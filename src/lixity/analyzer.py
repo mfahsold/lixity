@@ -23,7 +23,7 @@ from .models import (
 from .sentences import split_sentences
 from .style_profile import dominance_from_hits
 
-_RE_DE_DIPHTHONG = re.compile(r"(ei|ey|ai|ay|au|eu|äu|ie)")
+_RE_DE_DIPHTHONG = re.compile(r"(ei|ey|ai|ay|au|eu|äu|ie|aa|ee|oo)")
 _RE_DE_VOWEL = re.compile(r"[aeiouyäöü]")
 _RE_EN_CLEAN = re.compile(r"[^a-z]")
 _RE_EN_VOWEL_GROUP = re.compile(r"[aeiouy]+")
@@ -270,12 +270,13 @@ class CorpusAnalyzer:
         if w in exceptions:
             return exceptions[w]
         count = len(_RE_EN_VOWEL_GROUP.findall(w))
-        if w.endswith("e") and not w.endswith(("le", "ee", "ye", "ie", "oe")) and count > 1:
-            count -= 1
+        if w.endswith("e") and count > 1:
+            if w.endswith("le") and len(w) > 2 and w[-3] not in "aeiouy":
+                pass  # syllabic l ("table", "people") keeps its vowel
+            elif not w.endswith(("ee", "ye", "ie", "oe")):
+                count -= 1
         if w.endswith("ed") and not w.endswith(("ted", "ded")) and count > 1:
             count -= 1
-        if w.endswith("le") and len(w) > 2 and w[-3] not in "aeiouy":
-            count += 1
         if (
             w.endswith("es")
             and not w.endswith(("ses", "xes", "zes", "ches", "shes", "ges"))
@@ -465,6 +466,19 @@ class CorpusAnalyzer:
         return total / (window * windows)
 
     @staticmethod
+    def yules_k(tokens: list[str]) -> float:
+        """Yule's characteristic K = 10^4 * (Σ m² V_m − N) / N² (Yule 1944).
+
+        0.0 for empty input or all-unique tokens (no repetition).
+        """
+        n = len(tokens)
+        if n == 0:
+            return 0.0
+        counts = Counter(tokens)
+        m2 = sum(c * c for c in counts.values())
+        return 10000.0 * (m2 - n) / (n * n)
+
+    @staticmethod
     def maas_a2(n_tokens: int, v_types: int) -> float | None:
         """Maas a² = (log N − log V) / (log N)² – lower = more diverse (Maas 1972).
 
@@ -518,9 +532,7 @@ class CorpusAnalyzer:
         freqs = Counter(lower_tokens)
 
         # Lexical range & stability
-        m1 = n_tokens
-        m2 = sum(c**2 for c in freqs.values())
-        yules_k = 10000.0 * (m2 - m1) / (m1**2) if m1 else 0.0
+        yules_k = self.yules_k(lower_tokens)
         ttr = v_types / n_tokens if n_tokens else 0.0
         guiraud_r = v_types / math.sqrt(n_tokens) if n_tokens else 0.0
 

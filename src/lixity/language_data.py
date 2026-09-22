@@ -3581,7 +3581,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 180.0,
         "asl_coef": 1.0,
         "asw_coef": 58.5,
-        "long_word_min": 8,
+        "long_word_min": 6,
     },
     "en": {
         "variant": "Flesch",
@@ -3589,7 +3589,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 206.835,
         "asl_coef": 1.015,
         "asw_coef": 84.6,
-        "long_word_min": 7,
+        "long_word_min": 6,
     },
     "fr": {
         "variant": "Kandel-Moles",
@@ -3597,15 +3597,15 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 207.0,
         "asl_coef": 1.015,
         "asw_coef": 73.6,
-        "long_word_min": 7,
+        "long_word_min": 6,
     },
     "es": {
         "variant": "Szigriszt-Pazos",
         "name": "INFLESZ (Szigriszt-Pazos)",
         "constant": 206.835,
         "asl_coef": 1.0,
-        "asw_coef": 62.3,
-        "long_word_min": 7,
+        "asw_coef": 62.35,
+        "long_word_min": 6,
     },
     "it": {
         "variant": "Franchina-Vacca",
@@ -3613,7 +3613,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 217.0,
         "asl_coef": 1.3,
         "asw_coef": 60.0,
-        "long_word_min": 7,
+        "long_word_min": 6,
     },
     "pt": {
         "variant": "Martins",
@@ -3621,7 +3621,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 248.835,
         "asl_coef": 1.015,
         "asw_coef": 84.6,
-        "long_word_min": 7,
+        "long_word_min": 6,
     },
     "nl": {
         "variant": "Douma",
@@ -3629,7 +3629,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 207.0,
         "asl_coef": 0.93,
         "asw_coef": 77.0,
-        "long_word_min": 8,
+        "long_word_min": 6,
     },
     "generic": {
         "variant": "Flesch",
@@ -3637,7 +3637,7 @@ READABILITY: dict[str, ReadabilityFormula] = {
         "constant": 206.835,
         "asl_coef": 1.015,
         "asw_coef": 84.6,
-        "long_word_min": 7,
+        "long_word_min": 6,
     },
 }
 

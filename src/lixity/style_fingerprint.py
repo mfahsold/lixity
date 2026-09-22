@@ -167,7 +167,8 @@ def jacobi_eigh(matrix: list[list[float]], tol: float = 1e-12, max_sweeps: int =
     """
     Eigenvalues and eigenvectors of a symmetric matrix via cyclic Jacobi
     rotations (pure stdlib, deterministic). Returns (eigenvalues, eigenvectors)
-    with eigenvectors as columns; pairs are sorted by eigenvalue descending.
+    where ``eigenvectors[i]`` is the unit eigenvector belonging to
+    ``eigenvalues[i]``; pairs are sorted by eigenvalue descending.
     """
     n = len(matrix)
     a = [row[:] for row in matrix]
