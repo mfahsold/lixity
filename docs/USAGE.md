@@ -38,6 +38,7 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 lixity analyze   manuscript.md               # terminal report
 lixity analyze   manuscript.md --json        # machine-readable metrics
 lixity profile   manuscript.md               # tense profiles per paragraph
+lixity style     manuscript.md               # self-calibrated style passport
 lixity dashboard manuscript.md -o ui.html    # HTML dashboard
 ```
 
@@ -92,7 +93,9 @@ Emits paragraph-level tense and style profiles as JSON:
   `paragraphs`, `present_hits`, `past_hits`, `dominant`, `flagged`, `asl`,
   `dialog_pct`, `function_word_pct`,
 - `paragraphs[]` – the same fields per paragraph plus `severity`, `mixed`,
-  `switch`, `minority_ratio` and line anchors (`start_line`/`end_line`).
+  `switch`, `minority_ratio`, line anchors (`start_line`/`end_line`) and style
+  densities (`filter_density`, `modal_density`, `nominal_density`,
+  `passive_density` per 1,000 words).
 
 Tense classification is a transparent heuristic, not a black box: curated
 high-frequency verb forms are counted per paragraph. A minority tense share of
@@ -105,6 +108,24 @@ thresholds are injectable via `ProfileThresholds`.
 lixity profile manuscript.md > profile.json
 ```
 
+### `lixity style`
+
+Prints the **style passport** – the self-calibrated house style of the
+manuscript. Lixity measures 16 descriptive, register-neutral features per
+chapter (ASL, staccato, hypotaxis, sentence CV, dialogue, function words,
+perception filters, modals, passive, nominalisations, adjectives, long words,
+starter entropy, first-person starts, Guiraud R, HD-D) and derives their
+robust centre (median) and spread (MAD) from the corpus itself. Chapters are
+flagged only when they deviate from this own style (robust z-score ≥ 2.5) –
+whether a deviation is intended (register scene) or drift is for the author
+to decide, never the engine. The passport doubles as a constraint block for
+authoring and editing (human or assisting LLM).
+
+```bash
+lixity style manuscript.md          # text block
+lixity style manuscript.md --json   # machine-readable (bands, deviations)
+```
+
 ### `lixity dashboard`
 
 Writes one self-contained HTML file — no CDN, no framework, no external
@@ -114,12 +135,17 @@ produces an identical file, which makes it safe for version control.
 The dashboard contains:
 
 - corpus KPIs (words, chapters, paragraphs, sentences, ASL, TTR, Yule's K,
-  Flesch, LIX, dialogue, function words, flagged paragraphs),
+  Flesch, LIX, dialogue, Guiraud R, HD-D, staccato, first-person starts,
+  function words, flagged paragraphs),
 - the sentence-length architecture as bars,
+- the **style heatmap**: chapter × feature matrix of robust z-scores with a
+  diverging colour scale (blue = below, orange = above the house mean),
+- the **style passport** panel (median, ±2σ band, outlier count per feature),
 - a chapter map with a colour-coded paragraph strip (present / past / mixed /
-  neutral) and severity markers,
+  neutral) and severity markers, plus an optional **style layer** overlay
+  (bottom edge colour per paragraph, within-chapter normalised),
 - clickable paragraphs revealing text, line anchor and per-paragraph stats,
-- the chapter comparison matrix.
+- the chapter comparison matrix with a deviation column.
 
 ```bash
 lixity dashboard manuscript.md -o ui.html

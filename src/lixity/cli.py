@@ -10,6 +10,7 @@ from .formatters import ReportFormatter
 from .language import resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import CorpusConfig
+from .style_fingerprint import StyleFingerprint
 from .style_profile import ParagraphProfiler
 from .visualizer import render_dashboard
 
@@ -24,11 +25,12 @@ def main(argv=None):
         ("analyze", "Print corpus metrics (text/JSON)"),
         ("profile", "Paragraph-accurate tense profiles (JSON)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
+        ("style", "Self-calibrated style passport of the manuscript (text/JSON)"),
     ):
         p = sub.add_parser(name, help=help_text)
         p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
-        p.add_argument("--json", action="store_true", help="JSON output (analyze/profile)")
+        p.add_argument("--json", action="store_true", help="JSON output (analyze/profile/style)")
         p.add_argument("-o", "--output", help="Target file (dashboard)")
     args = parser.parse_args(argv)
 
@@ -58,12 +60,23 @@ def main(argv=None):
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
 
+    if args.command == "style":
+        metrics = CorpusAnalyzer(config).analyze_text(text)
+        fingerprint = StyleFingerprint.from_metrics(metrics)
+        if args.json:
+            print(json.dumps(fingerprint.passport(), ensure_ascii=False, indent=2))
+        else:
+            print(fingerprint.passport_text(labels=resolved.labels))
+        return 0
+
     metrics = CorpusAnalyzer(config).analyze_text(text)
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
+    fingerprint = StyleFingerprint.from_metrics(metrics)
     html = render_dashboard(
         chapters,
         paragraphs,
         metrics=metrics,
+        fingerprint=fingerprint,
         title=os.path.basename(args.file),
         labels=resolved.labels,
         language_name=resolved.name,

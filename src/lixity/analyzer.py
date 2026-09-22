@@ -20,6 +20,7 @@ Mathematical & linguistic foundation:
 
 import math
 import os
+import random
 import re
 from collections import Counter
 
@@ -50,6 +51,106 @@ class CorpusAnalyzer:
         self._filter_re = compile_pattern(self.lang.filter_verbs_regex)
         self._word_re = re.compile(self.lang.word_regex)
         self._dialogue_re = re.compile(self.lang.dialogue_regex)
+        # Style heuristics (self-calibrating house-style fingerprint)
+        self._passive_re = compile_pattern(self.lang.passive_regex)
+        self._nominal_re = compile_pattern(self.lang.nominal_regex)
+        self._adjective_re = compile_pattern(self.lang.adjective_regex)
+        self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
+        self._starters = frozenset(w.lower() for w in self.lang.first_person_starters)
+        self._content_blacklist = self.lang.function_words | self.lang.stopwords
+
+    @staticmethod
+    def hd_d(tokens: list[str], seed: int = 42, min_samples: int = 5) -> float | None:
+        """
+        HD-D: length-robust lexical diversity (McCarthy & Jarvis 2010).
+
+        Mean of the type-variety of 42 random samples of 35 consecutive tokens;
+        variety per sample = 1 - sum(c_t*(c_t-1)) / (n*(n-1)).
+        Deterministic via fixed seed; returns None for texts too short for
+        ``min_samples`` disjoint windows (no reliable statement).
+        """
+        n = len(tokens)
+        sample_size = 35
+        if n < sample_size * min_samples:
+            return None
+        max_samples = min(42, n // sample_size)
+        rng = random.Random(seed)  # noqa: S311 – deterministic sampling, not cryptography
+        starts = sorted(rng.sample(range(n - sample_size + 1), max_samples))
+        score = 0.0
+        for s in starts:
+            sample = tokens[s : s + sample_size]
+            repeat = sum(c * (c - 1) for c in Counter(sample).values())
+            score += 1.0 - repeat / (sample_size * (sample_size - 1))
+        return score / max_samples
+
+    @staticmethod
+    def _entropy(counts: Counter) -> float:
+        """Shannon entropy in bits over a token-type counter."""
+        total = sum(counts.values())
+        if not total:
+            return 0.0
+        return -sum((c / total) * math.log2(c / total) for c in counts.values())
+
+    def _starter_stats(self, sentences: list[str]) -> tuple[float, float]:
+        """(start entropy in bits, first-person-start rate) over sentence starters."""
+        starters: Counter = Counter()
+        first_person = 0
+        for s in sentences:
+            tokens = self._word_re.findall(s)
+            if not tokens:
+                continue
+            first = tokens[0].lower()
+            starters[first] += 1
+            if first in self._starters:
+                first_person += 1
+        total = sum(starters.values())
+        rate = (first_person / total * 100.0) if total else 0.0
+        return self._entropy(starters), rate
+
+    @staticmethod
+    def _density(matches: int, words: int) -> float:
+        """Occurrences per 1,000 tokens (length-comparable density)."""
+        return (matches / words * 1000.0) if words else 0.0
+
+    def _jsd_chapter(
+        self,
+        chapter_counter: Counter,
+        corpus_counter: Counter,
+        n_chapter: int,
+        n_corpus: int,
+        top_n: int = 5,
+    ) -> tuple[float, list[str]]:
+        """
+        Jensen-Shannon distance of the chapter's word distribution to the rest
+        of the corpus (leave-one-out, so small chapters are not self-biased).
+
+        Returns (jsd, top driver words): contributions are additive per type,
+        so the most divergent content words are interpretable.
+        """
+        rest = n_corpus - n_chapter
+        if rest < 1 or n_chapter < 1:
+            return 0.0, []
+        vocab = set(chapter_counter) | set(corpus_counter)
+        jsd = 0.0
+        contribs: dict[str, float] = {}
+        for w in vocab:
+            p = chapter_counter[w] / n_chapter
+            q = (corpus_counter[w] - chapter_counter[w]) / rest
+            m = 0.5 * (p + q)
+            term = 0.0
+            if p > 0.0:
+                term += p * math.log(p / m)
+            if q > 0.0:
+                term += q * math.log(q / m)
+            contrib = 0.5 * term
+            contribs[w] = contrib
+            jsd += contrib
+        top = [
+            w
+            for w, _ in sorted(contribs.items(), key=lambda kv: kv[1], reverse=True)
+            if len(w) > 1 and chapter_counter[w] > 0 and w not in self._content_blacklist
+        ][:top_n]
+        return jsd, top
 
     @staticmethod
     def count_syllables_de(word: str) -> int:
@@ -154,6 +255,12 @@ class CorpusAnalyzer:
             complex_pct=(comp_s / total_sent * 100.0) if total_sent else 0.0,
         )
 
+        # Style features (corpus level, house-style fingerprint)
+        staccato_pct = (short_s / total_sent * 100.0) if total_sent else 0.0
+        kaskade_pct = (comp_s / total_sent * 100.0) if total_sent else 0.0
+        sentence_cv = (std_sl / asl) if asl else 0.0
+        start_entropy, first_person_start_rate = self._starter_stats(raw_sents)
+
         # Readability & complexity
         total_syllables = sum(self.count_syllables(t) for t in tokens)
         asw = total_syllables / n_tokens if n_tokens else 0.0
@@ -203,6 +310,16 @@ class CorpusAnalyzer:
         }
         filter_cnt = len(self._filter_re.findall(cleaned_main))
 
+        # Style densities (per 1,000 tokens, length-comparable)
+        passive_density = self._density(len(self._passive_re.findall(cleaned_main)), n_tokens)
+        nominalization_density = self._density(
+            len(self._nominal_re.findall(cleaned_main)), n_tokens
+        )
+        adjective_density = self._density(len(self._adjective_re.findall(cleaned_main)), n_tokens)
+        modal_density = self._density(sum(1 for t in lower_tokens if t in self._modals), n_tokens)
+        filter_density = self._density(filter_cnt, n_tokens)
+        hd_d = self.hd_d(lower_tokens)
+
         # Chapter-wise segmentation
         raw_chapters = re.split(self.config.chapter_regex, main_text)
 
@@ -213,6 +330,7 @@ class CorpusAnalyzer:
             raw_chapters = raw_chapters[1:]
 
         chapters: list[ChapterMetrics] = []
+        chapter_tokens: list[list[str]] = []
         c_idx = 1
 
         for rc in raw_chapters:
@@ -235,13 +353,15 @@ class CorpusAnalyzer:
             c_sent_lens = [
                 len(self._word_re.findall(s)) for s in c_sents if len(self._word_re.findall(s)) > 0
             ]
-            c_asl = sum(c_sent_lens) / len(c_sent_lens) if c_sent_lens else 0.0
+            n_cs = len(c_sent_lens)
+            c_asl = sum(c_sent_lens) / n_cs if n_cs else 0.0
 
             c_dial = self._dialogue_re.findall(cl_b)
             c_dial_words = sum(len(m.split()) for m in c_dial)
             c_dial_pct = (c_dial_words / len(c_words)) * 100.0 if c_words else 0.0
 
-            c_ttr = len({w.lower() for w in c_words}) / len(c_words) if c_words else 0.0
+            c_lower = [w.lower() for w in c_words]
+            c_ttr = len(set(c_lower)) / len(c_words) if c_words else 0.0
 
             c_signals: dict[str, int] = {}
             for s_name, s_pat in self.lang.signal_keywords.items():
@@ -263,12 +383,36 @@ class CorpusAnalyzer:
             else:
                 dom = "Hybrid / Montage"
 
+            # --- Style features per chapter (house-style fingerprint) ---
+            n_cw = len(c_words)
+            c_short = sum(1 for sl in c_sent_lens if sl <= 6)
+            c_comp = sum(1 for sl in c_sent_lens if sl > 25)
+            c_staccato = (c_short / n_cs * 100.0) if n_cs else 0.0
+            c_kaskade = (c_comp / n_cs * 100.0) if n_cs else 0.0
+            c_std = math.sqrt(sum((sl - c_asl) ** 2 for sl in c_sent_lens) / n_cs) if n_cs else 0.0
+            c_cv = (c_std / c_asl) if c_asl else 0.0
+            c_start_entropy, c_first_rate = self._starter_stats(c_sents)
+            c_passive = self._density(len(self._passive_re.findall(cl_b)), n_cw)
+            c_nominal = self._density(len(self._nominal_re.findall(cl_b)), n_cw)
+            c_adjective = self._density(len(self._adjective_re.findall(cl_b)), n_cw)
+            c_modal = self._density(sum(1 for t in c_lower if t in self._modals), n_cw)
+            c_filter_density = self._density(c_fil, n_cw)
+            c_long_words = sum(1 for t in c_words if len(t) > 6)
+            c_long_pct = (c_long_words / n_cw * 100.0) if n_cw else 0.0
+            c_guiraud = len(set(c_lower)) / math.sqrt(n_cw) if n_cw else 0.0
+            c_hd_d = self.hd_d(c_lower)
+            c_func_pct = (
+                sum(1 for t in c_lower if t in self.lang.function_words) / n_cw * 100.0
+                if n_cw
+                else 0.0
+            )
+
             chapters.append(
                 ChapterMetrics(
                     num=c_idx,
                     title=title,
-                    words=len(c_words),
-                    sentences=len(c_sent_lens),
+                    words=n_cw,
+                    sentences=n_cs,
                     asl=c_asl,
                     dialog_pct=c_dial_pct,
                     ttr=c_ttr,
@@ -276,9 +420,31 @@ class CorpusAnalyzer:
                     filter_verbs=c_fil,
                     dominance=dom,
                     signal_matches=c_signals,
+                    staccato_pct=c_staccato,
+                    kaskade_pct=c_kaskade,
+                    sentence_cv=c_cv,
+                    start_entropy=c_start_entropy,
+                    first_person_start_rate=c_first_rate,
+                    passive_density=c_passive,
+                    nominalization_density=c_nominal,
+                    adjective_density=c_adjective,
+                    modal_density=c_modal,
+                    filter_density=c_filter_density,
+                    long_word_pct=c_long_pct,
+                    guiraud_r=c_guiraud,
+                    hd_d=c_hd_d,
+                    function_word_pct=c_func_pct,
                 )
             )
+            chapter_tokens.append(c_lower)
             c_idx += 1
+
+        # Jensen-Shannon divergence per chapter vs. the rest of the corpus
+        # (leave-one-out: no self-bias for small chapters; additive per word type).
+        for chapter, c_lower in zip(chapters, chapter_tokens, strict=False):
+            chapter.jsd, chapter.jsd_top_words = self._jsd_chapter(
+                Counter(c_lower), freqs, len(c_lower), n_tokens
+            )
 
         return CorpusMetrics(
             raw_words=raw_words,
@@ -307,6 +473,17 @@ class CorpusAnalyzer:
             signal_counts=signal_counts,
             filter_count=filter_cnt,
             chapters=chapters,
+            staccato_pct=staccato_pct,
+            kaskade_pct=kaskade_pct,
+            sentence_cv=sentence_cv,
+            start_entropy=start_entropy,
+            first_person_start_rate=first_person_start_rate,
+            passive_density=passive_density,
+            nominalization_density=nominalization_density,
+            adjective_density=adjective_density,
+            modal_density=modal_density,
+            filter_density=filter_density,
+            hd_d=hd_d,
         )
 
     def analyze_file(self, filepath: str) -> CorpusMetrics:

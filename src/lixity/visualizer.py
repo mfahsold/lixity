@@ -20,7 +20,8 @@ import html
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .language_data import EN_LABELS, METRIC_LABELS
+from .language_data import EN_LABELS, HELP_TEXTS, METRIC_LABELS
+from .style_fingerprint import FEATURES, LAYER_FEATURES, layer_colors, z_color
 from .style_profile import (
     TENSE_MIXED,
     TENSE_PAST,
@@ -96,6 +97,17 @@ table { width: 100%; border-collapse: collapse; font-size: .85rem; }
 th, td { text-align: left; padding: .35rem .5rem; border-bottom: 1px solid var(--line); }
 th { color: var(--muted); font-weight: 500; text-transform: uppercase; font-size: .7rem; letter-spacing: .06em; }
 td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+.heatmap-wrap { overflow-x: auto; }
+table.heatmap { border-collapse: separate; border-spacing: 0; font-size: .72rem; }
+table.heatmap th, table.heatmap td { padding: .22rem .32rem; border: 1px solid var(--line); text-align: center; }
+table.heatmap td.z { font-variant-numeric: tabular-nums; }
+table.heatmap th.ch, table.heatmap td.ch {
+  text-align: left; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  max-width: 11rem; border-right: 0; padding-left: 0;
+}
+.z-legend { display: inline-flex; align-items: center; gap: .3rem; font-size: .8rem; color: var(--muted); }
+.z-gradient { display: inline-block; width: 7rem; height: .6rem; border-radius: 3px;
+  background: linear-gradient(90deg, #2b6cb0, #7ba7d0, #e5e7eb, #e8b07a, #c05621); }
 .artifacts { display: grid; gap: .5rem; }
 .artifact { display: flex; flex-wrap: wrap; gap: .5rem 1rem; align-items: baseline; justify-content: space-between; padding: .55rem .7rem; border: 1px solid var(--line); border-radius: 10px; }
 .artifact .name { font-weight: 600; }
@@ -158,6 +170,15 @@ var filter = document.getElementById("filter-flags");
 if (filter) {
   filter.addEventListener("change", function () {
     document.body.classList.toggle("only-flags", filter.checked);
+  });
+}
+var layer = document.getElementById("style-layer");
+if (layer) {
+  layer.addEventListener("change", function () {
+    document.querySelectorAll(".chip").forEach(function (chip) {
+      var color = layer.value ? chip.getAttribute("data-layer-" + layer.value) : null;
+      chip.style.borderBottom = color ? "3px solid " + color : "";
+    });
   });
 }
 var API = document.body.dataset.api || "";
@@ -314,12 +335,33 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
 """
 
 
-_DEFAULT_LABELS = {**EN_LABELS, **METRIC_LABELS["en"]}
+_DEFAULT_LABELS = {**EN_LABELS, **METRIC_LABELS["en"], **HELP_TEXTS["en"]}
 
 
 def _label(labels: Mapping[str, str] | None, key: str) -> str:
     source = labels if labels else _DEFAULT_LABELS
     return source.get(key, _DEFAULT_LABELS.get(key, key))
+
+
+# Help-key mapping: model field name (FEATURES) -> tooltip key (help_*).
+_FEATURE_HELP = {
+    "asl": "asl",
+    "staccato_pct": "staccato",
+    "kaskade_pct": "kaskade",
+    "sentence_cv": "cv",
+    "dialog_pct": "dialogue",
+    "function_word_pct": "function_words",
+    "filter_density": "perception",
+    "modal_density": "modal",
+    "passive_density": "passive",
+    "nominalization_density": "nominal",
+    "adjective_density": "adjective",
+    "long_word_pct": "lix",
+    "start_entropy": "start_entropy",
+    "first_person_start_rate": "first_start",
+    "guiraud_r": "guiraud",
+    "hd_d": "hd_d",
+}
 
 
 def _tense_class(dominant: str) -> str:
@@ -335,7 +377,9 @@ def _tense_class(dominant: str) -> str:
 def _help(labels: Mapping[str, str] | None, key: str, text: str) -> str:
     """Wraps a term with a tooltip (help text from the language profile)."""
     tip = _label(labels, f"help_{key}")
-    return f'<span class="help" data-help="{html.escape(tip, quote=True)}" tabindex="0">{text}</span>'
+    return (
+        f'<span class="help" data-help="{html.escape(tip, quote=True)}" tabindex="0">{text}</span>'
+    )
 
 
 def _kpi(value: str, label: str) -> str:
@@ -346,6 +390,7 @@ def render_dashboard(
     chapters: Sequence[ChapterProfile],
     paragraphs: Sequence[ParagraphProfile],
     metrics: Any | None = None,
+    fingerprint: Any | None = None,
     artifacts: Sequence[Mapping[str, Any]] | None = None,
     title: str = "Manuskript",
     labels: Mapping[str, str] | None = None,
@@ -367,8 +412,14 @@ def render_dashboard(
     L = lambda key: esc(_label(labels, key))  # noqa: E731
     if not language_options:
         language_options = [
-            ("auto", "auto"), ("de", "Deutsch"), ("en", "English"), ("fr", "Français"),
-            ("es", "Español"), ("it", "Italiano"), ("pt", "Português"), ("nl", "Nederlands"),
+            ("auto", "auto"),
+            ("de", "Deutsch"),
+            ("en", "English"),
+            ("fr", "Français"),
+            ("es", "Español"),
+            ("it", "Italiano"),
+            ("pt", "Português"),
+            ("nl", "Nederlands"),
             ("generic", "generic"),
         ]
 
@@ -431,7 +482,9 @@ def render_dashboard(
             )
             + "</select>"
         )
-        parts.append(f'<input class="ctl" id="set-title" value="{esc(title)}" placeholder="{L("title")}"/>')
+        parts.append(
+            f'<input class="ctl" id="set-title" value="{esc(title)}" placeholder="{L("title")}"/>'
+        )
         parts.append(
             f'<button class="ctl" data-action="settings" data-payload="settings">{L("apply")}</button>'
         )
@@ -452,7 +505,7 @@ def render_dashboard(
         )
         parts.append(
             f'<button class="ctl primary" data-action="export" data-payload="format">'
-            f'{_help(labels, "export", L("export"))}</button>'
+            f"{_help(labels, 'export', L('export'))}</button>"
         )
         parts.append(
             f'<button class="ctl" data-action="analyze">{_help(labels, "rebuild", L("run_analysis"))}</button>'
@@ -481,10 +534,10 @@ def render_dashboard(
         parts.append(f"<h2>{L('nda_manager')}</h2>")
         parts.append(f'<p class="ctl-note" id="nda-hint">{L("locked_hint")}</p>')
         parts.append('<div class="row" id="nda-unlock-row">')
-        parts.append(f'<input class="ctl" type="password" id="nda-passphrase" placeholder="{L("passphrase")}"/>')
         parts.append(
-            f'<button class="ctl" id="nda-unlock-btn">{L("unlock")}</button>'
+            f'<input class="ctl" type="password" id="nda-passphrase" placeholder="{L("passphrase")}"/>'
         )
+        parts.append(f'<button class="ctl" id="nda-unlock-btn">{L("unlock")}</button>')
         parts.append("</div>")
         parts.append('<div id="nda-table"></div>')
         parts.append('<div class="row" id="nda-add-row" hidden="hidden">')
@@ -510,8 +563,40 @@ def render_dashboard(
         parts.append(_kpi(f"{metrics.yules_k:.1f}", _help(labels, "yules", "Yule&#8217;s K")))
         parts.append(_kpi(f"{metrics.flesch_de:.1f}", _help(labels, "flesch", "Flesch")))
         parts.append(_kpi(f"{metrics.lix:.1f}", _help(labels, "lix", "LIX")))
-        parts.append(_kpi(f"{metrics.dialog_ratio:.1f} %", _help(labels, "dialogue", L("dialogue"))))
-    parts.append(_kpi(f"{function_pct:.1f} %", _help(labels, "function_words", L("function_words"))))
+        parts.append(
+            _kpi(f"{metrics.dialog_ratio:.1f} %", _help(labels, "dialogue", L("dialogue")))
+        )
+        parts.append(_kpi(f"{metrics.guiraud_r:.2f}", _help(labels, "guiraud", "Guiraud R")))
+        hd_d_value = f"{metrics.hd_d:.3f}" if getattr(metrics, "hd_d", None) is not None else "–"
+        parts.append(_kpi(hd_d_value, _help(labels, "hd_d", "HD-D")))
+        parts.append(
+            _kpi(f"{metrics.staccato_pct:.1f} %", _help(labels, "staccato", L("feat_staccato")))
+        )
+        parts.append(
+            _kpi(
+                f"{metrics.first_person_start_rate:.1f} %",
+                _help(labels, "first_start", L("feat_ich_start")),
+            )
+        )
+    parts.append(
+        _kpi(f"{function_pct:.1f} %", _help(labels, "function_words", L("function_words")))
+    )
+    if fingerprint is not None:
+        parts.append(
+            _kpi(
+                f"{fingerprint.consistency * 100:.0f} %",
+                _help(labels, "consistency", L("consistency")),
+            )
+        )
+        drifters = fingerprint.top_deviants(1)
+        if drifters:
+            num, mean_abs = drifters[0]
+            parts.append(
+                _kpi(
+                    f"K. {num} (Ø {mean_abs:.1f})",
+                    _help(labels, "fingerprint", f"{L('deviation')} · Ø|z|"),
+                )
+            )
     parts.append(_kpi(str(total_flagged), _help(labels, "flagged", L("flagged"))))
     parts.append("</section>")
 
@@ -535,9 +620,80 @@ def render_dashboard(
             )
         parts.append("</div></section>")
 
+    # --- Style heatmap & passport (self-calibrated house style) -----------
+    if fingerprint is not None and metrics is not None and metrics.chapters:
+        parts.append('<section class="panel">')
+        parts.append(f"<h2>{_help(labels, 'heatmap', L('style_fingerprint'))}</h2>")
+        parts.append('<p class="hint">' + esc(_label(labels, "help_heatmap")) + "</p>")
+        parts.append(
+            '<div class="z-legend">'
+            + esc(_label(labels, "zscore"))
+            + ' <span class="z-gradient"></span> −2.5 … +2.5</div>'
+        )
+        parts.append('<div class="heatmap-wrap"><table class="heatmap"><thead><tr>')
+        parts.append(f'<th class="ch">{L("chapter")}</th>')
+        for _field, label_key in FEATURES:
+            parts.append(
+                f"<th>{_help(labels, _FEATURE_HELP.get(_field, _field), esc(_label(labels, label_key)))}</th>"
+            )
+        parts.append("</tr></thead><tbody>")
+        for chapter in metrics.chapters:
+            if chapter.num not in fingerprint.z_scores:
+                continue
+            parts.append(f'<tr><td class="ch">{chapter.num}. {esc(chapter.title)}</td>')
+            for field_name, _label_key in FEATURES:
+                z = fingerprint.z_scores[chapter.num].get(field_name)
+                if z is None:
+                    parts.append('<td class="z">–</td>')
+                    continue
+                raw = fingerprint.values[field_name].get(chapter.num)
+                raw_text = f"{raw:.2f}" if isinstance(raw, float) else str(raw)
+                tooltip = f"{_label(labels, _label_key)}: {raw_text} · z {z:+.1f}"
+                parts.append(
+                    f'<td class="z" style="background:{z_color(z)}" '
+                    f'title="{esc(tooltip, quote=True)}">{z:+.1f}</td>'
+                )
+            parts.append("</tr>")
+        parts.append("</tbody></table></div></section>")
+
+        parts.append('<section class="panel">')
+        parts.append(f"<h2>{_help(labels, 'passport', L('style_passport'))}</h2>")
+        parts.append("<table><thead><tr>")
+        parts.append(
+            f'<th>{L("metrics")}</th><th class="num">{L("median")}</th>'
+            f'<th class="num">{L("band")} (±2σ)</th><th class="num">{L("outliers")}</th>'
+        )
+        parts.append("</tr></thead><tbody>")
+        for field_name, label_key in FEATURES:
+            base = fingerprint.baseline.get(field_name, {})
+            if not base.get("n"):
+                continue
+            centre = float(base["median"])
+            sigma = float(base["sigma"])
+            band_text = f"{centre - 2 * sigma:.2f} … {centre + 2 * sigma:.2f}"
+            n_out = sum(1 for cells in fingerprint.deviations.values() if field_name in cells)
+            outlier_text = str(n_out) if n_out else "–"
+            parts.append(
+                f"<tr><td>{_help(labels, _FEATURE_HELP.get(field_name, field_name), esc(_label(labels, label_key)))}</td>"
+                f'<td class="num">{centre:.2f}</td>'
+                f'<td class="num">{esc(band_text)}</td>'
+                f'<td class="num">{outlier_text}</td></tr>'
+            )
+        parts.append("</tbody></table></section>")
+
     # --- Toolbar ----------------------------------------------------------
     parts.append('<div class="toolbar">')
     parts.append(f'<label><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
+    if paragraphs:
+        parts.append("<label>")
+        parts.append(f"{_help(labels, 'layer', L('style_layer'))} ")
+        parts.append('<select class="ctl" id="style-layer">')
+        parts.append(f'<option value="">{L("layer_off")}</option>')
+        for layer_key in LAYER_FEATURES:
+            parts.append(
+                f'<option value="{layer_key}">{esc(_label(labels, "layer_" + layer_key))}</option>'
+            )
+        parts.append("</select></label>")
     parts.append('<span class="legend">')
     for key, color in (
         ("present", "var(--present)"),
@@ -564,6 +720,10 @@ def render_dashboard(
     for idx, p in enumerate(paragraphs):
         by_chapter.setdefault(p.chapter_num, []).append((idx, p))
 
+    layer_data: dict[str, dict[int, str | None]] = {
+        layer_key: layer_colors(paragraphs, layer_key) for layer_key in LAYER_FEATURES
+    }
+
     parts.append("<main>")
     for chapter in chapters:
         chapter_paras = by_chapter.get(chapter.num, [])
@@ -589,9 +749,15 @@ def render_dashboard(
                     f"{_label(labels, 'present')} {p.present_hits} / "
                     f"{_label(labels, 'past')} {p.past_hits} · {p.severity_label}"
                 )
+                layer_attrs = "".join(
+                    f' data-layer-{key}="{color}"'
+                    for key in LAYER_FEATURES
+                    if (color := layer_data.get(key, {}).get(idx))
+                )
                 parts.append(
                     f'<button class="chip {_tense_class(p.dominant)}{sev}" '
-                    f'style="flex:{width:.2f} 0 auto" data-target="p-{idx}" '
+                    f'style="flex:{width:.2f} 0 auto" data-target="p-{idx}"'
+                    f"{layer_attrs} "
                     f'title="{esc(tooltip)}" aria-label="{esc(tooltip)}" aria-expanded="false"></button>'
                 )
             parts.append("</div>")
@@ -605,7 +771,10 @@ def render_dashboard(
                 parts.append(
                     f'<div class="stats">{L("present")} {p.present_hits} · {L("past")} {p.past_hits} · '
                     f"ASL {p.asl:.1f} · {L('dialogue')} {p.dialogue_pct:.1f} % · "
-                    f"{L('function_words')} {p.function_word_pct:.1f} % · {p.words} {L('words')}</div>"
+                    f"{L('function_words')} {p.function_word_pct:.1f} % · "
+                    f"{L('feat_filter')} {p.filter_density:.1f} · {L('feat_modal')} {p.modal_density:.1f} · "
+                    f"{L('feat_nominal')} {p.nominal_density:.1f} · {L('feat_passive')} {p.passive_density:.1f} · "
+                    f"{p.words} {L('words')}</div>"
                 )
                 parts.append(f"<p>{esc(p.text)}</p>")
                 parts.append("</div>")
@@ -623,14 +792,30 @@ def render_dashboard(
             f'<th class="num">{L("function_words")}</th><th>{L("past")}/{L("present")}</th>'
             f'<th class="num">{L("flagged")}</th>'
         )
+        if fingerprint is not None:
+            parts.append(f'<th class="num">{L("deviation")}</th>')
         parts.append("</tr></thead><tbody>")
         for c in chapters:
             parts.append(
                 f"<tr><td>{c.num}</td><td>{esc(c.title)}</td>"
                 f'<td class="num">{c.words:,}</td><td class="num">{c.asl:.1f}</td>'
                 f'<td class="num">{c.dialog_pct:.1f} %</td><td class="num">{c.function_word_pct:.1f} %</td>'
-                f'<td>{esc(c.dominant)}</td><td class="num">{c.flagged}</td></tr>'
+                f'<td>{esc(c.dominant)}</td><td class="num">{c.flagged}</td>'
             )
+            if fingerprint is not None:
+                dev = fingerprint.deviations.get(c.num, {})
+                if dev:
+                    named = ", ".join(
+                        f"{_label(labels, label_key)} {z:+.1f}σ"
+                        for field_name, label_key in FEATURES
+                        if (z := dev.get(field_name)) is not None
+                    )
+                    parts.append(
+                        f'<td class="num" title="{esc(named, quote=True)}">{len(dev)}</td>'
+                    )
+                else:
+                    parts.append('<td class="num">–</td>')
+            parts.append("</tr>")
         parts.append("</tbody></table></section>")
 
     # --- Publications -----------------------------------------------------

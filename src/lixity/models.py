@@ -9,7 +9,6 @@ and standards-compliant orjson serialisation both for internal workflows and
 for later distribution as a standalone open-source package.
 """
 
-
 from pydantic import BaseModel, Field
 
 
@@ -72,6 +71,22 @@ class CorpusConfig(BaseModel):
         default=None,
         description="RegEx zur Worttokenisierung (None = Sprachprofil-Standard).",
     )
+    first_person_starters: list[str] | None = Field(
+        default=None,
+        description="Wörter der 1. Person Singular für die Satzanfangs-Analyse (None = Sprachprofil).",
+    )
+    passive_regex: str | None = Field(
+        default=None,
+        description="RegEx für Passiv-Marker (None = Sprachprofil-Standard).",
+    )
+    nominal_regex: str | None = Field(
+        default=None,
+        description="RegEx für Nominalisierungs-Suffixe (None = Sprachprofil-Standard).",
+    )
+    adjective_regex: str | None = Field(
+        default=None,
+        description="RegEx für Adjektiv-Suffixe (None = Sprachprofil-Standard).",
+    )
 
 
 class SentenceDistribution(BaseModel):
@@ -113,6 +128,48 @@ class ChapterMetrics(BaseModel):
     signal_matches: dict[str, int] = Field(
         default_factory=dict, description="Generische Fundstellen aller Signalwörter."
     )
+    # --- Self-calibrating style features (house-style fingerprint) ---
+    staccato_pct: float = Field(
+        default=0.0, description="Anteil sehr kurzer Sätze (≤ 6 Wörter) in Prozent."
+    )
+    kaskade_pct: float = Field(
+        default=0.0, description="Anteil komplexer Sätze (> 25 Wörter) in Prozent."
+    )
+    sentence_cv: float = Field(
+        default=0.0, description="Variationskoeffizient der Satzlängen (Std/Mittel)."
+    )
+    start_entropy: float = Field(
+        default=0.0, description="Shannon-Entropie der Satzanfänge (Monotonie-Indikator)."
+    )
+    first_person_start_rate: float = Field(
+        default=0.0, description="Anteil der Sätze, die mit der 1. Person Singular beginnen."
+    )
+    passive_density: float = Field(default=0.0, description="Passiv-Marker je 1.000 Wörter.")
+    nominalization_density: float = Field(
+        default=0.0, description="Nominalisierungen je 1.000 Wörter."
+    )
+    adjective_density: float = Field(
+        default=0.0, description="Adjektiv-Suffix-Treffer je 1.000 Wörter."
+    )
+    modal_density: float = Field(default=0.0, description="Modalverben je 1.000 Wörter.")
+    filter_density: float = Field(default=0.0, description="Perzeptionsfilter je 1.000 Wörter.")
+    long_word_pct: float = Field(
+        default=0.0, description="Anteil langer Wörter (> 6 Buchstaben) in Prozent."
+    )
+    guiraud_r: float = Field(default=0.0, description="Guiraud-Index R = V / sqrt(N).")
+    hd_d: float | None = Field(
+        default=None, description="HD-D lexikalische Diversität (McCarthy & Jarvis 2010)."
+    )
+    jsd: float = Field(
+        default=0.0, description="Jensen-Shannon-Distanz der Wortverteilung zum Restkorpus."
+    )
+    jsd_top_words: list[str] = Field(
+        default_factory=list,
+        description="Stärkste Treiberwörter der Kapitel-Divergenz (Inhaltswörter).",
+    )
+    function_word_pct: float = Field(
+        default=0.0, description="Anteil der Funktionswörter an den Kapitel-Tokens."
+    )
 
 
 class CorpusMetrics(BaseModel):
@@ -146,6 +203,24 @@ class CorpusMetrics(BaseModel):
     signal_counts: dict[str, int] = Field(description="Fundstellen der Signal-Keywords.")
     filter_count: int = Field(description="Gesamtzahl gefundener Perzeptionsfilter.")
     chapters: list[ChapterMetrics] = Field(description="Detaillierte Metriken aller Einzelkapitel.")
+    # --- Self-calibrating style features (house-style fingerprint, corpus level) ---
+    staccato_pct: float = Field(default=0.0, description="Anteil Kurzsätze (≤ 6 Wörter).")
+    kaskade_pct: float = Field(default=0.0, description="Anteil komplexer Sätze (> 25 Wörter).")
+    sentence_cv: float = Field(default=0.0, description="Variationskoeffizient der Satzlängen.")
+    start_entropy: float = Field(default=0.0, description="Shannon-Entropie der Satzanfänge.")
+    first_person_start_rate: float = Field(default=0.0, description="Anteil der Ich-Satzanfänge.")
+    passive_density: float = Field(default=0.0, description="Passiv-Marker je 1.000 Wörter.")
+    nominalization_density: float = Field(
+        default=0.0, description="Nominalisierungen je 1.000 Wörter."
+    )
+    adjective_density: float = Field(
+        default=0.0, description="Adjektiv-Suffix-Treffer je 1.000 Wörter."
+    )
+    modal_density: float = Field(default=0.0, description="Modalverben je 1.000 Wörter.")
+    filter_density: float = Field(default=0.0, description="Perzeptionsfilter je 1.000 Wörter.")
+    hd_d: float | None = Field(
+        default=None, description="HD-D lexikalische Diversität (McCarthy & Jarvis 2010)."
+    )
 
 
 class DossierStatus(BaseModel):

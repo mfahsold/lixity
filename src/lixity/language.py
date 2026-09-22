@@ -30,7 +30,15 @@ from .language_data import (
     LEXICON,
     METRIC_LABELS,
     PROFILE_DATA,
+    STYLE_DATA,
 )
+
+
+def _suffix_pattern(suffixes) -> str:
+    """Builds a suffix regex for the style heuristics; empty list -> never matches."""
+    if not suffixes:
+        return ""
+    return r"\b\w+(?:" + "|".join(re.escape(s) for s in suffixes) + r")\b"
 
 
 @dataclass(frozen=True)
@@ -50,6 +58,10 @@ class LanguageProfile:
     labels: Mapping[str, str]
     lexicon: Mapping[str, tuple]
     function_words: frozenset
+    first_person_starters: frozenset
+    passive_regex: str
+    nominal_regex: str
+    adjective_regex: str
 
 
 @dataclass(frozen=True)
@@ -68,6 +80,11 @@ class ResolvedLanguage:
     labels: Mapping[str, str]
     lexicon: Mapping[str, tuple]
     function_words: frozenset
+    stopwords: frozenset
+    first_person_starters: frozenset
+    passive_regex: str
+    nominal_regex: str
+    adjective_regex: str
 
 
 FUNCTION_CATEGORIES = (
@@ -83,9 +100,7 @@ FUNCTION_CATEGORIES = (
 
 def _function_words(key: str) -> frozenset:
     lex = LEXICON.get(key, {})
-    return frozenset(
-        w.lower() for cat in FUNCTION_CATEGORIES for w in lex.get(cat, ())
-    )
+    return frozenset(w.lower() for cat in FUNCTION_CATEGORIES for w in lex.get(cat, ()))
 
 
 def _build_profiles() -> dict[str, LanguageProfile]:
@@ -97,6 +112,7 @@ def _build_profiles() -> dict[str, LanguageProfile]:
             past_parts.append(f"(?:{data['praeteritum_regex']})")
         for extra in LANGUAGE_PATTERNS.get(key, {}).get("praeteritum", []):
             past_parts.append(f"(?:{extra})")
+        style = STYLE_DATA.get(key, STYLE_DATA["generic"])
         profiles[key] = LanguageProfile(
             key=key,
             name=data["name"],
@@ -115,6 +131,10 @@ def _build_profiles() -> dict[str, LanguageProfile]:
             },
             lexicon=LEXICON.get(key, {}),
             function_words=_function_words(key),
+            first_person_starters=frozenset(style.get("first_person_starters", ())),
+            passive_regex=style.get("passive_regex", ""),
+            nominal_regex=_suffix_pattern(style.get("nominal_suffixes", ())),
+            adjective_regex=_suffix_pattern(style.get("adjective_suffixes", ())),
         )
     return profiles
 
@@ -188,4 +208,10 @@ def resolve_language(config, sample_text: str | None = None) -> ResolvedLanguage
         labels=profile.labels,
         lexicon=profile.lexicon,
         function_words=profile.function_words,
+        stopwords=profile.stopwords,
+        first_person_starters=getattr(config, "first_person_starters", None)
+        or profile.first_person_starters,
+        passive_regex=getattr(config, "passive_regex", None) or profile.passive_regex,
+        nominal_regex=getattr(config, "nominal_regex", None) or profile.nominal_regex,
+        adjective_regex=getattr(config, "adjective_regex", None) or profile.adjective_regex,
     )

@@ -16,6 +16,7 @@ from .models import (
     DossierStatus,
     SentenceDistribution,
 )
+from .style_fingerprint import StyleFingerprint
 
 __all__ = [
     "ChapterMetrics",
@@ -27,6 +28,7 @@ __all__ = [
     "FileUtils",
     "ReportFormatter",
     "SentenceDistribution",
+    "StyleFingerprint",
 ]
 
-__version__ = "1.0.2"
+__version__ = "1.1.0"

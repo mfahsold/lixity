@@ -61,7 +61,11 @@ class ParagraphProfile:
     asl: float
     dialogue_pct: float
     function_word_pct: float
-    text: str
+    filter_density: float = 0.0
+    modal_density: float = 0.0
+    nominal_density: float = 0.0
+    passive_density: float = 0.0
+    text: str = ""
 
     @property
     def line_label(self) -> str:
@@ -122,6 +126,11 @@ class ParagraphProfiler:
         self._dialogue = re.compile(self.lang.dialogue_regex)
         self._word = re.compile(self.lang.word_regex)
         self._appendix_title = self.config.appendix_marker.replace("##", "").strip()
+        # Style densities per paragraph (house-style overlay, per 1,000 words)
+        self._filter = compile_pattern(self.lang.filter_verbs_regex)
+        self._passive = compile_pattern(self.lang.passive_regex)
+        self._nominal = compile_pattern(self.lang.nominal_regex)
+        self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
 
     def _sentence_tense(self, sentence: str) -> str | None:
         """Classifies a single sentence as present-, past- or mixed-dominant."""
@@ -259,6 +268,14 @@ class ParagraphProfiler:
                 else 0.0
             )
 
+            def per_mille(matches: int, base_words: int = words) -> float:
+                return (matches / base_words * 1000.0) if base_words else 0.0
+
+            filter_density = per_mille(len(self._filter.findall(clean)))
+            modal_density = per_mille(sum(1 for t in tokens if t in self._modals))
+            nominal_density = per_mille(len(self._nominal.findall(clean)))
+            passive_density = per_mille(len(self._passive.findall(clean)))
+
             profile = ParagraphProfile(
                 chapter_num=chapter_num,
                 chapter_title=chapter_title,
@@ -276,6 +293,10 @@ class ParagraphProfiler:
                 asl=round(words / len(sentences), 2) if sentences else 0.0,
                 dialogue_pct=round(dialogue_pct, 1),
                 function_word_pct=round(function_word_pct, 1),
+                filter_density=round(filter_density, 1),
+                modal_density=round(modal_density, 1),
+                nominal_density=round(nominal_density, 1),
+                passive_density=round(passive_density, 1),
                 text=clean,
             )
             paragraphs.append(profile)

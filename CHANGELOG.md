@@ -5,6 +5,46 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0] – 2026-09-22
+
+### Added
+
+- **Self-calibrating style fingerprint** (`style_fingerprint.py`): register-neutral
+  consistency analysis. For 16 descriptive features (ASL, staccato, hypotaxis,
+  sentence CV, dialogue, function words, perception filters, modals, passive,
+  nominalisations, adjectives, long words, starter entropy, first-person starts,
+  Guiraud R, HD-D) the engine derives the manuscript's own house style
+  (robust median/MAD) and flags chapters only by deviation from it (robust z).
+- **Jensen-Shannon chapter divergence** with additive, interpretable driver
+  words (leave-one-out, content-word filtered) per chapter.
+- **HD-D** (McCarthy & Jarvis 2010) and per-chapter **Guiraud R** as
+  length-robust lexical diversity measures (TTR stays for continuity).
+- **`lixity style manuscript.md`**: style passport as text or JSON
+  (`--json`) – self-calibrated feature bands usable as constraints for
+  authoring/editing (human or assisting LLM).
+- **Dashboard**: chapter × feature heatmap with diverging z-colour scale,
+  style-passport panel (median, ±2σ band, outliers), consistency KPI,
+  top-deviant KPI, drift column in the chapter matrix, and a style-layer
+  overlay for the chapter strips (ASL/function/dialogue/filter/modal/
+  nominal/passive, within-chapter normalised).
+- Per-paragraph style densities (perception filters, modals, nominalisations,
+  passive) in the paragraph detail line and chip tooltips.
+- Style-pattern data per language (`STYLE_DATA`: first-person starters,
+  passive markers, nominal/adjective suffixes) – empty for `generic`, so all
+  metrics degrade gracefully without the profile.
+- New tests (`tests/test_style_fingerprint.py`): robust statistics, HD-D
+  determinism, JSD driver words, passport structure, heatmap/layer rendering.
+
+### Changed
+
+- `ChapterMetrics`/`CorpusMetrics` extended with the style features
+  (all fields defaulted – existing payloads stay valid).
+- `LanguageProfile`/`ResolvedLanguage` carry the new style patterns;
+  `CorpusConfig` accepts optional overrides (`passive_regex`, `nominal_regex`,
+  `adjective_regex`, `first_person_starters`).
+- Dashboard KPI row extended (Guiraud R, HD-D, staccato, first-person starts,
+  consistency, top deviant).
+
 ## [1.0.2] – 2026-09-22
 
 ### Fixed
