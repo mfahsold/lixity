@@ -166,9 +166,12 @@ class TestStyleFingerprint(unittest.TestCase):
 
     def test_passport_text(self):
         text = self.fp.passport_text(labels={"feat_asl": "ASL"})
-        self.assertIn("STILREFERENZ", text)
+        self.assertIn("STYLE REFERENCE", text)
         self.assertIn("ASL", text)
-        self.assertIn("Korridor", text)
+        self.assertIn("band", text)
+        german = self.fp.passport_text(labels={"feat_asl": "ASL"}, language_key="de")
+        self.assertIn("STILREFERENZ", german)
+        self.assertIn("Korridor", german)
 
     def test_single_chapter_no_deviations(self):
         one = CorpusAnalyzer(self.config).analyze_text(
@@ -382,8 +385,8 @@ class TestStyleDimensions(unittest.TestCase):
 
     def test_passport_text_lists_dimensions(self):
         text = self.fp.passport_text(labels={"feat_asl": "ASL"})
-        self.assertIn("STILREFERENZ", text)
-        self.assertIn("Zufallstreffer", text)
+        self.assertIn("STYLE REFERENCE", text)
+        self.assertIn("expected hits", text)
 
 
 if __name__ == "__main__":

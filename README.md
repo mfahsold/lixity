@@ -80,6 +80,8 @@ lixity analyze samples/effi-briest.md          # German – Fontane, 36 chapters
 lixity analyze samples/pride-and-prejudice.md  # English – Austen, 61 chapters
 ```
 
+Reports and CLI messages are English by default; `LIXITY_LANG=de` switches them to German.
+
 Full command reference, metric glossary, worked example and troubleshooting:
 [`docs/USAGE.md`](docs/USAGE.md).
 

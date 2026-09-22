@@ -5,6 +5,37 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0] – 2026-09-22
+
+### Changed (breaking)
+
+- **Language-neutral tense values:** `dominance` (chapter metrics) and
+  `dominant` (paragraph profiles) are now `present` / `past` / `mixed` /
+  `neutral`; display labels come from the language packs. The JSON contract
+  version is now **schema_version 2** for `analyze` and `profile`.
+- **English is the engine default** for reports and CLI messages; German is
+  available via `LIXITY_LANG=de` (Rich report, Markdown report, style
+  reference text, build/dashboard messages). Other report languages fall
+  back to English.
+- **Project corridors are opt-in:** reference corridors and literary
+  assessments are no longer engine defaults – projects supply them as
+  `texts` (the book project passes its own German corridors). Without them
+  the Rich report stays factual (metric + value).
+- Report row labels and feature units are localised (`de` / `en` packs).
+
+### Fixed
+
+- Chapter detection: front matter preceded by editorial HTML comments no
+  longer becomes chapter 1 (chapter numbering stays correct).
+- A chapter without tense markers is classified `neutral` instead of `past`
+  (one shared `dominance_from_hits` helper for chapters and paragraphs).
+- Style reference: correct singular/plural chapter count; localised units.
+
+### Added
+
+- `LIXITY_LANG` environment variable (`en` default, `de` supported) for
+  user-facing CLI messages.
+
 ## [1.6.1] – 2026-09-22
 
 ### Fixed

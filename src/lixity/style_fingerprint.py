@@ -19,23 +19,43 @@ from .format import num as format_num
 # Every style – staccato or cascading, nominal or verbal – is a legal value;
 # only the deviation from the text's own centre is measured.
 FEATURES: tuple[tuple[str, str, str], ...] = (
-    ("asl", "feat_asl", "Wörter je Satz"),
-    ("staccato_pct", "feat_staccato", "% der Sätze"),
-    ("kaskade_pct", "feat_kaskade", "% der Sätze"),
-    ("sentence_cv", "feat_cv", "Koeffizient"),
-    ("dialog_pct", "feat_dialog", "% der Wörter"),
-    ("function_word_pct", "feat_function", "% der Wörter"),
-    ("filter_density", "feat_filter", "je 1.000 Wörter"),
-    ("modal_density", "feat_modal", "je 1.000 Wörter"),
-    ("passive_density", "feat_passive", "je 1.000 Wörter"),
-    ("nominalization_density", "feat_nominal", "je 1.000 Wörter"),
-    ("adjective_density", "feat_adjective", "je 1.000 Wörter"),
-    ("long_word_pct", "feat_long_words", "% der Wörter"),
+    ("asl", "feat_asl", "words per sentence"),
+    ("staccato_pct", "feat_staccato", "% of sentences"),
+    ("kaskade_pct", "feat_kaskade", "% of sentences"),
+    ("sentence_cv", "feat_cv", "coefficient"),
+    ("dialog_pct", "feat_dialog", "% of words"),
+    ("function_word_pct", "feat_function", "% of words"),
+    ("filter_density", "feat_filter", "per 1,000 words"),
+    ("modal_density", "feat_modal", "per 1,000 words"),
+    ("passive_density", "feat_passive", "per 1,000 words"),
+    ("nominalization_density", "feat_nominal", "per 1,000 words"),
+    ("adjective_density", "feat_adjective", "per 1,000 words"),
+    ("long_word_pct", "feat_long_words", "% of words"),
     ("start_entropy", "feat_start_entropy", "bit"),
-    ("first_person_start_rate", "feat_ich_start", "% der Sätze"),
-    ("guiraud_r", "feat_guiraud", "Index"),
-    ("hd_d", "feat_hd_d", "Index"),
+    ("first_person_start_rate", "feat_ich_start", "% of sentences"),
+    ("guiraud_r", "feat_guiraud", "index"),
+    ("hd_d", "feat_hd_d", "index"),
 )
+
+# Localised unit strings (FEATURES carries the English defaults).
+FEATURE_UNITS_DE: dict[str, str] = {
+    "asl": "Wörter je Satz",
+    "staccato_pct": "% der Sätze",
+    "kaskade_pct": "% der Sätze",
+    "sentence_cv": "Koeffizient",
+    "dialog_pct": "% der Wörter",
+    "function_word_pct": "% der Wörter",
+    "filter_density": "je 1.000 Wörter",
+    "modal_density": "je 1.000 Wörter",
+    "passive_density": "je 1.000 Wörter",
+    "nominalization_density": "je 1.000 Wörter",
+    "adjective_density": "je 1.000 Wörter",
+    "long_word_pct": "% der Wörter",
+    "start_entropy": "bit",
+    "first_person_start_rate": "% der Sätze",
+    "guiraud_r": "Index",
+    "hd_d": "Index",
+}
 
 FEATURE_FIELDS: tuple[str, ...] = tuple(f for f, _l, _u in FEATURES)
 
@@ -206,6 +226,48 @@ def z_color(z: float) -> str:
             rgb = tuple(round(c0[i] + (c1[i] - c0[i]) * t) for i in range(3))
             return f"#{rgb[0]:02x}{rgb[1]:02x}{rgb[2]:02x}"
     return f"#{stops[-1][1][0]:02x}{stops[-1][1][1]:02x}{stops[-1][1][2]:02x}"
+
+
+PASSPORT_TEXTS: dict[str, dict[str, str]] = {
+    "en": {
+        "style_passport": "STYLE REFERENCE",
+        "house_style": "self-calibrated house style",
+        "chapter": "chapter",
+        "chapters": "chapters",
+        "median": "median",
+        "band": "band",
+        "constant": "constant",
+        "consistency": "Consistency",
+        "cells_in_band": "of cells within the band",
+        "multiplicity": "Multiplicity",
+        "expected_hits": "statistically expected hits",
+        "fdr_confirmed": "FDR-confirmed",
+        "cells": "cells",
+        "dimension": "Dimension",
+        "variance": "variance",
+        "flagged": "flagged",
+        "redundant": "Redundant features",
+    },
+    "de": {
+        "style_passport": "STILREFERENZ",
+        "house_style": "selbstkalibrierter Hausstil",
+        "chapter": "Kapitel",
+        "chapters": "Kapitel",
+        "median": "Median",
+        "band": "Korridor",
+        "constant": "konstant",
+        "consistency": "Konsistenz",
+        "cells_in_band": "der Zellen im Korridor",
+        "multiplicity": "Multiplizität",
+        "expected_hits": "statistisch erwartete Zufallstreffer",
+        "fdr_confirmed": "FDR-bestätigt",
+        "cells": "Zellen",
+        "dimension": "Dimension",
+        "variance": "Varianz",
+        "flagged": "auffällig",
+        "redundant": "Redundante Merkmale",
+    },
+}
 
 
 @dataclass
@@ -473,21 +535,29 @@ class StyleFingerprint:
         }
 
     def passport_text(
-        self, labels: Mapping[str, str] | None = None, language_key: str = "de"
+        self, labels: Mapping[str, str] | None = None, language_key: str = "en"
     ) -> str:
-        """Human-readable style passport (constraint block for author or LLM)."""
+        """Human-readable style reference (constraint block for author or LLM)."""
         labels = labels or {}
+        pack = PASSPORT_TEXTS.get(language_key, PASSPORT_TEXTS["en"])
 
-        def t(key: str, default: str) -> str:
-            return labels.get(key, default)
+        def t(key: str, default: str = "") -> str:
+            if labels and key in labels:
+                return labels[key]
+            return pack.get(key, default or key)
 
         lines = [
-            f"{t('style_passport', 'STILREFERENZ')} – "
-            f"{t('house_style', 'selbstkalibrierter Hausstil')} "
-            f"({self.n_chapters} {t('chapter', 'Kapitel')})",
+            f"{t('style_passport')} – "
+            f"{t('house_style')} "
+            f"({self.n_chapters} {t('chapters' if self.n_chapters != 1 else 'chapter')})",
             "=" * 72,
         ]
-        for field_name, label_key, unit in FEATURES:
+        for field_name, label_key, unit_default in FEATURES:
+            unit = (
+                FEATURE_UNITS_DE.get(field_name, unit_default)
+                if language_key == "de"
+                else unit_default
+            )
             base = self.baseline.get(field_name, {})
             if not base.get("n"):
                 continue
@@ -496,26 +566,26 @@ class StyleFingerprint:
             label = labels.get(label_key, field_name)
             if sigma > 0.0:
                 lines.append(
-                    f"{label:<22} {t('median', 'Median')} {format_num(centre, language_key, 2):>9}   "
-                    f"{t('band', 'Korridor')} "
+                    f"{label:<22} {t('median')} {format_num(centre, language_key, 2):>9}   "
+                    f"{t('band')} "
                     f"{format_num(centre - 2 * sigma, language_key, 2):>8} – "
                     f"{format_num(centre + 2 * sigma, language_key, 2):>7}   [{unit}]"
                 )
             else:
                 lines.append(
-                    f"{label:<22} {t('median', 'Median')} {format_num(centre, language_key, 2):>9}   "
-                    f"({t('constant', 'konstant')})   [{unit}]"
+                    f"{label:<22} {t('median')} {format_num(centre, language_key, 2):>9}   "
+                    f"({t('constant')})   [{unit}]"
                 )
         lines.append("=" * 72)
         lines.append(
-            f"{t('consistency', 'Konsistenz')}: {format_num(self.consistency * 100, language_key, 1)} % "
-            f"{t('cells_in_band', 'der Zellen im Korridor')} (z*)"
+            f"{t('consistency')}: {format_num(self.consistency * 100, language_key, 1)} % "
+            f"{t('cells_in_band')} (z*)"
         )
         lines.append(
-            f"{t('multiplicity', 'Multiplizität')}: {format_num(self.expected_false_positives, language_key, 1)} "
-            f"{t('expected_hits', 'statistisch erwartete Zufallstreffer')} |z*| >= 2.5; "
-            f"{t('fdr_confirmed', 'FDR-bestätigt')} (q=0.05): "
-            f"{sum(len(v) for v in self.fdr_flagged.values())} {t('cells', 'Zellen')}"
+            f"{t('multiplicity')}: {format_num(self.expected_false_positives, language_key, 1)} "
+            f"{t('expected_hits')} |z*| >= 2.5; "
+            f"{t('fdr_confirmed')} (q=0.05): "
+            f"{sum(len(v) for v in self.fdr_flagged.values())} {t('cells')}"
         )
         if self.dimensions:
             lines.append("-" * 72)
@@ -532,14 +602,14 @@ class StyleFingerprint:
                 )
                 flagged = dim.get("flagged", [])
                 lines.append(
-                    f"{t('dimension', 'Dimension')} {dim['index']} "
-                    f"({format_num(dim['variance'] * 100, language_key, 0)} % {t('variance', 'Varianz')}): "
+                    f"{t('dimension')} {dim['index']} "
+                    f"({format_num(dim['variance'] * 100, language_key, 0)} % {t('variance')}): "
                     f"{pos_text}  ⇅  {neg_text}"
                 )
                 if flagged:
                     lines.append(
-                        f"    {t('flagged', 'auffällig')}: "
-                        f"{t('chapter', 'Kapitel')} {', '.join(map(str, flagged))}"
+                        f"    {t('flagged')}: "
+                        f"{t('chapter')} {', '.join(map(str, flagged))}"
                     )
         if self.redundant_features:
             field_labels = {f: label_key for f, label_key, _u in FEATURES}
@@ -549,7 +619,7 @@ class StyleFingerprint:
                 f"({format_num(p['rho'], language_key, 2, signed=True)})"
                 for p in self.redundant_features[:4]
             )
-            lines.append(f"{t('redundant', 'Redundante Merkmale')} (|\u03c1| >= 0.8): {redundant}")
+            lines.append(f"{t('redundant')} (|\u03c1| >= 0.8): {redundant}")
         lines.append("=" * 72)
         field_labels = {f: label_key for f, label_key, _u in FEATURES}
         for chapter_num, mean_abs in self.top_deviants(5):
@@ -559,7 +629,7 @@ class StyleFingerprint:
                 for k, z in sorted(dev.items(), key=lambda kv: abs(kv[1]), reverse=True)[:4]
             )
             lines.append(
-                f"{t('chapter', 'Kapitel')} {chapter_num:>2}: Ø|z*| {format_num(mean_abs, language_key, 2)} – {named}"
+                f"{t('chapter')} {chapter_num:>2}: Ø|z*| {format_num(mean_abs, language_key, 2)} – {named}"
             )
         return "\n".join(lines)
 

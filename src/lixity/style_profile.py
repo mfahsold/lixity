@@ -12,10 +12,10 @@ from .language import compile_pattern, resolve_language
 from .markdown_parser import strip_inline_markup
 from .models import CorpusConfig
 
-TENSE_PRESENT = "Präsens"
-TENSE_PAST = "Präteritum"
-TENSE_MIXED = "Gemischt"
-TENSE_NEUTRAL = "Neutral"
+TENSE_PRESENT = "present"
+TENSE_PAST = "past"
+TENSE_MIXED = "mixed"
+TENSE_NEUTRAL = "neutral"
 
 
 def dominance_from_hits(present: int, past: int, neutral_max_hits: int = 1) -> str:
@@ -28,8 +28,6 @@ def dominance_from_hits(present: int, past: int, neutral_max_hits: int = 1) -> s
     if ratio < 0.67:
         return TENSE_PAST
     return TENSE_MIXED
-
-
 
 
 @dataclass
@@ -64,6 +62,7 @@ class ParagraphProfile:
         if self.start_line == self.end_line:
             return f"Z. {self.start_line}"
         return f"Z. {self.start_line}–{self.end_line}"
+
 
 @dataclass
 class ChapterProfile:

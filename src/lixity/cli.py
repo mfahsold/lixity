@@ -34,6 +34,68 @@ _META = {
     "schema_version": SCHEMA_VERSION,
 }
 
+# User-facing CLI messages: English is the engine default, German via
+# LIXITY_LANG=de (the book project uses this for its German control UI).
+CLI_TEXTS: dict[str, dict[str, str]] = {
+    "en": {
+        "about_title": "lixity {version} – quantitative text linguistics & stylometry",
+        "about_languages": "Languages: {languages}",
+        "about_features": "Features ({count}):",
+        "about_heuristics": (
+            "Heuristics: z_mild={z_mild}, z_strong={z_strong}, FDR q={fdr_q}, "
+            "min_chapters={min_chapters}, dimensions={n_dimensions}"
+        ),
+        "about_license": "License: {license}",
+        "err_prefix": "[error]",
+        "err_shell": "Unknown shell: {shell} (bash|zsh)",
+        "err_file": "File not readable: {file} ({exc})",
+        "build_workspace": "Workspace: {root}",
+        "build_manuscript": "Manuscript: {file} (language: {language})",
+        "state_written": "written",
+        "state_unchanged": "unchanged",
+        "build_dry_run": (
+            "Dry run: {changed} to write, {unchanged} unchanged – no files changed."
+        ),
+        "build_done": "Done: {changed} written, {unchanged} unchanged · nda/ ready.",
+        "dashboard_written": "Dashboard written: {output}",
+        "dashboard_unchanged": "Dashboard unchanged: {output}",
+    },
+    "de": {
+        "about_title": "lixity {version} – quantitative Textlinguistik & Stilometrie",
+        "about_languages": "Sprachen: {languages}",
+        "about_features": "Merkmale ({count}):",
+        "about_heuristics": (
+            "Heuristiken: z_mild={z_mild}, z_strong={z_strong}, FDR q={fdr_q}, "
+            "min_chapters={min_chapters}, Dimensionen={n_dimensions}"
+        ),
+        "about_license": "Lizenz: {license}",
+        "err_prefix": "[Fehler]",
+        "err_shell": "Unbekannte Shell: {shell} (bash|zsh)",
+        "err_file": "Datei nicht lesbar: {file} ({exc})",
+        "build_workspace": "Workspace: {root}",
+        "build_manuscript": "Manuskript: {file} (Sprache: {language})",
+        "state_written": "geschrieben",
+        "state_unchanged": "unverändert",
+        "build_dry_run": (
+            "Dry-Run: {changed} zu schreiben, {unchanged} unverändert – keine Dateien geändert."
+        ),
+        "build_done": "Fertig: {changed} geschrieben, {unchanged} unverändert · nda/ bereit.",
+        "dashboard_written": "Dashboard geschrieben: {output}",
+        "dashboard_unchanged": "Dashboard unverändert: {output}",
+    },
+}
+
+
+def _lang() -> str:
+    value = os.environ.get("LIXITY_LANG", "en").strip().lower()
+    return value if value in CLI_TEXTS else "en"
+
+
+def _m(key: str, **fmt: object) -> str:
+    pack = CLI_TEXTS[_lang()]
+    text = pack.get(key) or CLI_TEXTS["en"].get(key, key)
+    return text.format(**fmt) if fmt else text
+
 _BASH_COMPLETION = """# bash completion for lixity – source this file or add it to bash_completion.d/
 _lixity_complete() {
     local cur prev
@@ -93,19 +155,23 @@ def _print_about_text() -> None:
     from .api import about
 
     data = about()
-    print(f"lixity {data['meta']['version']} – quantitative Textlinguistik & Stilometrie")
-    print(f"Sprachen: {', '.join(data['languages'])}")
-    print(f"Merkmale ({len(data['features'])}):")
+    print(_m("about_title", version=data["meta"]["version"]))
+    print(_m("about_languages", languages=", ".join(data["languages"])))
+    print(_m("about_features", count=len(data["features"])))
     for feat in data["features"]:
         print(f"  {feat['field']:<24} [{feat['unit']}]")
     heuristics = data["heuristics"]
     print(
-        "Heuristiken: "
-        f"z_mild={heuristics['z_mild']}, z_strong={heuristics['z_strong']}, "
-        f"FDR q={heuristics['fdr_q']}, min_chapters={heuristics['min_chapters']}, "
-        f"Dimensionen={heuristics['n_dimensions']}"
+        _m(
+            "about_heuristics",
+            z_mild=heuristics["z_mild"],
+            z_strong=heuristics["z_strong"],
+            fdr_q=heuristics["fdr_q"],
+            min_chapters=heuristics["min_chapters"],
+            n_dimensions=heuristics["n_dimensions"],
+        )
     )
-    print(f"Lizenz: {data['license']}")
+    print(_m("about_license", license=data["license"]))
 
 
 def _cmd_build(args) -> int:
@@ -113,7 +179,7 @@ def _cmd_build(args) -> int:
     try:
         workspace = discover(explicit=args.file)
     except (FileNotFoundError, ValueError) as exc:
-        print(f"[Fehler] {exc}", file=sys.stderr)
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
 
     text = workspace.read_manuscript()
@@ -149,7 +215,7 @@ def _cmd_build(args) -> int:
         )
         + "\n",
         f"{workspace.slug}_report.md": ReportFormatter.format_markdown_report(
-            metrics, texts=resolved.labels, language_key=resolved.key
+            metrics, labels=resolved.labels, language_key=resolved.key
         ),
         f"{workspace.slug}_dashboard.html": render_dashboard(
             chapters,
@@ -163,8 +229,14 @@ def _cmd_build(args) -> int:
         ),
     }
 
-    print(f"Workspace: {workspace.root}")
-    print(f"Manuskript: {os.path.basename(workspace.manuscript)} (Sprache: {resolved.key})")
+    print(_m("build_workspace", root=workspace.root))
+    print(
+        _m(
+            "build_manuscript",
+            file=os.path.basename(workspace.manuscript),
+            language=resolved.key,
+        )
+    )
     if not args.dry_run:
         workspace.ensure_layout()
     changed = 0
@@ -172,13 +244,13 @@ def _cmd_build(args) -> int:
         is_changed = workspace.publish(name, content, dry_run=args.dry_run)
         changed += is_changed
         prefix = "(dry-run) " if args.dry_run else ""
-        state = "geschrieben" if is_changed else "unverändert"
+        state = _m("state_written") if is_changed else _m("state_unchanged")
         print(f"  {prefix}{state:<13} exports/{name}")
     unchanged = len(artifacts) - changed
     if args.dry_run:
-        print(f"Dry-Run: {changed} zu schreiben, {unchanged} unverändert – keine Dateien geändert.")
+        print(_m("build_dry_run", changed=changed, unchanged=unchanged))
     else:
-        print(f"Fertig: {changed} geschrieben, {unchanged} unverändert · nda/ bereit.")
+        print(_m("build_done", changed=changed, unchanged=unchanged))
     return EXIT_OK
 
 
@@ -227,7 +299,7 @@ def main(argv=None):
         if shell == "zsh":
             sys.stdout.write(_ZSH_COMPLETION)
             return EXIT_OK
-        print(f"[Fehler] Unbekannte Shell: {args.shell} (bash|zsh)", file=sys.stderr)
+        print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
 
     if args.command == "about":
@@ -241,7 +313,7 @@ def main(argv=None):
         with open(args.file, encoding="utf-8") as f:
             text = f.read()
     except OSError as exc:
-        print(f"[Fehler] Datei nicht lesbar: {args.file} ({exc})", file=sys.stderr)
+        print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
 
     config = CorpusConfig(language=args.language)
@@ -255,7 +327,7 @@ def main(argv=None):
             print(_json(payload))
         else:
             ReportFormatter.print_rich_report(
-                metrics, texts=resolved.labels, language_key=resolved.key
+                metrics, labels=resolved.labels, language_key=resolved.key
             )
         return EXIT_OK
 
@@ -293,8 +365,9 @@ def main(argv=None):
     )
     output = args.output or "lixity-dashboard.html"
     changed = FileUtils.atomic_write_if_changed(output, html)
-    state = "written" if changed else "unchanged"
-    print(f"Dashboard {state}: {output}")
+    print(
+        _m("dashboard_written" if changed else "dashboard_unchanged", output=output)
+    )
     return EXIT_OK
 
 

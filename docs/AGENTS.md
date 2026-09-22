@@ -27,21 +27,26 @@ from that style, controlled for measurement noise and multiple testing.
 
 - `--language auto|de|en|fr|es|it|pt|nl|generic` – `auto` detects via function words.
 - Exit codes: `0` success, `1` file/processing error, `2` usage error (argparse).
-  Errors go to stderr as `[Fehler] …` lines; stdout carries only the payload.
+  Errors go to stderr as `[error] …` lines (`LIXITY_LANG=de` switches the
+  user-facing messages to German); stdout carries only the payload.
+- Report language: English by default, German via `LIXITY_LANG=de`.
 
 ## 3. JSON contracts
 
-### 3.1 `analyze --json` (schema_version 1)
+### 3.1 `analyze --json` (schema_version 2)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.6.1", "schema_version": 1, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.7.0", "schema_version": 2, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",
              "staccato_pct": 38.5, "chapters": [ … ]}}
 ```
 
-`metrics.chapters[]` carries per chapter, among others:
+Tense values are **language-neutral**: `dominance` (chapters) and `dominant`
+(paragraphs) are one of `present`, `past`, `mixed`, `neutral` – display labels
+come from the UI label packs. `metrics.chapters[]` carries per chapter, among
+these:
 
 - `words`, `sentences`, `asl`, `dialog_pct`, `ttr`, `guiraud_r`, `hd_d`,
 - style features: `staccato_pct`, `kaskade_pct`, `sentence_cv`,

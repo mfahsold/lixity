@@ -7,7 +7,8 @@ chapter metrics, tense profiles, and synchronization reports.
 from pydantic import BaseModel, Field
 
 # Version of the machine-readable JSON contracts (analyze/profile).
-SCHEMA_VERSION = 1
+# v2: tense values are language-neutral (present/past/mixed/neutral).
+SCHEMA_VERSION = 2
 
 
 class CorpusConfig(BaseModel):
@@ -121,7 +122,8 @@ class ChapterMetrics(BaseModel):
     )
     filter_verbs: int = Field(default=0, description="Häufigkeit von Perzeptionsfiltern.")
     dominance: str = Field(
-        default="Gemischt", description="Tempus-Tendenz (kanonisch: Präsens/Präteritum/Gemischt)."
+        default="mixed",
+        description="Tempus-Tendenz (kanonisch: present/past/mixed/neutral).",
     )
     signal_matches: dict[str, int] = Field(
         default_factory=dict, description="Generische Fundstellen aller Signalwörter."

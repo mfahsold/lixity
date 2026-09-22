@@ -43,7 +43,7 @@ class TestApiFacade(unittest.TestCase):
 
     def test_profile_returns_meta_chapters_paragraphs(self):
         result = api.profile(SAMPLE, language="de")
-        self.assertEqual(result["meta"]["schema_version"], 1)
+        self.assertEqual(result["meta"]["schema_version"], 2)
         self.assertTrue(result["chapters"])
         self.assertTrue(result["paragraphs"])
         self.assertNotIn("text", result["paragraphs"][0])
@@ -109,6 +109,24 @@ class TestCliAgentSurface(unittest.TestCase):
         self.assertEqual(payload["meta"]["tool"], "lixity")
         self.assertIn("languages", payload)
         self.assertIn("features", payload)
+
+    def test_cli_messages_follow_lixity_lang(self):
+        import io
+        from contextlib import redirect_stdout
+
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            self.assertEqual(main(["about"]), 0)
+        self.assertIn("Languages:", buffer.getvalue())
+
+        os.environ["LIXITY_LANG"] = "de"
+        try:
+            buffer = io.StringIO()
+            with redirect_stdout(buffer):
+                self.assertEqual(main(["about"]), 0)
+            self.assertIn("Sprachen:", buffer.getvalue())
+        finally:
+            os.environ.pop("LIXITY_LANG", None)
 
     def test_cli_exit_codes(self):
         self.assertEqual(self._run("analyze"), 0)

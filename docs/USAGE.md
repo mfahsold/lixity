@@ -32,6 +32,15 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 .venv/bin/python -m unittest discover -s tests -v
 ```
 
+## Report language
+
+Reports and CLI messages are **English by default**; set `LIXITY_LANG=de` for
+German (the Rich report, the Markdown report, the style-reference text and the
+build/dashboard messages follow it). Metric labels and feature units are
+localised for `de` and `en`; other languages fall back to English. Project
+texts (reference corridors, assessments) are supplied by the calling project
+via the `texts` parameter and override single keys.
+
 ## Quick start
 
 ```bash
@@ -98,9 +107,9 @@ Emits paragraph-level tense and style profiles as JSON:
 - `paragraphs[]` – the same fields per paragraph plus `severity`, `mixed`,
   `switch`, `minority_ratio`, line anchors (`start_line`/`end_line`) and style
   densities (`filter_density`, `modal_density`, `nominal_density`,
-  `passive_density` per 1,000 words). `dominant` is one of `Präsens`,
-  `Präteritum`, `Gemischt`, `Neutral` (the display labels of the active
-  language profile; the dashboard maps them to its own label packs).
+  `passive_density` per 1,000 words). `dominant` is language-neutral:
+  `present`, `past`, `mixed` or `neutral`; the dashboard and reports map these
+  values to the display labels of the active language (Präsens, Present, …).
 
 Tense classification is a transparent heuristic, not a black box: curated
 high-frequency verb forms are counted per paragraph. A minority tense share of

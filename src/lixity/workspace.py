@@ -131,7 +131,7 @@ def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
     if explicit:
         path = os.path.abspath(explicit)
         if not os.path.isfile(path):
-            raise FileNotFoundError(f"Manuskript nicht gefunden: {path}")
+            raise FileNotFoundError(f"Manuscript not found: {path}")
         return Workspace(root=os.path.dirname(path), manuscript=path)
 
     base = os.path.abspath(root or os.getcwd())
@@ -151,8 +151,8 @@ def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
         return Workspace(root=base, manuscript=markdown[0])
     if not markdown:
         raise FileNotFoundError(
-            f"Kein Manuskript in {base} gefunden (erwartet: "
-            f"{os.path.basename(base)}.md, manuscript.md oder genau eine .md-Datei)."
+            f"No manuscript found in {base} (expected: "
+            f"{os.path.basename(base)}.md, manuscript.md or exactly one .md file)."
         )
     names = ", ".join(os.path.basename(path) for path in markdown)
-    raise ValueError(f"Mehrere Manuskripte in {base}: {names} – bitte explizit angeben.")
+    raise ValueError(f"Multiple manuscripts in {base}: {names} – please specify explicitly.")

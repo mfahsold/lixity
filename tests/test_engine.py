@@ -238,11 +238,15 @@ class TestReportFormatter(unittest.TestCase):
             "Ich koche heute Abend. Der Kater ist endlich weg. »Kommst du vorbei?«, fragte Ralf.\n"
         )
 
-    def test_markdown_formatter(self):
+    def test_markdown_formatter_defaults_to_english(self):
         md = ReportFormatter.format_markdown_report(self.metrics)
+        self.assertIn("### 1.1 Corpus metrics", md)
+        self.assertIn("### 1.2 Sentence-length architecture", md)
+        self.assertIn("Average sentence length (ASL)", md)
+
+    def test_markdown_formatter_german_pack(self):
+        md = ReportFormatter.format_markdown_report(self.metrics, language_key="de")
         self.assertIn("### 1.1 Gesamtkorpus-Kennzahlen", md)
-        self.assertIn("### 1.2 Satzlängen-Architektur", md)
-        self.assertIn("### 1.3 Interpunktion", md)
         self.assertIn("Mittlere Satzlänge (ASL)", md)
 
     def test_punctuation_rows_use_their_own_texts(self):
@@ -250,12 +254,40 @@ class TestReportFormatter(unittest.TestCase):
         md = ReportFormatter.format_markdown_report(
             self.metrics,
             texts={"punct_Doppelpunkte": "COLON_TEXT", "punct_Semikolons": "SEMI_TEXT"},
+            language_key="de",
         )
         semi_row = next(line for line in md.splitlines() if "Semikolons" in line)
         colon_row = next(line for line in md.splitlines() if "Doppelpunkte" in line)
         self.assertIn("SEMI_TEXT", semi_row)
         self.assertNotIn("COLON_TEXT", semi_row)
         self.assertIn("COLON_TEXT", colon_row)
+
+    def test_front_matter_with_leading_comment_is_not_a_chapter(self):
+        md = (
+            "<!-- Sample: provenance notice -->\n\n"
+            "# Book Title\n\n*Author*\n\n"
+            "## Kapitel 1\n\nIch trinke Kaffee. Ich gehe zum Fenster.\n"
+        )
+        metrics = CorpusAnalyzer().analyze_text(md)
+        self.assertEqual(len(metrics.chapters), 1)
+        self.assertEqual(metrics.chapters[0].title, "Kapitel 1")
+
+    def test_rich_report_reference_columns_are_opt_in(self):
+        from io import StringIO
+
+        from rich.console import Console
+
+        default_console = Console(file=StringIO(), width=200)
+        ReportFormatter.print_rich_report(self.metrics, console=default_console)
+        self.assertNotIn("Reference corridor", default_console.file.getvalue())
+
+        project_console = Console(file=StringIO(), width=200)
+        ReportFormatter.print_rich_report(
+            self.metrics,
+            console=project_console,
+            texts={"t1_asl_ref": "8.0 – 11.5", "t1_asl_note": "concise"},
+        )
+        self.assertIn("Reference corridor", project_console.file.getvalue())
 
     def test_json_formatter(self):
         json_str = ReportFormatter.to_json(self.metrics)

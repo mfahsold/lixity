@@ -626,10 +626,13 @@ class CorpusAnalyzer:
         raw_chapters = re.split(self.config.chapter_regex, main_text)
 
         # Front matter (everything before the first chapter) is not a chapter:
-        # If the first section starts with an H1 (book title/front matter), it is
-        # skipped – otherwise the chapter numbering would shift by one.
-        if raw_chapters and raw_chapters[0].strip().startswith("# "):
-            raw_chapters = raw_chapters[1:]
+        # if the first section starts with an H1 (book title/front matter) or
+        # contains only editorial comments, it is skipped – otherwise the
+        # chapter numbering would shift by one.
+        if raw_chapters:
+            first_clean = re.sub(r"<!--.*?-->", "", raw_chapters[0], flags=re.DOTALL).strip()
+            if first_clean.startswith("# ") or not first_clean:
+                raw_chapters = raw_chapters[1:]
 
         chapters: list[ChapterMetrics] = []
         chapter_tokens: list[list[str]] = []

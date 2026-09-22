@@ -56,28 +56,17 @@ def help_term(labels: Mapping[str, str] | None, key: str, text: str) -> str:
     )
 
 
-# Canonical tense values (style_profile.TENSE_*) -> label keys.
-_TENSE_LABEL_KEYS = {
-    TENSE_PRESENT: "present",
-    TENSE_PAST: "past",
-    TENSE_MIXED: "mixed",
-    TENSE_NEUTRAL: "neutral",
-}
+# Canonical tense values (style_profile.TENSE_*) are the label keys themselves.
+_TENSE_CLASSES = {TENSE_PRESENT, TENSE_PAST, TENSE_MIXED, TENSE_NEUTRAL}
 
 
 def tense_class(dominant: str) -> str:
-    if dominant == TENSE_PRESENT:
-        return "tense-present"
-    if dominant == TENSE_PAST:
-        return "tense-past"
-    if dominant == TENSE_MIXED:
-        return "tense-mixed"
-    return "tense-neutral"
+    return f"tense-{dominant}" if dominant in _TENSE_CLASSES else "tense-neutral"
 
 
 def tense_label(labels: Mapping[str, str] | None, dominant: str) -> str:
-    """Localised tense name (dominant holds canonical values, labels use keys)."""
-    return label(labels, _TENSE_LABEL_KEYS.get(dominant, dominant))
+    """Localised tense name (dominant holds the canonical neutral value)."""
+    return label(labels, dominant)
 
 
 def line_label(labels: Mapping[str, str] | None, profile: Any) -> str:

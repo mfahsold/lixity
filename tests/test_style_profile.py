@@ -149,7 +149,7 @@ class TestParagraphProfiler(unittest.TestCase):
     def test_neutral_without_markers(self):
         md = "## Kapitel 1\n\nDer Kater, die Kartons, der Regen.\n"
         paragraphs, _ = self._profile(md)
-        self.assertEqual(paragraphs[0].dominant, "Neutral")
+        self.assertEqual(paragraphs[0].dominant, TENSE_NEUTRAL)
         self.assertFalse(paragraphs[0].mixed)
         self.assertEqual(paragraphs[0].severity, 0)
 
@@ -193,7 +193,7 @@ class TestParagraphProfiler(unittest.TestCase):
         md = "## Kapitel 1\n\nIch trinke Kaffee. Ich ging zum Fenster.\n"
         config = CorpusConfig(language="generic", chapter_regex=r"(?m)^##\s+")
         paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
-        self.assertEqual(paragraphs[0].dominant, "Neutral")
+        self.assertEqual(paragraphs[0].dominant, TENSE_NEUTRAL)
         self.assertEqual(paragraphs[0].present_hits, 0)
         self.assertEqual(paragraphs[0].past_hits, 0)
         self.assertGreater(paragraphs[0].words, 0)
