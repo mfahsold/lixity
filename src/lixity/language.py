@@ -18,6 +18,7 @@ from .language_data import (
     METRIC_LABELS,
     PROFILE_DATA,
     STYLE_DATA,
+    UI_LABELS,
 )
 
 
@@ -117,6 +118,7 @@ def _build_profiles() -> dict[str, LanguageProfile]:
                 **HELP_TEXTS.get(key, HELP_TEXTS["en"]),
                 **GROUP_LABELS.get(key, GROUP_LABELS["en"]),
                 **LAYER_LABELS.get(key, LAYER_LABELS["en"]),
+                **UI_LABELS.get(key, UI_LABELS["en"]),
             },
             lexicon=LEXICON.get(key, {}),
             function_words=_function_words(key),

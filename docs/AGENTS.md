@@ -34,7 +34,7 @@ from that style, controlled for measurement noise and multiple testing.
 ### 3.1 `analyze --json` (schema_version 1)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.3.0", "schema_version": 1, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.3.1", "schema_version": 1, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",

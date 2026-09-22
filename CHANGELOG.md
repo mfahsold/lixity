@@ -5,6 +5,19 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.1] – 2026-09-22
+
+### Added
+
+- Dashboard control panel shows a **manuscript-format hint**
+  (`Markdown (.md), UTF-8 · chapters as “## Title”`), localized in all seven
+  languages.
+
+### Changed
+
+- `docs/USAGE.md`: clearer manuscript-format section plus a step-by-step
+  operating flow for the dashboard (KPIs → heatmap → style layer → paragraph).
+
 ## [1.3.0] – 2026-09-22
 
 ### Added

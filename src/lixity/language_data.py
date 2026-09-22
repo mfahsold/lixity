@@ -3790,3 +3790,14 @@ LAYER_LABELS = {
         "layer_hint_passive": "Oranje = passiefclusters, blauw = actieve, directe zinnen.",
     },
 }
+
+# Cross-cutting UI strings (load hints, onboarding).
+UI_LABELS = {
+    "de": {"load_hint": "Markdown (.md), UTF-8 · Kapitel als »## Titel«"},
+    "en": {"load_hint": "Markdown (.md), UTF-8 · chapters as “## Title”"},
+    "fr": {"load_hint": "Markdown (.md), UTF-8 · chapitres en « ## Titre »"},
+    "es": {"load_hint": "Markdown (.md), UTF-8 · capítulos como «## Título»"},
+    "it": {"load_hint": "Markdown (.md), UTF-8 · capitoli come «## Titolo»"},
+    "pt": {"load_hint": "Markdown (.md), UTF-8 · capítulos como «## Título»"},
+    "nl": {"load_hint": "Markdown (.md), UTF-8 · hoofdstukken als »## Titel«"},
+}

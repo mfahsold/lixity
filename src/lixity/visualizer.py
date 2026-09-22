@@ -205,7 +205,9 @@ def render_dashboard(
             parts.append(
                 f'<span class="ctl-note">{L("current_manuscript")}: {esc(manuscript_name)}</span>'
             )
-        parts.append("</div></div>")
+        parts.append("</div>")
+        parts.append(f'<p class="ctl-note">{L("load_hint")}</p>')
+        parts.append("</div>")
 
         # Settings (language, title)
         parts.append('<div class="ctl-group">')

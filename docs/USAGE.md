@@ -283,17 +283,40 @@ info = api.about()
 | **Sentence classes** | staccato ≤ 6, medium 7–15, long 16–25, complex > 25 words | describes the rhythm architecture |
 | **Tense severity** | 0 = neutral, 1 = watch, 2 = conspicuous, 3 = strong friction | flags switches and mixtures for review |
 
-## Markdown conventions
+## Manuscript format & how to operate lixity
 
-- Chapters are level-2 headings: `## Title` (configurable via
-  `CorpusConfig.chapter_regex`).
-- The appendix starts at `## Anmerkungen und Literaturverzeichnis`
-  (configurable via `CorpusConfig.appendix_marker`); it is excluded from prose
-  metrics and profiling.
-- HTML comments (`<!-- ... -->`) are ignored, which makes them a safe place for
-  editorial notes.
-- Line anchors in reports and dashboards refer to lines in the source file, so
-  findings stay navigable in the editor.
+**Format (Markdown, UTF-8):**
+
+- **Chapters** are level-2 headings: `## Title`. Everything before the first
+  `##` is front matter and is not analysed. Both are configurable
+  (`CorpusConfig.chapter_regex`).
+- **Appendix** starts at `## Anmerkungen und Literaturverzeichnis`
+  (`CorpusConfig.appendix_marker`); it is excluded from prose metrics.
+- **Paragraphs** are separated by blank lines. Hard line breaks inside a
+  paragraph are joined automatically – no manual reformatting needed.
+- **Dialogue** in typographic quotes (`»…«`, `„…“`, `“…”`) feeds the dialogue
+  ratio.
+- **Work markers** are invisible HTML comments
+  (`<!-- LIXITY-MARKER id="…" kind="…" note="…" -->`) placed directly above the
+  paragraph. They never appear in exports and move with the paragraph when
+  editing. Other HTML comments are ignored by the analysis.
+- Keep the file name stable: the dashboard derives its title from it.
+
+**Operating flow (dashboard):**
+
+1. `lixity dashboard manuscript.md -o exports/dashboard.html` (or `lixity build`
+   for the full artifact set), open the file in a browser.
+2. Read the KPI groups (Scope · Rhythm · Language · Vocabulary · Style), then
+   the heatmap: click a cell to jump to the chapter and activate the matching
+   style layer.
+3. Use the style layer (toolbar) to see *where* a dimension deviates: blue =
+   below, orange = above the chapter mean; the legend explains what to look
+   for, the tooltip gives the exact value.
+4. Click a paragraph strip to read the passage with line anchor, tense and
+   stats; with the control server, markers can be set right there.
+
+Line anchors in reports and dashboards refer to lines in the source file, so
+findings stay navigable in the editor.
 
 ## Library
 
