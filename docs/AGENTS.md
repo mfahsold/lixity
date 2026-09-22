@@ -19,6 +19,8 @@ from that style, controlled for measurement noise and multiple testing.
 |---|---|---|
 | `lixity analyze FILE --json` | corpus metrics + per-chapter style features | JSON (meta + metrics) |
 | `lixity profile FILE` | paragraph-accurate tense/style profiles | JSON (meta + chapters + paragraphs) |
+| `lixity dialogue FILE [--json]` | dialogue turn structure (turns, lengths, per chapter) | text / JSON |
+| `lixity characters FILE --names A,B [--json]` | character presence per chapter | text / JSON |
 | `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR) | JSON (schema v2) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard | file path |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` | artifact list |
@@ -165,6 +167,8 @@ from lixity import api
 metrics = api.analyze(text, language="auto")          # -> {"meta", "metrics"}
 profiles = api.profile(text, language="de")           # -> {"meta", "chapters", "paragraphs"}
 reference = api.fingerprint(text, language="de")      # -> style reference (schema v2)
+turns = api.dialogue(text, language="de")             # -> {"meta", "dialogue"}
+cast = api.characters(text, ["Anna", "Ralf"], language="de")  # -> {"meta", "chapters", "figures"}
 html = api.dashboard(text, language="de", title="…")  # -> self-contained HTML string
 marker_list = api.markers(text)                       # -> list of active work markers
 new_text, m = api.add_marker(text, kind="pruefen", note="Verify tense", line=42)

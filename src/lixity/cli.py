@@ -5,6 +5,9 @@ import os
 import sys
 
 import orjson
+from rich import box
+from rich.console import Console
+from rich.table import Table
 
 from . import __version__
 from .analyzer import CorpusAnalyzer
@@ -53,12 +56,28 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "build_manuscript": "Manuscript: {file} (language: {language})",
         "state_written": "written",
         "state_unchanged": "unchanged",
-        "build_dry_run": (
-            "Dry run: {changed} to write, {unchanged} unchanged – no files changed."
-        ),
+        "build_dry_run": ("Dry run: {changed} to write, {unchanged} unchanged – no files changed."),
         "build_done": "Done: {changed} written, {unchanged} unchanged · nda/ ready.",
         "dashboard_written": "Dashboard written: {output}",
         "dashboard_unchanged": "Dashboard unchanged: {output}",
+        "err_no_names": "No figure names given (use --name or --names).",
+        "dlg_metric": "Dialogue metric",
+        "dlg_value": "Value",
+        "dlg_turns": "Turns (quoted segments)",
+        "dlg_dialogue_pct": "Dialogue share",
+        "dlg_avg_turn": "Average turn (words)",
+        "dlg_median_turn": "Median turn (words)",
+        "dlg_longest_turn": "Longest turn (words)",
+        "dlg_turns_per_1000": "Turns per 1,000 words",
+        "dlg_paragraph_pct": "Dialogue paragraphs",
+        "dlg_chapter": "Ch.",
+        "dlg_title": "Title",
+        "chr_name": "Figure",
+        "chr_mentions": "Mentions",
+        "chr_chapters": "Chapters present",
+        "chr_span": "Chapter span",
+        "chr_gap": "Longest gap",
+        "chr_share": "Presence",
     },
     "de": {
         "about_title": "lixity {version} – quantitative Textlinguistik & Stilometrie",
@@ -82,6 +101,24 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "build_done": "Fertig: {changed} geschrieben, {unchanged} unverändert · nda/ bereit.",
         "dashboard_written": "Dashboard geschrieben: {output}",
         "dashboard_unchanged": "Dashboard unverändert: {output}",
+        "err_no_names": "Keine Figurennamen angegeben (--name oder --names).",
+        "dlg_metric": "Dialogmetrik",
+        "dlg_value": "Wert",
+        "dlg_turns": "Turns (Redeabschnitte)",
+        "dlg_dialogue_pct": "Dialoganteil",
+        "dlg_avg_turn": "Ø Turn (Wörter)",
+        "dlg_median_turn": "Median Turn (Wörter)",
+        "dlg_longest_turn": "Längster Turn (Wörter)",
+        "dlg_turns_per_1000": "Turns je 1.000 Wörter",
+        "dlg_paragraph_pct": "Dialogabsätze",
+        "dlg_chapter": "Kap.",
+        "dlg_title": "Titel",
+        "chr_name": "Figur",
+        "chr_mentions": "Erwähnungen",
+        "chr_chapters": "Kapitel anwesend",
+        "chr_span": "Kapitelspanne",
+        "chr_gap": "Größte Lücke",
+        "chr_share": "Präsenz",
     },
 }
 
@@ -96,13 +133,14 @@ def _m(key: str, **fmt: object) -> str:
     text = pack.get(key) or CLI_TEXTS["en"].get(key, key)
     return text.format(**fmt) if fmt else text
 
+
 _BASH_COMPLETION = """# bash completion for lixity – source this file or add it to bash_completion.d/
 _lixity_complete() {
     local cur prev
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dashboard style build about completion"
+    local cmds="analyze profile dialogue characters dashboard style build about completion"
     local opts="--language --json --output --help"
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$cmds" -- "$cur") )
@@ -172,6 +210,115 @@ def _print_about_text() -> None:
         )
     )
     print(_m("about_license", license=data["license"]))
+
+
+def _cmd_dialogue(args) -> int:
+    """Dialogue turn structure as a Rich table or JSON."""
+    try:
+        with open(args.file, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as exc:
+        print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
+        return EXIT_ERROR
+
+    from .dialogue import dialogue_report
+
+    config = CorpusConfig(language=args.language)
+    resolved = resolve_language(config, sample_text=text)
+    config = CorpusConfig(language=resolved.key)
+    report = dialogue_report(text, config)
+
+    if args.json:
+        print(_json(_meta_payload(resolved.key, dialogue=report.to_dict()), indent=True))
+        return EXIT_OK
+
+    con = Console()
+    summary = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
+    summary.add_column(_m("dlg_metric"), style="bold white")
+    summary.add_column(_m("dlg_value"), justify="right", style="cyan")
+    for key, value in (
+        ("dlg_turns", str(report.turns)),
+        ("dlg_dialogue_pct", f"{report.dialogue_pct:.1f} %"),
+        ("dlg_avg_turn", f"{report.avg_turn_words:.1f}"),
+        ("dlg_median_turn", f"{report.median_turn_words:.0f}"),
+        ("dlg_longest_turn", str(report.longest_turn_words)),
+        ("dlg_turns_per_1000", f"{report.turns_per_1000:.1f}"),
+        ("dlg_paragraph_pct", f"{report.dialogue_paragraph_pct:.1f} %"),
+    ):
+        summary.add_row(_m(key), value)
+    con.print(summary)
+
+    if report.chapters:
+        table = Table(box=box.SIMPLE, header_style="bold green")
+        table.add_column(_m("dlg_chapter"), justify="right")
+        table.add_column(_m("dlg_title"))
+        table.add_column(_m("dlg_turns"), justify="right")
+        table.add_column(_m("dlg_dialogue_pct"), justify="right")
+        table.add_column(_m("dlg_avg_turn"), justify="right")
+        table.add_column(_m("dlg_longest_turn"), justify="right")
+        for chapter in report.chapters:
+            table.add_row(
+                str(chapter.chapter_num),
+                chapter.title,
+                str(chapter.turns),
+                f"{chapter.dialogue_pct:.1f} %",
+                f"{chapter.avg_turn_words:.1f}",
+                str(chapter.longest_turn_words),
+            )
+        con.print(table)
+    return EXIT_OK
+
+
+def _cmd_characters(args) -> int:
+    """Character presence as a Rich table or JSON."""
+    names: list[str] = list(args.name or [])
+    if args.names:
+        names.extend(part.strip() for part in args.names.split(",") if part.strip())
+    if not names:
+        print(f"{_m('err_prefix')} {_m('err_no_names')}", file=sys.stderr)
+        return EXIT_ERROR
+    try:
+        with open(args.file, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as exc:
+        print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
+        return EXIT_ERROR
+
+    from .characters import presence_report
+
+    config = CorpusConfig(language=args.language)
+    resolved = resolve_language(config, sample_text=text)
+    config = CorpusConfig(language=resolved.key)
+    report = presence_report(text, names, config)
+
+    if args.json:
+        print(_json(_meta_payload(resolved.key, **report), indent=True))
+        return EXIT_OK
+
+    con = Console()
+    table = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
+    table.add_column(_m("chr_name"), style="bold white")
+    table.add_column(_m("chr_mentions"), justify="right", style="cyan")
+    table.add_column(_m("chr_chapters"), justify="right")
+    table.add_column(_m("chr_span"))
+    table.add_column(_m("chr_gap"), justify="right")
+    table.add_column(_m("chr_share"), justify="right")
+    for figure in report["figures"]:
+        span = (
+            f"{figure['first_chapter']}–{figure['last_chapter']}"
+            if figure["first_chapter"]
+            else "–"
+        )
+        table.add_row(
+            figure["name"],
+            str(figure["mentions"]),
+            f"{len(figure['chapters_present'])} / {report['chapters']}",
+            span,
+            str(figure["longest_gap"]),
+            f"{figure['presence_ratio'] * 100:.0f} %",
+        )
+    con.print(table)
+    return EXIT_OK
 
 
 def _cmd_build(args) -> int:
@@ -267,6 +414,8 @@ def main(argv=None):
     for name, help_text in (
         ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
         ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
+        ("dialogue", "Dialogue turn structure (text/JSON)"),
+        ("characters", "Character presence across chapters (text/JSON)"),
         ("style", "Self-calibrated style reference of the manuscript (text/JSON)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
         ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
@@ -285,9 +434,23 @@ def main(argv=None):
             p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
             p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
             continue
+        if name == "characters":
+            p.add_argument("file", help="Markdown manuscript")
+            p.add_argument(
+                "--name",
+                action="append",
+                default=[],
+                help="Figure name or alias pattern (repeatable)",
+            )
+            p.add_argument("--names", help="Comma-separated figure names")
+            p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+            p.add_argument("--json", action="store_true", help="JSON output")
+            continue
         p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
-        p.add_argument("--json", action="store_true", help="JSON output (analyze/profile/style)")
+        p.add_argument(
+            "--json", action="store_true", help="JSON output (analyze/profile/style/dialogue)"
+        )
         p.add_argument("-o", "--output", help="Target file (dashboard)")
     args = parser.parse_args(argv)
 
@@ -308,6 +471,12 @@ def main(argv=None):
 
     if args.command == "build":
         return _cmd_build(args)
+
+    if args.command == "dialogue":
+        return _cmd_dialogue(args)
+
+    if args.command == "characters":
+        return _cmd_characters(args)
 
     try:
         with open(args.file, encoding="utf-8") as f:
@@ -363,9 +532,7 @@ def main(argv=None):
     )
     output = args.output or "lixity-dashboard.html"
     changed = FileUtils.atomic_write_if_changed(output, html)
-    print(
-        _m("dashboard_written" if changed else "dashboard_unchanged", output=output)
-    )
+    print(_m("dashboard_written" if changed else "dashboard_unchanged", output=output))
     return EXIT_OK
 
 

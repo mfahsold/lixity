@@ -6,6 +6,7 @@ tense profiling, self-calibrated style references, work markers, and dashboards.
 
 from __future__ import annotations
 
+from collections.abc import Mapping, Sequence
 from typing import Any
 
 from . import __version__
@@ -86,6 +87,44 @@ def passport(text: str, language: str = "auto", **config_overrides: Any) -> dict
     Alias of :func:`fingerprint` – the style passport as structured data.
     """
     return fingerprint(text, language=language, **config_overrides)
+
+
+def dialogue(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+    """
+    Dialogue and interaction structure: turns (quoted segments), turn lengths
+    (mean/median/longest), turns per 1,000 words, dialogue paragraph share and
+    the per-chapter turn structure. Heuristic: quoted speech via the language
+    profile, no speaker attribution.
+
+    Returns ``{"meta": {...}, "dialogue": {...}}``.
+    """
+    config, resolved = _config_and_language(language, text, **config_overrides)
+    from .dialogue import dialogue_report
+
+    return {
+        "meta": _meta(resolved.key),
+        "dialogue": dialogue_report(text, config).to_dict(),
+    }
+
+
+def characters(
+    text: str,
+    names: Mapping[str, str] | Sequence[str],
+    language: str = "auto",
+    **config_overrides: Any,
+) -> dict[str, Any]:
+    """
+    Character presence across chapters for curated name patterns.
+
+    ``names`` is a sequence of display names or a mapping
+    ``pattern -> display name`` (aliases), e.g. ``{"Matthias|Matze": "Matthias"}``.
+    Returns ``{"meta": {...}, "chapters": n, "figures": [...]}``.
+    """
+    config, resolved = _config_and_language(language, text, **config_overrides)
+    from .characters import presence_report
+
+    report = presence_report(text, names, config)
+    return {"meta": _meta(resolved.key), **report}
 
 
 def dashboard(

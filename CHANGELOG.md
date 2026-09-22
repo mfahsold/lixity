@@ -5,6 +5,19 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **`lixity dialogue`** (and `api.dialogue`): dialogue turn structure — turns
+  (quoted segments), mean/median/longest turn, turns per 1,000 words and the
+  dialogue paragraph share, per chapter and corpus. Heuristic via the language
+  profile's dialogue pattern; no speaker attribution.
+- **`lixity characters`** (and `api.characters`): character presence across
+  chapters for curated names or alias patterns — mentions, chapters present,
+  first/last chapter, longest gap, presence ratio. Appendix and front matter
+  are excluded so chapter numbers match the metrics.
+
 ## [1.8.0] – 2026-09-22
 
 ### Changed (breaking, metric-affecting)

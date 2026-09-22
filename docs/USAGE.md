@@ -122,6 +122,39 @@ the thresholds are injectable via `ProfileThresholds`.
 lixity profile manuscript.md > profile.json
 ```
 
+### `lixity dialogue`
+
+Dialogue and interaction structure: how often speech starts (turns), how long
+turns are and how dialogue is distributed. Heuristic: quoted speech via the
+language profile's dialogue pattern; no speaker attribution.
+
+```bash
+lixity dialogue manuscript.md          # Rich tables (summary + per chapter)
+lixity dialogue manuscript.md --json   # meta + dialogue report
+```
+
+JSON fields: `turns`, `turn_words`, `dialogue_words`, `dialogue_pct`,
+`avg_turn_words`, `median_turn_words`, `longest_turn_words`, `turns_per_1000`,
+`dialogue_paragraph_pct`, `chapters[]` (per chapter: `turns`, `dialogue_pct`,
+`avg_turn_words`, `longest_turn_words`, `dialogue_paragraphs`, `paragraphs`).
+A paragraph counts as dialogue paragraph when at least 50 % of its words sit
+inside quotation marks.
+
+### `lixity characters`
+
+Character presence across chapters for curated names or alias patterns
+(`Matthias|Matze`). Whole-word, case-insensitive matching; appendix and front
+matter are excluded (chapter numbers match the metrics).
+
+```bash
+lixity characters manuscript.md --names "Anna,Ralf"
+lixity characters manuscript.md --name "Matthias|Matze" --name Anna --json
+```
+
+JSON fields: `chapters` (total), `figures[]` with `mentions`,
+`chapters_present`, `first_chapter`, `last_chapter`, `longest_gap`,
+`presence_ratio` and `per_chapter`.
+
 ### `lixity style`
 
 Prints the **style reference** – the self-calibrated house style of the

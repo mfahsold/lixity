@@ -29,6 +29,8 @@ present/past/mixed/neutral) and 2 (style reference).
 
 - `lixity analyze FILE --json` – corpus metrics + per-chapter style features (schema v1)
 - `lixity profile FILE` – paragraph-accurate tense/style profiles
+- `lixity dialogue FILE [--json]` – dialogue turn structure (turns, turn lengths, per chapter)
+- `lixity characters FILE --names A,B [--json]` – character presence per chapter (aliases supported)
 - `lixity style FILE --json` – self-calibrating style reference (schema v2)
 - `lixity dashboard FILE -o ui.html` – single-file interactive HTML dashboard (clickable KPIs, status strip, deviation layer, work markers)
 - `lixity build [FILE] [--dry-run]` – idempotent workspace build into `exports/` (zero writes for unchanged input)

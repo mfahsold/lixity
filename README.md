@@ -41,6 +41,10 @@ foundation of its analysis: **T**TR, **Y**ule's characteristic $K$, and
   correlation and cyclic Jacobi eigendecomposition (standard library only).
 - **Paragraph-accurate tense profiling:** narrative present vs. epic past per
   paragraph, with line anchors and friction severity.
+- **Dialogue & interaction structure:** turns (quoted segments), turn lengths,
+  turns per 1,000 words and dialogue paragraph share — per chapter and corpus.
+- **Character presence:** where each curated figure appears, for how long and
+  how large the gaps are (aliases supported).
 - **Editor-visible work markers:** invisible HTML comments with deterministic
   content-hash IDs and free-text notes, writable from the dashboard or API.
 - **Idempotent workspace build:** `lixity build` publishes a reproducible
@@ -68,6 +72,8 @@ pip install -e .
 lixity analyze manuscript.md            # Rich terminal report (--json for machines)
 lixity profile manuscript.md            # tense continuity, paragraph by paragraph
 lixity style manuscript.md              # self-calibrating style reference (--json: schema v2)
+lixity dialogue manuscript.md            # turn structure (--json for machines)
+lixity characters manuscript.md --names "Anna,Ralf"   # presence per chapter
 lixity dashboard manuscript.md -o exports/dashboard.html
 cd my-novel && lixity build             # idempotent workspace: exports/ + archive
 lixity about                            # languages, features, heuristics
