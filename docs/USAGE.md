@@ -246,28 +246,28 @@ The repository ships a complete, reproducible example in `samples/`:
 
 | Feature | Fontane (median) | Corridor (±2σ) | Draft |
 | :--- | ---: | ---: | ---: |
-| ASL | 21,06 | 14,96 – 27,15 | 20,12 |
-| Staccato share | 16,87 % | 4,03 – 29,71 | 16,67 % |
-| Hypotaxis share | 29,41 % | 13,49 – 45,34 | 29,17 % |
-| Sentence-length CV | 0,80 | 0,60 – 0,99 | 0,68 |
-| Dialogue share | 58,31 % | 26,22 – 90,40 | 43,84 % |
-| Function-word share | 44,91 % | 42,08 – 47,74 | 47,64 % |
-| Perception filters | 0,85 | −0,39 – 2,09 | 0,00 |
-| Modals / passive (per 1,000) | 11,32 / 4,47 | 6,40 – 16,24 / 1,81 – 7,12 | 10,85 / 2,58 |
-| Nominalisations (per 1,000) | 14,77 | 8,34 – 21,20 | 18,09 |
-| Adjectives (per 1,000) | 21,52 | 14,10 – 28,94 | 17,05 |
-| Long words | 11,02 % | 8,53 – 13,51 | 8,62 % |
-| Starter entropy | 5,30 bit | 4,57 – 6,02 | 5,16 |
-| First-person starts | 7,55 % | 1,87 – 13,22 | 5,21 % |
-| Guiraud R | 18,08 | 14,28 – 21,87 | 14,91 |
+| ASL | 15,57 | 10,45 – 20,70 | 15,21 |
+| Staccato share | 31,53 % | 19,78 – 43,27 | 28,35 % |
+| Hypotaxis share | 19,13 % | 5,71 – 32,56 | 15,75 % |
+| Sentence-length CV | 0,87 | 0,71 – 1,04 | 0,83 |
+| Dialogue share | 58,44 % | 26,78 – 90,10 | 43,84 % |
+| Function-word share | 44,98 % | 42,41 – 47,56 | 47,64 % |
+| Perception filters | 0,86 | −0,34 – 2,07 | 0,00 |
+| Modals / passive (per 1,000) | 11,37 / 4,50 | 6,41 – 16,34 / 2,11 – 6,88 | 10,85 / 2,58 |
+| Nominalisations (per 1,000) | 14,94 | 8,63 – 21,25 | 18,09 |
+| Adjectives (per 1,000) | 21,18 | 14,41 – 27,95 | 17,05 |
+| Long words | 20,28 % | 15,52 – 25,04 | 17,09 % |
+| Starter entropy | 5,52 bit | 4,87 – 6,18 | 5,36 |
+| First-person starts | 6,57 % | 1,53 – 11,61 | 4,72 % |
+| Guiraud R | 18,11 | 14,61 – 21,62 | 14,91 |
 | HD-D | 0,9924 | 0,9900 – 0,9948 | 0,9898 |
 
-**15 of 16 features** land inside the corridor; only HD-D misses it by a
-hair (0,9898 vs. 0,9900). Three features (dialogue share, function-word
-share, long words) exist per chapter only — for the single-chapter draft they
-are measured on that chapter. The loop is always the same:
-`build` → write → `analyze` → compare → revise – no external style dogma,
-only the author's own distribution.
+**14 of 16 features** land inside the corridor; the two at its edge are the
+function-word share (+0,08 pp) and HD-D (−0,0002). Three features (dialogue
+share, function-word share, long words) exist per chapter only — for the
+single-chapter draft they are measured on that chapter. The loop is always the
+same: `build` → write → `analyze` → compare → revise – no external style
+dogma, only the author's own distribution.
 
 ## Work markers (editor-visible)
 
