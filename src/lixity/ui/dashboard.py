@@ -71,6 +71,7 @@ def render_dashboard(
     characters: Mapping[str, Any] | None = None,
     pacing: Mapping[str, Any] | None = None,
     motifs: Mapping[str, Any] | None = None,
+    showing: Mapping[str, Any] | None = None,
     title: str = "Manuskript",
     labels: Mapping[str, str] | None = None,
     language_name: str = "",
@@ -81,18 +82,19 @@ def render_dashboard(
     api_base: str = "/api",
     manuscript_name: str = "",
     current_language: str = "auto",
-    language_options: Sequence | None = None,
+    language_options: Sequence[Any] | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
     ``controls=True`` adds the local control panel (buttons/dropdown/NDA),
     which triggers the CLI functions via the UI server (``scripts/ui_server.py``).
-    ``dialogue``/``characters``/``pacing``/``motifs`` add the optional
-    dialogue-structure, character-presence, pacing and motif/repetition panels
-    (see the corresponding modules).
+    ``dialogue``/``characters``/``pacing``/``motifs``/``showing`` add the
+    optional dialogue-structure, character-presence, pacing, motif/repetition
+    and showing/telling panels (see the corresponding modules).
     """
     esc = html.escape
-    L = lambda key: esc(label(labels, key))  # noqa: E731
+    def L(key: str) -> str:
+        return esc(label(labels, key))
 
     def N(value: float, decimals: int = 1, signed: bool = False) -> str:
         return format_num(value, language_key, decimals, signed)
@@ -545,6 +547,33 @@ def render_dashboard(
             parts.append("</tbody></table>")
         parts.append("</section>")
 
+    # --- Showing vs. telling (narrative distance) ---------------------------
+    if showing and showing.get("chapter_list"):
+        parts.append('<section class="panel" id="showing">')
+        parts.append(f"<h2>{L('panel_showing')}</h2>")
+        parts.append('<div class="kpi-row">')
+        parts.append(kpi(N(showing.get("tell_z_mean", 0.0), 2, signed=True), L("show_tell")))
+        parts.append(kpi(N(showing.get("show_z_mean", 0.0), 2, signed=True), L("show_show")))
+        parts.append(kpi(N(showing.get("balance_mean", 0.0), 2, signed=True), L("show_balance")))
+        parts.append("</div>")
+        showing_chapters = showing["chapter_list"]
+        max_abs = max((abs(float(c.get("balance", 0.0))) for c in showing_chapters), default=0.0) or 1.0
+        parts.append('<div class="dist">')
+        for chapter in showing_chapters:
+            num = int(chapter.get("chapter_num", 0))
+            balance = float(chapter.get("balance", 0.0))
+            width = min(100.0, abs(balance) / max_abs * 100.0)
+            parts.append(
+                f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
+                f'title="{esc(chapter.get("title", ""), quote=True)}">'
+                f'<span>{L("chapter")} {num}</span>'
+                f'<span class="bar"><i style="width:{width:.1f}%"></i></span>'
+                f'<span class="val">{N(balance, 2, signed=True)}</span>'
+                f"</div>"
+            )
+        parts.append("</div>")
+        parts.append("</section>")
+
     # --- Style heatmap & passport (self-calibrated house style) -----------
     if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
         parts.append('<section class="panel" id="heatmap">')
@@ -767,7 +796,7 @@ def render_dashboard(
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
 
     # --- Chapter map ------------------------------------------------------
-    by_chapter: dict = {}
+    by_chapter: dict[int, list[tuple[int, Any]]] = {}
     for idx, p in enumerate(paragraphs):
         by_chapter.setdefault(p.chapter_num, []).append((idx, p))
 
@@ -801,7 +830,7 @@ def render_dashboard(
                     f"{label(labels, 'present')} {p.present_hits} / "
                     f"{label(labels, 'past')} {p.past_hits} · {sev_label}"
                 )
-                layer_payload: dict[str, list] = {}
+                layer_payload: dict[str, list[Any]] = {}
                 for key in LAYER_FEATURES:
                     info = layer_data.get(key, {}).get(idx)
                     if info is not None:

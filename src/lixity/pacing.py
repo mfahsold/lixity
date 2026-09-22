@@ -21,6 +21,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
+from typing import Any
 
 from .dialogue import split_chapters
 from .language import compile_pattern, resolve_language
@@ -45,7 +46,7 @@ class SceneStats:
     dialogue_pct: float
     staccato_pct: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "index": self.index,
             "words": self.words,
@@ -74,7 +75,7 @@ class ChapterPacing:
     hook_score: int
     scene_list: list[SceneStats] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "chapter_num": self.chapter_num,
             "title": self.title,
@@ -106,7 +107,7 @@ class PacingReport:
     slowest_chapter: int | None
     chapter_list: list[ChapterPacing] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "language": self.language,
             "chapters": self.chapters,

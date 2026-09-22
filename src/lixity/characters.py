@@ -16,6 +16,7 @@ import re
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
+from typing import Any
 
 # Reuse the chapter splitting of the dialogue module (same conventions).
 from .dialogue import split_chapters
@@ -34,7 +35,7 @@ class CharacterPresence:
     longest_gap: int
     per_chapter: dict[int, int] = field(default_factory=dict)
 
-    def to_dict(self, total_chapters: int) -> dict:
+    def to_dict(self, total_chapters: int) -> dict[str, Any]:
         return {
             "name": self.name,
             "mentions": self.mentions,
@@ -107,7 +108,7 @@ def presence_report(
     text: str,
     names: Mapping[str, str] | Sequence[str],
     config: CorpusConfig | None = None,
-) -> dict:
+) -> dict[str, Any]:
     """JSON-ready character presence report (total chapters + per figure)."""
     config = config or CorpusConfig(language="auto")
     chapters = split_chapters(text, config)

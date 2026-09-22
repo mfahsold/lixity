@@ -574,7 +574,7 @@ class ReportFormatter:
             lines.append(f"| **{name}** | {_n(v, 0)} | {_n(density, 1)} | {fn} |")
 
         # Chapter matrix: motif columns dynamically from motif_counts
-        motif_keys: list = []
+        motif_keys: list[str] = []
         for c_ in m.chapters:
             for key in c_.motif_counts:
                 if key not in motif_keys:

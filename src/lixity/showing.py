@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import statistics
 from dataclasses import dataclass, field
+from typing import Any
 
 from .analyzer import CorpusAnalyzer
 from .models import CorpusConfig
@@ -45,7 +46,7 @@ class ChapterBalance:
     dialog_pct: float
     staccato_pct: float
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "chapter_num": self.chapter_num,
             "title": self.title,
@@ -74,7 +75,7 @@ class ShowingReport:
     most_showing: list[int] = field(default_factory=list)
     chapter_list: list[ChapterBalance] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "language": self.language,
             "chapters": self.chapters,
@@ -107,10 +108,18 @@ def _z_map(values: dict[int, float]) -> dict[int, float]:
     return {num: (value - centre) / deviation for num, value in values.items()}
 
 
-def showing_report(text: str, config: CorpusConfig | None = None) -> ShowingReport:
-    """Showing/telling balance per chapter (heuristic, self-calibrating)."""
+def showing_report(
+    text: str,
+    config: CorpusConfig | None = None,
+    metrics: Any | None = None,
+) -> ShowingReport:
+    """Showing/telling balance per chapter (heuristic, self-calibrating).
+
+    ``metrics`` allows callers that already analysed the text (CLI dashboard,
+    book adapter) to reuse the result instead of re-running the analyzer.
+    """
     config = config or CorpusConfig(language="auto")
-    resolved_metrics = CorpusAnalyzer(config).analyze_text(text)
+    resolved_metrics = metrics if metrics is not None else CorpusAnalyzer(config).analyze_text(text)
     chapters = resolved_metrics.chapters
     if not chapters:
         return ShowingReport(

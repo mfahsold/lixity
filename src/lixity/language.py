@@ -20,9 +20,10 @@ from .language_data import (
     STYLE_DATA,
     UI_LABELS,
 )
+from .models import CorpusConfig
 
 
-def _suffix_pattern(suffixes) -> str:
+def _suffix_pattern(suffixes: Sequence[str]) -> str:
     """Builds a suffix regex for the style heuristics; empty list -> never matches."""
     if not suffixes:
         return ""
@@ -47,11 +48,11 @@ class LanguageProfile:
     praeteritum_regex: str
     filter_verbs_regex: str
     signal_keywords: Mapping[str, str]
-    stopwords: frozenset
+    stopwords: frozenset[str]
     labels: Mapping[str, str]
     lexicon: Mapping[str, Sequence[str]]
-    function_words: frozenset
-    first_person_starters: frozenset
+    function_words: frozenset[str]
+    first_person_starters: frozenset[str]
     passive_regex: str
     nominal_regex: str
     adjective_regex: str
@@ -72,7 +73,7 @@ FUNCTION_CATEGORIES = (
 )
 
 
-def _function_words(key: str) -> frozenset:
+def _function_words(key: str) -> frozenset[str]:
     lex = LEXICON.get(key, {})
     return frozenset(w.lower() for cat in FUNCTION_CATEGORIES for w in lex.get(cat, ()))
 
@@ -158,7 +159,9 @@ def detect_language(text: str, min_hits: int = 3) -> str:
     return best_key
 
 
-def resolve_language(config, sample_text: str | None = None) -> ResolvedLanguage:
+def resolve_language(
+    config: CorpusConfig, sample_text: str | None = None
+) -> ResolvedLanguage:
     """Combines config overrides (None = profile default) into the effective profile.
 
     ``language="auto"`` uses stop word detection; without ``sample_text``
@@ -185,6 +188,7 @@ def resolve_language(config, sample_text: str | None = None) -> ResolvedLanguage
         value = getattr(config, field_name, None)
         if value is not None:
             resolved = replace(resolved, **{field_name: value})
-    if getattr(config, "signal_keywords", None) is not None:
-        resolved = replace(resolved, signal_keywords=config.signal_keywords)
+    configured_signals = getattr(config, "signal_keywords", None)
+    if configured_signals is not None:
+        resolved = replace(resolved, signal_keywords=configured_signals)
     return resolved

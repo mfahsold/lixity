@@ -98,7 +98,7 @@ class CorpusAnalyzer:
         self._content_blacklist = self.lang.function_words | self.lang.stopwords
 
     @staticmethod
-    def _entropy(counts: Counter) -> float:
+    def _entropy(counts: Counter[str]) -> float:
         """Shannon entropy in bits over a token-type counter."""
         total = sum(counts.values())
         if not total:
@@ -111,7 +111,7 @@ class CorpusAnalyzer:
         The entropy uncertainty follows the Miller-Madow first-order variance
         of the maximum-likelihood estimator: Var(H) = [sum(p*log2^2(p)) - H^2] / n.
         """
-        starters: Counter = Counter()
+        starters: Counter[str] = Counter()
         first_person = 0
         for s in sentences:
             tokens = self._word_re.findall(s)
@@ -139,8 +139,8 @@ class CorpusAnalyzer:
 
     def _jsd_chapter(
         self,
-        chapter_counter: Counter,
-        corpus_counter: Counter,
+        chapter_counter: Counter[str],
+        corpus_counter: Counter[str],
         n_chapter: int,
         n_corpus: int,
         top_n: int = 5,

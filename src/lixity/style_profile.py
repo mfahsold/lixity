@@ -136,7 +136,7 @@ class ParagraphProfiler:
         prev_dominant: str | None = None
         in_appendix = False
 
-        def close_chapter():
+        def close_chapter() -> None:
             if not chapter_title or not chapter_paragraphs:
                 return  # do not list empty chapters (e.g. an acknowledgements section still open)
             present = sum(p.present_hits for p in chapter_paragraphs)
@@ -147,7 +147,10 @@ class ParagraphProfiler:
             def _weighted(attr: str) -> float:
                 if not total_words:
                     return 0.0
-                return sum(getattr(p, attr) * p.words for p in chapter_paragraphs) / total_words
+                weighted = sum(
+                    getattr(p, attr) * p.words for p in chapter_paragraphs
+                ) / total_words
+                return float(weighted)
 
             chapters.append(
                 ChapterProfile(

@@ -21,7 +21,9 @@ from .ui import render_dashboard
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
 
 
-def _config_and_language(language: str, text: str, **overrides: Any):
+def _config_and_language(
+    language: str, text: str, **overrides: Any
+) -> tuple[CorpusConfig, Any]:
     """Resolves the language profile and builds the effective configuration."""
     config = CorpusConfig(language=language, **overrides)
     resolved = resolve_language(config, sample_text=text)

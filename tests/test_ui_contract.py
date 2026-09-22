@@ -62,6 +62,7 @@ def _full_dashboard() -> str:
     from lixity.markers import list_markers
     from lixity.motifs import motif_report
     from lixity.pacing import pacing_report
+    from lixity.showing import showing_report
 
     return render_dashboard(
         chapters,
@@ -74,6 +75,7 @@ def _full_dashboard() -> str:
         characters=presence_report(text, ["Ich"], config),
         pacing=pacing_report(text, config).to_dict(),
         motifs=motif_report(text, {"Ich": r"\bIch\b"}, config).to_dict(),
+        showing=showing_report(text, config, metrics=metrics).to_dict(),
         title="Testroman",
         controls=True,
     )
@@ -119,6 +121,7 @@ class TestJsDomContract(unittest.TestCase):
             'id="characters"',
             'id="pacing"',
             'id="motifs"',
+            'id="showing"',
             'data-jump="#ch-',
         ):
             self.assertIn(hook, html, hook)
@@ -237,6 +240,10 @@ class TestLabelCompleteness(unittest.TestCase):
             "mot_phrase",
             "mot_count",
             "mot_chapters",
+            "panel_showing",
+            "show_tell",
+            "show_show",
+            "show_balance",
         )
         for language in LANGUAGES:
             labels = get_language_profile(language).labels

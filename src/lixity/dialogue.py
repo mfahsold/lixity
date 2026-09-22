@@ -14,6 +14,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from statistics import median
+from typing import Any
 
 from .language import compile_pattern, resolve_language
 from .models import CorpusConfig
@@ -39,7 +40,7 @@ class DialogueChapter:
     dialogue_paragraphs: int
     paragraphs: int
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "chapter_num": self.chapter_num,
             "title": self.title,
@@ -72,7 +73,7 @@ class DialogueReport:
     dialogue_paragraph_pct: float
     chapters: list[DialogueChapter] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "language": self.language,
             "turns": self.turns,

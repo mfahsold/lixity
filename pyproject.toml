@@ -59,10 +59,8 @@ lixity = ["py.typed", "ui/assets/*"]
 [tool.mypy]
 python_version = "3.10"
 files = ["src/lixity"]
+strict = true
 ignore_missing_imports = true
-warn_unused_ignores = true
-no_implicit_optional = true
-check_untyped_defs = true
 
 [tool.ruff]
 line-length = 100

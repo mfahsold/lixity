@@ -3,6 +3,7 @@
 import argparse
 import os
 import sys
+from typing import Any
 
 import orjson
 from rich import box
@@ -243,7 +244,7 @@ compdef _lixity lixity
 """
 
 
-def _meta_payload(language_key: str, **body) -> dict:
+def _meta_payload(language_key: str, **body: Any) -> dict[str, Any]:
     payload = {"meta": {**_META, "language": language_key}}
     payload.update(body)
     return payload
@@ -278,7 +279,7 @@ def _print_about_text() -> None:
     print(_m("about_license", license=data["license"]))
 
 
-def _cmd_dialogue(args) -> int:
+def _cmd_dialogue(args: argparse.Namespace) -> int:
     """Dialogue turn structure as a Rich table or JSON."""
     try:
         with open(args.file, encoding="utf-8") as f:
@@ -335,7 +336,7 @@ def _cmd_dialogue(args) -> int:
     return EXIT_OK
 
 
-def _cmd_characters(args) -> int:
+def _cmd_characters(args: argparse.Namespace) -> int:
     """Character presence as a Rich table or JSON."""
     names: list[str] = list(args.name or [])
     if args.names:
@@ -387,7 +388,7 @@ def _cmd_characters(args) -> int:
     return EXIT_OK
 
 
-def _cmd_pacing(args) -> int:
+def _cmd_pacing(args: argparse.Namespace) -> int:
     """Scene structure, pacing signals and chapter hooks (Rich table or JSON)."""
     try:
         with open(args.file, encoding="utf-8") as f:
@@ -443,7 +444,7 @@ def _cmd_pacing(args) -> int:
     return EXIT_OK
 
 
-def _cmd_motifs(args) -> int:
+def _cmd_motifs(args: argparse.Namespace) -> int:
     """Motif presence and repetition signals (Rich tables or JSON)."""
     motifs: dict[str, str] = {}
     for spec in args.motif or []:
@@ -508,7 +509,7 @@ def _cmd_motifs(args) -> int:
     return EXIT_OK
 
 
-def _cmd_showing(args) -> int:
+def _cmd_showing(args: argparse.Namespace) -> int:
     """Showing vs. telling balance (Rich table or JSON)."""
     try:
         with open(args.file, encoding="utf-8") as f:
@@ -562,7 +563,7 @@ def _cmd_showing(args) -> int:
     return EXIT_OK
 
 
-def _cmd_build(args) -> int:
+def _cmd_build(args: argparse.Namespace) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
     try:
         workspace = discover(explicit=args.file)
@@ -642,7 +643,7 @@ def _cmd_build(args) -> int:
     return EXIT_OK
 
 
-def main(argv=None):
+def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="lixity",
         description=(

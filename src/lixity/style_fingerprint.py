@@ -163,7 +163,9 @@ def spearman_rho(x: list[float], y: list[float]) -> float:
     return cov / (vx * vy)
 
 
-def jacobi_eigh(matrix: list[list[float]], tol: float = 1e-12, max_sweeps: int = 200):
+def jacobi_eigh(
+    matrix: list[list[float]], tol: float = 1e-12, max_sweeps: int = 200
+) -> tuple[list[float], list[list[float]]]:
     """
     Eigenvalues and eigenvectors of a symmetric matrix via cyclic Jacobi
     rotations (pure stdlib, deterministic). Returns (eigenvalues, eigenvectors)
@@ -494,7 +496,7 @@ class StyleFingerprint:
         scored.sort(key=lambda kv: kv[1], reverse=True)
         return scored[:n]
 
-    def passport(self) -> dict:
+    def passport(self) -> dict[str, Any]:
         """Structured style passport (JSON-serialisable constraint data)."""
         features = []
         for field_name, _label, unit in FEATURES:

@@ -207,7 +207,7 @@ def inline_markdown_to_html(
     text = html_mod.escape(text, quote=False)
 
     # 3. Footnote references [^id] with unique anchor ID
-    def fn_ref(m: re.Match) -> str:
+    def fn_ref(m: re.Match[str]) -> str:
         fn_id = m.group(1)
         n = fn_counter.get(fn_id, 0) + 1
         fn_counter[fn_id] = n

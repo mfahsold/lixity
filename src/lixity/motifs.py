@@ -20,6 +20,7 @@ from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from itertools import pairwise
+from typing import Any
 
 from .dialogue import split_chapters
 from .language import compile_pattern, resolve_language
@@ -41,7 +42,7 @@ class MotifPresence:
     longest_gap: int
     per_chapter: dict[int, int] = field(default_factory=dict)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "name": self.name,
             "mentions": self.mentions,
@@ -62,7 +63,7 @@ class RepeatedPhrase:
     count: int
     chapters: list[int]
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {"phrase": self.phrase, "count": self.count, "chapters": self.chapters}
 
 
@@ -76,7 +77,7 @@ class MotifReport:
     top_words: list[tuple[str, int]] = field(default_factory=list)
     repeated_phrases: list[RepeatedPhrase] = field(default_factory=list)
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> dict[str, Any]:
         return {
             "language": self.language,
             "chapters": self.chapters,
