@@ -274,9 +274,6 @@ REPORT_TEXTS_DE: dict[str, str] = {
 
 REPORT_TEXTS: dict[str, dict[str, str]] = {"en": REPORT_TEXTS_EN, "de": REPORT_TEXTS_DE}
 
-# Backward-compatible alias (English is the engine default).
-DEFAULT_TEXTE = REPORT_TEXTS_EN
-
 
 def _resolve_texts(texts: Mapping[str, str] | None, language_key: str = "en") -> dict[str, str]:
     """Merges the language pack with optional project overrides."""

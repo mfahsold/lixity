@@ -39,7 +39,7 @@ _META = {
 }
 
 # User-facing CLI messages: English is the engine default, German via
-# LIXITY_LANG=de (the book project uses this for its German control UI).
+# LIXITY_LANG=de.
 CLI_TEXTS: dict[str, dict[str, str]] = {
     "en": {
         "about_title": "lixity {version} – quantitative text linguistics & stylometry",

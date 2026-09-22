@@ -5,6 +5,37 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.10.0] – 2026-09-22
+
+### Added
+
+- **Flagged passages panel** (`#flags`) directly under the KPIs: every
+  paragraph with severity ≥ 2 as a row (severity badge, chapter, line anchor,
+  excerpt), sorted by severity then line. Clicking a row jumps straight to
+  that paragraph — opens it, scrolls, flashes — with the “flagged only”
+  filter preselected; a quick **+ To-do** button writes the work marker
+  inline without leaving the list. The “flagged” KPI now targets this panel.
+- `ParagraphProfile.is_flagged`, the `FLAG_MIN_SEVERITY` constant and
+  `flagged_paragraphs()` (severity desc, line asc) replace the repeated
+  `severity >= 2` checks; `classify_severity()` is a documented, tested
+  pure function (0–3 truth table).
+
+### Fixed
+
+- **Marker clicks no longer scroll the page**: buttons inside jumpable rows
+  (`data-marker-kind`, `data-marker-resolve`, note field) are excluded from
+  jump activation in both the click and the keyboard handler.
+- **Line jumps land on the paragraph, not just the chapter**: `jumpToLine`
+  opens the target `.ptext` panel (via `data-target` or its
+  `data-start`/`data-end` span) and activates its chip; chapter scroll remains
+  the fallback (e.g. marker lines outside any paragraph span).
+
+### Removed
+
+- Dead aliases: `render_style_report`, `DEFAULT_TEXTE`, and the unused
+  `ParagraphProfile.line_label` property (the localised `line_label()` in
+  `ui.components` remains the single implementation).
+
 ## [1.9.1] – 2026-09-22
 
 ### Changed

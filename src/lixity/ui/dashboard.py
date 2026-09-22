@@ -17,6 +17,7 @@ from ..style_fingerprint import FEATURES, LAYER_FEATURES, layer_stats, z_color
 from ..style_profile import (
     ChapterProfile,
     ParagraphProfile,
+    flagged_paragraphs,
 )
 from .components import (
     band_chart,
@@ -93,6 +94,7 @@ def render_dashboard(
     and showing/telling panels (see the corresponding modules).
     """
     esc = html.escape
+
     def L(key: str) -> str:
         return esc(label(labels, key))
 
@@ -117,7 +119,7 @@ def render_dashboard(
         ]
 
     total_words = sum(c.words for c in chapters)
-    total_flagged = sum(1 for p in paragraphs if p.severity >= 2)
+    total_flagged = sum(1 for p in paragraphs if p.is_flagged)
     scale = max((p.words for p in paragraphs), default=1)
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
@@ -378,7 +380,7 @@ def render_dashboard(
         kpi(
             str(total_flagged),
             help_term(labels, "flagged", L("flagged")),
-            jump="#chapters",
+            jump="#flags",
             flags=True,
         )
     )
@@ -398,6 +400,59 @@ def render_dashboard(
         parts.append('<div class="kpi-row">')
         parts.extend(tiles)
         parts.append("</div></div>")
+    parts.append("</section>")
+
+    # --- Flagged passages (list → paragraph → marker) ----------------------
+    flagged = flagged_paragraphs(list(paragraphs))
+    parts.append('<section class="panel" id="flags">')
+    parts.append(f"<h2>{help_term(labels, 'flagged', label(labels, 'panel_flags'))}</h2>")
+    if flagged:
+        para_index = {id(p): i for i, p in enumerate(paragraphs)}
+        parts.append('<div class="table-wrap flags-wrap">')
+        parts.append("<table><thead><tr>")
+        parts.append(
+            f"<th>{label(labels, 'flags_stage')}</th>"
+            f"<th>{L('chapter')}</th>"
+            f'<th class="num">{L("line")}</th>'
+            f"<th>{label(labels, 'flags_excerpt')}</th>"
+        )
+        if controls:
+            parts.append("<th></th>")
+        parts.append("</tr></thead><tbody>")
+        for p in flagged:
+            idx = para_index[id(p)]
+            excerpt = " ".join(p.text.split())
+            if len(excerpt) > 140:
+                excerpt = excerpt[:137].rstrip() + "…"
+            chapter_cell = (
+                f"{L('chapter')} {p.chapter_num} · {esc(p.chapter_title)}"
+                if p.chapter_title
+                else f"{L('chapter')} {p.chapter_num}"
+            )
+            parts.append(
+                f'<tr class="row-link flag-row" data-line="{p.start_line}" '
+                f'data-target="p-{idx}" data-flags="1" role="button" tabindex="0" '
+                f'title="{esc(label(labels, "click_hint_para"), quote=True)}">'
+                f'<td><span class="badge sev-{p.severity}">'
+                f"{esc(label(labels, f'severity_{p.severity}'))}</span></td>"
+                f"<td>{chapter_cell}</td>"
+                f'<td class="num">{esc(line_label(labels, p))}</td>'
+                f'<td class="flag-excerpt">{esc(excerpt)}</td>'
+            )
+            if controls:
+                parts.append(
+                    f'<td class="flag-actions"><div class="row marker-row">'
+                    f'<button class="ctl" data-marker-kind="todo" '
+                    f'data-line="{p.start_line}">+ '
+                    f"{esc(label(labels, 'marker_todo'))}</button>"
+                    f'<span class="marker-note-slot" data-placeholder="'
+                    f'{esc(label(labels, "marker_note"), quote=True)}"></span>'
+                    f"</div></td>"
+                )
+            parts.append("</tr>")
+        parts.append("</tbody></table></div>")
+    else:
+        parts.append(f'<p class="hint">{label(labels, "flags_empty")}</p>')
     parts.append("</section>")
 
     # --- Sentence-length architecture -------------------------------------
@@ -433,7 +488,9 @@ def render_dashboard(
             kpi(N(dialogue.get("avg_turn_words", 0.0), 1), L("dlg_avg_turn"), jump="#chapters")
         )
         parts.append(
-            kpi(N(dialogue.get("turns_per_1000", 0.0), 1), L("dlg_turns_per_1000"), jump="#chapters")
+            kpi(
+                N(dialogue.get("turns_per_1000", 0.0), 1), L("dlg_turns_per_1000"), jump="#chapters"
+            )
         )
         parts.append("</div>")
         dialogue_chapters = [c for c in dialogue.get("chapters", []) if c.get("turns")]
@@ -461,7 +518,14 @@ def render_dashboard(
         parts.append("<table><thead><tr>")
         parts.extend(
             f"<th>{L(key)}</th>"
-            for key in ("chr_name", "chr_mentions", "chr_chapters", "chr_span", "chr_gap", "chr_share")
+            for key in (
+                "chr_name",
+                "chr_mentions",
+                "chr_chapters",
+                "chr_span",
+                "chr_gap",
+                "chr_share",
+            )
         )
         parts.append("</tr></thead><tbody>")
         total = int(characters.get("chapters", 0))
@@ -523,8 +587,7 @@ def render_dashboard(
         if motifs.get("motifs"):
             parts.append("<table><thead><tr>")
             parts.extend(
-                f"<th>{L(key)}</th>"
-                for key in ("mot_name", "mot_count", "mot_chapters", "chr_gap")
+                f"<th>{L(key)}</th>" for key in ("mot_name", "mot_count", "mot_chapters", "chr_gap")
             )
             parts.append("</tr></thead><tbody>")
             for motif in motifs["motifs"]:
@@ -570,7 +633,9 @@ def render_dashboard(
         parts.append(kpi(N(showing.get("balance_mean", 0.0), 2, signed=True), L("show_balance")))
         parts.append("</div>")
         showing_chapters = showing["chapter_list"]
-        max_abs = max((abs(float(c.get("balance", 0.0))) for c in showing_chapters), default=0.0) or 1.0
+        max_abs = (
+            max((abs(float(c.get("balance", 0.0))) for c in showing_chapters), default=0.0) or 1.0
+        )
         parts.append('<div class="dist scrollable">')
         for chapter in showing_chapters:
             num = int(chapter.get("chapter_num", 0))
@@ -728,7 +793,7 @@ def render_dashboard(
                 parts.append('<div class="table-wrap">')
                 parts.append("<table><thead><tr>")
                 parts.append(
-                    f'<th>{L("status")}</th><th>{L("chapter")}</th>'
+                    f"<th>{L('status')}</th><th>{L('chapter')}</th>"
                     f'<th class="num">{L("line")}</th><th>{L("notes")}</th>'
                 )
                 if controls:
@@ -748,7 +813,7 @@ def render_dashboard(
                     parts.append(
                         f'<tr class="row-link" data-line="{m.line}" role="button" tabindex="0">'
                         f'<td><span class="badge marker-{m.kind}">{esc(kind_label)}</span></td>'
-                        f'<td>{chapter_cell}</td>'
+                        f"<td>{chapter_cell}</td>"
                         f'<td class="num">{L("line")} {m.line}</td><td>{note}</td>'
                     )
                     if controls:
@@ -827,7 +892,7 @@ def render_dashboard(
     parts.append('<main id="chapters">')
     for chapter in chapters:
         chapter_paras = by_chapter.get(chapter.num, [])
-        has_flags = any(p.severity >= 2 for _, p in chapter_paras)
+        has_flags = any(p.is_flagged for _, p in chapter_paras)
         classes = "chapter has-flags" if has_flags else "chapter"
         parts.append(
             f'<section class="{classes}" id="ch-{chapter.num}" '
@@ -845,7 +910,7 @@ def render_dashboard(
         if chapter_paras:
             parts.append('<div class="strip">')
             for idx, p in chapter_paras:
-                sev = f" sev-{p.severity}" if p.severity >= 2 else ""
+                sev = f" sev-{p.severity}" if p.is_flagged else ""
                 width = max(1.0, p.words / scale * 100.0)
                 dom_label = tense_label(labels, p.dominant)
                 sev_label = label(labels, f"severity_{p.severity}")
@@ -880,7 +945,10 @@ def render_dashboard(
             for idx, p in chapter_paras:
                 dom_label = tense_label(labels, p.dominant)
                 sev_label = label(labels, f"severity_{p.severity}")
-                parts.append(f'<div class="ptext" id="p-{idx}"><div class="ptext-inner">')
+                parts.append(
+                    f'<div class="ptext" id="p-{idx}" data-start="{p.start_line}" '
+                    f'data-end="{p.end_line}"><div class="ptext-inner">'
+                )
                 parts.append(
                     f'<div class="anchor">{line_label(labels, p)} · '
                     f"{esc(dom_label)} · {esc(sev_label)}</div>"
@@ -992,6 +1060,3 @@ def render_dashboard(
     )
     return "\n".join(parts) + "\n"
 
-
-# Backwards-compatible name (older calls/tests)
-render_style_report = render_dashboard

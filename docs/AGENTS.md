@@ -41,7 +41,7 @@ from that style, controlled for measurement noise and multiple testing.
 ### 3.1 `analyze --json` (schema_version 2)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.9.1", "schema_version": 2, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.10.0", "schema_version": 2, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",
@@ -121,19 +121,23 @@ vocabulary; every server control is a native `<button>`/`<select>`.
 | `data-layer="<key>"` | activate a style layer (paragraph colouring) |
 | `data-only="1"` | additionally preselect "deviations only" |
 | `data-flags="1"` | additionally preselect "flagged only" |
-| `data-line="<n>"` | jump to the chapter containing that source line |
+| `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
+| `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
 | `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
-| `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field) |
+| `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field); **never scrolls** – marker controls are excluded from jump activation |
 | `role="button" tabindex="0"` | every clickable non-native target (KPI tile, band row, loading bar, table row, heatmap cell) |
 | `:focus-visible` | visible focus ring for all of the above (CSS covers `[role="button"]`) |
 
 The script drives click **and** keyboard activation through one selector
 (`INTERACTIVE = "[data-jump], [data-line], [role='button'], td.z[data-chapter]"`),
-so a new drill-down only needs the attributes, not new JavaScript. Marker
-writes go through the embedding server's action API
-(`{"action": "marker-add", "kind": …, "line": …, "note": …}`); the library
-itself never writes files.
+so a new drill-down only needs the attributes, not new JavaScript. The
+**flagged passages panel** (`#flags`, right under the KPIs) is the start of
+the editorial loop: every row jumps to its paragraph (with the “flagged only”
+filter preselected) and offers a quick `+ To-do` button that writes the
+marker without navigating. Marker writes go through the embedding server's
+action API (`{"action": "marker-add", "kind": …, "line": …, "note": …}`);
+the library itself never writes files.
 
 ### 3.5 Structure modules (`dialogue`, `characters`, `pacing`, `motifs`, `showing`)
 
@@ -171,7 +175,7 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
 | Task | Steps |
 |---|---|
 | First contact with a manuscript | `lixity about --json` → `lixity analyze FILE --json` → `lixity style FILE --json` |
-| Editorial pass on tense | `lixity profile FILE` → paragraphs with `severity ≥ 2` and `switch = true` |
+| Editorial pass on tense | `lixity profile FILE` → paragraphs with `severity ≥ 2` (`is_flagged`); in the dashboard: KPI “flagged” → `#flags` list → row opens the paragraph → `+ To-do` |
 | "Why does chapter N feel different?" | `lixity style FILE --json` → `deviations["N"]` + `fdr_flagged["N"]`, then `jsd_top_words` from `analyze` |
 | Dialogue overhaul | `lixity dialogue FILE --json` → chapters with low `turns`/`dialogue_pct` |
 | Character continuity check | `lixity characters FILE --names "A,B,C" --json` → `longest_gap`, `presence_ratio` |
@@ -202,6 +206,12 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
 - **JSD driver words**: the words that most contribute to a chapter's
   divergence from the rest of the corpus – use them for concrete,
   quotable editing feedback.
+- **Tense severity (paragraphs)**: `classify_severity` scores a paragraph
+  0–3 (0 = consistent, 1 = mixed without switch, 2 = single switch,
+  3 = multiple switches / long mixed); only severity ≥
+  `FLAG_MIN_SEVERITY` (2) is *flagged* (`is_flagged`), drives the
+  “flagged” KPI and the `#flags` panel. Use `flagged_paragraphs()` for the
+  sorted list (severity desc, line asc) instead of re-implementing the cut.
 - **Caveats**: per-chapter TTR is length-dependent (compare Guiraud R or
   HD-D instead); density features are heuristic counts (suffix/marker
   regexes per language profile) – comparable within one language only;

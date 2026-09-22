@@ -501,8 +501,31 @@ table.heatmap th.ch { z-index: 3; }
 }
 .badge.marker-pruefen { background: #e0f2fe; color: #0369a1; }
 .badge.marker-sachcheck { background: #fef3c7; color: #92400e; }
-.badge.marker-todo { background: #f3e8ff; color: #6b21a8; }
+.badge.marker-todo { background: #f3e8ff; color: #6b21a6; }
 .badge.marker-achtung { background: #fee2e2; color: #991b1b; }
+.badge.sev-2 { background: #fef3c7; color: #92400e; }
+.badge.sev-3 { background: #fee2e2; color: #991b1b; }
+
+/* --- Flagged passages list -------------------------------------------- */
+.flags-wrap {
+  max-height: 26rem;
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.flags-wrap thead th {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  border-bottom: 1px solid var(--line);
+}
+td.flag-excerpt {
+  max-width: 24rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+td.flag-actions { white-space: nowrap; }
 .dim-card {
   padding: .75rem 0;
   border-bottom: 1px solid var(--line);
@@ -702,4 +725,6 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
   .badge.marker-sachcheck { background: #451a03; color: #fde68a; }
   .badge.marker-todo { background: #3b0764; color: #d8b4fe; }
   .badge.marker-achtung { background: #450a0a; color: #fca5a5; }
+  .badge.sev-2 { background: #451a03; color: #fde68a; }
+  .badge.sev-3 { background: #450a0a; color: #fca5a5; }
 }

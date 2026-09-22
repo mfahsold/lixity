@@ -40,6 +40,8 @@ SAMPLE = (
     "Ich spüre die Kälte. Ich merke den Wind. Ich fühle den Regen auf der Haut und "
     "ich glaube, es wird kalt. Ich spüre das Zittern.\n\n"
     "Die Straße liegt still. Die Stadt schweigt. Der Abend kommt.\n\n"
+    "Ich trinke Kaffee und ich ging zum Laden. Ich sehe den Regen und ich kaufte Brot. "
+    "Ich gehe nach Hause und ich trank den Tee.\n\n"
     "## Kap 2\n\n"
     "Das Haus wurde verkauft und die Tür war verschlossen worden. Die Zeitung lag "
     "auf dem Tisch. Die Entscheidung fiel schwer. Die Beschreibung der Wohnung "
@@ -123,10 +125,45 @@ class TestJsDomContract(unittest.TestCase):
             'id="motifs"',
             'id="showing"',
             'class="table-wrap"',
-            'data-marker-resolve=',
+            "data-marker-resolve=",
             'data-jump="#ch-',
+            'id="flags"',
+            'class="row-link flag-row"',
+            'data-target="p-',
+            'class="ptext" id="p-',
+            'data-start="',
+            'data-end="',
+            'data-marker-kind="todo"',
+            'class="badge sev-',
         ):
             self.assertIn(hook, html, hook)
+
+    def test_flags_panel_contract(self):
+        """Flagged list: row → paragraph jump, filter context, marker quick-add."""
+        html = _full_dashboard()
+        self.assertIn('id="flags"', html)
+        # rows carry line anchor + paragraph target + only-flags drill-down
+        self.assertRegex(
+            html,
+            r'class="row-link flag-row" data-line="\d+" data-target="p-\d+" data-flags="1"',
+        )
+        # quick TODO button with its own note slot inside the row
+        self.assertIn('data-marker-kind="todo"', html)
+        # paragraph panels are addressable by line span
+        self.assertRegex(html, r'class="ptext" id="p-\d+" data-start="\d+" data-end="\d+"')
+        # KPI "flagged" jumps to the flags panel
+        self.assertIn('data-jump="#flags"', html)
+
+    def test_marker_controls_do_not_jump(self):
+        """The JS guard keeps marker clicks from scrolling the page."""
+        script = (UI_DIR / "assets" / "dashboard.js").read_text(encoding="utf-8")
+        self.assertIn("function isMarkerControl", script)
+        self.assertIn("[data-marker-kind], [data-marker-resolve]", script)
+        self.assertIn("!isMarkerControl(event.target)", script)
+        # jumpToLine opens the target paragraph (data-target / line span)
+        self.assertIn('getAttribute("data-target")', script)
+        self.assertIn(".ptext[data-start]", script)
+        self.assertIn("toggleParagraph(chip, true)", script)
 
     def test_unified_interaction_contract(self):
         """All content drill-downs are keyboard reachable with one vocabulary."""
@@ -134,10 +171,10 @@ class TestJsDomContract(unittest.TestCase):
         css = (UI_DIR / "assets" / "dashboard.css").read_text(encoding="utf-8")
         html = _full_dashboard()
         # One selector drives click and keyboard activation.
-        self.assertIn('var INTERACTIVE = "[data-jump], [data-line], [role=\'button\']', script)
+        self.assertIn("var INTERACTIVE = \"[data-jump], [data-line], [role='button']", script)
         self.assertIn("event.target.closest(INTERACTIVE)", script)
         # Focus visibility covers every [role="button"] target.
-        self.assertIn('[role=\"button\"]):focus-visible', css)
+        self.assertIn('[role="button"]):focus-visible', css)
         # Rows and band rows are announced as buttons and focusable.
         self.assertIn('class="row-link" data-line=', html)
         self.assertIn('role="button" tabindex="0"', html)
@@ -249,6 +286,11 @@ class TestLabelCompleteness(unittest.TestCase):
             "show_tell",
             "show_show",
             "show_balance",
+            "panel_flags",
+            "flags_stage",
+            "flags_excerpt",
+            "flags_empty",
+            "click_hint_para",
         )
         for language in LANGUAGES:
             labels = get_language_profile(language).labels

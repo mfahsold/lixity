@@ -129,12 +129,34 @@ function activate(el) {
 
 function jumpToLine(row) {
   var line = parseInt(row.getAttribute("data-line"), 10);
-  var chapters = document.querySelectorAll(".chapter[data-start]");
-  for (var i = 0; i < chapters.length; i++) {
-    var start = parseInt(chapters[i].getAttribute("data-start"), 10);
-    var end = parseInt(chapters[i].getAttribute("data-end"), 10);
-    if (line >= start && line <= end) { scrollAndFlash(chapters[i]); return; }
+  var targetId = row.getAttribute("data-target");
+  var panel = targetId ? document.getElementById(targetId) : null;
+  if (!panel) {
+    var panels = document.querySelectorAll(".ptext[data-start]");
+    for (var i = 0; i < panels.length; i++) {
+      var start = parseInt(panels[i].getAttribute("data-start"), 10);
+      var end = parseInt(panels[i].getAttribute("data-end"), 10);
+      if (line >= start && line <= end) { panel = panels[i]; break; }
+    }
   }
+  if (panel) {
+    var chip = document.querySelector('.chip[data-target="' + panel.id + '"]');
+    if (chip) toggleParagraph(chip, true);
+    scrollAndFlash(panel);
+    return;
+  }
+  var chapters = document.querySelectorAll(".chapter[data-start]");
+  for (var j = 0; j < chapters.length; j++) {
+    var cstart = parseInt(chapters[j].getAttribute("data-start"), 10);
+    var cend = parseInt(chapters[j].getAttribute("data-end"), 10);
+    if (line >= cstart && line <= cend) { scrollAndFlash(chapters[j]); return; }
+  }
+}
+
+// Marker controls (add/resolve/note) live inside jumpable rows; activating
+// them must open the note field only – never also scroll the page.
+function isMarkerControl(el) {
+  return !!el.closest("[data-marker-kind], [data-marker-resolve], .marker-note, .marker-note-slot");
 }
 
 // Unified interaction contract: every content drill-down is a [role="button"]
@@ -146,12 +168,17 @@ document.addEventListener("click", function (event) {
   var chip = event.target.closest(".chip");
   if (chip) { toggleParagraph(chip); return; }
   var target = event.target.closest(INTERACTIVE);
-  if (target && !target.closest(".controls")) activate(target);
+  if (target && !target.closest(".controls") && !isMarkerControl(event.target)) {
+    activate(target);
+  }
 });
 document.addEventListener("keydown", function (event) {
   if (event.key !== "Enter" && event.key !== " ") return;
   var el = event.target.closest ? event.target.closest(INTERACTIVE) : null;
-  if (el && !el.closest(".controls")) { event.preventDefault(); activate(el); }
+  if (el && !el.closest(".controls") && !isMarkerControl(event.target)) {
+    event.preventDefault();
+    activate(el);
+  }
 });
 var filter = document.getElementById("filter-flags");
 if (filter) {

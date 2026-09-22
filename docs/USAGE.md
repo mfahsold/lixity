@@ -278,6 +278,14 @@ The dashboard contains:
   first-person starts, function words, flagged paragraphs) — **every KPI tile
   is clickable** and jumps to the panel that shows it, preselecting the
   matching filter where one exists (flags / deviations),
+- a **flagged passages** panel (`#flags`, directly under the KPIs): one row
+  per paragraph with severity ≥ 2, sorted by severity then line — severity
+  badge, chapter, line anchor and a short excerpt. Clicking a row **jumps
+  straight to that paragraph** (opens it, scrolls, flashes) with the
+  “flagged only” filter preselected; each row also has a quick **+ To-do**
+  button that writes the work marker inline (note field, `Enter` saves)
+  without leaving the list. This is the start of the editorial loop:
+  overview → passage → marker,
 - the sentence-length architecture as bars,
 - a **dialogue structure** panel (when dialogue data is supplied or computed by
   the CLI): turns, dialogue share, average turn length, turns per 1,000 words
@@ -406,8 +414,11 @@ with the paragraph when editing, and are idempotent (deterministic
 content-hash IDs). Kinds: `pruefen`, `sachcheck`, `todo`, `achtung`. In the
 dashboard, clicking a kind opens an inline note field: type the reason,
 `Enter` commits (the marker is written with `note="…"`), `Esc` cancels.
-Programmatic access: `api.markers(text)`, `api.add_marker(text, kind, note,
-line)`, `api.resolve_marker(text, marker_id)`.
+Markers can be set from the flagged-passages list (quick `+ To-do` per row)
+or from an opened paragraph in the chapter map — both target the exact
+source line. Programmatic access: `api.markers(text)`,
+`api.add_marker(text, kind, note, line)`, `api.resolve_marker(text,
+marker_id)`.
 
 ## AI agent interface
 

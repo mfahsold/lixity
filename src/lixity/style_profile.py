@@ -18,6 +18,9 @@ TENSE_PAST = "past"
 TENSE_MIXED = "mixed"
 TENSE_NEUTRAL = "neutral"
 
+FLAG_MIN_SEVERITY = 2
+"""Severity at which a paragraph counts as flagged (level 1 = watch only)."""
+
 
 def dominance_from_hits(present: int, past: int, neutral_max_hits: int = 1) -> str:
     """Dominant tense from marker counts – shared by chapter and paragraph analysis."""
@@ -29,6 +32,49 @@ def dominance_from_hits(present: int, past: int, neutral_max_hits: int = 1) -> s
     if ratio < 0.67:
         return TENSE_PAST
     return TENSE_MIXED
+
+
+@dataclass(frozen=True)
+class ProfileThresholds:
+    """Thresholds of the style profile heuristic (injectable, documented, reproducible)."""
+
+    neutral_max_hits: int = 1  # fewer than 2 tense markers: no statement
+    mix_min_hits: int = 2  # at least 2 markers per tense
+    mix_min_ratio: float = 0.25  # minority share from 25 % = mixed
+    switch_min_hits: int = 2  # dominant tense requires >= 2 markers
+    severe_mix_minority: int = 3  # mixed + >= 3 minority markers = level 2
+
+
+def classify_severity(
+    switch: bool,
+    mixed: bool,
+    minority: int,
+    thresholds: ProfileThresholds | None = None,
+) -> int:
+    """Tense-friction severity of one paragraph (0–3).
+
+    Truth table (t = thresholds):
+
+    ================================  ========
+    condition                         severity
+    ================================  ========
+    switch AND mixed AND minority >= severe   3
+    (switch AND minority >= mix_min)
+        OR (mixed AND minority >= severe)    2
+    switch OR mixed                          1
+    otherwise                                0
+    ================================  ========
+
+    severe = t.severe_mix_minority, mix_min = t.mix_min_hits.
+    """
+    t = thresholds or ProfileThresholds()
+    if switch and mixed and minority >= t.severe_mix_minority:
+        return 3
+    if (switch and minority >= t.mix_min_hits) or (mixed and minority >= t.severe_mix_minority):
+        return 2
+    if switch or mixed:
+        return 1
+    return 0
 
 
 @dataclass
@@ -58,11 +104,17 @@ class ParagraphProfile:
     text: str = ""
 
     @property
-    def line_label(self) -> str:
-        """Compact line anchor for the UI (e.g. "l. 470–472")."""
-        if self.start_line == self.end_line:
-            return f"Z. {self.start_line}"
-        return f"Z. {self.start_line}–{self.end_line}"
+    def is_flagged(self) -> bool:
+        """True when the severity reaches FLAG_MIN_SEVERITY (actionable friction)."""
+        return self.severity >= FLAG_MIN_SEVERITY
+
+
+def flagged_paragraphs(paragraphs: list[ParagraphProfile]) -> list[ParagraphProfile]:
+    """Actionable paragraphs, sorted by severity (desc) then line (asc)."""
+    return sorted(
+        (p for p in paragraphs if p.is_flagged),
+        key=lambda p: (-p.severity, p.start_line),
+    )
 
 
 @dataclass
@@ -82,17 +134,6 @@ class ChapterProfile:
     asl: float
     dialog_pct: float
     function_word_pct: float
-
-
-@dataclass(frozen=True)
-class ProfileThresholds:
-    """Thresholds of the style profile heuristic (injectable, documented, reproducible)."""
-
-    neutral_max_hits: int = 1  # fewer than 2 tense markers: no statement
-    mix_min_hits: int = 2  # at least 2 markers per tense
-    mix_min_ratio: float = 0.25  # minority share from 25 % = mixed
-    switch_min_hits: int = 2  # dominant tense requires >= 2 markers
-    severe_mix_minority: int = 3  # mixed + >= 3 minority markers = level 2
 
 
 class ParagraphProfiler:
@@ -147,9 +188,7 @@ class ParagraphProfiler:
             def _weighted(attr: str) -> float:
                 if not total_words:
                     return 0.0
-                weighted = sum(
-                    getattr(p, attr) * p.words for p in chapter_paragraphs
-                ) / total_words
+                weighted = sum(getattr(p, attr) * p.words for p in chapter_paragraphs) / total_words
                 return float(weighted)
 
             chapters.append(
@@ -163,7 +202,7 @@ class ParagraphProfiler:
                     present_hits=present,
                     past_hits=past,
                     dominant=self._dominant(present, past),
-                    flagged=sum(1 for p in chapter_paragraphs if p.severity >= 2),
+                    flagged=sum(1 for p in chapter_paragraphs if p.is_flagged),
                     asl=round(total_words / total_sentences, 2) if total_sentences else 0.0,
                     dialog_pct=round(_weighted("dialogue_pct"), 1),
                     function_word_pct=round(_weighted("function_word_pct"), 1),
@@ -216,17 +255,7 @@ class ParagraphProfiler:
                 and max(present, past) >= self.thresholds.switch_min_hits
             )
 
-            minority = min(present, past)
-            if switch and mixed and minority >= self.thresholds.severe_mix_minority:
-                severity = 3
-            elif (switch and minority >= self.thresholds.mix_min_hits) or (
-                mixed and minority >= self.thresholds.severe_mix_minority
-            ):
-                severity = 2
-            elif switch or mixed:
-                severity = 1
-            else:
-                severity = 0
+            severity = classify_severity(switch, mixed, min(present, past), self.thresholds)
 
             dialogue_words = sum(len(m.split()) for m in self._dialogue.findall(clean))
             dialogue_pct = (dialogue_words / words * 100.0) if words else 0.0

@@ -31,9 +31,10 @@ from lixity.style_profile import (  # noqa: E402
     TENSE_NEUTRAL,
     TENSE_PAST,
     TENSE_PRESENT,
+    ParagraphProfile,
     ParagraphProfiler,
 )
-from lixity.ui import render_style_report  # noqa: E402
+from lixity.ui import render_dashboard  # noqa: E402
 
 
 class TestParserLineAnchors(unittest.TestCase):
@@ -153,6 +154,75 @@ class TestParagraphProfiler(unittest.TestCase):
         self.assertFalse(paragraphs[0].mixed)
         self.assertEqual(paragraphs[0].severity, 0)
 
+    def test_classify_severity_truth_table(self):
+        from lixity.style_profile import ProfileThresholds, classify_severity
+
+        t = ProfileThresholds()  # mix_min=2, severe=3
+        # level 3: switch + mixed + minority >= 3
+        self.assertEqual(classify_severity(True, True, 3, t), 3)
+        self.assertEqual(classify_severity(True, True, 2, t), 2)
+        # level 2: switch with minority >= 2, or mixed with minority >= 3
+        self.assertEqual(classify_severity(True, False, 2, t), 2)
+        self.assertEqual(classify_severity(False, True, 3, t), 2)
+        # level 1: bare switch or bare mixed below the severe minority
+        self.assertEqual(classify_severity(True, False, 1, t), 1)
+        self.assertEqual(classify_severity(False, True, 2, t), 1)
+        # level 0: neither
+        self.assertEqual(classify_severity(False, False, 5, t), 0)
+
+    def test_is_flagged_follows_flag_min_severity(self):
+        from lixity.style_profile import FLAG_MIN_SEVERITY
+
+        md = (
+            "## Kapitel 1\n\n"
+            "Ich trinke Kaffee und ich ging zum Fenster. Ich sehe den Regen und ich sah die Straße. "
+            "Ich trinke noch einen Schluck.\n\n"
+            "Ich trinke Kaffee. Ich gehe zum Fenster.\n"
+        )
+        paragraphs, _ = self._profile(md)
+        self.assertEqual(FLAG_MIN_SEVERITY, 2)
+        self.assertEqual(
+            [p.is_flagged for p in paragraphs],
+            [p.severity >= FLAG_MIN_SEVERITY for p in paragraphs],
+        )
+        self.assertTrue(paragraphs[0].is_flagged or not paragraphs[0].is_flagged)
+
+    def test_flagged_paragraphs_sorts_by_severity_then_line(self):
+        from lixity.style_profile import flagged_paragraphs
+
+        def make(idx, severity, start_line):
+            return ParagraphProfile(
+                chapter_num=1,
+                chapter_title="K",
+                start_line=start_line,
+                end_line=start_line,
+                words=5,
+                sentences=1,
+                present_hits=0,
+                past_hits=0,
+                dominant=TENSE_NEUTRAL,
+                minority_ratio=0.0,
+                mixed=False,
+                switch=False,
+                severity=severity,
+                asl=5.0,
+                dialogue_pct=0.0,
+                function_word_pct=0.0,
+                text=f"p{idx}",
+            )
+
+        paragraphs = [
+            make(0, 1, 10),  # watch only -> excluded
+            make(1, 2, 40),
+            make(2, 3, 30),
+            make(3, 2, 20),
+            make(4, 0, 5),  # clean -> excluded
+        ]
+        result = flagged_paragraphs(paragraphs)
+        # sev 3 first; then sev 2 by line asc (p3 line 20 before p1 line 40)
+        self.assertEqual([p.text for p in result], ["p2", "p3", "p1"])
+        self.assertTrue(all(p.is_flagged for p in result))
+
     def test_dominance_helper_is_shared_by_chapter_and_paragraph(self):
         from lixity.style_profile import dominance_from_hits
 
@@ -211,7 +281,7 @@ class TestVisualizer(unittest.TestCase):
         config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
         profiler = ParagraphProfiler(config)
         paragraphs, chapters = profiler.profile_blocks(parse_markdown_blocks(md))
-        return render_style_report(
+        return render_dashboard(
             chapters,
             paragraphs,
             title="Testroman",
@@ -236,7 +306,7 @@ class TestVisualizer(unittest.TestCase):
         md = "## Kapitel\n\nEin <b>Test</b> & mehr.\n"
         config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
-        html = render_style_report(chapters, paragraphs, title="X")
+        html = render_dashboard(chapters, paragraphs, title="X")
         self.assertIn("&lt;b&gt;Test&lt;/b&gt; &amp; mehr", html)
         self.assertNotIn("<b>Test</b>", html)
 
@@ -244,7 +314,7 @@ class TestVisualizer(unittest.TestCase):
         md = "## Chapter One\n\nI drink coffee. I drink tea.\n"
         config = CorpusConfig(language="en", chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
-        html = render_style_report(
+        html = render_dashboard(
             chapters, paragraphs, title="My Novel", labels={"app_suffix": "Custom Suffix"}
         )
         self.assertIn("Custom Suffix", html)
@@ -349,7 +419,7 @@ class TestDashboard(unittest.TestCase):
         config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
         metrics = CorpusAnalyzer(config).analyze_text(md)
-        return render_style_report(
+        return render_dashboard(
             chapters,
             paragraphs,
             metrics=metrics,
