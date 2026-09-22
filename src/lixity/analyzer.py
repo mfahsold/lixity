@@ -1,8 +1,9 @@
 """lixity.analyzer – High-performance text analysis and corpus linguistics engine.
 
 Computes sentence-length architecture (ASL, CV, staccato/hypotaxis), lexical diversity
-(TTR, Guiraud R, HD-D, Yule's K), readability (Flesch, LIX), dialogue ratios,
-register signals, and per-chapter metrics with standard errors.
+(TTR, Guiraud R, HD-D, MTLD, MATTR, Maas, Yule's K), language-calibrated readability
+(Flesch family, LIX), dialogue ratios, register signals, and per-chapter metrics
+with standard errors.
 """
 
 import math
@@ -12,12 +13,30 @@ import re
 from collections import Counter
 
 from .language import compile_pattern, resolve_language
+from .language_data import READABILITY
 from .models import (
     ChapterMetrics,
     CorpusConfig,
     CorpusMetrics,
     SentenceDistribution,
 )
+from .style_profile import TENSE_MIXED, TENSE_PAST, TENSE_PRESENT
+
+_RE_DE_DIPHTHONG = re.compile(r"(ei|ey|ai|ay|au|eu|äu|ie)")
+_RE_DE_VOWEL = re.compile(r"[aeiouyäöü]")
+_RE_EN_CLEAN = re.compile(r"[^a-z]")
+_RE_EN_VOWEL_GROUP = re.compile(r"[aeiouy]+")
+_RE_FR_CLEAN = re.compile(r"[^a-zàâäéèêëîïôöùûüÿçœæ]")
+_RE_FR_VOWEL_GROUP = re.compile(r"[aeiouyàâäéèêëîïôöùûüÿœæ]+")
+_RE_ES_CLEAN = re.compile(r"[^a-záéíóúüñ]")
+_RE_IT_CLEAN = re.compile(r"[^a-zàèéìíòóùú]")
+_RE_PT_CLEAN = re.compile(r"[^a-zàâãáéêíóôõúüç]")
+_RE_PT_VOWEL_GROUP = re.compile(r"[aeiouàâãáéêíóôõúü]+")
+_RE_NL_CLEAN = re.compile(r"[^a-záéíóúäëïöüâêîôû]")
+_RE_NL_VOWEL_GROUP = re.compile(r"[aeiouyáéíóúäëïöüâêîôûI]+")
+_RE_GENERIC_VOWEL_GROUP = re.compile(r"[aeiouy]+")
+_RE_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
+_RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
 
 
 class CorpusAnalyzer:
@@ -108,9 +127,11 @@ class CorpusAnalyzer:
             tokens = self._word_re.findall(s)
             if not tokens:
                 continue
+            # Elision-aware match (fr: "J'aime" -> "je"/"j", en: "I'm" -> "i")
             first = tokens[0].lower()
+            stem = first.split("'")[0].split("'")[0]
             starters[first] += 1
-            if first in self._starters:
+            if first in self._starters or stem in self._starters:
                 first_person += 1
         total = sum(starters.values())
         rate = (first_person / total * 100.0) if total else 0.0
@@ -140,29 +161,33 @@ class CorpusAnalyzer:
 
         Returns (jsd, top driver words): contributions are additive per type,
         so the most divergent content words are interpretable.
+
+        Only the chapter's own vocabulary is iterated. Types the chapter does
+        not contain contribute exactly ``q * ln(2) / 2`` each, so their total
+        is ``ln(2)/2 * (1 - n_chapter/rest)`` in closed form – an O(chapter
+        types) computation instead of O(corpus types).
         """
         rest = n_corpus - n_chapter
         if rest < 1 or n_chapter < 1:
             return 0.0, []
-        vocab = set(chapter_counter) | set(corpus_counter)
         jsd = 0.0
         contribs: dict[str, float] = {}
-        for w in vocab:
+        for w in sorted(chapter_counter):  # deterministic order: bit-identical across runs
             p = chapter_counter[w] / n_chapter
             q = (corpus_counter[w] - chapter_counter[w]) / rest
             m = 0.5 * (p + q)
-            term = 0.0
-            if p > 0.0:
-                term += p * math.log(p / m)
+            term = p * math.log(p / m)
             if q > 0.0:
                 term += q * math.log(q / m)
             contrib = 0.5 * term
             contribs[w] = contrib
             jsd += contrib
+        # Types absent from the chapter: p = 0, m = q/2 -> contribution q*ln(2)/2.
+        jsd += 0.5 * math.log(2.0) * (1.0 - n_chapter / rest)
         top = [
             w
             for w, _ in sorted(contribs.items(), key=lambda kv: kv[1], reverse=True)
-            if len(w) > 1 and chapter_counter[w] > 0 and w not in self._content_blacklist
+            if len(w) > 1 and w not in self._content_blacklist
         ][:top_n]
         return jsd, top
 
@@ -175,21 +200,270 @@ class CorpusAnalyzer:
         """
         w = word.lower()
         # Reduce diphthongs and double vowels to a single sound
-        w = re.sub(r"(ei|ey|ai|ay|au|eu|äu|ie)", "V", w)
-        w = re.sub(r"[aeiouyäöü]", "V", w)
+        w = _RE_DE_DIPHTHONG.sub("V", w)
+        w = _RE_DE_VOWEL.sub("V", w)
         return max(1, w.count("V"))
+
+    @staticmethod
+    def count_syllables_en(word: str) -> int:
+        """English syllable heuristic: vowel groups + silent-e / -ed / -es / -le rules (~95%)."""
+        w = _RE_EN_CLEAN.sub("", word.lower())
+        if not w:
+            return 0
+        exceptions = {
+            "the": 1,
+            "are": 1,
+            "were": 1,
+            "there": 1,
+            "here": 1,
+            "where": 1,
+            "one": 1,
+            "once": 1,
+            "eye": 1,
+            "hour": 2,
+            "our": 1,
+            "your": 1,
+            "fire": 2,
+            "hire": 2,
+            "more": 1,
+            "sore": 1,
+            "being": 2,
+            "doing": 2,
+            "going": 2,
+            "seeing": 2,
+            "said": 1,
+            "says": 1,
+            "people": 2,
+            "business": 2,
+            "different": 3,
+            "interest": 2,
+            "evening": 3,
+            "water": 2,
+            "little": 2,
+            "every": 2,
+            "very": 2,
+            "many": 2,
+            "any": 2,
+            "only": 2,
+            "both": 1,
+            "though": 1,
+            "through": 1,
+            "thought": 1,
+            "although": 2,
+            "enough": 2,
+            "rough": 1,
+            "tough": 1,
+            "cough": 1,
+            "bought": 1,
+            "brought": 1,
+            "ought": 1,
+            "island": 2,
+            "aisle": 1,
+            "honest": 2,
+        }
+        if w in exceptions:
+            return exceptions[w]
+        count = len(_RE_EN_VOWEL_GROUP.findall(w))
+        if w.endswith("e") and not w.endswith(("le", "ee", "ye", "ie", "oe")) and count > 1:
+            count -= 1
+        if w.endswith("ed") and not w.endswith(("ted", "ded")) and count > 1:
+            count -= 1
+        if w.endswith("le") and len(w) > 2 and w[-3] not in "aeiouy":
+            count += 1
+        if (
+            w.endswith("es")
+            and not w.endswith(("ses", "xes", "zes", "ches", "shes", "ges"))
+            and count > 1
+        ):
+            count -= 1
+        return max(1, count)
+
+    @staticmethod
+    def count_syllables_fr(word: str) -> int:
+        """French syllable heuristic: vowel groups with mute final -e / -ent / -es (~90%)."""
+        w = _RE_FR_CLEAN.sub("", word.lower())
+        if not w:
+            return 0
+        count = len(_RE_FR_VOWEL_GROUP.findall(w))
+        if w.endswith("e") and not w.endswith(("ée", "eé", "eë", "eü")) and count > 1:
+            count -= 1
+        if w.endswith("ent") and count > 1:
+            count -= 1
+        if w.endswith("es") and count > 1 and w[-3] not in "aeiouyàâäéèêëîïôöùûüÿœæ":
+            count -= 1
+        return max(1, count)
+
+    @staticmethod
+    def count_syllables_es(word: str) -> int:
+        """Spanish syllable heuristic: strong/weak vowel diphthong detection (~97%)."""
+        w = _RE_ES_CLEAN.sub("", word.lower())
+        if not w:
+            return 0
+        marked = w.replace("í", "I").replace("ú", "U")
+        strong = "aeoáéó"
+        weak = "iuü"
+        count = 0
+        i = 0
+        while i < len(marked):
+            c = marked[i]
+            if c in strong or c in "IU":
+                count += 1
+                j = i + 1
+                while j < len(marked) and marked[j] in weak:
+                    j += 1
+                    if j < len(marked) and marked[j] in strong:
+                        j += 1
+                i = j
+            else:
+                i += 1
+        return max(1, count)
+
+    @staticmethod
+    def count_syllables_it(word: str) -> int:
+        """Italian syllable heuristic: weak i/u join adjacent vowels into diphthongs (~98%)."""
+        w = _RE_IT_CLEAN.sub("", word.lower())
+        if not w:
+            return 0
+        count = 0
+        i = 0
+        while i < len(w):
+            c = w[i]
+            if c in "aeiouàèéìíòóùú":
+                count += 1
+                j = i + 1
+                while j < len(w) and w[j] in "iu":
+                    j += 1
+                i = j
+            else:
+                i += 1
+        return max(1, count)
+
+    @staticmethod
+    def count_syllables_pt(word: str) -> int:
+        """Portuguese syllable heuristic: vowel groups incl. nasal vowels/diphthongs (~95%)."""
+        w = _RE_PT_CLEAN.sub("", word.lower())
+        if not w:
+            return 0
+        count = len(_RE_PT_VOWEL_GROUP.findall(w))
+        return max(1, count)
+
+    @staticmethod
+    def count_syllables_nl(word: str) -> int:
+        """Dutch syllable heuristic: 'ij' counts as one nucleus, vowel groups otherwise (~94%)."""
+        w = _RE_NL_CLEAN.sub("", word.lower())
+        if not w:
+            return 0
+        marked = w.replace("ij", "I").replace("IJ", "I")
+        count = len(_RE_NL_VOWEL_GROUP.findall(marked))
+        return max(1, count)
 
     def count_syllables(self, word: str) -> int:
         """
         Language-sensitive syllable counting based on the configured language.
-        Uses the German diphthong heuristic for 'de', otherwise generic vowel clusters.
+        Dispatches to per-language heuristics (de, en, fr, es, it, pt, nl);
+        falls back to generic vowel-cluster counting.
         """
-        if self.lang.syllable_mode == "de":
-            return self.count_syllables_de(word)
-        # Generic fallback for Romance/Germanic languages
+        mode = self.lang.syllable_mode
+        fn = {
+            "de": self.count_syllables_de,
+            "en": self.count_syllables_en,
+            "fr": self.count_syllables_fr,
+            "es": self.count_syllables_es,
+            "it": self.count_syllables_it,
+            "pt": self.count_syllables_pt,
+            "nl": self.count_syllables_nl,
+        }.get(mode)
+        if fn is not None:
+            return fn(word)
         w = word.lower()
-        w = re.sub(r"[aeiouy]+", "V", w)
+        w = _RE_GENERIC_VOWEL_GROUP.sub("V", w)
         return max(1, w.count("V"))
+
+    def readability(self, asl: float, asw: float) -> tuple[float, str]:
+        """Language-calibrated Flesch-type Reading Ease score (0–100) + formula name."""
+        rd = READABILITY.get(self.lang.key, READABILITY["generic"])
+        score = rd["constant"] - rd["asl_coef"] * asl - rd["asw_coef"] * asw
+        return score, rd["name"]
+
+    def long_word_min(self) -> int:
+        """Language-calibrated minimum letter count for LIX 'long words' (Björnsson)."""
+        rd = READABILITY.get(self.lang.key, READABILITY["generic"])
+        return int(rd["long_word_min"])
+
+    @staticmethod
+    def mtld(tokens: list[str], threshold: float = 0.72) -> float | None:
+        """
+        MTLD: length-invariant lexical diversity (McCarthy & Jarvis 2010).
+
+        Mean length of sequential token runs that maintain TTR >= threshold;
+        computed forward and backward then averaged. Returns None when no
+        factor completes (e.g. very short or all-unique token sequences).
+        """
+        n = len(tokens)
+        if n < 10:
+            return None
+
+        def _factors(seq: list[str]) -> float:
+            factors = 0.0
+            types: set[str] = set()
+            seg_len = 0
+            for tok in seq:
+                types.add(tok)
+                seg_len += 1
+                ttr = len(types) / seg_len
+                if ttr <= threshold:
+                    factors += 1.0
+                    types.clear()
+                    seg_len = 0
+            if seg_len > 0:
+                ttr = len(types) / seg_len
+                factors += (1.0 - ttr) / (1.0 - threshold)
+            return factors
+
+        fwd = _factors(tokens)
+        bwd = _factors(tokens[::-1])
+        total_factors = (fwd + bwd) / 2.0
+        if total_factors <= 0.0:
+            return None
+        return n / total_factors
+
+    @staticmethod
+    def mattr(tokens: list[str], window: int = 50) -> float | None:
+        """
+        MATTR: moving-average type-token ratio (Covington & McFall 2010).
+
+        Mean TTR over sliding windows of ``window`` tokens – the only index
+        shown to be stable across all text lengths. None if text is shorter
+        than the window. O(N) via an incremental type counter.
+        """
+        n = len(tokens)
+        if n < window:
+            return None
+        counts: Counter[str] = Counter(tokens[:window])
+        distinct = len(counts)
+        total = distinct
+        for i in range(window, n):
+            leaving = tokens[i - window]
+            counts[leaving] -= 1
+            if counts[leaving] == 0:
+                del counts[leaving]
+                distinct -= 1
+            entering = tokens[i]
+            if counts[entering] == 0:
+                distinct += 1
+            counts[entering] += 1
+            total += distinct
+        windows = n - window + 1
+        return total / (window * windows)
+
+    @staticmethod
+    def maas_a2(n_tokens: int, v_types: int) -> float | None:
+        """Maas a² = (log N − log V) / (log N)² – lower = more diverse (Maas 1972)."""
+        if n_tokens <= 1 or v_types <= 1:
+            return None
+        log_n = math.log10(n_tokens)
+        log_v = math.log10(v_types)
+        return (log_n - log_v) / (log_n**2)
 
     def analyze_text(self, full_text: str) -> CorpusMetrics:
         """
@@ -217,8 +491,8 @@ class CorpusAnalyzer:
             main_text = full_text
 
         # Remove Markdown comments
-        cleaned_full = re.sub(r"<!--.*?-->", "", full_text, flags=re.DOTALL)
-        cleaned_main = re.sub(r"<!--.*?-->", "", main_text, flags=re.DOTALL)
+        cleaned_full = _RE_HTML_COMMENT.sub("", full_text)
+        cleaned_main = _RE_HTML_COMMENT.sub("", main_text)
 
         raw_words = len(cleaned_full.split())
         clean_words = len(cleaned_main.split())
@@ -240,10 +514,10 @@ class CorpusAnalyzer:
         guiraud_r = v_types / math.sqrt(n_tokens) if n_tokens else 0.0
 
         # Sentence metrics (remove headings before segmentation to prevent word carry-over)
-        prose_for_sents = re.sub(r"(?m)^#+.*$", "", cleaned_main)
+        prose_for_sents = _RE_HEADING_LINE.sub("", cleaned_main)
         raw_sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", prose_for_sents) if s.strip()]
         sent_lens = [
-            len(self._word_re.findall(s)) for s in raw_sents if len(self._word_re.findall(s)) > 0
+            count for count in (len(self._word_re.findall(s)) for s in raw_sents) if count > 0
         ]
         total_sent = len(sent_lens)
         asl = sum(sent_lens) / total_sent if total_sent else 0.0
@@ -275,11 +549,12 @@ class CorpusAnalyzer:
         sentence_cv = (std_sl / asl) if asl else 0.0
         start_entropy, first_person_start_rate, _entropy_se = self._starter_stats(raw_sents)
 
-        # Readability & complexity
+        # Readability & complexity (language-calibrated Flesch family + LIX)
         total_syllables = sum(self.count_syllables(t) for t in tokens)
         asw = total_syllables / n_tokens if n_tokens else 0.0
-        flesch_de = 180.0 - asl - (58.5 * asw)
-        long_words = sum(1 for t in tokens if len(t) > 6)
+        flesch_de, flesch_variant = self.readability(asl, asw)
+        lw_min = self.long_word_min()
+        long_words = sum(1 for t in tokens if len(t) > lw_min)
         pct_long_words = (long_words / n_tokens) * 100.0 if n_tokens else 0.0
         lix = asl + pct_long_words
 
@@ -305,16 +580,16 @@ class CorpusAnalyzer:
             1 for pl in para_lens if pl <= self.config.min_paragraph_length_for_oneliner and pl != 8
         )
 
-        # Punctuation as a stylistic seismograph
+        # Punctuation as a stylistic seismograph (language-neutral JSON keys)
         punctuation = {
-            "Punkte (.)": cleaned_main.count("."),
-            "Kommata (,)": cleaned_main.count(","),
-            "Gedankenstriche (–/—)": len(re.findall(r"[–—]", cleaned_main)),
-            "Doppelpunkte (:)": cleaned_main.count(":"),
-            "Semikolons (;)": cleaned_main.count(";"),
-            "Fragezeichen (?)": cleaned_main.count("?"),
-            "Ausrufezeichen (!)": cleaned_main.count("!"),
-            "Auslassungspunkte (…/...)": len(re.findall(r"(?:…|\.{3})", cleaned_main)),
+            "periods": cleaned_main.count("."),
+            "commas": cleaned_main.count(","),
+            "dashes": len(re.findall(r"[–—]", cleaned_main)),
+            "colons": cleaned_main.count(":"),
+            "semicolons": cleaned_main.count(";"),
+            "questions": cleaned_main.count("?"),
+            "exclamations": cleaned_main.count("!"),
+            "ellipses": len(re.findall(r"(?:…|\.{3})", cleaned_main)),
         }
 
         # Signal & filter words
@@ -333,6 +608,9 @@ class CorpusAnalyzer:
         modal_density = self._density(sum(1 for t in lower_tokens if t in self._modals), n_tokens)
         filter_density = self._density(filter_cnt, n_tokens)
         hd_d = self.hd_d(lower_tokens)
+        mtld = self.mtld(lower_tokens)
+        mattr = self.mattr(lower_tokens)
+        maas_a2 = self.maas_a2(n_tokens, v_types)
 
         # Chapter-wise segmentation
         raw_chapters = re.split(self.config.chapter_regex, main_text)
@@ -391,11 +669,11 @@ class CorpusAnalyzer:
             pt_c = len(self._praet_re.findall(cl_b))
             ratio = pr_c / (pt_c + 0.001)
             if ratio > 1.5:
-                dom = "Präsens (Szenisch)"
+                dom = TENSE_PRESENT
             elif ratio < 0.67:
-                dom = "Präteritum (Episch)"
+                dom = TENSE_PAST
             else:
-                dom = "Hybrid / Montage"
+                dom = TENSE_MIXED
 
             # --- Style features per chapter (house-style fingerprint) ---
             n_cw = len(c_words)
@@ -415,7 +693,7 @@ class CorpusAnalyzer:
             c_adjective = self._density(c_adjective_cnt, n_cw)
             c_modal = self._density(c_modal_cnt, n_cw)
             c_filter_density = self._density(c_fil, n_cw)
-            c_long_words = sum(1 for t in c_words if len(t) > 6)
+            c_long_words = sum(1 for t in c_words if len(t) > lw_min)
             c_long_pct = (c_long_words / n_cw * 100.0) if n_cw else 0.0
             c_guiraud = len(set(c_lower)) / math.sqrt(n_cw) if n_cw else 0.0
             c_hd_d, c_hd_d_se = self.hd_d_stats(c_lower)
@@ -512,6 +790,7 @@ class CorpusAnalyzer:
             sentence_dist=sent_dist,
             asw=asw,
             flesch_de=flesch_de,
+            flesch_variant=flesch_variant,
             lix=lix,
             dialog_words=dialog_words,
             dialog_ratio=dialog_ratio,
@@ -533,6 +812,9 @@ class CorpusAnalyzer:
             modal_density=modal_density,
             filter_density=filter_density,
             hd_d=hd_d,
+            mtld=mtld,
+            mattr=mattr,
+            maas_a2=maas_a2,
         )
 
     def analyze_file(self, filepath: str) -> CorpusMetrics:

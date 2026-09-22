@@ -44,8 +44,8 @@
   "keywords": "computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style passport, Benjamini-Hochberg, macro editing",
   "featureList": [
     "Sentence-length architecture and rhythm metrics (ASL, staccato, hypotaxis, CV)",
-    "Length-invariant lexical diversity (HD-D McCarthy & Jarvis 2010, Yule's characteristic K, Guiraud R)",
-    "Readability indices: Flesch Reading Ease (Amstad German adaptation) and LIX",
+    "Length-invariant lexical diversity (HD-D, MTLD, MATTR, Maas a², Yule's characteristic K, Guiraud R)",
+    "Language-calibrated readability: Flesch family (Amstad, Flesch, Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma) and LIX",
     "Register signals: dialogue ratio, function words, perception filters, modals, passive voice, nominal style",
     "Paragraph-accurate tense continuity profiling with line anchors and friction severity flags",
     "Self-calibrating style passport: manuscript-intrinsic median/MAD bands, significance-adjusted z* scores, Benjamini-Hochberg FDR control",
@@ -224,32 +224,36 @@ footer {
 
   <h2>What It Looks Like</h2>
   <figure class="shot">
-    <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard showing KPI tiles, chapter style map, and tense continuity panels" width="2880" height="2240" loading="eager"/>
+    <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1600" height="2100" loading="eager"/>
     <figcaption>Interactive single-file HTML dashboard &ndash; KPI overview, chapter map, tense continuity and style panels. Fully self-contained, no external assets.</figcaption>
   </figure>
   <div class="shot-grid">
     <figure class="shot">
-      <img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations" width="2304" height="946" loading="lazy"/>
+      <img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations" width="1600" height="1500" loading="lazy"/>
       <figcaption>z* deviation heatmap &ndash; significant departures from the manuscript&rsquo;s own house style.</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/dashboard-dimensions.png" alt="Latent style dimension cards with variance and loadings" width="2304" height="786" loading="lazy"/>
+      <img src="screenshots/dashboard-layer.png" alt="Style layer overlay colouring paragraphs by deviation from the chapter mean" width="1600" height="1500" loading="lazy"/>
+      <figcaption>Style layer overlay &ndash; paragraph colours show deviation from the chapter mean, with legend and per-layer guidance.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screenshots/dashboard-dimensions.png" alt="Latent style dimension cards with variance and loadings" width="1600" height="560" loading="lazy"/>
       <figcaption>Unsupervised style dimensions (Spearman &rho; + Jacobi eigendecomposition).</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/dashboard-markers.png" alt="Editor work marker table with status badges" width="2304" height="524" loading="lazy"/>
+      <img src="screenshots/dashboard-markers.png" alt="Editor work marker table with status badges" width="1600" height="330" loading="lazy"/>
       <figcaption>Editor-visible work markers with deterministic content-hash IDs.</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode" width="2880" height="2240" loading="lazy"/>
+      <img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode" width="1600" height="2100" loading="lazy"/>
       <figcaption>Same dashboard in dark mode &ndash; follows the reader&rsquo;s system preference.</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with Rich terminal report" width="2280" height="1372" loading="lazy"/>
+      <img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with Rich terminal report" width="1560" height="1030" loading="lazy"/>
       <figcaption><code>lixity analyze</code> &ndash; Rich terminal report with corpus KPIs.</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/cli-style.png" alt="Lixity CLI style passport output" width="2280" height="1920" loading="lazy"/>
+      <img src="screenshots/cli-style.png" alt="Lixity CLI style passport output" width="1560" height="1030" loading="lazy"/>
       <figcaption><code>lixity style</code> &ndash; self-calibrating style passport with bands, z*, FDR.</figcaption>
     </figure>
   </div>

@@ -13,6 +13,8 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from .format import num as format_num
+from .format import pct as format_pct
 from .models import CorpusMetrics
 
 DEFAULT_TEXTE: dict[str, str] = {
@@ -33,7 +35,10 @@ DEFAULT_TEXTE: dict[str, str] = {
     "md_ttr": "Lexikalische Diversität (Type-Token-Ratio).",
     "md_guiraud": "Längenstabilisierte lexikalische Streuung.",
     "md_yules": "Stabilität des Wortschatzes über die Textlänge.",
-    "md_flesch": "Lesbarkeit nach Flesch (deutsche Adaption).",
+    "md_mtld": "Längeninvariante Vokabelvielfalt (McCarthy & Jarvis 2010).",
+    "md_mattr": "Fensterstabile Type-Token-Ratio (Covington & McFall 2010).",
+    "md_maas": "Vokabelkonzentration (Maas 1972; niedriger = reicher).",
+    "md_flesch": "Sprachkalibrierte Lesbarkeitsformel des aktiven Sprachprofils.",
     "md_lix": "Lesbarkeitsindex (LIX).",
     "md_dialog": "Anteil wörtlicher Rede an der Prosa.",
     "md_paras": "Absatzökonomie des Haupttextes.",
@@ -51,6 +56,15 @@ DEFAULT_TEXTE: dict[str, str] = {
     "punct_Ausrufezeichen": "Sparsam dosiert.",
     "punct_Semikolons": "Selten; vermeidet dozierenden Ton.",
     "punct_Auslassungspunkte": "Abreißen des Gedankens.",
+    # Punctuation display names (language-neutral keys in the metrics payload)
+    "pname_periods": "Punkte (.)",
+    "pname_commas": "Kommata (,)",
+    "pname_dashes": "Gedankenstriche (–/—)",
+    "pname_colons": "Doppelpunkte (:)",
+    "pname_semicolons": "Semikolons (;)",
+    "pname_questions": "Fragezeichen (?)",
+    "pname_exclamations": "Ausrufezeichen (!)",
+    "pname_ellipses": "Auslassungspunkte (…/...)",
     # Rich table 1 – reference & assessment (neutral)
     "t1_asl_ref": "8,0 – 11,5 W.",
     "t1_asl_note": "Prägnanter Satzbau.",
@@ -62,6 +76,12 @@ DEFAULT_TEXTE: dict[str, str] = {
     "t1_ttr_note": "Homogener Wortschatz.",
     "t1_yules_ref": "50,0 – 70,0",
     "t1_yules_note": "Stabiler Wortschatz.",
+    "t1_mtld_ref": "≥ 60 (reich)",
+    "t1_mtld_note": "Längeninvariante Vokabelvielfalt.",
+    "t1_mattr_ref": "≥ 0,70 (reich)",
+    "t1_mattr_note": "Fensterstabile Vielfalt.",
+    "t1_maas_ref": "≤ 0,08 (reich)",
+    "t1_maas_note": "Vokabelkonzentration (niedriger = reicher).",
     "t1_flesch_ref": "65,0 – 80,0",
     "t1_flesch_note": "Leichter Lesefluss.",
     "t1_lix_ref": "< 40 (leicht)",
@@ -93,8 +113,16 @@ class ReportFormatter:
         m: CorpusMetrics,
         console: Console | None = None,
         texts: Mapping[str, str] | None = None,
+        language_key: str = "de",
     ) -> None:
         """Renders a modern, highly aesthetic Rich terminal dashboard."""
+
+        def _n(value: float, decimals: int = 1, signed: bool = False) -> str:
+            return format_num(value, language_key, decimals, signed)
+
+        def _p(value: float, decimals: int = 1) -> str:
+            return format_pct(value, language_key, decimals)
+
         con = console or Console()
         con.print()
         ns_250 = m.raw_words / 250.0
@@ -106,11 +134,11 @@ class ReportFormatter:
             "📖 Korpuslinguistische Textanalyse & Manuskriptprofil\n", style="bold cyan"
         )
         header_text.append(
-            f"Umfang: {m.raw_words:,} Wörter | {m.raw_chars:,} Zeichen | {len(m.chapters)} Kapitel vollendet\n",
+            f"Umfang: {_n(m.raw_words, 0)} Wörter | {_n(m.raw_chars, 0)} Zeichen | {len(m.chapters)} Kapitel vollendet\n",
             style="dim white",
         )
         header_text.append(
-            f"Normseiten: ~{ns_250:.1f} NS (à 250 W.) | ~{ns_1500:.1f} NS (à 1.500 Z.)",
+            f"Normseiten: ~{_n(ns_250, 1)} NS (à 250 W.) | ~{_n(ns_1500, 1)} NS (à 1.500 Z.)",
             style="green",
         )
         con.print(Panel(header_text, border_style="cyan", box=box.ROUNDED))
@@ -128,7 +156,7 @@ class ReportFormatter:
 
         table1.add_row(
             "Mittlere Satzlänge (ASL)",
-            f"{m.asl:.2f} W./Satz",
+            f"{_n(m.asl, 2)} W./Satz",
             _t(texts, "t1_asl_ref"),
             _t(texts, "t1_asl_note"),
         )
@@ -140,37 +168,55 @@ class ReportFormatter:
         )
         table1.add_row(
             "Standardabweichung",
-            f"{m.std_sl:.2f} Wörter",
+            f"{_n(m.std_sl, 2)} Wörter",
             _t(texts, "t1_std_ref"),
             _t(texts, "t1_std_note"),
         )
         table1.add_row(
             "Lexikalische Diversität (TTR)",
-            f"{m.ttr:.4f}",
+            f"{_n(m.ttr, 4)}",
             _t(texts, "t1_ttr_ref"),
             _t(texts, "t1_ttr_note"),
         )
         table1.add_row(
             "Yule's Characteristic K",
-            f"{m.yules_k:.2f}",
+            f"{_n(m.yules_k, 2)}",
             _t(texts, "t1_yules_ref"),
             _t(texts, "t1_yules_note"),
         )
         table1.add_row(
-            "Flesch Reading Ease (DE)",
-            f"{m.flesch_de:.1f}",
+            "MTLD (Textual Lexical Diversity)",
+            f"{_n(m.mtld, 1)}" if m.mtld is not None else "–",
+            _t(texts, "t1_mtld_ref"),
+            _t(texts, "t1_mtld_note"),
+        )
+        table1.add_row(
+            "MATTR (Moving-Average TTR)",
+            f"{_n(m.mattr, 3)}" if m.mattr is not None else "–",
+            _t(texts, "t1_mattr_ref"),
+            _t(texts, "t1_mattr_note"),
+        )
+        table1.add_row(
+            "Maas a²",
+            f"{_n(m.maas_a2, 4)}" if m.maas_a2 is not None else "–",
+            _t(texts, "t1_maas_ref"),
+            _t(texts, "t1_maas_note"),
+        )
+        table1.add_row(
+            m.flesch_variant or "Flesch Reading Ease",
+            f"{_n(m.flesch_de, 1)}",
             _t(texts, "t1_flesch_ref"),
             _t(texts, "t1_flesch_note"),
         )
         table1.add_row(
             "LIX-Lesbarkeitsindex",
-            f"{m.lix:.1f}",
+            f"{_n(m.lix, 1)}",
             _t(texts, "t1_lix_ref"),
             _t(texts, "t1_lix_note"),
         )
         table1.add_row(
             "Dialogquote",
-            f"{m.dialog_ratio:.2f} %",
+            f"{_p(m.dialog_ratio, 2)}",
             _t(texts, "t1_dialog_ref"),
             _t(texts, "t1_dialog_note"),
         )
@@ -198,36 +244,47 @@ class ReportFormatter:
         table2.add_row(
             "Kurzsätze (Staccato)",
             "≤ 6 Wörter",
-            f"{d.short_count:,}",
-            f"{d.short_pct:.1f} %",
+            f"{_n(d.short_count, 0)}",
+            f"{_p(d.short_pct, 1)}",
             _t(texts, "t2_short"),
         )
         table2.add_row(
             "Mittlere Sätze (Norm)",
             "7–15 Wörter",
-            f"{d.medium_count:,}",
-            f"{d.medium_pct:.1f} %",
+            f"{_n(d.medium_count, 0)}",
+            f"{_p(d.medium_pct, 1)}",
             _t(texts, "t2_medium"),
         )
         table2.add_row(
             "Lange Sätze (Erweiterung)",
             "16–25 Wörter",
-            f"{d.long_count:,}",
-            f"{d.long_pct:.1f} %",
+            f"{_n(d.long_count, 0)}",
+            f"{_p(d.long_pct, 1)}",
             _t(texts, "t2_long"),
         )
         table2.add_row(
             "Komplexe Hypotaxen",
             "> 25 Wörter",
-            f"{d.complex_count:,}",
-            f"{d.complex_pct:.1f} %",
+            f"{_n(d.complex_count, 0)}",
+            f"{_p(d.complex_pct, 1)}",
             _t(texts, "t2_complex"),
         )
         con.print(table2)
 
     @staticmethod
-    def format_markdown_report(m: CorpusMetrics, texts: Mapping[str, str] | None = None) -> str:
+    def format_markdown_report(
+        m: CorpusMetrics,
+        texts: Mapping[str, str] | None = None,
+        language_key: str = "de",
+    ) -> str:
         """Generates GitHub-Flavored Markdown for embedding into dossiers."""
+
+        def _n(value: float, decimals: int = 1, signed: bool = False) -> str:
+            return format_num(value, language_key, decimals, signed)
+
+        def _p(value: float, decimals: int = 1) -> str:
+            return format_pct(value, language_key, decimals)
+
         ns_250 = m.raw_words / 250.0
         ns_1500 = m.raw_chars / 1500.0
 
@@ -236,19 +293,22 @@ class ReportFormatter:
             "",
             "| Linguistische Metrik | Gemessener Wert | Einordnung & Referenzbereich |",
             "| :--- | :--- | :--- |",
-            f"| **Gesamtwortzahl (Volltext inkl. Anhang)** | **{m.raw_words:,} Wörter** ({m.raw_chars:,} Zeichen) | {_t(texts, 'md_raw_words')} (~{ns_250:.1f} Normseiten à 250 W. / {ns_1500:.1f} NS à 1.500 Z.). |",
-            f"| **Wortzahl Haupttext (Reine Romanprosa)** | **{m.clean_words:,} Wörter** ({m.clean_chars:,} Zeichen) | {_t(texts, 'md_clean_words')} ({len(m.chapters)} Kapitel). |",
-            f"| **Satz-Gesamtzahl (Haupttext)** | **{m.total_sentences:,} Sätze** | {_t(texts, 'md_sentences')} |",
-            f"| **Mittlere Satzlänge (ASL)** | **{m.asl:.2f} Wörter / Satz** | {_t(texts, 'md_asl')} |",
+            f"| **Gesamtwortzahl (Volltext inkl. Anhang)** | **{_n(m.raw_words, 0)} Wörter** ({_n(m.raw_chars, 0)} Zeichen) | {_t(texts, 'md_raw_words')} (~{_n(ns_250, 1)} Normseiten à 250 W. / {_n(ns_1500, 1)} NS à 1.500 Z.). |",
+            f"| **Wortzahl Haupttext (Reine Romanprosa)** | **{_n(m.clean_words, 0)} Wörter** ({_n(m.clean_chars, 0)} Zeichen) | {_t(texts, 'md_clean_words')} ({len(m.chapters)} Kapitel). |",
+            f"| **Satz-Gesamtzahl (Haupttext)** | **{_n(m.total_sentences, 0)} Sätze** | {_t(texts, 'md_sentences')} |",
+            f"| **Mittlere Satzlänge (ASL)** | **{_n(m.asl, 2)} Wörter / Satz** | {_t(texts, 'md_asl')} |",
             f"| **Median der Satzlänge** | **{m.median_sl} Wörter** | {_t(texts, 'md_median')} |",
-            f"| **Standardabweichung Satzlänge** | **{m.std_sl:.2f} Wörter** | {_t(texts, 'md_std')} |",
-            f"| **Lexikalische Diversität (TTR)** | **{m.ttr:.4f}** (V = {m.vocab_types:,} bei N = {m.tokens:,}) | {_t(texts, 'md_ttr')} |",
-            f"| **Guiraud-Index R ($V / \\sqrt{{N}}$)** | **{m.guiraud_r:.2f}** | {_t(texts, 'md_guiraud')} |",
-            f"| **Yule's Characteristic K** | **{m.yules_k:.2f}** | {_t(texts, 'md_yules')} |",
-            f"| **Flesch Reading Ease (DE-Adaption)** | **ca. {m.flesch_de:.1f}** | {_t(texts, 'md_flesch')} |",
-            f"| **LIX (Lesbarkeitsindex)** | **{m.lix:.1f}** | {_t(texts, 'md_lix')} |",
-            f"| **Dialogquote (Wörtliche Rede)** | **{m.dialog_words:,} Wörter ({m.dialog_ratio:.2f} %)** | {_t(texts, 'md_dialog')} |",
-            f"| **Fließprosa-Absätze** | **{m.total_paragraphs} Absätze** (Mittelwert: {m.avg_paragraph_len:.1f} W./Absatz) | {_t(texts, 'md_paras')} |",
+            f"| **Standardabweichung Satzlänge** | **{_n(m.std_sl, 2)} Wörter** | {_t(texts, 'md_std')} |",
+            f"| **Lexikalische Diversität (TTR)** | **{_n(m.ttr, 4)}** (V = {_n(m.vocab_types, 0)} bei N = {_n(m.tokens, 0)}) | {_t(texts, 'md_ttr')} |",
+            f"| **Guiraud-Index R ($V / \\sqrt{{N}}$)** | **{_n(m.guiraud_r, 2)}** | {_t(texts, 'md_guiraud')} |",
+            f"| **Yule's Characteristic K** | **{_n(m.yules_k, 2)}** | {_t(texts, 'md_yules')} |",
+            f"| **MTLD** | **{f'{_n(m.mtld, 1)}' if m.mtld is not None else '–'}** | {_t(texts, 'md_mtld')} |",
+            f"| **MATTR** | **{f'{_n(m.mattr, 3)}' if m.mattr is not None else '–'}** | {_t(texts, 'md_mattr')} |",
+            f"| **Maas a²** | **{f'{_n(m.maas_a2, 4)}' if m.maas_a2 is not None else '–'}** | {_t(texts, 'md_maas')} |",
+            f"| **{m.flesch_variant or 'Flesch Reading Ease'}** | **ca. {_n(m.flesch_de, 1)}** | {_t(texts, 'md_flesch')} |",
+            f"| **LIX (Lesbarkeitsindex)** | **{_n(m.lix, 1)}** | {_t(texts, 'md_lix')} |",
+            f"| **Dialogquote (Wörtliche Rede)** | **{_n(m.dialog_words, 0)} Wörter ({_p(m.dialog_ratio, 2)})** | {_t(texts, 'md_dialog')} |",
+            f"| **Fließprosa-Absätze** | **{m.total_paragraphs} Absätze** (Mittelwert: {_n(m.avg_paragraph_len, 1)} W./Absatz) | {_t(texts, 'md_paras')} |",
             "",
             "---",
             "",
@@ -262,16 +322,16 @@ class ReportFormatter:
 
         d = m.sentence_dist
         lines.append(
-            f"| **Kurzsätze (Staccato)** | $\\le 6$ Wörter | **{d.short_count:,}** | **{d.short_pct:.1f} %** | {_t(texts, 'md_short')} |"
+            f"| **Kurzsätze (Staccato)** | $\\le 6$ Wörter | **{_n(d.short_count, 0)}** | **{_p(d.short_pct, 1)}** | {_t(texts, 'md_short')} |"
         )
         lines.append(
-            f"| **Mittlere Sätze (Normprosa)** | 7–15 Wörter | **{d.medium_count:,}** | **{d.medium_pct:.1f} %** | {_t(texts, 'md_medium')} |"
+            f"| **Mittlere Sätze (Normprosa)** | 7–15 Wörter | **{_n(d.medium_count, 0)}** | **{_p(d.medium_pct, 1)}** | {_t(texts, 'md_medium')} |"
         )
         lines.append(
-            f"| **Lange Sätze (Erweiterung)** | 16–25 Wörter | **{d.long_count:,}** | **{d.long_pct:.1f} %** | {_t(texts, 'md_long')} |"
+            f"| **Lange Sätze (Erweiterung)** | 16–25 Wörter | **{_n(d.long_count, 0)}** | **{_p(d.long_pct, 1)}** | {_t(texts, 'md_long')} |"
         )
         lines.append(
-            f"| **Komplexe Hypotaxen** | $> 25$ Wörter | **{d.complex_count:,}** | **{d.complex_pct:.1f} %** | {_t(texts, 'md_complex')} |"
+            f"| **Komplexe Hypotaxen** | $> 25$ Wörter | **{_n(d.complex_count, 0)}** | **{_p(d.complex_pct, 1)}** | {_t(texts, 'md_complex')} |"
         )
 
         lines.extend(
@@ -286,23 +346,34 @@ class ReportFormatter:
             ]
         )
 
+        punct_names = {
+            "periods": "Punkte (.)",
+            "commas": "Kommata (,)",
+            "dashes": "Gedankenstriche (–/—)",
+            "colons": "Doppelpunkte (:)",
+            "semicolons": "Semikolons (;)",
+            "questions": "Fragezeichen (?)",
+            "exclamations": "Ausrufezeichen (!)",
+            "ellipses": "Auslassungspunkte (…/...)",
+        }
         for k, v in m.punctuation.items():
             density = (v / m.clean_words) * 1000.0 if m.clean_words else 0.0
             fn = ""
             for prefix, key in (
-                ("Punkte", "punct_Punkte"),
-                ("Kommata", "punct_Kommata"),
-                ("Gedankenstriche", "punct_Gedankenstriche"),
-                ("Doppelpunkte", "punct_Doppelpunkte"),
-                ("Fragezeichen", "punct_Fragezeichen"),
-                ("Ausrufezeichen", "punct_Ausrufezeichen"),
-                ("Semikolons", "punct_Semikolons"),
-                ("Auslassungspunkte", "punct_Auslassungspunkte"),
+                ("periods", "punct_Punkte"),
+                ("commas", "punct_Kommata"),
+                ("dashes", "punct_Gedankenstriche"),
+                ("colons", "punct_Doppelpunkte"),
+                ("questions", "punct_Fragezeichen"),
+                ("exclamations", "punct_Ausrufezeichen"),
+                ("semicolons", "punct_Semikolons"),
+                ("ellipses", "punct_Auslassungspunkte"),
             ):
                 if prefix in k:
                     fn = _t(texts, key)
                     break
-            lines.append(f"| **{k}** | {v:,} | {density:.1f} | {fn} |")
+            name = _t(texts, f"pname_{k}") or punct_names.get(k, k)
+            lines.append(f"| **{name}** | {_n(v, 0)} | {_n(density, 1)} | {fn} |")
 
         # Chapter matrix: motif columns dynamically from motif_counts
         motif_keys: list = []
@@ -324,8 +395,8 @@ class ReportFormatter:
         for c in m.chapters:
             motifs = "".join(f" {c.motif_counts.get(key, 0)} |" for key in motif_keys)
             lines.append(
-                f"| {c.num:02d} | {c.title} | {c.words:,} | {c.sentences} | "
-                f"{c.asl:.1f} | {c.dialog_pct:.1f} % | {c.ttr:.3f} |"
+                f"| {c.num:02d} | {c.title} | {_n(c.words, 0)} | {c.sentences} | "
+                f"{_n(c.asl, 1)} | {_p(c.dialog_pct, 1)} | {_n(c.ttr, 3)} |"
                 f"{motifs} {c.filter_verbs} | {c.dominance} |"
             )
 

@@ -47,6 +47,8 @@ class FileUtils:
             temp_fd, temp_path = tempfile.mkstemp(dir=out_dir, prefix="sync_tmp_", suffix=".tmp")
             with os.fdopen(temp_fd, "w", encoding=encoding) as f:
                 f.write(content)
+                f.flush()
+                os.fsync(f.fileno())  # durability: data on disk before the rename
             os.replace(temp_path, filepath)
             return True
         except OSError:

@@ -54,6 +54,7 @@ which writes a single HTML file.
 | `--language CODE` | all commands | `auto` (default), `de`, `en`, `fr`, `es`, `it`, `pt`, `nl`, `generic`. `auto` detects the language from function words and falls back to `generic` when the signal is weak or ambiguous. |
 | `--json` | `analyze`, `profile`, `style` | Print machine-readable JSON instead of the Rich/text output. |
 | `-o`, `--output PATH` | `dashboard` | Target HTML file (default: `lixity-dashboard.html`). |
+| `--dry-run` | `build` | Show planned artifacts without writing anything. |
 | `--version` | top-level | Print engine version and exit. |
 
 ### `lixity analyze`
@@ -79,10 +80,11 @@ The JSON payload is the full `CorpusMetrics` schema:
 | `total_sentences`, `asl`, `median_sl`, `std_sl` | sentence metrics |
 | `sentence_dist` | counts and shares of the four sentence classes |
 | `asw` | average syllables per word |
-| `flesch_de`, `lix` | readability indices |
+| `flesch_de`, `flesch_variant`, `lix` | language-calibrated readability indices |
+| `mtld`, `mattr`, `maas_a2` | length-invariant lexical diversity (`null` when too short) |
 | `dialog_words`, `dialog_ratio` | quoted speech |
 | `total_paragraphs`, `avg_paragraph_len`, `single_line_paragraphs` | paragraph economy |
-| `punctuation`, `signal_counts`, `filter_count` | punctuation, signal words, perception filters |
+| `punctuation`, `signal_counts`, `filter_count` | punctuation (language-neutral keys), signal words, perception filters |
 | `chapters` | per-chapter metrics (words, sentences, ASL, TTR, dialogue, motifs, dominance) |
 
 ### `lixity profile`
@@ -142,8 +144,8 @@ produces an identical file, which makes it safe for version control.
 The dashboard contains:
 
 - corpus KPIs (words, chapters, paragraphs, sentences, ASL, TTR, Yule's K,
-  Flesch, LIX, dialogue, Guiraud R, HD-D, staccato, first-person starts,
-  function words, flagged paragraphs),
+  Flesch, LIX, dialogue, Guiraud R, HD-D, MTLD, MATTR, Maas a², staccato,
+  first-person starts, function words, flagged paragraphs),
 - the sentence-length architecture as bars,
 - the **style heatmap**: chapter × feature matrix of significance-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
@@ -152,13 +154,47 @@ The dashboard contains:
 - the **style dimensions** panel (self-calibrated principal axes with
   loadings and flagged chapters),
 - a chapter map with a colour-coded paragraph strip (present / past / mixed /
-  neutral) and severity markers, plus an optional **style layer** overlay
-  (bottom edge colour per paragraph, within-chapter normalised),
-- clickable paragraphs revealing text, line anchor and per-paragraph stats,
+  neutral) and severity markers, plus a **style layer** overlay: choosing a
+  dimension (ASL, dialogue, function words, perception filters, modals,
+  nominalisations, passive) colours every paragraph by its deviation from the
+  chapter mean (blue = below, orange = above), with a legend, per-layer
+  guidance on what to look for, and the exact value in the tooltip,
+- clickable paragraphs revealing text, line anchor and per-paragraph stats
+  (highlighted in the active layer colour), and clickable heatmap cells that
+  jump to the chapter and activate the matching style layer,
 - the chapter comparison matrix with a deviation column.
 
 ```bash
 lixity dashboard manuscript.md -o ui.html
+```
+
+### `lixity build`
+
+Idempotent workspace build. Put a manuscript into a folder and run `lixity
+build` (or `lixity build path/to/manuscript.md`): lixity discovers the
+manuscript, creates the subfolders `exports/` (with `exports/archive/`) and
+`nda/`, and publishes all analysis artifacts:
+
+- `exports/<slug>_metrics.json` – full corpus metrics (schema v1),
+- `exports/<slug>_profile.json` – paragraph-accurate tense profiles,
+- `exports/<slug>_style.json` – self-calibrated style passport (schema v2),
+- `exports/<slug>_style_passport.txt` – human-readable passport,
+- `exports/<slug>_report.md` – Markdown dossier report,
+- `exports/<slug>_dashboard.html` – single-file HTML dashboard.
+
+**Idempotency:** identical input causes zero writes; changed input creates
+exactly one timestamped version, updates the stable file name (symlink with
+file-copy fallback) and rotates older versions into `exports/archive/`
+(last 10 kept per artifact family). `--dry-run` prints the plan without
+touching any file.
+
+**Manuscript discovery:** `<folder>.md`, then `manuscript.md`/`manuskript.md`,
+otherwise the only Markdown file in the folder (README/AGENTS/LICENSE/NDA are
+ignored); an explicit path always wins.
+
+```bash
+cd my-novel && lixity build          # discovers my-novel.md
+lixity build manuscript.md --dry-run
 ```
 
 ### `lixity about` and `lixity completion`
@@ -167,6 +203,38 @@ lixity dashboard manuscript.md -o ui.html
 lixity about            # tool metadata: languages, features, heuristics
 lixity completion bash  # shell completion script (bash or zsh)
 ```
+
+## Worked example: a sequel in the author's style
+
+The repository ships a complete, reproducible example in `samples/`:
+
+1. **Reference corpus** – Theodor Fontane, *Effi Briest* (Project Gutenberg
+   #5323, public domain), converted to Markdown: `samples/effi-briest.md`
+   (36 chapters, ~95,000 words).
+2. **Style corridor** – `lixity build samples/effi-briest.md` publishes the
+   manuscript's own median ± 2σ band per feature
+   (`samples/exports/effi-briest_style.json`).
+3. **Draft** – `samples/effi-briest-folge/effi-briest-folge.md`: the first
+   chapter of a sequel about Annie, Effi's daughter.
+4. **Verification** – `lixity analyze samples/effi-briest-folge/effi-briest-folge.md`
+   measures the draft against that corridor.
+
+| Feature | Fontane (median) | Corridor (±2σ) | Draft |
+| :--- | ---: | ---: | ---: |
+| ASL | 21.3 | 15.7 – 26.8 | 20.1 |
+| Staccato / hypotaxis | 16.9 / 29.5 % | 4 – 30 / 14 – 45 | 16.7 / 29.2 % |
+| Sentence-length CV | 0.80 | 0.61 – 0.99 | 0.68 |
+| Dialogue share | 58.4 % | 26.8 – 90.1 | 43.6 % |
+| Adjectives / 1,000 words | 21.2 | 14.4 – 28.0 | 17.1 |
+| Long words | 10.9 % | 8.4 – 13.5 | 8.6 % |
+| Modals / passive (per 1,000) | 11.4 / 4.5 | 6.4 – 16.3 / 2.1 – 6.9 | 10.9 / 2.6 |
+| Starter entropy | 5.30 bit | 4.61 – 5.99 | 5.11 |
+| Guiraud R | 18.1 | 14.6 – 21.6 | 14.8 |
+
+14 of 16 features land inside the corridor; the remaining two (function-word
+share +0.08 pp, HD-D −0.001) sit at its edge. The loop is always the same:
+`build` → write → `analyze` → compare → revise – no external style dogma,
+only the author's own distribution.
 
 ## Work markers (editor-visible)
 
@@ -204,8 +272,11 @@ info = api.about()
 | **Guiraud R** | V / √N | length-stabilised lexical spread; comparable across texts |
 | **Yule's K** | vocabulary repetition measure | 50–70 = stable narrator idiom; higher = more repetitive |
 | **ASW** | average syllables per word | feeds Flesch; ~1.7 is everyday German |
-| **Flesch (DE)** | Flesch Reading Ease, Amstad adaptation | 65–80 = easy; higher is easier |
-| **LIX** | ASL + share of words longer than 6 characters | < 40 = accessible, > 50 = demanding |
+| **MTLD** | mean segment length until TTR < 0.72 (forward/backward averaged) | ≥ 60 = rich; length-invariant |
+| **MATTR** | moving-average TTR over a 50-token window | ≥ 0.70 = rich; the most length-stable index |
+| **Maas a²** | (log N − log V) / (log N)² | lower = richer vocabulary |
+| **Flesch** | language-calibrated Flesch family (Amstad for German) | 65–80 = easy; higher is easier |
+| **LIX** | ASL + share of long words (threshold per language: > 6/7/8 letters) | < 40 = accessible, > 50 = demanding |
 | **Dialogue ratio** | share of words inside quoted speech | 5–15 % typical for narrative prose |
 | **Function words** | share of articles, pronouns, prepositions, conjunctions, particles, auxiliaries, modals | high share = grammatical glue, implicit style |
 | **Perception filters** | verbs of perception/sensation ("sah", "hörte", "fühlte") | few = showing, many = telling |
@@ -331,14 +402,16 @@ not a code change.
 
 ## Reproducing the screenshots
 
-The screenshots in the README and on the project page were generated from a
-reference literary manuscript (55k words, German):
+The screenshots in the README and on the project page are generated
+reproducibly from the bundled public-domain sample (Fontane, *Effi Briest*)
+with headless Chromium:
 
 ```bash
-lixity analyze   manuscript.md
-lixity profile   manuscript.md --json > profile.json
-lixity dashboard manuscript.md -o ui.html
+python3 scripts/make_screenshots.py
 ```
+
+The script renders both CLI reports and the dashboard sections and writes
+them to `docs/screenshots/`.
 
 ## Troubleshooting
 

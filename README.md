@@ -59,22 +59,18 @@ Most text analysis tools fall into one of two extremes: heavy general NLP librar
 ### 1. Fiction Authors & Novelists
 - **Macro-Editing & Pacing:** Analyze chapter rhythm via sentence-length distribution (staccato vs. norm vs. hypotactic cascades) and rhythm variability (CV).
 - **Tense Drift Prevention:** Automatically detect unintentional slips between narrative present (*Präsens*) and epic past (*Präteritum*) within scenes.
-- **Narrative Economy:** Track dialogue ratio, perception filter density (*saw, heard, felt*), and passive voice constructions.
 
 ### 2. Literary Editors & Translators
 - **Objective Consistency Auditing:** Evaluate chapter-by-chapter deviations against the book's self-established voice rather than arbitrary external guidelines.
-- **Translation Register Matching:** Compare lexical richness and syntactic rhythm between original source texts and foreign language translations.
 - **Non-Destructive Work Markers:** Embed persistent editorial flags (`<!-- LIXITY-MARKER ... -->`) that render cleanly in Markdown editors (Obsidian, VS Code, Ulysses) but vanish completely in print and EPUB builds.
 
 ### 3. Digital Humanities Researchers & Stylometrists
-- **Length-Robust Vocabulary Metrics:** Compute hypergeometric HD-D (McCarthy & Jarvis 2010), Yule's characteristic $K$, and Guiraud's $R$ across unequal chapter lengths without sample size distortion.
+- **Length-Robust Vocabulary Metrics:** Compute hypergeometric HD-D (McCarthy & Jarvis 2010), MTLD/MATTR, Yule's characteristic $K$, and Guiraud's $R$ across unequal chapter lengths without sample size distortion.
 - **Unsupervised Latent Style Axes:** Discover intrinsic stylistic dimensions using cyclic Jacobi eigendecomposition on Spearman rank correlation matrices without external matrix libraries.
-- **Reproducible Corpus Analysis:** Run fast, fully deterministic batch analyses with byte-for-byte reproducible JSON and markdown outputs.
 
 ### 4. AI Agent Engineers & Automated Publishing Pipelines
 - **Strict Machine Contracts:** Integrate with language models via stable `schema_version: 2` JSON payloads, complete with metadata headers and POSIX exit codes.
 - **Python Facade (`lixity.api`):** Deterministic programmatic access to analysis, tense profiling, passport generation, and marker manipulation.
-- **Offline & CI-Ready:** Zero network calls, zero API keys, and zero heavyweight runtime dependencies.
 
 ---
 
@@ -103,11 +99,14 @@ Most text analysis tools fall into one of two extremes: heavy general NLP librar
 - **Type-Token Ratio (TTR):** Distinct vocabulary types divided by total tokens.
 - **Guiraud's Index ($R = V / \sqrt{N}$):** Length-stabilized vocabulary richness.
 - **HD-D (McCarthy & Jarvis 2010):** Deterministic, hypergeometric implementation of vocd/D; robust against text length differences across chapters.
+- **MTLD (McCarthy & Jarvis 2010):** Mean segment length until the type-token ratio drops below 0.72 (forward/backward averaged); length-invariant.
+- **MATTR (Covington & McFall 2010):** Moving-average TTR over a 50-token window; the most length-stable diversity index.
+- **Maas a² (Maas 1972):** Compact vocabulary-concentration index $(\\log N - \\log V)/(\\log N)^2$.
 - **Yule's Characteristic $K$:** Length-independent measure of vocabulary concentration and repetition stability.
 
 ### 3. Readability & Accessibility
-- **Flesch Reading Ease (German Amstad Adaptation):** Syllable- and sentence-calibrated readability score (0–100).
-- **LIX (Läsbarhetsindex):** Scandinavian readability index combining sentence length and proportion of long words ($> 6$ characters).
+- **Flesch Reading Ease (language-calibrated):** Syllable- and sentence-calibrated readability score (0–100) with the literature formula of the active language profile — Amstad (de), Flesch (en), Kandel-Moles (fr), Szigriszt-Pazos (es), Franchina-Vacca (it), Martins (pt), Douma (nl).
+- **LIX (Läsbarhetsindex):** Sentence length plus proportion of long words, with language-calibrated long-word thresholds ($> 6$ letters for English, $> 7$ for Romance, $> 8$ for German/Dutch).
 
 ### 4. Narrative Voice & Register Signals
 - **Dialogue Share:** Proportion of direct speech enclosed in quotation marks.
@@ -141,10 +140,7 @@ pip install -e .
 ```
 
 ### Dependencies
-Lixity deliberately keeps dependencies minimal:
-- [`pydantic>=2.0.0`](https://pydantic.dev/) – Strict schema validation and data models
-- [`rich>=13.0.0`](https://github.com/Textualize/rich) – Terminal tables, trees, and progress rendering
-- [`orjson>=3.9.0`](https://github.com/ijl/orjson) – Fast, standards-compliant JSON serialization
+Deliberately minimal: `pydantic` (schemas), `rich` (terminal rendering), `orjson` (JSON). No NumPy, SciPy, or C-extensions.
 
 ---
 
@@ -196,9 +192,18 @@ lixity dashboard manuscript.md -o exports/dashboard.html
 ```
 
 ![Lixity dashboard heatmap](docs/screenshots/dashboard-heatmap.png)
+![Lixity style layer overlay](docs/screenshots/dashboard-layer.png)
 ![Lixity style dimensions](docs/screenshots/dashboard-dimensions.png)
 
-### 5. Introspection & Shell Completion
+### 5. Idempotent Workspace Build
+Drop a manuscript into a folder and run `lixity build`: it discovers the manuscript, creates `exports/` (with `exports/archive/`) and `nda/`, and publishes metrics, profiles, style passport, Markdown report and dashboard. Identical input causes zero writes; changed input rotates exactly one timestamped version (archive keeps the last 10 per family).
+
+```bash
+cd my-novel && lixity build      # discovers my-novel.md
+lixity build manuscript.md --dry-run
+```
+
+### 6. Introspection & Shell Completion
 
 ```bash
 # Display registered languages, features, and heuristics
@@ -208,6 +213,20 @@ lixity about
 lixity completion bash >> ~/.bashrc
 lixity completion zsh > "${fpath[1]}/_lixity"
 ```
+
+### 7. Worked Example: a Sequel in the Author's Own Style
+
+The repository ships a reproducible example: Fontane's *Effi Briest* (Project Gutenberg #5323, public domain) as the reference corpus, plus the first chapter of a sequel written against its measured style corridor.
+
+```bash
+# Style corridor of the reference manuscript (median ± 2σ per feature)
+lixity build samples/effi-briest.md
+
+# Measure the draft against the corridor
+lixity analyze samples/effi-briest-folge/effi-briest-folge.md --json
+```
+
+14 of 16 style features of the draft land inside the corridor — the loop is `build` → write → `analyze` → compare → revise. The full comparison table is in [`docs/USAGE.md`](docs/USAGE.md#worked-example-a-sequel-in-the-authors-style).
 
 ---
 
@@ -309,11 +328,11 @@ Lixity natively supports **7 languages** plus an extensible `generic` fallback:
 | :---: | :--- | :---: | :---: | :---: | :---: |
 | `de` | German (*Deutsch*) | Full | Full (Präsens/Präteritum) | Flesch (Amstad) + LIX | Full |
 | `en` | English | Full | Full (Present/Past) | Flesch + LIX | Full |
-| `fr` | French (*Français*) | Full | Full (Présent/Imparfait/Passé) | LIX | Full |
-| `es` | Spanish (*Español*) | Full | Full (Presente/Pasado) | LIX | Full |
-| `it` | Italian (*Italiano*) | Full | Full (Presente/Passato) | LIX | Full |
-| `pt` | Portuguese (*Português*) | Full | Full (Presente/Pretérito) | LIX | Full |
-| `nl` | Dutch (*Nederlands*) | Full | Full (O.T.T. / O.V.T.) | LIX | Full |
+| `fr` | French (*Français*) | Full | Full (Présent/Imparfait/Passé) | Flesch (Kandel-Moles) + LIX | Full |
+| `es` | Spanish (*Español*) | Full | Full (Presente/Pasado) | Flesch (Szigriszt-Pazos) + LIX | Full |
+| `it` | Italian (*Italiano*) | Full | Full (Presente/Passato) | Flesch (Franchina-Vacca) + LIX | Full |
+| `pt` | Portuguese (*Português*) | Full | Full (Presente/Pretérito) | Flesch (Martins) + LIX | Full |
+| `nl` | Dutch (*Nederlands*) | Full | Full (O.T.T. / O.V.T.) | Flesch (Douma) + LIX | Full |
 | `generic` | Generic Fallback | Universal | Minimal | LIX | Heuristic |
 
 The language can be explicitly set or automatically detected (`--language auto`) via function-word distribution vectors. Adding a new language requires only a single `LanguageProfile` definition without modifying any algorithmic code.
@@ -324,7 +343,7 @@ The language can be explicitly set or automatically detected (`--language auto`)
 
 Lixity implements peer-reviewed algorithms and mathematically sound formulations:
 
-- **HD-D Lexical Diversity:** Implements the McCarthy & Jarvis (2010) closed-form hypergeometric formulation of vocd, drawing random sample sizes of $N=42$ words to compute the probability of encountering each type.
+- **HD-D Lexical Diversity:** Implements the McCarthy & Jarvis (2010) closed-form hypergeometric formulation of vocd, drawing 42 random samples of 35 consecutive tokens (deterministic seed) and averaging their type variety.
 - **Yule's Characteristic $K$:**
   $$K = 10^4 \times \frac{\sum_{m} m^2 V_m - N}{N^2}$$
   where $V_m$ is the number of types occurring exactly $m$ times.
@@ -353,7 +372,7 @@ Yes. While developed with literary manuscripts in mind, Lixity's rhythm, lexical
 
 <details>
 <summary><b>Can I run Lixity in CI/CD pipelines?</b></summary>
-Yes. Lixity returns clean, standardized POSIX exit codes (0 = clean, 1 = error/invalid input, 2 = linting/style warnings if configured) and emits JSON with deterministic key ordering.
+Yes. Lixity is offline, deterministic, and returns clean POSIX exit codes (0 = success, 1 = file/processing error, 2 = usage error) with deterministic JSON key ordering — identical input yields byte-identical output.
 </details>
 
 ---

@@ -5,13 +5,15 @@ lexicons, tense markers, and register signals via function-word distribution vec
 """
 
 import re
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 
 from .language_data import (
+    GROUP_LABELS,
     HELP_TEXTS,
     LABELS,
     LANGUAGE_PATTERNS,
+    LAYER_LABELS,
     LEXICON,
     METRIC_LABELS,
     PROFILE_DATA,
@@ -41,7 +43,7 @@ class LanguageProfile:
     signal_keywords: Mapping[str, str]
     stopwords: frozenset
     labels: Mapping[str, str]
-    lexicon: Mapping[str, tuple]
+    lexicon: Mapping[str, Sequence[str]]
     function_words: frozenset
     first_person_starters: frozenset
     passive_regex: str
@@ -63,7 +65,7 @@ class ResolvedLanguage:
     filter_verbs_regex: str
     signal_keywords: Mapping[str, str]
     labels: Mapping[str, str]
-    lexicon: Mapping[str, tuple]
+    lexicon: Mapping[str, Sequence[str]]
     function_words: frozenset
     stopwords: frozenset
     first_person_starters: frozenset
@@ -113,6 +115,8 @@ def _build_profiles() -> dict[str, LanguageProfile]:
                 **LABELS.get(key, LABELS["generic"]),
                 **METRIC_LABELS.get(key, METRIC_LABELS["en"]),
                 **HELP_TEXTS.get(key, HELP_TEXTS["en"]),
+                **GROUP_LABELS.get(key, GROUP_LABELS["en"]),
+                **LAYER_LABELS.get(key, LAYER_LABELS["en"]),
             },
             lexicon=LEXICON.get(key, {}),
             function_words=_function_words(key),

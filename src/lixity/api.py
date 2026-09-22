@@ -114,6 +114,7 @@ def dashboard(
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,
+        language_key=resolved.key,
         markers=marker_items if marker_items else None,
     )
 

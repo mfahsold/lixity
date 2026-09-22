@@ -96,7 +96,7 @@ class TestCliAgentSurface(unittest.TestCase):
     def test_completion_bash_and_zsh(self):
         for script in (_BASH_COMPLETION, _ZSH_COMPLETION):
             self.assertIn("lixity", script)
-        self.assertIn("analyze profile dashboard style about completion", _BASH_COMPLETION)
+        self.assertIn("analyze profile dashboard style build about completion", _BASH_COMPLETION)
 
     def test_cli_exit_codes(self):
         self.assertEqual(self._run("analyze"), 0)

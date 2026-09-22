@@ -25,6 +25,7 @@ from lixity.style_fingerprint import (  # noqa: E402
     benjamini_hochberg,
     jacobi_eigh,
     layer_colors,
+    layer_stats,
     mad,
     median,
     robust_z,
@@ -113,6 +114,8 @@ class TestAnalyzerStyleFeatures(unittest.TestCase):
         hd2 = CorpusAnalyzer.hd_d(longer)
         self.assertIsNotNone(hd1)
         self.assertIsNotNone(hd2)
+        if hd1 is None or hd2 is None:
+            self.fail("HD-D should be measurable for 1000 tokens")
         self.assertAlmostEqual(hd1, hd2)
         self.assertGreaterEqual(hd1, 0.0)
         self.assertLessEqual(hd1, 1.0)
@@ -136,6 +139,8 @@ class TestStyleFingerprint(unittest.TestCase):
         z2 = self.fp.z_scores[2].get("first_person_start_rate")
         self.assertIsNotNone(z1)
         self.assertIsNotNone(z2)
+        if z1 is None or z2 is None:
+            self.fail("First-person deviation should be measurable")
         self.assertGreater(z1, 0.0)
         self.assertLess(z2, 0.0)
 
@@ -196,6 +201,27 @@ class TestParagraphLayers(unittest.TestCase):
         self.assertIsNotNone(colors.get(1))
         self.assertNotEqual(colors[0], colors[1])
 
+    def test_layer_stats_values_and_directions(self):
+        md = (
+            "## Kap 1\n\n"
+            "Ich trinke Kaffee und gehe los. Ich sehe den Regen und ich gehe weiter. "
+            "Ich trinke Tee und gehe nach Hause.\n\n"
+            "Ich spüre die Kälte und ich fühle den Wind. Ich merke den Regen auf der Haut. "
+            "Ich glaube, es wird kalt und ich spüre das Zittern.\n\n"
+            "Die Straße liegt still und die Stadt schweigt.\n\n"
+            "Ich spüre die Müdigkeit. Ich merke den Morgen und ich fühle die Sonne.\n"
+        )
+        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
+        stats = layer_stats(paragraphs, "filter")
+        self.assertTrue(stats)
+        for value, _z in stats.values():
+            self.assertGreaterEqual(value, 0.0)
+        # Filter-density outliers sit above the chapter median -> positive z
+        self.assertGreater(max(z for _v, z in stats.values()), 0.0)
+        self.assertLess(min(z for _v, z in stats.values()), 0.0)
+        self.assertEqual(layer_stats(paragraphs, "unknown"), {})
+
 
 class TestFingerprintDashboard(unittest.TestCase):
     def _build(self):
@@ -217,7 +243,8 @@ class TestFingerprintDashboard(unittest.TestCase):
         html = self._build()
         self.assertIn('<table class="heatmap">', html)
         self.assertIn("style-layer", html)
-        self.assertIn("data-layer-asl", html)
+        self.assertIn("data-layers=", html)
+        self.assertIn("layer-legend", html)
         self.assertIn("z-gradient", html)
         self.assertIn("Consistency", html)
 

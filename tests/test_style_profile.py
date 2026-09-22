@@ -152,6 +152,26 @@ class TestParagraphProfiler(unittest.TestCase):
         self.assertFalse(paragraphs[0].mixed)
         self.assertEqual(paragraphs[0].severity, 0)
 
+    def test_productive_tense_patterns_de(self):
+        # Weak preterite (-te) is not in the curated list but must be detected
+        md = "## Kapitel 1\n\nEr machte das Fenster auf. Sie sagte nichts und wartete.\n"
+        paragraphs, _ = self._profile(md)
+        self.assertEqual(paragraphs[0].dominant, TENSE_PAST)
+
+    def test_productive_tense_patterns_en(self):
+        md = "## Chapter 1\n\nHe walked to the door. She smiled at him.\n"
+        config = CorpusConfig(language="en", chapter_regex=r"(?m)^##\s+")
+        paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
+        self.assertEqual(paragraphs[0].dominant, TENSE_PAST)
+
+    def test_dutch_passive_requires_participle(self):
+        import re
+
+        lang = resolve_language(CorpusConfig(language="nl"))
+        self.assertIsNone(re.search(lang.passive_regex, "Het is goed."))
+        self.assertIsNotNone(re.search(lang.passive_regex, "Het is gemaakt."))
+        self.assertIsNotNone(re.search(lang.passive_regex, "Het werd geopend."))
+
     def test_generic_language_degrades_gracefully(self):
         md = "## Kapitel 1\n\nIch trinke Kaffee. Ich ging zum Fenster.\n"
         config = CorpusConfig(language="generic", chapter_regex=r"(?m)^##\s+")
@@ -174,7 +194,12 @@ class TestVisualizer(unittest.TestCase):
         config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
         profiler = ParagraphProfiler(config)
         paragraphs, chapters = profiler.profile_blocks(parse_markdown_blocks(md))
-        return render_style_report(chapters, paragraphs, title="Testroman")
+        return render_style_report(
+            chapters,
+            paragraphs,
+            title="Testroman",
+            labels=get_language_profile("de").labels,
+        )
 
     def test_html_contains_structure_and_anchors(self):
         html = self._render()

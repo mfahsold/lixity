@@ -21,6 +21,7 @@ from that style, controlled for measurement noise and multiple testing.
 | `lixity profile FILE` | paragraph-accurate tense/style profiles | JSON (meta + chapters + paragraphs) |
 | `lixity style FILE --json` | style passport (bands, deviations, dimensions, FDR) | JSON (passport, schema v2) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard | file path |
+| `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` | artifact list |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
 | `lixity completion bash\|zsh` | shell completion script | script |
 
@@ -33,9 +34,11 @@ from that style, controlled for measurement noise and multiple testing.
 ### 3.1 `analyze --json` (schema_version 1)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.2.0", "schema_version": 1, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.3.0", "schema_version": 1, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
-             "hd_d": 0.997, "staccato_pct": 38.5, "chapters": [ … ]}}
+             "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
+             "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",
+             "staccato_pct": 38.5, "chapters": [ … ]}}
 ```
 
 `metrics.chapters[]` carries per chapter, among others:
@@ -52,6 +55,18 @@ from that style, controlled for measurement noise and multiple testing.
 - `jsd` (Jensen-Shannon distance of the chapter's word distribution to the
   rest of the corpus) and `jsd_top_words` (the most contributing content
   words – interpretable drivers of divergence).
+
+Corpus-level notes:
+
+- `mtld`, `mattr`, `maas_a2` are length-invariant lexical-diversity indices
+  (`null` for texts too short to estimate them); `mattr` uses a 50-token
+  window, `mtld` the standard TTR threshold of 0.72.
+- `flesch_de` is the **language-calibrated** Flesch-type score of the active
+  profile; `flesch_variant` names the formula used (Amstad, Flesch,
+  Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma).
+- `punctuation` uses language-neutral keys (`periods`, `commas`, `dashes`,
+  `colons`, `semicolons`, `questions`, `exclamations`, `ellipses`), so agents
+  can parse them independent of the UI language.
 
 ### 3.2 `style --json` (passport, schema_version 2)
 

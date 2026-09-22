@@ -76,7 +76,7 @@ def parse_markdown_blocks(content: str) -> list[dict[str, Any]]:
         if stripped.startswith(">"):
             start_line = i + 1
             paras = []
-            cur_p = []
+            cur_p: list[str] = []
             while i < len(lines):
                 q_line = lines[i].rstrip("\r\n").strip()
                 if q_line.startswith(">"):

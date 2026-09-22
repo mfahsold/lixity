@@ -13,6 +13,8 @@ from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Any
 
+from .format import num as format_num
+
 # Descriptive, register-neutral features: (model field, label key, unit).
 # Every style – staccato or cascading, nominal or verbal – is a legal value;
 # only the deviation from the text's own centre is measured.
@@ -344,8 +346,8 @@ class StyleFingerprint:
                 ]
                 rho = 0.0
                 if len(common) >= 3:
-                    xs = [float(self.values[fields[i]][ch]) for ch in common]
-                    ys = [float(self.values[fields[j]][ch]) for ch in common]
+                    xs = [v for ch in common if (v := self.values[fields[i]][ch]) is not None]
+                    ys = [v for ch in common if (v := self.values[fields[j]][ch]) is not None]
                     rho = spearman_rho(xs, ys)
                 matrix[i][j] = matrix[j][i] = rho
         return matrix
@@ -398,7 +400,7 @@ class StyleFingerprint:
     def _derive_redundancies(self) -> list[dict[str, Any]]:
         """Feature pairs that measure (almost) the same thing: |rho| >= 0.8."""
         fields = self._usable_features()
-        pairs = []
+        pairs: list[dict[str, Any]] = []
         for i in range(len(fields)):
             for j in range(i + 1, len(fields)):
                 common = [
@@ -410,12 +412,12 @@ class StyleFingerprint:
                 ]
                 if len(common) < 3:
                     continue
-                xs = [float(self.values[fields[i]][ch]) for ch in common]
-                ys = [float(self.values[fields[j]][ch]) for ch in common]
+                xs = [v for ch in common if (v := self.values[fields[i]][ch]) is not None]
+                ys = [v for ch in common if (v := self.values[fields[j]][ch]) is not None]
                 rho = spearman_rho(xs, ys)
                 if abs(rho) >= REDUNDANCY_RHO:
                     pairs.append({"a": fields[i], "b": fields[j], "rho": round(rho, 3)})
-        pairs.sort(key=lambda p: abs(p["rho"]), reverse=True)
+        pairs.sort(key=lambda p: abs(float(p["rho"])), reverse=True)
         return pairs[:10]
 
     def top_deviants(self, n: int = 3) -> list[tuple[int, float]]:
@@ -470,11 +472,19 @@ class StyleFingerprint:
             "redundant_features": self.redundant_features,
         }
 
-    def passport_text(self, labels: Mapping[str, str] | None = None) -> str:
+    def passport_text(
+        self, labels: Mapping[str, str] | None = None, language_key: str = "de"
+    ) -> str:
         """Human-readable style passport (constraint block for author or LLM)."""
         labels = labels or {}
+
+        def t(key: str, default: str) -> str:
+            return labels.get(key, default)
+
         lines = [
-            f"STILPASS – selbstkalibrierter Hausstil ({self.n_chapters} Kapitel)",
+            f"{t('style_passport', 'STILPASS')} – "
+            f"{t('house_style', 'selbstkalibrierter Hausstil')} "
+            f"({self.n_chapters} {t('chapter', 'Kapitel')})",
             "=" * 72,
         ]
         for field_name, label_key, unit in FEATURES:
@@ -486,17 +496,26 @@ class StyleFingerprint:
             label = labels.get(label_key, field_name)
             if sigma > 0.0:
                 lines.append(
-                    f"{label:<22} Median {centre:>9.2f}   Korridor "
-                    f"{centre - 2 * sigma:>8.2f} – {centre + 2 * sigma:>7.2f}   [{unit}]"
+                    f"{label:<22} {t('median', 'Median')} {format_num(centre, language_key, 2):>9}   "
+                    f"{t('band', 'Korridor')} "
+                    f"{format_num(centre - 2 * sigma, language_key, 2):>8} – "
+                    f"{format_num(centre + 2 * sigma, language_key, 2):>7}   [{unit}]"
                 )
             else:
-                lines.append(f"{label:<22} Median {centre:>9.2f}   (konstant)   [{unit}]")
+                lines.append(
+                    f"{label:<22} {t('median', 'Median')} {format_num(centre, language_key, 2):>9}   "
+                    f"({t('constant', 'konstant')})   [{unit}]"
+                )
         lines.append("=" * 72)
-        lines.append(f"Konsistenz: {self.consistency * 100:.1f} % der Zellen im Korridor (z*)")
         lines.append(
-            f"Multiplizität: {self.expected_false_positives:.1f} statistisch erwartete "
-            f"Zufallstreffer bei |z*| ≥ 2,5; FDR-bestätigt (q=0,05): "
-            f"{sum(len(v) for v in self.fdr_flagged.values())} Zellen"
+            f"{t('consistency', 'Konsistenz')}: {format_num(self.consistency * 100, language_key, 1)} % "
+            f"{t('cells_in_band', 'der Zellen im Korridor')} (z*)"
+        )
+        lines.append(
+            f"{t('multiplicity', 'Multiplizität')}: {format_num(self.expected_false_positives, language_key, 1)} "
+            f"{t('expected_hits', 'statistisch erwartete Zufallstreffer')} |z*| >= 2.5; "
+            f"{t('fdr_confirmed', 'FDR-bestätigt')} (q=0.05): "
+            f"{sum(len(v) for v in self.fdr_flagged.values())} {t('cells', 'Zellen')}"
         )
         if self.dimensions:
             lines.append("-" * 72)
@@ -513,38 +532,45 @@ class StyleFingerprint:
                 )
                 flagged = dim.get("flagged", [])
                 lines.append(
-                    f"Dimension {dim['index']} ({dim['variance'] * 100:.0f} % Varianz): "
+                    f"{t('dimension', 'Dimension')} {dim['index']} "
+                    f"({format_num(dim['variance'] * 100, language_key, 0)} % {t('variance', 'Varianz')}): "
                     f"{pos_text}  ⇅  {neg_text}"
                 )
                 if flagged:
-                    lines.append(f"    auffällig: Kapitel {', '.join(map(str, flagged))}")
+                    lines.append(
+                        f"    {t('flagged', 'auffällig')}: "
+                        f"{t('chapter', 'Kapitel')} {', '.join(map(str, flagged))}"
+                    )
         if self.redundant_features:
             field_labels = {f: label_key for f, label_key, _u in FEATURES}
             redundant = ", ".join(
                 f"{labels.get(field_labels.get(p['a'], p['a']), p['a'])}↔"
-                f"{labels.get(field_labels.get(p['b'], p['b']), p['b'])} ({p['rho']:+.2f})"
+                f"{labels.get(field_labels.get(p['b'], p['b']), p['b'])} "
+                f"({format_num(p['rho'], language_key, 2, signed=True)})"
                 for p in self.redundant_features[:4]
             )
-            lines.append(f"Redundante Merkmale (|\u03c1| \u2265 0,8): {redundant}")
+            lines.append(f"{t('redundant', 'Redundante Merkmale')} (|\u03c1| >= 0.8): {redundant}")
         lines.append("=" * 72)
         field_labels = {f: label_key for f, label_key, _u in FEATURES}
         for chapter_num, mean_abs in self.top_deviants(5):
             dev = self.deviations.get(chapter_num, {})
             named = ", ".join(
-                f"{labels.get(field_labels.get(k, k), k)} {z:+.1f}\u03c3"
+                f"{labels.get(field_labels.get(k, k), k)} {format_num(z, language_key, 1, signed=True)}σ"
                 for k, z in sorted(dev.items(), key=lambda kv: abs(kv[1]), reverse=True)[:4]
             )
-            lines.append(f"Kapitel {chapter_num:>2}: Ø|z*| {mean_abs:.2f} – {named}")
+            lines.append(
+                f"{t('chapter', 'Kapitel')} {chapter_num:>2}: Ø|z*| {format_num(mean_abs, language_key, 2)} – {named}"
+            )
         return "\n".join(lines)
 
 
-def layer_colors(
-    paragraphs: Sequence[Any], layer: str, thresholds: FingerprintThresholds | None = None
-) -> dict[int, str | None]:
-    """
-    Colours for the chapter-strip overlay: within-chapter robust z of the
-    selected paragraph feature, mapped to the diverging colour scale.
-    Returns {paragraph_index: css colour or None (not measurable)}.
+def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float, float]]:
+    """Per-paragraph layer values with their within-chapter robust z-score.
+
+    Each chapter is its own reference (median/MAD), so the colour shows
+    deviation *within* the chapter, not against the whole manuscript.
+    Returns {paragraph_index: (value, robust z)}; empty for unknown layers
+    or chapters with fewer than three measurable paragraphs.
     """
     field_name = LAYER_FEATURES.get(layer)
     if field_name is None:
@@ -555,19 +581,22 @@ def layer_colors(
         if not isinstance(value, int | float):
             continue
         by_chapter.setdefault(p.chapter_num, []).append((idx, float(value)))
-    colours: dict[int, str | None] = {}
+    stats: dict[int, tuple[float, float]] = {}
     for pairs in by_chapter.values():
-        obs = [v for _, v in pairs]
-        if len(obs) < 3:
-            for idx, _ in pairs:
-                colours[idx] = None
+        if len(pairs) < 3:
             continue
+        obs = [v for _, v in pairs]
         centre = median(obs)
         spread = mad(obs, centre)
         if spread == 0.0:
-            for idx, _ in pairs:
-                colours[idx] = None
             continue
         for idx, value in pairs:
-            colours[idx] = z_color(robust_z(value, centre, spread))
-    return colours
+            stats[idx] = (value, robust_z(value, centre, spread))
+    return stats
+
+
+def layer_colors(
+    paragraphs: Sequence[Any], layer: str, thresholds: FingerprintThresholds | None = None
+) -> dict[int, str | None]:
+    """Colours for the chapter-strip overlay (value -> diverging colour scale)."""
+    return {idx: z_color(z) for idx, (_value, z) in layer_stats(paragraphs, layer).items()}

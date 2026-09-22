@@ -118,7 +118,7 @@ class ChapterMetrics(BaseModel):
     )
     filter_verbs: int = Field(default=0, description="Häufigkeit von Perzeptionsfiltern.")
     dominance: str = Field(
-        default="Hybrid / Montage", description="Tempus-Tendenz (Präsens vs. Präteritum)."
+        default="Gemischt", description="Tempus-Tendenz (kanonisch: Präsens/Präteritum/Gemischt)."
     )
     signal_matches: dict[str, int] = Field(
         default_factory=dict, description="Generische Fundstellen aller Signalwörter."
@@ -195,7 +195,11 @@ class CorpusMetrics(BaseModel):
     std_sl: float = Field(description="Standardabweichung der Satzlänge.")
     sentence_dist: SentenceDistribution = Field(description="Satzlängen-Architekturprofil.")
     asw: float = Field(description="Mittlere Silbenanzahl pro Wort (Average Syllables per Word).")
-    flesch_de: float = Field(description="Flesch Reading Ease (deutsche Amstad-Formel).")
+    flesch_de: float = Field(description="Flesch Reading Ease (sprachkalibrierte Formel).")
+    flesch_variant: str = Field(
+        default="",
+        description="Name der verwendeten Lesbarkeitsformel (z. B. Amstad, Kandel-Moles).",
+    )
     lix: float = Field(description="Läsbarhetsindex (LIX = ASL + % Langwörter > 6 Buchstaben).")
     dialog_words: int = Field(description="Wortanzahl in wörtlicher Rede.")
     dialog_ratio: float = Field(description="Prozentualer Dialoganteil an der Romanprosa.")
@@ -223,6 +227,17 @@ class CorpusMetrics(BaseModel):
     filter_density: float = Field(default=0.0, description="Perzeptionsfilter je 1.000 Wörter.")
     hd_d: float | None = Field(
         default=None, description="HD-D lexikalische Diversität (McCarthy & Jarvis 2010)."
+    )
+    mtld: float | None = Field(
+        default=None,
+        description="MTLD Measure of Textual Lexical Diversity (McCarthy & Jarvis 2010).",
+    )
+    mattr: float | None = Field(
+        default=None,
+        description="MATTR Moving-Average Type-Token-Ratio (Covington & McFall 2010).",
+    )
+    maas_a2: float | None = Field(
+        default=None, description="Maas a² = (log N − log V) / (log N)² (Maas 1972)."
     )
 
 

@@ -160,6 +160,40 @@ class TestCorpusAnalyzer(unittest.TestCase):
         self.assertGreater(m.flesch_de, 80.0)
         self.assertLess(m.lix, 25.0)
 
+    def test_lexical_diversity_indices(self):
+        # >= 50 tokens so that MTLD, MATTR and Maas a² are computable
+        diverse = " ".join(f"Wort{i} klingt anders und trägt eigene Farbe" for i in range(15))
+        metrics = self.analyzer.analyze_text(f"## Diversität\n\n{diverse}.\n")
+        self.assertTrue(metrics.mtld is not None and metrics.mtld > 0.0)
+        self.assertTrue(metrics.mattr is not None and 0.0 < metrics.mattr <= 1.0)
+        self.assertTrue(metrics.maas_a2 is not None and metrics.maas_a2 > 0.0)
+
+    def test_lexical_diversity_none_for_short_texts(self):
+        metrics = self.analyzer.analyze_text("## Kurz\n\nNur ein kurzer Satz.\n")
+        self.assertIsNone(metrics.mtld)
+        self.assertIsNone(metrics.mattr)
+
+    def test_mtld_deterministic_and_partial_factor(self):
+        # Every factor spans exactly 5 tokens (TTR hits 0.6 on the 5th),
+        # so MTLD = 120 / 24 = 5.0 – catches segment-reset regressions.
+        self.assertEqual(CorpusAnalyzer.mtld(["a", "b", "c"] * 40), 5.0)
+        # Trailing partial factor: (1 − 0.75) / (1 − 0.72) = 0.8929 factors.
+        partial = ["a", "b", "c"] * 40 + ["a", "b", "c", "a"]
+        value = CorpusAnalyzer.mtld(partial)
+        self.assertIsNotNone(value)
+        if value is None:
+            self.fail("MTLD should be computable for the partial-factor sample")
+        self.assertAlmostEqual(value, 124 / (24 + (1 - 0.75) / 0.28), places=6)
+
+    def test_readability_is_language_calibrated(self):
+        sample = "## Test\n\nDer alte Mann ging langsam über die Straße und sah den Himmel.\n"
+        m_de = self.analyzer.analyze_text(sample)
+        self.assertEqual(m_de.flesch_variant, "Flesch Reading Ease (Amstad)")
+        en_analyzer = CorpusAnalyzer(CorpusConfig(language="en", chapter_regex=r"(?m)^##\s+"))
+        m_en = en_analyzer.analyze_text(sample)
+        self.assertEqual(m_en.flesch_variant, "Flesch Reading Ease")
+        self.assertNotAlmostEqual(m_de.flesch_de, m_en.flesch_de, places=1)
+
 
 class TestFileUtils(unittest.TestCase):
     """Checks idempotent, atomic write operations."""

@@ -8,12 +8,14 @@ import sys
 from . import __version__
 from .analyzer import CorpusAnalyzer
 from .formatters import ReportFormatter
+from .io import FileUtils
 from .language import resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import CorpusConfig
 from .style_fingerprint import StyleFingerprint
 from .style_profile import ParagraphProfiler
 from .visualizer import render_dashboard
+from .workspace import discover
 
 EXIT_OK = 0
 EXIT_ERROR = 1
@@ -30,7 +32,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dashboard style about completion"
+    local cmds="analyze profile dashboard style build about completion"
     local opts="--language --json --output --help"
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$cmds" -- "$cur") )
@@ -98,6 +100,85 @@ def _print_about_text() -> None:
     print(f"Lizenz: {data['license']}")
 
 
+def _cmd_build(args) -> int:
+    """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
+    try:
+        workspace = discover(explicit=args.file)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"[Fehler] {exc}", file=sys.stderr)
+        return EXIT_ERROR
+
+    text = workspace.read_manuscript()
+    config = CorpusConfig(language=args.language)
+    resolved = resolve_language(config, sample_text=text)
+    config = CorpusConfig(language=resolved.key)
+
+    metrics = CorpusAnalyzer(config).analyze_text(text)
+    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
+    fingerprint = StyleFingerprint.from_metrics(metrics)
+    title = os.path.splitext(os.path.basename(workspace.manuscript))[0]
+
+    artifacts = {
+        f"{workspace.slug}_metrics.json": json.dumps(
+            _meta_payload(resolved.key, metrics=metrics.model_dump()),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        f"{workspace.slug}_profile.json": json.dumps(
+            _meta_payload(
+                resolved.key,
+                chapters=[c.__dict__ for c in chapters],
+                paragraphs=[
+                    {k: v for k, v in p.__dict__.items() if k != "text"} for p in paragraphs
+                ],
+            ),
+            ensure_ascii=False,
+            indent=2,
+        )
+        + "\n",
+        f"{workspace.slug}_style.json": json.dumps(
+            fingerprint.passport(), ensure_ascii=False, indent=2
+        )
+        + "\n",
+        f"{workspace.slug}_style_passport.txt": fingerprint.passport_text(
+            labels=resolved.labels, language_key=resolved.key
+        )
+        + "\n",
+        f"{workspace.slug}_report.md": ReportFormatter.format_markdown_report(
+            metrics, texts=resolved.labels, language_key=resolved.key
+        ),
+        f"{workspace.slug}_dashboard.html": render_dashboard(
+            chapters,
+            paragraphs,
+            metrics=metrics,
+            fingerprint=fingerprint,
+            title=title,
+            labels=resolved.labels,
+            language_name=resolved.name,
+            language_key=resolved.key,
+        ),
+    }
+
+    print(f"Workspace: {workspace.root}")
+    print(f"Manuskript: {os.path.basename(workspace.manuscript)} (Sprache: {resolved.key})")
+    if not args.dry_run:
+        workspace.ensure_layout()
+    changed = 0
+    for name, content in artifacts.items():
+        is_changed = workspace.publish(name, content, dry_run=args.dry_run)
+        changed += is_changed
+        prefix = "(dry-run) " if args.dry_run else ""
+        state = "geschrieben" if is_changed else "unverändert"
+        print(f"  {prefix}{state:<13} exports/{name}")
+    unchanged = len(artifacts) - changed
+    if args.dry_run:
+        print(f"Dry-Run: {changed} zu schreiben, {unchanged} unverändert – keine Dateien geändert.")
+    else:
+        print(f"Fertig: {changed} geschrieben, {unchanged} unverändert · nda/ bereit.")
+    return EXIT_OK
+
+
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="lixity",
@@ -113,12 +194,18 @@ def main(argv=None):
         ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
         ("style", "Self-calibrated style passport of the manuscript (text/JSON)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
+        ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
         ("about", "Tool metadata for agents: languages, features, heuristics"),
         ("completion", "Shell completion script (bash or zsh)"),
     ):
         p = sub.add_parser(name, help=help_text)
         if name in ("completion", "about"):
             p.add_argument("shell", nargs="?", default="bash", help="bash|zsh (completion)")
+            continue
+        if name == "build":
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
+            p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+            p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
             continue
         p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
@@ -144,6 +231,9 @@ def main(argv=None):
         _print_about_json() if "--json" in (argv or []) else _print_about_text()
         return EXIT_OK
 
+    if args.command == "build":
+        return _cmd_build(args)
+
     try:
         with open(args.file, encoding="utf-8") as f:
             text = f.read()
@@ -161,7 +251,9 @@ def main(argv=None):
             payload = _meta_payload(resolved.key, metrics=metrics.model_dump())
             print(json.dumps(payload, ensure_ascii=False))
         else:
-            ReportFormatter.print_rich_report(metrics, texts=resolved.labels)
+            ReportFormatter.print_rich_report(
+                metrics, texts=resolved.labels, language_key=resolved.key
+            )
         return EXIT_OK
 
     if args.command == "profile":
@@ -180,7 +272,7 @@ def main(argv=None):
         if args.json:
             print(json.dumps(fingerprint.passport(), ensure_ascii=False, indent=2))
         else:
-            print(fingerprint.passport_text(labels=resolved.labels))
+            print(fingerprint.passport_text(labels=resolved.labels, language_key=resolved.key))
         return EXIT_OK
 
     metrics = CorpusAnalyzer(config).analyze_text(text)
@@ -194,11 +286,12 @@ def main(argv=None):
         title=os.path.basename(args.file),
         labels=resolved.labels,
         language_name=resolved.name,
+        language_key=resolved.key,
     )
     output = args.output or "lixity-dashboard.html"
-    with open(output, "w", encoding="utf-8") as f:
-        f.write(html)
-    print(f"Dashboard written: {output}")
+    changed = FileUtils.atomic_write_if_changed(output, html)
+    state = "written" if changed else "unchanged"
+    print(f"Dashboard {state}: {output}")
     return EXIT_OK
 
 

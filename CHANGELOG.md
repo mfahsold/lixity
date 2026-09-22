@@ -5,6 +5,77 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.0] – 2026-09-22
+
+### Added
+
+- **Idempotent workspace build** (`lixity build [FILE] [--dry-run]`): discovers
+  the manuscript in a folder (`<folder>.md`, `manuscript.md`/`manuskript.md`,
+  or the only `.md` file), creates `exports/` (with `exports/archive/`) and
+  `nda/`, and publishes `_metrics.json`, `_profile.json`, `_style.json`,
+  `_style_passport.txt`, `_report.md` and `_dashboard.html`. Identical input
+  causes **zero writes**; changed input creates one timestamped version,
+  updates the stable name and rotates older versions into the archive
+  (last 10 kept per family). New module `lixity.workspace`.
+- **Language-calibrated readability**: Flesch-type formulas per profile
+  (Amstad, Flesch, Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins,
+  Douma), per-language syllable heuristics and a `flesch_variant` field.
+- **Length-invariant lexical diversity**: MTLD (McCarthy & Jarvis 2010),
+  MATTR (Covington & McFall 2010) and Maas a² – in JSON, reports and dashboard.
+- Productive tense patterns for German (weak preterite, Perfekt) and English
+  (regular `-ed`), complementing the curated verb forms.
+- **Locale-aware number rendering** (`lixity.format`): one source of truth for
+  CLI reports, style passport and dashboard – comma decimals and spaced
+  percentages for de/es/it/pt/nl, narrow-space grouping for French.
+- Reproducible screenshots: `scripts/make_screenshots.py` renders CLI reports
+  and dashboard sections with headless Chromium.
+- Worked example in README/USAGE: Fontane's *Effi Briest* as reference corpus
+  and a sequel draft measured against its style corridor (`samples/`).
+
+### Changed
+
+- **Style layer overlay, reworked**: selecting a layer now colours the whole
+  paragraph strip (blue = below, orange = above the chapter mean; tense stays
+  on the top edge), with a legend, per-layer guidance ("what to look for"),
+  exact values in the tooltip, and the active colour on the expanded
+  paragraph. Heatmap cells are clickable and jump to the chapter while
+  activating the matching layer; zero cells render calm.
+- LIX long-word thresholds are calibrated per language (> 6/7/8 letters).
+- Dashboard KPI grid grouped into **Scope · Rhythm · Language · Vocabulary ·
+  Style**; locale-aware numbers; keyboard focus outlines and
+  Escape-to-close tooltips.
+- **Performance**: JSD chapter divergence iterates only the chapter's own
+  vocabulary (closed form for absent types, ~4× faster), MATTR runs in O(N)
+  with an incremental type counter, syllable/comment regexes are precompiled
+  and a duplicated sentence scan was removed – analysis of the 95k-word
+  reference corpus drops from ~3.0 s to ~1.7 s.
+- **Architecture**: dashboard CSS/JS moved to `lixity/assets/` (editable,
+  lintable, shipped as package data); locale-aware number rendering
+  centralised in `lixity.format`; language data typed (`TypedDict`,
+  annotated registries); `py.typed` marker added; `mypy` configured and
+  enforced in CI.
+- `punctuation` uses language-neutral keys (`periods`, `commas`, …); display
+  names are localized.
+- Chapter dominance uses canonical values (Präsens/Präteritum/Gemischt).
+
+### Fixed
+
+- All pre-existing type errors resolved (`mypy` clean across 18 modules and
+  the test suite).
+- Jensen-Shannon chapter divergence is now bit-identical across processes
+  (deterministic iteration) – reproducible artifacts.
+- Dutch passive regex no longer matches plain copula sentences.
+- French first-person starters handle elision (`J'aime`).
+- English `read` is no longer counted in both present and past.
+
+### Security
+
+- `SECURITY.md` documents the threat model (offline, no shell, escaped
+  output, no secrets on disk).
+- `.gitignore` hardened for secrets and private stores (`*.enc`, `*.key`,
+  `*.pem`, `.env*`, `secrets/`).
+- Artifact writes are `fsync`ed before the atomic rename (durability).
+
 ## [1.2.0] – 2026-09-22
 
 ### Added
