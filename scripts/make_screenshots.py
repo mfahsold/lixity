@@ -170,11 +170,24 @@ def main() -> int:
     )
 
     # 3. Dashboard (light, top area) --------------------------------------
+    status = [
+        {"key": "manuscript", "state": "ok", "detail": f"{title}.md"},
+        {
+            "key": "analysis",
+            "state": "ok",
+            "detail": f"{len(chapters)} Kapitel · {len(paragraphs)} Absätze",
+        },
+        {"key": "dossiers", "state": "ok", "detail": "aktuell"},
+        {"key": "exports", "state": "warn", "detail": "keine erzeugt"},
+        {"key": "nda", "state": "unknown", "detail": "kein Speicher"},
+        {"key": "markers", "state": "ok", "detail": "keine offenen"},
+    ]
     dashboard = render_dashboard(
         chapters,
         paragraphs,
         metrics=metrics,
         fingerprint=fingerprint,
+        status=status,
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,

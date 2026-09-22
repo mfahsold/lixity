@@ -593,10 +593,3 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
         for idx, value in pairs:
             stats[idx] = (value, robust_z(value, centre, spread))
     return stats
-
-
-def layer_colors(
-    paragraphs: Sequence[Any], layer: str, thresholds: FingerprintThresholds | None = None
-) -> dict[int, str | None]:
-    """Colours for the chapter-strip overlay (value -> diverging colour scale)."""
-    return {idx: z_color(z) for idx, (_value, z) in layer_stats(paragraphs, layer).items()}

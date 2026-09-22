@@ -1,0 +1,50 @@
+# Lixity
+
+> Lixity is a deterministic, offline text-linguistics engine for literary
+> manuscripts: sentence rhythm, length-invariant lexical diversity, readability,
+> register signals, paragraph-accurate tense profiles, and a self-calibrating
+> style reference (median/MAD bands, significance-adjusted z*, Benjamini-Hochberg
+> FDR). It never judges style against external norms. Pure Python, 7 languages
+> (de, en, fr, es, it, pt, nl) plus a generic fallback, no cloud, byte-identical
+> output for identical input.
+
+License: Lixity Non-Commercial License 1.0 (LNCL-1.0) – source-available, not
+open source; free for research, education, personal writing and non-commercial
+open science; commercial use requires a written license
+(mfahsold@googlemail.com). Full text:
+https://github.com/mfahsold/lixity/blob/main/LICENSE
+
+## Primary documentation
+
+- [README](https://github.com/mfahsold/lixity#readme): overview, install, CLI quick start, capabilities, license
+- [docs/USAGE.md](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md): full command reference, worked example, metrics, known limitations
+- [docs/AGENTS.md](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md): JSON contracts, interpretation heuristics, stable Python facade, dashboard DOM hooks
+- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.6.0)
+
+## Commands (all offline, deterministic, UTF-8)
+
+- `lixity analyze FILE --json` – corpus metrics + per-chapter style features (schema v1)
+- `lixity profile FILE` – paragraph-accurate tense/style profiles
+- `lixity style FILE --json` – self-calibrating style reference (schema v2)
+- `lixity dashboard FILE -o ui.html` – single-file interactive HTML dashboard (clickable KPIs, status strip, deviation layer, work markers)
+- `lixity build [FILE] [--dry-run]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
+- `lixity about --json` – languages, features, heuristics
+- `lixity completion bash|zsh` – shell completion
+
+Python facade: `from lixity import api` – `analyze`, `profile`,
+`fingerprint`/`passport`, `dashboard`, `markers`/`add_marker`/`resolve_marker`,
+`about`.
+
+## Key numbers and thresholds
+
+- z* = (x − median) / sqrt(sigma^2 + SE^2), sigma = 1.4826 * MAD; |z*| >= 2.5 noticeable, >= 3.5 strong
+- FDR control: Benjamini-Hochberg, q = 0.05
+- Lexical diversity guards: MTLD and Maas a2 need >= 100 tokens, HD-D >= 175 tokens, MATTR >= 50-token window
+- Style reference needs several chapters with measurable spread
+
+## Project
+
+- Source: https://github.com/mfahsold/lixity
+- Project page: https://mfahsold.github.io/lixity/
+- Sample corpus: Project Gutenberg eBook #5323 (*Effi Briest*, Fontane, 1895, public domain)
+- Third-party: pydantic (MIT), rich (MIT), orjson (MIT/Apache-2.0)

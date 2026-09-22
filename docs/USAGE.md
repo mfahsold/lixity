@@ -143,14 +143,22 @@ produces an identical file, which makes it safe for version control.
 
 The dashboard contains:
 
+- a **status strip** at the top (when the embedding tool provides one, e.g.
+  the manuscript workspace UI): one dot per component (manuscript, analysis,
+  dossiers, exports, NDA, markers) with a one-word state, so the reader sees
+  at a glance what is current and what is stale,
 - corpus KPIs (words, chapters, paragraphs, sentences, ASL, TTR, Yule's K,
   Flesch, LIX, dialogue, Guiraud R, HD-D, MTLD, MATTR, Maas a², staccato,
-  first-person starts, function words, flagged paragraphs),
+  first-person starts, function words, flagged paragraphs) — **every KPI tile
+  is clickable** and jumps to the panel that shows it, preselecting the
+  matching filter where one exists (flags / deviations),
 - the sentence-length architecture as bars,
 - the **style heatmap**: chapter × feature matrix of significance-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
-  house mean), plus the expected-false-positive/FDR footnote,
-- the **style reference** panel (median, ±2σ band, outlier count per feature),
+  house mean), plus the expected-false-positive/FDR footnote; cells jump to
+  the chapter and activate the matching style layer,
+- the **style reference** panel (median, ±2σ band, outlier count per
+  feature): each band row is clickable and opens the corresponding chapter,
 - the **style dimensions** panel (self-calibrated principal axes with
   loadings and flagged chapters),
 - a chapter map with a colour-coded paragraph strip (present / past / mixed /
@@ -158,11 +166,16 @@ The dashboard contains:
   dimension (ASL, dialogue, function words, perception filters, modals,
   nominalisations, passive) colours every paragraph by its deviation from the
   chapter mean (blue = below, orange = above), with a legend, per-layer
-  guidance on what to look for, and the exact value in the tooltip,
+  guidance on what to look for, and the exact value in the tooltip; layer
+  colour encodes the absolute value span (min–max per dimension), while a
+  ring marks paragraphs that are *unusual for this chapter* (|z| ≥ 1.5) —
+  so the layer never hides low values in a narrow band,
 - clickable paragraphs revealing text, line anchor and per-paragraph stats
-  (highlighted in the active layer colour), and clickable heatmap cells that
-  jump to the chapter and activate the matching style layer,
-- the chapter comparison matrix with a deviation column.
+  (highlighted in the active layer colour),
+- the chapter comparison matrix with a deviation column; matrix rows and
+  marker rows navigate to their passage,
+- the **work markers** panel: setting a marker opens an inline note field
+  (`Enter` saves, `Esc` cancels) so the reason travels with the marker.
 
 ```bash
 lixity dashboard manuscript.md -o ui.html
@@ -243,7 +256,9 @@ the manuscript: invisible HTML comment lines with stable IDs
 (`<!-- LIXITY-MARKER id="…" kind="…" note="…" -->`) placed above the target
 paragraph. They appear in the text editor, never render in any export, move
 with the paragraph when editing, and are idempotent (deterministic
-content-hash IDs). Kinds: `pruefen`, `sachcheck`, `todo`, `achtung`.
+content-hash IDs). Kinds: `pruefen`, `sachcheck`, `todo`, `achtung`. In the
+dashboard, clicking a kind opens an inline note field: type the reason,
+`Enter` commits (the marker is written with `note="…"`), `Esc` cancels.
 Programmatic access: `api.markers(text)`, `api.add_marker(text, kind, note,
 line)`, `api.resolve_marker(text, marker_id)`.
 
@@ -320,8 +335,8 @@ findings stay navigable in the editor.
 
 ## Known limitations & stability
 
-Transparent about what the numbers can and cannot do (full register:
-`docs/ITERATION-2.md`):
+Transparent about what the numbers can and cannot do (full registers:
+`docs/ITERATION-2.md`, `docs/ITERATION-3.md`):
 
 - **Short texts.** All length-invariant lexical-diversity indices are
   unreliable on very short texts (Bestgen 2024/2025). Lixity returns `null`
@@ -343,6 +358,17 @@ Transparent about what the numbers can and cannot do (full register:
   metrics as text on click. Paragraph strips are deliberately dense
   (below the 24 px target size of WCAG 2.5.8) – keyboard access and
   click-to-read compensate.
+- **Status strip is a heuristic.** The component states are derived from the
+  workspace (file presence and modification times); "stale" means *older
+  than the manuscript*, not *wrong*. Only the embedding UI server computes
+  them – the standalone dashboard renders the strip only when a status list
+  is supplied.
+- **Marker notes are plain attributes.** Notes live inside the HTML comment
+  (`note="…"`), so quotes and newlines are escaped on write; extremely long
+  notes bloat the comment line – keep them short (one sentence).
+- **Drill-down filters are UI state.** The preselected filters (flags /
+  deviations) are convenience, not analysis: they never change the data,
+  only which rows are visible.
 
 ## Library
 
@@ -459,8 +485,8 @@ with headless Chromium:
 python3 scripts/make_screenshots.py
 ```
 
-The script renders both CLI reports and the dashboard sections and writes
-them to `docs/screenshots/`.
+The script renders both CLI reports and the dashboard sections (including a
+demonstration status strip) and writes them to `docs/screenshots/`.
 
 ## Troubleshooting
 
@@ -475,7 +501,7 @@ them to `docs/screenshots/`.
 ## Development
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -v   # 98 tests, offline
+.venv/bin/python -m unittest discover -s tests -v   # 125 tests, offline
 .venv/bin/ruff check src tests                      # lint (rule set pinned in pyproject.toml)
 ```
 

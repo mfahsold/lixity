@@ -34,7 +34,7 @@ from that style, controlled for measurement noise and multiple testing.
 ### 3.1 `analyze --json` (schema_version 1)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.5.0", "schema_version": 1, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.6.0", "schema_version": 1, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",
@@ -98,6 +98,26 @@ ones; a missing key falls back to English and then to the key itself:
 
 `tests/test_ui_contract.py` enforces that every key the renderer uses exists
 in all seven languages.
+
+### 3.4 Dashboard DOM hooks (for embedding and UI automation)
+
+The dashboard is a self-contained HTML file; agents that embed or drive it
+can rely on these stable hooks (enforced by the contract test):
+
+| Hook | Meaning |
+|---|---|
+| `[data-jump="<id>"]` | KPI tile: scrolls to the target panel and activates it |
+| `[data-flags="1"]` | jump additionally preselects the "flagged only" filter |
+| `[data-only="1"]` + `data-layer="<key>"` | jump preselects "deviations only" and the style layer |
+| `[data-layer]` | style-layer options (heatmap headers, legend, deviation list) |
+| `[data-marker-kind="<kind>"]` | marker control; click opens the inline note field |
+| `#marker-note-slot` | container receiving the inline note input |
+| `#status-strip` | optional component status strip (`li` per component, `data-state="ok\|warn\|unknown"`) |
+| `#heatmap`, `#layer-legend`, `#matrix`, `#chapter-<n>` | panel/row anchors used by drill-downs |
+
+Marker writes go through the embedding server's action API
+(`{"action": "marker-add", "kind": …, "line": …, "note": …}`); the library
+itself never writes files.
 
 ## 4. Interpretation heuristics (documented, not black-box)
 

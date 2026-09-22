@@ -93,6 +93,8 @@ class TestJsDomContract(unittest.TestCase):
             'tabindex="0"',
             'aria-expanded="false"',
             'data-action="load"',
+            'data-marker-kind="pruefen"',
+            'class="marker-note-slot"',
             'class="kpi kpi-link"',
             'data-jump="#heatmap"',
             'data-jump="#bands"',
@@ -175,8 +177,6 @@ class TestLabelCompleteness(unittest.TestCase):
             "layer_modal",
             "layer_nominal",
             "layer_passive",
-            "layer_below_short",
-            "layer_above_short",
             "click_hint",
             "load_hint",
             "group_scope",
@@ -197,6 +197,27 @@ class TestLabelCompleteness(unittest.TestCase):
 
 class TestShowDontTellComponents(unittest.TestCase):
     """The visual (data-ink) components are part of the render."""
+
+    def test_status_strip_renders_component_states(self):
+        text = SAMPLE
+        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
+        metrics = CorpusAnalyzer(config).analyze_text(text)
+        html = render_dashboard(
+            chapters,
+            paragraphs,
+            metrics=metrics,
+            title="Status",
+            status=[
+                {"key": "manuscript", "state": "ok", "detail": "roman.md"},
+                {"key": "dossiers", "state": "warn", "detail": "1 Dossier · älter"},
+            ],
+        )
+        self.assertIn('class="status-strip"', html)
+        self.assertIn('class="status-item ok"', html)
+        self.assertIn('class="status-item warn"', html)
+        self.assertIn('class="status-detail">roman.md<', html)
+        self.assertIn("Dossiers", html)
 
     def test_visual_components_rendered(self):
         html = _full_dashboard()

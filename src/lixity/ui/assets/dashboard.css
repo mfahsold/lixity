@@ -73,6 +73,36 @@ h2 {
 }
 .panel .hint { margin: -.35rem 0 .85rem; }
 
+/* --- Component status strip (one glance, deterministic) --------------- */
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1.1rem;
+  align-items: center;
+  margin: 1rem 0 0;
+  padding: .55rem .85rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: .78rem;
+  color: var(--muted);
+}
+.status-item { display: inline-flex; align-items: center; gap: .4rem; }
+.status-item b { color: var(--fg); font-weight: 600; }
+.status-dot {
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: none;
+}
+.status-item.ok .status-dot { background: var(--present); }
+.status-item.warn .status-dot { background: #d97706; }
+.status-item.error .status-dot { background: var(--flag); }
+.status-item.unknown .status-dot { background: var(--neutral); }
+.status-detail { color: var(--muted); }
+
 /* --- Key figures (grouped KPI grid) ----------------------------------- */
 .kpis { display: grid; gap: .95rem; margin: 1.15rem 0; }
 .kpi-group { display: grid; gap: .4rem; }
@@ -401,7 +431,7 @@ table.heatmap td.z {
   transition: transform .14s var(--ease), outline-color .14s var(--ease);
 }
 table.heatmap td.z.hl { outline: 1.5px solid var(--accent); outline-offset: -1px; }
-table.heatmap td.z.zero { color: var(--muted); background: var(--surface); }
+table.heatmap td.z.zero { color: var(--muted); background: var(--neutral); }
 table.heatmap td.z[data-chapter] { cursor: pointer; }
 table.heatmap td.z:hover { outline: 1.5px solid var(--fg); }
 table.heatmap th.ch, table.heatmap td.ch {
@@ -546,6 +576,17 @@ body:not(.has-js-tooltips) .help:focus::after {
 
 /* --- Controls (local server mode) ------------------------------------- */
 .controls .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
+.marker-note-slot { display: inline-flex; }
+.marker-note {
+  width: 15rem;
+  opacity: 0;
+  transform: translateX(-4px);
+  transition: opacity .16s var(--ease), transform .16s var(--ease), border-color .16s var(--ease);
+}
+.marker-note.visible { opacity: 1; transform: none; }
+.marker-note.saved { border-color: var(--present); color: var(--present); }
+.marker-note.failed { border-color: var(--flag); color: var(--flag); }
+.marker-note.gone { opacity: 0; }
 .ctl-group { display: grid; gap: .3rem; padding: .65rem 0; border-bottom: 1px solid var(--line); }
 .ctl-group:last-of-type { border-bottom: 0; }
 .ctl-label { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
@@ -564,6 +605,26 @@ button.ctl, select.ctl, input.ctl {
 button.ctl:hover, select.ctl:hover { border-color: var(--accent); color: var(--accent); }
 button.ctl { transition: transform .12s var(--ease), border-color .16s var(--ease), background .16s var(--ease); }
 button.ctl:active { transform: scale(.97); }
+button.ctl.busy {
+  color: var(--muted);
+  pointer-events: none;
+  position: relative;
+  padding-left: 1.6rem;
+}
+button.ctl.busy::before {
+  content: "";
+  position: absolute;
+  left: .55rem;
+  top: 50%;
+  width: .7rem;
+  height: .7rem;
+  margin-top: -.35rem;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ctl-spin .7s linear infinite;
+}
+@keyframes ctl-spin { to { transform: rotate(360deg); } }
 button.ctl.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
 button.ctl.primary:hover { opacity: .92; color: #fff; }
 details.nda { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; margin-top: .6rem; }

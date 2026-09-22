@@ -5,6 +5,56 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0] – 2026-09-22
+
+### Added
+
+- **Component status strip**: one dot per component (manuscript, analysis,
+  dossiers, exports, NDA, markers) with a one-word state, supplied by the
+  embedding tool; undeterminable components render `unknown` instead of a
+  fake `ok`.
+- **Work-marker notes**: clicking a marker kind opens an inline note field —
+  `Enter` saves the marker with `note="…"`, `Esc` cancels. Labels in all
+  seven languages.
+- **Drill-down filters**: KPI tiles, band rows, dimension loadings, matrix
+  rows and heatmap cells now navigate *and* preselect the matching view
+  ("flagged only" / "deviations only" plus the style layer).
+- **Busy states**: action buttons disable and spin while a server action
+  runs, so latency is visible and double-clicks are avoided.
+- `docs/llms.txt`, `docs/robots.txt`, `docs/sitemap.xml` and
+  `docs/ITERATION-3.md` (stability register for this iteration).
+- `samples/README.md` documenting sample provenance and licensing
+  (Project Gutenberg #5323, public domain).
+
+### Changed
+
+- **Style-layer colour semantics**: colour encodes the *absolute value span*
+  (min–max per dimension) so narrow bands stay readable; the legend prints
+  the concrete min/max values, and the ring (|z| ≥ 1.5) remains the
+  deviation-specific channel.
+- **One JSON serializer**: the whole CLI and all artifact writers serialise
+  through a single `orjson` helper (`OPT_NON_STR_KEYS`, deterministic
+  output) instead of mixed `json` calls.
+- Dependencies updated and validated in both project environments
+  (pydantic 2.13.5, rich 15.0.0, orjson 3.12.0); the declared floors are
+  unchanged, so existing installations keep working.
+- README, `docs/USAGE.md`, `docs/AGENTS.md` (§3.4 dashboard DOM hooks) and
+  the project page now cover the new UI, licensing/attribution and
+  agent-readable surfaces.
+
+### Fixed
+
+- Zero-value heatmap cells use the neutral surface colour (previously they
+  punched dark holes into the light theme and vice versa).
+- Marker notes are escaped on write, so quotes and line breaks cannot break
+  the marker comment.
+
+### Removed
+
+- Legacy payload helpers (`layer_colors`) and the short layer labels
+  (`layer_below_short` / `layer_above_short`); `layer_stats` is the single
+  source for layer values and deviations.
+
 ## [1.5.0] – 2026-09-22
 
 ### Added

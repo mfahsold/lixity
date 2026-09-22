@@ -82,8 +82,10 @@ Most text analysis tools fall into one of two extremes: heavy general NLP librar
 - **Multiple-Testing Control:** Reports statistically expected false positives and the Benjamini-Hochberg False Discovery Rate (FDR, $q = 0.05$) set across all chapter×feature cells.
 - **Unsupervised Style Dimensions:** Derives the manuscript's latent stylistic axes via Spearman rank correlation and cyclic Jacobi eigendecomposition (pure standard library, no NumPy/SciPy required).
 - **Paragraph-Accurate Tense Profiling:** Tracks narrative present vs. epic past paragraph-by-paragraph with line anchors and severity friction markers.
-- **Editor-Visible Work Markers:** Insert persistent, invisible HTML comments (`<!-- LIXITY-MARKER ... -->`) with deterministic content-hash IDs directly from the interactive dashboard or API.
-- **Agent-Ready JSON & API:** Strict JSON schemas with metadata blocks (`tool`, `version`, `schema_version`, `language`), clean exit codes, and a stable facade in `lixity.api`.
+- **Editor-Visible Work Markers:** Insert persistent, invisible HTML comments (`<!-- LIXITY-MARKER ... -->`) with deterministic content-hash IDs directly from the interactive dashboard or API — including a free-text note per marker.
+- **Idempotent Workspace Build:** `lixity build` turns a folder with a manuscript into a reproducible workspace (`exports/`, `exports/archive/`, `nda/`): unchanged input causes zero writes, changed input rotates exactly one timestamped version.
+- **Coherent Dashboard:** one status strip per component (manuscript · analysis · dossiers · exports · NDA · markers), clickable KPIs that drill down into the right panel *and* preselect the matching filter (flags / deviations), a self-calibrating style reference band chart, and a deviation layer that marks the passages worth reviewing.
+- **Agent-Ready JSON & API:** Strict JSON schemas with metadata blocks (`tool`, `version`, `schema_version`, `language`), clean exit codes, a stable facade in `lixity.api`, and an agent guide in [`docs/AGENTS.md`](docs/AGENTS.md).
 
 ---
 
@@ -185,7 +187,7 @@ lixity style manuscript.md --json
 ![Lixity CLI style reference](docs/screenshots/cli-style.png)
 
 ### 4. Interactive Single-File HTML Dashboard
-Generates a zero-dependency HTML dashboard with an interactive chapter map, diverging z-score heatmap, and work marker controls.
+Generates a zero-dependency HTML dashboard: component status strip, grouped KPIs, sentence rhythm, style-reference band chart, deviation layer and a clickable chapter map. Everything relevant is clickable — KPI tiles jump to their panel and preselect the matching filter, heatmap cells open the chapter, matrix and marker rows navigate to their passage.
 
 ```bash
 lixity dashboard manuscript.md -o exports/dashboard.html
@@ -275,6 +277,7 @@ Lixity bridges the gap between statistical analysis and editorial text editing t
 - **Visible in Editors:** Authors and editors see markers directly inside VS Code, Obsidian, Neovim, or Ulysses.
 - **Invisible in Exports:** Markdown renderers (Pandoc, CommonMark, Typst, LaTeX) treat HTML comments as invisible comments; they never appear in printed books or EPUBs.
 - **Idempotent IDs:** Marker IDs are deterministic content hashes derived from anchor text and line position. Markers stay anchored when text above or below is edited.
+- **Notes with one keystroke:** In the control dashboard, clicking a marker kind opens an inline note field; `Enter` saves, `Esc` cancels — the note travels with the marker and stays invisible in exports.
 - **Interactive Control:** Markers can be added or resolved directly from the Lixity dashboard when running the local UI server.
 
 ![Lixity work markers](docs/screenshots/dashboard-markers.png)
@@ -317,6 +320,23 @@ print("Supported languages:", about_info["languages"])
 ```
 
 Full contracts, JSON schema specifications, and agent interpretation heuristics are documented in [`docs/AGENTS.md`](docs/AGENTS.md).
+
+### Agent quickstart (machine-readable surfaces)
+
+| Need | Surface |
+| :--- | :--- |
+| One-shot corpus metrics | `lixity analyze FILE --json` (schema v1, meta block) |
+| Tense/style profiles per paragraph | `lixity profile FILE` |
+| Style reference (bands, z\*, FDR, dimensions) | `lixity style FILE --json` (schema v2) |
+| Reproducible artifact set in a folder | `lixity build [FILE] [--dry-run]` |
+| Capability discovery (languages, features, thresholds) | `lixity about --json` |
+| Python facade | `lixity.api`: `analyze`, `profile`, `fingerprint`/`passport`, `dashboard`, `markers`, `about` |
+| LLM-friendly site summary | [`docs/llms.txt`](docs/llms.txt) |
+
+All commands are offline, deterministic, and emit UTF-8 JSON (serialised with
+`orjson`); identical input yields byte-identical output. Known limitations
+(short texts, heuristics, calibration minima) are documented in
+[`docs/USAGE.md`](docs/USAGE.md#known-limitations--stability).
 
 ---
 
@@ -377,10 +397,28 @@ Yes. Lixity is offline, deterministic, and returns clean POSIX exit codes (0 = s
 
 ---
 
-## License
+## License & attribution
 
-**Lixity Non-Commercial License 1.0 (LNCL-1.0)**
+**Lixity Non-Commercial License 1.0 (LNCL-1.0)** – *source-available, not open
+source*: free for research, education, personal writing and clearly
+non-commercial open science. Commercial use or integration into commercial
+products requires a written license from the author
+(mfahsold@googlemail.com). The full terms are in [`LICENSE`](LICENSE); the
+license text must be kept with every copy.
 
-Free for research, educational purposes, personal writing, and non-commercial open science projects. Commercial exploitation or integration into proprietary SaaS products requires a written commercial license from the author.
+**Third-party components** (all permissive, no copyleft):
+
+| Component | License | Used for |
+| :--- | :--- | :--- |
+| [pydantic](https://github.com/pydantic/pydantic) | MIT | schema validation and data models |
+| [rich](https://github.com/Textualize/rich) | MIT | terminal tables and rendering |
+| [orjson](https://github.com/ijl/orjson) | MIT / Apache-2.0 | JSON serialisation |
+
+**Sample corpus:** `samples/effi-briest.md` is derived from *Effi Briest*
+(Theodor Fontane, 1895) via [Project Gutenberg eBook #5323](https://www.gutenberg.org/ebooks/5323).
+The text is public domain in the USA (Fontane died 1898); the unmodified
+Project Gutenberg file is kept alongside it in `samples/` with its header and
+license notice intact. The sequel draft under `samples/effi-briest-folge/` is
+an original stylistic exercise and not part of the novel.
 
 Contact: **Matthias Fahsold** ([mfahsold@googlemail.com](mailto:mfahsold@googlemail.com))

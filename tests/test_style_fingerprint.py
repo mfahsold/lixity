@@ -24,7 +24,6 @@ from lixity.style_fingerprint import (  # noqa: E402
     StyleFingerprint,
     benjamini_hochberg,
     jacobi_eigh,
-    layer_colors,
     layer_stats,
     mad,
     median,
@@ -180,7 +179,7 @@ class TestStyleFingerprint(unittest.TestCase):
 
 
 class TestParagraphLayers(unittest.TestCase):
-    def test_layer_colors_within_chapter(self):
+    def test_layer_stats_within_chapter(self):
         md = (
             "## Kap 1\n\n"
             "Ich trinke Kaffee und gehe los. Ich sehe den Regen und ich gehe weiter. "
@@ -192,14 +191,12 @@ class TestParagraphLayers(unittest.TestCase):
         )
         config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
         paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
-        colors = layer_colors(paragraphs, "filter")
-        self.assertTrue(any(v is not None for v in colors.values()))
-        for color in colors.values():
-            if color:
-                self.assertRegex(color, r"^#[0-9a-f]{6}$")
-        self.assertIsNotNone(colors.get(0))
-        self.assertIsNotNone(colors.get(1))
-        self.assertNotEqual(colors[0], colors[1])
+        stats = layer_stats(paragraphs, "filter")
+        self.assertTrue(stats)
+        for value, z in stats.values():
+            self.assertGreaterEqual(value, 0.0)
+            self.assertIsInstance(z, float)
+        self.assertNotEqual(stats[0][1], stats[1][1])
 
     def test_layer_stats_values_and_directions(self):
         md = (

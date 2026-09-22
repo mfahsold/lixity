@@ -9,6 +9,8 @@
 <meta name="robots" content="index, follow"/>
 <meta name="author" content="Matthias Fahsold"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
+<link rel="alternate" type="text/plain" href="llms.txt" title="LLM-friendly summary"/>
+<link rel="sitemap" type="application/xml" href="sitemap.xml"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry for Literary Manuscripts"/>
@@ -29,6 +31,8 @@
   "applicationCategory": "UtilitiesApplication",
   "applicationSubCategory": "Linguistic & Stylometric Analysis",
   "operatingSystem": "Linux, macOS, Windows",
+  "softwareVersion": "1.6.0",
+  "isAccessibleForFree": true,
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "codeRepository": "https://github.com/mfahsold/lixity",
   "author": {
@@ -50,7 +54,9 @@
     "Paragraph-accurate tense continuity profiling with line anchors and friction severity flags",
     "Self-calibrating style reference: manuscript-intrinsic median/MAD bands, significance-adjusted z* scores, Benjamini-Hochberg FDR control",
     "Unsupervised style dimensions via Spearman rank correlation and cyclic Jacobi eigendecomposition",
-    "Editor-visible work markers with deterministic content-hash IDs",
+    "Editor-visible work markers with deterministic content-hash IDs and inline notes",
+    "Idempotent workspace build: unchanged input causes zero writes, changed input rotates exactly one version",
+    "Single-file clickable dashboard: component status strip, KPI drill-downs, style-reference band chart, deviation layer",
     "Deterministic Python API for autonomous AI agents and publication pipelines",
     "Seven native language profiles (de, en, fr, es, it, pt, nl) plus generic fallback"
   ]
@@ -218,6 +224,8 @@ footer {
     <span>Tense Continuity Profiles</span>
     <span>Latent Style Dimensions</span>
     <span>Editor Work Markers</span>
+    <span>Idempotent Workspace Build</span>
+    <span>Clickable Drill-Down Dashboard</span>
     <span>7 Native Languages</span>
     <span>Zero Cloud Dependencies</span>
   </div>
@@ -225,7 +233,7 @@ footer {
   <h2>What It Looks Like</h2>
   <figure class="shot">
     <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1600" height="2100" loading="eager"/>
-    <figcaption>Interactive single-file HTML dashboard &ndash; KPI overview, chapter map, tense continuity and style panels. Fully self-contained, no external assets.</figcaption>
+    <figcaption>Interactive single-file HTML dashboard &ndash; component status strip, KPI overview, chapter map, tense continuity and style panels. Every KPI is clickable and drills into the matching panel and filter. Fully self-contained, no external assets.</figcaption>
   </figure>
   <div class="shot-grid">
     <figure class="shot">
@@ -442,8 +450,9 @@ html = api.dashboard(text, language="de", title="My Novel")</pre>
   </div>
 
   <div class="card">
-    <h2>License</h2>
-    <p><b>Lixity Non-Commercial License 1.0 (LNCL-1.0)</b> &ndash; free for research, education, personal writing, and non-commercial open science projects. Commercial use requires a written license: <a href="mailto:mfahsold@googlemail.com">mfahsold@googlemail.com</a>.</p>
+    <h2>License &amp; attribution</h2>
+    <p><b>Lixity Non-Commercial License 1.0 (LNCL-1.0)</b> &ndash; <em>source-available, not open source</em>: free for research, education, personal writing, and non-commercial open science projects. Commercial use or integration into commercial products requires a written license: <a href="mailto:mfahsold@googlemail.com">mfahsold@googlemail.com</a>. The license text must stay with every copy (<a href="https://github.com/mfahsold/lixity/blob/main/LICENSE">LICENSE</a>).</p>
+    <p>Third-party components are permissively licensed (pydantic &ndash; MIT, rich &ndash; MIT, orjson &ndash; MIT/Apache-2.0) and carry no copyleft obligations. The bundled sample text derives from <a href="https://www.gutenberg.org/ebooks/5323">Project Gutenberg eBook #5323</a> (<i>Effi Briest</i>, Theodor Fontane, 1895, public domain); the unmodified source file with its Project Gutenberg header is kept in the repository.</p>
   </div>
 
   <footer>
@@ -451,6 +460,7 @@ html = api.dashboard(text, language="de", title="My Novel")</pre>
     <div>
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage Guide</a> &middot;
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">Agent API</a> &middot;
+      <a href="llms.txt">llms.txt</a> &middot;
       <a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">Changelog</a>
     </div>
   </footer>

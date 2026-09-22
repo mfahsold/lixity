@@ -10,13 +10,27 @@ standard library.
 from __future__ import annotations
 
 import html
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from typing import Any
 
-from ..language_data import EN_LABELS, HELP_TEXTS, METRIC_LABELS
+from ..language_data import (
+    EN_LABELS,
+    GROUP_LABELS,
+    HELP_TEXTS,
+    LAYER_LABELS,
+    METRIC_LABELS,
+    UI_LABELS,
+)
 from ..style_profile import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT
 
-_DEFAULT_LABELS = {**EN_LABELS, **METRIC_LABELS["en"], **HELP_TEXTS["en"]}
+_DEFAULT_LABELS = {
+    **EN_LABELS,
+    **METRIC_LABELS["en"],
+    **HELP_TEXTS["en"],
+    **GROUP_LABELS["en"],
+    **LAYER_LABELS["en"],
+    **UI_LABELS["en"],
+}
 
 
 def label(labels: Mapping[str, str] | None, key: str) -> str:
@@ -80,8 +94,13 @@ def kpi(
     bar: float | None = None,
     jump: str | None = None,
     layer: str | None = None,
+    only: bool = False,
+    flags: bool = False,
 ) -> str:
-    """KPI tile; ``bar`` adds a proportion bar, ``jump``/``layer`` make it a link."""
+    """KPI tile; ``bar`` adds a proportion bar, ``jump``/``layer`` make it a link.
+
+    ``only``/``flags`` preselect the matching filter on the way down (drill-down).
+    """
     bar_html = (
         f'<i class="kpi-bar" style="--v:{max(0.0, min(100.0, bar)):.1f}%"></i>'
         if bar is not None
@@ -91,6 +110,8 @@ def kpi(
         attrs = (
             f' class="kpi kpi-link" data-jump="{html.escape(jump or "#chapters", quote=True)}"'
             + (f' data-layer="{html.escape(layer, quote=True)}"' if layer else "")
+            + (' data-only="1"' if only else "")
+            + (' data-flags="1"' if flags else "")
             + ' role="button" tabindex="0"'
         )
     else:
@@ -122,6 +143,8 @@ def band_chart(
     band_width = max(0.5, pos(band_hi) - band_left)
     dots = "".join(f'<b style="left:{pos(v):.2f}%"></b>' for v in outliers)
     attrs = f' data-layer="{html.escape(layer, quote=True)}"' if layer else ""
+    if layer and outliers:
+        attrs += ' data-only="1"'  # drill-down: show the marked passages right away
     return (
         f'<div class="band" title="{html.escape(title, quote=True)}"{attrs}>'
         f'<i class="band-range" style="left:{band_left:.2f}%;width:{band_width:.2f}%"></i>'
@@ -156,3 +179,27 @@ def loading_bars(
             f'<span class="load {sign}" style="--w:{width:.1f}%"{attrs}><i></i>{esc(name)}</span>'
         )
     return '<div class="loadings">' + "".join(bars) + "</div>"
+
+
+def status_strip(
+    labels: Mapping[str, str] | None, items: Sequence[Mapping[str, Any]] | None
+) -> str:
+    """Central component status line: one dot + label + detail per component.
+
+    ``items`` is a sequence of mappings with ``key``, ``state``
+    (``ok``/``warn``/``error``/``unknown``) and ``detail``. Labels are resolved
+    from the language profile (``status_<key>``); the strip is deterministic
+    (counts and names only, no timestamps).
+    """
+    entries = []
+    for item in items or ():
+        key = str(item.get("key", ""))
+        state = str(item.get("state", "unknown"))
+        detail = esc(item.get("detail", ""))
+        name = label(labels, f"status_{key}")
+        entries.append(
+            f'<span class="status-item {esc(state)}" title="{detail}">'
+            f'<i class="status-dot"></i><b>{esc(name)}</b>'
+            f'<span class="status-detail">{detail}</span></span>'
+        )
+    return '<div class="status-strip">' + "".join(entries) + "</div>"

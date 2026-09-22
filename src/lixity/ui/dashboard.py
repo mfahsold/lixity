@@ -25,6 +25,7 @@ from .components import (
     label,
     line_label,
     loading_bars,
+    status_strip,
     tense_class,
     tense_label,
 )
@@ -65,6 +66,7 @@ def render_dashboard(
     fingerprint: Any | None = None,
     markers: Sequence[Any] | None = None,
     artifacts: Sequence[Mapping[str, Any]] | None = None,
+    status: Sequence[Mapping[str, Any]] | None = None,
     title: str = "Manuskript",
     labels: Mapping[str, str] | None = None,
     language_name: str = "",
@@ -120,6 +122,26 @@ def render_dashboard(
         and any(float(base.get("sigma") or 0.0) > 0.0 for base in fingerprint.baseline.values())
     )
 
+    layer_data: dict[str, dict[int, tuple[float, float]]] = {
+        layer_key: layer_stats(paragraphs, layer_key) for layer_key in LAYER_FEATURES
+    }
+
+    def _layer_text(key: str, value: float) -> str:
+        if key == "asl":
+            return f"ASL {N(value, 1)}"
+        if key in ("dialogue", "function"):
+            text_label = label(labels, "dialogue" if key == "dialogue" else "function_words")
+            return f"{text_label} {P(value)}"
+        return f"{label(labels, 'feat_' + key)} {N(value, 1)}"
+
+    def _layer_range(key: str) -> tuple[float, float]:
+        values = [value for value, _z in layer_data.get(key, {}).values()]
+        return (min(values), max(values)) if values else (0.0, 1.0)
+
+    def _layer_tip(key: str, value: float, z: float) -> str:
+        direction = label(labels, "layer_above" if z > 0 else "layer_below")
+        return f"{_layer_text(key, value)} · {direction}"
+
     parts = [
         "<!DOCTYPE html>",
         f'<html lang="{html_lang}">',
@@ -139,6 +161,9 @@ def render_dashboard(
         f'<p class="microhint" id="microhint">{L("hint")}</p>',
         "</header>",
     ]
+
+    if status:
+        parts.append(status_strip(labels, status))
 
     if controls:
         parts.append('<section class="panel controls" id="controls">')
@@ -259,6 +284,7 @@ def render_dashboard(
                 P(metrics.staccato_pct),
                 help_term(labels, "staccato", L("feat_staccato")),
                 bar=metrics.staccato_pct,
+                jump="#dist",
             )
         )
         language_tiles.append(
@@ -266,6 +292,8 @@ def render_dashboard(
                 P(metrics.dialog_ratio),
                 help_term(labels, "dialogue", L("dialogue")),
                 bar=metrics.dialog_ratio,
+                jump="#chapters",
+                layer="dialogue",
             )
         )
         language_tiles.append(
@@ -294,6 +322,7 @@ def render_dashboard(
                 P(metrics.first_person_start_rate),
                 help_term(labels, "first_start", L("feat_ich_start")),
                 bar=metrics.first_person_start_rate,
+                jump="#heatmap",
             )
         )
     language_tiles.append(
@@ -301,6 +330,8 @@ def render_dashboard(
             P(function_pct),
             help_term(labels, "function_words", L("function_words")),
             bar=function_pct,
+            jump="#chapters",
+            layer="function",
         )
     )
     if fingerprint is not None:
@@ -309,19 +340,31 @@ def render_dashboard(
                 P(fingerprint.consistency * 100, 0),
                 help_term(labels, "consistency", L("consistency")),
                 bar=fingerprint.consistency * 100,
+                jump="#heatmap",
             )
         )
         drifters = fingerprint.top_deviants(1)
         if drifters:
             num, mean_abs = drifters[0]
+            devs = fingerprint.deviations.get(num, {})
+            top_field = max(devs, key=lambda k: abs(devs[k])) if devs else None
+            top_layer = feature_layers.get(top_field) if top_field else None
             style_tiles.append(
                 kpi(
                     f"Ø {N(mean_abs, 1)}",
                     help_term(labels, "fingerprint", f"{L('deviation')} · {L('chapter')} {num}"),
+                    jump=f"#ch-{num}",
+                    layer=top_layer,
+                    only=bool(devs),
                 )
             )
     style_tiles.append(
-        kpi(str(total_flagged), help_term(labels, "flagged", L("flagged")), jump="#heatmap")
+        kpi(
+        str(total_flagged),
+        help_term(labels, "flagged", L("flagged")),
+        jump="#chapters",
+        flags=True,
+    )
     )
 
     parts.append('<section class="kpis">')
@@ -399,7 +442,8 @@ def render_dashboard(
                 layer_key = feature_layers.get(field_name, "")
                 cell_attrs = (
                     f' data-chapter="{chapter.num}" data-layer="{layer_key}"'
-                    f' tabindex="0" role="button"'
+                    + (' data-only="1"' if layer_key and abs(z) >= 2.5 else "")
+                    + ' tabindex="0" role="button"'
                 )
                 if abs(z) < 0.05:
                     parts.append(
@@ -525,9 +569,11 @@ def render_dashboard(
         parts.append('<select class="ctl" id="style-layer">')
         parts.append(f'<option value="">{L("layer_off")}</option>')
         for layer_key in LAYER_FEATURES:
+            low, high = _layer_range(layer_key)
             parts.append(
                 f'<option value="{layer_key}" '
-                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}">'
+                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
+                f'data-range="{esc(f"{_layer_text(layer_key, low)} – {_layer_text(layer_key, high)}", quote=True)}">'
                 f"{esc(label(labels, 'layer_' + layer_key))}</option>"
             )
         parts.append("</select></label>")
@@ -557,8 +603,8 @@ def render_dashboard(
     parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
     parts.append('<span class="z-gradient"></span>')
     parts.append(
-        f'<span class="layer-scale"><span>{esc(label(labels, "layer_below_short"))}</span>'
-        f"<span>{esc(label(labels, 'layer_above_short'))}</span></span>"
+        '<span class="layer-scale"><span id="layer-scale-low"></span>'
+        '<span id="layer-scale-high"></span></span>'
     )
     parts.append('<span class="layer-count" id="layer-legend-count"></span>')
     parts.append(
@@ -575,21 +621,6 @@ def render_dashboard(
     by_chapter: dict = {}
     for idx, p in enumerate(paragraphs):
         by_chapter.setdefault(p.chapter_num, []).append((idx, p))
-
-    layer_data: dict[str, dict[int, tuple[float, float]]] = {
-        layer_key: layer_stats(paragraphs, layer_key) for layer_key in LAYER_FEATURES
-    }
-
-    def _layer_tip(key: str, value: float, z: float) -> str:
-        if key == "asl":
-            text = f"ASL {N(value, 1)}"
-        elif key in ("dialogue", "function"):
-            text_label = label(labels, "dialogue" if key == "dialogue" else "function_words")
-            text = f"{text_label} {P(value)}"
-        else:
-            text = f"{label(labels, 'feat_' + key)} {N(value, 1)}"
-        direction = label(labels, "layer_above" if z > 0 else "layer_below")
-        return f"{text} · {direction}"
 
     parts.append('<main id="chapters">')
     for chapter in chapters:
@@ -626,7 +657,11 @@ def render_dashboard(
                     info = layer_data.get(key, {}).get(idx)
                     if info is not None:
                         value, z = info
-                        layer_payload[key] = [z_color(z), _layer_tip(key, value, z), round(z, 2)]
+                        low, high = _layer_range(key)
+                        span = (high - low) or 1.0
+                        position = (value - low) / span
+                        colour = z_color((position * 2.0 - 1.0) * 2.5)
+                        layer_payload[key] = [colour, _layer_tip(key, value, z), round(z, 2)]
                 layer_attr = (
                     f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
                     if layer_payload
@@ -658,11 +693,16 @@ def render_dashboard(
                 )
                 if controls:
                     buttons = " ".join(
-                        f'<button class="ctl" data-marker-add="{esc(kind, quote=True)}" '
+                        f'<button class="ctl" data-marker-kind="{esc(kind, quote=True)}" '
                         f'data-line="{p.start_line}">+ {esc(label(labels, "marker_" + kind))}</button>'
                         for kind in ("pruefen", "sachcheck", "todo", "achtung")
                     )
-                    parts.append(f'<div class="row">{buttons}</div>')
+                    parts.append(
+                        f'<div class="row marker-row">{buttons}'
+                        f'<span class="marker-note-slot" '
+                        f'data-placeholder="{esc(label(labels, "marker_note"), quote=True)}"></span>'
+                        f"</div>"
+                    )
                 parts.append(f"<p>{esc(p.text)}</p>")
                 parts.append("</div></div>")
         parts.append("</section>")
@@ -685,8 +725,9 @@ def render_dashboard(
         max_asl = max((c.asl for c in chapters), default=1.0) or 1.0
         max_dialog = max((c.dialog_pct for c in chapters), default=1.0) or 1.0
         for c in chapters:
+            row_hint = ' data-flags="1"' if c.flagged else ""
             parts.append(
-                f'<tr class="row-link" data-jump="#ch-{c.num}" tabindex="0">'
+                f'<tr class="row-link" data-jump="#ch-{c.num}"{row_hint} tabindex="0">'
                 f"<td>{c.num}</td><td>{esc(c.title)}</td>"
                 f'<td class="num">{N(c.words, 0)}</td>'
                 f'<td class="num bar-cell"><i style="--v:{c.asl / max_asl * 100:.0f}%"></i>'

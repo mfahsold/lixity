@@ -98,6 +98,18 @@ class TestCliAgentSurface(unittest.TestCase):
             self.assertIn("lixity", script)
         self.assertIn("analyze profile dashboard style build about completion", _BASH_COMPLETION)
 
+    def test_about_json_flag(self):
+        import io
+        from contextlib import redirect_stdout
+
+        buffer = io.StringIO()
+        with redirect_stdout(buffer):
+            self.assertEqual(main(["about", "--json"]), 0)
+        payload = json.loads(buffer.getvalue())
+        self.assertEqual(payload["meta"]["tool"], "lixity")
+        self.assertIn("languages", payload)
+        self.assertIn("features", payload)
+
     def test_cli_exit_codes(self):
         self.assertEqual(self._run("analyze"), 0)
         self.assertEqual(self._run("analyze", "--json"), 0)

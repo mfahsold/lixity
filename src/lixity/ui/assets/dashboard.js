@@ -109,7 +109,16 @@ function toggleParagraph(chip, forceOpen) {
   }
 }
 
+function setFilter(input, bodyClass, on) {
+  if (!input) return;
+  input.checked = on;
+  document.body.classList.toggle(bodyClass, on);
+}
+
 function activate(el) {
+  // drill-down: carry the context filters on the way to the deeper level
+  if (el.getAttribute("data-only") && layerOnly) setFilter(layerOnly, "layer-only", true);
+  if (el.getAttribute("data-flags")) setFilter(document.getElementById("filter-flags"), "only-flags", true);
   if (el.matches("td.z[data-chapter]")) { jumpToChapter(el); return; }
   if (el.hasAttribute("data-line")) { jumpToLine(el); return; }
   var key = el.getAttribute("data-layer");
@@ -210,6 +219,12 @@ function applyLayer() {
         if (hint) title.setAttribute("data-tip", hint);
         else title.removeAttribute("data-tip");
       }
+      var low = document.getElementById("layer-scale-low");
+      var high = document.getElementById("layer-scale-high");
+      var range = option.getAttribute("data-range") || "";
+      var parts = range.split(" – ");
+      if (low) low.textContent = parts[0] || "";
+      if (high) high.textContent = parts[1] || "";
       if (layerCount) {
         var n = outlierChips().length;
         var noun = n === 1
@@ -269,17 +284,53 @@ async function markerApi(payload) {
     return { ok: false, message: String(err) };
   }
 }
-document.addEventListener("click", async function (event) {
-  var add = event.target.closest("[data-marker-add]");
-  if (add) {
-    markerApi({
-      _action: "add",
-      kind: add.dataset.markerAdd,
-      line: parseInt(add.dataset.line, 10),
-      note: ""
-    });
-    return;
+function closeNoteField() {
+  var field = document.querySelector(".marker-note");
+  if (field) {
+    field.classList.add("gone");
+    setTimeout(function () { field.remove(); }, 160);
   }
+}
+
+function openNoteField(button) {
+  closeNoteField();
+  var row = button.closest(".marker-row");
+  var slot = row && row.querySelector(".marker-note-slot");
+  if (!slot) return;
+  var input = document.createElement("input");
+  input.className = "ctl marker-note";
+  input.type = "text";
+  input.placeholder = slot.dataset.placeholder || "";
+  input.setAttribute("aria-label", slot.dataset.placeholder || "");
+  slot.appendChild(input);
+  requestAnimationFrame(function () { input.classList.add("visible"); });
+  input.focus();
+  input.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") { closeNoteField(); return; }
+    if (event.key !== "Enter") return;
+    var kind = button.dataset.markerKind;
+    var line = parseInt(button.dataset.line, 10);
+    var note = input.value.trim();
+    button.disabled = true;
+    input.disabled = true;
+    markerApi({ _action: "add", kind: kind, line: line, note: note }).then(function (data) {
+      button.disabled = false;
+      input.disabled = false;
+      if (data.ok) {
+        input.value = "";
+        input.classList.add("saved");
+        input.placeholder = "✓";
+      } else {
+        input.classList.add("failed");
+        input.placeholder = "✗ " + (data.message || "");
+      }
+    });
+  });
+}
+
+document.addEventListener("click", async function (event) {
+  var add = event.target.closest("[data-marker-kind]");
+  if (add) { openNoteField(add); return; }
   var resolve = event.target.closest("[data-marker-resolve]");
   if (resolve) {
     markerApi({ _action: "resolve", id: resolve.dataset.markerResolve });
@@ -384,11 +435,12 @@ document.addEventListener("change", async function (event) {
   }
 });
 if (document.getElementById("nda-manager")) { ndaRefresh(); }
-async function runAction(action, payload) {
+async function runAction(action, payload, button) {
   var status = document.getElementById("ctl-status");
   if (!status) return;
   status.className = "ctl-status";
   status.textContent = "…";
+  if (button) { button.classList.add("busy"); button.setAttribute("aria-busy", "true"); }
   try {
     var res = await fetch(API + "/" + action, {
       method: "POST",
@@ -402,6 +454,8 @@ async function runAction(action, payload) {
   } catch (err) {
     status.className = "ctl-status err";
     status.textContent = "✗ " + err;
+  } finally {
+    if (button) { button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
   }
 }
 document.querySelectorAll("[data-action]").forEach(function (btn) {
@@ -434,6 +488,6 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
       reader.readAsText(file);
       return;
     }
-    runAction(btn.dataset.action, payload);
+    runAction(btn.dataset.action, payload, btn);
   });
 });

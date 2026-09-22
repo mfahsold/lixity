@@ -343,7 +343,7 @@ class TestDashboard(unittest.TestCase):
 
     def test_dashboard_contains_metrics_and_map(self):
         html = self._build()
-        for needle in ("ASL", "TTR", "Yule", "Flesch", "LIX", 'class="kpi"', 'class="chip'):
+        for needle in ("ASL", "TTR", "Yule", "Flesch", "LIX", 'class="kpi', 'class="chip'):
             self.assertIn(needle, html)
 
     def test_dashboard_artifacts_and_links(self):

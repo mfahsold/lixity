@@ -1,9 +1,10 @@
 """Lixity – command line: corpus analysis, style profile, passport and dashboard."""
 
 import argparse
-import json
 import os
 import sys
+
+import orjson
 
 from . import __version__
 from .analyzer import CorpusAnalyzer
@@ -19,6 +20,13 @@ from .workspace import discover
 
 EXIT_OK = 0
 EXIT_ERROR = 1
+
+
+def _json(payload: object, indent: bool = False) -> str:
+    """Serialises to UTF-8 JSON with orjson (one serializer for the whole CLI)."""
+    option = orjson.OPT_NON_STR_KEYS | (orjson.OPT_INDENT_2 if indent else 0)
+    return orjson.dumps(payload, option=option).decode("utf-8")
+
 
 _META = {
     "tool": "lixity",
@@ -78,7 +86,7 @@ def _meta_payload(language_key: str, **body) -> dict:
 def _print_about_json() -> None:
     from .api import about
 
-    print(json.dumps(about(), ensure_ascii=False, indent=2))
+    print(_json(about(), indent=True))
 
 
 def _print_about_text() -> None:
@@ -119,13 +127,12 @@ def _cmd_build(args) -> int:
     title = os.path.splitext(os.path.basename(workspace.manuscript))[0]
 
     artifacts = {
-        f"{workspace.slug}_metrics.json": json.dumps(
+        f"{workspace.slug}_metrics.json": _json(
             _meta_payload(resolved.key, metrics=metrics.model_dump()),
-            ensure_ascii=False,
-            indent=2,
+            indent=True,
         )
         + "\n",
-        f"{workspace.slug}_profile.json": json.dumps(
+        f"{workspace.slug}_profile.json": _json(
             _meta_payload(
                 resolved.key,
                 chapters=[c.__dict__ for c in chapters],
@@ -133,14 +140,10 @@ def _cmd_build(args) -> int:
                     {k: v for k, v in p.__dict__.items() if k != "text"} for p in paragraphs
                 ],
             ),
-            ensure_ascii=False,
-            indent=2,
+            indent=True,
         )
         + "\n",
-        f"{workspace.slug}_style.json": json.dumps(
-            fingerprint.passport(), ensure_ascii=False, indent=2
-        )
-        + "\n",
+        f"{workspace.slug}_style.json": _json(fingerprint.passport(), indent=True) + "\n",
         f"{workspace.slug}_style_passport.txt": fingerprint.passport_text(
             labels=resolved.labels, language_key=resolved.key
         )
@@ -199,8 +202,11 @@ def main(argv=None):
         ("completion", "Shell completion script (bash or zsh)"),
     ):
         p = sub.add_parser(name, help=help_text)
-        if name in ("completion", "about"):
-            p.add_argument("shell", nargs="?", default="bash", help="bash|zsh (completion)")
+        if name == "completion":
+            p.add_argument("shell", nargs="?", default="bash", help="bash|zsh")
+            continue
+        if name == "about":
+            p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "build":
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
@@ -225,10 +231,7 @@ def main(argv=None):
         return EXIT_ERROR
 
     if args.command == "about":
-        if args.shell and args.shell != "bash":
-            print(f"[Fehler] Unbekanntes Argument: {args.shell}", file=sys.stderr)
-            return EXIT_ERROR
-        _print_about_json() if "--json" in (argv or []) else _print_about_text()
+        _print_about_json() if args.json else _print_about_text()
         return EXIT_OK
 
     if args.command == "build":
@@ -249,7 +252,7 @@ def main(argv=None):
         metrics = CorpusAnalyzer(config).analyze_text(text)
         if args.json:
             payload = _meta_payload(resolved.key, metrics=metrics.model_dump())
-            print(json.dumps(payload, ensure_ascii=False))
+            print(_json(payload))
         else:
             ReportFormatter.print_rich_report(
                 metrics, texts=resolved.labels, language_key=resolved.key
@@ -263,14 +266,14 @@ def main(argv=None):
             chapters=[c.__dict__ for c in chapters],
             paragraphs=[{k: v for k, v in p.__dict__.items() if k != "text"} for p in paragraphs],
         )
-        print(json.dumps(payload, ensure_ascii=False, indent=2))
+        print(_json(payload, indent=True))
         return EXIT_OK
 
     if args.command == "style":
         metrics = CorpusAnalyzer(config).analyze_text(text)
         fingerprint = StyleFingerprint.from_metrics(metrics)
         if args.json:
-            print(json.dumps(fingerprint.passport(), ensure_ascii=False, indent=2))
+            print(_json(fingerprint.passport(), indent=True))
         else:
             print(fingerprint.passport_text(labels=resolved.labels, language_key=resolved.key))
         return EXIT_OK
