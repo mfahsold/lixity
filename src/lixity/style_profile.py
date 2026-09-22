@@ -22,7 +22,7 @@ configured ``appendix_marker``.
 
 import re
 from dataclasses import dataclass
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 from .language import compile_pattern, resolve_language
 from .markdown_parser import strip_inline_markup
@@ -110,8 +110,8 @@ class ParagraphProfiler:
 
     def __init__(
         self,
-        config: Optional[CorpusConfig] = None,
-        thresholds: Optional[ProfileThresholds] = None,
+        config: CorpusConfig | None = None,
+        thresholds: ProfileThresholds | None = None,
     ):
         self.config = config or CorpusConfig()
         self.thresholds = thresholds or ProfileThresholds()
@@ -123,7 +123,7 @@ class ParagraphProfiler:
         self._word = re.compile(self.lang.word_regex)
         self._appendix_title = self.config.appendix_marker.replace("##", "").strip()
 
-    def _sentence_tense(self, sentence: str) -> Optional[str]:
+    def _sentence_tense(self, sentence: str) -> str | None:
         """Classifies a single sentence as present-, past- or mixed-dominant."""
         pr = len(self._praes.findall(sentence))
         pt = len(self._praet.findall(sentence))
@@ -147,18 +147,18 @@ class ParagraphProfiler:
         return TENSE_MIXED
 
     def profile_blocks(
-        self, blocks: List[Dict[str, Any]]
-    ) -> Tuple[List[ParagraphProfile], List[ChapterProfile]]:
+        self, blocks: list[dict[str, Any]]
+    ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
         """Builds paragraph and chapter profiles from semantic blocks (with line anchors)."""
-        paragraphs: List[ParagraphProfile] = []
-        chapters: List[ChapterProfile] = []
+        paragraphs: list[ParagraphProfile] = []
+        chapters: list[ChapterProfile] = []
 
         chapter_num = 0
         chapter_title = ""
         chapter_start = 0
         chapter_end = 0
-        chapter_paragraphs: List[ParagraphProfile] = []
-        prev_dominant: Optional[str] = None
+        chapter_paragraphs: list[ParagraphProfile] = []
+        prev_dominant: str | None = None
         in_appendix = False
 
         def close_chapter():

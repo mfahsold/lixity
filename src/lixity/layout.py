@@ -12,7 +12,6 @@ The three focused publication formats are:
 """
 
 from dataclasses import dataclass
-from typing import Optional, Tuple
 
 
 @dataclass
@@ -27,7 +26,7 @@ class BookLayoutConfig:
     margin_bottom: float
 
     # Rhythm & type area
-    line_spacing: Optional[float] = None
+    line_spacing: float | None = None
     para_spacing: float = 4.5
     first_line_indent: float = 0.0
     justify_body: bool = True
@@ -71,8 +70,8 @@ class BookLayoutConfig:
     color_heading: str = "#151515"
     color_muted: str = "#555555"
     color_footer: str = "#777777"
-    color_border: Tuple[float, float, float] = (0.75, 0.75, 0.75)
-    color_divider: Tuple[float, float, float] = (0.88, 0.88, 0.88)
+    color_border: tuple[float, float, float] = (0.75, 0.75, 0.75)
+    color_divider: tuple[float, float, float] = (0.88, 0.88, 0.88)
 
     # Imprint
     contact_info: str = "Kontakt: mfahsold@googlemail.com · Hamburg, 2026"
@@ -116,7 +115,7 @@ class BookLayoutConfig:
 
     @classmethod
     def from_preset(
-        cls, preset: str = "taschenbuch", font_family: Optional[str] = None
+        cls, preset: str = "taschenbuch", font_family: str | None = None
     ) -> "BookLayoutConfig":
         """Creates one of the three focused publication formats (a4, taschenbuch, mobile)."""
         family = font_family or "P052, Palatino, URW Palladio L, FreeSerif, serif"

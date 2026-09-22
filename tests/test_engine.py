@@ -17,8 +17,8 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
 
 from lixity import (  # noqa: E402
-    CorpusConfig,
     CorpusAnalyzer,
+    CorpusConfig,
     FileUtils,
     ReportFormatter,
 )

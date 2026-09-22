@@ -17,15 +17,16 @@ fully localised via the labels of the language profile.
 """
 
 import html
-from typing import Any, Mapping, Optional, Sequence
+from collections.abc import Mapping, Sequence
+from typing import Any
 
 from .language_data import EN_LABELS, METRIC_LABELS
 from .style_profile import (
-    ChapterProfile,
-    ParagraphProfile,
     TENSE_MIXED,
     TENSE_PAST,
     TENSE_PRESENT,
+    ChapterProfile,
+    ParagraphProfile,
 )
 
 _CSS = """\
@@ -316,7 +317,7 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
 _DEFAULT_LABELS = {**EN_LABELS, **METRIC_LABELS["en"]}
 
 
-def _label(labels: Optional[Mapping[str, str]], key: str) -> str:
+def _label(labels: Mapping[str, str] | None, key: str) -> str:
     source = labels if labels else _DEFAULT_LABELS
     return source.get(key, _DEFAULT_LABELS.get(key, key))
 
@@ -331,7 +332,7 @@ def _tense_class(dominant: str) -> str:
     return "tense-neutral"
 
 
-def _help(labels: Optional[Mapping[str, str]], key: str, text: str) -> str:
+def _help(labels: Mapping[str, str] | None, key: str, text: str) -> str:
     """Wraps a term with a tooltip (help text from the language profile)."""
     tip = _label(labels, f"help_{key}")
     return f'<span class="help" data-help="{html.escape(tip, quote=True)}" tabindex="0">{text}</span>'
@@ -344,10 +345,10 @@ def _kpi(value: str, label: str) -> str:
 def render_dashboard(
     chapters: Sequence[ChapterProfile],
     paragraphs: Sequence[ParagraphProfile],
-    metrics: Optional[Any] = None,
-    artifacts: Optional[Sequence[Mapping[str, Any]]] = None,
+    metrics: Any | None = None,
+    artifacts: Sequence[Mapping[str, Any]] | None = None,
     title: str = "Manuskript",
-    labels: Optional[Mapping[str, str]] = None,
+    labels: Mapping[str, str] | None = None,
     language_name: str = "",
     tense_available: bool = True,
     engine_name: str = "Lixity",
@@ -355,7 +356,7 @@ def render_dashboard(
     api_base: str = "/api",
     manuscript_name: str = "",
     current_language: str = "auto",
-    language_options: Optional[Sequence] = None,
+    language_options: Sequence | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 

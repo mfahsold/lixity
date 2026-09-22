@@ -9,7 +9,7 @@ and standards-compliant orjson serialisation both for internal workflows and
 for later distribution as a standalone open-source package.
 """
 
-from typing import Dict, List, Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -39,7 +39,7 @@ class CorpusConfig(BaseModel):
         default=25,
         description="Wortschwelle, unterhalb derer ein Absatz als potentieller Einzeiler klassifiziert wird.",
     )
-    motif_regexes: Dict[str, str] = Field(
+    motif_regexes: dict[str, str] = Field(
         default_factory=dict,
         description=(
             "Projekt-/roman-spezifische Leitmotive als Label→RegEx (z. B. Titelwortfelder). "
@@ -48,27 +48,27 @@ class CorpusConfig(BaseModel):
     )
 
     # Optional language overrides (None = language profile default)
-    signal_keywords: Optional[Dict[str, str]] = Field(
+    signal_keywords: dict[str, str] | None = Field(
         default=None,
         description="Thematische Signalwörter als Label→RegEx (None = Sprachprofil-Standard).",
     )
-    filter_verbs_regex: Optional[str] = Field(
+    filter_verbs_regex: str | None = Field(
         default=None,
         description="RegEx für Perzeptionsfilter ('Telling'-Indikatoren; None = Sprachprofil-Standard).",
     )
-    praesens_regex: Optional[str] = Field(
+    praesens_regex: str | None = Field(
         default=None,
         description="RegEx für Gegenwartsmarker (Präsens; None = Sprachprofil-Standard).",
     )
-    praeteritum_regex: Optional[str] = Field(
+    praeteritum_regex: str | None = Field(
         default=None,
         description="RegEx für Vergangenheitsmarker (Präteritum; None = Sprachprofil-Standard).",
     )
-    dialogue_regex: Optional[str] = Field(
+    dialogue_regex: str | None = Field(
         default=None,
         description="RegEx zur Erkennung wörtlicher Rede (None = Sprachprofil-Standard).",
     )
-    word_regex: Optional[str] = Field(
+    word_regex: str | None = Field(
         default=None,
         description="RegEx zur Worttokenisierung (None = Sprachprofil-Standard).",
     )
@@ -102,7 +102,7 @@ class ChapterMetrics(BaseModel):
     asl: float = Field(description="Mittlere Satzlänge (Average Sentence Length) in Wörtern.")
     dialog_pct: float = Field(description="Prozentualer Anteil wörtlicher Rede am Text.")
     ttr: float = Field(description="Type-Token-Ratio des Kapitels (lexikalische Dichte).")
-    motif_counts: Dict[str, int] = Field(
+    motif_counts: dict[str, int] = Field(
         default_factory=dict,
         description="Kapitelzählung der konfigurierten Leitmotive (CorpusConfig.motif_regexes).",
     )
@@ -110,7 +110,7 @@ class ChapterMetrics(BaseModel):
     dominance: str = Field(
         default="Hybrid / Montage", description="Tempus-Tendenz (Präsens vs. Präteritum)."
     )
-    signal_matches: Dict[str, int] = Field(
+    signal_matches: dict[str, int] = Field(
         default_factory=dict, description="Generische Fundstellen aller Signalwörter."
     )
 
@@ -142,10 +142,10 @@ class CorpusMetrics(BaseModel):
     total_paragraphs: int = Field(description="Gesamtzahl der Fließprosa-Absätze.")
     avg_paragraph_len: float = Field(description="Mittlere Absatzlänge in Wörtern.")
     single_line_paragraphs: int = Field(description="Anzahl kurzer/isolierter Absätze.")
-    punctuation: Dict[str, int] = Field(description="Absolute Häufigkeiten aller Satzzeichen.")
-    signal_counts: Dict[str, int] = Field(description="Fundstellen der Signal-Keywords.")
+    punctuation: dict[str, int] = Field(description="Absolute Häufigkeiten aller Satzzeichen.")
+    signal_counts: dict[str, int] = Field(description="Fundstellen der Signal-Keywords.")
     filter_count: int = Field(description="Gesamtzahl gefundener Perzeptionsfilter.")
-    chapters: List[ChapterMetrics] = Field(description="Detaillierte Metriken aller Einzelkapitel.")
+    chapters: list[ChapterMetrics] = Field(description="Detaillierte Metriken aller Einzelkapitel.")
 
 
 class DossierStatus(BaseModel):
@@ -155,7 +155,7 @@ class DossierStatus(BaseModel):
 
     ok: bool = Field(description="True wenn das Dossier 100% synchron zum Manuskript ist.")
     details: str = Field(description="Kurzbeschreibung der geprüften Domäne.")
-    drift: List[str] = Field(
+    drift: list[str] = Field(
         default_factory=list, description="Liste identifizierter Diskrepanzen."
     )
 
@@ -174,6 +174,6 @@ class CorpusAuditReport(BaseModel):
     markers: int = Field(description="Anzahl noch offener Arbeitsmarker (PRÜFEN/SACHCHECK).")
     kap23_words: int = Field(description="Wortanzahl Kapitel 23.")
     kap24_words: int = Field(description="Wortanzahl Kapitel 24.")
-    kap25_words: Optional[int] = Field(default=None, description="Wortanzahl Kapitel 25.")
-    dossiers: Dict[str, DossierStatus] = Field(description="Audit-Ergebnisse je Begleitdossier.")
+    kap25_words: int | None = Field(default=None, description="Wortanzahl Kapitel 25.")
+    dossiers: dict[str, DossierStatus] = Field(description="Audit-Ergebnisse je Begleitdossier.")
     all_synced: bool = Field(description="True wenn ausnahmslos alle Dossiers synchron sind.")

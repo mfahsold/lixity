@@ -14,18 +14,18 @@ This makes the formatter work for any language, any writing style and any
 novel idea – without code changes.
 """
 
-from typing import Dict, Mapping, Optional
+from collections.abc import Mapping
+
 import orjson
-from rich.console import Console
-from rich.table import Table
-from rich.panel import Panel
-from rich.text import Text
 from rich import box
+from rich.console import Console
+from rich.panel import Panel
+from rich.table import Table
+from rich.text import Text
 
 from .models import CorpusMetrics
 
-
-DEFAULT_TEXTE: Dict[str, str] = {
+DEFAULT_TEXTE: dict[str, str] = {
     # Structure (Markdown report)
     "sec_1_1": "### 1.1 Gesamtkorpus-Kennzahlen",
     "sec_1_2": "### 1.2 Satzlängen-Architektur & Rhythmusprofil",
@@ -88,7 +88,7 @@ DEFAULT_TEXTE: Dict[str, str] = {
 }
 
 
-def _t(texts: Optional[Mapping[str, str]], key: str) -> str:
+def _t(texts: Mapping[str, str] | None, key: str) -> str:
     """Returns the project text or the neutral engine default."""
     if texts and key in texts:
         return texts[key]
@@ -101,8 +101,8 @@ class ReportFormatter:
     @staticmethod
     def print_rich_report(
         m: CorpusMetrics,
-        console: Optional[Console] = None,
-        texts: Optional[Mapping[str, str]] = None,
+        console: Console | None = None,
+        texts: Mapping[str, str] | None = None,
     ) -> None:
         """Renders a modern, highly aesthetic Rich terminal dashboard."""
         con = console or Console()
@@ -236,7 +236,7 @@ class ReportFormatter:
         con.print(table2)
 
     @staticmethod
-    def format_markdown_report(m: CorpusMetrics, texts: Optional[Mapping[str, str]] = None) -> str:
+    def format_markdown_report(m: CorpusMetrics, texts: Mapping[str, str] | None = None) -> str:
         """Generates GitHub-Flavored Markdown for embedding into dossiers."""
         ns_250 = m.raw_words / 250.0
         ns_1500 = m.raw_chars / 1500.0

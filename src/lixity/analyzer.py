@@ -18,18 +18,17 @@ Mathematical & linguistic foundation:
   share of direct speech in typographic quotation marks (»...«, „...“, "...").
 """
 
+import math
 import os
 import re
-import math
 from collections import Counter
-from typing import Optional, List, Dict
 
 from .language import compile_pattern, resolve_language
 from .models import (
+    ChapterMetrics,
     CorpusConfig,
     CorpusMetrics,
     SentenceDistribution,
-    ChapterMetrics,
 )
 
 
@@ -39,7 +38,7 @@ class CorpusAnalyzer:
     Performs quantitative corpus linguistics, stylometry and chapter segmentation.
     """
 
-    def __init__(self, config: Optional[CorpusConfig] = None):
+    def __init__(self, config: CorpusConfig | None = None):
         """
         Initialises the analyzer with a configuration.
         If no configuration is passed, the default parameters apply.
@@ -120,17 +119,17 @@ class CorpusAnalyzer:
 
         # Lexical range & stability
         m1 = n_tokens
-        m2 = sum(c ** 2 for c in freqs.values())
-        yules_k = 10000.0 * (m2 - m1) / (m1 ** 2) if m1 else 0.0
+        m2 = sum(c**2 for c in freqs.values())
+        yules_k = 10000.0 * (m2 - m1) / (m1**2) if m1 else 0.0
         ttr = v_types / n_tokens if n_tokens else 0.0
         guiraud_r = v_types / math.sqrt(n_tokens) if n_tokens else 0.0
 
         # Sentence metrics (remove headings before segmentation to prevent word carry-over)
         prose_for_sents = re.sub(r"(?m)^#+.*$", "", cleaned_main)
-        raw_sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", prose_for_sents)
-                     if s.strip()]
-        sent_lens = [len(self._word_re.findall(s))
-                     for s in raw_sents if len(self._word_re.findall(s)) > 0]
+        raw_sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", prose_for_sents) if s.strip()]
+        sent_lens = [
+            len(self._word_re.findall(s)) for s in raw_sents if len(self._word_re.findall(s)) > 0
+        ]
         total_sent = len(sent_lens)
         asl = sum(sent_lens) / total_sent if total_sent else 0.0
         sorted_lens = sorted(sent_lens)
@@ -170,13 +169,20 @@ class CorpusAnalyzer:
 
         # Paragraph economy
         raw_paras = [p.strip() for p in cleaned_main.split("\n\n") if p.strip()]
-        prose_paras = [p for p in raw_paras
-                       if not p.startswith("#") and not p.startswith("|")
-                       and not p.startswith("-") and not p.startswith("*")]
+        prose_paras = [
+            p
+            for p in raw_paras
+            if not p.startswith("#")
+            and not p.startswith("|")
+            and not p.startswith("-")
+            and not p.startswith("*")
+        ]
         para_lens = [len(p.split()) for p in prose_paras]
         total_paras = len(para_lens)
         avg_para_len = sum(para_lens) / total_paras if total_paras else 0.0
-        single_line_paras = sum(1 for pl in para_lens if pl <= self.config.min_paragraph_length_for_oneliner and pl != 8)
+        single_line_paras = sum(
+            1 for pl in para_lens if pl <= self.config.min_paragraph_length_for_oneliner and pl != 8
+        )
 
         # Punctuation as a stylistic seismograph
         punctuation = {
@@ -206,7 +212,7 @@ class CorpusAnalyzer:
         if raw_chapters and raw_chapters[0].strip().startswith("# "):
             raw_chapters = raw_chapters[1:]
 
-        chapters: List[ChapterMetrics] = []
+        chapters: list[ChapterMetrics] = []
         c_idx = 1
 
         for rc in raw_chapters:
@@ -221,19 +227,23 @@ class CorpusAnalyzer:
             if not c_words:
                 continue
 
-            c_sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", cl_b)
-                       if s.strip() and not s.strip().startswith("#")]
-            c_sent_lens = [len(self._word_re.findall(s))
-                           for s in c_sents if len(self._word_re.findall(s)) > 0]
+            c_sents = [
+                s.strip()
+                for s in re.split(r"(?<=[.!?])\s+", cl_b)
+                if s.strip() and not s.strip().startswith("#")
+            ]
+            c_sent_lens = [
+                len(self._word_re.findall(s)) for s in c_sents if len(self._word_re.findall(s)) > 0
+            ]
             c_asl = sum(c_sent_lens) / len(c_sent_lens) if c_sent_lens else 0.0
 
             c_dial = self._dialogue_re.findall(cl_b)
             c_dial_words = sum(len(m.split()) for m in c_dial)
             c_dial_pct = (c_dial_words / len(c_words)) * 100.0 if c_words else 0.0
 
-            c_ttr = len(set(w.lower() for w in c_words)) / len(c_words) if c_words else 0.0
+            c_ttr = len({w.lower() for w in c_words}) / len(c_words) if c_words else 0.0
 
-            c_signals: Dict[str, int] = {}
+            c_signals: dict[str, int] = {}
             for s_name, s_pat in self.lang.signal_keywords.items():
                 c_signals[s_name] = len(re.findall(s_pat, cl_b, re.IGNORECASE))
 
@@ -253,19 +263,21 @@ class CorpusAnalyzer:
             else:
                 dom = "Hybrid / Montage"
 
-            chapters.append(ChapterMetrics(
-                num=c_idx,
-                title=title,
-                words=len(c_words),
-                sentences=len(c_sent_lens),
-                asl=c_asl,
-                dialog_pct=c_dial_pct,
-                ttr=c_ttr,
-                motif_counts=c_motifs,
-                filter_verbs=c_fil,
-                dominance=dom,
-                signal_matches=c_signals
-            ))
+            chapters.append(
+                ChapterMetrics(
+                    num=c_idx,
+                    title=title,
+                    words=len(c_words),
+                    sentences=len(c_sent_lens),
+                    asl=c_asl,
+                    dialog_pct=c_dial_pct,
+                    ttr=c_ttr,
+                    motif_counts=c_motifs,
+                    filter_verbs=c_fil,
+                    dominance=dom,
+                    signal_matches=c_signals,
+                )
+            )
             c_idx += 1
 
         return CorpusMetrics(
@@ -312,6 +324,6 @@ class CorpusAnalyzer:
         """
         if not os.path.isfile(filepath):
             raise FileNotFoundError(f"Manuskriptdatei nicht gefunden: {filepath}")
-        with open(filepath, "r", encoding="utf-8") as f:
+        with open(filepath, encoding="utf-8") as f:
             content = f.read()
         return self.analyze_text(content)

@@ -20,10 +20,17 @@ can additionally be overridden via the config (None = profile default).
 """
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
-from typing import Dict, Mapping, Optional
 
-from .language_data import HELP_TEXTS, LABELS, LANGUAGE_PATTERNS, LEXICON, METRIC_LABELS, PROFILE_DATA
+from .language_data import (
+    HELP_TEXTS,
+    LABELS,
+    LANGUAGE_PATTERNS,
+    LEXICON,
+    METRIC_LABELS,
+    PROFILE_DATA,
+)
 
 
 @dataclass(frozen=True)
@@ -81,9 +88,9 @@ def _function_words(key: str) -> frozenset:
     )
 
 
-def _build_profiles() -> Dict[str, LanguageProfile]:
+def _build_profiles() -> dict[str, LanguageProfile]:
     """Builds the registry from the data layer (including productive tense patterns)."""
-    profiles: Dict[str, LanguageProfile] = {}
+    profiles: dict[str, LanguageProfile] = {}
     for key, data in PROFILE_DATA.items():
         past_parts = []
         if data["praeteritum_regex"]:
@@ -112,7 +119,7 @@ def _build_profiles() -> Dict[str, LanguageProfile]:
     return profiles
 
 
-LANGUAGE_PROFILES: Dict[str, LanguageProfile] = _build_profiles()
+LANGUAGE_PROFILES: dict[str, LanguageProfile] = _build_profiles()
 
 
 def compile_pattern(pattern: str) -> "re.Pattern[str]":
@@ -135,7 +142,7 @@ def detect_language(text: str, min_hits: int = 3) -> str:
     if not words:
         return "generic"
 
-    scores: Dict[str, int] = {}
+    scores: dict[str, int] = {}
     for key, profile in LANGUAGE_PROFILES.items():
         signal = profile.stopwords | profile.function_words
         if not signal:
@@ -153,7 +160,7 @@ def detect_language(text: str, min_hits: int = 3) -> str:
     return best_key
 
 
-def resolve_language(config, sample_text: Optional[str] = None) -> ResolvedLanguage:
+def resolve_language(config, sample_text: str | None = None) -> ResolvedLanguage:
     """Combines config overrides (None = profile default) into effective patterns.
 
     ``language="auto"`` uses stop word detection; without ``sample_text``

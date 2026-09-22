@@ -5,28 +5,28 @@ Generic, modular and reusable core engine for quantitative
 corpus linguistics, stylometry and documentation audits of literary manuscripts.
 """
 
-from .models import (
-    CorpusConfig,
-    SentenceDistribution,
-    ChapterMetrics,
-    CorpusMetrics,
-    DossierStatus,
-    CorpusAuditReport,
-)
-from .io import FileUtils
 from .analyzer import CorpusAnalyzer
 from .formatters import ReportFormatter
+from .io import FileUtils
+from .models import (
+    ChapterMetrics,
+    CorpusAuditReport,
+    CorpusConfig,
+    CorpusMetrics,
+    DossierStatus,
+    SentenceDistribution,
+)
 
 __all__ = [
-    "CorpusConfig",
-    "SentenceDistribution",
     "ChapterMetrics",
+    "CorpusAnalyzer",
+    "CorpusAuditReport",
+    "CorpusConfig",
     "CorpusMetrics",
     "DossierStatus",
-    "CorpusAuditReport",
     "FileUtils",
-    "CorpusAnalyzer",
     "ReportFormatter",
+    "SentenceDistribution",
 ]
 
-__version__ = "1.0.0"
+__version__ = "1.0.2"

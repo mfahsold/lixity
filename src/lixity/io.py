@@ -40,13 +40,13 @@ class FileUtils:
             False: File already exists with identical content; no write access.
         """
         filepath = os.path.abspath(filepath)
-        if os.path.exists(filepath):
-            try:
-                with open(filepath, "r", encoding=encoding) as f:
-                    if f.read() == content:
-                        return False  # Identical content -> no write access needed
-            except Exception:
-                pass
+        unchanged = False
+        try:
+            unchanged = FileUtils.read_file(filepath, encoding) == content
+        except (OSError, UnicodeError):
+            unchanged = False  # Missing or unreadable target -> rewrite
+        if unchanged:
+            return False  # Identical content -> no write access needed
 
         out_dir = os.path.dirname(filepath)
         if out_dir:
@@ -62,12 +62,14 @@ class FileUtils:
         except OSError:
             # Stage 2: system-wide temp directory (in case the workspace is sandbox-isolated, for example)
             try:
-                temp_fd, temp_path = tempfile.mkstemp(dir=tempfile.gettempdir(), prefix="sync_tmp_", suffix=".tmp")
+                temp_fd, temp_path = tempfile.mkstemp(
+                    dir=tempfile.gettempdir(), prefix="sync_tmp_", suffix=".tmp"
+                )
                 with os.fdopen(temp_fd, "w", encoding=encoding) as f:
                     f.write(content)
                 shutil.move(temp_path, filepath)
                 return True
-            except Exception:
+            except OSError:
                 # Stage 3: direct in-place write as an emergency fallback
                 with open(filepath, "w", encoding=encoding) as f:
                     f.write(content)
@@ -85,7 +87,7 @@ class FileUtils:
         Returns:
             Complete file content as a string.
         """
-        with open(filepath, "r", encoding=encoding) as f:
+        with open(filepath, encoding=encoding) as f:
             return f.read()
 
     @staticmethod

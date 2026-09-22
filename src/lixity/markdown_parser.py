@@ -20,9 +20,9 @@ Editorial HTML comments (``<!-- PRÜFEN ... -->``) are always
 and completely filtered out so that they never appear in publication outputs.
 """
 
-import re
 import html as html_mod
-from typing import Dict, List, Optional, Any
+import re
+from typing import Any
 
 _FN_REF_PATTERN = re.compile(r"\[\^([^\]]+)\]")
 _FN_REF_STRIP_PATTERN = re.compile(r"\[\^([^\]]+)\]")
@@ -40,16 +40,18 @@ def strip_inline_markup(text: str) -> str:
     text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
     text = re.sub(r"(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)", r"\1", text)
     return text.strip()
+
+
 _LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 
 
-def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
+def parse_markdown_blocks(content: str) -> list[dict[str, Any]]:
     """Parses Markdown content into semantic blocks and filters editorial HTML comments."""
     # Remove editorial comments (<!-- ... -->) completely
     clean_content = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL)
     lines = clean_content.splitlines()
 
-    blocks: List[Dict[str, Any]] = []
+    blocks: list[dict[str, Any]] = []
     i = 0
 
     while i < len(lines):
@@ -120,7 +122,7 @@ def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
             i += 1
             while i < len(lines):
                 next_line = lines[i].rstrip("\r\n")
-                if next_line.startswith("    ") or next_line.startswith("\t"):
+                if next_line.startswith(("    ", "\t")):
                     fn_text.append(next_line.strip())
                     i += 1
                 elif lines[i].strip() and not lines[i].strip().startswith("[^"):
@@ -140,7 +142,7 @@ def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
             continue
 
         # List items
-        if stripped.startswith("- ") or stripped.startswith("* "):
+        if stripped.startswith(("- ", "* ")):
             start_line = i + 1
             item_text = [stripped[2:].strip()]
             i += 1
@@ -189,15 +191,15 @@ def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
     return blocks
 
 
-def parse_markdown_file(filepath: str) -> List[Dict[str, Any]]:
+def parse_markdown_file(filepath: str) -> list[dict[str, Any]]:
     """Reads a Markdown file in a UTF-8-safe way and parses it into semantic blocks."""
-    with open(filepath, "r", encoding="utf-8") as f:
+    with open(filepath, encoding="utf-8") as f:
         return parse_markdown_blocks(f.read())
 
 
 def inline_markdown_to_html(
     text: str,
-    fn_counter: Optional[Dict[str, int]] = None,
+    fn_counter: dict[str, int] | None = None,
     document_id: str = "doc",
 ) -> str:
     """Converts inline Markdown into a safe XHTML5 fragment for EPUB 3.3.

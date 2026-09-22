@@ -89,7 +89,7 @@ def prune_archive(
     if not os.path.isdir(archive_dir):
         return 0
 
-    families: "dict[str, list[str]]" = {}
+    families: dict[str, list[str]] = {}
     for entry in sorted(os.listdir(archive_dir)):
         entry_path = os.path.join(archive_dir, entry)
         if os.path.islink(entry_path) or not os.path.isfile(entry_path):

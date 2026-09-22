@@ -2,6 +2,7 @@
 
 import argparse
 import json
+import os
 import sys
 
 from .analyzer import CorpusAnalyzer
@@ -28,10 +29,10 @@ def main(argv=None):
         p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
         p.add_argument("--json", action="store_true", help="JSON output (analyze/profile)")
-        p.add_argument("--output", help="Target file (dashboard)")
+        p.add_argument("-o", "--output", help="Target file (dashboard)")
     args = parser.parse_args(argv)
 
-    with open(args.file, "r", encoding="utf-8") as f:
+    with open(args.file, encoding="utf-8") as f:
         text = f.read()
     config = CorpusConfig(language=args.language)
     resolved = resolve_language(config, sample_text=text)
@@ -50,7 +51,9 @@ def main(argv=None):
         payload = {
             "language": resolved.key,
             "chapters": [c.__dict__ for c in chapters],
-            "paragraphs": [{k: v for k, v in p.__dict__.items() if k != "text"} for p in paragraphs],
+            "paragraphs": [
+                {k: v for k, v in p.__dict__.items() if k != "text"} for p in paragraphs
+            ],
         }
         print(json.dumps(payload, ensure_ascii=False, indent=2))
         return 0
@@ -73,5 +76,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    import os  # noqa: E402
     sys.exit(main())

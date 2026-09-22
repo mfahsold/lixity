@@ -218,7 +218,7 @@ class TestVisualizeAdapterIdempotency(unittest.TestCase):
             content = "<!DOCTYPE html><html><body>Test</body></html>\n"
             self.assertTrue(FileUtils.atomic_write_if_changed(path, content))
             self.assertFalse(FileUtils.atomic_write_if_changed(path, content))
-            with open(path, "r", encoding="utf-8") as f:
+            with open(path, encoding="utf-8") as f:
                 self.assertEqual(f.read(), content)
 
 
@@ -357,7 +357,7 @@ class TestEngineLicense(unittest.TestCase):
     def test_license_file_exists_and_is_restrictive(self):
         path = os.path.join(BASE_DIR, "LICENSE")
         self.assertTrue(os.path.isfile(path), "LICENSE-ENGINE missing")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             text = f.read()
         self.assertIn("Lixity Non-Commercial License", text)
         self.assertIn("kommerzielle Nutzung", text)
@@ -366,7 +366,7 @@ class TestEngineLicense(unittest.TestCase):
 
     def test_pyproject_declares_lixity_and_noncommercial_license(self):
         path = os.path.join(BASE_DIR, "pyproject.toml")
-        with open(path, "r", encoding="utf-8") as f:
+        with open(path, encoding="utf-8") as f:
             text = f.read()
         self.assertIn('name = "lixity"', text)
         self.assertIn("Non-Commercial", text)
