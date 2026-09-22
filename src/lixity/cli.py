@@ -1,4 +1,4 @@
-"""Lixity – Kommandozeile: Korpusanalyse, Stilprofil und Dashboard."""
+"""Lixity – command line: corpus analysis, style profile and dashboard."""
 
 import argparse
 import json
@@ -16,19 +16,19 @@ from .visualizer import render_dashboard
 def main(argv=None):
     parser = argparse.ArgumentParser(
         prog="lixity",
-        description="Lixity – quantitative Textlinguistik, Stilometrie und Stil-Dashboards.",
+        description="Lixity – quantitative text linguistics, stylometry and style dashboards.",
     )
     sub = parser.add_subparsers(dest="command", required=True)
     for name, help_text in (
-        ("analyze", "Korpuskennzahlen ausgeben (Text/JSON)"),
-        ("profile", "Absatzgenaue Tempusprofile (JSON)"),
-        ("dashboard", "Single-File-HTML-Dashboard erzeugen"),
+        ("analyze", "Print corpus metrics (text/JSON)"),
+        ("profile", "Paragraph-accurate tense profiles (JSON)"),
+        ("dashboard", "Generate a single-file HTML dashboard"),
     ):
         p = sub.add_parser(name, help=help_text)
-        p.add_argument("file", help="Markdown-Manuskript")
+        p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
-        p.add_argument("--json", action="store_true", help="JSON-Ausgabe (analyze/profile)")
-        p.add_argument("--output", help="Zieldatei (dashboard)")
+        p.add_argument("--json", action="store_true", help="JSON output (analyze/profile)")
+        p.add_argument("--output", help="Target file (dashboard)")
     args = parser.parse_args(argv)
 
     with open(args.file, "r", encoding="utf-8") as f:
@@ -68,7 +68,7 @@ def main(argv=None):
     output = args.output or "lixity-dashboard.html"
     with open(output, "w", encoding="utf-8") as f:
         f.write(html)
-    print(f"Dashboard geschrieben: {output}")
+    print(f"Dashboard written: {output}")
     return 0
 
 

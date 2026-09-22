@@ -1,23 +1,23 @@
 """
 scripts/engine/style_profile.py
 ===============================
-Absatzgenaue Stil- und Tempusprofile mit Zeilenankern.
+Paragraph-accurate style and tense profiles with line anchors.
 
-Die Engine erkennt auf Basis semantischer Markdown-Blöcke (inkl. Zeilenanker
-aus ``markdown_parser``):
+Based on semantic Markdown blocks (including line anchors
+from ``markdown_parser``), the engine detects:
 
-- das dominante Tempus je Absatz (Präsens / Präteritum / Gemischt / Neutral),
-- **Tempuswechsel** zwischen aufeinanderfolgenden Absätzen eines Kapitels
-  (potenzielle Micro-Friktionen wie retro-spektive Einschübe),
-- **tempusgemischte** Absätze (Minderheitenanteil über Schwellwert),
-- Satzlängen-, Dialog- und Arbeitsmarker-Profil je Absatz.
+- the dominant tense per paragraph (present / past / mixed / neutral),
+- **tense switches** between consecutive paragraphs of a chapter
+  (potential micro-frictions such as retrospective insertions),
+- **tense-mixed** paragraphs (minority share above threshold),
+- sentence-length, dialogue and work-marker profile per paragraph.
 
-Die Heuristik ist bewusst transparent und reproduzierbar: Sie zählt kuratierte
-Hochfrequenz-Verbformen (``CorpusConfig.praesens_regex`` / ``praeteritum_regex``)
-und leitet daraus Verhältnisse ab – keine Blackbox, keine externen NLP-Modelle.
+The heuristic is deliberately transparent and reproducible: it counts curated
+high-frequency verb forms (``CorpusConfig.praesens_regex`` / ``praeteritum_regex``)
+and derives ratios from them – no black box, no external NLP models.
 
-Projektneutral: keine Buch-spezifischen Hardcodings; der Anhang wird über den
-konfigurierten ``appendix_marker`` abgetrennt.
+Project-neutral: no book-specific hardcodings; the appendix is separated via the
+configured ``appendix_marker``.
 """
 
 import re
@@ -43,7 +43,7 @@ SEVERITY_LABELS = {
 
 @dataclass
 class ParagraphProfile:
-    """Stilprofil eines einzelnen Fließtext-Absatzes mit Zeilenanker."""
+    """Style profile of a single body-text paragraph with line anchor."""
 
     chapter_num: int
     chapter_title: str
@@ -65,7 +65,7 @@ class ParagraphProfile:
 
     @property
     def line_label(self) -> str:
-        """Kompakter Zeilenanker für die UI (z. B. „Z. 470–472“)."""
+        """Compact line anchor for the UI (e.g. "l. 470–472")."""
         if self.start_line == self.end_line:
             return f"Z. {self.start_line}"
         return f"Z. {self.start_line}–{self.end_line}"
@@ -77,7 +77,7 @@ class ParagraphProfile:
 
 @dataclass
 class ChapterProfile:
-    """Aggregiertes Tempusprofil eines Kapitels (für Navigation & Kennzahlen)."""
+    """Aggregated tense profile of a chapter (for navigation & metrics)."""
 
     num: int
     title: str
@@ -96,17 +96,17 @@ class ChapterProfile:
 
 @dataclass(frozen=True)
 class ProfileThresholds:
-    """Schwellwerte der Stilprofil-Heuristik (injizierbar, dokumentiert, reproduzierbar)."""
+    """Thresholds of the style profile heuristic (injectable, documented, reproducible)."""
 
-    neutral_max_hits: int = 1  # unter 2 Tempusmarkern: keine Aussage
-    mix_min_hits: int = 2  # je Tempus mindestens 2 Marker
-    mix_min_ratio: float = 0.25  # Minderheitenanteil ab 25 % = gemischt
-    switch_min_hits: int = 2  # dominantes Tempus braucht >= 2 Marker
-    severe_mix_minority: int = 3  # gemischt + >= 3 Minderheitenmarker = Stufe 2
+    neutral_max_hits: int = 1  # fewer than 2 tense markers: no statement
+    mix_min_hits: int = 2  # at least 2 markers per tense
+    mix_min_ratio: float = 0.25  # minority share from 25 % = mixed
+    switch_min_hits: int = 2  # dominant tense requires >= 2 markers
+    severe_mix_minority: int = 3  # mixed + >= 3 minority markers = level 2
 
 
 class ParagraphProfiler:
-    """Zustandslose Engine für absatzgenaue Tempus- und Stilprofile."""
+    """Stateless engine for paragraph-accurate tense and style profiles."""
 
     def __init__(
         self,
@@ -124,7 +124,7 @@ class ParagraphProfiler:
         self._appendix_title = self.config.appendix_marker.replace("##", "").strip()
 
     def _sentence_tense(self, sentence: str) -> Optional[str]:
-        """Klassifiziert einen einzelnen Satz als Präsens-, Präteritum- oder gemischt-dominant."""
+        """Classifies a single sentence as present-, past- or mixed-dominant."""
         pr = len(self._praes.findall(sentence))
         pt = len(self._praet.findall(sentence))
         if pr == 0 and pt == 0:
@@ -149,7 +149,7 @@ class ParagraphProfiler:
     def profile_blocks(
         self, blocks: List[Dict[str, Any]]
     ) -> Tuple[List[ParagraphProfile], List[ChapterProfile]]:
-        """Erzeugt Absatz- und Kapitelprofile aus semantischen Blöcken (mit Zeilenankern)."""
+        """Builds paragraph and chapter profiles from semantic blocks (with line anchors)."""
         paragraphs: List[ParagraphProfile] = []
         chapters: List[ChapterProfile] = []
 
@@ -163,7 +163,7 @@ class ParagraphProfiler:
 
         def close_chapter():
             if not chapter_title or not chapter_paragraphs:
-                return  # leere Kapitel (z. B. noch offene Danksagung) nicht führen
+                return  # do not list empty chapters (e.g. an acknowledgements section still open)
             present = sum(p.present_hits for p in chapter_paragraphs)
             past = sum(p.past_hits for p in chapter_paragraphs)
             total_words = sum(p.words for p in chapter_paragraphs)

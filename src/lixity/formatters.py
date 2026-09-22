@@ -1,17 +1,17 @@
 """
 scripts/engine/formatters.py
 ============================
-Formatierer für linguistische Korpusdaten:
-- Rich Terminal-UI Dashboard (farbcodiert, strukturierte Tabellen)
-- GitHub-Flavored Markdown für Dossiers und Lektoratsberichte
-- orjson Serialisierung für maschinenlesbare Exports
+Formatters for linguistic corpus data:
+- Rich terminal UI dashboard (colour-coded, structured tables)
+- GitHub-Flavored Markdown for dossiers and lectorate reports
+- orjson serialisation for machine-readable exports
 
-Abstraktion: Alle interpretierenden Texte (Einordnungen, literarische
-Bewertungen, Funktionsbeschreibungen) sind über ein ``texts``-Mapping
-überschreibbar. Die Engine-Defaults sind bewusst neutral und projektfrei;
-projektspezifische Formulierungen liefert der Adapter (z. B. analyze_corpus.py).
-Damit funktioniert der Formatter für jede Sprache, jeden Schreibstil und jede
-Romanidee – ohne Codeänderung.
+Abstraction: All interpretive texts (assessments, literary
+evaluations, function descriptions) can be overridden via a ``texts`` mapping.
+The engine defaults are deliberately neutral and project-free;
+project-specific wording is supplied by the adapter (e.g. analyze_corpus.py).
+This makes the formatter work for any language, any writing style and any
+novel idea – without code changes.
 """
 
 from typing import Dict, Mapping, Optional
@@ -26,14 +26,14 @@ from .models import CorpusMetrics
 
 
 DEFAULT_TEXTE: Dict[str, str] = {
-    # Struktur (Markdown-Bericht)
+    # Structure (Markdown report)
     "sec_1_1": "### 1.1 Gesamtkorpus-Kennzahlen",
     "sec_1_2": "### 1.2 Satzlängen-Architektur & Rhythmusprofil",
     "sec_1_3": "### 1.3 Interpunktion als stilistischer Seismograf",
     "sec_1_4": "### 1.4 Kapitelweise Vergleichsmatrix (Linguistische Tiefenprofile)",
     "md_col_tempus": "Dominantes Tempus",
     "md_intro_sentence": "Die empirische Verteilung der Sätze des Haupttextes:",
-    # Markdown 1.1 – Einordnungen (neutral)
+    # Markdown 1.1 – assessments (neutral)
     "md_raw_words": "Volltext inklusive Anhang.",
     "md_clean_words": "Reine Romanprosa.",
     "md_sentences": "Satzgesamtzahl des Haupttextes.",
@@ -47,12 +47,12 @@ DEFAULT_TEXTE: Dict[str, str] = {
     "md_lix": "Lesbarkeitsindex (LIX).",
     "md_dialog": "Anteil wörtlicher Rede an der Prosa.",
     "md_paras": "Absatzökonomie des Haupttextes.",
-    # Markdown 1.2 – Satzlängenfunktionen (neutral)
+    # Markdown 1.2 – sentence-length functions (neutral)
     "md_short": "Kurze Takte und Handlungsbefehle.",
     "md_medium": "Handlungsfortgang und Anschauung.",
     "md_long": "Assoziative Erweiterungen.",
     "md_complex": "Hypotaxen; bewusst begrenzt.",
-    # Markdown 1.3 – Interpunktionsfunktionen (neutral)
+    # Markdown 1.3 – punctuation functions (neutral)
     "punct_Punkte": "Grundtakt der Satzbildung.",
     "punct_Kommata": "Aufzählungen und Beisätze.",
     "punct_Gedankenstriche": "Nachklapp, Selbstkorrektur, Einschub.",
@@ -61,7 +61,7 @@ DEFAULT_TEXTE: Dict[str, str] = {
     "punct_Ausrufezeichen": "Sparsam dosiert.",
     "punct_Semikolons": "Selten; vermeidet dozierenden Ton.",
     "punct_Auslassungspunkte": "Abreißen des Gedankens.",
-    # Rich-Tabelle 1 – Referenz & Bewertung (neutral)
+    # Rich table 1 – reference & assessment (neutral)
     "t1_asl_ref": "8,0 – 11,5 W.",
     "t1_asl_note": "Kurze, parataktische Struktur.",
     "t1_median_ref": "7 – 9 Wörter",
@@ -80,7 +80,7 @@ DEFAULT_TEXTE: Dict[str, str] = {
     "t1_dialog_note": "Dialoganteil der Prosa.",
     "t1_filter_ref": "Minimiert",
     "t1_filter_note": "Geringe Telling-Dichte.",
-    # Rich-Tabelle 2 – dramaturgische Funktion (neutral)
+    # Rich table 2 – dramaturgical function (neutral)
     "t2_short": "Kurze Takte, Handlungsbefehle.",
     "t2_medium": "Handlungsfortgang und Anschauung.",
     "t2_long": "Assoziative Erweiterungen.",
@@ -89,14 +89,14 @@ DEFAULT_TEXTE: Dict[str, str] = {
 
 
 def _t(texts: Optional[Mapping[str, str]], key: str) -> str:
-    """Liefert den Projekttext oder den neutralen Engine-Default."""
+    """Returns the project text or the neutral engine default."""
     if texts and key in texts:
         return texts[key]
     return DEFAULT_TEXTE.get(key, "")
 
 
 class ReportFormatter:
-    """Formatierung der Korpusdaten für Terminal, Markdown und JSON."""
+    """Formatting of corpus data for terminal, Markdown and JSON."""
 
     @staticmethod
     def print_rich_report(
@@ -104,13 +104,13 @@ class ReportFormatter:
         console: Optional[Console] = None,
         texts: Optional[Mapping[str, str]] = None,
     ) -> None:
-        """Rendert ein modernes, hochästhetisches Rich-Terminal-Dashboard."""
+        """Renders a modern, highly aesthetic Rich terminal dashboard."""
         con = console or Console()
         con.print()
         ns_250 = m.raw_words / 250.0
         ns_1500 = m.raw_chars / 1500.0
 
-        # Titel-Panel
+        # Title panel
         header_text = Text()
         header_text.append(
             "📖 Korpuslinguistische Textanalyse & Manuskriptprofil\n", style="bold cyan"
@@ -125,7 +125,7 @@ class ReportFormatter:
         )
         con.print(Panel(header_text, border_style="cyan", box=box.ROUNDED))
 
-        # Tabelle 1: Kernmetriken
+        # Table 1: core metrics
         table1 = Table(
             title="Linguistische Kennzahlen & Stilistische DNA",
             box=box.SIMPLE_HEAVY,
@@ -192,7 +192,7 @@ class ReportFormatter:
         )
         con.print(table1)
 
-        # Tabelle 2: Satzlängenverteilung
+        # Table 2: sentence-length distribution
         table2 = Table(
             title="Satzlängen-Architektur & Rhythmisierung",
             box=box.SIMPLE,
@@ -237,7 +237,7 @@ class ReportFormatter:
 
     @staticmethod
     def format_markdown_report(m: CorpusMetrics, texts: Optional[Mapping[str, str]] = None) -> str:
-        """Erzeugt GitHub-Flavored Markdown für die Einbettung in Dossiers."""
+        """Generates GitHub-Flavored Markdown for embedding into dossiers."""
         ns_250 = m.raw_words / 250.0
         ns_1500 = m.raw_chars / 1500.0
 
@@ -314,7 +314,7 @@ class ReportFormatter:
                     break
             lines.append(f"| **{k}** | {v:,} | {density:.1f} | {fn} |")
 
-        # Kapitelmatrix: Motivspalten dynamisch aus motif_counts
+        # Chapter matrix: motif columns dynamically from motif_counts
         motif_keys: list = []
         for c in m.chapters:
             for key in c.motif_counts:
@@ -343,6 +343,6 @@ class ReportFormatter:
 
     @staticmethod
     def to_json(m: CorpusMetrics, indent: bool = True) -> str:
-        """Serialisiert CorpusMetrics mit orjson."""
+        """Serialises CorpusMetrics with orjson."""
         opts = orjson.OPT_INDENT_2 if indent else 0
         return orjson.dumps(m.model_dump(), option=opts).decode("utf-8")

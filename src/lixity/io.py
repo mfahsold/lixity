@@ -1,17 +1,17 @@
 """
 scripts/engine/io.py
 ====================
-Robuste, idempotente Datei-I/O mit atomaren Schreibvorgängen,
-Inhalts-Gleichheitsprüfung und resilienten Fallbacks für Sandboxes und Container.
+Robust, idempotent file I/O with atomic writes,
+content equality checks and resilient fallbacks for sandboxes and containers.
 
-Architekturmerkmale:
-1. Idempotenz durch Content-Hashing/Equality-Check vor Schreibzugriff
-   (Verhindert unmotivierte Inode- und mtime-Änderungen und Git-Diff-Jitter).
-2. Atomarität durch Staging über temporäre Dateien und atomare Dateisystem-Renames.
-3. Resilienz durch dreistufige Fallback-Kaskade bei restriktiven Sandbox-Mounts:
-   - Stufe 1: `mkstemp` im Zielverzeichnis (atomar via `os.replace`).
-   - Stufe 2: `mkstemp` in `/tmp` mit dateisystemübergreifendem Transfer (`shutil.move`).
-   - Stufe 3: Direkter Inplace-Write bei blockierten Tempfile-Rechten.
+Architectural characteristics:
+1. Idempotence via content hashing/equality check before writing
+   (prevents unmotivated inode and mtime changes and Git diff jitter).
+2. Atomicity via staging through temporary files and atomic filesystem renames.
+3. Resilience via a three-stage fallback cascade for restrictive sandbox mounts:
+   - Stage 1: `mkstemp` in the target directory (atomic via `os.replace`).
+   - Stage 2: `mkstemp` in `/tmp` with cross-filesystem transfer (`shutil.move`).
+   - Stage 3: Direct in-place write when tempfile permissions are blocked.
 """
 
 import os
@@ -21,30 +21,30 @@ import tempfile
 
 class FileUtils:
     """
-    Werkzeuge für verlässliche, atomare und idempotente Dateisystem-Operationen.
+    Tools for reliable, atomic and idempotent filesystem operations.
     """
 
     @staticmethod
     def atomic_write_if_changed(filepath: str, content: str, encoding: str = "utf-8") -> bool:
         """
-        Schreibt den übergebenen Inhalt nur dann auf die Festplatte, wenn er sich
-        vom gegenwärtigen Dateiinhalt unterscheidet.
+        Writes the passed content to disk only if it differs
+        from the current file content.
 
-        Parameter:
-            filepath: Zielpfad der zu schreibenden Datei.
-            content: Neuer Dateiinhalt als String.
-            encoding: Textkodierung (Standard: 'utf-8').
+        Parameters:
+            filepath: Target path of the file to write.
+            content: New file content as a string.
+            encoding: Text encoding (default: 'utf-8').
 
-        Rückgabe:
-            True: Datei wurde neu angelegt oder geändert.
-            False: Datei existiert bereits mit identischem Inhalt; kein Schreibzugriff.
+        Returns:
+            True: File was created or changed.
+            False: File already exists with identical content; no write access.
         """
         filepath = os.path.abspath(filepath)
         if os.path.exists(filepath):
             try:
                 with open(filepath, "r", encoding=encoding) as f:
                     if f.read() == content:
-                        return False  # Inhalt identisch -> Kein Schreibzugriff nötig
+                        return False  # Identical content -> no write access needed
             except Exception:
                 pass
 
@@ -52,7 +52,7 @@ class FileUtils:
         if out_dir:
             os.makedirs(out_dir, exist_ok=True)
 
-        # 1. Stufe: Tempfile im Zielverzeichnis (echter POSIX-atomarer rename via os.replace)
+        # Stage 1: tempfile in the target directory (true POSIX-atomic rename via os.replace)
         try:
             temp_fd, temp_path = tempfile.mkstemp(dir=out_dir, prefix="sync_tmp_", suffix=".tmp")
             with os.fdopen(temp_fd, "w", encoding=encoding) as f:
@@ -60,7 +60,7 @@ class FileUtils:
             os.replace(temp_path, filepath)
             return True
         except OSError:
-            # 2. Stufe: Systemweites Temp-Verzeichnis (falls Workspace z.B. sandbox-isoliert ist)
+            # Stage 2: system-wide temp directory (in case the workspace is sandbox-isolated, for example)
             try:
                 temp_fd, temp_path = tempfile.mkstemp(dir=tempfile.gettempdir(), prefix="sync_tmp_", suffix=".tmp")
                 with os.fdopen(temp_fd, "w", encoding=encoding) as f:
@@ -68,7 +68,7 @@ class FileUtils:
                 shutil.move(temp_path, filepath)
                 return True
             except Exception:
-                # 3. Stufe: Direkter Inplace-Write als Notfall-Fallback
+                # Stage 3: direct in-place write as an emergency fallback
                 with open(filepath, "w", encoding=encoding) as f:
                     f.write(content)
                 return True
@@ -76,14 +76,14 @@ class FileUtils:
     @staticmethod
     def read_file(filepath: str, encoding: str = "utf-8") -> str:
         """
-        Liest eine Textdatei standardkonform ein.
+        Reads a text file in a standards-compliant way.
 
-        Parameter:
-            filepath: Pfad zur einzulesenden Datei.
-            encoding: Textkodierung (Standard: 'utf-8').
+        Parameters:
+            filepath: Path to the file to read.
+            encoding: Text encoding (default: 'utf-8').
 
-        Rückgabe:
-            Vollständiger Dateiinhalt als String.
+        Returns:
+            Complete file content as a string.
         """
         with open(filepath, "r", encoding=encoding) as f:
             return f.read()
@@ -91,10 +91,10 @@ class FileUtils:
     @staticmethod
     def ensure_dir(dirpath: str) -> None:
         """
-        Erstellt ein Verzeichnis rekursiv, falls es noch nicht existiert.
+        Creates a directory recursively if it does not yet exist.
 
-        Parameter:
-            dirpath: Zu erstellender Verzeichnispfad.
+        Parameters:
+            dirpath: Directory path to create.
         """
         if dirpath:
             os.makedirs(dirpath, exist_ok=True)

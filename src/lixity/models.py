@@ -1,12 +1,12 @@
 """
 scripts/engine/models.py
 ========================
-Pydantic v2-Datenmodelle für quantitative Korpuslinguistik, Stilometrie,
-Satzlängenarchitektur, Kapitelmetriken und Synchronisations-Audits.
+Pydantic v2 data models for quantitative corpus linguistics, stylometry,
+sentence-length architecture, chapter metrics and synchronisation audits.
 
-Strikte Schemadefinitionen gewährleisten Typsicherheit, automatische Validierung
-und standardkonforme orjson-Serialisierung sowohl für interne Workflows als auch
-für die spätere Bereitstellung als eigenständiges Open-Source-Paket.
+Strict schema definitions guarantee type safety, automatic validation
+and standards-compliant orjson serialisation both for internal workflows and
+for later distribution as a standalone open-source package.
 """
 
 from typing import Dict, List, Optional
@@ -15,13 +15,13 @@ from pydantic import BaseModel, Field
 
 class CorpusConfig(BaseModel):
     """
-    Konfigurationsschema für die quantitative Korpusanalyse.
+    Configuration schema for quantitative corpus analysis.
 
-    Sprachabhängige Muster (Tempus, Dialog, Worttoken, Filterverben,
-    Signalwörter) sind als **optionale Overrides** definiert: ``None`` bedeutet
-    "nimm den Standard des gewählten Sprachprofils" (``scripts/engine/language.py``).
-    Damit funktioniert die Engine für jede Sprache und jeden Schreibstil, ohne
-    Codeänderung – neue Sprachen werden als ``LanguageProfile`` registriert.
+    Language-dependent patterns (tense, dialogue, word tokens, filter verbs,
+    signal words) are defined as **optional overrides**: ``None`` means
+    "use the default of the selected language profile" (``scripts/engine/language.py``).
+    This makes the engine work for any language and any writing style without
+    code changes – new languages are registered as ``LanguageProfile``.
     """
 
     chapter_regex: str = Field(
@@ -47,7 +47,7 @@ class CorpusConfig(BaseModel):
         ),
     )
 
-    # Optionale Sprach-Overrides (None = Standard des Sprachprofils)
+    # Optional language overrides (None = language profile default)
     signal_keywords: Optional[Dict[str, str]] = Field(
         default=None,
         description="Thematische Signalwörter als Label→RegEx (None = Sprachprofil-Standard).",
@@ -76,8 +76,8 @@ class CorpusConfig(BaseModel):
 
 class SentenceDistribution(BaseModel):
     """
-    Statistische Verteilung der Satzlängenarchitektur.
-    Dient der Analyse des rhythmischen Staccato vs. kaskadierender Perioden.
+    Statistical distribution of the sentence-length architecture.
+    Serves the analysis of rhythmic staccato vs. cascading periods.
     """
 
     short_count: int = Field(description="Anzahl Kurzsätze (<= 6 Wörter, Staccato/Befehle).")
@@ -92,7 +92,7 @@ class SentenceDistribution(BaseModel):
 
 class ChapterMetrics(BaseModel):
     """
-    Linguistisches und narratologisches Profil eines einzelnen Kapitels.
+    Linguistic and narratological profile of a single chapter.
     """
 
     num: int = Field(description="Kapitelnummer (1-basiert).")
@@ -117,7 +117,7 @@ class ChapterMetrics(BaseModel):
 
 class CorpusMetrics(BaseModel):
     """
-    Gesamtheitliche quantitative und stilometrische Metriken des Manuskripts.
+    Holistic quantitative and stylometric metrics of the manuscript.
     """
 
     raw_words: int = Field(description="Wortzahl Volltext inklusive Anhang und Verzeichnisse.")
@@ -150,7 +150,7 @@ class CorpusMetrics(BaseModel):
 
 class DossierStatus(BaseModel):
     """
-    Synchronisations- und Konsistenzstatus eines einzelnen Begleitdossiers.
+    Synchronisation and consistency status of a single companion dossier.
     """
 
     ok: bool = Field(description="True wenn das Dossier 100% synchron zum Manuskript ist.")
@@ -162,7 +162,7 @@ class DossierStatus(BaseModel):
 
 class CorpusAuditReport(BaseModel):
     """
-    Vollständiger Audit-Bericht zur Abwehr von Zerfaserung und Dokumentationsdrift.
+    Complete audit report to prevent fragmentation and documentation drift.
     """
 
     manuscript: str = Field(description="Dateiname des analysierten Manuskripts.")

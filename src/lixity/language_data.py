@@ -1,29 +1,29 @@
 """
 scripts/engine/language_data.py
 ===============================
-Datenschicht der Sprachprofile: kuratierte Tempusmarker, Stopwörter und
-Signal-/Filterwörter je Sprache.
+Data layer of the language profiles: curated tense markers, stop words and
+signal/filter words per language.
 
-Die Muster stützen sich auf öffentliche Frequenz- und Konjugationsreferenzen
-(Wiktionary-Frequenzlisten, Lingolia, SpanishDict, OneWorldItaliano,
-UOL/Portal da Língua Portuguesa, HeardDutchHere) sowie auf die regulären
-Tempus-Endungen der jeweiligen Sprache (vgl. LANGUAGE_PATTERNS):
+The patterns draw on public frequency and conjugation references
+(Wiktionary frequency lists, Lingolia, SpanishDict, OneWorldItaliano,
+UOL/Portal da Língua Portuguesa, HeardDutchHere) as well as on the regular
+tense endings of the respective language (cf. LANGUAGE_PATTERNS):
 
-- Französisch: Imparfait ``-ais/-ait/-aient`` und Passé composé ``Hilfsverb + Partizip``
-- Spanisch: Imperfecto ``-aba/-aban``, ``-ía/-ían``; Pretérito (kuratiert); Perfecto ``haber + -ado/-ido``
-- Italienisch: Imperfetto ``-avo/-ava/-evi/-eva/-ivo/-iva``; Passato prossimo ``avere/essere + Partizip``
-- Portugiesisch: Imperfeito ``-ava/-avam``, ``-ia/-iam``; Pretérito (kuratiert); Perfeito composto ``ter + Partizip``
-- Niederländisch: schwache Vergangenheit ``Pronomen + -te/-de(n)``; Perfekt ``hebben/zijn + ge-…``
-- Deutsch/Englisch: kuratierte Hochfrequenz-Verbformen
+- French: imparfait ``-ais/-ait/-aient`` and passé composé ``auxiliary + participle``
+- Spanish: imperfecto ``-aba/-aban``, ``-ía/-ían``; pretérito (curated); perfecto ``haber + -ado/-ido``
+- Italian: imperfetto ``-avo/-ava/-evi/-eva/-ivo/-iva``; passato prossimo ``avere/essere + participle``
+- Portuguese: imperfeito ``-ava/-avam``, ``-ia/-iam``; pretérito (curated); perfeito composto ``ter + participle``
+- Dutch: weak past ``pronoun + -te/-de(n)``; perfect ``hebben/zijn + ge-…``
+- German/English: curated high-frequency verb forms
 
-Die ``stopwords`` dienen der abhängigkeitsfreien Spracherkennung
-(``language.detect_language``); Stopwort-Verfahren sind für Fließtexte
-belastbar, für Einzelwörter jedoch unzuverlässig (vgl. fastlang/langidentify).
+The ``stopwords`` serve dependency-free language detection
+(``language.detect_language``); stop word methods are robust for running text
+but unreliable for single words (cf. fastlang/langidentify).
 
-Neue Sprachen: Eintrag ergänzen – Analyzer, Profiler und UI folgen automatisch.
+New languages: add an entry – analyzer, profiler and UI follow automatically.
 """
 
-# Sprachabhängige UI-Labels (fehlende Schlüssel fallen auf Englisch zurück)
+# Language-dependent UI labels (missing keys fall back to English)
 DE_LABELS = {
     "app_suffix": "Stil- & Tempusanalyse",
     "present": "Präsens",
@@ -653,9 +653,9 @@ PROFILE_DATA = {
     },
 }
 
-# Reguläre, hochpräzise Tempusmuster je Sprache (Ergänzung zu den kuratierten Formen).
-# Erfasst die produktiven Endungen/Hilfsverbkonstruktionen des Erzähltempus,
-# gegen Substantiv-Fehltreffer durch Stopplisten geschützt.
+# Regular, high-precision tense patterns per language (complement to the curated forms).
+# Captures the productive endings/auxiliary constructions of the narrative tense,
+# protected against noun false positives by stop lists.
 LANGUAGE_PATTERNS = {
     "fr": {
         "praeteritum": [
@@ -692,10 +692,10 @@ LANGUAGE_PATTERNS = {
 }
 
 
-# Linguistische Standardlisten je Sprache (geschlossene Wortklassen).
-# Funktion: Stilmetrik (Funktionswortanteil), Tempuskontext und erweiterbare Basis
-# für weitere Analysen. Alle Listen sind bewusst als offene Standardsammlungen
-# angelegt und können pro Projekt ergänzt werden.
+# Standard linguistic lists per language (closed word classes).
+# Function: style metrics (function word ratio), tense context and extensible basis
+# for further analyses. All lists are deliberately designed as open standard collections
+# and can be extended per project.
 LEXICON = {'de': {'auxiliaries': ['sein',
         'haben',
         'werden',
@@ -1741,7 +1741,7 @@ LEXICON = {'de': {'auxiliaries': ['sein',
         'werden']}}
 
 
-# Metrik- und UI-Labels des Dashboards (Dashboard folgt der eingestellten Sprache)
+# Metric and UI labels of the dashboard (dashboard follows the configured language)
 METRIC_LABELS = {
     "de": {"sentences": "Sätze", "dialogue": "Dialog", "function_words": "Funktionswörter",
            "controls": "Steuerung", "export": "Exportieren", "sync": "Dossiers synchronisieren",
@@ -1753,6 +1753,10 @@ METRIC_LABELS = {
            "manuscript": "Manuskript", "load": "Laden", "current_manuscript": "Aktuell",
            "settings": "Einstellungen", "language": "Sprache", "title": "Titel", "apply": "Übernehmen",
            "run_analysis": "Analysen ausführen", "choose_file": "Markdown-Datei wählen",
+           "nda_manager": "NDA-Verwaltung (verschlüsselt)", "passphrase": "Passphrase",
+           "unlock": "Entsperren", "locked_hint": "Speicher gesperrt – Passphrase eingeben.",
+           "status": "Status", "notes": "Notiz", "actions": "Aktionen", "delete": "Löschen",
+           "export_pdf": "PDF", "ndas_empty": "Noch keine Einträge.",
            "artifacts": "Publikationen", "pages": "Seiten", "size": "Größe", "open": "Öffnen",
            "chapter_table": "Kapitelmatrix", "sentence_dist": "Satzlängen",
            "sections": "Analyse", "metrics": "Kennzahlen"},
@@ -1766,6 +1770,10 @@ METRIC_LABELS = {
            "manuscript": "Manuscript", "load": "Load", "current_manuscript": "Current",
            "settings": "Settings", "language": "Language", "title": "Title", "apply": "Apply",
            "run_analysis": "Run analyses", "choose_file": "Choose markdown file",
+           "nda_manager": "NDA manager (encrypted)", "passphrase": "Passphrase",
+           "unlock": "Unlock", "locked_hint": "Store locked – enter passphrase.",
+           "status": "Status", "notes": "Note", "actions": "Actions", "delete": "Delete",
+           "export_pdf": "PDF", "ndas_empty": "No entries yet.",
            "artifacts": "Publications", "pages": "pages", "size": "size", "open": "Open",
            "chapter_table": "Chapter matrix", "sentence_dist": "Sentence lengths",
            "sections": "Analysis", "metrics": "Metrics"},
@@ -1792,8 +1800,8 @@ METRIC_LABELS = {
 }
 
 
-# Hilfetexte für Tooltips (Abkürzungen, Fachbegriffe, Aktionen).
-# de/en vollständig; weitere Sprachen fallen auf Englisch zurück.
+# Help texts for tooltips (abbreviations, technical terms, actions).
+# de/en complete; other languages fall back to English.
 HELP_TEXTS = {
     "de": {
         "help_words": "Wortzahl der reinen Romanprosa (ohne Anhang und Verzeichnisse).",

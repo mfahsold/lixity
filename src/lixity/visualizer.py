@@ -1,19 +1,19 @@
 """
 scripts/engine/visualizer.py
 ============================
-Radikal einfache, eigenständige HTML-Analyse (Single-File-Dashboard).
+Radically simple, self-contained HTML analysis (single-file dashboard).
 
-Ein Dokument vereint:
-- Kennzahlen des Korpus (Wörter, Sätze, ASL, TTR, Yule's K, Flesch, LIX, Dialog,
-  Funktionswortanteil),
-- die Satzlängen-Architektur,
-- eine Kapitelkarte mit farbcodiertem Absatzstreifen (Tempusdominanz),
-- auffällige Absätze (Tempuswechsel/-mischung) mit Klick auf Text + Zeilenanker,
-- die Publikationsartefakte (PDF/EPUB/NDA) mit Größe, Seitenzahl und Link.
+One document combines:
+- corpus metrics (words, sentences, ASL, TTR, Yule's K, Flesch, LIX, dialogue,
+  function word ratio),
+- the sentence-length architecture,
+- a chapter map with colour-coded paragraph strip (tense dominance),
+- flagged paragraphs (tense switch/mixture) with click for text + line anchor,
+- the publication artefacts (PDF/EPUB/NDA) with size, page count and link.
 
-Eigenschaften: keine externen Abhängigkeiten (kein CDN, kein Framework),
-deterministisch (keine Zeitstempel), idempotent schreibbar, zweisprachig
-dunkel/hell, vollständig lokalisiert über die Labels des Sprachprofils.
+Properties: no external dependencies (no CDN, no framework),
+deterministic (no timestamps), idempotently writable, dual light/dark,
+fully localised via the labels of the language profile.
 """
 
 import html
@@ -36,6 +36,7 @@ _CSS = """\
   --flag: #b3402f; --radius: 12px;
 }
 * { box-sizing: border-box; }
+[hidden] { display: none !important; }
 body {
   margin: 0; padding: 2rem 1.25rem 3rem; background: var(--bg); color: var(--fg);
   font: 15px/1.55 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
@@ -159,6 +160,103 @@ if (filter) {
   });
 }
 var API = document.body.dataset.api || "";
+var NDA_STATUSES = ["entwurf", "versendet", "bestaetigt", "unterschrieben"];
+function ndaStatus(message, ok) {
+  var el = document.getElementById("nda-status");
+  if (!el) return;
+  el.className = "ctl-status " + (ok ? "ok" : "err");
+  el.textContent = (ok ? "✓ " : "✗ ") + (message || "");
+}
+async function ndaApi(path, payload) {
+  try {
+    var res = await fetch(API + "/" + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {})
+    });
+    return await res.json();
+  } catch (err) {
+    return { ok: false, message: String(err) };
+  }
+}
+function ndaRender(records) {
+  var host = document.getElementById("nda-table");
+  var hint = document.getElementById("nda-hint");
+  var unlockRow = document.getElementById("nda-unlock-row");
+  var addRow = document.getElementById("nda-add-row");
+  if (!host) return;
+  if (unlockRow) unlockRow.hidden = true;
+  if (addRow) addRow.hidden = false;
+  if (hint) hint.textContent = records.length + " Einträge";
+  var rows = records.map(function (r) {
+    var options = NDA_STATUSES.map(function (s) {
+      return '<option value="' + s + '"' + (s === r.status ? " selected" : "") + ">" + s + "</option>";
+    }).join("");
+    return "<tr><td><b>" + r.id + "</b></td><td>" + r.name + "</td><td>" + (r.contact || "–") +
+      '</td><td><select class="ctl" data-nda-status="' + r.id + '">' + options + "</select></td>" +
+      "<td>" + (r.pdf || "–") + "</td><td>" +
+      '<button class="ctl" data-nda-export="' + r.id + '">PDF</button> ' +
+      '<button class="ctl" data-nda-delete="' + r.id + '">✕</button></td></tr>';
+  }).join("");
+  host.innerHTML = records.length
+    ? "<table><thead><tr><th>ID</th><th>Name</th><th>Kontakt</th><th>Status</th><th>PDF</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
+    : "";
+}
+async function ndaRefresh() {
+  var data = await ndaApi("nda-list", {});
+  if (!data.ok) {
+    var hint = document.getElementById("nda-hint");
+    if (hint) hint.textContent = data.message || "";
+    var unlockRow = document.getElementById("nda-unlock-row");
+    if (unlockRow) unlockRow.hidden = false;
+    return;
+  }
+  ndaRender(data.records || []);
+}
+document.addEventListener("click", async function (event) {
+  var unlock = event.target.closest("#nda-unlock-btn");
+  if (unlock) {
+    var pass = document.getElementById("nda-passphrase");
+    var data = await ndaApi("nda-unlock", { passphrase: pass ? pass.value : "" });
+    ndaStatus(data.message, data.ok);
+    if (data.ok) { if (pass) pass.value = ""; ndaRender(data.records || []); }
+    return;
+  }
+  var add = event.target.closest("#nda-add-btn");
+  if (add) {
+    var payload = {
+      name: document.getElementById("nda-new-name").value,
+      contact: document.getElementById("nda-new-contact").value,
+      notes: document.getElementById("nda-new-notes").value
+    };
+    var res = await ndaApi("nda-add", payload);
+    ndaStatus(res.message, res.ok);
+    if (res.ok) ndaRefresh();
+    return;
+  }
+  var exp = event.target.closest("[data-nda-export]");
+  if (exp) {
+    var res2 = await ndaApi("nda-export", { id: exp.dataset.ndaExport });
+    ndaStatus(res2.message, res2.ok);
+    if (res2.ok) ndaRefresh();
+    return;
+  }
+  var del = event.target.closest("[data-nda-delete]");
+  if (del) {
+    var res3 = await ndaApi("nda-delete", { id: del.dataset.ndaDelete });
+    ndaStatus(res3.message, res3.ok);
+    if (res3.ok) ndaRefresh();
+    return;
+  }
+});
+document.addEventListener("change", async function (event) {
+  var sel = event.target.closest("[data-nda-status]");
+  if (sel) {
+    var res = await ndaApi("nda-update", { id: sel.dataset.ndaStatus, status: sel.value });
+    ndaStatus(res.message, res.ok);
+  }
+});
+if (document.getElementById("nda-manager")) { ndaRefresh(); }
 async function runAction(action, payload) {
   var status = document.getElementById("ctl-status");
   if (!status) return;
@@ -234,7 +332,7 @@ def _tense_class(dominant: str) -> str:
 
 
 def _help(labels: Optional[Mapping[str, str]], key: str, text: str) -> str:
-    """Umschließt einen Begriff mit einem Tooltip (Hilfetext aus dem Sprachprofil)."""
+    """Wraps a term with a tooltip (help text from the language profile)."""
     tip = _label(labels, f"help_{key}")
     return f'<span class="help" data-help="{html.escape(tip, quote=True)}" tabindex="0">{text}</span>'
 
@@ -259,10 +357,10 @@ def render_dashboard(
     current_language: str = "auto",
     language_options: Optional[Sequence] = None,
 ) -> str:
-    """Rendert das vollständige, deterministische Single-File-Dashboard.
+    """Renders the complete, deterministic single-file dashboard.
 
-    ``controls=True`` ergänzt das lokale Steuerungspanel (Buttons/Dropdown/NDA),
-    das über den UI-Server (``scripts/ui_server.py``) die CLI-Funktionen auslöst.
+    ``controls=True`` adds the local control panel (buttons/dropdown/NDA),
+    which triggers the CLI functions via the UI server (``scripts/ui_server.py``).
     """
     esc = html.escape
     L = lambda key: esc(_label(labels, key))  # noqa: E731
@@ -306,7 +404,7 @@ def render_dashboard(
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('controls')}</h2>")
 
-        # Manuskript laden
+        # Load manuscript
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
         parts.append('<div class="row">')
@@ -320,7 +418,7 @@ def render_dashboard(
             )
         parts.append("</div></div>")
 
-        # Einstellungen (Sprache, Titel)
+        # Settings (language, title)
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{L("settings")}</span>')
         parts.append('<div class="row">')
@@ -338,7 +436,7 @@ def render_dashboard(
         )
         parts.append("</div></div>")
 
-        # Analysen & Exporte
+        # Analyses & exports
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{L("export")} · {L("run_analysis")}</span>')
         parts.append('<div class="row">')
@@ -378,7 +476,28 @@ def render_dashboard(
         parts.append(f'<div class="ctl-status" id="ctl-status">{L("server_hint")}</div>')
         parts.append("</section>")
 
-    # --- Kennzahlen -------------------------------------------------------
+        parts.append('<section class="panel controls" id="nda-manager">')
+        parts.append(f"<h2>{L('nda_manager')}</h2>")
+        parts.append(f'<p class="ctl-note" id="nda-hint">{L("locked_hint")}</p>')
+        parts.append('<div class="row" id="nda-unlock-row">')
+        parts.append(f'<input class="ctl" type="password" id="nda-passphrase" placeholder="{L("passphrase")}"/>')
+        parts.append(
+            f'<button class="ctl" id="nda-unlock-btn">{L("unlock")}</button>'
+        )
+        parts.append("</div>")
+        parts.append('<div id="nda-table"></div>')
+        parts.append('<div class="row" id="nda-add-row" hidden="hidden">')
+        parts.append(f'<input class="ctl" id="nda-new-name" placeholder="{L("name")}"/>')
+        parts.append(f'<input class="ctl" id="nda-new-contact" placeholder="{L("contact")}"/>')
+        parts.append(f'<input class="ctl" id="nda-new-notes" placeholder="{L("notes")}"/>')
+        parts.append(
+            f'<button class="ctl primary" id="nda-add-btn">{L("create")} + {L("export_pdf")}</button>'
+        )
+        parts.append("</div>")
+        parts.append('<div class="ctl-status" id="nda-status"></div>')
+        parts.append("</section>")
+
+    # --- Key metrics ------------------------------------------------------
     parts.append('<section class="kpis">')
     parts.append(_kpi(f"{total_words:,}", _help(labels, "words", L("words_prose"))))
     parts.append(_kpi(str(len(chapters)), L("chapter")))
@@ -395,7 +514,7 @@ def render_dashboard(
     parts.append(_kpi(str(total_flagged), _help(labels, "flagged", L("flagged"))))
     parts.append("</section>")
 
-    # --- Satzlängen-Architektur ------------------------------------------
+    # --- Sentence-length architecture -------------------------------------
     if metrics is not None:
         d = metrics.sentence_dist
         rows = [
@@ -415,7 +534,7 @@ def render_dashboard(
             )
         parts.append("</div></section>")
 
-    # --- Werkzeugleiste ---------------------------------------------------
+    # --- Toolbar ----------------------------------------------------------
     parts.append('<div class="toolbar">')
     parts.append(f'<label><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
     parts.append('<span class="legend">')
@@ -439,7 +558,7 @@ def render_dashboard(
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
 
-    # --- Kapitelkarte -----------------------------------------------------
+    # --- Chapter map ------------------------------------------------------
     by_chapter: dict = {}
     for idx, p in enumerate(paragraphs):
         by_chapter.setdefault(p.chapter_num, []).append((idx, p))
@@ -492,7 +611,7 @@ def render_dashboard(
         parts.append("</section>")
     parts.append("</main>")
 
-    # --- Kapitelmatrix ----------------------------------------------------
+    # --- Chapter matrix ---------------------------------------------------
     if chapters:
         parts.append('<section class="panel">')
         parts.append(f"<h2>{L('chapter_table')}</h2>")
@@ -513,7 +632,7 @@ def render_dashboard(
             )
         parts.append("</tbody></table></section>")
 
-    # --- Publikationen ----------------------------------------------------
+    # --- Publications -----------------------------------------------------
     if artifacts:
         parts.append('<section class="panel">')
         parts.append(f"<h2>{_help(labels, 'artifacts', L('artifacts'))}</h2>")
@@ -550,5 +669,5 @@ def render_dashboard(
     return "\n".join(parts) + "\n"
 
 
-# Rückwärtskompatibler Name (ältere Aufrufe/Tests)
+# Backwards-compatible name (older calls/tests)
 render_style_report = render_dashboard

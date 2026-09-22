@@ -1,12 +1,12 @@
 # Lixity
 
-**Lixity** – aus dem mathematischen Kern: **T**TR (Type-Token-Ratio),
-**Y**ule's Characteristic K und **LIX** (Läsbarhetsindex).
+**Lixity** – from its mathematical core: **T**TR (Type-Token Ratio),
+**Y**ule's Characteristic K and **LIX** (Läsbarhetsindex).
 
-Quantitative Textlinguistik, Stilometrie, absatzgenaue Tempusprofile und
-idempotente Publikationspipelines für literarische Markdown-Manuskripte.
-Sprachneutral (`de`, `en`, `fr`, `es`, `it`, `pt`, `nl` + generischer Fallback,
-Spracherkennung über Funktionswörter).
+Quantitative text linguistics, stylometry, paragraph-accurate tense profiles and
+idempotent publication pipelines for literary Markdown manuscripts.
+Language-neutral (`de`, `en`, `fr`, `es`, `it`, `pt`, `nl` + generic fallback,
+language detection via function words).
 
 ## Installation
 
@@ -14,27 +14,27 @@ Spracherkennung über Funktionswörter).
 pip install git+https://github.com/mfahsold/lixity.git
 ```
 
-## Nutzung
+## Usage
 
 ```bash
-lixity analyze manuskript.md              # Korpuskennzahlen (Rich-Report)
-lixity analyze manuskript.md --json       # maschinenlesbar
-lixity profile manuskript.md              # Tempusprofile je Absatz (JSON)
-lixity dashboard manuskript.md -o ui.html # Single-File-HTML-Dashboard
+lixity analyze manuscript.md              # corpus metrics (Rich report)
+lixity analyze manuscript.md --json       # machine-readable
+lixity profile manuscript.md              # tense profiles per paragraph (JSON)
+lixity dashboard manuscript.md -o ui.html # single-file HTML dashboard
 ```
 
-Als Bibliothek:
+As a library:
 
 ```python
 from lixity import CorpusConfig, CorpusAnalyzer, ParagraphProfiler
 
 config = CorpusConfig(language="auto")
-metrics = CorpusAnalyzer(config).analyze_text(open("manuskript.md").read())
+metrics = CorpusAnalyzer(config).analyze_text(open("manuscript.md").read())
 ```
 
-## Lizenz
+## License
 
-**Lixity Non-Commercial License 1.0 (LNCL-1.0)** – frei für Forschung, Lehre und
-klar nicht-kommerzielle Projekte. Kommerzielle Nutzung nur mit schriftlicher
-Lizenz auf Anfrage: **mfahsold@googlemail.com**. Source-available, ausdrücklich
-keine OSI-Open-Source-Lizenz.
+**Lixity Non-Commercial License 1.0 (LNCL-1.0)** – free for research, teaching and
+clearly non-commercial projects. Commercial use only with a written license on
+request: **mfahsold@googlemail.com**. Source-available, explicitly not an
+OSI open-source license.

@@ -1,21 +1,21 @@
 """
 scripts/engine/analyzer.py
 ==========================
-Zustandslose, hochperformante Textanalyse-Engine für literarische Manuskripte.
+Stateless, high-performance text analysis engine for literary manuscripts.
 
-Mathematische & linguistische Fundierung:
-- Mittlere Satzlänge (ASL = Total Words / Total Sentences):
-  Indikator für parataktischen Rhythmus vs. hypotaktische Schachtelung.
-- Type-Token-Ratio (TTR = V / N) & Guiraud-Index (R = V / sqrt(N)):
-  Empirische Messung lexikalischer Vielfalt und Streuung.
+Mathematical & linguistic foundation:
+- Average Sentence Length (ASL = Total Words / Total Sentences):
+  indicator for paratactic rhythm vs. hypotactic nesting.
+- Type-Token Ratio (TTR = V / N) & Guiraud index (R = V / sqrt(N)):
+  empirical measurement of lexical variety and dispersion.
 - Yule's Characteristic K = 10^4 * (M_2 - M_1) / M_1^2:
-  Längenunabhängiger Index zur Stabilität des Wortschatzes (Yule 1944).
-- Flesch Reading Ease (Deutsche Adaption nach Toni Amstad 1978):
+  length-independent index for vocabulary stability (Yule 1944).
+- Flesch Reading Ease (German adaptation according to Toni Amstad 1978):
   FRE = 180 - ASL - (58.5 * ASW).
-- LIX (Läsbarhetsindex nach Carl-Hugo Björnsson 1968):
-  LIX = ASL + (% Wörter mit mehr als 6 Buchstaben).
-- Dialogquote:
-  Anteil wörtlicher Rede in typografischen Anführungszeichen (»...«, „...“, "...").
+- LIX (Läsbarhetsindex according to Carl-Hugo Björnsson 1968):
+  LIX = ASL + (% words with more than 6 letters).
+- Dialogue ratio:
+  share of direct speech in typographic quotation marks (»...«, „...“, "...").
 """
 
 import os
@@ -35,14 +35,14 @@ from .models import (
 
 class CorpusAnalyzer:
     """
-    Zustandslose, thread-sichere Analyse-Engine für literarische Markdown-Texte.
-    Führt quantitative Korpuslinguistik, Stilometrie und Kapitelgliederung durch.
+    Stateless, thread-safe analysis engine for literary Markdown texts.
+    Performs quantitative corpus linguistics, stylometry and chapter segmentation.
     """
 
     def __init__(self, config: Optional[CorpusConfig] = None):
         """
-        Initialisiert den Analyzer mit einer Konfiguration.
-        Wird keine Konfiguration übergeben, greifen die Standardparameter.
+        Initialises the analyzer with a configuration.
+        If no configuration is passed, the default parameters apply.
         """
         self.config = config or CorpusConfig()
         self.lang = resolve_language(self.config)
@@ -55,54 +55,54 @@ class CorpusAnalyzer:
     @staticmethod
     def count_syllables_de(word: str) -> int:
         """
-        Approximative Silbenzählung für deutsche Wörter.
-        Normalisiert Diphthonge ('ei', 'ie', 'au', 'eu', 'äu') auf Einzellaut
-        und zählt die verbleibenden Vokalcluster. Garantiert mindestens 1 Silbe.
+        Approximate syllable counting for German words.
+        Normalises diphthongs ('ei', 'ie', 'au', 'eu', 'äu') to a single sound
+        and counts the remaining vowel clusters. Guarantees at least 1 syllable.
         """
         w = word.lower()
-        # Diphthonge und Doppellaute zu Einzellaut reduzieren
+        # Reduce diphthongs and double vowels to a single sound
         w = re.sub(r"(ei|ey|ai|ay|au|eu|äu|ie)", "V", w)
         w = re.sub(r"[aeiouyäöü]", "V", w)
         return max(1, w.count("V"))
 
     def count_syllables(self, word: str) -> int:
         """
-        Sprachsensitive Silbenzählung anhand der konfigurierten Sprache.
-        Nutzt für 'de' die deutsche Diphthong-Heuristik, sonst generische Vokal-Cluster.
+        Language-sensitive syllable counting based on the configured language.
+        Uses the German diphthong heuristic for 'de', otherwise generic vowel clusters.
         """
         if self.lang.syllable_mode == "de":
             return self.count_syllables_de(word)
-        # Generischer Fallback für romanische/germanische Sprachen
+        # Generic fallback for Romance/Germanic languages
         w = word.lower()
         w = re.sub(r"[aeiouy]+", "V", w)
         return max(1, w.count("V"))
 
     def analyze_text(self, full_text: str) -> CorpusMetrics:
         """
-        Führt die vollständige stilometrische und quantitative Analyse auf
-        einem übergebenen Textstring aus.
+        Performs the complete stylometric and quantitative analysis on
+        a passed text string.
 
-        Ablauf:
-        1. Abtrennung des wissenschaftlichen Anhangs (Single Source of Truth).
-        2. Filterung von Markdown-HTML-Kommentaren (<!-- ... -->).
-        3. Tokenisierung und Erfassung der Vokabulartypen.
-        4. Berechnung lexikalischer Diversitätsmetriken (TTR, Guiraud, Yule).
-        5. Satzzerlegung und Satzlängen-Architektur (ohne Überschriften-Artefakte).
-        6. Lesbarkeitsindizes (Flesch DE, LIX).
-        7. Dialog- und Absatzökonomie.
-        8. Interpunktions- und Signalwortfrequenzen.
-        9. Kapitelweise Segmentierung und Tempus-Klassifikation.
+        Workflow:
+        1. Separation of the scholarly appendix (single source of truth).
+        2. Filtering of Markdown HTML comments (<!-- ... -->).
+        3. Tokenisation and capture of vocabulary types.
+        4. Computation of lexical diversity metrics (TTR, Guiraud, Yule).
+        5. Sentence segmentation and sentence-length architecture (without heading artefacts).
+        6. Readability indices (Flesch DE, LIX).
+        7. Dialogue and paragraph economy.
+        8. Punctuation and signal word frequencies.
+        9. Chapter-wise segmentation and tense classification.
 
-        Rückgabe:
-            CorpusMetrics-Objekt mit allen berechneten Kennzahlen.
+        Returns:
+            CorpusMetrics object with all computed metrics.
         """
-        # 1. Trennung Haupttext vs. Anhang
+        # 1. Separation of main text vs. appendix
         if self.config.appendix_marker and self.config.appendix_marker in full_text:
             main_text, _ = full_text.split(self.config.appendix_marker, 1)
         else:
             main_text = full_text
 
-        # Markdown-Kommentare entfernen
+        # Remove Markdown comments
         cleaned_full = re.sub(r"<!--.*?-->", "", full_text, flags=re.DOTALL)
         cleaned_main = re.sub(r"<!--.*?-->", "", main_text, flags=re.DOTALL)
 
@@ -111,21 +111,21 @@ class CorpusAnalyzer:
         raw_chars = len(cleaned_full)
         clean_chars = len(cleaned_main)
 
-        # Wort-Tokenisierung
+        # Word tokenisation
         tokens = self._word_re.findall(cleaned_main)
         n_tokens = len(tokens)
         lower_tokens = [t.lower() for t in tokens]
         v_types = len(set(lower_tokens))
         freqs = Counter(lower_tokens)
 
-        # Lexikalische Reichweite & Stabilität
+        # Lexical range & stability
         m1 = n_tokens
         m2 = sum(c ** 2 for c in freqs.values())
         yules_k = 10000.0 * (m2 - m1) / (m1 ** 2) if m1 else 0.0
         ttr = v_types / n_tokens if n_tokens else 0.0
         guiraud_r = v_types / math.sqrt(n_tokens) if n_tokens else 0.0
 
-        # Satz-Metriken (Überschriften vor Zerlegung entfernen, um Wort-Verschleppung zu verhindern)
+        # Sentence metrics (remove headings before segmentation to prevent word carry-over)
         prose_for_sents = re.sub(r"(?m)^#+.*$", "", cleaned_main)
         raw_sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", prose_for_sents)
                      if s.strip()]
@@ -138,7 +138,7 @@ class CorpusAnalyzer:
         variance_sl = sum((sl - asl) ** 2 for sl in sent_lens) / total_sent if total_sent else 0.0
         std_sl = math.sqrt(variance_sl)
 
-        # Satzlängenarchitektur
+        # Sentence-length architecture
         short_s = sum(1 for sl in sent_lens if sl <= 6)
         med_s = sum(1 for sl in sent_lens if 7 <= sl <= 15)
         long_s = sum(1 for sl in sent_lens if 16 <= sl <= 25)
@@ -155,7 +155,7 @@ class CorpusAnalyzer:
             complex_pct=(comp_s / total_sent * 100.0) if total_sent else 0.0,
         )
 
-        # Lesbarkeit & Komplexität
+        # Readability & complexity
         total_syllables = sum(self.count_syllables(t) for t in tokens)
         asw = total_syllables / n_tokens if n_tokens else 0.0
         flesch_de = 180.0 - asl - (58.5 * asw)
@@ -163,12 +163,12 @@ class CorpusAnalyzer:
         pct_long_words = (long_words / n_tokens) * 100.0 if n_tokens else 0.0
         lix = asl + pct_long_words
 
-        # Dialog-Quote (Erkennung wörtlicher Rede)
+        # Dialogue ratio (detection of direct speech)
         dialog_matches = self._dialogue_re.findall(cleaned_main)
         dialog_words = sum(len(m.split()) for m in dialog_matches)
         dialog_ratio = (dialog_words / clean_words) * 100.0 if clean_words else 0.0
 
-        # Absatz-Ökonomie
+        # Paragraph economy
         raw_paras = [p.strip() for p in cleaned_main.split("\n\n") if p.strip()]
         prose_paras = [p for p in raw_paras
                        if not p.startswith("#") and not p.startswith("|")
@@ -178,7 +178,7 @@ class CorpusAnalyzer:
         avg_para_len = sum(para_lens) / total_paras if total_paras else 0.0
         single_line_paras = sum(1 for pl in para_lens if pl <= self.config.min_paragraph_length_for_oneliner and pl != 8)
 
-        # Interpunktion als stilistischer Seismograf
+        # Punctuation as a stylistic seismograph
         punctuation = {
             "Punkte (.)": cleaned_main.count("."),
             "Kommata (,)": cleaned_main.count(","),
@@ -190,19 +190,19 @@ class CorpusAnalyzer:
             "Auslassungspunkte (…/...)": len(re.findall(r"(?:…|\.{3})", cleaned_main)),
         }
 
-        # Signal- & Filterwörter
+        # Signal & filter words
         signal_counts = {
             name: len(re.findall(pat, cleaned_main, re.IGNORECASE))
             for name, pat in self.lang.signal_keywords.items()
         }
         filter_cnt = len(self._filter_re.findall(cleaned_main))
 
-        # Kapitelweise Segmentierung
+        # Chapter-wise segmentation
         raw_chapters = re.split(self.config.chapter_regex, main_text)
 
-        # Front Matter (alles vor dem ersten Kapitel) ist kein Kapitel:
-        # Beginnt der erste Abschnitt mit einer H1 (Buchtitel/Titelei), wird er
-        # übersprungen – sonst würde die Kapitelnummerierung um eins verschoben.
+        # Front matter (everything before the first chapter) is not a chapter:
+        # If the first section starts with an H1 (book title/front matter), it is
+        # skipped – otherwise the chapter numbering would shift by one.
         if raw_chapters and raw_chapters[0].strip().startswith("# "):
             raw_chapters = raw_chapters[1:]
 
@@ -299,16 +299,16 @@ class CorpusAnalyzer:
 
     def analyze_file(self, filepath: str) -> CorpusMetrics:
         """
-        Liest eine UTF-8-Textdatei ein und delegiert an analyze_text.
+        Reads a UTF-8 text file and delegates to analyze_text.
 
-        Parameter:
-            filepath: Absoluter oder relativer Dateipfad zum Markdown-Manuskript.
+        Parameters:
+            filepath: Absolute or relative file path to the Markdown manuscript.
 
-        Rückgabe:
-            CorpusMetrics-Objekt.
+        Returns:
+            CorpusMetrics object.
 
         Raises:
-            FileNotFoundError: Wenn die Datei unter dem Pfad nicht existiert.
+            FileNotFoundError: If the file does not exist at the given path.
         """
         if not os.path.isfile(filepath):
             raise FileNotFoundError(f"Manuskriptdatei nicht gefunden: {filepath}")

@@ -1,8 +1,8 @@
 """
 scripts/engine
 ==============
-Generische, modulare und wiederverwendbare Core-Engine für quantitative
-Korpuslinguistik, Stilometrie und Dokumentations-Audits literarischer Manuskripte.
+Generic, modular and reusable core engine for quantitative
+corpus linguistics, stylometry and documentation audits of literary manuscripts.
 """
 
 from .models import (

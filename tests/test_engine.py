@@ -1,9 +1,9 @@
 """
 tests/test_engine.py
 ====================
-Umfassende Unit-Tests für die generische Korpusanalyse-Engine (scripts.engine).
-Testet Silbenzählung, Satzklassifikation, Lexikometrie, Lesbarkeitsindizes,
-idempotente atomare Datei-I/O und Formatierer.
+Comprehensive unit tests for the generic corpus analysis engine.
+Covers syllable counting, sentence classification, lexicometry, readability
+indices, idempotent atomic file I/O and formatters.
 """
 
 import os
@@ -11,7 +11,7 @@ import sys
 import tempfile
 import unittest
 
-# Sicherstellen, dass das Projektverzeichnis im Modulpfad liegt
+# Ensure the project directory is on the module path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
@@ -25,7 +25,7 @@ from lixity import (  # noqa: E402
 
 
 class TestSyllableCounter(unittest.TestCase):
-    """Prüft die Heuristik zur Silbenzählung."""
+    """Checks the syllable counting heuristic."""
 
     def setUp(self):
         self.analyzer = CorpusAnalyzer()
@@ -34,12 +34,11 @@ class TestSyllableCounter(unittest.TestCase):
         words = ["ich", "du", "wir", "gut", "rot", "wut", "haus", "wein", "zeit"]
         for w in words:
             self.assertEqual(
-                self.analyzer.count_syllables_de(w), 1,
-                f"Wort '{w}' sollte 1 Silbe haben"
+                self.analyzer.count_syllables_de(w), 1, f"word '{w}' should have 1 syllable"
             )
 
     def test_diphthongs(self):
-        # Diphthonge wie ei, au, eu, äu, ie sollen als 1 Vokal gezählt werden
+        # Diphthongs such as ei, au, eu, äu, ie should count as 1 vowel
         diphthong_words = [
             ("meine", 2),
             ("heute", 2),
@@ -49,8 +48,9 @@ class TestSyllableCounter(unittest.TestCase):
         ]
         for w, expected in diphthong_words:
             self.assertEqual(
-                self.analyzer.count_syllables_de(w), expected,
-                f"Wort '{w}' sollte {expected} Silben haben"
+                self.analyzer.count_syllables_de(w),
+                expected,
+                f"word '{w}' should have {expected} syllables",
             )
 
     def test_polysyllabic_words(self):
@@ -62,13 +62,14 @@ class TestSyllableCounter(unittest.TestCase):
         ]
         for w, expected in cases:
             self.assertEqual(
-                self.analyzer.count_syllables_de(w), expected,
-                f"Wort '{w}' sollte {expected} Silben haben"
+                self.analyzer.count_syllables_de(w),
+                expected,
+                f"word '{w}' should have {expected} syllables",
             )
 
 
 class TestCorpusAnalyzer(unittest.TestCase):
-    """Prüft die linguistischen Berechnungen auf Testtexten."""
+    """Checks the linguistic calculations on test texts."""
 
     def setUp(self):
         self.config = CorpusConfig(
@@ -78,11 +79,11 @@ class TestCorpusAnalyzer(unittest.TestCase):
         self.analyzer = CorpusAnalyzer(self.config)
 
     def test_sentence_distribution_and_asl(self):
-        # 4 Sätze unterschiedlicher Längen:
-        # 1. "Ich gehe." (2 Wörter -> kurz)
-        # 2. "Heute scheint die Sonne über Hamburg sehr schön." (8 Wörter -> mittel)
-        # 3. "Wenn wir heute Abend gemeinsam kochen, müssen wir unbedingt frischen Koriander und gute Limetten auf dem Isemarkt einkaufen gehen." (18 Wörter -> lang)
-        # 4. Sehr langer Satz (> 25 Wörter -> komplex)
+        # 4 sentences of different lengths:
+        # 1. "Ich gehe." (2 words -> short)
+        # 2. "Heute scheint die Sonne über Hamburg sehr schön." (8 words -> medium)
+        # 3. "Wenn wir heute Abend gemeinsam kochen, ..." (18 words -> long)
+        # 4. Very long sentence (> 25 words -> complex)
         sample = (
             "## Erstes Kapitel\n\n"
             "Ich gehe.\n\n"
@@ -99,7 +100,7 @@ class TestCorpusAnalyzer(unittest.TestCase):
         self.assertEqual(dist.long_count, 1)
         self.assertEqual(dist.complex_count, 1)
 
-        # Gesamtsumme der Anteile muss 100% sein
+        # The sum of all shares must be 100%
         total_pct = dist.short_pct + dist.medium_pct + dist.long_pct + dist.complex_pct
         self.assertAlmostEqual(total_pct, 100.0, places=1)
 
@@ -121,7 +122,7 @@ class TestCorpusAnalyzer(unittest.TestCase):
             "Dies ist nur wissenschaftliches Begleitmaterial und gehört nicht zur Romanprosa.\n"
         )
         metrics = self.analyzer.analyze_text(sample)
-        # clean_words sollte nur den Haupttext vor dem Anhang erfassen
+        # clean_words should only cover the main text before the appendix
         self.assertLess(metrics.clean_words, metrics.raw_words)
         self.assertEqual(len(metrics.chapters), 1)
         self.assertEqual(metrics.chapters[0].title, "Kapitel 1")
@@ -139,12 +140,12 @@ class TestCorpusAnalyzer(unittest.TestCase):
         self.assertGreater(metrics.lix, 0.0)
 
     def test_yules_k_stability(self):
-        # Repetitiver Text hat hohes Yule's K (geringe Diversität)
+        # Repetitive text has a high Yule's K (low diversity)
         repetitive = "## Repetitiv\n\n" + ("Das Haus ist groß. " * 30)
         m_rep = self.analyzer.analyze_text(repetitive)
         self.assertGreater(m_rep.yules_k, 100.0)
 
-        # Diverser Text hat moderates Yule's K
+        # Diverse text has a moderate Yule's K
         diverse = (
             "## Divers\n\n"
             "Der alte Kapitän stand am nebligen Kai und beobachtete die einfahrenden Frachtschiffe aus Übersee.\n"
@@ -153,7 +154,7 @@ class TestCorpusAnalyzer(unittest.TestCase):
         self.assertLess(m_div.yules_k, m_rep.yules_k)
 
     def test_readability_flesch_and_lix(self):
-        # Einfache Sprache -> hoher Flesch-Wert, niedriger LIX
+        # Simple language -> high Flesch value, low LIX
         simple_sample = "## Einfach\n\nIch gehe nach Hause. Du kommst mit. Wir essen Brot.\n"
         m = self.analyzer.analyze_text(simple_sample)
         self.assertGreater(m.flesch_de, 80.0)
@@ -161,7 +162,7 @@ class TestCorpusAnalyzer(unittest.TestCase):
 
 
 class TestFileUtils(unittest.TestCase):
-    """Prüft idempotente, atomare Schreibvorgänge."""
+    """Checks idempotent, atomic write operations."""
 
     def setUp(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -177,24 +178,24 @@ class TestFileUtils(unittest.TestCase):
         content_v1 = "Erste Version des Textes.\n"
         content_v2 = "Zweite Version des Textes.\n"
 
-        # 1. Erstes Schreiben -> True
+        # 1. First write -> True
         written = FileUtils.atomic_write_if_changed(self.test_file, content_v1)
         self.assertTrue(written)
         self.assertTrue(os.path.exists(self.test_file))
         self.assertEqual(FileUtils.read_file(self.test_file), content_v1)
 
-        # 2. Zweites Schreiben mit identischem Inhalt -> False (idempotent, kein Disk-Jitter)
+        # 2. Second write with identical content -> False (idempotent, no disk jitter)
         written_again = FileUtils.atomic_write_if_changed(self.test_file, content_v1)
         self.assertFalse(written_again)
 
-        # 3. Schreiben mit neuem Inhalt -> True
+        # 3. Write with new content -> True
         updated = FileUtils.atomic_write_if_changed(self.test_file, content_v2)
         self.assertTrue(updated)
         self.assertEqual(FileUtils.read_file(self.test_file), content_v2)
 
 
 class TestReportFormatter(unittest.TestCase):
-    """Prüft Markdown- und JSON-Serialisierung."""
+    """Checks Markdown and JSON serialization."""
 
     def setUp(self):
         analyzer = CorpusAnalyzer()

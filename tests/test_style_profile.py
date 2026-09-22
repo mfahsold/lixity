@@ -1,9 +1,10 @@
 """
 tests/test_style_profile.py
 ===========================
-Tests für die sprachneutrale Analyse-Schicht:
-Zeilenanker im Markdown-Parser, Sprachprofile (de/en/generic), absatzgenaue
-Tempusprofile mit Wechsel-/Misch-Erkennung sowie die idempotente HTML-UI.
+Tests for the language-neutral analysis layer:
+line anchors in the Markdown parser, language profiles (de/en/generic),
+paragraph-accurate tense profiles with switch/mix detection, and the
+idempotent HTML UI.
 """
 
 import os
@@ -35,7 +36,7 @@ from lixity.visualizer import render_style_report  # noqa: E402
 
 
 class TestParserLineAnchors(unittest.TestCase):
-    """Zeilenanker: jeder Block trägt start_line/end_line (1-basiert)."""
+    """Line anchors: every block carries start_line/end_line (1-based)."""
 
     def test_every_block_has_line_anchors(self):
         md = "# Titel\n\nEin Absatz.\n\n> Zitat.\n\n## Kapitel\n\nNoch ein Absatz.\n"
@@ -66,7 +67,7 @@ class TestParserLineAnchors(unittest.TestCase):
 
 
 class TestLanguageProfiles(unittest.TestCase):
-    """Sprachprofile: de/en/generic, Overrides, Fallback."""
+    """Language profiles: de/en/generic, overrides, fallback."""
 
     def test_german_profile_detects_markers(self):
         lang = resolve_language(CorpusConfig(language="de"))
@@ -107,7 +108,7 @@ class TestLanguageProfiles(unittest.TestCase):
 
 
 class TestParagraphProfiler(unittest.TestCase):
-    """Absatzgenaue Tempusprofile inkl. Wechsel- und Misch-Erkennung."""
+    """Paragraph-accurate tense profiles incl. switch and mix detection."""
 
     def _profile(self, md):
         config = CorpusConfig(chapter_regex=r"(?m)^##\s+", appendix_marker="## Anhang")
@@ -162,7 +163,7 @@ class TestParagraphProfiler(unittest.TestCase):
 
 
 class TestVisualizer(unittest.TestCase):
-    """HTML-UI: deterministisch, eigenständig, mit Zeilenankern."""
+    """HTML UI: deterministic, self-contained, with line anchors."""
 
     def _render(self):
         md = (
@@ -209,7 +210,7 @@ class TestVisualizer(unittest.TestCase):
 
 
 class TestVisualizeAdapterIdempotency(unittest.TestCase):
-    """Adapter-Schreibvorgang ist atomar und idempotent (kein Diff-Jitter)."""
+    """Adapter write operation is atomic and idempotent (no diff jitter)."""
 
     def test_atomic_write_if_changed_is_idempotent(self):
         with tempfile.TemporaryDirectory() as tmp:
@@ -222,16 +223,23 @@ class TestVisualizeAdapterIdempotency(unittest.TestCase):
 
 
 class TestLexiconAndDetection(unittest.TestCase):
-    """Linguistische Standardlisten (LEXICON) und Spracherkennung."""
+    """Standard linguistic lists (LEXICON) and language detection."""
 
     def test_lexicon_categories_per_language(self):
         for key in ("de", "en", "fr", "es", "it", "pt", "nl"):
             profile = get_language_profile(key)
-            for category in ("auxiliaries", "modals", "articles", "pronouns", "prepositions", "conjunctions"):
+            for category in (
+                "auxiliaries",
+                "modals",
+                "articles",
+                "pronouns",
+                "prepositions",
+                "conjunctions",
+            ):
                 with self.subTest(lang=key, category=category):
-                    self.assertTrue(profile.lexicon.get(category), f"{key}:{category} fehlt")
-            self.assertTrue(profile.function_words, f"{key}: Funktionswörter fehlen")
-            self.assertTrue(profile.stopwords, f"{key}: Stopwörter fehlen")
+                    self.assertTrue(profile.lexicon.get(category), f"{key}:{category} missing")
+            self.assertTrue(profile.function_words, f"{key}: function words missing")
+            self.assertTrue(profile.stopwords, f"{key}: stopwords missing")
 
     def test_detection_for_all_profiles(self):
         samples = {
@@ -255,7 +263,9 @@ class TestLexiconAndDetection(unittest.TestCase):
         config = CorpusConfig(language="auto")
         self.assertEqual(resolve_language(config).key, "generic")
         self.assertEqual(
-            resolve_language(config, sample_text="Der Kater war endlich weg und ich trinke Kaffee.").key,
+            resolve_language(
+                config, sample_text="Der Kater war endlich weg und ich trinke Kaffee."
+            ).key,
             "de",
         )
 
@@ -286,7 +296,7 @@ class TestLexiconAndDetection(unittest.TestCase):
 
 
 class TestDashboard(unittest.TestCase):
-    """Dashboard: Kennzahlen, Artefakte, Lokalisierung, Determinismus."""
+    """Dashboard: metrics, artifacts, localization, determinism."""
 
     def _build(self, labels=None, artifacts=None):
         md = (
@@ -337,16 +347,16 @@ class TestDashboard(unittest.TestCase):
 
     def test_dashboard_has_no_unresolved_help_keys(self):
         html = self._build(labels=get_language_profile("de").labels)
-        self.assertNotIn('data-help="help_', html, "unaufgelöster Tooltip-Schlüssel")
+        self.assertNotIn('data-help="help_', html, "unresolved tooltip key")
         self.assertIn('data-help="', html)
 
 
 class TestEngineLicense(unittest.TestCase):
-    """Extraktionsvorbereitung: restriktive Engine-Lizenz (Lixity, LNCL-1.0)."""
+    """Extraction preparation: restrictive engine license (Lixity, LNCL-1.0)."""
 
     def test_license_file_exists_and_is_restrictive(self):
         path = os.path.join(BASE_DIR, "LICENSE")
-        self.assertTrue(os.path.isfile(path), "LICENSE-ENGINE fehlt")
+        self.assertTrue(os.path.isfile(path), "LICENSE-ENGINE missing")
         with open(path, "r", encoding="utf-8") as f:
             text = f.read()
         self.assertIn("Lixity Non-Commercial License", text)

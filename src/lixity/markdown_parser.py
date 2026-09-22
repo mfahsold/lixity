@@ -1,24 +1,23 @@
 """
 scripts/engine/markdown_parser.py
 =================================
-Generischer, projektneutraler Markdown-Parser und Inline-Konverter.
+Generic, project-neutral Markdown parser and inline converter.
 
-Diese Engine-Schicht ist bewusst frei von PyCairo/Pango- und Projekt-
-Abhängigkeiten, damit sie von allen Publikationsadaptern (export_pdf.py,
-export_epub.py, create_excerpt.py) deterministisch geteilt werden kann.
+This engine layer is deliberately free of PyCairo/Pango and project
+dependencies so that it can be shared deterministically by all publication
+adapters (export_pdf.py, export_epub.py, create_excerpt.py).
 
-Bietet:
-- ``parse_markdown_blocks``: Wandelt Markdown-Text in semantische Blöcke
-  (h1/h2/h3, Absätze, Zitatblöcke, Listenpunkte, Trennlinien, Fußnoten).
-  Jeder Block trägt Zeilenanker (``start_line``/``end_line``, 1-basiert) für
-  die präzise Rückverfolgung im Manuskript (Lektorats- und Analyse-UI).
-- ``parse_markdown_file``: Datei-Variante mit UTF-8-Lesehandling.
-- ``inline_markdown_to_html``: Konvertiert Inline-Markup in sicheres XHTML5
-  (für EPUB 3.3); inklusive EPUB-Fußnoten-Verweisgenerierung.
+Provides:
+- ``parse_markdown_blocks``: converts Markdown text into semantic blocks
+  (h1/h2/h3, paragraphs, quote blocks, list items, dividers, footnotes).
+  Each block carries line anchors (``start_line``/``end_line``, 1-based) for
+  precise tracing in the manuscript (lectorate and analysis UI).
+- ``parse_markdown_file``: file variant with UTF-8 read handling.
+- ``inline_markdown_to_html``: converts inline markup into safe XHTML5
+  (for EPUB 3.3); including EPUB footnote reference generation.
 
-Redaktionelle HTML-Kommentare (``<!-- PRÜFEN ... -->``) werden grundsätzlich
-und restlos herausgefiltert, damit sie niemals in Publikationsausgaben
-erscheinen.
+Editorial HTML comments (``<!-- PRÜFEN ... -->``) are always
+and completely filtered out so that they never appear in publication outputs.
 """
 
 import re
@@ -30,10 +29,10 @@ _FN_REF_STRIP_PATTERN = re.compile(r"\[\^([^\]]+)\]")
 
 
 def strip_inline_markup(text: str) -> str:
-    """Entfernt Inline-Markdown (Kommentare, Fußnotenanker, Betonungen) für die Zählung.
+    """Removes inline Markdown (comments, footnote anchors, emphasis) for counting.
 
-    Der Klartext bleibt lesbar; die Funktion ist die gemeinsame Bereinigungsstufe
-    von Analyzer, Stilprofil und weiteren Analyse-Werkzeugen.
+    The plain text remains readable; the function is the shared cleaning stage
+    of the analyzer, style profile and further analysis tools.
     """
     text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
     text = _FN_REF_STRIP_PATTERN.sub("", text)
@@ -45,8 +44,8 @@ _LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 
 
 def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
-    """Parst Markdown-Inhalt in semantische Blöcke und filtert redaktionelle HTML-Kommentare."""
-    # Redaktionelle Kommentare (<!-- ... -->) restlos entfernen
+    """Parses Markdown content into semantic blocks and filters editorial HTML comments."""
+    # Remove editorial comments (<!-- ... -->) completely
     clean_content = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL)
     lines = clean_content.splitlines()
 
@@ -87,7 +86,7 @@ def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
             i += 1
             continue
 
-        # Zitate und Callout-Blöcke
+        # Quotes and callout blocks
         if stripped.startswith(">"):
             start_line = i + 1
             paras = []
@@ -112,7 +111,7 @@ def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
             )
             continue
 
-        # Fußnotendefinitionen [^id]: Text
+        # Footnote definitions [^id]: text
         fn_match = re.match(r"^\[\^([^\]]+)\]:\s*(.*)", stripped)
         if fn_match:
             start_line = i + 1
@@ -140,7 +139,7 @@ def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
             )
             continue
 
-        # Listenpunkte
+        # List items
         if stripped.startswith("- ") or stripped.startswith("* "):
             start_line = i + 1
             item_text = [stripped[2:].strip()]
@@ -162,7 +161,7 @@ def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
             )
             continue
 
-        # Fließtext-Absatz
+        # Body paragraph
         start_line = i + 1
         para_lines = [line.strip()]
         has_break = [line.endswith("  ")]
@@ -191,7 +190,7 @@ def parse_markdown_blocks(content: str) -> List[Dict[str, Any]]:
 
 
 def parse_markdown_file(filepath: str) -> List[Dict[str, Any]]:
-    """Liest eine Markdown-Datei UTF-8-sicher und parst sie in semantische Blöcke."""
+    """Reads a Markdown file in a UTF-8-safe way and parses it into semantic blocks."""
     with open(filepath, "r", encoding="utf-8") as f:
         return parse_markdown_blocks(f.read())
 
@@ -201,13 +200,13 @@ def inline_markdown_to_html(
     fn_counter: Optional[Dict[str, int]] = None,
     document_id: str = "doc",
 ) -> str:
-    """Konvertiert Inline-Markdown in sicheres XHTML5-Fragment für EPUB 3.3.
+    """Converts inline Markdown into a safe XHTML5 fragment for EPUB 3.3.
 
-    - ``**fett**`` → ``<strong>``, ``*kursiv*`` → ``<em>``, ``***x***`` → beides.
-    - ``[^id]`` → EPUB-Fußnotenanker (``epub:type="noteref"``) mit eindeutiger id.
+    - ``**bold**`` → ``<strong>``, ``*italic*`` → ``<em>``, ``***x***`` → both.
+    - ``[^id]`` → EPUB footnote anchor (``epub:type="noteref"``) with a unique id.
     - ``[Text](url)`` → ``<a href="url">``.
-    - Zeilenumbrüche (doppeltes Leerzeichen in Quelle) → ``<br/>``.
-    - ``fn_counter`` gewährleistet dokumentweit eindeutige Referenz-IDs.
+    - Line breaks (double space in the source) → ``<br/>``.
+    - ``fn_counter`` ensures document-wide unique reference IDs.
     """
     if not text:
         return ""
@@ -215,13 +214,13 @@ def inline_markdown_to_html(
     if fn_counter is None:
         fn_counter = {}
 
-    # 1. Wörtliche Asteriske schützen
+    # 1. Protect literal asterisks
     text = text.replace(r"\*", "\x01ASTERISK\x02")
 
-    # 2. HTML-eskapieren
+    # 2. HTML-escape
     text = html_mod.escape(text, quote=False)
 
-    # 3. Fußnotenreferenzen [^id] mit eindeutiger Anker-ID
+    # 3. Footnote references [^id] with unique anchor ID
     def fn_ref(m: re.Match) -> str:
         fn_id = m.group(1)
         n = fn_counter.get(fn_id, 0) + 1
@@ -233,18 +232,18 @@ def inline_markdown_to_html(
 
     text = _FN_REF_PATTERN.sub(fn_ref, text)
 
-    # 4. Fett-kursiv, fett, kursiv
+    # 4. Bold-italic, bold, italic
     text = re.sub(r"\*\*\*(.+?)\*\*\*", r"<strong><em>\1</em></strong>", text)
     text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
     text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", text)
 
-    # 5. Links [Text](url)
+    # 5. Links [text](url)
     text = _LINK_PATTERN.sub(r'<a href="\2">\1</a>', text)
 
-    # 6. Harte Zeilenumbrüche
+    # 6. Hard line breaks
     text = text.replace("\n", "<br/>\n")
 
-    # 7. Wörtliche Asteriske wiederherstellen
+    # 7. Restore literal asterisks
     text = text.replace("\x01ASTERISK\x02", "*")
 
     return text

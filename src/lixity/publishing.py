@@ -1,19 +1,19 @@
 """
 scripts/engine/publishing.py
 ============================
-Generische, projektneutrale Helfer für idempotente Publikationsartefakte.
+Generic, project-neutral helpers for idempotent publication artefacts.
 
-Diese Engine-Schicht ist frei von Projekt- und Renderer-Abhängigkeiten
-(kein PyCairo/Pango, keine Buch-spezifischen Namen) und wird von
-export_pdf.py, export_epub.py und create_excerpt.py geteilt.
+This engine layer is free of project and renderer dependencies
+(no PyCairo/Pango, no book-specific names) and is shared by
+export_pdf.py, export_epub.py and create_excerpt.py.
 
-Bietet:
-- ``update_stable_link``: Pflegt einen stabilen Symlink (mit Copy-Fallback
-  für Dateisysteme ohne Symlink-Unterstützung).
-- ``archive_timestamped``: Verschiebt ältere Zeitstempel-Artefakte atomar
-  in ein Archiv-Unterverzeichnis (idempotent, überschreibt nie frische Dateien).
-- ``prune_archive``: Kürzt ein Archiv auf die letzten N Versionen je
-  Artefaktfamilie (Retention-Policy gegen unbegrenztes Wachstum).
+Provides:
+- ``update_stable_link``: maintains a stable symlink (with copy fallback
+  for filesystems without symlink support).
+- ``archive_timestamped``: moves older timestamped artefacts atomically
+  into an archive subdirectory (idempotent, never overwrites fresh files).
+- ``prune_archive``: trims an archive to the last N versions per
+  artefact family (retention policy against unbounded growth).
 """
 
 import os
@@ -24,10 +24,10 @@ from re import Pattern
 
 
 def update_stable_link(link_path: str, source_file: str) -> bool:
-    """Aktualisiert einen stabilen Symlink auf ``source_file``.
+    """Updates a stable symlink pointing to ``source_file``.
 
-    Fällt auf eine echte Dateikopie zurück, wenn das Dateisystem keine
-    Symlinks unterstützt. Rückgabe: ``True`` bei Erfolg.
+    Falls back to a real file copy if the filesystem does not support
+    symlinks. Returns: ``True`` on success.
     """
     try:
         if os.path.lexists(link_path):
@@ -47,11 +47,11 @@ def archive_timestamped(
     keep_basenames: Iterable[str],
     archive_subdir: str = "archive",
 ) -> int:
-    """Archiviert Zeitstempel-Artefakte, die nicht in ``keep_basenames`` stehen.
+    """Archives timestamped artefacts that are not listed in ``keep_basenames``.
 
-    - Symlinks und Nicht-Dateien werden nie angetastet (stabile Verweise bleiben).
-    - Gleichnamige Archivdateien werden atomar ersetzt.
-    - Rückgabe: Anzahl der archivierten Dateien.
+    - Symlinks and non-files are never touched (stable references remain).
+    - Archive files with the same name are replaced atomically.
+    - Returns: number of archived files.
     """
     archive_dir = os.path.join(export_dir, archive_subdir)
     os.makedirs(archive_dir, exist_ok=True)
@@ -79,12 +79,12 @@ def prune_archive(
     keep_last: int = 10,
     timestamp_pattern: str = r"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}",
 ) -> int:
-    """Kürzt ein Archiv auf die letzten ``keep_last`` Versionen je Artefaktfamilie.
+    """Trims an archive to the last ``keep_last`` versions per artefact family.
 
-    Die Familie ergibt sich aus dem Dateinamen ohne Zeitstempel (z. B. alle
-    ``Buch_taschenbuch_*.pdf``). Sortiert wird lexikografisch – das entspricht
-    bei ``YYYY-MM-DD_HH-MM``-Zeitstempeln der chronologischen Reihenfolge.
-    Rückgabe: Anzahl der gelöschten Altversionen.
+    The family results from the file name without timestamp (e.g. all
+    ``Buch_taschenbuch_*.pdf``). Sorting is lexicographic – for
+    ``YYYY-MM-DD_HH-MM`` timestamps this corresponds to chronological order.
+    Returns: number of deleted old versions.
     """
     if not os.path.isdir(archive_dir):
         return 0

@@ -1,22 +1,22 @@
 """
 scripts/engine/language.py
 ==========================
-Sprachprofil-Schicht der Analyse-Engine: vollständig austauschbare
-Sprachmuster für Tempus-, Dialog-, Wort- und Silbenerkennung.
+Language profile layer of the analysis engine: fully interchangeable
+language patterns for tense, dialogue, word and syllable detection.
 
-Damit funktioniert die Engine für jede Sprache, jeden Schreibstil und jede
-Romanidee: Sprache wird über ``CorpusConfig.language`` gewählt; alle Muster
-sind zusätzlich per Config überschreibbar (None = Profil-Standard).
+This makes the engine work for any language, any writing style and any
+novel idea: the language is selected via ``CorpusConfig.language``; all patterns
+can additionally be overridden via the config (None = profile default).
 
-- Profile: ``de``, ``en``, ``fr``, ``es``, ``it``, ``pt``, ``nl`` und
-  ``generic`` (neutraler Fallback ohne Tempusklassifikation).
-- ``auto``: Spracherkennung über Stopwort-Häufigkeit (abhängigkeitsfrei);
-  Stopwort-Verfahren sind für Fließtexte belastbar, für Einzelwörter jedoch
-  unzuverlässig (vgl. fastlang/langidentify). Ohne Textprobe fällt ``auto``
-  auf ``generic`` zurück.
-- Die kuratierten Marker und produktiven Tempusmuster liegen in
-  ``language_data.py``; Analyzer, Profiler und UI folgen der Registry
-  automatisch – neue Sprache = ein Eintrag, keine Codeänderung.
+- Profiles: ``de``, ``en``, ``fr``, ``es``, ``it``, ``pt``, ``nl`` and
+  ``generic`` (neutral fallback without tense classification).
+- ``auto``: language detection via stop word frequency (dependency-free);
+  stop word methods are robust for running text but unreliable for
+  single words (cf. fastlang/langidentify). Without a text sample, ``auto``
+  falls back to ``generic``.
+- The curated markers and productive tense patterns live in
+  ``language_data.py``; analyzer, profiler and UI follow the registry
+  automatically – new language = one entry, no code change.
 """
 
 import re
@@ -28,7 +28,7 @@ from .language_data import HELP_TEXTS, LABELS, LANGUAGE_PATTERNS, LEXICON, METRI
 
 @dataclass(frozen=True)
 class LanguageProfile:
-    """Statische, kuratierte Sprachmuster eines Sprachprofils."""
+    """Static, curated language patterns of one language profile."""
 
     key: str
     name: str
@@ -47,7 +47,7 @@ class LanguageProfile:
 
 @dataclass(frozen=True)
 class ResolvedLanguage:
-    """Effektive Sprachmuster nach Config-Overrides (None = Profil-Standard)."""
+    """Effective language patterns after config overrides (None = profile default)."""
 
     key: str
     name: str
@@ -82,7 +82,7 @@ def _function_words(key: str) -> frozenset:
 
 
 def _build_profiles() -> Dict[str, LanguageProfile]:
-    """Erzeugt die Registry aus der Datenschicht (inkl. produktiver Tempusmuster)."""
+    """Builds the registry from the data layer (including productive tense patterns)."""
     profiles: Dict[str, LanguageProfile] = {}
     for key, data in PROFILE_DATA.items():
         past_parts = []
@@ -116,20 +116,20 @@ LANGUAGE_PROFILES: Dict[str, LanguageProfile] = _build_profiles()
 
 
 def compile_pattern(pattern: str) -> "re.Pattern[str]":
-    """Kompiliert ein Sprachmuster; leere Muster matchen nie (neutraler Fallback)."""
+    """Compiles a language pattern; empty patterns never match (neutral fallback)."""
     return re.compile(pattern or r"(?!x)x", re.IGNORECASE)
 
 
 def get_language_profile(key: str) -> LanguageProfile:
-    """Liefert das Sprachprofil; unbekannte Schlüssel fallen auf ``generic`` zurück."""
+    """Returns the language profile; unknown keys fall back to ``generic``."""
     return LANGUAGE_PROFILES.get((key or "").strip().lower(), LANGUAGE_PROFILES["generic"])
 
 
 def detect_language(text: str, min_hits: int = 3) -> str:
-    """Erkennt die Sprache über Stopwort-Häufigkeit (abhängigkeitsfrei, offline).
+    """Detects the language via stop word frequency (dependency-free, offline).
 
-    Rückgabe: Sprachschlüssel oder ``generic``, wenn das Signal zu schwach oder
-    mehrdeutig ist (kurze Texte, Eigennamen, Zahlen).
+    Returns: language key or ``generic`` if the signal is too weak or
+    ambiguous (short texts, proper names, numbers).
     """
     words = re.findall(r"[^\W\d_]+", text.lower())
     if not words:
@@ -149,15 +149,15 @@ def detect_language(text: str, min_hits: int = 3) -> str:
     if best_score < min_hits:
         return "generic"
     if len(ranked) > 1 and ranked[1][1] == best_score:
-        return "generic"  # Gleichstand: kein belastbares Signal
+        return "generic"  # Tie: no reliable signal
     return best_key
 
 
 def resolve_language(config, sample_text: Optional[str] = None) -> ResolvedLanguage:
-    """Verrechnet Config-Overrides (None = Profil-Standard) zu effektiven Mustern.
+    """Combines config overrides (None = profile default) into effective patterns.
 
-    ``language="auto"`` nutzt die Stopwort-Erkennung; ohne ``sample_text``
-    fällt die Auflösung auf das generische Profil zurück.
+    ``language="auto"`` uses stop word detection; without ``sample_text``
+    the resolution falls back to the generic profile.
     """
     key = str(getattr(config, "language", "de") or "de").strip().lower()
     if key == "auto":
