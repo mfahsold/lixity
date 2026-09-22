@@ -104,23 +104,29 @@ ones; a missing key falls back to English and then to the key itself:
 `tests/test_ui_contract.py` enforces that every key the renderer uses exists
 in all seven languages.
 
-### 3.4 Dashboard DOM hooks (for embedding and UI automation)
+### 3.4 Dashboard interaction contract (for embedding and UI automation)
 
-The dashboard is a self-contained HTML file; agents that embed or drive it
-can rely on these stable hooks (enforced by the contract test):
+The dashboard follows **one interaction model**: every content drill-down is a
+keyboard-reachable `[role="button"]` element carrying a small, uniform data
+vocabulary; every server control is a native `<button>`/`<select>`.
 
 | Hook | Meaning |
 |---|---|
-| `[data-jump="<id>"]` | KPI tile: scrolls to the target panel and activates it |
-| `[data-flags="1"]` | jump additionally preselects the "flagged only" filter |
-| `[data-only="1"]` + `data-layer="<key>"` | jump preselects "deviations only" and the style layer |
-| `[data-layer]` | style-layer options (heatmap headers, legend, deviation list) |
-| `[data-marker-kind="<kind>"]` | marker control; click opens the inline note field |
-| `#marker-note-slot` | container receiving the inline note input |
-| `#status-strip` | optional component status strip (`li` per component, `data-state="ok\|warn\|unknown"`) |
-| `#heatmap`, `#layer-legend`, `#matrix`, `#chapter-<n>` | panel/row anchors used by drill-downs |
+| `data-jump="<anchor>"` | scroll to a panel/row and flash it |
+| `data-layer="<key>"` | activate a style layer (paragraph colouring) |
+| `data-only="1"` | additionally preselect "deviations only" |
+| `data-flags="1"` | additionally preselect "flagged only" |
+| `data-line="<n>"` | jump to the chapter containing that source line |
+| `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
+| `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
+| `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field) |
+| `role="button" tabindex="0"` | every clickable non-native target (KPI tile, band row, loading bar, table row, heatmap cell) |
+| `:focus-visible` | visible focus ring for all of the above (CSS covers `[role="button"]`) |
 
-Marker writes go through the embedding server's action API
+The script drives click **and** keyboard activation through one selector
+(`INTERACTIVE = "[data-jump], [data-line], [role='button'], td.z[data-chapter]"`),
+so a new drill-down only needs the attributes, not new JavaScript. Marker
+writes go through the embedding server's action API
 (`{"action": "marker-add", "kind": …, "line": …, "note": …}`); the library
 itself never writes files.
 

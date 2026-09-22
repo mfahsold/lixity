@@ -131,7 +131,11 @@ def band_chart(
     band_left = pos(band_lo)
     band_width = max(0.5, pos(band_hi) - band_left)
     dots = "".join(f'<b style="left:{pos(v):.2f}%"></b>' for v in outliers)
-    attrs = f' data-layer="{html.escape(layer, quote=True)}"' if layer else ""
+    attrs = (
+        f' data-layer="{html.escape(layer, quote=True)}" role="button" tabindex="0"'
+        if layer
+        else ""
+    )
     if layer and outliers:
         attrs += ' data-only="1"'  # drill-down: show the marked passages right away
     return (

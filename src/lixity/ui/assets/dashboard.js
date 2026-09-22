@@ -137,18 +137,21 @@ function jumpToLine(row) {
   }
 }
 
+// Unified interaction contract: every content drill-down is a [role="button"]
+// (KPI tile, band row, loading bar, table row, heatmap cell) or carries
+// data-jump / data-line. Native controls use <button>/<select>.
+var INTERACTIVE = "[data-jump], [data-line], [role='button'], td.z[data-chapter]";
+
 document.addEventListener("click", function (event) {
   var chip = event.target.closest(".chip");
   if (chip) { toggleParagraph(chip); return; }
-  var target = event.target.closest("[data-jump], [data-line]");
-  if (target) activate(target);
+  var target = event.target.closest(INTERACTIVE);
+  if (target && !target.closest(".controls")) activate(target);
 });
 document.addEventListener("keydown", function (event) {
   if (event.key !== "Enter" && event.key !== " ") return;
-  var el = event.target.closest
-    ? event.target.closest("[data-jump], [data-line], td.z[data-chapter]")
-    : null;
-  if (el) { event.preventDefault(); activate(el); }
+  var el = event.target.closest ? event.target.closest(INTERACTIVE) : null;
+  if (el && !el.closest(".controls")) { event.preventDefault(); activate(el); }
 });
 var filter = document.getElementById("filter-flags");
 if (filter) {

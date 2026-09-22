@@ -6,7 +6,7 @@ lexicons, tense markers, and register signals via function-word distribution vec
 
 import re
 from collections.abc import Mapping, Sequence
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from .language_data import (
     GROUP_LABELS,
@@ -31,7 +31,12 @@ def _suffix_pattern(suffixes) -> str:
 
 @dataclass(frozen=True)
 class LanguageProfile:
-    """Static, curated language patterns of one language profile."""
+    """Curated patterns of one language profile (also the resolved, effective view).
+
+    ``_build_profiles()`` creates the static registry; ``resolve_language()``
+    derives the effective profile from it via :func:`dataclasses.replace`,
+    overriding only the fields the config actually sets.
+    """
 
     key: str
     name: str
@@ -52,27 +57,8 @@ class LanguageProfile:
     adjective_regex: str
 
 
-@dataclass(frozen=True)
-class ResolvedLanguage:
-    """Effective language patterns after config overrides (None = profile default)."""
-
-    key: str
-    name: str
-    syllable_mode: str
-    word_regex: str
-    dialogue_regex: str
-    praesens_regex: str
-    praeteritum_regex: str
-    filter_verbs_regex: str
-    signal_keywords: Mapping[str, str]
-    labels: Mapping[str, str]
-    lexicon: Mapping[str, Sequence[str]]
-    function_words: frozenset
-    stopwords: frozenset
-    first_person_starters: frozenset
-    passive_regex: str
-    nominal_regex: str
-    adjective_regex: str
+# The effective profile after config overrides is structurally the same object.
+ResolvedLanguage = LanguageProfile
 
 
 FUNCTION_CATEGORIES = (
@@ -173,7 +159,7 @@ def detect_language(text: str, min_hits: int = 3) -> str:
 
 
 def resolve_language(config, sample_text: str | None = None) -> ResolvedLanguage:
-    """Combines config overrides (None = profile default) into effective patterns.
+    """Combines config overrides (None = profile default) into the effective profile.
 
     ``language="auto"`` uses stop word detection; without ``sample_text``
     the resolution falls back to the generic profile.
@@ -182,28 +168,23 @@ def resolve_language(config, sample_text: str | None = None) -> ResolvedLanguage
     if key == "auto":
         key = detect_language(sample_text) if sample_text else "generic"
     profile = get_language_profile(key)
-    configured_signals = getattr(config, "signal_keywords", None)
-    signals: Mapping[str, str] = (
-        configured_signals if configured_signals is not None else profile.signal_keywords
-    )
-    return ResolvedLanguage(
-        key=profile.key,
-        name=profile.name,
-        syllable_mode=profile.syllable_mode,
-        word_regex=getattr(config, "word_regex", None) or profile.word_regex,
-        dialogue_regex=getattr(config, "dialogue_regex", None) or profile.dialogue_regex,
-        praesens_regex=getattr(config, "praesens_regex", None) or profile.praesens_regex,
-        praeteritum_regex=getattr(config, "praeteritum_regex", None) or profile.praeteritum_regex,
-        filter_verbs_regex=getattr(config, "filter_verbs_regex", None)
-        or profile.filter_verbs_regex,
-        signal_keywords=signals,
-        labels=profile.labels,
-        lexicon=profile.lexicon,
-        function_words=profile.function_words,
-        stopwords=profile.stopwords,
-        first_person_starters=getattr(config, "first_person_starters", None)
-        or profile.first_person_starters,
-        passive_regex=getattr(config, "passive_regex", None) or profile.passive_regex,
-        nominal_regex=getattr(config, "nominal_regex", None) or profile.nominal_regex,
-        adjective_regex=getattr(config, "adjective_regex", None) or profile.adjective_regex,
-    )
+
+    # Overrides: only fields the config actually sets replace profile defaults.
+    resolved = profile
+    for field_name in (
+        "word_regex",
+        "dialogue_regex",
+        "praesens_regex",
+        "praeteritum_regex",
+        "filter_verbs_regex",
+        "passive_regex",
+        "nominal_regex",
+        "adjective_regex",
+        "first_person_starters",
+    ):
+        value = getattr(config, field_name, None)
+        if value is not None:
+            resolved = replace(resolved, **{field_name: value})
+    if getattr(config, "signal_keywords", None) is not None:
+        resolved = replace(resolved, signal_keywords=config.signal_keywords)
+    return resolved

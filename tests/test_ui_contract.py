@@ -106,8 +106,24 @@ class TestJsDomContract(unittest.TestCase):
             'id="layer-only"',
             'id="layer-next"',
             'id="layer-legend-count"',
+            'role="button"',
         ):
             self.assertIn(hook, html, hook)
+
+    def test_unified_interaction_contract(self):
+        """All content drill-downs are keyboard reachable with one vocabulary."""
+        script = (UI_DIR / "assets" / "dashboard.js").read_text(encoding="utf-8")
+        css = (UI_DIR / "assets" / "dashboard.css").read_text(encoding="utf-8")
+        html = _full_dashboard()
+        # One selector drives click and keyboard activation.
+        self.assertIn('var INTERACTIVE = "[data-jump], [data-line], [role=\'button\']', script)
+        self.assertIn("event.target.closest(INTERACTIVE)", script)
+        # Focus visibility covers every [role="button"] target.
+        self.assertIn('[role=\"button\"]):focus-visible', css)
+        # Rows and band rows are announced as buttons and focusable.
+        self.assertIn('class="row-link" data-line=', html)
+        self.assertIn('role="button" tabindex="0"', html)
+        self.assertRegex(html, r'<div class="band"[^>]*role="button" tabindex="0"')
 
 
 class TestLabelCompleteness(unittest.TestCase):

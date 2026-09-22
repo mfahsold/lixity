@@ -491,7 +491,15 @@ def render_dashboard(
                 f'<span class="band-label">{help_term(labels, _FEATURE_HELP.get(field_name, field_name), esc(label(labels, label_key)))}</span>'
             )
             parts.append(
-                band_chart(title, centre - 2 * sigma, centre + 2 * sigma, centre, values, outliers)
+                band_chart(
+                    title,
+                    centre - 2 * sigma,
+                    centre + 2 * sigma,
+                    centre,
+                    values,
+                    outliers,
+                    layer=feature_layers.get(field_name),
+                )
             )
             parts.append(f'<span class="band-count">{n_out if n_out else ""}</span>')
             parts.append("</div>")
@@ -545,7 +553,7 @@ def render_dashboard(
                     kind_label = label(labels, "marker_" + m.kind)
                     note = esc(str(m.note or "")) or "–"
                     parts.append(
-                        f'<tr class="row-link" data-line="{m.line}" tabindex="0">'
+                        f'<tr class="row-link" data-line="{m.line}" role="button" tabindex="0">'
                         f'<td><span class="badge marker-{m.kind}">{esc(kind_label)}</span></td>'
                         f'<td class="num">{L("line")} {m.line}</td><td>{note}</td>'
                     )
@@ -727,7 +735,7 @@ def render_dashboard(
         for c in chapters:
             row_hint = ' data-flags="1"' if c.flagged else ""
             parts.append(
-                f'<tr class="row-link" data-jump="#ch-{c.num}"{row_hint} tabindex="0">'
+                f'<tr class="row-link" data-jump="#ch-{c.num}"{row_hint} role="button" tabindex="0">'
                 f"<td>{c.num}</td><td>{esc(c.title)}</td>"
                 f'<td class="num">{N(c.words, 0)}</td>'
                 f'<td class="num bar-cell"><i style="--v:{c.asl / max_asl * 100:.0f}%"></i>'
