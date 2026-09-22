@@ -217,9 +217,12 @@ Third-party components (all permissive): [pydantic](https://github.com/pydantic/
 (MIT), [rich](https://github.com/Textualize/rich) (MIT),
 [orjson](https://github.com/ijl/orjson) (MIT/Apache-2.0).
 
-Sample corpus: `samples/effi-briest.md` derives from *Effi Briest* (Fontane,
-1895) via [Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323) –
-public domain; the unmodified source file with its license header is kept in
-`samples/`. Provenance details: [`samples/README.md`](samples/README.md).
+Sample corpus: `samples/` ships two **public-domain** works for testing and
+demos — Fontane's *Effi Briest* (German, [Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323))
+and Austen's *Pride and Prejudice* (English, [#1342](https://www.gutenberg.org/ebooks/1342)) —
+each as an unmodified Project Gutenberg source file plus a Markdown
+conversion. They are **not** relicensed by the LNCL; the original sequel
+draft in `samples/effi-briest-folge/` is the author's own work. Provenance and
+license details: [`samples/README.md`](samples/README.md).
 
 Contact: **Matthias Fahsold** ([mfahsold@googlemail.com](mailto:mfahsold@googlemail.com))

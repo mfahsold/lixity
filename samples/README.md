@@ -1,33 +1,27 @@
 # Sample corpus – provenance and licensing
 
-## `effi-briest-pg5323.txt` / `effi-briest.md`
-
-Unmodified source file from **Project Gutenberg eBook #5323**
-(<https://www.gutenberg.org/ebooks/5323>, *Effi Briest*, Theodor Fontane,
-1895) plus a Markdown conversion (front matter, chapter headings as `## `).
-The underlying text is **public domain** (Fontane died in 1898; public domain
-in the USA and the EU). The `.txt` file keeps the original Project Gutenberg
+All sample texts are **public domain** and are **not** covered by the Lixity
+Non-Commercial License: that license applies to the software, not to these
+texts. The unmodified Project Gutenberg source files keep their original
 header and license notice and must not be redistributed without it.
 
-## `pride-and-prejudice-pg1342.txt` / `pride-and-prejudice.md`
+| File | Work | Source | Legal status |
+| :--- | :--- | :--- | :--- |
+| `effi-briest-pg5323.txt` | *Effi Briest*, Theodor Fontane (1895) | [Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323) | public domain (author died 1898); unmodified PG file with header |
+| `effi-briest.md` | same work, Markdown conversion | derived from the PG file | public domain; front matter + `## ` chapter headings |
+| `pride-and-prejudice-pg1342.txt` | *Pride and Prejudice*, Jane Austen (1813) | [Project Gutenberg #1342](https://www.gutenberg.org/ebooks/1342) | public domain (author died 1817); unmodified PG file with header |
+| `pride-and-prejudice.md` | same work, Markdown conversion | derived from the PG file | public domain; 61 chapters, ~122k words |
+| `effi-briest-folge/` | *Annie* – original sequel draft (first chapter) | written by the repository author | © the author; covered by the LNCL-1.0 (`../LICENSE`) |
 
-Unmodified source file from **Project Gutenberg eBook #1342**
-(<https://www.gutenberg.org/ebooks/1342>, *Pride and Prejudice*, Jane Austen,
-1813) plus a Markdown conversion. **Public domain** (Austen died in 1817).
-The `.txt` file keeps the original header and license notice.
+**Reproducible conversion** (Effi Briest): front matter, `## Erstes Kapitel` …
+headings, text otherwise unchanged from the PG file.
 
-Conversion (reproducible): body between the first `Chapter I.]` heading and
-the printer note, Project Gutenberg header/footer and the illustration list
-removed, `[Illustration …]` blocks stripped, `CHAPTER I.` / `Chapter I.]`
-headings converted to `## Chapter I`, blank line after every heading,
-front matter `# Pride and Prejudice` / `*Jane Austen*` added.
-
-## `effi-briest-folge/`
-
-An **original** stylistic exercise: the first chapter of a sequel written
-against the measured style corridor of *Effi Briest*. It is an original
-work, not part of the novel, and is covered by the Lixity Non-Commercial
-License 1.0 (`../LICENSE`).
+**Reproducible conversion** (Pride and Prejudice): body between the first
+`Chapter I.]` heading and the printer note; Project Gutenberg header/footer
+and the illustration list removed; `[Illustration …]` blocks stripped;
+`CHAPTER I.` / `Chapter I.]` headings converted to `## Chapter I`; blank line
+after every heading; front matter `# Pride and Prejudice` / `*Jane Austen*`
+added.
 
 ## Generated artifacts
 

@@ -1,3 +1,7 @@
+<!-- Sample: Pride and Prejudice (Jane Austen, 1813) · Project Gutenberg #1342 ·
+     public domain, not covered by the Lixity Non-Commercial License.
+     Unmodified source file: samples/pride-and-prejudice-pg1342.txt -->
+
 # Pride and Prejudice
 
 *Jane Austen*

@@ -10,9 +10,10 @@ Die Lizenz erlaubt **ausschließlich nicht-kommerzielle Nutzung**.
 
 ## 1. Begriffsbestimmungen
 
-- **Software**: der Quellcode in `scripts/engine/` (Paket »Lixity«) einschließlich
-  Dokumentation, Tests und Beispieldaten dieses Repositories, soweit sie der
-  Engine zuzuordnen sind.
+- **Software**: der Quellcode in `src/lixity/` (Paket »Lixity«) einschließlich
+  Dokumentation, Tests und der im Repository enthaltenen Original-Beispieldaten
+  (z. B. der Übungstext in `samples/effi-briest-folge/`), soweit sie der
+  Engine bzw. dem Autor zuzuordnen sind.
 - **Nicht-kommerzielle Nutzung**: Nutzung zu Forschungs-, Lehr-, Studien- und
   privaten Zwecken sowie in Projekten, die weder unmittelbar noch mittelbar auf
   Gewinnerzielung oder kommerziellen Vorteil gerichtet sind (z. B. akademische
@@ -78,10 +79,19 @@ Es gilt deutsches Recht. Gerichtsstand ist – soweit zulässig – Hamburg.
 
 Diese Lizenz ist **keine** von der Open Source Initiative (OSI) anerkannte
 Open-Source-Lizenz, sondern eine **source-available Lizenz mit
-Nicht-Kommerziell-Klausel**. Das Buchmanuskript selbst
-(»Eigentlich werde ich nie wütend«) ist davon unberührt und bleibt vollständig
-urheberrechtlich geschützt; alle Rechte liegen beim Autor.
+Nicht-Kommerziell-Klausel**.
+
+**Beispieldaten / Sample content:** Die gemeinfreien Beispieltexte in
+`samples/` (Fontane, *Effi Briest*; Austen, *Pride and Prejudice*) sind
+**nicht** Bestandteil dieser Lizenz und werden durch sie **nicht** neu
+lizenziert – sie bleiben gemeinfrei. Die unveränderten Project-Gutenberg-
+Quelldateien (`*-pg*.txt`) unterliegen den Bedingungen von Project Gutenberg
+(Header und Lizenzhinweis nicht entfernen). Der originale Übungstext in
+`samples/effi-briest-folge/` stammt vom Autor dieses Repositories und ist von
+dieser Lizenz erfasst.
 
 *This is a source-available, non-commercial license. Commercial use requires a
-separate written license (contact: mfahsold@googlemail.com). The novel
-manuscript is not covered by this license and remains fully protected.*
+separate written license (contact: mfahsold@googlemail.com). The public-domain
+sample texts in `samples/` are not relicensed by this license and remain in
+the public domain; the unmodified Project Gutenberg source files keep their
+header and license notice.*

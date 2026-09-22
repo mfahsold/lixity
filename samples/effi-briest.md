@@ -1,3 +1,7 @@
+<!-- Sample: Effi Briest (Theodor Fontane, 1895) · Project Gutenberg #5323 ·
+     public domain, not covered by the Lixity Non-Commercial License.
+     Unmodified source file: samples/effi-briest-pg5323.txt -->
+
 # Effi Briest
 
 *Theodor Fontane*

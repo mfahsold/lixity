@@ -46,5 +46,7 @@ Python facade: `from lixity import api` – `analyze`, `profile`,
 
 - Source: https://github.com/mfahsold/lixity
 - Project page: https://mfahsold.github.io/lixity/
-- Sample corpus: Project Gutenberg eBook #5323 (*Effi Briest*, Fontane, 1895, public domain)
+- Sample corpus: two public-domain works – *Effi Briest* (Fontane, 1895, Project Gutenberg #5323)
+  and *Pride and Prejudice* (Austen, 1813, #1342); unmodified PG source files plus Markdown
+  conversions, not relicensed by the LNCL
 - Third-party: pydantic (MIT), rich (MIT), orjson (MIT/Apache-2.0)
