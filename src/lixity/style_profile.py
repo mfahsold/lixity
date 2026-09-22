@@ -11,6 +11,7 @@ from typing import Any
 from .language import compile_pattern, resolve_language
 from .markdown_parser import strip_inline_markup
 from .models import CorpusConfig
+from .sentences import split_sentences
 
 TENSE_PRESENT = "present"
 TENSE_PAST = "past"
@@ -192,7 +193,7 @@ class ParagraphProfiler:
                 continue
 
             words = len(self._word.findall(clean))
-            sentences = [s.strip() for s in re.split(r"(?<=[.!?])\s+", clean) if s.strip()]
+            sentences = split_sentences(clean, self.config.language)
             present = len(self._praes.findall(clean))
             past = len(self._praet.findall(clean))
             dominant = self._dominant(present, past)

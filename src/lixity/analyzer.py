@@ -20,6 +20,7 @@ from .models import (
     CorpusMetrics,
     SentenceDistribution,
 )
+from .sentences import split_sentences
 from .style_profile import dominance_from_hits
 
 _RE_DE_DIPHTHONG = re.compile(r"(ei|ey|ai|ay|au|eu|äu|ie)")
@@ -525,7 +526,7 @@ class CorpusAnalyzer:
 
         # Sentence metrics (remove headings before segmentation to prevent word carry-over)
         prose_for_sents = _RE_HEADING_LINE.sub("", cleaned_main)
-        raw_sents = [s.strip() for s in re.split(r"(?<=[.!?])\s+", prose_for_sents) if s.strip()]
+        raw_sents = split_sentences(prose_for_sents, self.config.language)
         sent_lens = [
             count for count in (len(self._word_re.findall(s)) for s in raw_sents) if count > 0
         ]

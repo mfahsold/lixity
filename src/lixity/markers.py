@@ -82,7 +82,8 @@ def add_marker(
     line of the paragraph it precedes – it moves with the paragraph on edits.
     """
     if kind not in MARKER_KINDS:
-        raise ValueError(f"Unbekannte Marker-Art: {kind} (erlaubt: {', '.join(MARKER_KINDS)})")
+        allowed = ", ".join(MARKER_KINDS)
+        raise ValueError(f"Unknown marker kind: {kind} (allowed: {allowed})")
     lines = text.splitlines()
     anchor = max(1, min(int(target_line), len(lines) + 1))
     marker_id_value = marker_id_value or marker_id(kind, note, anchor)
@@ -128,7 +129,7 @@ def update_marker(
         new_kind = kind if kind is not None else attrs.get("kind", "pruefen")
         new_note = note if note is not None else attrs.get("note", "")
         if new_kind not in MARKER_KINDS:
-            raise ValueError(f"Unbekannte Marker-Art: {new_kind}")
+            raise ValueError(f"Unknown marker kind: {new_kind}")
         marker = Marker(id=marker_id_value, kind=new_kind, note=_sanitize(new_note), line=idx + 1)
         lines[idx] = marker.render()
         return "\n".join(lines) + ("\n" if text.endswith("\n") else ""), marker
