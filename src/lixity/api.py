@@ -165,6 +165,22 @@ def motifs(
     return {"meta": _meta(resolved.key), **report.to_dict()}
 
 
+def showing(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+    """
+    Showing vs. telling balance (heuristic, self-calibrating): robust z-scores
+    of the telling signals (perception filters, modals, passive,
+    nominalisations) and the showing signals (dialogue, staccato) against the
+    manuscript's own chapter medians, plus the balance ``show_z − tell_z`` and
+    the most telling/showing chapters.
+
+    Returns ``{"meta": {...}, "showing": {...}}``.
+    """
+    config, resolved = _config_and_language(language, text, **config_overrides)
+    from .showing import showing_report
+
+    return {"meta": _meta(resolved.key), "showing": showing_report(text, config).to_dict()}
+
+
 def dashboard(
     text: str,
     language: str = "auto",

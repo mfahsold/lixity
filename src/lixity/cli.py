@@ -101,6 +101,16 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "mot_phrase": "Repeated phrase",
         "mot_count": "Count",
         "mot_chapters": "Chapters",
+        "show_metric": "Narrative distance",
+        "show_value": "Value",
+        "show_chapters": "Chapters",
+        "show_tell_z": "Telling (mean z)",
+        "show_show_z": "Showing (mean z)",
+        "show_balance": "Balance (show - tell)",
+        "show_most_telling": "Most telling chapters",
+        "show_most_showing": "Most showing chapters",
+        "show_chapter": "Ch.",
+        "show_title": "Title",
     },
     "de": {
         "about_title": "lixity {version} – quantitative Textlinguistik & Stilometrie",
@@ -165,6 +175,16 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "mot_phrase": "Wiederholte Phrase",
         "mot_count": "Anzahl",
         "mot_chapters": "Kapitel",
+        "show_metric": "Erzähldistanz",
+        "show_value": "Wert",
+        "show_chapters": "Kapitel",
+        "show_tell_z": "Telling (Ø z)",
+        "show_show_z": "Showing (Ø z)",
+        "show_balance": "Balance (Show - Tell)",
+        "show_most_telling": "Telling-lastigste Kapitel",
+        "show_most_showing": "Showing-lastigste Kapitel",
+        "show_chapter": "Kap.",
+        "show_title": "Titel",
     },
 }
 
@@ -186,7 +206,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters pacing motifs dashboard style build about completion"
+    local cmds="analyze profile dialogue characters pacing motifs showing dashboard style build about completion"
     local opts="--language --json --output --help"
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$cmds" -- "$cur") )
@@ -488,6 +508,60 @@ def _cmd_motifs(args) -> int:
     return EXIT_OK
 
 
+def _cmd_showing(args) -> int:
+    """Showing vs. telling balance (Rich table or JSON)."""
+    try:
+        with open(args.file, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as exc:
+        print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
+        return EXIT_ERROR
+
+    from .showing import showing_report
+
+    config = CorpusConfig(language=args.language)
+    resolved = resolve_language(config, sample_text=text)
+    config = CorpusConfig(language=resolved.key)
+    report = showing_report(text, config)
+
+    if args.json:
+        print(_json(_meta_payload(resolved.key, showing=report.to_dict()), indent=True))
+        return EXIT_OK
+
+    con = Console()
+    summary = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
+    summary.add_column(_m("show_metric"), style="bold white")
+    summary.add_column(_m("show_value"), justify="right", style="cyan")
+    for key, value in (
+        ("show_chapters", str(report.chapters)),
+        ("show_tell_z", f"{report.tell_z_mean:+.2f}"),
+        ("show_show_z", f"{report.show_z_mean:+.2f}"),
+        ("show_balance", f"{report.balance_mean:+.2f}"),
+        ("show_most_telling", ", ".join(map(str, report.most_telling))),
+        ("show_most_showing", ", ".join(map(str, report.most_showing))),
+    ):
+        summary.add_row(_m(key), value)
+    con.print(summary)
+
+    if report.chapter_list:
+        table = Table(box=box.SIMPLE, header_style="bold green")
+        table.add_column(_m("show_chapter"), justify="right")
+        table.add_column(_m("show_title"))
+        table.add_column(_m("show_tell_z"), justify="right")
+        table.add_column(_m("show_show_z"), justify="right")
+        table.add_column(_m("show_balance"), justify="right")
+        for chapter in report.chapter_list:
+            table.add_row(
+                str(chapter.chapter_num),
+                chapter.title,
+                f"{chapter.tell_z:+.2f}",
+                f"{chapter.show_z:+.2f}",
+                f"{chapter.balance:+.2f}",
+            )
+        con.print(table)
+    return EXIT_OK
+
+
 def _cmd_build(args) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
     try:
@@ -585,6 +659,7 @@ def main(argv=None):
         ("characters", "Character presence across chapters (text/JSON)"),
         ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
         ("motifs", "Motif tracking and repetition analysis (text/JSON)"),
+        ("showing", "Showing vs. telling balance (text/JSON)"),
         ("style", "Self-calibrated style reference of the manuscript (text/JSON)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
         ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
@@ -670,6 +745,9 @@ def main(argv=None):
 
     if args.command == "motifs":
         return _cmd_motifs(args)
+
+    if args.command == "showing":
+        return _cmd_showing(args)
 
     try:
         with open(args.file, encoding="utf-8") as f:
