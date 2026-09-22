@@ -8,10 +8,27 @@ with standard errors.
 
 import math
 import os
-import random
 import re
 from collections import Counter
 
+from .diversity import (
+    hd_d as hd_d_value,
+)
+from .diversity import (
+    hd_d_stats,
+)
+from .diversity import (
+    maas_a2 as maas_a2_value,
+)
+from .diversity import (
+    mattr as mattr_value,
+)
+from .diversity import (
+    mtld as mtld_value,
+)
+from .diversity import (
+    yules_k as yules_k_value,
+)
 from .language import compile_pattern, resolve_language
 from .language_data import READABILITY
 from .models import (
@@ -22,27 +39,10 @@ from .models import (
 )
 from .sentences import split_sentences
 from .style_profile import dominance_from_hits
+from .syllables import count_syllables as count_syllables_for
 
-_RE_DE_DIPHTHONG = re.compile(r"(ei|ey|ai|ay|au|eu|äu|ie|aa|ee|oo)")
-_RE_DE_VOWEL = re.compile(r"[aeiouyäöü]")
-_RE_EN_CLEAN = re.compile(r"[^a-z]")
-_RE_EN_VOWEL_GROUP = re.compile(r"[aeiouy]+")
-_RE_FR_CLEAN = re.compile(r"[^a-zàâäéèêëîïôöùûüÿçœæ]")
-_RE_FR_VOWEL_GROUP = re.compile(r"[aeiouyàâäéèêëîïôöùûüÿœæ]+")
-_RE_ES_CLEAN = re.compile(r"[^a-záéíóúüñ]")
-_RE_IT_CLEAN = re.compile(r"[^a-zàèéìíòóùú]")
-_RE_PT_CLEAN = re.compile(r"[^a-zàâãáéêíóôõúüç]")
-_RE_PT_VOWEL_GROUP = re.compile(r"[aeiouàâãáéêíóôõúü]+")
-_RE_NL_CLEAN = re.compile(r"[^a-záéíóúäëïöüâêîôû]")
-_RE_NL_VOWEL_GROUP = re.compile(r"[aeiouyáéíóúäëïöüâêîôûI]+")
-_RE_GENERIC_VOWEL_GROUP = re.compile(r"[aeiouy]+")
 _RE_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
-
-
-# Minimum token count for length-sensitive lexical-diversity indices
-# (Bestgen 2024/2025: all LD indices are unreliable on very short texts).
-MIN_TOKENS_LD = 100
 
 
 class CorpusAnalyzer:
@@ -70,48 +70,6 @@ class CorpusAnalyzer:
         self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
         self._starters = frozenset(w.lower() for w in self.lang.first_person_starters)
         self._content_blacklist = self.lang.function_words | self.lang.stopwords
-
-    @staticmethod
-    def hd_d(tokens: list[str], seed: int = 42, min_samples: int = 5) -> float | None:
-        """
-        HD-D: length-robust lexical diversity (McCarthy & Jarvis 2010).
-
-        Mean of the type-variety of 42 random samples of 35 consecutive tokens;
-        variety per sample = 1 - sum(c_t*(c_t-1)) / (n*(n-1)).
-        Deterministic via fixed seed; returns None for texts too short for
-        ``min_samples`` disjoint windows (no reliable statement).
-        """
-        value, _ = CorpusAnalyzer.hd_d_stats(tokens, seed=seed, min_samples=min_samples)
-        return value
-
-    @staticmethod
-    def hd_d_stats(
-        tokens: list[str], seed: int = 42, min_samples: int = 5
-    ) -> tuple[float | None, float]:
-        """
-        HD-D with its estimation uncertainty: returns (value, standard error).
-
-        The standard error is the sample standard deviation of the up to 42
-        sample diversities divided by sqrt(#samples) – the documented plug-in
-        estimator of the HD-D mean.
-        """
-        n = len(tokens)
-        sample_size = 35
-        if n < sample_size * min_samples:
-            return None, 0.0
-        max_samples = min(42, n // sample_size)
-        rng = random.Random(seed)  # noqa: S311 – deterministic sampling, not cryptography
-        starts = sorted(rng.sample(range(n - sample_size + 1), max_samples))
-        diversities = []
-        for s in starts:
-            sample = tokens[s : s + sample_size]
-            repeat = sum(c * (c - 1) for c in Counter(sample).values())
-            diversities.append(1.0 - repeat / (sample_size * (sample_size - 1)))
-        mean = sum(diversities) / len(diversities)
-        if len(diversities) < 2:
-            return mean, 0.0
-        variance = sum((d - mean) ** 2 for d in diversities) / (len(diversities) - 1)
-        return mean, math.sqrt(variance) / math.sqrt(len(diversities))
 
     @staticmethod
     def _entropy(counts: Counter) -> float:
@@ -197,194 +155,9 @@ class CorpusAnalyzer:
         ][:top_n]
         return jsd, top
 
-    @staticmethod
-    def count_syllables_de(word: str) -> int:
-        """
-        Approximate syllable counting for German words.
-        Normalises diphthongs ('ei', 'ie', 'au', 'eu', 'äu') to a single sound
-        and counts the remaining vowel clusters. Guarantees at least 1 syllable.
-        """
-        w = word.lower()
-        # Reduce diphthongs and double vowels to a single sound
-        w = _RE_DE_DIPHTHONG.sub("V", w)
-        w = _RE_DE_VOWEL.sub("V", w)
-        return max(1, w.count("V"))
-
-    @staticmethod
-    def count_syllables_en(word: str) -> int:
-        """English syllable heuristic: vowel groups + silent-e / -ed / -es / -le rules (~95%)."""
-        w = _RE_EN_CLEAN.sub("", word.lower())
-        if not w:
-            return 0
-        exceptions = {
-            "the": 1,
-            "are": 1,
-            "were": 1,
-            "there": 1,
-            "here": 1,
-            "where": 1,
-            "one": 1,
-            "once": 1,
-            "eye": 1,
-            "hour": 2,
-            "our": 1,
-            "your": 1,
-            "fire": 2,
-            "hire": 2,
-            "more": 1,
-            "sore": 1,
-            "being": 2,
-            "doing": 2,
-            "going": 2,
-            "seeing": 2,
-            "said": 1,
-            "says": 1,
-            "people": 2,
-            "business": 2,
-            "different": 3,
-            "interest": 2,
-            "evening": 3,
-            "water": 2,
-            "little": 2,
-            "every": 2,
-            "very": 2,
-            "many": 2,
-            "any": 2,
-            "only": 2,
-            "both": 1,
-            "though": 1,
-            "through": 1,
-            "thought": 1,
-            "although": 2,
-            "enough": 2,
-            "rough": 1,
-            "tough": 1,
-            "cough": 1,
-            "bought": 1,
-            "brought": 1,
-            "ought": 1,
-            "island": 2,
-            "aisle": 1,
-            "honest": 2,
-        }
-        if w in exceptions:
-            return exceptions[w]
-        count = len(_RE_EN_VOWEL_GROUP.findall(w))
-        if w.endswith("e") and count > 1:
-            if w.endswith("le") and len(w) > 2 and w[-3] not in "aeiouy":
-                pass  # syllabic l ("table", "people") keeps its vowel
-            elif not w.endswith(("ee", "ye", "ie", "oe")):
-                count -= 1
-        if w.endswith("ed") and not w.endswith(("ted", "ded")) and count > 1:
-            count -= 1
-        if (
-            w.endswith("es")
-            and not w.endswith(("ses", "xes", "zes", "ches", "shes", "ges"))
-            and count > 1
-        ):
-            count -= 1
-        return max(1, count)
-
-    @staticmethod
-    def count_syllables_fr(word: str) -> int:
-        """French syllable heuristic: vowel groups with mute final -e / -ent / -es (~90%)."""
-        w = _RE_FR_CLEAN.sub("", word.lower())
-        if not w:
-            return 0
-        count = len(_RE_FR_VOWEL_GROUP.findall(w))
-        if w.endswith("e") and not w.endswith(("ée", "eé", "eë", "eü")) and count > 1:
-            count -= 1
-        if w.endswith("ent") and count > 1:
-            count -= 1
-        if w.endswith("es") and count > 1 and w[-3] not in "aeiouyàâäéèêëîïôöùûüÿœæ":
-            count -= 1
-        return max(1, count)
-
-    @staticmethod
-    def count_syllables_es(word: str) -> int:
-        """Spanish syllable heuristic: strong/weak vowel diphthong detection (~97%)."""
-        w = _RE_ES_CLEAN.sub("", word.lower())
-        if not w:
-            return 0
-        marked = w.replace("í", "I").replace("ú", "U")
-        strong = "aeoáéó"
-        weak = "iuü"
-        count = 0
-        i = 0
-        while i < len(marked):
-            c = marked[i]
-            if c in strong or c in "IU":
-                count += 1
-                j = i + 1
-                while j < len(marked) and marked[j] in weak:
-                    j += 1
-                    if j < len(marked) and marked[j] in strong:
-                        j += 1
-                i = j
-            else:
-                i += 1
-        return max(1, count)
-
-    @staticmethod
-    def count_syllables_it(word: str) -> int:
-        """Italian syllable heuristic: weak i/u join adjacent vowels into diphthongs (~98%)."""
-        w = _RE_IT_CLEAN.sub("", word.lower())
-        if not w:
-            return 0
-        count = 0
-        i = 0
-        while i < len(w):
-            c = w[i]
-            if c in "aeiouàèéìíòóùú":
-                count += 1
-                j = i + 1
-                while j < len(w) and w[j] in "iu":
-                    j += 1
-                i = j
-            else:
-                i += 1
-        return max(1, count)
-
-    @staticmethod
-    def count_syllables_pt(word: str) -> int:
-        """Portuguese syllable heuristic: vowel groups incl. nasal vowels/diphthongs (~95%)."""
-        w = _RE_PT_CLEAN.sub("", word.lower())
-        if not w:
-            return 0
-        count = len(_RE_PT_VOWEL_GROUP.findall(w))
-        return max(1, count)
-
-    @staticmethod
-    def count_syllables_nl(word: str) -> int:
-        """Dutch syllable heuristic: 'ij' counts as one nucleus, vowel groups otherwise (~94%)."""
-        w = _RE_NL_CLEAN.sub("", word.lower())
-        if not w:
-            return 0
-        marked = w.replace("ij", "I").replace("IJ", "I")
-        count = len(_RE_NL_VOWEL_GROUP.findall(marked))
-        return max(1, count)
-
     def count_syllables(self, word: str) -> int:
-        """
-        Language-sensitive syllable counting based on the configured language.
-        Dispatches to per-language heuristics (de, en, fr, es, it, pt, nl);
-        falls back to generic vowel-cluster counting.
-        """
-        mode = self.lang.syllable_mode
-        fn = {
-            "de": self.count_syllables_de,
-            "en": self.count_syllables_en,
-            "fr": self.count_syllables_fr,
-            "es": self.count_syllables_es,
-            "it": self.count_syllables_it,
-            "pt": self.count_syllables_pt,
-            "nl": self.count_syllables_nl,
-        }.get(mode)
-        if fn is not None:
-            return fn(word)
-        w = word.lower()
-        w = _RE_GENERIC_VOWEL_GROUP.sub("V", w)
-        return max(1, w.count("V"))
+        """Language-sensitive syllable counting (see :mod:`lixity.syllables`)."""
+        return count_syllables_for(word, self.lang.key)
 
     def readability(self, asl: float, asw: float) -> tuple[float, str]:
         """Language-calibrated Flesch-type Reading Ease score (0–100) + formula name."""
@@ -396,99 +169,6 @@ class CorpusAnalyzer:
         """Language-calibrated minimum letter count for LIX 'long words' (Björnsson)."""
         rd = READABILITY.get(self.lang.key, READABILITY["generic"])
         return int(rd["long_word_min"])
-
-    @staticmethod
-    def mtld(tokens: list[str], threshold: float = 0.72) -> float | None:
-        """
-        MTLD: length-invariant lexical diversity (McCarthy & Jarvis 2010).
-
-        Mean length of sequential token runs that maintain TTR >= threshold;
-        computed forward and backward then averaged. Returns None below
-        ``MIN_TOKENS_LD`` (100) tokens – Bestgen (2024/2025) shows that all
-        lexical-diversity indices are unreliable on very short texts – and
-        when no factor completes (all-unique token sequences).
-        """
-        n = len(tokens)
-        if n < MIN_TOKENS_LD:
-            return None
-
-        def _factors(seq: list[str]) -> float:
-            factors = 0.0
-            types: set[str] = set()
-            seg_len = 0
-            for tok in seq:
-                types.add(tok)
-                seg_len += 1
-                ttr = len(types) / seg_len
-                if ttr <= threshold:
-                    factors += 1.0
-                    types.clear()
-                    seg_len = 0
-            if seg_len > 0:
-                ttr = len(types) / seg_len
-                factors += (1.0 - ttr) / (1.0 - threshold)
-            return factors
-
-        fwd = _factors(tokens)
-        bwd = _factors(tokens[::-1])
-        total_factors = (fwd + bwd) / 2.0
-        if total_factors <= 0.0:
-            return None
-        return n / total_factors
-
-    @staticmethod
-    def mattr(tokens: list[str], window: int = 50) -> float | None:
-        """
-        MATTR: moving-average type-token ratio (Covington & McFall 2010).
-
-        Mean TTR over sliding windows of ``window`` tokens – the only index
-        shown to be stable across all text lengths. None if text is shorter
-        than the window. O(N) via an incremental type counter.
-        """
-        n = len(tokens)
-        if n < window:
-            return None
-        counts: Counter[str] = Counter(tokens[:window])
-        distinct = len(counts)
-        total = distinct
-        for i in range(window, n):
-            leaving = tokens[i - window]
-            counts[leaving] -= 1
-            if counts[leaving] == 0:
-                del counts[leaving]
-                distinct -= 1
-            entering = tokens[i]
-            if counts[entering] == 0:
-                distinct += 1
-            counts[entering] += 1
-            total += distinct
-        windows = n - window + 1
-        return total / (window * windows)
-
-    @staticmethod
-    def yules_k(tokens: list[str]) -> float:
-        """Yule's characteristic K = 10^4 * (Σ m² V_m − N) / N² (Yule 1944).
-
-        0.0 for empty input or all-unique tokens (no repetition).
-        """
-        n = len(tokens)
-        if n == 0:
-            return 0.0
-        counts = Counter(tokens)
-        m2 = sum(c * c for c in counts.values())
-        return 10000.0 * (m2 - n) / (n * n)
-
-    @staticmethod
-    def maas_a2(n_tokens: int, v_types: int) -> float | None:
-        """Maas a² = (log N − log V) / (log N)² – lower = more diverse (Maas 1972).
-
-        Requires ``MIN_TOKENS_LD`` tokens; shorter texts return None.
-        """
-        if n_tokens < MIN_TOKENS_LD or v_types <= 1:
-            return None
-        log_n = math.log10(n_tokens)
-        log_v = math.log10(v_types)
-        return (log_n - log_v) / (log_n**2)
 
     def analyze_text(self, full_text: str) -> CorpusMetrics:
         """
@@ -532,7 +212,7 @@ class CorpusAnalyzer:
         freqs = Counter(lower_tokens)
 
         # Lexical range & stability
-        yules_k = self.yules_k(lower_tokens)
+        yules_k = yules_k_value(lower_tokens)
         ttr = v_types / n_tokens if n_tokens else 0.0
         guiraud_r = v_types / math.sqrt(n_tokens) if n_tokens else 0.0
 
@@ -630,10 +310,10 @@ class CorpusAnalyzer:
         adjective_density = self._density(len(self._adjective_re.findall(cleaned_main)), n_tokens)
         modal_density = self._density(sum(1 for t in lower_tokens if t in self._modals), n_tokens)
         filter_density = self._density(filter_cnt, n_tokens)
-        hd_d = self.hd_d(lower_tokens)
-        mtld = self.mtld(lower_tokens)
-        mattr = self.mattr(lower_tokens)
-        maas_a2 = self.maas_a2(n_tokens, v_types)
+        hd_d = hd_d_value(lower_tokens)
+        mtld = mtld_value(lower_tokens)
+        mattr = mattr_value(lower_tokens)
+        maas_a2 = maas_a2_value(n_tokens, v_types)
 
         # Chapter-wise segmentation
         raw_chapters = re.split(self.config.chapter_regex, main_text)
@@ -716,7 +396,7 @@ class CorpusAnalyzer:
             c_long_words = sum(1 for t in c_words if len(t) > lw_min)
             c_long_pct = (c_long_words / n_cw * 100.0) if n_cw else 0.0
             c_guiraud = len(set(c_lower)) / math.sqrt(n_cw) if n_cw else 0.0
-            c_hd_d, c_hd_d_se = self.hd_d_stats(c_lower)
+            c_hd_d, c_hd_d_se = hd_d_stats(c_lower)
             c_func_pct = (
                 sum(1 for t in c_lower if t in self.lang.function_words) / n_cw * 100.0
                 if n_cw

@@ -17,6 +17,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
 
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
+from lixity.diversity import hd_d  # noqa: E402
 from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
@@ -107,10 +108,10 @@ class TestAnalyzerStyleFeatures(unittest.TestCase):
 
     def test_hd_d_deterministic_and_none_for_short_texts(self):
         tokens = ["a", "b", "c"]
-        self.assertIsNone(CorpusAnalyzer.hd_d(tokens))
+        self.assertIsNone(hd_d(tokens))
         longer = [f"wort{i % 50}" for i in range(1000)]
-        hd1 = CorpusAnalyzer.hd_d(longer)
-        hd2 = CorpusAnalyzer.hd_d(longer)
+        hd1 = hd_d(longer)
+        hd2 = hd_d(longer)
         self.assertIsNotNone(hd1)
         self.assertIsNotNone(hd2)
         if hd1 is None or hd2 is None:

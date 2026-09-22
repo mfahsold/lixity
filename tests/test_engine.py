@@ -22,6 +22,8 @@ from lixity import (  # noqa: E402
     FileUtils,
     ReportFormatter,
 )
+from lixity.diversity import mtld  # noqa: E402
+from lixity.syllables import count_de  # noqa: E402
 
 
 class TestSyllableCounter(unittest.TestCase):
@@ -33,9 +35,7 @@ class TestSyllableCounter(unittest.TestCase):
     def test_single_syllables(self):
         words = ["ich", "du", "wir", "gut", "rot", "wut", "haus", "wein", "zeit"]
         for w in words:
-            self.assertEqual(
-                self.analyzer.count_syllables_de(w), 1, f"word '{w}' should have 1 syllable"
-            )
+            self.assertEqual(count_de(w), 1, f"word '{w}' should have 1 syllable")
 
     def test_diphthongs(self):
         # Diphthongs such as ei, au, eu, äu, ie should count as 1 vowel
@@ -48,7 +48,7 @@ class TestSyllableCounter(unittest.TestCase):
         ]
         for w, expected in diphthong_words:
             self.assertEqual(
-                self.analyzer.count_syllables_de(w),
+                count_de(w),
                 expected,
                 f"word '{w}' should have {expected} syllables",
             )
@@ -62,7 +62,7 @@ class TestSyllableCounter(unittest.TestCase):
         ]
         for w, expected in cases:
             self.assertEqual(
-                self.analyzer.count_syllables_de(w),
+                count_de(w),
                 expected,
                 f"word '{w}' should have {expected} syllables",
             )
@@ -176,10 +176,10 @@ class TestCorpusAnalyzer(unittest.TestCase):
     def test_mtld_deterministic_and_partial_factor(self):
         # Every factor spans exactly 5 tokens (TTR hits 0.6 on the 5th),
         # so MTLD = 120 / 24 = 5.0 – catches segment-reset regressions.
-        self.assertEqual(CorpusAnalyzer.mtld(["a", "b", "c"] * 40), 5.0)
+        self.assertEqual(mtld(["a", "b", "c"] * 40), 5.0)
         # Trailing partial factor: (1 − 0.75) / (1 − 0.72) = 0.8929 factors.
         partial = ["a", "b", "c"] * 40 + ["a", "b", "c", "a"]
-        value = CorpusAnalyzer.mtld(partial)
+        value = mtld(partial)
         self.assertIsNotNone(value)
         if value is None:
             self.fail("MTLD should be computable for the partial-factor sample")

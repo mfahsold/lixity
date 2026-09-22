@@ -20,6 +20,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
 
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
+from lixity.diversity import hd_d, maas_a2, mattr, mtld, yules_k  # noqa: E402
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
     benjamini_hochberg,
@@ -31,6 +32,7 @@ from lixity.style_fingerprint import (  # noqa: E402
     significance_z,
     spearman_rho,
 )
+from lixity.syllables import count_de, count_en  # noqa: E402
 
 
 class TestReadabilityFormulas(unittest.TestCase):
@@ -104,17 +106,17 @@ class TestSyllableRules(unittest.TestCase):
     def test_german_syllables(self):
         for word, expected in self.GERMAN.items():
             with self.subTest(word=word):
-                self.assertEqual(CorpusAnalyzer.count_syllables_de(word), expected)
+                self.assertEqual(count_de(word), expected)
 
     def test_english_syllables(self):
         for word, expected in self.ENGLISH.items():
             with self.subTest(word=word):
-                self.assertEqual(CorpusAnalyzer.count_syllables_en(word), expected)
+                self.assertEqual(count_en(word), expected)
 
     def test_minimum_one_syllable(self):
         for word in ("x", "bzgl", ""):
-            self.assertGreaterEqual(CorpusAnalyzer.count_syllables_de(word), 1)
-            self.assertGreaterEqual(CorpusAnalyzer.count_syllables_en(word), 0)
+            self.assertGreaterEqual(count_de(word), 1)
+            self.assertGreaterEqual(count_en(word), 0)
 
 
 class TestRobustStatistics(unittest.TestCase):
@@ -245,30 +247,30 @@ class TestJacobiEigendecomposition(unittest.TestCase):
 class TestLexicalDiversityProperties(unittest.TestCase):
     def test_yule_and_maas_of_all_unique_tokens(self):
         tokens = [f"w{i}" for i in range(150)]
-        self.assertAlmostEqual(CorpusAnalyzer.yules_k(tokens), 0.0, places=12)
+        self.assertAlmostEqual(yules_k(tokens), 0.0, places=12)
         self.assertAlmostEqual(
-            CorpusAnalyzer.maas_a2(len(tokens), len(set(tokens))), 0.0, places=12
+            maas_a2(len(tokens), len(set(tokens))), 0.0, places=12
         )
 
     def test_mattr_window_properties(self):
         tokens = [f"w{i}" for i in range(100)]
-        unique_mattr = CorpusAnalyzer.mattr(tokens, window=50)
+        unique_mattr = mattr(tokens, window=50)
         self.assertIsNotNone(unique_mattr)
         self.assertAlmostEqual(float(unique_mattr), 1.0, places=12)
-        repeated = CorpusAnalyzer.mattr(["a"] * 100, window=50)
+        repeated = mattr(["a"] * 100, window=50)
         self.assertIsNotNone(repeated)
         self.assertAlmostEqual(float(repeated), 0.02, places=12)
 
     def test_mtld_short_text_returns_none(self):
-        self.assertIsNone(CorpusAnalyzer.mtld(["a"] * 50))
+        self.assertIsNone(mtld(["a"] * 50))
 
     def test_mtld_all_unique_returns_none(self):
-        self.assertIsNone(CorpusAnalyzer.mtld([f"w{i}" for i in range(200)]))
+        self.assertIsNone(mtld([f"w{i}" for i in range(200)]))
 
     def test_hd_d_is_deterministic_and_bounded(self):
         tokens = ([f"w{i}" for i in range(80)] * 5)[:400]
-        first = CorpusAnalyzer.hd_d(tokens)
-        second = CorpusAnalyzer.hd_d(tokens)
+        first = hd_d(tokens)
+        second = hd_d(tokens)
         self.assertEqual(first, second)
         self.assertIsNotNone(first)
         value = float(first)  # type: ignore[arg-type]
