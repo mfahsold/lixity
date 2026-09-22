@@ -1,4 +1,3 @@
-\
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -15,9 +14,11 @@
 <meta property="og:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry for Literary Manuscripts"/>
 <meta property="og:description" content="Self-calibrating style passports, length-invariant lexical diversity, tense profiles, and readability metrics for literary manuscripts – pure Python, offline, 7 languages."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
-<meta name="twitter:card" content="summary"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry"/>
 <meta name="twitter:description" content="Self-calibrating style passports, tense profiles, and length-invariant lexical diversity for literary manuscripts."/>
+<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
@@ -128,6 +129,48 @@ table { width: 100%; border-collapse: collapse; font-size: .9rem; text-align: le
 th, td { padding: .65rem .85rem; border-bottom: 1px solid var(--line); }
 th { font-weight: 600; color: var(--fg); background: var(--accent-light); }
 td:first-child { font-weight: 600; }
+figure.shot {
+  margin: 1.4rem 0;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+}
+figure.shot img {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-bottom: 1px solid var(--line);
+}
+figure.shot figcaption {
+  padding: .6rem 1rem;
+  font-size: .82rem;
+  color: var(--muted);
+}
+.shot-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
+  gap: 1rem;
+  margin: 1.2rem 0;
+}
+.shot-grid figure.shot { margin: 0; }
+.theme-note { font-size: .8rem; color: var(--muted); margin: .4rem 0 0; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1.4rem 0 0; }
+.btn {
+  display: inline-block;
+  padding: .55rem 1.1rem;
+  border-radius: 999px;
+  font-size: .88rem;
+  font-weight: 600;
+  text-decoration: none;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--fg);
+}
+.btn:hover { text-decoration: none; border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
+.btn.primary:hover { color: #fff; opacity: .92; }
 details {
   border-bottom: 1px solid var(--line);
   padding: .75rem 0;
@@ -157,7 +200,13 @@ footer {
 <body>
 <main>
   <h1>Lixity</h1>
-  <p class="sub">Quantitative text linguistics, length-invariant stylometry, and a self-calibrating style passport for literary manuscripts. Pure Python, offline, deterministic, seven languages.</p>
+  <p class="sub">An offline text-linguistics engine that measures <em>how a literary manuscript reads</em> &ndash; sentence rhythm, lexical diversity, tense continuity, register signals &ndash; and flags only the passages where a chapter departs from its own established voice.</p>
+
+  <div class="hero-actions">
+    <a class="btn primary" href="https://github.com/mfahsold/lixity">View on GitHub</a>
+    <a class="btn" href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage Guide</a>
+    <a class="btn" href="https://github.com/mfahsold/lixity#quick-start--cli-reference">Quick Start</a>
+  </div>
 
   <div class="pill-row">
     <span>Self-Calibrating Norms</span>
@@ -173,13 +222,40 @@ footer {
     <span>Zero Cloud Dependencies</span>
   </div>
 
-  <div class="card">
-    <h2>Installation</h2>
-    <pre>pip install git+https://github.com/mfahsold/lixity.git</pre>
-    <p class="sub" style="font-size:.85rem; margin:.6rem 0 0;">Requires Python 3.10+; lightweight dependencies: <code>pydantic</code>, <code>rich</code>, <code>orjson</code>.</p>
+  <h2>What It Looks Like</h2>
+  <figure class="shot">
+    <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard showing KPI tiles, chapter style map, and tense continuity panels" width="2880" height="2240" loading="eager"/>
+    <figcaption>Interactive single-file HTML dashboard &ndash; KPI overview, chapter map, tense continuity and style panels. Fully self-contained, no external assets.</figcaption>
+  </figure>
+  <div class="shot-grid">
+    <figure class="shot">
+      <img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations" width="2304" height="946" loading="lazy"/>
+      <figcaption>z* deviation heatmap &ndash; significant departures from the manuscript&rsquo;s own house style.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screenshots/dashboard-dimensions.png" alt="Latent style dimension cards with variance and loadings" width="2304" height="786" loading="lazy"/>
+      <figcaption>Unsupervised style dimensions (Spearman &rho; + Jacobi eigendecomposition).</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screenshots/dashboard-markers.png" alt="Editor work marker table with status badges" width="2304" height="524" loading="lazy"/>
+      <figcaption>Editor-visible work markers with deterministic content-hash IDs.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode" width="2880" height="2240" loading="lazy"/>
+      <figcaption>Same dashboard in dark mode &ndash; follows the reader&rsquo;s system preference.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with Rich terminal report" width="2280" height="1372" loading="lazy"/>
+      <figcaption><code>lixity analyze</code> &ndash; Rich terminal report with corpus KPIs.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screenshots/cli-style.png" alt="Lixity CLI style passport output" width="2280" height="1920" loading="lazy"/>
+      <figcaption><code>lixity style</code> &ndash; self-calibrating style passport with bands, z*, FDR.</figcaption>
+    </figure>
   </div>
 
   <h2>Why Lixity?</h2>
+  <p class="sub" style="margin-bottom:1rem;">Unlike grammar checkers or general NLP stacks, Lixity never measures against external norms. The manuscript itself establishes the baseline &ndash; deviations are highlighted only when a chapter departs significantly from its own voice, corrected for sample noise and multiple testing.</p>
   <div class="card" style="padding: 0; overflow: hidden;">
     <div class="table-wrapper" style="margin: 0;">
       <table>
@@ -300,6 +376,12 @@ footer {
       <h3>Style Dimensions</h3>
       <p>Unsupervised discovery of latent stylistic axes via Spearman rank correlation and cyclic Jacobi eigendecomposition.</p>
     </div>
+  </div>
+
+  <div class="card">
+    <h2>Installation</h2>
+    <pre>pip install git+https://github.com/mfahsold/lixity.git</pre>
+    <p class="sub" style="font-size:.85rem; margin:.6rem 0 0;">Requires Python 3.10+; lightweight dependencies: <code>pydantic</code>, <code>rich</code>, <code>orjson</code>.</p>
   </div>
 
   <div class="card">

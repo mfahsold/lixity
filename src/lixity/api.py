@@ -103,6 +103,9 @@ def dashboard(
     metrics = CorpusAnalyzer(config).analyze_text(text)
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
     fingerprint = StyleFingerprint.from_metrics(metrics)
+    from .markers import list_markers
+
+    marker_items = list_markers(text)
     return render_dashboard(
         chapters,
         paragraphs,
@@ -111,6 +114,7 @@ def dashboard(
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,
+        markers=marker_items if marker_items else None,
     )
 
 

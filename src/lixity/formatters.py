@@ -53,28 +53,28 @@ DEFAULT_TEXTE: dict[str, str] = {
     "punct_Auslassungspunkte": "Abreißen des Gedankens.",
     # Rich table 1 – reference & assessment (neutral)
     "t1_asl_ref": "8,0 – 11,5 W.",
-    "t1_asl_note": "Kurze, parataktische Struktur.",
+    "t1_asl_note": "Prägnanter Satzbau.",
     "t1_median_ref": "7 – 9 Wörter",
     "t1_median_note": "Lakonischer Rhythmus.",
     "t1_std_ref": "5,5 – 7,5 Wörter",
-    "t1_std_note": "Dynamik zwischen Fragment und Kaskade.",
+    "t1_std_note": "Dynamische Satzlängen.",
     "t1_ttr_ref": "0,17 – 0,22",
-    "t1_ttr_note": "Homogene Lexik.",
+    "t1_ttr_note": "Homogener Wortschatz.",
     "t1_yules_ref": "50,0 – 70,0",
-    "t1_yules_note": "Stabiles Erzähleridiom.",
+    "t1_yules_note": "Stabiler Wortschatz.",
     "t1_flesch_ref": "65,0 – 80,0",
     "t1_flesch_note": "Leichter Lesefluss.",
-    "t1_lix_ref": "< 40 (leicht/flüssig)",
+    "t1_lix_ref": "< 40 (leicht)",
     "t1_lix_note": "Zugängliche Prosa.",
     "t1_dialog_ref": "5,0 – 15,0 %",
-    "t1_dialog_note": "Dialoganteil der Prosa.",
+    "t1_dialog_note": "Lebendige Dialoge.",
     "t1_filter_ref": "Minimiert",
-    "t1_filter_note": "Geringe Telling-Dichte.",
+    "t1_filter_note": "Minimiertes Telling.",
     # Rich table 2 – dramaturgical function (neutral)
-    "t2_short": "Kurze Takte, Handlungsbefehle.",
-    "t2_medium": "Handlungsfortgang und Anschauung.",
-    "t2_long": "Assoziative Erweiterungen.",
-    "t2_complex": "Hypotaxen; bewusst begrenzt.",
+    "t2_short": "Kurze Takte, Tempo.",
+    "t2_medium": "Fließende Erzählung.",
+    "t2_long": "Assoziative Sätze.",
+    "t2_complex": "Komplexe Gedanken.",
 }
 
 
@@ -121,8 +121,8 @@ class ReportFormatter:
             box=box.SIMPLE_HEAVY,
             header_style="bold magenta",
         )
-        table1.add_column("Metrik", style="bold white")
-        table1.add_column("Messwert", justify="right", style="cyan")
+        table1.add_column("Metrik", style="bold white", no_wrap=True)
+        table1.add_column("Messwert", justify="right", style="cyan", no_wrap=True)
         table1.add_column("Referenz / Zielkorridor", style="dim")
         table1.add_column("Literarische Bewertung", style="yellow")
 
@@ -188,8 +188,8 @@ class ReportFormatter:
             box=box.SIMPLE,
             header_style="bold green",
         )
-        table2.add_column("Kategorie", style="bold white")
-        table2.add_column("Kriterium", style="dim")
+        table2.add_column("Kategorie", style="bold white", no_wrap=True)
+        table2.add_column("Kriterium", style="dim", no_wrap=True)
         table2.add_column("Anzahl", justify="right", style="cyan")
         table2.add_column("Anteil", justify="right", style="green")
         table2.add_column("Funktion")

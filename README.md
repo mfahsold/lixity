@@ -1,4 +1,3 @@
-\
 # Lixity
 
 [![tests](https://github.com/mfahsold/lixity/actions/workflows/tests.yml/badge.svg)](https://github.com/mfahsold/lixity/actions)
@@ -6,13 +5,17 @@
 ![License: LNCL-1.0](https://img.shields.io/badge/license-LNCL--1.0-orange)
 ![Dependencies](https://img.shields.io/badge/dependencies-pydantic%20%7C%20rich%20%7C%20orjson-brightgreen)
 
-**Lixity** is a dependency-light, multilingual text-linguistics engine and stylometric toolkit designed for literary manuscripts, fiction editors, digital humanities scholars, and autonomous AI coding agents. It unifies quantitative text linguistics, length-invariant lexical diversity, paragraph-accurate tense profiling, and a **self-calibrating style passport** into a single, deterministic CLI and Python API.
+**Lixity** is an offline text-linguistics engine that measures *how a literary manuscript reads* – sentence rhythm, lexical diversity, tense continuity, register signals – and flags only the passages where a chapter departs from its own established voice.
 
-The engine runs entirely offline with zero cloud dependencies, pure standard library core algorithms, and three robust production libraries (`pydantic>=2.0`, `rich>=13.0`, `orjson>=3.9`).
+Unlike grammar checkers or general NLP stacks, Lixity never measures against external norms. It derives a **self-calibrating style passport** from the manuscript itself (robust median/MAD house style), shrinks noisy observations from short chapters ($z^*$), and controls false discoveries across all chapter×feature cells (Benjamini-Hochberg FDR). The result is macro-editing evidence, not style dogma.
+
+Built for fiction authors, literary editors and translators, digital humanities researchers, and autonomous AI agents that need deterministic, auditable text analytics. Pure Python, zero cloud calls, three dependencies (`pydantic`, `rich`, `orjson`), seven native language profiles.
 
 The name represents the mathematical foundation of its analysis: **T**TR (Type-Token Ratio), **Y**ule's characteristic $K$, and **LIX** (Läsbarhetsindex).
 
 ![Lixity CLI analysis report](docs/screenshots/cli-analyze.png)
+
+![Lixity interactive HTML dashboard](docs/screenshots/dashboard-light.png)
 
 ---
 
@@ -183,12 +186,17 @@ lixity style manuscript.md
 lixity style manuscript.md --json
 ```
 
+![Lixity CLI style passport](docs/screenshots/cli-style.png)
+
 ### 4. Interactive Single-File HTML Dashboard
 Generates a zero-dependency HTML dashboard with an interactive chapter map, diverging z-score heatmap, and work marker controls.
 
 ```bash
 lixity dashboard manuscript.md -o exports/dashboard.html
 ```
+
+![Lixity dashboard heatmap](docs/screenshots/dashboard-heatmap.png)
+![Lixity style dimensions](docs/screenshots/dashboard-dimensions.png)
 
 ### 5. Introspection & Shell Completion
 
@@ -249,6 +257,8 @@ Lixity bridges the gap between statistical analysis and editorial text editing t
 - **Invisible in Exports:** Markdown renderers (Pandoc, CommonMark, Typst, LaTeX) treat HTML comments as invisible comments; they never appear in printed books or EPUBs.
 - **Idempotent IDs:** Marker IDs are deterministic content hashes derived from anchor text and line position. Markers stay anchored when text above or below is edited.
 - **Interactive Control:** Markers can be added or resolved directly from the Lixity dashboard when running the local UI server.
+
+![Lixity work markers](docs/screenshots/dashboard-markers.png)
 
 ---
 
