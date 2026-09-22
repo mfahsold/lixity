@@ -23,6 +23,7 @@ from that style, controlled for measurement noise and multiple testing.
 | `lixity characters FILE --names A,B [--json]` | character presence per chapter | text / JSON |
 | `lixity pacing FILE [--json]` | scenes, pacing signals, chapter hooks | text / JSON |
 | `lixity motifs FILE --motif NAME=REGEX [--json]` | motif presence + repetition (words, n-grams) | text / JSON |
+| `lixity showing FILE [--json]` | showing vs. telling balance per chapter | text / JSON |
 | `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR) | JSON (schema v2) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard | file path |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` | artifact list |
@@ -134,6 +135,51 @@ writes go through the embedding server's action API
 (`{"action": "marker-add", "kind": …, "line": …, "note": …}`); the library
 itself never writes files.
 
+### 3.5 Structure modules (`dialogue`, `characters`, `pacing`, `motifs`, `showing`)
+
+All five return `{"meta": {...}, …}` with the same meta block; every field is
+deterministic and documented in [`USAGE.md`](USAGE.md).
+
+- `dialogue`: `turns` = quoted segments (language dialogue pattern; **no
+  speaker attribution**), `avg_turn_words`, `median_turn_words`,
+  `longest_turn_words`, `turns_per_1000`, `dialogue_paragraph_pct` (a
+  paragraph counts as dialogue paragraph when ≥ 50 % of its words sit inside
+  quotation marks), `chapters[]` with the same per chapter.
+- `characters`: whole-word, case-insensitive matching of curated names or
+  alias patterns (`{"Matthias|Matze": "Matthias"}`); `mentions`,
+  `chapters_present`, `first_chapter`/`last_chapter`, `longest_gap` (chapters
+  without mention), `presence_ratio`, `per_chapter`. Appendix and front matter
+  are excluded, so chapter numbers match the metrics. **No NER** — the caller
+  supplies the names.
+- `pacing`: scene breaks are explicit dividers (`---`, `* * *`, `***`, `___`,
+  `•••`); `scenes` per chapter = breaks + 1. `hook_score` (0–3, heuristic):
+  +1 closing sentence ≤ 8 words, +1 terminal `?`/`!`/`…`, +1 closing in
+  dialogue. `fastest_chapter`/`slowest_chapter` use the lowest/highest ASL.
+- `motifs`: motif presence (regex patterns; `mentions`, `density_per_1000`,
+  chapter span, `longest_gap`) plus generic repetition — `top_words` (content
+  words; curated stop words excluded) and `repeated_phrases` (n-grams with
+  ≥ 3 occurrences and their chapters). Repetition is a **signal**, not a
+  verdict.
+- `showing`: telling signals (filter/modal/passive/nominalisation densities)
+  vs. showing signals (dialogue, staccato) as robust z against the book's own
+  chapter medians; `balance = show_z − tell_z` (positive = showing).
+  Documented fallback: if MAD = 0 (majority of chapters share the median), the
+  standard deviation is used. Heuristic composite, **not** a quality verdict.
+
+### 3.6 Task recipes (typical agent workflows)
+
+| Task | Steps |
+|---|---|
+| First contact with a manuscript | `lixity about --json` → `lixity analyze FILE --json` → `lixity style FILE --json` |
+| Editorial pass on tense | `lixity profile FILE` → paragraphs with `severity ≥ 2` and `switch = true` |
+| "Why does chapter N feel different?" | `lixity style FILE --json` → `deviations["N"]` + `fdr_flagged["N"]`, then `jsd_top_words` from `analyze` |
+| Dialogue overhaul | `lixity dialogue FILE --json` → chapters with low `turns`/`dialogue_pct` |
+| Character continuity check | `lixity characters FILE --names "A,B,C" --json` → `longest_gap`, `presence_ratio` |
+| Structural pacing review | `lixity pacing FILE --json` → `hook_score` and `fastest/slowest_chapter` |
+| Repetition cleanup | `lixity motifs FILE --json` → `repeated_phrases`, `top_words` |
+| Style drift in a new draft | `lixity build` (reference) → `lixity analyze draft.md --json` → compare against the corridor |
+| Human-readable hand-off | `lixity dashboard FILE -o review.html --names "A,B"` |
+
 ## 4. Interpretation heuristics (documented, not black-box)
 
 - **z*** = significance-adjusted deviation: `z* = (x − median) / √(σ² + SE²)`
@@ -173,6 +219,7 @@ turns = api.dialogue(text, language="de")             # -> {"meta", "dialogue"}
 cast = api.characters(text, ["Anna", "Ralf"], language="de")  # -> {"meta", "chapters", "figures"}
 pace = api.pacing(text, language="de")                # -> {"meta", "pacing"}
 motifs = api.motifs(text, {"Wut": r"\b(Wut|wütend\w*)\b"}, language="de")  # -> {"meta", "motifs", …}
+distance = api.showing(text, language="de")           # -> {"meta", "showing"}
 html = api.dashboard(text, language="de", title="…")  # -> self-contained HTML string
 marker_list = api.markers(text)                       # -> list of active work markers
 new_text, m = api.add_marker(text, kind="pruefen", note="Verify tense", line=42)

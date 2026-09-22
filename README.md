@@ -51,6 +51,9 @@ foundation of its analysis: **T**TR, **Y**ule's characteristic $K$, and
 - **Motifs & repetition:** track curated motifs across chapters (mentions,
   density, span, gaps) and surface repeated phrases and overused content words
   — a signal for macro editing, not a verdict.
+- **Showing vs. telling:** a self-calibrating narrative-distance balance per
+  chapter (telling signals vs. showing signals, robust z against the book's own
+  median) — heuristic, documented, not a verdict.
 - **Editor-visible work markers:** invisible HTML comments with deterministic
   content-hash IDs and free-text notes, writable from the dashboard or API.
 - **Idempotent workspace build:** `lixity build` publishes a reproducible
@@ -61,6 +64,19 @@ foundation of its analysis: **T**TR, **Y**ule's characteristic $K$, and
 - **Agent-ready:** strict JSON schemas with meta blocks, clean exit codes, a
   stable `lixity.api` facade, and an agent guide in
   [`docs/AGENTS.md`](docs/AGENTS.md).
+
+## Who it is for
+
+| Role | Entry point | Typical loop |
+| :--- | :--- | :--- |
+| **Authors** | `lixity analyze` → `lixity style` → `lixity dashboard` | write → measure → compare against the book's own corridor → revise |
+| **Editors & publishers** | `lixity profile`, `lixity dialogue`, `lixity pacing`, `lixity motifs` | find tense slips, flat dialogue, missing scenes, repeated phrases |
+| **Digital humanities** | `lixity analyze --json`, `lixity style --json`, `lixity.api` | reproducible, offline corpora with documented estimators |
+| **AI agents** | `lixity about --json` + [`docs/AGENTS.md`](docs/AGENTS.md) | discover capabilities, call deterministic commands, interpret z\*/FDR |
+
+Everything is offline, deterministic and scriptable; every number comes with
+its formula, its uncertainty and its caveats (see
+[`docs/STABILITY.md`](docs/STABILITY.md)).
 
 ## Installation
 
@@ -82,6 +98,7 @@ lixity dialogue manuscript.md            # turn structure (--json for machines)
 lixity characters manuscript.md --names "Anna,Ralf"   # presence per chapter
 lixity pacing manuscript.md              # scenes, pacing curve, chapter hooks
 lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b'   # motifs + repetition
+lixity showing manuscript.md             # showing/telling balance per chapter
 lixity dashboard manuscript.md -o exports/dashboard.html
 cd my-novel && lixity build             # idempotent workspace: exports/ + archive
 lixity about                            # languages, features, heuristics

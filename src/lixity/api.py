@@ -150,7 +150,7 @@ def motifs(
     phrase_size: int = 3,
     **config_overrides: Any,
 ) -> dict[str, Any]:
-    """
+    r"""
     Motif tracking and repetition analysis: per-motif presence (mentions,
     density, chapter span, longest gap) plus generic repetition signals —
     the most frequent content words and repeated n-grams (default 3-grams,
@@ -241,6 +241,76 @@ def about() -> dict[str, Any]:
             "hd_d_samples": 42,
             "hd_d_sample_size": 35,
         },
+        "commands": [
+            {
+                "name": "analyze",
+                "purpose": "corpus metrics and per-chapter style features",
+                "output": "text|json",
+                "schema_version": SCHEMA_VERSION,
+            },
+            {
+                "name": "profile",
+                "purpose": "paragraph-accurate tense and style profiles",
+                "output": "json",
+                "schema_version": SCHEMA_VERSION,
+            },
+            {
+                "name": "dialogue",
+                "purpose": "dialogue turn structure (turns, lengths, per chapter)",
+                "output": "text|json",
+                "schema_version": SCHEMA_VERSION,
+            },
+            {
+                "name": "characters",
+                "purpose": "character presence per chapter (names or aliases)",
+                "output": "text|json",
+                "schema_version": SCHEMA_VERSION,
+            },
+            {
+                "name": "pacing",
+                "purpose": "scene structure, pacing signals, chapter hook score",
+                "output": "text|json",
+                "schema_version": SCHEMA_VERSION,
+            },
+            {
+                "name": "motifs",
+                "purpose": "motif presence and repetition (content words, n-grams)",
+                "output": "text|json",
+                "schema_version": SCHEMA_VERSION,
+            },
+            {
+                "name": "showing",
+                "purpose": "showing vs. telling balance (self-calibrating)",
+                "output": "text|json",
+                "schema_version": SCHEMA_VERSION,
+            },
+            {
+                "name": "style",
+                "purpose": "self-calibrating style reference (bands, z*, FDR, dimensions)",
+                "output": "text|json",
+                "schema_version": 2,
+            },
+            {
+                "name": "dashboard",
+                "purpose": "single-file interactive HTML dashboard (all panels)",
+                "output": "html",
+            },
+            {
+                "name": "build",
+                "purpose": "idempotent workspace build (exports/, archive, nda/)",
+                "output": "files",
+            },
+            {
+                "name": "about",
+                "purpose": "this metadata (languages, features, thresholds, commands)",
+                "output": "text|json",
+            },
+            {
+                "name": "completion",
+                "purpose": "shell completion script",
+                "output": "script",
+            },
+        ],
         "license": "Lixity Non-Commercial License 1.0 (LNCL-1.0)",
     }
 

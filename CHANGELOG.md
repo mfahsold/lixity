@@ -5,7 +5,7 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.9.0] – 2026-09-22
 
 ### Added
 
@@ -26,9 +26,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Dashboard panels for dialogue structure, character presence, the pacing
   curve and motifs/repetition (clickable, keyboard reachable, seven
   languages).
+- **`lixity showing`** (and `api.showing`): self-calibrating showing vs.
+  telling balance per chapter (robust z of telling and showing signals
+  against the book's own medians; documented MAD→SD fallback).
+- **`lixity about --json`** now lists all commands with purpose, output type
+  and schema version (agent discovery).
 - Curated stop-word lists (de/en) extended with high-frequency adverbs,
   possessives and particles so repetition and driver-word analysis stays
   content-focused.
+- **`mypy --strict` is enabled** (147 → 0 errors) and runs in CI; the code
+  base is also free of runtime and syntax warnings (`python -W error`).
 
 ## [1.8.0] – 2026-09-22
 

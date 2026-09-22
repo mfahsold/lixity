@@ -57,6 +57,9 @@
     "Editor-visible work markers with deterministic content-hash IDs and inline notes",
     "Idempotent workspace build: unchanged input causes zero writes, changed input rotates exactly one version",
     "Single-file clickable dashboard: component status strip, KPI drill-downs, style-reference band chart, deviation layer",
+    "Dialogue turn structure, character presence, scene/pacing analysis with chapter hooks",
+    "Motif tracking and repetition analysis (content words, repeated n-grams)",
+    "Self-calibrating showing-vs-telling balance per chapter",
     "Deterministic Python API for autonomous AI agents and publication pipelines",
     "Seven native language profiles (de, en, fr, es, it, pt, nl) plus generic fallback"
   ]
@@ -224,6 +227,9 @@ footer {
     <span>Tense Continuity Profiles</span>
     <span>Latent Style Dimensions</span>
     <span>Editor Work Markers</span>
+    <span>Dialogue &amp; Character Panels</span>
+    <span>Scene &amp; Pacing Analysis</span>
+    <span>Motif &amp; Repetition Signals</span>
     <span>Idempotent Workspace Build</span>
     <span>Clickable Drill-Down Dashboard</span>
     <span>7 Native Languages</span>
@@ -403,6 +409,11 @@ lixity analyze manuscript.md --json       # Machine-readable JSON (schema v1)
 lixity profile manuscript.md              # Tense &amp; style profiles per paragraph
 lixity style manuscript.md                # Self-calibrating style reference
 lixity style manuscript.md --json         # Schema v2 JSON (bands, z*, FDR, dimensions)
+lixity dialogue manuscript.md             # Dialogue turn structure
+lixity characters manuscript.md --names "Anna,Ralf"
+lixity pacing manuscript.md               # Scenes, pacing curve, chapter hooks
+lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)'
+lixity showing manuscript.md              # Showing vs. telling balance
 lixity dashboard manuscript.md -o ui.html # Standalone interactive HTML dashboard
 lixity build [manuscript.md]              # Idempotent workspace (exports/ + archive)
 lixity about                              # Engine metadata &amp; heuristic thresholds

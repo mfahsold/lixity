@@ -54,6 +54,22 @@ lixity dashboard manuscript.md -o ui.html    # HTML dashboard
 All commands read a Markdown manuscript and write to stdout, except `dashboard`,
 which writes a single HTML file.
 
+## Which command for which question?
+
+| Question | Command | Key numbers |
+| :--- | :--- | :--- |
+| How does the manuscript read overall? | `lixity analyze` | ASL, CV, TTR, HD-D, MTLD, Flesch, LIX, dialogue, registers |
+| Where does the tense slip? | `lixity profile` | per paragraph: dominant tense, mix, switch, severity 0–3 |
+| Is this chapter still *this book's* style? | `lixity style` | median/MAD bands, z\*, FDR set, style dimensions |
+| How is the dialogue structured? | `lixity dialogue` | turns, turn lengths, turns per 1,000 words, dialogue paragraphs |
+| Who appears where — and when not? | `lixity characters` | mentions, chapters present, span, longest gap |
+| Where are the scenes and hooks? | `lixity pacing` | scenes, scene length, ASL curve, hook score 0–3 |
+| What repeats itself? | `lixity motifs` | motif presence, top content words, repeated n-grams |
+| Which chapters *tell* instead of *show*? | `lixity showing` | tell/show z, balance per chapter (self-calibrating) |
+| I want to see and click all of it | `lixity dashboard` | single-file HTML, all panels, offline |
+| I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation, `nda/` |
+| What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
+
 ## Command reference
 
 ### Common options
@@ -194,6 +210,33 @@ JSON fields: `chapters`, `motifs[]` (`mentions`, `density_per_1000`,
 `per_chapter`), `top_words[]` and `repeated_phrases[]` (`phrase`, `count`,
 `chapters`).
 
+### `lixity showing`
+
+Showing vs. telling balance — a **heuristic, self-calibrating** composite.
+Telling signals (per 1,000 words): perception filters, modals, passive
+constructions, nominalisations. Showing signals (shares in %): dialogue,
+staccato sentences. For each chapter the report computes robust z-scores
+(median/MAD, scaled) for the mean of each group against the manuscript's own
+chapter medians, and the balance `show_z − tell_z`.
+
+- **Positive balance:** the chapter shows more than this manuscript usually
+  does. **Negative balance:** it tells more.
+- Fallback (documented): when the median absolute deviation is zero (the
+  majority of chapters share the median — common for share features such as
+  dialogue), the standard deviation is used so the signal is not lost.
+- Deliberate telling is a stylistic device — the report ranks and locates,
+  it does not judge. The underlying signals are also visible per chapter in
+  the dashboard's style heatmap and layer.
+
+```bash
+lixity showing manuscript.md          # summary + per-chapter table
+lixity showing manuscript.md --json   # meta + showing report
+```
+
+JSON fields: `chapters`, `tell_z_mean`, `show_z_mean`, `balance_mean`,
+`most_telling`, `most_showing` and `chapter_list[]` with `tell_z`, `show_z`,
+`balance` and the raw signals.
+
 ### `lixity style`
 
 Prints the **style reference** – the self-calibrated house style of the
@@ -246,6 +289,8 @@ The dashboard contains:
   lower the faster) with its hook score,
 - a **motifs & repetition** panel (when data is supplied or computed by the
   CLI): motif presence and the most repeated phrases with their chapters,
+- a **narrative distance** panel (when data is supplied or computed by the
+  CLI): tell/show mean z and the per-chapter balance bars (positive = showing),
 - the **style heatmap**: chapter × feature matrix of significance-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
   house mean), plus the expected-false-positive/FDR footnote; cells jump to
@@ -463,6 +508,13 @@ print(f"ASL: {kpis['asl']:.2f}, LIX: {kpis['lix']:.1f}")
 
 # 2. Self-calibrated style reference (bands, z*, FDR, dimensions)
 reference = api.fingerprint(text, language="de")
+
+# 2b. Structure modules (dialogue, characters, pacing, motifs, showing)
+turns = api.dialogue(text, language="de")
+cast = api.characters(text, ["Anna", "Ralf"], language="de")
+pace = api.pacing(text, language="de")
+motifs = api.motifs(text, {"Wut": r"\b(Wut|wütend\w*)\b"}, language="de")
+distance = api.showing(text, language="de")
 
 # 3. Paragraph-level tense & style profiling
 profiles = api.profile(text, language="de")

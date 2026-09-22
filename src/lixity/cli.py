@@ -49,6 +49,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
             "Heuristics: z_mild={z_mild}, z_strong={z_strong}, FDR q={fdr_q}, "
             "min_chapters={min_chapters}, dimensions={n_dimensions}"
         ),
+        "about_commands": "Commands:",
         "about_license": "License: {license}",
         "err_prefix": "[error]",
         "err_shell": "Unknown shell: {shell} (bash|zsh)",
@@ -121,6 +122,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
             "Heuristiken: z_mild={z_mild}, z_strong={z_strong}, FDR q={fdr_q}, "
             "min_chapters={min_chapters}, Dimensionen={n_dimensions}"
         ),
+        "about_commands": "Kommandos:",
         "about_license": "Lizenz: {license}",
         "err_prefix": "[Fehler]",
         "err_shell": "Unbekannte Shell: {shell} (bash|zsh)",
@@ -276,6 +278,10 @@ def _print_about_text() -> None:
             n_dimensions=heuristics["n_dimensions"],
         )
     )
+    if data.get("commands"):
+        print(_m("about_commands"))
+        for command in data["commands"]:
+            print(f"  {command['name']:<12} {command['purpose']} [{command['output']}]")
     print(_m("about_license", license=data["license"]))
 
 
