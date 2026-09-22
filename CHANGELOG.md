@@ -17,6 +17,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   chapters for curated names or alias patterns — mentions, chapters present,
   first/last chapter, longest gap, presence ratio. Appendix and front matter
   are excluded so chapter numbers match the metrics.
+- **`lixity pacing`** (and `api.pacing`): scene structure via explicit
+  dividers, tempo signals per scene/chapter (ASL, staccato, dialogue) and a
+  documented 0–3 chapter hook score.
+- Dashboard panels for dialogue structure, character presence and the pacing
+  curve (clickable, keyboard reachable, seven languages).
 
 ## [1.8.0] – 2026-09-22
 

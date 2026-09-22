@@ -127,6 +127,20 @@ def characters(
     return {"meta": _meta(resolved.key), **report}
 
 
+def pacing(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+    """
+    Scene structure, pacing signals and chapter hooks: explicit scene breaks
+    (``---``, ``* * *``), per-scene tempo proxies (ASL, staccato, dialogue),
+    the closing sentence of each chapter and its documented 0–3 hook score.
+
+    Returns ``{"meta": {...}, "pacing": {...}}``.
+    """
+    config, resolved = _config_and_language(language, text, **config_overrides)
+    from .pacing import pacing_report
+
+    return {"meta": _meta(resolved.key), "pacing": pacing_report(text, config).to_dict()}
+
+
 def dashboard(
     text: str,
     language: str = "auto",

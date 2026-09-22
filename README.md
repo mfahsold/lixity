@@ -45,6 +45,9 @@ foundation of its analysis: **T**TR, **Y**ule's characteristic $K$, and
   turns per 1,000 words and dialogue paragraph share — per chapter and corpus.
 - **Character presence:** where each curated figure appears, for how long and
   how large the gaps are (aliases supported).
+- **Scene & pacing structure:** explicit scene breaks (`---`, `* * *`), tempo
+  signals per scene/chapter (ASL, staccato, dialogue) and a documented 0–3
+  hook score for every chapter ending.
 - **Editor-visible work markers:** invisible HTML comments with deterministic
   content-hash IDs and free-text notes, writable from the dashboard or API.
 - **Idempotent workspace build:** `lixity build` publishes a reproducible
@@ -74,6 +77,7 @@ lixity profile manuscript.md            # tense continuity, paragraph by paragra
 lixity style manuscript.md              # self-calibrating style reference (--json: schema v2)
 lixity dialogue manuscript.md            # turn structure (--json for machines)
 lixity characters manuscript.md --names "Anna,Ralf"   # presence per chapter
+lixity pacing manuscript.md              # scenes, pacing curve, chapter hooks
 lixity dashboard manuscript.md -o exports/dashboard.html
 cd my-novel && lixity build             # idempotent workspace: exports/ + archive
 lixity about                            # languages, features, heuristics

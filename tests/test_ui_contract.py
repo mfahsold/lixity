@@ -60,6 +60,7 @@ def _full_dashboard() -> str:
     from lixity.characters import presence_report
     from lixity.dialogue import dialogue_report
     from lixity.markers import list_markers
+    from lixity.pacing import pacing_report
 
     return render_dashboard(
         chapters,
@@ -70,6 +71,7 @@ def _full_dashboard() -> str:
         artifacts=[{"name": "buch.pdf", "size_kb": 1200.0, "href": "buch.pdf", "pages": 184}],
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, ["Ich"], config),
+        pacing=pacing_report(text, config).to_dict(),
         title="Testroman",
         controls=True,
     )
@@ -113,6 +115,7 @@ class TestJsDomContract(unittest.TestCase):
             'role="button"',
             'id="dialogue"',
             'id="characters"',
+            'id="pacing"',
             'data-jump="#ch-1"',
         ):
             self.assertIn(hook, html, hook)
@@ -222,6 +225,11 @@ class TestLabelCompleteness(unittest.TestCase):
             "chr_span",
             "chr_gap",
             "chr_share",
+            "panel_pacing",
+            "pac_scenes",
+            "pac_avg_scene",
+            "pac_hook",
+            "pac_hook_mean",
         )
         for language in LANGUAGES:
             labels = get_language_profile(language).labels

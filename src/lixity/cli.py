@@ -78,6 +78,19 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "chr_span": "Chapter span",
         "chr_gap": "Longest gap",
         "chr_share": "Presence",
+        "pac_metric": "Pacing metric",
+        "pac_value": "Value",
+        "pac_chapters": "Chapters",
+        "pac_scenes": "Scenes",
+        "pac_avg_scene": "Average scene (words)",
+        "pac_hook_mean": "Hook score (mean)",
+        "pac_fastest": "Fastest chapter",
+        "pac_slowest": "Slowest chapter",
+        "pac_chapter": "Ch.",
+        "pac_title": "Title",
+        "pac_asl": "ASL",
+        "pac_dialogue": "Dialogue",
+        "pac_hook": "Hook",
     },
     "de": {
         "about_title": "lixity {version} – quantitative Textlinguistik & Stilometrie",
@@ -119,6 +132,19 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "chr_span": "Kapitelspanne",
         "chr_gap": "Größte Lücke",
         "chr_share": "Präsenz",
+        "pac_metric": "Pacing-Metrik",
+        "pac_value": "Wert",
+        "pac_chapters": "Kapitel",
+        "pac_scenes": "Szenen",
+        "pac_avg_scene": "Ø Szene (Wörter)",
+        "pac_hook_mean": "Haken-Ø",
+        "pac_fastest": "Schnellstes Kapitel",
+        "pac_slowest": "Langsamstes Kapitel",
+        "pac_chapter": "Kap.",
+        "pac_title": "Titel",
+        "pac_asl": "ASL",
+        "pac_dialogue": "Dialog",
+        "pac_hook": "Haken",
     },
 }
 
@@ -140,7 +166,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters dashboard style build about completion"
+    local cmds="analyze profile dialogue characters pacing dashboard style build about completion"
     local opts="--language --json --output --help"
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$cmds" -- "$cur") )
@@ -321,6 +347,62 @@ def _cmd_characters(args) -> int:
     return EXIT_OK
 
 
+def _cmd_pacing(args) -> int:
+    """Scene structure, pacing signals and chapter hooks (Rich table or JSON)."""
+    try:
+        with open(args.file, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as exc:
+        print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
+        return EXIT_ERROR
+
+    from .pacing import pacing_report
+
+    config = CorpusConfig(language=args.language)
+    resolved = resolve_language(config, sample_text=text)
+    config = CorpusConfig(language=resolved.key)
+    report = pacing_report(text, config)
+
+    if args.json:
+        print(_json(_meta_payload(resolved.key, pacing=report.to_dict()), indent=True))
+        return EXIT_OK
+
+    con = Console()
+    summary = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
+    summary.add_column(_m("pac_metric"), style="bold white")
+    summary.add_column(_m("pac_value"), justify="right", style="cyan")
+    for key, value in (
+        ("pac_chapters", str(report.chapters)),
+        ("pac_scenes", str(report.scenes)),
+        ("pac_avg_scene", f"{report.avg_scene_words:.0f}"),
+        ("pac_hook_mean", f"{report.hook_score_mean:.2f}"),
+        ("pac_fastest", str(report.fastest_chapter or "–")),
+        ("pac_slowest", str(report.slowest_chapter or "–")),
+    ):
+        summary.add_row(_m(key), value)
+    con.print(summary)
+
+    if report.chapter_list:
+        table = Table(box=box.SIMPLE, header_style="bold green")
+        table.add_column(_m("pac_chapter"), justify="right")
+        table.add_column(_m("pac_title"))
+        table.add_column(_m("pac_scenes"), justify="right")
+        table.add_column(_m("pac_asl"), justify="right")
+        table.add_column(_m("pac_dialogue"), justify="right")
+        table.add_column(_m("pac_hook"), justify="right")
+        for chapter in report.chapter_list:
+            table.add_row(
+                str(chapter.chapter_num),
+                chapter.title,
+                str(chapter.scenes),
+                f"{chapter.asl:.1f}",
+                f"{chapter.dialogue_pct:.1f} %",
+                str(chapter.hook_score),
+            )
+        con.print(table)
+    return EXIT_OK
+
+
 def _cmd_build(args) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
     try:
@@ -416,6 +498,7 @@ def main(argv=None):
         ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
         ("dialogue", "Dialogue turn structure (text/JSON)"),
         ("characters", "Character presence across chapters (text/JSON)"),
+        ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
         ("style", "Self-calibrated style reference of the manuscript (text/JSON)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
         ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
@@ -483,6 +566,9 @@ def main(argv=None):
 
     if args.command == "characters":
         return _cmd_characters(args)
+
+    if args.command == "pacing":
+        return _cmd_pacing(args)
 
     try:
         with open(args.file, encoding="utf-8") as f:

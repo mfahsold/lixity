@@ -155,6 +155,26 @@ JSON fields: `chapters` (total), `figures[]` with `mentions`,
 `chapters_present`, `first_chapter`, `last_chapter`, `longest_gap`,
 `presence_ratio` and `per_chapter`.
 
+### `lixity pacing`
+
+Scene structure, pacing signals and chapter hooks. Scene breaks are explicit
+Markdown dividers (`---`, `* * *`, `***`, `___`, `•••`); scenes per chapter =
+breaks + 1. Per scene and chapter the report gives the observable tempo
+proxies (ASL, staccato share, dialogue share, scene length). The **hook score**
+(0–3, documented heuristic) adds one point each for a closing sentence of at
+most eight words, a terminal `?`/`!`/`…`, and a closing in dialogue.
+
+```bash
+lixity pacing manuscript.md          # Rich tables (summary + per chapter)
+lixity pacing manuscript.md --json   # meta + pacing report
+```
+
+JSON fields: `chapters`, `scenes`, `avg_scene_words`, `avg_chapter_scenes`,
+`hook_score_mean`, `fastest_chapter`, `slowest_chapter` and `chapter_list[]`
+with `scenes`, `asl`, `dialogue_pct`, `staccato_pct`,
+`closing_sentence_words`, `closing_terminal`, `closing_is_dialogue`,
+`hook_score` and the per-scene `scene_list[]`.
+
 ### `lixity style`
 
 Prints the **style reference** – the self-calibrated house style of the
@@ -202,6 +222,9 @@ The dashboard contains:
   and the chapters with the most speech,
 - a **character presence** panel (when names are supplied): mentions, chapters
   present, chapter span, longest gap and a presence bar per figure,
+- a **pacing curve** (when pacing data is supplied or computed by the CLI):
+  scenes, average scene length, hook mean and one bar per chapter (ASL, the
+  lower the faster) with its hook score,
 - the **style heatmap**: chapter × feature matrix of significance-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
   house mean), plus the expected-false-positive/FDR footnote; cells jump to

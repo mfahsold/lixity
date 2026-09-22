@@ -69,6 +69,7 @@ def render_dashboard(
     status: Sequence[Mapping[str, Any]] | None = None,
     dialogue: Mapping[str, Any] | None = None,
     characters: Mapping[str, Any] | None = None,
+    pacing: Mapping[str, Any] | None = None,
     title: str = "Manuskript",
     labels: Mapping[str, str] | None = None,
     language_name: str = "",
@@ -85,8 +86,8 @@ def render_dashboard(
 
     ``controls=True`` adds the local control panel (buttons/dropdown/NDA),
     which triggers the CLI functions via the UI server (``scripts/ui_server.py``).
-    ``dialogue``/``characters`` add the optional dialogue-structure and
-    character-presence panels (see :mod:`lixity.dialogue`/:mod:`lixity.characters`).
+    ``dialogue``/``characters``/``pacing`` add the optional dialogue-structure,
+    character-presence and pacing panels (see the corresponding modules).
     """
     esc = html.escape
     L = lambda key: esc(label(labels, key))  # noqa: E731
@@ -469,6 +470,33 @@ def render_dashboard(
                 f"</tr>"
             )
         parts.append("</tbody></table>")
+        parts.append("</section>")
+
+    # --- Pacing curve (scene structure & hooks) ----------------------------
+    if pacing and pacing.get("chapter_list"):
+        parts.append('<section class="panel" id="pacing">')
+        parts.append(f"<h2>{L('panel_pacing')}</h2>")
+        parts.append('<div class="kpi-row">')
+        parts.append(kpi(N(pacing.get("scenes", 0), 0), L("pac_scenes")))
+        parts.append(kpi(N(pacing.get("avg_scene_words", 0.0), 0), L("pac_avg_scene")))
+        parts.append(kpi(N(pacing.get("hook_score_mean", 0.0), 2), L("pac_hook_mean")))
+        parts.append("</div>")
+        chapters_pacing = pacing["chapter_list"]
+        max_asl = max((float(c.get("asl", 0.0)) for c in chapters_pacing), default=0.0) or 1.0
+        parts.append('<div class="dist">')
+        for chapter in chapters_pacing:
+            num = int(chapter.get("chapter_num", 0))
+            asl = float(chapter.get("asl", 0.0))
+            hook = int(chapter.get("hook_score", 0))
+            parts.append(
+                f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
+                f'title="{esc(chapter.get("title", ""), quote=True)}">'
+                f'<span>{L("chapter")} {num}</span>'
+                f'<span class="bar"><i style="width:{min(100.0, asl / max_asl * 100.0):.1f}%"></i></span>'
+                f'<span class="val">{N(asl, 1)} · {esc(label(labels, "pac_hook"))} {hook}</span>'
+                f"</div>"
+            )
+        parts.append("</div>")
         parts.append("</section>")
 
     # --- Style heatmap & passport (self-calibrated house style) -----------
