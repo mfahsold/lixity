@@ -67,6 +67,8 @@ def render_dashboard(
     markers: Sequence[Any] | None = None,
     artifacts: Sequence[Mapping[str, Any]] | None = None,
     status: Sequence[Mapping[str, Any]] | None = None,
+    dialogue: Mapping[str, Any] | None = None,
+    characters: Mapping[str, Any] | None = None,
     title: str = "Manuskript",
     labels: Mapping[str, str] | None = None,
     language_name: str = "",
@@ -83,6 +85,8 @@ def render_dashboard(
 
     ``controls=True`` adds the local control panel (buttons/dropdown/NDA),
     which triggers the CLI functions via the UI server (``scripts/ui_server.py``).
+    ``dialogue``/``characters`` add the optional dialogue-structure and
+    character-presence panels (see :mod:`lixity.dialogue`/:mod:`lixity.characters`).
     """
     esc = html.escape
     L = lambda key: esc(label(labels, key))  # noqa: E731
@@ -403,6 +407,69 @@ def render_dashboard(
                 f'<span class="val">{N(count, 0)} · {P(pct)}</span></div>'
             )
         parts.append("</div></section>")
+
+    # --- Dialogue structure (turns, per chapter) ---------------------------
+    if dialogue:
+        parts.append('<section class="panel" id="dialogue">')
+        parts.append(f"<h2>{L('panel_dialogue')}</h2>")
+        parts.append('<div class="kpi-row">')
+        parts.append(
+            kpi(N(dialogue.get("turns", 0), 0), help_term(labels, "dialogue", L("dlg_turns")))
+        )
+        parts.append(kpi(P(dialogue.get("dialogue_pct", 0.0)), L("dialogue")))
+        parts.append(
+            kpi(N(dialogue.get("avg_turn_words", 0.0), 1), L("dlg_avg_turn"), jump="#chapters")
+        )
+        parts.append(
+            kpi(N(dialogue.get("turns_per_1000", 0.0), 1), L("dlg_turns_per_1000"), jump="#chapters")
+        )
+        parts.append("</div>")
+        dialogue_chapters = [c for c in dialogue.get("chapters", []) if c.get("turns")]
+        if dialogue_chapters:
+            top = sorted(dialogue_chapters, key=lambda c: c.get("turns", 0), reverse=True)[:8]
+            parts.append('<div class="dist">')
+            for chapter in top:
+                num = int(chapter.get("chapter_num", 0))
+                share = float(chapter.get("dialogue_pct", 0.0))
+                parts.append(
+                    f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
+                    f'title="{esc(chapter.get("title", ""), quote=True)}">'
+                    f'<span>{L("chapter")} {num}</span>'
+                    f'<span class="bar"><i style="width:{min(100.0, share):.1f}%"></i></span>'
+                    f'<span class="val">{P(share)} · {int(chapter.get("turns", 0))} {esc(label(labels, "dlg_turns"))}</span>'
+                    f"</div>"
+                )
+            parts.append("</div>")
+        parts.append("</section>")
+
+    # --- Character presence ------------------------------------------------
+    if characters and characters.get("figures"):
+        parts.append('<section class="panel" id="characters">')
+        parts.append(f"<h2>{L('panel_characters')}</h2>")
+        parts.append("<table><thead><tr>")
+        parts.extend(
+            f"<th>{L(key)}</th>"
+            for key in ("chr_name", "chr_mentions", "chr_chapters", "chr_span", "chr_gap", "chr_share")
+        )
+        parts.append("</tr></thead><tbody>")
+        total = int(characters.get("chapters", 0))
+        for figure in characters["figures"]:
+            first = figure.get("first_chapter")
+            jump = f' data-jump="#ch-{int(first)}" role="button" tabindex="0"' if first else ""
+            share = float(figure.get("presence_ratio", 0.0)) * 100.0
+            chapter_span = f"{first}–{figure.get('last_chapter')}" if first else "–"
+            parts.append(
+                f'<tr class="row-link"{jump}>'
+                f'<td class="name">{esc(figure.get("name", ""))}</td>'
+                f'<td class="num">{int(figure.get("mentions", 0))}</td>'
+                f'<td class="num">{len(figure.get("chapters_present", []))} / {total}</td>'
+                f'<td class="num">{esc(chapter_span)}</td>'
+                f'<td class="num">{int(figure.get("longest_gap", 0))}</td>'
+                f'<td class="num bar-cell"><i style="--v:{min(100.0, share):.1f}%"></i>{share:.0f} %</td>'
+                f"</tr>"
+            )
+        parts.append("</tbody></table>")
+        parts.append("</section>")
 
     # --- Style heatmap & passport (self-calibrated house style) -----------
     if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:

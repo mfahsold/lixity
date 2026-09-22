@@ -57,6 +57,8 @@ def _full_dashboard() -> str:
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
     metrics = CorpusAnalyzer(config).analyze_text(text)
     fingerprint = StyleFingerprint.from_metrics(metrics)
+    from lixity.characters import presence_report
+    from lixity.dialogue import dialogue_report
     from lixity.markers import list_markers
 
     return render_dashboard(
@@ -66,6 +68,8 @@ def _full_dashboard() -> str:
         fingerprint=fingerprint,
         markers=list_markers(text),
         artifacts=[{"name": "buch.pdf", "size_kb": 1200.0, "href": "buch.pdf", "pages": 184}],
+        dialogue=dialogue_report(text, config).to_dict(),
+        characters=presence_report(text, ["Ich"], config),
         title="Testroman",
         controls=True,
     )
@@ -107,6 +111,9 @@ class TestJsDomContract(unittest.TestCase):
             'id="layer-next"',
             'id="layer-legend-count"',
             'role="button"',
+            'id="dialogue"',
+            'id="characters"',
+            'data-jump="#ch-1"',
         ):
             self.assertIn(hook, html, hook)
 
@@ -204,6 +211,17 @@ class TestLabelCompleteness(unittest.TestCase):
             "marker_sachcheck",
             "marker_todo",
             "marker_achtung",
+            "panel_dialogue",
+            "panel_characters",
+            "dlg_turns",
+            "dlg_avg_turn",
+            "dlg_turns_per_1000",
+            "chr_name",
+            "chr_mentions",
+            "chr_chapters",
+            "chr_span",
+            "chr_gap",
+            "chr_share",
         )
         for language in LANGUAGES:
             labels = get_language_profile(language).labels

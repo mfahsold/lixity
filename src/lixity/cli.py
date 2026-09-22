@@ -446,6 +446,12 @@ def main(argv=None):
             p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
+        if name == "dashboard":
+            p.add_argument("file", help="Markdown manuscript")
+            p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+            p.add_argument("--names", help="Comma-separated figure names (character panel)")
+            p.add_argument("-o", "--output", help="Target file (dashboard)")
+            continue
         p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
         p.add_argument(
@@ -520,11 +526,19 @@ def main(argv=None):
     metrics = CorpusAnalyzer(config).analyze_text(text)
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
     fingerprint = StyleFingerprint.from_metrics(metrics)
+    from .characters import presence_report
+    from .dialogue import dialogue_report
+
+    names = [
+        part.strip() for part in (getattr(args, "names", None) or "").split(",") if part.strip()
+    ]
     html = render_dashboard(
         chapters,
         paragraphs,
         metrics=metrics,
         fingerprint=fingerprint,
+        dialogue=dialogue_report(text, config).to_dict(),
+        characters=presence_report(text, names, config) if names else None,
         title=os.path.basename(args.file),
         labels=resolved.labels,
         language_name=resolved.name,

@@ -197,6 +197,11 @@ The dashboard contains:
   is clickable** and jumps to the panel that shows it, preselecting the
   matching filter where one exists (flags / deviations),
 - the sentence-length architecture as bars,
+- a **dialogue structure** panel (when dialogue data is supplied or computed by
+  the CLI): turns, dialogue share, average turn length, turns per 1,000 words
+  and the chapters with the most speech,
+- a **character presence** panel (when names are supplied): mentions, chapters
+  present, chapter span, longest gap and a presence bar per figure,
 - the **style heatmap**: chapter × feature matrix of significance-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
   house mean), plus the expected-false-positive/FDR footnote; cells jump to

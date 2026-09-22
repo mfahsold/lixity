@@ -49,9 +49,9 @@ foundation of its analysis: **T**TR, **Y**ule's characteristic $K$, and
   content-hash IDs and free-text notes, writable from the dashboard or API.
 - **Idempotent workspace build:** `lixity build` publishes a reproducible
   artifact set; unchanged input causes zero writes.
-- **Coherent dashboard:** optional component status strip, clickable KPIs
-  that drill down and preselect the matching filter, style-reference band
-  chart, deviation layer.
+- **Coherent dashboard:** optional component status strip, dialogue and
+  character-presence panels, clickable KPIs that drill down and preselect the
+  matching filter, style-reference band chart, deviation layer.
 - **Agent-ready:** strict JSON schemas with meta blocks, clean exit codes, a
   stable `lixity.api` facade, and an agent guide in
   [`docs/AGENTS.md`](docs/AGENTS.md).

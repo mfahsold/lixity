@@ -26,6 +26,8 @@ sys.path.insert(0, str(BASE_DIR / "src"))
 from rich.console import Console  # noqa: E402
 
 from lixity import CorpusAnalyzer, CorpusConfig, ReportFormatter  # noqa: E402
+from lixity.characters import presence_report  # noqa: E402
+from lixity.dialogue import dialogue_report  # noqa: E402
 from lixity.language import resolve_language  # noqa: E402
 from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.markers import add_marker  # noqa: E402
@@ -188,6 +190,8 @@ def main() -> int:
         metrics=metrics,
         fingerprint=fingerprint,
         status=status,
+        dialogue=dialogue_report(text, config).to_dict(),
+        characters=presence_report(text, ["Effi", "Innstetten", "Crampas", "Briest"], config),
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,
