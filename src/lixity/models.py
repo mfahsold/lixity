@@ -1,0 +1,179 @@
+"""
+scripts/engine/models.py
+========================
+Pydantic v2-Datenmodelle für quantitative Korpuslinguistik, Stilometrie,
+Satzlängenarchitektur, Kapitelmetriken und Synchronisations-Audits.
+
+Strikte Schemadefinitionen gewährleisten Typsicherheit, automatische Validierung
+und standardkonforme orjson-Serialisierung sowohl für interne Workflows als auch
+für die spätere Bereitstellung als eigenständiges Open-Source-Paket.
+"""
+
+from typing import Dict, List, Optional
+from pydantic import BaseModel, Field
+
+
+class CorpusConfig(BaseModel):
+    """
+    Konfigurationsschema für die quantitative Korpusanalyse.
+
+    Sprachabhängige Muster (Tempus, Dialog, Worttoken, Filterverben,
+    Signalwörter) sind als **optionale Overrides** definiert: ``None`` bedeutet
+    "nimm den Standard des gewählten Sprachprofils" (``scripts/engine/language.py``).
+    Damit funktioniert die Engine für jede Sprache und jeden Schreibstil, ohne
+    Codeänderung – neue Sprachen werden als ``LanguageProfile`` registriert.
+    """
+
+    chapter_regex: str = Field(
+        default=r"(?m)^##\s+", description="Regulärer Ausdruck zur Erkennung von Kapitelgrenzen."
+    )
+    appendix_marker: str = Field(
+        default="## Anmerkungen und Literaturverzeichnis",
+        description="Trennmarker, ab welchem Fließprosa in wissenschaftlichen Anhang übergeht.",
+    )
+    language: str = Field(
+        default="de",
+        description="Sprachschlüssel des Sprachprofils ('de', 'en', 'generic'; erweiterbar).",
+    )
+    min_paragraph_length_for_oneliner: int = Field(
+        default=25,
+        description="Wortschwelle, unterhalb derer ein Absatz als potentieller Einzeiler klassifiziert wird.",
+    )
+    motif_regexes: Dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Projekt-/roman-spezifische Leitmotive als Label→RegEx (z. B. Titelwortfelder). "
+            "Wird je Kapitel gezählt (ChapterMetrics.motif_counts)."
+        ),
+    )
+
+    # Optionale Sprach-Overrides (None = Standard des Sprachprofils)
+    signal_keywords: Optional[Dict[str, str]] = Field(
+        default=None,
+        description="Thematische Signalwörter als Label→RegEx (None = Sprachprofil-Standard).",
+    )
+    filter_verbs_regex: Optional[str] = Field(
+        default=None,
+        description="RegEx für Perzeptionsfilter ('Telling'-Indikatoren; None = Sprachprofil-Standard).",
+    )
+    praesens_regex: Optional[str] = Field(
+        default=None,
+        description="RegEx für Gegenwartsmarker (Präsens; None = Sprachprofil-Standard).",
+    )
+    praeteritum_regex: Optional[str] = Field(
+        default=None,
+        description="RegEx für Vergangenheitsmarker (Präteritum; None = Sprachprofil-Standard).",
+    )
+    dialogue_regex: Optional[str] = Field(
+        default=None,
+        description="RegEx zur Erkennung wörtlicher Rede (None = Sprachprofil-Standard).",
+    )
+    word_regex: Optional[str] = Field(
+        default=None,
+        description="RegEx zur Worttokenisierung (None = Sprachprofil-Standard).",
+    )
+
+
+class SentenceDistribution(BaseModel):
+    """
+    Statistische Verteilung der Satzlängenarchitektur.
+    Dient der Analyse des rhythmischen Staccato vs. kaskadierender Perioden.
+    """
+
+    short_count: int = Field(description="Anzahl Kurzsätze (<= 6 Wörter, Staccato/Befehle).")
+    short_pct: float = Field(description="Prozentualer Anteil der Kurzsätze.")
+    medium_count: int = Field(description="Anzahl mittlerer Sätze (7–15 Wörter, Normprosa).")
+    medium_pct: float = Field(description="Prozentualer Anteil der mittleren Sätze.")
+    long_count: int = Field(description="Anzahl langer Sätze (16–25 Wörter, Erweiterung).")
+    long_pct: float = Field(description="Prozentualer Anteil der langen Sätze.")
+    complex_count: int = Field(description="Anzahl komplexer Hypotaxen (> 25 Wörter).")
+    complex_pct: float = Field(description="Prozentualer Anteil komplexer Hypotaxen.")
+
+
+class ChapterMetrics(BaseModel):
+    """
+    Linguistisches und narratologisches Profil eines einzelnen Kapitels.
+    """
+
+    num: int = Field(description="Kapitelnummer (1-basiert).")
+    title: str = Field(description="Bereinigter Kapiteltitel.")
+    words: int = Field(description="Reine Wortanzahl des Kapitels ohne Markdown-Kommentare.")
+    sentences: int = Field(description="Anzahl der Sinneinheiten/Sätze im Kapitel.")
+    asl: float = Field(description="Mittlere Satzlänge (Average Sentence Length) in Wörtern.")
+    dialog_pct: float = Field(description="Prozentualer Anteil wörtlicher Rede am Text.")
+    ttr: float = Field(description="Type-Token-Ratio des Kapitels (lexikalische Dichte).")
+    motif_counts: Dict[str, int] = Field(
+        default_factory=dict,
+        description="Kapitelzählung der konfigurierten Leitmotive (CorpusConfig.motif_regexes).",
+    )
+    filter_verbs: int = Field(default=0, description="Häufigkeit von Perzeptionsfiltern.")
+    dominance: str = Field(
+        default="Hybrid / Montage", description="Tempus-Tendenz (Präsens vs. Präteritum)."
+    )
+    signal_matches: Dict[str, int] = Field(
+        default_factory=dict, description="Generische Fundstellen aller Signalwörter."
+    )
+
+
+class CorpusMetrics(BaseModel):
+    """
+    Gesamtheitliche quantitative und stilometrische Metriken des Manuskripts.
+    """
+
+    raw_words: int = Field(description="Wortzahl Volltext inklusive Anhang und Verzeichnisse.")
+    clean_words: int = Field(description="Bereinigte Wortzahl der reinen Romanprosa.")
+    raw_chars: int = Field(description="Gesamtzeichenzahl inklusive Leerzeichen und Anhang.")
+    clean_chars: int = Field(description="Bereinigte Zeichenzahl der reinen Romanprosa.")
+    tokens: int = Field(description="Gesamtzahl analysierter Wort-Token (N).")
+    vocab_types: int = Field(description="Anzahl distinkter Vokabulartypen (V).")
+    ttr: float = Field(description="Type-Token-Ratio (V / N, lexikalische Diversität).")
+    guiraud_r: float = Field(description="Guiraud-Index R = V / sqrt(N), textlängenstabilisiert.")
+    yules_k: float = Field(description="Yule's Characteristic K (Stabilität des Erzähleridioms).")
+    total_sentences: int = Field(description="Gesamtzahl Sätze der reinen Romanprosa.")
+    asl: float = Field(description="Mittlere Satzlänge (Average Sentence Length).")
+    median_sl: int = Field(description="Median der Satzlänge in Wörtern.")
+    std_sl: float = Field(description="Standardabweichung der Satzlänge.")
+    sentence_dist: SentenceDistribution = Field(description="Satzlängen-Architekturprofil.")
+    asw: float = Field(description="Mittlere Silbenanzahl pro Wort (Average Syllables per Word).")
+    flesch_de: float = Field(description="Flesch Reading Ease (deutsche Amstad-Formel).")
+    lix: float = Field(description="Läsbarhetsindex (LIX = ASL + % Langwörter > 6 Buchstaben).")
+    dialog_words: int = Field(description="Wortanzahl in wörtlicher Rede.")
+    dialog_ratio: float = Field(description="Prozentualer Dialoganteil an der Romanprosa.")
+    total_paragraphs: int = Field(description="Gesamtzahl der Fließprosa-Absätze.")
+    avg_paragraph_len: float = Field(description="Mittlere Absatzlänge in Wörtern.")
+    single_line_paragraphs: int = Field(description="Anzahl kurzer/isolierter Absätze.")
+    punctuation: Dict[str, int] = Field(description="Absolute Häufigkeiten aller Satzzeichen.")
+    signal_counts: Dict[str, int] = Field(description="Fundstellen der Signal-Keywords.")
+    filter_count: int = Field(description="Gesamtzahl gefundener Perzeptionsfilter.")
+    chapters: List[ChapterMetrics] = Field(description="Detaillierte Metriken aller Einzelkapitel.")
+
+
+class DossierStatus(BaseModel):
+    """
+    Synchronisations- und Konsistenzstatus eines einzelnen Begleitdossiers.
+    """
+
+    ok: bool = Field(description="True wenn das Dossier 100% synchron zum Manuskript ist.")
+    details: str = Field(description="Kurzbeschreibung der geprüften Domäne.")
+    drift: List[str] = Field(
+        default_factory=list, description="Liste identifizierter Diskrepanzen."
+    )
+
+
+class CorpusAuditReport(BaseModel):
+    """
+    Vollständiger Audit-Bericht zur Abwehr von Zerfaserung und Dokumentationsdrift.
+    """
+
+    manuscript: str = Field(description="Dateiname des analysierten Manuskripts.")
+    raw_words: int = Field(description="Gesamtwortzahl Volltext.")
+    main_words: int = Field(description="Bereinigte Wortzahl Romanprosa.")
+    chars: int = Field(description="Gesamtzeichenzahl.")
+    asl: float = Field(description="Mittlere Satzlänge.")
+    ttr: float = Field(description="Lexikalische Diversität.")
+    markers: int = Field(description="Anzahl noch offener Arbeitsmarker (PRÜFEN/SACHCHECK).")
+    kap23_words: int = Field(description="Wortanzahl Kapitel 23.")
+    kap24_words: int = Field(description="Wortanzahl Kapitel 24.")
+    kap25_words: Optional[int] = Field(default=None, description="Wortanzahl Kapitel 25.")
+    dossiers: Dict[str, DossierStatus] = Field(description="Audit-Ergebnisse je Begleitdossier.")
+    all_synced: bool = Field(description="True wenn ausnahmslos alle Dossiers synchron sind.")

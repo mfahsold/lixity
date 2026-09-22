@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Lixity – Textlinguistik & Stilometrie</title>
+<style>
+:root { --bg:#f6f7f9; --fg:#16181d; --muted:#6b7280; --line:#e5e7eb; --accent:#3b6ea5; }
+@media (prefers-color-scheme: dark) { :root { --bg:#111318; --fg:#e8eaf0; --muted:#9aa1ae; --line:#272b35; } }
+* { box-sizing: border-box; }
+body { margin:0; padding:4rem 1.5rem; background:var(--bg); color:var(--fg);
+  font:16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 46rem; margin: 0 auto; }
+h1 { font-size: 2.2rem; margin: 0 0 .4rem; letter-spacing: -.02em; }
+.sub { color: var(--muted); margin: 0 0 2rem; }
+code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
+pre { background:#00000008; border:1px solid var(--line); border-radius:12px; padding:1rem; overflow:auto; }
+a { color: var(--accent); }
+.card { border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; margin:1rem 0; background:#ffffff08; }
+.metrics { display:flex; flex-wrap:wrap; gap:.6rem; }
+.metrics span { border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; font-size:.85rem; color:var(--muted); }
+footer { margin-top:3rem; color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Lixity</h1>
+  <p class="sub">Quantitative Textlinguistik, Stilometrie und idempotente Publikationspipelines
+  für literarische Manuskripte. Der Name verbindet <b>T</b>TR, <b>Y</b>ule&rsquo;s K und <b>LIX</b>.</p>
+  <div class="metrics">
+    <span>ASL</span><span>TTR</span><span>Guiraud R</span><span>Yule&rsquo;s K</span>
+    <span>Flesch</span><span>LIX</span><span>Tempusprofile</span><span>7 Sprachen</span>
+  </div>
+  <div class="card">
+    <h2>Installation</h2>
+    <pre>pip install git+https://github.com/mfahsold/lixity.git</pre>
+  </div>
+  <div class="card">
+    <h2>Nutzung</h2>
+    <pre>lixity analyze manuskript.md
+lixity profile manuskript.md
+lixity dashboard manuskript.md -o ui.html</pre>
+  </div>
+  <div class="card">
+    <h2>Lizenz</h2>
+    <p><b>Lixity Non-Commercial License 1.0 (LNCL-1.0)</b> – frei für Forschung, Lehre und
+    klar nicht-kommerzielle Projekte. Kommerzielle Nutzung nur mit schriftlicher Lizenz
+    auf Anfrage: <a href="mailto:mfahsold@googlemail.com">mfahsold@googlemail.com</a>.</p>
+  </div>
+  <footer>© 2026 Matthias Fahsold · <a href="https://github.com/mfahsold/lixity">github.com/mfahsold/lixity</a></footer>
+</main>
+</body>
+</html>

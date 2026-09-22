@@ -1,0 +1,87 @@
+# Lixity Non-Commercial License 1.0 (LNCL-1.0)
+
+**Copyright (c) 2026 Matthias Fahsold, Hamburg. Alle Rechte vorbehalten / All rights reserved.**
+
+Lixity ist eine quelloffene (source-available) Software für quantitative
+Textlinguistik, Stilometrie und reproduzierbare Publikationspipelines.
+Die Lizenz erlaubt **ausschließlich nicht-kommerzielle Nutzung**.
+
+---
+
+## 1. Begriffsbestimmungen
+
+- **Software**: der Quellcode in `scripts/engine/` (Paket »Lixity«) einschließlich
+  Dokumentation, Tests und Beispieldaten dieses Repositories, soweit sie der
+  Engine zuzuordnen sind.
+- **Nicht-kommerzielle Nutzung**: Nutzung zu Forschungs-, Lehr-, Studien- und
+  privaten Zwecken sowie in Projekten, die weder unmittelbar noch mittelbar auf
+  Gewinnerzielung oder kommerziellen Vorteil gerichtet sind (z. B. akademische
+  Forschung, gemeinnützige Organisationen, nicht-kommerzielle Kunst- und
+  Literaturprojekte).
+- **Kommerzielle Nutzung**: jede Nutzung, die auf Gewinnerzielung, geschäftlichen
+  Vorteil oder entgeltliche Leistung gerichtet ist – insbesondere Einsatz in
+  oder für Produkte, Dienstleistungen, Beratung, Agentur-, Verlags- oder
+  SaaS-Angebote, bezahlte Auftragsarbeiten und der Vertrieb entgeltlicher
+  Auswertungen.
+
+## 2. Gewährte Rechte (nicht-kommerziell)
+
+Für nicht-kommerzielle Nutzung wird hiermit unentgeltlich gestattet:
+
+1. die Software zu verwenden, auszuführen und zu vervielfältigen,
+2. die Software zu untersuchen, zu verändern und anzupassen,
+3. veränderte oder unveränderte Fassungen weiterzugeben,
+
+sofern in allen Fällen (a) dieser Lizenztext vollständig beigefügt wird,
+(b) der Urheberrechtsvermerk erhalten bleibt, (c) wesentliche Änderungen
+deutlich als solche gekennzeichnet werden und (d) die Weitergabe ausschließlich
+unter dieser Lizenz (einschließlich dieses Abschnitts) erfolgt.
+
+## 3. Kommerzielle Nutzung nur mit gesonderter Lizenz
+
+Jede kommerzielle Nutzung ist **ohne vorherige, ausdrückliche und schriftliche
+Lizenzierung untersagt**. Eine kommerzielle Lizenz wird individuell erteilt und
+ist manuell anzufragen:
+
+> **E-Mail:** mfahsold@googlemail.com
+> **Betreff:** »Lixity – kommerzielle Lizenzierung«
+
+Die Anfrage sollte Einsatzzweck, Organisation, Umfang (Nutzer, Projekte,
+Deployment) und ggf. geplante Weitergabe beschreiben.
+
+## 4. Keine Markenrechte
+
+Diese Lizenz gewährt keine Rechte an Namen, Logos oder Marken. Der Name »Lixity«
+darf zur Bezeichnung unveränderter Fassungen verwendet werden; veränderte
+Fassungen sind als solche zu kennzeichnen.
+
+## 5. Gewährleistungsausschluss
+
+DIE SOFTWARE WIRD »WIE BESEHEN« BEREITGESTELLT, OHNE JEGLICHE AUSDRÜCKLICHE
+ODER STILLSCHWEIGENDE GEWÄHRLEISTUNG – EINSCHLIESSLICH, ABER NICHT BESCHRÄNKT
+AUF MARKTGÄNGIGKEIT, EIGNUNG FÜR EINEN BESTIMMTEN ZWECK UND NICHTVERLETZUNG
+VON RECHTEN DRITTER. DIE HAFTUNG DES URHEBERS IST – SOWEIT GESETZLICH ZULÄSSIG
+– AUF VORSATZ UND GROBE FAHRLÄSSIGKEIT BEGRENZT.
+
+## 6. Beendigung
+
+Bei Verstoß gegen diese Lizenz enden die gewährten Rechte automatisch. Eine
+kommerzielle Nutzung ohne Lizenz stellt einen Verstoß dar.
+
+## 7. Anwendbares Recht
+
+Es gilt deutsches Recht. Gerichtsstand ist – soweit zulässig – Hamburg.
+
+---
+
+## Hinweis / Note
+
+Diese Lizenz ist **keine** von der Open Source Initiative (OSI) anerkannte
+Open-Source-Lizenz, sondern eine **source-available Lizenz mit
+Nicht-Kommerziell-Klausel**. Das Buchmanuskript selbst
+(»Eigentlich werde ich nie wütend«) ist davon unberührt und bleibt vollständig
+urheberrechtlich geschützt; alle Rechte liegen beim Autor.
+
+*This is a source-available, non-commercial license. Commercial use requires a
+separate written license (contact: mfahsold@googlemail.com). The novel
+manuscript is not covered by this license and remains fully protected.*

@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "lixity"
+version = "1.0.0"
+description = "Lixity – quantitative text linguistics, stylometry, tense profiling and idempotent publication pipelines for literary markdown manuscripts. Non-commercial license."
+readme = "README.md"
+requires-python = ">=3.9"
+license = { text = "Lixity Non-Commercial License 1.0 (see LICENSE); commercial licensing on request" }
+authors = [{ name = "Matthias Fahsold", email = "mfahsold@googlemail.com" }]
+keywords = ["computational-linguistics", "stylometry", "tense-analysis", "corpus-linguistics", "multilingual", "manuscript-analysis"]
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "License :: Free for non-commercial use",
+    "Intended Audience :: Science/Research",
+    "Topic :: Text Processing :: Linguistic",
+    "Programming Language :: Python :: 3",
+]
+dependencies = ["pydantic>=2.0.0", "rich>=13.0.0", "orjson>=3.9.0"]
+
+[project.scripts]
+lixity = "lixity.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"

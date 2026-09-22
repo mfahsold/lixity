@@ -1,0 +1,1854 @@
+"""
+scripts/engine/language_data.py
+===============================
+Datenschicht der Sprachprofile: kuratierte Tempusmarker, Stopwörter und
+Signal-/Filterwörter je Sprache.
+
+Die Muster stützen sich auf öffentliche Frequenz- und Konjugationsreferenzen
+(Wiktionary-Frequenzlisten, Lingolia, SpanishDict, OneWorldItaliano,
+UOL/Portal da Língua Portuguesa, HeardDutchHere) sowie auf die regulären
+Tempus-Endungen der jeweiligen Sprache (vgl. LANGUAGE_PATTERNS):
+
+- Französisch: Imparfait ``-ais/-ait/-aient`` und Passé composé ``Hilfsverb + Partizip``
+- Spanisch: Imperfecto ``-aba/-aban``, ``-ía/-ían``; Pretérito (kuratiert); Perfecto ``haber + -ado/-ido``
+- Italienisch: Imperfetto ``-avo/-ava/-evi/-eva/-ivo/-iva``; Passato prossimo ``avere/essere + Partizip``
+- Portugiesisch: Imperfeito ``-ava/-avam``, ``-ia/-iam``; Pretérito (kuratiert); Perfeito composto ``ter + Partizip``
+- Niederländisch: schwache Vergangenheit ``Pronomen + -te/-de(n)``; Perfekt ``hebben/zijn + ge-…``
+- Deutsch/Englisch: kuratierte Hochfrequenz-Verbformen
+
+Die ``stopwords`` dienen der abhängigkeitsfreien Spracherkennung
+(``language.detect_language``); Stopwort-Verfahren sind für Fließtexte
+belastbar, für Einzelwörter jedoch unzuverlässig (vgl. fastlang/langidentify).
+
+Neue Sprachen: Eintrag ergänzen – Analyzer, Profiler und UI folgen automatisch.
+"""
+
+# Sprachabhängige UI-Labels (fehlende Schlüssel fallen auf Englisch zurück)
+DE_LABELS = {
+    "app_suffix": "Stil- & Tempusanalyse",
+    "present": "Präsens",
+    "past": "Präteritum",
+    "mixed": "Gemischt",
+    "neutral": "Neutral",
+    "severity_0": "unauffällig",
+    "severity_1": "beobachten",
+    "severity_2": "auffällig",
+    "severity_3": "starke Friktion",
+    "chapter": "Kapitel",
+    "paragraphs": "Absätze",
+    "words": "Wörter",
+    "words_prose": "Wörter (Prosa)",
+    "flagged": "Auffällig",
+    "filter_flags": "Nur Auffälligkeiten",
+    "legend": "Legende",
+    "line": "Z.",
+    "top": "nach oben",
+    "no_tense": "Keine Tempusmarker im gewählten Sprachprofil – es werden Zeilenanker, Absatz-, Satz- und Dialogprofil angezeigt.",
+    "hint": "Klick auf einen Absatz zeigt Text und Zeilenanker.",
+}
+
+EN_LABELS = {
+    "app_suffix": "Style & Tense Analysis",
+    "present": "Present",
+    "past": "Past",
+    "mixed": "Mixed",
+    "neutral": "Neutral",
+    "severity_0": "unremarkable",
+    "severity_1": "watch",
+    "severity_2": "noticeable",
+    "severity_3": "strong friction",
+    "chapter": "Chapter",
+    "paragraphs": "paragraphs",
+    "words": "words",
+    "words_prose": "words (prose)",
+    "flagged": "flagged",
+    "filter_flags": "Flagged only",
+    "legend": "Legend",
+    "line": "l.",
+    "top": "back to top",
+    "no_tense": "No tense markers for the selected language profile – line anchors, paragraph, sentence and dialogue profiles remain available.",
+    "hint": "Click a paragraph to show text and line anchors.",
+}
+
+FR_LABELS = {
+    "app_suffix": "Analyse du style et des temps",
+    "present": "Présent",
+    "past": "Passé",
+    "mixed": "Mixte",
+    "neutral": "Neutre",
+    "severity_0": "anodin",
+    "severity_1": "à surveiller",
+    "severity_2": "notable",
+    "severity_3": "forte friction",
+    "chapter": "Chapitre",
+    "paragraphs": "paragraphes",
+    "words": "mots",
+    "words_prose": "mots (prose)",
+    "flagged": "signalés",
+    "filter_flags": "Signalés uniquement",
+    "line": "l.",
+    "top": "en haut",
+}
+
+ES_LABELS = {
+    "app_suffix": "Análisis de estilo y tiempos",
+    "present": "Presente",
+    "past": "Pasado",
+    "mixed": "Mixto",
+    "neutral": "Neutro",
+    "severity_0": "sin incidencias",
+    "severity_1": "a revisar",
+    "severity_2": "notable",
+    "severity_3": "fricción fuerte",
+    "chapter": "Capítulo",
+    "paragraphs": "párrafos",
+    "words": "palabras",
+    "words_prose": "palabras (prosa)",
+    "flagged": "señalados",
+    "filter_flags": "Solo señalados",
+    "line": "l.",
+    "top": "arriba",
+}
+
+IT_LABELS = {
+    "app_suffix": "Analisi di stile e tempi",
+    "present": "Presente",
+    "past": "Passato",
+    "mixed": "Misto",
+    "neutral": "Neutro",
+    "severity_0": "nessuna anomalia",
+    "severity_1": "da osservare",
+    "severity_2": "notevole",
+    "severity_3": "forte frizione",
+    "chapter": "Capitolo",
+    "paragraphs": "paragrafi",
+    "words": "parole",
+    "words_prose": "parole (prosa)",
+    "flagged": "segnalati",
+    "filter_flags": "Solo segnalati",
+    "line": "r.",
+    "top": "in alto",
+}
+
+PT_LABELS = {
+    "app_suffix": "Análise de estilo e tempos",
+    "present": "Presente",
+    "past": "Passado",
+    "mixed": "Misto",
+    "neutral": "Neutro",
+    "severity_0": "sem ocorrências",
+    "severity_1": "a observar",
+    "severity_2": "notável",
+    "severity_3": "fricção forte",
+    "chapter": "Capítulo",
+    "paragraphs": "parágrafos",
+    "words": "palavras",
+    "words_prose": "palavras (prosa)",
+    "flagged": "sinalizados",
+    "filter_flags": "Apenas sinalizados",
+    "line": "l.",
+    "top": "acima",
+}
+
+NL_LABELS = {
+    "app_suffix": "Stijl- en tempusanalyse",
+    "present": "Tegenwoordige tijd",
+    "past": "Verleden tijd",
+    "mixed": "Gemengd",
+    "neutral": "Neutraal",
+    "severity_0": "onopvallend",
+    "severity_1": "observeren",
+    "severity_2": "opvallend",
+    "severity_3": "sterke frictie",
+    "chapter": "Hoofdstuk",
+    "paragraphs": "alinea's",
+    "words": "woorden",
+    "words_prose": "woorden (proza)",
+    "flagged": "gemarkeerd",
+    "filter_flags": "Alleen gemarkeerd",
+    "line": "r.",
+    "top": "omhoog",
+}
+
+LABELS = {
+    "de": DE_LABELS,
+    "en": EN_LABELS,
+    "fr": FR_LABELS,
+    "es": ES_LABELS,
+    "it": IT_LABELS,
+    "pt": PT_LABELS,
+    "nl": NL_LABELS,
+    "generic": EN_LABELS,
+}
+
+PROFILE_DATA = {
+    "de": {
+        "name": "Deutsch",
+        "syllable_mode": "de",
+        "word_regex": r"\b[a-zA-ZäöüÄÖÜß0-9_-]+\b",
+        "dialogue_regex": r'[„»\"]([^“«\"]+)[“«\"]',
+        "praesens_regex": (
+            r"\b("
+        "bin|bist|ist|sind|seid|habe|hast|hat|"
+        "haben|habt|werde|wirst|wird|werden|werdet|kann|"
+        "kannst|können|könnt|muss|musst|müssen|müsst|will|"
+        "willst|wollen|wollt|soll|sollst|sollen|sollt|darf|"
+        "darfst|dürfen|dürft|mag|magst|mögen|mögt|weiß|"
+        "weißt|wissen|wisst|denke|denkst|denkt|denken|glaube|"
+        "glaubst|glaubt|glauben|brauche|brauchst|braucht|brauchen|mache|"
+        "machst|macht|machen|sage|sagst|sagt|sagen|frage|"
+        "fragst|fragt|fragen|trinke|trinkst|trinkt|trinken|esse|"
+        "isst|esst|essen|sehe|siehst|sieht|sehen|seht|"
+        "komme|kommst|kommt|kommen|gehe|gehst|geht|gehen|"
+        "stehe|stehst|steht|stehen|sitze|sitzt|sitzen|liege|"
+        "liegst|liegt|liegen|fahre|fährst|fährt|fahren|laufe|"
+        "läufst|läuft|laufen|lese|liest|lesen|schreibe|schreibst|"
+        "schreibt|schreiben|höre|hörst|hört|hören|fühle|fühlst|"
+        "fühlt|fühlen|spüre|spürst|spürt|spüren|merke|merkst|"
+        "merkt|merken|nehme|nimmst|nimmt|nehmen|gebe|gibst|"
+        "gibt|geben|finde|findest|findet|finden|halte|hältst|"
+        "hält|halten|ziehe|ziehst|zieht|ziehen|tue|tust|"
+        "tut|tun|lasse|lässt|lassen|rufe|rufst|ruft|"
+        "rufen|bleibe|bleibst|bleibt|bleiben|koche|kochst|kocht|"
+        "kochen|setze|setzt|setzen|lege|legst|legt|legen|"
+        "warte|wartest|wartet|warten|rede|redest|redet|reden|"
+        "erzähle|erzählst|erzählt|erzählen|spiele|spielst|spielt|spielen|"
+        "lache|lachst|lacht|lachen|schaue|schaust|schaut|schauen|"
+        "hole|holst|holt|holen|stelle|stellst|stellt|stellen|"
+        "packe|packst|packt|packen|drehe|drehst|dreht|drehen"
+            r")\b"
+        ),
+        "praeteritum_regex": (
+            r"\b("
+        "war|warst|wart|waren|hatte|hattest|hattet|hatten|"
+        "wurde|wurdest|wurdet|wurden|konnte|konntest|konntet|konnten|"
+        "musste|musstest|musstet|mussten|wollte|wolltest|wolltet|wollten|"
+        "sollte|solltest|solltet|sollten|durfte|durftest|durftet|durften|"
+        "mochte|mochtest|mochtet|mochten|wusste|wusstest|wusstet|wussten|"
+        "ging|gingst|gingen|kam|kamst|kamen|sah|sahst|"
+        "sahen|trank|trankst|tranken|sprach|sprachst|sprachen|stand|"
+        "standen|lag|lagst|lagen|saß|saßen|fand|fanden|"
+        "hieß|hießen|ließ|ließen|rief|riefen|lief|liefen|"
+        "schrieb|schrieben|blieb|blieben|gab|gabst|gaben|nahm|"
+        "nahmst|nahmen|hielt|hielten|zog|zogen|tat|taten|"
+        "bat|baten|bot|boten|fuhr|fuhren|flog|flogen|"
+        "fiel|fielen|fing|fingen|schlug|schlugen|schnitt|schnitten|"
+        "schloss|schlossen|trat|traten|wuchs|wuchsen|wusch|wuschen|"
+        "brachte|brachten|dachte|dachten|kannte|kannten|nannte|nannten|"
+        "rannte|rannten|warf|warfen|wies|wiesen|aß|aßen|"
+        "genoss|genossen|entschied|entschieden|versprach|versprachen|vergaß|vergaßen|"
+        "verlor|verloren|verstand|verstanden|verließ|verließen|begann|begannen|"
+        "gewann|gewannen|schwieg|schwiegen|stieg|stiegen|schien|schienen|"
+        "stieß|stießen|griff|griffen|spürte|spürten|hörte|hörten|"
+        "fühlte|fühlten|merkte|merkten|fragte|fragten|sagte|sagten|"
+        "machte|machten|setzte|setzten|legte|legten|holte|holten|"
+        "drehte|drehten|schaute|schauten|wartete|warteten|redete|redeten|"
+        "erzählte|erzählten|lächelte|lächelten|küsste|küssten|streichelte|streichelten|"
+        "wischte|wischten|packte|packten|stellte|stellten|atmete|atmeten|"
+        "weinte|weinten|nickte|nickten|zuckte|zuckten|zitterte|zitterten|"
+        "kippte|kippten|öffnete|öffneten|tanzte|tanzten|lachte|lachten|"
+        "kochte|kochten|träumte|träumten"
+            r")\b"
+        ),
+        "filter_verbs_regex": r"\b(spüre|spürte|fühle|fühlte|merke|merkte|glaube|glaubte)\b",
+        "signal_keywords": {"Wut/wütend": r"\b(Wut|wütend(?:e[rnms]?)?)\b", "Eigentlich": r"\beigentlich\b", "Vielleicht": r"\bvielleicht\b", "Irgendwie": r"\birgendwie\b"},
+        "stopwords": (
+            "der", "die", "das", "und", "ist", "sind", "war", "waren",
+            "ich", "du", "er", "sie", "es", "wir", "ihr", "nicht",
+            "mit", "auf", "für", "von", "zu", "den", "dem", "des",
+            "ein", "eine", "einen", "einem", "einer", "dass", "wie", "auch",
+            "aber", "wenn", "dann", "noch", "nur", "schon", "sich", "im",
+            "in", "an", "am", "als", "aus", "bei", "nach", "über",
+            "vor", "durch", "um", "oder", "weil", "doch", "mich", "mir",
+            "dir", "ihm", "ihn", "uns", "euch", "mein", "dein", "sein",
+            "ihre", "ihren", "dieser", "diese", "dieses",
+        ),
+    },
+    "en": {
+        "name": "English",
+        "syllable_mode": "generic",
+        "word_regex": r"\b[a-zA-Z0-9\'’-]+\b",
+        "dialogue_regex": r"[“\"]([^”\"]+)[”\"]",
+        "praesens_regex": (
+            r"\b("
+        "am|is|are|have|has|do|does|will|"
+        "can|must|shall|may|go|goes|come|comes|"
+        "see|sees|look|looks|feel|feels|think|thinks|"
+        "know|knows|want|wants|need|needs|make|makes|"
+        "take|takes|say|says|ask|asks|drink|drinks|"
+        "eat|eats|sit|sits|stand|stands|walk|walks|"
+        "drive|drives|read|reads|write|writes|hear|hears|"
+        "smile|smiles|laugh|laughs|cook|cooks|love|loves|"
+        "remember|remembers|forget|forgets|try|tries|stop|stops|"
+        "start|starts|turn|turns|open|opens|close|closes|"
+        "put|puts|give|gives|find|finds|tell|tells|"
+        "talk|talks|speak|speaks|live|lives|work|works|"
+        "sleep|sleeps|wake|wakes|wait|waits|watch|watches|"
+        "play|plays|hold|holds|keep|keeps|leave|leaves|"
+        "meet|meets|send|sends|understand|understands|wear|wears|"
+        "win|wins"
+            r")\b"
+        ),
+        "praeteritum_regex": (
+            r"\b("
+        "was|were|had|did|could|would|should|might|"
+        "went|came|saw|drank|spoke|stood|sat|found|"
+        "said|asked|felt|thought|knew|wanted|needed|made|"
+        "took|heard|smiled|laughed|cooked|loved|liked|tried|"
+        "stopped|started|turned|opened|closed|gave|told|talked|"
+        "lived|worked|slept|woke|drove|read|wrote|ate|"
+        "ran|walked|looked|watched|played|held|kept|left|"
+        "met|sent|understood|wore|won|got|became|began|"
+        "brought|bought|caught|chose|fell|fought|forgot|grew|"
+        "hung|hit|hurt|lost|paid|rose|sang|shot|"
+        "showed|shut|spent|taught|threw|rang|rode|swam"
+            r")\b"
+        ),
+        "filter_verbs_regex": r"\b(feel|felt|notice|noticed|sense|sensed|think|thought)\b",
+        "signal_keywords": {"Anger": r"\b(anger|angry|rage|furious)\b", "Actually": r"\bactually\b"},
+        "stopwords": (
+            "the", "and", "is", "are", "was", "were", "of", "to",
+            "in", "a", "an", "that", "it", "he", "she", "they",
+            "we", "you", "i", "not", "with", "for", "on", "as",
+            "at", "but", "if", "then", "this", "his", "her", "their",
+            "our", "my", "your", "from", "by", "or", "so", "there",
+            "what", "when", "who", "how", "all", "would", "could", "should",
+            "will", "have", "has", "had", "be", "been", "do", "does",
+            "did", "me", "him", "them", "us", "no", "yes",
+        ),
+    },
+    "fr": {
+        "name": "Français",
+        "syllable_mode": "generic",
+        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "dialogue_regex": r'[«\"“]([^»\"”]+)[»\"”]',
+        "praesens_regex": (
+            r"\b("
+        "suis|es|est|sommes|êtes|sont|ai|as|"
+        "a|avons|avez|ont|vais|vas|va|allons|"
+        "allez|vont|fais|fait|faisons|font|dis|dit|"
+        "disons|disent|prends|prend|prenons|prennent|veux|veut|"
+        "voulons|veulent|sais|sait|savons|savent|peux|peut|"
+        "pouvons|peuvent|dois|doit|devons|doivent|vois|voit|"
+        "voyons|voient|viens|vient|venons|viennent|pars|part|"
+        "partons|partent|sors|sort|sortons|sortent|mets|met|"
+        "mettons|mettent|connais|connaît|connaissons|connaissent|crois|croit|"
+        "croyons|croient|pense|pensons|pensent|trouve|trouvons|trouvent|"
+        "regarde|regardons|regardent|parle|parlons|parlent|mange|mangeons|"
+        "mangent|bois|boit|buvons|boivent|dors|dort|dormons|"
+        "dorment|vis|vit|vivons|vivent|écris|écrit|écrivons|"
+        "écrivent|lis|lit|lisons|lisent|attends|attend|attendons|"
+        "attendent|cherche|cherchons|cherchent|donne|donnons|donnent|aime|"
+        "aimons|aiment|marche|marchons|marchent|rentre|rentrons|rentrent"
+            r")\b"
+        ),
+        "praeteritum_regex": (
+            r"\b("
+        "étais|était|étions|étaient|avais|avait|avions|avaient|"
+        "allais|allait|allions|allaient|faisais|faisait|faisions|faisaient|"
+        "disais|disait|disions|disaient|prenais|prenait|prenions|prenaient|"
+        "voulais|voulait|voulions|voulaient|savais|savait|savions|savaient|"
+        "pouvais|pouvait|pouvions|pouvaient|devais|devait|devions|devaient|"
+        "voyais|voyait|voyions|voyaient|venais|venait|venions|venaient|"
+        "partais|partait|partions|partaient|sortais|sortait|sortions|sortaient|"
+        "mettais|mettait|mettions|mettaient|connaissais|connaissait|connaissions|connaissaient|"
+        "croyais|croyait|croyions|croyaient|pensais|pensait|pensions|pensaient|"
+        "trouvais|trouvait|trouvions|trouvaient|regardais|regardait|regardions|regardaient|"
+        "parlais|parlait|parlions|parlaient|mangeais|mangeait|mangions|mangeaient|"
+        "buvais|buvait|buvions|buvaient|dormais|dormait|dormions|dormaient|"
+        "vivais|vivait|vivions|vivaient|écrivais|écrivait|écrivions|écrivaient|"
+        "lisais|lisait|lisions|lisaient|attendais|attendait|attendions|attendaient|"
+        "cherchais|cherchait|cherchions|cherchaient|donnais|donnait|donnions|donnaient|"
+        "aimais|aimait|aimions|aimaient|marchais|marchait|marchions|marchaient|"
+        "fus|fut|furent|eut|eurent|alla|allèrent|fit|"
+        "firent|dit|dirent|prit|prirent|vit|virent|vint|"
+        "vinrent|sut|surent|put|purent|voulut|voulurent|dut|"
+        "durent"
+            r")\b"
+        ),
+        "filter_verbs_regex": r"\b(sens|sentais|ressens|ressentais|pense|pensais|crois|croyais)\b",
+        "signal_keywords": {"Colère": r"\b(colère|en colère|furieux)\b", "En fait": r"\ben fait\b"},
+        "stopwords": (
+            "le", "la", "les", "et", "est", "sont", "était", "étaient",
+            "je", "tu", "il", "elle", "nous", "vous", "ils", "elles",
+            "ne", "pas", "de", "des", "du", "un", "une", "que",
+            "qui", "dans", "pour", "avec", "sur", "mais", "comme", "se",
+            "ce", "cette", "ces", "son", "sa", "ses", "mon", "ma",
+            "mes", "ton", "ta", "tes", "au", "aux", "en", "y",
+            "dont", "où", "quand", "si", "plus", "moins", "très", "tout",
+            "tous", "toute", "aussi", "encore", "déjà", "bien", "même",
+        ),
+    },
+    "es": {
+        "name": "Español",
+        "syllable_mode": "generic",
+        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "dialogue_regex": r'[«\"“]([^»\"”]+)[»\"”]',
+        "praesens_regex": (
+            r"\b("
+        "soy|eres|es|somos|sois|son|estoy|estás|"
+        "está|estamos|estáis|están|tengo|tienes|tiene|tenemos|"
+        "tenéis|tienen|he|has|ha|hemos|habéis|han|"
+        "voy|vas|va|vamos|vais|van|hago|haces|"
+        "hace|hacemos|hacéis|hacen|digo|dices|dice|decimos|"
+        "decís|dicen|veo|ves|ve|vemos|veis|ven|"
+        "sé|sabes|sabe|sabemos|sabéis|saben|puedo|puedes|"
+        "puede|podemos|podéis|pueden|quiero|quieres|quiere|queremos|"
+        "queréis|quieren|hablo|hablas|habla|hablamos|habláis|hablan|"
+        "como|comes|come|comemos|coméis|comen|bebo|bebes|"
+        "bebe|bebemos|bebéis|beben|vivo|vives|vive|vivimos|"
+        "vivís|viven|pienso|piensas|piensa|pensamos|pensáis|piensan|"
+        "miro|miras|mira|miramos|miráis|miran|espero|esperas|"
+        "espera|esperamos|esperáis|esperan|necesito|necesitas|necesita|necesitamos|"
+        "necesitáis|necesitan|trabajo|trabajas|trabaja|trabajamos|trabajáis|trabajan|"
+        "llamo|llamas|llama|llamamos|llamáis|llaman|siento|sientes|"
+        "siente|sentimos|sentís|sienten|duermo|duermes|duerme|dormimos|"
+        "dormís|duermen|salgo|sales|sale|salimos|salís|salen|"
+        "vengo|vienes|viene|venimos|venís|vienen|pongo|pones|"
+        "pone|ponemos|ponéis|ponen|doy|das|da|damos|"
+        "dais|dan|traigo|traes|trae|traemos|traéis|traen|"
+        "conozco|conoces|conoce|conocemos|conocéis|conocen"
+            r")\b"
+        ),
+        "praeteritum_regex": (
+            r"\b("
+        "era|eras|éramos|eran|estaba|estabas|estábamos|estaban|"
+        "tenía|tenías|teníamos|tenían|había|habías|habíamos|habían|"
+        "iba|ibas|íbamos|iban|hacía|hacías|hacíamos|hacían|"
+        "decía|decías|decíamos|decían|veía|veías|veíamos|veían|"
+        "sabía|sabías|sabíamos|sabían|podía|podías|podíamos|podían|"
+        "quería|querías|queríamos|querían|hablaba|hablabas|hablaban|comía|"
+        "comías|comían|vivía|vivías|vivían|pensaba|pensabas|pensaban|"
+        "miraba|mirabas|miraban|esperaba|esperabas|esperaban|necesitaba|necesitabas|"
+        "necesitaban|trabajaba|trabajabas|trabajaban|llamaba|llamabas|llamaban|sentía|"
+        "sentías|sentían|dormía|dormías|dormían|salía|salías|salían|"
+        "venía|venías|venían|ponía|ponías|ponían|daba|dabas|"
+        "daban|traía|traías|traían|conocía|conocías|conocían|fui|"
+        "fue|fuimos|fueron|estuve|estuvo|estuvimos|estuvieron|tuve|"
+        "tuvo|tuvimos|tuvieron|hice|hizo|hicimos|hicieron|dije|"
+        "dijo|dijimos|dijeron|vi|vio|vimos|vieron|supe|"
+        "supo|supimos|supieron|pude|pudo|pudimos|pudieron|quise|"
+        "quiso|quisimos|quisieron|hablé|habló|hablamos|hablaron|comí|"
+        "comió|comimos|comieron|viví|vivió|vivimos|vivieron|pensé|"
+        "pensó|pensamos|pensaron|miré|miró|miramos|miraron|esperé|"
+        "esperó|esperamos|esperaron|trabajé|trabajó|trabajamos|trabajaron|llamé|"
+        "llamó|llamamos|llamaron|sentí|sintió|sentimos|sintieron|dormí|"
+        "durmió|dormimos|durmieron|salí|salió|salimos|salieron|vine|"
+        "vino|vinimos|vinieron|puse|puso|pusimos|pusieron|di|"
+        "dio|dimos|dieron|traje|trajo|trajimos|trajeron|conocí|"
+        "conoció|conocimos|conocieron|llegué|llegó|llegamos|llegaron|pasé|"
+        "pasó|pasamos|pasaron|empecé|empezó|empezamos|empezaron"
+            r")\b"
+        ),
+        "filter_verbs_regex": r"\b(siento|sentía|pienso|pensaba|creo|creía)\b",
+        "signal_keywords": {"Ira": r"\b(ira|enfadado|furioso)\b", "En realidad": r"\ben realidad\b"},
+        "stopwords": (
+            "el", "la", "los", "las", "y", "es", "son", "era",
+            "eran", "de", "del", "un", "una", "que", "en", "por",
+            "para", "con", "no", "se", "lo", "su", "sus", "mi",
+            "mis", "tu", "tus", "al", "como", "pero", "si", "más",
+            "menos", "muy", "todo", "todos", "también", "ya", "bien", "mismo",
+            "cuando", "donde", "quien", "este", "esta", "estos", "estas", "ese",
+            "esa", "aquel", "yo", "él", "ella", "nosotros", "ellos", "ellas",
+        ),
+    },
+    "it": {
+        "name": "Italiano",
+        "syllable_mode": "generic",
+        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "dialogue_regex": r'[«\"“]([^»\"”]+)[»\"”]',
+        "praesens_regex": (
+            r"\b("
+        "sono|sei|è|siamo|siete|ho|hai|ha|"
+        "abbiamo|avete|hanno|sto|stai|sta|stiamo|state|"
+        "stanno|vado|vai|va|andiamo|andate|vanno|faccio|"
+        "fai|fa|facciamo|fate|fanno|dico|dici|dice|"
+        "diciamo|dite|dicono|vedo|vedi|vede|vediamo|vedete|"
+        "vedono|so|sai|sa|sappiamo|sapete|sanno|posso|"
+        "puoi|può|possiamo|potete|possono|voglio|vuoi|vuole|"
+        "vogliamo|volete|vogliono|devo|devi|deve|dobbiamo|dovete|"
+        "devono|parlo|parli|parla|parliamo|parlate|parlano|mangio|"
+        "mangi|mangia|mangiamo|mangiate|mangiano|bevo|bevi|beve|"
+        "beviamo|bevete|bevono|vivo|vivi|vive|viviamo|vivete|"
+        "vivono|penso|pensi|pensa|pensiamo|pensate|pensano|guardo|"
+        "guardi|guarda|guardiamo|guardate|guardano|aspetto|aspetti|aspetta|"
+        "aspettiamo|aspettate|aspettano|lavoro|lavori|lavora|lavoriamo|lavorate|"
+        "lavorano|chiamo|chiami|chiama|chiamiamo|chiamate|chiamano|sento|"
+        "senti|sente|sentiamo|sentite|sentono|dormo|dormi|dorme|"
+        "dormiamo|dormite|dormono|esco|esci|esce|usciamo|uscite|"
+        "escono|vengo|vieni|viene|veniamo|venite|vengono|metto|"
+        "metti|mette|mettiamo|mettete|mettono|do|dai|dà|"
+        "diamo|date|danno|porto|porti|porta|portiamo|portate|"
+        "portano|trovo|trovi|trova|troviamo|trovate|trovano"
+            r")\b"
+        ),
+        "praeteritum_regex": (
+            r"\b("
+        "ero|eri|era|eravamo|eravate|erano|avevo|avevi|"
+        "aveva|avevamo|avevate|avevano|stavo|stavi|stava|stavamo|"
+        "stavate|stavano|andavo|andavi|andava|andavamo|andavano|facevo|"
+        "facevi|faceva|facevamo|facevano|dicevo|dicevi|diceva|dicevamo|"
+        "dicevano|vedevo|vedevi|vedeva|vedevamo|vedevano|sapevo|sapevi|"
+        "sapeva|sapevamo|sapevano|potevo|potevi|poteva|potevamo|potevano|"
+        "volevo|volevi|voleva|volevamo|volevano|dovevo|dovevi|doveva|"
+        "dovevamo|dovevano|parlavo|parlavi|parlava|parlavamo|parlavano|mangiavo|"
+        "mangiavi|mangiava|mangiavamo|mangiavano|bevevo|bevevi|beveva|bevevamo|"
+        "bevevano|vivevo|vivevi|viveva|vivevamo|vivevano|pensavo|pensavi|"
+        "pensava|pensavamo|pensavano|guardavo|guardavi|guardava|guardavamo|guardavano|"
+        "aspettavo|aspettavi|aspettava|aspettavamo|aspettavano|lavoravo|lavoravi|lavorava|"
+        "lavoravamo|lavoravano|chiamavo|chiamavi|chiamava|chiamavamo|chiamavano|sentivo|"
+        "sentivi|sentiva|sentivamo|sentivano|dormivo|dormivi|dormiva|dormivamo|"
+        "dormivano|uscivo|uscivi|usciva|uscivamo|uscivano|venivo|venivi|"
+        "veniva|venivamo|venivano|mettevo|mettevi|metteva|mettevamo|mettevano|"
+        "davo|davi|dava|davamo|davano|portavo|portavi|portava|"
+        "portavamo|portavano|trovavo|trovavi|trovava|trovavamo|trovavano|fui|"
+        "fu|furono|ebbi|ebbe|andai|andò|feci|fece|"
+        "dissi|disse|vidi|vide|seppi|seppe|potei|poté|"
+        "volli|volle|dovetti|dovette|parlai|parlò|mangiai|mangiò|"
+        "vissi|visse"
+            r")\b"
+        ),
+        "filter_verbs_regex": r"\b(sento|sentivo|penso|pensavo|credo|credevo)\b",
+        "signal_keywords": {"Rabbia": r"\b(rabbia|arrabbiato|furioso)\b", "In realtà": r"\bin realtà\b"},
+        "stopwords": (
+            "il", "lo", "la", "i", "gli", "le", "e", "è",
+            "sono", "era", "erano", "di", "del", "un", "una", "che",
+            "in", "per", "con", "non", "si", "su", "suo", "sua",
+            "mio", "mia", "tuo", "tua", "al", "come", "ma", "se",
+            "più", "meno", "molto", "tutto", "tutti", "anche", "già", "bene",
+            "stesso", "quando", "dove", "chi", "questo", "questa", "quello", "quella",
+            "io", "lui", "lei", "noi", "loro",
+        ),
+    },
+    "pt": {
+        "name": "Português",
+        "syllable_mode": "generic",
+        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "dialogue_regex": r'[«\"“]([^»\"”]+)[»\"”]',
+        "praesens_regex": (
+            r"\b("
+        "sou|és|é|somos|são|estou|estás|está|"
+        "estamos|estão|tenho|tens|tem|temos|têm|vou|"
+        "vais|vai|vamos|vão|venho|vens|vem|vimos|"
+        "vêm|faço|fazes|faz|fazemos|fazem|digo|dizes|"
+        "diz|dizemos|dizem|vejo|vês|vê|vemos|veem|"
+        "sei|sabes|sabe|sabemos|sabem|posso|podes|pode|"
+        "podemos|podem|quero|queres|quer|queremos|querem|falo|"
+        "falas|fala|falamos|falam|como|comes|come|comemos|"
+        "comem|bebo|bebes|bebe|bebemos|bebem|vivo|vives|"
+        "vive|vivemos|vivem|penso|pensas|pensa|pensamos|pensam|"
+        "olho|olhas|olha|olhamos|olham|espero|esperas|espera|"
+        "esperamos|esperam|trabalho|trabalhas|trabalha|trabalhamos|trabalham|chamo|"
+        "chamas|chama|chamamos|chamam|sinto|sentes|sente|sentimos|"
+        "sentem|durmo|dormes|dorme|dormimos|dormem|saio|sais|"
+        "sai|saímos|saem|ponho|pões|põe|pomos|põem|"
+        "dou|dás|dá|damos|dão|trago|trazes|traz|"
+        "trazemos|trazem|conheço|conheces|conhece|conhecemos|conhecem|chego|"
+        "chegas|chega|chegamos|chegam|passo|passas|passa|passamos|"
+        "passam|começo|começas|começa|começamos|começam"
+            r")\b"
+        ),
+        "praeteritum_regex": (
+            r"\b("
+        "era|eras|éramos|eram|estava|estavas|estávamos|estavam|"
+        "tinha|tinhas|tínhamos|tinham|havia|havias|havíamos|haviam|"
+        "ia|ias|íamos|iam|vinha|vinhas|vínhamos|vinham|"
+        "fazia|fazias|fazíamos|faziam|dizia|dizias|dizíamos|diziam|"
+        "via|vias|víamos|viam|sabia|sabias|sabíamos|sabiam|"
+        "podia|podias|podíamos|podiam|queria|querias|queríamos|queriam|"
+        "falava|falavas|falávamos|falavam|comia|comias|comíamos|comiam|"
+        "bebia|bebias|bebíamos|bebiam|vivia|vivias|vivíamos|viviam|"
+        "pensava|pensavas|pensávamos|pensavam|olhava|olhavas|olhávamos|olhavam|"
+        "esperava|esperavas|esperávamos|esperavam|trabalhava|trabalhavas|trabalhávamos|trabalhavam|"
+        "chamava|chamavas|chamávamos|chamavam|sentia|sentias|sentíamos|sentiam|"
+        "dormia|dormias|dormíamos|dormiam|saía|saías|saíamos|saíam|"
+        "punha|punhas|púnhamos|punham|dava|davas|dávamos|davam|"
+        "trazia|trazias|trazíamos|traziam|conhecia|conhecias|conhecíamos|conheciam|"
+        "chegava|chegavas|chegávamos|chegavam|passava|passavas|passávamos|passavam|"
+        "começava|começavas|começávamos|começavam|fui|foi|fomos|foram|"
+        "estive|esteve|estivemos|estiveram|tive|teve|tivemos|tiveram|"
+        "houve|fiz|fez|fizemos|fizeram|disse|dissemos|disseram|"
+        "vi|viu|vimos|viram|soube|soubemos|souberam|pude|"
+        "pôde|pudemos|puderam|quis|quisemos|quiseram|falei|falou|"
+        "falamos|falaram|comi|comeu|comemos|comeram|vivi|viveu|"
+        "vivemos|viveram|pensei|pensou|pensamos|pensaram|olhei|olhou|"
+        "olhamos|olharam|esperei|esperou|esperamos|esperaram|trabalhei|trabalhou|"
+        "trabalhamos|trabalharam|chamei|chamou|chamamos|chamaram|senti|sentiu|"
+        "sentimos|sentiram|dormi|dormiu|dormimos|dormiram|saí|saiu|"
+        "saímos|saíram|pus|pôs|pusemos|puseram|dei|deu|"
+        "demos|deram|trouxe|trouxemos|trouxeram|conheci|conheceu|conhecemos|"
+        "conheceram|cheguei|chegou|chegamos|chegaram|passei|passou|passamos|"
+        "passaram|comecei|começou|começamos|começaram"
+            r")\b"
+        ),
+        "filter_verbs_regex": r"\b(sinto|sentia|penso|pensava|acho|achava)\b",
+        "signal_keywords": {"Raiva": r"\b(raiva|irritado|furioso)\b", "Na verdade": r"\bna verdade\b"},
+        "stopwords": (
+            "o", "a", "os", "as", "e", "é", "são", "era",
+            "eram", "de", "do", "da", "um", "uma", "que", "em",
+            "para", "com", "não", "se", "seu", "sua", "meu", "minha",
+            "teu", "tua", "ao", "como", "mas", "mais", "menos", "muito",
+            "todo", "todos", "também", "já", "bem", "mesmo", "quando", "onde",
+            "quem", "este", "esta", "esse", "essa", "aquele", "eu", "ele",
+            "ela", "nós", "eles", "elas",
+        ),
+    },
+    "nl": {
+        "name": "Nederlands",
+        "syllable_mode": "generic",
+        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "dialogue_regex": r'[„\"]([^”\"]+)[”\"]',
+        "praesens_regex": (
+            r"\b("
+        "ben|bent|is|zijn|heb|hebt|heeft|hebben|"
+        "ga|gaat|gaan|kom|komt|komen|kan|kunt|"
+        "kunnen|moet|moeten|wil|wilt|willen|mag|mogen|"
+        "zie|ziet|zien|weet|weten|denk|denkt|denken|"
+        "zeg|zegt|zeggen|maak|maakt|maken|doe|doet|"
+        "doen|vind|vindt|vinden|loop|loopt|lopen|sta|"
+        "staat|staan|zit|zitten|lig|ligt|liggen|blijf|"
+        "blijft|blijven|neem|neemt|nemen|geef|geeft|geven|"
+        "kijk|kijkt|kijken|hoor|hoort|horen|voel|voelt|"
+        "voelen|praat|praten|werk|werkt|werken|woon|woont|"
+        "wonen|drink|drinkt|drinken|eet|eten|slaap|slaapt|"
+        "slapen|schrijf|schrijft|schrijven|lees|leest|lezen|rijd|"
+        "rijdt|rijden|word|wordt|worden"
+            r")\b"
+        ),
+        "praeteritum_regex": (
+            r"\b("
+        "was|waren|had|hadden|ging|gingen|kwam|kwamen|"
+        "kon|konden|moest|moesten|wilde|wou|wilden|mocht|"
+        "mochten|zag|zagen|wist|wisten|dacht|dachten|zei|"
+        "zeiden|maakte|maakten|deed|deden|vond|vonden|liep|"
+        "liepen|stond|stonden|zat|zaten|lag|lagen|bleef|"
+        "bleven|nam|namen|gaf|gaven|keek|keken|hoorde|"
+        "hoorden|voelde|voelden|praatte|praatten|werkte|werkten|woonde|"
+        "woonden|dronk|dronken|at|aten|sliep|sliepen|schreef|"
+        "schreven|las|lazen|reed|reden|werd|werden"
+            r")\b"
+        ),
+        "filter_verbs_regex": r"\b(voel|voelde|denk|dacht|vind|vond)\b",
+        "signal_keywords": {"Woede": r"\b(woede|boos|woedend)\b", "Eigentlich": r"\beigenlijk\b"},
+        "stopwords": (
+            "de", "het", "een", "en", "is", "zijn", "was", "waren",
+            "ik", "je", "jij", "hij", "zij", "ze", "wij", "we",
+            "jullie", "niet", "van", "op", "voor", "met", "dat", "die",
+            "deze", "dit", "maar", "als", "dan", "nog", "ook", "al",
+            "wel", "geen", "mijn", "jouw", "haar", "ons", "hun", "om",
+            "door", "naar", "over", "onder", "tussen", "omdat", "terwijl", "toen",
+            "wanneer", "waar", "wie", "wat", "hoe",
+        ),
+    },
+    "generic": {
+        "name": "Generic",
+        "syllable_mode": "generic",
+        "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
+        "dialogue_regex": r'[“”„«"]([^“”„«"]+)[“”„«"]',
+        "praesens_regex": "",
+        "praeteritum_regex": "",
+        "filter_verbs_regex": "",
+        "signal_keywords": {},
+        "stopwords": (),
+    },
+}
+
+# Reguläre, hochpräzise Tempusmuster je Sprache (Ergänzung zu den kuratierten Formen).
+# Erfasst die produktiven Endungen/Hilfsverbkonstruktionen des Erzähltempus,
+# gegen Substantiv-Fehltreffer durch Stopplisten geschützt.
+LANGUAGE_PATTERNS = {
+    "fr": {
+        "praeteritum": [
+            r"\b(?!mais|jamais|frais|vrais|palais|délais|essais|succès|progrès|après|près|très)\w{3,}(?:ais|ait|aient|ions|iez)\b",
+            r"\b(?:ai|as|a|avons|avez|ont|suis|es|est|sommes|êtes|sont)\s+\w{3,}(?:é|ée|és|ées|i|is|it|u|us|ut)\b",
+        ],
+    },
+    "es": {
+        "praeteritum": [
+            r"\b\w{4,}(?:aba|abas|aban|ábamos)\b",
+            r"\b(?!día|tía|fría|mía|alegría|policía|energía|geografía|compañía|fantasía|teoría|ironía|armonía|melodía|categoría|biografía|filosofía|batería|panadería|carnicería|peluquería|lavandería|zapatería|librería|joyería|minoría|mayoría)\w{4,}(?:ía|ías|ían|íamos)\b",
+            r"\b(?:he|has|ha|hemos|habéis|han)\s+\w{3,}(?:ado|ido)\b",
+        ],
+    },
+    "it": {
+        "praeteritum": [
+            r"\b(?!brava|slava|prova|nuova|cava|lava|bava|fava)\w{4,}(?:avo|avi|ava|avamo|avano|evo|evi|eva|evamo|evano|ivo|ivi|iva|ivamo|ivano)\b",
+            r"\b(?:ho|hai|ha|abbiamo|avete|hanno|sono|sei|è|siamo|siete)\s+\w{3,}(?:ato|uto|ito|ati|uti|iti|ata|uta|ita|ate|ute|ite)\b",
+        ],
+    },
+    "pt": {
+        "praeteritum": [
+            r"\b\w{4,}(?:ava|avas|ávamos|avam)\b",
+            r"\b(?!dia|tia|fria|mia|alegria|polícia|energia|geografia|companhia|fantasia|teoria|ironia|harmonia|melodia|categoria|biografia|filosofia|bateria|padaria|sapataria|livraria|minoria|maioria)\w{4,}(?:ia|ias|íamos|iam)\b",
+            r"\b(?!estou|vou|dou|sou)\w{4,}ou\b",
+        ],
+    },
+    "nl": {
+        "praeteritum": [
+            r"\b(?:ik|je|jij|hij|zij|ze|wij|we|jullie|u)\s+\w{3,}(?:te|de|ten|den)\b",
+            r"\b(?:heb|hebt|heeft|hebben|had|hadden|ben|bent|is|zijn|was|waren)\s+\w*ge\w+(?:t|d|en)\b",
+        ],
+    },
+}
+
+
+# Linguistische Standardlisten je Sprache (geschlossene Wortklassen).
+# Funktion: Stilmetrik (Funktionswortanteil), Tempuskontext und erweiterbare Basis
+# für weitere Analysen. Alle Listen sind bewusst als offene Standardsammlungen
+# angelegt und können pro Projekt ergänzt werden.
+LEXICON = {'de': {'auxiliaries': ['sein',
+        'haben',
+        'werden',
+        'bin',
+        'bist',
+        'ist',
+        'sind',
+        'seid',
+        'war',
+        'warst',
+        'waren',
+        'habe',
+        'hast',
+        'hat',
+        'haben',
+        'habt',
+        'hatte',
+        'hattest',
+        'hatten',
+        'werde',
+        'wirst',
+        'wird',
+        'werden',
+        'werdet',
+        'wurde',
+        'wurden'], 'modals': ['können',
+        'müssen',
+        'wollen',
+        'sollen',
+        'dürfen',
+        'mögen',
+        'kann',
+        'kannst',
+        'können',
+        'muss',
+        'musst',
+        'müssen',
+        'will',
+        'willst',
+        'wollen',
+        'soll',
+        'sollst',
+        'sollen',
+        'darf',
+        'darfst',
+        'dürfen',
+        'mag',
+        'magst',
+        'mögen',
+        'konnte',
+        'musste',
+        'wollte',
+        'sollte',
+        'durfte',
+        'mochte'], 'articles': ['der',
+        'die',
+        'das',
+        'den',
+        'dem',
+        'des',
+        'ein',
+        'eine',
+        'einen',
+        'einem',
+        'einer',
+        'eines'], 'pronouns': ['ich',
+        'du',
+        'er',
+        'sie',
+        'es',
+        'wir',
+        'ihr',
+        'mich',
+        'dich',
+        'sich',
+        'uns',
+        'euch',
+        'mir',
+        'dir',
+        'ihm',
+        'ihn',
+        'ihnen',
+        'mein',
+        'dein',
+        'sein',
+        'ihre',
+        'unser',
+        'euer',
+        'dieser',
+        'diese',
+        'dieses',
+        'jener',
+        'welcher',
+        'wer',
+        'was'], 'prepositions': ['in',
+        'an',
+        'auf',
+        'über',
+        'unter',
+        'vor',
+        'hinter',
+        'neben',
+        'zwischen',
+        'mit',
+        'ohne',
+        'gegen',
+        'für',
+        'um',
+        'durch',
+        'von',
+        'zu',
+        'nach',
+        'bei',
+        'aus',
+        'seit',
+        'bis',
+        'während',
+        'wegen',
+        'trotz',
+        'statt'], 'conjunctions': ['und',
+        'oder',
+        'aber',
+        'denn',
+        'sondern',
+        'weil',
+        'dass',
+        'wenn',
+        'als',
+        'ob',
+        'obwohl',
+        'damit',
+        'sodass',
+        'bevor',
+        'nachdem',
+        'während',
+        'sobald',
+        'falls',
+        'doch'], 'particles': ['doch',
+        'mal',
+        'ja',
+        'eben',
+        'halt',
+        'wohl',
+        'denn',
+        'eigentlich',
+        'vielleicht',
+        'irgendwie',
+        'einfach',
+        'schon',
+        'noch',
+        'nur',
+        'auch'], 'irregular_past': ['ging',
+        'kam',
+        'sah',
+        'trank',
+        'sprach',
+        'stand',
+        'lag',
+        'saß',
+        'fand',
+        'hieß',
+        'ließ',
+        'rief',
+        'lief',
+        'schrieb',
+        'blieb',
+        'gab',
+        'nahm',
+        'hielt',
+        'zog',
+        'tat',
+        'bat',
+        'bot',
+        'fuhr',
+        'flog',
+        'fiel',
+        'fing',
+        'schlug',
+        'schnitt',
+        'schloss',
+        'trat',
+        'wuchs',
+        'wusch',
+        'brachte',
+        'dachte',
+        'kannte',
+        'nannte',
+        'rannte',
+        'warf',
+        'wies',
+        'aß',
+        'genoss',
+        'verlor',
+        'verstand',
+        'verließ',
+        'begann',
+        'gewann',
+        'stieg',
+        'schien',
+        'stieß',
+        'griff']}, 'en': {'auxiliaries': ['be',
+        'am',
+        'is',
+        'are',
+        'was',
+        'were',
+        'been',
+        'have',
+        'has',
+        'had',
+        'do',
+        'does',
+        'did',
+        'will',
+        'would'], 'modals': ['can',
+        'could',
+        'may',
+        'might',
+        'must',
+        'shall',
+        'should',
+        'ought',
+        'need',
+        'dare'], 'articles': ['a',
+        'an',
+        'the'], 'pronouns': ['i',
+        'you',
+        'he',
+        'she',
+        'it',
+        'we',
+        'they',
+        'me',
+        'him',
+        'her',
+        'us',
+        'them',
+        'my',
+        'your',
+        'his',
+        'its',
+        'our',
+        'their',
+        'this',
+        'that',
+        'these',
+        'those',
+        'who',
+        'what',
+        'which'], 'prepositions': ['in',
+        'on',
+        'at',
+        'by',
+        'for',
+        'with',
+        'about',
+        'against',
+        'between',
+        'into',
+        'through',
+        'during',
+        'before',
+        'after',
+        'above',
+        'below',
+        'to',
+        'from',
+        'up',
+        'down',
+        'of',
+        'off',
+        'over',
+        'under'], 'conjunctions': ['and',
+        'or',
+        'but',
+        'nor',
+        'for',
+        'yet',
+        'so',
+        'because',
+        'although',
+        'while',
+        'if',
+        'when',
+        'since',
+        'unless',
+        'until',
+        'though'], 'particles': ['just',
+        'even',
+        'only',
+        'still',
+        'yet',
+        'well',
+        'actually',
+        'really',
+        'simply',
+        'quite'], 'irregular_past': ['went',
+        'came',
+        'saw',
+        'drank',
+        'spoke',
+        'stood',
+        'sat',
+        'found',
+        'said',
+        'left',
+        'met',
+        'wrote',
+        'gave',
+        'took',
+        'held',
+        'kept',
+        'brought',
+        'bought',
+        'caught',
+        'chose',
+        'fell',
+        'fought',
+        'forgot',
+        'grew',
+        'heard',
+        'knew',
+        'made',
+        'ran',
+        'sang',
+        'sent',
+        'shut',
+        'slept',
+        'spent',
+        'taught',
+        'thought',
+        'threw',
+        'understood',
+        'woke',
+        'wore',
+        'won']}, 'fr': {'auxiliaries': ['être',
+        'avoir',
+        'suis',
+        'es',
+        'est',
+        'sommes',
+        'êtes',
+        'sont',
+        'étais',
+        'était',
+        'étions',
+        'étaient',
+        'ai',
+        'as',
+        'a',
+        'avons',
+        'avez',
+        'ont',
+        'avais',
+        'avait',
+        'avions',
+        'avaient'], 'modals': ['pouvoir',
+        'devoir',
+        'vouloir',
+        'savoir',
+        'peux',
+        'peut',
+        'pouvons',
+        'peuvent',
+        'dois',
+        'doit',
+        'devons',
+        'doivent',
+        'veux',
+        'veut',
+        'voulons',
+        'veulent',
+        'sais',
+        'sait',
+        'savons',
+        'savent'], 'articles': ['le',
+        'la',
+        'les',
+        'un',
+        'une',
+        'des',
+        'du',
+        'au',
+        'aux'], 'pronouns': ['je',
+        'tu',
+        'il',
+        'elle',
+        'on',
+        'nous',
+        'vous',
+        'ils',
+        'elles',
+        'me',
+        'te',
+        'se',
+        'lui',
+        'leur',
+        'moi',
+        'toi',
+        'mon',
+        'ma',
+        'mes',
+        'ton',
+        'ta',
+        'tes',
+        'son',
+        'sa',
+        'ses',
+        'notre',
+        'votre',
+        'leur',
+        'ce',
+        'cette',
+        'ces',
+        'qui',
+        'que',
+        'quoi'], 'prepositions': ['à',
+        'de',
+        'en',
+        'dans',
+        'sur',
+        'sous',
+        'avec',
+        'sans',
+        'pour',
+        'par',
+        'vers',
+        'chez',
+        'entre',
+        'contre',
+        'depuis',
+        'pendant',
+        'avant',
+        'après',
+        'devant',
+        'derrière'], 'conjunctions': ['et',
+        'ou',
+        'mais',
+        'car',
+        'donc',
+        'or',
+        'ni',
+        'que',
+        'quand',
+        'comme',
+        'si',
+        'parce',
+        'lorsque',
+        'puisque',
+        'quoique'], 'particles': ['bien',
+        'même',
+        'encore',
+        'déjà',
+        'toujours',
+        'jamais',
+        'surtout',
+        'peut-être',
+        'vraiment',
+        'simplement'], 'irregular_past': ['fus',
+        'fut',
+        'furent',
+        'eut',
+        'eurent',
+        'alla',
+        'allèrent',
+        'fit',
+        'firent',
+        'dit',
+        'dirent',
+        'prit',
+        'prirent',
+        'vit',
+        'virent',
+        'vint',
+        'vinrent',
+        'sut',
+        'surent',
+        'put',
+        'purent',
+        'voulut',
+        'dut']}, 'es': {'auxiliaries': ['ser',
+        'estar',
+        'haber',
+        'tener',
+        'soy',
+        'eres',
+        'es',
+        'somos',
+        'sois',
+        'son',
+        'estoy',
+        'estás',
+        'está',
+        'estamos',
+        'estáis',
+        'están',
+        'he',
+        'has',
+        'ha',
+        'hemos',
+        'habéis',
+        'han',
+        'tengo',
+        'tienes',
+        'tiene',
+        'tenemos',
+        'tienen',
+        'era',
+        'estaba',
+        'había',
+        'tenía'], 'modals': ['poder',
+        'deber',
+        'querer',
+        'saber',
+        'puedo',
+        'puede',
+        'podemos',
+        'pueden',
+        'debo',
+        'debe',
+        'debemos',
+        'deben',
+        'quiero',
+        'quiere',
+        'queremos',
+        'quieren',
+        'sé',
+        'sabe',
+        'sabemos',
+        'saben'], 'articles': ['el',
+        'la',
+        'los',
+        'las',
+        'un',
+        'una',
+        'unos',
+        'unas',
+        'lo'], 'pronouns': ['yo',
+        'tú',
+        'él',
+        'ella',
+        'nosotros',
+        'vosotros',
+        'ellos',
+        'ellas',
+        'me',
+        'te',
+        'se',
+        'le',
+        'les',
+        'nos',
+        'os',
+        'mi',
+        'mis',
+        'tu',
+        'tus',
+        'su',
+        'sus',
+        'este',
+        'esta',
+        'estos',
+        'estas',
+        'ese',
+        'esa',
+        'aquel',
+        'quien',
+        'que'], 'prepositions': ['a',
+        'de',
+        'en',
+        'por',
+        'para',
+        'con',
+        'sin',
+        'sobre',
+        'bajo',
+        'entre',
+        'hacia',
+        'hasta',
+        'desde',
+        'durante',
+        'contra',
+        'según',
+        'tras'], 'conjunctions': ['y',
+        'o',
+        'u',
+        'pero',
+        'sino',
+        'porque',
+        'aunque',
+        'mientras',
+        'si',
+        'cuando',
+        'como',
+        'pues',
+        'ni'], 'particles': ['ya',
+        'aún',
+        'todavía',
+        'solo',
+        'sólo',
+        'también',
+        'tampoco',
+        'quizá',
+        'quizás',
+        'realmente',
+        'simplemente'], 'irregular_past': ['fui',
+        'fue',
+        'fueron',
+        'estuve',
+        'estuvo',
+        'tuve',
+        'tuvo',
+        'hice',
+        'hizo',
+        'dije',
+        'dijo',
+        'vi',
+        'vio',
+        'supe',
+        'supo',
+        'pude',
+        'pudo',
+        'quise',
+        'quiso',
+        'vine',
+        'vino',
+        'puse',
+        'puso',
+        'di',
+        'dio',
+        'traje',
+        'trajo',
+        'llegué',
+        'llegó']}, 'it': {'auxiliaries': ['essere',
+        'avere',
+        'sono',
+        'sei',
+        'è',
+        'siamo',
+        'siete',
+        'ero',
+        'eri',
+        'era',
+        'eravamo',
+        'erano',
+        'ho',
+        'hai',
+        'ha',
+        'abbiamo',
+        'avete',
+        'hanno',
+        'avevo',
+        'aveva',
+        'avevamo',
+        'avevano'], 'modals': ['potere',
+        'dovere',
+        'volere',
+        'sapere',
+        'posso',
+        'può',
+        'possiamo',
+        'possono',
+        'devo',
+        'deve',
+        'dobbiamo',
+        'devono',
+        'voglio',
+        'vuole',
+        'vogliamo',
+        'vogliono',
+        'so',
+        'sa',
+        'sappiamo',
+        'sanno'], 'articles': ['il',
+        'lo',
+        'la',
+        'i',
+        'gli',
+        'le',
+        'un',
+        'uno',
+        'una'], 'pronouns': ['io',
+        'tu',
+        'lui',
+        'lei',
+        'noi',
+        'voi',
+        'loro',
+        'mi',
+        'ti',
+        'si',
+        'ci',
+        'vi',
+        'lo',
+        'la',
+        'li',
+        'le',
+        'mio',
+        'mia',
+        'tuo',
+        'tua',
+        'suo',
+        'sua',
+        'nostro',
+        'vostro',
+        'questo',
+        'questa',
+        'quello',
+        'quella',
+        'chi',
+        'che'], 'prepositions': ['di',
+        'a',
+        'da',
+        'in',
+        'con',
+        'su',
+        'per',
+        'tra',
+        'fra',
+        'senza',
+        'sotto',
+        'sopra',
+        'verso',
+        'contro',
+        'durante',
+        'dopo',
+        'prima'], 'conjunctions': ['e',
+        'o',
+        'ma',
+        'perché',
+        'siccome',
+        'mentre',
+        'se',
+        'quando',
+        'come',
+        'dunque',
+        'quindi',
+        'né'], 'particles': ['già',
+        'ancora',
+        'solo',
+        'anche',
+        'neanche',
+        'forse',
+        'davvero',
+        'proprio',
+        'semplicemente'], 'irregular_past': ['fui',
+        'fu',
+        'furono',
+        'ebbi',
+        'ebbe',
+        'andai',
+        'andò',
+        'feci',
+        'fece',
+        'dissi',
+        'disse',
+        'vidi',
+        'vide',
+        'seppi',
+        'seppe',
+        'potei',
+        'poté',
+        'volli',
+        'volle',
+        'dovetti',
+        'dovette',
+        'venni',
+        'venne',
+        'misi',
+        'mise',
+        'diedi',
+        'diede']}, 'pt': {'auxiliaries': ['ser',
+        'estar',
+        'ter',
+        'haver',
+        'sou',
+        'és',
+        'é',
+        'somos',
+        'são',
+        'estou',
+        'está',
+        'estamos',
+        'estão',
+        'tenho',
+        'tem',
+        'temos',
+        'têm',
+        'era',
+        'estava',
+        'tinha',
+        'havia'], 'modals': ['poder',
+        'dever',
+        'querer',
+        'saber',
+        'posso',
+        'pode',
+        'podemos',
+        'podem',
+        'devo',
+        'deve',
+        'devemos',
+        'devem',
+        'quero',
+        'quer',
+        'queremos',
+        'querem',
+        'sei',
+        'sabe',
+        'sabemos',
+        'sabem'], 'articles': ['o',
+        'a',
+        'os',
+        'as',
+        'um',
+        'uma',
+        'uns',
+        'umas'], 'pronouns': ['eu',
+        'tu',
+        'ele',
+        'ela',
+        'nós',
+        'vós',
+        'eles',
+        'elas',
+        'me',
+        'te',
+        'se',
+        'lhe',
+        'nos',
+        'vos',
+        'meu',
+        'minha',
+        'teu',
+        'tua',
+        'seu',
+        'sua',
+        'este',
+        'esta',
+        'esse',
+        'essa',
+        'aquele',
+        'quem',
+        'que'], 'prepositions': ['a',
+        'de',
+        'em',
+        'por',
+        'para',
+        'com',
+        'sem',
+        'sobre',
+        'sob',
+        'entre',
+        'até',
+        'desde',
+        'durante',
+        'contra',
+        'após'], 'conjunctions': ['e',
+        'ou',
+        'mas',
+        'porque',
+        'embora',
+        'enquanto',
+        'se',
+        'quando',
+        'como',
+        'pois',
+        'nem'], 'particles': ['já',
+        'ainda',
+        'só',
+        'também',
+        'tampouco',
+        'talvez',
+        'realmente',
+        'simplesmente',
+        'mesmo'], 'irregular_past': ['fui',
+        'foi',
+        'foram',
+        'estive',
+        'esteve',
+        'tive',
+        'teve',
+        'fiz',
+        'fez',
+        'disse',
+        'vi',
+        'viu',
+        'soube',
+        'pude',
+        'pôde',
+        'quis',
+        'vim',
+        'veio',
+        'pus',
+        'pôs',
+        'dei',
+        'deu',
+        'trouxe']}, 'nl': {'auxiliaries': ['zijn',
+        'hebben',
+        'worden',
+        'ben',
+        'bent',
+        'is',
+        'zijn',
+        'was',
+        'waren',
+        'heb',
+        'hebt',
+        'heeft',
+        'hebben',
+        'had',
+        'hadden',
+        'word',
+        'wordt',
+        'werden',
+        'werd',
+        'werden'], 'modals': ['kunnen',
+        'moeten',
+        'willen',
+        'mogen',
+        'zullen',
+        'kan',
+        'kunt',
+        'kunnen',
+        'moet',
+        'moeten',
+        'wil',
+        'wilt',
+        'willen',
+        'mag',
+        'mogen',
+        'zal',
+        'zullen',
+        'kon',
+        'konden',
+        'moest',
+        'moesten',
+        'wilde',
+        'wilden',
+        'mocht',
+        'mochten',
+        'zou',
+        'zouden'], 'articles': ['de',
+        'het',
+        'een'], 'pronouns': ['ik',
+        'je',
+        'jij',
+        'hij',
+        'zij',
+        'ze',
+        'wij',
+        'we',
+        'jullie',
+        'mij',
+        'me',
+        'hem',
+        'haar',
+        'ons',
+        'hen',
+        'hun',
+        'mijn',
+        'jouw',
+        'zijn',
+        'onze',
+        'deze',
+        'dit',
+        'die',
+        'dat',
+        'wie',
+        'wat'], 'prepositions': ['in',
+        'op',
+        'aan',
+        'bij',
+        'met',
+        'zonder',
+        'voor',
+        'na',
+        'van',
+        'tot',
+        'door',
+        'over',
+        'onder',
+        'tussen',
+        'tegen',
+        'tijdens',
+        'naar'], 'conjunctions': ['en',
+        'of',
+        'maar',
+        'want',
+        'omdat',
+        'als',
+        'toen',
+        'terwijl',
+        'hoewel',
+        'zodat',
+        'of',
+        'noch'], 'particles': ['al',
+        'nog',
+        'wel',
+        'eens',
+        'even',
+        'toch',
+        'maar',
+        'juist',
+        'eigenlijk',
+        'misschien',
+        'gewoon'], 'irregular_past': ['ging',
+        'gingen',
+        'kwam',
+        'kwamen',
+        'zag',
+        'zagen',
+        'dronk',
+        'dronken',
+        'at',
+        'aten',
+        'stond',
+        'stonden',
+        'zat',
+        'zaten',
+        'lag',
+        'lagen',
+        'vond',
+        'vonden',
+        'zei',
+        'zeiden',
+        'liet',
+        'lieten',
+        'schreef',
+        'schreven',
+        'gaf',
+        'gaven',
+        'nam',
+        'namen',
+        'hield',
+        'hielden',
+        'trok',
+        'trokken',
+        'deed',
+        'deden',
+        'bleef',
+        'bleven',
+        'werd',
+        'werden']}}
+
+
+# Metrik- und UI-Labels des Dashboards (Dashboard folgt der eingestellten Sprache)
+METRIC_LABELS = {
+    "de": {"sentences": "Sätze", "dialogue": "Dialog", "function_words": "Funktionswörter",
+           "controls": "Steuerung", "export": "Exportieren", "sync": "Dossiers synchronisieren",
+           "audit": "Audit prüfen", "prune": "Archiv aufräumen", "gdrive": "Google Drive",
+           "rebuild": "Dashboard neu erzeugen", "new_nda": "Neues NDA anlegen",
+           "name": "Name", "contact": "Kontakt", "create": "Erzeugen",
+           "format_all": "Alle Formate", "format_paperback": "Taschenbuch",
+           "server_hint": "Lokale Steuerung – Aktionen laufen auf diesem Rechner.",
+           "manuscript": "Manuskript", "load": "Laden", "current_manuscript": "Aktuell",
+           "settings": "Einstellungen", "language": "Sprache", "title": "Titel", "apply": "Übernehmen",
+           "run_analysis": "Analysen ausführen", "choose_file": "Markdown-Datei wählen",
+           "artifacts": "Publikationen", "pages": "Seiten", "size": "Größe", "open": "Öffnen",
+           "chapter_table": "Kapitelmatrix", "sentence_dist": "Satzlängen",
+           "sections": "Analyse", "metrics": "Kennzahlen"},
+    "en": {"sentences": "sentences", "dialogue": "dialogue", "function_words": "function words",
+           "controls": "Controls", "export": "Export", "sync": "Sync dossiers",
+           "audit": "Run audit", "prune": "Prune archive", "gdrive": "Google Drive",
+           "rebuild": "Rebuild dashboard", "new_nda": "Create new NDA",
+           "name": "Name", "contact": "Contact", "create": "Create",
+           "format_all": "All formats", "format_paperback": "Paperback",
+           "server_hint": "Local controls – actions run on this machine.",
+           "manuscript": "Manuscript", "load": "Load", "current_manuscript": "Current",
+           "settings": "Settings", "language": "Language", "title": "Title", "apply": "Apply",
+           "run_analysis": "Run analyses", "choose_file": "Choose markdown file",
+           "artifacts": "Publications", "pages": "pages", "size": "size", "open": "Open",
+           "chapter_table": "Chapter matrix", "sentence_dist": "Sentence lengths",
+           "sections": "Analysis", "metrics": "Metrics"},
+    "fr": {"sentences": "phrases", "dialogue": "dialogue", "function_words": "mots-outils",
+           "artifacts": "Publications", "pages": "pages", "size": "taille", "open": "Ouvrir",
+           "chapter_table": "Matrice des chapitres", "sentence_dist": "Longueurs de phrase",
+           "sections": "Analyse", "metrics": "Indicateurs"},
+    "es": {"sentences": "oraciones", "dialogue": "diálogo", "function_words": "palabras funcionales",
+           "artifacts": "Publicaciones", "pages": "páginas", "size": "tamaño", "open": "Abrir",
+           "chapter_table": "Matriz de capítulos", "sentence_dist": "Longitudes de frase",
+           "sections": "Análisis", "metrics": "Métricas"},
+    "it": {"sentences": "frasi", "dialogue": "dialogo", "function_words": "parole funzione",
+           "artifacts": "Pubblicazioni", "pages": "pagine", "size": "dimensione", "open": "Apri",
+           "chapter_table": "Matrice dei capitoli", "sentence_dist": "Lunghezze di frase",
+           "sections": "Analisi", "metrics": "Metriche"},
+    "pt": {"sentences": "frases", "dialogue": "diálogo", "function_words": "palavras funcionais",
+           "artifacts": "Publicações", "pages": "páginas", "size": "tamanho", "open": "Abrir",
+           "chapter_table": "Matriz de capítulos", "sentence_dist": "Comprimentos de frase",
+           "sections": "Análise", "metrics": "Métricas"},
+    "nl": {"sentences": "zinnen", "dialogue": "dialoog", "function_words": "functiewoorden",
+           "artifacts": "Publicaties", "pages": "pagina's", "size": "grootte", "open": "Openen",
+           "chapter_table": "Hoofdstukmatrix", "sentence_dist": "Zinslengtes",
+           "sections": "Analyse", "metrics": "Kerncijfers"},
+}
+
+
+# Hilfetexte für Tooltips (Abkürzungen, Fachbegriffe, Aktionen).
+# de/en vollständig; weitere Sprachen fallen auf Englisch zurück.
+HELP_TEXTS = {
+    "de": {
+        "help_words": "Wortzahl der reinen Romanprosa (ohne Anhang und Verzeichnisse).",
+        "help_asl": "ASL = Average Sentence Length: durchschnittliche Satzlänge in Wörtern. Niedrige Werte bedeuten kurze, parataktische Sätze.",
+        "help_ttr": "TTR = Type-Token-Ratio: Verhältnis verschiedener Wörter zur Gesamtwortzahl. Maß für lexikalische Vielfalt.",
+        "help_yules": "Yule's Characteristic K: längenunabhängiges Maß für die Stabilität des Wortschatzes (niedriger = gleichmäßiger).",
+        "help_flesch": "Flesch Reading Ease (deutsche Adaption nach Amstad): Lesbarkeit von 0 (schwer) bis 100 (sehr leicht).",
+        "help_lix": "LIX = Läsbarhetsindex: Satzlänge plus Anteil langer Wörter. Unter 40 gilt als leicht lesbar.",
+        "help_dialogue": "Anteil wörtlicher Rede am Prosatext.",
+        "help_function_words": "Anteil der Funktionswörter (Artikel, Pronomen, Präpositionen, Konjunktionen, Hilfs-/Modalverben) an allen Wörtern.",
+        "help_flagged": "Absätze mit Tempuswechsel oder Tempusmischung (Severity ab Stufe 2).",
+        "help_severity": "Severity 0–3: 1 beobachten, 2 auffällig, 3 starke Friktion (Tempuswechsel und -mischung zugleich).",
+        "help_present": "Präsens: szenisch erzählte Gegenwart.",
+        "help_past": "Präteritum: episch erzählte Vergangenheit bzw. Rückschau.",
+        "help_mixed": "Gemischt: Absatz mit annähernd gleich vielen Präsens- und Präteritummarkern.",
+        "help_neutral": "Neutral: zu wenige Tempusmarker für eine Aussage.",
+        "help_line": "Zeilenanker: Zeilennummern im Manuskript (z. B. Z. 470–472) für präzise Rückmeldungen.",
+        "help_filter": "Zeigt nur Kapitel und Absätze mit Auffälligkeiten.",
+        "help_format": "Zielformat des Exports: alle, A4-Lektorat, Taschenbuch, Mobile oder EPUB.",
+        "help_export": "Erzeugt die Publikationsdateien (PDF/EPUB) idempotent und atomar.",
+        "help_nda": "Erzeugt eine einseitige Vertraulichkeitsvereinbarung (DIN A4) für neue Testleser.",
+        "help_prune": "Kürzt das Export-Archiv auf die letzten 10 Versionen je Artefaktfamilie.",
+        "help_gdrive": "Synchronisiert die vier stabilen Endfassungen zu Google Drive (rclone).",
+        "help_sync": "Führt die quantitativen Kennzahlen atomar in alle Dossiers nach.",
+        "help_audit": "Prüft alle fünf Dossiers auf Synchronität mit dem Manuskript (0 Drift).",
+        "help_rebuild": "Erzeugt dieses Dashboard neu (nach Änderungen am Manuskript).",
+        "help_language": "Sprachprofil der Analyse: auto erkennt die Sprache über Funktionswörter.",
+        "help_artifacts": "Erzeugte Publikationsdateien mit Größe, Seitenzahl und Direktlink.",
+    },
+    "en": {
+        "help_words": "Word count of the narrative prose (excluding appendix and indexes).",
+        "help_asl": "ASL = Average Sentence Length in words. Low values indicate short, paratactic sentences.",
+        "help_ttr": "TTR = Type-Token Ratio: distinct words divided by total words. A measure of lexical variety.",
+        "help_yules": "Yule's Characteristic K: length-independent measure of vocabulary stability (lower = more even).",
+        "help_flesch": "Flesch Reading Ease (German Amstad adaptation): readability from 0 (hard) to 100 (very easy).",
+        "help_lix": "LIX = readability index: sentence length plus share of long words. Below 40 is easy to read.",
+        "help_dialogue": "Share of direct speech in the prose.",
+        "help_function_words": "Share of function words (articles, pronouns, prepositions, conjunctions, auxiliaries/modals).",
+        "help_flagged": "Paragraphs with tense switch or tense mixture (severity level 2 and above).",
+        "help_severity": "Severity 0–3: 1 watch, 2 noticeable, 3 strong friction (switch and mixture combined).",
+        "help_present": "Present tense: scene narrated in the now.",
+        "help_past": "Past tense: narrated past or retrospective.",
+        "help_mixed": "Mixed: paragraph with roughly equal present and past markers.",
+        "help_neutral": "Neutral: too few tense markers for a statement.",
+        "help_line": "Line anchor: manuscript line numbers (e.g. l. 470–472) for precise feedback.",
+        "help_filter": "Shows only chapters and paragraphs with findings.",
+        "help_format": "Export target: all, A4 lectorate, paperback, mobile or EPUB.",
+        "help_export": "Creates the publication files (PDF/EPUB) idempotently and atomically.",
+        "help_nda": "Creates a one-page confidentiality agreement (DIN A4) for new test readers.",
+        "help_prune": "Trims the export archive to the last 10 versions per artifact family.",
+        "help_gdrive": "Syncs the four stable final editions to Google Drive (rclone).",
+        "help_sync": "Writes the quantitative metrics back into all dossiers atomically.",
+        "help_audit": "Checks all five dossiers for synchronisation with the manuscript (0 drift).",
+        "help_rebuild": "Rebuilds this dashboard (after manuscript changes).",
+        "help_language": "Language profile of the analysis: auto detects the language via function words.",
+        "help_artifacts": "Generated publication files with size, page count and direct link.",
+    },
+}
