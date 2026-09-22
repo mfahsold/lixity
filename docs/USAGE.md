@@ -52,8 +52,9 @@ which writes a single HTML file.
 | Option | Applies to | Description |
 | :--- | :--- | :--- |
 | `--language CODE` | all commands | `auto` (default), `de`, `en`, `fr`, `es`, `it`, `pt`, `nl`, `generic`. `auto` detects the language from function words and falls back to `generic` when the signal is weak or ambiguous. |
-| `--json` | `analyze`, `profile` | Print machine-readable JSON instead of the Rich/text output. |
+| `--json` | `analyze`, `profile`, `style` | Print machine-readable JSON instead of the Rich/text output. |
 | `-o`, `--output PATH` | `dashboard` | Target HTML file (default: `lixity-dashboard.html`). |
+| `--version` | top-level | Print engine version and exit. |
 
 ### `lixity analyze`
 
@@ -301,13 +302,13 @@ not a code change.
 
 ## Reproducing the screenshots
 
-The screenshots in the README and on the project page were generated from the
-reference manuscript »Eigentlich werde ich nie wütend« (55k words, German):
+The screenshots in the README and on the project page were generated from a
+reference literary manuscript (55k words, German):
 
 ```bash
-lixity analyze   "Eigentlich werde ich nie wütend.md"
-lixity profile   "Eigentlich werde ich nie wütend.md" > profile.json
-lixity dashboard "Eigentlich werde ich nie wütend.md" -o ui.html
+lixity analyze   manuscript.md
+lixity profile   manuscript.md --json > profile.json
+lixity dashboard manuscript.md -o ui.html
 ```
 
 ## Troubleshooting
@@ -323,7 +324,7 @@ lixity dashboard "Eigentlich werde ich nie wütend.md" -o ui.html
 ## Development
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -v   # 43 tests, offline
+.venv/bin/python -m unittest discover -s tests -v   # 98 tests, offline
 .venv/bin/ruff check src tests                      # lint (rule set pinned in pyproject.toml)
 ```
 

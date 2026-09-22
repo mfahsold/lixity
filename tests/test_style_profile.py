@@ -346,9 +346,12 @@ class TestDashboard(unittest.TestCase):
         self.assertEqual(self._build(), self._build())
 
     def test_dashboard_has_no_unresolved_help_keys(self):
-        html = self._build(labels=get_language_profile("de").labels)
-        self.assertNotIn('data-help="help_', html, "unresolved tooltip key")
-        self.assertIn('data-help="', html)
+        for key in ("de", "en", "fr", "es", "it", "pt", "nl"):
+            with self.subTest(lang=key):
+                html = self._build(labels=get_language_profile(key).labels)
+                self.assertNotIn('data-help="help_', html, "unresolved tooltip key (help_*)")
+                self.assertIn('data-help="', html)
+                self.assertNotIn('data-help=""', html, "empty tooltip")
 
 
 class TestEngineLicense(unittest.TestCase):

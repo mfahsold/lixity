@@ -240,7 +240,7 @@ class TestJacobiEigendecomposition(unittest.TestCase):
 
     def test_eigenvalues_and_eigenvectors_of_known_matrix(self):
         matrix = [[2.0, 0.0], [0.0, 3.0]]
-        eigenvalues, eigenvectors = jacobi_eigh(matrix)
+        eigenvalues, _ = jacobi_eigh(matrix)
         self.assertAlmostEqual(eigenvalues[0], 3.0)
         self.assertAlmostEqual(eigenvalues[1], 2.0)
 
@@ -250,7 +250,7 @@ class TestJacobiEigendecomposition(unittest.TestCase):
             [0.5, 1.0, -0.3],
             [0.2, -0.3, 1.0],
         ]
-        eigenvalues, eigenvectors = jacobi_eigh(matrix)
+        _, eigenvectors = jacobi_eigh(matrix)
         for i in range(3):
             for j in range(3):
                 dot = sum(eigenvectors[i][k] * eigenvectors[j][k] for k in range(3))

@@ -100,7 +100,7 @@ def fingerprint(text: str, language: str = "auto", **config_overrides: Any) -> d
 
     Returns the passport dict (see docs/AGENTS.md for the full schema).
     """
-    config, resolved = _config_and_language(language, text, **config_overrides)
+    config, _resolved = _config_and_language(language, text, **config_overrides)
     metrics = CorpusAnalyzer(config).analyze_text(text)
     return StyleFingerprint.from_metrics(metrics).passport()
 
