@@ -38,7 +38,7 @@ python3 -m venv .venv && .venv/bin/pip install -e .
 lixity analyze   manuscript.md               # terminal report
 lixity analyze   manuscript.md --json        # machine-readable metrics
 lixity profile   manuscript.md               # tense profiles per paragraph
-lixity style     manuscript.md               # self-calibrated style passport
+lixity style     manuscript.md               # self-calibrated style reference
 lixity dashboard manuscript.md -o ui.html    # HTML dashboard
 ```
 
@@ -113,7 +113,7 @@ lixity profile manuscript.md > profile.json
 
 ### `lixity style`
 
-Prints the **style passport** – the self-calibrated house style of the
+Prints the **style reference** – the self-calibrated house style of the
 manuscript. Lixity measures 16 descriptive, register-neutral features per
 chapter (ASL, staccato, hypotaxis, sentence CV, dialogue, function words,
 perception filters, modals, passive, nominalisations, adjectives, long words,
@@ -150,7 +150,7 @@ The dashboard contains:
 - the **style heatmap**: chapter × feature matrix of significance-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
   house mean), plus the expected-false-positive/FDR footnote,
-- the **style passport** panel (median, ±2σ band, outlier count per feature),
+- the **style reference** panel (median, ±2σ band, outlier count per feature),
 - the **style dimensions** panel (self-calibrated principal axes with
   loadings and flagged chapters),
 - a chapter map with a colour-coded paragraph strip (present / past / mixed /
@@ -177,7 +177,7 @@ manuscript, creates the subfolders `exports/` (with `exports/archive/`) and
 
 - `exports/<slug>_metrics.json` – full corpus metrics (schema v1),
 - `exports/<slug>_profile.json` – paragraph-accurate tense profiles,
-- `exports/<slug>_style.json` – self-calibrated style passport (schema v2),
+- `exports/<slug>_style.json` – self-calibrated style reference (schema v2),
 - `exports/<slug>_style_passport.txt` – human-readable passport,
 - `exports/<slug>_report.md` – Markdown dossier report,
 - `exports/<slug>_dashboard.html` – single-file HTML dashboard.
@@ -358,7 +358,7 @@ res = api.analyze(text, language="auto")
 kpis = res["metrics"]
 print(f"ASL: {kpis['asl']:.2f}, LIX: {kpis['lix']:.1f}")
 
-# 2. Self-calibrated style passport (bands, z*, FDR, dimensions)
+# 2. Self-calibrated style reference (bands, z*, FDR, dimensions)
 passport = api.fingerprint(text, language="de")
 
 # 3. Paragraph-level tense & style profiling

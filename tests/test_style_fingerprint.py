@@ -167,7 +167,7 @@ class TestStyleFingerprint(unittest.TestCase):
 
     def test_passport_text(self):
         text = self.fp.passport_text(labels={"feat_asl": "ASL"})
-        self.assertIn("STILPASS", text)
+        self.assertIn("STILREFERENZ", text)
         self.assertIn("ASL", text)
         self.assertIn("Korridor", text)
 
@@ -385,7 +385,7 @@ class TestStyleDimensions(unittest.TestCase):
 
     def test_passport_text_lists_dimensions(self):
         text = self.fp.passport_text(labels={"feat_asl": "ASL"})
-        self.assertIn("STILPASS", text)
+        self.assertIn("STILREFERENZ", text)
         self.assertIn("Zufallstreffer", text)
 
 

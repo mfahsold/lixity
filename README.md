@@ -7,7 +7,7 @@
 
 **Lixity** is an offline text-linguistics engine that measures *how a literary manuscript reads* – sentence rhythm, lexical diversity, tense continuity, register signals – and flags only the passages where a chapter departs from its own established voice.
 
-Unlike grammar checkers or general NLP stacks, Lixity never measures against external norms. It derives a **self-calibrating style passport** from the manuscript itself (robust median/MAD house style), shrinks noisy observations from short chapters ($z^*$), and controls false discoveries across all chapter×feature cells (Benjamini-Hochberg FDR). The result is macro-editing evidence, not style dogma.
+Unlike grammar checkers or general NLP stacks, Lixity never measures against external norms. It derives a **self-calibrating style reference** from the manuscript itself (robust median/MAD house style), shrinks noisy observations from short chapters ($z^*$), and controls false discoveries across all chapter×feature cells (Benjamini-Hochberg FDR). The result is macro-editing evidence, not style dogma.
 
 Built for fiction authors, literary editors and translators, digital humanities researchers, and autonomous AI agents that need deterministic, auditable text analytics. Pure Python, zero cloud calls, three dependencies (`pydantic`, `rich`, `orjson`), seven native language profiles.
 
@@ -27,7 +27,7 @@ The name represents the mathematical foundation of its analysis: **T**TR (Type-T
 4. [What Lixity Measures](#what-lixity-measures)
 5. [Installation](#installation)
 6. [Quick Start & CLI Reference](#quick-start--cli-reference)
-7. [The Self-Calibrating Style Passport](#the-self-calibrating-style-passport)
+7. [The Self-Calibrating Style Reference](#the-self-calibrating-style-passport)
 8. [Work Markers (Editor-Visible)](#work-markers-editor-visible)
 9. [Python API for AI Agents](#python-api-for-ai-agents)
 10. [Multilingual Support](#multilingual-support)
@@ -171,7 +171,7 @@ lixity profile manuscript.md
 lixity profile manuscript.md --json
 ```
 
-### 3. Self-Calibrating Style Passport
+### 3. Self-Calibrating Style Reference
 Derives the manuscript's reference house style, computes significance-adjusted deviations, and uncovers latent style dimensions.
 
 ```bash
@@ -182,7 +182,7 @@ lixity style manuscript.md
 lixity style manuscript.md --json
 ```
 
-![Lixity CLI style passport](docs/screenshots/cli-style.png)
+![Lixity CLI style reference](docs/screenshots/cli-style.png)
 
 ### 4. Interactive Single-File HTML Dashboard
 Generates a zero-dependency HTML dashboard with an interactive chapter map, diverging z-score heatmap, and work marker controls.
@@ -196,7 +196,7 @@ lixity dashboard manuscript.md -o exports/dashboard.html
 ![Lixity style dimensions](docs/screenshots/dashboard-dimensions.png)
 
 ### 5. Idempotent Workspace Build
-Drop a manuscript into a folder and run `lixity build`: it discovers the manuscript, creates `exports/` (with `exports/archive/`) and `nda/`, and publishes metrics, profiles, style passport, Markdown report and dashboard. Identical input causes zero writes; changed input rotates exactly one timestamped version (archive keeps the last 10 per family).
+Drop a manuscript into a folder and run `lixity build`: it discovers the manuscript, creates `exports/` (with `exports/archive/`) and `nda/`, and publishes metrics, profiles, style reference, Markdown report and dashboard. Identical input causes zero writes; changed input rotates exactly one timestamped version (archive keeps the last 10 per family).
 
 ```bash
 cd my-novel && lixity build      # discovers my-novel.md
@@ -230,7 +230,7 @@ lixity analyze samples/effi-briest-folge/effi-briest-folge.md --json
 
 ---
 
-## The Self-Calibrating Style Passport
+## The Self-Calibrating Style Reference
 
 Traditional stylometry often evaluates texts against external norms (e.g. newspaper German or academic English). Lixity takes a fundamentally different, text-intrinsic approach: **the manuscript itself establishes the norm**.
 
@@ -297,7 +297,7 @@ print(f"ASL: {kpis['asl']:.2f}, LIX: {kpis['lix']:.1f}")
 profiles = api.profile(text, language="de")
 flagged_paragraphs = [p for p in profiles["paragraphs"] if p["severity"] >= 2]
 
-# 3. Self-calibrating style passport
+# 3. Self-calibrating style reference
 passport = api.fingerprint(text, language="de")
 for dim in passport["dimensions"]:
     print(f"Dimension {dim['index']}: {dim['variance']*100:.0f}% variance")
@@ -367,7 +367,7 @@ In short chapters (e.g. a brief transitional scene of 250 words), a few extra co
 
 <details>
 <summary><b>Will Lixity work with non-fiction or academic papers?</b></summary>
-Yes. While developed with literary manuscripts in mind, Lixity's rhythm, lexical richness, readability, and style passport features apply equally well to essays, dissertations, memoirs, and technical documentation.
+Yes. While developed with literary manuscripts in mind, Lixity's rhythm, lexical richness, readability, and style reference features apply equally well to essays, dissertations, memoirs, and technical documentation.
 </details>
 
 <details>

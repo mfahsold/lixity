@@ -482,7 +482,7 @@ class StyleFingerprint:
             return labels.get(key, default)
 
         lines = [
-            f"{t('style_passport', 'STILPASS')} – "
+            f"{t('style_passport', 'STILREFERENZ')} – "
             f"{t('house_style', 'selbstkalibrierter Hausstil')} "
             f"({self.n_chapters} {t('chapter', 'Kapitel')})",
             "=" * 72,

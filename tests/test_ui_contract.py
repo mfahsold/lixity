@@ -93,6 +93,17 @@ class TestJsDomContract(unittest.TestCase):
             'tabindex="0"',
             'aria-expanded="false"',
             'data-action="load"',
+            'class="kpi kpi-link"',
+            'data-jump="#heatmap"',
+            'data-jump="#bands"',
+            'data-jump="#ch-1"',
+            'data-line="3"',
+            'data-start="',
+            'data-outliers="',
+            'data-outliers-one="',
+            'id="layer-only"',
+            'id="layer-next"',
+            'id="layer-legend-count"',
         ):
             self.assertIn(hook, html, hook)
 

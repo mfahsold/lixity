@@ -108,6 +108,8 @@ def render_dashboard(
     total_words = sum(c.words for c in chapters)
     total_flagged = sum(1 for p in paragraphs if p.severity >= 2)
     scale = max((p.words for p in paragraphs), default=1)
+    feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
+
     function_pct = (
         round(sum(p.function_word_pct for p in paragraphs) / len(paragraphs), 1)
         if paragraphs
@@ -241,17 +243,17 @@ def render_dashboard(
 
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [
-        kpi(N(total_words, 0), help_term(labels, "words", L("words_prose"))),
-        kpi(str(len(chapters)), L("chapter")),
-        kpi(str(len(paragraphs)), L("paragraphs")),
+        kpi(N(total_words, 0), help_term(labels, "words", L("words_prose")), jump="#matrix"),
+        kpi(str(len(chapters)), L("chapter"), jump="#matrix"),
+        kpi(str(len(paragraphs)), L("paragraphs"), jump="#matrix"),
     ]
     rhythm_tiles: list[str] = []
     language_tiles: list[str] = []
     lexis_tiles: list[str] = []
     style_tiles: list[str] = []
     if metrics is not None:
-        scope_tiles.append(kpi(N(metrics.total_sentences, 0), L("sentences")))
-        rhythm_tiles.append(kpi(N(metrics.asl, 2), help_term(labels, "asl", "ASL")))
+        scope_tiles.append(kpi(N(metrics.total_sentences, 0), L("sentences"), jump="#matrix"))
+        rhythm_tiles.append(kpi(N(metrics.asl, 2), help_term(labels, "asl", "ASL"), jump="#dist"))
         rhythm_tiles.append(
             kpi(
                 P(metrics.staccato_pct),
@@ -266,19 +268,27 @@ def render_dashboard(
                 bar=metrics.dialog_ratio,
             )
         )
-        language_tiles.append(kpi(N(metrics.flesch_de, 1), help_term(labels, "flesch", "Flesch")))
-        language_tiles.append(kpi(N(metrics.lix, 1), help_term(labels, "lix", "LIX")))
-        lexis_tiles.append(kpi(N(metrics.ttr, 4), help_term(labels, "ttr", "TTR")))
-        lexis_tiles.append(kpi(N(metrics.guiraud_r, 2), help_term(labels, "guiraud", "Guiraud R")))
-        lexis_tiles.append(kpi(N(metrics.yules_k, 1), help_term(labels, "yules", "Yule&#8217;s K")))
+        language_tiles.append(
+            kpi(N(metrics.flesch_de, 1), help_term(labels, "flesch", "Flesch"), jump="#bands")
+        )
+        language_tiles.append(
+            kpi(N(metrics.lix, 1), help_term(labels, "lix", "LIX"), jump="#bands")
+        )
+        lexis_tiles.append(kpi(N(metrics.ttr, 4), help_term(labels, "ttr", "TTR"), jump="#bands"))
+        lexis_tiles.append(
+            kpi(N(metrics.guiraud_r, 2), help_term(labels, "guiraud", "Guiraud R"), jump="#bands")
+        )
+        lexis_tiles.append(
+            kpi(N(metrics.yules_k, 1), help_term(labels, "yules", "Yule&#8217;s K"), jump="#bands")
+        )
         hd_d_value = N(metrics.hd_d, 3) if getattr(metrics, "hd_d", None) is not None else "–"
-        lexis_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D")))
+        lexis_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D"), jump="#bands"))
         mtld_value = N(metrics.mtld, 1) if getattr(metrics, "mtld", None) is not None else "–"
-        lexis_tiles.append(kpi(mtld_value, help_term(labels, "mtld", "MTLD")))
+        lexis_tiles.append(kpi(mtld_value, help_term(labels, "mtld", "MTLD"), jump="#bands"))
         mattr_value = N(metrics.mattr, 3) if getattr(metrics, "mattr", None) is not None else "–"
-        lexis_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR")))
+        lexis_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR"), jump="#bands"))
         maas_value = N(metrics.maas_a2, 3) if getattr(metrics, "maas_a2", None) is not None else "–"
-        lexis_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²")))
+        lexis_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
         language_tiles.append(
             kpi(
                 P(metrics.first_person_start_rate),
@@ -310,7 +320,9 @@ def render_dashboard(
                     help_term(labels, "fingerprint", f"{L('deviation')} · {L('chapter')} {num}"),
                 )
             )
-    style_tiles.append(kpi(str(total_flagged), help_term(labels, "flagged", L("flagged"))))
+    style_tiles.append(
+        kpi(str(total_flagged), help_term(labels, "flagged", L("flagged")), jump="#heatmap")
+    )
 
     parts.append('<section class="kpis">')
     for caption_key, tiles in (
@@ -338,7 +350,7 @@ def render_dashboard(
             ("16–25", d.long_count, d.long_pct),
             ("> 25", d.complex_count, d.complex_pct),
         ]
-        parts.append('<section class="panel">')
+        parts.append('<section class="panel" id="dist">')
         parts.append(f"<h2>{L('sentence_dist')}</h2>")
         parts.append('<div class="dist">')
         for criterion, count, pct in rows:
@@ -351,8 +363,7 @@ def render_dashboard(
 
     # --- Style heatmap & passport (self-calibrated house style) -----------
     if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
-        feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
-        parts.append('<section class="panel">')
+        parts.append('<section class="panel" id="heatmap">')
         parts.append(f"<h2>{help_term(labels, 'heatmap', L('style_fingerprint'))}</h2>")
         parts.append(
             '<div class="z-legend">'
@@ -409,7 +420,7 @@ def render_dashboard(
         )
         parts.append("</section>")
 
-        parts.append('<section class="panel">')
+        parts.append('<section class="panel" id="bands">')
         parts.append(f"<h2>{help_term(labels, 'passport', L('style_passport'))}</h2>")
         parts.append('<div class="bands">')
         for field_name, label_key, _unit in FEATURES:
@@ -444,7 +455,7 @@ def render_dashboard(
 
         # --- Style dimensions (self-calibrated principal axes) -------------
         if fingerprint.dimensions:
-            parts.append('<section class="panel">')
+            parts.append('<section class="panel" id="dimensions">')
             parts.append(f"<h2>{help_term(labels, 'dimensions', L('style_dimensions'))}</h2>")
             field_labels = {f: label_key for f, label_key, _u in FEATURES}
             for dim in fingerprint.dimensions:
@@ -454,6 +465,11 @@ def render_dashboard(
                 entries = [
                     (label(labels, field_labels.get(f, f)), float(v)) for f, v in top_pos + top_neg
                 ]
+                chip_layers = {
+                    label(labels, field_labels.get(f, f)): feature_layers[f]
+                    for f, _v in top_pos + top_neg
+                    if f in feature_layers
+                }
                 limit = max((abs(v) for _f, v in entries), default=1.0)
                 flagged = dim.get("flagged", [])
                 parts.append('<div class="dim-card">')
@@ -461,7 +477,7 @@ def render_dashboard(
                     f'<div class="dim-header"><span class="dim-title">{L("style_dimensions")} {dim["index"]}</span>'
                     f'<span class="badge">{P(dim["variance"] * 100, 0)} {L("dim_variance")}</span></div>'
                 )
-                parts.append(loading_bars(entries, limit))
+                parts.append(loading_bars(entries, limit, layers=chip_layers))
                 if flagged:
                     ch_label = L("chapter")
                     flagged_str = ", ".join(f"{ch_label} {ch}" for ch in flagged)
@@ -471,7 +487,7 @@ def render_dashboard(
 
         # --- Work markers (editor-visible, set from the dashboard) -------
         if markers is not None:
-            parts.append('<section class="panel">')
+            parts.append('<section class="panel" id="markers">')
             parts.append(f"<h2>{help_term(labels, 'markers', L('markers'))}</h2>")
             if markers:
                 parts.append("<table><thead><tr>")
@@ -485,7 +501,8 @@ def render_dashboard(
                     kind_label = label(labels, "marker_" + m.kind)
                     note = esc(str(m.note or "")) or "–"
                     parts.append(
-                        f'<tr><td><span class="badge marker-{m.kind}">{esc(kind_label)}</span></td>'
+                        f'<tr class="row-link" data-line="{m.line}" tabindex="0">'
+                        f'<td><span class="badge marker-{m.kind}">{esc(kind_label)}</span></td>'
                         f'<td class="num">{L("line")} {m.line}</td><td>{note}</td>'
                     )
                     if controls:
@@ -532,15 +549,23 @@ def render_dashboard(
     parts.append(f'<a class="totop" href="#top">↑ {L("top")}</a>')
     parts.append("</div>")
 
-    parts.append('<div class="layer-legend" id="layer-legend" hidden="hidden">')
-    parts.append('<span class="layer-title" id="layer-legend-title"></span>')
+    parts.append(
+        f'<div class="layer-legend" id="layer-legend" hidden="hidden" '
+        f'data-outliers="{esc(label(labels, "layer_outliers"), quote=True)}" '
+        f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
+    )
+    parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
     parts.append('<span class="z-gradient"></span>')
     parts.append(
-        f'<span class="layer-scale">{esc(label(labels, "layer_below"))} · '
-        f"{esc(label(labels, 'layer_scale_mean'))} · "
-        f"{esc(label(labels, 'layer_above'))}</span>"
+        f'<span class="layer-scale"><span>{esc(label(labels, "layer_below_short"))}</span>'
+        f"<span>{esc(label(labels, 'layer_above_short'))}</span></span>"
     )
-    parts.append('<span class="layer-hint" id="layer-legend-hint"></span>')
+    parts.append('<span class="layer-count" id="layer-legend-count"></span>')
+    parts.append(
+        f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
+        f"{esc(label(labels, 'layer_only'))}</label>"
+    )
+    parts.append(f'<button class="ctl" id="layer-next">{esc(label(labels, "layer_next"))}</button>')
     parts.append("</div>")
 
     if not tense_available:
@@ -566,12 +591,15 @@ def render_dashboard(
         direction = label(labels, "layer_above" if z > 0 else "layer_below")
         return f"{text} · {direction}"
 
-    parts.append("<main>")
+    parts.append('<main id="chapters">')
     for chapter in chapters:
         chapter_paras = by_chapter.get(chapter.num, [])
         has_flags = any(p.severity >= 2 for _, p in chapter_paras)
         classes = "chapter has-flags" if has_flags else "chapter"
-        parts.append(f'<section class="{classes}" id="ch-{chapter.num}">')
+        parts.append(
+            f'<section class="{classes}" id="ch-{chapter.num}" '
+            f'data-start="{chapter.start_line}" data-end="{chapter.end_line}">'
+        )
         parts.append('<div class="chapter-head">')
         parts.append(f"<h2>{chapter.num}. {esc(chapter.title)}</h2>")
         parts.append(
@@ -593,12 +621,12 @@ def render_dashboard(
                     f"{label(labels, 'present')} {p.present_hits} / "
                     f"{label(labels, 'past')} {p.past_hits} · {sev_label}"
                 )
-                layer_payload: dict[str, list[str]] = {}
+                layer_payload: dict[str, list] = {}
                 for key in LAYER_FEATURES:
                     info = layer_data.get(key, {}).get(idx)
                     if info is not None:
                         value, z = info
-                        layer_payload[key] = [z_color(z), _layer_tip(key, value, z)]
+                        layer_payload[key] = [z_color(z), _layer_tip(key, value, z), round(z, 2)]
                 layer_attr = (
                     f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
                     if layer_payload
@@ -642,7 +670,7 @@ def render_dashboard(
 
     # --- Chapter matrix ---------------------------------------------------
     if chapters:
-        parts.append('<section class="panel">')
+        parts.append('<section class="panel" id="matrix">')
         parts.append(f"<h2>{L('chapter_table')}</h2>")
         parts.append("<table><thead><tr>")
         parts.append(
@@ -658,7 +686,8 @@ def render_dashboard(
         max_dialog = max((c.dialog_pct for c in chapters), default=1.0) or 1.0
         for c in chapters:
             parts.append(
-                f"<tr><td>{c.num}</td><td>{esc(c.title)}</td>"
+                f'<tr class="row-link" data-jump="#ch-{c.num}" tabindex="0">'
+                f"<td>{c.num}</td><td>{esc(c.title)}</td>"
                 f'<td class="num">{N(c.words, 0)}</td>'
                 f'<td class="num bar-cell"><i style="--v:{c.asl / max_asl * 100:.0f}%"></i>'
                 f"{N(c.asl, 1)}</td>"

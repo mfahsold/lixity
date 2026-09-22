@@ -5,6 +5,38 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0] – 2026-09-22
+
+### Added
+
+- **Everything relevant is clickable**: KPI tiles jump to their panel (or
+  activate the matching style layer), style-reference band rows and dimension
+  loading bars open the layer, chapter-matrix rows jump to the chapter and
+  work-marker rows jump to the containing chapter — mouse and keyboard.
+- **Style-layer v2**: deviations (|z| ≥ 1.5) are ring-marked and counted in
+  the legend, "only deviations" dims the rest, and "next deviation" walks
+  through the marked passages one by one (opens the paragraph and scrolls).
+- **Plain-language tooltips** in all seven languages: short, concrete, with a
+  reading direction ("higher = …") instead of formulas; the heatmap formula
+  moved to the docs.
+- `docs/ITERATION-2.md` stays the reference for the stability register.
+
+### Changed
+
+- **"Style passport" is now "Style reference"** (de: *Stilreferenz*,
+  fr: *Référence de style*, es/it/pt/nl analogous) – clearer name for the
+  self-calibrated style norm. The API (`fingerprint`/`passport`) and the
+  JSON schema are unchanged.
+- Style layer is framed as **"Deviations"** (the select lists the dimensions),
+  with short scale words ("below · above") and guidance on demand.
+- KPI labels balance their line breaks; chapter-matrix micro-bars render as a
+  thin underline instead of a block behind the number.
+
+### Fixed
+
+- Style-layer payload carries the robust z value (used for marking, counting
+  and navigation); the legend count uses correct singular/plural.
+
 ## [1.4.0] – 2026-09-22
 
 ### Added

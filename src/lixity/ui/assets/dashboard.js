@@ -88,30 +88,58 @@ document.addEventListener("mouseout", function (event) {
   if (cell) highlightCell(cell, false);
 }, { passive: true });
 
+var reduceMotion = window.matchMedia
+  && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+function scrollAndFlash(target) {
+  target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
+  target.classList.add("flash");
+  setTimeout(function () { target.classList.remove("flash"); }, 1400);
+}
+
+function toggleParagraph(chip, forceOpen) {
+  var panel = document.getElementById(chip.dataset.target);
+  if (!panel) return;
+  var open = forceOpen === undefined ? !panel.classList.contains("open") : forceOpen;
+  panel.classList.toggle("open", open);
+  chip.classList.toggle("active", open);
+  chip.setAttribute("aria-expanded", open ? "true" : "false");
+  if (open) {
+    panel.style.borderLeftColor = chip.style.getPropertyValue("--layer-color") || "";
+  }
+}
+
+function activate(el) {
+  if (el.matches("td.z[data-chapter]")) { jumpToChapter(el); return; }
+  if (el.hasAttribute("data-line")) { jumpToLine(el); return; }
+  var key = el.getAttribute("data-layer");
+  if (key && layer) { layer.value = key; applyLayer(); }
+  var target = document.querySelector(el.getAttribute("data-jump") || "");
+  if (target) scrollAndFlash(target);
+}
+
+function jumpToLine(row) {
+  var line = parseInt(row.getAttribute("data-line"), 10);
+  var chapters = document.querySelectorAll(".chapter[data-start]");
+  for (var i = 0; i < chapters.length; i++) {
+    var start = parseInt(chapters[i].getAttribute("data-start"), 10);
+    var end = parseInt(chapters[i].getAttribute("data-end"), 10);
+    if (line >= start && line <= end) { scrollAndFlash(chapters[i]); return; }
+  }
+}
+
 document.addEventListener("click", function (event) {
   var chip = event.target.closest(".chip");
-  if (chip) {
-    var panel = document.getElementById(chip.dataset.target);
-    if (panel) {
-      var open = panel.classList.toggle("open");
-      chip.classList.toggle("active", open);
-      chip.setAttribute("aria-expanded", open ? "true" : "false");
-      if (open) {
-        panel.style.borderLeftColor = chip.style.getPropertyValue("--layer-color") || "";
-      }
-    }
-    return;
-  }
-  var cell = event.target.closest("td.z[data-chapter]");
-  if (cell) jumpToChapter(cell);
+  if (chip) { toggleParagraph(chip); return; }
+  var target = event.target.closest("[data-jump], [data-line]");
+  if (target) activate(target);
 });
 document.addEventListener("keydown", function (event) {
   if (event.key !== "Enter" && event.key !== " ") return;
-  var cell = event.target.closest ? event.target.closest("td.z[data-chapter]") : null;
-  if (cell) {
-    event.preventDefault();
-    jumpToChapter(cell);
-  }
+  var el = event.target.closest
+    ? event.target.closest("[data-jump], [data-line], td.z[data-chapter]")
+    : null;
+  if (el) { event.preventDefault(); activate(el); }
 });
 var filter = document.getElementById("filter-flags");
 if (filter) {
@@ -141,6 +169,15 @@ function chipLayers(chip) {
   return chip._layers;
 }
 
+var layerOnly = document.getElementById("layer-only");
+var layerNext = document.getElementById("layer-next");
+var layerCount = document.getElementById("layer-legend-count");
+var outlierCursor = 0;
+
+function outlierChips() {
+  return Array.prototype.slice.call(document.querySelectorAll(".chip.outlier"));
+}
+
 function applyLayer() {
   var key = layer ? layer.value : "";
   document.body.classList.toggle("layer-on", !!key);
@@ -151,14 +188,17 @@ function applyLayer() {
       chip.classList.add("has-layer");
       chip.setAttribute("data-tip", info[1]);
       chip.removeAttribute("title");
+      chip.classList.toggle("outlier", Math.abs(info[2]) >= 1.5);
     } else {
       chip.style.removeProperty("--layer-color");
       chip.classList.remove("has-layer");
+      chip.classList.remove("outlier");
       chip.removeAttribute("data-tip");
       var base = chip.getAttribute("data-tip-base");
       if (base) chip.setAttribute("title", base);
     }
   });
+  outlierCursor = 0;
   if (layerLegend) {
     layerLegend.hidden = !key;
     if (key && layer) {
@@ -170,8 +210,31 @@ function applyLayer() {
         if (hint) title.setAttribute("data-tip", hint);
         else title.removeAttribute("data-tip");
       }
+      if (layerCount) {
+        var n = outlierChips().length;
+        var noun = n === 1
+          ? layerLegend.getAttribute("data-outliers-one")
+          : layerLegend.getAttribute("data-outliers");
+        layerCount.textContent = n ? n + " " + (noun || "") : "";
+      }
     }
   }
+}
+
+if (layerOnly) {
+  layerOnly.addEventListener("change", function () {
+    document.body.classList.toggle("layer-only", layerOnly.checked);
+  });
+}
+if (layerNext) {
+  layerNext.addEventListener("click", function () {
+    var chips = outlierChips();
+    if (!chips.length) return;
+    if (outlierCursor >= chips.length) outlierCursor = 0;
+    var chip = chips[outlierCursor++];
+    toggleParagraph(chip, true);
+    scrollAndFlash(chip);
+  });
 }
 
 function jumpToChapter(cell) {

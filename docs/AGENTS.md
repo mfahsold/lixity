@@ -8,7 +8,7 @@ govern the numbers.
 
 Lixity turns a Markdown manuscript into quantitative text linguistics:
 sentence rhythm, lexical diversity, readability, dialogue share,
-paragraph-accurate tense profiles, and a **self-calibrating style passport**.
+paragraph-accurate tense profiles, and a **self-calibrating style reference**.
 It never judges style against external norms – it derives the manuscript's
 own house style (robust median/MAD per feature) and flags only deviations
 from that style, controlled for measurement noise and multiple testing.
@@ -19,7 +19,7 @@ from that style, controlled for measurement noise and multiple testing.
 |---|---|---|
 | `lixity analyze FILE --json` | corpus metrics + per-chapter style features | JSON (meta + metrics) |
 | `lixity profile FILE` | paragraph-accurate tense/style profiles | JSON (meta + chapters + paragraphs) |
-| `lixity style FILE --json` | style passport (bands, deviations, dimensions, FDR) | JSON (passport, schema v2) |
+| `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR) | JSON (passport, schema v2) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard | file path |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` | artifact list |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
@@ -34,7 +34,7 @@ from that style, controlled for measurement noise and multiple testing.
 ### 3.1 `analyze --json` (schema_version 1)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.4.0", "schema_version": 1, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.5.0", "schema_version": 1, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",

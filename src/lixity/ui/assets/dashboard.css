@@ -85,7 +85,7 @@ h2 {
 }
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(8.8rem, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(9.4rem, 1fr));
   gap: .55rem;
 }
 .kpi {
@@ -126,7 +126,11 @@ h2 {
   font-size: .72rem;
   line-height: 1.35;
   margin-top: .25rem;
+  text-wrap: balance;
 }
+.kpi-link { cursor: pointer; }
+.kpi-link:hover b { color: var(--accent); }
+.kpi-link:active { transform: translateY(0); }
 
 /* --- Focus & anchors (keyboard accessibility) -------------------------- */
 :where(a, button, select, input, .chip, .help):focus-visible {
@@ -238,12 +242,22 @@ h2 {
   min-width: 7rem;
   font-size: .72rem;
 }
+.layer-legend .layer-count { font-variant-numeric: tabular-nums; }
+.layer-legend .layer-only { display: inline-flex; gap: .35rem; align-items: center; cursor: pointer; }
+.layer-legend button.ctl { margin-left: auto; }
 body.layer-on .chip.has-layer { background: var(--layer-color); }
 body.layer-on .chip.has-layer.tense-present { border-top: 2px solid var(--present); }
 body.layer-on .chip.has-layer.tense-past { border-top: 2px solid var(--past); }
 body.layer-on .chip.has-layer.tense-mixed { border-top: 2px solid var(--mixed); }
 body.layer-on .chip.has-layer.tense-neutral { border-top: 2px solid var(--neutral); }
-.chapter.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.chapter.flash, .ptext.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.row-link { cursor: pointer; }
+.row-link:hover td { background: var(--accent-light); }
+.band[data-layer], .load[data-layer] { cursor: pointer; }
+.chip.outlier { box-shadow: 0 0 0 2px var(--fg); }
+.chip.sev-2.outlier, .chip.sev-3.outlier { box-shadow: inset 0 -3px 0 var(--flag), 0 0 0 2px var(--fg); }
+body.layer-only .chip:not(.outlier) { opacity: .18; }
+body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 
 /* --- Expandable paragraph preview (animated, show-don't-tell) --------- */
 .ptext {
@@ -338,18 +352,14 @@ body.layer-on .chip.has-layer.tense-neutral { border-top: 2px solid var(--neutra
 .bar-cell i {
   position: absolute;
   right: .4rem;
-  top: 50%;
-  transform: translateY(-50%);
-  height: .55rem;
+  bottom: .3rem;
+  height: 2px;
   width: var(--v);
-  max-width: 3.2rem;
-  background: var(--accent-light);
-  border-radius: 3px;
-  z-index: 0;
+  max-width: 3.4rem;
+  background: var(--accent);
+  opacity: .35;
+  border-radius: 2px;
 }
-.bar-cell { z-index: 0; }
-.bar-cell { color: var(--fg); }
-.bar-cell i + * { position: relative; }
 
 /* --- Tables ----------------------------------------------------------- */
 table { width: 100%; border-collapse: collapse; font-size: .82rem; }

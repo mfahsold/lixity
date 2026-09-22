@@ -104,7 +104,7 @@ def _extract_section(dashboard: str, marker: str) -> str:
         raise SystemExit("Dashboard markup incomplete – cannot extract section.")
     style = style_match.group(1)
     lang = lang_match.group(1)
-    for match in re.finditer(r'<section class="panel">.*?</section>', dashboard, re.DOTALL):
+    for match in re.finditer(r'<section class="panel"[^>]*>.*?</section>', dashboard, re.DOTALL):
         if marker in match.group(0):
             return (
                 "<!DOCTYPE html>"

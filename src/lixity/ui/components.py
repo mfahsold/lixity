@@ -74,14 +74,28 @@ def line_label(labels: Mapping[str, str] | None, profile: Any) -> str:
     return f"{prefix} {start}" if start == end else f"{prefix} {start}–{end}"
 
 
-def kpi(value: str, label_text: str, bar: float | None = None) -> str:
-    """KPI tile; ``bar`` (0–100) adds a thin proportion bar under the value."""
+def kpi(
+    value: str,
+    label_text: str,
+    bar: float | None = None,
+    jump: str | None = None,
+    layer: str | None = None,
+) -> str:
+    """KPI tile; ``bar`` adds a proportion bar, ``jump``/``layer`` make it a link."""
     bar_html = (
         f'<i class="kpi-bar" style="--v:{max(0.0, min(100.0, bar)):.1f}%"></i>'
         if bar is not None
         else ""
     )
-    return f'<div class="kpi"><b>{value}</b><span>{label_text}</span>{bar_html}</div>'
+    if jump or layer:
+        attrs = (
+            f' class="kpi kpi-link" data-jump="{html.escape(jump or "#chapters", quote=True)}"'
+            + (f' data-layer="{html.escape(layer, quote=True)}"' if layer else "")
+            + ' role="button" tabindex="0"'
+        )
+    else:
+        attrs = ' class="kpi"'
+    return f"<div{attrs}><b>{value}</b><span>{label_text}</span>{bar_html}</div>"
 
 
 def band_chart(
@@ -91,6 +105,7 @@ def band_chart(
     median: float,
     values: list[float],
     outliers: list[float],
+    layer: str | None = None,
 ) -> str:
     """One style-passport row: data range, ±2σ band, median tick, outlier dots.
 
@@ -106,20 +121,38 @@ def band_chart(
     band_left = pos(band_lo)
     band_width = max(0.5, pos(band_hi) - band_left)
     dots = "".join(f'<b style="left:{pos(v):.2f}%"></b>' for v in outliers)
+    attrs = f' data-layer="{html.escape(layer, quote=True)}"' if layer else ""
     return (
-        f'<div class="band" title="{html.escape(title, quote=True)}">'
+        f'<div class="band" title="{html.escape(title, quote=True)}"{attrs}>'
         f'<i class="band-range" style="left:{band_left:.2f}%;width:{band_width:.2f}%"></i>'
         f'<i class="band-median" style="left:{pos(median):.2f}%"></i>'
         f"{dots}</div>"
     )
 
 
-def loading_bars(entries: list[tuple[str, float]], limit: float) -> str:
-    """Diverging mini-bars for dimension loadings (positive accent, negative blue)."""
+def loading_bars(
+    entries: list[tuple[str, float]],
+    limit: float,
+    layers: Mapping[str, str] | None = None,
+) -> str:
+    """Diverging mini-bars for dimension loadings (positive accent, negative blue).
+
+    ``layers`` maps a label to a style-layer key; matching chips become links
+    that activate that layer.
+    """
     scale = max(limit, 1e-9)
     bars = []
     for name, value in entries:
         width = min(100.0, abs(value) / scale * 100.0)
         sign = "pos" if value >= 0 else "neg"
-        bars.append(f'<span class="load {sign}" style="--w:{width:.1f}%"><i></i>{esc(name)}</span>')
+        layer = (layers or {}).get(name)
+        attrs = (
+            f' data-layer="{html.escape(layer, quote=True)}" data-jump="#chapters"'
+            f' role="button" tabindex="0"'
+            if layer
+            else ""
+        )
+        bars.append(
+            f'<span class="load {sign}" style="--w:{width:.1f}%"{attrs}><i></i>{esc(name)}</span>'
+        )
     return '<div class="loadings">' + "".join(bars) + "</div>"
