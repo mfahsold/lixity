@@ -48,6 +48,9 @@ foundation of its analysis: **T**TR, **Y**ule's characteristic $K$, and
 - **Scene & pacing structure:** explicit scene breaks (`---`, `* * *`), tempo
   signals per scene/chapter (ASL, staccato, dialogue) and a documented 0–3
   hook score for every chapter ending.
+- **Motifs & repetition:** track curated motifs across chapters (mentions,
+  density, span, gaps) and surface repeated phrases and overused content words
+  — a signal for macro editing, not a verdict.
 - **Editor-visible work markers:** invisible HTML comments with deterministic
   content-hash IDs and free-text notes, writable from the dashboard or API.
 - **Idempotent workspace build:** `lixity build` publishes a reproducible
@@ -78,6 +81,7 @@ lixity style manuscript.md              # self-calibrating style reference (--js
 lixity dialogue manuscript.md            # turn structure (--json for machines)
 lixity characters manuscript.md --names "Anna,Ralf"   # presence per chapter
 lixity pacing manuscript.md              # scenes, pacing curve, chapter hooks
+lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b'   # motifs + repetition
 lixity dashboard manuscript.md -o exports/dashboard.html
 cd my-novel && lixity build             # idempotent workspace: exports/ + archive
 lixity about                            # languages, features, heuristics

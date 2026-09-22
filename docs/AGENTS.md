@@ -22,6 +22,7 @@ from that style, controlled for measurement noise and multiple testing.
 | `lixity dialogue FILE [--json]` | dialogue turn structure (turns, lengths, per chapter) | text / JSON |
 | `lixity characters FILE --names A,B [--json]` | character presence per chapter | text / JSON |
 | `lixity pacing FILE [--json]` | scenes, pacing signals, chapter hooks | text / JSON |
+| `lixity motifs FILE --motif NAME=REGEX [--json]` | motif presence + repetition (words, n-grams) | text / JSON |
 | `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR) | JSON (schema v2) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard | file path |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` | artifact list |
@@ -171,6 +172,7 @@ reference = api.fingerprint(text, language="de")      # -> style reference (sche
 turns = api.dialogue(text, language="de")             # -> {"meta", "dialogue"}
 cast = api.characters(text, ["Anna", "Ralf"], language="de")  # -> {"meta", "chapters", "figures"}
 pace = api.pacing(text, language="de")                # -> {"meta", "pacing"}
+motifs = api.motifs(text, {"Wut": r"\b(Wut|wütend\w*)\b"}, language="de")  # -> {"meta", "motifs", …}
 html = api.dashboard(text, language="de", title="…")  # -> self-contained HTML string
 marker_list = api.markers(text)                       # -> list of active work markers
 new_text, m = api.add_marker(text, kind="pruefen", note="Verify tense", line=42)

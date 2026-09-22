@@ -175,6 +175,25 @@ with `scenes`, `asl`, `dialogue_pct`, `staccato_pct`,
 `closing_sentence_words`, `closing_terminal`, `closing_is_dialogue`,
 `hook_score` and the per-scene `scene_list[]`.
 
+### `lixity motifs`
+
+Motif tracking and repetition analysis. Motifs are curated regular
+expressions (`--motif NAME=REGEX`, repeatable); repetition is generic: the
+most frequent content words (function and stop words excluded) and repeated
+n-grams (default 3-grams, at least three occurrences) with their chapter
+spread. Repetition is a signal for macro editing — deliberate repetition is a
+stylistic device, so the report counts and locates, it does not judge.
+
+```bash
+lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b'
+lixity motifs manuscript.md --phrases 4 --json
+```
+
+JSON fields: `chapters`, `motifs[]` (`mentions`, `density_per_1000`,
+`chapters_present`, `first_chapter`, `last_chapter`, `longest_gap`,
+`per_chapter`), `top_words[]` and `repeated_phrases[]` (`phrase`, `count`,
+`chapters`).
+
 ### `lixity style`
 
 Prints the **style reference** – the self-calibrated house style of the
@@ -225,6 +244,8 @@ The dashboard contains:
 - a **pacing curve** (when pacing data is supplied or computed by the CLI):
   scenes, average scene length, hook mean and one bar per chapter (ASL, the
   lower the faster) with its hook score,
+- a **motifs & repetition** panel (when data is supplied or computed by the
+  CLI): motif presence and the most repeated phrases with their chapters,
 - the **style heatmap**: chapter × feature matrix of significance-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
   house mean), plus the expected-false-positive/FDR footnote; cells jump to

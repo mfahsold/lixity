@@ -91,6 +91,16 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pac_asl": "ASL",
         "pac_dialogue": "Dialogue",
         "pac_hook": "Hook",
+        "err_motif_spec": "Invalid motif (expected NAME=REGEX): {spec}",
+        "mot_name": "Motif",
+        "mot_mentions": "Mentions",
+        "mot_density": "Per 1,000 words",
+        "mot_span": "Chapter span",
+        "mot_gap": "Longest gap",
+        "mot_top_words": "Most frequent content words:",
+        "mot_phrase": "Repeated phrase",
+        "mot_count": "Count",
+        "mot_chapters": "Chapters",
     },
     "de": {
         "about_title": "lixity {version} – quantitative Textlinguistik & Stilometrie",
@@ -145,6 +155,16 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pac_asl": "ASL",
         "pac_dialogue": "Dialog",
         "pac_hook": "Haken",
+        "err_motif_spec": "Ungültiges Motiv (erwartet NAME=REGEX): {spec}",
+        "mot_name": "Motiv",
+        "mot_mentions": "Treffer",
+        "mot_density": "Je 1.000 Wörter",
+        "mot_span": "Kapitelspanne",
+        "mot_gap": "Größte Lücke",
+        "mot_top_words": "Häufigste Inhaltswörter:",
+        "mot_phrase": "Wiederholte Phrase",
+        "mot_count": "Anzahl",
+        "mot_chapters": "Kapitel",
     },
 }
 
@@ -166,7 +186,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters pacing dashboard style build about completion"
+    local cmds="analyze profile dialogue characters pacing motifs dashboard style build about completion"
     local opts="--language --json --output --help"
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$cmds" -- "$cur") )
@@ -403,6 +423,71 @@ def _cmd_pacing(args) -> int:
     return EXIT_OK
 
 
+def _cmd_motifs(args) -> int:
+    """Motif presence and repetition signals (Rich tables or JSON)."""
+    motifs: dict[str, str] = {}
+    for spec in args.motif or []:
+        name, separator, pattern = spec.partition("=")
+        if not separator or not name.strip() or not pattern.strip():
+            print(f"{_m('err_prefix')} {_m('err_motif_spec', spec=spec)}", file=sys.stderr)
+            return EXIT_ERROR
+        motifs[name.strip()] = pattern.strip()
+    try:
+        with open(args.file, encoding="utf-8") as f:
+            text = f.read()
+    except OSError as exc:
+        print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
+        return EXIT_ERROR
+
+    from .motifs import motif_report
+
+    config = CorpusConfig(language=args.language)
+    resolved = resolve_language(config, sample_text=text)
+    config = CorpusConfig(language=resolved.key)
+    report = motif_report(text, motifs, config, phrase_size=max(2, args.phrases))
+
+    if args.json:
+        print(_json(_meta_payload(resolved.key, **report.to_dict()), indent=True))
+        return EXIT_OK
+
+    con = Console()
+    if report.motifs:
+        table = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
+        table.add_column(_m("mot_name"), style="bold white")
+        table.add_column(_m("mot_mentions"), justify="right", style="cyan")
+        table.add_column(_m("mot_density"), justify="right")
+        table.add_column(_m("mot_span"))
+        table.add_column(_m("mot_gap"), justify="right")
+        for motif in report.motifs:
+            span = (
+                f"{motif.first_chapter}–{motif.last_chapter}"
+                if motif.first_chapter
+                else "–"
+            )
+            table.add_row(
+                motif.name,
+                str(motif.mentions),
+                f"{motif.density_per_1000:.2f}",
+                span,
+                str(motif.longest_gap),
+            )
+        con.print(table)
+
+    if report.top_words:
+        words = ", ".join(f"{word} ({count})" for word, count in report.top_words)
+        con.print(f"[bold]{_m('mot_top_words')}[/bold] {words}")
+
+    if report.repeated_phrases:
+        table = Table(box=box.SIMPLE, header_style="bold green")
+        table.add_column(_m("mot_phrase"))
+        table.add_column(_m("mot_count"), justify="right")
+        table.add_column(_m("mot_chapters"))
+        for phrase in report.repeated_phrases:
+            table.add_row(phrase.phrase, str(phrase.count), ", ".join(map(str, phrase.chapters)))
+        con.print(table)
+    return EXIT_OK
+
+
 def _cmd_build(args) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
     try:
@@ -499,6 +584,7 @@ def main(argv=None):
         ("dialogue", "Dialogue turn structure (text/JSON)"),
         ("characters", "Character presence across chapters (text/JSON)"),
         ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
+        ("motifs", "Motif tracking and repetition analysis (text/JSON)"),
         ("style", "Self-calibrated style reference of the manuscript (text/JSON)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
         ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
@@ -516,6 +602,18 @@ def main(argv=None):
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
             p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
             p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
+            continue
+        if name == "motifs":
+            p.add_argument("file", help="Markdown manuscript")
+            p.add_argument(
+                "--motif",
+                action="append",
+                default=[],
+                help="Motif as NAME=REGEX (repeatable)",
+            )
+            p.add_argument("--phrases", type=int, default=3, help="Phrase size (default 3)")
+            p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+            p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "characters":
             p.add_argument("file", help="Markdown manuscript")
@@ -569,6 +667,9 @@ def main(argv=None):
 
     if args.command == "pacing":
         return _cmd_pacing(args)
+
+    if args.command == "motifs":
+        return _cmd_motifs(args)
 
     try:
         with open(args.file, encoding="utf-8") as f:

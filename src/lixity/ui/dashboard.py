@@ -70,6 +70,7 @@ def render_dashboard(
     dialogue: Mapping[str, Any] | None = None,
     characters: Mapping[str, Any] | None = None,
     pacing: Mapping[str, Any] | None = None,
+    motifs: Mapping[str, Any] | None = None,
     title: str = "Manuskript",
     labels: Mapping[str, str] | None = None,
     language_name: str = "",
@@ -86,8 +87,9 @@ def render_dashboard(
 
     ``controls=True`` adds the local control panel (buttons/dropdown/NDA),
     which triggers the CLI functions via the UI server (``scripts/ui_server.py``).
-    ``dialogue``/``characters``/``pacing`` add the optional dialogue-structure,
-    character-presence and pacing panels (see the corresponding modules).
+    ``dialogue``/``characters``/``pacing``/``motifs`` add the optional
+    dialogue-structure, character-presence, pacing and motif/repetition panels
+    (see the corresponding modules).
     """
     esc = html.escape
     L = lambda key: esc(label(labels, key))  # noqa: E731
@@ -497,6 +499,50 @@ def render_dashboard(
                 f"</div>"
             )
         parts.append("</div>")
+        parts.append("</section>")
+
+    # --- Motifs & repetition ------------------------------------------------
+    if motifs and (motifs.get("motifs") or motifs.get("repeated_phrases")):
+        parts.append('<section class="panel" id="motifs">')
+        parts.append(f"<h2>{L('panel_motifs')}</h2>")
+        if motifs.get("motifs"):
+            parts.append("<table><thead><tr>")
+            parts.extend(
+                f"<th>{L(key)}</th>"
+                for key in ("chr_name", "mot_count", "mot_chapters", "chr_gap")
+            )
+            parts.append("</tr></thead><tbody>")
+            for motif in motifs["motifs"]:
+                first = motif.get("first_chapter")
+                jump = f' data-jump="#ch-{int(first)}" role="button" tabindex="0"' if first else ""
+                motif_span = f"{first}–{motif.get('last_chapter')}" if first else "–"
+                parts.append(
+                    f'<tr class="row-link"{jump}>'
+                    f'<td class="name">{esc(motif.get("name", ""))}</td>'
+                    f'<td class="num">{int(motif.get("mentions", 0))}</td>'
+                    f'<td class="num">{esc(motif_span)}</td>'
+                    f'<td class="num">{int(motif.get("longest_gap", 0))}</td>'
+                    f"</tr>"
+                )
+            parts.append("</tbody></table>")
+        if motifs.get("repeated_phrases"):
+            parts.append("<table><thead><tr>")
+            parts.extend(
+                f"<th>{L(key)}</th>" for key in ("mot_phrase", "mot_count", "mot_chapters")
+            )
+            parts.append("</tr></thead><tbody>")
+            for phrase in motifs["repeated_phrases"]:
+                chapter_list_text = ", ".join(str(c) for c in phrase.get("chapters", []))
+                first = phrase.get("chapters", [None])[0]
+                jump = f' data-jump="#ch-{int(first)}" role="button" tabindex="0"' if first else ""
+                parts.append(
+                    f'<tr class="row-link"{jump}>'
+                    f'<td class="name">{esc(phrase.get("phrase", ""))}</td>'
+                    f'<td class="num">{int(phrase.get("count", 0))}</td>'
+                    f'<td class="num">{esc(chapter_list_text)}</td>'
+                    f"</tr>"
+                )
+            parts.append("</tbody></table>")
         parts.append("</section>")
 
     # --- Style heatmap & passport (self-calibrated house style) -----------

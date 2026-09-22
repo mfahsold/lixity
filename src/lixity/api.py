@@ -141,6 +141,30 @@ def pacing(text: str, language: str = "auto", **config_overrides: Any) -> dict[s
     return {"meta": _meta(resolved.key), "pacing": pacing_report(text, config).to_dict()}
 
 
+def motifs(
+    text: str,
+    motifs: Mapping[str, str] | None = None,
+    language: str = "auto",
+    phrase_size: int = 3,
+    **config_overrides: Any,
+) -> dict[str, Any]:
+    """
+    Motif tracking and repetition analysis: per-motif presence (mentions,
+    density, chapter span, longest gap) plus generic repetition signals —
+    the most frequent content words and repeated n-grams (default 3-grams,
+    at least 3 occurrences) with their chapter spread.
+
+    ``motifs`` maps a display name to a regular expression
+    (``{"Wut": r"\b(Wut|wütend\w*)\b"}``). Returns ``{"meta", "motifs", "top_words",
+    "repeated_phrases", "chapters"}``.
+    """
+    config, resolved = _config_and_language(language, text, **config_overrides)
+    from .motifs import motif_report
+
+    report = motif_report(text, motifs, config, phrase_size=phrase_size)
+    return {"meta": _meta(resolved.key), **report.to_dict()}
+
+
 def dashboard(
     text: str,
     language: str = "auto",

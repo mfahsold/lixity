@@ -31,6 +31,7 @@ from lixity.dialogue import dialogue_report  # noqa: E402
 from lixity.language import resolve_language  # noqa: E402
 from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.markers import add_marker  # noqa: E402
+from lixity.motifs import motif_report  # noqa: E402
 from lixity.pacing import pacing_report  # noqa: E402
 from lixity.style_fingerprint import StyleFingerprint  # noqa: E402
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
@@ -194,6 +195,7 @@ def main() -> int:
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, ["Effi", "Innstetten", "Crampas", "Briest"], config),
         pacing=pacing_report(text, config).to_dict(),
+        motifs=motif_report(text, None, config).to_dict(),
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,

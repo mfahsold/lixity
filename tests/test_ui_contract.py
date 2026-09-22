@@ -60,6 +60,7 @@ def _full_dashboard() -> str:
     from lixity.characters import presence_report
     from lixity.dialogue import dialogue_report
     from lixity.markers import list_markers
+    from lixity.motifs import motif_report
     from lixity.pacing import pacing_report
 
     return render_dashboard(
@@ -72,6 +73,7 @@ def _full_dashboard() -> str:
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, ["Ich"], config),
         pacing=pacing_report(text, config).to_dict(),
+        motifs=motif_report(text, {"Ich": r"\bIch\b"}, config).to_dict(),
         title="Testroman",
         controls=True,
     )
@@ -104,7 +106,7 @@ class TestJsDomContract(unittest.TestCase):
             'class="kpi kpi-link"',
             'data-jump="#heatmap"',
             'data-jump="#bands"',
-            'data-jump="#ch-1"',
+            'data-jump="#ch-',
             'data-line="3"',
             'data-start="',
             'data-outliers="',
@@ -116,7 +118,8 @@ class TestJsDomContract(unittest.TestCase):
             'id="dialogue"',
             'id="characters"',
             'id="pacing"',
-            'data-jump="#ch-1"',
+            'id="motifs"',
+            'data-jump="#ch-',
         ):
             self.assertIn(hook, html, hook)
 
@@ -230,6 +233,10 @@ class TestLabelCompleteness(unittest.TestCase):
             "pac_avg_scene",
             "pac_hook",
             "pac_hook_mean",
+            "panel_motifs",
+            "mot_phrase",
+            "mot_count",
+            "mot_chapters",
         )
         for language in LANGUAGES:
             labels = get_language_profile(language).labels

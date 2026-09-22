@@ -20,8 +20,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **`lixity pacing`** (and `api.pacing`): scene structure via explicit
   dividers, tempo signals per scene/chapter (ASL, staccato, dialogue) and a
   documented 0–3 chapter hook score.
-- Dashboard panels for dialogue structure, character presence and the pacing
-  curve (clickable, keyboard reachable, seven languages).
+- **`lixity motifs`** (and `api.motifs`): motif presence (mentions, density,
+  chapter span, longest gap) and generic repetition signals — most frequent
+  content words and repeated n-grams with their chapter spread.
+- Dashboard panels for dialogue structure, character presence, the pacing
+  curve and motifs/repetition (clickable, keyboard reachable, seven
+  languages).
+- Curated stop-word lists (de/en) extended with high-frequency adverbs,
+  possessives and particles so repetition and driver-word analysis stays
+  content-focused.
 
 ## [1.8.0] – 2026-09-22
 

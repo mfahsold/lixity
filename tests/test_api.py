@@ -48,6 +48,18 @@ class TestApiFacade(unittest.TestCase):
         self.assertTrue(result["paragraphs"])
         self.assertNotIn("text", result["paragraphs"][0])
 
+    def test_interaction_facade_surfaces(self):
+        dialogue = api.dialogue(SAMPLE, language="de")
+        self.assertIn("dialogue", dialogue)
+        self.assertEqual(dialogue["meta"]["tool"], "lixity")
+        characters = api.characters(SAMPLE, ["Ich"], language="de")
+        self.assertIn("figures", characters)
+        pacing = api.pacing(SAMPLE, language="de")
+        self.assertIn("pacing", pacing)
+        motifs = api.motifs(SAMPLE, {"Ich": r"\bIch\b"}, language="de")
+        self.assertIn("motifs", motifs)
+        self.assertIn("top_words", motifs)
+
     def test_fingerprint_is_the_passport(self):
         passport = api.fingerprint(SAMPLE, language="de")
         self.assertEqual(passport["meta"]["schema_version"], 2)
@@ -97,7 +109,7 @@ class TestCliAgentSurface(unittest.TestCase):
         for script in (_BASH_COMPLETION, _ZSH_COMPLETION):
             self.assertIn("lixity", script)
         self.assertIn(
-            "analyze profile dialogue characters pacing dashboard style build about completion",
+            "analyze profile dialogue characters pacing motifs dashboard style build about completion",
             _BASH_COMPLETION,
         )
 
