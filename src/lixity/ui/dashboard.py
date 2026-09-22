@@ -358,10 +358,17 @@ def render_dashboard(
             devs = fingerprint.deviations.get(num, {})
             top_field = max(devs, key=lambda k: abs(devs[k])) if devs else None
             top_layer = feature_layers.get(top_field) if top_field else None
+            top_chapter = next((c for c in chapters if c.num == num), None)
+            top_title = top_chapter.title if top_chapter is not None else ""
             style_tiles.append(
                 kpi(
                     f"Ø {N(mean_abs, 1)}",
-                    help_term(labels, "fingerprint", f"{L('deviation')} · {L('chapter')} {num}"),
+                    help_term(
+                        labels,
+                        "fingerprint",
+                        f"{L('deviation')} · {L('chapter')} {num}"
+                        + (f" · {esc(top_title)}" if top_title else ""),
+                    ),
                     jump=f"#ch-{num}",
                     layer=top_layer,
                     only=bool(devs),
@@ -439,7 +446,7 @@ def render_dashboard(
                 parts.append(
                     f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
                     f'title="{esc(chapter.get("title", ""), quote=True)}">'
-                    f'<span>{L("chapter")} {num}</span>'
+                    f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
                     f'<span class="bar"><i style="width:{min(100.0, share):.1f}%"></i></span>'
                     f'<span class="val">{P(share)} · {int(chapter.get("turns", 0))} {esc(label(labels, "dlg_turns"))}</span>'
                     f"</div>"
@@ -463,12 +470,18 @@ def render_dashboard(
             jump = f' data-jump="#ch-{int(first)}" role="button" tabindex="0"' if first else ""
             share = float(figure.get("presence_ratio", 0.0)) * 100.0
             chapter_span = f"{first}–{figure.get('last_chapter')}" if first else "–"
+            first_chapter = next((c for c in chapters if c.num == first), None)
+            span_title = (
+                f"{L('chapter')} {first} · {esc(first_chapter.title)}"
+                if first_chapter is not None
+                else ""
+            )
             parts.append(
                 f'<tr class="row-link"{jump}>'
                 f'<td class="name">{esc(figure.get("name", ""))}</td>'
                 f'<td class="num">{int(figure.get("mentions", 0))}</td>'
                 f'<td class="num">{len(figure.get("chapters_present", []))} / {total}</td>'
-                f'<td class="num">{esc(chapter_span)}</td>'
+                f'<td class="num" title="{span_title}">{esc(chapter_span)}</td>'
                 f'<td class="num">{int(figure.get("longest_gap", 0))}</td>'
                 f'<td class="num bar-cell"><i style="--v:{min(100.0, share):.1f}%"></i>{share:.0f} %</td>'
                 f"</tr>"
@@ -487,7 +500,7 @@ def render_dashboard(
         parts.append("</div>")
         chapters_pacing = pacing["chapter_list"]
         max_asl = max((float(c.get("asl", 0.0)) for c in chapters_pacing), default=0.0) or 1.0
-        parts.append('<div class="dist">')
+        parts.append('<div class="dist scrollable">')
         for chapter in chapters_pacing:
             num = int(chapter.get("chapter_num", 0))
             asl = float(chapter.get("asl", 0.0))
@@ -495,7 +508,7 @@ def render_dashboard(
             parts.append(
                 f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
                 f'title="{esc(chapter.get("title", ""), quote=True)}">'
-                f'<span>{L("chapter")} {num}</span>'
+                f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
                 f'<span class="bar"><i style="width:{min(100.0, asl / max_asl * 100.0):.1f}%"></i></span>'
                 f'<span class="val">{N(asl, 1)} · {esc(label(labels, "pac_hook"))} {hook}</span>'
                 f"</div>"
@@ -511,7 +524,7 @@ def render_dashboard(
             parts.append("<table><thead><tr>")
             parts.extend(
                 f"<th>{L(key)}</th>"
-                for key in ("chr_name", "mot_count", "mot_chapters", "chr_gap")
+                for key in ("mot_name", "mot_count", "mot_chapters", "chr_gap")
             )
             parts.append("</tr></thead><tbody>")
             for motif in motifs["motifs"]:
@@ -558,7 +571,7 @@ def render_dashboard(
         parts.append("</div>")
         showing_chapters = showing["chapter_list"]
         max_abs = max((abs(float(c.get("balance", 0.0))) for c in showing_chapters), default=0.0) or 1.0
-        parts.append('<div class="dist">')
+        parts.append('<div class="dist scrollable">')
         for chapter in showing_chapters:
             num = int(chapter.get("chapter_num", 0))
             balance = float(chapter.get("balance", 0.0))
@@ -566,7 +579,7 @@ def render_dashboard(
             parts.append(
                 f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
                 f'title="{esc(chapter.get("title", ""), quote=True)}">'
-                f'<span>{L("chapter")} {num}</span>'
+                f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
                 f'<span class="bar"><i style="width:{width:.1f}%"></i></span>'
                 f'<span class="val">{N(balance, 2, signed=True)}</span>'
                 f"</div>"
@@ -712,9 +725,11 @@ def render_dashboard(
             parts.append('<section class="panel" id="markers">')
             parts.append(f"<h2>{help_term(labels, 'markers', L('markers'))}</h2>")
             if markers:
+                parts.append('<div class="table-wrap">')
                 parts.append("<table><thead><tr>")
                 parts.append(
-                    f'<th>{L("status")}</th><th class="num">{L("line")}</th><th>{L("notes")}</th>'
+                    f'<th>{L("status")}</th><th>{L("chapter")}</th>'
+                    f'<th class="num">{L("line")}</th><th>{L("notes")}</th>'
                 )
                 if controls:
                     parts.append("<th></th>")
@@ -722,9 +737,18 @@ def render_dashboard(
                 for m in markers:
                     kind_label = label(labels, "marker_" + m.kind)
                     note = esc(str(m.note or "")) or "–"
+                    marker_chapter = next(
+                        (c for c in chapters if c.start_line <= m.line <= c.end_line), None
+                    )
+                    chapter_cell = (
+                        f"{L('chapter')} {marker_chapter.num} · {esc(marker_chapter.title)}"
+                        if marker_chapter is not None
+                        else "–"
+                    )
                     parts.append(
                         f'<tr class="row-link" data-line="{m.line}" role="button" tabindex="0">'
                         f'<td><span class="badge marker-{m.kind}">{esc(kind_label)}</span></td>'
+                        f'<td>{chapter_cell}</td>'
                         f'<td class="num">{L("line")} {m.line}</td><td>{note}</td>'
                     )
                     if controls:
@@ -733,7 +757,7 @@ def render_dashboard(
                             f"{L('marker_resolve')}</button></td>"
                         )
                     parts.append("</tr>")
-                parts.append("</tbody></table>")
+                parts.append("</tbody></table></div>")
             else:
                 parts.append(f'<p class="hint">{L("markers_empty")}</p>')
             parts.append("</section>")
@@ -890,6 +914,7 @@ def render_dashboard(
     if chapters:
         parts.append('<section class="panel" id="matrix">')
         parts.append(f"<h2>{L('chapter_table')}</h2>")
+        parts.append('<div class="table-wrap">')
         parts.append("<table><thead><tr>")
         parts.append(
             f'<th>#</th><th>{L("chapter")}</th><th class="num">{L("words")}</th>'
@@ -929,7 +954,7 @@ def render_dashboard(
                 else:
                     parts.append('<td class="num">–</td>')
             parts.append("</tr>")
-        parts.append("</tbody></table></section>")
+        parts.append("</tbody></table></div></section>")
 
     # --- Publications -----------------------------------------------------
     if artifacts:

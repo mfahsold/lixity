@@ -122,6 +122,8 @@ class TestJsDomContract(unittest.TestCase):
             'id="pacing"',
             'id="motifs"',
             'id="showing"',
+            'class="table-wrap"',
+            'data-marker-resolve=',
             'data-jump="#ch-',
         ):
             self.assertIn(hook, html, hook)
@@ -240,6 +242,9 @@ class TestLabelCompleteness(unittest.TestCase):
             "mot_phrase",
             "mot_count",
             "mot_chapters",
+            "mot_name",
+            "show_tell",
+            "show_show",
             "panel_showing",
             "show_tell",
             "show_show",

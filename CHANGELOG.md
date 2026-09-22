@@ -5,6 +5,23 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.9.1] – 2026-09-22
+
+### Changed
+
+- **Chapter names wherever they are available**: dialogue, pacing and
+  showing rows show `Kap. N · Titel`, the deviation KPI names its chapter,
+  the marker table gained a chapter column, and the character span shows the
+  first chapter's title on hover.
+
+### Fixed
+
+- **Layout overflow hardened**: the chapter matrix and marker table scroll
+  horizontally inside their panels (like the heatmap); long texts wrap or
+  ellipsize (KPI labels, dimension loading chips, status details, chapter
+  titles, repeated phrases, paragraph text); the pacing and showing lists are
+  height-capped with a fade hint; the toolbar select is width-capped.
+
 ## [1.9.0] – 2026-09-22
 
 ### Added

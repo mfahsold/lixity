@@ -101,7 +101,13 @@ h2 {
 .status-item.warn .status-dot { background: #d97706; }
 .status-item.error .status-dot { background: var(--flag); }
 .status-item.unknown .status-dot { background: var(--neutral); }
-.status-detail { color: var(--muted); }
+.status-detail {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 22rem;
+}
 
 /* --- Key figures (grouped KPI grid) ----------------------------------- */
 .kpis { display: grid; gap: .95rem; margin: 1.15rem 0; }
@@ -151,12 +157,14 @@ h2 {
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
+.kpi { min-width: 0; }
 .kpi span {
   color: var(--muted);
   font-size: .72rem;
   line-height: 1.35;
   margin-top: .25rem;
   text-wrap: balance;
+  overflow-wrap: anywhere;
 }
 .kpi-link { cursor: pointer; }
 .kpi-link:hover b { color: var(--accent); }
@@ -174,11 +182,21 @@ h2 {
 .dist { display: grid; gap: .5rem; }
 .dist .row {
   display: grid;
-  grid-template-columns: 8.5rem 1fr 7.5rem;
+  grid-template-columns: minmax(0, 13rem) minmax(4rem, 1fr) max-content;
   align-items: center;
   gap: .75rem;
   font-size: .83rem;
 }
+.dist .label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.dist.scrollable {
+  max-height: 22rem;
+  overflow-y: auto;
+  padding-right: .35rem;
+  mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6rem), transparent);
+  -webkit-mask-image: linear-gradient(to bottom, #000 calc(100% - 1.6rem), transparent);
+}
+.dist.scrollable::-webkit-scrollbar { width: .45rem; }
+.dist.scrollable::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
 .dist .bar { height: 6px; background: var(--line); border-radius: 999px; overflow: hidden; }
 .dist .bar i { display: block; height: 100%; background: var(--accent); }
 .dist .val { text-align: right; color: var(--muted); font-variant-numeric: tabular-nums; white-space: nowrap; }
@@ -200,7 +218,8 @@ h2 {
   border-bottom: 1px solid var(--line);
   font-size: .83rem;
 }
-.toolbar label { display: inline-flex; gap: .45rem; align-items: center; cursor: pointer; }
+.toolbar label { display: inline-flex; gap: .45rem; align-items: center; cursor: pointer; min-width: 0; }
+.toolbar select { max-width: 15rem; }
 .legend { display: inline-flex; flex-wrap: wrap; gap: 1rem; color: var(--muted); font-size: .78rem; }
 .swatch { display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-right: .3rem; vertical-align: -1px; }
 .totop { margin-left: auto; font-size: .8rem; color: var(--muted); text-decoration: none; }
@@ -222,7 +241,7 @@ h2 {
   align-items: baseline;
   justify-content: space-between;
 }
-.chapter-head h2 { font-size: .92rem; font-weight: 650; margin: 0; }
+.chapter-head h2 { font-size: .92rem; font-weight: 650; margin: 0; min-width: 0; overflow-wrap: anywhere; }
 .chapter-head .meta { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
 .strip { display: flex; gap: 2px; margin: .65rem 0 0; }
 .chip {
@@ -309,7 +328,7 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 .ptext.open .ptext-inner { padding: .8rem 1rem; }
 .ptext .anchor { color: var(--muted); font-size: .76rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ptext .stats { color: var(--muted); font-size: .75rem; margin: .1rem 0 .45rem; line-height: 1.4; }
-.ptext p { margin: .4rem 0 0; font-size: .88rem; line-height: 1.6; }
+.ptext p { margin: .4rem 0 0; font-size: .88rem; line-height: 1.6; overflow-wrap: anywhere; }
 .ptext .row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
 
 /* --- Style passport band chart (data-ink, no numeric table) ----------- */
@@ -359,6 +378,7 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
   position: relative;
   display: inline-flex;
   align-items: center;
+  max-width: 100%;
   gap: .4rem;
   padding: .18rem .5rem;
   border-radius: 6px;
@@ -369,6 +389,7 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 }
 .load i {
   display: block;
+  flex: none;
   width: var(--w);
   max-width: 6rem;
   height: .3rem;
@@ -376,6 +397,13 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
   background: var(--accent);
 }
 .load.neg i { background: #7ba7d0; }
+.load b {
+  font-weight: 500;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
 
 /* --- Micro-bars in numeric table cells -------------------------------- */
 .bar-cell { position: relative; }
@@ -392,8 +420,11 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 }
 
 /* --- Tables ----------------------------------------------------------- */
+.table-wrap { overflow-x: auto; }
+.table-wrap::-webkit-scrollbar { height: .45rem; }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
 table { width: 100%; border-collapse: collapse; font-size: .82rem; }
-th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
 th {
   color: var(--muted);
   font-weight: 600;
@@ -502,7 +533,7 @@ table.heatmap th.ch { z-index: 3; }
   border-bottom: 1px solid var(--line);
 }
 .artifact:last-child { border-bottom: 0; }
-.artifact .name { font-weight: 600; }
+.artifact .name { font-weight: 600; overflow-wrap: anywhere; }
 .artifact .meta { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
 .artifact a { color: var(--accent); text-decoration: none; font-size: .82rem; }
 .artifact a:hover { text-decoration: underline; }

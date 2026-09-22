@@ -19,7 +19,7 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [README](https://github.com/mfahsold/lixity#readme): overview, install, CLI quick start, capabilities, license
 - [docs/USAGE.md](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md): full command reference, worked example, metrics, known limitations
 - [docs/AGENTS.md](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md): JSON contracts, interpretation heuristics, stable Python facade, dashboard DOM hooks
-- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.9.0)
+- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.9.1)
 
 Reports/CLI messages: English default, German via LIXITY_LANG=de. JSON contracts:
 schema_version 2 (analyze/profile, language-neutral tense values

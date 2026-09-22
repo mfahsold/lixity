@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lixity"
-version = "1.9.0"
+version = "1.9.1"
 description = "Quantitative text linguistics, length-robust stylometry, tense profiling, and self-calibrating style references for literary manuscripts. Pure Python, offline, deterministic."
 readme = "README.md"
 requires-python = ">=3.10"

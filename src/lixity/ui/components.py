@@ -169,7 +169,7 @@ def loading_bars(
             else ""
         )
         bars.append(
-            f'<span class="load {sign}" style="--w:{width:.1f}%"{attrs}><i></i>{esc(name)}</span>'
+            f'<span class="load {sign}" style="--w:{width:.1f}%"{attrs}><i></i><b>{esc(name)}</b></span>'
         )
     return '<div class="loadings">' + "".join(bars) + "</div>"
 
