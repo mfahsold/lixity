@@ -20,7 +20,7 @@ from .models import (
     CorpusMetrics,
     SentenceDistribution,
 )
-from .style_profile import TENSE_MIXED, TENSE_PAST, TENSE_PRESENT
+from .style_profile import dominance_from_hits
 
 _RE_DE_DIPHTHONG = re.compile(r"(ei|ey|ai|ay|au|eu|äu|ie)")
 _RE_DE_VOWEL = re.compile(r"[aeiouyäöü]")
@@ -677,13 +677,7 @@ class CorpusAnalyzer:
 
             pr_c = len(self._praes_re.findall(cl_b))
             pt_c = len(self._praet_re.findall(cl_b))
-            ratio = pr_c / (pt_c + 0.001)
-            if ratio > 1.5:
-                dom = TENSE_PRESENT
-            elif ratio < 0.67:
-                dom = TENSE_PAST
-            else:
-                dom = TENSE_MIXED
+            dom = dominance_from_hits(pr_c, pt_c)
 
             # --- Style features per chapter (house-style fingerprint) ---
             n_cw = len(c_words)

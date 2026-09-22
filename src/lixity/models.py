@@ -6,6 +6,9 @@ chapter metrics, tense profiles, and synchronization reports.
 
 from pydantic import BaseModel, Field
 
+# Version of the machine-readable JSON contracts (analyze/profile).
+SCHEMA_VERSION = 1
+
 
 class CorpusConfig(BaseModel):
     """

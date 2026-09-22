@@ -28,6 +28,7 @@ from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_profile import (  # noqa: E402
     TENSE_MIXED,
+    TENSE_NEUTRAL,
     TENSE_PAST,
     TENSE_PRESENT,
     ParagraphProfiler,
@@ -151,6 +152,22 @@ class TestParagraphProfiler(unittest.TestCase):
         self.assertEqual(paragraphs[0].dominant, "Neutral")
         self.assertFalse(paragraphs[0].mixed)
         self.assertEqual(paragraphs[0].severity, 0)
+
+    def test_dominance_helper_is_shared_by_chapter_and_paragraph(self):
+        from lixity.style_profile import dominance_from_hits
+
+        self.assertEqual(dominance_from_hits(0, 0), TENSE_NEUTRAL)
+        self.assertEqual(dominance_from_hits(1, 0), TENSE_NEUTRAL)
+        self.assertEqual(dominance_from_hits(5, 1), TENSE_PRESENT)
+        self.assertEqual(dominance_from_hits(1, 5), TENSE_PAST)
+        self.assertEqual(dominance_from_hits(3, 3), TENSE_MIXED)
+        # analyzer chapter metrics use the same helper (no silent "past" for 0/0)
+        from lixity.analyzer import CorpusAnalyzer
+
+        metrics = CorpusAnalyzer(CorpusConfig(language="de")).analyze_text(
+            "## Kapitel 1\n\nKaffee, Kater, Kartons, Regen.\n"
+        )
+        self.assertEqual(metrics.chapters[0].dominance, TENSE_NEUTRAL)
 
     def test_productive_tense_patterns_de(self):
         # Weak preterite (-te) is not in the curated list but must be detected

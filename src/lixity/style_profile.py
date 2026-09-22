@@ -17,12 +17,19 @@ TENSE_PAST = "Präteritum"
 TENSE_MIXED = "Gemischt"
 TENSE_NEUTRAL = "Neutral"
 
-SEVERITY_LABELS = {
-    0: "unauffällig",
-    1: "beobachten",
-    2: "auffällig",
-    3: "starke Friktion",
-}
+
+def dominance_from_hits(present: int, past: int, neutral_max_hits: int = 1) -> str:
+    """Dominant tense from marker counts – shared by chapter and paragraph analysis."""
+    if present + past <= neutral_max_hits:
+        return TENSE_NEUTRAL
+    ratio = present / (past + 0.001)
+    if ratio > 1.5:
+        return TENSE_PRESENT
+    if ratio < 0.67:
+        return TENSE_PAST
+    return TENSE_MIXED
+
+
 
 
 @dataclass
@@ -57,11 +64,6 @@ class ParagraphProfile:
         if self.start_line == self.end_line:
             return f"Z. {self.start_line}"
         return f"Z. {self.start_line}–{self.end_line}"
-
-    @property
-    def severity_label(self) -> str:
-        return SEVERITY_LABELS.get(self.severity, "unauffällig")
-
 
 @dataclass
 class ChapterProfile:
@@ -129,15 +131,7 @@ class ParagraphProfiler:
         return TENSE_MIXED
 
     def _dominant(self, present: int, past: int) -> str:
-        total = present + past
-        if total <= self.thresholds.neutral_max_hits:
-            return TENSE_NEUTRAL
-        ratio = present / (past + 0.001)
-        if ratio > 1.5:
-            return TENSE_PRESENT
-        if ratio < 0.67:
-            return TENSE_PAST
-        return TENSE_MIXED
+        return dominance_from_hits(present, past, self.thresholds.neutral_max_hits)
 
     def profile_blocks(
         self, blocks: list[dict[str, Any]]

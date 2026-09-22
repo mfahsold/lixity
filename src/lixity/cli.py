@@ -12,7 +12,7 @@ from .formatters import ReportFormatter
 from .io import FileUtils
 from .language import resolve_language
 from .markdown_parser import parse_markdown_blocks
-from .models import CorpusConfig
+from .models import SCHEMA_VERSION, CorpusConfig
 from .style_fingerprint import StyleFingerprint
 from .style_profile import ParagraphProfiler
 from .ui import render_dashboard
@@ -31,7 +31,7 @@ def _json(payload: object, indent: bool = False) -> str:
 _META = {
     "tool": "lixity",
     "version": __version__,
-    "schema_version": 1,
+    "schema_version": SCHEMA_VERSION,
 }
 
 _BASH_COMPLETION = """# bash completion for lixity – source this file or add it to bash_completion.d/

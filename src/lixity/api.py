@@ -12,12 +12,11 @@ from . import __version__
 from .analyzer import CorpusAnalyzer
 from .language import LANGUAGE_PROFILES, resolve_language
 from .markdown_parser import parse_markdown_blocks
-from .models import CorpusConfig
+from .models import SCHEMA_VERSION, CorpusConfig
 from .style_fingerprint import StyleFingerprint
 from .style_profile import ParagraphProfiler
 from .ui import render_dashboard
 
-SCHEMA_VERSION = 1
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
 
 
