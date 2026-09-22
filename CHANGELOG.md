@@ -5,12 +5,24 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.6.1] – 2026-09-22
+
+### Fixed
+
+- **Markdown report:** punctuation rows now use their own texts. Previously
+  the `colons` matcher also matched inside `semicolons`, so the semicolon row
+  displayed the colon text.
 
 ### Changed
 
-- Documentation consolidated: one stability register `docs/STABILITY.md`
-  (replaces `docs/ITERATION-2.md` and `docs/ITERATION-3.md`).
+- `CorpusAuditReport` carries a generic `tracked_chapters` mapping instead of
+  the book-specific `kap23_words` / `kap24_words` / `kap25_words` fields —
+  project data belongs to the adapter, not the engine.
+- Documentation tightened: leaner README (features and quick start instead of
+  marketing comparisons and duplicated CLI reference), single stability
+  register `docs/STABILITY.md` (replaces `docs/ITERATION-2.md` and
+  `docs/ITERATION-3.md`), compact security policy, condensed "Known
+  limitations" with a pointer to the register.
 
 ### Removed
 

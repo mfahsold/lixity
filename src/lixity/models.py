@@ -265,8 +265,9 @@ class CorpusAuditReport(BaseModel):
     asl: float = Field(description="Mittlere Satzlänge.")
     ttr: float = Field(description="Lexikalische Diversität.")
     markers: int = Field(description="Anzahl noch offener Arbeitsmarker (PRÜFEN/SACHCHECK).")
-    kap23_words: int = Field(description="Wortanzahl Kapitel 23.")
-    kap24_words: int = Field(description="Wortanzahl Kapitel 24.")
-    kap25_words: int | None = Field(default=None, description="Wortanzahl Kapitel 25.")
+    tracked_chapters: dict[str, int] = Field(
+        default_factory=dict,
+        description="Wortzahlen projektseitig beobachteter Kapitel (Label → Wörter).",
+    )
     dossiers: dict[str, DossierStatus] = Field(description="Audit-Ergebnisse je Begleitdossier.")
     all_synced: bool = Field(description="True wenn ausnahmslos alle Dossiers synchron sind.")

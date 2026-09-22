@@ -356,22 +356,19 @@ class ReportFormatter:
             "exclamations": "Ausrufezeichen (!)",
             "ellipses": "Auslassungspunkte (…/...)",
         }
+        punct_text_keys = {
+            "periods": "punct_Punkte",
+            "commas": "punct_Kommata",
+            "dashes": "punct_Gedankenstriche",
+            "colons": "punct_Doppelpunkte",
+            "semicolons": "punct_Semikolons",
+            "questions": "punct_Fragezeichen",
+            "exclamations": "punct_Ausrufezeichen",
+            "ellipses": "punct_Auslassungspunkte",
+        }
         for k, v in m.punctuation.items():
             density = (v / m.clean_words) * 1000.0 if m.clean_words else 0.0
-            fn = ""
-            for prefix, key in (
-                ("periods", "punct_Punkte"),
-                ("commas", "punct_Kommata"),
-                ("dashes", "punct_Gedankenstriche"),
-                ("colons", "punct_Doppelpunkte"),
-                ("questions", "punct_Fragezeichen"),
-                ("exclamations", "punct_Ausrufezeichen"),
-                ("semicolons", "punct_Semikolons"),
-                ("ellipses", "punct_Auslassungspunkte"),
-            ):
-                if prefix in k:
-                    fn = _t(texts, key)
-                    break
+            fn = _t(texts, punct_text_keys.get(k, ""))
             name = _t(texts, f"pname_{k}") or punct_names.get(k, k)
             lines.append(f"| **{name}** | {_n(v, 0)} | {_n(density, 1)} | {fn} |")
 

@@ -9,10 +9,10 @@ project, start with the [README](../README.md); this document goes into detail.
 2. [Quick start](#quick-start)
 3. [Command reference](#command-reference)
 4. [Understanding the metrics](#understanding-the-metrics)
-5. [Markdown conventions](#markdown-conventions)
-6. [Library](#library)
-7. [Configuration (`CorpusConfig`)](#configuration-corpusconfig)
-8. [Reproducing the screenshots](#reproducing-the-screenshots)
+5. [Manuscript format & operation](#manuscript-format--how-to-operate-lixity)
+6. [Known limitations & stability](#known-limitations--stability)
+7. [Library](#library)
+8. [Configuration (`CorpusConfig`)](#configuration-corpusconfig)
 9. [Troubleshooting](#troubleshooting)
 10. [Development](#development)
 11. [License](#license)
@@ -335,40 +335,23 @@ findings stay navigable in the editor.
 
 ## Known limitations & stability
 
-Transparent about what the numbers can and cannot do (full registers:
-`docs/STABILITY.md`):
+What the numbers can and cannot do — the full register (research basis,
+evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 
-- **Short texts.** All length-invariant lexical-diversity indices are
-  unreliable on very short texts (Bestgen 2024/2025). Lixity returns `null`
-  for MTLD and Maas a² below **100 tokens**, for MATTR below the window
-  (50) and for HD-D below 175 tokens; the dashboard shows `–`.
-- **Heuristics.** Syllable counts (±5–10 %), suffix-based adjective/
-  nominalisation counts and curated tense patterns are heuristics, not
-  ground truth – they are comparable *within* one language, not across
-  languages.
-- **Self-calibration needs chapters.** The style fingerprint needs several
-  chapters with measurable spread; for a single chapter the heatmap and
-  passport are hidden instead of showing noise.
+- **Short texts:** length-invariant lexical-diversity indices need minimum
+  sizes (MTLD/Maas a² ≥ 100 tokens, HD-D ≥ 175, MATTR ≥ window 50);
+  below that Lixity returns `null` and the dashboard shows `–`.
+- **Heuristics:** syllables (±5–10 %), suffix-based densities and tense
+  patterns are comparable *within* one language, not across languages.
+- **Self-calibration needs several chapters** with measurable spread; a
+  single chapter hides the heatmap instead of showing noise.
 - **Determinism** is byte-identical on the same interpreter; across Python
-  versions or platforms the last floating-point bits may differ.
-- **Dashboard size** grows with the number of paragraphs (~2 MB for 95k
-  words); the HTML is self-contained and offline by design.
-- **Accessibility.** Colour is never the only channel: values are printed,
-  the band chart encodes position/shape, and every strip reveals tense and
-  metrics as text on click. Paragraph strips are deliberately dense
-  (below the 24 px target size of WCAG 2.5.8) – keyboard access and
-  click-to-read compensate.
-- **Status strip is a heuristic.** The component states are derived from the
-  workspace (file presence and modification times); "stale" means *older
-  than the manuscript*, not *wrong*. Only the embedding UI server computes
-  them – the standalone dashboard renders the strip only when a status list
-  is supplied.
-- **Marker notes are plain attributes.** Notes live inside the HTML comment
-  (`note="…"`), so quotes and newlines are escaped on write; extremely long
-  notes bloat the comment line – keep them short (one sentence).
-- **Drill-down filters are UI state.** The preselected filters (flags /
-  deviations) are convenience, not analysis: they never change the data,
-  only which rows are visible.
+  versions the last floating-point bits may differ.
+- **Dashboard size** grows with paragraph count (~2 MB for 95k words) by
+  design — self-contained and offline.
+- **Accessibility:** colour is never the only channel (values printed, band
+  chart by shape); dense paragraph strips are a documented WCAG 2.5.8
+  exception with keyboard access and click-to-read.
 
 ## Library
 
@@ -475,19 +458,6 @@ All `None` patterns fall back to the curated defaults of the selected language
 profile in `lixity.language_data` — adding a language is a data-layer entry,
 not a code change.
 
-## Reproducing the screenshots
-
-The screenshots in the README and on the project page are generated
-reproducibly from the bundled public-domain sample (Fontane, *Effi Briest*)
-with headless Chromium:
-
-```bash
-python3 scripts/make_screenshots.py
-```
-
-The script renders both CLI reports and the dashboard sections (including a
-demonstration status strip) and writes them to `docs/screenshots/`.
-
 ## Troubleshooting
 
 | Symptom | Cause and fix |
@@ -505,7 +475,10 @@ demonstration status strip) and writes them to `docs/screenshots/`.
 .venv/bin/ruff check src tests                      # lint (rule set pinned in pyproject.toml)
 ```
 
-CI runs lint and tests on Python 3.10 and 3.12.
+Screenshots for README and project page are generated reproducibly from the
+bundled public-domain sample with headless Chromium:
+`python3 scripts/make_screenshots.py` (writes `docs/screenshots/`, including a
+demonstration status strip). CI runs lint and tests on Python 3.10 and 3.12.
 
 ## License
 

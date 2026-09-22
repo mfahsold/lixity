@@ -1,8 +1,7 @@
 # Stability & known limitations
 
-Single register for the research base, the critical assessment and every
-mitigation decision in Lixity. It replaces the former per-iteration
-documents (`ITERATION-2.md`, `ITERATION-3.md`) — one file, kept current.
+Research basis, known limitations and every documented trade-off in one
+place — kept in the present tense, no session logs.
 
 Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 🟡 low (cosmetic or documented trade-off).
@@ -66,28 +65,3 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 | 18 | orjson serialisation | `orjson` rejects non-string dict keys by default – chapter keys are ints in `deviations` | `OPT_NON_STR_KEYS` required | 🟠 → **fixed**: one `_json()` helper used everywhere; round-trip test covers integer chapter keys |
 | 19 | Busy states | server actions have latency; without feedback users click twice | action buttons | 🟡 **mitigated**: buttons disable + spinner while running; server-side idempotence remains the actual guard |
 | 20 | Layer colour semantics | colour encodes the absolute value span (min–max per dimension), not deviation sign alone | narrow bands would wash out | 🟡 **documented** in the legend (min/max values) + `USAGE.md`; the ring (|z| ≥ 1.5) is the second, deviation-specific channel |
-
-## 3. Iteration log (condensed)
-
-- **v1.4.0** – UI centralised in `lixity.ui` (renderer, components, assets);
-  "show, don't tell" dashboard (band chart, loading bars, micro-bars);
-  micro-interactions; LD guards; UI-contract and label-completeness tests;
-  wheel CI asserts packaged assets.
-- **v1.5.0** – everything clickable (KPI/band/matrix/marker drill-downs);
-  style-layer v2 (ring-marked deviations, "only deviations", next-deviation
-  navigation); plain-language tooltips in seven languages; "style passport"
-  renamed to **style reference**.
-- **v1.6.0** – component status strip and busy states; inline marker notes;
-  drill-down filters; absolute-span layer colours with legend min/max; one
-  `orjson` serializer; legacy payload (`layer_colors`, short layer labels)
-  and the `lixity.visualizer` compatibility shim removed; docs/SEO surfaces
-  (`llms.txt`, `robots.txt`, `sitemap.xml`).
-
-## 4. Verification
-
-- `ruff`, `mypy`, 125 tests green in lixity; 52 tests green in the book
-  project; dossier audit 0 drift.
-- Determinism: two renders byte-identical; engine output of the book
-  manuscript identical between v1.5.0 and v1.6.0 (analyze + style).
-- Visual: screenshots regenerated (`scripts/make_screenshots.py`).
-- Book project: dashboard idempotent (identical hash across runs).

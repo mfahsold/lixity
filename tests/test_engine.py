@@ -245,6 +245,18 @@ class TestReportFormatter(unittest.TestCase):
         self.assertIn("### 1.3 Interpunktion", md)
         self.assertIn("Mittlere Satzlänge (ASL)", md)
 
+    def test_punctuation_rows_use_their_own_texts(self):
+        """Regression: 'colons' must not match inside 'semicolons'."""
+        md = ReportFormatter.format_markdown_report(
+            self.metrics,
+            texts={"punct_Doppelpunkte": "COLON_TEXT", "punct_Semikolons": "SEMI_TEXT"},
+        )
+        semi_row = next(line for line in md.splitlines() if "Semikolons" in line)
+        colon_row = next(line for line in md.splitlines() if "Doppelpunkte" in line)
+        self.assertIn("SEMI_TEXT", semi_row)
+        self.assertNotIn("COLON_TEXT", semi_row)
+        self.assertIn("COLON_TEXT", colon_row)
+
     def test_json_formatter(self):
         json_str = ReportFormatter.to_json(self.metrics)
         self.assertIn('"raw_words":', json_str)
