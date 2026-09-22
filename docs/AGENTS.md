@@ -33,7 +33,7 @@ from that style, controlled for measurement noise and multiple testing.
 ### 3.1 `analyze --json` (schema_version 1)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.1.0", "schema_version": 1, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.2.0", "schema_version": 1, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "staccato_pct": 38.5, "chapters": [ … ]}}
 ```
@@ -104,6 +104,9 @@ metrics = api.analyze(text, language="auto")          # -> {"meta", "metrics"}
 profiles = api.profile(text, language="de")           # -> {"meta", "chapters", "paragraphs"}
 passport = api.fingerprint(text, language="de")       # -> passport dict (schema v2)
 html = api.dashboard(text, language="de", title="…")  # -> self-contained HTML string
+marker_list = api.markers(text)                       # -> list of active work markers
+new_text, m = api.add_marker(text, kind="pruefen", note="Verify tense", line=42)
+updated_text, ok = api.resolve_marker(new_text, m["id"])
 info = api.about()                                    # languages, features, heuristics
 ```
 

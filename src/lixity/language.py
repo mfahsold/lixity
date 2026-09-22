@@ -1,22 +1,7 @@
-"""
-scripts/engine/language.py
-==========================
-Language profile layer of the analysis engine: fully interchangeable
-language patterns for tense, dialogue, word and syllable detection.
+"""lixity.language – Pluggable multilingual architecture and automatic language detection.
 
-This makes the engine work for any language, any writing style and any
-novel idea: the language is selected via ``CorpusConfig.language``; all patterns
-can additionally be overridden via the config (None = profile default).
-
-- Profiles: ``de``, ``en``, ``fr``, ``es``, ``it``, ``pt``, ``nl`` and
-  ``generic`` (neutral fallback without tense classification).
-- ``auto``: language detection via stop word frequency (dependency-free);
-  stop word methods are robust for running text but unreliable for
-  single words (cf. fastlang/langidentify). Without a text sample, ``auto``
-  falls back to ``generic``.
-- The curated markers and productive tense patterns live in
-  ``language_data.py``; analyzer, profiler and UI follow the registry
-  automatically – new language = one entry, no code change.
+Manages language profiles (de, en, fr, es, it, pt, nl, generic) and resolves
+lexicons, tense markers, and register signals via function-word distribution vectors.
 """
 
 import re

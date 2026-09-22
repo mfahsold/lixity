@@ -1,19 +1,7 @@
-"""
-scripts/engine/publishing.py
-============================
-Generic, project-neutral helpers for idempotent publication artefacts.
+"""lixity.publishing – Idempotent publication artifact and archive helpers.
 
-This engine layer is free of project and renderer dependencies
-(no PyCairo/Pango, no book-specific names) and is shared by
-export_pdf.py, export_epub.py and create_excerpt.py.
-
-Provides:
-- ``update_stable_link``: maintains a stable symlink (with copy fallback
-  for filesystems without symlink support).
-- ``archive_timestamped``: moves older timestamped artefacts atomically
-  into an archive subdirectory (idempotent, never overwrites fresh files).
-- ``prune_archive``: trims an archive to the last N versions per
-  artefact family (retention policy against unbounded growth).
+Manages symlinking, export naming, and historical archive rotation for
+reproducible manuscript build pipelines.
 """
 
 import os

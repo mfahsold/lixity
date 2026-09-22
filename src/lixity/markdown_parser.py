@@ -1,23 +1,7 @@
-"""
-scripts/engine/markdown_parser.py
-=================================
-Generic, project-neutral Markdown parser and inline converter.
+"""lixity.markdown_parser – Deterministic Markdown block parser with line anchors.
 
-This engine layer is deliberately free of PyCairo/Pango and project
-dependencies so that it can be shared deterministically by all publication
-adapters (export_pdf.py, export_epub.py, create_excerpt.py).
-
-Provides:
-- ``parse_markdown_blocks``: converts Markdown text into semantic blocks
-  (h1/h2/h3, paragraphs, quote blocks, list items, dividers, footnotes).
-  Each block carries line anchors (``start_line``/``end_line``, 1-based) for
-  precise tracing in the manuscript (lectorate and analysis UI).
-- ``parse_markdown_file``: file variant with UTF-8 read handling.
-- ``inline_markdown_to_html``: converts inline markup into safe XHTML5
-  (for EPUB 3.3); including EPUB footnote reference generation.
-
-Editorial HTML comments (``<!-- PRÜFEN ... -->``) are always
-and completely filtered out so that they never appear in publication outputs.
+Parses Markdown into semantic blocks (headings, paragraphs, blockquotes, code)
+preserving exact 1-based manuscript line numbers for precise editorial feedback.
 """
 
 import html as html_mod

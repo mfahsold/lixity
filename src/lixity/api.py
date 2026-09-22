@@ -1,30 +1,7 @@
-"""
-scripts/engine/api.py
-=====================
-Stable programmatic facade for Lixity – the interface designed for AI agents
-and automation, in addition to the CLI.
+"""lixity.api – Programmatic API facade for AI agents and automation.
 
-Design principles:
-- **One function per use case**, with explicit, keyword-rich parameters –
-  agents can call the facade without knowing the internal engine layout.
-- **Self-describing results**: every JSON-able result carries a ``meta`` block
-  (tool, version, schema version, language) so that consuming agents can
-  interpret fields without reading documentation.
-- **Deterministic**: no timestamps, no randomness in outputs – identical
-  input produces identical output (idempotent tool calls).
-- **Pydantic models in, plain dicts out**: strict validation on input,
-  JSON-safe structures on output.
-
-Examples
---------
->>> from lixity.api import analyze
->>> metrics = analyze(text, language="auto")
->>> metrics["meta"]["schema_version"]
-1
-
->>> from lixity.api import passport
->>> data = passport(text, language="de")
->>> data["consistency"]
+Provides deterministic, self-describing functions for corpus linguistics,
+tense profiling, self-calibrated style passports, work markers, and dashboards.
 """
 
 from __future__ import annotations

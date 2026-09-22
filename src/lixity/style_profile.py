@@ -1,23 +1,7 @@
-"""
-scripts/engine/style_profile.py
-===============================
-Paragraph-accurate style and tense profiles with line anchors.
+"""lixity.style_profile – Paragraph-accurate style and narrative tense profiling.
 
-Based on semantic Markdown blocks (including line anchors
-from ``markdown_parser``), the engine detects:
-
-- the dominant tense per paragraph (present / past / mixed / neutral),
-- **tense switches** between consecutive paragraphs of a chapter
-  (potential micro-frictions such as retrospective insertions),
-- **tense-mixed** paragraphs (minority share above threshold),
-- sentence-length, dialogue and work-marker profile per paragraph.
-
-The heuristic is deliberately transparent and reproducible: it counts curated
-high-frequency verb forms (``CorpusConfig.praesens_regex`` / ``praeteritum_regex``)
-and derives ratios from them – no black box, no external NLP models.
-
-Project-neutral: no book-specific hardcodings; the appendix is separated via the
-configured ``appendix_marker``.
+Classifies narrative tense (present / past / mixed / neutral), detects tense friction
+and switches between consecutive paragraphs, and tracks paragraph-level style densities.
 """
 
 import re

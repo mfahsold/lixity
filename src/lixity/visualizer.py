@@ -1,19 +1,8 @@
-"""
-scripts/engine/visualizer.py
-============================
-Radically simple, self-contained HTML analysis (single-file dashboard).
+"""lixity.visualizer – Minimalist, self-contained single-file HTML dashboard.
 
-One document combines:
-- corpus metrics (words, sentences, ASL, TTR, Yule's K, Flesch, LIX, dialogue,
-  function word ratio),
-- the sentence-length architecture,
-- a chapter map with colour-coded paragraph strip (tense dominance),
-- flagged paragraphs (tense switch/mixture) with click for text + line anchor,
-- the publication artefacts (PDF/EPUB/NDA) with size, page count and link.
-
-Properties: no external dependencies (no CDN, no framework),
-deterministic (no timestamps), idempotently writable, dual light/dark,
-fully localised via the labels of the language profile.
+Renders an interactive stylometric report combining KPI cards, sentence rhythm bars,
+diverging z-score heatmap, style passport, latent dimensions, chapter map,
+and editor-visible work markers with floating tooltips.
 """
 
 import html

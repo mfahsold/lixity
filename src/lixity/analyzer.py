@@ -1,21 +1,8 @@
-"""
-scripts/engine/analyzer.py
-==========================
-Stateless, high-performance text analysis engine for literary manuscripts.
+"""lixity.analyzer – High-performance text analysis and corpus linguistics engine.
 
-Mathematical & linguistic foundation:
-- Average Sentence Length (ASL = Total Words / Total Sentences):
-  indicator for paratactic rhythm vs. hypotactic nesting.
-- Type-Token Ratio (TTR = V / N) & Guiraud index (R = V / sqrt(N)):
-  empirical measurement of lexical variety and dispersion.
-- Yule's Characteristic K = 10^4 * (M_2 - M_1) / M_1^2:
-  length-independent index for vocabulary stability (Yule 1944).
-- Flesch Reading Ease (German adaptation according to Toni Amstad 1978):
-  FRE = 180 - ASL - (58.5 * ASW).
-- LIX (Läsbarhetsindex according to Carl-Hugo Björnsson 1968):
-  LIX = ASL + (% words with more than 6 letters).
-- Dialogue ratio:
-  share of direct speech in typographic quotation marks (»...«, „...“, "...").
+Computes sentence-length architecture (ASL, CV, staccato/hypotaxis), lexical diversity
+(TTR, Guiraud R, HD-D, Yule's K), readability (Flesch, LIX), dialogue ratios,
+register signals, and per-chapter metrics with standard errors.
 """
 
 import math

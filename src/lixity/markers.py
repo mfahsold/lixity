@@ -1,22 +1,8 @@
-"""
-scripts/engine/markers.py
-=========================
-Editor-visible work markers for manuscripts – set from the dashboard,
-consumed in the text editor.
+"""lixity.markers – Editor-visible work markers for manuscripts.
 
-Design (SOTA best practices for plain-text files, cf. Marginalia/RFM):
-- Markers are **inline HTML comments** with a stable ID and structured,
-  machine-readable attributes: ``<!-- LIXITY-MARKER id="…" kind="…" note="…" -->``.
-  They are invisible in every renderer, survive all pipeline stages (the
-  analysis strips HTML comments) and travel with the text in Git.
-- **Standalone marker lines** (placed directly above the target paragraph):
-  robust against edits inside the paragraph – the marker moves with the
-  paragraph, and the line number is re-derived on every parse (no stale
-  offsets, no re-anchoring machinery).
-- **Deterministic IDs** (short content hash): idempotent add operations –
-  setting the same marker twice changes nothing.
-- Notes are sanitised (``-->`` cannot break the comment); the paragraph
-  anchor is expressed as a 1-based line number.
+Encodes non-destructive work markers as standard HTML comment lines:
+    <!-- LIXITY-MARKER id="..." kind="..." note="..." created="..." -->
+Supports idempotent addition, listing, updating, and resolving with stable IDs.
 """
 
 import hashlib

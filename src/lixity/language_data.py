@@ -1,26 +1,7 @@
-"""
-scripts/engine/language_data.py
-===============================
-Data layer of the language profiles: curated tense markers, stop words and
-signal/filter words per language.
+"""lixity.language_data – Curated linguistic lexicons, UI labels and help texts.
 
-The patterns draw on public frequency and conjugation references
-(Wiktionary frequency lists, Lingolia, SpanishDict, OneWorldItaliano,
-UOL/Portal da Língua Portuguesa, HeardDutchHere) as well as on the regular
-tense endings of the respective language (cf. LANGUAGE_PATTERNS):
-
-- French: imparfait ``-ais/-ait/-aient`` and passé composé ``auxiliary + participle``
-- Spanish: imperfecto ``-aba/-aban``, ``-ía/-ían``; pretérito (curated); perfecto ``haber + -ado/-ido``
-- Italian: imperfetto ``-avo/-ava/-evi/-eva/-ivo/-iva``; passato prossimo ``avere/essere + participle``
-- Portuguese: imperfeito ``-ava/-avam``, ``-ia/-iam``; pretérito (curated); perfeito composto ``ter + participle``
-- Dutch: weak past ``pronoun + -te/-de(n)``; perfect ``hebben/zijn + ge-…``
-- German/English: curated high-frequency verb forms
-
-The ``stopwords`` serve dependency-free language detection
-(``language.detect_language``); stop word methods are robust for running text
-but unreliable for single words (cf. fastlang/langidentify).
-
-New languages: add an entry – analyzer, profiler and UI follow automatically.
+Contains function words, tense inflections, auxiliary verbs, stopwords,
+and complete multilingual UI labels and help texts across all supported languages.
 """
 
 # Language-dependent UI labels (missing keys fall back to English)

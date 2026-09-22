@@ -6,9 +6,9 @@
 ![License: LNCL-1.0](https://img.shields.io/badge/license-LNCL--1.0-orange)
 ![Dependencies](https://img.shields.io/badge/dependencies-pydantic%20%7C%20rich%20%7C%20orjson-brightgreen)
 
-**Lixity** is a dependency-light, multilingual text-analysis engine and stylometric toolkit designed for literary manuscripts, editors, and autonomous AI coding agents. It combines quantitative text linguistics, length-robust lexical diversity, paragraph-accurate tense profiling, and a **self-calibrating style passport** into a single, deterministic CLI and Python API.
+**Lixity** is a dependency-light, multilingual text-linguistics engine and stylometric toolkit designed for literary manuscripts, fiction editors, digital humanities scholars, and autonomous AI coding agents. It unifies quantitative text linguistics, length-invariant lexical diversity, paragraph-accurate tense profiling, and a **self-calibrating style passport** into a single, deterministic CLI and Python API.
 
-The engine runs entirely offline, with zero cloud dependencies, pure standard library core algorithms, and three robust production libraries (`pydantic>=2.0`, `rich>=13.0`, `orjson>=3.9`).
+The engine runs entirely offline with zero cloud dependencies, pure standard library core algorithms, and three robust production libraries (`pydantic>=2.0`, `rich>=13.0`, `orjson>=3.9`).
 
 The name represents the mathematical foundation of its analysis: **T**TR (Type-Token Ratio), **Y**ule's characteristic $K$, and **LIX** (Läsbarhetsindex).
 
@@ -18,17 +18,60 @@ The name represents the mathematical foundation of its analysis: **T**TR (Type-T
 
 ## Table of Contents
 
-1. [Key Capabilities](#key-capabilities)
-2. [What Lixity Measures](#what-lixity-measures)
-3. [Installation](#installation)
-4. [Quick Start & CLI Reference](#quick-start--cli-reference)
-5. [The Self-Calibrating Style Passport](#the-self-calibrating-style-passport)
-6. [Work Markers (Editor-Visible)](#work-markers-editor-visible)
-7. [Python API for AI Agents](#python-api-for-ai-agents)
-8. [Multilingual Support](#multilingual-support)
-9. [Mathematical & Linguistic Principles](#mathematical--linguistic-principles)
-10. [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
-11. [License](#license)
+1. [Why Lixity?](#why-lixity)
+2. [Target Personas & Workflows](#target-personas--workflows)
+3. [Key Capabilities](#key-capabilities)
+4. [What Lixity Measures](#what-lixity-measures)
+5. [Installation](#installation)
+6. [Quick Start & CLI Reference](#quick-start--cli-reference)
+7. [The Self-Calibrating Style Passport](#the-self-calibrating-style-passport)
+8. [Work Markers (Editor-Visible)](#work-markers-editor-visible)
+9. [Python API for AI Agents](#python-api-for-ai-agents)
+10. [Multilingual Support](#multilingual-support)
+11. [Mathematical & Linguistic Principles](#mathematical--linguistic-principles)
+12. [Frequently Asked Questions (FAQ)](#frequently-asked-questions-faq)
+13. [License](#license)
+
+---
+
+## Why Lixity?
+
+Most text analysis tools fall into one of two extremes: heavy general NLP libraries designed for tokenization and entity extraction, or consumer grammar checkers that enforce rigid corporate writing rules. Lixity is engineered specifically for **long-form literary prose**, where style is intentional, variety is essential, and the manuscript itself defines what is "normal."
+
+| Dimension | Lixity | General NLP (spaCy / NLTK) | Traditional Stylometry (R `stylo`) | Consumer Writing Apps |
+| :--- | :--- | :--- | :--- | :--- |
+| **Primary Focus** | **Literary manuscripts & stylometry** | Tokenization, POS, NER | Authorship attribution | Spelling & grammar fixes |
+| **Baseline Norm** | **Self-calibrating** (Manuscript median/MAD) | External web/news training corpora | External comparative corpus | Generic corporate/web prose |
+| **Statistical Rigor** | **$z^*$ shrinkage** + Benjamini-Hochberg FDR | Raw frequencies without sample variance | Distance metrics (Delta, PCA) | Heuristic rule counters |
+| **Lexical Diversity** | **HD-D** & **Yule's $K$** (length-invariant) | Naive TTR (biased by chapter length) | Most Frequent Words (MFW) | Basic vocabulary variety score |
+| **Tense Dynamics** | **Paragraph-level** narrative present vs. past | Per-token POS tags (`VBD`/`VBP`) | Not analyzed | Isolated verb alerts |
+| **Latent Dimensions** | **Cyclic Jacobi eigendecomposition** on Spearman $\rho$ | Requires external SciPy / scikit-learn | Factor analysis in R | Not available |
+| **Editorial Flow** | **Non-destructive HTML work markers** + Agent API | Data science scripts only | R console / static plots | Proprietary cloud extensions |
+| **Runtime Footprint** | **Zero C-extensions**, pure Python, offline | Heavy neural models (> 500 MB) | Full R runtime environment | Cloud-dependent, closed source |
+
+---
+
+## Target Personas & Workflows
+
+### 1. Fiction Authors & Novelists
+- **Macro-Editing & Pacing:** Analyze chapter rhythm via sentence-length distribution (staccato vs. norm vs. hypotactic cascades) and rhythm variability (CV).
+- **Tense Drift Prevention:** Automatically detect unintentional slips between narrative present (*Präsens*) and epic past (*Präteritum*) within scenes.
+- **Narrative Economy:** Track dialogue ratio, perception filter density (*saw, heard, felt*), and passive voice constructions.
+
+### 2. Literary Editors & Translators
+- **Objective Consistency Auditing:** Evaluate chapter-by-chapter deviations against the book's self-established voice rather than arbitrary external guidelines.
+- **Translation Register Matching:** Compare lexical richness and syntactic rhythm between original source texts and foreign language translations.
+- **Non-Destructive Work Markers:** Embed persistent editorial flags (`<!-- LIXITY-MARKER ... -->`) that render cleanly in Markdown editors (Obsidian, VS Code, Ulysses) but vanish completely in print and EPUB builds.
+
+### 3. Digital Humanities Researchers & Stylometrists
+- **Length-Robust Vocabulary Metrics:** Compute hypergeometric HD-D (McCarthy & Jarvis 2010), Yule's characteristic $K$, and Guiraud's $R$ across unequal chapter lengths without sample size distortion.
+- **Unsupervised Latent Style Axes:** Discover intrinsic stylistic dimensions using cyclic Jacobi eigendecomposition on Spearman rank correlation matrices without external matrix libraries.
+- **Reproducible Corpus Analysis:** Run fast, fully deterministic batch analyses with byte-for-byte reproducible JSON and markdown outputs.
+
+### 4. AI Agent Engineers & Automated Publishing Pipelines
+- **Strict Machine Contracts:** Integrate with language models via stable `schema_version: 2` JSON payloads, complete with metadata headers and POSIX exit codes.
+- **Python Facade (`lixity.api`):** Deterministic programmatic access to analysis, tense profiling, passport generation, and marker manipulation.
+- **Offline & CI-Ready:** Zero network calls, zero API keys, and zero heavyweight runtime dependencies.
 
 ---
 
@@ -40,7 +83,7 @@ The name represents the mathematical foundation of its analysis: **T**TR (Type-T
 - **Multiple-Testing Control:** Reports statistically expected false positives and the Benjamini-Hochberg False Discovery Rate (FDR, $q = 0.05$) set across all chapter×feature cells.
 - **Unsupervised Style Dimensions:** Derives the manuscript's latent stylistic axes via Spearman rank correlation and cyclic Jacobi eigendecomposition (pure standard library, no NumPy/SciPy required).
 - **Paragraph-Accurate Tense Profiling:** Tracks narrative present vs. epic past paragraph-by-paragraph with line anchors and severity friction markers.
-- **Editor-Visible Work Markers:** Insert persistent, invisible HTML comments (`<!-- LIXITY-MARKER ... -->`) with deterministic content-hash IDs directly from the interactive dashboard.
+- **Editor-Visible Work Markers:** Insert persistent, invisible HTML comments (`<!-- LIXITY-MARKER ... -->`) with deterministic content-hash IDs directly from the interactive dashboard or API.
 - **Agent-Ready JSON & API:** Strict JSON schemas with metadata blocks (`tool`, `version`, `schema_version`, `language`), clean exit codes, and a stable facade in `lixity.api`.
 
 ---

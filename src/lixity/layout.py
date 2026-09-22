@@ -1,14 +1,7 @@
-"""
-scripts/engine/layout.py
-========================
-Generic, renderer-independent layout configuration for book publications.
+"""lixity.layout – Typography and layout geometry presets for book publications.
 
-Pure data class (no PyCairo/Pango, no project hardcodings) so that
-type-area presets are independently testable and reusable.
-The three focused publication formats are:
-- ``a4``          : lectorate copy (DIN A4, line numbers, correction margins)
-- ``taschenbuch`` : print master (135 x 205 mm, justified, recto/verso)
-- ``mobile``      : smartphone reading flow (108 x 192 mm, ragged right)
+Defines standardized page formats, margins, line heights, and grid ratios
+for paperback, reading copies, and digital reading formats.
 """
 
 from dataclasses import dataclass

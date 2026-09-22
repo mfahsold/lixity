@@ -1,17 +1,7 @@
-"""
-scripts/engine/io.py
-====================
-Robust, idempotent file I/O with atomic writes,
-content equality checks and resilient fallbacks for sandboxes and containers.
+"""lixity.io – Atomic, idempotent file operations with diff-suppression.
 
-Architectural characteristics:
-1. Idempotence via content hashing/equality check before writing
-   (prevents unmotivated inode and mtime changes and Git diff jitter).
-2. Atomicity via staging through temporary files and atomic filesystem renames.
-3. Resilience via a three-stage fallback cascade for restrictive sandbox mounts:
-   - Stage 1: `mkstemp` in the target directory (atomic via `os.replace`).
-   - Stage 2: `mkstemp` in `/tmp` with cross-filesystem transfer (`shutil.move`).
-   - Stage 3: Direct in-place write when tempfile permissions are blocked.
+Ensures zero-diff idempotency via content hashing and equality checks,
+with atomic replacement to prevent partial writes.
 """
 
 import os

@@ -1,9 +1,4 @@
-"""
-scripts/engine
-==============
-Generic, modular and reusable core engine for quantitative
-corpus linguistics, stylometry and documentation audits of literary manuscripts.
-"""
+"""Lixity – Quantitative text linguistics, stylometry and self-calibrating style passports."""
 
 from .analyzer import CorpusAnalyzer
 from .formatters import ReportFormatter

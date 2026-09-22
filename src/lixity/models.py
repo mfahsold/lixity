@@ -1,12 +1,7 @@
-"""
-scripts/engine/models.py
-========================
-Pydantic v2 data models for quantitative corpus linguistics, stylometry,
-sentence-length architecture, chapter metrics and synchronisation audits.
+"""lixity.models – Pydantic data schemas for corpus linguistics and stylometry.
 
-Strict schema definitions guarantee type safety, automatic validation
-and standards-compliant orjson serialisation both for internal workflows and
-for later distribution as a standalone open-source package.
+Defines strict, validated models for corpus configuration, sentence distributions,
+chapter metrics, tense profiles, and synchronization reports.
 """
 
 from pydantic import BaseModel, Field

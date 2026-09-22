@@ -1,17 +1,7 @@
-"""
-scripts/engine/formatters.py
-============================
-Formatters for linguistic corpus data:
-- Rich terminal UI dashboard (colour-coded, structured tables)
-- GitHub-Flavored Markdown for dossiers and lectorate reports
-- orjson serialisation for machine-readable exports
+"""lixity.formatters – Presentation layer for corpus metrics and stylometric reports.
 
-Abstraction: All interpretive texts (assessments, literary
-evaluations, function descriptions) can be overridden via a ``texts`` mapping.
-The engine defaults are deliberately neutral and project-free;
-project-specific wording is supplied by the adapter (e.g. analyze_corpus.py).
-This makes the formatter work for any language, any writing style and any
-novel idea – without code changes.
+Supports Rich terminal dashboards, GitHub-Flavored Markdown tables,
+and strict orjson serialization for automated consumption.
 """
 
 from collections.abc import Mapping

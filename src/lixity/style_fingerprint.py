@@ -1,41 +1,9 @@
-"""
-scripts/engine/style_fingerprint.py
-====================================
-Self-calibrating style fingerprint: register-neutral consistency analysis.
+"""lixity.style_fingerprint – Self-calibrating style passport and latent style dimensions.
 
-Instead of judging style against external norms, the engine derives the
-author's own **house style** from the corpus itself: for each descriptive
-feature, the robust centre (median) and spread (MAD) over the chapters.
-A chapter or paragraph is flagged only when it deviates from its own house
-style – whether that deviation is intended (a register scene) or drift is
-a decision the author makes, never the engine.
-
-Mathematical core (dependency-free, deterministic, transparent):
-
-1. Robust location/spread: median, MAD, robust z = 0.6745 * (x - median) / MAD.
-2. Measurement uncertainty: every feature carries a documented standard error
-   (``ChapterMetrics.style_se``: Poisson for count densities, binomial for
-   shares, plug-ins for ASL/CV/entropy/HD-D). Deviations are tested against
-   the combined variance: z* = (x - median) / sqrt(sigma^2 + se^2) – noisy
-   estimates of small chapters cannot produce significant deviations.
-3. Multiple testing: with C chapters x F features cells, some exceed any
-   threshold by chance. The passport reports the expected number of false
-   positives and a Benjamini-Hochberg FDR set (q = 0.05) – the set of cells
-   that remain significant under multiplicity control.
-4. Style dimensions: features are correlated. A Spearman correlation matrix
-   is eigendecomposed (cyclic Jacobi rotations, pure stdlib) – the resulting
-   principal components are the abstract, register-neutral style dimensions
-   of the author's own text (Biber-style, but self-calibrated instead of
-   pre-defined registers). Loadings show which features constitute each
-   dimension; chapter scores show where the manuscript moves along them.
-5. Interpretability: Jensen-Shannon divergence per chapter with additive
-   per-word contributions (see analyzer.py) and HD-D (McCarthy & Jarvis 2010)
-   for length-robust lexical diversity.
-
-The **style passport** exports the self-calibrated feature bands, the style
-dimensions and the significance-controlled deviations as structured data
-(JSON) and as a human-readable constraint block – usable by the author or an
-assisting LLM to keep new prose inside the house style.
+Derives the manuscript's reference house style using robust statistics (median/MAD),
+computes significance-adjusted deviations (z* with standard errors), controls false
+discoveries (Benjamini-Hochberg FDR), and extracts latent style dimensions via cyclic
+Jacobi eigendecomposition.
 """
 
 import math

@@ -226,10 +226,39 @@ info = api.about()
 
 ## Library
 
-Metrics:
+### High-Level API Facade (`lixity.api`)
+
+For automation, AI agents, and straightforward scripting, use the deterministic facade:
 
 ```python
-from lixity import CorpusConfig, CorpusAnalyzer, ReportFormatter
+from lixity import api
+
+# 1. Analyze corpus KPIs
+res = api.analyze(text, language="auto")
+kpis = res["metrics"]
+print(f"ASL: {kpis['asl']:.2f}, LIX: {kpis['lix']:.1f}")
+
+# 2. Self-calibrated style passport (bands, z*, FDR, dimensions)
+passport = api.fingerprint(text, language="de")
+
+# 3. Paragraph-level tense & style profiling
+profiles = api.profile(text, language="de")
+
+# 4. Generate standalone HTML dashboard
+html = api.dashboard(text, language="de", title="My Manuscript")
+
+# 5. Work markers (editor-visible HTML comments)
+markers = api.markers(text)
+new_text, marker = api.add_marker(text, kind="pruefen", note="Tense check", line=42)
+updated_text, ok = api.resolve_marker(new_text, marker["id"])
+```
+
+### Low-Level Classes
+
+For fine-grained control, custom configuration, or direct object-model access:
+
+```python
+from lixity import CorpusAnalyzer, CorpusConfig, ReportFormatter
 from lixity.language import resolve_language
 
 text = open("manuscript.md", encoding="utf-8").read()
