@@ -3793,11 +3793,11 @@ LAYER_LABELS = {
 
 # Cross-cutting UI strings (load hints, onboarding).
 UI_LABELS = {
-    "de": {"load_hint": "Markdown (.md), UTF-8 · Kapitel als »## Titel«"},
-    "en": {"load_hint": "Markdown (.md), UTF-8 · chapters as “## Title”"},
-    "fr": {"load_hint": "Markdown (.md), UTF-8 · chapitres en « ## Titre »"},
-    "es": {"load_hint": "Markdown (.md), UTF-8 · capítulos como «## Título»"},
-    "it": {"load_hint": "Markdown (.md), UTF-8 · capitoli come «## Titolo»"},
-    "pt": {"load_hint": "Markdown (.md), UTF-8 · capítulos como «## Título»"},
-    "nl": {"load_hint": "Markdown (.md), UTF-8 · hoofdstukken als »## Titel«"},
+    "de": {"layer_below_short": "unter", "layer_above_short": "über", "click_hint": "Klick: zum Kapitel", "load_hint": "Markdown (.md), UTF-8 · Kapitel als »## Titel«"},
+    "en": {"layer_below_short": "below", "layer_above_short": "above", "click_hint": "click: go to chapter", "load_hint": "Markdown (.md), UTF-8 · chapters as “## Title”"},
+    "fr": {"layer_below_short": "sous", "layer_above_short": "sur", "click_hint": "clic : aller au chapitre", "load_hint": "Markdown (.md), UTF-8 · chapitres en « ## Titre »"},
+    "es": {"layer_below_short": "bajo", "layer_above_short": "sobre", "click_hint": "clic: ir al capítulo", "load_hint": "Markdown (.md), UTF-8 · capítulos como «## Título»"},
+    "it": {"layer_below_short": "sotto", "layer_above_short": "sopra", "click_hint": "clic: vai al capitolo", "load_hint": "Markdown (.md), UTF-8 · capitoli come «## Titolo»"},
+    "pt": {"layer_below_short": "abaixo", "layer_above_short": "acima", "click_hint": "clique: ir ao capítulo", "load_hint": "Markdown (.md), UTF-8 · capítulos como «## Título»"},
+    "nl": {"layer_below_short": "onder", "layer_above_short": "boven", "click_hint": "klik: naar hoofdstuk", "load_hint": "Markdown (.md), UTF-8 · hoofdstukken als »## Titel«"},
 }

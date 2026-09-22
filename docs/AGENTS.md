@@ -34,7 +34,7 @@ from that style, controlled for measurement noise and multiple testing.
 ### 3.1 `analyze --json` (schema_version 1)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.3.1", "schema_version": 1, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.4.0", "schema_version": 1, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",
@@ -68,6 +68,7 @@ Corpus-level notes:
   `colons`, `semicolons`, `questions`, `exclamations`, `ellipses`), so agents
   can parse them independent of the UI language.
 
+
 ### 3.2 `style --json` (passport, schema_version 2)
 
 ```json
@@ -82,6 +83,21 @@ Corpus-level notes:
                  "scores": {"1": -2.1, …}, "flagged": [1, 2, 3]}, …],
  "redundant_features": [{"a": "asl", "b": "staccato_pct", "rho": -0.93}]}
 ```
+
+### 3.3 UI label packs (merge order)
+
+The dashboard resolves labels from six packs, later packs override earlier
+ones; a missing key falls back to English and then to the key itself:
+
+1. `LABELS` – core UI terms (tense, severity, chapters, …)
+2. `METRIC_LABELS` – metric names and control labels
+3. `HELP_TEXTS` – tooltip texts (`help_*`)
+4. `GROUP_LABELS` – KPI group captions
+5. `LAYER_LABELS` – style-layer legend and guidance
+6. `UI_LABELS` – cross-cutting hints (load hint, short scale words)
+
+`tests/test_ui_contract.py` enforces that every key the renderer uses exists
+in all seven languages.
 
 ## 4. Interpretation heuristics (documented, not black-box)
 

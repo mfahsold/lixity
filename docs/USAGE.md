@@ -318,6 +318,32 @@ info = api.about()
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
 
+## Known limitations & stability
+
+Transparent about what the numbers can and cannot do (full register:
+`docs/ITERATION-2.md`):
+
+- **Short texts.** All length-invariant lexical-diversity indices are
+  unreliable on very short texts (Bestgen 2024/2025). Lixity returns `null`
+  for MTLD and Maas a² below **100 tokens**, for MATTR below the window
+  (50) and for HD-D below 175 tokens; the dashboard shows `–`.
+- **Heuristics.** Syllable counts (±5–10 %), suffix-based adjective/
+  nominalisation counts and curated tense patterns are heuristics, not
+  ground truth – they are comparable *within* one language, not across
+  languages.
+- **Self-calibration needs chapters.** The style fingerprint needs several
+  chapters with measurable spread; for a single chapter the heatmap and
+  passport are hidden instead of showing noise.
+- **Determinism** is byte-identical on the same interpreter; across Python
+  versions or platforms the last floating-point bits may differ.
+- **Dashboard size** grows with the number of paragraphs (~2 MB for 95k
+  words); the HTML is self-contained and offline by design.
+- **Accessibility.** Colour is never the only channel: values are printed,
+  the band chart encodes position/shape, and every strip reveals tense and
+  metrics as text on click. Paragraph strips are deliberately dense
+  (below the 24 px target size of WCAG 2.5.8) – keyboard access and
+  click-to-read compensate.
+
 ## Library
 
 ### High-Level API Facade (`lixity.api`)

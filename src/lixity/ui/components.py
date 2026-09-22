@@ -1,0 +1,125 @@
+"""lixity.ui.components – Small, reusable dashboard building blocks.
+
+Centralises every piece of markup the dashboard reuses: labels and tooltips,
+KPI tiles with optional micro-bars, the style-passport band chart, dimension
+loading bars and the chapter-matrix micro-bars. All builders are pure
+functions returning HTML strings – no state, no dependencies beyond the
+standard library.
+"""
+
+from __future__ import annotations
+
+import html
+from collections.abc import Mapping
+from typing import Any
+
+from ..language_data import EN_LABELS, HELP_TEXTS, METRIC_LABELS
+from ..style_profile import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT
+
+_DEFAULT_LABELS = {**EN_LABELS, **METRIC_LABELS["en"], **HELP_TEXTS["en"]}
+
+
+def label(labels: Mapping[str, str] | None, key: str) -> str:
+    """Localised label with English fallback (never raises)."""
+    source = labels if labels else _DEFAULT_LABELS
+    return source.get(key, _DEFAULT_LABELS.get(key, key))
+
+
+def esc(value: object) -> str:
+    """HTML-escapes any value (single helper for the whole UI)."""
+    return html.escape(str(value))
+
+
+def help_term(labels: Mapping[str, str] | None, key: str, text: str) -> str:
+    """Wraps a term with a tooltip (help text from the language profile)."""
+    tip = label(labels, f"help_{key}")
+    if not tip or tip.startswith("help_"):
+        tip = HELP_TEXTS["en"].get(f"help_{key}") or HELP_TEXTS["de"].get(f"help_{key}") or ""
+    if not tip:
+        return text
+    return (
+        f'<span class="help" data-help="{html.escape(tip, quote=True)}" tabindex="0">{text}</span>'
+    )
+
+
+# Canonical tense values (style_profile.TENSE_*) -> label keys.
+_TENSE_LABEL_KEYS = {
+    TENSE_PRESENT: "present",
+    TENSE_PAST: "past",
+    TENSE_MIXED: "mixed",
+    TENSE_NEUTRAL: "neutral",
+}
+
+
+def tense_class(dominant: str) -> str:
+    if dominant == TENSE_PRESENT:
+        return "tense-present"
+    if dominant == TENSE_PAST:
+        return "tense-past"
+    if dominant == TENSE_MIXED:
+        return "tense-mixed"
+    return "tense-neutral"
+
+
+def tense_label(labels: Mapping[str, str] | None, dominant: str) -> str:
+    """Localised tense name (dominant holds canonical values, labels use keys)."""
+    return label(labels, _TENSE_LABEL_KEYS.get(dominant, dominant))
+
+
+def line_label(labels: Mapping[str, str] | None, profile: Any) -> str:
+    """Localised line anchor, e.g. 'Z. 470–472' (de) / 'l. 470–472' (en)."""
+    prefix = label(labels, "line")
+    start = int(profile.start_line)
+    end = int(profile.end_line)
+    return f"{prefix} {start}" if start == end else f"{prefix} {start}–{end}"
+
+
+def kpi(value: str, label_text: str, bar: float | None = None) -> str:
+    """KPI tile; ``bar`` (0–100) adds a thin proportion bar under the value."""
+    bar_html = (
+        f'<i class="kpi-bar" style="--v:{max(0.0, min(100.0, bar)):.1f}%"></i>'
+        if bar is not None
+        else ""
+    )
+    return f'<div class="kpi"><b>{value}</b><span>{label_text}</span>{bar_html}</div>'
+
+
+def band_chart(
+    title: str,
+    band_lo: float,
+    band_hi: float,
+    median: float,
+    values: list[float],
+    outliers: list[float],
+) -> str:
+    """One style-passport row: data range, ±2σ band, median tick, outlier dots.
+
+    Everything visible encodes data (Tufte); exact numbers live in the tooltip.
+    """
+    lo = min([*values, band_lo]) if values else band_lo
+    hi = max([*values, band_hi]) if values else band_hi
+    span = (hi - lo) or 1.0
+
+    def pos(value: float) -> float:
+        return max(0.0, min(100.0, (value - lo) / span * 100.0))
+
+    band_left = pos(band_lo)
+    band_width = max(0.5, pos(band_hi) - band_left)
+    dots = "".join(f'<b style="left:{pos(v):.2f}%"></b>' for v in outliers)
+    return (
+        f'<div class="band" title="{html.escape(title, quote=True)}">'
+        f'<i class="band-range" style="left:{band_left:.2f}%;width:{band_width:.2f}%"></i>'
+        f'<i class="band-median" style="left:{pos(median):.2f}%"></i>'
+        f"{dots}</div>"
+    )
+
+
+def loading_bars(entries: list[tuple[str, float]], limit: float) -> str:
+    """Diverging mini-bars for dimension loadings (positive accent, negative blue)."""
+    scale = max(limit, 1e-9)
+    bars = []
+    for name, value in entries:
+        width = min(100.0, abs(value) / scale * 100.0)
+        sign = "pos" if value >= 0 else "neg"
+        bars.append(f'<span class="load {sign}" style="--w:{width:.1f}%"><i></i>{esc(name)}</span>')
+    return '<div class="loadings">' + "".join(bars) + "</div>"

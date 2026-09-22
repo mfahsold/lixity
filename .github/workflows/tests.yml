@@ -26,3 +26,28 @@ jobs:
       - run: pip install pydantic rich orjson ruff==0.16.8 mypy
       - run: ruff check src tests scripts
       - run: mypy
+
+  package:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - run: python -m build --wheel
+      - name: Verify wheel contains UI assets and typing marker
+        run: |
+          python - <<'PY'
+          import glob, sys, zipfile
+
+          wheel = glob.glob("dist/*.whl")[0]
+          names = set(zipfile.ZipFile(wheel).namelist())
+          required = {
+              "lixity/py.typed",
+              "lixity/ui/assets/dashboard.css",
+              "lixity/ui/assets/dashboard.js",
+          }
+          missing = sorted(required - names)
+          sys.exit(f"missing in wheel: {missing}" if missing else 0)
+          PY

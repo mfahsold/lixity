@@ -39,6 +39,11 @@ _RE_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
 
 
+# Minimum token count for length-sensitive lexical-diversity indices
+# (Bestgen 2024/2025: all LD indices are unreliable on very short texts).
+MIN_TOKENS_LD = 100
+
+
 class CorpusAnalyzer:
     """
     Stateless, thread-safe analysis engine for literary Markdown texts.
@@ -396,11 +401,13 @@ class CorpusAnalyzer:
         MTLD: length-invariant lexical diversity (McCarthy & Jarvis 2010).
 
         Mean length of sequential token runs that maintain TTR >= threshold;
-        computed forward and backward then averaged. Returns None when no
-        factor completes (e.g. very short or all-unique token sequences).
+        computed forward and backward then averaged. Returns None below
+        ``MIN_TOKENS_LD`` (100) tokens – Bestgen (2024/2025) shows that all
+        lexical-diversity indices are unreliable on very short texts – and
+        when no factor completes (all-unique token sequences).
         """
         n = len(tokens)
-        if n < 10:
+        if n < MIN_TOKENS_LD:
             return None
 
         def _factors(seq: list[str]) -> float:
@@ -458,8 +465,11 @@ class CorpusAnalyzer:
 
     @staticmethod
     def maas_a2(n_tokens: int, v_types: int) -> float | None:
-        """Maas a² = (log N − log V) / (log N)² – lower = more diverse (Maas 1972)."""
-        if n_tokens <= 1 or v_types <= 1:
+        """Maas a² = (log N − log V) / (log N)² – lower = more diverse (Maas 1972).
+
+        Requires ``MIN_TOKENS_LD`` tokens; shorter texts return None.
+        """
+        if n_tokens < MIN_TOKENS_LD or v_types <= 1:
             return None
         log_n = math.log10(n_tokens)
         log_v = math.log10(v_types)

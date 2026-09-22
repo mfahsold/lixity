@@ -5,6 +5,41 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0] – 2026-09-22
+
+### Added
+
+- **Centralised UI package `lixity.ui`** – renderer (`dashboard.py`),
+  reusable components (`components.py`) and assets (CSS/JS) in one place;
+  `lixity.visualizer` remains as a compatibility shim.
+- **"Show, don't tell" dashboard**: style-passport **band chart** (range,
+  median tick, outlier dots; numbers on demand in the tooltip), dimension
+  **loading bars**, KPI **proportion bars**, chapter-matrix micro-bars and a
+  self-dismissing hint instead of permanent instructions.
+- **UI contract tests** (`tests/test_ui_contract.py`): every DOM id the
+  script uses exists in the render, every help key and core label key is
+  translated in all seven languages, and the visual components are rendered.
+- **CI packaging job** verifying that the wheel contains the UI assets and
+  the `py.typed` marker.
+- `docs/ITERATION-2.md` – research findings, critical assessment and the
+  stability register (with severity, evidence, mitigation); "Known
+  limitations" section in `docs/USAGE.md`.
+
+### Changed
+
+- **Micro-interactions**: hover/press feedback on chips and buttons, animated
+  paragraph expand (grid-rows), heatmap row/column highlight, translucent
+  sticky toolbar, tooltip fade; `prefers-reduced-motion` disables animation.
+- **Lexical-diversity guards** per Bestgen (2024/2025): MTLD and Maas a²
+  require ≥ 100 tokens, otherwise `null` (all LD indices are unreliable on
+  very short texts).
+- Label-pack merge order documented (`docs/AGENTS.md` §3.3).
+
+### Fixed
+
+- Chapter-matrix micro-bars are rendered (replaces the unused placeholder);
+  dead CSS rules removed.
+
 ## [1.3.1] – 2026-09-22
 
 ### Added

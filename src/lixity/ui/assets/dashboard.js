@@ -63,6 +63,31 @@
   });
 })();
 
+function highlightCell(cell, on) {
+  var table = cell.closest("table");
+  if (!table) return;
+  var row = cell.parentElement;
+  var index = Array.prototype.indexOf.call(row.children, cell);
+  row.querySelectorAll("td.z").forEach(function (td) {
+    if (td === cell || index < 1) td.classList.toggle("hl", on);
+  });
+  if (index < 1) return;
+  table.querySelectorAll("tbody tr").forEach(function (tr) {
+    var td = tr.children[index];
+    if (td) td.classList.toggle("hl", on);
+  });
+}
+
+document.addEventListener("mouseover", function (event) {
+  var cell = event.target.closest ? event.target.closest("td.z[data-chapter]") : null;
+  if (cell) highlightCell(cell, true);
+}, { passive: true });
+
+document.addEventListener("mouseout", function (event) {
+  var cell = event.target.closest ? event.target.closest("td.z[data-chapter]") : null;
+  if (cell) highlightCell(cell, false);
+}, { passive: true });
+
 document.addEventListener("click", function (event) {
   var chip = event.target.closest(".chip");
   if (chip) {
@@ -94,6 +119,17 @@ if (filter) {
     document.body.classList.toggle("only-flags", filter.checked);
   });
 }
+var microhint = document.getElementById("microhint");
+if (microhint) {
+  var dismissHint = function () {
+    microhint.classList.add("gone");
+    document.removeEventListener("click", dismissHint);
+    window.clearTimeout(hintTimer);
+  };
+  var hintTimer = window.setTimeout(dismissHint, 9000);
+  document.addEventListener("click", dismissHint);
+}
+
 var layer = document.getElementById("style-layer");
 var layerLegend = document.getElementById("layer-legend");
 
@@ -128,9 +164,12 @@ function applyLayer() {
     if (key && layer) {
       var option = layer.options[layer.selectedIndex];
       var title = document.getElementById("layer-legend-title");
-      var hint = document.getElementById("layer-legend-hint");
-      if (title) title.textContent = option.textContent;
-      if (hint) hint.textContent = option.getAttribute("data-hint") || "";
+      if (title) {
+        title.textContent = option.textContent;
+        var hint = option.getAttribute("data-hint") || "";
+        if (hint) title.setAttribute("data-tip", hint);
+        else title.removeAttribute("data-tip");
+      }
     }
   }
 }

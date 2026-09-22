@@ -15,7 +15,7 @@ from .markdown_parser import parse_markdown_blocks
 from .models import CorpusConfig
 from .style_fingerprint import StyleFingerprint
 from .style_profile import ParagraphProfiler
-from .visualizer import render_dashboard
+from .ui import render_dashboard
 
 SCHEMA_VERSION = 1
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
