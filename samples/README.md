@@ -1,18 +1,26 @@
 # Sample corpus – provenance and licensing
 
-## `effi-briest-pg5323.txt`
+## `effi-briest-pg5323.txt` / `effi-briest.md`
 
-Unmodified source file from **Project Gutenberg eBook #5323**:
-<https://www.gutenberg.org/ebooks/5323> (*Effi Briest*, Theodor Fontane,
-first published 1895). The file includes the original Project Gutenberg
+Unmodified source file from **Project Gutenberg eBook #5323**
+(<https://www.gutenberg.org/ebooks/5323>, *Effi Briest*, Theodor Fontane,
+1895) plus a Markdown conversion (front matter, chapter headings as `## `).
+The underlying text is **public domain** (Fontane died in 1898; public domain
+in the USA and the EU). The `.txt` file keeps the original Project Gutenberg
 header and license notice and must not be redistributed without it.
 
-## `effi-briest.md`
+## `pride-and-prejudice-pg1342.txt` / `pride-and-prejudice.md`
 
-A Markdown conversion of the novel for analysis with Lixity (chapter
-headings as `## `). The underlying text is **public domain** (Fontane died
-in 1898; the work is public domain in the USA and in the EU). The Markdown
-conversion is provided as a test and demonstration corpus.
+Unmodified source file from **Project Gutenberg eBook #1342**
+(<https://www.gutenberg.org/ebooks/1342>, *Pride and Prejudice*, Jane Austen,
+1813) plus a Markdown conversion. **Public domain** (Austen died in 1817).
+The `.txt` file keeps the original header and license notice.
+
+Conversion (reproducible): body between the first `Chapter I.]` heading and
+the printer note, Project Gutenberg header/footer and the illustration list
+removed, `[Illustration …]` blocks stripped, `CHAPTER I.` / `Chapter I.]`
+headings converted to `## Chapter I`, blank line after every heading,
+front matter `# Pride and Prejudice` / `*Jane Austen*` added.
 
 ## `effi-briest-folge/`
 
@@ -29,4 +37,5 @@ any time:
 
 ```bash
 lixity dashboard samples/effi-briest.md -o /tmp/effi-briest-dashboard.html
+lixity build samples/pride-and-prejudice.md
 ```
