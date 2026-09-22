@@ -5,6 +5,48 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0] – 2026-09-22
+
+### Changed (breaking, metric-affecting)
+
+- **Sentence segmentation is abbreviation-aware** and shared by corpus and
+  chapter metrics (`lixity.sentences`): abbreviations (`Mr.`, `z.B.`, `Dr.`),
+  decimal numbers and initials no longer split sentences, closing quotation
+  marks stay with the sentence they close. Sentence counts, ASL, CV, Flesch
+  and LIX change accordingly (dialogue-heavy texts get more, shorter
+  sentences; the chapter matrix was still on the naive regex before).
+- **LIX uses the standard long-word threshold** (more than six characters)
+  for every language; the previous per-language calibration (7/8 characters)
+  deviated from Björnsson. LIX values rise accordingly.
+- **Syllable heuristics improved:** German double vowels count as one nucleus
+  (`Kaffee`, `Idee`), the English silent-e/-le rule no longer double-counts
+  (`table`, `people`).
+- **Spanish readability** uses the INFLESZ coefficient 62.35 (matches the
+  named scale).
+
+### Changed (structure)
+
+- New core modules: `lixity/sentences.py` (segmentation), `lixity/syllables.py`
+  (per-language rule tables as data), `lixity/diversity.py` (HD-D, MTLD,
+  MATTR, Maas a², Yule's K). `analyzer.py` is orchestration and metric
+  assembly (857 → ~540 lines).
+- `SentenceStats` is the one sentence-architecture data structure for corpus
+  and chapters; `share_se`/`count_se` are module-level plug-in estimators.
+- `language.py`: one profile dataclass, resolved via `dataclasses.replace`
+  (was two identical dataclasses with three field lists).
+- **Unified UI interaction contract**: every content drill-down is a
+  keyboard-reachable `[role="button"]`, driven by one JS selector; focus
+  styling covers all targets (documented in `docs/AGENTS.md` §3.4).
+
+### Fixed
+
+- Style-reference band rows are clickable again (the layer mapping was lost
+  in a refactor) – as documented since v1.5.0.
+- `jacobi_eigh` docstring corrected (one eigenvector per list entry).
+- New `tests/test_math_core.py` pins the mathematical core (hand-computed
+  readability formulas, published Benjamini-Hochberg example, Jacobi
+  properties, Spearman, z*/MAD helpers, lexical-diversity properties).
+
 ## [1.7.0] – 2026-09-22
 
 ### Changed (breaking)
