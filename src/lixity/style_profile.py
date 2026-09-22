@@ -118,18 +118,6 @@ class ParagraphProfiler:
         self._nominal = compile_pattern(self.lang.nominal_regex)
         self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
 
-    def _sentence_tense(self, sentence: str) -> str | None:
-        """Classifies a single sentence as present-, past- or mixed-dominant."""
-        pr = len(self._praes.findall(sentence))
-        pt = len(self._praet.findall(sentence))
-        if pr == 0 and pt == 0:
-            return None
-        if pr > pt:
-            return TENSE_PRESENT
-        if pt > pr:
-            return TENSE_PAST
-        return TENSE_MIXED
-
     def _dominant(self, present: int, past: int) -> str:
         return dominance_from_hits(present, past, self.thresholds.neutral_max_hits)
 
