@@ -5,6 +5,51 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.0] – 2026-09-22
+
+### Added
+
+- **Measurement uncertainty**: every style feature carries a documented
+  standard error (`ChapterMetrics.style_se`: Poisson for count densities,
+  binomial for shares, plug-ins for ASL/CV/starter entropy via Miller-Madow,
+  HD-D sample dispersion). Deviations are now **significance-adjusted**:
+  `z* = (x − median) / √(σ² + SE²)` – noisy small chapters cannot produce
+  false alarms.
+- **Multiple-testing control**: the passport reports the statistically
+  expected false positives at |z*| ≥ 2.5 and the **Benjamini-Hochberg FDR
+  set** (q = 0.05) across all chapter×feature cells.
+- **Self-calibrated style dimensions**: Spearman correlation matrix of the
+  features, eigendecomposed via cyclic Jacobi rotations (pure stdlib) –
+  the manuscript's own abstract style axes with loadings, variance share,
+  per-chapter scores and flagged chapters (Biber-style, but no pre-defined
+  registers). Redundant feature pairs (|ρ| ≥ 0.8) are reported.
+- **Work markers** (`markers.py`): editor-visible, renderer-invisible
+  `<!-- LIXITY-MARKER id="…" kind="…" note="…" -->` lines with deterministic
+  content-hash IDs; add/list/resolve/update, idempotent, sanitised notes;
+  set/resolve from the dashboard (local control server) or the Python API.
+- **Agent interface**: stable `lixity.api` facade (`analyze`, `profile`,
+  `fingerprint`/`passport`, `dashboard`, `markers`, `add_marker`,
+  `resolve_marker`, `about`) with self-describing meta blocks, plus CLI
+  `about`, `completion bash|zsh`, `--version` and defined exit codes.
+- `docs/AGENTS.md`: machine-facing contracts (commands, JSON schemas,
+  interpretation heuristics, Python API).
+- New tests: significance adjustment, Benjamini-Hochberg, Jacobi
+  eigendecomposition, Spearman, markers lifecycle, API facade, CLI surface.
+
+### Changed
+
+- `style --json` passport is now schema version 2 (meta block with
+  expected false positives and FDR q; `dimensions`, `fdr_flagged`,
+  `redundant_features`, feature units).
+- Dashboard: style-dimensions panel, significance-adjusted heatmap cells
+  with effect-size tooltips, false-positive/FDR footnote, work-marker panel
+  and per-paragraph marker buttons (control mode).
+- Language profiles: project-neutral signal keywords (empty defaults –
+  leitmotifs belong to `CorpusConfig.signal_keywords` / `motif_regexes`).
+- Release kit: `api.py`, `markers.py`, current CLI/CI/pyproject templates,
+  richer `.gitignore`, SEO-optimised README and GitHub Pages
+  (meta description, Open Graph, Twitter cards, JSON-LD).
+
 ## [1.1.0] – 2026-09-22
 
 ### Added

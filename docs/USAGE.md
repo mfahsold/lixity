@@ -115,15 +115,21 @@ manuscript. Lixity measures 16 descriptive, register-neutral features per
 chapter (ASL, staccato, hypotaxis, sentence CV, dialogue, function words,
 perception filters, modals, passive, nominalisations, adjectives, long words,
 starter entropy, first-person starts, Guiraud R, HD-D) and derives their
-robust centre (median) and spread (MAD) from the corpus itself. Chapters are
-flagged only when they deviate from this own style (robust z-score ≥ 2.5) –
-whether a deviation is intended (register scene) or drift is for the author
-to decide, never the engine. The passport doubles as a constraint block for
-authoring and editing (human or assisting LLM).
+robust centre (median) and spread (MAD) from the corpus itself. Deviations
+are **significance-adjusted** against each chapter's estimation noise
+(`z* = (x − median) / √(σ² + SE²)`, documented standard errors per feature),
+reported with the statistically expected number of false positives and a
+**Benjamini-Hochberg FDR set** (q = 0.05). Additionally, the passport derives
+the manuscript's own abstract **style dimensions** (Spearman correlation of
+the features, Jacobi eigendecomposition) with loadings and per-chapter
+scores, plus redundant feature pairs (|ρ| ≥ 0.8). Whether a deviation is
+intended (register scene) or drift is for the author to decide, never the
+engine. The passport doubles as a constraint block for authoring and editing
+(human or assisting LLM).
 
 ```bash
 lixity style manuscript.md          # text block
-lixity style manuscript.md --json   # machine-readable (bands, deviations)
+lixity style manuscript.md --json   # machine-readable (schema v2)
 ```
 
 ### `lixity dashboard`
@@ -138,9 +144,12 @@ The dashboard contains:
   Flesch, LIX, dialogue, Guiraud R, HD-D, staccato, first-person starts,
   function words, flagged paragraphs),
 - the sentence-length architecture as bars,
-- the **style heatmap**: chapter × feature matrix of robust z-scores with a
-  diverging colour scale (blue = below, orange = above the house mean),
+- the **style heatmap**: chapter × feature matrix of significance-adjusted
+  z* values with a diverging colour scale (blue = below, orange = above the
+  house mean), plus the expected-false-positive/FDR footnote,
 - the **style passport** panel (median, ±2σ band, outlier count per feature),
+- the **style dimensions** panel (self-calibrated principal axes with
+  loadings and flagged chapters),
 - a chapter map with a colour-coded paragraph strip (present / past / mixed /
   neutral) and severity markers, plus an optional **style layer** overlay
   (bottom edge colour per paragraph, within-chapter normalised),
@@ -149,6 +158,39 @@ The dashboard contains:
 
 ```bash
 lixity dashboard manuscript.md -o ui.html
+```
+
+### `lixity about` and `lixity completion`
+
+```bash
+lixity about            # tool metadata: languages, features, heuristics
+lixity completion bash  # shell completion script (bash or zsh)
+```
+
+## Work markers (editor-visible)
+
+The dashboard (local control server) can set **work markers** directly into
+the manuscript: invisible HTML comment lines with stable IDs
+(`<!-- LIXITY-MARKER id="…" kind="…" note="…" -->`) placed above the target
+paragraph. They appear in the text editor, never render in any export, move
+with the paragraph when editing, and are idempotent (deterministic
+content-hash IDs). Kinds: `pruefen`, `sachcheck`, `todo`, `achtung`.
+Programmatic access: `api.markers(text)`, `api.add_marker(text, kind, note,
+line)`, `api.resolve_marker(text, marker_id)`.
+
+## AI agent interface
+
+Stable, deterministic facade for agents and automation – see
+[`docs/AGENTS.md`](AGENTS.md) for the full machine-facing contracts
+(JSON schemas with meta blocks, exit codes, interpretation heuristics):
+
+```python
+from lixity import api
+
+metrics = api.analyze(text, language="auto")
+passport = api.fingerprint(text, language="de")
+html = api.dashboard(text, language="de", title="…")
+info = api.about()
 ```
 
 ## Understanding the metrics

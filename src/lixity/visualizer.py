@@ -181,6 +181,37 @@ if (layer) {
     });
   });
 }
+async function markerApi(payload) {
+  try {
+    var res = await fetch(API + "/marker-" + payload._action, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    var data = await res.json();
+    if (data.ok) { setTimeout(function () { location.reload(); }, 800); }
+    return data;
+  } catch (err) {
+    return { ok: false, message: String(err) };
+  }
+}
+document.addEventListener("click", async function (event) {
+  var add = event.target.closest("[data-marker-add]");
+  if (add) {
+    markerApi({
+      _action: "add",
+      kind: add.dataset.markerAdd,
+      line: parseInt(add.dataset.line, 10),
+      note: ""
+    });
+    return;
+  }
+  var resolve = event.target.closest("[data-marker-resolve]");
+  if (resolve) {
+    markerApi({ _action: "resolve", id: resolve.dataset.markerResolve });
+    return;
+  }
+});
 var API = document.body.dataset.api || "";
 var NDA_STATUSES = ["entwurf", "versendet", "bestaetigt", "unterschrieben"];
 function ndaStatus(message, ok) {
@@ -391,6 +422,7 @@ def render_dashboard(
     paragraphs: Sequence[ParagraphProfile],
     metrics: Any | None = None,
     fingerprint: Any | None = None,
+    markers: Sequence[Any] | None = None,
     artifacts: Sequence[Mapping[str, Any]] | None = None,
     title: str = "Manuskript",
     labels: Mapping[str, str] | None = None,
@@ -632,7 +664,7 @@ def render_dashboard(
         )
         parts.append('<div class="heatmap-wrap"><table class="heatmap"><thead><tr>')
         parts.append(f'<th class="ch">{L("chapter")}</th>')
-        for _field, label_key in FEATURES:
+        for _field, label_key, _unit in FEATURES:
             parts.append(
                 f"<th>{_help(labels, _FEATURE_HELP.get(_field, _field), esc(_label(labels, label_key)))}</th>"
             )
@@ -641,20 +673,31 @@ def render_dashboard(
             if chapter.num not in fingerprint.z_scores:
                 continue
             parts.append(f'<tr><td class="ch">{chapter.num}. {esc(chapter.title)}</td>')
-            for field_name, _label_key in FEATURES:
+            for field_name, label_key, _unit in FEATURES:
                 z = fingerprint.z_scores[chapter.num].get(field_name)
                 if z is None:
                     parts.append('<td class="z">–</td>')
                     continue
                 raw = fingerprint.values[field_name].get(chapter.num)
                 raw_text = f"{raw:.2f}" if isinstance(raw, float) else str(raw)
-                tooltip = f"{_label(labels, _label_key)}: {raw_text} · z {z:+.1f}"
+                effect = fingerprint.effect_sizes[chapter.num].get(field_name, 0.0)
+                tooltip = (
+                    f"{_label(labels, label_key)}: {raw_text} · "
+                    f"z* {z:+.1f} · {_label(labels, 'effect_size')} {effect:+.1f}\u03c3"
+                )
                 parts.append(
                     f'<td class="z" style="background:{z_color(z)}" '
                     f'title="{esc(tooltip, quote=True)}">{z:+.1f}</td>'
                 )
             parts.append("</tr>")
-        parts.append("</tbody></table></div></section>")
+        parts.append("</tbody></table></div>")
+        fdr_total = sum(len(v) for v in fingerprint.fdr_flagged.values())
+        parts.append(
+            f'<p class="hint">{_help(labels, "expected_false_positives", L("expected_false_positives"))}: '
+            f"~{fingerprint.expected_false_positives:.1f} · "
+            f"{_help(labels, 'fdr', L('fdr_flagged'))}: {fdr_total}</p>"
+        )
+        parts.append("</section>")
 
         parts.append('<section class="panel">')
         parts.append(f"<h2>{_help(labels, 'passport', L('style_passport'))}</h2>")
@@ -664,7 +707,7 @@ def render_dashboard(
             f'<th class="num">{L("band")} (±2σ)</th><th class="num">{L("outliers")}</th>'
         )
         parts.append("</tr></thead><tbody>")
-        for field_name, label_key in FEATURES:
+        for field_name, label_key, _unit in FEATURES:
             base = fingerprint.baseline.get(field_name, {})
             if not base.get("n"):
                 continue
@@ -681,7 +724,71 @@ def render_dashboard(
             )
         parts.append("</tbody></table></section>")
 
-    # --- Toolbar ----------------------------------------------------------
+        # --- Style dimensions (self-calibrated principal axes) -------------
+        if fingerprint.dimensions:
+            parts.append('<section class="panel">')
+            parts.append(f"<h2>{_help(labels, 'dimensions', L('style_dimensions'))}</h2>")
+            field_labels = {f: label_key for f, label_key, _u in FEATURES}
+            for dim in fingerprint.dimensions:
+                loadings: dict[str, float] = dim["loadings"]
+                top_pos = sorted(loadings.items(), key=lambda kv: kv[1], reverse=True)[:3]
+                top_neg = sorted(loadings.items(), key=lambda kv: kv[1])[:3]
+                pos_text = " · ".join(
+                    f"{esc(_label(labels, field_labels.get(f, f)))} {v:+.2f}" for f, v in top_pos
+                )
+                neg_text = " · ".join(
+                    f"{esc(_label(labels, field_labels.get(f, f)))} {v:+.2f}" for f, v in top_neg
+                )
+                flagged = dim.get("flagged", [])
+                parts.append('<div class="artifact">')
+                parts.append(
+                    f'<span class="name">{L("style_dimensions")} {dim["index"]} · '
+                    f"{L('dim_variance')} {dim['variance'] * 100:.0f} %</span>"
+                )
+                parts.append(
+                    f'<span class="meta">{L("dim_loadings_pos")}: {pos_text}<br/>'
+                    f"{L('dim_loadings_neg')}: {neg_text}</span>"
+                )
+                if flagged:
+                    parts.append(
+                        f'<span class="meta">{L("dim_flagged")}: '
+                        f"{', '.join(str(ch) for ch in flagged)}</span>"
+                    )
+                parts.append("</div>")
+            parts.append("</section>")
+
+        # --- Work markers (editor-visible, set from the dashboard) -------
+        if markers is not None:
+            parts.append('<section class="panel">')
+            parts.append(f"<h2>{_help(labels, 'markers', L('markers'))}</h2>")
+            if markers:
+                parts.append("<table><thead><tr>")
+                parts.append(
+                    f'<th>{L("chapter")}</th><th class="num">{L("line")}</th>'
+                    f"<th>{L('metrics')}</th><th>{L('notes')}</th>"
+                )
+                if controls:
+                    parts.append("<th></th>")
+                parts.append("</tr></thead><tbody>")
+                for m in markers:
+                    kind_label = _label(labels, "marker_" + m.kind)
+                    note = esc(str(m.note or "")) or "–"
+                    parts.append(
+                        f'<tr><td>{m.line}</td><td class="num">{m.line}</td>'
+                        f"<td>{esc(kind_label)}</td><td>{note}</td>"
+                    )
+                    if controls:
+                        parts.append(
+                            f'<td><button class="ctl" data-marker-resolve="{esc(m.id, quote=True)}">'
+                            f"{L('marker_resolve')}</button></td>"
+                        )
+                    parts.append("</tr>")
+                parts.append("</tbody></table>")
+            else:
+                parts.append(f'<p class="hint">{L("markers_empty")}</p>')
+            parts.append("</section>")
+
+        # --- Toolbar ----------------------------------------------------------
     parts.append('<div class="toolbar">')
     parts.append(f'<label><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
     if paragraphs:
@@ -776,6 +883,13 @@ def render_dashboard(
                     f"{L('feat_nominal')} {p.nominal_density:.1f} · {L('feat_passive')} {p.passive_density:.1f} · "
                     f"{p.words} {L('words')}</div>"
                 )
+                if controls:
+                    buttons = " ".join(
+                        f'<button class="ctl" data-marker-add="{esc(kind, quote=True)}" '
+                        f'data-line="{p.start_line}">+ {esc(_label(labels, "marker_" + kind))}</button>'
+                        for kind in ("pruefen", "sachcheck", "todo", "achtung")
+                    )
+                    parts.append(f'<div class="row">{buttons}</div>')
                 parts.append(f"<p>{esc(p.text)}</p>")
                 parts.append("</div>")
         parts.append("</section>")
@@ -807,7 +921,7 @@ def render_dashboard(
                 if dev:
                     named = ", ".join(
                         f"{_label(labels, label_key)} {z:+.1f}σ"
-                        for field_name, label_key in FEATURES
+                        for field_name, label_key, _unit in FEATURES
                         if (z := dev.get(field_name)) is not None
                     )
                     parts.append(

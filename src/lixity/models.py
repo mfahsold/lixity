@@ -170,6 +170,14 @@ class ChapterMetrics(BaseModel):
     function_word_pct: float = Field(
         default=0.0, description="Anteil der Funktionswörter an den Kapitel-Tokens."
     )
+    style_se: dict[str, float] = Field(
+        default_factory=dict,
+        description=(
+            "Messunsicherheit (Standardfehler) je Stil-Feature. Dokumentierte "
+            "Näherungen: Poisson für Zähl-Dichten, Binomial für Anteile, "
+            "ASL/CV/Entropie/HD-D-Plug-ins. Leer = Feature nicht messbar."
+        ),
+    )
 
 
 class CorpusMetrics(BaseModel):

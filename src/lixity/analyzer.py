@@ -69,19 +69,37 @@ class CorpusAnalyzer:
         Deterministic via fixed seed; returns None for texts too short for
         ``min_samples`` disjoint windows (no reliable statement).
         """
+        value, _ = CorpusAnalyzer.hd_d_stats(tokens, seed=seed, min_samples=min_samples)
+        return value
+
+    @staticmethod
+    def hd_d_stats(
+        tokens: list[str], seed: int = 42, min_samples: int = 5
+    ) -> tuple[float | None, float]:
+        """
+        HD-D with its estimation uncertainty: returns (value, standard error).
+
+        The standard error is the sample standard deviation of the up to 42
+        sample diversities divided by sqrt(#samples) – the documented plug-in
+        estimator of the HD-D mean.
+        """
         n = len(tokens)
         sample_size = 35
         if n < sample_size * min_samples:
-            return None
+            return None, 0.0
         max_samples = min(42, n // sample_size)
         rng = random.Random(seed)  # noqa: S311 – deterministic sampling, not cryptography
         starts = sorted(rng.sample(range(n - sample_size + 1), max_samples))
-        score = 0.0
+        diversities = []
         for s in starts:
             sample = tokens[s : s + sample_size]
             repeat = sum(c * (c - 1) for c in Counter(sample).values())
-            score += 1.0 - repeat / (sample_size * (sample_size - 1))
-        return score / max_samples
+            diversities.append(1.0 - repeat / (sample_size * (sample_size - 1)))
+        mean = sum(diversities) / len(diversities)
+        if len(diversities) < 2:
+            return mean, 0.0
+        variance = sum((d - mean) ** 2 for d in diversities) / (len(diversities) - 1)
+        return mean, math.sqrt(variance) / math.sqrt(len(diversities))
 
     @staticmethod
     def _entropy(counts: Counter) -> float:
@@ -91,8 +109,12 @@ class CorpusAnalyzer:
             return 0.0
         return -sum((c / total) * math.log2(c / total) for c in counts.values())
 
-    def _starter_stats(self, sentences: list[str]) -> tuple[float, float]:
-        """(start entropy in bits, first-person-start rate) over sentence starters."""
+    def _starter_stats(self, sentences: list[str]) -> tuple[float, float, float]:
+        """(start entropy in bits, first-person-start rate, entropy standard error).
+
+        The entropy uncertainty follows the Miller-Madow first-order variance
+        of the maximum-likelihood estimator: Var(H) = [sum(p*log2^2(p)) - H^2] / n.
+        """
         starters: Counter = Counter()
         first_person = 0
         for s in sentences:
@@ -105,7 +127,12 @@ class CorpusAnalyzer:
                 first_person += 1
         total = sum(starters.values())
         rate = (first_person / total * 100.0) if total else 0.0
-        return self._entropy(starters), rate
+        entropy = self._entropy(starters)
+        if not total:
+            return entropy, rate, 0.0
+        second = sum((c / total) * math.log2(c / total) ** 2 for c in starters.values())
+        variance = (second - entropy**2) / total
+        return entropy, rate, math.sqrt(max(0.0, variance))
 
     @staticmethod
     def _density(matches: int, words: int) -> float:
@@ -259,7 +286,7 @@ class CorpusAnalyzer:
         staccato_pct = (short_s / total_sent * 100.0) if total_sent else 0.0
         kaskade_pct = (comp_s / total_sent * 100.0) if total_sent else 0.0
         sentence_cv = (std_sl / asl) if asl else 0.0
-        start_entropy, first_person_start_rate = self._starter_stats(raw_sents)
+        start_entropy, first_person_start_rate, _entropy_se = self._starter_stats(raw_sents)
 
         # Readability & complexity
         total_syllables = sum(self.count_syllables(t) for t in tokens)
@@ -391,21 +418,55 @@ class CorpusAnalyzer:
             c_kaskade = (c_comp / n_cs * 100.0) if n_cs else 0.0
             c_std = math.sqrt(sum((sl - c_asl) ** 2 for sl in c_sent_lens) / n_cs) if n_cs else 0.0
             c_cv = (c_std / c_asl) if c_asl else 0.0
-            c_start_entropy, c_first_rate = self._starter_stats(c_sents)
-            c_passive = self._density(len(self._passive_re.findall(cl_b)), n_cw)
-            c_nominal = self._density(len(self._nominal_re.findall(cl_b)), n_cw)
-            c_adjective = self._density(len(self._adjective_re.findall(cl_b)), n_cw)
-            c_modal = self._density(sum(1 for t in c_lower if t in self._modals), n_cw)
+            c_start_entropy, c_first_rate, c_entropy_se = self._starter_stats(c_sents)
+            c_passive_cnt = len(self._passive_re.findall(cl_b))
+            c_nominal_cnt = len(self._nominal_re.findall(cl_b))
+            c_adjective_cnt = len(self._adjective_re.findall(cl_b))
+            c_modal_cnt = sum(1 for t in c_lower if t in self._modals)
+            c_passive = self._density(c_passive_cnt, n_cw)
+            c_nominal = self._density(c_nominal_cnt, n_cw)
+            c_adjective = self._density(c_adjective_cnt, n_cw)
+            c_modal = self._density(c_modal_cnt, n_cw)
             c_filter_density = self._density(c_fil, n_cw)
             c_long_words = sum(1 for t in c_words if len(t) > 6)
             c_long_pct = (c_long_words / n_cw * 100.0) if n_cw else 0.0
             c_guiraud = len(set(c_lower)) / math.sqrt(n_cw) if n_cw else 0.0
-            c_hd_d = self.hd_d(c_lower)
+            c_hd_d, c_hd_d_se = self.hd_d_stats(c_lower)
             c_func_pct = (
                 sum(1 for t in c_lower if t in self.lang.function_words) / n_cw * 100.0
                 if n_cw
                 else 0.0
             )
+
+            # --- Measurement uncertainty per feature (documented plug-ins) ---
+            def share_se(pct: float, n: int) -> float:
+                p = pct / 100.0
+                return (math.sqrt(max(p * (1.0 - p), 0.0) / n) * 100.0) if n else 0.0
+
+            def count_se(cnt: int, words: int) -> float:
+                return (math.sqrt(cnt) * 1000.0 / words) if words else 0.0
+
+            c_se: dict[str, float] = {
+                "asl": (c_std / math.sqrt(n_cs)) if n_cs else 0.0,
+                "staccato_pct": share_se(c_staccato, n_cs),
+                "kaskade_pct": share_se(c_kaskade, n_cs),
+                "sentence_cv": (
+                    (c_cv / math.sqrt(2.0 * n_cs)) * math.sqrt(1.0 + 2.0 * c_cv**2) if n_cs else 0.0
+                ),
+                "dialog_pct": share_se(c_dial_pct, n_cw),
+                "function_word_pct": share_se(c_func_pct, n_cw),
+                "filter_density": count_se(c_fil, n_cw),
+                "modal_density": count_se(c_modal_cnt, n_cw),
+                "passive_density": count_se(c_passive_cnt, n_cw),
+                "nominalization_density": count_se(c_nominal_cnt, n_cw),
+                "adjective_density": count_se(c_adjective_cnt, n_cw),
+                "long_word_pct": share_se(c_long_pct, n_cw),
+                "start_entropy": c_entropy_se,
+                "first_person_start_rate": share_se(c_first_rate, n_cs),
+                "guiraud_r": (0.5 * c_guiraud / math.sqrt(n_cw)) if n_cw else 0.0,
+            }
+            if c_hd_d is not None:
+                c_se["hd_d"] = c_hd_d_se
 
             chapters.append(
                 ChapterMetrics(
@@ -434,6 +495,7 @@ class CorpusAnalyzer:
                     guiraud_r=c_guiraud,
                     hd_d=c_hd_d,
                     function_word_pct=c_func_pct,
+                    style_se=c_se,
                 )
             )
             chapter_tokens.append(c_lower)

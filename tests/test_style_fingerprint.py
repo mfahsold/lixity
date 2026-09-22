@@ -22,10 +22,14 @@ from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
     FEATURES,
     StyleFingerprint,
+    benjamini_hochberg,
+    jacobi_eigh,
     layer_colors,
     mad,
     median,
     robust_z,
+    significance_z,
+    spearman_rho,
     z_color,
 )
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
@@ -122,7 +126,7 @@ class TestStyleFingerprint(unittest.TestCase):
 
     def test_self_calibration_baseline(self):
         self.assertEqual(self.fp.n_chapters, 2)
-        for field_name, _label in FEATURES:
+        for field_name, _label, _unit in FEATURES:
             self.assertIn(field_name, self.fp.baseline)
             self.assertIn(field_name, self.fp.values)
 
@@ -229,6 +233,133 @@ class TestFingerprintDashboard(unittest.TestCase):
 
     def test_dashboard_is_deterministic_with_fingerprint(self):
         self.assertEqual(self._build(), self._build())
+
+
+class TestJacobiEigendecomposition(unittest.TestCase):
+    """Cyclic Jacobi rotations: correctness, orthogonality, determinism."""
+
+    def test_eigenvalues_and_eigenvectors_of_known_matrix(self):
+        matrix = [[2.0, 0.0], [0.0, 3.0]]
+        eigenvalues, eigenvectors = jacobi_eigh(matrix)
+        self.assertAlmostEqual(eigenvalues[0], 3.0)
+        self.assertAlmostEqual(eigenvalues[1], 2.0)
+
+    def test_orthonormal_eigenvectors(self):
+        matrix = [
+            [1.0, 0.5, 0.2],
+            [0.5, 1.0, -0.3],
+            [0.2, -0.3, 1.0],
+        ]
+        eigenvalues, eigenvectors = jacobi_eigh(matrix)
+        for i in range(3):
+            for j in range(3):
+                dot = sum(eigenvectors[i][k] * eigenvectors[j][k] for k in range(3))
+                self.assertAlmostEqual(dot, 1.0 if i == j else 0.0, places=10)
+
+    def test_reconstruction(self):
+        matrix = [
+            [1.0, 0.4, 0.1, -0.2],
+            [0.4, 1.0, 0.3, 0.1],
+            [0.1, 0.3, 1.0, -0.4],
+            [-0.2, 0.1, -0.4, 1.0],
+        ]
+        eigenvalues, eigenvectors = jacobi_eigh(matrix)
+        for i in range(4):
+            lhs = [sum(matrix[i][k] * eigenvectors[1][k] for k in range(4))]
+            rhs = [eigenvalues[1] * eigenvectors[1][i]]
+            self.assertAlmostEqual(lhs[0], rhs[0], places=8)
+        self.assertAlmostEqual(sum(eigenvalues), 4.0, places=8)
+
+    def test_deterministic(self):
+        matrix = [
+            [1.0, 0.5, 0.2],
+            [0.5, 1.0, -0.3],
+            [0.2, -0.3, 1.0],
+        ]
+        self.assertEqual(jacobi_eigh(matrix), jacobi_eigh(matrix))
+
+
+class TestSpearman(unittest.TestCase):
+    def test_perfect_monotone(self):
+        self.assertAlmostEqual(spearman_rho([1.0, 2.0, 3.0, 4.0], [10.0, 20.0, 30.0, 40.0]), 1.0)
+        self.assertAlmostEqual(spearman_rho([1.0, 2.0, 3.0, 4.0], [40.0, 30.0, 20.0, 10.0]), -1.0)
+
+    def test_ties_are_averaged(self):
+        self.assertAlmostEqual(spearman_rho([1.0, 1.0, 2.0], [1.0, 2.0, 2.0]), 0.5, places=6)
+
+
+class TestSignificanceAdjustment(unittest.TestCase):
+    """Measurement uncertainty shrinks deviations of noisy (small) chapters."""
+
+    def test_benjamini_hochberg(self):
+        cells = [(1, "asl", 0.001), (2, "asl", 0.03), (3, "asl", 0.04), (4, "asl", 0.5)]
+        flagged = benjamini_hochberg(cells, q=0.05)
+        self.assertEqual(flagged, [(1, "asl")])
+
+    def test_noise_shrinks_z(self):
+        self.assertAlmostEqual(significance_z(5.0, 0.0, 2.0, 0.0), 2.5)
+        self.assertLess(abs(significance_z(5.0, 0.0, 2.0, 1.5)), 2.5)
+
+    def test_analyzer_provides_style_se(self):
+        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        metrics = CorpusAnalyzer(config).analyze_text(SAMPLE)
+        for chapter in metrics.chapters:
+            self.assertIn("asl", chapter.style_se)
+            self.assertGreaterEqual(chapter.style_se["asl"], 0.0)
+            self.assertIn("filter_density", chapter.style_se)
+
+    def test_small_chapter_has_larger_se(self):
+        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        long_chapter = (
+            "## Lang\n\n"
+            + (
+                "Der Kater schlief. "
+                + "Die Sonne schien über den leeren Platz am Bahnhof und die Stadt war still. "
+            )
+            * 20
+        )
+        short_chapter = "## Kurz\n\nDer Kater schlief. Die Sonne schien über den Bahnhof.\n"
+        metrics = CorpusAnalyzer(config).analyze_text(long_chapter + "\n\n" + short_chapter)
+        se_long = metrics.chapters[0].style_se["asl"]
+        se_short = metrics.chapters[1].style_se["asl"]
+        self.assertGreater(se_short, se_long)
+
+
+class TestStyleDimensions(unittest.TestCase):
+    """Self-calibrated principal dimensions from the feature correlation."""
+
+    def setUp(self):
+        self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
+        self.fp = StyleFingerprint.from_metrics(self.metrics)
+
+    def test_dimensions_are_derived(self):
+        self.assertTrue(self.fp.dimensions)
+        dim = self.fp.dimensions[0]
+        self.assertIn("variance", dim)
+        self.assertIn("loadings", dim)
+        self.assertIn("scores", dim)
+        self.assertIn("flagged", dim)
+        self.assertLessEqual(dim["variance"], 1.0)
+
+    def test_dimensions_are_deterministic(self):
+        again = StyleFingerprint.from_metrics(self.metrics)
+        self.assertEqual(self.fp.dimensions, again.dimensions)
+        self.assertEqual(self.fp.redundant_features, again.redundant_features)
+
+    def test_passport_meta_v2(self):
+        passport = self.fp.passport()
+        self.assertEqual(passport["meta"]["schema_version"], 2)
+        self.assertIn("expected_false_positives", passport["meta"])
+        self.assertIn("dimensions", passport)
+        self.assertIn("fdr_flagged", passport)
+        self.assertIn("redundant_features", passport)
+        self.assertGreaterEqual(passport["meta"]["expected_false_positives"], 0.0)
+
+    def test_passport_text_lists_dimensions(self):
+        text = self.fp.passport_text(labels={"feat_asl": "ASL"})
+        self.assertIn("STILPASS", text)
+        self.assertIn("Zufallstreffer", text)
 
 
 if __name__ == "__main__":

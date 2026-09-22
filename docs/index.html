@@ -3,256 +3,117 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Lixity – Quantitative Text Linguistics for Manuscripts</title>
+<title>Lixity – Quantitative Text Linguistics &amp; Stylometry for Literary Manuscripts</title>
+<meta name="description" content="Lixity measures how a manuscript reads: sentence rhythm, lexical diversity, readability, dialogue, tense profiles and a self-calibrating style passport. Free, offline, multilingual, open-source-available analysis engine for authors and editors."/>
+<meta name="keywords" content="text linguistics, stylometry, style analysis, readability, manuscript analysis, tense analysis, style passport, corpus linguistics, Flesch reading ease, LIX, TTR, Guiraud, HD-D, writing tools, literary manuscripts"/>
+<meta name="robots" content="index, follow"/>
+<meta name="author" content="Matthias Fahsold"/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
+<meta property="og:type" content="website"/>
+<meta property="og:site_name" content="Lixity"/>
+<meta property="og:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry"/>
+<meta property="og:description" content="Self-calibrating style passports, tense profiles and readability metrics for literary manuscripts – free, offline, seven languages."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry"/>
+<meta name="twitter:description" content="Self-calibrating style passports, tense profiles and readability metrics for literary manuscripts."/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["SoftwareApplication", "WebSite"],
+  "name": "Lixity",
+  "alternateName": "Lixity – quantitative text linguistics and stylometry",
+  "description": "Quantitative text linguistics, stylometry, tense profiling, self-calibrating style passports and idempotent publication pipelines for literary Markdown manuscripts.",
+  "applicationCategory": "UtilitiesApplication",
+  "operatingSystem": "Linux, macOS, Windows",
+  "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
+  "codeRepository": "https://github.com/mfahsold/lixity",
+  "author": {"@type": "Person", "name": "Matthias Fahsold"},
+  "offers": {"@type": "Offer", "price": "0", "priceCurrency": "EUR"},
+  "featureList": [
+    "Sentence-length architecture and rhythm metrics (ASL, staccato, hypotaxis)",
+    "Lexical diversity: TTR, Guiraud R, HD-D, Yule's characteristic K",
+    "Readability: Flesch Reading Ease (Amstad), LIX",
+    "Register signals: dialogue, function words, perception filters, modals, passive, nominal style",
+    "Paragraph-accurate tense profiles with line anchors and severity flags",
+    "Self-calibrating style passport: robust bands, significance-adjusted deviations, FDR control",
+    "Self-calibrated style dimensions via Spearman correlation and Jacobi eigendecomposition",
+    "Editor-visible work markers with stable IDs",
+    "Python API for AI agents and automation",
+    "Seven languages plus generic fallback, dependency-light and offline"
+  ]
+}
+</script>
 <style>
-:root {
-  --bg:#f6f7f9; --fg:#16181d; --muted:#6b7280; --line:#e5e7eb;
-  --accent:#3b6ea5; --surface:#ffffff; --code:#00000008;
-}
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg:#111318; --fg:#e8eaf0; --muted:#9aa1ae; --line:#272b35;
-    --accent:#7aa7d4; --surface:#171a21; --code:#ffffff0a;
-  }
-}
+:root { --bg:#f6f7f9; --fg:#16181d; --muted:#6b7280; --line:#e5e7eb; --accent:#3b6ea5; }
+@media (prefers-color-scheme: dark) { :root { --bg:#111318; --fg:#e8eaf0; --muted:#9aa1ae; --line:#272b35; } }
 * { box-sizing: border-box; }
-html { scroll-behavior: smooth; }
-body { margin:0; background:var(--bg); color:var(--fg);
-  font:17px/1.65 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
-main { max-width: 54rem; margin: 0 auto; padding: 3rem 1.5rem 4rem; }
-h1 { font-size: 2.6rem; margin: 0 0 .5rem; letter-spacing: -.03em; }
-h2 { font-size: 1.35rem; margin: 0 0 .8rem; letter-spacing: -.01em; }
-h3 { font-size: 1rem; margin: 0 0 .3rem; }
-p { margin: .6rem 0; }
-.lede { font-size: 1.15rem; color: var(--muted); margin: 0 0 1.6rem; max-width: 44rem; }
+body { margin:0; padding:4rem 1.5rem; background:var(--bg); color:var(--fg);
+  font:16px/1.6 ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif; }
+main { max-width: 46rem; margin: 0 auto; }
+h1 { font-size: 2.2rem; margin: 0 0 .4rem; letter-spacing: -.02em; }
+h2 { font-size: 1.3rem; margin: 2rem 0 .5rem; }
+.sub { color: var(--muted); margin: 0 0 2rem; }
 code, pre { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; }
-pre { background:var(--code); border:1px solid var(--line); border-radius:12px;
-  padding:1rem 1.1rem; overflow:auto; font-size:.88rem; line-height:1.5; }
+pre { background:#00000008; border:1px solid var(--line); border-radius:12px; padding:1rem; overflow:auto; }
 a { color: var(--accent); }
-nav { position: sticky; top:0; z-index:10; background:var(--bg); border-bottom:1px solid var(--line);
-  margin:0 -1.5rem 2rem; padding:.7rem 1.5rem; display:flex; flex-wrap:wrap; gap:.4rem 1.1rem;
-  font-size:.9rem; }
-nav a { text-decoration:none; color:var(--muted); }
-nav a:hover { color:var(--fg); }
-section { margin: 2.6rem 0 0; }
-.card { border:1px solid var(--line); border-radius:14px; padding:1.1rem 1.25rem;
-  margin:1rem 0; background:var(--surface); }
-.metrics { display:flex; flex-wrap:wrap; gap:.6rem; margin:1.2rem 0 0; }
-.metrics span { border:1px solid var(--line); border-radius:999px; padding:.25rem .75rem;
-  font-size:.85rem; color:var(--muted); }
-figure { margin:1.4rem 0; }
-figure img { width:100%; height:auto; border:1px solid var(--line); border-radius:14px; display:block; }
-figcaption { color:var(--muted); font-size:.88rem; margin-top:.55rem; }
-.grid { display:grid; gap:1rem; grid-template-columns:repeat(auto-fit, minmax(16rem, 1fr)); }
-.grid .card { margin:0; }
-.grid p { color:var(--muted); font-size:.92rem; margin:.2rem 0 0; }
-table { width:100%; border-collapse:collapse; font-size:.92rem; }
-th, td { text-align:left; padding:.4rem .5rem; border-bottom:1px solid var(--line); vertical-align:top; }
-th { color:var(--muted); font-weight:500; text-transform:uppercase; font-size:.72rem;
-  letter-spacing:.06em; }
-td.num, th.num { text-align:right; font-variant-numeric:tabular-nums; white-space:nowrap; }
-.swatch { display:inline-block; width:.7rem; height:.7rem; border-radius:3px;
-  margin-right:.35rem; vertical-align:-1px; }
-footer { margin-top:3.5rem; padding-top:1.2rem; border-top:1px solid var(--line);
-  color:var(--muted); font-size:.88rem; display:flex; flex-wrap:wrap; gap:.5rem 1.5rem;
-  justify-content:space-between; }
+.card { border:1px solid var(--line); border-radius:12px; padding:1rem 1.1rem; margin:1rem 0; background:#ffffff08; }
+.metrics { display:flex; flex-wrap:wrap; gap:.6rem; }
+.metrics span { border:1px solid var(--line); border-radius:999px; padding:.25rem .7rem; font-size:.85rem; color:var(--muted); }
+footer { margin-top:3rem; color:var(--muted); font-size:.85rem; }
 </style>
 </head>
 <body>
 <main>
-
-<nav>
-  <a href="#overview">Overview</a>
-  <a href="#quickstart">Quick start</a>
-  <a href="#dashboard">Dashboard</a>
-  <a href="#example">Example</a>
-  <a href="#cli">CLI</a>
-  <a href="#docs">Docs</a>
-  <a href="https://github.com/mfahsold/lixity">GitHub</a>
-</nav>
-
-<header>
   <h1>Lixity</h1>
-  <p class="lede"><strong>Lixity measures how a manuscript reads.</strong> It turns a Markdown
-  manuscript into quantitative text linguistics — sentence rhythm, vocabulary richness,
-  readability, dialogue share and paragraph-accurate tense profiles — as a terminal report,
-  as JSON, or as a single-file HTML dashboard.</p>
+  <p class="sub">Quantitative text linguistics, stylometry and a self-calibrating style passport for
+  literary manuscripts. The name combines <b>T</b>TR, <b>Y</b>ule&rsquo;s K and <b>LIX</b>.</p>
   <div class="metrics">
-    <span>ASL</span><span>TTR</span><span>Guiraud R</span><span>Yule&rsquo;s K</span>
-    <span>Flesch</span><span>LIX</span><span>Tense profiles</span><span>7 languages</span>
-    <span>Offline &amp; deterministic</span>
+    <span>ASL</span><span>TTR</span><span>Guiraud R</span><span>HD-D</span><span>Yule&rsquo;s K</span>
+    <span>Flesch</span><span>LIX</span><span>Tempusprofile</span><span>Stilpass</span>
+    <span>Stildimensionen</span><span>Arbeitsmarker</span><span>7 Sprachen</span>
   </div>
-</header>
-
-<figure>
-  <img src="screenshots/cli-analyze.png"
-       alt="Lixity analyze terminal report with corpus metrics, reference corridors and sentence-length architecture"/>
-  <figcaption><code>lixity analyze</code> — corpus metrics with reference corridors, literary
-  assessments and the sentence-length architecture, straight in the terminal.</figcaption>
-</figure>
-
-<section id="overview">
-  <h2>What Lixity does</h2>
-  <p>Lixity is made for authors, editors and literary scholars who want evidence about style
-  instead of gut feeling. It answers questions like:</p>
-  <div class="grid">
-    <div class="card">
-      <h3>How does my prose move?</h3>
-      <p>Sentence-length architecture from staccato fragments (≤ 6 words) to complex
-      hypotaxes (&gt; 25 words), plus punctuation density per 1,000 words.</p>
-    </div>
-    <div class="card">
-      <h3>Rich or repetitive vocabulary?</h3>
-      <p>TTR, Guiraud R (length-stabilised) and Yule&rsquo;s K — each with a reference
-      corridor and a plain-language assessment.</p>
-    </div>
-    <div class="card">
-      <h3>How readable is it?</h3>
-      <p>Flesch Reading Ease (German Amstad adaptation) and LIX
-      (Läsbarhetsindex).</p>
-    </div>
-    <div class="card">
-      <h3>Where does the tense shift?</h3>
-      <p>Present/past dominance for every paragraph, with line anchors and severity flags
-      for tense switches and mixtures.</p>
-    </div>
-    <div class="card">
-      <h3>How much dialogue?</h3>
-      <p>Quoted-speech share per chapter and across the whole manuscript.</p>
-    </div>
-    <div class="card">
-      <h3>Showing or telling?</h3>
-      <p>Counts of perception filters, so you can see where narration explains instead of
-      showing.</p>
-    </div>
-  </div>
-</section>
-
-<section id="quickstart">
-  <h2>Quick start</h2>
-  <p>Requires Python 3.10 or newer. Everything runs offline.</p>
-  <pre>pip install git+https://github.com/mfahsold/lixity.git
-
-lixity analyze manuscript.md               # Rich report in the terminal
-lixity analyze manuscript.md --json        # the same numbers as JSON
-lixity profile manuscript.md               # tense profiles per paragraph (JSON)
-lixity dashboard manuscript.md -o ui.html  # single-file HTML dashboard</pre>
-  <p>Lixity reads plain Markdown: chapters are <code>##</code> headings, the appendix starts
-  at <code>## Anmerkungen und Literaturverzeichnis</code> (both configurable), and HTML
-  comments are ignored. Line numbers always refer to the source file, so every finding stays
-  clickable in your editor.</p>
-</section>
-
-<section id="dashboard">
-  <h2>The dashboard</h2>
-  <figure>
-    <img src="screenshots/dashboard-light.png"
-         alt="Lixity dashboard with corpus KPIs, sentence-length distribution and colour-coded chapter map"/>
-    <figcaption>One self-contained HTML file — no CDN, no framework, no data leaves your
-    machine.</figcaption>
-  </figure>
-  <p>Every paragraph is a coloured chip in the chapter map:</p>
-  <p>
-    <span class="swatch" style="background:#2f8f6f"></span>present ·
-    <span class="swatch" style="background:#b07a3f"></span>past ·
-    <span class="swatch" style="background:#7a6f9b"></span>mixed ·
-    <span class="swatch" style="background:#cbd5e1"></span>neutral (too few tense markers)
-  </p>
-  <p>A red underline marks flagged paragraphs: a tense switch against the paragraph before it,
-  or a strong mixture within the paragraph. Click a chip to reveal the paragraph text, its line
-  anchor and its stats. Because the output is deterministic, regenerating an unchanged
-  manuscript produces an identical file — safe for Git, no diff noise.</p>
-  <figure>
-    <img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode"/>
-    <figcaption>The same dashboard in dark mode (follows the operating system
-    preference).</figcaption>
-  </figure>
-</section>
-
-<section id="example">
-  <h2>Example: &raquo;Eigentlich werde ich nie w&uuml;tend&laquo;</h2>
-  <p>All screenshots and numbers on this page come from a real reference manuscript: a
-  55k-word German autofictional novel, 25 chapters, one Markdown source file.</p>
   <div class="card">
-    <table>
-      <tr><th>Metric</th><th class="num">Value</th><th>What it says</th></tr>
-      <tr><td>Words (full text / prose)</td><td class="num">55,331 / 53,306</td>
-          <td>~221 standard pages (250 words each)</td></tr>
-      <tr><td>Chapters / paragraphs / sentences</td><td class="num">25 / 427 / 5,505</td>
-          <td>complete novel structure</td></tr>
-      <tr><td>Average sentence length (ASL)</td><td class="num">9.63 words</td>
-          <td>short, paratactic rhythm</td></tr>
-      <tr><td>Type-Token Ratio (TTR)</td><td class="num">0.1784</td>
-          <td>homogeneous vocabulary</td></tr>
-      <tr><td>Yule&rsquo;s Characteristic K</td><td class="num">51.92</td>
-          <td>stable narrator idiom</td></tr>
-      <tr><td>Flesch Reading Ease (DE)</td><td class="num">69.0</td>
-          <td>easy reading flow</td></tr>
-      <tr><td>LIX</td><td class="num">34.0</td>
-          <td>accessible prose (&lt; 40)</td></tr>
-      <tr><td>Dialogue ratio</td><td class="num">5.02 %</td>
-          <td>dialogue as accent, not carrier</td></tr>
-    </table>
+    <h2>Installation</h2>
+    <pre>pip install git+https://github.com/mfahsold/lixity.git</pre>
   </div>
-  <p>The sentence-length architecture makes the rhythm visible: 38.5&nbsp;% staccato sentences
-  (≤ 6 words) against only 2.9&nbsp;% complex hypotaxes (&gt; 25 words).</p>
-</section>
-
-<section id="cli">
-  <h2>Command line at a glance</h2>
   <div class="card">
-    <table>
-      <tr><th>Command</th><th>Output</th><th>Typical use</th></tr>
-      <tr><td><code>lixity analyze FILE</code></td><td>Rich report or JSON</td>
-          <td>whole-corpus metrics and assessments</td></tr>
-      <tr><td><code>lixity profile FILE</code></td><td>JSON</td>
-          <td>paragraph tense/style profiles with line anchors</td></tr>
-      <tr><td><code>lixity dashboard FILE</code></td><td>HTML file (<code>-o</code>)</td>
-          <td>visual chapter map for editing sessions</td></tr>
-    </table>
+    <h2>Usage</h2>
+    <pre>lixity analyze manuscript.md
+lixity profile manuscript.md
+lixity style manuscript.md
+lixity dashboard manuscript.md -o ui.html
+lixity about
+lixity completion bash</pre>
   </div>
-  <p>All commands accept
-  <code>--language auto|de|en|fr|es|it|pt|nl|generic</code> (default: <code>auto</code> —
-  detection via function words, with a safe fallback to <code>generic</code>).</p>
-</section>
-
-<section id="docs">
-  <h2>Documentation</h2>
-  <div class="grid">
-    <div class="card">
-      <h3><a href="https://github.com/mfahsold/lixity#readme">README</a></h3>
-      <p>Overview, quick start and the reference-manuscript example.</p>
-    </div>
-    <div class="card">
-      <h3><a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage reference</a></h3>
-      <p>Full CLI, library and configuration reference, plus a glossary of all metrics.</p>
-    </div>
-    <div class="card">
-      <h3><a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">Changelog</a></h3>
-      <p>What changed in every release.</p>
-    </div>
-    <div class="card">
-      <h3><a href="https://github.com/mfahsold/lixity/issues">Issues</a></h3>
-      <p>Bug reports, ideas and feedback.</p>
-    </div>
-  </div>
-</section>
-
-<section>
-  <h2>License</h2>
   <div class="card">
-    <p><b>Lixity Non-Commercial License 1.0 (LNCL-1.0)</b> — free for research, teaching and
-    clearly non-commercial projects. Commercial use only with a written license on request:
-    <a href="mailto:mfahsold@googlemail.com">mfahsold@googlemail.com</a>. Source-available,
-    explicitly not an OSI open-source license.</p>
+    <h2>What you get</h2>
+    <ul>
+      <li><b>Sentence rhythm:</b> staccato to hypotaxis, ASL, sentence-length architecture.</li>
+      <li><b>Lexical diversity:</b> TTR, Guiraud R, HD-D, Yule&rsquo;s K.</li>
+      <li><b>Readability:</b> Flesch Reading Ease (Amstad), LIX.</li>
+      <li><b>Tense profiles</b> per paragraph with line anchors and severity flags.</li>
+      <li><b>Style passport:</b> the manuscript&rsquo;s own house style, self-calibrated
+      (robust median/MAD), significance-adjusted deviations with FDR control, and
+      self-calibrated style dimensions – no pre-defined registers.</li>
+      <li><b>Work markers</b> for the text editor, set from the dashboard, never rendered.</li>
+    </ul>
   </div>
-</section>
-
-<footer>
-  <span>&copy; 2026 Matthias Fahsold</span>
-  <span><a href="https://github.com/mfahsold/lixity">github.com/mfahsold/lixity</a></span>
-</footer>
-
+  <div class="card">
+    <h2>Python API for AI agents</h2>
+    <pre>from lixity import api
+passport = api.fingerprint(text, language="de")
+metrics = api.analyze(text, language="auto")</pre>
+    <p>Self-describing JSON, deterministic output, full contracts in
+    <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">docs/AGENTS.md</a>.</p>
+  </div>
+  <div class="card">
+    <h2>License</h2>
+    <p><b>Lixity Non-Commercial License 1.0 (LNCL-1.0)</b> &ndash; free for research, teaching and
+    clearly non-commercial projects. Commercial use only with a written license
+    on request: <a href="mailto:mfahsold@googlemail.com">mfahsold@googlemail.com</a>.</p>
+  </div>
+  <footer>&copy; 2026 Matthias Fahsold &middot; <a href="https://github.com/mfahsold/lixity">github.com/mfahsold/lixity</a></footer>
 </main>
 </body>
 </html>

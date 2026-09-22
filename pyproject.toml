@@ -4,14 +4,14 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "lixity"
-version = "1.1.0"
-description = "Lixity – quantitative text linguistics, stylometry, tense profiling and idempotent publication pipelines for literary markdown manuscripts. Non-commercial license."
+version = "1.2.0"
+description = "Lixity - quantitative text linguistics, stylometry, tense profiling, self-calibrating style passports and idempotent publication pipelines for literary markdown manuscripts. Non-commercial license."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "LicenseRef-Lixity-Non-Commercial-License-1.0"
 license-files = ["LICENSE"]
 authors = [{ name = "Matthias Fahsold", email = "mfahsold@googlemail.com" }]
-keywords = ["computational-linguistics", "stylometry", "tense-analysis", "corpus-linguistics", "multilingual", "manuscript-analysis"]
+keywords = ["computational-linguistics", "stylometry", "tense-analysis", "corpus-linguistics", "multilingual", "manuscript-analysis", "style-fingerprint", "readability", "text-analysis", "literary"]
 classifiers = [
     "Development Status :: 4 - Beta",
     "Intended Audience :: Science/Research",

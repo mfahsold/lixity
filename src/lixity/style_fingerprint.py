@@ -7,48 +7,67 @@ Instead of judging style against external norms, the engine derives the
 author's own **house style** from the corpus itself: for each descriptive
 feature, the robust centre (median) and spread (MAD) over the chapters.
 A chapter or paragraph is flagged only when it deviates from its own house
-style (robust z-score) – whether that deviation is intended (a register
-scene) or drift is a decision the author makes, never the engine.
+style – whether that deviation is intended (a register scene) or drift is
+a decision the author makes, never the engine.
 
 Mathematical core (dependency-free, deterministic, transparent):
-- median / MAD: robust location and spread, insensitive to outliers.
-- robust z = 0.6745 * (x - median) / MAD  (MAD scaled to N(0,1) consistency).
-- Jensen-Shannon distance per chapter vs. the rest of the corpus with
-  additive, interpretable per-word contributions (computed in analyzer.py).
-- HD-D (McCarthy & Jarvis 2010) for length-robust lexical diversity.
 
-The **style passport** exports the self-calibrated feature bands as
-structured data (JSON) and as a human-readable constraint block – usable by
-the author or an assisting LLM to keep new prose inside the house style.
+1. Robust location/spread: median, MAD, robust z = 0.6745 * (x - median) / MAD.
+2. Measurement uncertainty: every feature carries a documented standard error
+   (``ChapterMetrics.style_se``: Poisson for count densities, binomial for
+   shares, plug-ins for ASL/CV/entropy/HD-D). Deviations are tested against
+   the combined variance: z* = (x - median) / sqrt(sigma^2 + se^2) – noisy
+   estimates of small chapters cannot produce significant deviations.
+3. Multiple testing: with C chapters x F features cells, some exceed any
+   threshold by chance. The passport reports the expected number of false
+   positives and a Benjamini-Hochberg FDR set (q = 0.05) – the set of cells
+   that remain significant under multiplicity control.
+4. Style dimensions: features are correlated. A Spearman correlation matrix
+   is eigendecomposed (cyclic Jacobi rotations, pure stdlib) – the resulting
+   principal components are the abstract, register-neutral style dimensions
+   of the author's own text (Biber-style, but self-calibrated instead of
+   pre-defined registers). Loadings show which features constitute each
+   dimension; chapter scores show where the manuscript moves along them.
+5. Interpretability: Jensen-Shannon divergence per chapter with additive
+   per-word contributions (see analyzer.py) and HD-D (McCarthy & Jarvis 2010)
+   for length-robust lexical diversity.
+
+The **style passport** exports the self-calibrated feature bands, the style
+dimensions and the significance-controlled deviations as structured data
+(JSON) and as a human-readable constraint block – usable by the author or an
+assisting LLM to keep new prose inside the house style.
 """
 
+import math
 import statistics
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Any
 
-# Descriptive, register-neutral features: (model field, label key).
+# Descriptive, register-neutral features: (model field, label key, unit).
 # Every style – staccato or cascading, nominal or verbal – is a legal value;
 # only the deviation from the text's own centre is measured.
-FEATURES: tuple[tuple[str, str], ...] = (
-    ("asl", "feat_asl"),
-    ("staccato_pct", "feat_staccato"),
-    ("kaskade_pct", "feat_kaskade"),
-    ("sentence_cv", "feat_cv"),
-    ("dialog_pct", "feat_dialog"),
-    ("function_word_pct", "feat_function"),
-    ("filter_density", "feat_filter"),
-    ("modal_density", "feat_modal"),
-    ("passive_density", "feat_passive"),
-    ("nominalization_density", "feat_nominal"),
-    ("adjective_density", "feat_adjective"),
-    ("long_word_pct", "feat_long_words"),
-    ("start_entropy", "feat_start_entropy"),
-    ("first_person_start_rate", "feat_ich_start"),
-    ("guiraud_r", "feat_guiraud"),
-    ("hd_d", "feat_hd_d"),
+FEATURES: tuple[tuple[str, str, str], ...] = (
+    ("asl", "feat_asl", "Wörter je Satz"),
+    ("staccato_pct", "feat_staccato", "% der Sätze"),
+    ("kaskade_pct", "feat_kaskade", "% der Sätze"),
+    ("sentence_cv", "feat_cv", "Koeffizient"),
+    ("dialog_pct", "feat_dialog", "% der Wörter"),
+    ("function_word_pct", "feat_function", "% der Wörter"),
+    ("filter_density", "feat_filter", "je 1.000 Wörter"),
+    ("modal_density", "feat_modal", "je 1.000 Wörter"),
+    ("passive_density", "feat_passive", "je 1.000 Wörter"),
+    ("nominalization_density", "feat_nominal", "je 1.000 Wörter"),
+    ("adjective_density", "feat_adjective", "je 1.000 Wörter"),
+    ("long_word_pct", "feat_long_words", "% der Wörter"),
+    ("start_entropy", "feat_start_entropy", "bit"),
+    ("first_person_start_rate", "feat_ich_start", "% der Sätze"),
+    ("guiraud_r", "feat_guiraud", "Index"),
+    ("hd_d", "feat_hd_d", "Index"),
 )
+
+FEATURE_FIELDS: tuple[str, ...] = tuple(f for f, _l, _u in FEATURES)
 
 # Paragraph-level overlay layers for the chapter strips (chip bottom edge).
 LAYER_FEATURES: dict[str, str] = {
@@ -61,13 +80,19 @@ LAYER_FEATURES: dict[str, str] = {
     "passive": "passive_density",
 }
 
+# Dimensions to extract from the feature correlation matrix.
+N_DIMENSIONS = 3
+DIM_SCORE_THRESHOLD = 2.5  # |chapter score| from here: strong position on a dimension
+REDUNDANCY_RHO = 0.8  # |Spearman rho| from here: features measure (almost) the same
+
 
 @dataclass(frozen=True)
 class FingerprintThresholds:
     """Thresholds of the consistency heuristic (injectable, documented)."""
 
-    z_mild: float = 2.5  # robust z from here: noticeable deviation
-    z_strong: float = 3.5  # robust z from here: strong deviation
+    z_mild: float = 2.5  # significance-adjusted z from here: noticeable deviation
+    z_strong: float = 3.5  # significance-adjusted z from here: strong deviation
+    fdr_q: float = 0.05  # Benjamini-Hochberg false-discovery rate
     min_chapters: int = 2  # below this chapter count no baseline is derived
 
 
@@ -87,6 +112,108 @@ def robust_z(value: float, centre: float, spread: float) -> float:
     if spread == 0.0:
         return 0.0
     return 0.6745 * (value - centre) / spread
+
+
+def significance_z(value: float, centre: float, sigma: float, se: float) -> float:
+    """Deviation tested against house-style spread AND estimation noise."""
+    denom = math.sqrt(sigma**2 + se**2)
+    return (value - centre) / denom if denom > 0.0 else 0.0
+
+
+def normal_tail_probability(z: float) -> float:
+    """Two-sided p-value via math.erf (stdlib, no scipy)."""
+    return math.erfc(abs(z) / math.sqrt(2.0))
+
+
+def benjamini_hochberg(
+    cells: list[tuple[int, str, float]], q: float = 0.05
+) -> list[tuple[int, str]]:
+    """
+    Benjamini-Hochberg FDR control over (chapter, feature, p-value) cells.
+    Returns the significant cell set at level q (deterministic ordering).
+    """
+    ordered = sorted(cells, key=lambda c: (c[2], c[0], c[1]))
+    m = len(ordered)
+    k_star = 0
+    for k, (_ch, _f, p) in enumerate(ordered, start=1):
+        if p <= q * k / m:
+            k_star = k
+    return [(ch, feat) for ch, feat, _p in ordered[:k_star]]
+
+
+def spearman_rho(x: list[float], y: list[float]) -> float:
+    """Spearman rank correlation of two paired samples (average ranks on ties)."""
+    n = len(x)
+    if n < 3:
+        return 0.0
+
+    def ranks(values: list[float]) -> list[float]:
+        order = sorted(range(n), key=lambda i: (values[i], i))
+        result = [0.0] * n
+        i = 0
+        while i < n:
+            j = i
+            while j + 1 < n and values[order[j + 1]] == values[order[i]]:
+                j += 1
+            avg = (i + j) / 2.0 + 1.0
+            for k in range(i, j + 1):
+                result[order[k]] = avg
+            i = j + 1
+        return result
+
+    rx = ranks(x)
+    ry = ranks(y)
+    mx = sum(rx) / n
+    my = sum(ry) / n
+    cov = sum((a - mx) * (b - my) for a, b in zip(rx, ry, strict=True))
+    vx = math.sqrt(sum((a - mx) ** 2 for a in rx))
+    vy = math.sqrt(sum((b - my) ** 2 for b in ry))
+    if vx == 0.0 or vy == 0.0:
+        return 0.0
+    return cov / (vx * vy)
+
+
+def jacobi_eigh(matrix: list[list[float]], tol: float = 1e-12, max_sweeps: int = 200):
+    """
+    Eigenvalues and eigenvectors of a symmetric matrix via cyclic Jacobi
+    rotations (pure stdlib, deterministic). Returns (eigenvalues, eigenvectors)
+    with eigenvectors as columns; pairs are sorted by eigenvalue descending.
+    """
+    n = len(matrix)
+    a = [row[:] for row in matrix]
+    v = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+    for _ in range(max_sweeps):
+        off = sum(a[i][j] ** 2 for i in range(n) for j in range(i + 1, n))
+        if off <= tol * tol:
+            break
+        for p in range(n):
+            for q in range(p + 1, n):
+                if abs(a[p][q]) <= 1e-300:
+                    continue
+                theta = (a[q][q] - a[p][p]) / (2.0 * a[p][q])
+                t = math.copysign(1.0, theta) / (abs(theta) + math.sqrt(theta**2 + 1.0))
+                c = 1.0 / math.sqrt(t**2 + 1.0)
+                s = t * c
+                app = c * c * a[p][p] - 2.0 * s * c * a[p][q] + s * s * a[q][q]
+                aqq = s * s * a[p][p] + 2.0 * s * c * a[p][q] + c * c * a[q][q]
+                a[p][q] = a[q][p] = 0.0
+                a[p][p] = app
+                a[q][q] = aqq
+                for k in range(n):
+                    if k == p or k == q:
+                        continue
+                    akp = a[k][p]
+                    akq = a[k][q]
+                    a[k][p] = a[p][k] = c * akp - s * akq
+                    a[k][q] = a[q][k] = s * akp + c * akq
+                for k in range(n):
+                    vkp = v[k][p]
+                    vkq = v[k][q]
+                    v[k][p] = c * vkp - s * vkq
+                    v[k][q] = s * vkp + c * vkq
+    eigen = [(a[i][i], [v[j][i] for j in range(n)]) for i in range(n)]
+    eigen.sort(key=lambda pair: pair[0], reverse=True)
+    return [e for e, _ in eigen], [vec for _, vec in eigen]
 
 
 def z_color(z: float) -> str:
@@ -118,17 +245,26 @@ class StyleFingerprint:
 
     - values:       feature -> {chapter_num: value} (None = not measurable)
     - baseline:     feature -> {"median", "mad", "sigma", "n"}
-    - z_scores:     chapter_num -> {feature: z}
-    - deviations:   chapter_num -> {feature: z}  (only |z| >= z_mild)
+    - z_scores:     chapter -> {feature: z*}  (significance-adjusted)
+    - effect_sizes: chapter -> {feature: z}   (deviation in house-style sigma)
+    - deviations:   chapter -> {feature: z*}  (only |z*| >= z_mild)
+    - fdr_flagged:  chapter -> [feature]      (Benjamini-Hochberg set, q=0.05)
     - consistency:  share of measurable cells inside the band [0, 1]
+    - dimensions:   self-calibrated principal style dimensions (loadings/scores)
+    - redundant_features: feature pairs with |Spearman rho| >= 0.8
     """
 
     values: dict[str, dict[int, float | None]] = field(default_factory=dict)
     baseline: dict[str, dict[str, float | int]] = field(default_factory=dict)
     z_scores: dict[int, dict[str, float]] = field(default_factory=dict)
+    effect_sizes: dict[int, dict[str, float]] = field(default_factory=dict)
     deviations: dict[int, dict[str, float]] = field(default_factory=dict)
+    fdr_flagged: dict[int, list[str]] = field(default_factory=dict)
+    expected_false_positives: float = 0.0
     consistency: float = 1.0
     n_chapters: int = 0
+    dimensions: list[dict[str, Any]] = field(default_factory=list)
+    redundant_features: list[dict[str, Any]] = field(default_factory=list)
 
     @classmethod
     def from_metrics(
@@ -138,39 +274,50 @@ class StyleFingerprint:
         thresholds = thresholds or FingerprintThresholds()
         chapters = getattr(metrics, "chapters", []) or []
         values: dict[str, dict[int, float | None]] = {}
-        for field_name, _label in FEATURES:
+        ses: dict[str, dict[int, float]] = {}
+        for field_name, _label, _unit in FEATURES:
             col: dict[int, float | None] = {}
+            se_col: dict[int, float] = {}
             for chapter in chapters:
                 raw = getattr(chapter, field_name, None)
                 col[chapter.num] = float(raw) if isinstance(raw, int | float) else None
+                se_raw = getattr(chapter, "style_se", {}).get(field_name)
+                se_col[chapter.num] = float(se_raw) if isinstance(se_raw, int | float) else 0.0
             values[field_name] = col
+            ses[field_name] = se_col
 
         baseline: dict[str, dict[str, float | int]] = {}
         z_scores: dict[int, dict[str, float]] = {c.num: {} for c in chapters}
+        effect_sizes: dict[int, dict[str, float]] = {c.num: {} for c in chapters}
         measured_cells = 0
         in_band = 0
-        for field_name, _label in FEATURES:
+        p_cells: list[tuple[int, str, float]] = []
+        for field_name, _label, _unit in FEATURES:
             obs = [v for v in values[field_name].values() if v is not None]
             if len(obs) < thresholds.min_chapters:
                 baseline[field_name] = {"median": 0.0, "mad": 0.0, "sigma": 0.0, "n": len(obs)}
                 continue
             centre = median(obs)
             spread = mad(obs, centre)
+            sigma = 1.4826 * spread
             baseline[field_name] = {
                 "median": centre,
                 "mad": spread,
-                "sigma": 1.4826 * spread,
+                "sigma": sigma,
                 "n": len(obs),
             }
             for chapter in chapters:
                 value = values[field_name].get(chapter.num)
                 if value is None:
                     continue
-                z = robust_z(value, centre, spread)
-                z_scores[chapter.num][field_name] = z
+                z_raw = robust_z(value, centre, spread)
+                z_sig = significance_z(value, centre, sigma, ses[field_name][chapter.num])
+                z_scores[chapter.num][field_name] = z_sig
+                effect_sizes[chapter.num][field_name] = z_raw
                 measured_cells += 1
-                if abs(z) < thresholds.z_mild:
+                if abs(z_sig) < thresholds.z_mild:
                     in_band += 1
+                p_cells.append((chapter.num, field_name, normal_tail_probability(z_sig)))
 
         deviations: dict[int, dict[str, float]] = {}
         for chapter in chapters:
@@ -182,18 +329,129 @@ class StyleFingerprint:
             if flagged:
                 deviations[chapter.num] = flagged
 
+        fdr_cells = benjamini_hochberg(p_cells, q=thresholds.fdr_q)
+        fdr_flagged: dict[int, list[str]] = {}
+        for chapter_num, field_name in fdr_cells:
+            fdr_flagged.setdefault(chapter_num, []).append(field_name)
+
+        expected_fp = (
+            measured_cells * normal_tail_probability(thresholds.z_mild) if measured_cells else 0.0
+        )
         consistency = (in_band / measured_cells) if measured_cells else 1.0
-        return cls(
+        fingerprint = cls(
             values=values,
             baseline=baseline,
             z_scores=z_scores,
+            effect_sizes=effect_sizes,
             deviations=deviations,
+            fdr_flagged=fdr_flagged,
+            expected_false_positives=expected_fp,
             consistency=consistency,
             n_chapters=len(chapters),
         )
+        fingerprint.dimensions = fingerprint._derive_dimensions()
+        fingerprint.redundant_features = fingerprint._derive_redundancies()
+        return fingerprint
+
+    def _usable_features(self) -> list[str]:
+        return [
+            field
+            for field, _label, _unit in FEATURES
+            if self.baseline.get(field, {}).get("n", 0) >= 2
+            and float(self.baseline.get(field, {}).get("sigma", 0.0)) > 0.0
+        ]
+
+    def _correlation_matrix(self, fields: list[str]) -> list[list[float]]:
+        """Spearman correlation matrix over the chapter values of the features."""
+        n = len(fields)
+        matrix = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
+        for i in range(n):
+            for j in range(i + 1, n):
+                common = [
+                    ch
+                    for ch in self.values[fields[i]]
+                    if ch in self.values[fields[j]]
+                    and self.values[fields[i]].get(ch) is not None
+                    and self.values[fields[j]].get(ch) is not None
+                ]
+                rho = 0.0
+                if len(common) >= 3:
+                    xs = [float(self.values[fields[i]][ch]) for ch in common]
+                    ys = [float(self.values[fields[j]][ch]) for ch in common]
+                    rho = spearman_rho(xs, ys)
+                matrix[i][j] = matrix[j][i] = rho
+        return matrix
+
+    def _derive_dimensions(self) -> list[dict[str, Any]]:
+        """
+        Principal style dimensions of the author's own text: eigendecomposition
+        of the Spearman correlation matrix of the usable features (cyclic
+        Jacobi rotations, deterministic sign convention).
+        """
+        fields = self._usable_features()
+        if len(fields) < 3:
+            return []
+        matrix = self._correlation_matrix(fields)
+        eigenvalues, eigenvectors = jacobi_eigh(matrix)
+        dims: list[dict[str, Any]] = []
+        for dim_index in range(min(N_DIMENSIONS, len(fields))):
+            loading_vector = eigenvectors[dim_index]
+            # Deterministic sign: the largest absolute loading points upward.
+            anchor = max(range(len(loading_vector)), key=lambda k: abs(loading_vector[k]))
+            if loading_vector[anchor] < 0.0:
+                loading_vector = [-v for v in loading_vector]
+            loadings = {fields[k]: round(loading_vector[k], 3) for k in range(len(fields))}
+            scores: dict[int, float] = {}
+            flagged: list[int] = []
+            for chapter_num in sorted(self.z_scores):
+                score = 0.0
+                for k, field_name in enumerate(fields):
+                    value = self.values[field_name].get(chapter_num)
+                    if value is None:
+                        continue  # mean imputation: z = 0 contribution
+                    centre = float(self.baseline[field_name]["median"])
+                    sigma = float(self.baseline[field_name]["sigma"])
+                    z = (value - centre) / sigma
+                    score += loading_vector[k] * z
+                scores[chapter_num] = round(score, 2)
+                if abs(score) >= DIM_SCORE_THRESHOLD:
+                    flagged.append(chapter_num)
+            dims.append(
+                {
+                    "index": dim_index + 1,
+                    "variance": round(eigenvalues[dim_index] / len(fields), 4),
+                    "loadings": loadings,
+                    "scores": scores,
+                    "flagged": flagged,
+                }
+            )
+        return dims
+
+    def _derive_redundancies(self) -> list[dict[str, Any]]:
+        """Feature pairs that measure (almost) the same thing: |rho| >= 0.8."""
+        fields = self._usable_features()
+        pairs = []
+        for i in range(len(fields)):
+            for j in range(i + 1, len(fields)):
+                common = [
+                    ch
+                    for ch in self.values[fields[i]]
+                    if ch in self.values[fields[j]]
+                    and self.values[fields[i]][ch] is not None
+                    and self.values[fields[j]][ch] is not None
+                ]
+                if len(common) < 3:
+                    continue
+                xs = [float(self.values[fields[i]][ch]) for ch in common]
+                ys = [float(self.values[fields[j]][ch]) for ch in common]
+                rho = spearman_rho(xs, ys)
+                if abs(rho) >= REDUNDANCY_RHO:
+                    pairs.append({"a": fields[i], "b": fields[j], "rho": round(rho, 3)})
+        pairs.sort(key=lambda p: abs(p["rho"]), reverse=True)
+        return pairs[:10]
 
     def top_deviants(self, n: int = 3) -> list[tuple[int, float]]:
-        """Chapters with the highest mean absolute robust z (style drift ranking)."""
+        """Chapters with the highest mean absolute significance-adjusted z."""
         scored = []
         for chapter_num, cells in self.z_scores.items():
             if not cells:
@@ -206,13 +464,14 @@ class StyleFingerprint:
     def passport(self) -> dict:
         """Structured style passport (JSON-serialisable constraint data)."""
         features = []
-        for field_name, _label in FEATURES:
+        for field_name, _label, unit in FEATURES:
             base = self.baseline.get(field_name, {})
             sigma = float(base.get("sigma", 0.0))
             centre = float(base.get("median", 0.0))
             features.append(
                 {
                     "feature": field_name,
+                    "unit": unit,
                     "median": round(centre, 4),
                     "sigma": round(sigma, 4),
                     "band": [round(centre - 2 * sigma, 4), round(centre + 2 * sigma, 4)],
@@ -220,13 +479,27 @@ class StyleFingerprint:
                 }
             )
         return {
-            "chapters": self.n_chapters,
+            "meta": {
+                "tool": "lixity",
+                "schema_version": 2,
+                "n_chapters": self.n_chapters,
+                "n_features": len(FEATURES),
+                "z_mild": 2.5,
+                "z_strong": 3.5,
+                "fdr_q": 0.05,
+                "expected_false_positives": round(self.expected_false_positives, 2),
+            },
             "consistency": round(self.consistency, 4),
             "features": features,
             "deviations": {
                 str(chapter_num): {feat: round(z, 2) for feat, z in dev.items()}
                 for chapter_num, dev in sorted(self.deviations.items())
             },
+            "fdr_flagged": {
+                str(chapter_num): fields for chapter_num, fields in sorted(self.fdr_flagged.items())
+            },
+            "dimensions": self.dimensions,
+            "redundant_features": self.redundant_features,
         }
 
     def passport_text(self, labels: Mapping[str, str] | None = None) -> str:
@@ -234,9 +507,9 @@ class StyleFingerprint:
         labels = labels or {}
         lines = [
             f"STILPASS – selbstkalibrierter Hausstil ({self.n_chapters} Kapitel)",
-            "=" * 62,
+            "=" * 72,
         ]
-        for field_name, label_key in FEATURES:
+        for field_name, label_key, unit in FEATURES:
             base = self.baseline.get(field_name, {})
             if not base.get("n"):
                 continue
@@ -246,20 +519,54 @@ class StyleFingerprint:
             if sigma > 0.0:
                 lines.append(
                     f"{label:<22} Median {centre:>9.2f}   Korridor "
-                    f"{centre - 2 * sigma:>8.2f} – {centre + 2 * sigma:.2f}"
+                    f"{centre - 2 * sigma:>8.2f} – {centre + 2 * sigma:>7.2f}   [{unit}]"
                 )
             else:
-                lines.append(f"{label:<22} Median {centre:>9.2f}   (konstant)")
-        lines.append("=" * 62)
-        lines.append(f"Konsistenz: {self.consistency * 100:.1f} % der Zellen im Korridor")
-        field_labels = dict(FEATURES)
+                lines.append(f"{label:<22} Median {centre:>9.2f}   (konstant)   [{unit}]")
+        lines.append("=" * 72)
+        lines.append(f"Konsistenz: {self.consistency * 100:.1f} % der Zellen im Korridor (z*)")
+        lines.append(
+            f"Multiplizität: {self.expected_false_positives:.1f} statistisch erwartete "
+            f"Zufallstreffer bei |z*| ≥ 2,5; FDR-bestätigt (q=0,05): "
+            f"{sum(len(v) for v in self.fdr_flagged.values())} Zellen"
+        )
+        if self.dimensions:
+            lines.append("-" * 72)
+            field_labels = {f: label_key for f, label_key, _u in FEATURES}
+            for dim in self.dimensions:
+                loadings = dim["loadings"]
+                top_pos = sorted(loadings.items(), key=lambda kv: kv[1], reverse=True)[:3]
+                top_neg = sorted(loadings.items(), key=lambda kv: kv[1])[:3]
+                pos_text = ", ".join(
+                    f"+{labels.get(field_labels.get(f, f), f)}" for f, _v in top_pos
+                )
+                neg_text = ", ".join(
+                    f"{labels.get(field_labels.get(f, f), f)}" for f, _v in top_neg
+                )
+                flagged = dim.get("flagged", [])
+                lines.append(
+                    f"Dimension {dim['index']} ({dim['variance'] * 100:.0f} % Varianz): "
+                    f"{pos_text}  ⇅  {neg_text}"
+                )
+                if flagged:
+                    lines.append(f"    auffällig: Kapitel {', '.join(map(str, flagged))}")
+        if self.redundant_features:
+            field_labels = {f: label_key for f, label_key, _u in FEATURES}
+            redundant = ", ".join(
+                f"{labels.get(field_labels.get(p['a'], p['a']), p['a'])}↔"
+                f"{labels.get(field_labels.get(p['b'], p['b']), p['b'])} ({p['rho']:+.2f})"
+                for p in self.redundant_features[:4]
+            )
+            lines.append(f"Redundante Merkmale (|\u03c1| \u2265 0,8): {redundant}")
+        lines.append("=" * 72)
+        field_labels = {f: label_key for f, label_key, _u in FEATURES}
         for chapter_num, mean_abs in self.top_deviants(5):
             dev = self.deviations.get(chapter_num, {})
             named = ", ".join(
                 f"{labels.get(field_labels.get(k, k), k)} {z:+.1f}\u03c3"
                 for k, z in sorted(dev.items(), key=lambda kv: abs(kv[1]), reverse=True)[:4]
             )
-            lines.append(f"Kapitel {chapter_num:>2}: Ø|z| {mean_abs:.2f} – {named}")
+            lines.append(f"Kapitel {chapter_num:>2}: Ø|z*| {mean_abs:.2f} – {named}")
         return "\n".join(lines)
 
 

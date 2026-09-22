@@ -251,12 +251,9 @@ PROFILE_DATA = {
             r")\b"
         ),
         "filter_verbs_regex": r"\b(spüre|spürte|fühle|fühlte|merke|merkte|glaube|glaubte)\b",
-        "signal_keywords": {
-            "Wut/wütend": r"\b(Wut|wütend(?:e[rnms]?)?)\b",
-            "Eigentlich": r"\beigentlich\b",
-            "Vielleicht": r"\bvielleicht\b",
-            "Irgendwie": r"\birgendwie\b",
-        },
+        # Signal keywords are deliberately project-neutral: authors configure
+        # their own leitmotifs and signal words via CorpusConfig.signal_keywords.
+        "signal_keywords": {},
         "stopwords": (
             "der",
             "die",
@@ -370,10 +367,8 @@ PROFILE_DATA = {
             r")\b"
         ),
         "filter_verbs_regex": r"\b(feel|felt|notice|noticed|sense|sensed|think|thought)\b",
-        "signal_keywords": {
-            "Anger": r"\b(anger|angry|rage|furious)\b",
-            "Actually": r"\bactually\b",
-        },
+        # Signal keywords: project-neutral (configure via CorpusConfig.signal_keywords).
+        "signal_keywords": {},
         "stopwords": (
             "the",
             "and",
@@ -490,7 +485,8 @@ PROFILE_DATA = {
             r")\b"
         ),
         "filter_verbs_regex": r"\b(sens|sentais|ressens|ressentais|pense|pensais|crois|croyais)\b",
-        "signal_keywords": {"Colère": r"\b(colère|en colère|furieux)\b", "En fait": r"\ben fait\b"},
+        # Signal keywords: project-neutral (configure via CorpusConfig.signal_keywords).
+        "signal_keywords": {},
         "stopwords": (
             "le",
             "la",
@@ -619,10 +615,8 @@ PROFILE_DATA = {
             r")\b"
         ),
         "filter_verbs_regex": r"\b(siento|sentía|pienso|pensaba|creo|creía)\b",
-        "signal_keywords": {
-            "Ira": r"\b(ira|enfadado|furioso)\b",
-            "En realidad": r"\ben realidad\b",
-        },
+        # Signal keywords: project-neutral (configure via CorpusConfig.signal_keywords).
+        "signal_keywords": {},
         "stopwords": (
             "el",
             "la",
@@ -739,10 +733,8 @@ PROFILE_DATA = {
             r")\b"
         ),
         "filter_verbs_regex": r"\b(sento|sentivo|penso|pensavo|credo|credevo)\b",
-        "signal_keywords": {
-            "Rabbia": r"\b(rabbia|arrabbiato|furioso)\b",
-            "In realtà": r"\bin realtà\b",
-        },
+        # Signal keywords: project-neutral (configure via CorpusConfig.signal_keywords).
+        "signal_keywords": {},
         "stopwords": (
             "il",
             "lo",
@@ -861,10 +853,8 @@ PROFILE_DATA = {
             r")\b"
         ),
         "filter_verbs_regex": r"\b(sinto|sentia|penso|pensava|acho|achava)\b",
-        "signal_keywords": {
-            "Raiva": r"\b(raiva|irritado|furioso)\b",
-            "Na verdade": r"\bna verdade\b",
-        },
+        # Signal keywords: project-neutral (configure via CorpusConfig.signal_keywords).
+        "signal_keywords": {},
         "stopwords": (
             "o",
             "a",
@@ -956,7 +946,8 @@ PROFILE_DATA = {
             r")\b"
         ),
         "filter_verbs_regex": r"\b(voel|voelde|denk|dacht|vind|vond)\b",
-        "signal_keywords": {"Woede": r"\b(woede|boos|woedend)\b", "Eigentlich": r"\beigenlijk\b"},
+        # Signal keywords: project-neutral (configure via CorpusConfig.signal_keywords).
+        "signal_keywords": {},
         "stopwords": (
             "de",
             "het",
@@ -2333,6 +2324,23 @@ METRIC_LABELS = {
         "feat_guiraud": "Guiraud R",
         "feat_hd_d": "HD-D",
         "zscore": "z-Score",
+        "style_dimensions": "Stildimensionen",
+        "dim_variance": "Varianz",
+        "dim_flagged": "auffällige Kapitel",
+        "dim_loadings_pos": "prägend +",
+        "dim_loadings_neg": "prägend −",
+        "expected_false_positives": "statistisch erwartete Zufallstreffer",
+        "fdr_flagged": "FDR-bestätigt",
+        "redundant_features": "Redundante Merkmale",
+        "effect_size": "Effektstärke",
+        "markers": "Arbeitsmarker",
+        "markers_empty": "Keine offenen Marker – das Manuskript ist frei.",
+        "marker_pruefen": "Prüfen",
+        "marker_sachcheck": "Sachcheck",
+        "marker_todo": "To-do",
+        "marker_achtung": "Achtung",
+        "marker_resolve": "Lösen",
+        "marker_add": "Marker setzen",
     },
     "en": {
         "sentences": "sentences",
@@ -2415,6 +2423,23 @@ METRIC_LABELS = {
         "feat_guiraud": "Guiraud R",
         "feat_hd_d": "HD-D",
         "zscore": "z-score",
+        "style_dimensions": "Style dimensions",
+        "dim_variance": "variance",
+        "dim_flagged": "flagged chapters",
+        "dim_loadings_pos": "shaped by +",
+        "dim_loadings_neg": "shaped by −",
+        "expected_false_positives": "statistically expected false positives",
+        "fdr_flagged": "FDR-confirmed",
+        "redundant_features": "Redundant features",
+        "effect_size": "effect size",
+        "markers": "Work markers",
+        "markers_empty": "No open markers – the manuscript is clean.",
+        "marker_pruefen": "Check",
+        "marker_sachcheck": "Fact-check",
+        "marker_todo": "To-do",
+        "marker_achtung": "Attention",
+        "marker_resolve": "Resolve",
+        "marker_add": "Set marker",
     },
     "fr": {
         "sentences": "phrases",
@@ -2516,7 +2541,11 @@ HELP_TEXTS = {
         "help_artifacts": "Erzeugte Publikationsdateien mit Größe, Seitenzahl und Direktlink.",
         "help_fingerprint": "Stil-Fingerabdruck: robuste Merkmalsverteilung des eigenen Textes (Median ± MAD). Abweichungen zeigen Drift vom eigenen Hausstil – bewertet wird nur vom Autor.",
         "help_consistency": "Anteil der Kapitel-Merkmals-Zellen innerhalb des selbstkalibrierten Stilkorridors (|z| < 2,5).",
-        "help_heatmap": "Jede Zelle: robuste Abweichung (z) des Kapitels vom Hausstil-Mittel. Blau = unter, orange = über dem eigenen Mittel.",
+        "help_heatmap": "Jede Zelle: signifikanzbereinigte Abweichung z* = (x − Median) / √(σ² + SE²) des Kapitels vom Hausstil – die Messunsicherheit kleiner Kapitel wird berücksichtigt. Blau = unter, orange = über dem eigenen Mittel.",
+        "help_dimensions": "Eigendimensionen der Merkmalskorrelation (Spearman → Jacobi-Eigendecomposition): die abstrakten Stilachsen des eigenen Texts. Ladungen zeigen, welche Merkmale die Achse prägen – kein vorgefertigtes Register.",
+        "help_expected_false_positives": "Bei |z*| ≥ 2,5 fallen statistisch ~1,2 % der Zellen zufällig auf: die erwartete Anzahl wird ausgewiesen, damit Auffälligkeiten nicht überinterpretiert werden.",
+        "help_fdr": "Benjamini-Hochberg-Korrektur (q = 0,05) über alle Kapitel-Merkmals-Zellen: nur diese Abweichungen bleiben unter Multiplizitätskontrolle signifikant.",
+        "help_markers": "Arbeitsmarker werden als unsichtbare HTML-Kommentare direkt ins Manuskript geschrieben (Zeile über dem Absatz) und erscheinen damit im Texteditor. Sie werden in keinem Export gerendert und wandern beim Editieren mit dem Absatz mit.",
         "help_passive": "Passiv-Marker (werden/worden bzw. sprachspezifische Muster) je 1.000 Wörter.",
         "help_nominal": "Nominalisierungen über Suffixe (-ung, -heit, -keit …) je 1.000 Wörter – Indikator für sachlichen Nominalstil.",
         "help_modal": "Modalverben je 1.000 Wörter – Hedging und Distanzsignale.",
@@ -2537,7 +2566,11 @@ HELP_TEXTS = {
         "help_words": "Word count of the narrative prose (excluding appendix and indexes).",
         "help_fingerprint": "Style fingerprint: robust feature distribution of the text itself (median ± MAD). Deviations show drift from the author's own house style – only the author judges.",
         "help_consistency": "Share of chapter-feature cells inside the self-calibrated style band (|z| < 2.5).",
-        "help_heatmap": "Each cell: robust deviation (z) of the chapter from the house-style median. Blue = below, orange = above the author's own mean.",
+        "help_heatmap": "Each cell: significance-adjusted deviation z* = (x − median) / √(σ² + SE²) of the chapter from the house style – the estimation noise of small chapters is respected. Blue = below, orange = above the author's own mean.",
+        "help_dimensions": "Eigendimensions of the feature correlation (Spearman → Jacobi eigendecomposition): the abstract style axes of the author's own text. Loadings show which features shape the axis – no pre-defined register.",
+        "help_expected_false_positives": "At |z*| ≥ 2.5, ~1.2 % of cells fall out by chance: the expected count is reported so that findings are not over-interpreted.",
+        "help_fdr": "Benjamini-Hochberg correction (q = 0.05) across all chapter-feature cells: only these deviations remain significant under multiplicity control.",
+        "help_markers": "Work markers are written into the manuscript as invisible HTML comment lines (directly above the paragraph) and therefore appear in the text editor. They are never rendered in exports and move with the paragraph when editing.",
         "help_passive": "Passive markers (be/get patterns per language) per 1,000 words.",
         "help_nominal": "Nominalisations via suffixes per 1,000 words – indicator of sober nominal style.",
         "help_modal": "Modal verbs per 1,000 words – hedging and distance signals.",
