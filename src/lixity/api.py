@@ -1,7 +1,7 @@
 """lixity.api – Programmatic API facade for AI agents and automation.
 
 Provides deterministic, self-describing functions for corpus linguistics,
-tense profiling, self-calibrated style passports, work markers, and dashboards.
+tense profiling, self-calibrated style references, work markers, and dashboards.
 """
 
 from __future__ import annotations
@@ -69,13 +69,13 @@ def profile(text: str, language: str = "auto", **config_overrides: Any) -> dict[
 
 def fingerprint(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
     """
-    Self-calibrated style fingerprint (style passport): house-style bands
+    Self-calibrated style fingerprint (style reference): house-style bands
     (median ± 2 sigma) per feature, significance-adjusted deviations (z*),
     Benjamini-Hochberg FDR set, expected false positives, self-calibrated
     style dimensions (Spearman correlation + Jacobi eigendecomposition) and
     redundant feature pairs.
 
-    Returns the passport dict (see docs/AGENTS.md for the full schema).
+    Returns the style reference dict (see docs/AGENTS.md for the full schema).
     """
     config, _resolved = _config_and_language(language, text, **config_overrides)
     metrics = CorpusAnalyzer(config).analyze_text(text)

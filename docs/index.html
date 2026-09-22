@@ -358,7 +358,7 @@ footer {
     </div>
     <div class="card">
       <h3>AI Agent &amp; Pipeline Engineers</h3>
-      <p>Deterministic JSON contracts (<code>schema_version: 2</code>), standardized exit codes, and a stable programmatic facade (<code>lixity.api</code>) designed for autonomous coding and editing agents.</p>
+      <p>Deterministic JSON contracts (<code>schema_version 1</code> for metrics and profiles, <code>2</code> for the style reference), standardized exit codes, and a stable programmatic facade (<code>lixity.api</code>) designed for autonomous coding and editing agents.</p>
     </div>
   </div>
 
@@ -381,7 +381,7 @@ footer {
       <p>Dialogue share, function-word ratio, sensory perception filters, modal density, passive markers, and nominal style suffixes.</p>
     </div>
     <div class="card">
-      <h3>Self-Calibrating Passport</h3>
+      <h3>Self-Calibrating Style Reference</h3>
       <p>The manuscript&rsquo;s own house style derived via median/MAD, significance-adjusted deviations z*, and Benjamini-Hochberg FDR control.</p>
     </div>
     <div class="card">
@@ -404,6 +404,7 @@ lixity profile manuscript.md              # Tense &amp; style profiles per parag
 lixity style manuscript.md                # Self-calibrating style reference
 lixity style manuscript.md --json         # Schema v2 JSON (bands, z*, FDR, dimensions)
 lixity dashboard manuscript.md -o ui.html # Standalone interactive HTML dashboard
+lixity build [manuscript.md]              # Idempotent workspace (exports/ + archive)
 lixity about                              # Engine metadata &amp; heuristic thresholds
 lixity completion bash                    # Shell completion script for Bash / Zsh</pre>
   </div>
@@ -416,7 +417,7 @@ lixity completion bash                    # Shell completion script for Bash / Z
 metrics = api.analyze(text, language="auto")
 
 # Derive self-calibrated style reference (bands, z*, FDR, dimensions)
-passport = api.fingerprint(text, language="de")
+reference = api.fingerprint(text, language="de")
 
 # Add persistent, editor-visible work markers
 new_text, marker = api.add_marker(text, "pruefen", "Verify tense shift", line=42)

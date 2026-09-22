@@ -19,7 +19,7 @@ from that style, controlled for measurement noise and multiple testing.
 |---|---|---|
 | `lixity analyze FILE --json` | corpus metrics + per-chapter style features | JSON (meta + metrics) |
 | `lixity profile FILE` | paragraph-accurate tense/style profiles | JSON (meta + chapters + paragraphs) |
-| `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR) | JSON (passport, schema v2) |
+| `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR) | JSON (schema v2) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard | file path |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` | artifact list |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
@@ -69,7 +69,7 @@ Corpus-level notes:
   can parse them independent of the UI language.
 
 
-### 3.2 `style --json` (passport, schema_version 2)
+### 3.2 `style --json` (style reference, schema_version 2)
 
 ```json
 {"meta": {"schema_version": 2, "n_chapters": 25, "n_features": 16,
@@ -125,7 +125,7 @@ itself never writes files.
   with σ = 1.4826·MAD. Small chapters have large SE – their deviations are
   shrunk, so they cannot produce false alarms.
 - **Thresholds**: |z*| ≥ 2.5 noticeable, ≥ 3.5 strong. At 2.5, ~1.2 % of all
-  chapter×feature cells exceed the threshold by chance; the passport reports
+  chapter×feature cells exceed the threshold by chance; the style reference reports
   the expected count (`expected_false_positives`) – never report a deviation
   as "significant" without comparing it to this number.
 - **FDR**: `fdr_flagged` is the Benjamini-Hochberg set (q = 0.05) – the cells
@@ -153,7 +153,7 @@ from lixity import api
 
 metrics = api.analyze(text, language="auto")          # -> {"meta", "metrics"}
 profiles = api.profile(text, language="de")           # -> {"meta", "chapters", "paragraphs"}
-passport = api.fingerprint(text, language="de")       # -> passport dict (schema v2)
+reference = api.fingerprint(text, language="de")      # -> style reference (schema v2)
 html = api.dashboard(text, language="de", title="…")  # -> self-contained HTML string
 marker_list = api.markers(text)                       # -> list of active work markers
 new_text, m = api.add_marker(text, kind="pruefen", note="Verify tense", line=42)

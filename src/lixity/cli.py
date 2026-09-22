@@ -1,4 +1,4 @@
-"""Lixity – command line: corpus analysis, style profile, passport and dashboard."""
+"""Lixity – command line: corpus analysis, style profile, style reference and dashboard."""
 
 import argparse
 import os
@@ -187,7 +187,7 @@ def main(argv=None):
         prog="lixity",
         description=(
             "Lixity – quantitative text linguistics, stylometry, self-calibrating "
-            "style passports and single-file dashboards for literary manuscripts."
+            "style references and single-file dashboards for literary manuscripts."
         ),
     )
     parser.add_argument("--version", action="version", version=f"lixity {__version__}")
@@ -195,7 +195,7 @@ def main(argv=None):
     for name, help_text in (
         ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
         ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
-        ("style", "Self-calibrated style passport of the manuscript (text/JSON)"),
+        ("style", "Self-calibrated style reference of the manuscript (text/JSON)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
         ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
         ("about", "Tool metadata for agents: languages, features, heuristics"),

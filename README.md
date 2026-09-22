@@ -18,9 +18,11 @@ chapter×feature cells (Benjamini-Hochberg FDR). The result is macro-editing
 evidence, not style dogma.
 
 Pure Python (3.10+), zero cloud calls, three dependencies (`pydantic`, `rich`,
-`orjson`), seven native language profiles. The name stands for the
-mathematical foundation of its analysis: **T**TR, **Y**ule's characteristic
-$K$, and **LIX**.
+`orjson`), seven native language profiles. Lixity is the analysis engine
+behind a full-length novel project; the repository ships German and English
+sample corpora for evaluation. The name stands for the mathematical
+foundation of its analysis: **T**TR, **Y**ule's characteristic $K$, and
+**LIX**.
 
 ![Lixity interactive HTML dashboard](docs/screenshots/dashboard-light.png)
 
@@ -43,8 +45,9 @@ $K$, and **LIX**.
   content-hash IDs and free-text notes, writable from the dashboard or API.
 - **Idempotent workspace build:** `lixity build` publishes a reproducible
   artifact set; unchanged input causes zero writes.
-- **Coherent dashboard:** status strip, clickable KPIs that drill down and
-  preselect the matching filter, style-reference band chart, deviation layer.
+- **Coherent dashboard:** optional component status strip, clickable KPIs
+  that drill down and preselect the matching filter, style-reference band
+  chart, deviation layer.
 - **Agent-ready:** strict JSON schemas with meta blocks, clean exit codes, a
   stable `lixity.api` facade, and an agent guide in
   [`docs/AGENTS.md`](docs/AGENTS.md).
@@ -68,6 +71,13 @@ lixity style manuscript.md              # self-calibrating style reference (--js
 lixity dashboard manuscript.md -o exports/dashboard.html
 cd my-novel && lixity build             # idempotent workspace: exports/ + archive
 lixity about                            # languages, features, heuristics
+```
+
+Try it on the bundled public-domain samples:
+
+```bash
+lixity analyze samples/effi-briest.md          # German – Fontane, 36 chapters
+lixity analyze samples/pride-and-prejudice.md  # English – Austen, 61 chapters
 ```
 
 Full command reference, metric glossary, worked example and troubleshooting:
@@ -101,9 +111,9 @@ Five groups of features, all documented with their formulas and caveats in
 2. **Significance-adjusted $z^*$:**
    $$z^* = \frac{x - \text{median}}{\sqrt{\sigma_{\text{MAD}}^2 + \text{SE}^2}}$$
    A short chapter must deviate dramatically to be flagged.
-3. **FDR control:** with 25 chapters × 16 features, ~5 cells at $|z^*| \ge 2.5$
-   are expected by chance; the Benjamini-Hochberg set ($q = 0.05$) separates
-   real shifts from noise.
+3. **FDR control:** in a 400-cell matrix (25 chapters × 16 features), ~5 cells
+   at $|z^*| \ge 2.5$ are expected by chance; the Benjamini-Hochberg set
+   ($q = 0.05$) separates real shifts from noise.
 4. **Style dimensions:** principal axes of the Spearman correlation matrix
    (cyclic Jacobi eigendecomposition, pure standard library) – the author's
    own latent axes, not preconceived genre models.

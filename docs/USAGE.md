@@ -98,14 +98,16 @@ Emits paragraph-level tense and style profiles as JSON:
 - `paragraphs[]` – the same fields per paragraph plus `severity`, `mixed`,
   `switch`, `minority_ratio`, line anchors (`start_line`/`end_line`) and style
   densities (`filter_density`, `modal_density`, `nominal_density`,
-  `passive_density` per 1,000 words).
+  `passive_density` per 1,000 words). `dominant` is one of `Präsens`,
+  `Präteritum`, `Gemischt`, `Neutral` (the display labels of the active
+  language profile; the dashboard maps them to its own label packs).
 
 Tense classification is a transparent heuristic, not a black box: curated
 high-frequency verb forms are counted per paragraph. A minority tense share of
 ≥ 25 % marks a paragraph as `mixed`; a change of the dominant tense between
 consecutive paragraphs is a `switch`. Severity levels `0`–`3` (from
-`unauffällig` to `starke Friktion`) prioritise what is worth a second look; the
-thresholds are injectable via `ProfileThresholds`.
+*unremarkable* to *strong friction*) prioritise what is worth a second look;
+the thresholds are injectable via `ProfileThresholds`.
 
 ```bash
 lixity profile manuscript.md > profile.json
@@ -122,12 +124,12 @@ robust centre (median) and spread (MAD) from the corpus itself. Deviations
 are **significance-adjusted** against each chapter's estimation noise
 (`z* = (x − median) / √(σ² + SE²)`, documented standard errors per feature),
 reported with the statistically expected number of false positives and a
-**Benjamini-Hochberg FDR set** (q = 0.05). Additionally, the passport derives
+**Benjamini-Hochberg FDR set** (q = 0.05). Additionally, the style reference derives
 the manuscript's own abstract **style dimensions** (Spearman correlation of
 the features, Jacobi eigendecomposition) with loadings and per-chapter
 scores, plus redundant feature pairs (|ρ| ≥ 0.8). Whether a deviation is
 intended (register scene) or drift is for the author to decide, never the
-engine. The passport doubles as a constraint block for authoring and editing
+engine. The style reference doubles as a constraint block for authoring and editing
 (human or assisting LLM).
 
 ```bash
@@ -191,7 +193,7 @@ manuscript, creates the subfolders `exports/` (with `exports/archive/`) and
 - `exports/<slug>_metrics.json` – full corpus metrics (schema v1),
 - `exports/<slug>_profile.json` – paragraph-accurate tense profiles,
 - `exports/<slug>_style.json` – self-calibrated style reference (schema v2),
-- `exports/<slug>_style_passport.txt` – human-readable passport,
+- `exports/<slug>_style_passport.txt` – human-readable style reference (legacy file name),
 - `exports/<slug>_report.md` – Markdown dossier report,
 - `exports/<slug>_dashboard.html` – single-file HTML dashboard.
 
@@ -214,6 +216,7 @@ lixity build manuscript.md --dry-run
 
 ```bash
 lixity about            # tool metadata: languages, features, heuristics
+lixity about --json     # same metadata as machine-readable JSON
 lixity completion bash  # shell completion script (bash or zsh)
 ```
 
@@ -234,18 +237,26 @@ The repository ships a complete, reproducible example in `samples/`:
 
 | Feature | Fontane (median) | Corridor (±2σ) | Draft |
 | :--- | ---: | ---: | ---: |
-| ASL | 21.3 | 15.7 – 26.8 | 20.1 |
-| Staccato / hypotaxis | 16.9 / 29.5 % | 4 – 30 / 14 – 45 | 16.7 / 29.2 % |
-| Sentence-length CV | 0.80 | 0.61 – 0.99 | 0.68 |
-| Dialogue share | 58.4 % | 26.8 – 90.1 | 43.6 % |
-| Adjectives / 1,000 words | 21.2 | 14.4 – 28.0 | 17.1 |
-| Long words | 10.9 % | 8.4 – 13.5 | 8.6 % |
-| Modals / passive (per 1,000) | 11.4 / 4.5 | 6.4 – 16.3 / 2.1 – 6.9 | 10.9 / 2.6 |
-| Starter entropy | 5.30 bit | 4.61 – 5.99 | 5.11 |
-| Guiraud R | 18.1 | 14.6 – 21.6 | 14.8 |
+| ASL | 21,06 | 14,96 – 27,15 | 20,12 |
+| Staccato share | 16,87 % | 4,03 – 29,71 | 16,67 % |
+| Hypotaxis share | 29,41 % | 13,49 – 45,34 | 29,17 % |
+| Sentence-length CV | 0,80 | 0,60 – 0,99 | 0,68 |
+| Dialogue share | 58,31 % | 26,22 – 90,40 | 43,84 % |
+| Function-word share | 44,91 % | 42,08 – 47,74 | 47,64 % |
+| Perception filters | 0,85 | −0,39 – 2,09 | 0,00 |
+| Modals / passive (per 1,000) | 11,32 / 4,47 | 6,40 – 16,24 / 1,81 – 7,12 | 10,85 / 2,58 |
+| Nominalisations (per 1,000) | 14,77 | 8,34 – 21,20 | 18,09 |
+| Adjectives (per 1,000) | 21,52 | 14,10 – 28,94 | 17,05 |
+| Long words | 11,02 % | 8,53 – 13,51 | 8,62 % |
+| Starter entropy | 5,30 bit | 4,57 – 6,02 | 5,16 |
+| First-person starts | 7,55 % | 1,87 – 13,22 | 5,21 % |
+| Guiraud R | 18,08 | 14,28 – 21,87 | 14,91 |
+| HD-D | 0,9924 | 0,9900 – 0,9948 | 0,9898 |
 
-14 of 16 features land inside the corridor; the remaining two (function-word
-share +0.08 pp, HD-D −0.001) sit at its edge. The loop is always the same:
+**15 of 16 features** land inside the corridor; only HD-D misses it by a
+hair (0,9898 vs. 0,9900). Three features (dialogue share, function-word
+share, long words) exist per chapter only — for the single-chapter draft they
+are measured on that chapter. The loop is always the same:
 `build` → write → `analyze` → compare → revise – no external style dogma,
 only the author's own distribution.
 
@@ -264,18 +275,10 @@ line)`, `api.resolve_marker(text, marker_id)`.
 
 ## AI agent interface
 
-Stable, deterministic facade for agents and automation – see
-[`docs/AGENTS.md`](AGENTS.md) for the full machine-facing contracts
-(JSON schemas with meta blocks, exit codes, interpretation heuristics):
-
-```python
-from lixity import api
-
-metrics = api.analyze(text, language="auto")
-passport = api.fingerprint(text, language="de")
-html = api.dashboard(text, language="de", title="…")
-info = api.about()
-```
+Stable, deterministic facade for agents and automation – the full
+machine-facing contracts (JSON schemas with meta blocks, exit codes,
+interpretation heuristics) live in [`docs/AGENTS.md`](AGENTS.md); the API
+facade is described below under [Library](#library).
 
 ## Understanding the metrics
 
@@ -368,7 +371,7 @@ kpis = res["metrics"]
 print(f"ASL: {kpis['asl']:.2f}, LIX: {kpis['lix']:.1f}")
 
 # 2. Self-calibrated style reference (bands, z*, FDR, dimensions)
-passport = api.fingerprint(text, language="de")
+reference = api.fingerprint(text, language="de")
 
 # 3. Paragraph-level tense & style profiling
 profiles = api.profile(text, language="de")
@@ -471,7 +474,7 @@ not a code change.
 ## Development
 
 ```bash
-.venv/bin/python -m unittest discover -s tests -v   # 125 tests, offline
+.venv/bin/python -m unittest discover -s tests -v   # 126 tests, offline
 .venv/bin/ruff check src tests                      # lint (rule set pinned in pyproject.toml)
 ```
 
