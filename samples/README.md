@@ -21,11 +21,12 @@ against the measured style corridor of *Effi Briest*. It is an original
 work, not part of the novel, and is covered by the Lixity Non-Commercial
 License 1.0 (`../LICENSE`).
 
-## `effi-briest-dashboard.html`
+## Generated artifacts
 
-A generated analysis artifact (single-file dashboard) of the sample
-manuscript, kept for reference. Regenerate with:
+Generated analysis artifacts (dashboards, metrics JSON) are not committed —
+they are reproducible and would only bloat the repository. Regenerate them
+any time:
 
 ```bash
-lixity dashboard samples/effi-briest.md -o samples/effi-briest-dashboard.html
+lixity dashboard samples/effi-briest.md -o /tmp/effi-briest-dashboard.html
 ```

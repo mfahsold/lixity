@@ -32,7 +32,7 @@ from lixity.style_profile import (  # noqa: E402
     TENSE_PRESENT,
     ParagraphProfiler,
 )
-from lixity.visualizer import render_style_report  # noqa: E402
+from lixity.ui import render_style_report  # noqa: E402
 
 
 class TestParserLineAnchors(unittest.TestCase):

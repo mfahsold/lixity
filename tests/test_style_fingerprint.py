@@ -33,7 +33,7 @@ from lixity.style_fingerprint import (  # noqa: E402
     z_color,
 )
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
-from lixity.visualizer import render_dashboard  # noqa: E402
+from lixity.ui import render_dashboard  # noqa: E402
 
 SAMPLE = (
     "## Kap 1\n\n"

@@ -5,6 +5,20 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Changed
+
+- Documentation consolidated: one stability register `docs/STABILITY.md`
+  (replaces `docs/ITERATION-2.md` and `docs/ITERATION-3.md`).
+
+### Removed
+
+- `lixity.visualizer` compatibility shim — import the renderer from
+  `lixity.ui` (`from lixity.ui import render_dashboard`).
+- Committed sample dashboard artifact (`samples/effi-briest-dashboard.html`,
+  2.4 MB); it is reproducible from the sample manuscript.
+
 ## [1.6.0] – 2026-09-22
 
 ### Added
@@ -22,7 +36,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Busy states**: action buttons disable and spin while a server action
   runs, so latency is visible and double-clicks are avoided.
 - `docs/llms.txt`, `docs/robots.txt`, `docs/sitemap.xml` and
-  `docs/ITERATION-3.md` (stability register for this iteration).
+  `docs/STABILITY.md` (single stability register).
 - `samples/README.md` documenting sample provenance and licensing
   (Project Gutenberg #5323, public domain).
 
@@ -69,7 +83,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - **Plain-language tooltips** in all seven languages: short, concrete, with a
   reading direction ("higher = …") instead of formulas; the heatmap formula
   moved to the docs.
-- `docs/ITERATION-2.md` stays the reference for the stability register.
+- `docs/STABILITY.md` stays the reference for the stability register.
 
 ### Changed
 
@@ -103,7 +117,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   translated in all seven languages, and the visual components are rendered.
 - **CI packaging job** verifying that the wheel contains the UI assets and
   the `py.typed` marker.
-- `docs/ITERATION-2.md` – research findings, critical assessment and the
+- `docs/STABILITY.md` – research findings, critical assessment and the
   stability register (with severity, evidence, mitigation); "Known
   limitations" section in `docs/USAGE.md`.
 

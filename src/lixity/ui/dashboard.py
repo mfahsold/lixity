@@ -1,4 +1,4 @@
-"""lixity.visualizer – Minimalist, self-contained single-file HTML dashboard.
+"""lixity.ui.dashboard – Minimalist, self-contained single-file HTML dashboard.
 
 Renders an interactive stylometric report combining KPI cards, sentence rhythm bars,
 diverging z-score heatmap, style passport, latent dimensions, chapter map,
@@ -360,11 +360,11 @@ def render_dashboard(
             )
     style_tiles.append(
         kpi(
-        str(total_flagged),
-        help_term(labels, "flagged", L("flagged")),
-        jump="#chapters",
-        flags=True,
-    )
+            str(total_flagged),
+            help_term(labels, "flagged", L("flagged")),
+            jump="#chapters",
+            flags=True,
+        )
     )
 
     parts.append('<section class="kpis">')

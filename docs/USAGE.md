@@ -336,7 +336,7 @@ findings stay navigable in the editor.
 ## Known limitations & stability
 
 Transparent about what the numbers can and cannot do (full registers:
-`docs/ITERATION-2.md`, `docs/ITERATION-3.md`):
+`docs/STABILITY.md`):
 
 - **Short texts.** All length-invariant lexical-diversity indices are
   unreliable on very short texts (Bestgen 2024/2025). Lixity returns `null`
@@ -429,7 +429,7 @@ from lixity import CorpusConfig
 from lixity.language import resolve_language
 from lixity.markdown_parser import parse_markdown_blocks
 from lixity.style_profile import ParagraphProfiler
-from lixity.visualizer import render_dashboard
+from lixity.ui import render_dashboard
 
 text = open("manuscript.md", encoding="utf-8").read()
 resolved = resolve_language(CorpusConfig(language="auto"), sample_text=text)

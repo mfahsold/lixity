@@ -31,7 +31,7 @@ from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.markers import add_marker  # noqa: E402
 from lixity.style_fingerprint import StyleFingerprint  # noqa: E402
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
-from lixity.visualizer import render_dashboard  # noqa: E402
+from lixity.ui import render_dashboard  # noqa: E402
 
 CHROME = (
     shutil.which("chromium")
