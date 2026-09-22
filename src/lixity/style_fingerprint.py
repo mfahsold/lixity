@@ -190,7 +190,7 @@ def jacobi_eigh(matrix: list[list[float]], tol: float = 1e-12, max_sweeps: int =
                 a[p][p] = app
                 a[q][q] = aqq
                 for k in range(n):
-                    if k == p or k == q:
+                    if k in (p, q):
                         continue
                     akp = a[k][p]
                     akq = a[k][q]

@@ -306,7 +306,6 @@ class ReportFormatter:
         m: CorpusMetrics,
         console: Console | None = None,
         texts: Mapping[str, str] | None = None,
-        labels: Mapping[str, str] | None = None,
         language_key: str = "en",
     ) -> None:
         """Renders a modern, highly aesthetic Rich terminal dashboard."""

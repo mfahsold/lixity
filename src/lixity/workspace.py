@@ -13,6 +13,7 @@ idempotently:
 
 from __future__ import annotations
 
+import contextlib
 import os
 import re
 import unicodedata
@@ -103,14 +104,12 @@ class Workspace:
 
         self.ensure_layout()
         stem, ext = os.path.splitext(filename)
-        stamp = datetime.now().strftime(TIMESTAMP_FORMAT)
+        stamp = datetime.now().astimezone().strftime(TIMESTAMP_FORMAT)
         versioned_name = f"{stem}_{stamp}{ext}"
         versioned = self.artifact_path(versioned_name)
         FileUtils.atomic_write_if_changed(versioned, content)
-        try:  # published artifacts are readable (mkstemp defaults to 0600)
+        with contextlib.suppress(OSError):  # mkstemp defaults to 0600
             os.chmod(versioned, 0o644)
-        except OSError:
-            pass
         update_stable_link(stable, versioned)
         archive_timestamped(
             self.exports_dir,

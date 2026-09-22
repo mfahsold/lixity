@@ -639,11 +639,11 @@ class CorpusAnalyzer:
         chapter_tokens: list[list[str]] = []
         c_idx = 1
 
-        for rc in raw_chapters:
-            rc = rc.strip()
-            if not rc:
+        for raw_chapter in raw_chapters:
+            chapter_text = raw_chapter.strip()
+            if not chapter_text:
                 continue
-            lines = rc.split("\n")
+            lines = chapter_text.split("\n")
             title = lines[0].strip().replace("# ", "")
             body = "\n".join(lines[1:]).strip()
             cl_b = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)

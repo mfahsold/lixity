@@ -64,9 +64,8 @@ class TestDiscovery(unittest.TestCase):
                 discover(root=tmp)
 
     def test_missing_manuscript_raises(self):
-        with tempfile.TemporaryDirectory() as tmp:
-            with self.assertRaises(FileNotFoundError):
-                discover(root=tmp)
+        with tempfile.TemporaryDirectory() as tmp, self.assertRaises(FileNotFoundError):
+            discover(root=tmp)
 
 
 class TestPublishIdempotency(unittest.TestCase):

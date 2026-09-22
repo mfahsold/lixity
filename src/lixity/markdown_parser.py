@@ -230,6 +230,4 @@ def inline_markdown_to_html(
     text = text.replace("\n", "<br/>\n")
 
     # 7. Restore literal asterisks
-    text = text.replace("\x01ASTERISK\x02", "*")
-
-    return text
+    return text.replace("\x01ASTERISK\x02", "*")

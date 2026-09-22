@@ -69,5 +69,5 @@ line-length = 100
 target-version = "py310"
 
 [tool.ruff.lint]
-select = ["E4", "E7", "E9", "F", "I", "UP", "B", "BLE", "C4", "PIE", "RUF", "S"]
+select = ["E4", "E7", "E9", "F", "I", "UP", "B", "BLE", "C4", "DTZ", "PERF", "PIE", "PLW", "RUF", "S", "SIM"]
 allowed-confusables = ["–", "’", "σ", "−"]

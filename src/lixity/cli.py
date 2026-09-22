@@ -326,9 +326,7 @@ def main(argv=None):
             payload = _meta_payload(resolved.key, metrics=metrics.model_dump())
             print(_json(payload))
         else:
-            ReportFormatter.print_rich_report(
-                metrics, labels=resolved.labels, language_key=resolved.key
-            )
+            ReportFormatter.print_rich_report(metrics, language_key=resolved.key)
         return EXIT_OK
 
     if args.command == "profile":

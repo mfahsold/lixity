@@ -154,7 +154,7 @@ class BookLayoutConfig:
                 confidential_heading_gap=5.0,
                 confidential_gap=4.0,
             )
-        elif key in ("mobile", "smartphone", "phone"):
+        if key in ("mobile", "smartphone", "phone"):
             # Format for mobile reading on smartphones (ragged right, ergonomic)
             return cls(
                 page_width=306.14,  # 108 mm (9:16 aspect ratio)

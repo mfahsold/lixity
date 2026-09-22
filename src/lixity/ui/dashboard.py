@@ -225,10 +225,10 @@ def render_dashboard(
         parts.append(
             f'<button class="ctl" data-action="analyze">{help_term(labels, "rebuild", L("run_analysis"))}</button>'
         )
-        for action in ("sync", "audit", "prune", "gdrive", "rebuild"):
-            parts.append(
-                f'<button class="ctl" data-action="{action}">{help_term(labels, action, L(action))}</button>'
-            )
+        parts.extend(
+            f'<button class="ctl" data-action="{action}">{help_term(labels, action, L(action))}</button>'
+            for action in ("sync", "audit", "prune", "gdrive", "rebuild")
+        )
         parts.append("</div></div>")
 
         # NDA

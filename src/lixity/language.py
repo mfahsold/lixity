@@ -98,8 +98,9 @@ def _build_profiles() -> dict[str, LanguageProfile]:
         past_parts = []
         if data["praeteritum_regex"]:
             past_parts.append(f"(?:{data['praeteritum_regex']})")
-        for extra in LANGUAGE_PATTERNS.get(key, {}).get("praeteritum", []):
-            past_parts.append(f"(?:{extra})")
+        past_parts.extend(
+            f"(?:{extra})" for extra in LANGUAGE_PATTERNS.get(key, {}).get("praeteritum", [])
+        )
         style = STYLE_DATA.get(key, STYLE_DATA["generic"])
         profiles[key] = LanguageProfile(
             key=key,
