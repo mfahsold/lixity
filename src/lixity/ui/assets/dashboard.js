@@ -368,7 +368,15 @@ document.addEventListener("click", async function (event) {
   }
 });
 var API = document.body.dataset.api || "";
-var NDA_STATUSES = ["entwurf", "versendet", "bestaetigt", "unterschrieben"];
+// NDA statuses come from the server-rendered data attribute (single source: lixity.status.NdaStatus).
+function ndaStatuses() {
+  var el = document.getElementById("nda-status");
+  try {
+    var raw = el && el.getAttribute("data-nda-statuses");
+    if (raw) return JSON.parse(raw);
+  } catch (e) { /* fall through */ }
+  return ["entwurf", "versendet", "bestaetigt", "unterschrieben"];
+}
 function ndaStatus(message, ok) {
   var el = document.getElementById("nda-status");
   if (!el) return;
@@ -397,7 +405,7 @@ function ndaRender(records) {
   if (addRow) addRow.hidden = false;
   if (hint) hint.textContent = records.length + " Einträge";
   var rows = records.map(function (r) {
-    var options = NDA_STATUSES.map(function (s) {
+    var options = ndaStatuses().map(function (s) {
       return '<option value="' + s + '"' + (s === r.status ? " selected" : "") + ">" + s + "</option>";
     }).join("");
     return "<tr><td><b>" + r.id + "</b></td><td>" + r.name + "</td><td>" + (r.contact || "–") +

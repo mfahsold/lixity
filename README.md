@@ -38,10 +38,12 @@ mathematical foundation: **T**TR, **Y**ule's characteristic $K$, and **LIX**.
 | Cliff's $\delta$ / Vargha–Delaney $\hat{A}_{12}$ | magnitude of confirmed cells |
 | Runs test + lag-1 $\rho_1$ | exchangeability of the baseline |
 | Spearman $\rho$ + cyclic Jacobi EVD | latent style dimensions |
-| PELT changepoints (BIC) | where the house style shifts (Wave-2) |
-| Mann–Kendall $\tau, S, p$ | monotonic style drift (Wave-2) |
+| PELT changepoints (BIC) | where the house style shifts (structural) |
+| Mann–Kendall $\tau, S, p$ | monotonic style drift (structural) |
 | Sn / Qn (Rousseeuw & Croux) | outlier-resistant scale cross-check |
 | Hill $\hat\alpha$ | heavy-tailed feature diagnostic |
+| Wasserstein-1D + two-sample KS | early/late chapter-half shift (structural) |
+| Dunning $G^2$ + co-occurrence fitness | early/late keyness, Goh–Barabási on content-word graph (structural) |
 
 Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`,
 `flag_min_severity`) are injectable via CLI, API kwargs, UI settings, or
@@ -54,7 +56,7 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`,
 - **Self-calibrating norms:** house style from the manuscript’s own median/MAD.
 - **Noise-aware $z^*$ + FDR (BH/BY)** with injectable thresholds.
 - **Effect sizes & diagnostics** on every confirmed cell (Cliff’s δ, runs, ACF).
-- **Wave-2 diagnostics:** PELT changepoints, Mann–Kendall trends, Sn/Qn scales, Hill tail index.
+- **Structural diagnostics:** PELT changepoints, Mann–Kendall trends, Sn/Qn scales, Hill tail index, early/late Wasserstein–KS shift, content-word co-occurrence (Goh–Barabási) and Dunning keyness.
 - **Latent style dimensions:** Spearman ρ + cyclic Jacobi (stdlib only).
 - **Paragraph tense profiling:** present/past/mixed/neutral, severity 0–3.
 - **Structure modules:** dialogue, characters, pacing, motifs, showing/telling.
@@ -76,7 +78,7 @@ uv tool install git+https://github.com/mfahsold/lixity.git
 pip install git+https://github.com/mfahsold/lixity.git
 
 # pin a release for reproducible pipelines
-pip install "git+https://github.com/mfahsold/lixity.git@v1.10.0"
+pip install "git+https://github.com/mfahsold/lixity.git@v1.11.0"
 ```
 
 Development install (editable, with lint/type/test tooling):
@@ -179,7 +181,7 @@ from lixity import api
 
 metrics = api.analyze(text, language="auto")          # {"meta", "metrics"}
 profiles = api.profile(text, language="de")           # {"meta", "chapters", "paragraphs"}
-reference = api.fingerprint(text, language="de")      # style reference (schema v3)
+reference = api.fingerprint(text, language="de")      # style reference (schema v4)
 html = api.dashboard(text, language="de", title="My Manuscript")
 new_text, marker = api.add_marker(text, kind="pruefen", note="Verify tense", line=142)
 updated_text, ok = api.resolve_marker(new_text, marker["id"])
@@ -192,7 +194,7 @@ Machine-readable surfaces:
 | :--- | :--- |
 | Corpus metrics | `lixity analyze FILE --json` (meta block, schema_version 2) |
 | Paragraph profiles | `lixity profile FILE` (schema_version 2) |
-| Style reference (bands, z\*, FDR, effect sizes, wave-2) | `lixity style FILE --json` (**schema_version 3**) |
+| Style reference (bands, z\*, FDR, effect sizes, structural) | `lixity style FILE --json` (**schema_version 4**) |
 | Reproducible artifact set | `lixity build [FILE] [--dry-run]` |
 | Capability discovery | `lixity about --json` |
 | Shell completion | `lixity completion bash\|zsh` |

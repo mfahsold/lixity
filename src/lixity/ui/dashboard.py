@@ -13,6 +13,7 @@ from typing import Any
 
 from ..format import num as format_num
 from ..format import pct as format_pct
+from ..status import FLAG_MIN_SEVERITY, NdaStatus
 from ..style_fingerprint import FEATURES, LAYER_FEATURES, layer_stats, z_color
 from ..style_profile import (
     ChapterProfile,
@@ -126,10 +127,12 @@ def render_dashboard(
     total_words = sum(c.words for c in chapters)
     if flag_min_severity is None:
         flag_min_severity = (
-            fingerprint.thresholds.flag_min_severity if fingerprint is not None else 2
+            fingerprint.thresholds.flag_min_severity
+            if fingerprint is not None
+            else int(FLAG_MIN_SEVERITY)
         )
     if flag_min_severity not in (1, 2, 3):
-        flag_min_severity = 2
+        flag_min_severity = int(FLAG_MIN_SEVERITY)
     total_flagged = sum(1 for p in paragraphs if p.severity >= flag_min_severity)
     scale = max((p.words for p in paragraphs), default=1)
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
@@ -324,7 +327,10 @@ def render_dashboard(
             f'<button class="ctl primary" id="nda-add-btn">{L("create")} + {L("export_pdf")}</button>'
         )
         parts.append("</div>")
-        parts.append('<div class="ctl-status" id="nda-status"></div>')
+        _nda_statuses = json.dumps(NdaStatus.all_values())
+        parts.append(
+            f'<div class="ctl-status" id="nda-status" data-nda-statuses="{_nda_statuses}"></div>'
+        )
         parts.append("</section>")
 
     # --- Key metrics (grouped for scanability) ----------------------------

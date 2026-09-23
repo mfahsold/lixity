@@ -3,7 +3,7 @@
 Derives the manuscript's reference house style using robust statistics (median/MAD),
 computes significance-adjusted deviations (z* with standard errors), controls false
 discoveries (Benjamini-Hochberg FDR), extracts latent style dimensions via cyclic
-Jacobi eigendecomposition, and provides Wave-2 diagnostics: changepoint segmentation
+Jacobi eigendecomposition, and provides structural diagnostics: changepoint segmentation
 (PELT), monotonic trend tests (Mann-Kendall), distribution distances (Wasserstein/KS),
 keyness (Dunning G²), tail behaviour (Hill estimator), robust scale estimators (Sn/Qn),
 and degree-distribution fitness (Goh-Barabási).
@@ -18,6 +18,18 @@ from itertools import pairwise
 from typing import Any
 
 from .format import num as format_num
+from .language import resolve_language
+from .markdown_parser import split_chapters, strip_inline_markup
+from .models import CorpusConfig
+from .status import (
+    PASSPORT_LABEL_SEGMENTED,
+    PASSPORT_LABEL_SHIFTED,
+    PASSPORT_LABEL_STRUCTURAL,
+    PASSPORT_LABEL_TRENDING,
+    SCHEMA_VERSION_STYLE,
+    STRUCTURAL_DIAGNOSTICS_KEY,
+    ContractKeys,
+)
 
 # Descriptive, register-neutral features: (model field, label key, unit).
 # Every style – staccato or cascading, nominal or verbal – is a legal value;
@@ -41,24 +53,136 @@ FEATURES: tuple[tuple[str, str, str], ...] = (
     ("hd_d", "feat_hd_d", "index"),
 )
 
-# Localised unit strings (FEATURES carries the English defaults).
-FEATURE_UNITS_DE: dict[str, str] = {
-    "asl": "Wörter je Satz",
-    "staccato_pct": "% der Sätze",
-    "kaskade_pct": "% der Sätze",
-    "sentence_cv": "Koeffizient",
-    "dialog_pct": "% der Wörter",
-    "function_word_pct": "% der Wörter",
-    "filter_density": "je 1.000 Wörter",
-    "modal_density": "je 1.000 Wörter",
-    "passive_density": "je 1.000 Wörter",
-    "nominalization_density": "je 1.000 Wörter",
-    "adjective_density": "je 1.000 Wörter",
-    "long_word_pct": "% der Wörter",
-    "start_entropy": "bit",
-    "first_person_start_rate": "% der Sätze",
-    "guiraud_r": "Index",
-    "hd_d": "Index",
+# Localised unit strings per language (FEATURES carries the English defaults).
+# Keys are language codes matching resolve_language().key; missing keys fall
+# back to the English unit in FEATURES.
+FEATURE_UNITS: dict[str, dict[str, str]] = {
+    "en": {
+        "asl": "words per sentence",
+        "staccato_pct": "% of sentences",
+        "kaskade_pct": "% of sentences",
+        "sentence_cv": "coefficient",
+        "dialog_pct": "% of words",
+        "function_word_pct": "% of words",
+        "filter_density": "per 1,000 words",
+        "modal_density": "per 1,000 words",
+        "passive_density": "per 1,000 words",
+        "nominalization_density": "per 1,000 words",
+        "adjective_density": "per 1,000 words",
+        "long_word_pct": "% of words",
+        "start_entropy": "bit",
+        "first_person_start_rate": "% of sentences",
+        "guiraud_r": "index",
+        "hd_d": "index",
+    },
+    "de": {
+        "asl": "Wörter je Satz",
+        "staccato_pct": "% der Sätze",
+        "kaskade_pct": "% der Sätze",
+        "sentence_cv": "Koeffizient",
+        "dialog_pct": "% der Wörter",
+        "function_word_pct": "% der Wörter",
+        "filter_density": "je 1.000 Wörter",
+        "modal_density": "je 1.000 Wörter",
+        "passive_density": "je 1.000 Wörter",
+        "nominalization_density": "je 1.000 Wörter",
+        "adjective_density": "je 1.000 Wörter",
+        "long_word_pct": "% der Wörter",
+        "start_entropy": "bit",
+        "first_person_start_rate": "% der Sätze",
+        "guiraud_r": "Index",
+        "hd_d": "Index",
+    },
+    "fr": {
+        "asl": "mots par phrase",
+        "staccato_pct": "% des phrases",
+        "kaskade_pct": "% des phrases",
+        "sentence_cv": "coefficient",
+        "dialog_pct": "% des mots",
+        "function_word_pct": "% des mots",
+        "filter_density": "pour 1 000 mots",
+        "modal_density": "pour 1 000 mots",
+        "passive_density": "pour 1 000 mots",
+        "nominalization_density": "pour 1 000 mots",
+        "adjective_density": "pour 1 000 mots",
+        "long_word_pct": "% des mots",
+        "start_entropy": "bit",
+        "first_person_start_rate": "% des phrases",
+        "guiraud_r": "indice",
+        "hd_d": "indice",
+    },
+    "es": {
+        "asl": "palabras por frase",
+        "staccato_pct": "% de frases",
+        "kaskade_pct": "% de frases",
+        "sentence_cv": "coeficiente",
+        "dialog_pct": "% de palabras",
+        "function_word_pct": "% de palabras",
+        "filter_density": "por 1.000 palabras",
+        "modal_density": "por 1.000 palabras",
+        "passive_density": "por 1.000 palabras",
+        "nominalization_density": "por 1.000 palabras",
+        "adjective_density": "por 1.000 palabras",
+        "long_word_pct": "% de palabras",
+        "start_entropy": "bit",
+        "first_person_start_rate": "% de frases",
+        "guiraud_r": "índice",
+        "hd_d": "índice",
+    },
+    "it": {
+        "asl": "parole per frase",
+        "staccato_pct": "% delle frasi",
+        "kaskade_pct": "% delle frasi",
+        "sentence_cv": "coefficiente",
+        "dialog_pct": "% delle parole",
+        "function_word_pct": "% delle parole",
+        "filter_density": "ogni 1.000 parole",
+        "modal_density": "ogni 1.000 parole",
+        "passive_density": "ogni 1.000 parole",
+        "nominalization_density": "ogni 1.000 parole",
+        "adjective_density": "ogni 1.000 parole",
+        "long_word_pct": "% delle parole",
+        "start_entropy": "bit",
+        "first_person_start_rate": "% delle frasi",
+        "guiraud_r": "indice",
+        "hd_d": "indice",
+    },
+    "pt": {
+        "asl": "palavras por frase",
+        "staccato_pct": "% de frases",
+        "kaskade_pct": "% de frases",
+        "sentence_cv": "coeficiente",
+        "dialog_pct": "% de palavras",
+        "function_word_pct": "% de palavras",
+        "filter_density": "por 1.000 palavras",
+        "modal_density": "por 1.000 palavras",
+        "passive_density": "por 1.000 palavras",
+        "nominalization_density": "por 1.000 palavras",
+        "adjective_density": "por 1.000 palavras",
+        "long_word_pct": "% de palavras",
+        "start_entropy": "bit",
+        "first_person_start_rate": "% de frases",
+        "guiraud_r": "índice",
+        "hd_d": "índice",
+    },
+    "nl": {
+        "asl": "woorden per zin",
+        "staccato_pct": "% van zinnen",
+        "kaskade_pct": "% van zinnen",
+        "sentence_cv": "coëfficiënt",
+        "dialog_pct": "% van woorden",
+        "function_word_pct": "% van woorden",
+        "filter_density": "per 1.000 woorden",
+        "modal_density": "per 1.000 woorden",
+        "passive_density": "per 1.000 woorden",
+        "nominalization_density": "per 1.000 woorden",
+        "adjective_density": "per 1.000 woorden",
+        "long_word_pct": "% van woorden",
+        "start_entropy": "bit",
+        "first_person_start_rate": "% van zinnen",
+        "guiraud_r": "index",
+        "hd_d": "index",
+    },
 }
 
 FEATURE_FIELDS: tuple[str, ...] = tuple(f for f, _l, _u in FEATURES)
@@ -286,7 +410,7 @@ def spearman_rho(x: list[float], y: list[float]) -> float:
 
 
 # ---------------------------------------------------------------------------
-#  Wave-2 statistical functions (pure stdlib, no numpy/scipy)
+#  Structural statistical functions (pure stdlib, no numpy/scipy)
 # ---------------------------------------------------------------------------
 
 
@@ -758,9 +882,10 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "variance": "variance",
         "flagged": "flagged",
         "redundant": "Redundant features",
-        "wave2": "Wave-2 diagnostics",
-        "segmented": "segmented features",
-        "trending": "trending features",
+        PASSPORT_LABEL_STRUCTURAL: "Structural diagnostics",
+        PASSPORT_LABEL_SEGMENTED: "segmented features",
+        PASSPORT_LABEL_TRENDING: "trending features",
+        PASSPORT_LABEL_SHIFTED: "shifted features",
     },
     "de": {
         "style_passport": "STILREFERENZ",
@@ -783,9 +908,10 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "variance": "Varianz",
         "flagged": "auffällig",
         "redundant": "Redundante Merkmale",
-        "wave2": "Wave-2-Diagnostik",
-        "segmented": "segmentierte Merkmale",
-        "trending": "trendende Merkmale",
+        PASSPORT_LABEL_STRUCTURAL: "Strukturelle Diagnostik",
+        PASSPORT_LABEL_SEGMENTED: "segmentierte Merkmale",
+        PASSPORT_LABEL_TRENDING: "trendende Merkmale",
+        PASSPORT_LABEL_SHIFTED: "verschobene Merkmale",
     },
 }
 
@@ -819,7 +945,7 @@ class StyleFingerprint:
     dimensions: list[dict[str, Any]] = field(default_factory=list)
     redundant_features: list[dict[str, Any]] = field(default_factory=list)
     baseline_diagnostics: dict[str, Any] = field(default_factory=dict)
-    wave2_diagnostics: dict[str, Any] = field(default_factory=dict)
+    structural_diagnostics: dict[str, Any] = field(default_factory=dict)
     thresholds: FingerprintThresholds = field(default_factory=FingerprintThresholds)
 
     @classmethod
@@ -915,7 +1041,7 @@ class StyleFingerprint:
         fingerprint.dimensions = fingerprint._derive_dimensions()
         fingerprint.redundant_features = fingerprint._derive_redundancies()
         fingerprint.baseline_diagnostics = fingerprint._derive_baseline_diagnostics()
-        fingerprint.wave2_diagnostics = fingerprint._derive_wave2_diagnostics()
+        fingerprint.structural_diagnostics = fingerprint._derive_structural_diagnostics()
         return fingerprint
 
     def _derive_baseline_diagnostics(self) -> dict[str, Any]:
@@ -952,19 +1078,22 @@ class StyleFingerprint:
             "exchangeable": exchangeable,
         }
 
-    def _derive_wave2_diagnostics(self) -> dict[str, Any]:
-        """Wave-2 diagnostics per usable feature: changepoints, trends, robust scales.
+    def _derive_structural_diagnostics(self) -> dict[str, Any]:
+        """Structural diagnostics per usable feature: changepoints, trends, robust scales.
 
         - **changepoints**: PELT changepoint indices (0-based) per feature
         - **trends**: Mann-Kendall (tau, S, p) per feature
         - **robust_scales**: Sn and Qn estimators per feature, compared to 1.4826·MAD
         - **tail_index**: Hill tail exponent (alpha-hat) per feature (n >= 5)
+        - **distribution_shift**: Wasserstein-1D + two-sample KS, first half of
+          chapters vs second half (n >= 4 with both halves >= 2)
         """
         fields = self._usable_features()
         changepoints: dict[str, list[int]] = {}
         trends: dict[str, dict[str, float]] = {}
         robust_scales: dict[str, dict[str, float]] = {}
         tail_index: dict[str, float] = {}
+        distribution_shift: dict[str, dict[str, float]] = {}
 
         for field_name in fields:
             series: list[float] = []
@@ -1002,18 +1131,34 @@ class StyleFingerprint:
                 if alpha is not None:
                     tail_index[field_name] = round(alpha, 4)
 
+            if len(series) >= 4:
+                mid = len(series) // 2
+                first, second = series[:mid], series[mid:]
+                if len(first) >= 2 and len(second) >= 2:
+                    w1 = wasserstein_1d(first, second)
+                    ks_d, ks_p = ks_2sample(first, second)
+                    distribution_shift[field_name] = {
+                        "wasserstein": round(w1, 6),
+                        "ks_d": round(ks_d, 4),
+                        "ks_p": round(ks_p, 4),
+                    }
+
         # Summary: features with significant trends (p < 0.05)
         trending = [f for f, t in trends.items() if t["p"] < 0.05]
         # Summary: features with changepoints
         segmented = list(changepoints.keys())
+        # Summary: features whose early/late chapter halves differ (KS p < 0.05)
+        shifted = [f for f, s in distribution_shift.items() if s["ks_p"] < 0.05]
 
         return {
             "changepoints": changepoints,
             "trends": trends,
             "robust_scales": robust_scales,
             "tail_index": tail_index,
+            "distribution_shift": distribution_shift,
             "trending_features": sorted(trending),
             "segmented_features": sorted(segmented),
+            "shifted_features": sorted(shifted),
         }
 
     def _usable_features(self) -> list[str]:
@@ -1153,7 +1298,7 @@ class StyleFingerprint:
         return {
             "meta": {
                 "tool": "lixity",
-                "schema_version": 3,
+                "schema_version": SCHEMA_VERSION_STYLE,
                 "n_chapters": self.n_chapters,
                 "n_features": len(FEATURES),
                 "z_mild": self.thresholds.z_mild,
@@ -1167,7 +1312,7 @@ class StyleFingerprint:
             },
             "consistency": round(self.consistency, 4),
             "baseline_diagnostics": self.baseline_diagnostics,
-            "wave2_diagnostics": self.wave2_diagnostics,
+            STRUCTURAL_DIAGNOSTICS_KEY: self.structural_diagnostics,
             "features": features,
             "deviations": {
                 str(chapter_num): {feat: round(z, 2) for feat, z in dev.items()}
@@ -1200,11 +1345,8 @@ class StyleFingerprint:
             "=" * 72,
         ]
         for field_name, label_key, unit_default in FEATURES:
-            unit = (
-                FEATURE_UNITS_DE.get(field_name, unit_default)
-                if language_key == "de"
-                else unit_default
-            )
+            unit_pack = FEATURE_UNITS.get(language_key) or FEATURE_UNITS["en"]
+            unit = unit_pack.get(field_name, unit_default)
             base = self.baseline.get(field_name, {})
             if not base.get("n"):
                 continue
@@ -1245,14 +1387,20 @@ class StyleFingerprint:
                 f"{t('mean_acf')} ρ₁={rho}"
                 + (f" · {t('low_power')}" if diag.get("low_power") else "")
             )
-        if self.wave2_diagnostics:
-            w2 = self.wave2_diagnostics
-            seg = w2.get("segmented_features") or []
-            trend = w2.get("trending_features") or []
-            if seg or trend:
-                lines.append(
-                    f"{t('wave2')}: {len(seg)} {t('segmented')} · {len(trend)} {t('trending')}"
-                )
+        if self.structural_diagnostics:
+            w2 = self.structural_diagnostics
+            seg = w2.get(ContractKeys.SEGMENTED_FEATURES) or []
+            trend = w2.get(ContractKeys.TRENDING_FEATURES) or []
+            shift = w2.get(ContractKeys.SHIFTED_FEATURES) or []
+            bits: list[str] = []
+            if seg:
+                bits.append(f"{len(seg)} {t(PASSPORT_LABEL_SEGMENTED)}")
+            if trend:
+                bits.append(f"{len(trend)} {t(PASSPORT_LABEL_TRENDING)}")
+            if shift:
+                bits.append(f"{len(shift)} {t(PASSPORT_LABEL_SHIFTED)}")
+            if bits:
+                lines.append(f"{t(PASSPORT_LABEL_STRUCTURAL)}: {' · '.join(bits)}")
         if self.dimensions:
             lines.append("-" * 72)
             field_labels = {f: label_key for f, label_key, _u in FEATURES}
@@ -1297,6 +1445,89 @@ class StyleFingerprint:
                 f"{t('chapter')} {chapter_num:>2}: Ø|z*| {format_num(mean_abs, language_key, 2)} – {named}"
             )
         return "\n".join(lines)
+
+
+def lexical_structural_diagnostics(
+    text: str, config: CorpusConfig | None = None, *, window: int = 2, top_n: int = 10
+) -> dict[str, Any]:
+    """Token-level structural diagnostics: co-occurrence fitness and early/late keyness.
+
+    Returns a JSON-safe fragment for ``structural_diagnostics``:
+
+    - ``cooccurrence``: undirected content-word graph (sliding ``window``) with
+      mean degree and Goh–Barabási degree-sequence fitness when estimable.
+    - ``keyness``: Dunning $G^2$ of the first half of chapters vs the second
+      half (content words only); ``early_over`` / ``late_over`` list the
+      strongest over-represented words per half (deterministic order).
+
+    Empty or too-short input yields ``{}``. Guards: co-occurrence needs at
+    least 50 content tokens; keyness needs both halves with ≥ 20 tokens each.
+    """
+    import re
+
+    config = config or CorpusConfig()
+    resolved = resolve_language(config, sample_text=text)
+    word_re = re.compile(resolved.word_regex)
+    blacklist = resolved.function_words | resolved.stopwords
+    chapters = split_chapters(text, config)
+    if not chapters:
+        return {}
+
+    chapter_tokens: list[list[str]] = []
+    for _num, _title, body in chapters:
+        clean = strip_inline_markup(body)
+        chapter_tokens.append([w.lower() for w in word_re.findall(clean)])
+
+    n = len(chapter_tokens)
+    all_tokens = [t for toks in chapter_tokens for t in toks]
+    content_tokens = [t for t in all_tokens if len(t) > 1 and t not in blacklist]
+    result: dict[str, Any] = {}
+
+    if len(content_tokens) >= 50:
+        degrees = cooccurrence_degrees(content_tokens, window=window)
+        fitness = goh_barabasi_fitness(degrees)
+        cooc: dict[str, Any] = {
+            "window": window,
+            "n_tokens": len(content_tokens),
+            "n_types": len(set(content_tokens)),
+            "mean_degree": round(sum(degrees) / len(degrees), 3) if degrees else 0.0,
+        }
+        if fitness is not None:
+            cooc["fitness"] = fitness
+        result[ContractKeys.COOCCURRENCE] = cooc
+
+    mid = n // 2
+    if mid >= 1 and n - mid >= 1:
+        early = Counter(
+            t for toks in chapter_tokens[:mid] for t in toks if len(t) > 1 and t not in blacklist
+        )
+        late = Counter(
+            t for toks in chapter_tokens[mid:] for t in toks if len(t) > 1 and t not in blacklist
+        )
+        total_a = sum(early.values())
+        total_b = sum(late.values())
+        if total_a >= 20 and total_b >= 20:
+            scored: list[tuple[str, float]] = []
+            for word in sorted(set(early) | set(late)):
+                g2 = dunning_g2(early[word], late[word], total_a, total_b)
+                if g2 != 0.0:
+                    scored.append((word, round(g2, 3)))
+            scored.sort(key=lambda kv: (-abs(kv[1]), kv[0]))
+            early_over = [{"word": w, "g2": g2} for w, g2 in scored if g2 > 0][:top_n]
+            late_pairs = sorted(
+                ((w, g2) for w, g2 in scored if g2 < 0),
+                key=lambda kv: (kv[1], kv[0]),
+            )[:top_n]
+            late_over = [{"word": w, "g2": g2} for w, g2 in late_pairs]
+            result[ContractKeys.KEYNESS] = {
+                "split": "first_half_vs_second_half",
+                "n_early_chapters": mid,
+                "n_late_chapters": n - mid,
+                "early_over": early_over,
+                "late_over": late_over,
+            }
+
+    return result
 
 
 def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float, float]]:

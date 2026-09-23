@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.11.0] – 2026-09-23
+
 ### Added
 
 - **Packaging & installability (SOTA):** dynamic version from
@@ -24,15 +26,24 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `--motif` and install-path hints; `lixity completion` accepts
   `bash|zsh|sh` as choices.
 - **Top-level `--help` epilog** with examples, docs URL and `LIXITY_LANG`.
-- **Wave-2 diagnostics** on the style passport (`wave2_diagnostics`,
-  `schema_version: 3`): PELT changepoints, Mann–Kendall trends, Sn/Qn
+- **Structural diagnostics** on the style passport (`structural_diagnostics`,
+  `schema_version: 4`): PELT changepoints, Mann–Kendall trends, Sn/Qn
   robust scales (alongside MAD), Hill tail index, and summary lists
   (`trending_features`, `segmented_features`); `passport_text` gains a
-  “Wave-2 diagnostics” line (en/de). Pure stdlib — no numpy/scipy.
-- **Standalone Wave-2 estimators** in `style_fingerprint` (tested, not yet
-  wired into the passport): Wasserstein-1D, two-sample KS, Dunning $G^2$
-  keyness, Goh–Barabási degree-sequence fitness, and
-  `cooccurrence_degrees` (undirected word co-occurrence graph).
+  “Structural diagnostics” line (en/de). Pure stdlib — no numpy/scipy.
+- **Wired structural estimators** (previously standalone-only):
+  - `distribution_shift` + `shifted_features`: Wasserstein-1D and
+    two-sample KS comparing the first half of chapters against the second
+    (both halves ≥ 2);
+  - `lexical_structural_diagnostics(text, config)` merges token-level blocks
+    into the passport on text-bearing surfaces (`api.fingerprint`,
+    CLI `style` / `build` / `dashboard`): `cooccurrence` (content-word
+    graph mean degree + Goh–Barabási fitness) and `keyness` (Dunning $G^2$
+    early vs late halves). Guards: ≥ 50 content tokens for the graph,
+    ≥ 20 per keyness half; single-chapter texts omit `keyness`.
+- **`CITATION.cff`**, **`.pre-commit-config.yaml`** (ruff + trailing
+  whitespace), **release workflow** (tag → wheel + GitHub Release), and
+  **GitHub Pages deploy** (`docs/` on `main`).
 - **Injectable statistical thresholds** (`z_mild`, `z_strong`, `fdr_q`,
   `fdr_method`, `dim_score_threshold`, `flag_min_severity`):
   stored on `StyleFingerprint.thresholds`, reported in every passport `meta`,
@@ -57,20 +68,37 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   \(n < 8\) — passport `baseline_diagnostics` + `passport_text` line.
 - **`docs/METHODS.md`**: formal catalogue of every estimator (MAD/σ scaling,
   z\*, BH/BY-FDR, Cliff’s δ, runs/ACF, Jacobi dimensions, LD indices,
-  readability constants, JSD, layer z, Wave-2 PELT/MK/Sn/Qn/Hill and
-  standalone Wasserstein/KS/Dunning/Goh–Barabási) with injectability
-  table including the config file.
+  readability constants, JSD, layer z, Structural PELT/MK/Sn/Qn/Hill and
+  Wasserstein/KS/Dunning/Goh–Barabási — including their passport wiring —)
+  with injectability table including the config file; Track B/C research
+  and pedagogy backlog (Burrows’ Delta / OHCO-TEI / hermeneutics, tutorials).
 - Contract tests for threshold round-trip and sensitivity settings markup
   (z mild/strong, FDR q, flags cut, dimension threshold).
 
 ### Changed
 
+- **BREAKING (schema v3 → v4):** style-passport JSON container key renamed
+  `wave2_diagnostics` → `structural_diagnostics`; passport text label
+  `wave2` → `structural` (en: “Structural diagnostics”, de: “Strukturelle
+  Diagnostik”); function `lexical_wave2_diagnostics` →
+  `lexical_structural_diagnostics`. Sub-keys (`changepoints`, `trends`,
+  `distribution_shift`, `cooccurrence`, `keyness`, …) are unchanged.
+  Project-management codenames no longer appear in public contracts.
+- **Centralised status codes** in new module `lixity.status`: `Status`
+  (UI ok/warn/error/unknown), `Tense` (present/past/mixed/neutral),
+  `Severity` (0–3 + `FLAG_MIN_SEVERITY`), `NdaStatus`, and
+  `ContractKeys` / `STRUCTURAL_DIAGNOSTICS_KEY` / `SCHEMA_VERSION_*`.
+  `style_profile.TENSE_*` / `FLAG_MIN_SEVERITY` now re-export from
+  `status`; NDA status list is server-injected (`data-nda-statuses`)
+  instead of hard-coded in `dashboard.js`.
+- **Feature units localised for all seven UI languages** (en/de/fr/es/it/pt/nl)
+  via `FEATURE_UNITS` (was: German override + English fallback only).
 - **Install docs** (README, `docs/USAGE.md`, project page, `docs/llms.txt`):
   pipx / uv / pip / pinned-tag options; development via `make install-dev`.
 - **`docs/USAGE.md` Development** section now documents `make check`
   (ruff + mypy --strict + pytest -W error) instead of the stale unittest count.
-- **GH Pages** (`docs/index.html`): Wave-2 FAQ and feature pills, style
-  schema v3, BH/BY, injectable thresholds, structure-module cards, Methods /
+- **GH Pages** (`docs/index.html`): Structural FAQ and feature pills, style
+  schema v4, BH/BY, injectable thresholds, structure-module cards, Methods /
   Contributing / Security footer links, installation matrix.
 - **`.gitignore`** hardened: agent/tool workspaces (`.remember/`, `.claude/`,
   …), coverage formats, keystores / `.netrc` / swap files, stray
@@ -91,7 +119,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   to `render_dashboard`; `api.profile` / `api.dashboard` accept
   `flag_min_severity` explicitly.
 - Passport `meta` now reports `min_chapters` and `flag_min_severity`
-  alongside the Wave-1 thresholds.
+  alongside the z\*/FDR thresholds.
 - **Style reference rows are fully clickable**: every `.band-row` jumps to
   that feature's heatmap column (`#feat-<field>`), activates the matching
   style layer when one exists, and preselects “deviations only” when the
@@ -632,6 +660,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.11.0...HEAD
+[1.11.0]: https://github.com/mfahsold/lixity/compare/v1.10.0...v1.11.0
+[1.10.0]: https://github.com/mfahsold/lixity/compare/v1.9.1...v1.10.0
 [1.0.2]: https://github.com/mfahsold/lixity/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/mfahsold/lixity/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/mfahsold/lixity/releases/tag/v1.0.0

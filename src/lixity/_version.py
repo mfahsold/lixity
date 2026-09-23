@@ -1,3 +1,3 @@
 """Single source of truth for the package version (readable by setuptools without imports)."""
 
-__version__ = "1.10.0"
+__version__ = "1.11.0"

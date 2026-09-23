@@ -29,8 +29,14 @@ RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
 .venv/bin/mypy --strict src
 ```
 
-CI (`.github/workflows/tests.yml`) runs the same checks on Python 3.10 and
-3.12 plus a wheel packaging job.
+CI (`.github/workflows/tests.yml`) runs the same checks on Python 3.10–3.13
+plus a wheel packaging job. Optional local hooks:
+`pre-commit install` (trailing whitespace, YAML check, ruff `--fix` — see
+[`.pre-commit-config.yaml`](.pre-commit-config.yaml)). Tags matching `v*`
+build a wheel and open a GitHub Release (`.github/workflows/release.yml`);
+pushes to `main` under `docs/` deploy GitHub Pages
+(`.github/workflows/pages.yml` — enable Pages → Source: GitHub Actions in
+repo settings once).
 
 ## Pull requests
 

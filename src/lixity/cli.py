@@ -736,6 +736,11 @@ def _cmd_build(args: argparse.Namespace) -> int:
         parse_markdown_blocks(text)
     )
     fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
+    from .style_fingerprint import lexical_structural_diagnostics
+
+    lexical = lexical_structural_diagnostics(text, config)
+    if lexical:
+        fingerprint.structural_diagnostics.update(lexical)
     title = os.path.splitext(os.path.basename(workspace.manuscript))[0]
 
     artifacts = {
@@ -827,7 +832,7 @@ def main(argv: list[str] | None = None) -> int:
         ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
         ("motifs", "Motif tracking and repetition analysis (text/JSON)"),
         ("showing", "Showing vs. telling balance (text/JSON)"),
-        ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v3)"),
+        ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
         ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
         ("about", "Tool metadata for agents: languages, features, heuristics"),
@@ -1046,6 +1051,11 @@ def main(argv: list[str] | None = None) -> int:
         metrics = CorpusAnalyzer(config).analyze_text(text)
         fp_thresholds, _profile_t = _thresholds_and_profile(args)
         fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
+        from .style_fingerprint import lexical_structural_diagnostics
+
+        lexical = lexical_structural_diagnostics(text, config)
+        if lexical:
+            fingerprint.structural_diagnostics.update(lexical)
         if args.json:
             print(_json(fingerprint.passport(), indent=True))
         else:
@@ -1060,6 +1070,11 @@ def main(argv: list[str] | None = None) -> int:
     fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
     from .characters import presence_report
     from .dialogue import dialogue_report
+    from .style_fingerprint import lexical_structural_diagnostics as _lexical_structural
+
+    _lex = _lexical_structural(text, config)
+    if _lex:
+        fingerprint.structural_diagnostics.update(_lex)
 
     names = [
         part.strip() for part in (getattr(args, "names", None) or "").split(",") if part.strip()

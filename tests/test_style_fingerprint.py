@@ -16,6 +16,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
 
+from lixity import api  # noqa: E402
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
 from lixity.diversity import hd_d  # noqa: E402
 from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
@@ -26,6 +27,7 @@ from lixity.style_fingerprint import (  # noqa: E402
     benjamini_hochberg,
     jacobi_eigh,
     layer_stats,
+    lexical_structural_diagnostics,
     mad,
     median,
     robust_z,
@@ -377,7 +379,7 @@ class TestStyleDimensions(unittest.TestCase):
 
     def test_passport_meta_v2(self):
         passport = self.fp.passport()
-        self.assertEqual(passport["meta"]["schema_version"], 3)
+        self.assertEqual(passport["meta"]["schema_version"], 4)
         self.assertIn("expected_false_positives", passport["meta"])
         self.assertIn("dimensions", passport)
         self.assertIn("fdr_flagged", passport)
@@ -414,7 +416,7 @@ class TestStyleDimensions(unittest.TestCase):
 
 
 # ---------------------------------------------------------------------------
-#  Wave-2 tests
+#  Structural diagnostics tests
 # ---------------------------------------------------------------------------
 
 
@@ -678,37 +680,54 @@ class TestSnQn(unittest.TestCase):
         self.assertEqual(qn_estimator(data), qn_estimator(data))
 
 
-class TestWave2Integration(unittest.TestCase):
-    """Wave-2 diagnostics integrated into the style fingerprint pipeline."""
+class TestStructuralIntegration(unittest.TestCase):
+    """Structural diagnostics integrated into the style fingerprint pipeline."""
 
     def setUp(self):
         self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
         self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
         self.fp = StyleFingerprint.from_metrics(self.metrics)
 
-    def test_wave2_diagnostics_exist(self):
-        self.assertIsInstance(self.fp.wave2_diagnostics, dict)
-        self.assertIn("changepoints", self.fp.wave2_diagnostics)
-        self.assertIn("trends", self.fp.wave2_diagnostics)
-        self.assertIn("robust_scales", self.fp.wave2_diagnostics)
-        self.assertIn("trending_features", self.fp.wave2_diagnostics)
-        self.assertIn("segmented_features", self.fp.wave2_diagnostics)
+    def test_structural_diagnostics_exist(self):
+        self.assertIsInstance(self.fp.structural_diagnostics, dict)
+        self.assertIn("changepoints", self.fp.structural_diagnostics)
+        self.assertIn("trends", self.fp.structural_diagnostics)
+        self.assertIn("robust_scales", self.fp.structural_diagnostics)
+        self.assertIn("distribution_shift", self.fp.structural_diagnostics)
+        self.assertIn("trending_features", self.fp.structural_diagnostics)
+        self.assertIn("segmented_features", self.fp.structural_diagnostics)
+        self.assertIn("shifted_features", self.fp.structural_diagnostics)
 
-    def test_wave2_in_passport(self):
+    def test_structural_distribution_shift_structure(self):
+        shift = self.fp.structural_diagnostics.get("distribution_shift", {})
+        self.assertIsInstance(shift, dict)
+        for entry in shift.values():
+            self.assertIn("wasserstein", entry)
+            self.assertIn("ks_d", entry)
+            self.assertIn("ks_p", entry)
+            self.assertGreaterEqual(entry["wasserstein"], 0.0)
+            self.assertGreaterEqual(entry["ks_p"], 0.0)
+            self.assertLessEqual(entry["ks_p"], 1.0)
+        shifted = self.fp.structural_diagnostics.get("shifted_features", [])
+        for field_name in shifted:
+            self.assertIn(field_name, shift)
+            self.assertLess(shift[field_name]["ks_p"], 0.05)
+
+    def test_structural_in_passport(self):
         passport = self.fp.passport()
-        self.assertIn("wave2_diagnostics", passport)
-        self.assertEqual(passport["meta"]["schema_version"], 3)
+        self.assertIn("structural_diagnostics", passport)
+        self.assertEqual(passport["meta"]["schema_version"], 4)
 
-    def test_wave2_json_serialisable(self):
+    def test_structural_json_serialisable(self):
         passport = self.fp.passport()
         json.dumps(passport)  # must not raise
 
-    def test_wave2_deterministic(self):
+    def test_structural_deterministic(self):
         fp2 = StyleFingerprint.from_metrics(self.metrics)
-        self.assertEqual(self.fp.wave2_diagnostics, fp2.wave2_diagnostics)
+        self.assertEqual(self.fp.structural_diagnostics, fp2.structural_diagnostics)
 
     def test_trends_structure(self):
-        for trend in self.fp.wave2_diagnostics.get("trends", {}).values():
+        for trend in self.fp.structural_diagnostics.get("trends", {}).values():
             self.assertIn("tau", trend)
             self.assertIn("S", trend)
             self.assertIn("p", trend)
@@ -716,7 +735,7 @@ class TestWave2Integration(unittest.TestCase):
             self.assertLessEqual(trend["p"], 1.0)
 
     def test_robust_scales_structure(self):
-        for scales in self.fp.wave2_diagnostics.get("robust_scales", {}).values():
+        for scales in self.fp.structural_diagnostics.get("robust_scales", {}).values():
             self.assertIn("sn", scales)
             self.assertIn("qn", scales)
             self.assertIn("sigma_mad", scales)
@@ -724,7 +743,7 @@ class TestWave2Integration(unittest.TestCase):
             self.assertGreaterEqual(scales["qn"], 0.0)
 
     def test_tail_index_present_when_measurable(self):
-        tail = self.fp.wave2_diagnostics.get("tail_index", {})
+        tail = self.fp.structural_diagnostics.get("tail_index", {})
         self.assertIsInstance(tail, dict)
         for alpha in tail.values():
             self.assertGreater(alpha, 0.0)
@@ -736,11 +755,112 @@ class TestWave2Integration(unittest.TestCase):
         self.assertEqual(meta["flag_min_severity"], self.fp.thresholds.flag_min_severity)
         self.assertEqual(meta["min_chapters"], self.fp.thresholds.min_chapters)
 
-    def test_passport_text_mentions_wave2_when_present(self):
+    def test_passport_text_mentions_structural_when_present(self):
         text = self.fp.passport_text(language_key="en")
-        w2 = self.fp.wave2_diagnostics
-        if w2.get("segmented_features") or w2.get("trending_features"):
-            self.assertIn("Wave-2 diagnostics", text)
+        w2 = self.fp.structural_diagnostics
+        if (
+            w2.get("segmented_features")
+            or w2.get("trending_features")
+            or w2.get("shifted_features")
+        ):
+            self.assertIn("Structural diagnostics", text)
+
+    def test_passport_text_labels_shifted_in_de_and_en(self):
+        fp = StyleFingerprint.from_metrics(self.metrics)
+        fp.structural_diagnostics.setdefault("distribution_shift", {"asl": {"ks_p": 0.01}})
+        fp.structural_diagnostics["shifted_features"] = ["asl"]
+        self.assertIn("shifted features", fp.passport_text(language_key="en"))
+        self.assertIn("verschobene Merkmale", fp.passport_text(language_key="de"))
+
+
+class TestLexicalStructural(unittest.TestCase):
+    """Token-level structural: co-occurrence fitness + Dunning keyness halves."""
+
+    def setUp(self):
+        self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        # Multi-chapter German prose long enough for keyness (≥ 20 content
+        # tokens per half) and co-occurrence (≥ 50 content tokens).
+        paragraphs = [
+            "Das alte Haus stand am Ende der stillen Straße und der Wind "
+            "bewegte die Blätter der Bäume. Die Bewohner sprachen leise "
+            "über die kommenden Veränderungen und ihre gemeinsamen Sorgen. "
+            "Jeder Morgen begann mit dem Klang der Glocken und dem Duft "
+            "von frischem Brot aus der Bäckerei gegenüber. Niemand wusste "
+            "genau, wie lange diese Ruhe noch dauern würde in der kleinen "
+            "Stadt am Flussufer mit ihren vielen Gassen und Höfen. "
+            "Am Nachmittag sammelten sich die Kinder auf dem Markt und "
+            "spielten laut, während die Erwachsenen ihre Einkäufe trugen. "
+            "Der Lehrer erklärte die neue Ordnung der Dinge und die "
+            "Bürger hörten aufmerksam zu, denn niemand wollte den "
+            "Frieden gefährden, den man sich über Jahre erarbeitet hatte. "
+            "Abends leuchteten die Fenster warm und man hörte Musik aus "
+            "den offenen Türen der Gasthäuser am Hafen. Die Fischer "
+            "kamen mit ihren Netzen zurück und erzählten von Stürmen, "
+            "die niemand am Ufer gesehen hatte. Am nächsten Tag wieder "
+            "derselbe Rhythmus: Arbeit, Gespräch und das leise Geheimnis "
+            "der Stadt, das jeder für sich behielt und doch mit allen teilte."
+        ]
+        blocks = [f"## Kap {i + 1}\n\n" + paragraphs[i % len(paragraphs)] + "\n" for i in range(4)]
+        self.text = "\n".join(blocks)
+        self.lexical = lexical_structural_diagnostics(self.text, self.config)
+
+    def test_cooccurrence_block(self):
+        cooc = self.lexical.get("cooccurrence")
+        self.assertIsInstance(cooc, dict)
+        if not isinstance(cooc, dict):
+            return
+        self.assertIn("window", cooc)
+        self.assertIn("n_tokens", cooc)
+        self.assertIn("mean_degree", cooc)
+        self.assertGreaterEqual(cooc["n_tokens"], 50)
+        self.assertGreaterEqual(cooc["mean_degree"], 0.0)
+        if "fitness" in cooc:
+            fitness = cooc["fitness"]
+            self.assertIsInstance(fitness, dict)
+            if isinstance(fitness, dict):
+                self.assertIn("exponent", fitness)
+                self.assertIn("ks_distance", fitness)
+                self.assertIn("p_value", fitness)
+
+    def test_keyness_block_halves(self):
+        keyness = self.lexical.get("keyness")
+        self.assertIsInstance(keyness, dict)
+        if not isinstance(keyness, dict):
+            return
+        self.assertEqual(keyness["split"], "first_half_vs_second_half")
+        self.assertEqual(keyness["n_early_chapters"], 2)
+        self.assertEqual(keyness["n_late_chapters"], 2)
+        early = keyness["early_over"]
+        late = keyness["late_over"]
+        self.assertIsInstance(early, list)
+        self.assertIsInstance(late, list)
+        for item in early:
+            self.assertGreater(item["g2"], 0.0)
+            self.assertIn("word", item)
+        for item in late:
+            self.assertLess(item["g2"], 0.0)
+
+    def test_lexical_is_deterministic(self):
+        again = lexical_structural_diagnostics(self.text, self.config)
+        self.assertEqual(self.lexical, again)
+
+    def test_empty_text_returns_empty(self):
+        self.assertEqual(lexical_structural_diagnostics("", self.config), {})
+
+    def test_single_chapter_skips_keyness_but_may_keep_cooccurrence(self):
+        one = "## Kap 1\n\n" + ("Wort " * 80) + "\n"
+        out = lexical_structural_diagnostics(one, self.config)
+        self.assertNotIn("keyness", out)
+
+    def test_api_fingerprint_merges_lexical_structural(self):
+        passport = api.fingerprint(self.text, language="de")
+        w2 = passport["structural_diagnostics"]
+        self.assertIn("distribution_shift", w2)
+        self.assertIn("shifted_features", w2)
+        # 4 chapters with enough content -> keyness + cooccurrence both present
+        self.assertIn("cooccurrence", w2)
+        self.assertIn("keyness", w2)
+        json.dumps(passport)
 
 
 class TestGohBarabasi(unittest.TestCase):

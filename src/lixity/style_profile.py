@@ -12,14 +12,30 @@ from .language import compile_pattern, resolve_language
 from .markdown_parser import strip_inline_markup
 from .models import CorpusConfig
 from .sentences import split_sentences
+from .status import (
+    FLAG_MIN_SEVERITY,
+    TENSE_MIXED,
+    TENSE_NEUTRAL,
+    TENSE_PAST,
+    TENSE_PRESENT,
+)
 
-TENSE_PRESENT = "present"
-TENSE_PAST = "past"
-TENSE_MIXED = "mixed"
-TENSE_NEUTRAL = "neutral"
+__all__ = [
+    "FLAG_MIN_SEVERITY",
+    "TENSE_MIXED",
+    "TENSE_NEUTRAL",
+    "TENSE_PAST",
+    "TENSE_PRESENT",
+    "ChapterProfile",
+    "ParagraphProfile",
+    "ParagraphProfiler",
+    "ProfileThresholds",
+    "classify_severity",
+    "dominance_from_hits",
+    "flagged_paragraphs",
+]
 
-FLAG_MIN_SEVERITY = 2
-"""Severity at which a paragraph counts as flagged (level 1 = watch only)."""
+# Re-exported from lixity.status (single source of truth).
 
 
 def dominance_from_hits(present: int, past: int, neutral_max_hits: int = 1) -> str:

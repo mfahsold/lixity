@@ -21,7 +21,7 @@ from ..language_data import (
     METRIC_LABELS,
     UI_LABELS,
 )
-from ..style_profile import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT
+from ..status import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT, Status
 
 _DEFAULT_LABELS = {
     **EN_LABELS,
@@ -56,7 +56,7 @@ def help_term(labels: Mapping[str, str] | None, key: str, text: str) -> str:
     )
 
 
-# Canonical tense values (style_profile.TENSE_*) are the label keys themselves.
+# Canonical tense values (status.TENSE_*) are the label keys themselves.
 _TENSE_CLASSES = {TENSE_PRESENT, TENSE_PAST, TENSE_MIXED, TENSE_NEUTRAL}
 
 
@@ -172,15 +172,20 @@ def status_strip(
 ) -> str:
     """Central component status line: one dot + label + detail per component.
 
-    ``items`` is a sequence of mappings with ``key``, ``state``
-    (``ok``/``warn``/``error``/``unknown``) and ``detail``. Labels are resolved
-    from the language profile (``status_<key>``); the strip is deterministic
-    (counts and names only, no timestamps).
+    ``items`` is a sequence of mappings with ``key``, ``state`` (a
+    :class:`lixity.status.Status` value: ``ok``/``warn``/``error``/``unknown``)
+    and ``detail``. Labels are resolved from the language profile
+    (``status_<key>``); the strip is deterministic (counts and names only,
+    no timestamps).
     """
     entries = []
     for item in items or ():
         key = str(item.get("key", ""))
-        state = str(item.get("state", "unknown"))
+        raw_state = str(item.get("state", Status.UNKNOWN.value))
+        try:
+            state = Status(raw_state).value
+        except ValueError:
+            state = Status.UNKNOWN.value
         detail = esc(item.get("detail", ""))
         name = label(labels, f"status_{key}")
         entries.append(

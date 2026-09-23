@@ -31,7 +31,7 @@ uv tool install git+https://github.com/mfahsold/lixity.git
 pip install git+https://github.com/mfahsold/lixity.git
 
 # pin a release
-pip install "git+https://github.com/mfahsold/lixity.git@v1.10.0"
+pip install "git+https://github.com/mfahsold/lixity.git@v1.11.0"
 ```
 
 Development install (editable, with the test suite):
@@ -282,14 +282,20 @@ sizes; the passport also reports baseline exchangeability diagnostics
 (runs test, lag-1 ACF). Additionally, the style reference derives
 the manuscript's own abstract **style dimensions** (Spearman correlation of
 the features, Jacobi eigendecomposition) with loadings and per-chapter
-scores, plus redundant feature pairs (|ρ| ≥ 0.8). Whether a deviation is
+scores, plus redundant feature pairs (|ρ| ≥ 0.8). Structural structural
+diagnostics ride along in `structural_diagnostics`: PELT changepoints, Mann–Kendall
+trends, Sn/Qn scales, Hill tail index, early/late Wasserstein–KS
+`distribution_shift` / `shifted_features`, and — because `style` builds from
+source text — token-level `cooccurrence` (mean degree + Goh–Barabási
+fitness) and `keyness` (Dunning G² for the first half of chapters vs the
+second; omitted for single-chapter texts). Whether a deviation is
 intended (register scene) or drift is for the author to decide, never the
 engine. The style reference doubles as a constraint block for authoring and editing
 (human or assisting LLM).
 
 ```bash
 lixity style manuscript.md          # text block
-lixity style manuscript.md --json   # machine-readable (schema v3)
+lixity style manuscript.md --json   # machine-readable (schema v4)
 lixity style manuscript.md --json --z-mild 1.5 --fdr-q 0.1 --fdr-method by
 ```
 
@@ -371,7 +377,7 @@ manuscript, creates the subfolders `exports/` (with `exports/archive/`) and
 
 - `exports/<slug>_metrics.json` – full corpus metrics (schema_version 2 meta),
 - `exports/<slug>_profile.json` – paragraph-accurate tense profiles,
-- `exports/<slug>_style.json` – self-calibrated style reference (schema v3),
+- `exports/<slug>_style.json` – self-calibrated style reference (schema v4),
 - `exports/<slug>_style_passport.txt` – human-readable style reference (legacy file name),
 - `exports/<slug>_report.md` – Markdown dossier report,
 - `exports/<slug>_dashboard.html` – single-file HTML dashboard.

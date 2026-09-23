@@ -70,7 +70,7 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
   (2026), not as a verdict – the self-calibrating, author-centred design
   matches this guidance.
 
-**Wave-2 structural diagnostics.**
+**Structural diagnostics.**
 - PELT (Killick et al. 2012) is the standard exact changepoint method;
   the BIC penalty $2\ln n$ is the default for Gaussian cost and keeps the
   segment count conservative. Changepoints mark *where* the house style
@@ -86,12 +86,25 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 - Hill’s $\hat\alpha$ estimates the power-law tail exponent; values
   $\alpha \lesssim 2$ flag a heavy-tailed feature (occasional extreme
   chapters) that a median/MAD band will under-represent.
-- Goh–Barabási (Goh et al. 2001) fits discrete power laws to degree
-  sequences; the KS distance and asymptotic $p$ report fit quality, not
-  “scale-free-ness” as a verdict.
-- Wasserstein-1D and two-sample KS compare chapter sub-distributions;
-  Dunning $G^2$ is the standard keyness measure for sub-corpus contrasts.
-  All are standalone, deterministic, stdlib-only.
+- Early/late **Wasserstein + two-sample KS** (`distribution_shift`) answer
+  whether the first half of the book differs distributionally from the
+  second half; KS $p$ is asymptotic (fine for $n \ge 10$, heuristic below).
+- **Dunning $G^2$** is the standard keyness measure for sub-corpus
+  contrasts; Lixity’s early/late split is a *documented heuristic* (chapter
+  count midpoint), not a fitted breakpoint — read it with PELT
+  `changepoints` when the halves look arbitrary.
+- **Goh–Barabási** (Goh et al. 2001) fits discrete power laws to the
+  content-word co-occurrence degree sequence; the KS distance and
+  asymptotic $p$ report fit quality, not “scale-free-ness” as a verdict.
+- **Co-occurrence degrees** (window = 2 by default) are a structural signal
+  over *content* words only; function/stop words are excluded so the graph
+  reflects topical co-occurrence, not syntax.
+
+**Track B / C (research & pedagogy, not shipped).** Textometry / Burrows’
+Delta (and 2026 JS/Rank-Turbulence generalisations), OHCO/TEI interchange,
+a deeper hermeneutic layer on flagged cells, and worked tutorial walks are
+catalogued as future directions in [`METHODS.md`](METHODS.md) Track B/C —
+they are not current product features and must not be cited as such.
 
 **Accessibility / data visualisation (WCAG 2.2).**
 - Colour must never be the only channel (SC 1.4.1, 1.3.3): the heatmap
@@ -142,11 +155,13 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 | 32 | Type safety & warnings | untyped helpers and warning noise could hide defects | strict typing was off; `\w` in a docstring raised a SyntaxWarning | 🟠 → **fixed**: `mypy --strict` clean (0 errors) and enforced in CI; `python -W error` test run is clean |
 | 33 | Marker controls in jumpable rows | a click on “+ kind”/“Resolve” inside a `row-link` also fired the row jump (marker buttons carry `data-line`, which the INTERACTIVE selector matched) | double action: note field opened *and* the page scrolled | 🟠 → **fixed**: `isMarkerControl()` guard in click *and* keydown handlers; contract test asserts the guard |
 | 34 | Flagged list length | severity ≥ 2 rows grow linearly with manuscript size (100+ rows in a novel) | a flat list would push the dashboard top down | 🟡 **documented**: capped scroll area (sticky header, ~26 rem); severity-descending sort keeps the worst cases visible |
-| 35 | Wave-2 changepoints | PELT on short series ($n < 8$) can over-segment; BIC penalty is conservative but not a stationarity proof | $n \ge 3$ required; penalty $2\ln n$ | 🟡 **documented**: `segmented_features` is a signal to inspect, not a proof of regime change; read with `trends` and JSD drivers |
+| 35 | Structural changepoints | PELT on short series ($n < 8$) can over-segment; BIC penalty is conservative but not a stationarity proof | $n \ge 3$ required; penalty $2\ln n$ | 🟡 **documented**: `segmented_features` is a signal to inspect, not a proof of regime change; read with `trends` and JSD drivers |
 | 36 | Mann–Kendall $p$ | normal approximation degrades for very short series; ties affect $\tau$ | $n \ge 3$ required | 🟡 **documented**: `trending_features` uses $p < 0.05$ as a heuristic cut; treat $n < 10$ as provisional |
 | 37 | Hill tail index | $\hat\alpha$ biased for small $k$; undefined for non-positive values | $n \ge 5$, $k = \lfloor\sqrt n\rfloor$ | 🟡 **documented**: `tail_index` is diagnostic only; low $\alpha$ = occasional extreme chapters, not a quality problem |
 | 38 | Sn / Qn vs. MAD | different consistency constants ($1.1926$, $2.2219$); $O(n^2)$ | both reported side by side in `robust_scales` | 🟡 **documented**: Sn/Qn are cross-checks, not replacements for the MAD band; disagreement flags outlier sensitivity |
-| 39 | Goh–Barabási fit | discrete power-law fit on short degree sequences is unreliable | $n \ge 5$ positive degrees, non-constant | 🟡 **documented**: standalone helper; KS $p$ is asymptotic, not exact for tiny samples |
+| 39 | Goh–Barabási fit | discrete power-law fit on short degree sequences is unreliable | $n \ge 5$ positive degrees, non-constant | 🟡 **documented**: needs ≥ 50 content tokens for the co-occurrence graph; KS $p$ is asymptotic, not exact for tiny samples |
 | 40 | Parallel split paths | `dialogue` and `analyzer` once had divergent `split_chapters` implementations | chapter numbering could drift | 🟠 → **fixed**: single source in `markdown_parser.split_chapters` (re-export from `dialogue`); regression test asserts shared titles + sequential numbering |
 | 41 | Threshold resolution | three call sites built `FingerprintThresholds` independently (CLI / API / dashboard) | a new key could be wired on one path only | 🟠 → **fixed**: one builder `config.resolve_thresholds` (kwargs > project config > default); unit tests cover each precedence level |
 | 42 | `flag_min_severity` wiring | profile / dashboard / CLI each resolved the flags cut differently | raising the floor could leave stale counts in one surface | 🟠 → **fixed**: end-to-end plumbing (CLI `_thresholds_and_profile` → `ProfileThresholds` → `render_dashboard(flag_min_severity=…)`); contract tests for profile + dashboard select |
+| 43 | Structural early/late split | `distribution_shift` / `keyness` use a chapter-count midpoint, not a fitted breakpoint | PELT may place the break elsewhere | 🟡 **documented**: heuristic halves; cross-read with `changepoints` and `trends` |
+| 44 | Token-level structural only on text surfaces | `from_metrics` alone has no tokens, so `cooccurrence` / `keyness` appear only when built from source text | a metrics-only passport looks “incomplete” | 🟡 **documented** in METHODS §4c: merge via `lexical_structural_diagnostics`; metric-derived keys always present |

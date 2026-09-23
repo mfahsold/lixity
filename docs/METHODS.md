@@ -112,10 +112,12 @@ On the ordered per-feature series $x_1,\dots,x_n$ (chapters in order):
 - `low_power` is true for $n < 8$ chapters — treat every downstream
   significance claim as provisional.
 
-## 4c. Wave-2 diagnostics (`wave2_diagnostics`)
+## 4c. Structural diagnostics (`structural_diagnostics`)
 
 Pure-stdlib structural and distributional diagnostics over the ordered
-per-feature series (chapters in order). They answer *where* and *how*
+per-feature series (chapters in order) plus token-level lexical diagnostics
+when the passport is built from source text (`api.fingerprint`, `lixity style`,
+`lixity build`, `lixity dashboard`). They answer *where* and *how*
 the house style shifts — orthogonal to the per-cell z\*/FDR layer.
 
 | Key | Estimator | Guard / notes |
@@ -124,28 +126,52 @@ the house style shifts — orthogonal to the per-cell z\*/FDR layer.
 | `trends` | **Mann–Kendall** monotonic trend: $\tau$, $S$, two-sided normal $p$ (tie-corrected variance, continuity correction) | $n < 3$ → `None`; constant → $(0,0,1)$ |
 | `robust_scales` | **Sn** (Rousseeuw & Croux 1993, consistency $c_n = 1.1926$) and **Qn** (same paper, $d_n = 2.2219$), alongside $1.4826\cdot\mathrm{MAD}$ | $n < 2$ → $0$; Sn/Qn have 50 % breakdown (vs. MAD's 50 % with lower Gaussian efficiency) |
 | `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None` |
+| `distribution_shift` | **Wasserstein-1D** $W_1$ (L¹ integral of quantile functions) and **two-sample KS** ($D$, asymptotic $p$) of the first half of chapters vs the second half, per feature | both halves $\ge 2$ (so $n \ge 4$); empty half → omitted |
 | `trending_features` | feature names with Mann–Kendall $p < 0.05$ | summary list |
 | `segmented_features` | feature names with at least one PELT changepoint | summary list |
+| `shifted_features` | feature names with early/late KS $p < 0.05$ | summary list |
+| `cooccurrence` *(token-level)* | undirected content-word graph (sliding window, default 2) with mean degree and **Goh–Barabási** degree-sequence fitness $\hat\alpha = 1 + n/\sum\ln(k_i/(k_{\min}-0.5))$ + KS fit | needs ≥ 50 content tokens; fit omitted when degenerate / $n<5$ / constant |
+| `keyness` *(token-level)* | **Dunning $G^2$** (log-likelihood ratio) of first-half chapters vs second half, content words only; signed so positive = over in the early half | both halves ≥ 20 content tokens; single-chapter texts omit `keyness` |
 
-Additional standalone helpers (same module, not yet wired into the passport):
+Token-level blocks (`cooccurrence`, `keyness`) are computed by
+`lexical_structural_diagnostics(text, config)` and merged into
+`structural_diagnostics` on the text-bearing surfaces (`api.fingerprint`,
+CLI `style` / `build` / `dashboard`). `StyleFingerprint.from_metrics`
+alone still yields the metric-derived keys only.
 
-- **Wasserstein-1D** ($W_1$): $L^1$ integral of the quantile functions of two
-  empirical samples; empty sample → $0$.
-- **Two-sample KS**: maximum absolute CDF difference with asymptotic
-  $p$-value; empty sample → $(0, 1)$.
-- **Dunning $G^2$** (log-likelihood ratio keyness): signed so positive =
-  over-represented in sub-corpus A; zero totals or term absent → $0$.
-- **Goh–Barabási fitness**: discrete power-law fit of a degree sequence,
-  $\hat\alpha = 1 + n/\sum\ln(k_i/(k_{\min}-0.5))$, plus KS distance and
-  asymptotic $p$; empty / $n<5$ / constant / non-positive denominator → `None`.
-- **Co-occurrence degrees**: undirected word co-occurrence graph (nodes =
-  token types, edges within a sliding window, no self-loops); returns one
-  degree per distinct token (isolates = $0$).
+The passport `meta` block reports `schema_version: 4`, `min_chapters` and
+`flag_min_severity` alongside the z\*/FDR thresholds; `passport_text` adds a
+“Structural diagnostics” line when any feature has a changepoint, significant
+trend or early/late distribution shift.
 
-The passport `meta` block reports `schema_version: 3`, `min_chapters` and
-`flag_min_severity` alongside the Wave-1 thresholds; `passport_text` adds a
-“Wave-2 diagnostics” line when any feature has a changepoint or significant
-trend.
+### Track B / research extensions (not implemented)
+
+Documented research directions, **not** current product features:
+
+- **Textometry / Burrows’ Delta** (and 2026 generalisations to Jensen–
+  Shannon / Rank-Turbulence Delta): authorship-attribution baselines.
+  Lixity’s chapter↔rest JSD with driver words is *inspired by* this line
+  but deliberately **not** an attribution instrument (see STABILITY §1).
+  A future Delta panel would rank chapters against an external reference
+  corpus — out of scope while the product stays manuscript-intrinsic.
+- **OHCO / TEI**: the hierarchical ordered corpus of hypotheses (OHCO) and
+  TEI XML are the scholarly interchange standards. Lixity’s input contract
+  is UTF-8 Markdown with `## ` chapter headings (configurable
+  `chapter_regex` / `appendix_marker`); a TEI→Markdown ingest path would be
+  the natural bridge, not a second analysis core.
+- **Hermeneutic loop / Foregrounding (Mukařovský)**: deviation from a
+  text’s *own* norm is the literary signal — already the design principle
+  of the self-calibrating house style. A deeper hermeneutic layer (quotes,
+  interpretive commentary tied to flagged cells) is UI/agent territory, not
+  a new estimator.
+
+### Track C / pedagogy (not implemented)
+
+- Worked examples that walk one chapter from KPI → heatmap → paragraph →
+  marker, suitable as a tutorial on the project page.
+- Glossary of every passport key for non-statisticians (beyond `llms.txt`).
+- Exportable “method card” (estimator + citation + guard) per metric for
+  peer review / replication packages.
 
 ## 5. Latent style dimensions
 

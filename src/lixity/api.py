@@ -15,7 +15,12 @@ from .config import resolve_thresholds
 from .language import LANGUAGE_PROFILES, resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import SCHEMA_VERSION, CorpusConfig
-from .style_fingerprint import FingerprintThresholds, StyleFingerprint
+from .status import SCHEMA_VERSION_STYLE
+from .style_fingerprint import (
+    FingerprintThresholds,
+    StyleFingerprint,
+    lexical_structural_diagnostics,
+)
 from .style_profile import ParagraphProfiler, ProfileThresholds
 from .ui import render_dashboard
 
@@ -102,6 +107,10 @@ def fingerprint(
     Thresholds (z_mild=2.5, z_strong=3.5, fdr_q=0.05, fdr_method='bh',
     dim_score_threshold=2.5) are injectable; ``None`` keeps the documented
     defaults. Returns the style reference dict (see docs/AGENTS.md).
+
+    In addition to the metrics-derived structural block, the passport carries
+    token-level ``structural_diagnostics.cooccurrence`` / ``.keyness`` computed
+    from ``text`` (Dunning G² early vs late half, Goh–Barabási fitness).
     """
     config, _resolved = _config_and_language(language, text, **config_overrides)
     metrics = CorpusAnalyzer(config).analyze_text(text)
@@ -113,7 +122,11 @@ def fingerprint(
         dim_score_threshold=dim_score_threshold,
         flag_min_severity=flag_min_severity,
     )
-    return StyleFingerprint.from_metrics(metrics, thresholds=thresholds).passport()
+    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds)
+    lexical = lexical_structural_diagnostics(text, config)
+    if lexical:
+        fingerprint.structural_diagnostics.update(lexical)
+    return fingerprint.passport()
 
 
 def _thresholds(
@@ -282,6 +295,9 @@ def dashboard(
         parse_markdown_blocks(text)
     )
     fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds)
+    lexical = lexical_structural_diagnostics(text, config)
+    if lexical:
+        fingerprint.structural_diagnostics.update(lexical)
     from .markers import list_markers
 
     marker_items = list_markers(text)
@@ -372,9 +388,12 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "style",
-                "purpose": "self-calibrating style reference (bands, z*, FDR, dimensions, wave-2 diagnostics)",
+                "purpose": (
+                    "self-calibrating style reference (bands, z*, FDR, dimensions, "
+                    "structural diagnostics incl. distribution shift, co-occurrence fitness, keyness)"
+                ),
                 "output": "text|json",
-                "schema_version": 3,
+                "schema_version": SCHEMA_VERSION_STYLE,
             },
             {
                 "name": "dashboard",

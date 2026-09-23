@@ -6,9 +6,11 @@ chapter metrics, tense profiles, and synchronization reports.
 
 from pydantic import BaseModel, Field
 
+from .status import SCHEMA_VERSION_ANALYZE
+
 # Version of the machine-readable JSON contracts (analyze/profile).
 # v2: tense values are language-neutral (present/past/mixed/neutral).
-SCHEMA_VERSION = 2
+SCHEMA_VERSION = SCHEMA_VERSION_ANALYZE
 
 
 class CorpusConfig(BaseModel):

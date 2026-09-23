@@ -1,0 +1,50 @@
+name: release
+on:
+  push:
+    tags: ["v*"]
+permissions:
+  contents: write
+jobs:
+  build-and-release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install build
+      - run: python -m build
+      - name: Verify wheel version matches tag
+        run: |
+          python - <<'PY'
+          import glob, re, sys, zipfile
+          from pathlib import Path
+
+          tag = "${{ github.ref_name }}"
+          expected = tag[1:] if tag.startswith("v") else tag
+          version_py = Path("src/lixity/_version.py").read_text(encoding="utf-8")
+          m = re.search(r'__version__\s*=\s*"([^"]+)"', version_py)
+          if not m:
+              sys.exit("could not read __version__")
+          if m.group(1) != expected:
+              sys.exit(f"tag {tag} != package version {m.group(1)}")
+          wheel = glob.glob("dist/*.whl")[0]
+          zf = zipfile.ZipFile(wheel)
+          dist_info = next(n for n in zf.namelist() if n.endswith(".dist-info/METADATA"))
+          metadata = zf.read(dist_info).decode("utf-8")
+          if f"Version: {expected}" not in metadata:
+              sys.exit("wheel METADATA version mismatch")
+          print(f"release {expected} OK")
+          PY
+      - name: Create GitHub Release with artifacts
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*
+          generate_release_notes: true
+          body: |
+            Lixity ${{ github.ref_name }} — see [CHANGELOG.md](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+
+            Install (not on PyPI):
+            ```bash
+            pip install "git+https://github.com/mfahsold/lixity.git@${{ github.ref_name }}"
+            ```

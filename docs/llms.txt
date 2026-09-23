@@ -4,8 +4,10 @@
 > manuscripts: sentence rhythm, length-invariant lexical diversity, readability,
 > register signals, paragraph-accurate tense profiles, a self-calibrating
 > style reference (median/MAD bands, significance-adjusted z*, Benjamini-Hochberg
-> or Benjamini-Yekutieli FDR), and Wave-2 structural diagnostics (PELT
-> changepoints, Mann-Kendall trends, Sn/Qn scales, Hill tail index). It never
+> or Benjamini-Yekutieli FDR), and Structural diagnostics (PELT
+> changepoints, Mann-Kendall trends, Sn/Qn scales, Hill tail index,
+> early/late Wasserstein-KS shift, content-word co-occurrence fitness,
+> Dunning keyness). It never
 > judges style against external norms. Pure Python, 7 languages (de, en, fr,
 > es, it, pt, nl) plus a generic fallback, no cloud, byte-identical output for
 > identical input.
@@ -21,7 +23,7 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - `pipx install git+https://github.com/mfahsold/lixity.git`
 - `uv tool install git+https://github.com/mfahsold/lixity.git`
 - `pip install git+https://github.com/mfahsold/lixity.git`
-- pin: `pip install "git+https://github.com/mfahsold/lixity.git@v1.10.0"`
+- pin: `pip install "git+https://github.com/mfahsold/lixity.git@v1.11.0"`
 - dev: `git clone … && make install-dev && make check`
 
 ## Primary documentation
@@ -29,16 +31,16 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [README](https://github.com/mfahsold/lixity#readme): overview, install, CLI quick start, capabilities, license
 - [docs/USAGE.md](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md): full command reference, worked example, metrics, known limitations
 - [docs/AGENTS.md](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md): JSON contracts, interpretation heuristics, stable Python facade, dashboard DOM hooks
-- [docs/METHODS.md](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md): formal estimators (z*, BH/BY FDR, Cliff’s δ, runs/ACF, Jacobi dimensions, LD indices, readability, JSD, Wave-2 PELT/Mann-Kendall/Sn/Qn/Hill) and injectability
+- [docs/METHODS.md](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md): formal estimators (z*, BH/BY FDR, Cliff’s δ, runs/ACF, Jacobi dimensions, LD indices, readability, JSD, Structural PELT/Mann-Kendall/Sn/Qn/Hill/Wasserstein-KS/Dunning/Goh–Barabási) and injectability
 - [docs/STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): research basis, caveats, platform differences
 - [CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development setup, PR checklist
 - [SECURITY.md](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): threat model and private reporting
-- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.10.0)
+- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.11.0)
 - Project page: https://mfahsold.github.io/lixity/
 
 Reports/CLI messages: English default, German via LIXITY_LANG=de. JSON contracts:
 schema_version 2 (analyze/profile, language-neutral tense values
-present/past/mixed/neutral) and 3 (style reference, with wave2_diagnostics).
+present/past/mixed/neutral) and 4 (style reference, with structural_diagnostics).
 
 ## Commands (all offline, deterministic, UTF-8)
 
@@ -49,7 +51,7 @@ present/past/mixed/neutral) and 3 (style reference, with wave2_diagnostics).
 - `lixity pacing FILE [--json]` – scene breaks, pacing signals, chapter hook score
 - `lixity motifs FILE --motif NAME=REGEX [--json]` – motif presence + repeated phrases/content words
 - `lixity showing FILE [--json]` – showing/telling balance per chapter (self-calibrating)
-- `lixity style FILE --json [--z-mild F] [--z-strong F] [--fdr-q F] [--fdr-method bh|by] [--dim-threshold F] [--flag-min-severity 1|2|3]` – self-calibrating style reference (schema v3; thresholds injectable, re-read from meta; Cliff’s δ + baseline diagnostics + wave2_diagnostics: PELT/Mann-Kendall/Sn/Qn/Hill)
+- `lixity style FILE --json [--z-mild F] [--z-strong F] [--fdr-q F] [--fdr-method bh|by] [--dim-threshold F] [--flag-min-severity 1|2|3]` – self-calibrating style reference (schema v4; thresholds injectable, re-read from meta; Cliff’s δ + baseline diagnostics + structural_diagnostics: PELT/Mann-Kendall/Sn/Qn/Hill + early/late Wasserstein-KS shift + co-occurrence fitness + Dunning keyness)
 - `lixity dashboard FILE [-o ui.html] [--names A,B] [same threshold flags]` – single-file interactive dashboard (clickable KPIs, status strip, structure panels, work markers, full settings group)
 - `lixity build [FILE] [--dry-run] [same threshold flags]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
 - `lixity about --json` – languages, features, heuristics, command list
@@ -64,7 +66,7 @@ Python facade: `from lixity import api` – `analyze`, `profile`, `dialogue`,
 - z* = (x − median) / sqrt(sigma^2 + SE^2), sigma = 1.4826 * MAD; defaults |z*| >= 2.5 noticeable, >= 3.5 strong — injectable (`--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`, API kwargs, control-server settings, `[tool.lixity]` config); always re-read from passport.meta
 - FDR control: Benjamini–Hochberg default q = 0.05; `--fdr-method by` for Benjamini–Yekutieli (arbitrary dependence)
 - Effect sizes: Cliff’s δ / Vargha–Delaney A on FDR cells; baseline diagnostics (runs, lag-1 ρ, low_power n<8)
-- Wave-2: PELT changepoints (BIC), Mann–Kendall trends, Sn/Qn beside MAD, Hill α̂
+- Structural: PELT changepoints (BIC), Mann–Kendall trends, Sn/Qn beside MAD, Hill α̂, early/late Wasserstein+KS shift, co-occurrence fitness, Dunning keyness
 - Lexical diversity guards: MTLD and Maas a2 need >= 100 tokens, HD-D >= 175 tokens, MATTR >= 50-token window
 - Style reference needs several chapters with measurable spread
 

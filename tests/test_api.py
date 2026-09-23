@@ -62,11 +62,14 @@ class TestApiFacade(unittest.TestCase):
 
     def test_fingerprint_is_the_passport(self):
         passport = api.fingerprint(SAMPLE, language="de")
-        self.assertEqual(passport["meta"]["schema_version"], 3)
+        self.assertEqual(passport["meta"]["schema_version"], 4)
         self.assertIn("features", passport)
         self.assertIn("dimensions", passport)
         self.assertIn("fdr_flagged", passport)
-        self.assertIn("wave2_diagnostics", passport)
+        self.assertIn("structural_diagnostics", passport)
+        w2 = passport["structural_diagnostics"]
+        self.assertIn("distribution_shift", w2)
+        self.assertIn("shifted_features", w2)
         self.assertIn("flag_min_severity", passport["meta"])
         alias = api.passport(SAMPLE, language="de")
         self.assertEqual(passport, alias)
@@ -130,6 +133,24 @@ class TestApiFacade(unittest.TestCase):
     def test_facade_is_deterministic(self):
         self.assertEqual(api.analyze(SAMPLE), api.analyze(SAMPLE))
         self.assertEqual(api.fingerprint(SAMPLE), api.fingerprint(SAMPLE))
+
+    def test_fingerprint_includes_lexical_structural_on_multi_chapter_text(self):
+        sentence = (
+            "Das alte Haus stand am Ende der stillen Straße und der Wind "
+            "bewegte die Blätter der Bäume. Die Bewohner sprachen leise "
+            "über die kommenden Veränderungen und ihre gemeinsamen Sorgen. "
+            "Jeder Morgen begann mit dem Klang der Glocken und dem Duft "
+            "von frischem Brot aus der Bäckerei gegenüber am Markt. "
+            "Niemand wusste genau, wie lange diese Ruhe noch dauern würde "
+            "in der kleinen Stadt am Flussufer mit ihren vielen Gassen.\n"
+        )
+        text = "\n".join(f"## Kap {i + 1}\n\n{sentence}" for i in range(4))
+        passport = api.fingerprint(text, language="de")
+        w2 = passport["structural_diagnostics"]
+        self.assertIn("cooccurrence", w2)
+        self.assertIn("keyness", w2)
+        self.assertEqual(w2["keyness"]["n_early_chapters"], 2)
+        json.dumps(passport)
 
 
 class TestCliAgentSurface(unittest.TestCase):
