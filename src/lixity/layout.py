@@ -2,6 +2,11 @@
 
 Defines standardized page formats, margins, line heights, and grid ratios
 for paperback, reading copies, and digital reading formats.
+
+``line_spacing`` is the Pango line-spacing factor applied at render time
+(measured baseline distance ~= factor * 1.6 * font size for Palatino-class
+serifs; factor 0.94 ~= 1.50x leading at 12 / 8.8 / 8.5 pt). Typographic
+defaults for reproducible exports — not measured truth about a manuscript.
 """
 
 from dataclasses import dataclass
@@ -123,7 +128,7 @@ class BookLayoutConfig:
                 margin_right=66.0,  # wide margin for handwritten lector notes
                 margin_top=56.0,
                 margin_bottom=56.0,
-                line_spacing=None,  # natural leading: 17 pt at 12 pt (1.42x)
+                line_spacing=0.94,  # approx. 18.0 pt baseline distance at 12 pt (1.50x)
                 para_spacing=6.0,  # airy paragraph spacing for annotations
                 first_line_indent=0.0,
                 justify_body=False,  # ragged right (manuscript norm, no whitespace rivers)
@@ -163,7 +168,7 @@ class BookLayoutConfig:
                 margin_right=30.0,
                 margin_top=34.0,
                 margin_bottom=40.0,
-                line_spacing=0.88,  # approx. 12.4 pt baseline distance at 8.8 pt (1.41x)
+                line_spacing=0.94,  # approx. 13.2 pt baseline distance at 8.8 pt (1.50x)
                 para_spacing=3.2,  # pleasant mobile reading flow
                 first_line_indent=0.0,
                 justify_body=False,  # ragged right against whitespace rivers on mobile devices
@@ -199,7 +204,7 @@ class BookLayoutConfig:
                 margin_right=42.0,  # outer margin
                 margin_top=40.0,
                 margin_bottom=48.0,
-                line_spacing=0.88,  # approx. 12.0 pt baseline distance at 8.5 pt (1.41x)
+                line_spacing=0.94,  # approx. 12.8 pt baseline distance at 8.5 pt (1.50x)
                 para_spacing=0.0,  # classic literary book typesetting without paragraph gaps
                 first_line_indent=10.5,  # 1.25-em paragraph indent (except after headings/scene breaks)
                 justify_body=True,  # justified for classic book layout

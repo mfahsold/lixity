@@ -7,6 +7,23 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.13.0] – 2026-09-23
+
+### Changed
+
+- **Layout default leading ≈ 1.50×:** all three `BookLayoutConfig.from_preset`
+  presets (`a4`, `taschenbuch`, `mobile`) now set `line_spacing=0.94`
+  (Pango factor ≈ 18.0 / 13.2 / 12.8 pt baseline distance at 12 / 8.8 / 8.5 pt).
+  Previously mobile and paperback used `0.88` (≈ 1.41×) and A4 used natural
+  Pango metrics (≈ 1.33×); the tighter leading was reported as too cramped
+  for continuous reading. Typographic defaults for reproducible exports —
+  override per call via CLI `--line-spacing` or a custom config.
+
+### Tests
+
+- **`tests/test_layout.py`:** renderer-free assertions on preset
+  `line_spacing`, body sizes, and the ≈ 1.50× target (no Cairo/Pango in pytest).
+
 ## [1.12.0] – 2026-09-23
 
 ### Added
@@ -687,7 +704,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.12.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.13.0...HEAD
+[1.13.0]: https://github.com/mfahsold/lixity/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/mfahsold/lixity/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/mfahsold/lixity/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/mfahsold/lixity/compare/v1.9.1...v1.10.0
