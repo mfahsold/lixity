@@ -126,7 +126,25 @@ class TestReportSurface(unittest.TestCase):
         report = pacing_report("", DE)
         self.assertEqual(report.chapters, 0)
         self.assertEqual(report.scenes, 0)
+        self.assertEqual(report.explicit_scene_breaks, 0)
+        self.assertFalse(report.scenes_are_chapters)
         self.assertIsNone(report.fastest_chapter)
+
+    def test_no_dividers_flags_scenes_are_chapters(self):
+        text = "## Eins\n\nEr ging. Sie blieb.\n\n## Zwei\n\nEs war still.\n"
+        report = pacing_report(text, DE)
+        self.assertEqual(report.explicit_scene_breaks, 0)
+        self.assertTrue(report.scenes_are_chapters)
+        self.assertEqual(report.scenes, report.chapters)
+        payload = report.to_dict()
+        self.assertIs(payload["scenes_are_chapters"], True)
+        self.assertEqual(payload["explicit_scene_breaks"], 0)
+
+    def test_explicit_breaks_clears_flag(self):
+        report = pacing_report(SCENES, DE)
+        self.assertEqual(report.explicit_scene_breaks, 1)
+        self.assertFalse(report.scenes_are_chapters)
+        self.assertIs(report.to_dict()["scenes_are_chapters"], False)
 
 
 if __name__ == "__main__":

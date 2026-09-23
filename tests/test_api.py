@@ -56,9 +56,17 @@ class TestApiFacade(unittest.TestCase):
         self.assertIn("figures", characters)
         pacing = api.pacing(SAMPLE, language="de")
         self.assertIn("pacing", pacing)
+        self.assertIn("explicit_scene_breaks", pacing["pacing"])
+        self.assertIn("scenes_are_chapters", pacing["pacing"])
         motifs = api.motifs(SAMPLE, {"Ich": r"\bIch\b"}, language="de")
         self.assertIn("motifs", motifs)
         self.assertIn("top_words", motifs)
+
+    def test_characters_requires_names(self):
+        with self.assertRaises(ValueError):
+            api.characters(SAMPLE, [], language="de")
+        with self.assertRaises(ValueError):
+            api.characters(SAMPLE, {}, language="de")
 
     def test_fingerprint_is_the_passport(self):
         passport = api.fingerprint(SAMPLE, language="de")

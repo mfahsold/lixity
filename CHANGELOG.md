@@ -7,6 +7,33 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.12.0] – 2026-09-23
+
+### Added
+
+- **Pacing degeneracy flag:** `PacingReport` / JSON gain
+  `explicit_scene_breaks` and `scenes_are_chapters` (true when the text has
+  no explicit `---`/`* * *` dividers, so scenes ≡ chapters). The CLI prints
+  a warning in that case; scene counts are then structure placeholders, not
+  pacing evidence.
+
+### Changed
+
+- **`characters` requires names:** empty `--names` / empty API name list
+  now fail fast (CLI exit 1 `err_no_names`; `ValueError` via the API)
+  instead of returning a silent `figures: []`. No NER — the caller
+  supplies the names.
+
+### Documentation
+
+- **Boundary caveats** (USAGE §Known limitations, STABILITY register rows
+  45–50, AGENTS §3.5 boundary note, METHODS Track B):
+  heuristics measure the text, not ground truth; `signal_counts` is empty
+  unless `CorpusConfig.signal_keywords` is set; German filter-verb counts
+  (engine ≈ 94) intentionally differ from broader editorial lists (120);
+  pacing without explicit dividers is flagged; no external Delta
+  stylometry and no dialogue speaker attribution.
+
 ## [1.11.0] – 2026-09-23
 
 ### Added
@@ -660,7 +687,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.11.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.12.0...HEAD
+[1.12.0]: https://github.com/mfahsold/lixity/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/mfahsold/lixity/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/mfahsold/lixity/compare/v1.9.1...v1.10.0
 [1.0.2]: https://github.com/mfahsold/lixity/compare/v1.0.1...v1.0.2

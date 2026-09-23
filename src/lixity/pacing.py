@@ -5,6 +5,9 @@ structure and tempo:
 
 - **Scenes**: scene breaks are explicit dividers in Markdown
   (``---``, ``* * *``, ``***`` …). Scenes per chapter = breaks + 1.
+  When the text has **no** explicit dividers, ``explicit_scene_breaks`` is 0
+  and ``scenes_are_chapters`` is true — each chapter is one scene; scene
+  structure is then uninformative, not "well paced".
 - **Pacing signals**: per chapter and scene, the observable tempo proxies —
   average sentence length, staccato share, dialogue share and scene length.
   Short sentences, staccato and dialogue read as faster; the report provides
@@ -100,6 +103,7 @@ class PacingReport:
     language: str
     chapters: int
     scenes: int
+    explicit_scene_breaks: int
     avg_scene_words: float
     avg_chapter_scenes: float
     hook_score_mean: float
@@ -107,11 +111,18 @@ class PacingReport:
     slowest_chapter: int | None
     chapter_list: list[ChapterPacing] = field(default_factory=list)
 
+    @property
+    def scenes_are_chapters(self) -> bool:
+        """True when no explicit dividers were found (scenes ≡ chapters)."""
+        return self.explicit_scene_breaks == 0 and self.chapters > 0
+
     def to_dict(self) -> dict[str, Any]:
         return {
             "language": self.language,
             "chapters": self.chapters,
             "scenes": self.scenes,
+            "explicit_scene_breaks": self.explicit_scene_breaks,
+            "scenes_are_chapters": self.scenes_are_chapters,
             "avg_scene_words": round(self.avg_scene_words, 2),
             "avg_chapter_scenes": round(self.avg_chapter_scenes, 2),
             "hook_score_mean": round(self.hook_score_mean, 2),
@@ -177,6 +188,7 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
     chapter_list: list[ChapterPacing] = []
     total_scenes = 0
     total_scene_words = 0
+    explicit_breaks = 0
     hook_scores: list[int] = []
     pace: dict[int, float] = {}
 
@@ -186,6 +198,7 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         if not words:
             continue
         raw_scenes = [part for part in SCENE_BREAK_RE.split(clean) if part.strip()]
+        explicit_breaks += len(SCENE_BREAK_RE.findall(clean))
         scenes: list[SceneStats] = []
         for index, scene_text in enumerate(raw_scenes, start=1):
             stats = _scene_stats(scene_text, index, word_re, dialogue_re, resolved.key)
@@ -237,6 +250,7 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         language=resolved.key,
         chapters=len(chapter_list),
         scenes=total_scenes,
+        explicit_scene_breaks=explicit_breaks,
         avg_scene_words=(total_scene_words / total_scenes) if total_scenes else 0.0,
         avg_chapter_scenes=(total_scenes / len(chapter_list)) if chapter_list else 0.0,
         hook_score_mean=(sum(hook_scores) / len(hook_scores)) if hook_scores else 0.0,

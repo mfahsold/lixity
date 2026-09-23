@@ -70,6 +70,11 @@ def character_presence(
         patterns = {label: _name_pattern(pattern) for pattern, label in names.items()}
     else:
         patterns = {name: _name_pattern(name) for name in names}
+    if not patterns:
+        raise ValueError(
+            "characters requires at least one name or alias pattern "
+            "(no NER — the caller supplies the names)"
+        )
 
     chapters = split_chapters(text, config)
 
@@ -108,7 +113,10 @@ def presence_report(
     names: Mapping[str, str] | Sequence[str],
     config: CorpusConfig | None = None,
 ) -> dict[str, Any]:
-    """JSON-ready character presence report (total chapters + per figure)."""
+    """JSON-ready character presence report (total chapters + per figure).
+
+    Raises ``ValueError`` when ``names`` is empty — there is no NER.
+    """
     config = config or CorpusConfig(language="auto")
     chapters = split_chapters(text, config)
     figures = character_presence(text, names, config)

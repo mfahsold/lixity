@@ -78,7 +78,7 @@ uv tool install git+https://github.com/mfahsold/lixity.git
 pip install git+https://github.com/mfahsold/lixity.git
 
 # pin a release for reproducible pipelines
-pip install "git+https://github.com/mfahsold/lixity.git@v1.11.0"
+pip install "git+https://github.com/mfahsold/lixity.git@v1.12.0"
 ```
 
 Development install (editable, with lint/type/test tooling):

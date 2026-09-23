@@ -23,7 +23,7 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - `pipx install git+https://github.com/mfahsold/lixity.git`
 - `uv tool install git+https://github.com/mfahsold/lixity.git`
 - `pip install git+https://github.com/mfahsold/lixity.git`
-- pin: `pip install "git+https://github.com/mfahsold/lixity.git@v1.11.0"`
+- pin: `pip install "git+https://github.com/mfahsold/lixity.git@v1.12.0"`
 - dev: `git clone … && make install-dev && make check`
 
 ## Primary documentation
@@ -35,7 +35,7 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [docs/STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): research basis, caveats, platform differences
 - [CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development setup, PR checklist
 - [SECURITY.md](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): threat model and private reporting
-- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.11.0)
+- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.12.0)
 - Project page: https://mfahsold.github.io/lixity/
 
 Reports/CLI messages: English default, German via LIXITY_LANG=de. JSON contracts:

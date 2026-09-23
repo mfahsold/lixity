@@ -152,8 +152,12 @@ Documented research directions, **not** current product features:
   Shannon / Rank-Turbulence Delta): authorship-attribution baselines.
   Lixity’s chapter↔rest JSD with driver words is *inspired by* this line
   but deliberately **not** an attribution instrument (see STABILITY §1).
-  A future Delta panel would rank chapters against an external reference
-  corpus — out of scope while the product stays manuscript-intrinsic.
+  There is **no external Delta stylometry** against a reference corpus;
+  a future Delta panel would rank chapters against such a corpus — out of
+  scope while the product stays manuscript-intrinsic. Structure-module
+  caveats (empty `signal_counts`, filter-list definitions, pacing without
+  dividers, no NER/speaker attribution) are registered in STABILITY §2
+  and summarised in AGENTS §3.5.
 - **OHCO / TEI**: the hierarchical ordered corpus of hypotheses (OHCO) and
   TEI XML are the scholarly interchange standards. Lixity’s input contract
   is UTF-8 Markdown with `## ` chapter headings (configurable

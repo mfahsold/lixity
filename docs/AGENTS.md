@@ -49,7 +49,7 @@ from that style, controlled for measurement noise and multiple testing.
 ### 3.1 `analyze --json` (schema_version 2)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.11.0", "schema_version": 2, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.12.0", "schema_version": 2, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",
@@ -197,11 +197,15 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
   `chapters_present`, `first_chapter`/`last_chapter`, `longest_gap` (chapters
   without mention), `presence_ratio`, `per_chapter`. Appendix and front matter
   are excluded, so chapter numbers match the metrics. **No NER** — the caller
-  supplies the names.
+  supplies the names; an empty name list is an error (not a silent empty
+  report).
 - `pacing`: scene breaks are explicit dividers (`---`, `* * *`, `***`, `___`,
-  `•••`); `scenes` per chapter = breaks + 1. `hook_score` (0–3, heuristic):
-  +1 closing sentence ≤ 8 words, +1 terminal `?`/`!`/`…`, +1 closing in
-  dialogue. `fastest_chapter`/`slowest_chapter` use the lowest/highest ASL.
+  `•••`); `scenes` per chapter = breaks + 1. When no dividers exist,
+  `explicit_scene_breaks=0` and `scenes_are_chapters=true` (scenes ≡
+  chapters) — do not read scene counts as pacing evidence then. `hook_score`
+  (0–3, heuristic): +1 closing sentence ≤ 8 words, +1 terminal `?`/`!`/`…`,
+  +1 closing in dialogue. `fastest_chapter`/`slowest_chapter` use the
+  lowest/highest ASL.
 - `motifs`: motif presence (regex patterns; `mentions`, `density_per_1000`,
   chapter span, `longest_gap`) plus generic repetition — `top_words` (content
   words; curated stop words excluded) and `repeated_phrases` (n-grams with
@@ -212,6 +216,17 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
   chapter medians; `balance = show_z − tell_z` (positive = showing).
   Documented fallback: if MAD = 0 (majority of chapters share the median), the
   standard deviation is used. Heuristic composite, **not** a quality verdict.
+
+**Boundary note.** Structure modules are deterministic in-text proxies.
+Heuristics (hook score, filter/signal counts, n-gram repetition) measure
+observable patterns — they are **not** ground truth. `signal_counts` is
+`{}` unless the caller supplies `CorpusConfig.signal_keywords` (language
+profiles default empty); `filter_count` uses the language filter-verb lemma
+list and intentionally differs from broader editorial definitions (German
+perception verbs: engine ≈ 94 vs a 120-verb dossier list — restate the
+definition before comparing). There is **no external Delta stylometry** and
+no speaker attribution: chapter divergence is in-corpus JSD, dialogue turns
+are quotation segments.
 
 ### 3.6 Task recipes (typical agent workflows)
 

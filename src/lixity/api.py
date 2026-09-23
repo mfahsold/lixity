@@ -202,7 +202,13 @@ def characters(
     ``names`` is a sequence of display names or a mapping
     ``pattern -> display name`` (aliases), e.g. ``{"Matthias|Matze": "Matthias"}``.
     Returns ``{"meta": {...}, "chapters": n, "figures": [...]}``.
+    Raises ``ValueError`` when ``names`` is empty (no NER — names required).
     """
+    if not names:
+        raise ValueError(
+            "characters requires at least one name or alias pattern "
+            "(no NER — the caller supplies the names)"
+        )
     config, resolved = _config_and_language(language, text, **config_overrides)
     from .characters import presence_report
 
@@ -215,6 +221,9 @@ def pacing(text: str, language: str = "auto", **config_overrides: Any) -> dict[s
     Scene structure, pacing signals and chapter hooks: explicit scene breaks
     (``---``, ``* * *``), per-scene tempo proxies (ASL, staccato, dialogue),
     the closing sentence of each chapter and its documented 0–3 hook score.
+
+    When the text has no explicit dividers, ``explicit_scene_breaks`` is 0 and
+    ``scenes_are_chapters`` is true (each chapter is one scene).
 
     Returns ``{"meta": {...}, "pacing": {...}}``.
     """

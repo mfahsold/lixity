@@ -153,6 +153,10 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pac_asl": "ASL",
         "pac_dialogue": "Dialogue",
         "pac_hook": "Hook",
+        "pac_no_breaks": (
+            "No explicit scene dividers found — scenes = chapters "
+            "(scene structure is uninformative)."
+        ),
         "err_motif_spec": "Invalid motif (expected NAME=REGEX): {spec}",
         "mot_name": "Motif",
         "mot_mentions": "Mentions",
@@ -228,6 +232,10 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "pac_asl": "ASL",
         "pac_dialogue": "Dialog",
         "pac_hook": "Haken",
+        "pac_no_breaks": (
+            "Keine expliziten Szenentrenner gefunden — Szenen = Kapitel "
+            "(Szenenstruktur ohne Aussagekraft)."
+        ),
         "err_motif_spec": "Ungültiges Motiv (erwartet NAME=REGEX): {spec}",
         "mot_name": "Motiv",
         "mot_mentions": "Treffer",
@@ -580,6 +588,8 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
     ):
         summary.add_row(_m(key), value)
     con.print(summary)
+    if report.scenes_are_chapters and report.chapters:
+        con.print(f"[yellow]{_m('pac_no_breaks')}[/yellow]")
 
     if report.chapter_list:
         table = Table(box=box.SIMPLE, header_style="bold green")

@@ -31,7 +31,7 @@ uv tool install git+https://github.com/mfahsold/lixity.git
 pip install git+https://github.com/mfahsold/lixity.git
 
 # pin a release
-pip install "git+https://github.com/mfahsold/lixity.git@v1.11.0"
+pip install "git+https://github.com/mfahsold/lixity.git@v1.12.0"
 ```
 
 Development install (editable, with the test suite):
@@ -183,7 +183,9 @@ inside quotation marks.
 
 Character presence across chapters for curated names or alias patterns
 (`Matthias|Matze`). Whole-word, case-insensitive matching; appendix and front
-matter are excluded (chapter numbers match the metrics).
+matter are excluded (chapter numbers match the metrics). **No NER** — the
+caller supplies the names; empty `--names` is an error (CLI exit 1,
+`ValueError` via the API).
 
 ```bash
 lixity characters manuscript.md --names "Anna,Ralf"
@@ -198,17 +200,22 @@ JSON fields: `chapters` (total), `figures[]` with `mentions`,
 
 Scene structure, pacing signals and chapter hooks. Scene breaks are explicit
 Markdown dividers (`---`, `* * *`, `***`, `___`, `•••`); scenes per chapter =
-breaks + 1. Per scene and chapter the report gives the observable tempo
-proxies (ASL, staccato share, dialogue share, scene length). The **hook score**
-(0–3, documented heuristic) adds one point each for a closing sentence of at
-most eight words, a terminal `?`/`!`/`…`, and a closing in dialogue.
+breaks + 1. When the text has **no** explicit dividers, `explicit_scene_breaks`
+is 0 and `scenes_are_chapters` is true — each chapter is one scene, so scene
+structure is uninformative (the CLI prints a warning; do not read
+`scenes`/`avg_scene_words` as pacing evidence in that case). Per scene and
+chapter the report gives the observable tempo proxies (ASL, staccato share,
+dialogue share, scene length). The **hook score** (0–3, documented heuristic)
+adds one point each for a closing sentence of at most eight words, a terminal
+`?`/`!`/`…`, and a closing in dialogue.
 
 ```bash
 lixity pacing manuscript.md          # Rich tables (summary + per chapter)
 lixity pacing manuscript.md --json   # meta + pacing report
 ```
 
-JSON fields: `chapters`, `scenes`, `avg_scene_words`, `avg_chapter_scenes`,
+JSON fields: `chapters`, `scenes`, `explicit_scene_breaks`,
+`scenes_are_chapters`, `avg_scene_words`, `avg_chapter_scenes`,
 `hook_score_mean`, `fastest_chapter`, `slowest_chapter` and `chapter_list[]`
 with `scenes`, `asl`, `dialogue_pct`, `staccato_pct`,
 `closing_sentence_words`, `closing_terminal`, `closing_is_dialogue`,
@@ -541,7 +548,23 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
   sizes (MTLD/Maas a² ≥ 100 tokens, HD-D ≥ 175, MATTR ≥ window 50);
   below that Lixity returns `null` and the dashboard shows `–`.
 - **Heuristics:** syllables (±5–10 %), suffix-based densities and tense
-  patterns are comparable *within* one language, not across languages.
+  patterns are comparable *within* one language, not across languages;
+  heuristics measure what is in the text, they are not ground truth.
+- **`signal_counts`:** empty (`{}`) unless the caller supplies
+  `CorpusConfig.signal_keywords` — language profiles default to no thematic
+  signal words. `filter_count` uses the language filter-verb regex (a curated
+  lemma list), which intentionally differs from broader editorial definitions
+  (e.g. German perception verbs: engine ≈ 94 vs a 120-verb dossier list);
+  do not swap the two numbers without restating the definition.
+- **Pacing without dividers:** no explicit `---`/`* * *` breaks means
+  `explicit_scene_breaks=0` and `scenes_are_chapters=true` (scenes ≡
+  chapters); scene counts are then structure placeholders, not pacing.
+- **`characters` / `dialogue`:** no NER and no speaker attribution — names
+  and alias patterns come from the caller; dialogue turns are quotation
+  segments, not speaker turns.
+- **No external Delta stylometry:** divergence metrics (JSD driver words)
+  are in-corpus diagnostics for *this* manuscript, not authorship
+  attribution against an external reference corpus.
 - **Self-calibration needs several chapters** with measurable spread; a
   single chapter hides the heatmap instead of showing noise.
 - **Determinism** is byte-identical on the same interpreter; across Python
