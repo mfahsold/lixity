@@ -5,6 +5,72 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **Injectable statistical thresholds** (`z_mild`, `z_strong`, `fdr_q`,
+  `fdr_method`, `dim_score_threshold`, `flag_min_severity`):
+  stored on `StyleFingerprint.thresholds`, reported in every passport `meta`,
+  and controllable from
+  - CLI: `--z-mild`, `--z-strong`, `--fdr-q`, `--fdr-method {bh,by}`,
+    `--dim-threshold`, `--flag-min-severity {1,2,3}` on `style`,
+    `dashboard`, `build`;
+  - API: `api.fingerprint(..., z_mild=…, fdr_q=…, fdr_method=…, …)`
+    (same kwargs on `api.passport` / `api.dashboard`);
+  - control UI: Settings fields for z\* mild/strong, FDR q, flags severity
+    floor and dimension-score threshold, persisted on the embedded server;
+  - config file: `[tool.lixity]` in `pyproject.toml`, or `lixity.toml` /
+    `~/.config/lixity.toml` via `src/lixity/config.py`
+    (CLI > UI session > project > user > code default).
+- **Benjamini–Yekutieli FDR** (`fdr_method="by"`, harmonic factor \(c(m)\))
+  alongside the default BH path (`fdr_rejects`).
+- **Effect sizes on confirmed cells**: Cliff’s δ and Vargha–Delaney
+  \(\hat{A}_{12}\) with Romano bands (`effect_label`), exposed as
+  passport `effect_magnitudes`.
+- **Baseline exchangeability diagnostics**: runs test about the series
+  median, lag-1 autocorrelation vs \(1/\sqrt{n}\), `low_power` for
+  \(n < 8\) — passport `baseline_diagnostics` + `passport_text` line.
+- **`docs/METHODS.md`**: formal catalogue of every estimator (MAD/σ scaling,
+  z\*, BH/BY-FDR, Cliff’s δ, runs/ACF, Jacobi dimensions, LD indices,
+  readability constants, JSD, layer z) with injectability table including
+  the config file.
+- Contract tests for threshold round-trip and sensitivity settings markup
+  (z mild/strong, FDR q, flags cut, dimension threshold).
+
+### Changed
+
+- **Style reference rows are fully clickable**: every `.band-row` jumps to
+  that feature's heatmap column (`#feat-<field>`), activates the matching
+  style layer when one exists, and preselects “deviations only” when the
+  feature has outliers. The red **outlier count** is a nested control that
+  opens the strongest outlier chapter (with layer + only-deviations).
+- Heatmap column headers expose stable anchors (`id="feat-<field>"`).
+- Heatmap legend and “deviations only” cut use `fingerprint.thresholds.z_mild`
+  instead of a hardcoded 2.5.
+- Research basis (STABILITY §1) extended: robust statistics / multiplicity
+  control, readability literature (Amstad…Douma, Weiss & Meurers 2022),
+  foregrounding/stylistics angle.
+- README condensed with an explicit mathematical-core focus; links to
+  METHODS.md.
+
+### Fixed
+
+- Dialogue and nominal style layers now bind correctly:
+  `LAYER_FEATURES` uses fingerprint field names (`dialog_pct`,
+  `nominalization_density`); `LAYER_PARAGRAPH_ATTR` maps them to the
+  `ParagraphProfile` attributes (`dialogue_pct`, `nominal_density`) used by
+  `layer_stats`. Previously the dialogue band had no layer and the nominal
+  layer produced empty stats.
+- Export-format `<select id="fmt">` exposes a short `aria-label` (export)
+  instead of the full help sentence; the tooltip moved to `title`.
+- USAGE metric table: LIX long-word threshold is **>6 characters in every
+  language** (Björnsson), not per-language 6/7/8 (docs inconsistency with
+  STABILITY #24 / METHODS §7).
+- Book scripts `export_pdf.py` / `export_nda.py`: suppress third-party
+  `PyGIDeprecationWarning` for `GLib.unix_signal_add_full` during Pango
+  import (system PyGObject, not Lixity code).
+
 ## [1.10.0] – 2026-09-22
 
 ### Added

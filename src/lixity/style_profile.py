@@ -43,6 +43,7 @@ class ProfileThresholds:
     mix_min_ratio: float = 0.25  # minority share from 25 % = mixed
     switch_min_hits: int = 2  # dominant tense requires >= 2 markers
     severe_mix_minority: int = 3  # mixed + >= 3 minority markers = level 2
+    flag_min_severity: int = FLAG_MIN_SEVERITY  # editorial cut for the flags panel
 
 
 def classify_severity(
@@ -102,17 +103,24 @@ class ParagraphProfile:
     nominal_density: float = 0.0
     passive_density: float = 0.0
     text: str = ""
+    flag_min: int = FLAG_MIN_SEVERITY
 
     @property
     def is_flagged(self) -> bool:
-        """True when the severity reaches FLAG_MIN_SEVERITY (actionable friction)."""
-        return self.severity >= FLAG_MIN_SEVERITY
+        """True when severity reaches this paragraph's flag cut (default FLAG_MIN_SEVERITY)."""
+        return self.severity >= self.flag_min
 
 
-def flagged_paragraphs(paragraphs: list[ParagraphProfile]) -> list[ParagraphProfile]:
-    """Actionable paragraphs, sorted by severity (desc) then line (asc)."""
+def flagged_paragraphs(
+    paragraphs: list[ParagraphProfile], min_severity: int | None = None
+) -> list[ParagraphProfile]:
+    """Actionable paragraphs, sorted by severity (desc) then line (asc).
+
+    ``min_severity`` overrides each paragraph's own cut when given (UI/CLI).
+    """
+    cut = FLAG_MIN_SEVERITY if min_severity is None else min_severity
     return sorted(
-        (p for p in paragraphs if p.is_flagged),
+        (p for p in paragraphs if p.severity >= (cut if min_severity is not None else p.flag_min)),
         key=lambda p: (-p.severity, p.start_line),
     )
 
@@ -296,6 +304,7 @@ class ParagraphProfiler:
                 nominal_density=round(nominal_density, 1),
                 passive_density=round(passive_density, 1),
                 text=clean,
+                flag_min=self.thresholds.flag_min_severity,
             )
             paragraphs.append(profile)
             chapter_paragraphs.append(profile)

@@ -8,6 +8,33 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 
 ## 1. Research findings (state of the art)
 
+**Robust statistics & multiplicity control.**
+- MAD with the 1.4826 consistency constant ($1/\Phi^{-1}(3/4)$, R/DescTools
+  default) scales the median absolute deviation to normal-consistent σ;
+  0.6745 is the dual factor used in `robust_z`. Lixity never treats sample
+  SD as the house-style spread when MAD is available.
+- Significance-adjusted $z^* = (x-\tilde x)/\sqrt{\sigma_{\mathrm{MAD}}^2+\mathrm{SE}^2}$
+  shrinks short chapters (Poisson/binomial plug-in SEs) so a 120-word chapter
+  cannot outrank a 8 000-word chapter on a pure robust z.
+- Benjamini–Hochberg at $q=0.05$ is the default multiplicity control over
+  chapter×feature cells; Benjamini–Yekutieli ($c=\sum 1/i$) is available via
+  `fdr_method="by"` / `--fdr-method by` when dependence among features is
+  unknown. Storey’s $\pi_0$ is optional literature, not required for a
+  400-cell matrix. Expected false positives at $|z^*|\ge 2.5$
+  are reported (`expected_false_positives`) so no deviation is called
+  “significant” in isolation.
+- Surviving FDR cells carry **Cliff’s $\delta$** (Romano bands: negligible /
+  small / medium / large) and the implied Vargha–Delaney $\hat{A}_{12}$ so
+  magnitude is never confused with significance alone.
+- Baseline **exchangeability diagnostics** (runs test about the series
+  median, lag-1 autocorrelation vs $1/\sqrt{n}$, `low_power` for $n<8$)
+  flag series where the i.i.d. FDR model is optimistic — the passport’s
+  `baseline_diagnostics` block reports them.
+- Thresholds (`z_mild=2.5`, `z_strong=3.5`, `fdr_q=0.05`, `fdr_method="bh"`,
+  `dim_score_threshold=2.5`, `flag_min_severity=2`) are injectable
+  (CLI / API / control-server settings / `[tool.lixity]` project config) and
+  echoed in every passport `meta` block — see [`METHODS.md`](METHODS.md) §3.
+
 **Lexical diversity.**
 - McCarthy & Jarvis (2010, *Behavior Research Methods* 42:381–392) recommend
   using **MTLD + vocd-D/HD-D + Maas together** – not a single index; each
@@ -21,8 +48,20 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
   different things (local repetition vs. global variation); the UI shows
   both, side by side.
 
+**Readability & stylistics.**
+- Amstad (1978) recalibrates Flesch for German; Kandel-Moles, Szigriszt-Pazos,
+  Franchina-Vacca, Martins and Douma supply the fr/es/it/pt/nl constants.
+  Weiss & Meurers (2022) show that raw readability *formulas* miss
+  linguistic dimensions that matter for comprehension — Lixity therefore
+  names the formula variant (`flesch_variant`) and treats the score as a
+  relative, language-local signal, never a cross-language quality ranking.
+- Foregrounding theory (Mukařovský / standard stylistics): deviation from
+  a text’s *own* norm is the literary signal. The self-calibrating house
+  style is that norm — a cultural-science reading of “what is remarkable
+  *here*” rather than “what is correct” against an external standard.
+
 **Stylometry.**
-- Burrows' Delta remains the standard baseline; 2026 work generalises it to
+- Burrows’ Delta remains the standard baseline; 2026 work generalises it to
   **Jensen–Shannon Delta** and Rank-Turbulence Delta and stresses
   *interpretability*. The chapter divergence is a Jensen–Shannon distance
   with interpretable driver words – in line with this direction, but not an
@@ -40,6 +79,7 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 - Target size ≥ 24×24 px (SC 2.5.8): paragraph chips are deliberately dense
   (18 px) – documented exception with keyboard access and click-to-read.
 - Diverging scales only with a meaningful midpoint (the chapter mean).
+
 
 ## 2. Stability register
 
@@ -70,7 +110,7 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 | 23 | Syllable heuristics | German double vowels and English silent-e/-le were mis-counted | `Kaffee`=3, `table`=3 | 🟡 → **fixed**: double vowels count as one nucleus, syllabic-l rule de-duplicated; accuracy ~90–98 % per language (documented) |
 | 24 | LIX long-word threshold | per-language calibration (7/8 characters) deviated from the standard | Björnsson defines >6 characters | 🟠 → **fixed**: standard >6 characters for every language; LIX values rise accordingly (documented, breaking metric change) |
 | 25 | Readability formulas | constants must match the named literature formulas | hand-computed tests added | 🟢 **verified**: Amstad, Flesch, Kandel-Moles, INFLESZ (62.35), Franchina-Vacca (0.6 per 100 words = 60.0), Martins, Douma |
-| 26 | UI interaction contract | some click targets were not keyboard reachable; one drill-down was lost | band rows lacked `role`/`tabindex` and the layer mapping | 🟠 → **fixed**: unified `[role="button"]` contract, one JS selector, focus ring for all; band rows clickable again |
+| 26 | UI interaction contract | some click targets were not keyboard reachable; one drill-down was lost | band rows lacked `role`/`tabindex` and the layer mapping | 🟠 → **fixed**: unified `[role="button"]` contract, one JS selector, focus ring for all; band rows jump to `#feat-<field>` (heatmap column) with optional layer + deviations-only |
 | 27 | Dialogue turns | "turn" = quoted segment; no speaker attribution, quotation patterns are curated per language | no reliable offline speaker ID | 🟡 **documented**: turn structure, not who speaks; patterns per language profile |
 | 28 | Character presence | whole-word matching on caller-supplied names/aliases; no NER, no coreference | nickname not in the list is invisible | 🟡 **documented**: alias patterns supported (`Matthias|Matze`); appendix/front matter excluded so chapter numbers match the metrics |
 | 29 | Chapter hook score | 0–3 heuristic (short closing sentence, terminal ?/!/…, closing dialogue) | deliberate calm endings score 0 | 🟡 **documented**: ranks and locates chapter endings, no quality verdict |

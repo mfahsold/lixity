@@ -115,11 +115,11 @@ def band_chart(
     median: float,
     values: list[float],
     outliers: list[float],
-    layer: str | None = None,
 ) -> str:
     """One style-passport row: data range, ±2σ band, median tick, outlier dots.
 
     Everything visible encodes data (Tufte); exact numbers live in the tooltip.
+    Interaction (jump/layer) lives on the parent ``.band-row``.
     """
     lo = min([*values, band_lo]) if values else band_lo
     hi = max([*values, band_hi]) if values else band_hi
@@ -131,15 +131,8 @@ def band_chart(
     band_left = pos(band_lo)
     band_width = max(0.5, pos(band_hi) - band_left)
     dots = "".join(f'<b style="left:{pos(v):.2f}%"></b>' for v in outliers)
-    attrs = (
-        f' data-layer="{html.escape(layer, quote=True)}" role="button" tabindex="0"'
-        if layer
-        else ""
-    )
-    if layer and outliers:
-        attrs += ' data-only="1"'  # drill-down: show the marked passages right away
     return (
-        f'<div class="band" title="{html.escape(title, quote=True)}"{attrs}>'
+        f'<div class="band" title="{html.escape(title, quote=True)}">'
         f'<i class="band-range" style="left:{band_left:.2f}%;width:{band_width:.2f}%"></i>'
         f'<i class="band-median" style="left:{pos(median):.2f}%"></i>'
         f"{dots}</div>"

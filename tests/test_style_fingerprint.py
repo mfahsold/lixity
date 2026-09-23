@@ -383,6 +383,29 @@ class TestStyleDimensions(unittest.TestCase):
         self.assertIn("fdr_flagged", passport)
         self.assertIn("redundant_features", passport)
         self.assertGreaterEqual(passport["meta"]["expected_false_positives"], 0.0)
+        # thresholds are stored on the fingerprint (not hardcoded in passport)
+        self.assertEqual(passport["meta"]["z_mild"], self.fp.thresholds.z_mild)
+        self.assertEqual(passport["meta"]["z_strong"], self.fp.thresholds.z_strong)
+        self.assertEqual(passport["meta"]["fdr_q"], self.fp.thresholds.fdr_q)
+
+    def test_injected_thresholds_reach_passport_and_dashboard(self):
+        """z_mild/fdr_q travel from from_metrics into passport meta and heatmap legend."""
+        from lixity.analyzer import CorpusAnalyzer
+        from lixity.language import resolve_language
+        from lixity.models import CorpusConfig
+        from lixity.style_fingerprint import FingerprintThresholds
+
+        text = "## A\n\nKurzer Satz. Zweiter Satz.\n\n## B\n\nEtwas längerer Satz mit Komma.\n\n## C\n\nNoch einmal anders geschrieben.\n"
+        config = CorpusConfig(language="de")
+        resolved = resolve_language(config, sample_text=text)
+        config = CorpusConfig(language=resolved.key)
+        metrics = CorpusAnalyzer(config).analyze_text(text)
+        custom = FingerprintThresholds(z_mild=1.5, fdr_q=0.1)
+        fp = StyleFingerprint.from_metrics(metrics, thresholds=custom)
+        meta = fp.passport()["meta"]
+        self.assertEqual(meta["z_mild"], 1.5)
+        self.assertEqual(meta["fdr_q"], 0.1)
+        self.assertEqual(fp.thresholds.z_strong, 3.5)  # untouched default
 
     def test_passport_text_lists_dimensions(self):
         text = self.fp.passport_text(labels={"feat_asl": "ASL"})

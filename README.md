@@ -6,77 +6,56 @@
 ![Dependencies](https://img.shields.io/badge/dependencies-pydantic%20%7C%20rich%20%7C%20orjson-brightgreen)
 
 **Lixity** is an offline text-linguistics engine that measures *how a literary
-manuscript reads* – sentence rhythm, lexical diversity, tense continuity,
-register signals – and flags only the passages where a chapter departs from
+manuscript reads* — and flags only the passages where a chapter departs from
 the manuscript's own established voice.
 
-Unlike grammar checkers or general NLP stacks, Lixity never measures against
-external norms. It derives a **self-calibrating style reference** from the
-manuscript itself (robust median/MAD house style), shrinks noisy observations
-from short chapters ($z^*$), and controls false discoveries across all
-chapter×feature cells (Benjamini-Hochberg FDR). The result is macro-editing
-evidence, not style dogma.
+It never measures against external norms. A **self-calibrating style
+reference** (robust median / MAD house style) is derived from the manuscript
+itself; noisy short-chapter observations are shrunk ($z^*$), false discoveries
+are controlled across all chapter×feature cells (Benjamini–Hochberg or
+Benjamini–Yekutieli FDR), and surviving cells carry effect sizes (Cliff's
+$\delta$) plus exchangeability diagnostics (runs test, lag-1 ACF). The result
+is macro-editing evidence, not style dogma.
 
-Pure Python (3.10+), zero cloud calls, three dependencies (`pydantic`, `rich`,
-`orjson`), seven native language profiles. Lixity is the analysis engine
-behind a full-length novel project; the repository ships German and English
-sample corpora for evaluation. The name stands for the mathematical
-foundation of its analysis: **T**TR, **Y**ule's characteristic $K$, and
-**LIX**.
+Pure Python (3.10+), zero cloud calls, three dependencies (`pydantic`,
+`rich`, `orjson`), seven native language profiles. Formal methods live in
+[`docs/METHODS.md`](docs/METHODS.md); stability caveats in
+[`docs/STABILITY.md`](docs/STABILITY.md). The name stands for the
+mathematical foundation: **T**TR, **Y**ule's characteristic $K$, and **LIX**.
 
 ![Lixity interactive HTML dashboard](docs/screenshots/dashboard-light.png)
 
 ![Lixity CLI analysis report](docs/screenshots/cli-analyze.png)
 
+## Mathematical core
+
+| Estimator | Role |
+| :--- | :--- |
+| Robust baseline $\tilde{x},\ \mathrm{MAD},\ \sigma = 1.4826\cdot\mathrm{MAD}$ | house-style band per feature |
+| Noise-aware $z^* = (x-\tilde{x})/\sqrt{\sigma^2+\mathrm{SE}^2}$ | shrinks short-chapter noise |
+| BH / BY FDR at $q$ (default 0.05) | multiplicity-controlled `fdr_flagged` |
+| Expected FP $= m\cdot P(\lvert Z\rvert\ge z_{\mathrm{mild}})$ | calibration against over-reading |
+| Cliff's $\delta$ / Vargha–Delaney $\hat{A}_{12}$ | magnitude of confirmed cells |
+| Runs test + lag-1 $\rho_1$ | exchangeability of the baseline |
+| Spearman $\rho$ + cyclic Jacobi EVD | latent style dimensions |
+
+Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`,
+`flag_min_severity`) are injectable via CLI, API kwargs, UI settings, or
+`[tool.lixity]` project config — resolution order documented in
+[`docs/METHODS.md`](docs/METHODS.md).
+
 ## Key capabilities
 
-- **Offline & deterministic:** identical input produces byte-identical
-  metrics, JSON and HTML.
-- **Self-calibrating norms:** no external style dogmas – the reference house
-  style is derived from the manuscript's own median and MAD.
-- **Statistical significance ($z^*$):** standard-error-aware deviation
-  scoring (Poisson, binomial, Miller-Madow), so short chapters cannot trigger
-  false alarms; plus Benjamini-Hochberg FDR control ($q = 0.05$).
-- **Unsupervised style dimensions:** latent stylistic axes via Spearman rank
-  correlation and cyclic Jacobi eigendecomposition (standard library only).
-- **Paragraph-accurate tense profiling:** narrative present vs. epic past per
-  paragraph, with line anchors and friction severity.
-- **Dialogue & interaction structure:** turns (quoted segments), turn lengths,
-  turns per 1,000 words and dialogue paragraph share — per chapter and corpus.
-- **Character presence:** where each curated figure appears, for how long and
-  how large the gaps are (aliases supported).
-- **Scene & pacing structure:** explicit scene breaks (`---`, `* * *`), tempo
-  signals per scene/chapter (ASL, staccato, dialogue) and a documented 0–3
-  hook score for every chapter ending.
-- **Motifs & repetition:** track curated motifs across chapters (mentions,
-  density, span, gaps) and surface repeated phrases and overused content words
-  — a signal for macro editing, not a verdict.
-- **Showing vs. telling:** a self-calibrating narrative-distance balance per
-  chapter (telling signals vs. showing signals, robust z against the book's own
-  median) — heuristic, documented, not a verdict.
-- **Editor-visible work markers:** invisible HTML comments with deterministic
-  content-hash IDs and free-text notes, writable from the dashboard or API.
-- **Idempotent workspace build:** `lixity build` publishes a reproducible
-  artifact set; unchanged input causes zero writes.
-- **Coherent dashboard:** optional component status strip, dialogue and
-  character-presence panels, clickable KPIs that drill down and preselect the
-  matching filter, style-reference band chart, deviation layer.
-- **Agent-ready:** strict JSON schemas with meta blocks, clean exit codes, a
-  stable `lixity.api` facade, and an agent guide in
+- **Offline & deterministic:** identical input → byte-identical metrics, JSON, HTML.
+- **Self-calibrating norms:** house style from the manuscript’s own median/MAD.
+- **Noise-aware $z^*$ + FDR (BH/BY)** with injectable thresholds.
+- **Effect sizes & diagnostics** on every confirmed cell.
+- **Latent style dimensions:** Spearman ρ + cyclic Jacobi (stdlib only).
+- **Paragraph tense profiling:** present/past/mixed/neutral, severity 0–3.
+- **Structure modules:** dialogue, characters, pacing, motifs, showing/telling.
+- **Idempotent build & single-file dashboard** with seven language profiles.
+- **Agent-ready:** strict JSON schemas, stable `lixity.api`,
   [`docs/AGENTS.md`](docs/AGENTS.md).
-
-## Who it is for
-
-| Role | Entry point | Typical loop |
-| :--- | :--- | :--- |
-| **Authors** | `lixity analyze` → `lixity style` → `lixity dashboard` | write → measure → compare against the book's own corridor → revise |
-| **Editors & publishers** | `lixity profile`, `lixity dialogue`, `lixity pacing`, `lixity motifs` | find tense slips, flat dialogue, missing scenes, repeated phrases |
-| **Digital humanities** | `lixity analyze --json`, `lixity style --json`, `lixity.api` | reproducible, offline corpora with documented estimators |
-| **AI agents** | `lixity about --json` + [`docs/AGENTS.md`](docs/AGENTS.md) | discover capabilities, call deterministic commands, interpret z\*/FDR |
-
-Everything is offline, deterministic and scriptable; every number comes with
-its formula, its uncertainty and its caveats (see
-[`docs/STABILITY.md`](docs/STABILITY.md)).
 
 ## Installation
 
@@ -93,16 +72,29 @@ pip install -e .
 ```bash
 lixity analyze manuscript.md            # Rich terminal report (--json for machines)
 lixity profile manuscript.md            # tense continuity, paragraph by paragraph
-lixity style manuscript.md              # self-calibrating style reference (--json: schema v2)
-lixity dialogue manuscript.md            # turn structure (--json for machines)
-lixity characters manuscript.md --names "Anna,Ralf"   # presence per chapter
-lixity pacing manuscript.md              # scenes, pacing curve, chapter hooks
-lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b'   # motifs + repetition
-lixity showing manuscript.md             # showing/telling balance per chapter
+lixity style manuscript.md              # style reference (BH/BY, δ, diagnostics)
+lixity dialogue manuscript.md           # turn structure
+lixity characters manuscript.md --names "Anna,Ralf"
+lixity pacing manuscript.md             # scenes, pacing, hooks
+lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b'
+lixity showing manuscript.md            # showing/telling per chapter
 lixity dashboard manuscript.md -o exports/dashboard.html
 cd my-novel && lixity build             # idempotent workspace: exports/ + archive
 lixity about                            # languages, features, heuristics
 ```
+
+Common sensitivity flags (on `style` / `dashboard` / `build`):
+
+```bash
+lixity style manuscript.md --json \
+  --z-mild 2.5 --z-strong 3.5 --fdr-q 0.05 --fdr-method bh \
+  --dim-threshold 2.5 --flag-min-severity 2
+```
+
+Project defaults: put the same keys under `[tool.lixity]` in
+`pyproject.toml`, or in `lixity.toml` / `~/.config/lixity.toml`
+(CLI > UI session > project > user > defaults).
+
 
 Try it on the bundled public-domain samples:
 
@@ -120,39 +112,15 @@ Full command reference, metric glossary, worked example and troubleshooting:
 
 ## What Lixity measures
 
-Five groups of features, all documented with their formulas and caveats in
-[`docs/USAGE.md`](docs/USAGE.md#understanding-the-metrics):
+Five groups, formulas and caveats in [`docs/USAGE.md`](docs/USAGE.md#understanding-the-metrics)
+and [`docs/METHODS.md`](docs/METHODS.md):
 
-1. **Sentence architecture & rhythm** – average sentence length, staccato /
-   paratactic / hypotactic distribution, coefficient of variation,
-   punctuation.
-2. **Lexical diversity** – TTR, Guiraud's $R$, HD-D (McCarthy & Jarvis),
-   MTLD, MATTR, Maas a², Yule's characteristic $K$ – with length guards for
-   short texts.
-3. **Readability** – language-calibrated Flesch family (Amstad, Flesch,
-   Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma) and LIX.
-4. **Narrative voice & register** – dialogue share, function words,
-   perception filters, modals, passive, nominalisations, adjectives,
-   sentence-starter entropy, first-person starts.
-5. **Tense dynamics** – per-paragraph dominance (present / past / mixed /
-   neutral) and friction severity 0–3.
-
-## How the style reference works
-
-1. **Robust centrality:** 16 features per chapter, median and MAD (scaled
-   $\sigma \approx 1.4826 \times \text{MAD}$).
-2. **Significance-adjusted $z^*$:**
-   $$z^* = \frac{x - \text{median}}{\sqrt{\sigma_{\text{MAD}}^2 + \text{SE}^2}}$$
-   A short chapter must deviate dramatically to be flagged.
-3. **FDR control:** in a 400-cell matrix (25 chapters × 16 features), ~5 cells
-   at $|z^*| \ge 2.5$ are expected by chance; the Benjamini-Hochberg set
-   ($q = 0.05$) separates real shifts from noise.
-4. **Style dimensions:** principal axes of the Spearman correlation matrix
-   (cyclic Jacobi eigendecomposition, pure standard library) – the author's
-   own latent axes, not preconceived genre models.
-
-Implementation notes and the full stability register (research basis, known
-limitations, every documented trade-off): [`docs/STABILITY.md`](docs/STABILITY.md).
+1. **Sentence architecture & rhythm** – ASL, staccato/parataxis/hypotaxis, CV, punctuation.
+2. **Lexical diversity** – TTR, Guiraud $R$, HD-D, MTLD, MATTR, Maas $a^2$, Yule $K$ (length-guarded).
+3. **Readability** – language-calibrated Flesch family + LIX (Björnsson >6 characters).
+4. **Narrative voice & register** – dialogue, function words, perception filters, modals,
+   passive, nominalisations, adjectives, starter entropy, first-person starts.
+5. **Tense dynamics** – per-paragraph dominance and friction severity 0–3.
 
 ## Work markers (editor-visible)
 
@@ -219,13 +187,8 @@ one `LanguageProfile` entry – no algorithmic change.
 
 ## Implementation principles
 
-- **HD-D:** McCarthy & Jarvis (2010) closed-form hypergeometric vocd, 42
-  deterministic samples of 35 tokens.
-- **Yule's $K$:** $K = 10^4 \cdot \frac{\sum_m m^2 V_m - N}{N^2}$.
-- **Miller-Madow correction:** $H_{\text{corr}} = -\sum p_i \ln p_i + \frac{k-1}{2N}$
-  for sentence-starter entropy.
-- **Cyclic Jacobi eigendecomposition:** solves $Av = \lambda v$ via plane
-  rotations – orthogonal eigenvectors without BLAS/LAPACK.
+Estimator catalogue (HD-D samples, Yule $K$, Miller–Madow, cyclic Jacobi,
+BH/BY, Cliff’s δ): [`docs/METHODS.md`](docs/METHODS.md).
 
 ## FAQ
 

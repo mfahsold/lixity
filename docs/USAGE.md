@@ -78,6 +78,12 @@ which writes a single HTML file.
 | :--- | :--- | :--- |
 | `--language CODE` | all commands | `auto` (default), `de`, `en`, `fr`, `es`, `it`, `pt`, `nl`, `generic`. `auto` detects the language from function words and falls back to `generic` when the signal is weak or ambiguous. |
 | `--json` | `analyze`, `profile`, `style` | Print machine-readable JSON instead of the Rich/text output. |
+| `--z-mild FLOAT` | `style`, `dashboard`, `build` | Notable \|z\*\| threshold (default `2.5`). Lower = more sensitive. Active values are reported in the passport `meta` and in the dashboard legend. |
+| `--z-strong FLOAT` | `style`, `dashboard`, `build` | Strong \|z\*\| threshold (default `3.5`). |
+| `--fdr-q FLOAT` | `style`, `dashboard`, `build` | False-discovery rate for `fdr_flagged` (default `0.05`). |
+| `--fdr-method {bh,by}` | `style`, `dashboard`, `build` | BH = Benjamini–Hochberg (default); BY = Benjamini–Yekutieli (arbitrary dependence). |
+| `--dim-threshold FLOAT` | `style`, `dashboard`, `build` | \|dimension score\| from which a chapter is flagged on that axis (default `2.5`). |
+| `--flag-min-severity {1,2,3}` | `style`, `dashboard`, `build` | Minimum paragraph severity for the flags panel (default `2`). |
 | `-o`, `--output PATH` | `dashboard` | Target HTML file (default: `lixity-dashboard.html`). |
 | `--dry-run` | `build` | Show planned artifacts without writing anything. |
 | `--version` | top-level | Print engine version and exit. |
@@ -240,15 +246,23 @@ JSON fields: `chapters`, `tell_z_mean`, `show_z_mean`, `balance_mean`,
 ### `lixity style`
 
 Prints the **style reference** – the self-calibrated house style of the
-manuscript. Lixity measures 16 descriptive, register-neutral features per
+manuscript. Defaults: \|z\*\| ≥ 2.5 notable, ≥ 3.5 strong, FDR q = 0.05 (BH);
+override with `--z-mild`, `--z-strong`, `--fdr-q`, `--fdr-method`,
+`--dim-threshold`, `--flag-min-severity` (same flags on `dashboard`
+and `build`). Active values are always reported in the passport `meta`
+(`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`) and in
+the dashboard legend / settings – re-read them, never assume the defaults.
+Lixity measures 16 descriptive, register-neutral features per
 chapter (ASL, staccato, hypotaxis, sentence CV, dialogue, function words,
 perception filters, modals, passive, nominalisations, adjectives, long words,
 starter entropy, first-person starts, Guiraud R, HD-D) and derives their
 robust centre (median) and spread (MAD) from the corpus itself. Deviations
 are **significance-adjusted** against each chapter's estimation noise
 (`z* = (x − median) / √(σ² + SE²)`, documented standard errors per feature),
-reported with the statistically expected number of false positives and a
-**Benjamini-Hochberg FDR set** (q = 0.05). Additionally, the style reference derives
+reported with the statistically expected number of false positives and an
+**FDR set** (BH or BY, q = 0.05). Confirmed cells carry Cliff's δ effect
+sizes; the passport also reports baseline exchangeability diagnostics
+(runs test, lag-1 ACF). Additionally, the style reference derives
 the manuscript's own abstract **style dimensions** (Spearman correlation of
 the features, Jacobi eigendecomposition) with loadings and per-chapter
 scores, plus redundant feature pairs (|ρ| ≥ 0.8). Whether a deviation is
@@ -259,6 +273,7 @@ engine. The style reference doubles as a constraint block for authoring and edit
 ```bash
 lixity style manuscript.md          # text block
 lixity style manuscript.md --json   # machine-readable (schema v2)
+lixity style manuscript.md --json --z-mild 1.5 --fdr-q 0.1 --fdr-method by
 ```
 
 ### `lixity dashboard`
@@ -304,7 +319,10 @@ The dashboard contains:
   house mean), plus the expected-false-positive/FDR footnote; cells jump to
   the chapter and activate the matching style layer,
 - the **style reference** panel (median, ±2σ band, outlier count per
-  feature): each band row is clickable and opens the corresponding chapter,
+  feature): **each band row is clickable** and jumps to that feature's
+  column in the style heatmap (`#feat-<field>`), activating the matching
+  style layer and preselecting “deviations only” when outliers exist; the
+  red **outlier count** opens the strongest outlier chapter directly,
 - the **style dimensions** panel (self-calibrated principal axes with
   loadings and flagged chapters),
 - a chapter map with a colour-coded paragraph strip (present / past / mixed /
@@ -441,7 +459,7 @@ facade is described below under [Library](#library).
 | **MATTR** | moving-average TTR over a 50-token window | ≥ 0.70 = rich; the most length-stable index |
 | **Maas a²** | (log N − log V) / (log N)² | lower = richer vocabulary |
 | **Flesch** | language-calibrated Flesch family (Amstad for German) | 65–80 = easy; higher is easier |
-| **LIX** | ASL + share of long words (threshold per language: > 6/7/8 letters) | < 40 = accessible, > 50 = demanding |
+| **LIX** | ASL + share of long words (Björnsson: more than six characters, all languages) | < 40 = accessible, > 50 = demanding |
 | **Dialogue ratio** | share of words inside quoted speech | 5–15 % typical for narrative prose |
 | **Function words** | share of articles, pronouns, prepositions, conjunctions, particles, auxiliaries, modals | high share = grammatical glue, implicit style |
 | **Perception filters** | verbs of perception/sensation ("sah", "hörte", "fühlte") | few = showing, many = telling |

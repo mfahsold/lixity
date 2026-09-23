@@ -501,6 +501,16 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
     if (btn.dataset.payload === "settings") {
       payload.language = document.getElementById("set-language").value;
       payload.title = document.getElementById("set-title").value;
+      var zm = document.getElementById("set-z-mild");
+      var zs = document.getElementById("set-z-strong");
+      var fq = document.getElementById("set-fdr-q");
+      var fs = document.getElementById("set-flag-min-sev");
+      var dt = document.getElementById("set-dim-threshold");
+      if (zm) payload.z_mild = parseFloat(zm.value);
+      if (zs) payload.z_strong = parseFloat(zs.value);
+      if (fq) payload.fdr_q = parseFloat(fq.value);
+      if (fs) payload.flag_min_severity = parseInt(fs.value, 10);
+      if (dt) payload.dim_score_threshold = parseFloat(dt.value);
     }
     if (btn.dataset.payload === "load") {
       var input = document.getElementById("ms-file");

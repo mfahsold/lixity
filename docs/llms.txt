@@ -19,6 +19,8 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [README](https://github.com/mfahsold/lixity#readme): overview, install, CLI quick start, capabilities, license
 - [docs/USAGE.md](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md): full command reference, worked example, metrics, known limitations
 - [docs/AGENTS.md](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md): JSON contracts, interpretation heuristics, stable Python facade, dashboard DOM hooks
+- [docs/METHODS.md](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md): formal estimators (z*, BH/BY FDR, Cliff’s δ, runs/ACF, Jacobi dimensions, LD indices, readability, JSD) and injectability
+- [docs/STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): research basis, caveats, platform differences
 - [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.10.0)
 
 Reports/CLI messages: English default, German via LIXITY_LANG=de. JSON contracts:
@@ -34,9 +36,9 @@ present/past/mixed/neutral) and 2 (style reference).
 - `lixity pacing FILE [--json]` – scene breaks, pacing signals, chapter hook score
 - `lixity motifs FILE --motif NAME=REGEX [--json]` – motif presence + repeated phrases/content words
 - `lixity showing FILE [--json]` – showing/telling balance per chapter (self-calibrating)
-- `lixity style FILE --json` – self-calibrating style reference (schema v2)
-- `lixity dashboard FILE [-o ui.html] [--names A,B]` – single-file interactive dashboard (clickable KPIs, status strip, dialogue and character panels, deviation layer, work markers)
-- `lixity build [FILE] [--dry-run]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
+- `lixity style FILE --json [--z-mild F] [--z-strong F] [--fdr-q F] [--fdr-method bh|by] [--dim-threshold F] [--flag-min-severity 1|2|3]` – self-calibrating style reference (schema v2; thresholds injectable, re-read from meta; Cliff’s δ + baseline diagnostics)
+- `lixity dashboard FILE [-o ui.html] [--names A,B] [same threshold flags]` – single-file interactive dashboard (clickable KPIs, status strip, structure panels, work markers, full settings group)
+- `lixity build [FILE] [--dry-run] [same threshold flags]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
 - `lixity about --json` – languages, features, heuristics, command list
 - `lixity completion bash|zsh` – shell completion
 
@@ -46,8 +48,9 @@ Python facade: `from lixity import api` – `analyze`, `profile`, `dialogue`,
 
 ## Key numbers and thresholds
 
-- z* = (x − median) / sqrt(sigma^2 + SE^2), sigma = 1.4826 * MAD; |z*| >= 2.5 noticeable, >= 3.5 strong
-- FDR control: Benjamini-Hochberg, q = 0.05
+- z* = (x − median) / sqrt(sigma^2 + SE^2), sigma = 1.4826 * MAD; defaults |z*| >= 2.5 noticeable, >= 3.5 strong — injectable (`--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`, API kwargs, control-server settings, `[tool.lixity]` config); always re-read from passport.meta
+- FDR control: Benjamini–Hochberg default q = 0.05; `--fdr-method by` for Benjamini–Yekutieli (arbitrary dependence)
+- Effect sizes: Cliff’s δ / Vargha–Delaney A on FDR cells; baseline diagnostics (runs, lag-1 ρ, low_power n<8)
 - Lexical diversity guards: MTLD and Maas a2 need >= 100 tokens, HD-D >= 175 tokens, MATTR >= 50-token window
 - Style reference needs several chapters with measurable spread
 

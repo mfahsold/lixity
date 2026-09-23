@@ -24,13 +24,21 @@ from that style, controlled for measurement noise and multiple testing.
 | `lixity pacing FILE [--json]` | scenes, pacing signals, chapter hooks | text / JSON |
 | `lixity motifs FILE --motif NAME=REGEX [--json]` | motif presence + repetition (words, n-grams) | text / JSON |
 | `lixity showing FILE [--json]` | showing vs. telling balance per chapter | text / JSON |
-| `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR) | JSON (schema v2) |
-| `lixity dashboard FILE -o ui.html` | single-file HTML dashboard | file path |
-| `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` | artifact list |
+| `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR; `--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`) | JSON (schema v2) |
+| `lixity dashboard FILE -o ui.html` | single-file HTML dashboard (Settings: z\*, FDR, flags cut, dim threshold) | file path |
+| `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` (same threshold flags as `style`) | artifact list |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
 | `lixity completion bash\|zsh` | shell completion script | script |
 
 - `--language auto|de|en|fr|es|it|pt|nl|generic` – `auto` detects via function words.
+- `--z-mild FLOAT` / `--z-strong FLOAT` / `--fdr-q FLOAT` /
+  `--fdr-method bh|by` / `--dim-threshold FLOAT` / `--flag-min-severity 1|2|3`
+  – style-reference thresholds on `style`, `dashboard`, `build`
+  (defaults 2.5 / 3.5 / 0.05 / bh / 2.5 / 2);
+  always re-read active values from `passport.meta` (`z_mild`, `z_strong`,
+  `fdr_q`, `fdr_method`, `dim_score_threshold`), never assume the defaults.
+  Project-wide defaults: `[tool.lixity]` / `lixity.toml` / `~/.config/lixity.toml`
+  (CLI flag > UI session > project > user > code).
 - Exit codes: `0` success, `1` file/processing error, `2` usage error (argparse).
   Errors go to stderr as `[error] …` lines (`LIXITY_LANG=de` switches the
   user-facing messages to German); stdout carries only the payload.
@@ -117,8 +125,9 @@ vocabulary; every server control is a native `<button>`/`<select>`.
 
 | Hook | Meaning |
 |---|---|
-| `data-jump="<anchor>"` | scroll to a panel/row and flash it |
+| `data-jump="<anchor>"` | scroll to a panel/row/column and flash it (`#feat-<field>` = heatmap column) |
 | `data-layer="<key>"` | activate a style layer (paragraph colouring) |
+| `data-feature="<field>"` | passport row: fingerprint field of the heatmap column target |
 | `data-only="1"` | additionally preselect "deviations only" |
 | `data-flags="1"` | additionally preselect "flagged only" |
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
@@ -132,6 +141,9 @@ vocabulary; every server control is a native `<button>`/`<select>`.
 The script drives click **and** keyboard activation through one selector
 (`INTERACTIVE = "[data-jump], [data-line], [role='button'], td.z[data-chapter]"`),
 so a new drill-down only needs the attributes, not new JavaScript. The
+**style passport** (`#bands`) rows carry `data-jump="#feat-<field>"` (heatmap
+column anchor) plus optional `data-layer`; the red outlier count on the same
+row is a nested control that jumps to the strongest outlier chapter. The
 **flagged passages panel** (`#flags`, right under the KPIs) is the start of
 the editorial loop: every row jumps to its paragraph (with the “flagged only”
 filter preselected) and offers a quick `+ To-do` button that writes the
@@ -189,13 +201,21 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
 - **z*** = significance-adjusted deviation: `z* = (x − median) / √(σ² + SE²)`
   with σ = 1.4826·MAD. Small chapters have large SE – their deviations are
   shrunk, so they cannot produce false alarms.
-- **Thresholds**: |z*| ≥ 2.5 noticeable, ≥ 3.5 strong. At 2.5, ~1.2 % of all
-  chapter×feature cells exceed the threshold by chance; the style reference reports
-  the expected count (`expected_false_positives`) – never report a deviation
-  as "significant" without comparing it to this number.
-- **FDR**: `fdr_flagged` is the Benjamini-Hochberg set (q = 0.05) – the cells
-  that remain significant under multiplicity control. Prefer it over the raw
-  `deviations` when making strong claims.
+- **Thresholds**: |z*| ≥ 2.5 noticeable, ≥ 3.5 strong (injectable via
+  `--z-mild` / `--z-strong` / `--fdr-q` / `--fdr-method` /
+  `--dim-threshold` / `--flag-min-severity`, API kwargs, the control-server
+  settings, or `[tool.lixity]`; always re-read them from `passport.meta`,
+  never assume the defaults). At 2.5, ~1.2 % of all chapter×feature cells
+  exceed the threshold by chance; the style reference reports the expected
+  count (`expected_false_positives`) – never report a deviation as
+  "significant" without comparing it to this number.
+- **FDR**: `fdr_flagged` is the Benjamini–Hochberg set by default
+  (q = 0.05), or Benjamini–Yekutieli when `meta.fdr_method` is `by` –
+  the cells that remain significant under multiplicity control. Prefer it
+  over the raw `deviations` when making strong claims. Confirmed cells
+  also carry effect sizes (`effect_magnitudes`, Cliff’s δ labels) and the
+  passport reports baseline exchangeability (`baseline_diagnostics`).
+  Formal methods: [`METHODS.md`](METHODS.md).
 - **Dimensions**: principal components of the Spearman correlation matrix
   (Jacobi eigendecomposition, deterministic sign). They are the manuscript's
   own abstract style axes, not pre-defined registers. `flagged` chapters sit

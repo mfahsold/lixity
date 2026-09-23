@@ -60,13 +60,24 @@ FEATURE_UNITS_DE: dict[str, str] = {
 FEATURE_FIELDS: tuple[str, ...] = tuple(f for f, _l, _u in FEATURES)
 
 # Paragraph-level overlay layers for the chapter strips (chip bottom edge).
+# Values are the fingerprint/chapter field names (FEATURES / deviations).
 LAYER_FEATURES: dict[str, str] = {
+    "asl": "asl",
+    "function": "function_word_pct",
+    "dialogue": "dialog_pct",
+    "filter": "filter_density",
+    "modal": "modal_density",
+    "nominal": "nominalization_density",
+    "passive": "passive_density",
+}
+# ParagraphProfile attribute per layer key (dialogue/nominal use shorter names).
+LAYER_PARAGRAPH_ATTR: dict[str, str] = {
     "asl": "asl",
     "function": "function_word_pct",
     "dialogue": "dialogue_pct",
     "filter": "filter_density",
     "modal": "modal_density",
-    "nominal": "nominalization_density",
+    "nominal": "nominal_density",
     "passive": "passive_density",
 }
 
@@ -82,8 +93,11 @@ class FingerprintThresholds:
 
     z_mild: float = 2.5  # significance-adjusted z from here: noticeable deviation
     z_strong: float = 3.5  # significance-adjusted z from here: strong deviation
-    fdr_q: float = 0.05  # Benjamini-Hochberg false-discovery rate
+    fdr_q: float = 0.05  # Benjamini-Hochberg / Benjamini-Yekutieli false-discovery rate
+    fdr_method: str = "bh"  # "bh" (default) or "by" (arbitrary dependence)
     min_chapters: int = 2  # below this chapter count no baseline is derived
+    dim_score_threshold: float = 2.5  # |dimension score| from here: flagged on that axis
+    flag_min_severity: int = 2  # paragraph severity floor for the flags panel (1|2|3)
 
 
 def median(values: list[float]) -> float:
@@ -129,6 +143,110 @@ def benjamini_hochberg(
         if p <= q * k / m:
             k_star = k
     return [(ch, feat) for ch, feat, _p in ordered[:k_star]]
+
+
+def benjamini_yekutieli(
+    cells: list[tuple[int, str, float]], q: float = 0.05
+) -> list[tuple[int, str]]:
+    """
+    Benjamini-Yekutieli FDR control: BH step-up with the harmonic factor
+    c(m) = sum 1/i, valid under arbitrary dependence between tests
+    (style features are strongly correlated).
+    """
+    if not cells:
+        return []
+    m = len(cells)
+    harmonic = sum(1.0 / i for i in range(1, m + 1))
+    return benjamini_hochberg(cells, q=q / harmonic)
+
+
+def fdr_rejects(
+    cells: list[tuple[int, str, float]], q: float = 0.05, method: str = "bh"
+) -> list[tuple[int, str]]:
+    """Dispatch BH (default) or BY multiplicity control."""
+    if method.lower() in ("by", "benjamini-yekutieli", "benjamini_yekutieli"):
+        return benjamini_yekutieli(cells, q=q)
+    return benjamini_hochberg(cells, q=q)
+
+
+def cliff_delta(x: list[float], y: list[float]) -> float:
+    """
+    Cliff's delta: P(X>Y) - P(X<Y) over all pairs (ties count 0).
+    Ordinal effect size for one chapter vs. the rest of the house style.
+    """
+    if not x or not y:
+        return 0.0
+    wins = losses = 0
+    for a in x:
+        for b in y:
+            if a > b:
+                wins += 1
+            elif a < b:
+                losses += 1
+    n = len(x) * len(y)
+    return (wins - losses) / n if n else 0.0
+
+
+def vargha_delaney_a(x: list[float], y: list[float]) -> float:
+    """Vargha-Delaney A = P(X>Y) + 0.5·P(X=Y) = (δ + 1) / 2."""
+    if not x or not y:
+        return 0.5
+    wins = ties = 0
+    for a in x:
+        for b in y:
+            if a > b:
+                wins += 1
+            elif a == b:
+                ties += 1
+    n = len(x) * len(y)
+    return (wins + 0.5 * ties) / n if n else 0.5
+
+
+def effect_label(delta: float) -> str:
+    """Romano et al. (2006) bands for |Cliff's delta|."""
+    a = abs(delta)
+    if a < 0.147:
+        return "negligible"
+    if a < 0.33:
+        return "small"
+    if a < 0.474:
+        return "medium"
+    return "large"
+
+
+def lag1_autocorrelation(values: list[float]) -> float | None:
+    """Lag-1 Pearson autocorrelation; None when n < 3 or zero variance."""
+    n = len(values)
+    if n < 3:
+        return None
+    mean = sum(values) / n
+    denom = sum((v - mean) ** 2 for v in values)
+    if denom == 0.0:
+        return None
+    num = sum((values[i] - mean) * (values[i + 1] - mean) for i in range(n - 1))
+    return num / denom
+
+
+def runs_above_median_z(values: list[float]) -> float | None:
+    """
+    Wald-Wolfowitz runs z for above/below-median signs (ties to the right).
+    None when n < 8 or one side is empty (no power).
+    """
+    n = len(values)
+    if n < 8:
+        return None
+    med = median(values)
+    signs = [1 if v >= med else -1 for v in values]
+    n_pos = sum(1 for s in signs if s > 0)
+    n_neg = n - n_pos
+    if n_pos == 0 or n_neg == 0:
+        return None
+    runs = 1 + sum(1 for i in range(n - 1) if signs[i] != signs[i + 1])
+    mu = (2.0 * n_pos * n_neg) / n + 1.0
+    var = (2.0 * n_pos * n_neg * (2.0 * n_pos * n_neg - n)) / (n * n * (n - 1.0))
+    if var <= 0.0:
+        return None
+    return (runs - mu) / math.sqrt(var)
 
 
 def spearman_rho(x: list[float], y: list[float]) -> float:
@@ -246,6 +364,9 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "expected_hits": "statistically expected hits",
         "fdr_confirmed": "FDR-confirmed",
         "cells": "cells",
+        "exchangeability": "Exchangeability",
+        "mean_acf": "mean lag-1",
+        "low_power": "low power (n < 8)",
         "dimension": "Dimension",
         "variance": "variance",
         "flagged": "flagged",
@@ -265,6 +386,9 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "expected_hits": "statistisch erwartete Zufallstreffer",
         "fdr_confirmed": "FDR-bestätigt",
         "cells": "Zellen",
+        "exchangeability": "Austauschbarkeit",
+        "mean_acf": "mittlere Verzögerung-1",
+        "low_power": "geringe Kraft (n < 8)",
         "dimension": "Dimension",
         "variance": "Varianz",
         "flagged": "auffällig",
@@ -293,6 +417,7 @@ class StyleFingerprint:
     baseline: dict[str, dict[str, float | int]] = field(default_factory=dict)
     z_scores: dict[int, dict[str, float]] = field(default_factory=dict)
     effect_sizes: dict[int, dict[str, float]] = field(default_factory=dict)
+    cliffs_delta: dict[int, dict[str, float]] = field(default_factory=dict)
     deviations: dict[int, dict[str, float]] = field(default_factory=dict)
     fdr_flagged: dict[int, list[str]] = field(default_factory=dict)
     expected_false_positives: float = 0.0
@@ -300,6 +425,8 @@ class StyleFingerprint:
     n_chapters: int = 0
     dimensions: list[dict[str, Any]] = field(default_factory=list)
     redundant_features: list[dict[str, Any]] = field(default_factory=list)
+    baseline_diagnostics: dict[str, Any] = field(default_factory=dict)
+    thresholds: FingerprintThresholds = field(default_factory=FingerprintThresholds)
 
     @classmethod
     def from_metrics(
@@ -324,6 +451,7 @@ class StyleFingerprint:
         baseline: dict[str, dict[str, float | int]] = {}
         z_scores: dict[int, dict[str, float]] = {c.num: {} for c in chapters}
         effect_sizes: dict[int, dict[str, float]] = {c.num: {} for c in chapters}
+        cliffs: dict[int, dict[str, float]] = {c.num: {} for c in chapters}
         measured_cells = 0
         in_band = 0
         p_cells: list[tuple[int, str, float]] = []
@@ -345,10 +473,14 @@ class StyleFingerprint:
                 value = values[field_name].get(chapter.num)
                 if value is None:
                     continue
+                others = [
+                    v for ch, v in values[field_name].items() if ch != chapter.num and v is not None
+                ]
                 z_raw = robust_z(value, centre, spread)
                 z_sig = significance_z(value, centre, sigma, ses[field_name][chapter.num])
                 z_scores[chapter.num][field_name] = z_sig
                 effect_sizes[chapter.num][field_name] = z_raw
+                cliffs[chapter.num][field_name] = cliff_delta([value], others)
                 measured_cells += 1
                 if abs(z_sig) < thresholds.z_mild:
                     in_band += 1
@@ -364,7 +496,7 @@ class StyleFingerprint:
             if flagged:
                 deviations[chapter.num] = flagged
 
-        fdr_cells = benjamini_hochberg(p_cells, q=thresholds.fdr_q)
+        fdr_cells = fdr_rejects(p_cells, q=thresholds.fdr_q, method=thresholds.fdr_method)
         fdr_flagged: dict[int, list[str]] = {}
         for chapter_num, field_name in fdr_cells:
             fdr_flagged.setdefault(chapter_num, []).append(field_name)
@@ -378,15 +510,52 @@ class StyleFingerprint:
             baseline=baseline,
             z_scores=z_scores,
             effect_sizes=effect_sizes,
+            cliffs_delta=cliffs,
             deviations=deviations,
             fdr_flagged=fdr_flagged,
             expected_false_positives=expected_fp,
             consistency=consistency,
             n_chapters=len(chapters),
+            thresholds=thresholds,
         )
         fingerprint.dimensions = fingerprint._derive_dimensions()
         fingerprint.redundant_features = fingerprint._derive_redundancies()
+        fingerprint.baseline_diagnostics = fingerprint._derive_baseline_diagnostics()
         return fingerprint
+
+    def _derive_baseline_diagnostics(self) -> dict[str, Any]:
+        """
+        Exchangeability diagnostics: are chapters i.i.d. draws from one house
+        style? Runs z (above/below median) and lag-1 autocorrelation per usable
+        feature; low power when n < 8 (documented).
+        """
+        fields = self._usable_features()
+        n = self.n_chapters
+        runs_flagged: list[str] = []
+        acf_values: list[float] = []
+        for field_name in fields:
+            series: list[float] = []
+            for ch in sorted(self.values[field_name]):
+                value = self.values[field_name].get(ch)
+                if value is not None:
+                    series.append(float(value))
+            rz = runs_above_median_z(series)
+            rho1 = lag1_autocorrelation(series)
+            if rz is not None and abs(rz) >= 1.96:
+                runs_flagged.append(field_name)
+            if rho1 is not None:
+                acf_values.append(rho1)
+        mean_rho1 = sum(acf_values) / len(acf_values) if acf_values else 0.0
+        acf_critical = 1.0 / math.sqrt(n) if n >= 3 else 1.0
+        exchangeable = not runs_flagged and abs(mean_rho1) < acf_critical
+        return {
+            "n_chapters": n,
+            "low_power": n < 8,
+            "runs_flagged": sorted(runs_flagged),
+            "mean_lag1_rho": round(mean_rho1, 4),
+            "acf_critical": round(acf_critical, 4),
+            "exchangeable": exchangeable,
+        }
 
     def _usable_features(self) -> list[str]:
         return [
@@ -448,9 +617,9 @@ class StyleFingerprint:
                     sigma = float(self.baseline[field_name]["sigma"])
                     z = (value - centre) / sigma
                     score += loading_vector[k] * z
-                scores[chapter_num] = round(score, 2)
-                if abs(score) >= DIM_SCORE_THRESHOLD:
-                    flagged.append(chapter_num)
+                    scores[chapter_num] = round(score, 2)
+                    if abs(score) >= self.thresholds.dim_score_threshold:
+                        flagged.append(chapter_num)
             dims.append(
                 {
                     "index": dim_index + 1,
@@ -513,18 +682,30 @@ class StyleFingerprint:
                     "chapters_measured": int(base.get("n", 0)),
                 }
             )
+        # Cliff's δ / Vargha-Delaney A for FDR-confirmed cells (magnitude).
+        effect_magnitudes: dict[str, dict[str, str]] = {}
+        for chapter_num, fields in self.fdr_flagged.items():
+            row: dict[str, str] = {}
+            for field_name in fields:
+                d = self.cliffs_delta.get(chapter_num, {}).get(field_name, 0.0)
+                row[field_name] = effect_label(d)
+            if row:
+                effect_magnitudes[str(chapter_num)] = row
         return {
             "meta": {
                 "tool": "lixity",
                 "schema_version": 2,
                 "n_chapters": self.n_chapters,
                 "n_features": len(FEATURES),
-                "z_mild": 2.5,
-                "z_strong": 3.5,
-                "fdr_q": 0.05,
+                "z_mild": self.thresholds.z_mild,
+                "z_strong": self.thresholds.z_strong,
+                "fdr_q": self.thresholds.fdr_q,
+                "fdr_method": self.thresholds.fdr_method,
+                "dim_score_threshold": self.thresholds.dim_score_threshold,
                 "expected_false_positives": round(self.expected_false_positives, 2),
             },
             "consistency": round(self.consistency, 4),
+            "baseline_diagnostics": self.baseline_diagnostics,
             "features": features,
             "deviations": {
                 str(chapter_num): {feat: round(z, 2) for feat, z in dev.items()}
@@ -533,6 +714,7 @@ class StyleFingerprint:
             "fdr_flagged": {
                 str(chapter_num): fields for chapter_num, fields in sorted(self.fdr_flagged.items())
             },
+            "effect_magnitudes": effect_magnitudes,
             "dimensions": self.dimensions,
             "redundant_features": self.redundant_features,
         }
@@ -586,10 +768,21 @@ class StyleFingerprint:
         )
         lines.append(
             f"{t('multiplicity')}: {format_num(self.expected_false_positives, language_key, 1)} "
-            f"{t('expected_hits')} |z*| >= 2.5; "
-            f"{t('fdr_confirmed')} (q=0.05): "
+            f"{t('expected_hits')} |z*| >= {format_num(self.thresholds.z_mild, language_key, 1)}; "
+            f"{t('fdr_confirmed')} "
+            f"({'BY' if self.thresholds.fdr_method.lower().startswith('by') else 'BH'} "
+            f"q={format_num(self.thresholds.fdr_q, language_key, 2)}): "
             f"{sum(len(v) for v in self.fdr_flagged.values())} {t('cells')}"
         )
+        if self.baseline_diagnostics:
+            diag = self.baseline_diagnostics
+            rho = format_num(float(diag.get("mean_lag1_rho", 0.0)), language_key, 2, signed=True)
+            flag = "✓" if diag.get("exchangeable") else "!"
+            lines.append(
+                f"{t('exchangeability')}: {flag} "
+                f"{t('mean_acf')} ρ₁={rho}"
+                + (f" · {t('low_power')}" if diag.get("low_power") else "")
+            )
         if self.dimensions:
             lines.append("-" * 72)
             field_labels = {f: label_key for f, label_key, _u in FEATURES}
@@ -598,10 +791,10 @@ class StyleFingerprint:
                 top_pos = sorted(loadings.items(), key=lambda kv: kv[1], reverse=True)[:3]
                 top_neg = sorted(loadings.items(), key=lambda kv: kv[1])[:3]
                 pos_text = ", ".join(
-                    f"+{labels.get(field_labels.get(f, f), f)}" for f, _v in top_pos
+                    f"+{labels.get(field_labels.get(f) or f, f)}" for f, _v in top_pos
                 )
                 neg_text = ", ".join(
-                    f"{labels.get(field_labels.get(f, f), f)}" for f, _v in top_neg
+                    f"{labels.get(field_labels.get(f) or f, f)}" for f, _v in top_neg
                 )
                 flagged = dim.get("flagged", [])
                 lines.append(
@@ -611,14 +804,13 @@ class StyleFingerprint:
                 )
                 if flagged:
                     lines.append(
-                        f"    {t('flagged')}: "
-                        f"{t('chapter')} {', '.join(map(str, flagged))}"
+                        f"    {t('flagged')}: {t('chapter')} {', '.join(map(str, flagged))}"
                     )
         if self.redundant_features:
             field_labels = {f: label_key for f, label_key, _u in FEATURES}
             redundant = ", ".join(
-                f"{labels.get(field_labels.get(p['a'], p['a']), p['a'])}↔"
-                f"{labels.get(field_labels.get(p['b'], p['b']), p['b'])} "
+                f"{labels.get(field_labels.get(p['a']) or p['a'], p['a'])}↔"
+                f"{labels.get(field_labels.get(p['b']) or p['b'], p['b'])} "
                 f"({format_num(p['rho'], language_key, 2, signed=True)})"
                 for p in self.redundant_features[:4]
             )
@@ -645,7 +837,7 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
     Returns {paragraph_index: (value, robust z)}; empty for unknown layers
     or chapters with fewer than three measurable paragraphs.
     """
-    field_name = LAYER_FEATURES.get(layer)
+    field_name = LAYER_PARAGRAPH_ATTR.get(layer, LAYER_FEATURES.get(layer))
     if field_name is None:
         return {}
     by_chapter: dict[int, list[tuple[int, float]]] = {}

@@ -12,18 +12,50 @@ from rich.table import Table
 
 from . import __version__
 from .analyzer import CorpusAnalyzer
+from .config import apply_config_to_thresholds, load_project_config
 from .formatters import ReportFormatter
 from .io import FileUtils
 from .language import resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import SCHEMA_VERSION, CorpusConfig
-from .style_fingerprint import StyleFingerprint
+from .style_fingerprint import FingerprintThresholds, StyleFingerprint
 from .style_profile import ParagraphProfiler
 from .ui import render_dashboard
 from .workspace import discover
 
 EXIT_OK = 0
 EXIT_ERROR = 1
+
+
+def _thresholds_from_args(
+    args: argparse.Namespace, config: dict[str, Any] | None = None
+) -> FingerprintThresholds:
+    """Builds FingerprintThresholds from CLI flags (defaults = documented heuristics).
+
+    Precedence: CLI flag > ``[tool.lixity]`` project config > built-in default.
+    """
+    defaults = FingerprintThresholds()
+    base: dict[str, Any] = {
+        "z_mild": defaults.z_mild,
+        "z_strong": defaults.z_strong,
+        "fdr_q": defaults.fdr_q,
+        "fdr_method": defaults.fdr_method,
+        "dim_score_threshold": defaults.dim_score_threshold,
+    }
+    if config:
+        for key, value in apply_config_to_thresholds(config).items():
+            if key in base:
+                base[key] = value
+    overrides = {
+        "z_mild": getattr(args, "z_mild", None),
+        "z_strong": getattr(args, "z_strong", None),
+        "fdr_q": getattr(args, "fdr_q", None),
+        "fdr_method": getattr(args, "fdr_method", None),
+        "dim_score_threshold": getattr(args, "dim_threshold", None),
+        "flag_min_severity": getattr(args, "flag_min_severity", None),
+    }
+    base.update({k: v for k, v in overrides.items() if v is not None})
+    return FingerprintThresholds(**base)
 
 
 def _json(payload: object, indent: bool = False) -> str:
@@ -486,11 +518,7 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
         table.add_column(_m("mot_span"))
         table.add_column(_m("mot_gap"), justify="right")
         for motif in report.motifs:
-            span = (
-                f"{motif.first_chapter}–{motif.last_chapter}"
-                if motif.first_chapter
-                else "–"
-            )
+            span = f"{motif.first_chapter}–{motif.last_chapter}" if motif.first_chapter else "–"
             table.add_row(
                 motif.name,
                 str(motif.mentions),
@@ -584,7 +612,9 @@ def _cmd_build(args: argparse.Namespace) -> int:
 
     metrics = CorpusAnalyzer(config).analyze_text(text)
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
-    fingerprint = StyleFingerprint.from_metrics(metrics)
+    fingerprint = StyleFingerprint.from_metrics(
+        metrics, thresholds=_thresholds_from_args(args, getattr(args, "_project_config", None))
+    )
     title = os.path.splitext(os.path.basename(workspace.manuscript))[0]
 
     artifacts = {
@@ -684,6 +714,34 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
             p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
             p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
+            p.add_argument(
+                "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
+            )
+            p.add_argument(
+                "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
+            )
+            p.add_argument(
+                "--fdr-q", type=float, default=None, help="Benjamini-Hochberg q (default 0.05)"
+            )
+            p.add_argument(
+                "--fdr-method",
+                choices=("bh", "by"),
+                default=None,
+                help="FDR method: bh (Benjamini-Hochberg) or by (Benjamini-Yekutieli)",
+            )
+            p.add_argument(
+                "--dim-threshold",
+                type=float,
+                default=None,
+                help="|dimension score| threshold (default 2.5)",
+            )
+            p.add_argument(
+                "--flag-min-severity",
+                type=int,
+                choices=(1, 2, 3),
+                default=None,
+                help="Minimum paragraph severity for flags panel (default 2)",
+            )
             continue
         if name == "motifs":
             p.add_argument("file", help="Markdown manuscript")
@@ -714,6 +772,34 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
             p.add_argument("--names", help="Comma-separated figure names (character panel)")
             p.add_argument("-o", "--output", help="Target file (dashboard)")
+            p.add_argument(
+                "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
+            )
+            p.add_argument(
+                "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
+            )
+            p.add_argument(
+                "--fdr-q", type=float, default=None, help="Benjamini-Hochberg q (default 0.05)"
+            )
+            p.add_argument(
+                "--fdr-method",
+                choices=("bh", "by"),
+                default=None,
+                help="FDR method: bh or by",
+            )
+            p.add_argument(
+                "--dim-threshold",
+                type=float,
+                default=None,
+                help="|dimension score| threshold (default 2.5)",
+            )
+            p.add_argument(
+                "--flag-min-severity",
+                type=int,
+                choices=(1, 2, 3),
+                default=None,
+                help="Minimum paragraph severity for flags panel (default 2)",
+            )
             continue
         p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
@@ -721,7 +807,37 @@ def main(argv: list[str] | None = None) -> int:
             "--json", action="store_true", help="JSON output (analyze/profile/style/dialogue)"
         )
         p.add_argument("-o", "--output", help="Target file (dashboard)")
+        p.add_argument(
+            "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
+        )
+        p.add_argument(
+            "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
+        )
+        p.add_argument(
+            "--fdr-q", type=float, default=None, help="Benjamini-Hochberg q (default 0.05)"
+        )
+        p.add_argument(
+            "--fdr-method",
+            choices=("bh", "by"),
+            default=None,
+            help="FDR method: bh or by",
+        )
+        p.add_argument(
+            "--dim-threshold",
+            type=float,
+            default=None,
+            help="|dimension score| threshold (default 2.5)",
+        )
+        p.add_argument(
+            "--flag-min-severity",
+            type=int,
+            choices=(1, 2, 3),
+            default=None,
+            help="Minimum paragraph severity for flags panel (default 2)",
+        )
     args = parser.parse_args(argv)
+    project_config = load_project_config()
+    args._project_config = project_config
 
     if args.command == "completion":
         shell = (args.shell or "bash").strip().lower()
@@ -788,7 +904,9 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "style":
         metrics = CorpusAnalyzer(config).analyze_text(text)
-        fingerprint = StyleFingerprint.from_metrics(metrics)
+        fingerprint = StyleFingerprint.from_metrics(
+            metrics, thresholds=_thresholds_from_args(args, getattr(args, "_project_config", None))
+        )
         if args.json:
             print(_json(fingerprint.passport(), indent=True))
         else:
@@ -797,7 +915,9 @@ def main(argv: list[str] | None = None) -> int:
 
     metrics = CorpusAnalyzer(config).analyze_text(text)
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
-    fingerprint = StyleFingerprint.from_metrics(metrics)
+    fingerprint = StyleFingerprint.from_metrics(
+        metrics, thresholds=_thresholds_from_args(args, getattr(args, "_project_config", None))
+    )
     from .characters import presence_report
     from .dialogue import dialogue_report
 

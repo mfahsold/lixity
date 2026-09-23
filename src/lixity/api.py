@@ -14,16 +14,14 @@ from .analyzer import CorpusAnalyzer
 from .language import LANGUAGE_PROFILES, resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import SCHEMA_VERSION, CorpusConfig
-from .style_fingerprint import StyleFingerprint
+from .style_fingerprint import FingerprintThresholds, StyleFingerprint
 from .style_profile import ParagraphProfiler
 from .ui import render_dashboard
 
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
 
 
-def _config_and_language(
-    language: str, text: str, **overrides: Any
-) -> tuple[CorpusConfig, Any]:
+def _config_and_language(language: str, text: str, **overrides: Any) -> tuple[CorpusConfig, Any]:
     """Resolves the language profile and builds the effective configuration."""
     config = CorpusConfig(language=language, **overrides)
     resolved = resolve_language(config, sample_text=text)
@@ -69,26 +67,87 @@ def profile(text: str, language: str = "auto", **config_overrides: Any) -> dict[
     }
 
 
-def fingerprint(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+def fingerprint(
+    text: str,
+    language: str = "auto",
+    z_mild: float | None = None,
+    z_strong: float | None = None,
+    fdr_q: float | None = None,
+    fdr_method: str | None = None,
+    dim_score_threshold: float | None = None,
+    flag_min_severity: int | None = None,
+    **config_overrides: Any,
+) -> dict[str, Any]:
     """
     Self-calibrated style fingerprint (style reference): house-style bands
     (median ± 2 sigma) per feature, significance-adjusted deviations (z*),
-    Benjamini-Hochberg FDR set, expected false positives, self-calibrated
+    Benjamini-Hochberg/Yekutieli FDR set, expected false positives, effect
+    sizes (Cliff's δ), baseline exchangeability diagnostics, self-calibrated
     style dimensions (Spearman correlation + Jacobi eigendecomposition) and
     redundant feature pairs.
 
-    Returns the style reference dict (see docs/AGENTS.md for the full schema).
+    Thresholds (z_mild=2.5, z_strong=3.5, fdr_q=0.05, fdr_method='bh',
+    dim_score_threshold=2.5) are injectable; ``None`` keeps the documented
+    defaults. Returns the style reference dict (see docs/AGENTS.md).
     """
     config, _resolved = _config_and_language(language, text, **config_overrides)
     metrics = CorpusAnalyzer(config).analyze_text(text)
-    return StyleFingerprint.from_metrics(metrics).passport()
+    thresholds = _thresholds(
+        z_mild,
+        z_strong,
+        fdr_q,
+        fdr_method=fdr_method,
+        dim_score_threshold=dim_score_threshold,
+        flag_min_severity=flag_min_severity,
+    )
+    return StyleFingerprint.from_metrics(metrics, thresholds=thresholds).passport()
 
 
-def passport(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+def _thresholds(
+    z_mild: float | None,
+    z_strong: float | None,
+    fdr_q: float | None,
+    *,
+    fdr_method: str | None = None,
+    dim_score_threshold: float | None = None,
+    flag_min_severity: int | None = None,
+) -> FingerprintThresholds:
+    defaults = FingerprintThresholds()
+    return FingerprintThresholds(
+        z_mild=float(z_mild) if z_mild is not None else defaults.z_mild,
+        z_strong=float(z_strong) if z_strong is not None else defaults.z_strong,
+        fdr_q=float(fdr_q) if fdr_q is not None else defaults.fdr_q,
+        fdr_method=fdr_method if fdr_method is not None else defaults.fdr_method,
+        dim_score_threshold=(
+            float(dim_score_threshold)
+            if dim_score_threshold is not None
+            else defaults.dim_score_threshold
+        ),
+        flag_min_severity=(
+            int(flag_min_severity) if flag_min_severity is not None else defaults.flag_min_severity
+        ),
+    )
+
+
+def passport(
+    text: str,
+    language: str = "auto",
+    z_mild: float | None = None,
+    z_strong: float | None = None,
+    fdr_q: float | None = None,
+    **config_overrides: Any,
+) -> dict[str, Any]:
     """
     Alias of :func:`fingerprint` – the style passport as structured data.
     """
-    return fingerprint(text, language=language, **config_overrides)
+    return fingerprint(
+        text,
+        language=language,
+        z_mild=z_mild,
+        z_strong=z_strong,
+        fdr_q=fdr_q,
+        **config_overrides,
+    )
 
 
 def dialogue(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
@@ -187,6 +246,9 @@ def dashboard(
     text: str,
     language: str = "auto",
     title: str = "Manuskript",
+    z_mild: float | None = None,
+    z_strong: float | None = None,
+    fdr_q: float | None = None,
     **config_overrides: Any,
 ) -> str:
     """
@@ -196,7 +258,8 @@ def dashboard(
     config, resolved = _config_and_language(language, text, **config_overrides)
     metrics = CorpusAnalyzer(config).analyze_text(text)
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
-    fingerprint = StyleFingerprint.from_metrics(metrics)
+    thresholds = _thresholds(z_mild, z_strong, fdr_q)
+    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds)
     from .markers import list_markers
 
     marker_items = list_markers(text)

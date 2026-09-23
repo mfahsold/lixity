@@ -84,6 +84,7 @@ def render_dashboard(
     manuscript_name: str = "",
     current_language: str = "auto",
     language_options: Sequence[Any] | None = None,
+    flag_min_severity: int = 2,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -119,7 +120,7 @@ def render_dashboard(
         ]
 
     total_words = sum(c.words for c in chapters)
-    total_flagged = sum(1 for p in paragraphs if p.is_flagged)
+    total_flagged = sum(1 for p in paragraphs if p.severity >= flag_min_severity)
     scale = max((p.words for p in paragraphs), default=1)
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
@@ -132,6 +133,11 @@ def render_dashboard(
         fingerprint is not None
         and any(float(base.get("sigma") or 0.0) > 0.0 for base in fingerprint.baseline.values())
     )
+    z_mild = fingerprint.thresholds.z_mild if fingerprint is not None else 2.5
+    z_strong = fingerprint.thresholds.z_strong if fingerprint is not None else 3.5
+    fdr_q = fingerprint.thresholds.fdr_q if fingerprint is not None else 0.05
+    dim_threshold = fingerprint.thresholds.dim_score_threshold if fingerprint is not None else 2.5
+    flag_min_severity = flag_min_severity if flag_min_severity in (1, 2, 3) else 2
 
     layer_data: dict[str, dict[int, tuple[float, float]]] = {
         layer_key: layer_stats(paragraphs, layer_key) for layer_key in LAYER_FEATURES
@@ -196,7 +202,7 @@ def render_dashboard(
         parts.append(f'<p class="ctl-note">{L("load_hint")}</p>')
         parts.append("</div>")
 
-        # Settings (language, title)
+        # Settings (language, title, statistical sensitivity)
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{L("settings")}</span>')
         parts.append('<div class="row">')
@@ -212,6 +218,40 @@ def render_dashboard(
             f'<input class="ctl" id="set-title" value="{esc(title)}" placeholder="{L("title")}"/>'
         )
         parts.append(
+            f'<input class="ctl" type="number" id="set-z-mild" step="0.1" min="0.5" max="6" '
+            f'value="{N(z_mild, 1)}" aria-label="{esc(L("z_mild"))}" '
+            f'title="{esc(label(labels, "help_z_mild") or L("z_mild"))}" '
+            f'placeholder="{L("z_mild")}"/>'
+        )
+        parts.append(
+            f'<input class="ctl" type="number" id="set-z-strong" step="0.1" min="1" max="8" '
+            f'value="{N(z_strong, 1)}" aria-label="{esc(L("z_strong"))}" '
+            f'title="{esc(label(labels, "help_z_strong") or L("z_strong"))}" '
+            f'placeholder="{L("z_strong")}"/>'
+        )
+        parts.append(
+            f'<input class="ctl" type="number" id="set-fdr-q" step="0.01" min="0.01" max="0.5" '
+            f'value="{N(fdr_q, 2)}" aria-label="{esc(L("fdr_q"))}" '
+            f'title="{esc(label(labels, "help_fdr_q") or L("fdr_q"))}" '
+            f'placeholder="{L("fdr_q")}"/>'
+        )
+        parts.append(
+            f'<select class="ctl" id="set-flag-min-sev" aria-label="{esc(L("flag_min_severity"))}" '
+            f'title="{esc(label(labels, "help_flag_min_severity") or L("flag_min_severity"))}">'
+            + "".join(
+                f'<option value="{sev}"{" selected" if sev == flag_min_severity else ""}>'
+                f"{esc(label(labels, f'severity_{sev}'))} ≥ {sev}</option>"
+                for sev in (1, 2, 3)
+            )
+            + "</select>"
+        )
+        parts.append(
+            f'<input class="ctl" type="number" id="set-dim-threshold" step="0.1" min="1" max="4" '
+            f'value="{N(dim_threshold, 1)}" aria-label="{esc(L("dim_score_threshold"))}" '
+            f'title="{esc(label(labels, "help_dim_score_threshold") or L("dim_score_threshold"))}" '
+            f'placeholder="{L("dim_score_threshold")}"/>'
+        )
+        parts.append(
             f'<button class="ctl" data-action="settings" data-payload="settings">{L("apply")}</button>'
         )
         parts.append("</div></div>")
@@ -221,7 +261,8 @@ def render_dashboard(
         parts.append(f'<span class="ctl-label">{L("export")} · {L("run_analysis")}</span>')
         parts.append('<div class="row">')
         parts.append(
-            f'<select class="ctl" id="fmt" aria-label="{esc(label(labels, "help_format"))}">'
+            f'<select class="ctl" id="fmt" aria-label="{esc(L("export"))}" '
+            f'title="{esc(label(labels, "help_format"))}">'
             f'<option value="all">{L("format_all")}</option>'
             f'<option value="a4">A4</option>'
             f'<option value="taschenbuch">{L("format_paperback")}</option>'
@@ -403,7 +444,7 @@ def render_dashboard(
     parts.append("</section>")
 
     # --- Flagged passages (list → paragraph → marker) ----------------------
-    flagged = flagged_paragraphs(list(paragraphs))
+    flagged = flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
     parts.append('<section class="panel" id="flags">')
     parts.append(f"<h2>{help_term(labels, 'flagged', label(labels, 'panel_flags'))}</h2>")
     if flagged:
@@ -659,14 +700,16 @@ def render_dashboard(
         parts.append(
             '<div class="z-legend">'
             + esc(label(labels, "zscore"))
-            + f' <span class="z-gradient"></span> −{N(2.5, 1)} … +{N(2.5, 1)}'
+            + f' <span class="z-gradient"></span> −{N(z_mild, 1)} … +{N(z_mild, 1)}'
             + "</div>"
         )
         parts.append('<div class="heatmap-wrap"><table class="heatmap"><thead><tr>')
-        parts.append(f'<th class="ch">{L("chapter")}</th>')
+        parts.append('<th class="ch" id="feat-chapter">' + L("chapter") + "</th>")
         for _field, label_key, _unit in FEATURES:
             parts.append(
-                f"<th>{help_term(labels, _FEATURE_HELP.get(_field, _field), esc(label(labels, label_key)))}</th>"
+                f'<th id="feat-{_field}">'
+                f"{help_term(labels, _FEATURE_HELP.get(_field, _field), esc(label(labels, label_key)))}"
+                "</th>"
             )
         parts.append("</tr></thead><tbody>")
         for chapter in metrics.chapters:
@@ -690,7 +733,7 @@ def render_dashboard(
                 layer_key = feature_layers.get(field_name, "")
                 cell_attrs = (
                     f' data-chapter="{chapter.num}" data-layer="{layer_key}"'
-                    + (' data-only="1"' if layer_key and abs(z) >= 2.5 else "")
+                    + (' data-only="1"' if layer_key and abs(z) >= z_mild else "")
                     + ' tabindex="0" role="button"'
                 )
                 if abs(z) < 0.05:
@@ -723,18 +766,31 @@ def render_dashboard(
             sigma = float(base["sigma"])
             series = fingerprint.values.get(field_name, {})
             values = [float(v) for v in series.values() if v is not None]
-            outliers = [
-                float(v)
-                for ch, v in series.items()
-                if v is not None and field_name in fingerprint.deviations.get(ch, {})
+            outlier_chapters = [
+                int(ch) for ch, feats in fingerprint.deviations.items() if field_name in feats
             ]
+            outliers = [float(series[ch]) for ch in outlier_chapters if series.get(ch) is not None]
             n_out = len(outliers)
+            layer = feature_layers.get(field_name)
+            click_hint = label(labels, "click_hint")
             title = (
                 f"{label(labels, label_key)}: {L('median')} {N(centre, 2)} · "
                 f"{L('band')} {N(centre - 2 * sigma, 2)} – {N(centre + 2 * sigma, 2)} · "
-                f"{L('outliers')}: {n_out}"
+                f"{L('outliers')}: {n_out}" + (f" · {click_hint}" if n_out or layer else "")
             )
-            parts.append('<div class="band-row">')
+            # Whole row: jump to the feature's heatmap column (feat-* anchor).
+            row_attrs = [
+                f'data-jump="#feat-{field_name}"',
+                f'data-feature="{field_name}"',
+                'role="button"',
+                'tabindex="0"',
+                f'title="{esc(title, quote=True)}"',
+            ]
+            if layer:
+                row_attrs.append(f'data-layer="{layer}"')
+                if n_out:
+                    row_attrs.append('data-only="1"')
+            parts.append(f'<div class="band-row" {" ".join(row_attrs)}>')
             parts.append(
                 f'<span class="band-label">{help_term(labels, _FEATURE_HELP.get(field_name, field_name), esc(label(labels, label_key)))}</span>'
             )
@@ -746,10 +802,30 @@ def render_dashboard(
                     centre,
                     values,
                     outliers,
-                    layer=feature_layers.get(field_name),
                 )
             )
-            parts.append(f'<span class="band-count">{n_out if n_out else ""}</span>')
+            if n_out and outlier_chapters:
+                # Outlier count: open the strongest outlier chapter (with layer).
+                strongest = max(
+                    outlier_chapters,
+                    key=lambda ch: abs(
+                        float(fingerprint.deviations.get(ch, {}).get(field_name, 0.0))
+                    ),
+                )
+                count_attrs = [
+                    f'data-jump="#ch-{strongest}"',
+                    'role="button"',
+                    'tabindex="0"',
+                    f'title="{esc(f"{label(labels, label_key)} · {L('chapter')} {strongest} · {click_hint}", quote=True)}"',
+                ]
+                if layer:
+                    count_attrs.append(f'data-layer="{layer}"')
+                    count_attrs.append('data-only="1"')
+                parts.append(
+                    f'<span class="band-count band-outlier" {" ".join(count_attrs)}>{n_out}</span>'
+                )
+            else:
+                parts.append(f'<span class="band-count">{n_out if n_out else ""}</span>')
             parts.append("</div>")
         parts.append("</div></section>")
 
@@ -927,7 +1003,7 @@ def render_dashboard(
                         low, high = _layer_range(key)
                         span = (high - low) or 1.0
                         position = (value - low) / span
-                        colour = z_color((position * 2.0 - 1.0) * 2.5)
+                        colour = z_color((position * 2.0 - 1.0) * z_mild)
                         layer_payload[key] = [colour, _layer_tip(key, value, z), round(z, 2)]
                 layer_attr = (
                     f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
@@ -1059,4 +1135,3 @@ def render_dashboard(
         ]
     )
     return "\n".join(parts) + "\n"
-

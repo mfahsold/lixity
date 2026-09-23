@@ -178,7 +178,54 @@ class TestJsDomContract(unittest.TestCase):
         # Rows and band rows are announced as buttons and focusable.
         self.assertIn('class="row-link" data-line=', html)
         self.assertIn('role="button" tabindex="0"', html)
-        self.assertRegex(html, r'<div class="band"[^>]*role="button" tabindex="0"')
+        self.assertRegex(
+            html, r'<div class="band-row"[^>]*data-jump="#feat-[^"]+"[^>]*role="button"'
+        )
+        self.assertRegex(html, r'<div class="band" title="[^"]*"')
+        # Heatmap column anchors for every feature in the passport
+        self.assertIn('id="feat-asl"', html)
+        self.assertIn('id="feat-dialog_pct"', html)
+
+    def test_style_reference_rows_are_clickable(self):
+        """Passport rows jump to their heatmap column; outlier counts open a chapter."""
+        html = _full_dashboard()
+        # every band row carries a feat-* anchor and is a button
+        rows = re.findall(r'<div class="band-row"([^>]*)>', html)
+        self.assertTrue(rows, "no band rows rendered")
+        for attrs in rows:
+            self.assertRegex(attrs, r'data-jump="#feat-[^"]+"')
+            self.assertIn('role="button"', attrs)
+        # heatmap headers expose matching ids
+        fields = re.findall(r'id="feat-([^"]+)"', html)
+        self.assertIn("asl", fields)
+        self.assertIn("dialog_pct", fields)
+        # at least one row has a layer
+        self.assertRegex(html, r'class="band-row"[^>]*data-layer="')
+        # outlier counts (when present) open the strongest chapter
+        if 'class="band-count band-outlier"' in html:
+            self.assertRegex(
+                html,
+                r'class="band-count band-outlier"[^>]*data-jump="#ch-\d+"[^>]*role="button"',
+            )
+
+    def test_sensitivity_settings_render(self):
+        """Statistical sensitivity inputs are in the settings group with labels."""
+        html = _full_dashboard()
+        self.assertIn('id="set-z-mild"', html)
+        self.assertIn('id="set-z-strong"', html)
+        self.assertIn('id="set-fdr-q"', html)
+        self.assertIn('id="set-flag-min-sev"', html)
+        self.assertIn('id="set-dim-threshold"', html)
+        self.assertIn('value="2.5"', html)
+        self.assertIn('value="3.5"', html)
+        self.assertIn('value="0.05"', html)
+        # JS posts all thresholds with the settings payload
+        script = (UI_DIR / "assets" / "dashboard.js").read_text(encoding="utf-8")
+        self.assertIn("payload.z_mild = parseFloat(zm.value)", script)
+        self.assertIn("payload.z_strong = parseFloat(zs.value)", script)
+        self.assertIn("payload.fdr_q = parseFloat(fq.value)", script)
+        self.assertIn("payload.flag_min_severity = parseInt(fs.value, 10)", script)
+        self.assertIn("payload.dim_score_threshold = parseFloat(dt.value)", script)
 
 
 class TestLabelCompleteness(unittest.TestCase):
@@ -291,6 +338,11 @@ class TestLabelCompleteness(unittest.TestCase):
             "flags_excerpt",
             "flags_empty",
             "click_hint_para",
+            "z_mild",
+            "z_strong",
+            "fdr_q",
+            "flag_min_severity",
+            "dim_score_threshold",
         )
         for language in LANGUAGES:
             labels = get_language_profile(language).labels
