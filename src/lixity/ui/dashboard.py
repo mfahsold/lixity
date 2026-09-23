@@ -84,15 +84,19 @@ def render_dashboard(
     manuscript_name: str = "",
     current_language: str = "auto",
     language_options: Sequence[Any] | None = None,
-    flag_min_severity: int = 2,
+    flag_min_severity: int | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
     ``controls=True`` adds the local control panel (buttons/dropdown/NDA),
-    which triggers the CLI functions via the UI server (``scripts/ui_server.py``).
-    ``dialogue``/``characters``/``pacing``/``motifs``/``showing`` add the
-    optional dialogue-structure, character-presence, pacing, motif/repetition
-    and showing/telling panels (see the corresponding modules).
+    which triggers the CLI functions via the UI server (``lixity.ui.server``
+    / the embedding host). ``dialogue``/``characters``/``pacing``/``motifs``/
+    ``showing`` add the optional dialogue-structure, character-presence,
+    pacing, motif/repetition and showing/telling panels (see the
+    corresponding modules).
+
+    ``flag_min_severity`` floors the paragraph flag cut; ``None`` takes the
+    resolved value from ``fingerprint.thresholds`` (CLI/API/config aware).
     """
     esc = html.escape
 
@@ -120,6 +124,12 @@ def render_dashboard(
         ]
 
     total_words = sum(c.words for c in chapters)
+    if flag_min_severity is None:
+        flag_min_severity = (
+            fingerprint.thresholds.flag_min_severity if fingerprint is not None else 2
+        )
+    if flag_min_severity not in (1, 2, 3):
+        flag_min_severity = 2
     total_flagged = sum(1 for p in paragraphs if p.severity >= flag_min_severity)
     scale = max((p.words for p in paragraphs), default=1)
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
@@ -137,7 +147,6 @@ def render_dashboard(
     z_strong = fingerprint.thresholds.z_strong if fingerprint is not None else 3.5
     fdr_q = fingerprint.thresholds.fdr_q if fingerprint is not None else 0.05
     dim_threshold = fingerprint.thresholds.dim_score_threshold if fingerprint is not None else 2.5
-    flag_min_severity = flag_min_severity if flag_min_severity in (1, 2, 3) else 2
 
     layer_data: dict[str, dict[int, tuple[float, float]]] = {
         layer_key: layer_stats(paragraphs, layer_key) for layer_key in LAYER_FEATURES
@@ -812,11 +821,14 @@ def render_dashboard(
                         float(fingerprint.deviations.get(ch, {}).get(field_name, 0.0))
                     ),
                 )
+                title_text = (
+                    f"{label(labels, label_key)} · {L('chapter')} {strongest} · {click_hint}"
+                )
                 count_attrs = [
                     f'data-jump="#ch-{strongest}"',
                     'role="button"',
                     'tabindex="0"',
-                    f'title="{esc(f"{label(labels, label_key)} · {L('chapter')} {strongest} · {click_hint}", quote=True)}"',
+                    f'title="{esc(title_text, quote=True)}"',
                 ]
                 if layer:
                     count_attrs.append(f'data-layer="{layer}"')

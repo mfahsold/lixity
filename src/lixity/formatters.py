@@ -602,6 +602,6 @@ class ReportFormatter:
 
     @staticmethod
     def to_json(m: CorpusMetrics, indent: bool = True) -> str:
-        """Serialises CorpusMetrics with orjson."""
-        opts = orjson.OPT_INDENT_2 if indent else 0
+        """Serialises CorpusMetrics with orjson (non-string keys allowed)."""
+        opts = orjson.OPT_NON_STR_KEYS | (orjson.OPT_INDENT_2 if indent else 0)
         return orjson.dumps(m.model_dump(), option=opts).decode("utf-8")

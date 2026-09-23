@@ -2,14 +2,51 @@
 
 Parses Markdown into semantic blocks (headings, paragraphs, blockquotes, code)
 preserving exact 1-based manuscript line numbers for precise editorial feedback.
+Also owns the shared chapter segmentation used by the analyzer and structure
+modules so chapter numbering stays identical everywhere.
 """
+
+from __future__ import annotations
 
 import html as html_mod
 import re
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .models import CorpusConfig
 
 _FN_REF_PATTERN = re.compile(r"\[\^([^\]]+)\]")
 _FN_REF_STRIP_PATTERN = re.compile(r"\[\^([^\]]+)\]")
+
+
+def split_chapters(text: str, config: CorpusConfig) -> list[tuple[int, str, str]]:
+    """(chapter number, title, body) – single source of truth for all callers.
+
+    The scholarly appendix (``config.appendix_marker``) is cut off first and
+    front matter is not a chapter, so chapter numbers match the metrics.
+    Empty bodies (after stripping HTML comments) are skipped.
+    """
+    if config.appendix_marker and config.appendix_marker in text:
+        text, _ = text.split(config.appendix_marker, 1)
+    parts = re.split(config.chapter_regex, text)
+    if parts:
+        first = re.sub(r"<!--.*?-->", "", parts[0], flags=re.DOTALL).strip()
+        if first.startswith("# ") or not first:
+            parts = parts[1:]
+    chapters: list[tuple[int, str, str]] = []
+    number = 1
+    for raw in parts:
+        block = raw.strip()
+        if not block:
+            continue
+        lines = block.split("\n")
+        title = lines[0].strip().replace("# ", "")
+        body = "\n".join(lines[1:]).strip()
+        if not re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL).strip():
+            continue  # heading without content is not a chapter
+        chapters.append((number, title, body))
+        number += 1
+    return chapters
 
 
 def strip_inline_markup(text: str) -> str:

@@ -17,6 +17,7 @@ from statistics import median
 from typing import Any
 
 from .language import compile_pattern, resolve_language
+from .markdown_parser import split_chapters  # shared chapter segmentation (re-export)
 from .models import CorpusConfig
 
 # A paragraph counts as dialogue paragraph when at least this share of its
@@ -88,35 +89,6 @@ class DialogueReport:
             "dialogue_paragraph_pct": round(self.dialogue_paragraph_pct, 2),
             "chapters": [chapter.to_dict() for chapter in self.chapters],
         }
-
-
-def split_chapters(text: str, config: CorpusConfig) -> list[tuple[int, str, str]]:
-    """(chapter number, title, body) – same conventions as the analyzer.
-
-    The scholarly appendix (``config.appendix_marker``) is cut off first and
-    front matter is not a chapter, so chapter numbers match the metrics.
-    """
-    if config.appendix_marker and config.appendix_marker in text:
-        text, _ = text.split(config.appendix_marker, 1)
-    parts = re.split(config.chapter_regex, text)
-    if parts:
-        first = re.sub(r"<!--.*?-->", "", parts[0], flags=re.DOTALL).strip()
-        if first.startswith("# ") or not first:
-            parts = parts[1:]
-    chapters: list[tuple[int, str, str]] = []
-    number = 1
-    for raw in parts:
-        block = raw.strip()
-        if not block:
-            continue
-        lines = block.split("\n")
-        title = lines[0].strip().replace("# ", "")
-        body = "\n".join(lines[1:]).strip()
-        if not re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL).strip():
-            continue  # heading without content is not a chapter (matches the analyzer)
-        chapters.append((number, title, body))
-        number += 1
-    return chapters
 
 
 def _turn_stats(

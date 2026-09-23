@@ -32,6 +32,7 @@ from .diversity import (
 )
 from .language import compile_pattern, resolve_language
 from .language_data import READABILITY
+from .markdown_parser import split_chapters
 from .models import (
     ChapterMetrics,
     CorpusConfig,
@@ -236,11 +237,7 @@ class CorpusAnalyzer:
     def _paragraph_stats(self, text: str) -> tuple[int, float, int]:
         """(prose paragraphs, average words per paragraph, one-liner count)."""
         raw = [p.strip() for p in text.split("\n\n") if p.strip()]
-        prose = [
-            p
-            for p in raw
-            if not p.startswith(("#", "|", "-", "*"))
-        ]
+        prose = [p for p in raw if not p.startswith(("#", "|", "-", "*"))]
         lengths = [len(p.split()) for p in prose]
         total = len(lengths)
         average = sum(lengths) / total if total else 0.0
@@ -307,9 +304,7 @@ class CorpusAnalyzer:
         c_guiraud = len(set(c_lower)) / math.sqrt(n_cw) if n_cw else 0.0
         c_hd_d, c_hd_d_se = hd_d_stats(c_lower)
         c_func_pct = (
-            sum(1 for t in c_lower if t in self.lang.function_words) / n_cw * 100.0
-            if n_cw
-            else 0.0
+            sum(1 for t in c_lower if t in self.lang.function_words) / n_cw * 100.0 if n_cw else 0.0
         )
 
         # Measurement uncertainty per feature (documented plug-ins)
@@ -448,22 +443,11 @@ class CorpusAnalyzer:
         modal_density = self._density(sum(1 for t in lower_tokens if t in self._modals), n_tokens)
         filter_density = self._density(filter_cnt, n_tokens)
 
-        # 9. Chapter-wise segmentation (front matter is not a chapter)
-        raw_chapters = re.split(self.config.chapter_regex, main_text)
-        if raw_chapters:
-            first_clean = _RE_HTML_COMMENT.sub("", raw_chapters[0]).strip()
-            if first_clean.startswith("# ") or not first_clean:
-                raw_chapters = raw_chapters[1:]
-
+        # 9. Chapter-wise segmentation (shared split_chapters: front matter +
+        #    appendix + empty-body rules identical to the structure modules).
         chapters: list[ChapterMetrics] = []
         chapter_tokens: list[list[str]] = []
-        for raw_chapter in raw_chapters:
-            chapter_text = raw_chapter.strip()
-            if not chapter_text:
-                continue
-            lines = chapter_text.split("\n")
-            title = lines[0].strip().replace("# ", "")
-            body = "\n".join(lines[1:]).strip()
+        for _split_num, title, body in split_chapters(main_text, self.config):
             chapter, c_lower = self._chapter_metrics(len(chapters) + 1, title, body, lw_min)
             if chapter is None:
                 continue

@@ -4,8 +4,8 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Lixity – Quantitative Text Linguistics &amp; Stylometry for Literary Manuscripts</title>
-<meta name="description" content="Lixity measures how literary manuscripts read: sentence rhythm, length-invariant lexical diversity (HD-D, Yule's K), paragraph-accurate tense profiles, and self-calibrating style references. Deterministic, offline, multilingual text analytics engine for authors, editors, and AI agents."/>
-<meta name="keywords" content="computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg FDR, macro editing, offline text analytics, digital humanities"/>
+<meta name="description" content="Lixity measures how literary manuscripts read: sentence rhythm, length-invariant lexical diversity (HD-D, Yule's K), paragraph-accurate tense profiles, self-calibrating style references, and Wave-2 diagnostics (PELT, Mann–Kendall). Deterministic, offline, multilingual text analytics engine for authors, editors, and AI agents."/>
+<meta name="keywords" content="computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg FDR, PELT changepoint, Mann-Kendall trend, macro editing, offline text analytics, digital humanities"/>
 <meta name="robots" content="index, follow"/>
 <meta name="author" content="Matthias Fahsold"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
@@ -52,7 +52,10 @@
     "Language-calibrated readability: Flesch family (Amstad, Flesch, Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma) and LIX",
     "Register signals: dialogue ratio, function words, perception filters, modals, passive voice, nominal style",
     "Paragraph-accurate tense continuity profiling with line anchors and friction severity flags",
-    "Self-calibrating style reference: manuscript-intrinsic median/MAD bands, significance-adjusted z* scores, Benjamini-Hochberg FDR control",
+    "Self-calibrating style reference: manuscript-intrinsic median/MAD bands, significance-adjusted z* scores, Benjamini-Hochberg / Benjamini-Yekutieli FDR control",
+    "Wave-2 diagnostics: PELT changepoints, Mann-Kendall trends, Sn/Qn robust scales, Hill tail index (schema v3)",
+    "Effect sizes on confirmed cells: Cliff's delta and Vargha-Delaney A12",
+    "Injectable thresholds via CLI, API, UI settings, or [tool.lixity] / lixity.toml config",
     "Unsupervised style dimensions via Spearman rank correlation and cyclic Jacobi eigendecomposition",
     "Editor-visible work markers with deterministic content-hash IDs and inline notes",
     "Idempotent workspace build: unchanged input causes zero writes, changed input rotates exactly one version",
@@ -220,12 +223,14 @@ footer {
   <div class="pill-row">
     <span>Self-Calibrating Norms</span>
     <span>z* Significance Shrinkage</span>
-    <span>Benjamini-Hochberg FDR</span>
+    <span>Benjamini-Hochberg / Yekutieli FDR</span>
+    <span>Wave-2 Diagnostics</span>
     <span>HD-D (McCarthy &amp; Jarvis)</span>
     <span>Yule&rsquo;s Characteristic K</span>
     <span>Sentence Architecture</span>
     <span>Tense Continuity Profiles</span>
     <span>Latent Style Dimensions</span>
+    <span>Injectable Thresholds</span>
     <span>Editor Work Markers</span>
     <span>Dialogue &amp; Character Panels</span>
     <span>Scene &amp; Pacing Analysis</span>
@@ -364,7 +369,7 @@ footer {
     </div>
     <div class="card">
       <h3>AI Agent &amp; Pipeline Engineers</h3>
-      <p>Deterministic JSON contracts (<code>schema_version 2</code>, language-neutral tense values), standardized exit codes, and a stable programmatic facade (<code>lixity.api</code>) designed for autonomous coding and editing agents.</p>
+      <p>Deterministic JSON contracts (<code>schema_version 2</code> for analyze/profile, <code>3</code> for the style reference with Wave-2 diagnostics, language-neutral tense values), standardized exit codes, and a stable programmatic facade (<code>lixity.api</code>) designed for autonomous coding and editing agents.</p>
     </div>
   </div>
 
@@ -388,27 +393,47 @@ footer {
     </div>
     <div class="card">
       <h3>Self-Calibrating Style Reference</h3>
-      <p>The manuscript&rsquo;s own house style derived via median/MAD, significance-adjusted deviations z*, and Benjamini-Hochberg FDR control.</p>
+      <p>The manuscript&rsquo;s own house style derived via median/MAD, significance-adjusted deviations z*, and Benjamini-Hochberg FDR control (BH or BY).</p>
+    </div>
+    <div class="card">
+      <h3>Wave-2 Diagnostics</h3>
+      <p>Where the house style shifts (PELT changepoints), whether features drift (Mann&ndash;Kendall), robust Sn/Qn scales beside MAD, and heavy-tailed features (Hill &alpha;&#770;).</p>
     </div>
     <div class="card">
       <h3>Style Dimensions</h3>
       <p>Unsupervised discovery of latent stylistic axes via Spearman rank correlation and cyclic Jacobi eigendecomposition.</p>
     </div>
+    <div class="card">
+      <h3>Structure Modules</h3>
+      <p>Dialogue turns, character presence, scene/pacing with hook scores, motif tracking, and self-calibrating showing-vs-telling balance per chapter.</p>
+    </div>
   </div>
 
   <div class="card">
     <h2>Installation</h2>
-    <pre>pip install git+https://github.com/mfahsold/lixity.git</pre>
-    <p class="sub" style="font-size:.85rem; margin:.6rem 0 0;">Requires Python 3.10+; lightweight dependencies: <code>pydantic</code>, <code>rich</code>, <code>orjson</code>.</p>
+    <pre># recommended (isolated)
+pipx install git+https://github.com/mfahsold/lixity.git
+uv tool install git+https://github.com/mfahsold/lixity.git
+
+# or into the active environment
+pip install git+https://github.com/mfahsold/lixity.git
+
+# pin a release
+pip install "git+https://github.com/mfahsold/lixity.git@v1.10.0"
+
+# development
+git clone https://github.com/mfahsold/lixity.git &amp;&amp; cd lixity
+make install-dev &amp;&amp; make check</pre>
+    <p class="sub" style="font-size:.85rem; margin:.6rem 0 0;">Requires Python 3.10+; lightweight dependencies: <code>pydantic</code>, <code>rich</code>, <code>orjson</code>. Source-available under LNCL-1.0 (not on PyPI).</p>
   </div>
 
   <div class="card">
     <h2>CLI Commands</h2>
     <pre>lixity analyze manuscript.md              # Corpus metrics (Rich table report)
-lixity analyze manuscript.md --json       # Machine-readable JSON (schema v1)
+lixity analyze manuscript.md --json       # Machine-readable JSON (schema v2 meta)
 lixity profile manuscript.md              # Tense &amp; style profiles per paragraph
 lixity style manuscript.md                # Self-calibrating style reference
-lixity style manuscript.md --json         # Schema v2 JSON (bands, z*, FDR, dimensions)
+lixity style manuscript.md --json         # Schema v3 JSON (bands, z*, FDR, wave-2)
 lixity dialogue manuscript.md             # Dialogue turn structure
 lixity characters manuscript.md --names "Anna,Ralf"
 lixity pacing manuscript.md               # Scenes, pacing curve, chapter hooks
@@ -427,7 +452,7 @@ lixity completion bash                    # Shell completion script for Bash / Z
 # Analyze corpus KPIs
 metrics = api.analyze(text, language="auto")
 
-# Derive self-calibrated style reference (bands, z*, FDR, dimensions)
+# Derive self-calibrated style reference (bands, z*, FDR, wave-2; schema v3)
 reference = api.fingerprint(text, language="de")
 
 # Add persistent, editor-visible work markers
@@ -438,6 +463,8 @@ html = api.dashboard(text, language="de", title="My Novel")</pre>
     <p style="font-size:.85rem; color:var(--muted); margin:.6rem 0 0;">
       Deterministic contracts and schema definitions in
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">docs/AGENTS.md</a>.
+      Formal methods in
+      <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">docs/METHODS.md</a>.
     </p>
   </div>
 
@@ -446,6 +473,10 @@ html = api.dashboard(text, language="de", title="My Novel")</pre>
     <details>
       <summary>How does self-calibration work?</summary>
       <p>Instead of comparing your novel against generic newspaper corpora or external averages, Lixity uses robust statistics (median and MAD) across your chapters to derive your manuscript&rsquo;s own reference house style. Deviations are highlighted only when a chapter deviates significantly from your own norm.</p>
+    </details>
+    <details>
+      <summary>What are Wave-2 diagnostics?</summary>
+      <p>Alongside the per-chapter z* heatmap, the style reference reports structural signals over chapter order: PELT changepoints (where the house style shifts), Mann&ndash;Kendall trends (monotonic drift), Sn/Qn robust scales next to MAD, and Hill tail indices for heavy-tailed features. They are diagnostic, not verdicts — read them with the FDR set.</p>
     </details>
     <details>
       <summary>What are significance-adjusted z* scores?</summary>
@@ -472,6 +503,9 @@ html = api.dashboard(text, language="de", title="My Novel")</pre>
     <div>
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage Guide</a> &middot;
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">Agent API</a> &middot;
+      <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">Methods</a> &middot;
+      <a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a> &middot;
+      <a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a> &middot;
       <a href="llms.txt">llms.txt</a> &middot;
       <a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">Changelog</a>
     </div>

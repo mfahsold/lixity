@@ -20,9 +20,11 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
 
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
+from lixity.config import resolve_thresholds  # noqa: E402
 from lixity.diversity import hd_d, maas_a2, mattr, mtld, yules_k  # noqa: E402
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
+    FingerprintThresholds,
     benjamini_hochberg,
     jacobi_eigh,
     mad,
@@ -33,6 +35,33 @@ from lixity.style_fingerprint import (  # noqa: E402
     spearman_rho,
 )
 from lixity.syllables import count_de, count_en  # noqa: E402
+
+
+class TestResolveThresholds(unittest.TestCase):
+    """Shared threshold builder: kwargs > project config > code default."""
+
+    def test_defaults_when_no_overrides(self):
+        t = resolve_thresholds(use_project_config=False)
+        self.assertEqual(t, FingerprintThresholds())
+
+    def test_explicit_kwargs_win_over_defaults(self):
+        t = resolve_thresholds(z_mild=1.5, fdr_q=0.1, use_project_config=False)
+        self.assertEqual(t.z_mild, 1.5)
+        self.assertEqual(t.fdr_q, 0.1)
+        self.assertEqual(t.z_strong, FingerprintThresholds().z_strong)
+
+    def test_none_kwargs_do_not_clobber_defaults(self):
+        t = resolve_thresholds(z_mild=None, fdr_q=None, use_project_config=False)
+        self.assertEqual(t.z_mild, FingerprintThresholds().z_mild)
+        self.assertEqual(t.fdr_q, FingerprintThresholds().fdr_q)
+
+    def test_flag_min_severity_injectable(self):
+        t = resolve_thresholds(flag_min_severity=3, use_project_config=False)
+        self.assertEqual(t.flag_min_severity, 3)
+
+    def test_fdr_method_injectable(self):
+        t = resolve_thresholds(fdr_method="by", use_project_config=False)
+        self.assertEqual(t.fdr_method, "by")
 
 
 class TestReadabilityFormulas(unittest.TestCase):
@@ -241,16 +270,16 @@ class TestJacobiEigendecomposition(unittest.TestCase):
             self.assertAlmostEqual(sum(c * c for c in vi), 1.0, places=9)
             for j in range(i + 1, n):
                 vj = eigenvectors[j]
-                self.assertAlmostEqual(sum(a * b for a, b in zip(vi, vj, strict=True)), 0.0, places=9)
+                self.assertAlmostEqual(
+                    sum(a * b for a, b in zip(vi, vj, strict=True)), 0.0, places=9
+                )
 
 
 class TestLexicalDiversityProperties(unittest.TestCase):
     def test_yule_and_maas_of_all_unique_tokens(self):
         tokens = [f"w{i}" for i in range(150)]
         self.assertAlmostEqual(yules_k(tokens), 0.0, places=12)
-        self.assertAlmostEqual(
-            maas_a2(len(tokens), len(set(tokens))), 0.0, places=12
-        )
+        self.assertAlmostEqual(maas_a2(len(tokens), len(set(tokens))), 0.0, places=12)
 
     def test_mattr_window_properties(self):
         tokens = [f"w{i}" for i in range(100)]

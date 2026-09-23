@@ -11,11 +11,12 @@ from typing import Any
 
 from . import __version__
 from .analyzer import CorpusAnalyzer
+from .config import resolve_thresholds
 from .language import LANGUAGE_PROFILES, resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import SCHEMA_VERSION, CorpusConfig
 from .style_fingerprint import FingerprintThresholds, StyleFingerprint
-from .style_profile import ParagraphProfiler
+from .style_profile import ParagraphProfiler, ProfileThresholds
 from .ui import render_dashboard
 
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
@@ -50,16 +51,28 @@ def analyze(text: str, language: str = "auto", **config_overrides: Any) -> dict[
     return {"meta": _meta(resolved.key), "metrics": metrics.model_dump()}
 
 
-def profile(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+def profile(
+    text: str,
+    language: str = "auto",
+    flag_min_severity: int | None = None,
+    **config_overrides: Any,
+) -> dict[str, Any]:
     """
     Paragraph-accurate tense and style profiles with line anchors
     (dominant tense, switch/mix severity, ASL, dialogue, function words,
     perception filters, modals, nominalisations, passive).
 
+    ``flag_min_severity`` (1|2|3) floors the paragraph flag cut; ``None``
+    resolves from project config / code default (same as the style passport).
+
     Returns a JSON-safe dict: ``{"meta": {...}, "chapters": [...], "paragraphs": [...]}``.
     """
     config, resolved = _config_and_language(language, text, **config_overrides)
-    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
+    fp_thresholds = resolve_thresholds(flag_min_severity=flag_min_severity)
+    profile_thresholds = ProfileThresholds(flag_min_severity=fp_thresholds.flag_min_severity)
+    paragraphs, chapters = ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
+        parse_markdown_blocks(text)
+    )
     return {
         "meta": _meta(resolved.key),
         "chapters": [c.__dict__ for c in chapters],
@@ -111,21 +124,17 @@ def _thresholds(
     fdr_method: str | None = None,
     dim_score_threshold: float | None = None,
     flag_min_severity: int | None = None,
+    min_chapters: int | None = None,
 ) -> FingerprintThresholds:
-    defaults = FingerprintThresholds()
-    return FingerprintThresholds(
-        z_mild=float(z_mild) if z_mild is not None else defaults.z_mild,
-        z_strong=float(z_strong) if z_strong is not None else defaults.z_strong,
-        fdr_q=float(fdr_q) if fdr_q is not None else defaults.fdr_q,
-        fdr_method=fdr_method if fdr_method is not None else defaults.fdr_method,
-        dim_score_threshold=(
-            float(dim_score_threshold)
-            if dim_score_threshold is not None
-            else defaults.dim_score_threshold
-        ),
-        flag_min_severity=(
-            int(flag_min_severity) if flag_min_severity is not None else defaults.flag_min_severity
-        ),
+    """Shared builder: explicit kwargs > project config > code default."""
+    return resolve_thresholds(
+        z_mild=z_mild,
+        z_strong=z_strong,
+        fdr_q=fdr_q,
+        fdr_method=fdr_method,
+        dim_score_threshold=dim_score_threshold,
+        flag_min_severity=flag_min_severity,
+        min_chapters=min_chapters,
     )
 
 
@@ -249,6 +258,9 @@ def dashboard(
     z_mild: float | None = None,
     z_strong: float | None = None,
     fdr_q: float | None = None,
+    fdr_method: str | None = None,
+    dim_score_threshold: float | None = None,
+    flag_min_severity: int | None = None,
     **config_overrides: Any,
 ) -> str:
     """
@@ -257,8 +269,18 @@ def dashboard(
     """
     config, resolved = _config_and_language(language, text, **config_overrides)
     metrics = CorpusAnalyzer(config).analyze_text(text)
-    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
-    thresholds = _thresholds(z_mild, z_strong, fdr_q)
+    thresholds = _thresholds(
+        z_mild,
+        z_strong,
+        fdr_q,
+        fdr_method=fdr_method,
+        dim_score_threshold=dim_score_threshold,
+        flag_min_severity=flag_min_severity,
+    )
+    profile_thresholds = ProfileThresholds(flag_min_severity=thresholds.flag_min_severity)
+    paragraphs, chapters = ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
+        parse_markdown_blocks(text)
+    )
     fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds)
     from .markers import list_markers
 
@@ -273,6 +295,7 @@ def dashboard(
         language_name=resolved.name,
         language_key=resolved.key,
         markers=marker_items if marker_items else None,
+        flag_min_severity=thresholds.flag_min_severity,
     )
 
 
@@ -349,9 +372,9 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "style",
-                "purpose": "self-calibrating style reference (bands, z*, FDR, dimensions)",
+                "purpose": "self-calibrating style reference (bands, z*, FDR, dimensions, wave-2 diagnostics)",
                 "output": "text|json",
-                "schema_version": 2,
+                "schema_version": 3,
             },
             {
                 "name": "dashboard",

@@ -38,6 +38,10 @@ mathematical foundation: **T**TR, **Y**ule's characteristic $K$, and **LIX**.
 | Cliff's $\delta$ / Vargha–Delaney $\hat{A}_{12}$ | magnitude of confirmed cells |
 | Runs test + lag-1 $\rho_1$ | exchangeability of the baseline |
 | Spearman $\rho$ + cyclic Jacobi EVD | latent style dimensions |
+| PELT changepoints (BIC) | where the house style shifts (Wave-2) |
+| Mann–Kendall $\tau, S, p$ | monotonic style drift (Wave-2) |
+| Sn / Qn (Rousseeuw & Croux) | outlier-resistant scale cross-check |
+| Hill $\hat\alpha$ | heavy-tailed feature diagnostic |
 
 Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`,
 `flag_min_severity`) are injectable via CLI, API kwargs, UI settings, or
@@ -49,22 +53,48 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`,
 - **Offline & deterministic:** identical input → byte-identical metrics, JSON, HTML.
 - **Self-calibrating norms:** house style from the manuscript’s own median/MAD.
 - **Noise-aware $z^*$ + FDR (BH/BY)** with injectable thresholds.
-- **Effect sizes & diagnostics** on every confirmed cell.
+- **Effect sizes & diagnostics** on every confirmed cell (Cliff’s δ, runs, ACF).
+- **Wave-2 diagnostics:** PELT changepoints, Mann–Kendall trends, Sn/Qn scales, Hill tail index.
 - **Latent style dimensions:** Spearman ρ + cyclic Jacobi (stdlib only).
 - **Paragraph tense profiling:** present/past/mixed/neutral, severity 0–3.
 - **Structure modules:** dialogue, characters, pacing, motifs, showing/telling.
 - **Idempotent build & single-file dashboard** with seven language profiles.
-- **Agent-ready:** strict JSON schemas, stable `lixity.api`,
-  [`docs/AGENTS.md`](docs/AGENTS.md).
+- **Agent-ready:** strict JSON schemas (analyze/profile **v2**, style **v3**),
+  stable `lixity.api`, [`docs/AGENTS.md`](docs/AGENTS.md).
 
 ## Installation
 
+Requires Python **3.10+**. Lixity is source-available (LNCL-1.0), not on
+PyPI — install from GitHub:
+
 ```bash
+# recommended: isolated tool environment (pipx or uv)
+pipx install git+https://github.com/mfahsold/lixity.git
+uv tool install git+https://github.com/mfahsold/lixity.git
+
+# plain pip (user or venv)
 pip install git+https://github.com/mfahsold/lixity.git
 
-# local development
+# pin a release for reproducible pipelines
+pip install "git+https://github.com/mfahsold/lixity.git@v1.10.0"
+```
+
+Development install (editable, with lint/type/test tooling):
+
+```bash
 git clone https://github.com/mfahsold/lixity.git && cd lixity
-pip install -e .
+make install-dev        # venv + pip install -e ".[dev]"
+make check              # ruff + mypy --strict + pytest -W error
+
+# or without make
+python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+```
+
+Shell completion after install:
+
+```bash
+lixity completion bash > ~/.local/share/bash-completion/completions/lixity
+lixity completion zsh  > "${fpath[1]}/_lixity"
 ```
 
 ## Quick start
@@ -106,7 +136,9 @@ lixity analyze samples/pride-and-prejudice.md  # English – Austen, 61 chapters
 Reports and CLI messages are English by default; `LIXITY_LANG=de` switches them to German.
 
 Full command reference, metric glossary, worked example and troubleshooting:
-[`docs/USAGE.md`](docs/USAGE.md).
+[`docs/USAGE.md`](docs/USAGE.md). Agent-facing JSON contracts:
+[`docs/AGENTS.md`](docs/AGENTS.md). Site overview:
+[mfahsold.github.io/lixity](https://mfahsold.github.io/lixity/).
 
 ![Lixity style layer overlay](docs/screenshots/dashboard-layer.png)
 
@@ -147,7 +179,7 @@ from lixity import api
 
 metrics = api.analyze(text, language="auto")          # {"meta", "metrics"}
 profiles = api.profile(text, language="de")           # {"meta", "chapters", "paragraphs"}
-reference = api.fingerprint(text, language="de")      # style reference (schema v2)
+reference = api.fingerprint(text, language="de")      # style reference (schema v3)
 html = api.dashboard(text, language="de", title="My Manuscript")
 new_text, marker = api.add_marker(text, kind="pruefen", note="Verify tense", line=142)
 updated_text, ok = api.resolve_marker(new_text, marker["id"])
@@ -158,11 +190,12 @@ Machine-readable surfaces:
 
 | Need | Surface |
 | :--- | :--- |
-| Corpus metrics | `lixity analyze FILE --json` (schema v1, meta block) |
-| Paragraph profiles | `lixity profile FILE` |
-| Style reference (bands, z\*, FDR, dimensions) | `lixity style FILE --json` (schema v2) |
+| Corpus metrics | `lixity analyze FILE --json` (meta block, schema_version 2) |
+| Paragraph profiles | `lixity profile FILE` (schema_version 2) |
+| Style reference (bands, z\*, FDR, effect sizes, wave-2) | `lixity style FILE --json` (**schema_version 3**) |
 | Reproducible artifact set | `lixity build [FILE] [--dry-run]` |
 | Capability discovery | `lixity about --json` |
+| Shell completion | `lixity completion bash\|zsh` |
 | LLM-friendly site summary | [`docs/llms.txt`](docs/llms.txt) |
 
 Contracts, interpretation heuristics and dashboard DOM hooks:
@@ -217,7 +250,8 @@ for identical input.
 source*: free for research, education, personal writing and clearly
 non-commercial open science. Commercial use requires a written license
 (mfahsold@googlemail.com). Full terms: [`LICENSE`](LICENSE); the license text
-must be kept with every copy.
+must be kept with every copy. Security reports: [`SECURITY.md`](SECURITY.md).
+Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 Third-party components (all permissive): [pydantic](https://github.com/pydantic/pydantic)
 (MIT), [rich](https://github.com/Textualize/rich) (MIT),

@@ -62,18 +62,63 @@ class TestApiFacade(unittest.TestCase):
 
     def test_fingerprint_is_the_passport(self):
         passport = api.fingerprint(SAMPLE, language="de")
-        self.assertEqual(passport["meta"]["schema_version"], 2)
+        self.assertEqual(passport["meta"]["schema_version"], 3)
         self.assertIn("features", passport)
         self.assertIn("dimensions", passport)
         self.assertIn("fdr_flagged", passport)
+        self.assertIn("wave2_diagnostics", passport)
+        self.assertIn("flag_min_severity", passport["meta"])
         alias = api.passport(SAMPLE, language="de")
         self.assertEqual(passport, alias)
+
+    def test_profile_flag_min_severity_injectable(self):
+        base = api.profile(SAMPLE, language="de")
+        raised = api.profile(SAMPLE, language="de", flag_min_severity=3)
+        # Raising the floor can only flag fewer or equal paragraphs
+        self.assertLessEqual(
+            sum(1 for p in raised["paragraphs"] if p["severity"] >= 3),
+            sum(1 for p in base["paragraphs"] if p["severity"] >= 3),
+        )
+        # Paragraphs with flag_min stamped reflect the resolved cut
+        flagged_cut = {p["flag_min"] for p in raised["paragraphs"]}
+        self.assertEqual(flagged_cut, {3})
+
+    def test_thresholds_resolve_from_explicit_kwargs(self):
+        passport = api.fingerprint(SAMPLE, language="de", z_mild=1.5, fdr_q=0.1)
+        self.assertEqual(passport["meta"]["z_mild"], 1.5)
+        self.assertEqual(passport["meta"]["fdr_q"], 0.1)
 
     def test_dashboard_returns_self_contained_html(self):
         html = api.dashboard(SAMPLE, language="de", title="Test")
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn('<table class="heatmap">', html)
         self.assertNotIn("http://", html)
+
+    def test_dashboard_flag_min_severity_selectable(self):
+        from lixity.analyzer import CorpusAnalyzer
+        from lixity.markdown_parser import parse_markdown_blocks
+        from lixity.models import CorpusConfig
+        from lixity.style_fingerprint import StyleFingerprint
+        from lixity.style_profile import ParagraphProfiler
+        from lixity.ui import render_dashboard
+
+        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
+            parse_markdown_blocks(SAMPLE)
+        )
+        metrics = CorpusAnalyzer(config).analyze_text(SAMPLE)
+        fingerprint = StyleFingerprint.from_metrics(metrics)
+        html = render_dashboard(
+            chapters,
+            paragraphs,
+            metrics=metrics,
+            fingerprint=fingerprint,
+            title="T",
+            controls=True,
+            flag_min_severity=3,
+        )
+        self.assertIn('id="set-flag-min-sev"', html)
+        self.assertIn('value="3" selected', html)
 
     def test_about_lists_features_and_heuristics(self):
         info = api.about()
@@ -112,6 +157,10 @@ class TestCliAgentSurface(unittest.TestCase):
             "analyze profile dialogue characters pacing motifs showing dashboard style build about completion",
             _BASH_COMPLETION,
         )
+        self.assertIn("--fdr-method", _BASH_COMPLETION)
+        self.assertIn("--flag-min-severity", _BASH_COMPLETION)
+        self.assertIn("_lixity_style_flags", _ZSH_COMPLETION)
+        self.assertIn("characters", _ZSH_COMPLETION)
 
     def test_about_json_flag(self):
         import io

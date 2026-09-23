@@ -18,8 +18,7 @@ from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Any
 
-# Reuse the chapter splitting of the dialogue module (same conventions).
-from .dialogue import split_chapters
+from .markdown_parser import split_chapters  # shared chapter segmentation
 from .models import CorpusConfig
 
 

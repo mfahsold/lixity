@@ -12,7 +12,10 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
-from typing import Any
+from typing import TYPE_CHECKING, Any
+
+if TYPE_CHECKING:
+    from .style_fingerprint import FingerprintThresholds
 
 # Keys that may appear in [tool.lixity] (documented schema).
 TOOL_KEYS = frozenset(
@@ -102,3 +105,48 @@ def apply_config_to_thresholds(config: dict[str, Any]) -> dict[str, Any]:
         if key in config:
             out[key] = config[key]
     return out
+
+
+def resolve_thresholds(
+    z_mild: float | None = None,
+    z_strong: float | None = None,
+    fdr_q: float | None = None,
+    fdr_method: str | None = None,
+    dim_score_threshold: float | None = None,
+    flag_min_severity: int | None = None,
+    min_chapters: int | None = None,
+    *,
+    use_project_config: bool = True,
+) -> FingerprintThresholds:
+    """Single threshold builder for CLI, API and embedders.
+
+    Precedence (first wins per key): explicit non-``None`` argument →
+    project/user config (``[tool.lixity]`` / ``lixity.toml`` /
+    ``~/.config/lixity.toml``) → ``FingerprintThresholds`` code default.
+    Local imports avoid a module-level cycle with ``style_fingerprint``.
+    """
+    from .style_fingerprint import FingerprintThresholds as _FT
+
+    defaults = _FT()
+    values: dict[str, Any] = {
+        "z_mild": defaults.z_mild,
+        "z_strong": defaults.z_strong,
+        "fdr_q": defaults.fdr_q,
+        "fdr_method": defaults.fdr_method,
+        "min_chapters": defaults.min_chapters,
+        "dim_score_threshold": defaults.dim_score_threshold,
+        "flag_min_severity": defaults.flag_min_severity,
+    }
+    if use_project_config:
+        values.update(apply_config_to_thresholds(load_project_config()))
+    overrides = {
+        "z_mild": z_mild,
+        "z_strong": z_strong,
+        "fdr_q": fdr_q,
+        "fdr_method": fdr_method,
+        "dim_score_threshold": dim_score_threshold,
+        "flag_min_severity": flag_min_severity,
+        "min_chapters": min_chapters,
+    }
+    values.update({k: v for k, v in overrides.items() if v is not None})
+    return _FT(**values)

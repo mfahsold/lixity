@@ -377,7 +377,7 @@ class TestStyleDimensions(unittest.TestCase):
 
     def test_passport_meta_v2(self):
         passport = self.fp.passport()
-        self.assertEqual(passport["meta"]["schema_version"], 2)
+        self.assertEqual(passport["meta"]["schema_version"], 3)
         self.assertIn("expected_false_positives", passport["meta"])
         self.assertIn("dimensions", passport)
         self.assertIn("fdr_flagged", passport)
@@ -411,6 +411,413 @@ class TestStyleDimensions(unittest.TestCase):
         text = self.fp.passport_text(labels={"feat_asl": "ASL"})
         self.assertIn("STYLE REFERENCE", text)
         self.assertIn("expected hits", text)
+
+
+# ---------------------------------------------------------------------------
+#  Wave-2 tests
+# ---------------------------------------------------------------------------
+
+
+class TestPELT(unittest.TestCase):
+    """Changepoint segmentation via PELT."""
+
+    def test_too_short_returns_empty(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        self.assertEqual(pelt_changepoints([]), [])
+        self.assertEqual(pelt_changepoints([1.0]), [])
+        self.assertEqual(pelt_changepoints([1.0, 2.0]), [])
+
+    def test_constant_series_no_changepoint(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        self.assertEqual(pelt_changepoints([5.0] * 10), [])
+
+    def test_obvious_step_change(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        # Clear mean shift at index 5
+        series = [1.0] * 5 + [10.0] * 5
+        cps = pelt_changepoints(series)
+        self.assertTrue(len(cps) >= 1)
+        # The changepoint should be near index 5
+        self.assertTrue(any(4 <= cp <= 6 for cp in cps))
+
+    def test_custom_penalty(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        series = [1.0] * 5 + [10.0] * 5
+        # Very high penalty → no changepoints
+        self.assertEqual(pelt_changepoints(series, penalty=1e6), [])
+
+    def test_deterministic(self):
+        from lixity.style_fingerprint import pelt_changepoints
+
+        series = [1.0, 2.0, 1.5, 10.0, 11.0, 9.5, 3.0, 2.5]
+        self.assertEqual(pelt_changepoints(series), pelt_changepoints(series))
+
+
+class TestMannKendall(unittest.TestCase):
+    """Mann-Kendall monotonic trend test."""
+
+    def test_too_short_returns_none(self):
+        from lixity.style_fingerprint import mann_kendall
+
+        self.assertIsNone(mann_kendall([]))
+        self.assertIsNone(mann_kendall([1.0]))
+        self.assertIsNone(mann_kendall([1.0, 2.0]))
+
+    def test_perfect_upward_trend(self):
+        from lixity.style_fingerprint import mann_kendall
+
+        result = mann_kendall([1.0, 2.0, 3.0, 4.0, 5.0])
+        self.assertIsNotNone(result)
+        if result is None:
+            return
+        tau, s, p = result
+        self.assertAlmostEqual(tau, 1.0)
+        self.assertGreater(s, 0.0)
+        self.assertLess(p, 0.05)
+
+    def test_perfect_downward_trend(self):
+        from lixity.style_fingerprint import mann_kendall
+
+        result = mann_kendall([5.0, 4.0, 3.0, 2.0, 1.0])
+        self.assertIsNotNone(result)
+        if result is None:
+            return
+        tau, s, _p = result
+        self.assertAlmostEqual(tau, -1.0)
+        self.assertLess(s, 0.0)
+
+    def test_constant_series(self):
+        from lixity.style_fingerprint import mann_kendall
+
+        result = mann_kendall([3.0, 3.0, 3.0, 3.0])
+        self.assertIsNotNone(result)
+        if result is None:
+            return
+        tau, s, _p = result
+        self.assertAlmostEqual(tau, 0.0)
+        self.assertAlmostEqual(s, 0.0)
+
+    def test_deterministic(self):
+        from lixity.style_fingerprint import mann_kendall
+
+        data = [2.0, 3.0, 1.0, 5.0, 4.0]
+        self.assertEqual(mann_kendall(data), mann_kendall(data))
+
+
+class TestWassersteinKS(unittest.TestCase):
+    """Wasserstein distance and KS two-sample test."""
+
+    def test_wasserstein_empty(self):
+        from lixity.style_fingerprint import wasserstein_1d
+
+        self.assertAlmostEqual(wasserstein_1d([], [1.0, 2.0]), 0.0)
+        self.assertAlmostEqual(wasserstein_1d([1.0], []), 0.0)
+
+    def test_wasserstein_identical(self):
+        from lixity.style_fingerprint import wasserstein_1d
+
+        x = [1.0, 2.0, 3.0]
+        self.assertAlmostEqual(wasserstein_1d(x, x), 0.0)
+
+    def test_wasserstein_shift(self):
+        from lixity.style_fingerprint import wasserstein_1d
+
+        x = [0.0, 1.0, 2.0]
+        y = [10.0, 11.0, 12.0]
+        w = wasserstein_1d(x, y)
+        self.assertGreater(w, 0.0)
+        self.assertAlmostEqual(w, 10.0, places=1)
+
+    def test_ks_empty(self):
+        from lixity.style_fingerprint import ks_2sample
+
+        d, p = ks_2sample([], [1.0])
+        self.assertAlmostEqual(d, 0.0)
+        self.assertAlmostEqual(p, 1.0)
+
+    def test_ks_identical(self):
+        from lixity.style_fingerprint import ks_2sample
+
+        x = [1.0, 2.0, 3.0, 4.0, 5.0]
+        d, _p = ks_2sample(x, x)
+        self.assertAlmostEqual(d, 0.0)
+
+    def test_ks_different(self):
+        from lixity.style_fingerprint import ks_2sample
+
+        x = [1.0, 2.0, 3.0, 4.0, 5.0]
+        y = [100.0, 200.0, 300.0, 400.0, 500.0]
+        d, p = ks_2sample(x, y)
+        self.assertAlmostEqual(d, 1.0)
+        self.assertLess(p, 0.05)
+
+
+class TestDunningG2(unittest.TestCase):
+    """Dunning G² keyness test."""
+
+    def test_zero_totals(self):
+        from lixity.style_fingerprint import dunning_g2
+
+        self.assertAlmostEqual(dunning_g2(5, 3, 0, 100), 0.0)
+        self.assertAlmostEqual(dunning_g2(5, 3, 100, 0), 0.0)
+
+    def test_absent_term(self):
+        from lixity.style_fingerprint import dunning_g2
+
+        self.assertAlmostEqual(dunning_g2(0, 0, 100, 100), 0.0)
+
+    def test_overrepresented(self):
+        from lixity.style_fingerprint import dunning_g2
+
+        # Term appears 10 times in A (100 words), 1 time in B (100 words)
+        g2 = dunning_g2(10, 1, 100, 100)
+        self.assertGreater(g2, 0.0)
+
+    def test_underrepresented(self):
+        from lixity.style_fingerprint import dunning_g2
+
+        # Term appears 1 time in A (100 words), 10 times in B (100 words)
+        g2 = dunning_g2(1, 10, 100, 100)
+        self.assertLess(g2, 0.0)
+
+    def test_symmetric(self):
+        from lixity.style_fingerprint import dunning_g2
+
+        g_over = dunning_g2(10, 1, 100, 100)
+        g_under = dunning_g2(1, 10, 100, 100)
+        self.assertAlmostEqual(abs(g_over), abs(g_under))
+
+
+class TestHillEstimator(unittest.TestCase):
+    """Hill tail index estimator."""
+
+    def test_too_short(self):
+        from lixity.style_fingerprint import hill_estimator
+
+        self.assertIsNone(hill_estimator([1.0, 2.0, 3.0]))
+        self.assertIsNone(hill_estimator([]))
+
+    def test_positive_values(self):
+        from lixity.style_fingerprint import hill_estimator
+
+        # Exponential-like tail: alpha should be finite and positive
+        data = [float(i) for i in range(1, 101)]
+        alpha = hill_estimator(data)
+        self.assertIsNotNone(alpha)
+        if alpha is not None:
+            self.assertGreater(alpha, 0.0)
+
+    def test_custom_k(self):
+        from lixity.style_fingerprint import hill_estimator
+
+        data = [float(i) for i in range(1, 51)]
+        self.assertIsNotNone(hill_estimator(data, k=5))
+        self.assertIsNone(hill_estimator(data, k=1))  # k < 2
+
+    def test_negative_values_return_none(self):
+        from lixity.style_fingerprint import hill_estimator
+
+        # All non-positive → None
+        self.assertIsNone(hill_estimator([-1.0, -2.0, -3.0, -4.0, -5.0]))
+
+    def test_deterministic(self):
+        from lixity.style_fingerprint import hill_estimator
+
+        data = [float(i) for i in range(1, 30)]
+        self.assertEqual(hill_estimator(data), hill_estimator(data))
+
+
+class TestSnQn(unittest.TestCase):
+    """Sn and Qn robust scale estimators (Rousseeuw & Croux)."""
+
+    def test_too_short(self):
+        from lixity.style_fingerprint import qn_estimator, sn_estimator
+
+        self.assertAlmostEqual(sn_estimator([]), 0.0)
+        self.assertAlmostEqual(sn_estimator([1.0]), 0.0)
+        self.assertAlmostEqual(qn_estimator([]), 0.0)
+        self.assertAlmostEqual(qn_estimator([1.0]), 0.0)
+
+    def test_constant_returns_zero(self):
+        from lixity.style_fingerprint import qn_estimator, sn_estimator
+
+        self.assertAlmostEqual(sn_estimator([5.0] * 5), 0.0)
+        self.assertAlmostEqual(qn_estimator([5.0] * 5), 0.0)
+
+    def test_positive_for_spread(self):
+        from lixity.style_fingerprint import qn_estimator, sn_estimator
+
+        data = [1.0, 2.0, 3.0, 4.0, 5.0]
+        self.assertGreater(sn_estimator(data), 0.0)
+        self.assertGreater(qn_estimator(data), 0.0)
+
+    def test_sn_qn_comparable_to_mad(self):
+        from lixity.style_fingerprint import mad, median, qn_estimator, sn_estimator
+
+        # For Gaussian-ish data, Sn ≈ Qn ≈ 1.4826·MAD (order of magnitude)
+        data = [1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0]
+        centre = median(data)
+        sigma_mad = 1.4826 * mad(data, centre)
+        sn = sn_estimator(data)
+        qn = qn_estimator(data)
+        # Within a factor of 3 for this small sample
+        self.assertGreater(sn, sigma_mad * 0.3)
+        self.assertLess(sn, sigma_mad * 3.0)
+        self.assertGreater(qn, sigma_mad * 0.3)
+        self.assertLess(qn, sigma_mad * 3.0)
+
+    def test_deterministic(self):
+        from lixity.style_fingerprint import qn_estimator, sn_estimator
+
+        data = [3.0, 1.0, 4.0, 1.0, 5.0, 9.0, 2.0, 6.0]
+        self.assertEqual(sn_estimator(data), sn_estimator(data))
+        self.assertEqual(qn_estimator(data), qn_estimator(data))
+
+
+class TestWave2Integration(unittest.TestCase):
+    """Wave-2 diagnostics integrated into the style fingerprint pipeline."""
+
+    def setUp(self):
+        self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
+        self.fp = StyleFingerprint.from_metrics(self.metrics)
+
+    def test_wave2_diagnostics_exist(self):
+        self.assertIsInstance(self.fp.wave2_diagnostics, dict)
+        self.assertIn("changepoints", self.fp.wave2_diagnostics)
+        self.assertIn("trends", self.fp.wave2_diagnostics)
+        self.assertIn("robust_scales", self.fp.wave2_diagnostics)
+        self.assertIn("trending_features", self.fp.wave2_diagnostics)
+        self.assertIn("segmented_features", self.fp.wave2_diagnostics)
+
+    def test_wave2_in_passport(self):
+        passport = self.fp.passport()
+        self.assertIn("wave2_diagnostics", passport)
+        self.assertEqual(passport["meta"]["schema_version"], 3)
+
+    def test_wave2_json_serialisable(self):
+        passport = self.fp.passport()
+        json.dumps(passport)  # must not raise
+
+    def test_wave2_deterministic(self):
+        fp2 = StyleFingerprint.from_metrics(self.metrics)
+        self.assertEqual(self.fp.wave2_diagnostics, fp2.wave2_diagnostics)
+
+    def test_trends_structure(self):
+        for trend in self.fp.wave2_diagnostics.get("trends", {}).values():
+            self.assertIn("tau", trend)
+            self.assertIn("S", trend)
+            self.assertIn("p", trend)
+            self.assertGreaterEqual(trend["p"], 0.0)
+            self.assertLessEqual(trend["p"], 1.0)
+
+    def test_robust_scales_structure(self):
+        for scales in self.fp.wave2_diagnostics.get("robust_scales", {}).values():
+            self.assertIn("sn", scales)
+            self.assertIn("qn", scales)
+            self.assertIn("sigma_mad", scales)
+            self.assertGreaterEqual(scales["sn"], 0.0)
+            self.assertGreaterEqual(scales["qn"], 0.0)
+
+    def test_tail_index_present_when_measurable(self):
+        tail = self.fp.wave2_diagnostics.get("tail_index", {})
+        self.assertIsInstance(tail, dict)
+        for alpha in tail.values():
+            self.assertGreater(alpha, 0.0)
+
+    def test_passport_meta_reports_all_thresholds(self):
+        meta = self.fp.passport()["meta"]
+        self.assertIn("flag_min_severity", meta)
+        self.assertIn("min_chapters", meta)
+        self.assertEqual(meta["flag_min_severity"], self.fp.thresholds.flag_min_severity)
+        self.assertEqual(meta["min_chapters"], self.fp.thresholds.min_chapters)
+
+    def test_passport_text_mentions_wave2_when_present(self):
+        text = self.fp.passport_text(language_key="en")
+        w2 = self.fp.wave2_diagnostics
+        if w2.get("segmented_features") or w2.get("trending_features"):
+            self.assertIn("Wave-2 diagnostics", text)
+
+
+class TestGohBarabasi(unittest.TestCase):
+    """Goh–Barabási degree-sequence fitness."""
+
+    def test_empty_and_short_return_none(self):
+        from lixity.style_fingerprint import goh_barabasi_fitness
+
+        self.assertIsNone(goh_barabasi_fitness([]))
+        self.assertIsNone(goh_barabasi_fitness([1, 2, 3]))
+        self.assertIsNone(goh_barabasi_fitness([0, 0, 0, 0, 0, 0]))
+
+    def test_constant_positive_degrees_return_none(self):
+        from lixity.style_fingerprint import goh_barabasi_fitness
+
+        self.assertIsNone(goh_barabasi_fitness([3] * 10))
+
+    def test_power_law_like_sequence_fits(self):
+        from lixity.style_fingerprint import goh_barabasi_fitness
+
+        # Heavy-tailed degree sequence (scale-free-like)
+        degrees = [1] * 40 + [2] * 20 + [3] * 10 + [5] * 5 + [10] * 3 + [20] * 2
+        result = goh_barabasi_fitness(degrees)
+        self.assertIsNotNone(result)
+        if result is None:
+            return
+        self.assertIn("exponent", result)
+        self.assertIn("ks_distance", result)
+        self.assertIn("p_value", result)
+        self.assertGreater(result["exponent"], 1.0)
+        self.assertGreaterEqual(result["ks_distance"], 0.0)
+        self.assertLessEqual(result["ks_distance"], 1.0)
+        self.assertGreaterEqual(result["p_value"], 0.0)
+        self.assertLessEqual(result["p_value"], 1.0)
+
+    def test_deterministic(self):
+        from lixity.style_fingerprint import goh_barabasi_fitness
+
+        degrees = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        self.assertEqual(goh_barabasi_fitness(degrees), goh_barabasi_fitness(degrees))
+
+
+class TestCooccurrenceDegrees(unittest.TestCase):
+    """Word co-occurrence degree sequence."""
+
+    def test_empty_and_bad_window(self):
+        from lixity.style_fingerprint import cooccurrence_degrees
+
+        self.assertEqual(cooccurrence_degrees([]), [])
+        self.assertEqual(cooccurrence_degrees(["a", "b"], window=0), [])
+
+    def test_one_degree_per_token_type(self):
+        from lixity.style_fingerprint import cooccurrence_degrees
+
+        tokens = ["a", "b", "c", "a", "b"]
+        degrees = cooccurrence_degrees(tokens, window=2)
+        self.assertEqual(len(degrees), 3)  # a, b, c
+        self.assertTrue(all(d >= 0 for d in degrees))
+
+    def test_isolated_token_has_degree_zero(self):
+        from lixity.style_fingerprint import cooccurrence_degrees
+
+        # window=1: edges are only (a,b) and (b,z); every distinct type gets degree >= 1
+        tokens = ["a", "b", "z"]
+        degrees = cooccurrence_degrees(tokens, window=1)
+        self.assertEqual(len(degrees), 3)
+        self.assertTrue(all(d >= 1 for d in degrees))
+
+        # One repeated type never co-occurs with a *different* type → degree 0
+        alone = cooccurrence_degrees(["q", "q", "q"], window=1)
+        self.assertEqual(alone, [0])
+
+    def test_deterministic(self):
+        from lixity.style_fingerprint import cooccurrence_degrees
+
+        tokens = ["x", "y", "z", "x", "y"]
+        self.assertEqual(cooccurrence_degrees(tokens), cooccurrence_degrees(tokens))
 
 
 if __name__ == "__main__":

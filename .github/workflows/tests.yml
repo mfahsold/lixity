@@ -1,11 +1,13 @@
 name: tests
 on: [push, pull_request]
+permissions:
+  contents: read
 jobs:
   unittest:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.10", "3.12"]
+        python-version: ["3.10", "3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -15,6 +17,8 @@ jobs:
       - run: python -m unittest discover -s tests -v
         env:
           PYTHONPATH: src
+      - run: pip install pytest
+      - run: PYTHONPATH=src python -m pytest -W error -q -p no:asyncio
 
   lint:
     runs-on: ubuntu-latest
@@ -36,18 +40,33 @@ jobs:
           python-version: "3.12"
       - run: pip install build
       - run: python -m build --wheel
-      - name: Verify wheel contains UI assets and typing marker
+      - name: Verify wheel contains UI assets, typing marker and version metadata
         run: |
           python - <<'PY'
-          import glob, sys, zipfile
+          import glob, re, sys, zipfile
+          from pathlib import Path
 
           wheel = glob.glob("dist/*.whl")[0]
-          names = set(zipfile.ZipFile(wheel).namelist())
+          zf = zipfile.ZipFile(wheel)
+          names = set(zf.namelist())
           required = {
               "lixity/py.typed",
               "lixity/ui/assets/dashboard.css",
               "lixity/ui/assets/dashboard.js",
+              "lixity/_version.py",
           }
           missing = sorted(required - names)
-          sys.exit(f"missing in wheel: {missing}" if missing else 0)
+          if missing:
+              sys.exit(f"missing in wheel: {missing}")
+
+          version_py = Path("src/lixity/_version.py").read_text(encoding="utf-8")
+          m = re.search(r'__version__\s*=\s*"([^"]+)"', version_py)
+          if not m:
+              sys.exit("could not read __version__ from _version.py")
+          expected = m.group(1)
+          dist_info = next(n for n in names if n.endswith(".dist-info/METADATA"))
+          metadata = zf.read(dist_info).decode("utf-8")
+          if f"Version: {expected}" not in metadata:
+              sys.exit(f"wheel METADATA version does not match {expected}")
+          print(f"wheel OK: {expected}")
           PY

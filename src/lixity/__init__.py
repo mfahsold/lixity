@@ -1,5 +1,6 @@
 """Lixity – Quantitative text linguistics, stylometry and self-calibrating style passports."""
 
+from ._version import __version__
 from .analyzer import CorpusAnalyzer
 from .formatters import ReportFormatter
 from .io import FileUtils
@@ -24,6 +25,5 @@ __all__ = [
     "ReportFormatter",
     "SentenceDistribution",
     "StyleFingerprint",
+    "__version__",
 ]
-
-__version__ = "1.10.0"

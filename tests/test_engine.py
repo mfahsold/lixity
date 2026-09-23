@@ -127,6 +127,27 @@ class TestCorpusAnalyzer(unittest.TestCase):
         self.assertEqual(len(metrics.chapters), 1)
         self.assertEqual(metrics.chapters[0].title, "Kapitel 1")
 
+    def test_chapter_numbering_matches_split_chapters(self):
+        """Analyzer and structure modules share one segmentation (single path)."""
+        from lixity.markdown_parser import split_chapters
+
+        sample = (
+            "## Kapitel 1\n\n"
+            "Erster Satz des ersten Kapitels hier.\n\n"
+            "## Kapitel 2\n\n"
+            "Zweiter Satz steht hier und ist lang genug.\n\n"
+            "## Anhang\n\n"
+            "Anhangstext.\n"
+        )
+        metrics = self.analyzer.analyze_text(sample)
+        shared = split_chapters(sample, self.config)
+        self.assertEqual(len(metrics.chapters), len(shared))
+        self.assertEqual(
+            [c.title for c in metrics.chapters],
+            [title for _n, title, _b in shared],
+        )
+        self.assertEqual([c.num for c in metrics.chapters], list(range(1, len(shared) + 1)))
+
     def test_lexical_metrics(self):
         sample = (
             "## Kapitel\n\n"

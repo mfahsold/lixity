@@ -2,12 +2,16 @@
 
 Derives the manuscript's reference house style using robust statistics (median/MAD),
 computes significance-adjusted deviations (z* with standard errors), controls false
-discoveries (Benjamini-Hochberg FDR), and extracts latent style dimensions via cyclic
-Jacobi eigendecomposition.
+discoveries (Benjamini-Hochberg FDR), extracts latent style dimensions via cyclic
+Jacobi eigendecomposition, and provides Wave-2 diagnostics: changepoint segmentation
+(PELT), monotonic trend tests (Mann-Kendall), distribution distances (Wasserstein/KS),
+keyness (Dunning G²), tail behaviour (Hill estimator), robust scale estimators (Sn/Qn),
+and degree-distribution fitness (Goh-Barabási).
 """
 
 import math
 import statistics
+from collections import Counter
 from collections.abc import Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
@@ -281,6 +285,389 @@ def spearman_rho(x: list[float], y: list[float]) -> float:
     return cov / (vx * vy)
 
 
+# ---------------------------------------------------------------------------
+#  Wave-2 statistical functions (pure stdlib, no numpy/scipy)
+# ---------------------------------------------------------------------------
+
+
+def _segment_cost(values: list[float], start: int, end: int) -> float:
+    """Gaussian negative-log-likelihood cost of a segment (BIC-compatible).
+
+    Cost = n·ln(variance) with variance = (1/n)·Σ(xi − x̄)². Returns 0.0 for
+    segments of length ≤ 1 (no variance to measure).
+    """
+    n = end - start
+    if n <= 1:
+        return 0.0
+    seg = values[start:end]
+    mean = sum(seg) / n
+    var = sum((x - mean) ** 2 for x in seg) / n
+    if var <= 0.0:
+        return 0.0
+    return n * math.log(var)
+
+
+def pelt_changepoints(values: list[float], penalty: float | None = None) -> list[int]:
+    """PELT (Pruned Exact Linear Time) changepoint segmentation.
+
+    Detects structural breaks (phase shifts) in a chapter-level metric series
+    using a Gaussian cost model with BIC penalty.  Returns the 0-based indices
+    of the *first element after* each changepoint, sorted ascending.
+
+    Edge cases:
+    - ``n < 3``  → ``[]``  (too short to split)
+    - Constant series → ``[]``  (zero variance everywhere)
+    - ``penalty=None`` → BIC default ``2·ln(n)``
+    """
+    n = len(values)
+    if n < 3:
+        return []
+
+    if penalty is None:
+        penalty = 2.0 * math.log(n)
+
+    # opt[j] = minimum cost of segmenting values[0:j]
+    opt = [0.0] * (n + 1)
+    # last_cp[j] = the last changepoint index for opt[j]
+    last_cp = [0] * (n + 1)
+    # Candidate set (PELT pruning)
+    candidates: list[int] = [0]
+
+    for j in range(1, n + 1):
+        best_cost = math.inf
+        best_t = 0
+        for t in candidates:
+            cost = opt[t] + _segment_cost(values, t, j) + penalty
+            if cost < best_cost:
+                best_cost = cost
+                best_t = t
+        opt[j] = best_cost
+        last_cp[j] = best_t
+        # Prune: keep only candidates whose opt + cost ≤ opt[j]
+        candidates = [t for t in candidates if opt[t] + _segment_cost(values, t, j) <= opt[j]]
+        candidates.append(j)
+
+    # Back-trace
+    cps: list[int] = []
+    idx = n
+    while idx > 0:
+        cp = last_cp[idx]
+        if cp > 0:
+            cps.append(cp)
+        idx = cp
+    cps.sort()
+    return cps
+
+
+def mann_kendall(
+    values: list[float],
+) -> tuple[float, float, float] | None:
+    """Mann-Kendall monotonic trend test (non-parametric).
+
+    Returns ``(tau, S, p_value)`` or ``None`` when ``n < 3``.
+
+    - ``tau``: Kendall's tau-b (concordance – discordance, normalised)
+    - ``S``:   the raw Mann-Kendall statistic
+    - ``p_value``: two-sided normal approximation (tie-corrected variance)
+
+    Edge cases:
+    - ``n < 3``  → ``None``
+    - Constant   → ``(0.0, 0.0, 1.0)``
+    """
+    n = len(values)
+    if n < 3:
+        return None
+
+    s = 0.0
+    for i in range(n - 1):
+        for j in range(i + 1, n):
+            diff = values[j] - values[i]
+            if diff > 0.0:
+                s += 1.0
+            elif diff < 0.0:
+                s -= 1.0
+
+    # Tie groups
+    tie_counts = Counter(values)
+    tie_groups = [c for c in tie_counts.values() if c > 1]
+
+    n0 = n * (n - 1) / 2.0
+    tau = s / n0 if n0 > 0.0 else 0.0
+
+    # Variance under H0 (tie-corrected)
+    var_s = n * (n - 1.0) * (2.0 * n + 5.0) / 18.0
+    for t in tie_groups:
+        var_s -= t * (t - 1.0) * (2.0 * t + 5.0) / 18.0
+
+    if var_s <= 0.0:
+        return (0.0, 0.0, 1.0)
+
+    # Continuity correction
+    if s > 0:
+        z = (s - 1.0) / math.sqrt(var_s)
+    elif s < 0:
+        z = (s + 1.0) / math.sqrt(var_s)
+    else:
+        z = 0.0
+
+    p = math.erfc(abs(z) / math.sqrt(2.0))
+    return (tau, s, p)
+
+
+def wasserstein_1d(x: list[float], y: list[float]) -> float:
+    """1-D Wasserstein (earth mover's) distance between two empirical distributions.
+
+    Computed as the L¹ integral of the quantile functions: sort both samples,
+    linearly interpolate to the same size, then sum absolute differences.
+    Returns 0.0 when either sample is empty.
+    """
+    if not x or not y:
+        return 0.0
+    sx = sorted(x)
+    sy = sorted(y)
+    na, nb = len(sx), len(sy)
+    # Merge-based exact computation (equivalent to the integral form)
+    total = 0.0
+    all_cdf_points = sorted(
+        set([(i / na) for i in range(1, na + 1)] + [(j / nb) for j in range(1, nb + 1)])
+    )
+    prev_q = 0.0
+    for q in all_cdf_points:
+        ia = min(int(q * na), na - 1)
+        ib = min(int(q * nb), nb - 1)
+        total += abs(sx[ia] - sy[ib]) * (q - prev_q)
+        prev_q = q
+    return total
+
+
+def ks_2sample(x: list[float], y: list[float]) -> tuple[float, float]:
+    """Two-sample Kolmogorov-Smirnov test (approximate p via asymptotic formula).
+
+    Returns ``(D, p_value)`` where D is the maximum absolute CDF difference.
+    Returns ``(0.0, 1.0)`` when either sample is empty.
+    """
+    if not x or not y:
+        return (0.0, 1.0)
+    na, nb = len(x), len(y)
+    combined = sorted(set(x) | set(y))
+    sx = sorted(x)
+    sy = sorted(y)
+
+    d_max = 0.0
+    for val in combined:
+        # CDF of x at val
+        cdf_x = sum(1 for v in sx if v <= val) / na
+        cdf_y = sum(1 for v in sy if v <= val) / nb
+        d_max = max(d_max, abs(cdf_x - cdf_y))
+
+    # Asymptotic p-value (Kolmogorov distribution approximation)
+    en = math.sqrt(na * nb / (na + nb))
+    lam = (en + 0.12 + 0.11 / en) * d_max
+    # Kolmogorov survival function (truncated series)
+    p = 0.0
+    if lam > 0.0:
+        p = 2.0 * sum(
+            ((-1.0) ** (k - 1)) * math.exp(-2.0 * k * k * lam * lam) for k in range(1, 101)
+        )
+    p = max(0.0, min(1.0, p))
+    return (d_max, p)
+
+
+def dunning_g2(obs_a: int, obs_b: int, total_a: int, total_b: int) -> float:
+    """Dunning's G² (log-likelihood ratio) for keyness of a term.
+
+    Compares observed frequency in sub-corpus A vs. sub-corpus B.
+    Returns a signed G² value: positive = over-represented in A,
+    negative = under-represented.  Returns 0.0 when totals are zero
+    or the term is absent from both corpora.
+    """
+    if total_a <= 0 or total_b <= 0:
+        return 0.0
+    c = obs_a + obs_b
+    if c == 0:
+        return 0.0
+    n = total_a + total_b
+    e_a = total_a * c / n
+    e_b = total_b * c / n
+
+    g2 = 0.0
+    if obs_a > 0 and e_a > 0.0:
+        g2 += 2.0 * obs_a * math.log(obs_a / e_a)
+    if obs_b > 0 and e_b > 0.0:
+        g2 += 2.0 * obs_b * math.log(obs_b / e_b)
+
+    # Sign: positive when A is over-represented
+    if e_a > 0.0 and obs_a / e_a < 1.0:
+        g2 = -g2
+    return g2
+
+
+def hill_estimator(values: list[float], k: int | None = None) -> float | None:
+    """Hill estimator for the tail index (power-law exponent) alpha-hat.
+
+    Uses the *k* largest observations.  ``k=None`` defaults to ``floor(sqrt(n))``.
+    Returns ``None`` when fewer than 5 observations or ``k < 2``, or when
+    the k-th order statistic is non-positive (log undefined).
+
+    The Hill estimator is alpha = [1/k * sum ln(x_(n-i+1) / x_(n-k))]^-1
+    where x_(.) are order statistics.
+    """
+    n = len(values)
+    if n < 5:
+        return None
+    if k is None:
+        k = max(2, int(math.sqrt(n)))
+    if k < 2 or k >= n:
+        return None
+
+    sorted_vals = sorted(values)
+    # x_{(n-k)} is the threshold
+    threshold = sorted_vals[n - k - 1]
+    if threshold <= 0.0:
+        return None
+
+    log_sum = 0.0
+    for i in range(n - k, n):
+        if sorted_vals[i] <= 0.0:
+            return None
+        log_sum += math.log(sorted_vals[i] / threshold)
+
+    if log_sum <= 0.0:
+        return None
+    return k / log_sum
+
+
+def goh_barabasi_fitness(degrees: list[int]) -> dict[str, float] | None:
+    """Goh–Barabási degree-sequence fitness (discrete power-law / scale-free fit).
+
+    Estimates the power-law exponent with the Goh–Barabási maximum-likelihood
+    form ``alpha = 1 + n / sum ln(k_i / (k_min - 0.5))`` over positive degrees, then
+    reports the Kolmogorov–Smirnov distance between the empirical and fitted
+    CDFs (continuous approximation) with an asymptotic p-value.
+
+    Returns ``{"exponent", "ks_distance", "p_value"}`` or ``None`` when the
+    sequence is empty, shorter than 5, all-zero, or constant (no fit).
+
+    Edge cases:
+    - empty / only zeros → ``None``
+    - ``n < 5`` → ``None``
+    - all equal positive degrees → ``None`` (degenerate fit)
+    """
+    pos = [d for d in degrees if d > 0]
+    n = len(pos)
+    if n < 5:
+        return None
+    k_min = min(pos)
+    k_max = max(pos)
+    if k_min == k_max:
+        return None
+
+    denom = sum(math.log(k / (k_min - 0.5)) for k in pos)
+    if denom <= 0.0:
+        return None
+    alpha = 1.0 + n / denom
+    if alpha <= 1.0:
+        return None
+
+    sorted_pos = sorted(pos)
+    # Continuous power-law CDF truncated to [k_min, k_max] for KS comparison.
+    trunc = 1.0 - (k_max / k_min) ** (1.0 - alpha)
+
+    def cdf_theory(k: float) -> float:
+        if trunc <= 0.0:
+            return 1.0
+        value = (1.0 - (k / float(k_min)) ** (1.0 - alpha)) / trunc
+        return float(max(0.0, min(1.0, value)))
+
+    d_max = 0.0
+    for i, k in enumerate(sorted_pos):
+        theo = cdf_theory(float(k))
+        d_max = max(d_max, abs((i + 1) / n - theo), abs(i / n - theo))
+
+    en = math.sqrt(n)
+    lam = (en + 0.12 + 0.11 / en) * d_max
+    p = 0.0
+    if lam > 0.0:
+        p = 2.0 * sum(
+            ((-1.0) ** (t - 1)) * math.exp(-2.0 * t * t * lam * lam) for t in range(1, 101)
+        )
+    p = max(0.0, min(1.0, p))
+    return {
+        "exponent": round(alpha, 4),
+        "ks_distance": round(d_max, 4),
+        "p_value": round(p, 4),
+    }
+
+
+def cooccurrence_degrees(tokens: Sequence[str], window: int = 2) -> list[int]:
+    """Degree sequence of the undirected word co-occurrence graph.
+
+    Nodes are token types; an undirected edge joins every pair within
+    ``window`` positions (excluding self-loops). Returns one degree per
+    distinct token (isolates included as 0); empty for empty input.
+    """
+    if not tokens or window < 1:
+        return []
+    nodes: set[str] = set()
+    edges: set[tuple[str, str]] = set()
+    for i, a in enumerate(tokens):
+        nodes.add(a)
+        for j in range(i + 1, min(i + 1 + window, len(tokens))):
+            b = tokens[j]
+            if a != b:
+                edges.add((a, b) if a < b else (b, a))
+    deg: dict[str, int] = dict.fromkeys(nodes, 0)
+    for a, b in edges:
+        deg[a] += 1
+        deg[b] += 1
+    return list(deg.values())
+
+
+def sn_estimator(values: list[float]) -> float:
+    """Sn robust scale estimator (Rousseeuw & Croux 1993).
+
+    Sn = cn · median_i { median_j |xi − xj| } where cn is a finite-sample
+    correction factor.  Returns 0.0 for fewer than 2 observations.
+    """
+    n = len(values)
+    if n < 2:
+        return 0.0
+
+    inner_medians: list[float] = []
+    for i in range(n):
+        diffs = sorted(abs(values[i] - values[j]) for j in range(n))
+        inner_medians.append(statistics.median(diffs))
+
+    raw = statistics.median(inner_medians)
+    # Asymptotic consistency factor for Gaussian: 1.1926
+    cn = 1.1926
+    return cn * raw
+
+
+def qn_estimator(values: list[float]) -> float:
+    """Qn robust scale estimator (Rousseeuw & Croux 1993).
+
+    Qn = dn · {|xi − xj|; i < j}_(h) where h = ⌊n/2⌋·(⌊n/2⌋+1)/2 ≈ first
+    quartile of all pairwise distances.  Returns 0.0 for fewer than 2 observations.
+    """
+    n = len(values)
+    if n < 2:
+        return 0.0
+
+    # All pairwise absolute differences
+    diffs = sorted(abs(values[i] - values[j]) for i in range(n) for j in range(i + 1, n))
+
+    # h = binomial(floor(n/2)+1, 2) ≈ first quartile index
+    h_n = n // 2 + 1
+    h = h_n * (h_n - 1) // 2
+    h = max(1, min(h, len(diffs)))
+
+    raw = diffs[h - 1]  # 1-based → 0-based
+    # Asymptotic consistency factor for Gaussian: 2.2219
+    dn = 2.2219
+    return dn * raw
+
+
 def jacobi_eigh(
     matrix: list[list[float]], tol: float = 1e-12, max_sweeps: int = 200
 ) -> tuple[list[float], list[list[float]]]:
@@ -371,6 +758,9 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "variance": "variance",
         "flagged": "flagged",
         "redundant": "Redundant features",
+        "wave2": "Wave-2 diagnostics",
+        "segmented": "segmented features",
+        "trending": "trending features",
     },
     "de": {
         "style_passport": "STILREFERENZ",
@@ -393,6 +783,9 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "variance": "Varianz",
         "flagged": "auffällig",
         "redundant": "Redundante Merkmale",
+        "wave2": "Wave-2-Diagnostik",
+        "segmented": "segmentierte Merkmale",
+        "trending": "trendende Merkmale",
     },
 }
 
@@ -426,6 +819,7 @@ class StyleFingerprint:
     dimensions: list[dict[str, Any]] = field(default_factory=list)
     redundant_features: list[dict[str, Any]] = field(default_factory=list)
     baseline_diagnostics: dict[str, Any] = field(default_factory=dict)
+    wave2_diagnostics: dict[str, Any] = field(default_factory=dict)
     thresholds: FingerprintThresholds = field(default_factory=FingerprintThresholds)
 
     @classmethod
@@ -521,6 +915,7 @@ class StyleFingerprint:
         fingerprint.dimensions = fingerprint._derive_dimensions()
         fingerprint.redundant_features = fingerprint._derive_redundancies()
         fingerprint.baseline_diagnostics = fingerprint._derive_baseline_diagnostics()
+        fingerprint.wave2_diagnostics = fingerprint._derive_wave2_diagnostics()
         return fingerprint
 
     def _derive_baseline_diagnostics(self) -> dict[str, Any]:
@@ -555,6 +950,70 @@ class StyleFingerprint:
             "mean_lag1_rho": round(mean_rho1, 4),
             "acf_critical": round(acf_critical, 4),
             "exchangeable": exchangeable,
+        }
+
+    def _derive_wave2_diagnostics(self) -> dict[str, Any]:
+        """Wave-2 diagnostics per usable feature: changepoints, trends, robust scales.
+
+        - **changepoints**: PELT changepoint indices (0-based) per feature
+        - **trends**: Mann-Kendall (tau, S, p) per feature
+        - **robust_scales**: Sn and Qn estimators per feature, compared to 1.4826·MAD
+        - **tail_index**: Hill tail exponent (alpha-hat) per feature (n >= 5)
+        """
+        fields = self._usable_features()
+        changepoints: dict[str, list[int]] = {}
+        trends: dict[str, dict[str, float]] = {}
+        robust_scales: dict[str, dict[str, float]] = {}
+        tail_index: dict[str, float] = {}
+
+        for field_name in fields:
+            series: list[float] = []
+            for ch in sorted(self.values[field_name]):
+                value = self.values[field_name].get(ch)
+                if value is not None:
+                    series.append(float(value))
+
+            if len(series) >= 3:
+                cps = pelt_changepoints(series)
+                if cps:
+                    changepoints[field_name] = cps
+
+                mk = mann_kendall(series)
+                if mk is not None:
+                    tau, s_val, p_val = mk
+                    trends[field_name] = {
+                        "tau": round(tau, 4),
+                        "S": round(s_val, 1),
+                        "p": round(p_val, 4),
+                    }
+
+            if len(series) >= 2:
+                sn = sn_estimator(series)
+                qn = qn_estimator(series)
+                sigma_mad = float(self.baseline.get(field_name, {}).get("sigma", 0.0))
+                robust_scales[field_name] = {
+                    "sn": round(sn, 6),
+                    "qn": round(qn, 6),
+                    "sigma_mad": round(sigma_mad, 6),
+                }
+
+            if len(series) >= 5:
+                alpha = hill_estimator(series)
+                if alpha is not None:
+                    tail_index[field_name] = round(alpha, 4)
+
+        # Summary: features with significant trends (p < 0.05)
+        trending = [f for f, t in trends.items() if t["p"] < 0.05]
+        # Summary: features with changepoints
+        segmented = list(changepoints.keys())
+
+        return {
+            "changepoints": changepoints,
+            "trends": trends,
+            "robust_scales": robust_scales,
+            "tail_index": tail_index,
+            "trending_features": sorted(trending),
+            "segmented_features": sorted(segmented),
         }
 
     def _usable_features(self) -> list[str]:
@@ -694,7 +1153,7 @@ class StyleFingerprint:
         return {
             "meta": {
                 "tool": "lixity",
-                "schema_version": 2,
+                "schema_version": 3,
                 "n_chapters": self.n_chapters,
                 "n_features": len(FEATURES),
                 "z_mild": self.thresholds.z_mild,
@@ -702,10 +1161,13 @@ class StyleFingerprint:
                 "fdr_q": self.thresholds.fdr_q,
                 "fdr_method": self.thresholds.fdr_method,
                 "dim_score_threshold": self.thresholds.dim_score_threshold,
+                "min_chapters": self.thresholds.min_chapters,
+                "flag_min_severity": self.thresholds.flag_min_severity,
                 "expected_false_positives": round(self.expected_false_positives, 2),
             },
             "consistency": round(self.consistency, 4),
             "baseline_diagnostics": self.baseline_diagnostics,
+            "wave2_diagnostics": self.wave2_diagnostics,
             "features": features,
             "deviations": {
                 str(chapter_num): {feat: round(z, 2) for feat, z in dev.items()}
@@ -783,6 +1245,14 @@ class StyleFingerprint:
                 f"{t('mean_acf')} ρ₁={rho}"
                 + (f" · {t('low_power')}" if diag.get("low_power") else "")
             )
+        if self.wave2_diagnostics:
+            w2 = self.wave2_diagnostics
+            seg = w2.get("segmented_features") or []
+            trend = w2.get("trending_features") or []
+            if seg or trend:
+                lines.append(
+                    f"{t('wave2')}: {len(seg)} {t('segmented')} · {len(trend)} {t('trending')}"
+                )
         if self.dimensions:
             lines.append("-" * 72)
             field_labels = {f: label_key for f, label_key, _u in FEATURES}

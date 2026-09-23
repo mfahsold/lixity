@@ -112,6 +112,41 @@ On the ordered per-feature series $x_1,\dots,x_n$ (chapters in order):
 - `low_power` is true for $n < 8$ chapters — treat every downstream
   significance claim as provisional.
 
+## 4c. Wave-2 diagnostics (`wave2_diagnostics`)
+
+Pure-stdlib structural and distributional diagnostics over the ordered
+per-feature series (chapters in order). They answer *where* and *how*
+the house style shifts — orthogonal to the per-cell z\*/FDR layer.
+
+| Key | Estimator | Guard / notes |
+| :--- | :--- | :--- |
+| `changepoints` | **PELT** (pruned exact linear time) with Gaussian cost $n\ln\sigma^2$ and BIC penalty $2\ln n$ | $n < 3$ or constant series → `[]`; values are 0-based indices of the first element after each break |
+| `trends` | **Mann–Kendall** monotonic trend: $\tau$, $S$, two-sided normal $p$ (tie-corrected variance, continuity correction) | $n < 3$ → `None`; constant → $(0,0,1)$ |
+| `robust_scales` | **Sn** (Rousseeuw & Croux 1993, consistency $c_n = 1.1926$) and **Qn** (same paper, $d_n = 2.2219$), alongside $1.4826\cdot\mathrm{MAD}$ | $n < 2$ → $0$; Sn/Qn have 50 % breakdown (vs. MAD's 50 % with lower Gaussian efficiency) |
+| `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None` |
+| `trending_features` | feature names with Mann–Kendall $p < 0.05$ | summary list |
+| `segmented_features` | feature names with at least one PELT changepoint | summary list |
+
+Additional standalone helpers (same module, not yet wired into the passport):
+
+- **Wasserstein-1D** ($W_1$): $L^1$ integral of the quantile functions of two
+  empirical samples; empty sample → $0$.
+- **Two-sample KS**: maximum absolute CDF difference with asymptotic
+  $p$-value; empty sample → $(0, 1)$.
+- **Dunning $G^2$** (log-likelihood ratio keyness): signed so positive =
+  over-represented in sub-corpus A; zero totals or term absent → $0$.
+- **Goh–Barabási fitness**: discrete power-law fit of a degree sequence,
+  $\hat\alpha = 1 + n/\sum\ln(k_i/(k_{\min}-0.5))$, plus KS distance and
+  asymptotic $p$; empty / $n<5$ / constant / non-positive denominator → `None`.
+- **Co-occurrence degrees**: undirected word co-occurrence graph (nodes =
+  token types, edges within a sliding window, no self-loops); returns one
+  degree per distinct token (isolates = $0$).
+
+The passport `meta` block reports `schema_version: 3`, `min_chapters` and
+`flag_min_severity` alongside the Wave-1 thresholds; `passport_text` adds a
+“Wave-2 diagnostics” line when any feature has a changepoint or significant
+trend.
+
 ## 5. Latent style dimensions
 
 1. Spearman rank correlation $\rho$ over chapter values of usable features

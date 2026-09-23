@@ -22,8 +22,8 @@ from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Any
 
-from .dialogue import split_chapters
 from .language import compile_pattern, resolve_language
+from .markdown_parser import split_chapters
 from .models import CorpusConfig
 
 MIN_PHRASE_COUNT = 3  # a repeated n-gram must occur at least this often

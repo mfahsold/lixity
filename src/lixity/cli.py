@@ -12,14 +12,14 @@ from rich.table import Table
 
 from . import __version__
 from .analyzer import CorpusAnalyzer
-from .config import apply_config_to_thresholds, load_project_config
+from .config import load_project_config, resolve_thresholds
 from .formatters import ReportFormatter
 from .io import FileUtils
 from .language import resolve_language
 from .markdown_parser import parse_markdown_blocks
 from .models import SCHEMA_VERSION, CorpusConfig
 from .style_fingerprint import FingerprintThresholds, StyleFingerprint
-from .style_profile import ParagraphProfiler
+from .style_profile import ParagraphProfiler, ProfileThresholds
 from .ui import render_dashboard
 from .workspace import discover
 
@@ -32,30 +32,58 @@ def _thresholds_from_args(
 ) -> FingerprintThresholds:
     """Builds FingerprintThresholds from CLI flags (defaults = documented heuristics).
 
-    Precedence: CLI flag > ``[tool.lixity]`` project config > built-in default.
+    Precedence: CLI flag > project config (``[tool.lixity]`` / ``lixity.toml``) >
+    built-in default — shared builder ``config.resolve_thresholds``.
     """
-    defaults = FingerprintThresholds()
-    base: dict[str, Any] = {
-        "z_mild": defaults.z_mild,
-        "z_strong": defaults.z_strong,
-        "fdr_q": defaults.fdr_q,
-        "fdr_method": defaults.fdr_method,
-        "dim_score_threshold": defaults.dim_score_threshold,
-    }
-    if config:
-        for key, value in apply_config_to_thresholds(config).items():
-            if key in base:
-                base[key] = value
-    overrides = {
-        "z_mild": getattr(args, "z_mild", None),
-        "z_strong": getattr(args, "z_strong", None),
-        "fdr_q": getattr(args, "fdr_q", None),
-        "fdr_method": getattr(args, "fdr_method", None),
-        "dim_score_threshold": getattr(args, "dim_threshold", None),
-        "flag_min_severity": getattr(args, "flag_min_severity", None),
-    }
-    base.update({k: v for k, v in overrides.items() if v is not None})
-    return FingerprintThresholds(**base)
+    # When the caller already loaded project config (CLI main), honour it;
+    # otherwise resolve_thresholds loads it itself.
+    if config is not None:
+        from .config import apply_config_to_thresholds
+
+        overrides = {
+            k: v
+            for k, v in {
+                "z_mild": getattr(args, "z_mild", None),
+                "z_strong": getattr(args, "z_strong", None),
+                "fdr_q": getattr(args, "fdr_q", None),
+                "fdr_method": getattr(args, "fdr_method", None),
+                "dim_score_threshold": getattr(args, "dim_threshold", None),
+                "flag_min_severity": getattr(args, "flag_min_severity", None),
+            }.items()
+            if v is not None
+        }
+        # Merge: defaults ← config ← CLI flags (via resolve_thresholds kwargs)
+        merged = {**apply_config_to_thresholds(config), **overrides}
+        return resolve_thresholds(
+            z_mild=merged.get("z_mild"),
+            z_strong=merged.get("z_strong"),
+            fdr_q=merged.get("fdr_q"),
+            fdr_method=merged.get("fdr_method"),
+            dim_score_threshold=merged.get("dim_score_threshold"),
+            flag_min_severity=merged.get("flag_min_severity"),
+            min_chapters=merged.get("min_chapters"),
+            use_project_config=False,  # already applied above
+        )
+    return resolve_thresholds(
+        z_mild=getattr(args, "z_mild", None),
+        z_strong=getattr(args, "z_strong", None),
+        fdr_q=getattr(args, "fdr_q", None),
+        fdr_method=getattr(args, "fdr_method", None),
+        dim_score_threshold=getattr(args, "dim_threshold", None),
+        flag_min_severity=getattr(args, "flag_min_severity", None),
+    )
+
+
+def _thresholds_and_profile(
+    args: argparse.Namespace,
+) -> tuple[FingerprintThresholds, ProfileThresholds]:
+    """Resolved fingerprint thresholds + matching paragraph profile thresholds.
+
+    One resolution path: CLI flag > project config > code default; the
+    paragraph severity floor travels with the same value everywhere.
+    """
+    fp = _thresholds_from_args(args, getattr(args, "_project_config", None))
+    return fp, ProfileThresholds(flag_min_severity=fp.flag_min_severity)
 
 
 def _json(payload: object, indent: bool = False) -> str:
@@ -236,15 +264,18 @@ def _m(key: str, **fmt: object) -> str:
 
 
 _BASH_COMPLETION = """# bash completion for lixity – source this file or add it to bash_completion.d/
+#   lixity completion bash > /etc/bash_completion.d/lixity   # system
+#   lixity completion bash > ~/.local/share/bash-completion/completions/lixity
 _lixity_complete() {
     local cur prev
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     local cmds="analyze profile dialogue characters pacing motifs showing dashboard style build about completion"
-    local opts="--language --json --output --help"
+    local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
+    local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity"
     if [[ $COMP_CWORD -eq 1 ]]; then
-        COMPREPLY=( $(compgen -W "$cmds" -- "$cur") )
+        COMPREPLY=( $(compgen -W "$cmds --help --version" -- "$cur") )
         return 0
     fi
     case "$prev" in
@@ -252,12 +283,24 @@ _lixity_complete() {
             COMPREPLY=( $(compgen -W "auto de en fr es it pt nl generic" -- "$cur") )
             return 0
             ;;
+        --fdr-method)
+            COMPREPLY=( $(compgen -W "bh by" -- "$cur") )
+            return 0
+            ;;
+        --flag-min-severity)
+            COMPREPLY=( $(compgen -W "1 2 3" -- "$cur") )
+            return 0
+            ;;
         -o|--output)
             COMPREPLY=( $(compgen -f -- "$cur") )
             return 0
             ;;
+        completion)
+            COMPREPLY=( $(compgen -W "bash zsh" -- "$cur") )
+            return 0
+            ;;
     esac
-    COMPREPLY=( $(compgen -W "$opts" -- "$cur") )
+    COMPREPLY=( $(compgen -W "$opts $style_opts" -- "$cur") )
     COMPREPLY+=( $(compgen -f -- "$cur") )
 }
 complete -F _lixity_complete lixity
@@ -265,16 +308,93 @@ complete -F _lixity_complete lixity
 
 _ZSH_COMPLETION = """#compdef lixity
 # zsh completion for lixity – place in a directory of $fpath
+#   lixity completion zsh > "${fpath[1]}/_lixity"
+_lixity_style_flags=(
+  '--z-mild[Notable |z*| threshold]:threshold:'
+  '--z-strong[Strong |z*| threshold]:threshold:'
+  '--fdr-q[FDR q]:q:'
+  '--fdr-method[FDR method]:method:(bh by)'
+  '--dim-threshold[Dimension score threshold]:threshold:'
+  '--flag-min-severity[Minimum severity]:severity:(1 2 3)'
+)
 _lixity() {
-    _arguments \
-        '1:command:(analyze profile dashboard style about completion)' \
-        '*:file:_files' \
-        '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
-        '--json[JSON output]' \
-        '-o[output file]:file:_files' \
-        '--output[output file]:file:_files'
+  local -a cmds
+  cmds=(
+    'analyze:Corpus metrics (text/JSON)'
+    'profile:Paragraph tense/style profiles'
+    'dialogue:Dialogue turn structure'
+    'characters:Character presence across chapters'
+    'pacing:Scene structure and pacing'
+    'motifs:Motif tracking and repetition'
+    'showing:Showing vs telling balance'
+    'style:Self-calibrated style reference'
+    'dashboard:Single-file HTML dashboard'
+    'build:Idempotent workspace build'
+    'about:Tool metadata for agents'
+    'completion:Shell completion script'
+  )
+  _arguments -C \
+    '--version[Print version and exit]' \
+    '1: :->command' \
+    '*:: :->args'
+  case $state in
+    command)
+      _describe -t commands 'lixity command' cmds
+      ;;
+    args)
+      case $words[1] in
+        completion)
+          _values 'shell' bash zsh sh
+          ;;
+        about)
+          _arguments '--json[JSON output]' '--help[Help]'
+          ;;
+        build)
+          _arguments \
+            '1:file:_files' \
+            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--dry-run[Show planned artifacts only]' \
+            "${_lixity_style_flags[@]}"
+          ;;
+        motifs)
+          _arguments \
+            '1:file:_files' \
+            '--motif[NAME=REGEX]' \
+            '--phrases[Phrase size]:n:' \
+            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--json[JSON output]'
+          ;;
+        characters)
+          _arguments \
+            '1:file:_files' \
+            '--name[Figure name or alias]' \
+            '--names[Comma-separated names]:names:' \
+            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--json[JSON output]'
+          ;;
+        dashboard)
+          _arguments \
+            '1:file:_files' \
+            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--names[Character names]:names:' \
+            '-o[output file]:file:_files' \
+            '--output[output file]:file:_files' \
+            "${_lixity_style_flags[@]}"
+          ;;
+        *)
+          _arguments \
+            '1:file:_files' \
+            '--language[language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--json[JSON output]' \
+            '-o[output file]:file:_files' \
+            '--output[output file]:file:_files' \
+            "${_lixity_style_flags[@]}"
+          ;;
+      esac
+      ;;
+  esac
 }
-compdef _lixity lixity
+_lixity "$@"
 """
 
 
@@ -611,10 +731,11 @@ def _cmd_build(args: argparse.Namespace) -> int:
     config = CorpusConfig(language=resolved.key)
 
     metrics = CorpusAnalyzer(config).analyze_text(text)
-    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
-    fingerprint = StyleFingerprint.from_metrics(
-        metrics, thresholds=_thresholds_from_args(args, getattr(args, "_project_config", None))
+    fp_thresholds, profile_thresholds = _thresholds_and_profile(args)
+    paragraphs, chapters = ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
+        parse_markdown_blocks(text)
     )
+    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
     title = os.path.splitext(os.path.basename(workspace.manuscript))[0]
 
     artifacts = {
@@ -651,6 +772,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
             labels=resolved.labels,
             language_name=resolved.name,
             language_key=resolved.key,
+            flag_min_severity=fp_thresholds.flag_min_severity,
         ),
     }
 
@@ -686,9 +808,17 @@ def main(argv: list[str] | None = None) -> int:
             "Lixity – quantitative text linguistics, stylometry, self-calibrating "
             "style references and single-file dashboards for literary manuscripts."
         ),
+        epilog=(
+            "Examples:  lixity analyze manuscript.md   |   "
+            "lixity style manuscript.md --json   |   "
+            "lixity completion bash\n"
+            "Docs: https://mfahsold.github.io/lixity/  ·  "
+            "Report language: LIXITY_LANG=de"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument("--version", action="version", version=f"lixity {__version__}")
-    sub = parser.add_subparsers(dest="command", required=True)
+    sub = parser.add_subparsers(dest="command", required=True, metavar="command")
     for name, help_text in (
         ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
         ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
@@ -697,7 +827,7 @@ def main(argv: list[str] | None = None) -> int:
         ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
         ("motifs", "Motif tracking and repetition analysis (text/JSON)"),
         ("showing", "Showing vs. telling balance (text/JSON)"),
-        ("style", "Self-calibrated style reference of the manuscript (text/JSON)"),
+        ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v3)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
         ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
         ("about", "Tool metadata for agents: languages, features, heuristics"),
@@ -705,7 +835,13 @@ def main(argv: list[str] | None = None) -> int:
     ):
         p = sub.add_parser(name, help=help_text)
         if name == "completion":
-            p.add_argument("shell", nargs="?", default="bash", help="bash|zsh")
+            p.add_argument(
+                "shell",
+                nargs="?",
+                default="bash",
+                choices=("bash", "zsh", "sh"),
+                help="Target shell (default: bash)",
+            )
             continue
         if name == "about":
             p.add_argument("--json", action="store_true", help="JSON output")
@@ -847,6 +983,7 @@ def main(argv: list[str] | None = None) -> int:
         if shell == "zsh":
             sys.stdout.write(_ZSH_COMPLETION)
             return EXIT_OK
+        # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
         return EXIT_ERROR
 
@@ -893,7 +1030,10 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     if args.command == "profile":
-        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
+        _fp, profile_thresholds = _thresholds_and_profile(args)
+        paragraphs, chapters = ParagraphProfiler(
+            config, thresholds=profile_thresholds
+        ).profile_blocks(parse_markdown_blocks(text))
         payload = _meta_payload(
             resolved.key,
             chapters=[c.__dict__ for c in chapters],
@@ -904,9 +1044,8 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "style":
         metrics = CorpusAnalyzer(config).analyze_text(text)
-        fingerprint = StyleFingerprint.from_metrics(
-            metrics, thresholds=_thresholds_from_args(args, getattr(args, "_project_config", None))
-        )
+        fp_thresholds, _profile_t = _thresholds_and_profile(args)
+        fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
         if args.json:
             print(_json(fingerprint.passport(), indent=True))
         else:
@@ -914,10 +1053,11 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     metrics = CorpusAnalyzer(config).analyze_text(text)
-    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
-    fingerprint = StyleFingerprint.from_metrics(
-        metrics, thresholds=_thresholds_from_args(args, getattr(args, "_project_config", None))
+    fp_thresholds, profile_thresholds = _thresholds_and_profile(args)
+    paragraphs, chapters = ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
+        parse_markdown_blocks(text)
     )
+    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
     from .characters import presence_report
     from .dialogue import dialogue_report
 
@@ -935,6 +1075,7 @@ def main(argv: list[str] | None = None) -> int:
         labels=resolved.labels,
         language_name=resolved.name,
         language_key=resolved.key,
+        flag_min_severity=fp_thresholds.flag_min_severity,
     )
     output = args.output or "lixity-dashboard.html"
     changed = FileUtils.atomic_write_if_changed(output, html)

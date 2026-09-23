@@ -24,11 +24,11 @@ from that style, controlled for measurement noise and multiple testing.
 | `lixity pacing FILE [--json]` | scenes, pacing signals, chapter hooks | text / JSON |
 | `lixity motifs FILE --motif NAME=REGEX [--json]` | motif presence + repetition (words, n-grams) | text / JSON |
 | `lixity showing FILE [--json]` | showing vs. telling balance per chapter | text / JSON |
-| `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR; `--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`) | JSON (schema v2) |
+| `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR, wave-2 diagnostics; `--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`) | JSON (schema v3) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard (Settings: z\*, FDR, flags cut, dim threshold) | file path |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` (same threshold flags as `style`) | artifact list |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
-| `lixity completion bash\|zsh` | shell completion script | script |
+| `lixity completion bash\|zsh` | shell completion script (all commands + style flags) | script |
 
 - `--language auto|de|en|fr|es|it|pt|nl|generic` – `auto` detects via function words.
 - `--z-mild FLOAT` / `--z-strong FLOAT` / `--fdr-q FLOAT` /
@@ -87,20 +87,38 @@ Corpus-level notes:
   can parse them independent of the UI language.
 
 
-### 3.2 `style --json` (style reference, schema_version 2)
+### 3.2 `style --json` (style reference, schema_version 3)
 
 ```json
-{"meta": {"schema_version": 2, "n_chapters": 25, "n_features": 16,
-          "expected_false_positives": 5.0, "fdr_q": 0.05},
+{"meta": {"schema_version": 3, "n_chapters": 25, "n_features": 16,
+          "expected_false_positives": 5.0, "fdr_q": 0.05,
+          "min_chapters": 2, "flag_min_severity": 2},
  "consistency": 0.98,
+ "baseline_diagnostics": {"runs_flagged": [], "mean_lag1_rho": 0.1,
+                          "acf_critical": 0.2, "exchangeable": true,
+                          "low_power": false},
+ "wave2_diagnostics": {"changepoints": {"asl": [7, 14]},
+                       "trends": {"dialog_pct": {"tau": -0.42, "S": -38.0, "p": 0.012}},
+                       "robust_scales": {"asl": {"sn": 1.9, "qn": 1.7, "sigma_mad": 1.8}},
+                       "tail_index": {"asl": 3.2},
+                       "trending_features": ["dialog_pct"],
+                       "segmented_features": ["asl"]},
  "features": [{"feature": "asl", "unit": "…", "median": 9.79, "sigma": 1.8,
                "band": [6.2, 13.4], "chapters_measured": 25}, …],
  "deviations": {"20": {"dialog_pct": 5.1}, …},
  "fdr_flagged": {"20": ["dialog_pct"], …},
+ "effect_magnitudes": {"20": {"dialog_pct": "large"}},
  "dimensions": [{"index": 1, "variance": 0.33, "loadings": {…},
                  "scores": {"1": -2.1, …}, "flagged": [1, 2, 3]}, …],
  "redundant_features": [{"a": "asl", "b": "staccato_pct", "rho": -0.93}]}
 ```
+
+`wave2_diagnostics` is empty when no feature is measurable. Changepoint
+indices are 0-based positions of the first element after each break;
+`trends[field]` is `null` when $n < 3$; `tail_index[field]` is omitted
+when the Hill estimator is undefined. Prefer `fdr_flagged` over raw
+`deviations` for strong claims; read `wave2_diagnostics` for *where* the
+house style shifts over chapter order.
 
 ### 3.3 UI label packs (merge order)
 
@@ -226,6 +244,15 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
 - **JSD driver words**: the words that most contribute to a chapter's
   divergence from the rest of the corpus – use them for concrete,
   quotable editing feedback.
+- **Wave-2 diagnostics** (`wave2_diagnostics`): `changepoints` (PELT,
+  0-based index of the first element after each break) answer *where* the
+  house style shifts over chapter order; `trends` (Mann–Kendall, p < 0.05
+  → `trending_features`) answer *whether* a feature drifts monotonically;
+  `robust_scales` (Sn/Qn next to 1.4826·MAD) show whether a band is
+  outlier-sensitive; `tail_index` (Hill α̂) flags heavy-tailed features.
+  All are diagnostic signals, not verdicts – read them together with
+  `fdr_flagged` and the JSD driver words. Formal definitions:
+  [`METHODS.md`](METHODS.md) §4c.
 - **Tense severity (paragraphs)**: `classify_severity` scores a paragraph
   0–3 (0 = consistent, 1 = mixed without switch, 2 = single switch,
   3 = multiple switches / long mixed); only severity ≥
@@ -244,7 +271,7 @@ from lixity import api
 
 metrics = api.analyze(text, language="auto")          # -> {"meta", "metrics"}
 profiles = api.profile(text, language="de")           # -> {"meta", "chapters", "paragraphs"}
-reference = api.fingerprint(text, language="de")      # -> style reference (schema v2)
+reference = api.fingerprint(text, language="de")      # -> style reference (schema v3)
 turns = api.dialogue(text, language="de")             # -> {"meta", "dialogue"}
 cast = api.characters(text, ["Anna", "Ralf"], language="de")  # -> {"meta", "chapters", "figures"}
 pace = api.pacing(text, language="de")                # -> {"meta", "pacing"}

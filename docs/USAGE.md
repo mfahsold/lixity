@@ -19,17 +19,34 @@ project, start with the [README](../README.md); this document goes into detail.
 
 ## Installation
 
-Requires Python 3.10 or newer.
+Requires Python 3.10 or newer. Lixity is source-available (LNCL-1.0) and
+installed from GitHub (not PyPI):
 
 ```bash
+# isolated tool environments (recommended for CLI-only use)
+pipx install git+https://github.com/mfahsold/lixity.git
+uv tool install git+https://github.com/mfahsold/lixity.git
+
+# into the active environment / venv
 pip install git+https://github.com/mfahsold/lixity.git
+
+# pin a release
+pip install "git+https://github.com/mfahsold/lixity.git@v1.10.0"
 ```
 
 Development install (editable, with the test suite):
 
 ```bash
-python3 -m venv .venv && .venv/bin/pip install -e .
-.venv/bin/python -m unittest discover -s tests -v
+git clone https://github.com/mfahsold/lixity.git && cd lixity
+make install-dev          # or: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
+make check                # ruff + mypy --strict + pytest -W error
+```
+
+Shell completion:
+
+```bash
+lixity completion bash > ~/.local/share/bash-completion/completions/lixity
+lixity completion zsh  > "${fpath[1]}/_lixity"
 ```
 
 ## Report language
@@ -272,7 +289,7 @@ engine. The style reference doubles as a constraint block for authoring and edit
 
 ```bash
 lixity style manuscript.md          # text block
-lixity style manuscript.md --json   # machine-readable (schema v2)
+lixity style manuscript.md --json   # machine-readable (schema v3)
 lixity style manuscript.md --json --z-mild 1.5 --fdr-q 0.1 --fdr-method by
 ```
 
@@ -352,9 +369,9 @@ build` (or `lixity build path/to/manuscript.md`): lixity discovers the
 manuscript, creates the subfolders `exports/` (with `exports/archive/`) and
 `nda/`, and publishes all analysis artifacts:
 
-- `exports/<slug>_metrics.json` – full corpus metrics (schema v1),
+- `exports/<slug>_metrics.json` – full corpus metrics (schema_version 2 meta),
 - `exports/<slug>_profile.json` – paragraph-accurate tense profiles,
-- `exports/<slug>_style.json` – self-calibrated style reference (schema v2),
+- `exports/<slug>_style.json` – self-calibrated style reference (schema v3),
 - `exports/<slug>_style_passport.txt` – human-readable style reference (legacy file name),
 - `exports/<slug>_report.md` – Markdown dossier report,
 - `exports/<slug>_dashboard.html` – single-file HTML dashboard.
@@ -377,9 +394,17 @@ lixity build manuscript.md --dry-run
 ### `lixity about` and `lixity completion`
 
 ```bash
-lixity about            # tool metadata: languages, features, heuristics
-lixity about --json     # same metadata as machine-readable JSON
-lixity completion bash  # shell completion script (bash or zsh)
+lixity about                 # languages, features, heuristics
+lixity about --json          # machine-readable capability discovery
+lixity completion bash       # bash completion script
+lixity completion zsh        # zsh completion script
+```
+
+Install completion (user-level):
+
+```bash
+lixity completion bash > ~/.local/share/bash-completion/completions/lixity
+lixity completion zsh  > "${fpath[1]}/_lixity"
 ```
 
 ## Worked example: a sequel in the author's style
@@ -645,15 +670,30 @@ not a code change.
 
 ## Development
 
+One entry point (Makefile):
+
 ```bash
-.venv/bin/python -m unittest discover -s tests -v   # 126 tests, offline
-.venv/bin/ruff check src tests                      # lint (rule set pinned in pyproject.toml)
+make help        # list targets
+make install-dev # .venv + pip install -e ".[dev]"
+make check       # ruff + mypy --strict + pytest -W error
+make build       # sdist + wheel into dist/
+make screenshots # regenerate docs/screenshots (headless Chromium)
+```
+
+Without make:
+
+```bash
+PYTHONPATH=src .venv/bin/python -m pytest -W error -q -p no:asyncio
+RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
+.venv/bin/mypy --strict src
 ```
 
 Screenshots for README and project page are generated reproducibly from the
 bundled public-domain sample with headless Chromium:
 `python3 scripts/make_screenshots.py` (writes `docs/screenshots/`, including a
-demonstration status strip). CI runs lint and tests on Python 3.10 and 3.12.
+demonstration status strip). CI runs lint and tests on Python 3.10 and 3.12
+plus a wheel packaging job. Contribution workflow:
+[`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ## License
 

@@ -9,6 +9,30 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- **Packaging & installability (SOTA):** dynamic version from
+  `lixity._version.__version__` (single source for setuptools / `__version__` /
+  `--version`), optional-dependencies `dev` extra (`pytest`, `mypy`, `ruff`,
+  `build`), richer classifiers (`Environment :: Console`, Python 3.13,
+  `Typing :: Typed`, OS Independent), project URLs for the GitHub Pages site
+  and security policy.
+- **`Makefile`** (`make help|install-dev|test|lint|typecheck|check|build|screenshots|clean`)
+  and **`CONTRIBUTING.md`** (dev setup, PR checklist, bug reports).
+- **`.github/dependabot.yml`** weekly updates for GitHub Actions.
+- **Shell completion parity:** zsh script now covers all commands and the
+  style-threshold flags (`--z-mild`…`--flag-min-severity`); bash completion
+  gained `--fdr-method`, `--flag-min-severity`, `--dry-run`, `--names`,
+  `--motif` and install-path hints; `lixity completion` accepts
+  `bash|zsh|sh` as choices.
+- **Top-level `--help` epilog** with examples, docs URL and `LIXITY_LANG`.
+- **Wave-2 diagnostics** on the style passport (`wave2_diagnostics`,
+  `schema_version: 3`): PELT changepoints, Mann–Kendall trends, Sn/Qn
+  robust scales (alongside MAD), Hill tail index, and summary lists
+  (`trending_features`, `segmented_features`); `passport_text` gains a
+  “Wave-2 diagnostics” line (en/de). Pure stdlib — no numpy/scipy.
+- **Standalone Wave-2 estimators** in `style_fingerprint` (tested, not yet
+  wired into the passport): Wasserstein-1D, two-sample KS, Dunning $G^2$
+  keyness, Goh–Barabási degree-sequence fitness, and
+  `cooccurrence_degrees` (undirected word co-occurrence graph).
 - **Injectable statistical thresholds** (`z_mild`, `z_strong`, `fdr_q`,
   `fdr_method`, `dim_score_threshold`, `flag_min_severity`):
   stored on `StyleFingerprint.thresholds`, reported in every passport `meta`,
@@ -33,13 +57,41 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   \(n < 8\) — passport `baseline_diagnostics` + `passport_text` line.
 - **`docs/METHODS.md`**: formal catalogue of every estimator (MAD/σ scaling,
   z\*, BH/BY-FDR, Cliff’s δ, runs/ACF, Jacobi dimensions, LD indices,
-  readability constants, JSD, layer z) with injectability table including
-  the config file.
+  readability constants, JSD, layer z, Wave-2 PELT/MK/Sn/Qn/Hill and
+  standalone Wasserstein/KS/Dunning/Goh–Barabási) with injectability
+  table including the config file.
 - Contract tests for threshold round-trip and sensitivity settings markup
   (z mild/strong, FDR q, flags cut, dimension threshold).
 
 ### Changed
 
+- **Install docs** (README, `docs/USAGE.md`, project page, `docs/llms.txt`):
+  pipx / uv / pip / pinned-tag options; development via `make install-dev`.
+- **`docs/USAGE.md` Development** section now documents `make check`
+  (ruff + mypy --strict + pytest -W error) instead of the stale unittest count.
+- **GH Pages** (`docs/index.html`): Wave-2 FAQ and feature pills, style
+  schema v3, BH/BY, injectable thresholds, structure-module cards, Methods /
+  Contributing / Security footer links, installation matrix.
+- **`.gitignore`** hardened: agent/tool workspaces (`.remember/`, `.claude/`,
+  …), coverage formats, keystores / `.netrc` / swap files, stray
+  `*_dashboard.html` / `*_metrics.json` style build artifacts outside
+  `exports/`.
+- **`SECURITY.md`**: supported-versions table, expanded threat model,
+  consumer hardening checklist (pipx/uv, pinned tags, local-only dashboards).
+- **Single chapter segmentation**: `split_chapters` moved from `dialogue`
+  to `markdown_parser` (re-export kept); `analyzer` and all structure
+  modules share one implementation, so chapter titles/numbers can no longer
+  drift between reports.
+- **Single threshold builder**: `config.resolve_thresholds` is the only
+  place that builds `FingerprintThresholds` (kwargs > project config >
+  code default); CLI `_thresholds_from_args` and API `_thresholds` both
+  call it.
+- **`flag_min_severity` end-to-end**: CLI `_thresholds_and_profile` feeds
+  `ProfileThresholds` into `ParagraphProfiler` and passes the resolved cut
+  to `render_dashboard`; `api.profile` / `api.dashboard` accept
+  `flag_min_severity` explicitly.
+- Passport `meta` now reports `min_chapters` and `flag_min_severity`
+  alongside the Wave-1 thresholds.
 - **Style reference rows are fully clickable**: every `.band-row` jumps to
   that feature's heatmap column (`#feat-<field>`), activates the matching
   style layer when one exists, and preselects “deviations only” when the

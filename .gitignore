@@ -1,22 +1,48 @@
 __pycache__/
 *.py[cod]
+*$py.class
 .venv/
 venv/
+.env/
 build/
 dist/
 *.egg-info/
+*.egg
+.eggs/
+pip-wheel-metadata/
 
 # Test & lint caches
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
 .coverage
+.coverage.*
 htmlcov/
+coverage.xml
+.tox/
+.nox/
+.hypothesis/
+.dmypy.json
+dmypy.json
+
+# Tooling / agent workspaces (local only)
+.remember/
+.claude/
+.cursor/
+.opencode/
+.agent/
+.local/
+*.local.*
 
 # Generated workspaces (lixity build)
 exports/
 nda/
 .screenshots/
+*_dashboard.html
+*_metrics.json
+*_profile.json
+*_style.json
+*_style_passport.txt
 
 # Secrets & private stores (never commit)
 .env
@@ -25,8 +51,15 @@ nda/
 *.key
 *.pem
 *.p12
+*.pfx
+*.jks
+id_rsa*
 secrets/
 credentials*
+.netrc
+.npmrc
+config.local.json
+*.keystore
 
 # OS artifacts
 .DS_Store
@@ -34,5 +67,9 @@ Thumbs.db
 
 # Editor & logs
 *.log
+*.swp
+*.swo
 .idea/
 .vscode/
+.history/
+

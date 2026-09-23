@@ -23,8 +23,8 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from .dialogue import split_chapters
 from .language import compile_pattern, resolve_language
+from .markdown_parser import split_chapters
 from .models import CorpusConfig
 from .sentences import split_sentences
 
@@ -153,9 +153,7 @@ def _closing_sentence(body: str, language_key: str) -> str:
     return ""
 
 
-def _hook_score(
-    closing: str, is_dialogue: bool, word_re: re.Pattern[str]
-) -> tuple[int, int, str]:
+def _hook_score(closing: str, is_dialogue: bool, word_re: re.Pattern[str]) -> tuple[int, int, str]:
     """(score, closing sentence words, terminal character) – documented heuristic."""
     words = len(word_re.findall(closing))
     terminal = closing.rstrip("\"'»«“”\u2018\u2019)]")[-1:] if closing else ""
