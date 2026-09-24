@@ -12,26 +12,19 @@ from typing import Any
 from . import __version__
 from .analyzer import CorpusAnalyzer
 from .config import resolve_thresholds
-from .language import LANGUAGE_PROFILES, resolve_language
-from .markdown_parser import parse_markdown_blocks
-from .models import SCHEMA_VERSION, CorpusConfig
-from .status import SCHEMA_VERSION_STYLE
-from .style_fingerprint import (
-    FingerprintThresholds,
-    StyleFingerprint,
-    lexical_structural_diagnostics,
+from .language import LANGUAGE_PROFILES
+from .models import SCHEMA_VERSION
+from .pipeline import (
+    analyze_document,
+    fingerprint_document,
+    profile_document,
+    resolve_document_config,
 )
-from .style_profile import ParagraphProfiler, ProfileThresholds
+from .status import SCHEMA_VERSION_STYLE
+from .style_fingerprint import FingerprintThresholds
 from .ui import render_dashboard
 
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
-
-
-def _config_and_language(language: str, text: str, **overrides: Any) -> tuple[CorpusConfig, Any]:
-    """Resolves the language profile and builds the effective configuration."""
-    config = CorpusConfig(language=language, **overrides)
-    resolved = resolve_language(config, sample_text=text)
-    return CorpusConfig(language=resolved.key, **overrides), resolved
 
 
 def _meta(language_key: str) -> dict[str, Any]:
@@ -43,7 +36,7 @@ def _meta(language_key: str) -> dict[str, Any]:
     }
 
 
-def analyze(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+def analyze(text: str, language: str = "en", **config_overrides: Any) -> dict[str, Any]:
     """
     Corpus analysis: words, sentences, ASL, TTR, Guiraud R, Yule's K, Flesch,
     LIX, dialogue, punctuation, sentence-length architecture, chapters and
@@ -51,14 +44,14 @@ def analyze(text: str, language: str = "auto", **config_overrides: Any) -> dict[
 
     Returns a JSON-safe dict: ``{"meta": {...}, "metrics": {...}}``.
     """
-    config, resolved = _config_and_language(language, text, **config_overrides)
+    config, resolved = resolve_document_config(text, language, **config_overrides)
     metrics = CorpusAnalyzer(config).analyze_text(text)
     return {"meta": _meta(resolved.key), "metrics": metrics.model_dump()}
 
 
 def profile(
     text: str,
-    language: str = "auto",
+    language: str = "en",
     flag_min_severity: int | None = None,
     **config_overrides: Any,
 ) -> dict[str, Any]:
@@ -72,12 +65,9 @@ def profile(
 
     Returns a JSON-safe dict: ``{"meta": {...}, "chapters": [...], "paragraphs": [...]}``.
     """
-    config, resolved = _config_and_language(language, text, **config_overrides)
+    config, resolved = resolve_document_config(text, language, **config_overrides)
     fp_thresholds = resolve_thresholds(flag_min_severity=flag_min_severity)
-    profile_thresholds = ProfileThresholds(flag_min_severity=fp_thresholds.flag_min_severity)
-    paragraphs, chapters = ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
-        parse_markdown_blocks(text)
-    )
+    paragraphs, chapters = profile_document(text, config, fp_thresholds)
     return {
         "meta": _meta(resolved.key),
         "chapters": [c.__dict__ for c in chapters],
@@ -87,7 +77,7 @@ def profile(
 
 def fingerprint(
     text: str,
-    language: str = "auto",
+    language: str = "en",
     z_mild: float | None = None,
     z_strong: float | None = None,
     fdr_q: float | None = None,
@@ -112,8 +102,7 @@ def fingerprint(
     token-level ``structural_diagnostics.cooccurrence`` / ``.keyness`` computed
     from ``text`` (Dunning G² early vs late half, Goh–Barabási fitness).
     """
-    config, _resolved = _config_and_language(language, text, **config_overrides)
-    metrics = CorpusAnalyzer(config).analyze_text(text)
+    config, _resolved = resolve_document_config(text, language, **config_overrides)
     thresholds = _thresholds(
         z_mild,
         z_strong,
@@ -122,11 +111,7 @@ def fingerprint(
         dim_score_threshold=dim_score_threshold,
         flag_min_severity=flag_min_severity,
     )
-    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds)
-    lexical = lexical_structural_diagnostics(text, config)
-    if lexical:
-        fingerprint.structural_diagnostics.update(lexical)
-    return fingerprint.passport()
+    return fingerprint_document(text, config, thresholds).passport()
 
 
 def _thresholds(
@@ -153,7 +138,7 @@ def _thresholds(
 
 def passport(
     text: str,
-    language: str = "auto",
+    language: str = "en",
     z_mild: float | None = None,
     z_strong: float | None = None,
     fdr_q: float | None = None,
@@ -172,7 +157,7 @@ def passport(
     )
 
 
-def dialogue(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+def dialogue(text: str, language: str = "en", **config_overrides: Any) -> dict[str, Any]:
     """
     Dialogue and interaction structure: turns (quoted segments), turn lengths
     (mean/median/longest), turns per 1,000 words, dialogue paragraph share and
@@ -181,7 +166,7 @@ def dialogue(text: str, language: str = "auto", **config_overrides: Any) -> dict
 
     Returns ``{"meta": {...}, "dialogue": {...}}``.
     """
-    config, resolved = _config_and_language(language, text, **config_overrides)
+    config, resolved = resolve_document_config(text, language, **config_overrides)
     from .dialogue import dialogue_report
 
     return {
@@ -193,7 +178,7 @@ def dialogue(text: str, language: str = "auto", **config_overrides: Any) -> dict
 def characters(
     text: str,
     names: Mapping[str, str] | Sequence[str],
-    language: str = "auto",
+    language: str = "en",
     **config_overrides: Any,
 ) -> dict[str, Any]:
     """
@@ -209,14 +194,14 @@ def characters(
             "characters requires at least one name or alias pattern "
             "(no NER — the caller supplies the names)"
         )
-    config, resolved = _config_and_language(language, text, **config_overrides)
+    config, resolved = resolve_document_config(text, language, **config_overrides)
     from .characters import presence_report
 
     report = presence_report(text, names, config)
     return {"meta": _meta(resolved.key), **report}
 
 
-def pacing(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+def pacing(text: str, language: str = "en", **config_overrides: Any) -> dict[str, Any]:
     """
     Scene structure, pacing signals and chapter hooks: explicit scene breaks
     (``---``, ``* * *``), per-scene tempo proxies (ASL, staccato, dialogue),
@@ -227,7 +212,7 @@ def pacing(text: str, language: str = "auto", **config_overrides: Any) -> dict[s
 
     Returns ``{"meta": {...}, "pacing": {...}}``.
     """
-    config, resolved = _config_and_language(language, text, **config_overrides)
+    config, resolved = resolve_document_config(text, language, **config_overrides)
     from .pacing import pacing_report
 
     return {"meta": _meta(resolved.key), "pacing": pacing_report(text, config).to_dict()}
@@ -236,7 +221,7 @@ def pacing(text: str, language: str = "auto", **config_overrides: Any) -> dict[s
 def motifs(
     text: str,
     motifs: Mapping[str, str] | None = None,
-    language: str = "auto",
+    language: str = "en",
     phrase_size: int = 3,
     **config_overrides: Any,
 ) -> dict[str, Any]:
@@ -250,14 +235,14 @@ def motifs(
     (``{"Wut": r"\b(Wut|wütend\w*)\b"}``). Returns ``{"meta", "motifs", "top_words",
     "repeated_phrases", "chapters"}``.
     """
-    config, resolved = _config_and_language(language, text, **config_overrides)
+    config, resolved = resolve_document_config(text, language, **config_overrides)
     from .motifs import motif_report
 
     report = motif_report(text, motifs, config, phrase_size=phrase_size)
     return {"meta": _meta(resolved.key), **report.to_dict()}
 
 
-def showing(text: str, language: str = "auto", **config_overrides: Any) -> dict[str, Any]:
+def showing(text: str, language: str = "en", **config_overrides: Any) -> dict[str, Any]:
     """
     Showing vs. telling balance (heuristic, self-calibrating): robust z-scores
     of the telling signals (perception filters, modals, passive,
@@ -267,7 +252,7 @@ def showing(text: str, language: str = "auto", **config_overrides: Any) -> dict[
 
     Returns ``{"meta": {...}, "showing": {...}}``.
     """
-    config, resolved = _config_and_language(language, text, **config_overrides)
+    config, resolved = resolve_document_config(text, language, **config_overrides)
     from .showing import showing_report
 
     return {"meta": _meta(resolved.key), "showing": showing_report(text, config).to_dict()}
@@ -275,7 +260,7 @@ def showing(text: str, language: str = "auto", **config_overrides: Any) -> dict[
 
 def dashboard(
     text: str,
-    language: str = "auto",
+    language: str = "en",
     title: str = "Manuscript",
     z_mild: float | None = None,
     z_strong: float | None = None,
@@ -289,8 +274,7 @@ def dashboard(
     Renders the complete single-file HTML dashboard (self-contained, no CDN,
     deterministic). Returns the HTML document as a string.
     """
-    config, resolved = _config_and_language(language, text, **config_overrides)
-    metrics = CorpusAnalyzer(config).analyze_text(text)
+    config, resolved = resolve_document_config(text, language, **config_overrides)
     thresholds = _thresholds(
         z_mild,
         z_strong,
@@ -299,22 +283,15 @@ def dashboard(
         dim_score_threshold=dim_score_threshold,
         flag_min_severity=flag_min_severity,
     )
-    profile_thresholds = ProfileThresholds(flag_min_severity=thresholds.flag_min_severity)
-    paragraphs, chapters = ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
-        parse_markdown_blocks(text)
-    )
-    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds)
-    lexical = lexical_structural_diagnostics(text, config)
-    if lexical:
-        fingerprint.structural_diagnostics.update(lexical)
+    analysis = analyze_document(text, config, thresholds)
     from .markers import list_markers
 
     marker_items = list_markers(text)
     return render_dashboard(
-        chapters,
-        paragraphs,
-        metrics=metrics,
-        fingerprint=fingerprint,
+        analysis.chapters,
+        analysis.paragraphs,
+        metrics=analysis.metrics,
+        fingerprint=analysis.fingerprint,
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,

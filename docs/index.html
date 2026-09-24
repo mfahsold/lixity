@@ -53,7 +53,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Linguistic & Stylometric Analysis",
       "operatingSystem": "Linux, macOS, Windows",
-      "softwareVersion": "1.14.0",
+      "softwareVersion": "1.15.0.dev0",
       "isAccessibleForFree": true,
       "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
       "codeRepository": "https://github.com/mfahsold/lixity",
@@ -249,7 +249,7 @@ figure.shot figcaption strong {
 }
 .shot-pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
   gap: 1.25rem;
   margin: 1.2rem 0;
 }
@@ -259,8 +259,8 @@ figure.shot figcaption strong {
   flex-direction: column;
 }
 .shot-pair figure.shot img {
-  flex: 1 1 auto;
-  object-fit: cover;
+  flex: 0 0 auto;
+  object-fit: contain;
 }
 .hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1.4rem 0 0; }
 .btn {
@@ -373,32 +373,35 @@ footer {
   </div>
 
   <h2>What It Looks Like</h2>
+  <p><strong>Development preview: 1.15.0.dev0.</strong> This page includes
+    unreleased work on <code>main</code>. The published <code>v1.14.0</code> tag
+    remains a separate installation choice; no <code>v1.15.0</code> release is implied.</p>
   <span class="section-kicker">Interactive Macro-Editing Dashboard</span>
   <figure class="shot">
-    <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1600" height="1050" loading="eager" fetchpriority="high" decoding="async"/>
+    <a href="screenshots/dashboard-light.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1600" height="1050" loading="eager" fetchpriority="high" decoding="async"/></a>
     <figcaption><strong>Interactive standalone HTML dashboard</strong> &ndash; component status strip, KPI overview tiles, chapter map, tense continuity, and style reference corridor. Every metric tile is clickable and drills directly into the matching analytical panel and filter. Fully self-contained, zero external CDN dependencies.</figcaption>
   </figure>
 
   <span class="section-kicker">Editorial Diagnostics: Heatmap &amp; Paragraph Context</span>
   <div class="shot-pair">
     <figure class="shot">
-      <img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations" width="1600" height="950" loading="lazy" decoding="async"/>
+      <a href="screenshots/dashboard-heatmap.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations" width="1600" height="950" loading="lazy" decoding="async"/></a>
       <figcaption><strong>z* deviation heatmap</strong> &ndash; statistically significant departures from the manuscript&rsquo;s own house style across chapters, guarded by noise-aware shrinkage and Benjamini&ndash;Hochberg FDR control.</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/dashboard-layer.png" alt="Style layer overlay colouring paragraphs by deviation from the chapter mean" width="1600" height="900" loading="lazy" decoding="async"/>
-      <figcaption><strong>Paragraph style layer overlay</strong> &ndash; color-maps syntactic rhythm and complexity directly onto the manuscript text, complete with threshold legends and editorial guidance.</figcaption>
+      <a href="screenshots/dashboard-layer.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-layer.png" alt="Chapter I with the dialogue layer active and three expanded paragraphs showing line anchors and metrics" width="1152" height="419" loading="lazy" decoding="async"/></a>
+      <figcaption><strong>Paragraph context, not just a score</strong> &ndash; the dialogue layer is active; three opened paragraphs expose the original text, line anchors, tense signals and local metrics.</figcaption>
     </figure>
   </div>
 
   <span class="section-kicker">Stylometric Architecture &amp; Editor Workflow</span>
   <div class="shot-pair">
     <figure class="shot">
-      <img src="screenshots/dashboard-dimensions.png" alt="Latent style dimension cards with variance and loadings" width="1600" height="480" loading="lazy" decoding="async"/>
-      <figcaption><strong>Unsupervised style dimensions</strong> &ndash; latent stylistic axes derived via Spearman rank correlation (&rho;) and cyclic Jacobi eigendecomposition in pure Python stdlib.</figcaption>
+      <a href="screenshots/dashboard-dimensions.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions.png" alt="Complete 3D chapter trajectory and all three style-dimension cards" width="1152" height="602" loading="lazy" decoding="async"/></a>
+      <figcaption><strong>3D style space &amp; style dimensions</strong> &ndash; rotate and zoom a chapter trajectory, inspect its strongest feature loadings, and select a point to reach the chapter. The threshold box represents per-axis score cutoffs, not a quality ranking or a spherical confidence region.</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/dashboard-markers.png" alt="Editor work marker table with status badges" width="1600" height="340" loading="lazy" decoding="async"/>
+      <a href="screenshots/dashboard-markers.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-markers.png" alt="Three illustrative editorial work markers with notes and line anchors" width="1152" height="222" loading="lazy" decoding="async"/></a>
       <figcaption><strong>Persistent work markers</strong> &ndash; editor-visible review anchors with deterministic content-hash IDs and inline click-to-edit notes that vanish from print/EPUB exports.</figcaption>
     </figure>
   </div>
@@ -406,20 +409,76 @@ footer {
   <span class="section-kicker">Terminal Suite &amp; Agent Automation</span>
   <div class="shot-pair">
     <figure class="shot">
-      <img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with Rich terminal report" width="1560" height="920" loading="lazy" decoding="async"/>
+      <a href="screenshots/cli-analyze.png" target="_blank" rel="noopener"><img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with Rich terminal report" width="1560" height="920" loading="lazy" decoding="async"/></a>
       <figcaption><code>lixity analyze</code> &ndash; Rich terminal report with corpus-wide KPIs, readability indices, tense distribution, and per-chapter metrics in a single command.</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/cli-style.png" alt="Lixity CLI style reference output" width="1560" height="920" loading="lazy" decoding="async"/>
+      <a href="screenshots/cli-style.png" target="_blank" rel="noopener"><img src="screenshots/cli-style.png" alt="Lixity CLI style reference output" width="1560" height="920" loading="lazy" decoding="async"/></a>
       <figcaption><code>lixity style</code> &ndash; self-calibrating style reference corridor with robust median/MAD bounds, noise-aware z* shrinkage, and FDR-confirmed departures.</figcaption>
     </figure>
   </div>
 
   <span class="section-kicker">Adaptive Experience</span>
   <figure class="shot">
-    <img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode" width="1600" height="1050" loading="lazy" decoding="async"/>
+    <a href="screenshots/dashboard-dark.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode" width="1600" height="1050" loading="lazy" decoding="async"/></a>
     <figcaption><strong>Distraction-free dark mode</strong> &ndash; high-contrast, eye-friendly editorial environment that automatically follows the reader&rsquo;s system preference.</figcaption>
   </figure>
+
+  <div class="shot-pair">
+    <figure class="shot">
+      <a href="screenshots/dashboard-mobile.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-mobile.png" alt="Mobile project overview showing Lixity version, non-commercial license and corpus metrics" width="390" height="1000" loading="lazy" decoding="async"/></a>
+      <figcaption><strong>Project identity on mobile</strong> &ndash; project name,
+        engine version and the localized non-commercial-use notice remain visible.</figcaption>
+    </figure>
+    <figure class="shot">
+      <a href="screenshots/dashboard-dimensions-mobile.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions-mobile.png" alt="Full mobile style-dimension panel with stacked controls and feature loadings" width="342" height="1317" loading="lazy" decoding="async"/></a>
+      <figcaption><strong>Readable mobile diagnostics</strong> &ndash; complete
+        dimension cards, wrapping controls and labels rather than a desktop crop.</figcaption>
+    </figure>
+  </div>
+  <figure class="shot">
+    <a href="screenshots/dashboard-dimensions-dark.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions-dark.png" alt="Complete dark-mode 3D style-space panel and three dimension cards" width="1152" height="603" loading="lazy" decoding="async"/></a>
+    <figcaption><strong>Style space in dark mode</strong> &ndash; the same data,
+      controls and threshold geometry with the dark color scheme.</figcaption>
+  </figure>
+  <p class="sub">All captures use the public-domain Austen sample. Marker notes
+    are illustrative; private manuscripts and NDA records are never pictured.
+    <a href="https://github.com/mfahsold/lixity/blob/main/docs/screenshots/README.md">Capture recipe and provenance</a>.</p>
+
+  <section id="development-update">
+    <h2>Less Setup, One Analysis Path</h2>
+    <div class="grid">
+      <article class="card">
+        <h3>Explore, Then Read</h3>
+        <p>Use the 3D chapter view as an entry point, not a verdict. Toggle the
+          trajectory and threshold box, inspect feature directions, then read
+          the underlying passage. Mobile layouts keep the controls and loading
+          labels usable. Rotation runs only when requested and pauses in hidden tabs.</p>
+      </article>
+      <article class="card">
+        <h3>Reuse the Engine</h3>
+        <p>CLI, API and adapters share a typed analysis pipeline. Corpus metrics
+          are computed once per complete analysis and reused for fingerprint
+          assembly. Rendering consumes results rather than recalculating them.</p>
+      </article>
+      <article class="card">
+        <h3>Keep Projects Separate</h3>
+        <p>Pass explicit project settings and thresholds when serving multiple
+          manuscripts. Characters, motifs, publication artifacts and local NDA
+          workflows belong to project adapters, not global engine defaults.</p>
+      </article>
+      <article class="card">
+        <h3>English Default, Language-Aware Analysis</h3>
+        <p>Choose a supported manuscript language or enable <code>--language auto</code>.
+          Profiles supply linguistic patterns, syllable rules and readability
+          coefficients alongside translated labels and scientific help. Language
+          support is more than interface translation.</p>
+      </article>
+    </div>
+    <p><a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">Architecture and integration</a>
+      &middot; <a href="https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md">Language contract and limitations</a>
+      &middot; <a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">Development changelog</a></p>
+  </section>
 
   <h2>Why Lixity?</h2>
   <div class="card" style="padding: 0; overflow: hidden;">
@@ -631,7 +690,12 @@ html = api.dashboard(text, language="en", title="My Novel")</pre>
     </details>
     <details>
       <summary>What languages are supported?</summary>
-      <p>Native profiles exist for German (de), English (en), French (fr), Spanish (es), Italian (it), Portuguese (pt), and Dutch (nl), plus a generic fallback. Languages can be specified explicitly or auto-detected from function words.</p>
+      <p>Profiles cover English (en), German (de), French (fr), Spanish (es),
+        Italian (it), Portuguese (pt), and Dutch (nl), plus a generic fallback.
+        English is the development version's default. Select a language or use
+        <code>--language auto</code> for function-word-based detection. Dashboard
+        resources cover all seven languages; CLI messages currently have English
+        and German packs. Heuristic accuracy varies with language and text.</p>
     </details>
     <details>
       <summary>Is Lixity suitable for non-fiction, essays, and scholarly manuscripts?</summary>

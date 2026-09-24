@@ -1221,9 +1221,9 @@ class StyleFingerprint:
                     sigma = float(self.baseline[field_name]["sigma"])
                     z = (value - centre) / sigma
                     score += loading_vector[k] * z
-                    scores[chapter_num] = round(score, 2)
-                    if abs(score) >= self.thresholds.dim_score_threshold:
-                        flagged.append(chapter_num)
+                scores[chapter_num] = round(score, 2)
+                if abs(score) >= self.thresholds.dim_score_threshold:
+                    flagged.append(chapter_num)
             dims.append(
                 {
                     "index": dim_index + 1,

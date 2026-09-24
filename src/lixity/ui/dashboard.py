@@ -26,15 +26,20 @@ from .components import (
     kpi,
     label,
     line_label,
-    loading_bars,
+    panel_start,
+    project_header,
     status_strip,
     tense_class,
     tense_label,
 )
+from .dimensions import style_dimensions
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
 _CSS = (_ASSET_DIR / "dashboard.css").read_text(encoding="utf-8")
-_JS = (_ASSET_DIR / "dashboard.js").read_text(encoding="utf-8")
+_JS = "\n".join(
+    (_ASSET_DIR / name).read_text(encoding="utf-8")
+    for name in ("dashboard.js", "style-space.js")
+)
 
 
 # Help-key mapping: model field name (FEATURES) -> tooltip key (help_*).
@@ -182,13 +187,7 @@ def render_dashboard(
         "</head>",
         f'<body id="top" data-api="{esc(api_base)}">',
         '<div class="page">',
-        "<header>",
-        f"<h1>{esc(title)}</h1>",
-        f'<p class="sub">{L("app_suffix")}'
-        + (f" · {esc(language_name)}" if language_name else "")
-        + "</p>",
-        f'<p class="microhint" id="microhint">{L("hint")}</p>',
-        "</header>",
+        project_header(title, labels, language_name, engine_name),
     ]
 
     if status:
@@ -520,8 +519,7 @@ def render_dashboard(
             ("16–25", d.long_count, d.long_pct),
             ("> 25", d.complex_count, d.complex_pct),
         ]
-        parts.append('<section class="panel" id="dist">')
-        parts.append(f"<h2>{L('sentence_dist')}</h2>")
+        parts.append(panel_start("dist", labels, "sentence_dist"))
         parts.append('<div class="dist">')
         for criterion, count, pct in rows:
             parts.append(
@@ -533,8 +531,7 @@ def render_dashboard(
 
     # --- Dialogue structure (turns, per chapter) ---------------------------
     if dialogue:
-        parts.append('<section class="panel" id="dialogue">')
-        parts.append(f"<h2>{L('panel_dialogue')}</h2>")
+        parts.append(panel_start("dialogue", labels, "panel_dialogue"))
         parts.append('<div class="kpi-row">')
         parts.append(
             kpi(N(dialogue.get("turns", 0), 0), help_term(labels, "dialogue", L("dlg_turns")))
@@ -569,8 +566,7 @@ def render_dashboard(
 
     # --- Character presence ------------------------------------------------
     if characters and characters.get("figures"):
-        parts.append('<section class="panel" id="characters">')
-        parts.append(f"<h2>{L('panel_characters')}</h2>")
+        parts.append(panel_start("characters", labels, "panel_characters"))
         parts.append("<table><thead><tr>")
         parts.extend(
             f"<th>{L(key)}</th>"
@@ -611,8 +607,7 @@ def render_dashboard(
 
     # --- Pacing curve (scene structure & hooks) ----------------------------
     if pacing and pacing.get("chapter_list"):
-        parts.append('<section class="panel" id="pacing">')
-        parts.append(f"<h2>{L('panel_pacing')}</h2>")
+        parts.append(panel_start("pacing", labels, "panel_pacing"))
         parts.append('<div class="kpi-row">')
         parts.append(kpi(N(pacing.get("scenes", 0), 0), L("pac_scenes")))
         parts.append(kpi(N(pacing.get("avg_scene_words", 0.0), 0), L("pac_avg_scene")))
@@ -638,8 +633,7 @@ def render_dashboard(
 
     # --- Motifs & repetition ------------------------------------------------
     if motifs and (motifs.get("motifs") or motifs.get("repeated_phrases")):
-        parts.append('<section class="panel" id="motifs">')
-        parts.append(f"<h2>{L('panel_motifs')}</h2>")
+        parts.append(panel_start("motifs", labels, "panel_motifs"))
         if motifs.get("motifs"):
             parts.append("<table><thead><tr>")
             parts.extend(
@@ -681,8 +675,7 @@ def render_dashboard(
 
     # --- Showing vs. telling (narrative distance) ---------------------------
     if showing and showing.get("chapter_list"):
-        parts.append('<section class="panel" id="showing">')
-        parts.append(f"<h2>{L('panel_showing')}</h2>")
+        parts.append(panel_start("showing", labels, "panel_showing"))
         parts.append('<div class="kpi-row">')
         parts.append(kpi(N(showing.get("tell_z_mean", 0.0), 2, signed=True), L("show_tell")))
         parts.append(kpi(N(showing.get("show_z_mean", 0.0), 2, signed=True), L("show_show")))
@@ -847,37 +840,7 @@ def render_dashboard(
             parts.append("</div>")
         parts.append("</div></section>")
 
-        # --- Style dimensions (self-calibrated principal axes) -------------
-        if fingerprint.dimensions:
-            parts.append('<section class="panel" id="dimensions">')
-            parts.append(f"<h2>{help_term(labels, 'dimensions', L('style_dimensions'))}</h2>")
-            field_labels = {f: label_key for f, label_key, _u in FEATURES}
-            for dim in fingerprint.dimensions:
-                loadings: dict[str, float] = dim["loadings"]
-                top_pos = sorted(loadings.items(), key=lambda kv: kv[1], reverse=True)[:3]
-                top_neg = sorted(loadings.items(), key=lambda kv: kv[1])[:3]
-                entries = [
-                    (label(labels, field_labels.get(f, f)), float(v)) for f, v in top_pos + top_neg
-                ]
-                chip_layers = {
-                    label(labels, field_labels.get(f, f)): feature_layers[f]
-                    for f, _v in top_pos + top_neg
-                    if f in feature_layers
-                }
-                limit = max((abs(v) for _f, v in entries), default=1.0)
-                flagged = dim.get("flagged", [])
-                parts.append('<div class="dim-card">')
-                parts.append(
-                    f'<div class="dim-header"><span class="dim-title">{L("style_dimensions")} {dim["index"]}</span>'
-                    f'<span class="badge">{P(dim["variance"] * 100, 0)} {L("dim_variance")}</span></div>'
-                )
-                parts.append(loading_bars(entries, limit, layers=chip_layers))
-                if flagged:
-                    ch_label = L("chapter")
-                    flagged_str = ", ".join(f"{ch_label} {ch}" for ch in flagged)
-                    parts.append(f'<div class="dim-meta">{L("dim_flagged")}: {flagged_str}</div>')
-                parts.append("</div>")
-            parts.append("</section>")
+        parts.append(style_dimensions(chapters, fingerprint, labels, language_key))
 
         # --- Work markers (editor-visible, set from the dashboard) -------
         if markers is not None:
@@ -1074,8 +1037,7 @@ def render_dashboard(
 
     # --- Chapter matrix ---------------------------------------------------
     if chapters:
-        parts.append('<section class="panel" id="matrix">')
-        parts.append(f"<h2>{L('chapter_table')}</h2>")
+        parts.append(panel_start("matrix", labels, "chapter_table"))
         parts.append('<div class="table-wrap">')
         parts.append("<table><thead><tr>")
         parts.append(

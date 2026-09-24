@@ -44,6 +44,15 @@ from that style, controlled for measurement noise and multiple testing.
   user-facing messages to German); stdout carries only the payload.
 - Report language: English by default, German via `LIXITY_LANG=de`.
 
+Development version `1.15.0.dev0` also defaults the analysis language to
+English. Pass the intended manuscript language or explicit `auto`; do not
+assume the previous automatic default. Language-independent JSON identifiers
+remain unchanged. See [LOCALIZATION.md](LOCALIZATION.md).
+
+Project adapters may reuse `lixity.pipeline.analyze_document` with explicit
+configuration and thresholds. This avoids duplicate metrics calculation and
+implicit project switching; see [ARCHITECTURE.md](ARCHITECTURE.md).
+
 ## 3. JSON contracts
 
 ### 3.1 `analyze --json` (schema_version 2)

@@ -55,10 +55,10 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 | <img src="docs/screenshots/dashboard-heatmap.png" alt="z* deviation heatmap" width="100%" /> | <img src="docs/screenshots/dashboard-layer.png" alt="Paragraph style overlay" width="100%" /> |
 | *Significance-adjusted departures from house style* | *Sentence rhythm & syntactic density mapped in context* |
 
-| Unsupervised Style Dimensions | Editor-Visible Work Markers |
+| 3D Stylistic Space & Style Dimensions | Editor-Visible Work Markers |
 | :---: | :---: |
-| <img src="docs/screenshots/dashboard-dimensions.png" alt="Unsupervised style dimensions" width="100%" /> | <img src="docs/screenshots/dashboard-markers.png" alt="Editor work markers" width="100%" /> |
-| *Spearman correlation & cyclic Jacobi EVD (pure stdlib)* | *Persistent content-hashed `<!-- LIXITY-MARKER -->` tags* |
+| <img src="docs/screenshots/dashboard-dimensions.png" alt="3D stylistic space and latent style dimensions" width="100%" /> | <img src="docs/screenshots/dashboard-markers.png" alt="Editor work markers" width="100%" /> |
+| *Interactive 3D narrative trajectory & cyclic Jacobi EVD* | *Persistent content-hashed `<!-- LIXITY-MARKER -->` tags* |
 
 | CLI Corpus Diagnostics | Self-Calibrating Style Reference |
 | :---: | :---: |
@@ -71,6 +71,16 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
   <img src="docs/screenshots/dashboard-dark.png" alt="Lixity Dashboard Dark Mode" width="100%" />
 </p>
 </details>
+
+### Mobile views
+
+| Project overview | Complete style-dimension panel |
+| :---: | :---: |
+| <img src="docs/screenshots/dashboard-mobile.png" alt="Mobile project header with version, non-commercial license and corpus overview" width="300" /> | <img src="docs/screenshots/dashboard-dimensions-mobile.png" alt="Mobile 3D chapter view with all three dimension cards and readable feature labels" width="300" /> |
+
+Screenshots use the public-domain *Pride and Prejudice* sample; marker notes
+are illustrative and never written back to the source. Open an image for full
+resolution. [Screenshot provenance and regeneration](docs/screenshots/README.md).
 
 ## Installation
 
@@ -137,7 +147,7 @@ Project-wide defaults: place the same keys under `[tool.lixity]` in
 Test with the bundled public-domain samples:
 
 ```bash
-lixity analyze samples/effi-briest.md          # German – Fontane, 36 chapters
+lixity analyze samples/effi-briest.md --language de  # German – Fontane, 36 chapters
 lixity analyze samples/pride-and-prejudice.md  # English – Austen, 61 chapters
 ```
 
@@ -147,6 +157,59 @@ Full command reference, metric glossary, worked example, and troubleshooting:
 [`docs/USAGE.md`](docs/USAGE.md). Agent-facing JSON contracts:
 [`docs/AGENTS.md`](docs/AGENTS.md). Project website:
 [mfahsold.github.io/lixity](https://mfahsold.github.io/lixity/).
+
+## What's new in the development version
+
+**1.15.0.dev0 is an unreleased development version.** The latest version
+listed in the release history is 1.14.0; its tag does not include the changes
+below. Use an editable checkout to try them before the next release.
+
+- **Explore style in 3D:** rotate and zoom chapter trajectories, toggle the
+  trajectory and threshold box, and select a point to reach its chapter.
+  Mobile layouts preserve feature labels; rotation stops when disabled or
+  the tab is hidden. The picture is a projection, not a writing-quality score.
+- **One analysis path:** CLI, API and project adapters share metrics,
+  paragraph profiling and fingerprint assembly instead of maintaining copies.
+- **Clear project boundaries:** explicit threshold mappings support several
+  projects in one process without changing the working directory.
+- **English by default:** select a manuscript language explicitly or request
+  `--language auto`. Localization covers linguistic profiles, readability
+  coefficients, labels, help text and number presentation.
+
+The engine produces offline analysis and HTML. Publication workflows, local
+control servers and encrypted NDA storage belong to project adapters; they
+are not a bundled hosted service or a universal feature of every installation.
+
+## Architecture and project adapters
+
+CLI commands and the Python API share `lixity.pipeline`: language resolution,
+paragraph profiling and fingerprint construction have one implementation.
+`analyze_document` computes corpus metrics once and returns a typed
+`DocumentAnalysis`; renderers only consume results. UI panels reuse central
+components and bundled assets, without a frontend build or CDN.
+
+Project adapters own file access, publication exports and local services—not
+copies of analysis algorithms. For multiple projects in one process, pass an
+explicit configuration instead of changing the working directory:
+
+```python
+from lixity.config import load_project_config, resolve_thresholds
+from lixity.pipeline import analyze_document, resolve_document_config
+
+settings = load_project_config("/path/to/project")
+thresholds = resolve_thresholds(project_config=settings)
+config, language = resolve_document_config(text, settings.get("language", "en"))
+result = analyze_document(text, config, thresholds)
+```
+
+An empty `project_config={}` isolates thresholds from user/project files;
+explicit threshold arguments override the supplied mapping. The pipeline itself
+does not read files, discover projects or maintain global session state.
+
+Adapters using the shared pipeline must install this checkout until release.
+See [architecture and integration boundaries](docs/ARCHITECTURE.md) for the
+configuration contract and [language support](docs/LOCALIZATION.md) for its
+scope, guarantees and limitations.
 
 ## What Lixity Measures
 
@@ -219,7 +282,16 @@ Interface contracts, interpretation heuristics, and dashboard DOM hooks:
 | `nl` | Dutch | O.T.T. / O.V.T. | Flesch (Douma) + LIX |
 | `generic` | Fallback | Minimal | LIX |
 
-`--language auto` detects the language automatically from function-word distributions. Adding a new language requires only a single `LanguageProfile` registration — no algorithm changes needed.
+English is the default for CLI/API analysis and the core configuration.
+`--language auto` explicitly enables function-word-based detection; weak or
+ambiguous evidence uses the generic profile rather than guessing a language.
+New languages require linguistic resources, localized labels, documented
+readability behavior and regression fixtures—not just a translated menu.
+
+Language-specific heuristics are not equally accurate for every genre or
+dialect. Numerical dispatch and resource-coverage tests are not proof of
+empirical linguistic accuracy. See [localization](docs/LOCALIZATION.md) and
+[scientific limitations](docs/STABILITY.md).
 
 ## Frequently Asked Questions (FAQ)
 
@@ -269,4 +341,3 @@ Lixity is distributed under a dual-licensing model engineered for independent cr
 Third-party components (all permissively licensed): [pydantic](https://github.com/pydantic/pydantic) (MIT), [rich](https://github.com/Textualize/rich) (MIT), [orjson](https://github.com/ijl/orjson) (MIT/Apache-2.0).
 
 Sample corpus: `samples/` includes two **public-domain** works for testing and demonstration — Fontane's *Effi Briest* (German, [Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323)) and Austen's *Pride and Prejudice* (English, [#1342](https://www.gutenberg.org/ebooks/1342)) — each provided as an unmodified Project Gutenberg source file and as a clean Markdown conversion. These sample texts are **not** relicensed under the LNCL; the original sequel draft under `samples/effi-briest-folge/` is the author's own work. Provenance and license details: [`samples/README.md`](samples/README.md).
-

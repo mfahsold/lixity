@@ -53,6 +53,8 @@ jobs:
               "lixity/py.typed",
               "lixity/ui/assets/dashboard.css",
               "lixity/ui/assets/dashboard.js",
+              "lixity/ui/assets/style-space.js",
+              "lixity/pipeline.py",
               "lixity/_version.py",
           }
           missing = sorted(required - names)

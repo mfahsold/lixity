@@ -4,7 +4,8 @@ scripts/make_screenshots.py
 ===========================
 Regenerates the README/GitHub-Pages screenshots reproducibly.
 
-Requires Chromium (headless) and the repository's own sample manuscript.
+Requires Node.js, Playwright with Chromium, and the public sample manuscript.
+Set PLAYWRIGHT_MODULE when Playwright is installed outside the repository.
 
 Usage:
     python3 scripts/make_screenshots.py
@@ -14,6 +15,7 @@ Usage:
 import argparse
 import html
 import io
+import json
 import re
 import shutil
 import subprocess
@@ -25,25 +27,18 @@ sys.path.insert(0, str(BASE_DIR / "src"))
 
 from rich.console import Console  # noqa: E402
 
-from lixity import CorpusAnalyzer, CorpusConfig, ReportFormatter  # noqa: E402
+from lixity import ReportFormatter  # noqa: E402
 from lixity.characters import presence_report  # noqa: E402
+from lixity.config import resolve_thresholds  # noqa: E402
 from lixity.dialogue import dialogue_report  # noqa: E402
-from lixity.language import resolve_language  # noqa: E402
-from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.markers import add_marker  # noqa: E402
 from lixity.motifs import motif_report  # noqa: E402
 from lixity.pacing import pacing_report  # noqa: E402
+from lixity.pipeline import analyze_document, resolve_document_config  # noqa: E402
 from lixity.showing import showing_report  # noqa: E402
-from lixity.style_fingerprint import StyleFingerprint  # noqa: E402
-from lixity.style_profile import ParagraphProfiler  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 
-CHROME = (
-    shutil.which("chromium")
-    or shutil.which("chromium-browser")
-    or shutil.which("google-chrome")
-    or shutil.which("chrome")
-)
+CAPTURES: list[dict[str, str | int]] = []
 WORK_DIR = BASE_DIR / ".screenshots"
 OUT_DIR = BASE_DIR / "docs" / "screenshots"
 
@@ -70,21 +65,10 @@ WINDOW_CHROME = """<!DOCTYPE html>
 """
 
 
-def _run_chrome(source: Path, target: Path, width: int, height: int) -> None:
-    if CHROME is None:
-        raise SystemExit("Chromium not found – cannot render screenshots.")
-    cmd = [
-        CHROME,
-        "--headless=new",
-        "--disable-gpu",
-        "--hide-scrollbars",
-        f"--window-size={width},{height}",
-        "--virtual-time-budget=2500",
-        f"--screenshot={target}",
-        source.as_uri(),
-    ]
-    subprocess.run(cmd, check=True, capture_output=True, timeout=120)  # noqa: S603
-    print(f"  {target.relative_to(BASE_DIR)} ({width}x{height})")
+def _queue_capture(source: Path, target: Path, width: int, height: int) -> None:
+    CAPTURES.append({
+        "source": str(source), "target": str(target), "width": width, "height": height,
+    })
 
 
 def _write_html(name: str, document: str) -> Path:
@@ -99,22 +83,24 @@ def _terminal_shot(title: str, content_html: str, target: Path, width: int, heig
         title=html.escape(title),
         content=content_html,
     )
-    _run_chrome(_write_html(target.stem + ".html", document), target, width, height)
+    _queue_capture(_write_html(target.stem + ".html", document), target, width, height)
 
 
 def _extract_section(dashboard: str, marker: str) -> str:
     style_match = re.search(r"<style>(.*?)</style>", dashboard, re.DOTALL)
+    script_match = re.search(r"<script>(.*?)</script>", dashboard, re.DOTALL)
     lang_match = re.search(r'<html lang="([^"]*)"', dashboard)
     if style_match is None or lang_match is None:
         raise SystemExit("Dashboard markup incomplete – cannot extract section.")
     style = style_match.group(1)
+    script = script_match.group(1) if script_match else ""
     lang = lang_match.group(1)
     for match in re.finditer(r'<section class="panel"[^>]*>.*?</section>', dashboard, re.DOTALL):
-        if marker in match.group(0):
+        if f'id="{marker}"' in match.group(0).split(">", 1)[0]:
             return (
                 "<!DOCTYPE html>"
                 f'<html lang="{lang}"><head><meta charset="utf-8"/><style>{style}</style></head>'
-                f'<body><div class="page">{match.group(0)}</div></body></html>'
+                f'<body><div class="page">{match.group(0)}</div><script>{script}</script></body></html>'
             )
     raise SystemExit(f"Section not found: {marker}")
 
@@ -131,18 +117,18 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Regenerate README screenshots.")
     parser.add_argument("--manuscript", default="samples/pride-and-prejudice.md")
     args = parser.parse_args()
+    CAPTURES.clear()
 
     manuscript = (BASE_DIR / args.manuscript).resolve()
     text = manuscript.read_text(encoding="utf-8")
-    config = CorpusConfig(language="auto")
-    resolved = resolve_language(config, sample_text=text)
-    config = CorpusConfig(language=resolved.key)
+    config, resolved = resolve_document_config(text, "auto")
     is_en = resolved.key == "en"
     title = "Pride and Prejudice" if is_en else manuscript.stem
 
-    metrics = CorpusAnalyzer(config).analyze_text(text)
-    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
-    fingerprint = StyleFingerprint.from_metrics(metrics)
+    thresholds = resolve_thresholds(project_config={})
+    analysis = analyze_document(text, config, thresholds)
+    metrics, fingerprint = analysis.metrics, analysis.fingerprint
+    paragraphs, chapters = analysis.paragraphs, analysis.chapters
 
     WORK_DIR.mkdir(exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
@@ -185,9 +171,7 @@ def main() -> int:
             "state": "ok",
             "detail": f"{len(chapters)} {chap_noun} · {len(paragraphs)} {para_noun}",
         },
-        {"key": "dossiers", "state": "ok", "detail": "up to date" if is_en else "aktuell"},
         {"key": "exports", "state": "warn", "detail": "none generated" if is_en else "keine erzeugt"},
-        {"key": "nda", "state": "unknown", "detail": "local only" if is_en else "kein Speicher"},
         {"key": "markers", "state": "ok", "detail": "no open markers" if is_en else "keine offenen"},
     ]
     char_names = ["Elizabeth", "Darcy", "Jane", "Bingley"] if is_en else ["Effi", "Innstetten", "Crampas", "Briest"]
@@ -208,10 +192,10 @@ def main() -> int:
         language_key=resolved.key,
     )
     dashboard_path = _write_html("dashboard.html", _force_light(dashboard))
-    _run_chrome(dashboard_path, OUT_DIR / "dashboard-light.png", 1600, 1050)
+    _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1600, 1050)
 
     # 4. Dashboard (dark) --------------------------------------------------
-    _run_chrome(
+    _queue_capture(
         _write_html("dashboard-dark.html", _force_dark(dashboard)),
         OUT_DIR / "dashboard-dark.png",
         1600,
@@ -219,21 +203,21 @@ def main() -> int:
     )
 
     # 5. Dashboard sections ------------------------------------------------
-    _run_chrome(
+    _queue_capture(
         _write_html(
-            "section-heatmap.html", _extract_section(_force_light(dashboard), "heatmap-wrap")
+            "section-heatmap.html", _extract_section(_force_light(dashboard), "heatmap")
         ),
         OUT_DIR / "dashboard-heatmap.png",
         1600,
         950,
     )
-    _run_chrome(
+    _queue_capture(
         _write_html(
-            "section-dimensions.html", _extract_section(_force_light(dashboard), "dim-card")
+            "section-dimensions.html", _extract_section(_force_light(dashboard), "dimensions")
         ),
         OUT_DIR / "dashboard-dimensions.png",
         1600,
-        480,
+        580,
     )
 
     # 6. Work markers (temporary copy with three editorial markers) --------
@@ -253,26 +237,25 @@ def main() -> int:
     )
     for line, kind, note in markers_spec:
         marked, _ = add_marker(marked, kind=kind, note=note, target_line=line)
-    marked_metrics = CorpusAnalyzer(config).analyze_text(marked)
-    marked_paragraphs, marked_chapters = ParagraphProfiler(config).profile_blocks(
-        parse_markdown_blocks(marked)
-    )
+    marked_analysis = analyze_document(marked, config, thresholds)
+    marked_metrics = marked_analysis.metrics
+    marked_paragraphs, marked_chapters = marked_analysis.paragraphs, marked_analysis.chapters
     from lixity.markers import list_markers
 
     marked_dashboard = render_dashboard(
         marked_chapters,
         marked_paragraphs,
         metrics=marked_metrics,
-        fingerprint=StyleFingerprint.from_metrics(marked_metrics),
+        fingerprint=marked_analysis.fingerprint,
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,
         language_key=resolved.key,
         markers=list_markers(marked),
     )
-    _run_chrome(
+    _queue_capture(
         _write_html(
-            "section-markers.html", _extract_section(_force_light(marked_dashboard), "marker")
+            "section-markers.html", _extract_section(_force_light(marked_dashboard), "markers")
         ),
         OUT_DIR / "dashboard-markers.png",
         1600,
@@ -290,11 +273,21 @@ def main() -> int:
         language_name=resolved.name,
         language_key=resolved.key,
     ).replace('<option value="dialogue"', '<option value="dialogue" selected', 1)
-    _run_chrome(
+    _queue_capture(
         _write_html("dashboard-layer.html", _force_light(layer_dashboard)),
         OUT_DIR / "dashboard-layer.png",
         1600,
         900,
+    )
+
+    manifest = WORK_DIR / "captures.json"
+    manifest.write_text(json.dumps(CAPTURES), encoding="utf-8")
+    node = shutil.which("node")
+    if node is None:
+        raise SystemExit("Node.js is required for Playwright screenshot capture.")
+    subprocess.run(  # noqa: S603
+        [node, str(BASE_DIR / "scripts/capture_screenshots.cjs"), str(manifest)], check=True,
+        timeout=180,
     )
 
     print(

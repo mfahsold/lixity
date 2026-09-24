@@ -19,7 +19,7 @@ class CorpusConfig(BaseModel):
 
     Language-dependent patterns (tense, dialogue, word tokens, filter verbs,
     signal words) are defined as **optional overrides**: ``None`` means
-    "use the default of the selected language profile" (``scripts/engine/language.py``).
+    "use the default of the selected language profile" (``lixity.language``).
     This makes the engine work for any language and any writing style without
     code changes – new languages are registered as ``LanguageProfile``.
     """
@@ -32,7 +32,7 @@ class CorpusConfig(BaseModel):
         description="Divider marker where narrative prose transitions to scholarly appendix/notes.",
     )
     language: str = Field(
-        default="de",
+        default="en",
         description="Language code of the profile ('de', 'en', 'generic'; extensible).",
     )
     min_paragraph_length_for_oneliner: int = Field(

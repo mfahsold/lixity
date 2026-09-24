@@ -11,6 +11,7 @@ from dataclasses import dataclass, replace
 from .language_data import (
     GROUP_LABELS,
     HELP_TEXTS,
+    IDENTITY_LABELS,
     LABELS,
     LANGUAGE_PATTERNS,
     LAYER_LABELS,
@@ -101,6 +102,7 @@ def _build_profiles() -> dict[str, LanguageProfile]:
             signal_keywords=data["signal_keywords"],
             stopwords=frozenset(data.get("stopwords", ())),
             labels={
+                **IDENTITY_LABELS.get(key, IDENTITY_LABELS["en"]),
                 **LABELS.get(key, LABELS["generic"]),
                 **METRIC_LABELS.get(key, METRIC_LABELS["en"]),
                 **HELP_TEXTS.get(key, HELP_TEXTS["en"]),
@@ -167,7 +169,7 @@ def resolve_language(
     ``language="auto"`` uses stop word detection; without ``sample_text``
     the resolution falls back to the generic profile.
     """
-    key = str(getattr(config, "language", "de") or "de").strip().lower()
+    key = str(getattr(config, "language", "en") or "en").strip().lower()
     if key == "auto":
         key = detect_language(sample_text) if sample_text else "generic"
     profile = get_language_profile(key)

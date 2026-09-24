@@ -1,9 +1,9 @@
 """lixity.syllables – language-specific syllable-count heuristics.
 
 Curated, deterministic plug-in estimators used by the readability formulas
-(Flesch family, LIX). Accuracy is documented in ``docs/STABILITY.md``: the
-heuristics reach roughly 90–98 % on common vocabulary per language, with the
-known weaknesses (rare hiatus, foreign words) documented as a trade-off.
+(Flesch family; LIX uses word lengths rather than syllables). Known weaknesses
+such as hiatus and foreign words are discussed in ``docs/STABILITY.md``.
+Regression fixtures do not establish language-wide accuracy percentages.
 
 All rules are data: regex tables and exception dictionaries live here, the
 counting logic stays a pure function per language.

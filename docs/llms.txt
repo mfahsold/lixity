@@ -28,6 +28,9 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 
 ## Primary documentation
 
+- Development checkout: 1.15.0.dev0 (unreleased); published tag: v1.14.0.
+- [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md): shared analysis pipeline, project isolation, engine/adapter boundaries
+- [Localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): English defaults, seven linguistic profiles, mathematical invariants and limitations
 - [README](https://github.com/mfahsold/lixity#readme): overview, install, CLI quick start, capabilities, license
 - [docs/USAGE.md](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md): full command reference, worked example, metrics, known limitations
 - [docs/AGENTS.md](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md): JSON contracts, interpretation heuristics, stable Python facade, dashboard DOM hooks
@@ -41,6 +44,14 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 Reports/CLI messages: English default, German via LIXITY_LANG=de. JSON contracts:
 schema_version 2 (analyze/profile, language-neutral tense values
 present/past/mixed/neutral) and 4 (style reference, with structural_diagnostics).
+
+Development analysis defaults to English too. Use --language CODE or explicit
+--language auto; ambiguous detection falls back to generic. Dashboard resources
+cover seven languages; CLI message packs currently cover English and German.
+The 3D chapter view is an exploratory projection with per-axis threshold boxes,
+not a quality ranking. Rotation is opt-in and pauses when the page is hidden.
+Publication servers and encrypted NDA storage are project-adapter features,
+not services bundled with the core engine.
 
 ## Commands (all offline, deterministic, UTF-8)
 
@@ -80,4 +91,3 @@ Python facade: `from lixity import api` – `analyze`, `profile`, `dialogue`,
   and *Pride and Prejudice* (Austen, 1813, #1342); unmodified PG source files plus Markdown
   conversions, not relicensed by the LNCL
 - Third-party: pydantic (MIT), rich (MIT), orjson (MIT/Apache-2.0)
-

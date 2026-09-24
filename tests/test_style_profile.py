@@ -113,7 +113,7 @@ class TestParagraphProfiler(unittest.TestCase):
     """Paragraph-accurate tense profiles incl. switch and mix detection."""
 
     def _profile(self, md):
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+", appendix_marker="## Anhang")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+", appendix_marker="## Anhang")
         return ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
 
     def test_present_and_past_paragraphs(self):
@@ -278,7 +278,7 @@ class TestVisualizer(unittest.TestCase):
             "Ich trinke Kaffee. Ich gehe zum Fenster.\n\n"
             "Ich trank Kaffee und ich ging zum Fenster. Ich sah den Regen.\n"
         )
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         profiler = ParagraphProfiler(config)
         paragraphs, chapters = profiler.profile_blocks(parse_markdown_blocks(md))
         return render_dashboard(
@@ -304,7 +304,7 @@ class TestVisualizer(unittest.TestCase):
 
     def test_html_escapes_manuscript_text(self):
         md = "## Kapitel\n\nEin <b>Test</b> & mehr.\n"
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
         html = render_dashboard(chapters, paragraphs, title="X")
         self.assertIn("&lt;b&gt;Test&lt;/b&gt; &amp; mehr", html)
@@ -382,7 +382,7 @@ class TestLexiconAndDetection(unittest.TestCase):
         )
 
     def test_function_word_share_is_measurable(self):
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         md = (
             "## Kapitel\n\n"
             "Der Kater war endlich weg und ich trinke Kaffee mit dem Nachbarn an der Theke.\n\n"
@@ -416,7 +416,7 @@ class TestDashboard(unittest.TestCase):
             "Ich trinke Kaffee. Ich gehe zum Fenster. Der Regen fällt.\n\n"
             "Ich trank Kaffee und ich ging zum Fenster. Ich sah den Regen.\n"
         )
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
         metrics = CorpusAnalyzer(config).analyze_text(md)
         return render_dashboard(

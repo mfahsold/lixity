@@ -11,6 +11,7 @@ forward-compatible configs stay loadable.
 from __future__ import annotations
 
 import os
+from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -117,6 +118,7 @@ def resolve_thresholds(
     min_chapters: int | None = None,
     *,
     use_project_config: bool = True,
+    project_config: Mapping[str, Any] | None = None,
 ) -> FingerprintThresholds:
     """Single threshold builder for CLI, API and embedders.
 
@@ -137,7 +139,9 @@ def resolve_thresholds(
         "dim_score_threshold": defaults.dim_score_threshold,
         "flag_min_severity": defaults.flag_min_severity,
     }
-    if use_project_config:
+    if project_config is not None:
+        values.update(apply_config_to_thresholds(dict(project_config)))
+    elif use_project_config:
         values.update(apply_config_to_thresholds(load_project_config()))
     overrides = {
         "z_mild": z_mild,

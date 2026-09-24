@@ -13,10 +13,12 @@ import html
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from .._version import __version__
 from ..language_data import (
     EN_LABELS,
     GROUP_LABELS,
     HELP_TEXTS,
+    IDENTITY_LABELS,
     LAYER_LABELS,
     METRIC_LABELS,
     UI_LABELS,
@@ -24,6 +26,7 @@ from ..language_data import (
 from ..status import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT, Status
 
 _DEFAULT_LABELS = {
+    **IDENTITY_LABELS["en"],
     **EN_LABELS,
     **METRIC_LABELS["en"],
     **HELP_TEXTS["en"],
@@ -42,6 +45,41 @@ def label(labels: Mapping[str, str] | None, key: str) -> str:
 def esc(value: object) -> str:
     """HTML-escapes any value (single helper for the whole UI)."""
     return html.escape(str(value))
+
+
+def project_header(
+    title: str, labels: Mapping[str, str] | None = None,
+    language_name: str = "", engine_name: str = "Lixity",
+) -> str:
+    subtitle = label(labels, "app_suffix")
+    if language_name:
+        subtitle += " · " + language_name
+    return (
+        '<header class="project-header"><div class="product-meta">'
+        f'<span class="product-name">{esc(engine_name)}</span>'
+        f'<span class="version-badge">{esc(label(labels, "version"))} {esc(__version__)}</span>'
+        f'<span class="license-badge">{esc(label(labels, "license_notice"))}</span>'
+        '</div>'
+        f'<span class="project-label">{esc(label(labels, "project_name"))}</span>'
+        f'<h1>{esc(title)}</h1><p class="sub">{esc(subtitle)}</p>'
+        f'<p class="microhint" id="microhint">{esc(label(labels, "hint"))}</p>'
+        '</header>'
+    )
+
+
+def panel_start(panel_id: str, labels: Mapping[str, str] | None, title_key: str) -> str:
+    return (
+        f'<section class="panel" id="{esc(panel_id)}">'
+        f'<h2>{esc(label(labels, title_key))}</h2>'
+    )
+
+
+def toggle_button(text: str, control_id: str, pressed: bool, css_class: str = "ctl") -> str:
+    classes = f"{css_class} active" if pressed else css_class
+    return (
+        f'<button type="button" class="{esc(classes)}" id="{esc(control_id)}" '
+        f'aria-pressed="{str(pressed).lower()}" title="{esc(text)}">{esc(text)}</button>'
+    )
 
 
 def help_term(labels: Mapping[str, str] | None, key: str, text: str) -> str:
@@ -162,7 +200,8 @@ def loading_bars(
             else ""
         )
         bars.append(
-            f'<span class="load {sign}" style="--w:{width:.1f}%"{attrs}><i></i><b>{esc(name)}</b></span>'
+            f'<span class="load {sign}" style="--w:{width:.1f}%" title="{esc(name)}"{attrs}>'
+            f'<span class="load-track"><i></i></span><b>{esc(name)}</b></span>'
         )
     return '<div class="loadings">' + "".join(bars) + "</div>"
 

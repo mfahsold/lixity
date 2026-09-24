@@ -113,7 +113,7 @@ class TestApiFacade(unittest.TestCase):
         from lixity.style_profile import ParagraphProfiler
         from lixity.ui import render_dashboard
 
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
             parse_markdown_blocks(SAMPLE)
         )
@@ -238,7 +238,7 @@ class TestCliAgentSurface(unittest.TestCase):
         payload = json.loads(buffer.getvalue())
         self.assertEqual(payload["meta"]["tool"], "lixity")
         self.assertIn("metrics", payload)
-        self.assertEqual(payload["meta"]["language"], "de")
+        self.assertEqual(payload["meta"]["language"], "en")
 
     def test_missing_file_exits_1(self):
         self.assertEqual(main(["analyze", "/definitiv/nicht/da.md"]), 1)

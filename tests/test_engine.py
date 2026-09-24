@@ -73,6 +73,7 @@ class TestCorpusAnalyzer(unittest.TestCase):
 
     def setUp(self):
         self.config = CorpusConfig(
+            language="de",
             chapter_regex=r"(?m)^##\s+",
             appendix_marker="## Anhang",
         )

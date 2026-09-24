@@ -15,11 +15,14 @@ from .analyzer import CorpusAnalyzer
 from .config import load_project_config, resolve_thresholds
 from .formatters import ReportFormatter
 from .io import FileUtils
-from .language import resolve_language
-from .markdown_parser import parse_markdown_blocks
-from .models import SCHEMA_VERSION, CorpusConfig
-from .style_fingerprint import FingerprintThresholds, StyleFingerprint
-from .style_profile import ParagraphProfiler, ProfileThresholds
+from .models import SCHEMA_VERSION
+from .pipeline import (
+    analyze_document,
+    fingerprint_document,
+    profile_document,
+    resolve_document_config,
+)
+from .style_fingerprint import FingerprintThresholds
 from .ui import render_dashboard
 from .workspace import discover
 
@@ -35,36 +38,8 @@ def _thresholds_from_args(
     Precedence: CLI flag > project config (``[tool.lixity]`` / ``lixity.toml``) >
     built-in default — shared builder ``config.resolve_thresholds``.
     """
-    # When the caller already loaded project config (CLI main), honour it;
-    # otherwise resolve_thresholds loads it itself.
-    if config is not None:
-        from .config import apply_config_to_thresholds
-
-        overrides = {
-            k: v
-            for k, v in {
-                "z_mild": getattr(args, "z_mild", None),
-                "z_strong": getattr(args, "z_strong", None),
-                "fdr_q": getattr(args, "fdr_q", None),
-                "fdr_method": getattr(args, "fdr_method", None),
-                "dim_score_threshold": getattr(args, "dim_threshold", None),
-                "flag_min_severity": getattr(args, "flag_min_severity", None),
-            }.items()
-            if v is not None
-        }
-        # Merge: defaults ← config ← CLI flags (via resolve_thresholds kwargs)
-        merged = {**apply_config_to_thresholds(config), **overrides}
-        return resolve_thresholds(
-            z_mild=merged.get("z_mild"),
-            z_strong=merged.get("z_strong"),
-            fdr_q=merged.get("fdr_q"),
-            fdr_method=merged.get("fdr_method"),
-            dim_score_threshold=merged.get("dim_score_threshold"),
-            flag_min_severity=merged.get("flag_min_severity"),
-            min_chapters=merged.get("min_chapters"),
-            use_project_config=False,  # already applied above
-        )
     return resolve_thresholds(
+        project_config=config,
         z_mild=getattr(args, "z_mild", None),
         z_strong=getattr(args, "z_strong", None),
         fdr_q=getattr(args, "fdr_q", None),
@@ -72,18 +47,6 @@ def _thresholds_from_args(
         dim_score_threshold=getattr(args, "dim_threshold", None),
         flag_min_severity=getattr(args, "flag_min_severity", None),
     )
-
-
-def _thresholds_and_profile(
-    args: argparse.Namespace,
-) -> tuple[FingerprintThresholds, ProfileThresholds]:
-    """Resolved fingerprint thresholds + matching paragraph profile thresholds.
-
-    One resolution path: CLI flag > project config > code default; the
-    paragraph severity floor travels with the same value everywhere.
-    """
-    fp = _thresholds_from_args(args, getattr(args, "_project_config", None))
-    return fp, ProfileThresholds(flag_min_severity=fp.flag_min_severity)
 
 
 def _json(payload: object, indent: bool = False) -> str:
@@ -456,9 +419,7 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
 
     from .dialogue import dialogue_report
 
-    config = CorpusConfig(language=args.language)
-    resolved = resolve_language(config, sample_text=text)
-    config = CorpusConfig(language=resolved.key)
+    config, resolved = resolve_document_config(text, args.language)
     report = dialogue_report(text, config)
 
     if args.json:
@@ -519,9 +480,7 @@ def _cmd_characters(args: argparse.Namespace) -> int:
 
     from .characters import presence_report
 
-    config = CorpusConfig(language=args.language)
-    resolved = resolve_language(config, sample_text=text)
-    config = CorpusConfig(language=resolved.key)
+    config, resolved = resolve_document_config(text, args.language)
     report = presence_report(text, names, config)
 
     if args.json:
@@ -565,9 +524,7 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
 
     from .pacing import pacing_report
 
-    config = CorpusConfig(language=args.language)
-    resolved = resolve_language(config, sample_text=text)
-    config = CorpusConfig(language=resolved.key)
+    config, resolved = resolve_document_config(text, args.language)
     report = pacing_report(text, config)
 
     if args.json:
@@ -630,9 +587,7 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
 
     from .motifs import motif_report
 
-    config = CorpusConfig(language=args.language)
-    resolved = resolve_language(config, sample_text=text)
-    config = CorpusConfig(language=resolved.key)
+    config, resolved = resolve_document_config(text, args.language)
     report = motif_report(text, motifs, config, phrase_size=max(2, args.phrases))
 
     if args.json:
@@ -684,9 +639,7 @@ def _cmd_showing(args: argparse.Namespace) -> int:
 
     from .showing import showing_report
 
-    config = CorpusConfig(language=args.language)
-    resolved = resolve_language(config, sample_text=text)
-    config = CorpusConfig(language=resolved.key)
+    config, resolved = resolve_document_config(text, args.language)
     report = showing_report(text, config)
 
     if args.json:
@@ -736,21 +689,13 @@ def _cmd_build(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     text = workspace.read_manuscript()
-    config = CorpusConfig(language=args.language)
-    resolved = resolve_language(config, sample_text=text)
-    config = CorpusConfig(language=resolved.key)
+    config, resolved = resolve_document_config(text, args.language)
 
-    metrics = CorpusAnalyzer(config).analyze_text(text)
-    fp_thresholds, profile_thresholds = _thresholds_and_profile(args)
-    paragraphs, chapters = ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
-        parse_markdown_blocks(text)
-    )
-    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
-    from .style_fingerprint import lexical_structural_diagnostics
-
-    lexical = lexical_structural_diagnostics(text, config)
-    if lexical:
-        fingerprint.structural_diagnostics.update(lexical)
+    fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+    analysis = analyze_document(text, config, fp_thresholds)
+    metrics = analysis.metrics
+    paragraphs, chapters = analysis.paragraphs, analysis.chapters
+    fingerprint = analysis.fingerprint
     title = os.path.splitext(os.path.basename(workspace.manuscript))[0]
 
     artifacts = {
@@ -863,7 +808,7 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if name == "build":
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
-            p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+            p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
             p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
             p.add_argument(
                 "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
@@ -903,7 +848,7 @@ def main(argv: list[str] | None = None) -> int:
                 help="Motif as NAME=REGEX (repeatable)",
             )
             p.add_argument("--phrases", type=int, default=3, help="Phrase size (default 3)")
-            p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+            p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "characters":
@@ -915,12 +860,12 @@ def main(argv: list[str] | None = None) -> int:
                 help="Figure name or alias pattern (repeatable)",
             )
             p.add_argument("--names", help="Comma-separated figure names")
-            p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+            p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "dashboard":
             p.add_argument("file", help="Markdown manuscript")
-            p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+            p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
             p.add_argument("--names", help="Comma-separated figure names (character panel)")
             p.add_argument("-o", "--output", help="Target file (dashboard)")
             p.add_argument(
@@ -953,7 +898,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             continue
         p.add_argument("file", help="Markdown manuscript")
-        p.add_argument("--language", default="auto", help="de|en|fr|es|it|pt|nl|generic|auto")
+        p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
         p.add_argument(
             "--json", action="store_true", help="JSON output (analyze/profile/style/dialogue)"
         )
@@ -989,6 +934,8 @@ def main(argv: list[str] | None = None) -> int:
     args = parser.parse_args(argv)
     project_config = load_project_config()
     args._project_config = project_config
+    if hasattr(args, "language") and args.language is None:
+        args.language = project_config.get("language", "en")
 
     if args.command == "completion":
         shell = (args.shell or "bash").strip().lower()
@@ -1031,9 +978,7 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
 
-    config = CorpusConfig(language=args.language)
-    resolved = resolve_language(config, sample_text=text)
-    config = CorpusConfig(language=resolved.key)
+    config, resolved = resolve_document_config(text, args.language)
 
     if args.command == "analyze":
         metrics = CorpusAnalyzer(config).analyze_text(text)
@@ -1045,10 +990,8 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     if args.command == "profile":
-        _fp, profile_thresholds = _thresholds_and_profile(args)
-        paragraphs, chapters = ParagraphProfiler(
-            config, thresholds=profile_thresholds
-        ).profile_blocks(parse_markdown_blocks(text))
+        fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+        paragraphs, chapters = profile_document(text, config, fp_thresholds)
         payload = _meta_payload(
             resolved.key,
             chapters=[c.__dict__ for c in chapters],
@@ -1058,33 +1001,21 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     if args.command == "style":
-        metrics = CorpusAnalyzer(config).analyze_text(text)
-        fp_thresholds, _profile_t = _thresholds_and_profile(args)
-        fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
-        from .style_fingerprint import lexical_structural_diagnostics
-
-        lexical = lexical_structural_diagnostics(text, config)
-        if lexical:
-            fingerprint.structural_diagnostics.update(lexical)
+        fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+        fingerprint = fingerprint_document(text, config, fp_thresholds)
         if args.json:
             print(_json(fingerprint.passport(), indent=True))
         else:
             print(fingerprint.passport_text(labels=resolved.labels, language_key=resolved.key))
         return EXIT_OK
 
-    metrics = CorpusAnalyzer(config).analyze_text(text)
-    fp_thresholds, profile_thresholds = _thresholds_and_profile(args)
-    paragraphs, chapters = ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
-        parse_markdown_blocks(text)
-    )
-    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=fp_thresholds)
+    fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+    analysis = analyze_document(text, config, fp_thresholds)
+    metrics = analysis.metrics
+    paragraphs, chapters = analysis.paragraphs, analysis.chapters
+    fingerprint = analysis.fingerprint
     from .characters import presence_report
     from .dialogue import dialogue_report
-    from .style_fingerprint import lexical_structural_diagnostics as _lexical_structural
-
-    _lex = _lexical_structural(text, config)
-    if _lex:
-        fingerprint.structural_diagnostics.update(_lex)
 
     names = [
         part.strip() for part in (getattr(args, "names", None) or "").split(",") if part.strip()

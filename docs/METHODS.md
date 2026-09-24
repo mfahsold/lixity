@@ -10,6 +10,21 @@ every `meta` block.
 
 ## 1. Robust house-style baseline
 
+### Language and presentation boundary
+
+Language selection changes tokenization, linguistic feature extraction and
+the readability model. It does not translate or alter the definitions of
+median/MAD, FDR correction or eigendecomposition. JSON numbers remain numeric;
+locale-specific decimal separators are applied only when rendering reports.
+See [LOCALIZATION.md](LOCALIZATION.md) for supported profiles and limitations.
+
+The 3D dashboard displays up to three derived dimension scores. A point is
+flagged when a completed dimension score reaches the configured absolute
+cutoff on any displayed axis. All feature contributions must be summed before
+testing that cutoff: intermediate partial sums are not dimension scores.
+The visual boundary is therefore a box of per-axis cutoffs, not a sphere or
+a joint confidence region. Camera rotation and zoom do not change scores.
+
 Per feature $f$ over $n$ measurable chapters with values $x_1,\dots,x_n$:
 
 | Quantity | Definition | Notes |

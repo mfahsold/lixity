@@ -7,10 +7,13 @@ divergence with driver words, HD-D, the style passport and the
 heatmap/layer rendering of the dashboard.
 """
 
+import html as html_module
 import json
 import os
+import re
 import sys
 import unittest
+from unittest.mock import patch
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -76,7 +79,7 @@ class TestRobustStatistics(unittest.TestCase):
 
 class TestAnalyzerStyleFeatures(unittest.TestCase):
     def setUp(self):
-        self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         self.analyzer = CorpusAnalyzer(self.config)
 
     def test_house_style_features_are_computed(self):
@@ -125,7 +128,7 @@ class TestAnalyzerStyleFeatures(unittest.TestCase):
 
 class TestStyleFingerprint(unittest.TestCase):
     def setUp(self):
-        self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
         self.fp = StyleFingerprint.from_metrics(self.metrics)
 
@@ -195,7 +198,7 @@ class TestParagraphLayers(unittest.TestCase):
             "Die Straße liegt still und die Stadt schweigt.\n\n"
             "Ich spüre die Müdigkeit. Ich merke den Morgen und ich fühle die Sonne.\n"
         )
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
         stats = layer_stats(paragraphs, "filter")
         self.assertTrue(stats)
@@ -214,7 +217,7 @@ class TestParagraphLayers(unittest.TestCase):
             "Die Straße liegt still und die Stadt schweigt.\n\n"
             "Ich spüre die Müdigkeit. Ich merke den Morgen und ich fühle die Sonne.\n"
         )
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
         stats = layer_stats(paragraphs, "filter")
         self.assertTrue(stats)
@@ -228,7 +231,7 @@ class TestParagraphLayers(unittest.TestCase):
 
 class TestFingerprintDashboard(unittest.TestCase):
     def _build(self):
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
             parse_markdown_blocks(SAMPLE)
         )
@@ -252,7 +255,7 @@ class TestFingerprintDashboard(unittest.TestCase):
         self.assertIn("Consistency", html)
 
     def test_dashboard_without_fingerprint_still_works(self):
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
             parse_markdown_blocks(SAMPLE)
         )
@@ -263,6 +266,28 @@ class TestFingerprintDashboard(unittest.TestCase):
 
     def test_dashboard_is_deterministic_with_fingerprint(self):
         self.assertEqual(self._build(), self._build())
+
+    def test_dimension_payload_preserves_untrusted_titles_as_data(self):
+        title = '<img src=x onerror="window.injected=true"> & heading'
+        rendered = api.dashboard(SAMPLE.replace("Kap 1", title), language="de")
+        match = re.search(r'data-dim3d="([^"]*)"', rendered)
+        self.assertIsNotNone(match)
+        payload = json.loads(html_module.unescape(match.group(1)))
+        self.assertEqual(payload["points"][0]["title"], title)
+        self.assertEqual(payload["labels"]["flagged"], "auffällige Kapitel")
+        self.assertNotIn(title, rendered)
+
+    def test_dimension_controls_expose_initial_state(self):
+        rendered = self._build()
+        self.assertIsNotNone(re.search(r'id="dim-ctl-traj"[^>]*aria-pressed="true"', rendered))
+        self.assertIsNotNone(re.search(r'id="dim-ctl-spin"[^>]*aria-pressed="false"', rendered))
+
+    def test_dimension_loadings_do_not_repeat_features(self):
+        groups = re.findall(r'<div class="loadings">(.*?)</div>', self._build())
+        self.assertTrue(groups)
+        for group in groups:
+            names = re.findall(r'<b>(.*?)</b>', group)
+            self.assertEqual(len(names), len(set(names)))
 
 
 class TestJacobiEigendecomposition(unittest.TestCase):
@@ -331,7 +356,7 @@ class TestSignificanceAdjustment(unittest.TestCase):
         self.assertLess(abs(significance_z(5.0, 0.0, 2.0, 1.5)), 2.5)
 
     def test_analyzer_provides_style_se(self):
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         metrics = CorpusAnalyzer(config).analyze_text(SAMPLE)
         for chapter in metrics.chapters:
             self.assertIn("asl", chapter.style_se)
@@ -339,7 +364,7 @@ class TestSignificanceAdjustment(unittest.TestCase):
             self.assertIn("filter_density", chapter.style_se)
 
     def test_small_chapter_has_larger_se(self):
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         long_chapter = (
             "## Lang\n\n"
             + (
@@ -359,7 +384,7 @@ class TestStyleDimensions(unittest.TestCase):
     """Self-calibrated principal dimensions from the feature correlation."""
 
     def setUp(self):
-        self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
         self.fp = StyleFingerprint.from_metrics(self.metrics)
 
@@ -376,6 +401,23 @@ class TestStyleDimensions(unittest.TestCase):
         again = StyleFingerprint.from_metrics(self.metrics)
         self.assertEqual(self.fp.dimensions, again.dimensions)
         self.assertEqual(self.fp.redundant_features, again.redundant_features)
+
+    def test_dimension_flags_use_complete_scores_and_are_unique(self):
+        fields = ["asl", "staccato_pct", "kaskade_pct"]
+        self.fp.baseline = {
+            field: {"n": 3, "median": 0.0, "sigma": 1.0} for field in fields
+        }
+        self.fp.values = {
+            fields[0]: {1: 10.0, 2: 10.0, 3: None},
+            fields[1]: {1: -10.0, 2: 10.0, 3: None},
+            fields[2]: {1: 0.0, 2: 0.0, 3: None},
+        }
+        self.fp.z_scores = {1: {}, 2: {}, 3: {}}
+        vectors = [[0.707, 0.707, 0.0], [0.707, -0.707, 0.0], [0.0, 0.0, 1.0]]
+        with patch("lixity.style_fingerprint.jacobi_eigh", return_value=([1.0] * 3, vectors)):
+            dimension = self.fp._derive_dimensions()[0]
+        self.assertEqual(dimension["scores"], {1: 0.0, 2: 14.14, 3: 0.0})
+        self.assertEqual(dimension["flagged"], [2])
 
     def test_passport_meta_v2(self):
         passport = self.fp.passport()
@@ -684,7 +726,7 @@ class TestStructuralIntegration(unittest.TestCase):
     """Structural diagnostics integrated into the style fingerprint pipeline."""
 
     def setUp(self):
-        self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
         self.fp = StyleFingerprint.from_metrics(self.metrics)
 
@@ -777,7 +819,7 @@ class TestLexicalStructural(unittest.TestCase):
     """Token-level structural: co-occurrence fitness + Dunning keyness halves."""
 
     def setUp(self):
-        self.config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         # Multi-chapter German prose long enough for keyness (≥ 20 content
         # tokens per half) and co-occurrence (≥ 50 content tokens).
         paragraphs = [

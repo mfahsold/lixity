@@ -7,6 +7,36 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Shared `lixity.pipeline` orchestration for CLI, API and project adapters,
+  with one corpus analysis per complete result and explicit threshold mappings.
+- Interactive 3D chapter trajectories with zoom, rotation, localized tooltips,
+  per-axis threshold boxes, chapter navigation and responsive feature loadings.
+- Browser regression checks and localization contracts for all seven profiles.
+- Architecture and localization guides with explicit engine/adapter boundaries.
+- Shared project header with engine version and localized non-commercial-use notice.
+- Eleven refreshed public-sample screenshots, including full dimension panels,
+  real expanded paragraph context, mobile views and dark-mode diagnostics.
+
+### Changed
+
+- Development version is `1.15.0.dev0`; no new release tag is published yet.
+- CLI/API/core analysis defaults to English. Use `--language de` for German
+  or `--language auto` for detection; CLI project language settings are honored.
+- Documentation and comments use English; localized resources remain multilingual.
+- Canvas animation runs only when rotation is enabled and the page is visible.
+
+### Fixed
+
+- Dimension scores are flagged only after all feature contributions are summed.
+- Point hit testing matches the rendered projection after zoom/rotation.
+- Chapter titles in canvas tooltips are text rather than executable HTML.
+- English percentages retain their percent sign; tooltip numbers use their locale.
+- Mobile dimension cards retain space for feature labels and avoid overflow.
+- Long chapter paragraph strips scroll within their component on mobile.
+- Screenshot selection uses exact panel IDs instead of incidental label matches.
+
 ## [1.14.0] – 2026-09-24
 
 ### Added

@@ -187,7 +187,7 @@ class CorpusAnalyzer:
         return count_syllables_for(word, self.lang.key)
 
     def readability(self, asl: float, asw: float) -> tuple[float, str]:
-        """Language-calibrated Flesch-type Reading Ease score (0–100) + formula name."""
+        """Language-calibrated Reading Ease score and formula name; not clipped to 0–100."""
         rd = READABILITY.get(self.lang.key, READABILITY["generic"])
         score = rd["constant"] - rd["asl_coef"] * asl - rd["asw_coef"] * asw
         return score, rd["name"]

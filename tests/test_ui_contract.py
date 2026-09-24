@@ -55,7 +55,7 @@ SAMPLE = (
 
 def _full_dashboard() -> str:
     text, _marker = add_marker(SAMPLE, kind="todo", note="Prüfen", target_line=3)
-    config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+    config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
     metrics = CorpusAnalyzer(config).analyze_text(text)
     fingerprint = StyleFingerprint.from_metrics(metrics)
@@ -87,7 +87,9 @@ class TestJsDomContract(unittest.TestCase):
     """Every id the script touches must exist in the markup (no silent breakage)."""
 
     def test_script_ids_are_rendered(self):
-        script = (UI_DIR / "assets" / "dashboard.js").read_text(encoding="utf-8")
+        script = "\n".join(
+            asset.read_text(encoding="utf-8") for asset in sorted((UI_DIR / "assets").glob("*.js"))
+        )
         ids = set(re.findall(r'getElementById\("([^"]+)"\)', script))
         ids.discard("lixity-tooltip")  # created by the script itself
         self.assertTrue(ids)
@@ -355,7 +357,7 @@ class TestShowDontTellComponents(unittest.TestCase):
 
     def test_status_strip_renders_component_states(self):
         text = SAMPLE
-        config = CorpusConfig(chapter_regex=r"(?m)^##\s+")
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
         metrics = CorpusAnalyzer(config).analyze_text(text)
         html = render_dashboard(

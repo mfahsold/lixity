@@ -6,6 +6,16 @@ non-commercial open science; commercial use needs a written license).
 
 ## Ground rules
 
+- Write documentation, code comments and docstrings in English. Localized
+  resources, quoted source material and linguistic test fixtures are exceptions.
+- English is the default language. Automatic manuscript-language detection is
+  explicit (`--language auto`); never silently use German as a default.
+- Localization includes linguistic profiles, tokenization, sentence boundaries,
+  syllables, tense/style patterns, readability models, scientific explanations
+  and number formatting—not only translated interface labels.
+- Keep language-independent mathematics and machine-readable identifiers stable.
+  Language-specific coefficients need documented sources and numerical tests;
+  heuristics must be labeled as such, not presented as validated measurements.
 - Offline, deterministic, pure Python 3.10+ — no new hard dependencies
   without discussion (current: `pydantic`, `rich`, `orjson`).
 - Statistical code stays stdlib-only (no numpy/scipy) so wheels stay tiny

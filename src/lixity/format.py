@@ -29,5 +29,5 @@ def num(value: float, language_key: str = "en", decimals: int = 1, signed: bool 
 
 def pct(value: float, language_key: str = "en", decimals: int = 1) -> str:
     """Percentage with typographic spacing (space before % outside English)."""
-    suffix = "" if language_key in ("en", "generic") else " %"
+    suffix = "%" if language_key in ("en", "generic") else " %"
     return num(value, language_key, decimals) + suffix

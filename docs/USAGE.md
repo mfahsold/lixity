@@ -87,13 +87,40 @@ which writes a single HTML file.
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation, `nda/` |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
 
+## Development dashboard workflow
+
+The `1.15.0.dev0` checkout adds the shared pipeline and the 3D style-space
+interaction. These features are not promised for the older `v1.14.0` tag.
+
+```bash
+lixity dashboard manuscript.md --language en -o dashboard.html
+lixity dashboard roman.md --language de -o roman.html
+lixity dashboard unknown-language.md --language auto -o detected.html
+```
+
+Open the generated file in a browser; no server is needed for analysis views.
+In **Style dimensions**, drag to rotate, use the wheel to zoom, toggle the
+trajectory or threshold box, and reset the camera as needed. Select a chapter
+point to navigate to the underlying chapter. Rotation is opt-in and pauses
+when the tab is hidden. Dimension cards show positive and negative loadings.
+
+The box represents independent per-axis cutoffs, not a confidence ellipsoid.
+An outlying point means “inspect this chapter,” not “this writing is bad.”
+The canvas is pointer-operated; textual scores/loadings remain available, but
+full keyboard navigation of individual canvas points is not implemented.
+
+Publication, marker-mutation and NDA controls require a compatible project
+server; a standalone HTML export does not provide those services itself.
+See [architecture](ARCHITECTURE.md) for adapter responsibilities and
+[localization](LOCALIZATION.md) for analysis versus presentation language.
+
 ## Command reference
 
 ### Common options
 
 | Option | Applies to | Description |
 | :--- | :--- | :--- |
-| `--language CODE` | all commands | `auto` (default), `de`, `en`, `fr`, `es`, `it`, `pt`, `nl`, `generic`. `auto` detects the language from function words and falls back to `generic` when the signal is weak or ambiguous. |
+| `--language CODE` | analysis commands | `en` (default), `de`, `fr`, `es`, `it`, `pt`, `nl`, `generic`, `auto`. Explicit flags override project language settings. `auto` detects the language from function words and falls back to `generic` when the signal is weak or ambiguous. |
 | `--json` | `analyze`, `profile`, `style` | Print machine-readable JSON instead of the Rich/text output. |
 | `--z-mild FLOAT` | `style`, `dashboard`, `build` | Notable \|z\*\| threshold (default `2.5`). Lower = more sensitive. Active values are reported in the passport `meta` and in the dashboard legend. |
 | `--z-strong FLOAT` | `style`, `dashboard`, `build` | Strong \|z\*\| threshold (default `3.5`). |

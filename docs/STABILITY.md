@@ -8,6 +8,22 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 
 ## 1. Research findings (state of the art)
 
+### Development-version guarantees and limits
+
+The `1.15.0.dev0` suite checks English defaults, language resource-key coverage,
+readability-coefficient dispatch and locale formatting. These are software
+contracts, not empirical validation of linguistic accuracy across seven
+languages. No language-wide accuracy percentage is established by this suite.
+
+The 3D chapter view is exploratory: its dimensions are corpus-specific, signs
+can be arbitrary, and per-axis thresholds are not simultaneous confidence
+regions. Pointer interaction is tested; complete keyboard navigation within
+the canvas is not yet available. Textual dimension information remains visible.
+
+Engine tests use synthetic/public samples. Project adapters and optional local
+servers have separate trust boundaries and need their own tests; core test
+success is not a security certification for an arbitrary adapter.
+
 **Robust statistics & multiplicity control.**
 - MAD with the 1.4826 consistency constant ($1/\Phi^{-1}(3/4)$, R/DescTools
   default) scales the median absolute deviation to normal-consistent σ;
@@ -143,7 +159,7 @@ they are not current product features and must not be cited as such.
 | 20 | Layer colour semantics | colour encodes the absolute value span (min–max per dimension), not deviation sign alone | narrow bands would wash out | 🟡 **documented** in the legend (min/max values) + `USAGE.md`; the ring (|z| ≥ 1.5) is the second, deviation-specific channel |
 | 21 | Sentence segmentation | abbreviation-aware splitter; unknown abbreviations, decimals and ellipses are still heuristic | naive splitting inflated ASL on `Mr.`/`z.B.` texts | 🟠 → **fixed**: shared `lixity.sentences` splitter (abbreviation/number/initial guards, closing marks stay with their sentence); **documented** as a heuristic |
 | 22 | Corpus vs. chapter metrics | two divergent sentence splitters and duplicated sentence statistics | chapter matrix was still on the naive regex | 🟠 → **fixed**: one splitter and one `SentenceStats` implementation for both levels |
-| 23 | Syllable heuristics | German double vowels and English silent-e/-le were mis-counted | `Kaffee`=3, `table`=3 | 🟡 → **fixed**: double vowels count as one nucleus, syllabic-l rule de-duplicated; accuracy ~90–98 % per language (documented) |
+| 23 | Syllable heuristics | German double vowels and English silent-e/-le were mis-counted | `Kaffee`=3, `table`=3 | 🟡 → **fixed** for these fixtures: double vowels count as one nucleus, syllabic-l rule de-duplicated; language-wide accuracy remains unestablished |
 | 24 | LIX long-word threshold | per-language calibration (7/8 characters) deviated from the standard | Björnsson defines >6 characters | 🟠 → **fixed**: standard >6 characters for every language; LIX values rise accordingly (documented, breaking metric change) |
 | 25 | Readability formulas | constants must match the named literature formulas | hand-computed tests added | 🟢 **verified**: Amstad, Flesch, Kandel-Moles, INFLESZ (62.35), Franchina-Vacca (0.6 per 100 words = 60.0), Martins, Douma |
 | 26 | UI interaction contract | some click targets were not keyboard reachable; one drill-down was lost | band rows lacked `role`/`tabindex` and the layer mapping | 🟠 → **fixed**: unified `[role="button"]` contract, one JS selector, focus ring for all; band rows jump to `#feat-<field>` (heatmap column) with optional layer + deviations-only |
