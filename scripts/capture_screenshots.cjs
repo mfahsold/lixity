@@ -52,6 +52,11 @@ async function main() {
     await save(path.join(output, 'dashboard-dimensions-mobile.png'), '#dimensions');
     await open(path.join(base, 'dashboard-dark.html'), 1600, 1050, 'dark');
     await save(path.join(output, 'dashboard-dimensions-dark.png'), '#dimensions');
+    await open(path.join(base, 'dashboard.html'), 1600, 1050);
+    await save(path.join(output, 'dashboard-reference.png'), '#bands');
+    await open(path.join(base, 'dashboard-settings.html'), 1600, 1050);
+    await page.locator('.settings-advanced summary').click();
+    await save(path.join(output, 'dashboard-settings.png'), '#settings-form');
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(base, 'capture-results.json'), JSON.stringify(results, null, 2));
     console.log(JSON.stringify(results, null, 2));

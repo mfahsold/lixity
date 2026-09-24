@@ -5,6 +5,7 @@ Chromium. Playwright is optional tooling, not a Lixity runtime dependency.
 
 ```sh
 node tests/browser/style-space.cjs
+node tests/browser/settings.cjs
 ```
 
 If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
@@ -12,3 +13,7 @@ its module directory. `PYTHON_BIN` optionally overrides `.venv/bin/python`.
 The test generates a synthetic manuscript, checks canvas interaction, tooltip
 escaping, idle rendering and mobile layout, and prints its temporary screenshot
 directory. It does not read any private manuscript or contact a server.
+
+The settings test intercepts all requests to a synthetic host. It verifies
+locale-safe values, validation before submission, reset without saving, FDR
+row filtering, mobile layout and the serif font being limited to the title.

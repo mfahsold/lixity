@@ -488,12 +488,37 @@ document.addEventListener("change", async function (event) {
   }
 });
 if (document.getElementById("nda-manager")) { ndaRefresh(); }
+var settingsForm = document.getElementById("settings-form");
+if (settingsForm) {
+  settingsForm.addEventListener("submit", function(event) {
+    event.preventDefault();
+    settingsForm.querySelector('[data-action="settings"]').click();
+  });
+  document.getElementById("settings-reset").addEventListener("click", function() {
+    settingsForm.querySelectorAll("[data-default]").forEach(function(input) {
+      input.value = input.dataset.default;
+      input.setCustomValidity("");
+    });
+    settingsForm.querySelector("details").open = true;
+  });
+}
+var fdrFilter = document.getElementById("heatmap-fdr-only");
+if (fdrFilter) {
+  fdrFilter.addEventListener("change", function() {
+    var visible = 0;
+    document.querySelectorAll("#heatmap tbody tr[data-fdr-count]").forEach(function(row) {
+      row.hidden = fdrFilter.checked && Number(row.dataset.fdrCount) === 0;
+      if (!row.hidden) visible++;
+    });
+    document.getElementById("heatmap-empty").hidden = visible > 0;
+  });
+}
 async function runAction(action, payload, button) {
   var status = document.getElementById("ctl-status");
   if (!status) return;
   status.className = "ctl-status";
   status.textContent = "…";
-  if (button) { button.classList.add("busy"); button.setAttribute("aria-busy", "true"); }
+  if (button) { button.disabled = true; button.classList.add("busy"); button.setAttribute("aria-busy", "true"); }
   try {
     var res = await fetch(API + "/" + action, {
       method: "POST",
@@ -508,7 +533,7 @@ async function runAction(action, payload, button) {
     status.className = "ctl-status err";
     status.textContent = "✗ " + err;
   } finally {
-    if (button) { button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
+    if (button) { button.disabled = false; button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
   }
 }
 document.querySelectorAll("[data-action]").forEach(function (btn) {
@@ -522,6 +547,16 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
       payload.contact = document.getElementById("nda-contact").value;
     }
     if (btn.dataset.payload === "settings") {
+      var settings = document.getElementById("settings-form");
+      var mild = document.getElementById("set-z-mild");
+      var strong = document.getElementById("set-z-strong");
+      strong.setCustomValidity(strong.valueAsNumber < mild.valueAsNumber
+        ? document.getElementById("settings-order-error").textContent : "");
+      if (!settings.checkValidity()) {
+        settings.querySelector("details").open = true;
+        settings.reportValidity();
+        return;
+      }
       payload.language = document.getElementById("set-language").value;
       payload.title = document.getElementById("set-title").value;
       var zm = document.getElementById("set-z-mild");

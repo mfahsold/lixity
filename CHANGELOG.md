@@ -9,6 +9,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Explanatory settings form with visible labels, expandable thresholds,
+  restore-without-saving and client/server validation in the local adapter.
+- FDR-specific matrix markers and chapter filtering, fixed-scale legend,
+  Cliff's δ details, and visible reference medians/sample counts.
+- Classic serif typography for the project title only; system UI sans elsewhere.
 - Shared `lixity.pipeline` orchestration for CLI, API and project adapters,
   with one corpus analysis per complete result and explicit threshold mappings.
 - Interactive 3D chapter trajectories with zoom, rotation, localized tooltips,
@@ -29,6 +34,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Localized settings no longer write decimal commas into HTML number values.
+- Matrix color legends reflect the actual color scale rather than the configured
+  detection cutoff; reference rows respect the configured minimum sample size.
 - Dimension scores are flagged only after all feature contributions are summed.
 - Point hit testing matches the rendered projection after zoom/rotation.
 - Chapter titles in canvas tooltips are text rather than executable HTML.

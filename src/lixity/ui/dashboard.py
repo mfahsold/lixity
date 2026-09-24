@@ -8,13 +8,21 @@ and editor-visible work markers with floating tooltips.
 import html
 import json
 from collections.abc import Mapping, Sequence
+from dataclasses import replace
 from pathlib import Path as _Path
 from typing import Any
 
 from ..format import num as format_num
 from ..format import pct as format_pct
 from ..status import FLAG_MIN_SEVERITY, NdaStatus
-from ..style_fingerprint import FEATURES, LAYER_FEATURES, layer_stats, z_color
+from ..style_fingerprint import (
+    FEATURES,
+    LAYER_FEATURES,
+    Z_COLOR_LIMIT,
+    FingerprintThresholds,
+    layer_stats,
+    z_color,
+)
 from ..style_profile import (
     ChapterProfile,
     ParagraphProfile,
@@ -33,6 +41,7 @@ from .components import (
     tense_label,
 )
 from .dimensions import style_dimensions
+from .settings import settings_form
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
 _CSS = (_ASSET_DIR / "dashboard.css").read_text(encoding="utf-8")
@@ -152,9 +161,6 @@ def render_dashboard(
         and any(float(base.get("sigma") or 0.0) > 0.0 for base in fingerprint.baseline.values())
     )
     z_mild = fingerprint.thresholds.z_mild if fingerprint is not None else 2.5
-    z_strong = fingerprint.thresholds.z_strong if fingerprint is not None else 3.5
-    fdr_q = fingerprint.thresholds.fdr_q if fingerprint is not None else 0.05
-    dim_threshold = fingerprint.thresholds.dim_score_threshold if fingerprint is not None else 2.5
 
     layer_data: dict[str, dict[int, tuple[float, float]]] = {
         layer_key: layer_stats(paragraphs, layer_key) for layer_key in LAYER_FEATURES
@@ -213,59 +219,11 @@ def render_dashboard(
         parts.append(f'<p class="ctl-note">{L("load_hint")}</p>')
         parts.append("</div>")
 
-        # Settings (language, title, statistical sensitivity)
-        parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{L("settings")}</span>')
-        parts.append('<div class="row">')
-        parts.append(
-            f'<select class="ctl" id="set-language" aria-label="{L("language")}">'
-            + "".join(
-                f'<option value="{code}"{" selected" if code == current_language else ""}>{label}</option>'
-                for code, label in language_options
-            )
-            + "</select>"
-        )
-        parts.append(
-            f'<input class="ctl" id="set-title" value="{esc(title)}" placeholder="{L("title")}"/>'
-        )
-        parts.append(
-            f'<input class="ctl" type="number" id="set-z-mild" step="0.1" min="0.5" max="6" '
-            f'value="{N(z_mild, 1)}" aria-label="{esc(L("z_mild"))}" '
-            f'title="{esc(label(labels, "help_z_mild") or L("z_mild"))}" '
-            f'placeholder="{L("z_mild")}"/>'
-        )
-        parts.append(
-            f'<input class="ctl" type="number" id="set-z-strong" step="0.1" min="1" max="8" '
-            f'value="{N(z_strong, 1)}" aria-label="{esc(L("z_strong"))}" '
-            f'title="{esc(label(labels, "help_z_strong") or L("z_strong"))}" '
-            f'placeholder="{L("z_strong")}"/>'
-        )
-        parts.append(
-            f'<input class="ctl" type="number" id="set-fdr-q" step="0.01" min="0.01" max="0.5" '
-            f'value="{N(fdr_q, 2)}" aria-label="{esc(L("fdr_q"))}" '
-            f'title="{esc(label(labels, "help_fdr_q") or L("fdr_q"))}" '
-            f'placeholder="{L("fdr_q")}"/>'
-        )
-        parts.append(
-            f'<select class="ctl" id="set-flag-min-sev" aria-label="{esc(L("flag_min_severity"))}" '
-            f'title="{esc(label(labels, "help_flag_min_severity") or L("flag_min_severity"))}">'
-            + "".join(
-                f'<option value="{sev}"{" selected" if sev == flag_min_severity else ""}>'
-                f"{esc(label(labels, f'severity_{sev}'))} ≥ {sev}</option>"
-                for sev in (1, 2, 3)
-            )
-            + "</select>"
-        )
-        parts.append(
-            f'<input class="ctl" type="number" id="set-dim-threshold" step="0.1" min="1" max="4" '
-            f'value="{N(dim_threshold, 1)}" aria-label="{esc(L("dim_score_threshold"))}" '
-            f'title="{esc(label(labels, "help_dim_score_threshold") or L("dim_score_threshold"))}" '
-            f'placeholder="{L("dim_score_threshold")}"/>'
-        )
-        parts.append(
-            f'<button class="ctl" data-action="settings" data-payload="settings">{L("apply")}</button>'
-        )
-        parts.append("</div></div>")
+        parts.append(settings_form(
+            labels, title, current_language, language_options,
+            replace(fingerprint.thresholds if fingerprint is not None else FingerprintThresholds(),
+                    flag_min_severity=flag_min_severity),
+        ))
 
         # Analyses & exports
         parts.append('<div class="ctl-group">')
@@ -305,7 +263,7 @@ def render_dashboard(
         )
         parts.append("</div></div>")
 
-        parts.append(f'<div class="ctl-status" id="ctl-status">{L("server_hint")}</div>')
+        parts.append(f'<div class="ctl-status" id="ctl-status" role="status" aria-live="polite">{L("server_hint")}</div>')
         parts.append("</section>")
 
         parts.append('<section class="panel controls" id="nda-manager">')
@@ -708,9 +666,17 @@ def render_dashboard(
         parts.append(
             '<div class="z-legend">'
             + esc(label(labels, "zscore"))
-            + f' <span class="z-gradient"></span> −{N(z_mild, 1)} … +{N(z_mild, 1)}'
+            + f' <span class="z-gradient"></span> −{N(Z_COLOR_LIMIT, 1)} … +{N(Z_COLOR_LIMIT, 1)}'
             + "</div>"
         )
+        parts.append(f'<p class="panel-guide">{L("matrix_reading")}</p>')
+        parts.append(
+            f'<div class="matrix-tools"><label><input type="checkbox" id="heatmap-fdr-only"/> '
+            f'{L("matrix_fdr_only")}</label><span class="analysis-method">'
+            f'{esc(fingerprint.thresholds.fdr_method.upper())} · q = {N(fingerprint.thresholds.fdr_q, 2)}'
+            f' · |z*| ≥ {N(z_mild, 1)}</span></div>'
+        )
+        parts.append(f'<p id="heatmap-empty" class="panel-guide" role="status" hidden>{L("matrix_empty")}</p>')
         parts.append('<div class="heatmap-wrap"><table class="heatmap"><thead><tr>')
         parts.append('<th class="ch" id="feat-chapter">' + L("chapter") + "</th>")
         for _field, label_key, _unit in FEATURES:
@@ -723,7 +689,8 @@ def render_dashboard(
         for chapter in metrics.chapters:
             if chapter.num not in fingerprint.z_scores:
                 continue
-            parts.append(f'<tr><td class="ch">{chapter.num}. {esc(chapter.title)}</td>')
+            confirmed = set(fingerprint.fdr_flagged.get(chapter.num, []))
+            parts.append(f'<tr data-fdr-count="{len(confirmed)}"><td class="ch">{chapter.num}. {esc(chapter.title)}</td>')
             for field_name, label_key, _unit in FEATURES:
                 z = fingerprint.z_scores[chapter.num].get(field_name)
                 if z is None:
@@ -738,6 +705,13 @@ def render_dashboard(
                     f"{label(labels, 'effect_size')} {N(effect, 1, signed=True)}\u03c3 · "
                     f"{label(labels, 'click_hint')}"
                 )
+                cliff = fingerprint.cliffs_delta.get(chapter.num, {}).get(field_name)
+                if cliff is not None:
+                    tooltip += f" · Cliff’s δ {N(cliff, 2, signed=True)}"
+                marker = (
+                    f'<span class="fdr-marker" aria-label="{L("fdr_flagged")}">●</span>'
+                    if field_name in confirmed else ""
+                )
                 layer_key = feature_layers.get(field_name, "")
                 cell_attrs = (
                     f' data-chapter="{chapter.num}" data-layer="{layer_key}"'
@@ -746,12 +720,12 @@ def render_dashboard(
                 )
                 if abs(z) < 0.05:
                     parts.append(
-                        f'<td class="z zero"{cell_attrs} title="{esc(tooltip, quote=True)}">0</td>'
+                        f'<td class="z zero"{cell_attrs} title="{esc(tooltip, quote=True)}">0{marker}</td>'
                     )
                 else:
                     parts.append(
                         f'<td class="z" style="background:{z_color(z)}"{cell_attrs} '
-                        f'title="{esc(tooltip, quote=True)}">{N(z, 1, signed=True)}</td>'
+                        f'title="{esc(tooltip, quote=True)}">{N(z, 1, signed=True)}{marker}</td>'
                     )
             parts.append("</tr>")
         parts.append("</tbody></table></div>")
@@ -765,10 +739,11 @@ def render_dashboard(
 
         parts.append('<section class="panel" id="bands">')
         parts.append(f"<h2>{help_term(labels, 'passport', L('style_passport'))}</h2>")
+        parts.append(f'<p class="panel-guide">{L("reference_reading")}</p>')
         parts.append('<div class="bands">')
         for field_name, label_key, _unit in FEATURES:
             base = fingerprint.baseline.get(field_name, {})
-            if not base.get("n"):
+            if int(base.get("n", 0)) < fingerprint.thresholds.min_chapters:
                 continue
             centre = float(base["median"])
             sigma = float(base["sigma"])
@@ -783,6 +758,7 @@ def render_dashboard(
             click_hint = label(labels, "click_hint")
             title = (
                 f"{label(labels, label_key)}: {L('median')} {N(centre, 2)} · "
+                f"σ = {N(sigma, 2)} · n = {int(base['n'])} · "
                 f"{L('band')} {N(centre - 2 * sigma, 2)} – {N(centre + 2 * sigma, 2)} · "
                 f"{L('outliers')}: {n_out}" + (f" · {click_hint}" if n_out or layer else "")
             )
@@ -800,7 +776,8 @@ def render_dashboard(
                     row_attrs.append('data-only="1"')
             parts.append(f'<div class="band-row" {" ".join(row_attrs)}>')
             parts.append(
-                f'<span class="band-label">{help_term(labels, _FEATURE_HELP.get(field_name, field_name), esc(label(labels, label_key)))}</span>'
+                f'<span class="band-label">{help_term(labels, _FEATURE_HELP.get(field_name, field_name), esc(label(labels, label_key)))}'
+                f'<small class="band-summary">{L("median")} {N(centre, 2)} · n = {int(base["n"])}</small></span>'
             )
             parts.append(
                 band_chart(
@@ -984,7 +961,7 @@ def render_dashboard(
                         low, high = _layer_range(key)
                         span = (high - low) or 1.0
                         position = (value - low) / span
-                        colour = z_color((position * 2.0 - 1.0) * z_mild)
+                        colour = z_color((position * 2.0 - 1.0) * Z_COLOR_LIMIT)
                         layer_payload[key] = [colour, _layer_tip(key, value, z), round(z, 2)]
                 layer_attr = (
                     f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"

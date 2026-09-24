@@ -192,6 +192,11 @@ def main() -> int:
         language_key=resolved.key,
     )
     dashboard_path = _write_html("dashboard.html", _force_light(dashboard))
+    _write_html("dashboard-settings.html", _force_light(render_dashboard(
+        chapters, paragraphs, metrics=metrics, fingerprint=fingerprint,
+        title=title, labels=resolved.labels, language_name=resolved.name,
+        language_key=resolved.key, current_language=resolved.key, controls=True,
+    )))
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1600, 1050)
 
     # 4. Dashboard (dark) --------------------------------------------------

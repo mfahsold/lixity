@@ -10,6 +10,7 @@ from dataclasses import dataclass, replace
 
 from .language_data import (
     GROUP_LABELS,
+    GUIDANCE_LABELS,
     HELP_TEXTS,
     IDENTITY_LABELS,
     LABELS,
@@ -102,6 +103,7 @@ def _build_profiles() -> dict[str, LanguageProfile]:
             signal_keywords=data["signal_keywords"],
             stopwords=frozenset(data.get("stopwords", ())),
             labels={
+                **GUIDANCE_LABELS.get(key, GUIDANCE_LABELS["en"]),
                 **IDENTITY_LABELS.get(key, IDENTITY_LABELS["en"]),
                 **LABELS.get(key, LABELS["generic"]),
                 **METRIC_LABELS.get(key, METRIC_LABELS["en"]),

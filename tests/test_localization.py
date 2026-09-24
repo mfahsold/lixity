@@ -25,7 +25,7 @@ class TestLocalization(unittest.TestCase):
         self.assertEqual(api.analyze(text, language="auto")["meta"]["language"], "de")
 
     def test_all_supported_profiles_have_complete_resource_keys(self):
-        for name in ("LABELS", "METRIC_LABELS", "HELP_TEXTS", "GROUP_LABELS", "LAYER_LABELS", "UI_LABELS", "IDENTITY_LABELS"):
+        for name in ("LABELS", "METRIC_LABELS", "HELP_TEXTS", "GROUP_LABELS", "LAYER_LABELS", "UI_LABELS", "IDENTITY_LABELS", "GUIDANCE_LABELS"):
             table = getattr(language_data, name)
             for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
                 with self.subTest(resource=name, language=language):

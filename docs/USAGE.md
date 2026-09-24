@@ -99,6 +99,32 @@ lixity dashboard unknown-language.md --language auto -o detected.html
 ```
 
 Open the generated file in a browser; no server is needed for analysis views.
+
+### Settings and interpretation
+
+In a compatible local project server, settings show language and project title
+first. Expand **Detection thresholds** for labeled numeric controls and their
+explanations. Changes apply only after **Apply**; restoring defaults changes
+the form but does not save it. Invalid numbers and a strong-deviation cutoff
+below the noticeable cutoff are rejected before submission.
+
+The style matrix keeps its color scale fixed at z* = −2.5 to +2.5, independently
+of your detection threshold. A **●** identifies a cell selected by the engine's
+FDR correction. The optional filter shows only chapters with those results.
+Color alone is not a significance decision or an assessment of writing quality.
+Cell details include the raw value, z*, standardized effect and Cliff's δ.
+
+The style reference shows the manuscript median ± 2 robust standard deviations,
+with per-feature medians and sample counts. This is neither a confidence
+interval nor an external editorial target. Its counts denote deviation-cutoff
+hits; they are not interchangeable with the matrix's FDR decisions.
+
+Only the project title uses a classic serif font stack. Controls, tables,
+body text and all other headings use the existing modern system sans-serif.
+No font files are fetched from a third-party server.
+
+### Style-space navigation
+
 In **Style dimensions**, drag to rotate, use the wheel to zoom, toggle the
 trajectory or threshold box, and reset the camera as needed. Select a chapter
 point to navigate to the underlying chapter. Rotation is opt-in and pauses

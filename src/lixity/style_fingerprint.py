@@ -838,6 +838,9 @@ def jacobi_eigh(
     return [e for e, _ in eigen], [vec for _, vec in eigen]
 
 
+Z_COLOR_LIMIT = 2.5
+
+
 def z_color(z: float) -> str:
     """
     Deterministic diverging colour scale for robust z-scores
@@ -845,11 +848,11 @@ def z_color(z: float) -> str:
     Clamped to [-2.5, +2.5]; no external colour libraries.
     """
     stops = (
-        (-2.5, (43, 108, 176)),
+        (-Z_COLOR_LIMIT, (43, 108, 176)),
         (-1.0, (123, 167, 208)),
         (0.0, (229, 231, 235)),
         (1.0, (232, 176, 122)),
-        (2.5, (192, 86, 33)),
+        (Z_COLOR_LIMIT, (192, 86, 33)),
     )
     z = max(stops[0][0], min(stops[-1][0], z))
     for (z0, c0), (z1, c1) in pairwise(stops):

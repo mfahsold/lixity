@@ -72,6 +72,20 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 </p>
 </details>
 
+### Settings and scientific context
+
+![Settings with visible labels, explanations and restore-without-saving](docs/screenshots/dashboard-settings.png)
+
+The settings form separates everyday project choices from detection thresholds.
+Invalid values are rejected; restoring defaults does not silently save them.
+In the fingerprint matrix, **●** marks the engine's FDR-selected cells separately
+from deviation colors. The style reference exposes medians and sample counts
+and explains its robust bands rather than presenting them as quality targets.
+Only the project title uses classic book-style serif typography; the rest of
+the interface uses the modern system sans-serif stack.
+
+![Style reference bands with medians and chapter sample counts](docs/screenshots/dashboard-reference.png)
+
 ### Mobile views
 
 | Project overview | Complete style-dimension panel |

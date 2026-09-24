@@ -36,6 +36,8 @@ The command fails on runtime errors, missing panels or mobile page overflow.
 - `dashboard-dimensions`: complete panel, without cutting off the last card.
 - `dashboard-markers`: the actual marker panel; three illustrative notes are
   inserted into an in-memory sample copy only.
+- `dashboard-settings`: the shared settings form with detection controls expanded.
+- `dashboard-reference`: complete reference bands with medians and sample counts.
 - `dashboard-mobile`: 390-pixel mobile overview viewport.
 - `dashboard-dimensions-mobile` / `dashboard-dimensions-dark`: complete panels.
 - `cli-analyze` / `cli-style`: terminal-style excerpts of actual report output.

@@ -17,6 +17,7 @@ from .._version import __version__
 from ..language_data import (
     EN_LABELS,
     GROUP_LABELS,
+    GUIDANCE_LABELS,
     HELP_TEXTS,
     IDENTITY_LABELS,
     LAYER_LABELS,
@@ -26,6 +27,7 @@ from ..language_data import (
 from ..status import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT, Status
 
 _DEFAULT_LABELS = {
+    **GUIDANCE_LABELS["en"],
     **IDENTITY_LABELS["en"],
     **EN_LABELS,
     **METRIC_LABELS["en"],
