@@ -29,6 +29,7 @@ from ..style_profile import (
     flagged_paragraphs,
 )
 from .components import (
+    artifact_href,
     band_chart,
     help_term,
     kpi,
@@ -516,7 +517,7 @@ def render_dashboard(
     # --- Character presence ------------------------------------------------
     if characters and characters.get("figures"):
         parts.append(panel_start("characters", labels, "panel_characters"))
-        parts.append("<table><thead><tr>")
+        parts.append('<div class="table-wrap"><table><thead><tr>')
         parts.extend(
             f"<th>{L(key)}</th>"
             for key in (
@@ -551,7 +552,7 @@ def render_dashboard(
                 f'<td class="num bar-cell"><i style="--v:{min(100.0, share):.1f}%"></i>{share:.0f} %</td>'
                 f"</tr>"
             )
-        parts.append("</tbody></table>")
+        parts.append("</tbody></table></div>")
         parts.append("</section>")
 
     # --- Pacing curve (scene structure & hooks) ----------------------------
@@ -584,7 +585,7 @@ def render_dashboard(
     if motifs and (motifs.get("motifs") or motifs.get("repeated_phrases")):
         parts.append(panel_start("motifs", labels, "panel_motifs"))
         if motifs.get("motifs"):
-            parts.append("<table><thead><tr>")
+            parts.append('<div class="table-wrap"><table><thead><tr>')
             parts.extend(
                 f"<th>{L(key)}</th>" for key in ("mot_name", "mot_count", "mot_chapters", "chr_gap")
             )
@@ -601,9 +602,9 @@ def render_dashboard(
                     f'<td class="num">{int(motif.get("longest_gap", 0))}</td>'
                     f"</tr>"
                 )
-            parts.append("</tbody></table>")
+            parts.append("</tbody></table></div>")
         if motifs.get("repeated_phrases"):
-            parts.append("<table><thead><tr>")
+            parts.append('<div class="table-wrap"><table><thead><tr>')
             parts.extend(
                 f"<th>{L(key)}</th>" for key in ("mot_phrase", "mot_count", "mot_chapters")
             )
@@ -619,7 +620,7 @@ def render_dashboard(
                     f'<td class="num">{esc(chapter_list_text)}</td>'
                     f"</tr>"
                 )
-            parts.append("</tbody></table>")
+            parts.append("</tbody></table></div>")
         parts.append("</section>")
 
     # --- Showing vs. telling (narrative distance) ---------------------------
@@ -1009,13 +1010,17 @@ def render_dashboard(
         parts.append('<div class="table-wrap">')
         parts.append("<table><thead><tr>")
         parts.append(
-            f'<th>#</th><th>{L("chapter")}</th><th class="num">{L("words")}</th>'
-            f'<th class="num">ASL</th><th class="num">{L("dialogue")}</th>'
-            f'<th class="num">{L("function_words")}</th><th>{L("past")}/{L("present")}</th>'
-            f'<th class="num">{L("flagged")}</th>'
+            f'<th scope="col">{help_term(labels, "chapter_row", "#")}</th>'
+            f'<th scope="col">{help_term(labels, "chapter_row", L("chapter"))}</th>'
+            f'<th scope="col" class="num">{help_term(labels, "words", L("words"))}</th>'
+            f'<th scope="col" class="num">{help_term(labels, "asl", "ASL")}</th>'
+            f'<th scope="col" class="num">{help_term(labels, "dialogue", L("dialogue"))}</th>'
+            f'<th scope="col" class="num">{help_term(labels, "function_words", L("function_words"))}</th>'
+            f'<th scope="col">{help_term(labels, "chapter_tense", L("past") + "/" + L("present"))}</th>'
+            f'<th scope="col" class="num">{help_term(labels, "chapter_flags", L("flagged"))}</th>'
         )
         if fingerprint is not None:
-            parts.append(f'<th class="num">{L("deviation")}</th>')
+            parts.append(f'<th scope="col" class="num">{help_term(labels, "chapter_deviation", L("deviation"))}</th>')
         parts.append("</tr></thead><tbody>")
         max_asl = max((c.asl for c in chapters), default=1.0) or 1.0
         max_dialog = max((c.dialog_pct for c in chapters), default=1.0) or 1.0
@@ -1036,7 +1041,7 @@ def render_dashboard(
                 dev = fingerprint.deviations.get(c.num, {})
                 if dev:
                     named = ", ".join(
-                        f"{label(labels, label_key)} {z:+.1f}σ"
+                        f"{label(labels, label_key)}: z* = {N(z, 1, signed=True)}"
                         for field_name, label_key, _unit in FEATURES
                         if (z := dev.get(field_name)) is not None
                     )
@@ -1061,7 +1066,7 @@ def render_dashboard(
             if art.get("pages"):
                 meta_bits.append(f"{art['pages']} {label(labels, 'pages')}")
             meta = " · ".join(meta_bits)
-            href = art.get("href")
+            href = artifact_href(art.get("href"))
             link = (
                 f'<a href="{esc(str(href))}" target="_blank" rel="noopener">{L("open")}</a>'
                 if href

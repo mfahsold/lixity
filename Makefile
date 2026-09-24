@@ -3,20 +3,23 @@
 PYTHON ?= python3
 VENV ?= .venv
 VPY := $(VENV)/bin/python
-VPIP := $(VENV)/bin/pip
 RUFF_CACHE ?= /tmp/ruff_cache
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
 	  awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-16s\033[0m %s\n", $$1, $$2}'
 
-install: ## Editable install into the current environment
-	$(PYTHON) -m pip install -e .
+install: ## Create .venv and install the local CLI/API without dev tools
+	$(PYTHON) -m venv "$(VENV)"
+	"$(VPY)" -m pip install -e .
+	"$(VPY)" -m pip check
+	"$(VPY)" -m lixity.cli --version
 
 install-dev: ## Create .venv and install with dev extras
-	$(PYTHON) -m venv $(VENV)
-	$(VPIP) install -U pip
-	$(VPIP) install -e ".[dev]"
+	$(PYTHON) -m venv "$(VENV)"
+	"$(VPY)" -m pip install -e ".[dev]"
+	"$(VPY)" -m pip check
+	"$(VPY)" -m lixity.cli --version
 
 test: ## Run the full test suite (warnings as errors)
 	PYTHONPATH=src $(VPY) -m pytest -W error -q -p no:asyncio

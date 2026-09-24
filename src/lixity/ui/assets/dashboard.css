@@ -17,6 +17,12 @@
   --ease: cubic-bezier(.2, .7, .3, 1);
   --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   --font-title: "Palatino Linotype", "Book Antiqua", Palatino, "Iowan Old Style", Georgia, "Noto Serif", serif;
+  --space-1: .25rem;
+  --space-2: .5rem;
+  --space-3: .75rem;
+  --space-4: 1rem;
+  --space-5: 1.5rem;
+  --panel-padding: 1.25rem;
 }
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
@@ -28,7 +34,8 @@ body {
   font: 14.5px/1.55 var(--font);
   -webkit-font-smoothing: antialiased;
 }
-.page { max-width: 72rem; margin: 0 auto; }
+.page { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-4); }
+.page > * { min-width: 0; margin-block: 0; }
 h1 {
   font-size: 1.45rem;
   font-weight: 650;
@@ -36,7 +43,7 @@ h1 {
   letter-spacing: -.02em;
   overflow-wrap: anywhere;
 }
-.project-header { margin-bottom: 1.2rem; }
+.project-header { margin-bottom: 0; }
 .project-header h1 { font-family: var(--font-title); font-size: clamp(1.8rem, 4vw, 2.7rem); font-weight: 500; line-height: 1.2; letter-spacing: -.025em; margin-bottom: .5rem; }
 .settings-form { margin: 0; }
 .settings-form h3 { margin: 0; font-size: .92rem; }
@@ -87,18 +94,22 @@ h2 {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: 1.25rem 1.45rem;
-  margin: 1rem 0;
+  padding: var(--panel-padding);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
   box-shadow: 0 1px 2px rgba(0, 0, 0, .02);
 }
 .panel h2 {
   font-size: .92rem;
   font-weight: 650;
   letter-spacing: -.01em;
-  margin: 0 0 .85rem;
+  margin: 0;
   color: var(--fg);
 }
-.panel .hint { margin: -.35rem 0 .85rem; }
+.panel > * { min-width: 0; margin-block: 0; }
+.panel .hint { margin: 0; }
 
 /* --- Component status strip (one glance, deterministic) --------------- */
 .status-strip {
@@ -106,7 +117,7 @@ h2 {
   flex-wrap: wrap;
   gap: .4rem 1.1rem;
   align-items: center;
-  margin: 1rem 0 0;
+  margin: 0;
   padding: .55rem .85rem;
   background: var(--surface);
   border: 1px solid var(--line);
@@ -137,7 +148,7 @@ h2 {
 }
 
 /* --- Key figures (grouped KPI grid) ----------------------------------- */
-.kpis { display: grid; gap: .95rem; margin: 1.15rem 0; }
+.kpis { display: grid; gap: var(--space-4); margin: 0; }
 .kpi-group { display: grid; gap: .4rem; }
 .kpi-caption {
   font-size: .66rem;
@@ -148,8 +159,8 @@ h2 {
 }
 .kpi-row {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(9.4rem, 1fr));
-  gap: .55rem;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 8rem), 1fr));
+  gap: var(--space-2);
 }
 .kpi {
   background: var(--surface);
@@ -237,7 +248,7 @@ h2 {
   flex-wrap: wrap;
   gap: 1.25rem;
   align-items: center;
-  margin: 1.25rem 0 .5rem;
+  margin: 0;
   padding: .6rem .25rem;
   background: color-mix(in srgb, var(--bg) 82%, transparent);
   backdrop-filter: blur(8px);
@@ -253,12 +264,13 @@ h2 {
 .totop:hover { color: var(--fg); }
 
 /* --- Chapter map ------------------------------------------------------ */
+#chapters { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
 .chapter {
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: var(--radius);
-  padding: .85rem 1.15rem;
-  margin: .65rem 0;
+  padding: var(--panel-padding);
+  margin: 0;
   transition: border-color .15s ease;
 }
 .chapter-head {
@@ -487,7 +499,12 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 }
 
 /* --- Tables ----------------------------------------------------------- */
-.table-wrap { overflow-x: auto; }
+.table-wrap, #nda-table { overflow-x: auto; }
+.table-wrap table, #nda-table table { min-width: 40rem; }
+.nda-actions { white-space: nowrap; }
+.nda-actions button + button { margin-left: var(--space-2); }
+#matrix table { min-width: 52rem; }
+#matrix td.num { white-space: nowrap; }
 .table-wrap::-webkit-scrollbar { height: .45rem; }
 .table-wrap::-webkit-scrollbar-thumb { background: var(--line); border-radius: 999px; }
 table { width: 100%; border-collapse: collapse; font-size: .82rem; }
@@ -852,8 +869,8 @@ body:not(.has-js-tooltips) .help:focus::after {
 .marker-note.saved { border-color: var(--present); color: var(--present); }
 .marker-note.failed { border-color: var(--flag); color: var(--flag); }
 .marker-note.gone { opacity: 0; }
-.ctl-group { display: grid; gap: .75rem; padding: 1rem 0; }
-.ctl-group + .ctl-group { border-top: 1px solid var(--line); }
+.ctl-group { display: grid; gap: var(--space-3); padding: 0; }
+.ctl-group + .ctl-group { border-top: 1px solid var(--line); padding-top: var(--space-4); }
 .ctl-label { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .ctl-note { color: var(--muted); font-size: .8rem; margin: 0; }
 button.ctl, select.ctl, input.ctl {
@@ -898,9 +915,23 @@ details.nda .row { margin-top: .5rem; }
 .ctl-status { color: var(--muted); font-size: .8rem; min-height: 1.2em; margin-top: .5rem; }
 .ctl-status.ok { color: var(--present); }
 .ctl-status.err { color: var(--flag); }
+.ctl-status:empty, #nda-table:empty { display: none; }
+.page > *, .panel > * { margin-block: 0; }
 body.only-flags .chapter { display: none; }
 body.only-flags .chapter.has-flags { display: block; }
 body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
+
+@media (max-width: 600px) {
+  :root { --panel-padding: 1rem; }
+  body { padding: var(--space-4) var(--space-3) var(--space-5); }
+  .dist .row { grid-template-columns: minmax(0, 1fr) auto; gap: var(--space-2); }
+  .dist .label { grid-column: 1 / -1; }
+  .band-row { grid-template-columns: minmax(0, 1fr) 2rem; gap: var(--space-2); padding-block: var(--space-2); }
+  .band-label { grid-column: 1 / -1; white-space: normal; }
+  .band-summary { display: inline; margin-left: var(--space-2); }
+  .toolbar { gap: var(--space-3); }
+  .controls input.ctl { max-width: 100%; min-width: 0; }
+}
 
 /* --- Reduced motion --------------------------------------------------- */
 @media (prefers-reduced-motion: reduce) {

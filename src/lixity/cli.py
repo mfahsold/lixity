@@ -53,6 +53,7 @@ def _thresholds_from_args(
         fdr_method=getattr(args, "fdr_method", None),
         dim_score_threshold=getattr(args, "dim_threshold", None),
         flag_min_severity=getattr(args, "flag_min_severity", None),
+        min_chapters=getattr(args, "min_chapters", None),
     )
 
 
@@ -251,7 +252,7 @@ _lixity_complete() {
     prev="${COMP_WORDS[COMP_CWORD-1]}"
     local cmds="analyze profile dialogue characters pacing motifs showing dashboard style build about completion"
     local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
-    local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity"
+    local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
     if [[ $COMP_CWORD -eq 1 ]]; then
         COMPREPLY=( $(compgen -W "$cmds --help --version" -- "$cur") )
         return 0
@@ -292,6 +293,7 @@ _lixity_style_flags=(
   '--z-strong[Strong |z*| threshold]:threshold:'
   '--fdr-q[FDR q]:q:'
   '--fdr-method[FDR method]:method:(bh by)'
+  '--min-chapters[Minimum chapters for baseline]:count:'
   '--dim-threshold[Dimension score threshold]:threshold:'
   '--flag-min-severity[Minimum severity]:severity:(1 2 3)'
 )
@@ -813,6 +815,9 @@ def main(argv: list[str] | None = None) -> int:
         if name == "about":
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
+        if name in ("style", "dashboard", "build"):
+            p.add_argument("--min-chapters", type=int, default=None,
+                           help="Minimum chapters required for a style baseline (default: 2)")
         if name == "build":
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
             p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
@@ -939,6 +944,8 @@ def main(argv: list[str] | None = None) -> int:
             help="Minimum paragraph severity for flags panel (default 2)",
         )
     args = parser.parse_args(argv)
+    if getattr(args, "min_chapters", None) is not None and args.min_chapters < 2:
+        parser.error("--min-chapters must be at least 2")
     project_config = load_project_config(getattr(args, "file", None))
     args._project_config = project_config
     if hasattr(args, "language") and args.language is None:

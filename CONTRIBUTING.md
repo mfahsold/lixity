@@ -26,6 +26,11 @@ non-commercial open science; commercial use needs a written license).
 
 ## Development setup
 
+Start with the [installation guide](docs/INSTALLATION.md) for prerequisites,
+Windows commands and an isolated environment. `make install` and
+`make install-dev` both create `.venv`, verify dependencies and print the
+installed version; neither installs into global Python.
+
 ```bash
 make install-dev          # or: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make check                # ruff + mypy --strict + pytest -W error

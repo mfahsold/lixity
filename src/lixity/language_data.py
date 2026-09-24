@@ -3298,6 +3298,10 @@ METRIC_LABELS = {
 HELP_TEXTS = {
     "de": {
         "help_words": "Wörter der reinen Romanprosa – ohne Anhang und Verzeichnisse.",
+        "help_chapter_row": "Kapitelnummer und Titel. Eine Zeile öffnet das Kapitel; bei auffälligen Zeilen wird zusätzlich der Absatzfilter aktiviert.",
+        "help_chapter_tense": "Vorherrschendes Tempus aus sprachspezifischen Markern: Vergangenheit, Präsens, gemischt oder neutral. Eine Heuristik, kein grammatisches Urteil.",
+        "help_chapter_flags": "Anzahl der Absätze ab der aktiven Schwereschwelle. Prüfhinweise, keine Fehlerzahl und keine FDR-Ergebnisse.",
+        "help_chapter_deviation": "Anzahl der Merkmale über der Abweichungsschwelle des Kapitels. Nicht die FDR-Auswahl und kein Maß für Textqualität.",
         "help_asl": "Durchschnittliche Satzlänge in Wörtern. Kurze Sätze wirken schnell und knapp, lange ruhig und ausführlich.",
         "help_ttr": "Verschiedene Wörter geteilt durch alle Wörter. Sinkt mit der Textlänge – für Vergleiche Guiraud R oder HD-D nutzen.",
         "help_yules": "Wie stark sich Wörter wiederholen. Niedrig = gleichmäßiger Wortschatz, hoch = repetitiv.",
@@ -3356,6 +3360,10 @@ HELP_TEXTS = {
     },
     "en": {
         "help_words": "Words of the narrative prose – excluding appendix and indexes.",
+        "help_chapter_row": "Chapter number and title. Select a row to open the chapter; flagged rows also enable the paragraph filter.",
+        "help_chapter_tense": "Dominant tense inferred from language-specific markers: past, present, mixed or neutral. This is a heuristic, not a grammatical verdict.",
+        "help_chapter_flags": "Number of paragraphs meeting the active severity threshold. These are review hints, not errors or FDR results.",
+        "help_chapter_deviation": "Number of features crossing the chapter's deviation threshold. This is not the FDR-selected count and does not measure writing quality.",
         "help_fingerprint": "The manuscript's own style norm: the typical spread of each feature. Deviations show drift – you are the judge.",
         "help_consistency": "How many chapters stay inside the manuscript's own style band. Higher = more even.",
         "help_heatmap": "How strongly a chapter deviates from its own mean in a feature; small chapters are damped. Blue = below, orange = above. Click a cell to jump to the chapter.",
@@ -3414,6 +3422,10 @@ HELP_TEXTS = {
     },
     "fr": {
         "help_words": "Mots de la prose narrative – hors annexe et index.",
+        "help_chapter_row": "Numéro et titre du chapitre. Sélectionner une ligne ouvre le chapitre ; les lignes signalées activent aussi le filtre des paragraphes.",
+        "help_chapter_tense": "Temps dominant estimé à partir de marqueurs linguistiques : passé, présent, mixte ou neutre. Une heuristique, pas un verdict grammatical.",
+        "help_chapter_flags": "Nombre de paragraphes atteignant le seuil de gravité actif. Des pistes de révision, ni erreurs ni résultats FDR.",
+        "help_chapter_deviation": "Nombre de caractéristiques dépassant le seuil d’écart du chapitre. Ce n’est ni le nombre de résultats FDR ni une mesure de qualité.",
         "help_asl": "Longueur moyenne des phrases en mots. Phrases courtes = rythme vif, phrases longues = ample.",
         "help_ttr": "Mots distincts divisés par tous les mots. Baisse avec la longueur – pour comparer, utilisez Guiraud R ou HD-D.",
         "help_yules": "Force de répétition des mots. Bas = vocabulaire régulier, haut = répétitif.",
@@ -3472,6 +3484,10 @@ HELP_TEXTS = {
     },
     "es": {
         "help_words": "Palabras de la prosa narrativa – sin apéndice ni índices.",
+        "help_chapter_row": "Número y título del capítulo. Seleccionar una fila abre el capítulo; las filas marcadas también activan el filtro de párrafos.",
+        "help_chapter_tense": "Tiempo dominante estimado mediante marcadores lingüísticos: pasado, presente, mixto o neutro. Una heurística, no un juicio gramatical.",
+        "help_chapter_flags": "Número de párrafos que alcanzan el umbral de gravedad activo. Indicaciones de revisión, no errores ni resultados FDR.",
+        "help_chapter_deviation": "Número de características que superan el umbral de desviación del capítulo. No es el recuento FDR ni una medida de calidad.",
         "help_asl": "Longitud media de frase en palabras. Frases cortas = ritmo rápido, largas = amplio.",
         "help_ttr": "Palabras distintas divididas por el total. Baja con la longitud – para comparar, use Guiraud R o HD-D.",
         "help_yules": "Cuánto se repiten las palabras. Bajo = vocabulario regular, alto = repetitivo.",
@@ -3530,6 +3546,10 @@ HELP_TEXTS = {
     },
     "it": {
         "help_words": "Parole della prosa narrativa – senza appendice e indici.",
+        "help_chapter_row": "Numero e titolo del capitolo. Selezionare una riga apre il capitolo; le righe segnalate attivano anche il filtro dei paragrafi.",
+        "help_chapter_tense": "Tempo dominante stimato da marcatori linguistici: passato, presente, misto o neutro. Un’euristica, non un giudizio grammaticale.",
+        "help_chapter_flags": "Numero di paragrafi che raggiungono la soglia di gravità attiva. Indicazioni di revisione, non errori né risultati FDR.",
+        "help_chapter_deviation": "Numero di caratteristiche oltre la soglia di deviazione del capitolo. Non è il conteggio FDR né una misura della qualità.",
         "help_asl": "Lunghezza media delle frasi in parole. Frasi brevi = ritmo veloce, lunghe = ampio.",
         "help_ttr": "Parole distinte divise per il totale. Cala con la lunghezza – per confrontare usare Guiraud R o HD-D.",
         "help_yules": "Quanto si ripetono le parole. Basso = vocabolario regolare, alto = ripetitivo.",
@@ -3588,6 +3608,10 @@ HELP_TEXTS = {
     },
     "pt": {
         "help_words": "Palavras da prosa narrativa – sem apêndice e índices.",
+        "help_chapter_row": "Número e título do capítulo. Selecionar uma linha abre o capítulo; as linhas assinaladas também ativam o filtro de parágrafos.",
+        "help_chapter_tense": "Tempo dominante estimado por marcadores linguísticos: passado, presente, misto ou neutro. Uma heurística, não um juízo gramatical.",
+        "help_chapter_flags": "Número de parágrafos que atingem o limiar de gravidade ativo. Indicações de revisão, não erros nem resultados FDR.",
+        "help_chapter_deviation": "Número de características acima do limiar de desvio do capítulo. Não é a contagem FDR nem uma medida de qualidade.",
         "help_asl": "Comprimento médio das frases em palavras. Frases curtas = ritmo rápido, longas = amplo.",
         "help_ttr": "Palavras distintas divididas pelo total. Cai com o comprimento – para comparar, use Guiraud R ou HD-D.",
         "help_yules": "Quanto as palavras se repetem. Baixo = vocabulário regular, alto = repetitivo.",
@@ -3646,6 +3670,10 @@ HELP_TEXTS = {
     },
     "nl": {
         "help_words": "Woorden van de narratieve proza – zonder bijlage en registers.",
+        "help_chapter_row": "Hoofdstuknummer en titel. Selecteer een rij om het hoofdstuk te openen; gemarkeerde rijen activeren ook het alineafilter.",
+        "help_chapter_tense": "Dominante tijd geschat met taalspecifieke markers: verleden, heden, gemengd of neutraal. Een heuristiek, geen grammaticaal oordeel.",
+        "help_chapter_flags": "Aantal alinea’s dat de actieve ernstgrens bereikt. Revisieaanwijzingen, geen fouten of FDR-resultaten.",
+        "help_chapter_deviation": "Aantal kenmerken boven de afwijkingsdrempel van het hoofdstuk. Niet het aantal FDR-resultaten en geen kwaliteitsmaat.",
         "help_asl": "Gemiddelde zinslengte in woorden. Korte zinnen = snel tempo, lange = ruim verteld.",
         "help_ttr": "Verschillende woorden gedeeld door het totaal. Daalt met de tekstlengte – vergelijk met Guiraud R of HD-D.",
         "help_yules": "Hoe sterk woorden zich herhalen. Laag = gelijkmatig, hoog = repetitief.",

@@ -32,6 +32,12 @@ dmypy.json
 .opencode/
 .agent/
 .local/
+.codex/
+.agents/
+node_modules/
+playwright-report/
+test-results/
+playwright/.auth/
 *.local.*
 
 # Generated workspaces (lixity build)
@@ -43,10 +49,15 @@ nda/
 *_profile.json
 *_style.json
 *_style_passport.txt
+lixity-dashboard.html
+/manuscripts/
+/private/
 
 # Secrets & private stores (never commit)
 .env
 .env.*
+!.env.example
+!.env.template
 *.enc
 *.key
 *.pem
@@ -54,6 +65,8 @@ nda/
 *.pfx
 *.jks
 id_rsa*
+id_ed25519*
+id_ecdsa*
 secrets/
 credentials*
 .netrc
@@ -72,4 +85,3 @@ Thumbs.db
 .idea/
 .vscode/
 .history/
-

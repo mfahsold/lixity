@@ -43,9 +43,11 @@ user settings. A supplied threshold mapping prevents implicit configuration
 discovery inside `resolve_thresholds`; `{}` selects code defaults only.
 Explicit threshold arguments take precedence over the mapping.
 
-This is not a global project-session framework. The convenience API still
-resolves thresholds from the current working directory unless callers use
-the explicit pipeline. Adapters should pass the intended configuration and
+This is not a global project-session framework. The convenience API's
+`profile`, `fingerprint`/`passport` and `dashboard` accept `project_config`
+for threshold resolution: `{}` avoids implicit discovery, while `None`
+retains current-directory discovery for compatibility. Language, title and
+corpus overrides remain separate explicit arguments. Adapters should pass the intended configuration and
 keep manuscript-specific characters, motifs and artifacts within that project.
 
 ## Presentation and trust boundaries

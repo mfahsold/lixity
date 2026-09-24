@@ -53,6 +53,7 @@ def profile(
     text: str,
     language: str = "en",
     flag_min_severity: int | None = None,
+    project_config: Mapping[str, Any] | None = None,
     **config_overrides: Any,
 ) -> dict[str, Any]:
     """
@@ -66,7 +67,7 @@ def profile(
     Returns a JSON-safe dict: ``{"meta": {...}, "chapters": [...], "paragraphs": [...]}``.
     """
     config, resolved = resolve_document_config(text, language, **config_overrides)
-    fp_thresholds = resolve_thresholds(flag_min_severity=flag_min_severity)
+    fp_thresholds = resolve_thresholds(flag_min_severity=flag_min_severity, project_config=project_config)
     paragraphs, chapters = profile_document(text, config, fp_thresholds)
     return {
         "meta": _meta(resolved.key),
@@ -84,6 +85,8 @@ def fingerprint(
     fdr_method: str | None = None,
     dim_score_threshold: float | None = None,
     flag_min_severity: int | None = None,
+    min_chapters: int | None = None,
+    project_config: Mapping[str, Any] | None = None,
     **config_overrides: Any,
 ) -> dict[str, Any]:
     """
@@ -95,8 +98,11 @@ def fingerprint(
     redundant feature pairs.
 
     Thresholds (z_mild=2.5, z_strong=3.5, fdr_q=0.05, fdr_method='bh',
-    dim_score_threshold=2.5) are injectable; ``None`` keeps the documented
-    defaults. Returns the style reference dict (see docs/AGENTS.md).
+    dim_score_threshold=2.5, min_chapters=2) are injectable. ``None`` resolves
+    from project settings, then code defaults. ``project_config={}`` disables
+    implicit threshold discovery; a mapping supplies threshold settings only.
+    Language and corpus options remain explicit arguments. Returns the style
+    reference dict (see docs/AGENTS.md).
 
     In addition to the metrics-derived structural block, the passport carries
     token-level ``structural_diagnostics.cooccurrence`` / ``.keyness`` computed
@@ -110,6 +116,8 @@ def fingerprint(
         fdr_method=fdr_method,
         dim_score_threshold=dim_score_threshold,
         flag_min_severity=flag_min_severity,
+        min_chapters=min_chapters,
+        project_config=project_config,
     )
     return fingerprint_document(text, config, thresholds).passport()
 
@@ -123,6 +131,7 @@ def _thresholds(
     dim_score_threshold: float | None = None,
     flag_min_severity: int | None = None,
     min_chapters: int | None = None,
+    project_config: Mapping[str, Any] | None = None,
 ) -> FingerprintThresholds:
     """Shared builder: explicit kwargs > project config > code default."""
     return resolve_thresholds(
@@ -133,6 +142,7 @@ def _thresholds(
         dim_score_threshold=dim_score_threshold,
         flag_min_severity=flag_min_severity,
         min_chapters=min_chapters,
+        project_config=project_config,
     )
 
 
@@ -268,11 +278,17 @@ def dashboard(
     fdr_method: str | None = None,
     dim_score_threshold: float | None = None,
     flag_min_severity: int | None = None,
+    min_chapters: int | None = None,
+    project_config: Mapping[str, Any] | None = None,
     **config_overrides: Any,
 ) -> str:
     """
     Renders the complete single-file HTML dashboard (self-contained, no CDN,
     deterministic). Returns the HTML document as a string.
+
+    ``project_config`` supplies threshold settings only; ``{}`` uses code
+    defaults without reading the current directory. Optional structure panels
+    and server controls require the lower-level renderer and an adapter.
     """
     config, resolved = resolve_document_config(text, language, **config_overrides)
     thresholds = _thresholds(
@@ -282,6 +298,8 @@ def dashboard(
         fdr_method=fdr_method,
         dim_score_threshold=dim_score_threshold,
         flag_min_severity=flag_min_severity,
+        min_chapters=min_chapters,
+        project_config=project_config,
     )
     analysis = analyze_document(text, config, thresholds)
     from .markers import list_markers
@@ -322,6 +340,8 @@ def about() -> dict[str, Any]:
             "z_mild": defaults.z_mild,
             "z_strong": defaults.z_strong,
             "fdr_q": defaults.fdr_q,
+            "fdr_method": defaults.fdr_method,
+            "flag_min_severity": defaults.flag_min_severity,
             "min_chapters": defaults.min_chapters,
             "n_dimensions": N_DIMENSIONS,
             "dim_score_threshold": DIM_SCORE_THRESHOLD,
@@ -383,7 +403,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "dashboard",
-                "purpose": "single-file interactive HTML dashboard (all panels)",
+                "purpose": "single-file HTML dashboard; optional panels depend on supplied analyses",
                 "output": "html",
             },
             {

@@ -153,4 +153,7 @@ def resolve_thresholds(
         "min_chapters": min_chapters,
     }
     values.update({k: v for k, v in overrides.items() if v is not None})
+    minimum = values["min_chapters"]
+    if isinstance(minimum, bool) or not isinstance(minimum, int) or minimum < 2:
+        raise ValueError("min_chapters must be an integer of at least 2")
     return _FT(**values)

@@ -98,39 +98,50 @@ resolution. [Screenshot provenance and regeneration](docs/screenshots/README.md)
 
 ## Installation
 
-Requires Python **3.10+**. Lixity is source-available (LNCL-1.0), not on PyPI, and installed directly from GitHub:
+Install from GitHub into an isolated CLI environment. Requires Git and
+[uv](https://docs.astral.sh/uv/getting-started/installation/); uv can supply
+Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-# Recommended: Isolated tool environment (pipx or uv)
-pipx install git+https://github.com/mfahsold/lixity.git
-uv tool install git+https://github.com/mfahsold/lixity.git
-
-# Regular pip (in active virtual environment)
-pip install git+https://github.com/mfahsold/lixity.git
-
-# Pinned release for reproducible pipelines
-pip install "git+https://github.com/mfahsold/lixity.git@v1.14.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"
+lixity --version
+lixity about
 ```
 
-Development installation (editable, with test and typing tools):
+This installs **1.15.0.dev0 from main**, including the new UI; it is not a
+published 1.15.0 release. Use `@v1.14.0` instead for the older published release,
+or a full commit hash for reproducible deployments. Update your chosen source
+with `uv tool upgrade lixity`; a pinned ref remains pinned.
+
+**[Full installation guide](docs/INSTALLATION.md):** Windows/macOS/Linux,
+pipx alternative, Python API environments, PATH repair, upgrades and removal.
+Python 3.10+ supports the engine; TOML project settings require 3.11+.
+
+For engine development:
 
 ```bash
 git clone https://github.com/mfahsold/lixity.git && cd lixity
 make install-dev        # venv + pip install -e ".[dev]"
 make check              # ruff + mypy --strict + pytest -W error
 
-# or without make
-python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 ```
 
-Shell completion (Bash / Zsh):
-
-```bash
-lixity completion bash > ~/.local/share/bash-completion/completions/lixity
-lixity completion zsh  > "${fpath[1]}/_lixity"
-```
+`make install` creates a local `.venv` without dev tools; both installation
+targets verify dependencies and version, without changing global Python.
 
 ## Quick Start
+
+Start with a UTF-8 Markdown manuscript using `## Chapter title` headings:
+
+```bash
+lixity build manuscript.md --language en
+```
+
+Open `exports/manuscript_dashboard.html`. Use `--language de` for German or
+explicit `--language auto` for detection. No account, API key or upload is needed.
+Settings/NDA actions require a project adapter, not just the standalone HTML.
+
+Other commands:
 
 ```bash
 lixity analyze manuscript.md            # Rich terminal report (--json for machines)
@@ -157,6 +168,11 @@ lixity style manuscript.md --json \
 Project-wide defaults: place the same keys under `[tool.lixity]` in
 `pyproject.toml`, or in `lixity.toml` / `~/.config/lixity.toml`
 (CLI flag > UI session > project config > user config > code defaults).
+
+Use `--min-chapters 4` with `style`, `dashboard` or `build` to require at least
+four usable chapters for a style baseline (default: 2). API callers can pass
+`min_chapters=4, project_config={}` to `fingerprint`/`passport` or `dashboard`
+to avoid implicit threshold lookup. Language remains an explicit argument.
 
 Test with the bundled public-domain samples:
 

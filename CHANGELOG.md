@@ -26,6 +26,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Installation guidance now has one canonical guide for CLI/API/development,
+  Windows, updates and first-run verification. `make install` uses `.venv`
+  rather than global Python; both installation targets check dependencies.
+
 - Development version is `1.15.0.dev0`; no new release tag is published yet.
 - CLI/API/core analysis defaults to English. Use `--language de` for German
   or `--language auto` for detection; CLI project language settings are honored.
@@ -33,6 +37,20 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Canvas animation runs only when rotation is enabled and the page is visible.
 
 ### Fixed
+
+- NDA records render through text-safe DOM APIs instead of HTML interpolation;
+  artifact links reject executable URL schemes. Added synthetic regressions.
+
+- Public API `min_chapters` now reaches the style core rather than being
+  silently ignored; the CLI exposes `--min-chapters`. API threshold mappings
+  can explicitly disable current-directory configuration discovery.
+- Repository guidance distinguishes analysis from authorized mutations;
+  ignore rules cover local agent/browser state and the default HTML export.
+
+- Shared panel and page spacing replaces overlapping margins; mobile charts use
+  stacked labels and wide tables scroll instead of crushing their columns.
+- Chapter matrix headers explain every column in all seven UI languages;
+  shared tooltips now support keyboard focus, Escape and ARIA descriptions.
 
 - Control groups share one spacing and separator rule; the duplicate legacy NDA
   entry form is removed in favor of the encrypted NDA manager.

@@ -12,6 +12,7 @@ from __future__ import annotations
 import html
 from collections.abc import Mapping, Sequence
 from typing import Any
+from urllib.parse import urlsplit
 
 from .._version import __version__
 from ..language_data import (
@@ -82,6 +83,22 @@ def toggle_button(text: str, control_id: str, pressed: bool, css_class: str = "c
         f'<button type="button" class="{esc(classes)}" id="{esc(control_id)}" '
         f'aria-pressed="{str(pressed).lower()}" title="{esc(text)}">{esc(text)}</button>'
     )
+
+
+def artifact_href(value: Any) -> str:
+    """Allow relative artifact paths and HTTP(S), never executable URL schemes."""
+    if not isinstance(value, str) or any(ord(character) < 32 for character in value):
+        return ""
+    candidate: str = value.strip()
+    if "\\" in candidate or candidate.startswith("//"):
+        return ""
+    try:
+        parsed = urlsplit(candidate)
+    except ValueError:
+        return ""
+    if parsed.scheme and (parsed.scheme.lower() not in ("http", "https") or not parsed.netloc):
+        return ""
+    return candidate
 
 
 def help_term(labels: Mapping[str, str] | None, key: str, text: str) -> str:

@@ -2,6 +2,8 @@
   var tip = document.createElement("div");
   tip.id = "lixity-tooltip";
   tip.className = "tooltip-popup";
+  tip.setAttribute("role", "tooltip");
+  tip.setAttribute("aria-hidden", "true");
   document.body.appendChild(tip);
   document.body.classList.add("has-js-tooltips");
 
@@ -14,14 +16,25 @@
       el.setAttribute("data-tip", text);
       el.removeAttribute("title");
     }
+    if (activeEl && activeEl !== el) hide();
     activeEl = el;
+    var descriptions = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+    if (descriptions.indexOf(tip.id) === -1) descriptions.push(tip.id);
+    el.setAttribute("aria-describedby", descriptions.join(" "));
     tip.textContent = text;
+    tip.setAttribute("aria-hidden", "false");
     tip.classList.add("visible");
     updatePos(el);
   }
 
   function hide() {
+    if (activeEl) {
+      var descriptions = (activeEl.getAttribute("aria-describedby") || "").split(/\s+/).filter(function(id) { return id && id !== tip.id; });
+      if (descriptions.length) activeEl.setAttribute("aria-describedby", descriptions.join(" "));
+      else activeEl.removeAttribute("aria-describedby");
+    }
     activeEl = null;
+    tip.setAttribute("aria-hidden", "true");
     tip.classList.remove("visible");
   }
 
@@ -49,6 +62,12 @@
     var el = e.target.closest("[data-help], [data-tip]");
     if (el) hide();
   }, { passive: true });
+
+  document.addEventListener("focusin", function(e) {
+    var el = e.target.closest("[data-help], [data-tip], [title]");
+    if (el) show(el);
+  });
+  document.addEventListener("focusout", hide);
 
   var posTicking = false;
   function scheduleUpdatePos() {
@@ -419,19 +438,47 @@ function ndaRender(records) {
   if (unlockRow) unlockRow.hidden = true;
   if (addRow) addRow.hidden = false;
   if (hint) hint.textContent = records.length + (records.length === 1 ? " entry" : " entries");
-  var rows = records.map(function (r) {
-    var options = ndaStatuses().map(function (s) {
-      return '<option value="' + s + '"' + (s === r.status ? " selected" : "") + ">" + s + "</option>";
-    }).join("");
-    return "<tr><td><b>" + r.id + "</b></td><td>" + r.name + "</td><td>" + (r.contact || "–") +
-      '</td><td><select class="ctl" data-nda-status="' + r.id + '">' + options + "</select></td>" +
-      "<td>" + (r.pdf || "–") + "</td><td>" +
-      '<button class="ctl" data-nda-export="' + r.id + '">PDF</button> ' +
-      '<button class="ctl" data-nda-delete="' + r.id + '">✕</button></td></tr>';
-  }).join("");
-  host.innerHTML = records.length
-    ? "<table><thead><tr><th>ID</th><th>Name</th><th>Contact</th><th>Status</th><th>PDF</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
-    : "";
+  host.replaceChildren();
+  if (!records.length) return;
+  var table = document.createElement("table");
+  var header = table.createTHead().insertRow();
+  ["ID", document.getElementById("nda-new-name").placeholder,
+    document.getElementById("nda-new-contact").placeholder, "Status", "PDF", ""].forEach(function(text) {
+    var cell = document.createElement("th");
+    cell.scope = "col";
+    cell.textContent = text;
+    header.appendChild(cell);
+  });
+  var body = table.createTBody();
+  records.forEach(function(record) {
+    var row = body.insertRow();
+    [record.id, record.name, record.contact || "–"].forEach(function(value) {
+      row.insertCell().textContent = String(value == null ? "" : value);
+    });
+    var select = document.createElement("select");
+    select.className = "ctl";
+    select.dataset.ndaStatus = String(record.id);
+    ndaStatuses().forEach(function(status) {
+      var option = document.createElement("option");
+      option.value = status;
+      option.textContent = status;
+      option.selected = status === record.status;
+      select.appendChild(option);
+    });
+    row.insertCell().appendChild(select);
+    row.insertCell().textContent = String(record.pdf || "–");
+    var actions = row.insertCell();
+    actions.className = "nda-actions";
+    [["ndaExport", "PDF"], ["ndaDelete", "✕"]].forEach(function(action) {
+      var button = document.createElement("button");
+      button.type = "button";
+      button.className = "ctl";
+      button.dataset[action[0]] = String(record.id);
+      button.textContent = action[1];
+      actions.appendChild(button);
+    });
+  });
+  host.appendChild(table);
 }
 async function ndaRefresh() {
   var data = await ndaApi("nda-list", {});

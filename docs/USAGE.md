@@ -19,22 +19,24 @@ project, start with the [README](../README.md); this document goes into detail.
 
 ## Installation
 
-Requires Python 3.10 or newer. Lixity is source-available (LNCL-1.0) and
-installed from GitHub (not PyPI):
+Use the [installation guide](INSTALLATION.md) for Windows/macOS/Linux,
+updates, removal, pipx, Python API environments and troubleshooting.
+Lixity is source-available under LNCL-1.0 for non-commercial use, not on PyPI.
+With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-# isolated tool environments (recommended for CLI-only use)
-pipx install git+https://github.com/mfahsold/lixity.git
-uv tool install git+https://github.com/mfahsold/lixity.git
-
-# into the active environment / venv
-pip install git+https://github.com/mfahsold/lixity.git
-
-# pin a release
-pip install "git+https://github.com/mfahsold/lixity.git@v1.14.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"
+lixity --version
+lixity about
 ```
 
-Development install (editable, with the test suite):
+`main` is the unreleased 1.15.0.dev0 checkout. Choose `@v1.14.0` instead for
+the older published release, or a full commit hash for reproducibility.
+`uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
+terminal after `uv tool update-shell` if the command is not found.
+The engine supports Python 3.10+; TOML project configuration needs 3.11+.
+
+Development install (editable, isolated, with the test suite):
 
 ```bash
 git clone https://github.com/mfahsold/lixity.git && cd lixity
@@ -42,12 +44,8 @@ make install-dev          # or: python3 -m venv .venv && .venv/bin/pip install -
 make check                # ruff + mypy --strict + pytest -W error
 ```
 
-Shell completion:
-
-```bash
-lixity completion bash > ~/.local/share/bash-completion/completions/lixity
-lixity completion zsh  > "${fpath[1]}/_lixity"
-```
+See [shell completion](INSTALLATION.md#optional-shell-completion) for safe
+Bash/Zsh setup and user-writable destinations.
 
 ## Report language
 
@@ -722,6 +720,17 @@ FileUtils.atomic_write_if_changed("ui.html", html)  # False if unchanged
 ```
 
 ## Configuration (`CorpusConfig`)
+
+The style core's minimum calibration size is exposed through
+`lixity style manuscript.md --min-chapters 4 --json` (also `dashboard` and
+`build`) and `api.fingerprint(..., min_chapters=4)`. Values must be integers
+of at least 2. Fewer usable chapters produce unavailable baselines rather
+than evidence of a consistent style.
+
+For API project isolation, pass `project_config={}` to `profile`, `fingerprint`,
+`passport` or `dashboard` to avoid implicit threshold lookup. A supplied mapping
+contains threshold settings only; language, title and corpus options remain
+explicit arguments. See [architecture](ARCHITECTURE.md).
 
 CLI commands with an explicit manuscript path load project settings relative to
 that manuscript, not the shell's working directory. Without an explicit path,

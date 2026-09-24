@@ -46,5 +46,7 @@ jobs:
 
             Install (not on PyPI):
             ```bash
-            pip install "git+https://github.com/mfahsold/lixity.git@${{ github.ref_name }}"
+            uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@${{ github.ref_name }}"
+            lixity --version
             ```
+            Requires Git and uv. See the [installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) for prerequisites, Python API environments and troubleshooting.
