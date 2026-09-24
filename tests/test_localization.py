@@ -2,6 +2,7 @@
 
 import io
 import json
+import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
@@ -17,6 +18,28 @@ from lixity.models import CorpusConfig
 
 
 class TestLocalization(unittest.TestCase):
+    @unittest.skipIf(sys.version_info < (3, 11), "Project TOML loading requires Python 3.11+")
+    def test_cli_uses_the_manuscript_project_from_another_directory(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manuscript = root / "sample.md"
+            manuscript.write_text("## Eins\n\nIch gehe und ich sehe das Haus.\n", encoding="utf-8")
+            (root / "lixity.toml").write_text('language = "de"\ntitle = "My project"\n', encoding="utf-8")
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(main(["analyze", str(manuscript), "--json"]), 0)
+            self.assertEqual(json.loads(output.getvalue())["meta"]["language"], "de")
+            for command in ("dashboard", "build"):
+                dashboard = root / "dashboard.html"
+                arguments = [command, str(manuscript)]
+                if command == "dashboard":
+                    arguments.extend(["-o", str(dashboard)])
+                else:
+                    dashboard = root / "exports" / "sample_dashboard.html"
+                with redirect_stdout(io.StringIO()):
+                    self.assertEqual(main(arguments), 0)
+                self.assertIn("<h1>My project</h1>", dashboard.read_text(encoding="utf-8"))
+
     def test_english_defaults_and_explicit_detection(self):
         text = "## Chapter\n\nIch gehe und ich sehe das Haus. Die Tür ist offen.\n"
         self.assertEqual(CorpusConfig().language, "en")

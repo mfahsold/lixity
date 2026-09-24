@@ -31,6 +31,16 @@ assert.equal(fixture.status, 0, fixture.stderr);
       } else await route.fulfill({contentType: 'text/html', body: fixture.stdout});
     });
     await page.goto('http://lixity.test/');
+    assert.equal(await page.locator('#nda-name, [data-action="nda"]').count(), 0);
+    assert.equal(await page.locator('#nda-add-btn').count(), 1);
+    const groups = await page.locator('#controls > .ctl-group').evaluateAll(elements => elements.map(element => {
+      const style = getComputedStyle(element);
+      return {top: style.borderTopWidth, bottom: style.borderBottomWidth, margin: style.marginTop, padding: style.paddingTop};
+    }));
+    assert.equal(groups.length, 3);
+    assert.deepEqual(groups.map(group => group.top), ['0px', '1px', '1px']);
+    assert.ok(groups.every(group => group.bottom === '0px' && group.margin === '0px' && group.padding === groups[0].padding));
+    await page.locator('#controls').screenshot({path: '/tmp/lixity-controls-fixed.png'});
     await page.locator('.settings-advanced summary').click();
     assert.equal(await page.locator('#set-z-mild').inputValue(), '2.5');
     assert.equal(await page.locator('#set-fdr-q').inputValue(), '0.05');
@@ -60,6 +70,8 @@ assert.equal(fixture.status, 0, fixture.stderr);
     assert.notEqual(fonts.title, fonts.body);
     await page.setViewportSize({width: 390, height: 844});
     assert.ok(await page.locator('#settings-form').evaluate(form => form.scrollWidth <= form.clientWidth));
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.locator('#controls').screenshot({path: '/tmp/lixity-controls-mobile-fixed.png'});
     assert.deepEqual(errors, []);
     console.log('Settings: localized values, validation, reset, payload, FDR filter, title-only serif and mobile layout passed');
   } finally {

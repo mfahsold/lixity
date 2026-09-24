@@ -91,13 +91,13 @@ def render_dashboard(
     title: str = "Manuscript",
     labels: Mapping[str, str] | None = None,
     language_name: str = "",
-    language_key: str = "generic",
+    language_key: str = "en",
     tense_available: bool = True,
     engine_name: str = "Lixity",
     controls: bool = False,
     api_base: str = "/api",
     manuscript_name: str = "",
-    current_language: str = "auto",
+    current_language: str | None = None,
     language_options: Sequence[Any] | None = None,
     flag_min_severity: int | None = None,
 ) -> str:
@@ -125,6 +125,8 @@ def render_dashboard(
         return format_pct(value, language_key, decimals)
 
     html_lang = language_key if language_key not in ("auto", "generic") else "en"
+    if current_language is None:
+        current_language = language_key
     if not language_options:
         language_options = [
             ("auto", "auto"),
@@ -249,17 +251,6 @@ def render_dashboard(
         parts.extend(
             f'<button class="ctl" data-action="{action}">{help_term(labels, action, L(action))}</button>'
             for action in ("sync", "audit", "prune", "gdrive", "rebuild")
-        )
-        parts.append("</div></div>")
-
-        # NDA
-        parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{help_term(labels, "nda", L("new_nda"))}</span>')
-        parts.append('<div class="row">')
-        parts.append(f'<input class="ctl" id="nda-name" placeholder="{L("name")}"/>')
-        parts.append(f'<input class="ctl" id="nda-contact" placeholder="{L("contact")}"/>')
-        parts.append(
-            f'<button class="ctl" data-action="nda" data-payload="nda">{L("create")}</button>'
         )
         parts.append("</div></div>")
 

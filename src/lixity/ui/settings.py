@@ -19,7 +19,7 @@ def settings_form(
 
     defaults = FingerprintThresholds()
     parts = [
-        '<form id="settings-form" class="settings-form" novalidate>',
+        '<form id="settings-form" class="settings-form ctl-group" novalidate>',
         f'<h3>{translated("settings")}</h3>',
         '<div class="settings-grid">',
         f'<div class="setting-field"><label for="set-language">{translated("language")}</label>',

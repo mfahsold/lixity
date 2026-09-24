@@ -25,6 +25,20 @@ class Controls(HTMLParser):
 
 
 class TestSettingsUi(unittest.TestCase):
+    def test_settings_language_matches_analysis_unless_explicitly_overridden(self):
+        for language in ("en", "de", "fr", "generic"):
+            rendered = render_dashboard([], [], controls=True, language_key=language)
+            self.assertIn(f'<option value="{language}" selected>', rendered)
+        rendered = render_dashboard([], [], controls=True, language_key="de", current_language="auto")
+        self.assertIn('<option value="auto" selected>', rendered)
+
+    def test_controls_have_one_nda_workflow_and_shared_groups(self):
+        rendered = render_dashboard([], [], controls=True)
+        self.assertNotIn('id="nda-name"', rendered)
+        self.assertNotIn('data-action="nda"', rendered)
+        self.assertEqual(rendered.count('id="nda-add-btn"'), 1)
+        self.assertIn('class="settings-form ctl-group"', rendered)
+
     def test_localized_settings_keep_machine_readable_number_values(self):
         for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
             with self.subTest(language=language):

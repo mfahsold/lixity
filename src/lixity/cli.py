@@ -30,6 +30,13 @@ EXIT_OK = 0
 EXIT_ERROR = 1
 
 
+def _document_title(args: argparse.Namespace, manuscript: str) -> str:
+    configured = args._project_config.get("title")
+    if isinstance(configured, str) and configured.strip():
+        return configured.strip()
+    return os.path.splitext(os.path.basename(manuscript))[0]
+
+
 def _thresholds_from_args(
     args: argparse.Namespace, config: dict[str, Any] | None = None
 ) -> FingerprintThresholds:
@@ -696,7 +703,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
     metrics = analysis.metrics
     paragraphs, chapters = analysis.paragraphs, analysis.chapters
     fingerprint = analysis.fingerprint
-    title = os.path.splitext(os.path.basename(workspace.manuscript))[0]
+    title = _document_title(args, workspace.manuscript)
 
     artifacts = {
         f"{workspace.slug}_metrics.json": _json(
@@ -932,7 +939,7 @@ def main(argv: list[str] | None = None) -> int:
             help="Minimum paragraph severity for flags panel (default 2)",
         )
     args = parser.parse_args(argv)
-    project_config = load_project_config()
+    project_config = load_project_config(getattr(args, "file", None))
     args._project_config = project_config
     if hasattr(args, "language") and args.language is None:
         args.language = project_config.get("language", "en")
@@ -1027,7 +1034,7 @@ def main(argv: list[str] | None = None) -> int:
         fingerprint=fingerprint,
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, names, config) if names else None,
-        title=os.path.basename(args.file),
+        title=_document_title(args, args.file),
         labels=resolved.labels,
         language_name=resolved.name,
         language_key=resolved.key,

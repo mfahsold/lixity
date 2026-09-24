@@ -723,6 +723,12 @@ FileUtils.atomic_write_if_changed("ui.html", html)  # False if unchanged
 
 ## Configuration (`CorpusConfig`)
 
+CLI commands with an explicit manuscript path load project settings relative to
+that manuscript, not the shell's working directory. Without an explicit path,
+workspace discovery starts in the current directory. The configured `title`
+is used by both `dashboard` and `build`; artifact filenames still follow the
+manuscript filename. An explicit `--language` overrides the project language.
+
 | Field | Default | Purpose |
 | :--- | :--- | :--- |
 | `language` | `de` | Language profile key (`auto` when set by the CLI). |

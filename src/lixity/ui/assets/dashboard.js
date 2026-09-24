@@ -542,10 +542,6 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
     if (btn.dataset.payload === "format") {
       payload.format = document.getElementById("fmt").value;
     }
-    if (btn.dataset.payload === "nda") {
-      payload.name = document.getElementById("nda-name").value;
-      payload.contact = document.getElementById("nda-contact").value;
-    }
     if (btn.dataset.payload === "settings") {
       var settings = document.getElementById("settings-form");
       var mild = document.getElementById("set-z-mild");

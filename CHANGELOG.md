@@ -34,6 +34,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Control groups share one spacing and separator rule; the duplicate legacy NDA
+  entry form is removed in favor of the encrypted NDA manager.
+- Settings display the analysis language unless the host explicitly selects auto.
+- CLI configuration follows an explicitly selected manuscript's directory;
+  dashboard and workspace builds honor the configured project title.
+
 - Localized settings no longer write decimal commas into HTML number values.
 - Matrix color legends reflect the actual color scale rather than the configured
   detection cutoff; reference rows respect the configured minimum sample size.
