@@ -87,6 +87,10 @@ class TestLocalization(unittest.TestCase):
                 rendered = project_header('<img src=x onerror="alert(1)">', labels)
                 self.assertIn(__version__, rendered)
                 self.assertIn(labels["license_notice"], rendered)
+                self.assertIn(labels["license_sales_notice"], rendered)
+                self.assertIn(labels["license_terms"], rendered)
+                self.assertIn('href="https://github.com/mfahsold/lixity/blob/main/LICENSE"', rendered)
+                self.assertIn('href="mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20License"', rendered)
                 self.assertIn("&lt;img", rendered)
                 self.assertNotIn("<img", rendered)
 

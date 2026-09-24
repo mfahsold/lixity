@@ -5,15 +5,24 @@
 ![License: LNCL-1.0](https://img.shields.io/badge/license-LNCL--1.0-orange)
 ![Dependencies](https://img.shields.io/badge/dependencies-pydantic%20%7C%20rich%20%7C%20orjson-brightgreen)
 
-**Lixity** is an offline text-linguistics engine that quantitatively measures *how a literary manuscript reads* — sentence rhythm, length-invariant lexical diversity, narrative distance, tense continuity, and register signals — and precisely flags only those passages where a chapter departs from its own established voice.
+**Explore sentence rhythm, vocabulary and tense across your manuscript.**
+Lixity turns Markdown into an offline, interactive dashboard. Compare chapters
+against the manuscript's own style, then inspect the passages behind each signal.
 
-Lixity never measures against arbitrary external corpora or generic newspaper prose. Instead, a **self-calibrating style reference** (robust median and MAD as house style) is derived directly from the manuscript itself. Observations from shorter chapters are stabilized via noise-aware significance shrinkage (z\*), while multiplicity across chapter × feature cells is strictly controlled using Benjamini–Hochberg or Benjamini–Yekutieli FDR. Confirmed departures carry standardized non-parametric effect sizes (Cliff’s δ) alongside exchangeability diagnostics (Runs test, Lag-1 ACF). The result is empirical evidence for macro-editing and developmental line editing — not rigid dogma.
+Python 3.10+ · Seven language profiles · No cloud calls.
 
-Pure Python (3.10+), zero cloud calls, three runtime dependencies (`pydantic`, `rich`, `orjson`), seven native language profiles. Formal mathematical estimators are documented in [`docs/METHODS.md`](docs/METHODS.md); empirical stability boundaries in [`docs/STABILITY.md`](docs/STABILITY.md). The name reflects its mathematical roots: **T**TR, **Y**ule's characteristic K, and **LIX**.
+**Free only for non-commercial projects.** Using Lixity for a book intended
+for sale—including self-publishing—requires a separate written commercial
+license. [Examples and terms](docs/LICENSING.md).
 
-<p align="center">
-  <img src="docs/screenshots/dashboard-light.png" alt="Lixity Interactive Stylometry Dashboard" width="100%" />
-</p>
+![Lixity manuscript dashboard](docs/screenshots/dashboard-light.png)
+
+```bash
+lixity build manuscript.md --language en
+```
+
+Open `exports/manuscript_dashboard.html`.
+[Install Lixity](#installation) · [Usage](docs/USAGE.md) · [Methods](docs/METHODS.md)
 
 ## Mathematical Core
 
@@ -63,7 +72,7 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 | CLI Corpus Diagnostics | Self-Calibrating Style Reference |
 | :---: | :---: |
 | <img src="docs/screenshots/cli-analyze.png" alt="CLI analyze output" width="100%" /> | <img src="docs/screenshots/cli-style.png" alt="CLI style reference" width="100%" /> |
-| *Rich terminal metrics and chapter overview* | *Median/MAD corridor, z* shrinkage, and effect sizes* |
+| Terminal metrics and chapter overview | Median/MAD corridor, `z*` shrinkage and effect sizes |
 
 <details>
 <summary><b>View Dashboard in Dark Mode</b></summary>
@@ -76,13 +85,8 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 ![Settings with visible labels, explanations and restore-without-saving](docs/screenshots/dashboard-settings.png)
 
-The settings form separates everyday project choices from detection thresholds.
-Invalid values are rejected; restoring defaults does not silently save them.
-In the fingerprint matrix, **●** marks the engine's FDR-selected cells separately
-from deviation colors. The style reference exposes medians and sample counts
-and explains its robust bands rather than presenting them as quality targets.
-Only the project title uses classic book-style serif typography; the rest of
-the interface uses the modern system sans-serif stack.
+Choose project settings and detection thresholds. **●** marks FDR-selected
+matrix cells; reference bands show medians and sample counts, not quality targets.
 
 ![Style reference bands with medians and chapter sample counts](docs/screenshots/dashboard-reference.png)
 
@@ -327,35 +331,59 @@ empirical linguistic accuracy. See [localization](docs/LOCALIZATION.md) and
 
 <details>
 <summary><b>Why doesn't Lixity compare against an external reference corpus?</b></summary>
-A literary manuscript creates its own aesthetic world and stylistic conventions. Comparing a gothic novel or experimental prose against "average contemporary journalism" or corporate corpora generates misplaced criticism and flattens authorial voice. Lixity determines what is normal <i>for this specific work</i>, establishing reference corridors from the manuscript's own median and MAD distributions.
+
+It compares chapters with the manuscript's own median and spread, not an
+external writing ideal. A deviation is a prompt to read, not a quality verdict.
+
 </details>
 
 <details>
-<summary><b>How does noise-aware z* shrinkage prevent false alarms in short chapters?</b></summary>
-Short scenes (e.g., 200 words) naturally exhibit high sampling variance; under naive statistics, they are almost invariably flagged as extreme outliers. Lixity calculates the analytical standard error (SE) for every feature and applies <b>noise-aware z\* significance shrinkage</b>: <code>z\* = (x − x̃) / √(σ² + SE²)</code>. The greater the estimation uncertainty of a short chapter, the more heavily its deviation is shrunk toward zero — reliably preventing sample-size false alarms.
+<summary><b>How are short chapters handled?</b></summary>
+
+`z* = (x − median) / √(σ² + SE²)`. Greater sampling uncertainty reduces the
+score. This limits noise-driven flags; it does not eliminate false positives.
+
 </details>
 
 <details>
 <summary><b>How do work markers integrate into author workflows and book exports?</b></summary>
-Work markers are inserted as standard HTML comments (<code>&lt;!-- LIXITY-MARKER id="..." kind="..." note="..." --&gt;</code>) directly above the target paragraph. They are fully visible and editable in plain-text editors (VS Code, Obsidian, Neovim, Ulysses), yet completely ignored by document compilers (Pandoc, Typst, LaTeX) when generating PDF, EPUB, or print output.
+
+Markers are HTML comments above a paragraph. They remain editable in Markdown;
+export visibility depends on your converter. Check the generated book.
+
 </details>
 
 <details>
 <summary><b>Is Lixity suitable for non-fiction, essays, and scholarly manuscripts?</b></summary>
-Yes. Sentence rhythm architecture, lexical richness, readability indices, and self-calibrating consistency analysis apply equally well to essays, dissertations, memoirs, long-form journalism, and technical documentation.
+
+Yes, but interpret genre-dependent heuristics cautiously. See
+[limitations](docs/STABILITY.md).
+
 </details>
 
 <details>
 <summary><b>Can Lixity run in automated CI/CD and publishing pipelines?</b></summary>
-Yes. Lixity operates entirely offline, executes no network calls, runs on pure Python, produces bit-identical JSON and HTML outputs for identical inputs, and follows standard POSIX exit codes (0 = success, 1 = processing error, 2 = CLI usage error).
+
+Yes. Use JSON output and exit codes: `0` success, `1` processing error,
+`2` usage error. Pin the version, language and settings for reproducibility.
+
 </details>
 
-## Licensing, Commercial Inquiries & Location
+## License
 
-Lixity is distributed under a dual-licensing model engineered for independent creative freedom, academic research, and commercial software integration:
+Lixity is **source-available, not Open Source**. LNCL-1.0 permits only
+non-commercial use. The project's purpose matters—not whether you are an
+individual, independent author or organization.
 
-- **Non-Commercial Edition (LNCL-1.0):** Free for independent novelists, creative writers, academic researchers, digital humanities scholars, and non-commercial open science projects. Full terms: [`LICENSE`](LICENSE); the license text must accompany every copy.
-- **Commercial & Enterprise Licensing:** Required for commercial book publishing houses, literary agencies, writing software developers, and enterprise editorial platforms integrating Lixity into commercial products, SaaS platforms, or proprietary AI pipelines. Commercial licenses include commercial deployment rights, technical integration support, priority issue resolution, and bespoke language profile training.
+| Project | Required license |
+| :--- | :--- |
+| Private writing with no commercial purpose | Included LNCL-1.0 |
+| Book intended for sale, including self-publishing, ebooks and print-on-demand | Separate written commercial license |
+| Paid editing, client work or commercial software integration | Separate written commercial license |
+
+Obtain permission **before using Lixity for the commercial project**, not only
+after the first sale. If plans change, contact the maintainer before commercial
+use or sale. [Licensing guide](docs/LICENSING.md) · [Full terms](LICENSE).
 
 ### Inquiries & Support
 

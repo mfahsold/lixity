@@ -1,8 +1,9 @@
 # Contributing to Lixity
 
 Thanks for helping improve Lixity. The project is **source-available under
-LNCL-1.0** (free for research, education, personal writing and
-non-commercial open science; commercial use needs a written license).
+LNCL-1.0**, for projects with no commercial purpose. Books intended for sale,
+including self-publishing, require a separate written commercial license.
+See [licensing examples](docs/LICENSING.md).
 
 ## Ground rules
 

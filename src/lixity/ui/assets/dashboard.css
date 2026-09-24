@@ -67,6 +67,11 @@ h1 {
 .product-name { color: var(--accent); font-size: .82rem; font-weight: 750; letter-spacing: .05em; }
 .version-badge, .license-badge { border: 1px solid var(--line); border-radius: 999px; padding: .15rem .55rem; font-size: .7rem; color: var(--muted); background: var(--surface); }
 .license-badge { margin-left: auto; }
+.license-terms { margin-top: 1rem; padding: .75rem 1rem; border: 1px solid var(--line); border-radius: 8px; font-size: .75rem; line-height: 1.6; overflow-wrap: anywhere; }
+.license-terms p { margin: .3rem 0; color: var(--muted); }
+.license-links { display: flex; flex-wrap: wrap; gap: .35rem 1rem; }
+.license-links a { color: var(--accent); text-underline-offset: .15em; }
+.license-terms:target { outline: 2px solid var(--accent); outline-offset: 3px; }
 .project-label { display: block; color: var(--muted); font-size: .68rem; text-transform: uppercase; letter-spacing: .08em; margin-bottom: .2rem; }
 h2 {
   font-size: .92rem;

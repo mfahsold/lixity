@@ -29,24 +29,28 @@ Per feature $f$ over $n$ measurable chapters with values $x_1,\dots,x_n$:
 
 | Quantity | Definition | Notes |
 | :--- | :--- | :--- |
-| Centre | $\tilde{x} = \operatorname{median}(x_i)$ | robust to single outliers |
-| Spread | $\mathrm{MAD} = \operatorname{median}(\lvert x_i - \tilde{x}\rvert)$ | 0 for $n < 2$ |
+| Centre | $\tilde{x} = \mathrm{median}(x_i)$ | robust to single outliers |
+| Spread | $\mathrm{MAD} = \mathrm{median}(\lvert x_i - \tilde{x}\rvert)$ | 0 for $n < 2$ |
 | Sigma | $\sigma = 1.4826 \cdot \mathrm{MAD}$ | 1.4826 = $1/\Phi^{-1}(0.75)$ (DescTools/R default) |
 
 A feature is **measurable** only when $n \ge$ `FingerprintThresholds.min_chapters`
 (default 2) and $\sigma > 0$; otherwise its baseline is zeroed and it stays out
 of the fingerprint.
 
-## 2. Significance-adjusted deviation $z^*$
+## 2. Significance-adjusted deviation (z*)
 
 Plain robust z:
 
-$$z_{\text{raw}} = 0.6745 \cdot \frac{x - \tilde{x}}{\mathrm{MAD}}
-\quad (0.6745 = 1/1.4826)$$
+$$
+z_{\text{raw}} = 0.6745 \cdot \frac{x - \tilde{x}}{\mathrm{MAD}}
+\quad (0.6745 = 1/1.4826)
+$$
 
 Lixity scores the style reference with the **noise-aware** form:
 
-$$z^* = \frac{x - \tilde{x}}{\sqrt{\sigma_{\mathrm{MAD}}^2 + \mathrm{SE}^2}}$$
+$$
+z^* = \frac{x - \tilde{x}}{\sqrt{\sigma_{\mathrm{MAD}}^2 + \mathrm{SE}^2}}
+$$
 
 Standard errors per feature (plug-in estimators, fixed constants, see
 `style_se` in the analyze schema):
@@ -57,8 +61,8 @@ Standard errors per feature (plug-in estimators, fixed constants, see
 | Shares (%) | binomial: $\mathrm{SE} = \sqrt{p(1-p)/N}$ |
 | ASL, CV, entropy, HD-D, … | sample-based (variance / delta method) |
 
-Short chapters get a large $\mathrm{SE}$, so their $z^*$ shrinks and cannot
-manufacture false alarms.
+Larger standard errors reduce the magnitude of $z^*$, limiting noise-driven
+flags. False positives remain possible.
 
 ## 3. Thresholds (`FingerprintThresholds`)
 

@@ -2,6 +2,8 @@
 
 Lixity runs locally on Linux, macOS and Windows. It is **source-available under
 LNCL-1.0, for non-commercial use**, and is installed from GitHub, not PyPI.
+Books intended for sale, including self-publishing, require a separate written
+commercial license. See [licensing examples](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 

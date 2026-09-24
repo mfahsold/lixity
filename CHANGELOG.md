@@ -7,7 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-No changes yet.
+### Changed
+
+- Clarify that books intended for sale, including self-publishing, require a
+  separate written commercial license. Add visible localized dashboard terms
+  and licensing/contact links; no acceptance dialog or telemetry.
+- Shorten public documentation and fix GitHub math rendering, literal Markdown
+  escapes in HTML blocks, and narrow-screen card spacing.
 
 ## [1.15.0] – 2026-09-24
 

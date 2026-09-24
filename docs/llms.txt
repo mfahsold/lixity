@@ -13,8 +13,11 @@
 > identical input.
 
 License: Lixity Non-Commercial License 1.0 (LNCL-1.0) – source-available, not
-open source; free for research, education, personal writing and non-commercial
-open science; commercial use requires a written license
+open source; free only for projects with no commercial purpose. Using Lixity for
+a book intended for sale, including self-publishing, requires a separate written
+commercial license before that use. Research and education are not blanket
+exemptions for commercial projects. Licensing examples:
+https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md
 (mfahsold@googlemail.com). Full text:
 https://github.com/mfahsold/lixity/blob/main/LICENSE
 

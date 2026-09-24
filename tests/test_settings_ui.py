@@ -29,7 +29,8 @@ class TestSettingsUi(unittest.TestCase):
         for href in ("javascript:alert(1)", "java\nscript:alert(1)", "data:text/html,bad"):
             with self.subTest(href=href):
                 rendered = render_dashboard([], [], artifacts=[{"name": "Sample", "href": href}])
-                self.assertNotIn('target="_blank"', rendered)
+                artifacts = rendered.split('<div class="artifacts">', 1)[1].split('</section>', 1)[0]
+                self.assertNotIn('<a ', artifacts)
         rendered = render_dashboard([], [], artifacts=[{"name": "Sample", "href": "exports/book.pdf"}])
         self.assertIn('href="exports/book.pdf"', rendered)
 

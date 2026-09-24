@@ -94,14 +94,14 @@
         {
           "@type": "Offer",
           "name": "Non-Commercial Edition (LNCL-1.0)",
-          "description": "Free for personal writing, research, education, and non-commercial open science.",
+          "description": "Free only for projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license.",
           "price": "0",
           "priceCurrency": "EUR"
         },
         {
           "@type": "Offer",
           "name": "Commercial & Enterprise License",
-          "description": "Commercial evaluation, bespoke language profile training, and production integration licenses available on request.",
+          "description": "Separate written permission required for books intended for sale, paid editing and other commercial projects. Terms available on request.",
           "priceSpecification": {
             "@type": "PriceSpecification",
             "priceCurrency": "EUR"
@@ -198,7 +198,12 @@ a:hover { text-decoration: underline; }
   margin: 1.2rem 0;
   box-shadow: 0 1px 3px rgba(0,0,0,.02);
 }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(16rem, 1fr)); gap: 1rem; margin: 1rem 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; margin: 1rem 0; }
+.grid > * { min-width: 0; }
+.grid > .card { margin: 0; }
+.card > :first-child { margin-top: 0; }
+.card > :last-child { margin-bottom: 0; }
+p, li, td, .meta-val { overflow-wrap: anywhere; }
 .pill-row { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.2rem 0 2rem; }
 .pill-row span {
   background: var(--surface);
@@ -302,7 +307,7 @@ details p { margin: .5rem 0 0; color: var(--muted); font-size: .9rem; line-heigh
 }
 .contact-meta-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
   gap: 1rem;
   margin: 1rem 0;
   padding: 1rem 1.2rem;
@@ -342,35 +347,25 @@ footer {
 <body>
 <main>
   <h1>Lixity</h1>
-  <p class="sub">An offline text-linguistics engine that measures <em>how a literary manuscript reads</em> &ndash; sentence rhythm, length-invariant lexical diversity, tense continuity, narrative distance, and register signals &ndash; and flags only the passages where a chapter departs from its own established voice.</p>
+  <p class="sub">Explore rhythm, vocabulary and tense across your manuscript.<br/>
+    Markdown in. An interactive, offline dashboard out.</p>
 
   <div class="hero-actions">
-    <a class="btn primary" href="https://github.com/mfahsold/lixity">View on GitHub</a>
+    <a class="btn primary" href="#installation">Create a dashboard</a>
     <a class="btn" href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage Guide</a>
-    <a class="btn" href="#installation">Install &amp; create a dashboard</a>
+    <a class="btn" href="https://github.com/mfahsold/lixity">GitHub</a>
     <a class="btn" href="#licensing-inquiries">Licensing &amp; Inquiries</a>
   </div>
 
   <div class="pill-row">
-    <span>Self-Calibrating Norms</span>
-    <span>z* Significance Shrinkage</span>
-    <span>Benjamini-Hochberg / Yekutieli FDR</span>
-    <span>Structural Diagnostics</span>
-    <span>HD-D (McCarthy &amp; Jarvis)</span>
-    <span>Yule&rsquo;s Characteristic K</span>
-    <span>Sentence Architecture</span>
-    <span>Tense Continuity Profiles</span>
-    <span>Latent Style Dimensions</span>
-    <span>Injectable Thresholds</span>
-    <span>Editor Work Markers</span>
-    <span>Dialogue &amp; Character Panels</span>
-    <span>Scene &amp; Pacing Analysis</span>
-    <span>Motif &amp; Repetition Signals</span>
-    <span>Idempotent Workspace Build</span>
-    <span>Clickable Drill-Down Dashboard</span>
-    <span>7 Native Languages</span>
-    <span>Zero Cloud Dependencies</span>
+    <span>Offline</span>
+    <span>7 languages</span>
+    <span>Your manuscript as reference</span>
+    <span>CLI &amp; Python API</span>
   </div>
+  <p><strong>Non-commercial projects only.</strong> Using Lixity for a book
+    intended for sale requires a separate written commercial license,
+    including self-publishing. <a href="#licensing-inquiries">Licensing examples</a>.</p>
 
   <h2>What It Looks Like</h2>
   <p><strong>Lixity 1.15.0.</strong> Explore the refreshed dashboard, shared
@@ -379,14 +374,14 @@ footer {
   <span class="section-kicker">Interactive Macro-Editing Dashboard</span>
   <figure class="shot">
     <a href="screenshots/dashboard-light.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1600" height="1050" loading="eager" fetchpriority="high" decoding="async"/></a>
-    <figcaption><strong>Interactive standalone HTML dashboard</strong> &ndash; component status strip, KPI overview tiles, chapter map, tense continuity, and style reference corridor. Every metric tile is clickable and drills directly into the matching analytical panel and filter. Fully self-contained, zero external CDN dependencies.</figcaption>
+    <figcaption><strong>From overview to passage.</strong> Select a metric, inspect a chapter, then read its paragraphs. One offline HTML file.</figcaption>
   </figure>
 
   <span class="section-kicker">Editorial Diagnostics: Heatmap &amp; Paragraph Context</span>
   <div class="shot-pair">
     <figure class="shot">
       <a href="screenshots/dashboard-heatmap.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations" width="1600" height="950" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>z* deviation heatmap</strong> &ndash; statistically significant departures from the manuscript&rsquo;s own house style across chapters, guarded by noise-aware shrinkage and Benjamini&ndash;Hochberg FDR control.</figcaption>
+      <figcaption><strong>Chapter differences.</strong> Color shows adjusted deviation; dots mark FDR-selected cells. Neither is a quality score.</figcaption>
     </figure>
     <figure class="shot">
       <a href="screenshots/dashboard-layer.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-layer.png" alt="Chapter I with the dialogue layer active and three expanded paragraphs showing line anchors and metrics" width="1152" height="431" loading="lazy" decoding="async"/></a>
@@ -420,7 +415,7 @@ footer {
 
   <span class="section-kicker">Adaptive Experience</span>
   <figure class="shot">
-    <a href="screenshots/dashboard-settings.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-settings.png" alt="Settings with visible field labels, threshold explanations and restore-defaults action" width="1110" height="507" loading="lazy" decoding="async"/></a>
+    <a href="screenshots/dashboard-settings.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-settings.png" alt="Settings with visible field labels, threshold explanations and restore-defaults action" width="1110" height="508" loading="lazy" decoding="async"/></a>
     <figcaption><strong>Settings that explain themselves</strong> &ndash; project
       choices first, detection thresholds on demand, validation before applying
       and a reset that does not silently save changes.</figcaption>
@@ -443,7 +438,7 @@ footer {
         engine version and the localized non-commercial-use notice remain visible.</figcaption>
     </figure>
     <figure class="shot">
-      <a href="screenshots/dashboard-dimensions-mobile.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions-mobile.png" alt="Full mobile style-dimension panel with stacked controls and feature loadings" width="366" height="1273" loading="lazy" decoding="async"/></a>
+      <a href="screenshots/dashboard-dimensions-mobile.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions-mobile.png" alt="Full mobile style-dimension panel with stacked controls and feature loadings" width="366" height="1272" loading="lazy" decoding="async"/></a>
       <figcaption><strong>Readable mobile diagnostics</strong> &ndash; complete
         dimension cards, wrapping controls and labels rather than a desktop crop.</figcaption>
     </figure>
@@ -462,29 +457,19 @@ footer {
     <div class="grid">
       <article class="card">
         <h3>Explore, Then Read</h3>
-        <p>Use the 3D chapter view as an entry point, not a verdict. Toggle the
-          trajectory and threshold box, inspect feature directions, then read
-          the underlying passage. Mobile layouts keep the controls and loading
-          labels usable. Rotation runs only when requested and pauses in hidden tabs.</p>
+        <p>Select a chapter in 3D, inspect its features, then read the passage.</p>
       </article>
       <article class="card">
         <h3>Reuse the Engine</h3>
-        <p>CLI, API and adapters share a typed analysis pipeline. Corpus metrics
-          are computed once per complete analysis and reused for fingerprint
-          assembly. Rendering consumes results rather than recalculating them.</p>
+        <p>CLI, API and adapters share one analysis pipeline. Metrics are computed once and reused.</p>
       </article>
       <article class="card">
         <h3>Keep Projects Separate</h3>
-        <p>Pass explicit project settings and thresholds when serving multiple
-          manuscripts. Characters, motifs, publication artifacts and local NDA
-          workflows belong to project adapters, not global engine defaults.</p>
+        <p>Pass settings per manuscript. Project adapters own files, exports and local services.</p>
       </article>
       <article class="card">
         <h3>English Default, Language-Aware Analysis</h3>
-        <p>Choose a supported manuscript language or enable <code>--language auto</code>.
-          Profiles supply linguistic patterns, syllable rules and readability
-          coefficients alongside translated labels and scientific help. Language
-          support is more than interface translation.</p>
+        <p>Use <code>--language de</code> for German or <code>--language auto</code> for detection. English is the default.</p>
       </article>
     </div>
     <p><a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">Architecture and integration</a>
@@ -699,7 +684,8 @@ html = api.dashboard(text, language="en", title="My Novel")</pre>
     </details>
     <details>
       <summary>What are significance-adjusted z* scores?</summary>
-      <p>In short chapters (e.g. 200 words), small sample sizes create large statistical variance. Lixity computes the standard error for every metric (Poisson, binomial, Miller-Madow) and shrinks noisy observations: <code>z* = (x &minus; median) / &radic;(&sigma;&sup2; + SE&sup2;)</code>. This prevents short scenes from triggering false alarms.</p>
+      <p><code>z* = (x &minus; median) / &radic;(&sigma;&sup2; + SE&sup2;)</code>.
+        Greater sampling uncertainty reduces the score. False positives remain possible.</p>
     </details>
     <details>
       <summary>How do work markers interact with Markdown editors and book exports?</summary>
@@ -726,13 +712,15 @@ html = api.dashboard(text, language="en", title="My Novel")</pre>
 
   <div class="card" id="licensing-inquiries">
     <h2>Licensing &amp; Commercial Inquiries</h2>
-    <p class="sub" style="margin: 0 0 1.2rem; font-size: .95rem;">Lixity operates under a transparent dual-licensing model engineered for independent creative freedom, academic research, and commercial reliability.</p>
+    <p><strong>Source-available, not Open Source.</strong> LNCL-1.0 permits only
+      non-commercial projects. Your project's purpose matters, not whether you
+      are an individual author or a business.</p>
 
     <div class="grid" style="margin-bottom: 1.2rem;">
       <div style="padding: 1.1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);">
         <div class="meta-badge">Community &amp; Research</div>
         <h3 style="margin-top: .4rem; color: var(--accent);">Non-Commercial Edition (LNCL-1.0)</h3>
-        <p style="font-size: .88rem; margin: .4rem 0;"><strong>Free of charge</strong> for fiction novelists, independent writers, academic researchers, digital humanities departments, and non-commercial open science projects.</p>
+        <p style="font-size: .88rem; margin: .4rem 0;"><strong>Free of charge</strong> for private writing, research and teaching with no commercial purpose. A book intended for sale does not qualify.</p>
         <ul style="font-size: .84rem; color: var(--muted); padding-left: 1.2rem; margin: .5rem 0 0;">
           <li>Full computational stylometry engine &amp; all 7 native language profiles</li>
           <li>Interactive standalone HTML dashboard &amp; complete CLI toolchain</li>
@@ -743,18 +731,20 @@ html = api.dashboard(text, language="en", title="My Novel")</pre>
       <div style="padding: 1.1rem; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-light);">
         <div class="meta-badge" style="background: var(--accent); color: #fff;">Commercial &amp; Enterprise</div>
         <h3 style="margin-top: .4rem; color: var(--accent);">Commercial License</h3>
-        <p style="font-size: .88rem; margin: .4rem 0;">Required for <strong>publishing houses, literary agencies, writing software vendors, and enterprise editorial pipelines</strong> incorporating Lixity into commercial products or workflows.</p>
+        <p style="font-size: .88rem; margin: .4rem 0;">Required for <strong>books intended for sale, including self-publishing</strong>, paid editing, commissioned work and commercial integrations. Obtain written permission before using Lixity for that purpose, not after the first sale.</p>
         <ul style="font-size: .84rem; color: var(--muted); padding-left: 1.2rem; margin: .5rem 0 0;">
-          <li>Commercial deployment rights &amp; proprietary workflow integration</li>
-          <li>Priority issue resolution &amp; technical integration guidance</li>
-          <li>Bespoke language profile training &amp; custom metric calibration</li>
+          <li>Print, ebook, audiobook and print-on-demand projects</li>
+          <li>Applies to independent authors as well as publishers</li>
+          <li>Fees and rights agreed separately in writing</li>
         </ul>
       </div>
     </div>
 
     <h3>Contact &amp; Evaluation Inquiries</h3>
     <p style="font-size: .9rem; line-height: 1.6; margin-bottom: .6rem;">
-      For commercial licensing quotes, pilot evaluations, bespoke language modules, or enterprise editorial workflow integrations, please contact the maintainer directly:
+      Describe your project and planned use of Lixity. If a private project later
+      becomes commercial, contact the maintainer before commercial use or sale.
+      <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">Licensing guide</a>.
     </p>
 
     <div class="contact-meta-grid">

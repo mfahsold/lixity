@@ -22,6 +22,8 @@ project, start with the [README](../README.md); this document goes into detail.
 Use the [installation guide](INSTALLATION.md) for Windows/macOS/Linux,
 updates, removal, pipx, Python API environments and troubleshooting.
 Lixity is source-available under LNCL-1.0 for non-commercial use, not on PyPI.
+Using it for a book intended for sale requires a separate written commercial
+license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash

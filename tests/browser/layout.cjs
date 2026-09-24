@@ -24,6 +24,13 @@ assert.equal(fixture.status, 0, fixture.stderr);
     for (const width of [1440, 768, 390, 320]) {
       await page.setViewportSize({width, height: 900});
       await page.goto('http://lixity.test/');
+      assert.ok(await page.locator('#license-terms').isVisible());
+      assert.ok((await page.locator('#license-terms').textContent()).includes('self-publishing'));
+      await page.locator('.license-badge').focus();
+      await page.keyboard.press('Enter');
+      assert.ok(page.url().endsWith('#license-terms'));
+      assert.equal(await page.locator('.license-links a').count(), 2);
+      await page.locator('.project-header').screenshot({path: `/tmp/lixity-license-${width}.png`});
       await page.evaluate(() => ndaRender([{id: '" data-injected="yes', name: '<img src=x onerror="window.ndaInjected=1">', contact: '<script>bad()</script>', pdf: '<svg onload="window.ndaInjected=1">', status: 'draft'}]));
       assert.equal(await page.locator('#nda-table img, #nda-table script, #nda-table svg, #nda-table [data-injected]').count(), 0);
       assert.equal(await page.locator('#nda-table [data-nda-export]').getAttribute('data-nda-export'), '" data-injected="yes');

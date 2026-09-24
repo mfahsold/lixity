@@ -87,13 +87,48 @@ GUIDANCE_LABELS = {
 }
 
 IDENTITY_LABELS = {
-    "en": {"project_name": "Project", "version": "Version", "license_notice": "Non-commercial use only · LNCL-1.0"},
-    "de": {"project_name": "Projekt", "version": "Version", "license_notice": "Nur nicht-kommerzielle Nutzung · LNCL-1.0"},
-    "fr": {"project_name": "Projet", "version": "Version", "license_notice": "Usage non commercial uniquement · LNCL-1.0"},
-    "es": {"project_name": "Proyecto", "version": "Versión", "license_notice": "Solo uso no comercial · LNCL-1.0"},
-    "it": {"project_name": "Progetto", "version": "Versione", "license_notice": "Solo uso non commerciale · LNCL-1.0"},
-    "pt": {"project_name": "Projeto", "version": "Versão", "license_notice": "Apenas uso não comercial · LNCL-1.0"},
-    "nl": {"project_name": "Project", "version": "Versie", "license_notice": "Alleen niet-commercieel gebruik · LNCL-1.0"},
+    "en": {
+        "project_name": "Project", "version": "Version",
+        "license_notice": "Non-commercial use only · LNCL-1.0",
+        "license_sales_notice": "Books intended for sale, including self-publishing, require a separate written commercial license before using Lixity for that purpose.",
+        "license_terms": "License terms", "license_contact": "Request a license",
+    },
+    "de": {
+        "project_name": "Projekt", "version": "Version",
+        "license_notice": "Nur nicht-kommerzielle Nutzung · LNCL-1.0",
+        "license_sales_notice": "Für Bücher mit Verkaufsabsicht, auch im Selfpublishing, ist vor dem Einsatz von Lixity eine separate schriftliche kommerzielle Lizenz erforderlich.",
+        "license_terms": "Lizenzbedingungen", "license_contact": "Lizenz anfragen",
+    },
+    "fr": {
+        "project_name": "Projet", "version": "Version",
+        "license_notice": "Usage non commercial uniquement · LNCL-1.0",
+        "license_sales_notice": "Les livres destinés à la vente, y compris en autoédition, nécessitent une licence commerciale écrite distincte avant toute utilisation de Lixity à cette fin.",
+        "license_terms": "Conditions de licence", "license_contact": "Demander une licence",
+    },
+    "es": {
+        "project_name": "Proyecto", "version": "Versión",
+        "license_notice": "Solo uso no comercial · LNCL-1.0",
+        "license_sales_notice": "Los libros destinados a la venta, incluida la autopublicación, requieren una licencia comercial escrita independiente antes de usar Lixity para ese fin.",
+        "license_terms": "Condiciones de licencia", "license_contact": "Solicitar una licencia",
+    },
+    "it": {
+        "project_name": "Progetto", "version": "Versione",
+        "license_notice": "Solo uso non commerciale · LNCL-1.0",
+        "license_sales_notice": "I libri destinati alla vendita, anche in autopubblicazione, richiedono una licenza commerciale scritta separata prima di usare Lixity a tale scopo.",
+        "license_terms": "Condizioni di licenza", "license_contact": "Richiedi una licenza",
+    },
+    "pt": {
+        "project_name": "Projeto", "version": "Versão",
+        "license_notice": "Apenas uso não comercial · LNCL-1.0",
+        "license_sales_notice": "Livros destinados à venda, incluindo autopublicação, exigem uma licença comercial escrita separada antes de usar o Lixity para esse fim.",
+        "license_terms": "Termos da licença", "license_contact": "Solicitar uma licença",
+    },
+    "nl": {
+        "project_name": "Project", "version": "Versie",
+        "license_notice": "Alleen niet-commercieel gebruik · LNCL-1.0",
+        "license_sales_notice": "Boeken die bestemd zijn voor verkoop, ook in eigen beheer, vereisen een afzonderlijke schriftelijke commerciële licentie voordat Lixity daarvoor wordt gebruikt.",
+        "license_terms": "Licentievoorwaarden", "license_contact": "Licentie aanvragen",
+    },
 }
 
 # Language-dependent UI labels (missing keys fall back to English)
