@@ -172,12 +172,12 @@ REPORT_TEXTS_DE: dict[str, str] = {
     "md_lix": "Lesbarkeitsindex (LIX).",
     "md_dialog": "Anteil wörtlicher Rede an der Prosa.",
     "md_paras": "Absatzökonomie des Haupttextes.",
-    # Markdown 1.2 – Satzlängen-Funktionen
+    # Markdown 1.2 – Sentence-length functions
     "md_short": "Kurze Takte und Handlungsbefehle.",
     "md_medium": "Handlungsfortgang und Anschauung.",
     "md_long": "Assoziative Erweiterungen.",
     "md_complex": "Hypotaxen; bewusst begrenzt.",
-    # Markdown 1.3 – Interpunktions-Funktionen
+    # Markdown 1.3 – Punctuation functions
     "punct_Punkte": "Grundtakt der Satzbildung.",
     "punct_Kommata": "Aufzählungen und Beisätze.",
     "punct_Gedankenstriche": "Nachklapp, Selbstkorrektur, Einschub.",
@@ -186,7 +186,7 @@ REPORT_TEXTS_DE: dict[str, str] = {
     "punct_Ausrufezeichen": "Sparsam dosiert.",
     "punct_Semikolons": "Selten; vermeidet dozierenden Ton.",
     "punct_Auslassungspunkte": "Abreißen des Gedankens.",
-    # Interpunktions-Anzeigenamen (sprachneutrale Keys in den Metriken)
+    # Punctuation display names (language-neutral keys in metrics)
     "pname_periods": "Punkte (.)",
     "pname_commas": "Kommata (,)",
     "pname_dashes": "Gedankenstriche (–/—)",
@@ -195,7 +195,7 @@ REPORT_TEXTS_DE: dict[str, str] = {
     "pname_questions": "Fragezeichen (?)",
     "pname_exclamations": "Ausrufezeichen (!)",
     "pname_ellipses": "Auslassungspunkte (…/...)",
-    # Zeilenlabels und Einheiten (Markdown + Rich)
+    # Row labels and units (Markdown + Rich)
     "label_raw_words": "Gesamtwortzahl (Volltext inkl. Anhang)",
     "label_clean_words": "Wortzahl Haupttext (Reine Romanprosa)",
     "label_sentences": "Satz-Gesamtzahl (Haupttext)",
@@ -224,7 +224,7 @@ REPORT_TEXTS_DE: dict[str, str] = {
     "unit_hits": "Belege",
     "md_normpages": "~{ns250} Normseiten à 250 W. / ~{ns1500} Normseiten à 1.500 Z.",
     "md_chapters": "({chapters})",
-    # Markdown-Tabellenköpfe
+    # Markdown table headers
     "md_header_metric": "Linguistische Metrik",
     "md_header_value": "Gemessener Wert",
     "md_header_note": "Einordnung & Referenzbereich",
@@ -248,7 +248,7 @@ REPORT_TEXTS_DE: dict[str, str] = {
     "crit_medium": "7–15 Wörter",
     "crit_long": "16–25 Wörter",
     "crit_complex": "> 25 Wörter",
-    # Rich-Report
+    # Rich Report
     "rich_title": "📖 Korpuslinguistische Textanalyse & Manuskriptprofil",
     "rich_scope": "Umfang: {words} Wörter | {chars} Zeichen | {chapters}",
     "chapter": "Kapitel",
@@ -265,7 +265,7 @@ REPORT_TEXTS_DE: dict[str, str] = {
     "col_count": "Anzahl",
     "col_share": "Anteil",
     "col_function": "Funktion",
-    # Rich-Tabelle 2 – Satzlängen-Funktionen
+    # Rich Table 2 – Sentence-length functions
     "t2_short": "Kurze Takte, Tempo.",
     "t2_medium": "Fließende Erzählung.",
     "t2_long": "Assoziative Sätze.",

@@ -5,83 +5,66 @@
 ![License: LNCL-1.0](https://img.shields.io/badge/license-LNCL--1.0-orange)
 ![Dependencies](https://img.shields.io/badge/dependencies-pydantic%20%7C%20rich%20%7C%20orjson-brightgreen)
 
-**Lixity** is an offline text-linguistics engine that measures *how a literary
-manuscript reads* — and flags only the passages where a chapter departs from
-the manuscript's own established voice.
+**Lixity** is an offline text-linguistics engine that quantitatively measures *how a literary manuscript reads* — sentence rhythm, length-invariant lexical diversity, narrative distance, tense continuity, and register signals — and precisely flags only those passages where a chapter departs from its own established voice.
 
-It never measures against external norms. A **self-calibrating style
-reference** (robust median / MAD house style) is derived from the manuscript
-itself; noisy short-chapter observations are shrunk ($z^*$), false discoveries
-are controlled across all chapter×feature cells (Benjamini–Hochberg or
-Benjamini–Yekutieli FDR), and surviving cells carry effect sizes (Cliff's
-$\delta$) plus exchangeability diagnostics (runs test, lag-1 ACF). The result
-is macro-editing evidence, not style dogma.
+Lixity never measures against arbitrary external corpora or generic newspaper prose. Instead, a **self-calibrating style reference** (robust median and MAD as house style) is derived directly from the manuscript itself. Observations from shorter chapters are stabilized via noise-aware significance shrinkage (z\*), while multiplicity across chapter × feature cells is strictly controlled using Benjamini–Hochberg or Benjamini–Yekutieli FDR. Confirmed departures carry standardized non-parametric effect sizes (Cliff’s δ) alongside exchangeability diagnostics (Runs test, Lag-1 ACF). The result is empirical evidence for macro-editing and developmental line editing — not rigid dogma.
 
-Pure Python (3.10+), zero cloud calls, three dependencies (`pydantic`,
-`rich`, `orjson`), seven native language profiles. Formal methods live in
-[`docs/METHODS.md`](docs/METHODS.md); stability caveats in
-[`docs/STABILITY.md`](docs/STABILITY.md). The name stands for the
-mathematical foundation: **T**TR, **Y**ule's characteristic $K$, and **LIX**.
+Pure Python (3.10+), zero cloud calls, three runtime dependencies (`pydantic`, `rich`, `orjson`), seven native language profiles. Formal mathematical estimators are documented in [`docs/METHODS.md`](docs/METHODS.md); empirical stability boundaries in [`docs/STABILITY.md`](docs/STABILITY.md). The name reflects its mathematical roots: **T**TR, **Y**ule's characteristic K, and **LIX**.
 
 ![Lixity interactive HTML dashboard](docs/screenshots/dashboard-light.png)
 
 ![Lixity CLI analysis report](docs/screenshots/cli-analyze.png)
 
-## Mathematical core
+## Mathematical Core
 
-| Estimator | Role |
+| Estimator / Method | Role in System |
 | :--- | :--- |
-| Robust baseline $\tilde{x},\ \mathrm{MAD},\ \sigma = 1.4826\cdot\mathrm{MAD}$ | house-style band per feature |
-| Noise-aware $z^* = (x-\tilde{x})/\sqrt{\sigma^2+\mathrm{SE}^2}$ | shrinks short-chapter noise |
-| BH / BY FDR at $q$ (default 0.05) | multiplicity-controlled `fdr_flagged` |
-| Expected FP $= m\cdot P(\lvert Z\rvert\ge z_{\mathrm{mild}})$ | calibration against over-reading |
-| Cliff's $\delta$ / Vargha–Delaney $\hat{A}_{12}$ | magnitude of confirmed cells |
-| Runs test + lag-1 $\rho_1$ | exchangeability of the baseline |
-| Spearman $\rho$ + cyclic Jacobi EVD | latent style dimensions |
-| PELT changepoints (BIC) | where the house style shifts (structural) |
-| Mann–Kendall $\tau, S, p$ | monotonic style drift (structural) |
-| Sn / Qn (Rousseeuw & Croux) | outlier-resistant scale cross-check |
-| Hill $\hat\alpha$ | heavy-tailed feature diagnostic |
-| Wasserstein-1D + two-sample KS | early/late chapter-half shift (structural) |
-| Dunning $G^2$ + co-occurrence fitness | early/late keyness, Goh–Barabási on content-word graph (structural) |
+| Robust baseline x̃, MAD, σ = 1.4826 · MAD | Manuscript-intrinsic house-style corridor per feature |
+| Noise-aware z\* = (x − x̃) / √(σ² + SE²) | Shrinks sampling noise in short chapters via analytical SE |
+| BH / BY FDR at q (default: 0.05) | Multiplicity-controlled `fdr_flagged` cells |
+| Expected FP = m · P(\|Z\| ≥ z_mild) | Calibration against statistical over-interpretation |
+| Cliff’s δ / Vargha–Delaney Â₁₂ | Standardized non-parametric effect size for confirmed cells |
+| Runs test + Lag-1 ρ₁ | Exchangeability diagnostics (I.I.D. baseline assumption) |
+| Spearman ρ + cyclic Jacobi EVD | Latent style dimensions and principal axes (pure stdlib) |
+| PELT changepoints (BIC) | Locates structural regime shifts in the house style |
+| Mann–Kendall τ, S, p | Detects monotonic feature drift across chapter progression |
+| Sn / Qn (Rousseeuw & Croux) | Outlier-resistant alternative scale cross-checks to MAD |
+| Hill tail index (α̂) | Diagnostics for heavy-tailed feature distributions |
+| 1D Wasserstein + 2-sample KS | Distributional shift between early and late manuscript halves |
+| Dunning G² + Co-occurrence fitness | Lexical keyness and Goh–Barabási network architecture |
 
-Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`,
-`flag_min_severity`) are injectable via CLI, API kwargs, UI settings, or
-`[tool.lixity]` project config — resolution order documented in
-[`docs/METHODS.md`](docs/METHODS.md).
+Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, `flag_min_severity`) are fully configurable via CLI flags, API kwargs, UI settings, or `[tool.lixity]` project configuration (resolution order in [`docs/METHODS.md`](docs/METHODS.md)).
 
-## Key capabilities
+## Key Capabilities
 
-- **Offline & deterministic:** identical input → byte-identical metrics, JSON, HTML.
-- **Self-calibrating norms:** house style from the manuscript’s own median/MAD.
-- **Noise-aware $z^*$ + FDR (BH/BY)** with injectable thresholds.
-- **Effect sizes & diagnostics** on every confirmed cell (Cliff’s δ, runs, ACF).
-- **Structural diagnostics:** PELT changepoints, Mann–Kendall trends, Sn/Qn scales, Hill tail index, early/late Wasserstein–KS shift, content-word co-occurrence (Goh–Barabási) and Dunning keyness.
-- **Latent style dimensions:** Spearman ρ + cyclic Jacobi (stdlib only).
-- **Paragraph tense profiling:** present/past/mixed/neutral, severity 0–3.
-- **Structure modules:** dialogue, characters, pacing, motifs, showing/telling.
-- **Idempotent build & single-file dashboard** with seven language profiles.
-- **Agent-ready:** strict JSON schemas (analyze/profile **v2**, style **v3**),
-  stable `lixity.api`, [`docs/AGENTS.md`](docs/AGENTS.md).
+- **Offline & Deterministic:** Identical input produces bit-identical metrics, JSON, and HTML reports.
+- **Self-Calibrating Norms:** House style derived from the manuscript's own median and MAD bands.
+- **Noise-Aware z\* + FDR (BH/BY):** Controlled false discovery rate with configurable severity cuts.
+- **Effect Sizes & Diagnostics:** Cliff’s δ, Runs test, and lag-1 autocorrelation for every confirmed cell.
+- **Structural Diagnostics:** PELT changepoints, Mann–Kendall trends, Sn/Qn scales, Hill tail index, Wasserstein–KS shift, Goh–Barabási co-occurrence graphs, and Dunning G² keyness.
+- **Latent Style Dimensions:** Spearman rank correlation and cyclic Jacobi eigendecomposition (pure Python stdlib).
+- **Paragraph-Accurate Tense Profiling:** Present, past, mixed, neutral with a 0–3 friction severity scale.
+- **Narratological Structure Modules:** Dialogue turn structure, character presence, scene/pacing curves, motifs, and showing vs. telling balance.
+- **Idempotent Workspace Build & Dashboard:** Fully self-contained, single-file interactive HTML dashboard with 7 language profiles.
+- **AI Agent-Ready:** Strict JSON schemas (analyze/profile **v2**, style **v4**), stable `lixity.api` facade, [`docs/AGENTS.md`](docs/AGENTS.md).
 
 ## Installation
 
-Requires Python **3.10+**. Lixity is source-available (LNCL-1.0), not on
-PyPI — install from GitHub:
+Requires Python **3.10+**. Lixity is source-available (LNCL-1.0), not on PyPI, and installed directly from GitHub:
 
 ```bash
-# recommended: isolated tool environment (pipx or uv)
+# Recommended: Isolated tool environment (pipx or uv)
 pipx install git+https://github.com/mfahsold/lixity.git
 uv tool install git+https://github.com/mfahsold/lixity.git
 
-# plain pip (user or venv)
+# Regular pip (in active virtual environment)
 pip install git+https://github.com/mfahsold/lixity.git
 
-# pin a release for reproducible pipelines
-pip install "git+https://github.com/mfahsold/lixity.git@v1.13.0"
+# Pinned release for reproducible pipelines
+pip install "git+https://github.com/mfahsold/lixity.git@v1.14.0"
 ```
 
-Development install (editable, with lint/type/test tooling):
+Development installation (editable, with test and typing tools):
 
 ```bash
 git clone https://github.com/mfahsold/lixity.git && cd lixity
@@ -92,30 +75,30 @@ make check              # ruff + mypy --strict + pytest -W error
 python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 ```
 
-Shell completion after install:
+Shell completion (Bash / Zsh):
 
 ```bash
 lixity completion bash > ~/.local/share/bash-completion/completions/lixity
 lixity completion zsh  > "${fpath[1]}/_lixity"
 ```
 
-## Quick start
+## Quick Start
 
 ```bash
 lixity analyze manuscript.md            # Rich terminal report (--json for machines)
-lixity profile manuscript.md            # tense continuity, paragraph by paragraph
-lixity style manuscript.md              # style reference (BH/BY, δ, diagnostics)
-lixity dialogue manuscript.md           # turn structure
-lixity characters manuscript.md --names "Anna,Ralf"
-lixity pacing manuscript.md             # scenes, pacing, hooks
-lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b'
-lixity showing manuscript.md            # showing/telling per chapter
-lixity dashboard manuscript.md -o exports/dashboard.html
-cd my-novel && lixity build             # idempotent workspace: exports/ + archive
-lixity about                            # languages, features, heuristics
+lixity profile manuscript.md            # Tense continuity, paragraph by paragraph
+lixity style manuscript.md              # Style reference (BH/BY, δ, diagnostics)
+lixity dialogue manuscript.md           # Turn structure and speech ratio per chapter
+lixity characters manuscript.md --names "Anna,Ralf" # Character presence
+lixity pacing manuscript.md             # Scenes, tempo, and chapter hooks
+lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b' # Motifs & repetition
+lixity showing manuscript.md            # Showing vs. telling per chapter
+lixity dashboard manuscript.md -o exports/dashboard.html # Interactive HTML dashboard
+cd my-novel && lixity build             # Idempotent workspace: exports/ + archive
+lixity about                            # Languages, heuristics, and metadata
 ```
 
-Common sensitivity flags (on `style` / `dashboard` / `build`):
+Common sensitivity flags (for `style`, `dashboard`, and `build`):
 
 ```bash
 lixity style manuscript.md --json \
@@ -123,90 +106,87 @@ lixity style manuscript.md --json \
   --dim-threshold 2.5 --flag-min-severity 2
 ```
 
-Project defaults: put the same keys under `[tool.lixity]` in
+Project-wide defaults: place the same keys under `[tool.lixity]` in
 `pyproject.toml`, or in `lixity.toml` / `~/.config/lixity.toml`
-(CLI > UI session > project > user > defaults).
+(CLI flag > UI session > project config > user config > code defaults).
 
-
-Try it on the bundled public-domain samples:
+Test with the bundled public-domain samples:
 
 ```bash
 lixity analyze samples/effi-briest.md          # German – Fontane, 36 chapters
 lixity analyze samples/pride-and-prejudice.md  # English – Austen, 61 chapters
 ```
 
-Reports and CLI messages are English by default; `LIXITY_LANG=de` switches them to German.
+Reports and CLI messages appear in English by default; `LIXITY_LANG=de` switches them to German.
 
-Full command reference, metric glossary, worked example and troubleshooting:
+Full command reference, metric glossary, worked example, and troubleshooting:
 [`docs/USAGE.md`](docs/USAGE.md). Agent-facing JSON contracts:
-[`docs/AGENTS.md`](docs/AGENTS.md). Site overview:
+[`docs/AGENTS.md`](docs/AGENTS.md). Project website:
 [mfahsold.github.io/lixity](https://mfahsold.github.io/lixity/).
 
 ![Lixity style layer overlay](docs/screenshots/dashboard-layer.png)
 
-## What Lixity measures
+## What Lixity Measures
 
-Five groups, formulas and caveats in [`docs/USAGE.md`](docs/USAGE.md#understanding-the-metrics)
-and [`docs/METHODS.md`](docs/METHODS.md):
+Detailed formulas, mathematical derivations, and academic citations are documented in [`docs/METHODS.md`](docs/METHODS.md) and [`docs/USAGE.md`](docs/USAGE.md#understanding-the-metrics):
 
-1. **Sentence architecture & rhythm** – ASL, staccato/parataxis/hypotaxis, CV, punctuation.
-2. **Lexical diversity** – TTR, Guiraud $R$, HD-D, MTLD, MATTR, Maas $a^2$, Yule $K$ (length-guarded).
-3. **Readability** – language-calibrated Flesch family + LIX (Björnsson >6 characters).
-4. **Narrative voice & register** – dialogue, function words, perception filters, modals,
-   passive, nominalisations, adjectives, starter entropy, first-person starts.
-5. **Tense dynamics** – per-paragraph dominance and friction severity 0–3.
+1. **Sentence Architecture & Rhythm** – Average sentence length (ASL), coefficient of variation (CV), and distribution across four syntactic length tiers (staccato ≤ 6 words, medium 7–15, long 16–25, complex hypotaxis > 25 words). Uncovers pacing ruptures, breathlessness, and rhythmic monotony.
+2. **Length-Invariant Lexical Diversity** – Type-Token Ratio (TTR), Guiraud R, hypergeometric HD-D (McCarthy & Jarvis 2010), MTLD, moving-average MATTR, Maas a², and Yule's characteristic K. Guarded by strict token floors so short scenes and expansive chapters remain comparable without sample-size distortion.
+3. **Language-Calibrated Readability** – Standard LIX (Björnsson, words > 6 characters for all languages) and language-specific calibrated Flesch variants: Amstad (de), classic Flesch (en), Kandel-Moles (fr), Szigriszt-Pazos (es), Franchina-Vacca (it), Martins (pt), and Douma (nl).
+4. **Narrative Voice & Register** – Dialogue ratio, function-word density (the author's implicit grammatical fingerprint), perception filters ("telling" verbs like *saw*, *heard*, *felt*), modal hedging, passive voice, nominal style suffixes, sentence-starter Shannon entropy, and first-person openings.
+5. **Tense Dynamics & Continuity** – Paragraph-accurate classification into dominant tense (present, past, mixed, neutral) with a 4-tier friction severity rating (0–3) to flag unintended slips between epic past and scenic present.
 
-## Work markers (editor-visible)
+## Work Markers (Editor-Visible)
 
-Markers are HTML comment lines placed directly above the target paragraph:
+Work markers are standard HTML comment lines placed directly above the target paragraph:
 
 ```markdown
-<!-- LIXITY-MARKER id="m-7f8a1c9b" kind="pruefen" note="Tempusprüfung" created="…" -->
-Er ging zum Fenster und sieht den Regen fallen.
+<!-- LIXITY-MARKER id="m-7f8a1c9b" kind="pruefen" note="Verify tense shift" created="…" -->
+He walked to the window and watches the rain falling outside.
 ```
 
-- Visible in VS Code, Obsidian, Neovim, Ulysses; **invisible in every export**
-  (Pandoc, Typst, LaTeX treat HTML comments as comments).
-- Deterministic content-hash IDs stay anchored when surrounding text changes.
-- Clicking a marker kind in the control dashboard opens an inline note field
+- Visible in VS Code, Obsidian, Neovim, Ulysses; **completely invisible in book exports**
+  (Pandoc, Typst, and LaTeX treat HTML comments natively as comments).
+- Deterministic content-hash IDs remain anchored even as surrounding text shifts during revision.
+- Clicking a marker kind in the dashboard opens an inline note field directly in the document
   (`Enter` saves, `Esc` cancels).
-- Programmatic access: `api.markers`, `api.add_marker`, `api.resolve_marker`.
+- Programmatic access via `api.markers`, `api.add_marker`, and `api.resolve_marker`.
 
 ![Lixity work markers](docs/screenshots/dashboard-markers.png)
 
-## Python API for AI agents
+## Python API for AI Agents
 
 ```python
 from lixity import api
 
 metrics = api.analyze(text, language="auto")          # {"meta", "metrics"}
-profiles = api.profile(text, language="de")           # {"meta", "chapters", "paragraphs"}
-reference = api.fingerprint(text, language="de")      # style reference (schema v4)
-html = api.dashboard(text, language="de", title="My Manuscript")
-new_text, marker = api.add_marker(text, kind="pruefen", note="Verify tense", line=142)
-updated_text, ok = api.resolve_marker(new_text, marker["id"])
-info = api.about()                                    # languages, features, heuristics
+profiles = api.profile(text, language="en")           # {"meta", "chapters", "paragraphs"}
+reference = api.fingerprint(text, language="en")      # Style reference (schema v4)
+html = api.dashboard(text, language="en", title="My Novel")
+new_text, marker = api.add_marker(text, kind="pruefen", note="Check tense", line=142)
+updated_text = api.resolve_marker(new_text, marker["id"])
+info = api.about()                                    # Languages, features, heuristics
 ```
 
 Machine-readable surfaces:
 
 | Need | Surface |
 | :--- | :--- |
-| Corpus metrics | `lixity analyze FILE --json` (meta block, schema_version 2) |
+| Whole-corpus metrics | `lixity analyze FILE --json` (meta block, schema_version 2) |
 | Paragraph profiles | `lixity profile FILE` (schema_version 2) |
 | Style reference (bands, z\*, FDR, effect sizes, structural) | `lixity style FILE --json` (**schema_version 4**) |
 | Reproducible artifact set | `lixity build [FILE] [--dry-run]` |
 | Capability discovery | `lixity about --json` |
 | Shell completion | `lixity completion bash\|zsh` |
-| LLM-friendly site summary | [`docs/llms.txt`](docs/llms.txt) |
+| LLM-friendly summary | [`docs/llms.txt`](docs/llms.txt) |
 
-Contracts, interpretation heuristics and dashboard DOM hooks:
-[`docs/AGENTS.md`](docs/AGENTS.md). Known limitations:
+Interface contracts, interpretation heuristics, and dashboard DOM hooks:
+[`docs/AGENTS.md`](docs/AGENTS.md). Known limitations and stability boundaries:
 [`docs/STABILITY.md`](docs/STABILITY.md).
 
-## Languages
+## Supported Languages
 
-| Code | Language | Tense detection | Readability |
+| Code | Language | Tense Detection | Readability |
 | :---: | :--- | :--- | :--- |
 | `de` | German | Präsens / Präteritum | Flesch (Amstad) + LIX |
 | `en` | English | Present / Past | Flesch + LIX |
@@ -215,56 +195,43 @@ Contracts, interpretation heuristics and dashboard DOM hooks:
 | `it` | Italian | Presente / Passato | Flesch (Franchina-Vacca) + LIX |
 | `pt` | Portuguese | Presente / Pretérito | Flesch (Martins) + LIX |
 | `nl` | Dutch | O.T.T. / O.V.T. | Flesch (Douma) + LIX |
-| `generic` | Fallback | minimal | LIX |
+| `generic` | Fallback | Minimal | LIX |
 
-`--language auto` detects via function-word distribution. Adding a language is
-one `LanguageProfile` entry – no algorithmic change.
+`--language auto` detects the language automatically from function-word distributions. Adding a new language requires only a single `LanguageProfile` registration — no algorithm changes needed.
 
-## Implementation principles
-
-Estimator catalogue (HD-D samples, Yule $K$, Miller–Madow, cyclic Jacobi,
-BH/BY, Cliff’s δ): [`docs/METHODS.md`](docs/METHODS.md).
-
-## FAQ
+## Frequently Asked Questions (FAQ)
 
 <details>
-<summary><b>Why not compare against an external corpus?</b></summary>
-A literary manuscript has its own aesthetic. Measuring it against "average
-newspaper German" produces meaningless critique; Lixity discovers what is
-normal <i>for this book</i>.
+<summary><b>Why doesn't Lixity compare against an external reference corpus?</b></summary>
+A literary manuscript creates its own aesthetic world and stylistic conventions. Comparing a gothic novel or experimental prose against "average contemporary journalism" or corporate corpora generates misplaced criticism and flattens authorial voice. Lixity determines what is normal <i>for this specific work</i>, establishing reference corridors from the manuscript's own median and MAD distributions.
 </details>
 
 <details>
-<summary><b>Does it work for non-fiction?</b></summary>
-Yes – rhythm, lexical richness, readability and the style reference apply to
-essays, dissertations, memoirs and documentation as well.
+<summary><b>How does noise-aware z* shrinkage prevent false alarms in short chapters?</b></summary>
+Short scenes (e.g., 200 words) naturally exhibit high sampling variance; under naive statistics, they are almost invariably flagged as extreme outliers. Lixity calculates the analytical standard error (SE) for every feature and applies <b>noise-aware z\* significance shrinkage</b>: <code>z\* = (x − x̃) / √(σ² + SE²)</code>. The greater the estimation uncertainty of a short chapter, the more heavily its deviation is shrunk toward zero — reliably preventing sample-size false alarms.
 </details>
 
 <details>
-<summary><b>Can it run in CI pipelines?</b></summary>
-Yes: offline, deterministic, POSIX exit codes (0 / 1 / 2), byte-identical JSON
-for identical input.
+<summary><b>How do work markers integrate into author workflows and book exports?</b></summary>
+Work markers are inserted as standard HTML comments (<code>&lt;!-- LIXITY-MARKER id="..." kind="..." note="..." --&gt;</code>) directly above the target paragraph. They are fully visible and editable in plain-text editors (VS Code, Obsidian, Neovim, Ulysses), yet completely ignored by document compilers (Pandoc, Typst, LaTeX) when generating PDF, EPUB, or print output.
 </details>
 
-## License & attribution
+<details>
+<summary><b>Is Lixity suitable for non-fiction, essays, and scholarly manuscripts?</b></summary>
+Yes. Sentence rhythm architecture, lexical richness, readability indices, and self-calibrating consistency analysis apply equally well to essays, dissertations, memoirs, long-form journalism, and technical documentation.
+</details>
 
-**Lixity Non-Commercial License 1.0 (LNCL-1.0)** – *source-available, not open
-source*: free for research, education, personal writing and clearly
-non-commercial open science. Commercial use requires a written license
-(mfahsold@googlemail.com). Full terms: [`LICENSE`](LICENSE); the license text
-must be kept with every copy. Security reports: [`SECURITY.md`](SECURITY.md).
-Contributing: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+<details>
+<summary><b>Can Lixity run in automated CI/CD and publishing pipelines?</b></summary>
+Yes. Lixity operates entirely offline, executes no network calls, runs on pure Python, produces bit-identical JSON and HTML outputs for identical inputs, and follows standard POSIX exit codes (0 = success, 1 = processing error, 2 = CLI usage error).
+</details>
 
-Third-party components (all permissive): [pydantic](https://github.com/pydantic/pydantic)
-(MIT), [rich](https://github.com/Textualize/rich) (MIT),
-[orjson](https://github.com/ijl/orjson) (MIT/Apache-2.0).
+## License & Attribution
 
-Sample corpus: `samples/` ships two **public-domain** works for testing and
-demos — Fontane's *Effi Briest* (German, [Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323))
-and Austen's *Pride and Prejudice* (English, [#1342](https://www.gutenberg.org/ebooks/1342)) —
-each as an unmodified Project Gutenberg source file plus a Markdown
-conversion. They are **not** relicensed by the LNCL; the original sequel
-draft in `samples/effi-briest-folge/` is the author's own work. Provenance and
-license details: [`samples/README.md`](samples/README.md).
+**Lixity Non-Commercial License 1.0 (LNCL-1.0)** – *source-available, not open source*: Free for research, education, personal writing, and non-commercial open science. Commercial use or integration into commercial products requires a written license (contact: mfahsold@googlemail.com). Full terms: [`LICENSE`](LICENSE); the license text must accompany every copy. Security advisories: [`SECURITY.md`](SECURITY.md). Contributing guide: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+
+Third-party components (all permissively licensed): [pydantic](https://github.com/pydantic/pydantic) (MIT), [rich](https://github.com/Textualize/rich) (MIT), [orjson](https://github.com/ijl/orjson) (MIT/Apache-2.0).
+
+Sample corpus: `samples/` includes two **public-domain** works for testing and demonstration — Fontane's *Effi Briest* (German, [Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323)) and Austen's *Pride and Prejudice* (English, [#1342](https://www.gutenberg.org/ebooks/1342)) — each provided as an unmodified Project Gutenberg source file and as a clean Markdown conversion. These sample texts are **not** relicensed under the LNCL; the original sequel draft under `samples/effi-briest-folge/` is the author's own work. Provenance and license details: [`samples/README.md`](samples/README.md).
 
 Contact: **Matthias Fahsold** ([mfahsold@googlemail.com](mailto:mfahsold@googlemail.com))

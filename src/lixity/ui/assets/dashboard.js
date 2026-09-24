@@ -50,13 +50,19 @@
     if (el) hide();
   }, { passive: true });
 
-  window.addEventListener("scroll", function () {
-    if (activeEl) updatePos(activeEl);
-  }, { passive: true });
+  var posTicking = false;
+  function scheduleUpdatePos() {
+    if (!posTicking && activeEl) {
+      posTicking = true;
+      requestAnimationFrame(function () {
+        posTicking = false;
+        if (activeEl) updatePos(activeEl);
+      });
+    }
+  }
 
-  window.addEventListener("resize", function () {
-    if (activeEl) updatePos(activeEl);
-  }, { passive: true });
+  window.addEventListener("scroll", scheduleUpdatePos, { passive: true });
+  window.addEventListener("resize", scheduleUpdatePos, { passive: true });
 
   document.addEventListener("keydown", function (e) {
     if (e.key === "Escape" && activeEl) hide();
@@ -173,6 +179,15 @@ document.addEventListener("click", function (event) {
   }
 });
 document.addEventListener("keydown", function (event) {
+  if (event.key === "Escape") {
+    closeNoteField();
+    document.querySelectorAll(".ptext.open").forEach(function (panel) {
+      var chip = document.querySelector('.chip[data-target="' + panel.id + '"]');
+      if (chip) toggleParagraph(chip, false);
+      else panel.classList.remove("open");
+    });
+    return;
+  }
   if (event.key !== "Enter" && event.key !== " ") return;
   var el = event.target.closest ? event.target.closest(INTERACTIVE) : null;
   if (el && !el.closest(".controls") && !isMarkerControl(event.target)) {
@@ -403,7 +418,7 @@ function ndaRender(records) {
   if (!host) return;
   if (unlockRow) unlockRow.hidden = true;
   if (addRow) addRow.hidden = false;
-  if (hint) hint.textContent = records.length + " Einträge";
+  if (hint) hint.textContent = records.length + (records.length === 1 ? " entry" : " entries");
   var rows = records.map(function (r) {
     var options = ndaStatuses().map(function (s) {
       return '<option value="' + s + '"' + (s === r.status ? " selected" : "") + ">" + s + "</option>";
@@ -415,7 +430,7 @@ function ndaRender(records) {
       '<button class="ctl" data-nda-delete="' + r.id + '">✕</button></td></tr>';
   }).join("");
   host.innerHTML = records.length
-    ? "<table><thead><tr><th>ID</th><th>Name</th><th>Kontakt</th><th>Status</th><th>PDF</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
+    ? "<table><thead><tr><th>ID</th><th>Name</th><th>Contact</th><th>Status</th><th>PDF</th><th></th></tr></thead><tbody>" + rows + "</tbody></table>"
     : "";
 }
 async function ndaRefresh() {
@@ -525,7 +540,7 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
       if (!input.files || !input.files.length) {
         var status = document.getElementById("ctl-status");
         status.className = "ctl-status err";
-        status.textContent = "✗ " + (input.getAttribute("accept") || "Datei");
+        status.textContent = "✗ " + (input.getAttribute("accept") || "File");
         return;
       }
       var file = input.files[0];

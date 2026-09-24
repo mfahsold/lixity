@@ -518,7 +518,7 @@ class CorpusAnalyzer:
             FileNotFoundError: If the file does not exist at the given path.
         """
         if not os.path.isfile(filepath):
-            raise FileNotFoundError(f"Manuskriptdatei nicht gefunden: {filepath}")
+            raise FileNotFoundError(f"Manuscript file not found: {filepath}")
         with open(filepath, encoding="utf-8") as f:
             content = f.read()
         return self.analyze_text(content)

@@ -25,68 +25,68 @@ class CorpusConfig(BaseModel):
     """
 
     chapter_regex: str = Field(
-        default=r"(?m)^##\s+", description="Regulärer Ausdruck zur Erkennung von Kapitelgrenzen."
+        default=r"(?m)^##\s+", description="Regular expression to identify chapter boundaries."
     )
     appendix_marker: str = Field(
         default="## Anmerkungen und Literaturverzeichnis",
-        description="Trennmarker, ab welchem Fließprosa in wissenschaftlichen Anhang übergeht.",
+        description="Divider marker where narrative prose transitions to scholarly appendix/notes.",
     )
     language: str = Field(
         default="de",
-        description="Sprachschlüssel des Sprachprofils ('de', 'en', 'generic'; erweiterbar).",
+        description="Language code of the profile ('de', 'en', 'generic'; extensible).",
     )
     min_paragraph_length_for_oneliner: int = Field(
         default=25,
-        description="Wortschwelle, unterhalb derer ein Absatz als potentieller Einzeiler klassifiziert wird.",
+        description="Word threshold below which a paragraph is classified as a potential one-liner.",
     )
     motif_regexes: dict[str, str] = Field(
         default_factory=dict,
         description=(
-            "Projekt-/roman-spezifische Leitmotive als Label→RegEx (z. B. Titelwortfelder). "
-            "Wird je Kapitel gezählt (ChapterMetrics.motif_counts)."
+            "Project- or novel-specific motifs as label→regex mapping (e.g., thematic clusters). "
+            "Counted per chapter (ChapterMetrics.motif_counts)."
         ),
     )
 
     # Optional language overrides (None = language profile default)
     signal_keywords: dict[str, str] | None = Field(
         default=None,
-        description="Thematische Signalwörter als Label→RegEx (None = Sprachprofil-Standard).",
+        description="Thematic signal keywords as label→regex mapping (None = language profile default).",
     )
     filter_verbs_regex: str | None = Field(
         default=None,
-        description="RegEx für Perzeptionsfilter ('Telling'-Indikatoren; None = Sprachprofil-Standard).",
+        description="Regex for perception filters ('telling' indicators; None = language profile default).",
     )
     praesens_regex: str | None = Field(
         default=None,
-        description="RegEx für Gegenwartsmarker (Präsens; None = Sprachprofil-Standard).",
+        description="Regex for present-tense markers (None = language profile default).",
     )
     praeteritum_regex: str | None = Field(
         default=None,
-        description="RegEx für Vergangenheitsmarker (Präteritum; None = Sprachprofil-Standard).",
+        description="Regex for past-tense markers (None = language profile default).",
     )
     dialogue_regex: str | None = Field(
         default=None,
-        description="RegEx zur Erkennung wörtlicher Rede (None = Sprachprofil-Standard).",
+        description="Regex for quoted/direct speech detection (None = language profile default).",
     )
     word_regex: str | None = Field(
         default=None,
-        description="RegEx zur Worttokenisierung (None = Sprachprofil-Standard).",
+        description="Regex for word tokenization (None = language profile default).",
     )
     first_person_starters: list[str] | None = Field(
         default=None,
-        description="Wörter der 1. Person Singular für die Satzanfangs-Analyse (None = Sprachprofil).",
+        description="First-person singular pronouns for sentence-starter analysis (None = language profile default).",
     )
     passive_regex: str | None = Field(
         default=None,
-        description="RegEx für Passiv-Marker (None = Sprachprofil-Standard).",
+        description="Regex for passive-voice markers (None = language profile default).",
     )
     nominal_regex: str | None = Field(
         default=None,
-        description="RegEx für Nominalisierungs-Suffixe (None = Sprachprofil-Standard).",
+        description="Regex for nominalisation suffixes (None = language profile default).",
     )
     adjective_regex: str | None = Field(
         default=None,
-        description="RegEx für Adjektiv-Suffixe (None = Sprachprofil-Standard).",
+        description="Regex for adjective suffixes (None = language profile default).",
     )
 
 
@@ -96,14 +96,14 @@ class SentenceDistribution(BaseModel):
     Serves the analysis of rhythmic staccato vs. cascading periods.
     """
 
-    short_count: int = Field(description="Anzahl Kurzsätze (<= 6 Wörter, Staccato/Befehle).")
-    short_pct: float = Field(description="Prozentualer Anteil der Kurzsätze.")
-    medium_count: int = Field(description="Anzahl mittlerer Sätze (7–15 Wörter, Normprosa).")
-    medium_pct: float = Field(description="Prozentualer Anteil der mittleren Sätze.")
-    long_count: int = Field(description="Anzahl langer Sätze (16–25 Wörter, Erweiterung).")
-    long_pct: float = Field(description="Prozentualer Anteil der langen Sätze.")
-    complex_count: int = Field(description="Anzahl komplexer Hypotaxen (> 25 Wörter).")
-    complex_pct: float = Field(description="Prozentualer Anteil komplexer Hypotaxen.")
+    short_count: int = Field(description="Count of short sentences (<= 6 words, staccato/commands).")
+    short_pct: float = Field(description="Percentage of short sentences.")
+    medium_count: int = Field(description="Count of medium sentences (7–15 words, standard prose).")
+    medium_pct: float = Field(description="Percentage of medium sentences.")
+    long_count: int = Field(description="Count of long sentences (16–25 words, extended period).")
+    long_pct: float = Field(description="Percentage of long sentences.")
+    complex_count: int = Field(description="Count of complex hypotactic sentences (> 25 words).")
+    complex_pct: float = Field(description="Percentage of complex hypotactic sentences.")
 
 
 class ChapterMetrics(BaseModel):
@@ -111,73 +111,73 @@ class ChapterMetrics(BaseModel):
     Linguistic and narratological profile of a single chapter.
     """
 
-    num: int = Field(description="Kapitelnummer (1-basiert).")
-    title: str = Field(description="Bereinigter Kapiteltitel.")
-    words: int = Field(description="Reine Wortanzahl des Kapitels ohne Markdown-Kommentare.")
-    sentences: int = Field(description="Anzahl der Sinneinheiten/Sätze im Kapitel.")
-    asl: float = Field(description="Mittlere Satzlänge (Average Sentence Length) in Wörtern.")
-    dialog_pct: float = Field(description="Prozentualer Anteil wörtlicher Rede am Text.")
-    ttr: float = Field(description="Type-Token-Ratio des Kapitels (lexikalische Dichte).")
+    num: int = Field(description="Chapter number (1-based).")
+    title: str = Field(description="Cleaned chapter title.")
+    words: int = Field(description="Net word count of the chapter excluding Markdown comments.")
+    sentences: int = Field(description="Count of sense units / sentences in the chapter.")
+    asl: float = Field(description="Average sentence length (ASL) in words.")
+    dialog_pct: float = Field(description="Percentage of direct dialogue in the text.")
+    ttr: float = Field(description="Type-Token Ratio of the chapter (lexical density).")
     motif_counts: dict[str, int] = Field(
         default_factory=dict,
-        description="Kapitelzählung der konfigurierten Leitmotive (CorpusConfig.motif_regexes).",
+        description="Chapter count of configured motifs (CorpusConfig.motif_regexes).",
     )
-    filter_verbs: int = Field(default=0, description="Häufigkeit von Perzeptionsfiltern.")
+    filter_verbs: int = Field(default=0, description="Frequency of perception filter verbs.")
     dominance: str = Field(
         default="mixed",
-        description="Tempus-Tendenz (kanonisch: present/past/mixed/neutral).",
+        description="Tense tendency (canonical: present/past/mixed/neutral).",
     )
     signal_matches: dict[str, int] = Field(
-        default_factory=dict, description="Generische Fundstellen aller Signalwörter."
+        default_factory=dict, description="Generic match counts of all signal words."
     )
     # --- Self-calibrating style features (house-style fingerprint) ---
     staccato_pct: float = Field(
-        default=0.0, description="Anteil sehr kurzer Sätze (≤ 6 Wörter) in Prozent."
+        default=0.0, description="Percentage of very short sentences (≤ 6 words)."
     )
     kaskade_pct: float = Field(
-        default=0.0, description="Anteil komplexer Sätze (> 25 Wörter) in Prozent."
+        default=0.0, description="Percentage of complex sentences (> 25 words)."
     )
     sentence_cv: float = Field(
-        default=0.0, description="Variationskoeffizient der Satzlängen (Std/Mittel)."
+        default=0.0, description="Coefficient of variation of sentence lengths (std / mean)."
     )
     start_entropy: float = Field(
-        default=0.0, description="Shannon-Entropie der Satzanfänge (Monotonie-Indikator)."
+        default=0.0, description="Shannon entropy of sentence starters (monotony indicator)."
     )
     first_person_start_rate: float = Field(
-        default=0.0, description="Anteil der Sätze, die mit der 1. Person Singular beginnen."
+        default=0.0, description="Share of sentences opening with first-person singular pronouns."
     )
-    passive_density: float = Field(default=0.0, description="Passiv-Marker je 1.000 Wörter.")
+    passive_density: float = Field(default=0.0, description="Passive-voice markers per 1,000 words.")
     nominalization_density: float = Field(
-        default=0.0, description="Nominalisierungen je 1.000 Wörter."
+        default=0.0, description="Nominalisations per 1,000 words."
     )
     adjective_density: float = Field(
-        default=0.0, description="Adjektiv-Suffix-Treffer je 1.000 Wörter."
+        default=0.0, description="Adjective suffix matches per 1,000 words."
     )
-    modal_density: float = Field(default=0.0, description="Modalverben je 1.000 Wörter.")
-    filter_density: float = Field(default=0.0, description="Perzeptionsfilter je 1.000 Wörter.")
+    modal_density: float = Field(default=0.0, description="Modal verbs per 1,000 words.")
+    filter_density: float = Field(default=0.0, description="Perception filter verbs per 1,000 words.")
     long_word_pct: float = Field(
-        default=0.0, description="Anteil langer Wörter (> 6 Buchstaben) in Prozent."
+        default=0.0, description="Percentage of long words (> 6 letters)."
     )
-    guiraud_r: float = Field(default=0.0, description="Guiraud-Index R = V / sqrt(N).")
+    guiraud_r: float = Field(default=0.0, description="Guiraud index R = V / sqrt(N).")
     hd_d: float | None = Field(
-        default=None, description="HD-D lexikalische Diversität (McCarthy & Jarvis 2010)."
+        default=None, description="HD-D lexical diversity (McCarthy & Jarvis 2010)."
     )
     jsd: float = Field(
-        default=0.0, description="Jensen-Shannon-Distanz der Wortverteilung zum Restkorpus."
+        default=0.0, description="Jensen-Shannon divergence of word distribution against remaining corpus."
     )
     jsd_top_words: list[str] = Field(
         default_factory=list,
-        description="Stärkste Treiberwörter der Kapitel-Divergenz (Inhaltswörter).",
+        description="Strongest driver content words of chapter divergence.",
     )
     function_word_pct: float = Field(
-        default=0.0, description="Anteil der Funktionswörter an den Kapitel-Tokens."
+        default=0.0, description="Share of function words among chapter tokens."
     )
     style_se: dict[str, float] = Field(
         default_factory=dict,
         description=(
-            "Messunsicherheit (Standardfehler) je Stil-Feature. Dokumentierte "
-            "Näherungen: Poisson für Zähl-Dichten, Binomial für Anteile, "
-            "ASL/CV/Entropie/HD-D-Plug-ins. Leer = Feature nicht messbar."
+            "Measurement uncertainty (standard error) per style feature. Documented "
+            "approximations: Poisson for count densities, binomial for shares, "
+            "ASL/CV/entropy/HD-D plug-ins. Empty = feature not measurable."
         ),
     )
 
@@ -187,53 +187,53 @@ class CorpusMetrics(BaseModel):
     Holistic quantitative and stylometric metrics of the manuscript.
     """
 
-    raw_words: int = Field(description="Wortzahl Volltext inklusive Anhang und Verzeichnisse.")
-    clean_words: int = Field(description="Bereinigte Wortzahl der reinen Romanprosa.")
-    raw_chars: int = Field(description="Gesamtzeichenzahl inklusive Leerzeichen und Anhang.")
-    clean_chars: int = Field(description="Bereinigte Zeichenzahl der reinen Romanprosa.")
-    tokens: int = Field(description="Gesamtzahl analysierter Wort-Token (N).")
-    vocab_types: int = Field(description="Anzahl distinkter Vokabulartypen (V).")
-    ttr: float = Field(description="Type-Token-Ratio (V / N, lexikalische Diversität).")
-    guiraud_r: float = Field(description="Guiraud-Index R = V / sqrt(N), textlängenstabilisiert.")
-    yules_k: float = Field(description="Yule's Characteristic K (Stabilität des Erzähleridioms).")
-    total_sentences: int = Field(description="Gesamtzahl Sätze der reinen Romanprosa.")
-    asl: float = Field(description="Mittlere Satzlänge (Average Sentence Length).")
-    median_sl: int = Field(description="Median der Satzlänge in Wörtern.")
-    std_sl: float = Field(description="Standardabweichung der Satzlänge.")
-    sentence_dist: SentenceDistribution = Field(description="Satzlängen-Architekturprofil.")
-    asw: float = Field(description="Mittlere Silbenanzahl pro Wort (Average Syllables per Word).")
-    flesch_de: float = Field(description="Flesch Reading Ease (sprachkalibrierte Formel).")
+    raw_words: int = Field(description="Total word count including appendix and directories.")
+    clean_words: int = Field(description="Cleaned word count of pure narrative prose.")
+    raw_chars: int = Field(description="Total character count including whitespace and appendix.")
+    clean_chars: int = Field(description="Cleaned character count of pure narrative prose.")
+    tokens: int = Field(description="Total analyzed word tokens (N).")
+    vocab_types: int = Field(description="Distinct vocabulary types (V).")
+    ttr: float = Field(description="Type-Token Ratio (V / N, lexical diversity).")
+    guiraud_r: float = Field(description="Guiraud index R = V / sqrt(N), text-length stabilized.")
+    yules_k: float = Field(description="Yule's characteristic K (stability of authorial vocabulary).")
+    total_sentences: int = Field(description="Total sentence count of pure narrative prose.")
+    asl: float = Field(description="Average sentence length (ASL).")
+    median_sl: int = Field(description="Median sentence length in words.")
+    std_sl: float = Field(description="Standard deviation of sentence length.")
+    sentence_dist: SentenceDistribution = Field(description="Sentence-length architectural profile.")
+    asw: float = Field(description="Average syllables per word.")
+    flesch_de: float = Field(description="Flesch Reading Ease (language-calibrated formula).")
     flesch_variant: str = Field(
         default="",
-        description="Name der verwendeten Lesbarkeitsformel (z. B. Amstad, Kandel-Moles).",
+        description="Name of the applied readability formula (e.g., Amstad, Kandel-Moles).",
     )
-    lix: float = Field(description="Läsbarhetsindex (LIX = ASL + % Langwörter > 6 Buchstaben).")
-    dialog_words: int = Field(description="Wortanzahl in wörtlicher Rede.")
-    dialog_ratio: float = Field(description="Prozentualer Dialoganteil an der Romanprosa.")
-    total_paragraphs: int = Field(description="Gesamtzahl der Fließprosa-Absätze.")
-    avg_paragraph_len: float = Field(description="Mittlere Absatzlänge in Wörtern.")
-    single_line_paragraphs: int = Field(description="Anzahl kurzer/isolierter Absätze.")
-    punctuation: dict[str, int] = Field(description="Absolute Häufigkeiten aller Satzzeichen.")
-    signal_counts: dict[str, int] = Field(description="Fundstellen der Signal-Keywords.")
-    filter_count: int = Field(description="Gesamtzahl gefundener Perzeptionsfilter.")
-    chapters: list[ChapterMetrics] = Field(description="Detaillierte Metriken aller Einzelkapitel.")
+    lix: float = Field(description="Läsbarhetsindex (LIX = ASL + % long words > 6 letters).")
+    dialog_words: int = Field(description="Word count in direct speech.")
+    dialog_ratio: float = Field(description="Percentage of direct dialogue in narrative prose.")
+    total_paragraphs: int = Field(description="Total count of narrative prose paragraphs.")
+    avg_paragraph_len: float = Field(description="Average paragraph length in words.")
+    single_line_paragraphs: int = Field(description="Count of short or isolated paragraphs.")
+    punctuation: dict[str, int] = Field(description="Absolute frequencies of all punctuation marks.")
+    signal_counts: dict[str, int] = Field(description="Match counts of signal keywords.")
+    filter_count: int = Field(description="Total count of perception filter verbs.")
+    chapters: list[ChapterMetrics] = Field(description="Detailed metrics of all individual chapters.")
     # --- Self-calibrating style features (house-style fingerprint, corpus level) ---
-    staccato_pct: float = Field(default=0.0, description="Anteil Kurzsätze (≤ 6 Wörter).")
-    kaskade_pct: float = Field(default=0.0, description="Anteil komplexer Sätze (> 25 Wörter).")
-    sentence_cv: float = Field(default=0.0, description="Variationskoeffizient der Satzlängen.")
-    start_entropy: float = Field(default=0.0, description="Shannon-Entropie der Satzanfänge.")
-    first_person_start_rate: float = Field(default=0.0, description="Anteil der Ich-Satzanfänge.")
-    passive_density: float = Field(default=0.0, description="Passiv-Marker je 1.000 Wörter.")
+    staccato_pct: float = Field(default=0.0, description="Percentage of short sentences (≤ 6 words).")
+    kaskade_pct: float = Field(default=0.0, description="Percentage of complex sentences (> 25 words).")
+    sentence_cv: float = Field(default=0.0, description="Coefficient of variation of sentence lengths.")
+    start_entropy: float = Field(default=0.0, description="Shannon entropy of sentence starters.")
+    first_person_start_rate: float = Field(default=0.0, description="Share of first-person sentence openings.")
+    passive_density: float = Field(default=0.0, description="Passive-voice markers per 1,000 words.")
     nominalization_density: float = Field(
-        default=0.0, description="Nominalisierungen je 1.000 Wörter."
+        default=0.0, description="Nominalisations per 1,000 words."
     )
     adjective_density: float = Field(
-        default=0.0, description="Adjektiv-Suffix-Treffer je 1.000 Wörter."
+        default=0.0, description="Adjective suffix matches per 1,000 words."
     )
-    modal_density: float = Field(default=0.0, description="Modalverben je 1.000 Wörter.")
-    filter_density: float = Field(default=0.0, description="Perzeptionsfilter je 1.000 Wörter.")
+    modal_density: float = Field(default=0.0, description="Modal verbs per 1,000 words.")
+    filter_density: float = Field(default=0.0, description="Perception filter verbs per 1,000 words.")
     hd_d: float | None = Field(
-        default=None, description="HD-D lexikalische Diversität (McCarthy & Jarvis 2010)."
+        default=None, description="HD-D lexical diversity (McCarthy & Jarvis 2010)."
     )
     mtld: float | None = Field(
         default=None,
@@ -241,7 +241,7 @@ class CorpusMetrics(BaseModel):
     )
     mattr: float | None = Field(
         default=None,
-        description="MATTR Moving-Average Type-Token-Ratio (Covington & McFall 2010).",
+        description="MATTR Moving-Average Type-Token Ratio (Covington & McFall 2010).",
     )
     maas_a2: float | None = Field(
         default=None, description="Maas a² = (log N − log V) / (log N)² (Maas 1972)."
@@ -253,10 +253,10 @@ class DossierStatus(BaseModel):
     Synchronisation and consistency status of a single companion dossier.
     """
 
-    ok: bool = Field(description="True wenn das Dossier 100% synchron zum Manuskript ist.")
-    details: str = Field(description="Kurzbeschreibung der geprüften Domäne.")
+    ok: bool = Field(description="True when the dossier is 100% synchronized with the manuscript.")
+    details: str = Field(description="Short summary of the verified domain.")
     drift: list[str] = Field(
-        default_factory=list, description="Liste identifizierter Diskrepanzen."
+        default_factory=list, description="List of identified discrepancies."
     )
 
 
@@ -265,16 +265,16 @@ class CorpusAuditReport(BaseModel):
     Complete audit report to prevent fragmentation and documentation drift.
     """
 
-    manuscript: str = Field(description="Dateiname des analysierten Manuskripts.")
-    raw_words: int = Field(description="Gesamtwortzahl Volltext.")
-    main_words: int = Field(description="Bereinigte Wortzahl Romanprosa.")
-    chars: int = Field(description="Gesamtzeichenzahl.")
-    asl: float = Field(description="Mittlere Satzlänge.")
-    ttr: float = Field(description="Lexikalische Diversität.")
-    markers: int = Field(description="Anzahl noch offener Arbeitsmarker (PRÜFEN/SACHCHECK).")
+    manuscript: str = Field(description="Filename of the analyzed manuscript.")
+    raw_words: int = Field(description="Total full-text word count.")
+    main_words: int = Field(description="Cleaned narrative prose word count.")
+    chars: int = Field(description="Total character count.")
+    asl: float = Field(description="Average sentence length.")
+    ttr: float = Field(description="Lexical diversity.")
+    markers: int = Field(description="Count of unresolved work markers (TODO/CHECK).")
     tracked_chapters: dict[str, int] = Field(
         default_factory=dict,
-        description="Wortzahlen projektseitig beobachteter Kapitel (Label → Wörter).",
+        description="Word counts of project-tracked chapters (label → words).",
     )
-    dossiers: dict[str, DossierStatus] = Field(description="Audit-Ergebnisse je Begleitdossier.")
-    all_synced: bool = Field(description="True wenn ausnahmslos alle Dossiers synchron sind.")
+    dossiers: dict[str, DossierStatus] = Field(description="Audit results per companion dossier.")
+    all_synced: bool = Field(description="True when all dossiers without exception are synchronized.")

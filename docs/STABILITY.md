@@ -15,9 +15,9 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
   SD as the house-style spread when MAD is available.
 - Significance-adjusted $z^* = (x-\tilde x)/\sqrt{\sigma_{\mathrm{MAD}}^2+\mathrm{SE}^2}$
   shrinks short chapters (Poisson/binomial plug-in SEs) so a 120-word chapter
-  cannot outrank a 8 000-word chapter on a pure robust z.
+  cannot outrank an 8,000-word chapter on a pure robust z.
 - Benjamini–Hochberg at $q=0.05$ is the default multiplicity control over
-  chapter×feature cells; Benjamini–Yekutieli ($c=\sum 1/i$) is available via
+  chapter × feature cells; Benjamini–Yekutieli ($c=\sum 1/i$) is available via
   `fdr_method="by"` / `--fdr-method by` when dependence among features is
   unknown. Storey’s $\pi_0$ is optional literature, not required for a
   400-cell matrix. Expected false positives at $|z^*|\ge 2.5$

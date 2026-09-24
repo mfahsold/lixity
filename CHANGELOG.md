@@ -7,6 +7,40 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.14.0] – 2026-09-24
+
+### Added
+
+- **Substantive Documentation & Presentation Elevation:**
+  - `README.md` and GitHub Pages (`docs/index.html`) thoroughly expanded, tightened, and refined in English, emphasizing self-calibrating macro-editing versus external normative style checkers.
+  - Added an executive Mathematical Core summary table in `README.md` with clean, platform-independent Unicode notations (`x̃`, `Â₁₂`, `ρ₁`, `τ, S, p`, `G²`).
+  - Added in-depth descriptions of the 5 core metric groups and their diagnostic value for macro-editing and developmental line editing.
+  - Expanded FAQs in `README.md` and `docs/index.html` covering noise-aware significance shrinkage ($z^*$), non-destructive Markdown editor work markers (Pandoc / Typst / LaTeX pass-through), and pipeline integration.
+  - Enhanced persona-workflow cards and comparison matrix on GitHub Pages.
+- **English Schema & Model Descriptions:**
+  - Translated all Pydantic model field descriptions in `src/lixity/models.py` (`CorpusConfig`, `SentenceDistribution`, `ChapterMetrics`, `CorpusMetrics`, `DossierStatus`, `CorpusAuditReport`) and internal error messages into English for clean API introspection.
+- **UI Performance & Accessibility Enhancements:**
+  - Throttled tooltip repositioning on scroll and resize via `requestAnimationFrame` tick scheduling to avoid layout thrashing and maintain 60/120 fps fluid scrolling.
+  - Added Escape key dismissals to close open paragraph detail panels (`.ptext.open`) and active inline marker note input fields (`.marker-note`).
+  - Extended CSS `scroll-margin-top: 4.5rem` to all panels and anchored sections (`.panel`, `section[id]`), preventing sticky toolbars from obscuring content headers upon link activation.
+  - Added `user-select: none` to `.kpi-link` tiles to prevent accidental text selection during navigation clicks.
+  - Standardized NDA table headers and fallback file upload status text to English in `dashboard.js`.
+
+### Fixed
+
+- **GitHub Markdown & KaTeX Math Rendering:**
+  - Removed KaTeX delimiter-backtick collisions in `docs/METHODS.md` that previously caused red parse error boxes on GitHub.
+  - Escaped mathematical asterisks (`z\*`) across documentation to eliminate accidental Markdown italics formatting.
+  - Replaced unstable combining circumflex diacritics (`Hill &alpha;&#770;` / `Hill α̂`) that produced detached boxes across browser fonts with `Hill tail index`.
+  - Normalized schema version indicators (`schema_version 4` for style references) across GitHub Pages and documentation.
+- **Typographic, Editorial & Security Updates:**
+  - Fixed duplicate word in `docs/USAGE.md` ("Structural structural diagnostics" → "Structural diagnostics").
+  - Converted German decimal commas to standard English decimal points in the worked example in `docs/USAGE.md` (`15,57` → `15.57`, `+0,08 pp` → `+0.08 pp`, `−0,0002` → `−0.0002`).
+  - Corrected English article and thousands formatting in `docs/STABILITY.md` ("a 8 000-word" → "an 8,000-word chapter", `chapter × feature`).
+  - Added missing accent in `CITATION.cff` (`Goh-Barabási`).
+  - Updated `SECURITY.md` supported release branch to `1.14.x`.
+  - Completed all missing GitHub release comparison links at the bottom of `CHANGELOG.md` from v1.1.0 through v1.9.1.
+
 ## [1.13.0] – 2026-09-23
 
 ### Changed
@@ -704,11 +738,24 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.13.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.14.0...HEAD
+[1.14.0]: https://github.com/mfahsold/lixity/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/mfahsold/lixity/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/mfahsold/lixity/compare/v1.11.0...v1.12.0
 [1.11.0]: https://github.com/mfahsold/lixity/compare/v1.10.0...v1.11.0
 [1.10.0]: https://github.com/mfahsold/lixity/compare/v1.9.1...v1.10.0
+[1.9.1]: https://github.com/mfahsold/lixity/compare/v1.9.0...v1.9.1
+[1.9.0]: https://github.com/mfahsold/lixity/compare/v1.8.0...v1.9.0
+[1.8.0]: https://github.com/mfahsold/lixity/compare/v1.7.0...v1.8.0
+[1.7.0]: https://github.com/mfahsold/lixity/compare/v1.6.1...v1.7.0
+[1.6.1]: https://github.com/mfahsold/lixity/compare/v1.6.0...v1.6.1
+[1.6.0]: https://github.com/mfahsold/lixity/compare/v1.5.0...v1.6.0
+[1.5.0]: https://github.com/mfahsold/lixity/compare/v1.4.0...v1.5.0
+[1.4.0]: https://github.com/mfahsold/lixity/compare/v1.3.1...v1.4.0
+[1.3.1]: https://github.com/mfahsold/lixity/compare/v1.3.0...v1.3.1
+[1.3.0]: https://github.com/mfahsold/lixity/compare/v1.2.0...v1.3.0
+[1.2.0]: https://github.com/mfahsold/lixity/compare/v1.1.0...v1.2.0
+[1.1.0]: https://github.com/mfahsold/lixity/compare/v1.0.2...v1.1.0
 [1.0.2]: https://github.com/mfahsold/lixity/compare/v1.0.1...v1.0.2
 [1.0.1]: https://github.com/mfahsold/lixity/compare/v1.0.0...v1.0.1
 [1.0.0]: https://github.com/mfahsold/lixity/releases/tag/v1.0.0

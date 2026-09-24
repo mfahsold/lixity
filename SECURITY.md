@@ -8,7 +8,7 @@ minimal reproduction (sample manuscript + command) where possible.
 
 | Version | Supported |
 | :--- | :--- |
-| 1.11.x (latest `main` / release tag) | ✅ fixes |
+| 1.14.x (latest `main` / release tag) | ✅ fixes |
 | older tags | ❌ upgrade first |
 
 Only the latest release on `main` receives fixes.

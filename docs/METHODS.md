@@ -57,9 +57,9 @@ manufacture false alarms.
 | `dim_score_threshold` | 2.5 | \|dimension score\| from here: chapter flagged on that axis |
 | `flag_min_severity` | 2 | paragraph severity floor for the flags panel (1–3) |
 
-- A cell counts **in band** iff $\lvert z^* \rvert <$ `z_mild`.
-- `expected_false_positives` $= m \cdot P(\lvert Z \rvert \ge$ `z_mild`$)$ with
-  $m$ = measured cells and $P$ the two-sided normal tail (`erfc`). At the
+- A cell counts **in band** iff |z\*| < `z_mild`.
+- `expected_false_positives` = m · P(|Z| ≥ z_mild) with
+  m = measured cells and P the two-sided normal tail (`erfc`). At the
   default 2.5 this is ≈ 1.24 % of $m$.
 - Injectability: CLI `--z-mild/--z-strong/--fdr-q/--fdr-method/--dim-threshold/--flag-min-severity`
   on `style`, `dashboard`, `build`; API kwargs of the same names; the
@@ -184,9 +184,8 @@ Documented research directions, **not** current product features:
 2. Cyclic Jacobi eigendecomposition on the symmetric matrix
    (standard library only; eigenvalues sorted descending; sign fixed by
    the largest-absolute loading).
-3. Dimension score threshold: $\lvert\text{score}\rvert \ge$
-   `dim_score_threshold` (default 2.5) marks `flagged` chapters on that axis.
-4. Redundancy: pairs with $\lvert\rho\rvert \ge$ `REDUNDANCY_RHO` (0.8).
+3. Dimension score threshold: |score| ≥ `dim_score_threshold` (default 2.5) marks `flagged` chapters on that axis.
+4. Redundancy: pairs with |ρ| ≥ `REDUNDANCY_RHO` (0.8).
 
 ## 6. Lexical diversity indices
 
@@ -225,7 +224,7 @@ language: $\mathrm{LIX} = \mathrm{ASL} + 100 \cdot \frac{\text{long words}}{\tex
 
 $JSD(P \| Q) = \tfrac12 D_{\mathrm{KL}}(P \| M) + \tfrac12 D_{\mathrm{KL}}(Q \| M)$
 with $M = \tfrac12(P+Q)$ (base-2, so $\in [0,1]$). Driver words are ranked by
-their contribution $\tfrac12\sum_x p_m(x)\log\frac{p_m(x)}{q(x)}$-style terms
+their contribution (using terms of the form $\tfrac12\sum_x p_m(x)\log\frac{p_m(x)}{q(x)}$)
 — interpretable, not a black-box embedding.
 
 ## 9. Paragraph layers (within-chapter colouring)

@@ -74,7 +74,7 @@ def render_dashboard(
     pacing: Mapping[str, Any] | None = None,
     motifs: Mapping[str, Any] | None = None,
     showing: Mapping[str, Any] | None = None,
-    title: str = "Manuskript",
+    title: str = "Manuscript",
     labels: Mapping[str, str] | None = None,
     language_name: str = "",
     language_key: str = "generic",

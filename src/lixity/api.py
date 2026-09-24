@@ -276,7 +276,7 @@ def showing(text: str, language: str = "auto", **config_overrides: Any) -> dict[
 def dashboard(
     text: str,
     language: str = "auto",
-    title: str = "Manuskript",
+    title: str = "Manuscript",
     z_mild: float | None = None,
     z_strong: float | None = None,
     fdr_q: float | None = None,
