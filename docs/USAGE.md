@@ -25,13 +25,13 @@ Lixity is source-available under LNCL-1.0 for non-commercial use, not on PyPI.
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
 lixity --version
 lixity about
 ```
 
-`main` is the unreleased 1.15.0.dev0 checkout. Choose `@v1.14.0` instead for
-the older published release, or a full commit hash for reproducibility.
+`v1.15.0` is the release pin. Choose `@main` only to follow development,
+or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
 The engine supports Python 3.10+; TOML project configuration needs 3.11+.
@@ -87,7 +87,7 @@ which writes a single HTML file.
 
 ## Development dashboard workflow
 
-The `1.15.0.dev0` checkout adds the shared pipeline and the 3D style-space
+The `1.15.0` release adds the shared pipeline and the 3D style-space
 interaction. These features are not promised for the older `v1.14.0` tag.
 
 ```bash

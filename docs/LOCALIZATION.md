@@ -6,7 +6,7 @@ Documentation, comments and docstrings are English. Localized resource values,
 quoted material and linguistic fixtures retain their intended language.
 Machine-readable keys and tense identifiers remain language-neutral.
 
-From `1.15.0.dev0`, CLI/API analysis and `CorpusConfig` default to English.
+From `1.15.0`, CLI/API analysis and `CorpusConfig` default to English.
 CLI `--language` overrides the project's `language` setting; without either,
 English applies. API callers select their language through the argument.
 `auto` is explicit and resolves to `generic` for weak or ambiguous evidence.

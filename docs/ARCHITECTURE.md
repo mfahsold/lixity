@@ -1,7 +1,7 @@
 # Architecture and integration boundaries
 
-This document describes the `1.15.0.dev0` development checkout. It does not
-claim these interfaces are present in the published `v1.14.0` tag.
+This document describes Lixity `1.15.0`. The shared pipeline and explicit
+API threshold mappings require this release or newer.
 
 ## Layers
 

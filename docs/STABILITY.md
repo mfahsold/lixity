@@ -8,9 +8,9 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 
 ## 1. Research findings (state of the art)
 
-### Development-version guarantees and limits
+### Release verification and limits
 
-The `1.15.0.dev0` suite checks English defaults, language resource-key coverage,
+The `1.15.0` suite checks English defaults, language resource-key coverage,
 readability-coefficient dispatch and locale formatting. These are software
 contracts, not empirical validation of linguistic accuracy across seven
 languages. No language-wide accuracy percentage is established by this suite.

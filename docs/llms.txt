@@ -20,10 +20,10 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 
 ## Install (GitHub source, not PyPI)
 
-- CLI: `uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"`
+- CLI: `uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"`
 - Verify: `lixity --version` and `lixity about`.
 - Update chosen source: `uv tool upgrade lixity`; pinned refs stay pinned.
-- Older published release: replace `@main` with `@v1.14.0`.
+- Development builds: replace `@v1.15.0` with `@main` deliberately.
 - Engine: Python 3.10+; TOML project settings: Python 3.11+.
 - API: install into the consuming project's venv, not a separate tool environment.
 - dev: `git clone … && make install-dev && make check`
@@ -35,7 +35,7 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 
 - [Installation](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md): prerequisites, development vs release, Windows, updates, first dashboard, troubleshooting
 
-- Development checkout: 1.15.0.dev0 (unreleased); published tag: v1.14.0.
+- Current release: 1.15.0; published tag: v1.15.0.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md): shared analysis pipeline, project isolation, engine/adapter boundaries
 - [Localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): English defaults, seven linguistic profiles, mathematical invariants and limitations
 - [README](https://github.com/mfahsold/lixity#readme): overview, install, CLI quick start, capabilities, license
@@ -45,7 +45,7 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [docs/STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): research basis, caveats, platform differences
 - [CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development setup, PR checklist
 - [SECURITY.md](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): threat model and private reporting
-- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.14.0)
+- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.15.0)
 - Project page: https://mfahsold.github.io/lixity/
 
 Reports/CLI messages: English default, German via LIXITY_LANG=de. JSON contracts:

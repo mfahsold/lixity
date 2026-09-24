@@ -12,15 +12,20 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
-      - run: pip install build
+      - run: python -m pip install ".[dev]"
+      - name: Validate release source
+        run: |
+          python -m pytest -W error -q -p no:asyncio
+          ruff check src tests scripts
+          mypy
       - run: python -m build
       - name: Verify wheel version matches tag
         run: |
           python - <<'PY'
-          import glob, re, sys, zipfile
+          import glob, os, re, sys, zipfile
           from pathlib import Path
 
-          tag = "${{ github.ref_name }}"
+          tag = os.environ["GITHUB_REF_NAME"]
           expected = tag[1:] if tag.startswith("v") else tag
           version_py = Path("src/lixity/_version.py").read_text(encoding="utf-8")
           m = re.search(r'__version__\s*=\s*"([^"]+)"', version_py)
@@ -36,17 +41,20 @@ jobs:
               sys.exit("wheel METADATA version mismatch")
           print(f"release {expected} OK")
           PY
+      - name: Verify isolated wheel installation
+        run: |
+          python -m venv /tmp/lixity-release-smoke
+          /tmp/lixity-release-smoke/bin/python -m pip install dist/*.whl
+          cd /tmp
+          /tmp/lixity-release-smoke/bin/python -m pip check
+          /tmp/lixity-release-smoke/bin/lixity --version
+          /tmp/lixity-release-smoke/bin/lixity about --json
+      - name: Generate artifact checksums
+        run: sha256sum dist/*.whl dist/*.tar.gz > dist/SHA256SUMS
       - name: Create GitHub Release with artifacts
         uses: softprops/action-gh-release@v3
         with:
           files: dist/*
+          fail_on_unmatched_files: true
+          body_path: docs/releases/${{ github.ref_name }}.md
           generate_release_notes: true
-          body: |
-            Lixity ${{ github.ref_name }} — see [CHANGELOG.md](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
-
-            Install (not on PyPI):
-            ```bash
-            uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@${{ github.ref_name }}"
-            lixity --version
-            ```
-            Requires Git and uv. See the [installation guide](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md) for prerequisites, Python API environments and troubleshooting.

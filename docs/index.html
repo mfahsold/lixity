@@ -53,7 +53,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Linguistic & Stylometric Analysis",
       "operatingSystem": "Linux, macOS, Windows",
-      "softwareVersion": "1.15.0.dev0",
+      "softwareVersion": "1.15.0",
       "isAccessibleForFree": true,
       "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
       "codeRepository": "https://github.com/mfahsold/lixity",
@@ -373,9 +373,9 @@ footer {
   </div>
 
   <h2>What It Looks Like</h2>
-  <p><strong>Development preview: 1.15.0.dev0.</strong> This page includes
-    unreleased work on <code>main</code>. The published <code>v1.14.0</code> tag
-    remains a separate installation choice; no <code>v1.15.0</code> release is implied.</p>
+  <p><strong>Lixity 1.15.0.</strong> Explore the refreshed dashboard, shared
+    analysis pipeline and rendering security fixes.
+    <a href="https://github.com/mfahsold/lixity/releases/tag/v1.15.0">Release notes and downloads</a>.</p>
   <span class="section-kicker">Interactive Macro-Editing Dashboard</span>
   <figure class="shot">
     <a href="screenshots/dashboard-light.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1600" height="1050" loading="eager" fetchpriority="high" decoding="async"/></a>
@@ -443,7 +443,7 @@ footer {
         engine version and the localized non-commercial-use notice remain visible.</figcaption>
     </figure>
     <figure class="shot">
-      <a href="screenshots/dashboard-dimensions-mobile.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions-mobile.png" alt="Full mobile style-dimension panel with stacked controls and feature loadings" width="366" height="1272" loading="lazy" decoding="async"/></a>
+      <a href="screenshots/dashboard-dimensions-mobile.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions-mobile.png" alt="Full mobile style-dimension panel with stacked controls and feature loadings" width="366" height="1273" loading="lazy" decoding="async"/></a>
       <figcaption><strong>Readable mobile diagnostics</strong> &ndash; complete
         dimension cards, wrapping controls and labels rather than a desktop crop.</figcaption>
     </figure>
@@ -629,17 +629,16 @@ footer {
       <a href="https://git-scm.com/downloads">Git</a> and
       <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> first;
       uv can supply Python 3.12. No account, API key or manuscript upload is needed.</p>
-    <pre>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"
+    <pre>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
 lixity --version
 lixity about
 lixity build manuscript.md --language en</pre>
     <p>Use a UTF-8 Markdown manuscript with <code>## Chapter title</code> headings.
       Open <code>exports/manuscript_dashboard.html</code> locally. For German,
       use <code>--language de</code>; automatic detection is explicit.</p>
-    <p><strong>Version choice:</strong> <code>main</code> installs the unreleased
-      <code>1.15.0.dev0</code> with the new UI. Choose <code>@v1.14.0</code> instead
-      for the older published release, or pin a reviewed commit for reproducibility.
-      Update the chosen source with <code>uv tool upgrade lixity</code>.</p>
+    <p><strong>Version choice:</strong> <code>@v1.15.0</code> pins this release.
+      Select a future tag explicitly to upgrade; <code>uv tool upgrade lixity</code>
+      retains the chosen ref. Use <code>@main</code> only for development builds.</p>
     <p><strong>Non-commercial use only (LNCL-1.0).</strong> Not on PyPI.
       Python 3.10+ supports the engine; TOML project settings require 3.11+.
       Standalone HTML is not an editing/NDA server; those actions require an adapter.</p>
@@ -710,7 +709,7 @@ html = api.dashboard(text, language="en", title="My Novel")</pre>
       <summary>What languages are supported?</summary>
       <p>Profiles cover English (en), German (de), French (fr), Spanish (es),
         Italian (it), Portuguese (pt), and Dutch (nl), plus a generic fallback.
-        English is the development version's default. Select a language or use
+        English is the default. Select a language or use
         <code>--language auto</code> for function-word-based detection. Dashboard
         resources cover all seven languages; CLI messages currently have English
         and German packs. Heuristic accuracy varies with language and text.</p>

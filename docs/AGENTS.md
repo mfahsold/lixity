@@ -58,7 +58,7 @@ is importable by a project adapter. TOML configuration requires Python 3.11+.
   user-facing messages to German); stdout carries only the payload.
 - Report language: English by default, German via `LIXITY_LANG=de`.
 
-Development version `1.15.0.dev0` also defaults the analysis language to
+Release `1.15.0` defaults the analysis language to
 English. Pass the intended manuscript language or explicit `auto`; do not
 assume the previous automatic default. Language-independent JSON identifiers
 remain unchanged. See [LOCALIZATION.md](LOCALIZATION.md).
@@ -72,7 +72,7 @@ implicit project switching; see [ARCHITECTURE.md](ARCHITECTURE.md).
 ### 3.1 `analyze --json` (schema_version 2)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.14.0", "schema_version": 2, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.15.0", "schema_version": 2, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",

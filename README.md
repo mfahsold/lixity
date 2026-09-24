@@ -103,15 +103,15 @@ Install from GitHub into an isolated CLI environment. Requires Git and
 Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
 lixity --version
 lixity about
 ```
 
-This installs **1.15.0.dev0 from main**, including the new UI; it is not a
-published 1.15.0 release. Use `@v1.14.0` instead for the older published release,
-or a full commit hash for reproducible deployments. Update your chosen source
-with `uv tool upgrade lixity`; a pinned ref remains pinned.
+This installs **v1.15.0**, including the new UI, shared pipeline and security
+fixes. The tag stays pinned: upgrading to a future release requires selecting
+its tag explicitly. Use `@main` only for development builds, or a reviewed
+full commit hash for reproducible deployments.
 
 **[Full installation guide](docs/INSTALLATION.md):** Windows/macOS/Linux,
 pipx alternative, Python API environments, PATH repair, upgrades and removal.
@@ -188,11 +188,11 @@ Full command reference, metric glossary, worked example, and troubleshooting:
 [`docs/AGENTS.md`](docs/AGENTS.md). Project website:
 [mfahsold.github.io/lixity](https://mfahsold.github.io/lixity/).
 
-## What's new in the development version
+## What's new in v1.15.0
 
-**1.15.0.dev0 is an unreleased development version.** The latest version
-listed in the release history is 1.14.0; its tag does not include the changes
-below. Use an editable checkout to try them before the next release.
+**v1.15.0** includes the UI, architecture and security improvements below.
+Read the [release notes and migration checklist](docs/releases/v1.15.0.md)
+before updating an existing project, especially its language defaults.
 
 - **Explore style in 3D:** rotate and zoom chapter trajectories, toggle the
   trajectory and threshold box, and select a point to reach its chapter.
@@ -236,7 +236,7 @@ An empty `project_config={}` isolates thresholds from user/project files;
 explicit threshold arguments override the supplied mapping. The pipeline itself
 does not read files, discover projects or maintain global session state.
 
-Adapters using the shared pipeline must install this checkout until release.
+Adapters using the shared pipeline require Lixity 1.15.0 or newer.
 See [architecture and integration boundaries](docs/ARCHITECTURE.md) for the
 configuration contract and [language support](docs/LOCALIZATION.md) for its
 scope, guarantees and limitations.

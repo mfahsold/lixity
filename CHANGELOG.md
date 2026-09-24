@@ -7,6 +7,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+No changes yet.
+
+## [1.15.0] – 2026-09-24
+
 ### Added
 
 - Explanatory settings form with visible labels, expandable thresholds,
@@ -21,7 +25,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Browser regression checks and localization contracts for all seven profiles.
 - Architecture and localization guides with explicit engine/adapter boundaries.
 - Shared project header with engine version and localized non-commercial-use notice.
-- Eleven refreshed public-sample screenshots, including full dimension panels,
+- Thirteen refreshed public-sample screenshots, including full dimension panels,
   real expanded paragraph context, mobile views and dark-mode diagnostics.
 
 ### Changed
@@ -30,7 +34,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Windows, updates and first-run verification. `make install` uses `.venv`
   rather than global Python; both installation targets check dependencies.
 
-- Development version is `1.15.0.dev0`; no new release tag is published yet.
+- Promoted the reviewed `1.15.0.dev0` work to release `1.15.0`.
 - CLI/API/core analysis defaults to English. Use `--language de` for German
   or `--language auto` for detection; CLI project language settings are honored.
 - Documentation and comments use English; localized resources remain multilingual.
@@ -800,7 +804,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.14.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.15.0...HEAD
+[1.15.0]: https://github.com/mfahsold/lixity/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/mfahsold/lixity/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/mfahsold/lixity/compare/v1.12.0...v1.13.0
 [1.12.0]: https://github.com/mfahsold/lixity/compare/v1.11.0...v1.12.0

@@ -7,8 +7,8 @@ publishing exploit details before maintainers can assess the report.
 
 ## Versions and scope
 
-The current development checkout is **1.15.0.dev0**; the published release is
-**v1.14.0**. Reports should identify the exact tag or commit. Fixes are developed
+The current release is **v1.15.0**, including dashboard rendering security
+fixes. Reports should identify the exact tag or commit. Fixes are developed
 on `main`; backports are evaluated case by case. A development version is not
 a production-support guarantee.
 
