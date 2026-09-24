@@ -50,7 +50,8 @@ jobs:
           /tmp/lixity-release-smoke/bin/lixity --version
           /tmp/lixity-release-smoke/bin/lixity about --json
       - name: Generate artifact checksums
-        run: sha256sum dist/*.whl dist/*.tar.gz > dist/SHA256SUMS
+        working-directory: dist
+        run: sha256sum *.whl *.tar.gz > SHA256SUMS
       - name: Create GitHub Release with artifacts
         uses: softprops/action-gh-release@v3
         with:
