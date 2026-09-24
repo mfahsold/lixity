@@ -129,7 +129,7 @@ def _force_light(dashboard: str) -> str:
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Regenerate README screenshots.")
-    parser.add_argument("--manuscript", default="samples/effi-briest.md")
+    parser.add_argument("--manuscript", default="samples/pride-and-prejudice.md")
     args = parser.parse_args()
 
     manuscript = (BASE_DIR / args.manuscript).resolve()
@@ -137,7 +137,8 @@ def main() -> int:
     config = CorpusConfig(language="auto")
     resolved = resolve_language(config, sample_text=text)
     config = CorpusConfig(language=resolved.key)
-    title = manuscript.stem
+    is_en = resolved.key == "en"
+    title = "Pride and Prejudice" if is_en else manuscript.stem
 
     metrics = CorpusAnalyzer(config).analyze_text(text)
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
@@ -155,38 +156,41 @@ def main() -> int:
         color_system="truecolor",
         file=io.StringIO(),
     )
-    ReportFormatter.print_rich_report(metrics, console=console, texts=resolved.labels)
+    ReportFormatter.print_rich_report(metrics, console=console, texts=resolved.labels, language_key=resolved.key)
     _terminal_shot(
         f"lixity analyze {args.manuscript}",
         console.export_html(inline_styles=True),
         OUT_DIR / "cli-analyze.png",
         1560,
-        1030,
+        920,
     )
 
     # 2. CLI: style passport ----------------------------------------------
-    passport = html.escape(fingerprint.passport_text(labels=resolved.labels))
+    passport = html.escape(fingerprint.passport_text(labels=resolved.labels, language_key=resolved.key))
     _terminal_shot(
         f"lixity style {args.manuscript}",
         f"<pre>{passport}</pre>",
         OUT_DIR / "cli-style.png",
         1560,
-        1030,
+        920,
     )
 
     # 3. Dashboard (light, top area) --------------------------------------
+    chap_noun = "Chapters" if is_en else "Kapitel"
+    para_noun = "Paragraphs" if is_en else "Absätze"
     status = [
         {"key": "manuscript", "state": "ok", "detail": f"{title}.md"},
         {
             "key": "analysis",
             "state": "ok",
-            "detail": f"{len(chapters)} Kapitel · {len(paragraphs)} Absätze",
+            "detail": f"{len(chapters)} {chap_noun} · {len(paragraphs)} {para_noun}",
         },
-        {"key": "dossiers", "state": "ok", "detail": "aktuell"},
-        {"key": "exports", "state": "warn", "detail": "keine erzeugt"},
-        {"key": "nda", "state": "unknown", "detail": "kein Speicher"},
-        {"key": "markers", "state": "ok", "detail": "keine offenen"},
+        {"key": "dossiers", "state": "ok", "detail": "up to date" if is_en else "aktuell"},
+        {"key": "exports", "state": "warn", "detail": "none generated" if is_en else "keine erzeugt"},
+        {"key": "nda", "state": "unknown", "detail": "local only" if is_en else "kein Speicher"},
+        {"key": "markers", "state": "ok", "detail": "no open markers" if is_en else "keine offenen"},
     ]
+    char_names = ["Elizabeth", "Darcy", "Jane", "Bingley"] if is_en else ["Effi", "Innstetten", "Crampas", "Briest"]
     dashboard = render_dashboard(
         chapters,
         paragraphs,
@@ -194,7 +198,7 @@ def main() -> int:
         fingerprint=fingerprint,
         status=status,
         dialogue=dialogue_report(text, config).to_dict(),
-        characters=presence_report(text, ["Effi", "Innstetten", "Crampas", "Briest"], config),
+        characters=presence_report(text, char_names, config),
         pacing=pacing_report(text, config).to_dict(),
         motifs=motif_report(text, None, config).to_dict(),
         showing=showing_report(text, config, metrics=metrics).to_dict(),
@@ -204,14 +208,14 @@ def main() -> int:
         language_key=resolved.key,
     )
     dashboard_path = _write_html("dashboard.html", _force_light(dashboard))
-    _run_chrome(dashboard_path, OUT_DIR / "dashboard-light.png", 1600, 2100)
+    _run_chrome(dashboard_path, OUT_DIR / "dashboard-light.png", 1600, 1050)
 
     # 4. Dashboard (dark) --------------------------------------------------
     _run_chrome(
         _write_html("dashboard-dark.html", _force_dark(dashboard)),
         OUT_DIR / "dashboard-dark.png",
         1600,
-        2100,
+        1050,
     )
 
     # 5. Dashboard sections ------------------------------------------------
@@ -221,7 +225,7 @@ def main() -> int:
         ),
         OUT_DIR / "dashboard-heatmap.png",
         1600,
-        1500,
+        950,
     )
     _run_chrome(
         _write_html(
@@ -229,16 +233,25 @@ def main() -> int:
         ),
         OUT_DIR / "dashboard-dimensions.png",
         1600,
-        560,
+        480,
     )
 
     # 6. Work markers (temporary copy with three editorial markers) --------
     marked = text
-    for line, kind, note in (
-        (7, "pruefen", "Tempuswechsel im Dialog prüfen"),
-        (61, "sachcheck", "Chronologie: Effis Sterbejahr"),
-        (85, "todo", "Kapitelende kürzen?"),
-    ):
+    markers_spec = (
+        (
+            (7, "pruefen", "Verify dialogue tense continuity"),
+            (61, "sachcheck", "Fact-check: Netherfield ball timeline"),
+            (85, "todo", "Tighten chapter closing cadence"),
+        )
+        if is_en
+        else (
+            (7, "pruefen", "Tempuswechsel im Dialog prüfen"),
+            (61, "sachcheck", "Chronologie: Effis Sterbejahr"),
+            (85, "todo", "Kapitelende kürzen?"),
+        )
+    )
+    for line, kind, note in markers_spec:
         marked, _ = add_marker(marked, kind=kind, note=note, target_line=line)
     marked_metrics = CorpusAnalyzer(config).analyze_text(marked)
     marked_paragraphs, marked_chapters = ParagraphProfiler(config).profile_blocks(
@@ -263,35 +276,26 @@ def main() -> int:
         ),
         OUT_DIR / "dashboard-markers.png",
         1600,
-        330,
+        340,
     )
 
     # 7. Style layer (draft chapter with the dialogue layer active) --------
-    layer_manuscript = BASE_DIR / "samples" / "effi-briest-folge" / "effi-briest-folge.md"
-    if layer_manuscript.is_file():
-        layer_text = layer_manuscript.read_text(encoding="utf-8")
-        layer_resolved = resolve_language(CorpusConfig(language="auto"), sample_text=layer_text)
-        layer_config = CorpusConfig(language=layer_resolved.key)
-        layer_metrics = CorpusAnalyzer(layer_config).analyze_text(layer_text)
-        layer_paragraphs, layer_chapters = ParagraphProfiler(layer_config).profile_blocks(
-            parse_markdown_blocks(layer_text)
-        )
-        layer_dashboard = render_dashboard(
-            layer_chapters,
-            layer_paragraphs,
-            metrics=layer_metrics,
-            fingerprint=StyleFingerprint.from_metrics(layer_metrics),
-            title="Annie – Erstes Kapitel",
-            labels=layer_resolved.labels,
-            language_name=layer_resolved.name,
-            language_key=layer_resolved.key,
-        ).replace('<option value="dialogue"', '<option value="dialogue" selected', 1)
-        _run_chrome(
-            _write_html("dashboard-layer.html", _force_light(layer_dashboard)),
-            OUT_DIR / "dashboard-layer.png",
-            1600,
-            1500,
-        )
+    layer_dashboard = render_dashboard(
+        chapters,
+        paragraphs,
+        metrics=metrics,
+        fingerprint=fingerprint,
+        title=title,
+        labels=resolved.labels,
+        language_name=resolved.name,
+        language_key=resolved.key,
+    ).replace('<option value="dialogue"', '<option value="dialogue" selected', 1)
+    _run_chrome(
+        _write_html("dashboard-layer.html", _force_light(layer_dashboard)),
+        OUT_DIR / "dashboard-layer.png",
+        1600,
+        900,
+    )
 
     print(
         f"Done – {len(list(OUT_DIR.glob('*.png')))} screenshots in {OUT_DIR.relative_to(BASE_DIR)}"

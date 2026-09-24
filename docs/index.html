@@ -4,67 +4,140 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Lixity – Quantitative Text Linguistics &amp; Stylometry for Literary Manuscripts</title>
-<meta name="description" content="Lixity measures how literary manuscripts read: sentence rhythm, length-invariant lexical diversity (HD-D, Yule's K), paragraph-accurate tense profiles, self-calibrating style references, and structural diagnostics (PELT, Mann–Kendall). Deterministic, offline, multilingual text analytics engine for authors, editors, and AI agents."/>
-<meta name="keywords" content="computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg FDR, PELT changepoint, Mann-Kendall trend, macro editing, offline text analytics, digital humanities"/>
+<meta name="description" content="Lixity measures how literary manuscripts read: sentence rhythm, length-invariant lexical diversity (HD-D, Yule's K), paragraph-accurate tense profiles, self-calibrating style references, and structural diagnostics (PELT, Mann–Kendall). Deterministic, offline, multilingual text analytics engine for authors, editors, publishers, and AI agents."/>
+<meta name="keywords" content="computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg FDR, PELT changepoint, Mann-Kendall trend, macro editing, offline text analytics, digital humanities, editorial software"/>
 <meta name="robots" content="index, follow"/>
 <meta name="author" content="Matthias Fahsold"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
 <link rel="alternate" type="text/plain" href="llms.txt" title="LLM-friendly summary"/>
 <link rel="sitemap" type="application/xml" href="sitemap.xml"/>
+
+<!-- GEO Location Metadata -->
+<meta name="geo.region" content="DE-HH"/>
+<meta name="geo.placename" content="Hamburg, Germany"/>
+<meta name="geo.position" content="53.5511;9.9937"/>
+<meta name="ICBM" content="53.5511, 9.9937"/>
+
+<!-- Open Graph / Facebook -->
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry for Literary Manuscripts"/>
 <meta property="og:description" content="Self-calibrating style references, length-invariant lexical diversity, tense profiles, and readability metrics for literary manuscripts – pure Python, offline, 7 languages."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta property="og:image:width" content="1600"/>
+<meta property="og:image:height" content="1050"/>
+<meta property="og:image:type" content="image/png"/>
+<meta property="og:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
+<meta property="og:locale" content="en_US"/>
+<meta property="og:locale:alternate" content="de_DE"/>
+
+<!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry"/>
 <meta name="twitter:description" content="Self-calibrating style references, tense profiles, and length-invariant lexical diversity for literary manuscripts."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta name="twitter:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
+
+<!-- Structured Data (Schema.org) -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@type": ["SoftwareApplication", "WebSite"],
-  "name": "Lixity",
-  "alternateName": "Lixity – Quantitative Text Linguistics & Stylometry",
-  "description": "Deterministic, dependency-light, multilingual text linguistics engine and stylometric toolkit for literary manuscripts, editors, digital humanities scholars, and autonomous AI agents.",
-  "applicationCategory": "UtilitiesApplication",
-  "applicationSubCategory": "Linguistic & Stylometric Analysis",
-  "operatingSystem": "Linux, macOS, Windows",
-  "softwareVersion": "1.14.0",
-  "isAccessibleForFree": true,
-  "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
-  "codeRepository": "https://github.com/mfahsold/lixity",
-  "author": {
-    "@type": "Person",
-    "name": "Matthias Fahsold",
-    "email": "mfahsold@googlemail.com"
-  },
-  "offers": {
-    "@type": "Offer",
-    "price": "0",
-    "priceCurrency": "EUR"
-  },
-  "keywords": "computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg, macro editing",
-  "featureList": [
-    "Sentence-length architecture and rhythm metrics (ASL, staccato, hypotaxis, CV)",
-    "Length-invariant lexical diversity (HD-D, MTLD, MATTR, Maas a², Yule's characteristic K, Guiraud R)",
-    "Language-calibrated readability: Flesch family (Amstad, Flesch, Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma) and LIX",
-    "Register signals: dialogue ratio, function words, perception filters, modals, passive voice, nominal style",
-    "Paragraph-accurate tense continuity profiling with line anchors and friction severity flags",
-    "Self-calibrating style reference: manuscript-intrinsic median/MAD bands, significance-adjusted z* scores, Benjamini-Hochberg / Benjamini-Yekutieli FDR control",
-    "Structural diagnostics: PELT changepoints, Mann-Kendall trends, Sn/Qn robust scales, Hill tail index, early/late Wasserstein-KS shift, co-occurrence fitness, Dunning keyness (schema v4)",
-    "Effect sizes on confirmed cells: Cliff's delta and Vargha-Delaney A12",
-    "Injectable thresholds via CLI, API, UI settings, or [tool.lixity] / lixity.toml config",
-    "Unsupervised style dimensions via Spearman rank correlation and cyclic Jacobi eigendecomposition",
-    "Editor-visible work markers with deterministic content-hash IDs and inline notes",
-    "Idempotent workspace build: unchanged input causes zero writes, changed input rotates exactly one version",
-    "Single-file clickable dashboard: component status strip, KPI drill-downs, style-reference band chart, deviation layer",
-    "Dialogue turn structure, character presence, scene/pacing analysis with chapter hooks",
-    "Motif tracking and repetition analysis (content words, repeated n-grams)",
-    "Self-calibrating showing-vs-telling balance per chapter",
-    "Deterministic Python API for autonomous AI agents and publication pipelines",
-    "Seven native language profiles (de, en, fr, es, it, pt, nl) plus generic fallback"
+  "@graph": [
+    {
+      "@type": "SoftwareApplication",
+      "@id": "https://mfahsold.github.io/lixity/#software",
+      "name": "Lixity",
+      "alternateName": "Lixity – Quantitative Text Linguistics & Stylometry",
+      "description": "Deterministic, dependency-light, multilingual text linguistics engine and stylometric toolkit for literary manuscripts, editors, publishers, digital humanities scholars, and autonomous AI agents.",
+      "applicationCategory": "UtilitiesApplication",
+      "applicationSubCategory": "Linguistic & Stylometric Analysis",
+      "operatingSystem": "Linux, macOS, Windows",
+      "softwareVersion": "1.14.0",
+      "isAccessibleForFree": true,
+      "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
+      "codeRepository": "https://github.com/mfahsold/lixity",
+      "author": {
+        "@type": "Person",
+        "@id": "https://mfahsold.github.io/lixity/#author",
+        "name": "Matthias Fahsold",
+        "email": "mfahsold@googlemail.com",
+        "jobTitle": "Lead Architect & Author",
+        "url": "https://github.com/mfahsold",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Hamburg",
+          "addressRegion": "HH",
+          "addressCountry": "DE"
+        }
+      },
+      "publisher": {
+        "@type": "Organization",
+        "name": "Lixity",
+        "url": "https://mfahsold.github.io/lixity/",
+        "logo": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
+        "address": {
+          "@type": "PostalAddress",
+          "addressLocality": "Hamburg",
+          "addressRegion": "HH",
+          "addressCountry": "DE"
+        },
+        "contactPoint": {
+          "@type": "ContactPoint",
+          "contactType": "Licensing & Commercial Inquiries",
+          "email": "mfahsold@googlemail.com",
+          "availableLanguage": ["English", "German"],
+          "areaServed": "Worldwide"
+        }
+      },
+      "offers": [
+        {
+          "@type": "Offer",
+          "name": "Non-Commercial Edition (LNCL-1.0)",
+          "description": "Free for personal writing, research, education, and non-commercial open science.",
+          "price": "0",
+          "priceCurrency": "EUR"
+        },
+        {
+          "@type": "Offer",
+          "name": "Commercial & Enterprise License",
+          "description": "Commercial evaluation, bespoke language profile training, and production integration licenses available on request.",
+          "priceSpecification": {
+            "@type": "PriceSpecification",
+            "priceCurrency": "EUR"
+          }
+        }
+      ],
+      "keywords": "computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg, macro editing",
+      "featureList": [
+        "Sentence-length architecture and rhythm metrics (ASL, staccato, hypotaxis, CV)",
+        "Length-invariant lexical diversity (HD-D, MTLD, MATTR, Maas a², Yule's characteristic K, Guiraud R)",
+        "Language-calibrated readability: Flesch family (Amstad, Flesch, Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma) and LIX",
+        "Register signals: dialogue ratio, function words, perception filters, modals, passive voice, nominal style",
+        "Paragraph-accurate tense continuity profiling with line anchors and friction severity flags",
+        "Self-calibrating style reference: manuscript-intrinsic median/MAD bands, significance-adjusted z* scores, Benjamini-Hochberg / Benjamini-Yekutieli FDR control",
+        "Structural diagnostics: PELT changepoints, Mann-Kendall trends, Sn/Qn robust scales, Hill tail index, early/late Wasserstein-KS shift, co-occurrence fitness, Dunning keyness (schema v4)",
+        "Effect sizes on confirmed cells: Cliff's delta and Vargha-Delaney A12",
+        "Injectable thresholds via CLI, API, UI settings, or [tool.lixity] / lixity.toml config",
+        "Unsupervised style dimensions via Spearman rank correlation and cyclic Jacobi eigendecomposition",
+        "Editor-visible work markers with deterministic content-hash IDs and inline notes",
+        "Idempotent workspace build: unchanged input causes zero writes, changed input rotates exactly one version",
+        "Single-file clickable dashboard: component status strip, KPI drill-downs, style-reference band chart, deviation layer",
+        "Dialogue turn structure, character presence, scene/pacing analysis with chapter hooks",
+        "Motif tracking and repetition analysis (content words, repeated n-grams)",
+        "Self-calibrating showing-vs-telling balance per chapter",
+        "Deterministic Python API for autonomous AI agents and publication pipelines",
+        "Seven native language profiles (de, en, fr, es, it, pt, nl) plus generic fallback"
+      ]
+    },
+    {
+      "@type": "WebSite",
+      "@id": "https://mfahsold.github.io/lixity/#website",
+      "url": "https://mfahsold.github.io/lixity/",
+      "name": "Lixity",
+      "description": "Quantitative Text Linguistics & Stylometry for Literary Manuscripts",
+      "inLanguage": "en"
+    }
   ]
 }
 </script>
@@ -101,10 +174,10 @@ body {
   font: 15px/1.6 var(--font);
   -webkit-font-smoothing: antialiased;
 }
-main { max-width: 56rem; margin: 0 auto; }
+main { max-width: 58rem; margin: 0 auto; }
 h1 { font-size: 2.3rem; font-weight: 700; margin: 0 0 .3rem; letter-spacing: -.03em; }
-h2 { font-size: 1.3rem; font-weight: 650; margin: 2.2rem 0 .7rem; letter-spacing: -.01em; }
-h3 { font-size: 1.02rem; font-weight: 600; margin: 1.2rem 0 .4rem; }
+h2 { font-size: 1.35rem; font-weight: 650; margin: 2.4rem 0 .7rem; letter-spacing: -.01em; }
+h3 { font-size: 1.05rem; font-weight: 600; margin: 1.2rem 0 .4rem; }
 .sub { color: var(--muted); font-size: 1.05rem; margin: 0 0 1.8rem; line-height: 1.5; }
 code, pre { font-family: var(--mono); font-size: .88em; }
 pre {
@@ -136,6 +209,15 @@ a:hover { text-decoration: underline; }
   color: var(--muted);
   font-weight: 500;
 }
+.section-kicker {
+  font-size: .75rem;
+  text-transform: uppercase;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: var(--accent);
+  margin-bottom: .25rem;
+  display: block;
+}
 .table-wrapper { overflow-x: auto; margin: 1rem 0; }
 table { width: 100%; border-collapse: collapse; font-size: .9rem; text-align: left; }
 th, td { padding: .65rem .85rem; border-bottom: 1px solid var(--line); }
@@ -156,18 +238,30 @@ figure.shot img {
   border-bottom: 1px solid var(--line);
 }
 figure.shot figcaption {
-  padding: .6rem 1rem;
-  font-size: .82rem;
+  padding: .75rem 1.1rem;
+  font-size: .84rem;
   color: var(--muted);
+  line-height: 1.5;
+  background: var(--surface);
 }
-.shot-grid {
+figure.shot figcaption strong {
+  color: var(--fg);
+}
+.shot-pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(20rem, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(22rem, 1fr));
+  gap: 1.25rem;
   margin: 1.2rem 0;
 }
-.shot-grid figure.shot { margin: 0; }
-.theme-note { font-size: .8rem; color: var(--muted); margin: .4rem 0 0; }
+.shot-pair figure.shot {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+}
+.shot-pair figure.shot img {
+  flex: 1 1 auto;
+  object-fit: cover;
+}
 .hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1.4rem 0 0; }
 .btn {
   display: inline-block;
@@ -196,6 +290,38 @@ summary {
 }
 summary:hover { color: var(--accent); }
 details p { margin: .5rem 0 0; color: var(--muted); font-size: .9rem; line-height: 1.55; }
+.meta-badge {
+  display: inline-block;
+  padding: .2rem .55rem;
+  border-radius: 4px;
+  font-size: .75rem;
+  font-weight: 600;
+  background: var(--accent-light);
+  color: var(--accent);
+  margin-right: .4rem;
+}
+.contact-meta-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(13rem, 1fr));
+  gap: 1rem;
+  margin: 1rem 0;
+  padding: 1rem 1.2rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+}
+.contact-meta-item .meta-label {
+  font-size: .72rem;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted);
+  font-weight: 600;
+  margin-bottom: .2rem;
+}
+.contact-meta-item .meta-val {
+  font-weight: 600;
+  font-size: .92rem;
+}
 footer {
   margin-top: 4rem;
   padding-top: 1.2rem;
@@ -206,6 +332,10 @@ footer {
   flex-wrap: wrap;
   justify-content: space-between;
   gap: 1rem;
+}
+@media (max-width: 680px) {
+  body { padding: 1.5rem 1rem 3rem; }
+  .shot-pair { grid-template-columns: 1fr; }
 }
 </style>
 </head>
@@ -218,6 +348,7 @@ footer {
     <a class="btn primary" href="https://github.com/mfahsold/lixity">View on GitHub</a>
     <a class="btn" href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage Guide</a>
     <a class="btn" href="https://github.com/mfahsold/lixity#quick-start">Quick Start</a>
+    <a class="btn" href="#licensing-inquiries">Licensing &amp; Inquiries</a>
   </div>
 
   <div class="pill-row">
@@ -242,40 +373,53 @@ footer {
   </div>
 
   <h2>What It Looks Like</h2>
+  <span class="section-kicker">Interactive Macro-Editing Dashboard</span>
   <figure class="shot">
-    <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1600" height="2100" loading="eager"/>
-    <figcaption>Interactive single-file HTML dashboard &ndash; component status strip, KPI overview, chapter map, tense continuity, and style panels. Every KPI is clickable and drills directly into the matching panel and filter. Fully self-contained, no external CDN dependencies.</figcaption>
+    <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1600" height="1050" loading="eager" fetchpriority="high" decoding="async"/>
+    <figcaption><strong>Interactive standalone HTML dashboard</strong> &ndash; component status strip, KPI overview tiles, chapter map, tense continuity, and style reference corridor. Every metric tile is clickable and drills directly into the matching analytical panel and filter. Fully self-contained, zero external CDN dependencies.</figcaption>
   </figure>
-  <div class="shot-grid">
+
+  <span class="section-kicker">Editorial Diagnostics: Heatmap &amp; Paragraph Context</span>
+  <div class="shot-pair">
     <figure class="shot">
-      <img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations" width="1600" height="1500" loading="lazy"/>
-      <figcaption>z* deviation heatmap &ndash; statistically significant departures from the manuscript&rsquo;s own house style.</figcaption>
+      <img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations" width="1600" height="950" loading="lazy" decoding="async"/>
+      <figcaption><strong>z* deviation heatmap</strong> &ndash; statistically significant departures from the manuscript&rsquo;s own house style across chapters, guarded by noise-aware shrinkage and Benjamini&ndash;Hochberg FDR control.</figcaption>
     </figure>
     <figure class="shot">
-      <img src="screenshots/dashboard-layer.png" alt="Style layer overlay colouring paragraphs by deviation from the chapter mean" width="1600" height="1500" loading="lazy"/>
-      <figcaption>Style layer overlay &ndash; paragraph colours show deviation from the chapter mean, complete with legend and per-layer editorial guidance.</figcaption>
-    </figure>
-    <figure class="shot">
-      <img src="screenshots/dashboard-dimensions.png" alt="Latent style dimension cards with variance and loadings" width="1600" height="560" loading="lazy"/>
-      <figcaption>Unsupervised style dimensions (Spearman &rho; + cyclic Jacobi eigendecomposition in pure Python stdlib).</figcaption>
-    </figure>
-    <figure class="shot">
-      <img src="screenshots/dashboard-markers.png" alt="Editor work marker table with status badges" width="1600" height="330" loading="lazy"/>
-      <figcaption>Editor-visible work markers with deterministic content-hash IDs and inline click-to-edit notes.</figcaption>
-    </figure>
-    <figure class="shot">
-      <img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode" width="1600" height="2100" loading="lazy"/>
-      <figcaption>Same dashboard in dark mode &ndash; automatically follows the reader&rsquo;s system preference.</figcaption>
-    </figure>
-    <figure class="shot">
-      <img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with Rich terminal report" width="1560" height="1030" loading="lazy"/>
-      <figcaption><code>lixity analyze</code> &ndash; Rich terminal report with full corpus KPIs and per-chapter metrics.</figcaption>
-    </figure>
-    <figure class="shot">
-      <img src="screenshots/cli-style.png" alt="Lixity CLI style reference output" width="1560" height="1030" loading="lazy"/>
-      <figcaption><code>lixity style</code> &ndash; self-calibrating style reference with median/MAD bands, z*, and FDR control.</figcaption>
+      <img src="screenshots/dashboard-layer.png" alt="Style layer overlay colouring paragraphs by deviation from the chapter mean" width="1600" height="900" loading="lazy" decoding="async"/>
+      <figcaption><strong>Paragraph style layer overlay</strong> &ndash; color-maps syntactic rhythm and complexity directly onto the manuscript text, complete with threshold legends and editorial guidance.</figcaption>
     </figure>
   </div>
+
+  <span class="section-kicker">Stylometric Architecture &amp; Editor Workflow</span>
+  <div class="shot-pair">
+    <figure class="shot">
+      <img src="screenshots/dashboard-dimensions.png" alt="Latent style dimension cards with variance and loadings" width="1600" height="480" loading="lazy" decoding="async"/>
+      <figcaption><strong>Unsupervised style dimensions</strong> &ndash; latent stylistic axes derived via Spearman rank correlation (&rho;) and cyclic Jacobi eigendecomposition in pure Python stdlib.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screenshots/dashboard-markers.png" alt="Editor work marker table with status badges" width="1600" height="340" loading="lazy" decoding="async"/>
+      <figcaption><strong>Persistent work markers</strong> &ndash; editor-visible review anchors with deterministic content-hash IDs and inline click-to-edit notes that vanish from print/EPUB exports.</figcaption>
+    </figure>
+  </div>
+
+  <span class="section-kicker">Terminal Suite &amp; Agent Automation</span>
+  <div class="shot-pair">
+    <figure class="shot">
+      <img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with Rich terminal report" width="1560" height="920" loading="lazy" decoding="async"/>
+      <figcaption><code>lixity analyze</code> &ndash; Rich terminal report with corpus-wide KPIs, readability indices, tense distribution, and per-chapter metrics in a single command.</figcaption>
+    </figure>
+    <figure class="shot">
+      <img src="screenshots/cli-style.png" alt="Lixity CLI style reference output" width="1560" height="920" loading="lazy" decoding="async"/>
+      <figcaption><code>lixity style</code> &ndash; self-calibrating style reference corridor with robust median/MAD bounds, noise-aware z* shrinkage, and FDR-confirmed departures.</figcaption>
+    </figure>
+  </div>
+
+  <span class="section-kicker">Adaptive Experience</span>
+  <figure class="shot">
+    <img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode" width="1600" height="1050" loading="lazy" decoding="async"/>
+    <figcaption><strong>Distraction-free dark mode</strong> &ndash; high-contrast, eye-friendly editorial environment that automatically follows the reader&rsquo;s system preference.</figcaption>
+  </figure>
 
   <h2>Why Lixity?</h2>
   <div class="card" style="padding: 0; overflow: hidden;">
@@ -499,14 +643,67 @@ html = api.dashboard(text, language="en", title="My Novel")</pre>
     </details>
   </div>
 
-  <div class="card">
-    <h2>License &amp; attribution</h2>
-    <p><b>Lixity Non-Commercial License 1.0 (LNCL-1.0)</b> &ndash; <em>source-available, not open source</em>: free for research, education, personal writing, and non-commercial open science projects. Commercial use or integration into commercial products requires a written license: <a href="mailto:mfahsold@googlemail.com">mfahsold@googlemail.com</a>. The license text must stay with every copy (<a href="https://github.com/mfahsold/lixity/blob/main/LICENSE">LICENSE</a>).</p>
-    <p>Third-party components are permissively licensed (pydantic &ndash; MIT, rich &ndash; MIT, orjson &ndash; MIT/Apache-2.0) and carry no copyleft obligations. The bundled samples are two public-domain works &ndash; <a href="https://www.gutenberg.org/ebooks/5323">Project Gutenberg #5323</a> (<i>Effi Briest</i>, Fontane, 1895) and <a href="https://www.gutenberg.org/ebooks/1342">#1342</a> (<i>Pride and Prejudice</i>, Austen, 1813); the unmodified source files with their Project Gutenberg headers are kept in the repository, and the samples are not relicensed by the LNCL.</p>
+  <div class="card" id="licensing-inquiries">
+    <h2>Licensing &amp; Commercial Inquiries</h2>
+    <p class="sub" style="margin: 0 0 1.2rem; font-size: .95rem;">Lixity operates under a transparent dual-licensing model engineered for independent creative freedom, academic research, and commercial reliability.</p>
+
+    <div class="grid" style="margin-bottom: 1.2rem;">
+      <div style="padding: 1.1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);">
+        <div class="meta-badge">Community &amp; Research</div>
+        <h3 style="margin-top: .4rem; color: var(--accent);">Non-Commercial Edition (LNCL-1.0)</h3>
+        <p style="font-size: .88rem; margin: .4rem 0;"><strong>Free of charge</strong> for fiction novelists, independent writers, academic researchers, digital humanities departments, and non-commercial open science projects.</p>
+        <ul style="font-size: .84rem; color: var(--muted); padding-left: 1.2rem; margin: .5rem 0 0;">
+          <li>Full computational stylometry engine &amp; all 7 native language profiles</li>
+          <li>Interactive standalone HTML dashboard &amp; complete CLI toolchain</li>
+          <li>100% offline, local processing ensuring absolute manuscript privacy</li>
+        </ul>
+      </div>
+
+      <div style="padding: 1.1rem; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-light);">
+        <div class="meta-badge" style="background: var(--accent); color: #fff;">Commercial &amp; Enterprise</div>
+        <h3 style="margin-top: .4rem; color: var(--accent);">Commercial License</h3>
+        <p style="font-size: .88rem; margin: .4rem 0;">Required for <strong>publishing houses, literary agencies, writing software vendors, and enterprise editorial pipelines</strong> incorporating Lixity into commercial products or workflows.</p>
+        <ul style="font-size: .84rem; color: var(--muted); padding-left: 1.2rem; margin: .5rem 0 0;">
+          <li>Commercial deployment rights &amp; proprietary workflow integration</li>
+          <li>Priority issue resolution &amp; technical integration guidance</li>
+          <li>Bespoke language profile training &amp; custom metric calibration</li>
+        </ul>
+      </div>
+    </div>
+
+    <h3>Contact &amp; Evaluation Inquiries</h3>
+    <p style="font-size: .9rem; line-height: 1.6; margin-bottom: .6rem;">
+      For commercial licensing quotes, pilot evaluations, bespoke language modules, or enterprise editorial workflow integrations, please contact the maintainer directly:
+    </p>
+
+    <div class="contact-meta-grid">
+      <div class="contact-meta-item">
+        <div class="meta-label">Maintainer &amp; Architect</div>
+        <div class="meta-val">Matthias Fahsold</div>
+      </div>
+      <div class="contact-meta-item">
+        <div class="meta-label">Location / Jurisdiction</div>
+        <div class="meta-val">Hamburg, Germany</div>
+        <div style="font-size: .78rem; color: var(--muted);">CET (UTC+1 / UTC+2)</div>
+      </div>
+      <div class="contact-meta-item">
+        <div class="meta-label">Direct Inquiry Email</div>
+        <div class="meta-val"><a href="mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry">mfahsold@googlemail.com</a></div>
+      </div>
+      <div class="contact-meta-item">
+        <div class="meta-label">Response Time</div>
+        <div class="meta-val">Within 24&ndash;48h</div>
+        <div style="font-size: .78rem; color: var(--muted);">Mon&ndash;Fri Business Days</div>
+      </div>
+    </div>
+
+    <p style="font-size: .82rem; color: var(--muted); margin: .8rem 0 0;">
+      Third-party dependencies (pydantic &ndash; MIT, rich &ndash; MIT, orjson &ndash; MIT/Apache-2.0) carry no copyleft obligations. Bundled historical literary texts (Austen, Fontane) are public domain (<a href="https://www.gutenberg.org/">Project Gutenberg</a>) and are not relicensed by the LNCL. Full license terms: <a href="https://github.com/mfahsold/lixity/blob/main/LICENSE">LICENSE</a>.
+    </p>
   </div>
 
   <footer>
-    <div>&copy; 2026 Matthias Fahsold &middot; <a href="https://github.com/mfahsold/lixity">github.com/mfahsold/lixity</a></div>
+    <div>&copy; 2026 Matthias Fahsold &middot; Hamburg, Germany &middot; <a href="https://github.com/mfahsold/lixity">github.com/mfahsold/lixity</a></div>
     <div>
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage Guide</a> &middot;
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">Agent API</a> &middot;

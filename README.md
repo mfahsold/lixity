@@ -11,9 +11,9 @@ Lixity never measures against arbitrary external corpora or generic newspaper pr
 
 Pure Python (3.10+), zero cloud calls, three runtime dependencies (`pydantic`, `rich`, `orjson`), seven native language profiles. Formal mathematical estimators are documented in [`docs/METHODS.md`](docs/METHODS.md); empirical stability boundaries in [`docs/STABILITY.md`](docs/STABILITY.md). The name reflects its mathematical roots: **T**TR, **Y**ule's characteristic K, and **LIX**.
 
-![Lixity interactive HTML dashboard](docs/screenshots/dashboard-light.png)
-
-![Lixity CLI analysis report](docs/screenshots/cli-analyze.png)
+<p align="center">
+  <img src="docs/screenshots/dashboard-light.png" alt="Lixity Interactive Stylometry Dashboard" width="100%" />
+</p>
 
 ## Mathematical Core
 
@@ -47,6 +47,30 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 - **Narratological Structure Modules:** Dialogue turn structure, character presence, scene/pacing curves, motifs, and showing vs. telling balance.
 - **Idempotent Workspace Build & Dashboard:** Fully self-contained, single-file interactive HTML dashboard with 7 language profiles.
 - **AI Agent-Ready:** Strict JSON schemas (analyze/profile **v2**, style **v4**), stable `lixity.api` facade, [`docs/AGENTS.md`](docs/AGENTS.md).
+
+## Visual Overview
+
+| Departure Heatmap (Noise-Aware z* & FDR) | Paragraph Style Layer Overlay |
+| :---: | :---: |
+| <img src="docs/screenshots/dashboard-heatmap.png" alt="z* deviation heatmap" width="100%" /> | <img src="docs/screenshots/dashboard-layer.png" alt="Paragraph style overlay" width="100%" /> |
+| *Significance-adjusted departures from house style* | *Sentence rhythm & syntactic density mapped in context* |
+
+| Unsupervised Style Dimensions | Editor-Visible Work Markers |
+| :---: | :---: |
+| <img src="docs/screenshots/dashboard-dimensions.png" alt="Unsupervised style dimensions" width="100%" /> | <img src="docs/screenshots/dashboard-markers.png" alt="Editor work markers" width="100%" /> |
+| *Spearman correlation & cyclic Jacobi EVD (pure stdlib)* | *Persistent content-hashed `<!-- LIXITY-MARKER -->` tags* |
+
+| CLI Corpus Diagnostics | Self-Calibrating Style Reference |
+| :---: | :---: |
+| <img src="docs/screenshots/cli-analyze.png" alt="CLI analyze output" width="100%" /> | <img src="docs/screenshots/cli-style.png" alt="CLI style reference" width="100%" /> |
+| *Rich terminal metrics and chapter overview* | *Median/MAD corridor, z* shrinkage, and effect sizes* |
+
+<details>
+<summary><b>View Dashboard in Dark Mode</b></summary>
+<p align="center">
+  <img src="docs/screenshots/dashboard-dark.png" alt="Lixity Dashboard Dark Mode" width="100%" />
+</p>
+</details>
 
 ## Installation
 
@@ -123,8 +147,6 @@ Full command reference, metric glossary, worked example, and troubleshooting:
 [`docs/USAGE.md`](docs/USAGE.md). Agent-facing JSON contracts:
 [`docs/AGENTS.md`](docs/AGENTS.md). Project website:
 [mfahsold.github.io/lixity](https://mfahsold.github.io/lixity/).
-
-![Lixity style layer overlay](docs/screenshots/dashboard-layer.png)
 
 ## What Lixity Measures
 
@@ -226,12 +248,25 @@ Yes. Sentence rhythm architecture, lexical richness, readability indices, and se
 Yes. Lixity operates entirely offline, executes no network calls, runs on pure Python, produces bit-identical JSON and HTML outputs for identical inputs, and follows standard POSIX exit codes (0 = success, 1 = processing error, 2 = CLI usage error).
 </details>
 
-## License & Attribution
+## Licensing, Commercial Inquiries & Location
 
-**Lixity Non-Commercial License 1.0 (LNCL-1.0)** – *source-available, not open source*: Free for research, education, personal writing, and non-commercial open science. Commercial use or integration into commercial products requires a written license (contact: mfahsold@googlemail.com). Full terms: [`LICENSE`](LICENSE); the license text must accompany every copy. Security advisories: [`SECURITY.md`](SECURITY.md). Contributing guide: [`CONTRIBUTING.md`](CONTRIBUTING.md).
+Lixity is distributed under a dual-licensing model engineered for independent creative freedom, academic research, and commercial software integration:
+
+- **Non-Commercial Edition (LNCL-1.0):** Free for independent novelists, creative writers, academic researchers, digital humanities scholars, and non-commercial open science projects. Full terms: [`LICENSE`](LICENSE); the license text must accompany every copy.
+- **Commercial & Enterprise Licensing:** Required for commercial book publishing houses, literary agencies, writing software developers, and enterprise editorial platforms integrating Lixity into commercial products, SaaS platforms, or proprietary AI pipelines. Commercial licenses include commercial deployment rights, technical integration support, priority issue resolution, and bespoke language profile training.
+
+### Inquiries & Support
+
+| Attribute | Details |
+| :--- | :--- |
+| **Maintainer & Lead Architect** | **Matthias Fahsold** |
+| **Location & Jurisdiction** | **Hamburg, Germany** (Central European Time, UTC+1 / UTC+2) |
+| **Direct Contact** | [mfahsold@googlemail.com](mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry) |
+| **Response Window** | Typically within 24–48 business hours (Mon–Fri) |
+| **Security Advisories** | [`SECURITY.md`](SECURITY.md) |
+| **Contributing Guide** | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 
 Third-party components (all permissively licensed): [pydantic](https://github.com/pydantic/pydantic) (MIT), [rich](https://github.com/Textualize/rich) (MIT), [orjson](https://github.com/ijl/orjson) (MIT/Apache-2.0).
 
 Sample corpus: `samples/` includes two **public-domain** works for testing and demonstration — Fontane's *Effi Briest* (German, [Project Gutenberg #5323](https://www.gutenberg.org/ebooks/5323)) and Austen's *Pride and Prejudice* (English, [#1342](https://www.gutenberg.org/ebooks/1342)) — each provided as an unmodified Project Gutenberg source file and as a clean Markdown conversion. These sample texts are **not** relicensed under the LNCL; the original sequel draft under `samples/effi-briest-folge/` is the author's own work. Provenance and license details: [`samples/README.md`](samples/README.md).
 
-Contact: **Matthias Fahsold** ([mfahsold@googlemail.com](mailto:mfahsold@googlemail.com))
