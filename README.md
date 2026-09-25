@@ -216,6 +216,10 @@ are not a bundled hosted service or a universal feature of every installation.
 
 ## Architecture and project adapters
 
+A [research workspace RFC](docs/research/README.md) proposes source archives,
+evidence-linked dossiers and optional hybrid search using established platforms
+and formats. It is a documented proposal, not an available feature.
+
 CLI commands and the Python API share `lixity.pipeline`: language resolution,
 paragraph profiling and fingerprint construction have one implementation.
 `analyze_document` computes corpus metrics once and returns a typed

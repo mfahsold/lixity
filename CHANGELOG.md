@@ -7,6 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Research workspace architecture proposal: source/version/passage/claim/dossier
+  model, optional Zotero/Docling/Qdrant/Haystack integrations, archival interchange,
+  synthetic evidence-chain example and staged implementation/evaluation plan.
+  Documentation only; no research commands or runtime dependencies are added.
+
 ### Changed
 
 - Clarify that books intended for sale, including self-publishing, require a

@@ -1,0 +1,298 @@
+{
+  "schema_version": "research-bundle/1",
+  "synthetic": true,
+  "description": "Design fixture only; not an implemented API contract. Every place and event is invented.",
+  "project": {
+    "schema_version": "research/1",
+    "id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+    "kind": "project",
+    "revision": 1,
+    "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+    "created_at": "2026-09-25T00:00:00Z",
+    "created_by": "synthetic-author",
+    "title": "Synthetic research example",
+    "languages": [
+      "en"
+    ],
+    "narrative_strands": [
+      {
+        "id": "A",
+        "chronology": "independent"
+      },
+      {
+        "id": "B",
+        "chronology": "independent"
+      }
+    ]
+  },
+  "records": [
+    {
+      "schema_version": "research/1",
+      "id": "urn:uuid:00000000-0000-4000-8000-000000000002",
+      "kind": "source",
+      "revision": 1,
+      "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-25T00:00:00Z",
+      "created_by": "synthetic-author",
+      "source_type": "synthetic_fixture",
+      "title": "Synthetic reading-room register",
+      "identifiers": [],
+      "bibliography": {
+        "type": "manuscript",
+        "title": "Synthetic reading-room register",
+        "language": "en"
+      },
+      "access": {
+        "mode": "local_fixture"
+      }
+    },
+    {
+      "schema_version": "research/1",
+      "id": "urn:uuid:00000000-0000-4000-8000-000000000003",
+      "kind": "source_version",
+      "revision": 1,
+      "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-25T00:00:00Z",
+      "created_by": "synthetic-author",
+      "source_ref": {
+        "id": "urn:uuid:00000000-0000-4000-8000-000000000002",
+        "revision": 1
+      },
+      "captured_at": "2026-09-25T00:00:00Z",
+      "availability": "available",
+      "acquisition": {
+        "method": "local_import",
+        "original_filename": "synthetic-source.txt"
+      },
+      "rights": {
+        "retention": "allowed",
+        "redistribution": "conditional",
+        "license": "LNCL-1.0"
+      },
+      "blob": {
+        "sha256": "396f91290f2707254e4fadcc0ea0c2a4f7f15c6f4c7f07d451c5384ba4e84d7c",
+        "byte_length": 191,
+        "media_type": "text/plain",
+        "storage_key": "sha256/396f91290f2707254e4fadcc0ea0c2a4f7f15c6f4c7f07d451c5384ba4e84d7c"
+      }
+    },
+    {
+      "schema_version": "research/1",
+      "id": "urn:uuid:00000000-0000-4000-8000-000000000004",
+      "kind": "extraction",
+      "revision": 1,
+      "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-25T00:00:00Z",
+      "created_by": "synthetic-author",
+      "source_version_ref": {
+        "id": "urn:uuid:00000000-0000-4000-8000-000000000003",
+        "revision": 1
+      },
+      "activity_ref": {
+        "id": "urn:uuid:00000000-0000-4000-8000-000000000005",
+        "revision": 1
+      },
+      "text_blob": {
+        "sha256": "396f91290f2707254e4fadcc0ea0c2a4f7f15c6f4c7f07d451c5384ba4e84d7c",
+        "byte_length": 191,
+        "media_type": "text/plain",
+        "storage_key": "sha256/396f91290f2707254e4fadcc0ea0c2a4f7f15c6f4c7f07d451c5384ba4e84d7c"
+      },
+      "representation": {
+        "encoding": "UTF-8",
+        "normalization": "none",
+        "line_endings": "LF",
+        "offset_unit": "unicode_codepoint"
+      },
+      "warnings": []
+    },
+    {
+      "schema_version": "research/1",
+      "id": "urn:uuid:00000000-0000-4000-8000-000000000005",
+      "kind": "activity",
+      "revision": 1,
+      "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-25T00:00:00Z",
+      "created_by": "synthetic-author",
+      "operation": "extract_utf8",
+      "inputs": [
+        {
+          "id": "urn:uuid:00000000-0000-4000-8000-000000000003",
+          "revision": 1
+        }
+      ],
+      "agent": {
+        "name": "synthetic-example-builder",
+        "version": "1"
+      },
+      "parameters": {
+        "normalization": "none"
+      },
+      "started_at": "2026-09-25T00:00:00Z",
+      "ended_at": "2026-09-25T00:00:00Z",
+      "status": "succeeded"
+    },
+    {
+      "schema_version": "research/1",
+      "id": "urn:uuid:00000000-0000-4000-8000-000000000006",
+      "kind": "passage",
+      "revision": 1,
+      "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-25T00:00:00Z",
+      "created_by": "synthetic-author",
+      "extraction_ref": {
+        "id": "urn:uuid:00000000-0000-4000-8000-000000000004",
+        "revision": 1
+      },
+      "selector": {
+        "type": "TextPositionSelector",
+        "start": 81,
+        "end": 125,
+        "quote": {
+          "type": "TextQuoteSelector",
+          "exact": "The Northbridge reading room opened in 1924.",
+          "prefix": "nd events are invented.\n",
+          "suffix": "\nThis fixture provides n"
+        }
+      },
+      "verbatim": "The Northbridge reading room opened in 1924.",
+      "language": "en",
+      "verification": {
+        "status": "reviewed",
+        "actor": "synthetic-author",
+        "at": "2026-09-25T00:00:00Z",
+        "rationale": "Checked against the invented fixture, not a real-world historical source."
+      }
+    },
+    {
+      "schema_version": "research/1",
+      "id": "urn:uuid:00000000-0000-4000-8000-000000000007",
+      "kind": "claim",
+      "revision": 1,
+      "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-25T00:00:00Z",
+      "created_by": "synthetic-author",
+      "statement": "The synthetic register reports a 1924 opening for the reading room.",
+      "claim_type": "source_report",
+      "scope": {
+        "places": [],
+        "narrative_strands": [],
+        "valid_time": {
+          "start": "1924",
+          "end": "1924",
+          "precision": "year",
+          "uncertainty": "Invented fixture; no real-world validity asserted."
+        }
+      },
+      "status": "reviewed",
+      "review": {
+        "status": "reviewed",
+        "actor": "synthetic-author",
+        "at": "2026-09-25T00:00:00Z",
+        "rationale": "Checked against the invented fixture, not a real-world historical source.",
+        "evidence_refs": [
+          {
+            "id": "urn:uuid:00000000-0000-4000-8000-000000000008",
+            "revision": 1
+          }
+        ]
+      }
+    },
+    {
+      "schema_version": "research/1",
+      "id": "urn:uuid:00000000-0000-4000-8000-000000000008",
+      "kind": "evidence_link",
+      "revision": 1,
+      "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-25T00:00:00Z",
+      "created_by": "synthetic-author",
+      "claim_ref": {
+        "id": "urn:uuid:00000000-0000-4000-8000-000000000007",
+        "revision": 1
+      },
+      "passage_ref": {
+        "id": "urn:uuid:00000000-0000-4000-8000-000000000006",
+        "revision": 1
+      },
+      "relation": "supports",
+      "rationale": "The exact sentence supplies the year in the synthetic source.",
+      "review": {
+        "status": "reviewed",
+        "actor": "synthetic-author",
+        "at": "2026-09-25T00:00:00Z",
+        "rationale": "Checked against the invented fixture, not a real-world historical source."
+      }
+    },
+    {
+      "schema_version": "research/1",
+      "id": "urn:uuid:00000000-0000-4000-8000-000000000010",
+      "kind": "decision",
+      "revision": 1,
+      "project_id": "urn:uuid:00000000-0000-4000-8000-000000000001",
+      "created_at": "2026-09-25T00:00:00Z",
+      "created_by": "synthetic-author",
+      "statement": "Use the fixture opening year in strand A; strand B remains independent.",
+      "status": "accepted",
+      "scope": {
+        "narrative_strands": [
+          "A"
+        ],
+        "valid_time": {
+          "precision": "unknown"
+        }
+      },
+      "considered_claim_refs": [
+        {
+          "id": "urn:uuid:00000000-0000-4000-8000-000000000007",
+          "revision": 1
+        }
+      ],
+      "review": {
+        "actor": "synthetic-author",
+        "at": "2026-09-25T00:00:00Z",
+        "rationale": "Explicit fictional example decision."
+      },
+      "considered_evidence_refs": [
+        {
+          "id": "urn:uuid:00000000-0000-4000-8000-000000000008",
+          "revision": 1
+        }
+      ]
+    }
+  ],
+  "dossier_files": [
+    {
+      "record_ref": {
+        "id": "urn:uuid:00000000-0000-4000-8000-000000000009",
+        "revision": 1
+      },
+      "path": "dossier.md",
+      "blob": {
+        "sha256": "b07badbb460450815ebfa425c12a6b2880f3b52e2174316ebeb416be786025bd",
+        "byte_length": 1095,
+        "media_type": "text/markdown",
+        "storage_key": "sha256/b07badbb460450815ebfa425c12a6b2880f3b52e2174316ebeb416be786025bd"
+      }
+    }
+  ],
+  "example_blob_files": [
+    {
+      "path": "synthetic-source.txt",
+      "blob": {
+        "sha256": "396f91290f2707254e4fadcc0ea0c2a4f7f15c6f4c7f07d451c5384ba4e84d7c",
+        "byte_length": 191,
+        "media_type": "text/plain",
+        "storage_key": "sha256/396f91290f2707254e4fadcc0ea0c2a4f7f15c6f4c7f07d451c5384ba4e84d7c"
+      }
+    },
+    {
+      "path": "dossier.md",
+      "blob": {
+        "sha256": "b07badbb460450815ebfa425c12a6b2880f3b52e2174316ebeb416be786025bd",
+        "byte_length": 1095,
+        "media_type": "text/markdown",
+        "storage_key": "sha256/b07badbb460450815ebfa425c12a6b2880f3b52e2174316ebeb416be786025bd"
+      }
+    }
+  ]
+}
