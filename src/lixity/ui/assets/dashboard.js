@@ -1020,6 +1020,8 @@ document.addEventListener("click", function (event) {
     if (modalNew && typeof modalNew.showModal === "function") {
       switchModalTab("tab-pane-import");
       modalNew.showModal();
+      var dropzone = document.getElementById("import-dropzone");
+      if (dropzone) dropzone.focus();
     }
     return;
   }
