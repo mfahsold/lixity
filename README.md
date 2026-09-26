@@ -114,7 +114,14 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 </details>
 
-### 5. Responsive Mobile Views
+### 5. Research Workspace & Archival Citations (Pilot)
+
+| Verified Archival Source Dashboard (`lixity research dashboard`) | CLI Full-Text Search & Exact Citation (`lixity research search/cite`) |
+| :---: | :---: |
+| <img src="docs/screenshots/dashboard-research.png" alt="Research source dashboard with cultural context metadata" width="100%" /> | <img src="docs/screenshots/cli-research.png" alt="CLI research search and citation" width="100%" /> |
+| *Verified source metadata (genre, era, place, provenance) & stylometrics* | *SQLite FTS5 BM25 search & exact Unicode codepoint character offsets* |
+
+### 6. Responsive Mobile Views
 
 | Project overview | Complete style-dimension panel |
 | :---: | :---: |
@@ -286,7 +293,7 @@ Detailed formulas, mathematical derivations, and academic citations are document
 4. **Narrative Voice & Register** – Dialogue ratio, function-word density (the author's implicit grammatical fingerprint), perception filters ("telling" verbs like *saw*, *heard*, *felt*), modal hedging, passive voice, nominal style suffixes, sentence-starter Shannon entropy, and first-person openings.
 5. **Tense Dynamics & Continuity** – Paragraph-accurate classification into dominant tense (present, past, mixed, neutral) with a 4-tier friction severity rating (0–3) to flag unintended slips between epic past and scenic present.
 
-## Editorial Practice: The Lektorats-Matrix
+## Editorial Practice: The Macro-Editing Matrix
 
 Statistical indicators are not an objective quality score or an instruction to rewrite prose; they serve as diagnostic prompts for human macro-editing. Lixity maps statistical signals directly to concrete editorial questions and editing interventions:
 

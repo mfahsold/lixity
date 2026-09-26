@@ -1,14 +1,25 @@
-const { chromium } = require(process.env.PLAYWRIGHT_MODULE || 'playwright');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const assert = require('node:assert/strict');
 
+let playwrightMod = process.env.PLAYWRIGHT_MODULE || 'playwright';
+try {
+  require.resolve(playwrightMod);
+} catch {
+  const fallback = '/home/codeai/.npm/_npx/b234c773f454f454/node_modules/playwright';
+  if (fs.existsSync(fallback)) playwrightMod = fallback;
+}
+const { chromium } = require(playwrightMod);
+
 async function main() {
   const captures = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
   const launchOptions = {headless: true};
-  if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
-    launchOptions.executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  const execPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
+    (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
+     fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined);
+  if (execPath) {
+    launchOptions.executablePath = execPath;
   }
   const browser = await chromium.launch(launchOptions);
   const results = [];

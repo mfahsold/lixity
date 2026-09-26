@@ -290,6 +290,72 @@ def main() -> int:
         900,
     )
 
+    # 8. Research Source Dashboard & CLI Citation (Research Pilot) ---------
+    research_proj = WORK_DIR / "research-demo"
+    if research_proj.exists():
+        shutil.rmtree(research_proj)
+    from lixity.research import api as research_api
+
+    research_api.init(research_proj, title="1920s Archival Research", language="en")
+    source_text = """## Section 1: Port Authority Log – October 1923
+
+On the cold evening of October 14, 1923, customs officers on the night shift observed suspicious movements near Warehouse 4 in the Free Port zone.
+The autumn mist hung heavy over the Elbe river, obscuring the watercraft anchored along the quay.
+Two unidentified figures were seen attempting to force the secondary padlock on the eastern warehouse gate.
+
+When challenged by the night watchman, both individuals abandoned a wooden crate and fled along the cobblestone embankment toward Sandtorhafen.
+Officer Hansen inspected the abandoned crate and found forty bundles of untaxed Virginian tobacco leaves.
+The evidence was impounded and transferred to the central customs station at dawn.
+
+## Section 2: Witness Statement and Follow-up
+
+The night watchman reported that a small motor launch with muffled exhaust had been idling near the southern pier shortly before the incident.
+Inspection of the lock revealed fresh tool abrasions consistent with a heavy steel crowbar.
+No customs seals on the adjacent bonded storehouses had been broken during the encounter.
+"""
+    customs_file = WORK_DIR / "customs_log_1923.txt"
+    customs_file.write_text(source_text, encoding="utf-8")
+    ingest_res = research_api.ingest(
+        research_proj,
+        customs_file,
+        context={
+            "genre": "Official Customs Register",
+            "created_period": "1923",
+            "depicted_period": "October 1923",
+            "place": "Hamburg Free Port Zone",
+            "perspective": "Third-Person Administrative",
+            "provenance_note": "Municipal Archives, Record Group 332-1, Item 409",
+        },
+        allow_retention=True,
+    )
+    research_api.reindex(research_proj)
+    research_html = research_api.source_dashboard(research_proj, ingest_res["source_id"])
+    _queue_capture(
+        _write_html("dashboard-research.html", _force_light(research_html)),
+        OUT_DIR / "dashboard-research.png",
+        1480,
+        960,
+    )
+
+    search_res = research_api.search(research_proj, "warehouse customs", limit=1)
+    matches = search_res.get("matches", [])
+    passage_id = matches[0]["passage_id"] if matches else "urn:uuid:sample-passage-uuid"
+    cite_res = research_api.cite(research_proj, passage_id) if matches else {}
+
+    cli_research_text = (
+        f"$ lixity research search --project ./novel-research --query \"warehouse customs\" --limit 1\n"
+        f"{json.dumps(search_res, indent=2)}\n\n"
+        f"$ lixity research cite --project ./novel-research --passage {passage_id}\n"
+        f"{json.dumps(cite_res, indent=2)}"
+    )
+    _terminal_shot(
+        "lixity research search & cite",
+        f"<pre>{html.escape(cli_research_text)}</pre>",
+        OUT_DIR / "cli-research.png",
+        1320,
+        780,
+    )
+
     manifest = WORK_DIR / "captures.json"
     manifest.write_text(json.dumps(CAPTURES), encoding="utf-8")
     node = shutil.which("node")

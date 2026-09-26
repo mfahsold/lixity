@@ -41,6 +41,8 @@ The command fails on runtime errors, missing panels or mobile page overflow.
 - `dashboard-mobile`: 390-pixel mobile overview viewport.
 - `dashboard-dimensions-mobile` / `dashboard-dimensions-dark`: complete panels.
 - `cli-analyze` / `cli-style`: terminal-style excerpts of actual report output.
+- `dashboard-research`: standalone source dashboard with verified source criticism context.
+- `cli-research`: terminal search & citation workflow with passage IDs and character offsets.
 
 The screenshot helper selects sections by exact ID. It does not crop whichever
 earlier panel happens to mention “markers.” Screenshots illustrate a corpus's
