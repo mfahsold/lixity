@@ -37,7 +37,8 @@ class BookLayoutConfig:
     hyphenate_body: bool = True  # Pyphen hyphenation for body text
 
     # Font family & styles
-    font_family: str = "P052, Palatino, URW Palladio L, FreeSerif, serif"
+    font_family: str = "Palatino, Palatino Linotype, Noto Serif, P052, URW Palladio L, FreeSerif, serif"
+    letter_spacing: int = 70  # subtle tracking in Pango units (1024 = 1pt; ~0.07pt prevents glyph collision)
     font_size_body: float = 9.8
     font_size_h1: float = 20.0
     font_size_h2: float = 14.5
@@ -116,7 +117,10 @@ class BookLayoutConfig:
         cls, preset: str = "taschenbuch", font_family: str | None = None
     ) -> "BookLayoutConfig":
         """Creates one of the three focused publication formats (a4, taschenbuch, mobile)."""
-        family = font_family or "P052, Palatino, URW Palladio L, FreeSerif, serif"
+        family = (
+            font_family
+            or "Palatino, Palatino Linotype, Noto Serif, P052, URW Palladio L, FreeSerif, serif"
+        )
         key = (preset or "taschenbuch").strip().lower()
 
         if key in ("a4", "lektorat", "manuskript"):
