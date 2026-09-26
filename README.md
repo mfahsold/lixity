@@ -24,6 +24,18 @@ lixity build manuscript.md --language en
 Open `exports/manuscript_dashboard.html`.
 [Install Lixity](#installation) · [Usage](docs/USAGE.md) · [Methods](docs/METHODS.md)
 
+## The 5 Core Pillars
+
+Lixity unifies mathematically rigorous text linguistics, narratological dramaturgy, typographic publication engineering, and source-critical evidence into a single stateless engine.
+
+| Pillar | Scope | Core Techniques & Features |
+| :--- | :--- | :--- |
+| **01. Stylistics & Corpus Diagnostics** | Macro & micro sentence architecture | ASL, rhythm CV, 4 length tiers (staccato to hypotaxis), 7 calibrated readability indices (Flesch, Amstad, LIX), length-invariant lexical diversity (HD-D, MTLD, Yule's K, Maas a²). |
+| **02. Dramaturgy & Tense Profiling** | Paragraph-accurate narrative continuity | Tense classification (present, past, mixed, neutral), 4-tier friction severity rating (0–3), speech ratios, dialogue turns, scene pacing curves, and chapter tension hooks. |
+| **03. Robust 3D Style Space** | Self-calibrating manuscript baseline | Manuscript-intrinsic median ± 2 MAD corridor, noise-aware z\* shrinkage, Benjamini–Hochberg / BY FDR multiplicity control, cyclic Jacobi EVD, and interactive 3D trajectory. |
+| **04. Typographic Publication** | Print & digital publishing vectors | Cairo & Pango PDF engine with subpixel metrics, font hinting control, collision-free tracking: Paperback (135×205 mm), Editorial Proof A4 with line numbers, Mobile 9:16 PDF, and valid EPUB 3.3 with dual NCX/nav navigation. |
+| **05. Evidence-Based Research** *(Pilot)* | Source archive & verifiable citation chain | Immutable SHA-256 UTF-8 storage, cultural source criticism (epoch, location, genre, perspective), SQLite FTS5 BM25 search, persistent passage citation chains, lifecycle withdrawal & purge. |
+
 ## Mathematical Core
 
 | Estimator / Method | Role in System |
@@ -274,6 +286,20 @@ Detailed formulas, mathematical derivations, and academic citations are document
 4. **Narrative Voice & Register** – Dialogue ratio, function-word density (the author's implicit grammatical fingerprint), perception filters ("telling" verbs like *saw*, *heard*, *felt*), modal hedging, passive voice, nominal style suffixes, sentence-starter Shannon entropy, and first-person openings.
 5. **Tense Dynamics & Continuity** – Paragraph-accurate classification into dominant tense (present, past, mixed, neutral) with a 4-tier friction severity rating (0–3) to flag unintended slips between epic past and scenic present.
 
+## Editorial Practice: The Lektorats-Matrix
+
+Statistical indicators are not an objective quality score or an instruction to rewrite prose; they serve as diagnostic prompts for human macro-editing. Lixity maps statistical signals directly to concrete editorial questions and editing interventions:
+
+| Linguistic Feature | Calculation & Diagnostic Signal | Editorial Interpretation & Practical Editing | Warning Signal & Editorial Intervention |
+| :--- | :--- | :--- | :--- |
+| **Sentence Rhythm & Length Tiers** | ASL, rhythm CV, staccato (≤6w), hypotaxis (>25w) | **Pacing & Prose Breath:** Verifies whether dialogue or action sequences bounce dynamically or suffocate under monotonous clause stacks. High CV (>0.70) indicates organic prose. | Low CV (<0.40) flags rhythmic monotony (e.g., chains of subject-verb-object main clauses). Sudden hypotaxis spikes stall fast-paced action scenes. |
+| **Length-Invariant Lexical Richness** | Hypergeometric HD-D, MTLD, Yule's K, Maas a² | **Vocabulary Freshness without Sample-Size Bias:** Unlike raw TTR, HD-D does not penalize or inflate short chapters. Assesses whether vocabulary remains rich across 50,000+ words. | Pronounced drop in HD-D in late chapters exposes author exhaustion. Artificially high HD-D (>0.90) warns of strained, unnatural thesaurus hunting. |
+| **Tense Continuity & Friction** | Present, past, mixed, neutral; friction rating 0–3 | **Timeline & Perspective Discipline:** Detects subconscious drift between retrospective epic past and immediate scenic present at paragraph resolution. | Friction score 2–3 (e.g., past-tense narrative abruptly mixing with unquoted present-tense clauses) requires verification for accidental tense errors. |
+| **Showing vs. Telling & Filters** | Perception verbs, passive voice, nominal style | **Sensory Immersion:** Identifies perception filters (*saw, heard, felt, noticed*) that place an unnecessary buffer between reader and protagonist instead of showing the scene directly. | High filter density turns visceral drama into detached police reports. High passive and nominal suffix ratios stifle narrative propulsion. |
+| **FDR Significance Heatmap** | Noise-aware z\*, Benjamini–Hochberg (●), Cliff's δ | **False-Discovery Protection:** Prevents statistical over-interpretation. A black dot (●) marks strictly confirmed macro departures under false discovery rate control. | Only confirmed cells (●) with substantial effect size (Cliff's \|δ\| > 0.47) warrant deep rewrites; mild fluctuations reflect natural artistic variation. |
+| **Structural & Drift Diagnostics** | PELT changepoints (BIC), Mann–Kendall τ, Wasserstein–KS | **Narrative Architecture & Regime Shifts:** PELT locates unannounced stylistic regime shifts (e.g., tone rupture at Act II); Mann–Kendall identifies slow, cumulative drift across the manuscript. | Unexpected PELT changepoints uncover author handovers, long writing hiatuses, or tonal inconsistency across character arcs. |
+| **Persistent Work Markers** | Content-hashed `<!-- LIXITY-MARKER -->` tags | **Traceable Editorial Annotations:** Notes remain anchored right at the target paragraph in Markdown, but vanish cleanly in print (PDF) and digital (EPUB) book exports. | Content hashes ensure editorial anchors remain intact even as surrounding text shifts during iterative manuscript revision. |
+
 ## Work Markers (Editor-Visible)
 
 Work markers are standard HTML comment lines placed directly above the target paragraph:
@@ -291,6 +317,41 @@ He walked to the window and watches the rain falling outside.
 - Programmatic access via `api.markers`, `api.add_marker`, and `api.resolve_marker`.
 
 ![Lixity work markers](docs/screenshots/dashboard-markers.png)
+
+## Research Workspace: Evidence-Based Source Archive
+
+Historical novels, investigative non-fiction, and scholarly manuscripts demand an unbroken chain of custody between archived primary sources, cultural context, and narrative synthesis. The experimental research pilot ([`docs/research/USAGE.md`](docs/research/USAGE.md), developing towards `1.16.0.dev0`; not in release `v1.15.0`) provides a dedicated, immutable local evidence repository separate from narrative manuscripts.
+
+### Untrusted Evidence vs. Narrative Invention
+In Lixity's architecture, archived documents are **untrusted historical evidence**, never instructions or unquestioned facts. Authors and editors maintain strict separation between:
+1. **Raw Document Integrity:** Verifiable SHA-256 byte blobs stored with explicit retention permissions (`--allow-retention`).
+2. **Versioned Source Criticism:** Cultural context (creation date, depicted epoch, location, genre, narrative perspective, and transmission state) attached without altering source bytes.
+3. **Persistent Passage Citations:** Stable passage identifiers (`urn:uuid:...`) anchoring quotations down to exact character offsets, remaining verifiable across revisions.
+4. **Lifecycle Governance:** Controlled distinction between **Withdrawal** (hiding questionable sources from active search while preserving citation audit trails) and **Purge** (permanent cryptographic removal with dry-run verification).
+
+```bash
+# 1. Initialize a dedicated research workspace
+lixity research init --project ./novel-research --title "1920s Archive" --language en
+
+# 2. Ingest primary source with cultural source criticism and explicit retention
+lixity research ingest --project ./novel-research --file ./sources/police_log_1923.txt \
+  --context '{"genre": "Police Log", "epoch": "1923", "location": "Hamburg", "provenance": "State Archives"}' \
+  --allow-retention
+
+# 3. Fast lexical full-text search with BM25 ranking (SQLite FTS5)
+lixity research search --project ./novel-research --query "dockyard customs" --limit 5
+
+# 4. Resolve immutable passage citation (paragraph, exact offset, source metadata)
+lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-HERE
+
+# 5. Run linguistic source analysis and generate standalone source dashboard
+lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE
+lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE > source_report.html
+
+# 6. Lifecycle: withdraw contested source or preview irreversible purge
+lixity research withdraw --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --reason "Contested provenance"
+lixity research purge --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --dry-run
+```
 
 ## Python API for AI Agents
 

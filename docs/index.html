@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="auto">
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Lixity – Quantitative Text Linguistics &amp; Stylometry for Literary Manuscripts</title>
-<meta name="description" content="Lixity measures how literary manuscripts read: sentence rhythm, length-invariant lexical diversity (HD-D, Yule's K), paragraph-accurate tense profiles, self-calibrating style references, and structural diagnostics (PELT, Mann–Kendall). Deterministic, offline, multilingual text analytics engine for authors, editors, publishers, and AI agents."/>
-<meta name="keywords" content="computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg FDR, PELT changepoint, Mann-Kendall trend, macro editing, offline text analytics, digital humanities, editorial software"/>
+<title>Lixity – Quantitative Text Linguistics, Computational Stylometry &amp; Research Workspace</title>
+<meta name="description" content="Lixity turns literary manuscripts into an offline analytical workspace: sentence rhythm, length-invariant lexical diversity (HD-D, Yule's K), paragraph-accurate tense profiling, self-calibrating style references (BH/BY FDR), immutable source archives, and exact citation chains. 100% offline, pure Python, multilingual."/>
+<meta name="keywords" content="computational stylometry, quantitative text linguistics, literary manuscript analysis, research workspace, source criticism, evidence chain, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg FDR, PELT changepoint, macro editing, offline text analytics, digital humanities, editorial software"/>
 <meta name="robots" content="index, follow"/>
 <meta name="author" content="Matthias Fahsold"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
@@ -21,8 +21,8 @@
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
-<meta property="og:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry for Literary Manuscripts"/>
-<meta property="og:description" content="Self-calibrating style references, length-invariant lexical diversity, tense profiles, and readability metrics for literary manuscripts – pure Python, offline, 7 languages."/>
+<meta property="og:title" content="Lixity – Quantitative Text Linguistics, Stylometry &amp; Research Workspace"/>
+<meta property="og:description" content="Self-calibrating style references, tense dynamics, evidence-based research archiving, and publication typography for literary manuscripts – 100% offline, pure Python, 7 languages."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="1480"/>
@@ -34,8 +34,8 @@
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Stylometry"/>
-<meta name="twitter:description" content="Self-calibrating style references, tense profiles, and length-invariant lexical diversity for literary manuscripts."/>
+<meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Research Workspace"/>
+<meta name="twitter:description" content="Self-calibrating style references, tense profiles, evidence-based source archives, and publication-ready typography."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
 
@@ -49,7 +49,7 @@
       "@id": "https://mfahsold.github.io/lixity/#software",
       "name": "Lixity",
       "alternateName": "Lixity – Quantitative Text Linguistics & Stylometry",
-      "description": "Deterministic, dependency-light, multilingual text linguistics engine and stylometric toolkit for literary manuscripts, editors, publishers, digital humanities scholars, and autonomous AI agents.",
+      "description": "Deterministic, dependency-light, multilingual text linguistics engine and evidence-based research workspace for literary manuscripts, authors, editors, publishers, and AI agents.",
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Linguistic & Stylometric Analysis",
       "operatingSystem": "Linux, macOS, Windows",
@@ -107,27 +107,6 @@
             "priceCurrency": "EUR"
           }
         }
-      ],
-      "keywords": "computational stylometry, quantitative text linguistics, literary manuscript analysis, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg, macro editing",
-      "featureList": [
-        "Sentence-length architecture and rhythm metrics (ASL, staccato, hypotaxis, CV)",
-        "Length-invariant lexical diversity (HD-D, MTLD, MATTR, Maas a², Yule's characteristic K, Guiraud R)",
-        "Language-calibrated readability: Flesch family (Amstad, Flesch, Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma) and LIX",
-        "Register signals: dialogue ratio, function words, perception filters, modals, passive voice, nominal style",
-        "Paragraph-accurate tense continuity profiling with line anchors and friction severity flags",
-        "Self-calibrating style reference: manuscript-intrinsic median/MAD bands, significance-adjusted z* scores, Benjamini-Hochberg / Benjamini-Yekutieli FDR control",
-        "Structural diagnostics: PELT changepoints, Mann-Kendall trends, Sn/Qn robust scales, Hill tail index, early/late Wasserstein-KS shift, co-occurrence fitness, Dunning keyness (schema v4)",
-        "Effect sizes on confirmed cells: Cliff's delta and Vargha-Delaney A12",
-        "Injectable thresholds via CLI, API, UI settings, or [tool.lixity] / lixity.toml config",
-        "Unsupervised style dimensions via Spearman rank correlation and cyclic Jacobi eigendecomposition",
-        "Editor-visible work markers with deterministic content-hash IDs and inline notes",
-        "Idempotent workspace build: unchanged input causes zero writes, changed input rotates exactly one version",
-        "Single-file clickable dashboard: component status strip, KPI drill-downs, style-reference band chart, deviation layer",
-        "Dialogue turn structure, character presence, scene/pacing analysis with chapter hooks",
-        "Motif tracking and repetition analysis (content words, repeated n-grams)",
-        "Self-calibrating showing-vs-telling balance per chapter",
-        "Deterministic Python API for autonomous AI agents and publication pipelines",
-        "Seven native language profiles (de, en, fr, es, it, pt, nl) plus generic fallback"
       ]
     },
     {
@@ -141,122 +120,594 @@
   ]
 }
 </script>
+
 <style>
 :root {
-  --bg: #f8f9fa;
-  --surface: #ffffff;
-  --fg: #1d2129;
-  --muted: #656d78;
-  --line: #e6e9ee;
-  --accent: #2b5c8f;
-  --accent-light: #eef3f9;
-  --radius: 8px;
-  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  --mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  --bg: #0b0d12;
+  --bg-subtle: #121620;
+  --surface: #181d29;
+  --surface-raised: #202738;
+  --surface-overlay: rgba(24, 29, 41, 0.82);
+  --border: #283144;
+  --border-subtle: #1e2534;
+  --border-accent: rgba(79, 141, 249, 0.35);
+  --fg: #eef2f8;
+  --fg-heading: #ffffff;
+  --muted: #9aa5b8;
+  --subtle: #6c788d;
+  --accent: #3b82f6;
+  --accent-glow: rgba(59, 130, 246, 0.2);
+  --accent-light: rgba(59, 130, 246, 0.12);
+  --emerald: #10b981;
+  --emerald-light: rgba(16, 185, 129, 0.12);
+  --amber: #f59e0b;
+  --amber-light: rgba(245, 158, 11, 0.12);
+  --rose: #f43f5e;
+  --rose-light: rgba(244, 63, 94, 0.12);
+  --radius-sm: 6px;
+  --radius: 12px;
+  --radius-lg: 18px;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.25);
+  --shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.55);
+  --font: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  --serif: "Newsreader", "Charter", "Palatino", "Palatino Linotype", Georgia, serif;
+  --mono: "JetBrains Mono", ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
 }
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0e1013;
-    --surface: #15181d;
-    --fg: #e4e7ec;
-    --muted: #88919e;
-    --line: #21252d;
-    --accent: #4a8ad4;
-    --accent-light: #182230;
+
+[data-theme="light"] {
+  --bg: #f8fafc;
+  --bg-subtle: #f1f5f9;
+  --surface: #ffffff;
+  --surface-raised: #f8fafc;
+  --surface-overlay: rgba(255, 255, 255, 0.9);
+  --border: #e2e8f0;
+  --border-subtle: #cbd5e1;
+  --border-accent: rgba(37, 99, 235, 0.3);
+  --fg: #1e293b;
+  --fg-heading: #0f172a;
+  --muted: #475569;
+  --subtle: #64748b;
+  --accent: #2563eb;
+  --accent-glow: rgba(37, 99, 235, 0.12);
+  --accent-light: rgba(37, 99, 235, 0.08);
+  --emerald: #059669;
+  --emerald-light: rgba(5, 150, 105, 0.1);
+  --amber: #d97706;
+  --amber-light: rgba(217, 119, 6, 0.1);
+  --rose: #e11d48;
+  --rose-light: rgba(225, 29, 72, 0.1);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+  --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+  --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
+}
+
+@media (prefers-color-scheme: light) {
+  :root[data-theme="auto"] {
+    --bg: #f8fafc;
+    --bg-subtle: #f1f5f9;
+    --surface: #ffffff;
+    --surface-raised: #f8fafc;
+    --surface-overlay: rgba(255, 255, 255, 0.9);
+    --border: #e2e8f0;
+    --border-subtle: #cbd5e1;
+    --border-accent: rgba(37, 99, 235, 0.3);
+    --fg: #1e293b;
+    --fg-heading: #0f172a;
+    --muted: #475569;
+    --subtle: #64748b;
+    --accent: #2563eb;
+    --accent-glow: rgba(37, 99, 235, 0.12);
+    --accent-light: rgba(37, 99, 235, 0.08);
+    --emerald: #059669;
+    --emerald-light: rgba(5, 150, 105, 0.1);
+    --amber: #d97706;
+    --amber-light: rgba(217, 119, 6, 0.1);
+    --rose: #e11d48;
+    --rose-light: rgba(225, 29, 72, 0.1);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.06);
+    --shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+    --shadow-lg: 0 12px 32px rgba(0, 0, 0, 0.12);
   }
 }
+
 * { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
 body {
   margin: 0;
-  padding: 3rem 1.5rem 5rem;
+  padding: 0;
   background: var(--bg);
   color: var(--fg);
-  font: 15px/1.6 var(--font);
+  font: 16px/1.65 var(--font);
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-main { max-width: 58rem; margin: 0 auto; }
-h1 { font-size: 2.3rem; font-weight: 700; margin: 0 0 .3rem; letter-spacing: -.03em; }
-h2 { font-size: 1.35rem; font-weight: 650; margin: 2.4rem 0 .7rem; letter-spacing: -.01em; }
-h3 { font-size: 1.05rem; font-weight: 600; margin: 1.2rem 0 .4rem; }
-.sub { color: var(--muted); font-size: 1.05rem; margin: 0 0 1.8rem; line-height: 1.5; }
-code, pre { font-family: var(--mono); font-size: .88em; }
-pre {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 1rem 1.2rem;
-  overflow-x: auto;
-  line-height: 1.45;
+
+/* Site Header */
+header.site-header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: var(--surface-overlay);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+  padding: 0.75rem 1.5rem;
 }
-a { color: var(--accent); text-decoration: none; }
-a:hover { text-decoration: underline; }
-.card {
-  background: var(--surface);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 1.25rem 1.4rem;
-  margin: 1.2rem 0;
-  box-shadow: 0 1px 3px rgba(0,0,0,.02);
+.header-inner {
+  max-width: 72rem;
+  margin: 0 auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
 }
-.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem; margin: 1rem 0; }
-.grid > * { min-width: 0; }
-.grid > .card { margin: 0; }
-.card > :first-child { margin-top: 0; }
-.card > :last-child { margin-bottom: 0; }
-p, li, td, .meta-val { overflow-wrap: anywhere; }
-.pill-row { display: flex; flex-wrap: wrap; gap: .5rem; margin: 1.2rem 0 2rem; }
-.pill-row span {
-  background: var(--surface);
-  border: 1px solid var(--line);
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  text-decoration: none;
+  color: var(--fg-heading);
+}
+.brand-logo {
+  width: 32px;
+  height: 32px;
+  background: linear-gradient(135deg, var(--accent), #6366f1);
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  color: #ffffff;
+  font-weight: 800;
+  font-size: 1.15rem;
+  box-shadow: 0 2px 8px var(--accent-glow);
+}
+.brand-name {
+  font-weight: 750;
+  font-size: 1.25rem;
+  letter-spacing: -0.02em;
+}
+.brand-badge {
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 0.15rem 0.5rem;
   border-radius: 999px;
-  padding: .25rem .75rem;
-  font-size: .8rem;
-  color: var(--muted);
-  font-weight: 500;
-}
-.section-kicker {
-  font-size: .75rem;
-  text-transform: uppercase;
-  font-weight: 700;
-  letter-spacing: .06em;
+  background: var(--accent-light);
   color: var(--accent);
-  margin-bottom: .25rem;
-  display: block;
+  border: 1px solid var(--border-accent);
 }
-.table-wrapper { overflow-x: auto; margin: 1rem 0; }
-table { width: 100%; border-collapse: collapse; font-size: .9rem; text-align: left; }
-th, td { padding: .65rem .85rem; border-bottom: 1px solid var(--line); }
-th { font-weight: 600; color: var(--fg); background: var(--accent-light); }
-td:first-child { font-weight: 600; }
-figure.shot {
-  margin: 1.4rem 0;
+nav.site-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+nav.site-nav a {
+  padding: 0.4rem 0.75rem;
+  border-radius: var(--radius-sm);
+  color: var(--muted);
+  font-size: 0.88rem;
+  font-weight: 550;
+  text-decoration: none;
+  transition: color 0.15s, background 0.15s;
+}
+nav.site-nav a:hover {
+  color: var(--fg-heading);
+  background: var(--surface-raised);
+}
+.theme-btn {
   background: var(--surface);
-  border: 1px solid var(--line);
+  border: 1px solid var(--border);
+  color: var(--fg);
+  padding: 0.4rem 0.75rem;
+  border-radius: 999px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  transition: all 0.2s;
+}
+.theme-btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+/* Main Container */
+main {
+  max-width: 72rem;
+  margin: 0 auto;
+  padding: 3rem 1.5rem 6rem;
+}
+
+/* Hero Section */
+.hero {
+  padding: 2.5rem 0 3.5rem;
+  text-align: center;
+  max-width: 58rem;
+  margin: 0 auto;
+}
+.eyebrow-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.3rem 0.9rem;
+  border-radius: 999px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow-sm);
+}
+.eyebrow-pill .dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--emerald);
+  box-shadow: 0 0 8px var(--emerald);
+}
+h1.hero-title {
+  font-family: var(--serif);
+  font-size: clamp(2.4rem, 5vw, 3.8rem);
+  font-weight: 750;
+  line-height: 1.15;
+  letter-spacing: -0.03em;
+  color: var(--fg-heading);
+  margin: 0 0 1.25rem;
+}
+h1.hero-title span.gradient {
+  background: linear-gradient(135deg, var(--accent), #818cf8 60%, var(--emerald));
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+p.hero-sub {
+  font-size: clamp(1.05rem, 2vw, 1.25rem);
+  line-height: 1.6;
+  color: var(--muted);
+  margin: 0 auto 2rem;
+  max-width: 48rem;
+}
+.hero-cta {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.85rem;
+  margin-bottom: 2.2rem;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.35rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: all 0.2s;
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  color: var(--fg);
+}
+.btn:hover {
+  text-decoration: none;
+  transform: translateY(-1px);
+  border-color: var(--accent);
+  color: var(--accent);
+  box-shadow: var(--shadow-sm);
+}
+.btn.primary {
+  background: linear-gradient(135deg, var(--accent), #4338ca);
+  border-color: transparent;
+  color: #ffffff;
+  box-shadow: 0 4px 14px var(--accent-glow);
+}
+.btn.primary:hover {
+  opacity: 0.95;
+  color: #ffffff;
+  box-shadow: 0 6px 20px var(--accent-glow);
+}
+.btn.secondary {
+  background: var(--surface-raised);
+  border-color: var(--border);
+}
+.feature-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin: 1.5rem 0 2rem;
+}
+.badge-pill {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.78rem;
+  color: var(--muted);
+  font-weight: 550;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+/* Notice Box */
+.notice-box {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--amber);
+  border-radius: var(--radius);
+  padding: 1.15rem 1.4rem;
+  margin: 2rem 0;
+  font-size: 0.92rem;
+  line-height: 1.6;
+  color: var(--muted);
+}
+.notice-box strong { color: var(--fg-heading); }
+
+/* Section Headers */
+.section-header {
+  margin: 4.5rem 0 2rem;
+  text-align: left;
+}
+.section-tag {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  margin-bottom: 0.4rem;
+}
+h2.section-title {
+  font-family: var(--serif);
+  font-size: clamp(1.8rem, 3.2vw, 2.4rem);
+  font-weight: 750;
+  letter-spacing: -0.02em;
+  color: var(--fg-heading);
+  margin: 0 0 0.6rem;
+}
+p.section-desc {
+  color: var(--muted);
+  font-size: 1.05rem;
+  margin: 0;
+  max-width: 52rem;
+}
+
+/* 5 Core Pillars Grid */
+.pillars-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
+  gap: 1.35rem;
+  margin: 2rem 0;
+}
+.pillar-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.6rem 1.7rem;
+  position: relative;
+  overflow: hidden;
+  transition: transform 0.2s, border-color 0.2s, box-shadow 0.2s;
+  display: flex;
+  flex-direction: column;
+}
+.pillar-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow);
+}
+.pillar-card.highlight {
+  border-color: var(--border-accent);
+  background: linear-gradient(180deg, var(--surface), var(--surface-raised));
+}
+.pillar-num {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  font-weight: 700;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+.pillar-icon {
+  font-size: 1.8rem;
+  margin-bottom: 0.8rem;
+}
+.pillar-title {
+  font-size: 1.22rem;
+  font-weight: 700;
+  color: var(--fg-heading);
+  margin: 0 0 0.6rem;
+  letter-spacing: -0.01em;
+}
+.pillar-body {
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+  margin: 0 0 1.2rem;
+  flex: 1 0 auto;
+}
+.pillar-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: auto;
+}
+.pillar-tag {
+  font-family: var(--mono);
+  font-size: 0.72rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: var(--radius-sm);
+  background: var(--bg-subtle);
+  border: 1px solid var(--border-subtle);
+  color: var(--subtle);
+}
+
+/* Feature & Function Breakdown Table */
+.feature-table-wrapper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow-x: auto;
+  margin: 2rem 0;
+  box-shadow: var(--shadow-sm);
+}
+table.editorial-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.92rem;
+  text-align: left;
+}
+table.editorial-table th {
+  background: var(--surface-raised);
+  padding: 0.85rem 1.15rem;
+  font-weight: 650;
+  color: var(--fg-heading);
+  border-bottom: 2px solid var(--border);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+table.editorial-table td {
+  padding: 0.95rem 1.15rem;
+  border-bottom: 1px solid var(--border-subtle);
+  vertical-align: top;
+  line-height: 1.55;
+}
+table.editorial-table tr:last-child td {
+  border-bottom: 0;
+}
+table.editorial-table tr:hover td {
+  background: var(--bg-subtle);
+}
+.tech-metric {
+  font-family: var(--mono);
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: var(--accent);
+}
+.editorial-callout {
+  color: var(--fg);
+  font-size: 0.9rem;
+}
+.editorial-callout strong {
+  color: var(--fg-heading);
+}
+
+/* Research Deep-Dive Showcase */
+.research-container {
+  background: var(--surface);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-lg);
+  padding: 2.2rem;
+  margin: 2.5rem 0;
+  box-shadow: var(--shadow);
+}
+.research-badge-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 1.4rem;
+}
+.research-badge {
+  font-size: 0.78rem;
+  font-weight: 700;
+  padding: 0.25rem 0.7rem;
+  border-radius: 999px;
+  background: var(--emerald-light);
+  color: var(--emerald);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+.research-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr));
+  gap: 1.2rem;
+  margin: 1.8rem 0;
+}
+.research-item {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.25rem 1.35rem;
+}
+.research-item h4 {
+  margin: 0 0 0.5rem;
+  font-size: 1.05rem;
+  color: var(--fg-heading);
+}
+.research-item p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+/* Code & Snippets */
+pre.cmd-block {
+  background: #06080c;
+  color: #e2e8f0;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.15rem 1.4rem;
+  overflow-x: auto;
+  font-family: var(--mono);
+  font-size: 0.86rem;
+  line-height: 1.55;
+  margin: 1rem 0;
+  box-shadow: inset 0 1px 4px rgba(0, 0, 0, 0.4);
+}
+code {
+  font-family: var(--mono);
+  font-size: 0.88em;
+  background: var(--bg-subtle);
+  padding: 0.15rem 0.35rem;
+  border-radius: 4px;
+  border: 1px solid var(--border-subtle);
+}
+pre code {
+  background: transparent;
+  padding: 0;
+  border: 0;
+}
+
+/* Visual Gallery & Screenshots */
+figure.shot {
+  margin: 1.6rem 0;
+  background: var(--surface);
+  border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
-  box-shadow: 0 2px 10px rgba(0,0,0,.05);
+  box-shadow: var(--shadow);
+  transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+}
+figure.shot:hover {
+  border-color: var(--border-accent);
+  box-shadow: var(--shadow-lg);
 }
 figure.shot img {
   display: block;
   width: 100%;
   height: auto;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--border);
+  cursor: zoom-in;
 }
 figure.shot figcaption {
-  padding: .75rem 1.1rem;
-  font-size: .84rem;
+  padding: 0.85rem 1.25rem;
+  font-size: 0.88rem;
   color: var(--muted);
-  line-height: 1.5;
+  line-height: 1.55;
   background: var(--surface);
 }
 figure.shot figcaption strong {
-  color: var(--fg);
+  color: var(--fg-heading);
 }
 .shot-pair {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr));
-  gap: 1.25rem;
-  margin: 1.2rem 0;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 26rem), 1fr));
+  gap: 1.5rem;
+  margin: 1.5rem 0;
 }
 .shot-pair figure.shot {
   margin: 0;
@@ -265,549 +716,759 @@ figure.shot figcaption strong {
 }
 .shot-pair figure.shot img {
   flex: 0 0 auto;
+}
+
+/* Lightbox Modal */
+.lightbox {
+  display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 1000;
+  background: rgba(5, 7, 12, 0.92);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 2rem;
+  align-items: center;
+  justify-content: center;
+}
+.lightbox.active {
+  display: flex;
+}
+.lightbox img {
+  max-width: 94vw;
+  max-height: 90vh;
   object-fit: contain;
+  border-radius: var(--radius);
+  box-shadow: 0 10px 40px rgba(0,0,0,0.8);
+  border: 1px solid var(--border);
 }
-.hero-actions { display: flex; flex-wrap: wrap; gap: .7rem; margin: 1.4rem 0 0; }
-.btn {
-  display: inline-block;
-  padding: .55rem 1.1rem;
+.lightbox-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: var(--surface-raised);
+  border: 1px solid var(--border);
+  color: var(--fg-heading);
+  padding: 0.5rem 1rem;
   border-radius: 999px;
-  font-size: .88rem;
-  font-weight: 600;
-  text-decoration: none;
-  border: 1px solid var(--line);
-  background: var(--surface);
-  color: var(--fg);
+  font-weight: 700;
+  cursor: pointer;
 }
-.btn:hover { text-decoration: none; border-color: var(--accent); color: var(--accent); }
-.btn.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-.btn.primary:hover { color: #fff; opacity: .92; }
+
+/* Card & Grid general */
+.card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.5rem 1.7rem;
+  margin: 1.5rem 0;
+  box-shadow: var(--shadow-sm);
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 19rem), 1fr));
+  gap: 1.25rem;
+  margin: 1.25rem 0;
+}
+
+/* Details & FAQs */
 details {
-  border-bottom: 1px solid var(--line);
-  padding: .75rem 0;
+  border-bottom: 1px solid var(--border);
+  padding: 0.9rem 0;
 }
 details:last-of-type { border-bottom: 0; }
 summary {
   cursor: pointer;
-  font-weight: 600;
-  font-size: .95rem;
+  font-weight: 650;
+  font-size: 1rem;
+  color: var(--fg-heading);
   user-select: none;
+  outline: none;
 }
 summary:hover { color: var(--accent); }
-details p { margin: .5rem 0 0; color: var(--muted); font-size: .9rem; line-height: 1.55; }
-.meta-badge {
-  display: inline-block;
-  padding: .2rem .55rem;
-  border-radius: 4px;
-  font-size: .75rem;
-  font-weight: 600;
-  background: var(--accent-light);
-  color: var(--accent);
-  margin-right: .4rem;
+details p {
+  margin: 0.75rem 0 0;
+  color: var(--muted);
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+/* Licensing Grid */
+.license-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: 1.35rem;
+  margin: 1.5rem 0;
+}
+.license-card {
+  padding: 1.4rem;
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: var(--surface);
+}
+.license-card.commercial {
+  border-color: var(--border-accent);
+  background: linear-gradient(180deg, var(--surface), var(--surface-raised));
 }
 .contact-meta-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 13rem), 1fr));
   gap: 1rem;
-  margin: 1rem 0;
-  padding: 1rem 1.2rem;
-  border: 1px solid var(--line);
+  margin: 1.2rem 0;
+  padding: 1.2rem;
+  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--surface);
+  background: var(--bg-subtle);
 }
 .contact-meta-item .meta-label {
-  font-size: .72rem;
+  font-size: 0.72rem;
   text-transform: uppercase;
-  letter-spacing: .05em;
-  color: var(--muted);
-  font-weight: 600;
-  margin-bottom: .2rem;
+  letter-spacing: 0.05em;
+  color: var(--subtle);
+  font-weight: 700;
+  margin-bottom: 0.25rem;
 }
 .contact-meta-item .meta-val {
-  font-weight: 600;
-  font-size: .92rem;
+  font-weight: 650;
+  font-size: 0.95rem;
+  color: var(--fg-heading);
 }
+
+/* Footer */
 footer {
-  margin-top: 4rem;
-  padding-top: 1.2rem;
-  border-top: 1px solid var(--line);
+  margin-top: 5rem;
+  padding-top: 2rem;
+  border-top: 1px solid var(--border);
   color: var(--muted);
-  font-size: .82rem;
+  font-size: 0.85rem;
   display: flex;
   flex-wrap: wrap;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 1.2rem;
 }
-@media (max-width: 680px) {
-  body { padding: 1.5rem 1rem 3rem; }
+footer a { color: var(--muted); text-decoration: none; }
+footer a:hover { color: var(--accent); text-decoration: underline; }
+
+@media (max-width: 768px) {
+  nav.site-nav { display: none; }
   .shot-pair { grid-template-columns: 1fr; }
+  .research-container { padding: 1.4rem; }
 }
 </style>
 </head>
+
 <body>
+<header class="site-header">
+  <div class="header-inner">
+    <a href="#" class="brand">
+      <div class="brand-logo">L</div>
+      <span class="brand-name">Lixity</span>
+      <span class="brand-badge">v1.15.0</span>
+    </a>
+    <nav class="site-nav">
+      <a href="#core-pillars">5 Kernfunktionen</a>
+      <a href="#editorial-matrix">Lektorats-Matrix</a>
+      <a href="#research-workspace">Recherche &amp; Belegkette</a>
+      <a href="#visual-suite">Screenshots</a>
+      <a href="#cli-api">CLI &amp; API</a>
+      <a href="#installation">Installation</a>
+      <a href="#licensing">Lizenz</a>
+    </nav>
+    <button class="theme-btn" id="themeToggle" title="Dark/Light Mode umschalten">
+      <span id="themeIcon">🌓</span> Theme
+    </button>
+  </div>
+</header>
+
 <main>
-  <h1>Lixity</h1>
-  <p class="sub">Quantitative Text Linguistics &amp; Computational Stylometry for Literary Manuscripts.<br/>
-    Markdown in. An interactive, offline analytical dashboard out.</p>
-
-  <div class="hero-actions">
-    <a class="btn primary" href="#installation">Create a dashboard</a>
-    <a class="btn" href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage Guide</a>
-    <a class="btn" href="https://github.com/mfahsold/lixity">GitHub</a>
-    <a class="btn" href="#licensing-inquiries">Licensing &amp; Inquiries</a>
-  </div>
-
-  <div class="pill-row">
-    <span>100% Offline &amp; Private</span>
-    <span>7 Native Languages</span>
-    <span>Self-Calibrating Median/MAD</span>
-    <span>FDR Multiplicity Control</span>
-    <span>Strict JSON Schemas v2/v4</span>
-    <span>CLI &amp; Deterministic API</span>
-  </div>
-  <p><strong>Non-commercial projects only.</strong> Using Lixity for a book
-    intended for sale requires a separate written commercial license,
-    including self-publishing. <a href="#licensing-inquiries">Licensing examples &amp; terms</a>.</p>
-
-  <div class="card" style="border-left: 3px solid var(--accent); background: var(--surface);">
-    <h3 style="margin-top: 0;">The Paradigm: The Manuscript Is Its Own Baseline</h3>
-    <p style="margin: 0; color: var(--muted); font-size: .92rem; line-height: 1.6;">
-      Generic grammar checkers and writing apps evaluate prose against corporate averages and impose arbitrary rules. Lixity derives the <strong>manuscript&rsquo;s internal house style</strong> using robust non-parametric statistics (median and MAD across chapters). Deviations are adjusted for chapter length and sample variance (<em>z* shrinkage</em>) and filtered through false discovery rate control (<em>Benjamini–Hochberg / Benjamini–Yekutieli FDR</em>). A flagged cell is an editorial departure to review, not an objective defect or instruction to rewrite.
-    </p>
-  </div>
-
-  <h2>Visual Analytical Suite</h2>
-  <p><strong>Lixity 1.15.0.</strong> Explore the interactive macro dashboard, multi-scale stylometrics, and editorial review layers.
-    <a href="https://github.com/mfahsold/lixity/releases/tag/v1.15.0">Release notes &amp; downloads</a>.</p>
-
-  <!-- 1. Hero Macro Overview -->
-  <span class="section-kicker">1. Macro Manuscript Overview</span>
-  <figure class="shot">
-    <a href="screenshots/dashboard-light.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI tiles, style heatmap and tense continuity" width="1480" height="945" loading="eager" fetchpriority="high" decoding="async"/></a>
-    <figcaption><strong>From corpus metrics to passage triage.</strong> Scope, sentence rhythm architecture (ASL, staccato, hypotaxis), dialogue ratio, readability (Flesch, LIX), length-invariant lexical diversity (HD-D, Yule&rsquo;s K, MTLD, MATTR, Maas a&sup2;), and consistency metrics in a single self-contained, offline HTML file.</figcaption>
-  </figure>
-
-  <!-- 2. Full-Width Heatmap -->
-  <span class="section-kicker">2. Full 16-Feature Departure Matrix</span>
-  <figure class="shot">
-    <a href="screenshots/dashboard-heatmap.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-heatmap.png" alt="Diverging z-score heatmap of chapter style deviations across all 16 linguistic features" width="1702" height="884" loading="lazy" decoding="async"/></a>
-    <figcaption><strong>Significance-adjusted chapter departures.</strong> Color encodes noise-aware z* shrinkage from the manuscript&rsquo;s median; black dots (●) denote cells confirmed under Benjamini–Hochberg FDR control (<em>q = 0.05</em>). All 16 features are visible simultaneously, complete with expected false positive calibration.</figcaption>
-  </figure>
-
-  <!-- 3. Paragraph Inspection & Work Markers -->
-  <span class="section-kicker">3. Paragraph-Level Inspection &amp; Editor Workflow</span>
-  <div class="shot-pair">
-    <figure class="shot">
-      <a href="screenshots/dashboard-layer.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-layer.png" alt="Chapter I with the dialogue layer active and three expanded paragraphs showing line anchors and metrics" width="1152" height="431" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>Paragraph context, not an abstract score.</strong> Dialogue overlay active in Chapter I: expanded paragraphs reveal verbatim text, line anchors, tense classification (present/past/mixed), and local sentence metrics.</figcaption>
-    </figure>
-    <figure class="shot">
-      <a href="screenshots/dashboard-markers.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-markers.png" alt="Persistent editorial work markers with status chips, notes and line anchors" width="1152" height="298" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>Persistent work markers.</strong> Editor-visible review anchors with deterministic content-hash IDs, line anchors and status badges (<code>CHECK</code>, <code>FACT-CHECK</code>, <code>TO-DO</code>, <code>ATTENTION</code>) that vanish automatically from print and EPUB exports.</figcaption>
-    </figure>
-  </div>
-
-  <!-- 4. Latent Style Space & Reference Bands -->
-  <span class="section-kicker">4. Latent Stylistic Space &amp; House Style Baseline</span>
-  <div class="shot-pair">
-    <figure class="shot">
-      <a href="screenshots/dashboard-dimensions.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions.png" alt="Complete 3D chapter trajectory and all three style-dimension cards" width="1152" height="605" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>3D stylistic space &amp; latent style dimensions.</strong> Unsupervised chapter trajectory derived via cyclic Jacobi eigendecomposition in pure Python. Inspect dominant feature loadings, rotate the trajectory, and select points to jump to chapters.</figcaption>
-    </figure>
-    <figure class="shot">
-      <a href="screenshots/dashboard-reference.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-reference.png" alt="Style-reference bands with feature medians, sample counts and deviation hits" width="1152" height="878" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>Reference bands, not external dogma.</strong> Robust median &plusmn; 2 MAD bands belong strictly to this manuscript. Medians, feature spread, and sample counts remain transparent.</figcaption>
-    </figure>
-  </div>
-
-  <!-- 5. Terminal Suite & Automation Engine -->
-  <span class="section-kicker">5. Terminal Suite &amp; Automation Engine</span>
-  <div class="shot-pair">
-    <figure class="shot">
-      <a href="screenshots/cli-analyze.png" target="_blank" rel="noopener"><img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with Rich terminal report" width="1320" height="840" loading="lazy" decoding="async"/></a>
-      <figcaption><code>lixity analyze</code> &ndash; Rich terminal report with corpus-wide KPIs, readability indices, tense distribution, and sentence-length architecture in a single command.</figcaption>
-    </figure>
-    <figure class="shot">
-      <a href="screenshots/cli-style.png" target="_blank" rel="noopener"><img src="screenshots/cli-style.png" alt="Lixity CLI style reference output" width="1320" height="860" loading="lazy" decoding="async"/></a>
-      <figcaption><code>lixity style</code> &ndash; Self-calibrating style reference with robust median/MAD bounds, noise-aware z* shrinkage, and structural diagnostics (PELT changepoints, Mann–Kendall trends, Sn/Qn scales, Hill tail index).</figcaption>
-    </figure>
-  </div>
-
-  <!-- 6. Ergonomics, Settings & Dark Mode -->
-  <span class="section-kicker">6. Interactive Ergonomics &amp; Customization</span>
-  <div class="shot-pair">
-    <figure class="shot">
-      <a href="screenshots/dashboard-settings.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-settings.png" alt="Settings with visible field labels, threshold explanations and restore-defaults action" width="1110" height="508" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>Self-documenting settings.</strong> Project preferences first, detection thresholds on demand, validation before applying, and a reset action that never silently mutates project files.</figcaption>
-    </figure>
-    <figure class="shot">
-      <a href="screenshots/dashboard-dimensions-dark.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions-dark.png" alt="Complete dark-mode 3D style-space panel and three dimension cards" width="1152" height="605" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>Style space in dark mode.</strong> Identical data geometry, threshold boundaries, and feature cards rendered in an eye-friendly, high-contrast dark theme.</figcaption>
-    </figure>
-  </div>
-
-  <details style="margin: 1.2rem 0;">
-    <summary><b>View full macro dashboard in Dark Mode</b></summary>
-    <figure class="shot" style="margin-top: .8rem;">
-      <a href="screenshots/dashboard-dark.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dark.png" alt="Lixity dashboard in dark mode" width="1480" height="945" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>Distraction-free dark theme.</strong> Automatically mirrors system color scheme or toggles seamlessly for night-time editorial sessions.</figcaption>
-    </figure>
-  </details>
-
-  <!-- 7. Responsive Mobile Views -->
-  <span class="section-kicker">7. Mobile-Optimized Diagnostics</span>
-  <div class="shot-pair">
-    <figure class="shot">
-      <a href="screenshots/dashboard-mobile.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-mobile.png" alt="Mobile project overview showing Lixity version, non-commercial license and corpus metrics" width="390" height="1028" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>Project identity on mobile.</strong> Title, engine version, localized non-commercial license notice, and cleanly wrapped metric tiles.</figcaption>
-    </figure>
-    <figure class="shot">
-      <a href="screenshots/dashboard-dimensions-mobile.png" target="_blank" rel="noopener"><img src="screenshots/dashboard-dimensions-mobile.png" alt="Full mobile style-dimension panel with stacked controls and feature loadings" width="366" height="1272" loading="lazy" decoding="async"/></a>
-      <figcaption><strong>Touch-ready stylometry.</strong> Stacked 3D canvas controls, readable feature loadings, and complete outlier chapter lists formatted for handheld review.</figcaption>
-    </figure>
-  </div>
-  <p class="sub">All captures use the public-domain Austen sample (<em>Pride and Prejudice</em>). Marker notes
-    are illustrative; private manuscripts and NDA records are never pictured.
-    <a href="https://github.com/mfahsold/lixity/blob/main/docs/screenshots/README.md">Capture recipe and provenance</a>.</p>
-
-  <section id="development-update">
-    <h2>Evidence-Based Research Workspace (Development Pilot &middot; 1.16.0.dev0)</h2>
-    <p><strong>Development preview &middot; 1.16.0.dev0</strong>:
-      archive local UTF-8 source texts, query full text via SQLite FTS5, extract exact character- and byte-level citations, audit source integrity, and manage data retention lifecycles (controlled withdrawal &amp; purge) via
-      <code>lixity research</code>.
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">Try the local research pilot</a>.
-      Explicitly separated from the core analysis pipeline; research UI, dossier review, OCR and hybrid retrieval are future roadmap items.</p>
-    <div class="grid">
-      <article class="card">
-        <h3>Explore, Then Read</h3>
-        <p>Select a chapter in 3D, inspect its features, then read the passage.</p>
-      </article>
-      <article class="card">
-        <h3>Reuse the Engine</h3>
-        <p>CLI, API and adapters share one analysis pipeline. Metrics are computed once and reused.</p>
-      </article>
-      <article class="card">
-        <h3>Keep Projects Separate</h3>
-        <p>Pass settings per manuscript. Project adapters own files, exports and local services.</p>
-      </article>
-      <article class="card">
-        <h3>English Default, Language-Aware Analysis</h3>
-        <p>Use <code>--language de</code> for German or <code>--language auto</code> for detection. English is the default.</p>
-      </article>
+  <!-- Hero Section -->
+  <section class="hero">
+    <div class="eyebrow-pill">
+      <span class="dot"></span>
+      <span>v1.15.0 Released &middot; 1.16.0 Recherche-Pilot im Core aktiv</span>
     </div>
-    <p><a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">Architecture and integration</a>
-      &middot; <a href="https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md">Language contract and limitations</a>
-      &middot; <a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">Development changelog</a></p>
+    <h1 class="hero-title">
+      Quantitative Textlinguistik &amp; <span class="gradient">Evidenzbasierte Recherche</span>
+    </h1>
+    <p class="hero-sub">
+      Lixity verwandelt Markdown-Manuskripte in einen interaktiven, 100% offlinefähigen Analyseraum. Vergleiche Kapitel gegen den intrinsischen Hausstil des Werks, visualisiere Satzrhythmus und Tempusbrüche bis auf Absatzebene &ndash; und verankere historische Quellen in einer revisionssicheren Belegkette.
+    </p>
+    <div class="hero-cta">
+      <a class="btn primary" href="#installation">
+        <svg width="16" height="16" fill="currentColor" viewBox="0 0 16 16"><path d="M.5 9.9a.5.5 0 0 1 .5.5v2.5a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1v-2.5a.5.5 0 0 1 1 0v2.5a2 2 0 0 1-2 2H2a2 2 0 0 1-2-2v-2.5a.5.5 0 0 1 .5-.5z"/><path d="M7.646 11.854a.5.5 0 0 0 .708 0l3-3a.5.5 0 0 0-.708-.708L8.5 10.293V1.5a.5.5 0 0 0-1 0v8.793L5.354 8.146a.5.5 0 1 0-.708.708l3 3z"/></svg>
+        Installation &amp; Quickstart
+      </a>
+      <a class="btn secondary" href="#visual-suite">Dashboard erkunden</a>
+      <a class="btn secondary" href="#research-workspace">Recherche-Pilot</a>
+      <a class="btn" href="https://github.com/mfahsold/lixity" target="_blank" rel="noopener">GitHub</a>
+    </div>
+    <div class="feature-badge-row">
+      <span class="badge-pill">100% Offline &amp; Lokal</span>
+      <span class="badge-pill">Keine Cloud-I/O &middot; DSGVO-sicher</span>
+      <span class="badge-pill">7 Sprachprofile (de, en, fr, es, it, pt, nl)</span>
+      <span class="badge-pill">Selbstkalibrierende Median/MAD-Norm</span>
+      <span class="badge-pill">FDR-Multiplizitätskontrolle (BH/BY)</span>
+      <span class="badge-pill">SQLite-FTS5-Volltextsuche</span>
+      <span class="badge-pill">Revisionssichere Absatz-Zitate</span>
+    </div>
   </section>
 
-  <h2>Why Lixity?</h2>
-  <div class="card" style="padding: 0; overflow: hidden;">
-    <div class="table-wrapper" style="margin: 0;">
-      <table>
+  <!-- Notice -->
+  <div class="notice-box">
+    <strong>Lizenzhinweis:</strong> Lixity ist unter LNCL-1.0 source-available und für rein nicht-kommerzielle Schreibprojekte, Wissenschaft und Lehre kostenfrei. Für Romane, Buchveröffentlichungen oder Schriften mit <strong>Verkaufsabsicht</strong> (einschließlich Self-Publishing) ist vorab eine gesonderte, schriftliche kommerzielle Lizenz erforderlich. <a href="#licensing">Details &amp; Anfragen</a>.
+  </div>
+
+  <!-- SECTION 1: DIE 5 KERNFUNKTIONALITÄTEN -->
+  <section id="core-pillars">
+    <div class="section-header">
+      <span class="section-tag">Architektur &amp; Fundament</span>
+      <h2 class="section-title">Die 5 Kernfunktionalitäten von Lixity</h2>
+      <p class="section-desc">Lixity verbindet mathematisch fundierte Textlinguistik, narratologische Dramaturgie, typografische Satzreife und quellenkritische Evidenz in einer einheitlichen, zustandslosen Engine.</p>
+    </div>
+
+    <div class="pillars-grid">
+      <!-- Pillar 1 -->
+      <article class="pillar-card">
+        <div class="pillar-num">Pillar 01</div>
+        <div class="pillar-icon">📊</div>
+        <h3 class="pillar-title">Stil- &amp; Korpusanalyse</h3>
+        <p class="pillar-body">
+          Präzise Erfassung der makro- und mikrostrukturellen Satzarchitektur: Durchschnittliche Satzlänge (ASL), Rhythmus-Variationskoeffizient (CV), 4 syntaktische Längenstufen (Staccato bis Hypotaxe), 7 sprachkalibrierte Flesch/Amstad/LIX-Lesbarkeitsindizes sowie längeninvariante Wortschatzdichte (HD-D, MTLD, Yule's K, Maas a²).
+        </p>
+        <div class="pillar-tags">
+          <span class="pillar-tag">ASL / CV</span>
+          <span class="pillar-tag">HD-D / MTLD</span>
+          <span class="pillar-tag">Yule's K</span>
+          <span class="pillar-tag">Flesch-Amstad</span>
+        </div>
+      </article>
+
+      <!-- Pillar 2 -->
+      <article class="pillar-card">
+        <div class="pillar-num">Pillar 02</div>
+        <div class="pillar-icon">⏱️</div>
+        <h3 class="pillar-title">Dramaturgie &amp; Tempus-Profil</h3>
+        <p class="pillar-body">
+          Absatzgenaue Tempuskontinuität ohne heuristisches Raten: Erkennt ungewollte Brüche zwischen epischem Präteritum und unmittelbarem Präsens. Bewertet Tempusmischungen auf einer 4-stufigen Reibungsskala (0&ndash;3). Analysiert Sprechanteile, Dialog-Turn-Längen, Pacing-Kurven und Kapitel-Spannungshooks.
+        </p>
+        <div class="pillar-tags">
+          <span class="pillar-tag">Präsens / Präteritum</span>
+          <span class="pillar-tag">Reibung 0–3</span>
+          <span class="pillar-tag">Dialog-Turns</span>
+          <span class="pillar-tag">Pacing-Hooks</span>
+        </div>
+      </article>
+
+      <!-- Pillar 3 -->
+      <article class="pillar-card">
+        <div class="pillar-num">Pillar 03</div>
+        <div class="pillar-icon">🎯</div>
+        <h3 class="pillar-title">Robuster 3D-Stilraum</h3>
+        <p class="pillar-body">
+          Keine externen Dogmen: Das Manuskript ist sein eigener Maßstab. Der Hausstil wird robust via Median &plusmn; 2 MAD abgeleitet. Abweichungen werden rauschbereinigt (z* Shrinkage) und via Benjamini-Hochberg FDR gefiltert. Unüberwachte Erkennung latenter Stilachsen und interaktiver 3D-Trajektorienraum via zyklischer Jacobi-EVD.
+        </p>
+        <div class="pillar-tags">
+          <span class="pillar-tag">Median ± 2 MAD</span>
+          <span class="pillar-tag">z* Shrinkage</span>
+          <span class="pillar-tag">BH/BY FDR</span>
+          <span class="pillar-tag">3D Jacobi-EVD</span>
+        </div>
+      </article>
+
+      <!-- Pillar 4 -->
+      <article class="pillar-card">
+        <div class="pillar-num">Pillar 04</div>
+        <div class="pillar-icon">📖</div>
+        <h3 class="pillar-title">Typografische Publikation</h3>
+        <p class="pillar-body">
+          Publikationsreife Multi-Format-Exporte direkt aus Markdown: Vektor-PDF-Engine (Cairo + Pango) mit Subpixel-Metriken, Ligaturen und kollisionsfreiem Tracking. Erzeugt Taschenbuch-Druckvorlagen (135&times;205 mm KiWi/Suhrkamp), Lektoratsfassungen mit Zeilennummern (A4) und Mobil-PDFs sowie valides EPUB 3.3 mit NCX-Dualnavigation.
+        </p>
+        <div class="pillar-tags">
+          <span class="pillar-tag">Taschenbuch</span>
+          <span class="pillar-tag">Lektorats-A4</span>
+          <span class="pillar-tag">Mobile 9:16</span>
+          <span class="pillar-tag">EPUB 3.3 / NCX</span>
+        </div>
+      </article>
+
+      <!-- Pillar 5 -->
+      <article class="pillar-card highlight">
+        <div class="pillar-num">Pillar 05 &middot; Neu</div>
+        <div class="pillar-icon">🔍</div>
+        <h3 class="pillar-title">Recherche &amp; Quellenarchiv</h3>
+        <p class="pillar-body">
+          Evidenzbasierte Recherchearbeit für historische Romane und anspruchsvolle Sachbücher: Manipulationssicheres UTF-8-Quellenarchiv mit SHA-256-Integrität, versionierte Quellenkritik &amp; Kulturkontext (Epoche, Ort, Genre, Perspektive), blitzschnelle SQLite-FTS5-Volltextsuche, revisionssichere Absatz-Zitate und geregelter Lebenszyklus.
+        </p>
+        <div class="pillar-tags">
+          <span class="pillar-tag">SHA-256 Blobs</span>
+          <span class="pillar-tag">Quellenkritik</span>
+          <span class="pillar-tag">SQLite FTS5</span>
+          <span class="pillar-tag">Absatz-Zitate</span>
+        </div>
+      </article>
+    </div>
+  </section>
+
+  <!-- SECTION 2: REDAKTIONELLE LEKTORATS-MATRIX -->
+  <section id="editorial-matrix">
+    <div class="section-header">
+      <span class="section-tag">Praxiseinsatz im Lektorat</span>
+      <h2 class="section-title">Lektorats-Matrix &amp; Redaktionelle Einordnung</h2>
+      <p class="section-desc">Statistische Metriken sind kein Selbstzweck und kein objektives Güteurteil. Lixity übersetzt mathematische Signale in konkrete redaktionelle Fragestellungen für Autoren und Lektoren.</p>
+    </div>
+
+    <div class="feature-table-wrapper">
+      <table class="editorial-table">
         <thead>
           <tr>
-            <th>Dimension</th>
-            <th>Lixity</th>
-            <th>General NLP (spaCy / NLTK)</th>
-            <th>Classic Stylometry (R stylo)</th>
-            <th>Consumer Writing Apps</th>
+            <th style="width: 22%;">Linguistisches Feature</th>
+            <th style="width: 18%;">Berechnung &amp; Signal</th>
+            <th style="width: 32%;">Redaktionelle Einordnung &amp; Praxiseinsatz</th>
+            <th style="width: 28%;">Warnsignal / Redaktionelle Intervention</th>
           </tr>
         </thead>
         <tbody>
           <tr>
-            <td>Focus</td>
-            <td>Literary prose &amp; manuscripts</td>
-            <td>Tokenization, POS, NER</td>
-            <td>Authorship attribution</td>
-            <td>Spelling &amp; grammar rules</td>
+            <td><strong>Satzrhythmus &amp; Längenstufen</strong></td>
+            <td><span class="tech-metric">ASL, CV, Staccato (&le;6w), Hypotaxe (&gt;25w)</span></td>
+            <td class="editorial-callout">
+              <strong>Satzatmung &amp; Tempogestaltung:</strong> Zeigt, ob Dialoge oder Actionszenen dynamisch federn oder in gleichförmiger Satzkaskade ersticken. Ein hoher Variationskoeffizient (CV &gt; 0.70) bürgt für organische Prosa.
+            </td>
+            <td>Niedriger CV (&lt; 0.40) signalisiert rhythmische Monotonie (z.B. Aneinanderreihung gleichförmiger Hauptsätze); plötzliche Hypotaxe-Spitzen bremsen Actionszenen aus.</td>
           </tr>
           <tr>
-            <td>Baseline Norm</td>
-            <td>Self-calibrating (own median/MAD)</td>
-            <td>External web/news corpora</td>
-            <td>External comparison corpus</td>
-            <td>Generic corporate prose</td>
+            <td><strong>Längeninvariante Lexik</strong></td>
+            <td><span class="tech-metric">HD-D (McCarthy &amp; Jarvis), MTLD, Yule's K</span></td>
+            <td class="editorial-callout">
+              <strong>Vokabular-Frische ohne Stichprobenfehler:</strong> Im Gegensatz zum simplen TTR verzerrt HD-D kurze Kapitel nicht. Misst verlässlich, ob der Wortschatz über 50.000 Wörter hinweg erschöpft oder konstant reichhaltig bleibt.
+            </td>
+            <td>Starker HD-D-Abfall in späteren Kapiteln deckt Ermüdung des Autors auf; extrem hoher HD-D (&gt; 0.90) warnt vor unnatürlich krampfhafter Synonymjagd.</td>
           </tr>
           <tr>
-            <td>Statistical Rigor</td>
-            <td>z* shrinkage + FDR (q=0.05)</td>
-            <td>Raw counts without sample error</td>
-            <td>Distance measures (Delta, PCA)</td>
-            <td>Heuristic style scores</td>
+            <td><strong>Tempuskontinuität &amp; Friktion</strong></td>
+            <td><span class="tech-metric">Präsens, Präteritum, Reibungsscore 0&ndash;3</span></td>
+            <td class="editorial-callout">
+              <strong>Blickwinkel- &amp; Zeitebenen-Disziplin:</strong> Erkennt das gefürchtete unbewusste Abdriften zwischen Rückblende (Präteritum) und unmittelbarer Gegenwartshandlung (Präsens) auf Absatzebene.
+            </td>
+            <td>Friktionsstufe 2&ndash;3 (z.B. Präteritum-Erzählung mit unvermittelten Präsens-Sätzen ohne Dialog) verlangt Lektoratsprüfung auf versehentliche Zeitfehler.</td>
           </tr>
           <tr>
-            <td>Lexical Diversity</td>
-            <td>Hypergeometric HD-D &amp; Yule&rsquo;s K</td>
-            <td>Naive TTR (length-biased)</td>
-            <td>Most Frequent Words (MFW)</td>
-            <td>Basic variety counter</td>
+            <td><strong>Showing vs. Telling &amp; Filter</strong></td>
+            <td><span class="tech-metric">Wahrnehmungsverben, Passiv, Nominalsuffixe</span></td>
+            <td class="editorial-callout">
+              <strong>Szenische Immersion:</strong> Identifiziert Wahrnehmungsfilter (<em>er sah, sie hörte, er fühlte, sie bemerkte</em>), die unnötige Distanz zwischen Leser und Protagonisten aufbauen, anstatt die Welt direkt zu zeigen.
+            </td>
+            <td>Hohe Filterdichte verwandelt dramatische Erlebnisse in distanzierte Polizeiberichte; hohe Passiv- und Nominalquoten ersticken literarische Dynamik.</td>
           </tr>
           <tr>
-            <td>Tense Dynamics</td>
-            <td>Paragraph-accurate present vs. past</td>
-            <td>Per-token POS tags</td>
-            <td>Not analyzed</td>
-            <td>Isolated verb alerts</td>
+            <td><strong>FDR-Signifikanzmatrix</strong></td>
+            <td><span class="tech-metric">z* Shrinkage, Benjamini-Hochberg (●), Cliff's δ</span></td>
+            <td class="editorial-callout">
+              <strong>Falsch-Positiv-Schutz:</strong> Verhindert Überinterpretation. Ein schwarzer Punkt (●) markiert ausschließlich echte, statistisch signifikante Stilbrüche unter Kontrolle der Falschentdeckungsrate.
+            </td>
+            <td>Nur bestätigte Zellen (●) mit großer Effektstärke (Cliff's |δ| &gt; 0.47) rechtfertigen tiefe Textänderungen; schwache Abweichungen sind oft gesunde künstlerische Freiheit.</td>
           </tr>
           <tr>
-            <td>Latent Dimensions</td>
-            <td>Cyclic Jacobi eigendecomposition</td>
-            <td>Requires SciPy / scikit-learn</td>
-            <td>Factor analysis in R</td>
-            <td>Not available</td>
+            <td><strong>Struktur- &amp; Trenddiagnostik</strong></td>
+            <td><span class="tech-metric">PELT-Changepoints, Mann-Kendall τ, Wasserstein-KS</span></td>
+            <td class="editorial-callout">
+              <strong>Strukturelle Roman-Architektur:</strong> PELT deckt unangekündigte Regimewechsel des Stils auf (z.B. Wechsel des Erzähltons ab Akt II); Mann-Kendall erkennt schleichende Drifts über den gesamten Roman.
+            </td>
+            <td>Unerwartete PELT-Bruchstellen zeigen Autorenwechsel, lange Schreibpausen oder Inkonsistenzen in der Figurenführung schonungslos auf.</td>
           </tr>
           <tr>
-            <td>Workflow</td>
-            <td>HTML work markers + Agent API</td>
-            <td>Scripting only</td>
-            <td>R console / static plots</td>
-            <td>Cloud desktop/browser add-on</td>
-          </tr>
-          <tr>
-            <td>Footprint</td>
-            <td>Zero C-extensions, pure Python</td>
-            <td>Heavy models (&gt; 500 MB)</td>
-            <td>Heavy R runtime</td>
-            <td>Cloud-dependent, proprietary</td>
+            <td><strong>Persistente Work-Marker</strong></td>
+            <td><span class="tech-metric">&lt;!-- LIXITY-MARKER id="..." kind="pruefen" --&gt;</span></td>
+            <td class="editorial-callout">
+              <strong>Spurloser Arbeitsnachweis:</strong> Lektoratsnotizen bleiben direkt am Zielabsatz im Markdown verankert, verschwinden aber automatisch und rückstandsfrei im Buchdruck (PDF) und E-Book (EPUB).
+            </td>
+            <td>Content-Hash-IDs stellen sicher, dass Lektoratsanker selbst nach Textverschiebungen oder Absatzergänzungen stabil auffindbar bleiben.</td>
           </tr>
         </tbody>
       </table>
     </div>
-  </div>
+  </section>
 
-  <h2>Target Personas &amp; Workflows</h2>
-  <div class="grid">
-    <div class="card">
-      <h3>Fiction Authors &amp; Novelists</h3>
-      <p>Macro-editing and pacing diagnostics: detect accidental slips between narrative present and past, balance dialogue with prose, and evaluate rhythm variation (CV) across chapters.</p>
-    </div>
-    <div class="card">
-      <h3>Literary Editors &amp; Translators</h3>
-      <p>Objective chapter consistency inspection without arbitrary external dogmas. Insert persistent, editor-visible work markers (<code>&lt;!-- LIXITY-MARKER ... --&gt;</code>) that vanish in final print and EPUB exports.</p>
-    </div>
-    <div class="card">
-      <h3>Digital Humanities Scholars</h3>
-      <p>Rigorous, reproducible corpus stylometry: length-invariant lexical diversity (HD-D, Yule&rsquo;s K), Miller-Madow bias-corrected Shannon entropy, and Jacobi eigendecomposition in pure Python.</p>
-    </div>
-    <div class="card">
-      <h3>AI Agent &amp; Pipeline Engineers</h3>
-      <p>Deterministic JSON contracts (<code>schema_version 2</code> for analyze/profile, <code>4</code> for the style reference with structural diagnostics, language-neutral tense values), standardized exit codes, and a stable programmatic facade (<code>lixity.api</code>) designed for autonomous coding and editing agents.</p>
-    </div>
-  </div>
+  <!-- SECTION 3: RECHERCHE, QUELLENARBEIT & BELEGKETTE -->
+  <section id="research-workspace">
+    <div class="research-container">
+      <div class="research-badge-strip">
+        <span class="research-badge">1.16.0.dev0 Research Pilot</span>
+        <span class="badge-pill">Unveränderliche SHA-256-Speicherung</span>
+        <span class="badge-pill">Kulturwissenschaftliche Quellenkritik</span>
+        <span class="badge-pill">Exakte Absatz-Zitation</span>
+        <span class="badge-pill">SQLite FTS5 Volltextsuche</span>
+      </div>
 
-  <h2>What Lixity Measures</h2>
-  <div class="grid">
-    <div class="card">
-      <h3>Sentence Rhythm</h3>
-      <p>Average sentence length (ASL), coefficient of variation (CV), and length distribution from staccato (&le; 6 words) to hypotaxis (&gt; 25 words).</p>
-    </div>
-    <div class="card">
-      <h3>Lexical Diversity</h3>
-      <p>Length-robust measures: Guiraud R, hypergeometric HD-D (McCarthy &amp; Jarvis 2010), and Yule&rsquo;s characteristic K for vocabulary concentration.</p>
-    </div>
-    <div class="card">
-      <h3>Tense Dynamics</h3>
-      <p>Paragraph-by-paragraph detection of narrative present vs. epic past, line anchors, and friction severity flags (0&ndash;3).</p>
-    </div>
-    <div class="card">
-      <h3>Register Signals</h3>
-      <p>Dialogue share, function-word ratio, sensory perception filters, modal density, passive markers, and nominal style suffixes.</p>
-    </div>
-    <div class="card">
-      <h3>Self-Calibrating Style Reference</h3>
-      <p>The manuscript&rsquo;s own house style derived via median/MAD, significance-adjusted deviations z*, and Benjamini-Hochberg FDR control (BH or BY).</p>
-    </div>
-    <div class="card">
-      <h3>Structural Diagnostics</h3>
-      <p>Where the house style shifts (PELT changepoints), whether features drift (Mann&ndash;Kendall), robust Sn/Qn scales beside MAD, heavy-tailed features (Hill tail index), early/late Wasserstein&ndash;KS distribution shift, content-word co-occurrence (Goh&ndash;Barab&aacute;si fitness), and Dunning keyness between chapter halves.</p>
-    </div>
-    <div class="card">
-      <h3>Style Dimensions</h3>
-      <p>Unsupervised discovery of latent stylistic axes via Spearman rank correlation and cyclic Jacobi eigendecomposition.</p>
-    </div>
-    <div class="card">
-      <h3>Structure Modules</h3>
-      <p>Dialogue turns, character presence, scene/pacing with hook scores, motif tracking, and self-calibrating showing-vs-telling balance per chapter.</p>
-    </div>
-  </div>
+      <h2 style="font-family: var(--serif); font-size: 2.1rem; margin: 0 0 0.8rem; color: var(--fg-heading);">
+        Evidenzbasierte Recherche &amp; Manipulationssichere Belegkette
+      </h2>
+      <p style="color: var(--muted); font-size: 1.05rem; line-height: 1.6; margin: 0 0 1.5rem; max-width: 54rem;">
+        Autoren historischer Romane, Dokumentaristen und Wissenschaftler stehen vor einer gewaltigen Herausforderung: Tausende Archivdokumente, Tagebucheinträge und Zeitzeugennotizen müssen über Jahre hinweg exakt nachvollziehbar bleiben. Ein einfacher Zettelkasten oder eine diffuse Vektordatenbank genügt nicht &ndash; Lixity trennt <strong>reine Quellenfakten</strong>, <strong>kulturhistorische Einordnung</strong> und <strong>literarische Fiktionsentscheidungen</strong> strikt voneinander.
+      </p>
 
-  <div class="card">
-    <h2 id="installation">Install &amp; create your first dashboard</h2>
-    <p>Use an isolated CLI environment on Windows, macOS or Linux. Install
-      <a href="https://git-scm.com/downloads">Git</a> and
-      <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a> first;
-      uv can supply Python 3.12. No account, API key or manuscript upload is needed.</p>
-    <pre>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
-lixity --version
-lixity about
-lixity build manuscript.md --language en</pre>
-    <p>Use a UTF-8 Markdown manuscript with <code>## Chapter title</code> headings.
-      Open <code>exports/manuscript_dashboard.html</code> locally. For German,
-      use <code>--language de</code>; automatic detection is explicit.</p>
-    <p><strong>Version choice:</strong> <code>@v1.15.0</code> pins this release.
-      Select a future tag explicitly to upgrade; <code>uv tool upgrade lixity</code>
-      retains the chosen ref. Use <code>@main</code> only for development builds.</p>
-    <p><strong>Non-commercial use only (LNCL-1.0).</strong> Not on PyPI.
-      Python 3.10+ supports the engine; TOML project settings require 3.11+.
-      Standalone HTML is not an editing/NDA server; those actions require an adapter.</p>
-    <p><a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">Complete installation, Windows/API setup, updates and troubleshooting</a></p>
-  </div>
+      <div class="research-grid">
+        <div class="research-item">
+          <h4>1. Unveränderliches Textarchiv</h4>
+          <p>Quelltexte werden als reine UTF-8-Bytes mit SHA-256-Prüfsumme archiviert. <code>--allow-retention</code> bestätigt explizit das lokale Speicherrecht. Keine stillen Normalisierungen, kein Datenverlust.</p>
+        </div>
+        <div class="research-item">
+          <h4>2. Versionierte Quellenkritik</h4>
+          <p>Erfasst Entstehungszeit, dargestellte Epoche, Ort, Genre, Erzählperspektive und Überlieferungszustand. Historische Primärquelle und heutige Sekundärliteratur bleiben unmissverständlich getrennt.</p>
+        </div>
+        <div class="research-item">
+          <h4>3. Revisionssichere Zitate</h4>
+          <p>Jede Information lässt sich bis auf den unveränderlichen Absatz (mit deterministischer Passage-UUID) und exakten Zeichenoffset zurückverfolgen. Selbst nach Manuskriptänderungen bleibt der Beleg intakt.</p>
+        </div>
+        <div class="research-item">
+          <h4>4. Geregelter Lebenszyklus</h4>
+          <p>Unterscheidet sauber zwischen <strong>Withdrawal</strong> (Quelle aus der Standardsuche ausblenden, Belege historisch bewahren) und <strong>Purge</strong> (DSGVO-konforme endgültige Löschung mit Dry-Run-Vorschau).</p>
+        </div>
+      </div>
 
-  <div class="card">
-    <h2>CLI Commands</h2>
-    <pre>lixity analyze manuscript.md              # Corpus metrics (Rich table report)
-lixity analyze manuscript.md --json       # Machine-readable JSON (schema v2 meta)
-lixity profile manuscript.md              # Tense &amp; style profiles per paragraph
-lixity style manuscript.md                # Self-calibrating style reference
-lixity style manuscript.md --json         # Schema v4 JSON (bands, z*, FDR, structural)
-lixity style manuscript.md --min-chapters 4 --fdr-method by --json
-lixity dialogue manuscript.md             # Dialogue turn structure
-lixity characters manuscript.md --names "Anna,Ralf"
-lixity pacing manuscript.md               # Scenes, pacing curve, chapter hooks
-lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)'
-lixity showing manuscript.md              # Showing vs. telling balance
-lixity dashboard manuscript.md -o ui.html # Standalone interactive HTML dashboard
-lixity build [manuscript.md]              # Idempotent workspace (exports/ + archive)
-lixity about                              # Engine metadata &amp; heuristic thresholds
-lixity completion bash                    # Shell completion script for Bash / Zsh</pre>
-  </div>
+      <h3 style="margin: 2rem 0 0.6rem; font-size: 1.15rem; color: var(--fg-heading);">Recherche-Workflow im Terminal (CLI)</h3>
+      <pre class="cmd-block"># 1. Separaten Forschungsarbeitsraum anlegen
+lixity research init --project ./mein-roman-recherche --title "Recherchearchiv" --language de
 
-  <div class="card">
-    <h2>Python API for AI Agents</h2>
-    <pre>from lixity import api
+# 2. Primärquelle mit Quellenkritik aufnehmen (mit Bestätigung des lokalen Speicherrechts)
+lixity research ingest --project ./mein-roman-recherche --file ./tagebuch_1923.txt \
+  --context '{"genre": "Tagebuch", "epoch": "1923", "location": "Hamburg", "provenance": "Staatsarchiv"}' \
+  --allow-retention
 
-# Analyze corpus KPIs
+# 3. Revisionssichere SQLite-Volltextsuche (FTS5 mit BM25-Ranking)
+lixity research search --project ./mein-roman-recherche --query "Speicherstadt Zoll" --limit 5
+
+# 4. Unveränderliches Zitat auflösen (Absatz, Offset, Quellennachweis)
+lixity research cite --project ./mein-roman-recherche --passage urn:uuid:PASSAGE-UUID-HIER
+
+# 5. Linguistische Quellenanalyse &amp; dediziertes Quellendashboard erzeugen
+lixity research analyze --project ./mein-roman-recherche --source-id urn:uuid:SOURCE-UUID-HIER
+lixity research dashboard --project ./mein-roman-recherche --source-id urn:uuid:SOURCE-UUID-HIER &gt; quelle.html
+
+# 6. Integritätsprüfung aller Prüfsummen und Belegketten
+lixity research audit --project ./mein-roman-recherche</pre>
+
+      <p style="margin: 1.2rem 0 0; font-size: 0.88rem; color: var(--subtle);">
+        Der Recherche-Pilot läuft lokal, offline und ohne zusätzliche Python-Pakete. Weiterführende Architektur &amp; RFC-Entwurf: <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">docs/research/USAGE.md</a> und <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">docs/research/README.md</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- SECTION 4: VISUAL ANALYTICAL SUITE (SCREENSHOTS) -->
+  <section id="visual-suite">
+    <div class="section-header">
+      <span class="section-tag">Visual Suite &amp; UI</span>
+      <h2 class="section-title">Visual Analytical Suite (13 Screenshots)</h2>
+      <p class="section-desc">Klicke auf einen Screenshot, um ihn in voller Auflösung im interaktiven Lightbox-Viewer zu inspizieren. Alle Aufnahmen stammen aus real gerenderten Desktop- und Mobil-Sitzungen.</p>
+    </div>
+
+    <!-- 1. Hero Overview -->
+    <span class="section-tag">1. Makro-Übersicht &amp; KPI-Strip</span>
+    <figure class="shot">
+      <img src="screenshots/dashboard-light.png" alt="Lixity interaktives HTML-Dashboard mit gruppierten KPI-Kacheln, Stil-Heatmap und Tempus-Kontinuität" width="1480" height="945" loading="eager" fetchpriority="high" decoding="async"/>
+      <figcaption><strong>Vom Korpusüberblick bis zur Absatz-Triage:</strong> Projektmetriken, Satzlängen-Architektur (ASL, Staccato, Hypotaxe), Lesbarkeit (Flesch, LIX), längeninvariante Vokabulardichte (HD-D, Yule's K, MTLD) und Konsistenzprüfungen in einer einzigen, offlinefähigen HTML-Datei.</figcaption>
+    </figure>
+
+    <!-- 2. Heatmap -->
+    <span class="section-tag">2. 16-Feature Departure Matrix</span>
+    <figure class="shot">
+      <img src="screenshots/dashboard-heatmap.png" alt="Divergierende z*-Heatmap der Kapitelabweichungen über alle 16 linguistischen Merkmale" width="1702" height="884" loading="lazy" decoding="async"/>
+      <figcaption><strong>Signifikanz-bereinigte Kapitelabweichungen:</strong> Farbe codiert die rauschbereinigte z*-Abweichung vom Manuskript-Median. Punkte (●) markieren Zellen, die unter Benjamini-Hochberg FDR-Kontrolle (<em>q = 0.05</em>) statistisch signifikant bestätigt wurden &ndash; geschützt vor statistischen Zufallsartefakten.</figcaption>
+    </figure>
+
+    <!-- 3. Paragraph Layer & Work Markers -->
+    <span class="section-tag">3. Absatz-Prüfung &amp; Lektorats-Marker</span>
+    <div class="shot-pair">
+      <figure class="shot">
+        <img src="screenshots/dashboard-layer.png" alt="Kapitel I mit aktiver Dialog-Überlagerung und aufgeklappten Absätzen mit Zeilenankern" width="1152" height="431" loading="lazy" decoding="async"/>
+        <figcaption><strong>Absatzkontext statt abstrakter Zahlen:</strong> Aufgeklappte Absätze zeigen den Volltext mit Zeilenankern, Tempus-Klassifikation (Präsens/Präteritum/Gemischt) und lokalen Satzrhythmus-Werten im unmittelbaren Zusammenhang.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="screenshots/dashboard-markers.png" alt="Persistente redaktionelle Work-Marker mit Status-Chips und Notizen" width="1152" height="298" loading="lazy" decoding="async"/>
+        <figcaption><strong>Persistente Work-Marker:</strong> Revisionssichere HTML-Kommentare (<code>CHECK</code>, <code>FACT-CHECK</code>, <code>TO-DO</code>) mit Content-Hash-IDs, die im Editor sichtbar bleiben, im Buch- und EPUB-Export jedoch automatisch verschwinden.</figcaption>
+      </figure>
+    </div>
+
+    <!-- 4. 3D Space & Reference Bands -->
+    <span class="section-tag">4. Latenter Stilraum &amp; Hausstil-Korridore</span>
+    <div class="shot-pair">
+      <figure class="shot">
+        <img src="screenshots/dashboard-dimensions.png" alt="Komplette 3D-Kapiteltrajektorie und alle drei Stil-Dimensionskarten" width="1152" height="605" loading="lazy" decoding="async"/>
+        <figcaption><strong>3D-Stilraum &amp; latente Dimensionen:</strong> Unüberwachte Ableitung narrativer Kapitel-Trajektorien via zyklischer Jacobi-EVD in reinem Python. Zeigt Feature-Ladungen, rotiert stufenlos und verlinkt jeden Datenpunkt direkt zum Kapitel.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="screenshots/dashboard-reference.png" alt="Stil-Referenzbänder mit Medianen, Streuung und Stichprobenumfängen" width="1152" height="878" loading="lazy" decoding="async"/>
+        <figcaption><strong>Referenzbänder des Werks:</strong> Robuste Median &plusmn; 2 MAD-Korridore gehören ausschließlich diesem Manuskript. Stichprobenumfang und Abweichungsschwellen bleiben transparent ausgewiesen.</figcaption>
+      </figure>
+    </div>
+
+    <!-- 5. Terminal Suite -->
+    <span class="section-tag">5. Terminal Suite &amp; CLI-Werkzeuge</span>
+    <div class="shot-pair">
+      <figure class="shot">
+        <img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze Befehl mit Rich-Terminal-Report" width="1320" height="840" loading="lazy" decoding="async"/>
+        <figcaption><code>lixity analyze</code> &ndash; Rich-Terminal-Report mit Korpus-KPIs, Lesbarkeitsindizes, Tempusverteilung und Satzlängen-Architektur auf einen Blick.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="screenshots/cli-style.png" alt="Lixity CLI style Referenz-Ausgabe" width="1320" height="860" loading="lazy" decoding="async"/>
+        <figcaption><code>lixity style</code> &ndash; Selbstkalibrierende Stil-Referenz mit Median/MAD-Schranken, z*-Werten und Strukturdiagnostik (PELT-Changepoints, Mann-Kendall-Trends, Sn/Qn-Skalen).</figcaption>
+      </figure>
+    </div>
+
+    <!-- 6. Dark Mode & Settings -->
+    <span class="section-tag">6. Dark Mode &amp; Interaktive Einstellungen</span>
+    <div class="shot-pair">
+      <figure class="shot">
+        <img src="screenshots/dashboard-settings.png" alt="Einstellungen mit sichtbaren Feldbezeichnungen und Schwellen-Erklärungen" width="1110" height="508" loading="lazy" decoding="async"/>
+        <figcaption><strong>Selbstdokumentierende Einstellungen:</strong> Projektpräferenzen, numerische Schwellenwert-Justierung mit Validierung vor Übernahme und Reset-Schutz gegen unbeabsichtigte Dateiänderungen.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="screenshots/dashboard-dimensions-dark.png" alt="Dunkler 3D-Stilraum und drei Dimensionskarten" width="1152" height="605" loading="lazy" decoding="async"/>
+        <figcaption><strong>Stilraum im Dark Mode:</strong> Identische Datenmetrik, Schwellwertboxen und Merkmalskarten &ndash; gerendert in einem augenschonenden, kontrastreichen Dark Theme.</figcaption>
+      </figure>
+    </div>
+
+    <figure class="shot">
+      <img src="screenshots/dashboard-dark.png" alt="Lixity Gesamtdashboard im Dark Mode" width="1480" height="945" loading="lazy" decoding="async"/>
+      <figcaption><strong>Volles Makro-Dashboard im Dark Mode:</strong> Konzentriertes, reflexionsarmes Arbeiten bei abendlichen Lektoratssitzungen.</figcaption>
+    </figure>
+
+    <!-- 7. Mobile Views -->
+    <span class="section-tag">7. Mobile Responsivität</span>
+    <div class="shot-pair">
+      <figure class="shot">
+        <img src="screenshots/dashboard-mobile.png" alt="Mobile Projektübersicht mit Lixity Version und Korpusmetriken" width="390" height="1028" loading="lazy" decoding="async"/>
+        <figcaption><strong>Mobile Übersicht:</strong> Projekt-Header, Versionsstand, Lizenzstatus und responsiv umbrechende Metrik-Kacheln auf dem Smartphone.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="screenshots/dashboard-dimensions-mobile.png" alt="Mobiles Stil-Dimensions-Panel mit gestapelten Bedienelementen" width="366" height="1272" loading="lazy" decoding="async"/>
+        <figcaption><strong>Touchfähige Stilometrie:</strong> Gestapelte 3D-Steuerelemente, lesbare Merkmalsladungen und vollständige Kapitel-Ausreißerlisten für unterwegs.</figcaption>
+      </figure>
+    </div>
+  </section>
+
+  <!-- SECTION 5: CLI & API -->
+  <section id="cli-api">
+    <div class="section-header">
+      <span class="section-tag">Entwickler &amp; Agenten</span>
+      <h2 class="section-title">CLI-Befehle &amp; Python-API für AI-Agenten</h2>
+      <p class="section-desc">Lixity bietet deterministische, versionierte JSON-Verträge (analyze/profile <code>v2</code>, style <code>v4</code>) und stabile POSIX-Exit-Codes für autonome Programmier- und Lektoratsagenten.</p>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top: 0; color: var(--fg-heading);">Kommandozeilen-Befehle (CLI)</h3>
+      <pre class="cmd-block"># Manuskript analysieren (Rich-Terminal oder JSON)
+lixity analyze manuscript.md              # Visueller Terminal-Report
+lixity analyze manuscript.md --json       # Reines JSON (Schema v2)
+
+# Tempus &amp; Dialogdynamik
+lixity profile manuscript.md              # Absatzgenaue Tempus- &amp; Stilanalyse
+lixity dialogue manuscript.md             # Sprechanteil &amp; Dialogwechsel
+lixity characters manuscript.md --names "Anna,Ralf" # Figurenpräsenz
+lixity pacing manuscript.md               # Szenenrhythmus &amp; Kapitel-Hooks
+lixity showing manuscript.md              # Showing vs. Telling Balance
+
+# Selbstkalibrierende Stil-Referenz &amp; Strukturdiagnostik
+lixity style manuscript.md                # Median/MAD, z*, FDR-Matrix
+lixity style manuscript.md --json --fdr-method by --min-chapters 4
+
+# Interaktives Dashboard &amp; Idempotenter Workspace-Build
+lixity dashboard manuscript.md -o exports/dashboard.html # Einzeldatei-HTML
+lixity build manuscript.md --language de  # Automatische Archiv-Rotation in exports/</pre>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top: 0; color: var(--fg-heading);">Python-API für autonome AI-Agenten</h3>
+      <pre class="cmd-block">from lixity import api
+
+# 1. Korpus-KPIs &amp; Lesbarkeit berechnen
 metrics = api.analyze(text, language="auto")
 
-# Derive self-calibrated style reference (bands, z*, FDR, structural; schema v4)
-reference = api.fingerprint(text, language="en")
+# 2. Selbstkalibrierende Stil-Referenz mit FDR &amp; Strukturdiagnostik (Schema v4)
+reference = api.fingerprint(text, language="de")
 
-# Add persistent, editor-visible work markers
-new_text, marker = api.add_marker(text, "pruefen", "Verify tense shift", line=42)
+# 3. Persistente Lektorats-Marker setzen
+updated_text, marker = api.add_marker(text, kind="pruefen", note="Tempussprung prüfen", line=42)
 
-# Generate single-file interactive HTML dashboard
-html = api.dashboard(text, language="en", title="My Novel")</pre>
-    <p style="font-size:.85rem; color:var(--muted); margin:.6rem 0 0;">
-      Deterministic contracts and schema definitions in
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">docs/AGENTS.md</a>.
-      Formal methods in
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">docs/METHODS.md</a>.
-    </p>
-  </div>
+# 4. Einzeldatei-Dashboard generieren
+dashboard_html = api.dashboard(text, language="de", title="Mein Roman")</pre>
+      <p style="font-size: 0.88rem; color: var(--muted); margin: 0.8rem 0 0;">
+        Vollständige Schnittstellenverträge in <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">docs/AGENTS.md</a> &middot; Mathematische Herleitungen in <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">docs/METHODS.md</a>.
+      </p>
+    </div>
+  </section>
 
-  <div class="card">
-    <h2>Frequently Asked Questions</h2>
-    <details>
-      <summary>How does self-calibration work?</summary>
-      <p>Instead of comparing your novel against generic newspaper corpora or external averages, Lixity uses robust statistics (median and MAD) across your chapters to derive your manuscript&rsquo;s own reference house style. Deviations are highlighted only when a chapter departs significantly from your own established voice.</p>
-    </details>
-    <details>
-      <summary>What are structural diagnostics?</summary>
-      <p>Alongside the per-chapter z* heatmap, the style reference reports structural signals over chapter order: PELT changepoints (where the house style shifts), Mann&ndash;Kendall trends (monotonic drift), Sn/Qn robust scales next to MAD, Hill tail index for heavy-tailed features, early/late Wasserstein&ndash;KS distribution shift, Goh&ndash;Barab&aacute;si fitness on the content-word co-occurrence graph, and Dunning keyness for early vs late chapter halves. They are diagnostic, not verdicts &ndash; read them in conjunction with the FDR set.</p>
-    </details>
-    <details>
-      <summary>What are significance-adjusted z* scores?</summary>
-      <p><code>z* = (x &minus; median) / &radic;(&sigma;&sup2; + SE&sup2;)</code>.
-        Greater sampling uncertainty reduces the score. False positives remain possible.</p>
-    </details>
-    <details>
-      <summary>How do work markers interact with Markdown editors and book exports?</summary>
-      <p>Work markers are saved as standard HTML comments (<code>&lt;!-- LIXITY-MARKER id=&quot;...&quot; kind=&quot;...&quot; note=&quot;...&quot; --&gt;</code>) directly above the target paragraph. They are visible in plain-text editors (VS Code, Obsidian, Neovim, Ulysses) but completely ignored by document compilers (Pandoc, Typst, LaTeX) when generating PDF, EPUB, or print output.</p>
-    </details>
-    <details>
-      <summary>What languages are supported?</summary>
-      <p>Profiles cover English (en), German (de), French (fr), Spanish (es),
-        Italian (it), Portuguese (pt), and Dutch (nl), plus a generic fallback.
-        English is the default. Select a language or use
-        <code>--language auto</code> for function-word-based detection. Dashboard
-        resources cover all seven languages; CLI messages currently have English
-        and German packs. Heuristic accuracy varies with language and text.</p>
-    </details>
-    <details>
-      <summary>Is Lixity suitable for non-fiction, essays, and scholarly manuscripts?</summary>
-      <p>Yes. Sentence rhythm architecture, lexical richness, readability indices, and self-calibrating consistency analysis apply equally well to essays, dissertations, memoirs, long-form journalism, and technical documentation.</p>
-    </details>
-    <details>
-      <summary>Can Lixity run in automated CI/CD and publishing pipelines?</summary>
-      <p>Yes. Lixity operates entirely offline, executes no network calls, runs on pure Python, produces bit-identical JSON and HTML outputs for identical inputs, and follows standard POSIX exit codes (0 = success, 1 = processing error, 2 = CLI usage error).</p>
-    </details>
-  </div>
+  <!-- SECTION 6: INSTALLATION -->
+  <section id="installation">
+    <div class="card">
+      <div class="section-tag">Setup &amp; Get Started</div>
+      <h2 style="font-family: var(--serif); font-size: 2rem; margin: 0 0 0.8rem; color: var(--fg-heading);">
+        Installation &amp; Erstes Dashboard erstellen
+      </h2>
+      <p style="color: var(--muted); margin: 0 0 1.2rem;">
+        Installiere Lixity in einer isolierten CLI-Umgebung auf Windows, macOS oder Linux mittels <a href="https://docs.astral.sh/uv/">uv</a> (oder pipx). Kein Account, kein API-Key und kein Upload privater Manuskripte erforderlich.
+      </p>
+      <pre class="cmd-block"># Installation via uv (empfohlen, benötigt Git &amp; uv)
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
 
-  <div class="card" id="licensing-inquiries">
-    <h2>Licensing &amp; Commercial Inquiries</h2>
-    <p><strong>Source-available, not Open Source.</strong> LNCL-1.0 permits only
-      non-commercial projects. Your project's purpose matters, not whether you
-      are an individual author or a business.</p>
+# Installation überprüfen
+lixity --version
+lixity about
 
-    <div class="grid" style="margin-bottom: 1.2rem;">
-      <div style="padding: 1.1rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--bg);">
-        <div class="meta-badge">Community &amp; Research</div>
-        <h3 style="margin-top: .4rem; color: var(--accent);">Non-Commercial Edition (LNCL-1.0)</h3>
-        <p style="font-size: .88rem; margin: .4rem 0;"><strong>Free of charge</strong> for private writing, research and teaching with no commercial purpose. A book intended for sale does not qualify.</p>
-        <ul style="font-size: .84rem; color: var(--muted); padding-left: 1.2rem; margin: .5rem 0 0;">
-          <li>Full computational stylometry engine &amp; all 7 native language profiles</li>
-          <li>Interactive standalone HTML dashboard &amp; complete CLI toolchain</li>
-          <li>100% offline, local processing ensuring absolute manuscript privacy</li>
-        </ul>
+# Erstes Dashboard bauen (Deutsch)
+lixity build mein_manuskript.md --language de</pre>
+      <p style="font-size: 0.88rem; color: var(--muted); margin: 0.8rem 0 0;">
+        Öffne anschließend einfach <code>exports/mein_manuskript_dashboard.html</code> in jedem modernen Webbrowser. Ausführliche Installationsanleitung für Windows/macOS, Shell-Completion und Fehlersuche: <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">docs/INSTALLATION.md</a>.
+      </p>
+    </div>
+  </section>
+
+  <!-- SECTION 7: LIZENZ & KONTAKT -->
+  <section id="licensing">
+    <div class="card">
+      <div class="section-tag">Rechtlicher Rahmen</div>
+      <h2 style="font-family: var(--serif); font-size: 2rem; margin: 0 0 0.8rem; color: var(--fg-heading);">
+        Lizenzmodell &amp; Kommerzielle Anfragen
+      </h2>
+      <p style="color: var(--muted); margin: 0 0 1.5rem;">
+        <strong>Source-available, kein Open Source.</strong> Die LNCL-1.0 gestattet die kostenfreie Nutzung ausschließlich für nicht-kommerzielle Zwecke. Ausschlaggebend ist der Zweck des Werks &ndash; nicht, ob Sie Einzelautor oder Unternehmen sind.
+      </p>
+
+      <div class="license-grid">
+        <div class="license-card">
+          <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--emerald); margin-bottom: 0.3rem;">Kostenfrei &middot; LNCL-1.0</div>
+          <h3 style="margin: 0 0 0.5rem; color: var(--fg-heading);">Nicht-Kommerzielle Edition</h3>
+          <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 0.8rem;">
+            Kostenlos für private Texte, universitäre Forschung, Lehre und unverkäufliche Arbeiten.
+          </p>
+          <ul style="font-size: 0.84rem; color: var(--subtle); padding-left: 1.2rem; margin: 0;">
+            <li>Vollständige Stilometrie-Engine &amp; alle 7 Sprachprofile</li>
+            <li>Interaktives HTML-Dashboard &amp; CLI-Werkzeuge</li>
+            <li>100% offline &amp; garantierte Manuskript-Privatsphäre</li>
+          </ul>
+        </div>
+
+        <div class="license-card commercial">
+          <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--accent); margin-bottom: 0.3rem;">Lizenzpflichtig &middot; Schriftliche Genehmigung</div>
+          <h3 style="margin: 0 0 0.5rem; color: var(--fg-heading);">Kommerzielle Lizenz</h3>
+          <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 0.8rem;">
+            Zwingend erforderlich für <strong>Romane und Bücher mit Verkaufsabsicht</strong> (inkl. Self-Publishing), bezahltes Lektorat und Verlage.
+          </p>
+          <ul style="font-size: 0.84rem; color: var(--subtle); padding-left: 1.2rem; margin: 0;">
+            <li>Gilt für Print, E-Book, Hörbuch und Print-on-Demand</li>
+            <li>Gilt für Verlagsautoren wie auch Self-Publisher gleichermaßen</li>
+            <li>Schriftliche Konditionen vor Erstverkauf einholen</li>
+          </ul>
+        </div>
       </div>
 
-      <div style="padding: 1.1rem; border: 1px solid var(--accent); border-radius: var(--radius); background: var(--accent-light);">
-        <div class="meta-badge" style="background: var(--accent); color: #fff;">Commercial &amp; Enterprise</div>
-        <h3 style="margin-top: .4rem; color: var(--accent);">Commercial License</h3>
-        <p style="font-size: .88rem; margin: .4rem 0;">Required for <strong>books intended for sale, including self-publishing</strong>, paid editing, commissioned work and commercial integrations. Obtain written permission before using Lixity for that purpose, not after the first sale.</p>
-        <ul style="font-size: .84rem; color: var(--muted); padding-left: 1.2rem; margin: .5rem 0 0;">
-          <li>Print, ebook, audiobook and print-on-demand projects</li>
-          <li>Applies to independent authors as well as publishers</li>
-          <li>Fees and rights agreed separately in writing</li>
-        </ul>
+      <h3 style="margin: 1.8rem 0 0.6rem; color: var(--fg-heading);">Kontakt &amp; Lizenzanfragen</h3>
+      <p style="font-size: 0.92rem; color: var(--muted); margin: 0 0 1rem;">
+        Beschreiben Sie kurz Ihr Buchprojekt, den geplanten Veröffentlichungsrahmen und Zeitplan:
+      </p>
+
+      <div class="contact-meta-grid">
+        <div class="contact-meta-item">
+          <div class="meta-label">Urheber &amp; Chefarchitekt</div>
+          <div class="meta-val">Matthias Fahsold</div>
+        </div>
+        <div class="contact-meta-item">
+          <div class="meta-label">Standort / Gerichtsstand</div>
+          <div class="meta-val">Hamburg, Deutschland</div>
+          <div style="font-size: 0.78rem; color: var(--subtle);">MEZ / MESZ (UTC+1 / UTC+2)</div>
+        </div>
+        <div class="contact-meta-item">
+          <div class="meta-label">Direkte Kontakt-E-Mail</div>
+          <div class="meta-val">
+            <a href="mailto:mfahsold@googlemail.com?subject=Lixity%20Lizenzanfrage" style="color: var(--accent);">mfahsold@googlemail.com</a>
+          </div>
+        </div>
+        <div class="contact-meta-item">
+          <div class="meta-label">Reguläre Reaktionszeit</div>
+          <div class="meta-val">24&ndash;48 Stunden</div>
+          <div style="font-size: 0.78rem; color: var(--subtle);">Werktags Mo&ndash;Fr</div>
+        </div>
       </div>
     </div>
+  </section>
 
-    <h3>Contact &amp; Evaluation Inquiries</h3>
-    <p style="font-size: .9rem; line-height: 1.6; margin-bottom: .6rem;">
-      Describe your project and planned use of Lixity. If a private project later
-      becomes commercial, contact the maintainer before commercial use or sale.
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">Licensing guide</a>.
-    </p>
-
-    <div class="contact-meta-grid">
-      <div class="contact-meta-item">
-        <div class="meta-label">Maintainer &amp; Architect</div>
-        <div class="meta-val">Matthias Fahsold</div>
-      </div>
-      <div class="contact-meta-item">
-        <div class="meta-label">Location / Jurisdiction</div>
-        <div class="meta-val">Hamburg, Germany</div>
-        <div style="font-size: .78rem; color: var(--muted);">CET (UTC+1 / UTC+2)</div>
-      </div>
-      <div class="contact-meta-item">
-        <div class="meta-label">Direct Inquiry Email</div>
-        <div class="meta-val"><a href="mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry">mfahsold@googlemail.com</a></div>
-      </div>
-      <div class="contact-meta-item">
-        <div class="meta-label">Response Time</div>
-        <div class="meta-val">Within 24&ndash;48h</div>
-        <div style="font-size: .78rem; color: var(--muted);">Mon&ndash;Fri Business Days</div>
-      </div>
-    </div>
-
-    <p style="font-size: .82rem; color: var(--muted); margin: .8rem 0 0;">
-      Third-party dependencies (pydantic &ndash; MIT, rich &ndash; MIT, orjson &ndash; MIT/Apache-2.0) carry no copyleft obligations. Bundled historical literary texts (Austen, Fontane) are public domain (<a href="https://www.gutenberg.org/">Project Gutenberg</a>) and are not relicensed by the LNCL. Full license terms: <a href="https://github.com/mfahsold/lixity/blob/main/LICENSE">LICENSE</a>.
-    </p>
-  </div>
-
+  <!-- Footer -->
   <footer>
     <div>&copy; 2026 Matthias Fahsold &middot; Hamburg, Germany &middot; <a href="https://github.com/mfahsold/lixity">github.com/mfahsold/lixity</a></div>
     <div>
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Usage Guide</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">Agent API</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">Methods</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a> &middot;
-      <a href="llms.txt">llms.txt</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">Changelog</a>
+      <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">Nutzungsanleitung</a> &middot;
+      <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">Agent-Schnittstelle</a> &middot;
+      <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">Methoden</a> &middot;
+      <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">Recherche-Pilot</a> &middot;
+      <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">Lizenzierungsbeispiele</a> &middot;
+      <a href="llms.txt">llms.txt</a>
     </div>
   </footer>
 </main>
+
+<!-- Lightbox Modal -->
+<div class="lightbox" id="lightboxModal" role="dialog" aria-modal="true" aria-label="Bildvergrößerung">
+  <button class="lightbox-close" id="lightboxClose" aria-label="Schließen">&times; Schließen</button>
+  <img id="lightboxImg" src="" alt="Großansicht"/>
+</div>
+
+<script>
+// Theme Toggle Logic
+const themeBtn = document.getElementById('themeToggle');
+const themeIcon = document.getElementById('themeIcon');
+const htmlEl = document.documentElement;
+
+function getStoredTheme() {
+  return localStorage.getItem('lixity-theme') || 'auto';
+}
+
+function applyTheme(theme) {
+  htmlEl.setAttribute('data-theme', theme);
+  localStorage.setItem('lixity-theme', theme);
+  if (theme === 'dark') {
+    themeIcon.textContent = '🌙';
+  } else if (theme === 'light') {
+    themeIcon.textContent = '☀️';
+  } else {
+    themeIcon.textContent = '🌓';
+  }
+}
+
+applyTheme(getStoredTheme());
+
+themeBtn.addEventListener('click', () => {
+  const current = htmlEl.getAttribute('data-theme') || 'auto';
+  let next = 'light';
+  if (current === 'light') next = 'dark';
+  else if (current === 'dark') next = 'auto';
+  applyTheme(next);
+});
+
+// Lightbox Modal Logic
+const modal = document.getElementById('lightboxModal');
+const modalImg = document.getElementById('lightboxImg');
+const modalClose = document.getElementById('lightboxClose');
+
+document.querySelectorAll('figure.shot img').forEach(img => {
+  img.addEventListener('click', () => {
+    modalImg.src = img.src;
+    modalImg.alt = img.alt;
+    modal.classList.add('active');
+  });
+});
+
+modalClose.addEventListener('click', () => modal.classList.remove('active'));
+modal.addEventListener('click', (e) => {
+  if (e.target === modal) modal.classList.remove('active');
+});
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'Escape' && modal.classList.contains('active')) {
+    modal.classList.remove('active');
+  }
+});
+</script>
 </body>
 </html>
