@@ -53,7 +53,7 @@ class TestResearchAnalysis(unittest.TestCase):
         source = self.ingest()
         before = {path: path.read_bytes() for path in self.project.rglob("*") if path.is_file()}
         with patch("lixity.config.load_project_config", side_effect=AssertionError("ambient config")), \
-                patch("lixity.pipeline.analyze_document", wraps=pipeline.analyze_document) as analyze:
+                patch("lixity.research.analysis.analyze_document", wraps=pipeline.analyze_document) as analyze:
             result = api.analyze_source(self.project, source["source_id"], thresholds={"fdr_method": "by"})
         self.assertEqual(analyze.call_count, 1)
         self.assertEqual(result["metrics"], core.analyze(self.text)["metrics"])

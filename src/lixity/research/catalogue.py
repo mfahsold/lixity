@@ -48,7 +48,7 @@ def reindex(repository: Repository) -> dict[str, Any]:
                             repository.quote(snapshot, record)
                             connection.execute("INSERT INTO passages VALUES (?, ?)", (record.id, record.verbatim))
                             count += 1
-            with open(temporary, "rb") as stream:
+            with open(temporary, "r+b") as stream:
                 os.fsync(stream.fileno())
             os.replace(temporary, destination)
             sync_directory(destination.parent)

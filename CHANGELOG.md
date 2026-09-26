@@ -56,6 +56,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   Markdown headings consistently from prose measurements.
 - Project TOML works on Python 3.10 through a conditional `tomli` dependency;
   Python 3.11+ continues to use the standard library.
+- Rebuilding the research catalogue flushes a writable file descriptor on
+  Windows before atomic publication. Browser checks honor an external Python
+  environment in CI as well as the local development environment.
 
 ### Changed
 
