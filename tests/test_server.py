@@ -349,3 +349,92 @@ class TestLixityServer(unittest.TestCase):
             finally:
                 LixityServerHandler.research_dir = orig_rdir
                 LixityServerHandler.source_input = orig_ms
+
+    def test_project_create_and_open_workflow(self):
+        orig_ws = LixityServerHandler.workspace_root
+        orig_ms = LixityServerHandler.source_input
+        orig_title = LixityServerHandler.title
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                # 1. Create minimal project
+                proj_dir = Path(td) / "my-novel"
+                create_payload = json.dumps({
+                    "title": "Die Chroniken von Nebelwald",
+                    "language": "de",
+                    "path": str(proj_dir),
+                    "template": "three_act",
+                    "init_research": True,
+                })
+                status, body, _ = self.make_request(
+                    "/api/project-create",
+                    method="POST",
+                    body=create_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                res = json.loads(body)
+                self.assertTrue(res["ok"])
+                self.assertTrue(proj_dir.is_dir())
+                self.assertTrue((proj_dir / "manuscript.md").is_file())
+                self.assertTrue((proj_dir / "lixity.toml").is_file())
+                self.assertTrue((proj_dir / "research").is_dir())
+
+                ms_text = (proj_dir / "manuscript.md").read_text(encoding="utf-8")
+                self.assertIn("Erster Akt: Aufbruch", ms_text)
+                self.assertIn("Zweiter Akt: Konfrontation", ms_text)
+                self.assertIn("Dritter Akt: Rückkehr", ms_text)
+
+                self.assertEqual(LixityServerHandler.workspace_root, str(proj_dir))
+                self.assertEqual(LixityServerHandler.source_input, str(proj_dir / "manuscript.md"))
+
+                # 2. Open project by path
+                open_payload = json.dumps({"path": str(proj_dir)})
+                status, body, _ = self.make_request(
+                    "/api/project-open",
+                    method="POST",
+                    body=open_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                open_res = json.loads(body)
+                self.assertTrue(open_res["ok"])
+                self.assertEqual(open_res["workspace_root"], str(proj_dir))
+
+                # 3. Open manuscript file explicitly
+                open_file_payload = json.dumps({"path": str(proj_dir / "manuscript.md")})
+                status, body, _ = self.make_request(
+                    "/api/project-open",
+                    method="POST",
+                    body=open_file_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                open_file_res = json.loads(body)
+                self.assertTrue(open_file_res["ok"])
+
+                # 4. Error on non-existent path
+                err_payload = json.dumps({"path": str(proj_dir / "non-existent")})
+                status, body, _ = self.make_request(
+                    "/api/project-open",
+                    method="POST",
+                    body=err_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 404)
+        finally:
+            LixityServerHandler.workspace_root = orig_ws
+            LixityServerHandler.source_input = orig_ms
+            LixityServerHandler.title = orig_title
+            LixityServerHandler.refresh()
+
+    def test_dashboard_welcome_hero_and_modals(self):
+        # When no manuscript/chapters loaded, welcome hero and modals must be rendered
+        html, info = build_server_dashboard(None, language="de", title="Lixity Empty")
+        self.assertEqual(info["chapters"], 0)
+        self.assertIn('id="welcome-hero"', html)
+        self.assertIn('id="modal-project-create"', html)
+        self.assertIn('id="modal-project-open"', html)
+        self.assertIn('id="hero-btn-new-project"', html)
+        self.assertIn('id="hero-btn-open-project"', html)
+        self.assertIn('template-card', html)
+

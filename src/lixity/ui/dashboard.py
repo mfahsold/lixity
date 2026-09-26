@@ -233,9 +233,51 @@ def render_dashboard(
                 )
         parts.append("</tbody></table></div></section>")
 
+    if not chapters:
+        is_de = language_key == "de"
+        welcome_title = "Willkommen bei Lixity" if is_de else "Welcome to Lixity"
+        welcome_desc = (
+            "Starten Sie ein neues Romanprojekt mit strukturierter Vorlage oder öffnen Sie ein vorhandenes Manuskript zur Stilanalyse."
+            if is_de
+            else "Start a new book project with a proven narrative structure or open an existing manuscript for deep stylistic analysis."
+        )
+        parts.append('<section class="welcome-hero" id="welcome-hero">')
+        parts.append('  <div class="welcome-inner">')
+        parts.append('    <div class="welcome-badge">Lixity Workspace</div>')
+        parts.append(f'    <h1 class="welcome-title">{esc(welcome_title)}</h1>')
+        parts.append(f'    <p class="welcome-desc">{esc(welcome_desc)}</p>')
+        if controls:
+            parts.append('    <div class="welcome-actions">')
+            parts.append(f'      <button type="button" class="ctl primary welcome-btn" id="hero-btn-new-project">+ {L("new_project")}</button>')
+            parts.append(f'      <button type="button" class="ctl welcome-btn" id="hero-btn-open-project">📂 {L("open_project")}</button>')
+            parts.append('    </div>')
+        parts.append('    <div class="welcome-features">')
+        if is_de:
+            parts.append('      <div class="wf-item"><strong>FDR-Multitest</strong><span>Strenge Kontrolle falscher Entdeckungen (q = 0.05)</span></div>')
+            parts.append('      <div class="wf-item"><strong>3D-Stilraum</strong><span>Hauptkomponenten & Trajektorie der Kapitel</span></div>')
+            parts.append('      <div class="wf-item"><strong>Lokale Recherche</strong><span>FTS5-Volltextsuche, Dossiers & Evidenzabgleich</span></div>')
+        else:
+            parts.append('      <div class="wf-item"><strong>FDR Multi-Testing</strong><span>Rigorous Benjamini-Hochberg error control (q = 0.05)</span></div>')
+            parts.append('      <div class="wf-item"><strong>3D Style Space</strong><span>Principal components & chapter trajectory</span></div>')
+            parts.append('      <div class="wf-item"><strong>Local Research</strong><span>FTS5 fulltext search, dossiers & evidence grounding</span></div>')
+        parts.append('    </div>')
+        parts.append('  </div>')
+        parts.append('</section>')
+
     if controls:
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('controls')}</h2>")
+
+        # Workspace Action Bar
+        parts.append('<div class="ctl-group workspace-bar">')
+        parts.append('<span class="ctl-label">Workspace</span>')
+        parts.append('<div class="row">')
+        parts.append(f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>')
+        parts.append(f'<button type="button" class="ctl" id="btn-modal-open-project">📂 {L("open_project")}</button>')
+        if manuscript_name:
+            parts.append(f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>')
+        parts.append('</div>')
+        parts.append('</div>')
 
         # Load manuscript
         parts.append('<div class="ctl-group">')
@@ -394,6 +436,85 @@ def render_dashboard(
 
         parts.append('<div class="ctl-status" id="research-status-bar" role="status" aria-live="polite"></div>')
         parts.append("</section>")
+
+        is_de = language_key == "de"
+        # Modal: New Project
+        parts.append('<dialog class="lixity-modal" id="modal-project-create">')
+        parts.append('  <div class="modal-card">')
+        parts.append('    <div class="modal-header">')
+        parts.append(f'      <h3>{L("create_project")}</h3>')
+        parts.append('      <button type="button" class="modal-close" data-close-modal aria-label="Schließen">✕</button>')
+        parts.append('    </div>')
+        parts.append('    <form id="form-project-create" class="modal-body" method="dialog">')
+        parts.append('      <div class="form-group">')
+        parts.append(f'        <label for="new-proj-title" class="ctl-label">{L("title")}</label>')
+        parts.append(f'        <input class="ctl" id="new-proj-title" required placeholder="{"z. B. Der Schatten über den Dünen" if is_de else "e.g. Whispers in the Mist"}" style="width:100%;"/>')
+        parts.append('      </div>')
+        parts.append('      <div class="row">')
+        parts.append('        <div style="flex:1;">')
+        parts.append(f'          <label for="new-proj-lang" class="ctl-label">{L("language")}</label>')
+        parts.append('          <select class="ctl" id="new-proj-lang" style="width:100%;">')
+        for code, name in (("de", "Deutsch"), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("it", "Italiano"), ("pt", "Português"), ("nl", "Nederlands")):
+            sel = ' selected' if code == language_key else ''
+            parts.append(f'            <option value="{code}"{sel}>{name}</option>')
+        parts.append('          </select>')
+        parts.append('        </div>')
+        parts.append('        <div style="flex:2;">')
+        parts.append(f'          <label for="new-proj-path" class="ctl-label">{"Zielordner (optional)" if is_de else "Target folder (optional)"}</label>')
+        parts.append(f'          <input class="ctl" id="new-proj-path" placeholder="{"Standard: Unterordner" if is_de else "Default: Subfolder"}" style="width:100%;"/>')
+        parts.append('        </div>')
+        parts.append('      </div>')
+        parts.append('      <div class="form-group">')
+        parts.append(f'        <span class="ctl-label">{"Erzählstruktur & Vorlage wählen" if is_de else "Select narrative structure & template"}</span>')
+        parts.append('        <div class="template-grid">')
+        parts.append('          <label class="template-card active">')
+        parts.append('            <input type="radio" name="proj_template" value="minimal" checked/>')
+        parts.append('            <div class="tc-title">Minimal</div>')
+        parts.append(f'            <div class="tc-desc">{"1 Kapitel – schlanker Einstieg für freies Schreiben." if is_de else "1 chapter – lean starting point for free writing."}</div>')
+        parts.append('          </label>')
+        parts.append('          <label class="template-card">')
+        parts.append('            <input type="radio" name="proj_template" value="three_act"/>')
+        parts.append(f'            <div class="tc-title">{"3-Akt-Struktur" if is_de else "3-Act Structure"}</div>')
+        parts.append(f'            <div class="tc-desc">{"Klassischer Plot: Aufbruch, Konfrontation, Rückkehr." if is_de else "Classic arc: Departure, confrontation, resolution."}</div>')
+        parts.append('          </label>')
+        parts.append('          <label class="template-card">')
+        parts.append('            <input type="radio" name="proj_template" value="research"/>')
+        parts.append(f'            <div class="tc-title">{"Recherche-Roman" if is_de else "Research Novel"}</div>')
+        parts.append(f'            <div class="tc-desc">{"Inklusive lokalem Recherche- & Dossier-Speicher (research/)." if is_de else "Includes local research & dossier archive (research/)."}</div>')
+        parts.append('          </label>')
+        parts.append('        </div>')
+        parts.append('      </div>')
+        parts.append('      <div class="form-group" style="margin-top:.4rem;">')
+        parts.append(f'        <label style="display:inline-flex;align-items:center;gap:.45rem;cursor:pointer;font-size:.85rem;"><input type="checkbox" id="new-proj-research"/> <span>{"Recherchemodul aktivieren (research/)" if is_de else "Initialize research archive (research/)"}</span></label>')
+        parts.append('      </div>')
+        parts.append('      <div class="modal-footer">')
+        parts.append(f'        <button type="button" class="ctl" data-close-modal>{"Abbrechen" if is_de else "Cancel"}</button>')
+        parts.append(f'        <button type="submit" class="ctl primary" id="btn-submit-create-project">{"Projekt anlegen" if is_de else "Create Project"}</button>')
+        parts.append('      </div>')
+        parts.append('    </form>')
+        parts.append('  </div>')
+        parts.append('</dialog>')
+
+        # Modal: Open Project
+        parts.append('<dialog class="lixity-modal" id="modal-project-open">')
+        parts.append('  <div class="modal-card">')
+        parts.append('    <div class="modal-header">')
+        parts.append(f'      <h3>{L("open_project")}</h3>')
+        parts.append('      <button type="button" class="modal-close" data-close-modal aria-label="Schließen">✕</button>')
+        parts.append('    </div>')
+        parts.append('    <form id="form-project-open" class="modal-body" method="dialog">')
+        parts.append('      <div class="form-group">')
+        parts.append(f'        <label for="open-proj-path" class="ctl-label">{"Projektordner oder Manuskript-Datei (.md)" if is_de else "Project folder or manuscript file (.md)"}</label>')
+        parts.append(f'        <input class="ctl" id="open-proj-path" required placeholder="{"/pfad/zu/deinem/projekt oder manuskript.md" if is_de else "/path/to/project or manuscript.md"}" style="width:100%;"/>')
+        parts.append(f'        <p class="ctl-note">{"Geben Sie einen absoluten oder relativen Pfad zu einem Verzeichnis oder einer Markdown-Datei an." if is_de else "Enter an absolute or relative path to a directory or Markdown file."}</p>')
+        parts.append('      </div>')
+        parts.append('      <div class="modal-footer">')
+        parts.append(f'        <button type="button" class="ctl" data-close-modal>{"Abbrechen" if is_de else "Cancel"}</button>')
+        parts.append(f'        <button type="submit" class="ctl primary" id="btn-submit-open-project">{L("open")}</button>')
+        parts.append('      </div>')
+        parts.append('    </form>')
+        parts.append('  </div>')
+        parts.append('</dialog>')
 
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [

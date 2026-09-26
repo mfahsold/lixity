@@ -923,8 +923,104 @@ document.addEventListener("click", async function (event) {
         (chRows ? '<div style="margin-top:.8rem;"><div class="ctl-label" style="margin-bottom:.3rem;">Kapiteldichte</div><table style="width:100%;font-size:.8rem;"><thead><tr><th style="text-align:left;">Kapitel</th><th style="text-align:right;">Tokens</th><th style="text-align:right;">Dichte</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
       '</div>';
     }
-    researchStatus("Abgleich erfolgreich abgeschlossen", true);
+if (document.getElementById("research-manager")) { initResearchUI(); }
+
+// --- Workspace & Project Modals -------------------------------------------
+document.addEventListener("click", function (event) {
+  var newBtn = event.target.closest("#btn-modal-new-project, #hero-btn-new-project");
+  if (newBtn) {
+    var modalNew = document.getElementById("modal-project-create");
+    if (modalNew && typeof modalNew.showModal === "function") {
+      modalNew.showModal();
+      var input = document.getElementById("new-proj-title");
+      if (input) input.focus();
+    }
+    return;
+  }
+
+  var openBtn = event.target.closest("#btn-modal-open-project, #hero-btn-open-project");
+  if (openBtn) {
+    var modalOpen = document.getElementById("modal-project-open");
+    if (modalOpen && typeof modalOpen.showModal === "function") {
+      modalOpen.showModal();
+      var inputOpen = document.getElementById("open-proj-path");
+      if (inputOpen) inputOpen.focus();
+    }
+    return;
+  }
+
+  var closeBtn = event.target.closest("[data-close-modal]");
+  if (closeBtn) {
+    var dialog = closeBtn.closest("dialog");
+    if (dialog && typeof dialog.close === "function") dialog.close();
+    return;
+  }
+
+  if (event.target.tagName === "DIALOG" && event.target.classList.contains("lixity-modal")) {
+    var rect = event.target.getBoundingClientRect();
+    var isInDialog = (rect.top <= event.clientY && event.clientY <= rect.top + rect.height
+      && rect.left <= event.clientX && event.clientX <= rect.left + rect.width);
+    if (!isInDialog && typeof event.target.close === "function") {
+      event.target.close();
+    }
   }
 });
 
-if (document.getElementById("research-manager")) { initResearchUI(); }
+document.addEventListener("change", function (event) {
+  if (event.target.name === "proj_template") {
+    document.querySelectorAll(".template-card").forEach(function (card) {
+      card.classList.toggle("active", card.contains(event.target));
+    });
+    var rBox = document.getElementById("new-proj-research");
+    if (rBox && event.target.value === "research") {
+      rBox.checked = true;
+    }
+  }
+});
+
+var formCreate = document.getElementById("form-project-create");
+if (formCreate) {
+  formCreate.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var titleEl = document.getElementById("new-proj-title");
+    var title = titleEl ? titleEl.value.trim() : "";
+    if (!title) return;
+    var langEl = document.getElementById("new-proj-lang");
+    var lang = langEl ? langEl.value : "en";
+    var pathEl = document.getElementById("new-proj-path");
+    var folder = pathEl ? pathEl.value.trim() : "";
+    var templateEl = document.querySelector('input[name="proj_template"]:checked');
+    var template = templateEl ? templateEl.value : "minimal";
+    var researchEl = document.getElementById("new-proj-research");
+    var initResearch = Boolean(researchEl && researchEl.checked);
+
+    var submitBtn = document.getElementById("btn-submit-create-project");
+    var modal = document.getElementById("modal-project-create");
+    if (modal && typeof modal.close === "function") modal.close();
+
+    runAction("project-create", {
+      title: title,
+      language: lang,
+      path: folder,
+      template: template,
+      init_research: initResearch
+    }, submitBtn);
+  });
+}
+
+var formOpen = document.getElementById("form-project-open");
+if (formOpen) {
+  formOpen.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var pathEl = document.getElementById("open-proj-path");
+    var path = pathEl ? pathEl.value.trim() : "";
+    if (!path) return;
+
+    var submitBtn = document.getElementById("btn-submit-open-project");
+    var modal = document.getElementById("modal-project-open");
+    if (modal && typeof modal.close === "function") modal.close();
+
+    runAction("project-open", { path: path }, submitBtn);
+  });
+}
+

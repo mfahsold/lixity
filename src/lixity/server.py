@@ -374,6 +374,14 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._handle_load(payload)
             return
 
+        if action == "project-create":
+            self._handle_project_create(payload)
+            return
+
+        if action == "project-open":
+            self._handle_project_open(payload)
+            return
+
         if action.startswith("marker-"):
             self._handle_marker(action, payload)
             return
@@ -489,6 +497,153 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         self._json({
             "ok": True,
             "message": f"Manuscript loaded: {name} · {info.get('chapters')} chapters",
+            "reload": True,
+        })
+
+    def _handle_project_create(self, payload: dict[str, Any]) -> None:
+        title = str(payload.get("title") or "Untitled Project").strip()
+        lang = str(payload.get("language") or self.language or "en").strip().lower()
+        if lang not in LANGUAGE_CHOICES and lang != "auto":
+            lang = "en"
+        if lang == "auto":
+            lang = "en"
+
+        folder_input = str(payload.get("path") or "").strip()
+        if folder_input:
+            target_path = Path(folder_input).expanduser().resolve()
+        else:
+            slug = re.sub(r"[^\w\-]+", "-", title.lower()).strip("-") or "new-project"
+            base_dir = Path(self.workspace_root).resolve() if self.workspace_root else Path.cwd()
+            target_path = base_dir / slug
+
+        try:
+            target_path.mkdir(parents=True, exist_ok=True)
+        except OSError as exc:
+            self._json({"ok": False, "message": f"Failed to create directory {target_path}: {exc}"}, 500)
+            return
+
+        template_key = str(payload.get("template") or "minimal").strip().lower()
+        init_research = bool(payload.get("init_research", False) or template_key == "research")
+
+        manuscript_file = target_path / "manuscript.md"
+        if not manuscript_file.exists():
+            if template_key == "three_act":
+                if lang == "de":
+                    ms_content = (
+                        f"# {title}\n\n"
+                        "## Erster Akt: Aufbruch\n\n"
+                        "Die gewohnte Welt wird vorgestellt. Ein auslösendes Ereignis stellt die Hauptfiguren vor eine Entscheidung.\n\n"
+                        "## Zweiter Akt: Konfrontation\n\n"
+                        "Herausforderungen, Konflikte und Rückschläge in der neuen Welt. Die Spannung steigt bis zum Wendepunkt.\n\n"
+                        "## Dritter Akt: Rückkehr\n\n"
+                        "Der Höhepunkt, die finale Entscheidung und die Auflösung der offenen Fäden.\n"
+                    )
+                else:
+                    ms_content = (
+                        f"# {title}\n\n"
+                        "## Act I: Departure\n\n"
+                        "The ordinary world is established. An inciting incident forces the protagonist to make a fateful choice.\n\n"
+                        "## Act II: Confrontation\n\n"
+                        "Rising obstacles, conflicts, and trials in an unfamiliar world leading to the crucial midpoint.\n\n"
+                        "## Act III: Resolution\n\n"
+                        "The climax, final showdown, and resolution bringing new perspective and transformation.\n"
+                    )
+            elif template_key == "research":
+                if lang == "de":
+                    ms_content = (
+                        f"# {title}\n\n"
+                        "## Kapitel 1: Grundlagen und Spuren\n\n"
+                        "Jede Untersuchung beginnt mit einer Frage. Die ersten Quellen geben Zeugnis von Ereignissen, die lange im Verborgenen lagen.\n"
+                    )
+                else:
+                    ms_content = (
+                        f"# {title}\n\n"
+                        "## Chapter 1: Foundations\n\n"
+                        "Every investigation begins with a question. The earliest accounts testify to events long kept in the shadows.\n"
+                    )
+            else:
+                if lang == "de":
+                    ms_content = (
+                        f"# {title}\n\n"
+                        "## Kapitel 1\n\n"
+                        "Hier beginnt die Geschichte. Schreiben Sie Ihre ersten Sätze oder fügen Sie Ihr Manuskript ein.\n"
+                    )
+                else:
+                    ms_content = (
+                        f"# {title}\n\n"
+                        "## Chapter 1\n\n"
+                        "The story begins here. Write your opening lines or paste your manuscript content.\n"
+                    )
+
+            try:
+                manuscript_file.write_text(ms_content, encoding="utf-8")
+            except OSError as exc:
+                self._json({"ok": False, "message": f"Failed to write manuscript: {exc}"}, 500)
+                return
+
+        config_file = target_path / "lixity.toml"
+        if not config_file.exists():
+            cfg_text = f'[project]\ntitle = "{title}"\nlanguage = "{lang}"\n'
+            with contextlib.suppress(OSError):
+                config_file.write_text(cfg_text, encoding="utf-8")
+
+        if init_research:
+            with contextlib.suppress(ResearchError, OSError, ValueError):
+                research_api.init(target_path, title=title, language=lang)
+
+        self.__class__.workspace_root = str(target_path)
+        self.__class__.source_input = str(manuscript_file)
+        self.__class__.exports_dir = str(target_path / "exports")
+        self.__class__.research_dir = str(target_path) if (target_path / "research").is_dir() else None
+        self.__class__.language = lang
+        self.__class__.title = title
+        self.__class__.title_custom = True
+        self.refresh()
+
+        self._json({
+            "ok": True,
+            "message": f"Project '{title}' created and loaded",
+            "path": str(target_path),
+            "manuscript": str(manuscript_file),
+            "reload": True,
+        })
+
+    def _handle_project_open(self, payload: dict[str, Any]) -> None:
+        target_raw = str(payload.get("path") or "").strip()
+        if not target_raw:
+            self._json({"ok": False, "message": "Project or manuscript path is required"}, 400)
+            return
+
+        target_path = Path(target_raw).expanduser().resolve()
+        if not target_path.exists():
+            self._json({"ok": False, "message": f"Path does not exist: {target_path}"}, 404)
+            return
+
+        try:
+            if target_path.is_file():
+                ws_root = str(target_path.parent)
+                manuscript = str(target_path)
+            else:
+                ws = discover(root=str(target_path))
+                ws_root = ws.root
+                manuscript = ws.manuscript
+        except (FileNotFoundError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+            return
+
+        self.__class__.workspace_root = ws_root
+        self.__class__.source_input = manuscript
+        self.__class__.exports_dir = str(Path(ws_root) / "exports")
+        self.__class__.research_dir = str(Path(ws_root)) if (Path(ws_root) / "research").is_dir() else None
+        if not self.title_custom:
+            self.__class__.title = None
+        self.refresh()
+
+        self._json({
+            "ok": True,
+            "message": f"Workspace loaded: {Path(manuscript).name}",
+            "workspace_root": ws_root,
+            "manuscript": manuscript,
             "reload": True,
         })
 
