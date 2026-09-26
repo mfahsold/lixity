@@ -17,9 +17,12 @@ from .models import (
     ENTITY,
     Activity,
     Blob,
+    Claim,
+    Decision,
     Dossier,
     Entity,
     Entry,
+    EvidenceLink,
     Extraction,
     Head,
     Manifest,
@@ -224,6 +227,15 @@ class Repository:
             elif isinstance(record, Dossier):
                 for ref in record.evidence_refs:
                     snapshot.get(ref, Passage)
+            elif isinstance(record, Claim):
+                if record.dossier_ref:
+                    snapshot.get(record.dossier_ref, Dossier)
+            elif isinstance(record, EvidenceLink):
+                snapshot.get(record.claim_ref, Claim)
+                snapshot.get(record.passage_ref, Passage)
+            elif isinstance(record, Decision):
+                if record.claim_ref:
+                    snapshot.get(record.claim_ref, Claim)
             elif isinstance(record, Tombstone):
                 pass
 

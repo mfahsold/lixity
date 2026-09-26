@@ -24,6 +24,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("compare", "Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)"),
         ("sources", "List active sources, versions, tags, and passage counts"),
         ("dossier", "Create, list or inspect research dossiers"),
+        ("claim", "Create or list research claims and hypotheses"),
+        ("link-evidence", "Link a passage citation to a claim as evidence"),
+        ("decision", "Record or list deliberate author decisions and fact deviations"),
         ("withdraw", "Withdraw an archived source or version, marking citations and excluding from search"),
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
     ):
@@ -66,6 +69,28 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--tags", help="Comma-separated tags")
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
+        elif name == "claim":
+            command.add_argument("--claim-id", help="Claim UUID to inspect")
+            command.add_argument("--title", help="Title for new claim")
+            command.add_argument("--statement", help="Full factual statement or hypothesis")
+            command.add_argument("--confidence", choices=("hypothetical", "evidenced", "disputed"), default="hypothetical")
+            command.add_argument("--time-period", help="Temporal scope")
+            command.add_argument("--place", help="Geographic scope")
+            command.add_argument("--actors", help="Comma-separated key historical actors or entities")
+            command.add_argument("--dossier-id", help="Optional associated dossier UUID")
+            command.add_argument("--tags", help="Comma-separated tags")
+        elif name == "link-evidence":
+            command.add_argument("--claim-id", required=True, help="Claim UUID")
+            command.add_argument("--passage-id", required=True, help="Passage citation UUID")
+            command.add_argument("--relation", choices=("supports", "contradicts", "qualifies", "contextualizes"), default="supports")
+            command.add_argument("--rationale", help="Reviewer rationale for link")
+            command.add_argument("--reviewer", default="author", help="Reviewer identifier")
+        elif name == "decision":
+            command.add_argument("--title", help="Title for new author decision")
+            command.add_argument("--rationale", help="Artistic or historical rationale")
+            command.add_argument("--claim-id", help="Optional claim UUID being decided upon")
+            command.add_argument("--deviation-from-fact", action="store_true", help="Flag intentional deviation from historical evidence")
+            command.add_argument("--impact-on-plot", help="Description of plot or worldbuilding impact")
         elif name in ("withdraw", "purge"):
             command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
@@ -159,6 +184,48 @@ def run(args: argparse.Namespace) -> int:
                 )
             else:
                 result = api.list_dossiers(args.project)
+        elif command == "claim":
+            if getattr(args, "claim_id", None) and not getattr(args, "title", None):
+                result = api.list_evidence_links(args.project, claim_id=args.claim_id)
+            elif getattr(args, "title", None) and getattr(args, "statement", None):
+                raw_tags = getattr(args, "tags", "") or ""
+                tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+                raw_actors = getattr(args, "actors", "") or ""
+                actors = [a.strip() for a in raw_actors.split(",") if a.strip()]
+                result = api.create_claim(
+                    args.project,
+                    title=args.title,
+                    statement=args.statement,
+                    confidence=getattr(args, "confidence", "hypothetical"),
+                    time_period=getattr(args, "time_period", None),
+                    place=getattr(args, "place", None),
+                    actors=actors,
+                    dossier_id=getattr(args, "dossier_id", None),
+                    tags=tags,
+                )
+            else:
+                result = api.list_claims(args.project, dossier_id=getattr(args, "dossier_id", None))
+        elif command == "link-evidence":
+            result = api.link_evidence(
+                args.project,
+                claim_id=args.claim_id,
+                passage_id=args.passage_id,
+                relation=args.relation,
+                rationale=getattr(args, "rationale", None),
+                reviewer=getattr(args, "reviewer", "author"),
+            )
+        elif command == "decision":
+            if getattr(args, "title", None) and getattr(args, "rationale", None):
+                result = api.record_decision(
+                    args.project,
+                    title=args.title,
+                    rationale=args.rationale,
+                    claim_id=getattr(args, "claim_id", None),
+                    deviation_from_fact=getattr(args, "deviation_from_fact", False),
+                    impact_on_plot=getattr(args, "impact_on_plot", None),
+                )
+            else:
+                result = api.list_decisions(args.project)
         elif command == "withdraw":
             result = api.withdraw(args.project, args.source_id, version_id=args.version_id,
                                   reason=args.reason, actor=args.actor)

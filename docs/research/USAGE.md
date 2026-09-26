@@ -8,16 +8,19 @@ grounding comparisons against manuscripts. It does not implement the entire [RFC
 
 | Available in development | Not implemented |
 | --- | --- |
-| Explicit project, immutable captures, paragraph citations | Claims, author decisions (probabilistic) |
-| SQLite/FTS5 lexical search, instant index rebuild | Embeddings, dense hybrid search, Qdrant, Haystack |
-| Local text / Markdown input, original bytes retained | PDF/OCR, Zotero, network imports, archive exchange |
-| Versioned source criticism context & core analysis adapter | Multi-tenant team services, cloud hosting |
-| Controlled withdrawal & physical purge with dry-run preview | Automated factual proof or rewriting prose |
-| Read-only HTML source dashboard with localized context | Ambient configuration discovery |
-| Integrity audit and snapshot conflict detection | Ambient manuscript detection |
-| Source listing & tagging (`lixity research sources`) | External web scrapers |
-| Dossier creation & inspection (`lixity research dossier`) | Automatic claim reconciliation |
-| Cross-corpus linguistic grounding (`lixity research compare`) | Full-document OCR |
+| Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
+| SQLite/FTS5 lexical search, instant index rebuild | PDF/OCR, Zotero, network imports, archive exchange |
+| Local text / Markdown input, original bytes retained | Multi-tenant team services, cloud hosting |
+| Versioned source criticism context & core analysis adapter | Automated factual proof or rewriting prose |
+| Controlled withdrawal & physical purge with dry-run preview | Ambient configuration discovery |
+| Read-only HTML source dashboard with localized context | Ambient manuscript detection |
+| Integrity audit and snapshot conflict detection | External web scrapers |
+| Source listing & tagging (`lixity research sources`) | Full-document OCR |
+| Dossier creation & inspection (`lixity research dossier`) | |
+| Factual claims & scope (`lixity research claim`) | |
+| Evidence linking with relations (`lixity research link-evidence`) | |
+| Authorial decisions & fact deviations (`lixity research decision`) | |
+| Cross-corpus linguistic grounding (`lixity research compare`) | |
 | Interactive web research panel in `lixity serve` | |
 
 ## Try it
@@ -45,6 +48,11 @@ lixity research dashboard --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUI
 lixity research compare --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --manuscript ./novel.md
 lixity research dossier --project ./novel --title "Reading Room Notes" --body "Opened in 1924." --evidence urn:uuid:YOUR-PASSAGE-UUID
 lixity research dossier --project ./novel --list
+lixity research claim --project ./novel --title "Archive Founding" --statement "Founded in 1924." --confidence evidenced
+lixity research claim --project ./novel
+lixity research link-evidence --project ./novel --claim-id urn:uuid:YOUR-CLAIM-UUID --passage-id urn:uuid:YOUR-PASSAGE-UUID --relation supports
+lixity research decision --project ./novel --title "Move date to 1914" --rationale "Plot tension" --claim-id urn:uuid:YOUR-CLAIM-UUID --deviation-from-fact
+lixity research decision --project ./novel
 lixity research withdraw --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "License revoked"
 lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --dry-run
 lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "GDPR deletion"
@@ -87,7 +95,28 @@ if results["hits"]:
         evidence_ids=[results["hits"][0]["passage_id"]],
         tags=["milestone"],
     )
+    claim = api.create_claim(
+        "./novel",
+        title="Reading Room 1924",
+        statement="The reading room was opened in 1924.",
+        confidence="evidenced",
+    )
+    link = api.link_evidence(
+        "./novel",
+        claim_id=claim["claim_id"],
+        passage_id=results["hits"][0]["passage_id"],
+        relation="supports",
+    )
+    decision = api.record_decision(
+        "./novel",
+        title="Shift date to 1914",
+        rationale="Dramatic tension before war.",
+        claim_id=claim["claim_id"],
+        deviation_from_fact=True,
+    )
 dossiers = api.list_dossiers("./novel")
+claims = api.list_claims("./novel")
+decisions = api.list_decisions("./novel")
 analysis = api.analyze_source("./novel", capture["source_id"])
 html = api.source_dashboard("./novel", capture["source_id"])
 comparison = api.compare_source("./novel", capture["source_id"], "novel.md")

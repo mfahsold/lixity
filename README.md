@@ -22,7 +22,7 @@ lixity build manuscript.md --language en
 ```
 
 Open `exports/manuscript_dashboard.html`.
-[Install Lixity](#installation) · [Usage](docs/USAGE.md) · [Methods](docs/METHODS.md)
+[Onboarding Guide](docs/ONBOARDING.md) · [Install Lixity](#installation) · [Usage](docs/USAGE.md) · [Methods](docs/METHODS.md)
 
 ## The 5 Core Pillars
 
@@ -34,7 +34,7 @@ Lixity unifies mathematically rigorous text linguistics, narratological dramatur
 | **02. Dramaturgy & Tense Profiling** | Paragraph-accurate narrative continuity | Tense classification (present, past, mixed, neutral), 4-tier friction severity rating (0–3), speech ratios, dialogue turns, scene pacing curves, and chapter tension hooks. |
 | **03. Robust 3D Style Space** | Self-calibrating manuscript baseline | Manuscript-intrinsic median ± 2 MAD corridor, noise-aware z\* shrinkage, Benjamini–Hochberg / BY FDR multiplicity control, cyclic Jacobi EVD, and interactive 3D trajectory. |
 | **04. Typographic Publication** | Print & digital publishing vectors | Cairo & Pango PDF engine with subpixel metrics, font hinting control, collision-free tracking: Paperback (135×205 mm), Editorial Proof A4 with line numbers, Mobile 9:16 PDF, and valid EPUB 3.3 with dual NCX/nav navigation. |
-| **05. Evidence-Based Research** *(Pilot)* | Source archive & verifiable citation chain | Immutable SHA-256 UTF-8 storage, cultural source criticism (epoch, location, genre, perspective), SQLite FTS5 BM25 search, persistent passage citation chains, lifecycle withdrawal & purge. |
+| **05. Evidence-Based Research** | Source archive & verifiable citation chain | Immutable SHA-256 UTF-8 storage, cultural source criticism, SQLite FTS5 search, persistent passage citations, factual claims, evidence links, plot decisions, and cross-corpus comparison. |
 
 ## Mathematical Core
 
@@ -186,17 +186,19 @@ Settings/NDA actions require a project adapter, not just the standalone HTML.
 Other commands:
 
 ```bash
-lixity analyze manuscript.md            # Rich terminal report (--json for machines)
-lixity profile manuscript.md            # Tense continuity, paragraph by paragraph
-lixity style manuscript.md              # Style reference (BH/BY, δ, diagnostics)
-lixity dialogue manuscript.md           # Turn structure and speech ratio per chapter
+lixity serve --no-project --port 8765        # Native dev server & onboarding wizard
+lixity analyze manuscript.md                 # Rich terminal report (--json for machines)
+lixity profile manuscript.md                 # Tense continuity, paragraph by paragraph
+lixity style manuscript.md                   # Style reference (BH/BY, δ, diagnostics)
+lixity dialogue manuscript.md                # Turn structure and speech ratio per chapter
 lixity characters manuscript.md --names "Anna,Ralf" # Character presence
-lixity pacing manuscript.md             # Scenes, tempo, and chapter hooks
+lixity pacing manuscript.md                  # Scenes, tempo, and chapter hooks
 lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b' # Motifs & repetition
-lixity showing manuscript.md            # Showing vs. telling per chapter
+lixity showing manuscript.md                 # Showing vs. telling per chapter
 lixity dashboard manuscript.md -o exports/dashboard.html # Interactive HTML dashboard
-cd my-novel && lixity build             # Idempotent workspace: exports/ + archive
-lixity about                            # Languages, heuristics, and metadata
+lixity research --help                       # Evidence archive, claims & decisions
+cd my-novel && lixity build                  # Idempotent workspace: exports/ + archive
+lixity about                                 # Languages, heuristics, and metadata
 ```
 
 Common sensitivity flags (for `style`, `dashboard`, and `build`):

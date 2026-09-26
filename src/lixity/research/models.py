@@ -8,7 +8,19 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator,
 Identifier = Annotated[str, Field(pattern=r"^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Language = Literal["en", "de", "fr", "es", "it", "pt", "nl", "generic"]
-Kind = Literal["project", "source", "source_version", "activity", "extraction", "passage", "tombstone", "dossier"]
+Kind = Literal[
+    "project",
+    "source",
+    "source_version",
+    "activity",
+    "extraction",
+    "passage",
+    "tombstone",
+    "dossier",
+    "claim",
+    "evidence_link",
+    "decision",
+]
 
 
 class StrictModel(BaseModel):
@@ -123,16 +135,75 @@ class Dossier(Record):
     evidence_refs: list[Reference] = Field(default_factory=list)
 
 
+class ClaimScope(StrictModel):
+    time_period: ContextLabel | None = None
+    place: ContextLabel | None = None
+    actors: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(default_factory=list)
+
+
+class Claim(Record):
+    kind: Literal["claim"] = "claim"
+    title: Annotated[str, Field(min_length=1, max_length=500)]
+    statement: Annotated[str, Field(min_length=1, max_length=10000)]
+    confidence: Literal["hypothetical", "evidenced", "disputed"] = "hypothetical"
+    scope: ClaimScope = Field(default_factory=ClaimScope)
+    dossier_ref: Reference | None = None
+    tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
+
+
+EvidenceRelation = Literal["supports", "contradicts", "qualifies", "contextualizes"]
+
+
+class EvidenceLink(Record):
+    kind: Literal["evidence_link"] = "evidence_link"
+    claim_ref: Reference
+    passage_ref: Reference
+    relation: EvidenceRelation = "supports"
+    rationale: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+    reviewer: Annotated[str, Field(min_length=1, max_length=200)] = "author"
+
+
+class Decision(Record):
+    kind: Literal["decision"] = "decision"
+    title: Annotated[str, Field(min_length=1, max_length=500)]
+    rationale: Annotated[str, Field(min_length=1, max_length=10000)]
+    claim_ref: Reference | None = None
+    deviation_from_fact: bool = False
+    impact_on_plot: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+
+
 class Tombstone(Record):
     kind: Literal["tombstone"] = "tombstone"
     target_ref: Reference
-    target_kind: Literal["source", "source_version", "activity", "extraction", "passage", "dossier"]
+    target_kind: Literal[
+        "source",
+        "source_version",
+        "activity",
+        "extraction",
+        "passage",
+        "dossier",
+        "claim",
+        "evidence_link",
+        "decision",
+    ]
     operation: Literal["withdraw", "purge"]
     reason: Annotated[str, Field(min_length=1, max_length=500)]
 
 
-Entity = Annotated[Project | Source | SourceVersion | Activity | Extraction | Passage | Tombstone | Dossier,
-                   Field(discriminator="kind")]
+Entity = Annotated[
+    Project
+    | Source
+    | SourceVersion
+    | Activity
+    | Extraction
+    | Passage
+    | Tombstone
+    | Dossier
+    | Claim
+    | EvidenceLink
+    | Decision,
+    Field(discriminator="kind"),
+]
 ENTITY: TypeAdapter[Entity] = TypeAdapter(Entity)
 
 

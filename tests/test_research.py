@@ -273,3 +273,77 @@ class TestResearch(unittest.TestCase):
         self.assertEqual(loaded["citations"][0]["passage_id"], passage_id)
         self.assertEqual(loaded["citations"][0]["verbatim"], "Café in Zürich.")
 
+    def test_claims_evidence_links_and_decisions(self):
+        ingested = self.ingest(context={"genre": "field-report"})
+        details = api.get_source(self.project, ingested["source_id"])
+        passage_id = details["passages"][0]["id"]
+
+        # 1. Create a claim
+        claim = api.create_claim(
+            self.project,
+            title="Café Treffpunkt 1912",
+            statement="Das Café diente im Herbst 1912 als geheimer Treffpunkt.",
+            confidence="evidenced",
+            time_period="Herbst 1912",
+            place="Zürich",
+            actors=["Julian", "Elena"],
+            tags=["geheimtreffen", "zuerich"],
+        )
+        self.assertEqual(claim["schema_version"], "research-claim-local/1")
+        self.assertEqual(claim["title"], "Café Treffpunkt 1912")
+        self.assertEqual(claim["confidence"], "evidenced")
+
+        claims = api.list_claims(self.project)
+        self.assertEqual(len(claims["claims"]), 1)
+        c = claims["claims"][0]
+        self.assertEqual(c["id"], claim["claim_id"])
+        self.assertEqual(c["scope"]["place"], "Zürich")
+        self.assertEqual(c["scope"]["actors"], ["Julian", "Elena"])
+
+        # 2. Link evidence to claim
+        link = api.link_evidence(
+            self.project,
+            claim_id=claim["claim_id"],
+            passage_id=passage_id,
+            relation="supports",
+            rationale="Passage belegt Treffen im Café in Zürich.",
+            reviewer="Dr. Historicus",
+        )
+        self.assertEqual(link["schema_version"], "research-evidence-link-local/1")
+        self.assertEqual(link["relation"], "supports")
+
+        links = api.list_evidence_links(self.project, claim_id=claim["claim_id"])
+        self.assertEqual(len(links["evidence_links"]), 1)
+        l_item = links["evidence_links"][0]
+        self.assertEqual(l_item["id"], link["evidence_link_id"])
+        self.assertEqual(l_item["relation"], "supports")
+        self.assertEqual(l_item["citation"]["verbatim"], "Café in Zürich.")
+
+        # 3. Record literary decision
+        decision = api.record_decision(
+            self.project,
+            title="Verschiebung des Datums auf 1914",
+            rationale="Für dramaturgischen Spannungsaufbau vor Kriegsausbruch.",
+            claim_id=claim["claim_id"],
+            deviation_from_fact=True,
+            impact_on_plot="Erhöht die Bedrohungslage im zweiten Akt.",
+        )
+        self.assertEqual(decision["schema_version"], "research-decision-local/1")
+        self.assertTrue(decision["deviation_from_fact"])
+
+        decisions = api.list_decisions(self.project)
+        self.assertEqual(len(decisions["decisions"]), 1)
+        d_item = decisions["decisions"][0]
+        self.assertEqual(d_item["id"], decision["decision_id"])
+        self.assertEqual(d_item["claim_id"], claim["claim_id"])
+        self.assertTrue(d_item["deviation_from_fact"])
+
+        # 4. Error handling: link to non-existent claim or passage raises error
+        with self.assertRaises(api.ResearchError):
+            api.link_evidence(
+                self.project,
+                claim_id="urn:uuid:00000000-0000-4000-8000-000000000000",
+                passage_id=passage_id,
+            )
+
+

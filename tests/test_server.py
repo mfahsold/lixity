@@ -339,13 +339,90 @@ class TestLixityServer(unittest.TestCase):
                 self.assertTrue(cmp_res["ok"])
                 self.assertIn("jaccard_similarity", cmp_res["summary"])
 
-                # 10. Status after init & ingests
+                # 10. Create Claim
+                claim_payload = json.dumps({
+                    "title": "Establishment in 1924",
+                    "statement": "The archives in Prague were established in 1924.",
+                    "confidence": "evidenced",
+                    "time_period": "1924",
+                    "place": "Prague",
+                    "actors": ["Archivist"],
+                    "tags": ["founding"],
+                })
+                status, body, _ = self.make_request(
+                    "/api/research-claim-add",
+                    method="POST",
+                    body=claim_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                cl_res = json.loads(body)
+                self.assertTrue(cl_res["ok"])
+                claim_id = cl_res["claim_id"]
+
+                # 11. Link Evidence
+                link_payload = json.dumps({
+                    "claim_id": claim_id,
+                    "passage_id": passage_id,
+                    "relation": "supports",
+                    "rationale": "Directly corroborates the year.",
+                })
+                status, body, _ = self.make_request(
+                    "/api/research-evidence-link",
+                    method="POST",
+                    body=link_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                lk_res = json.loads(body)
+                self.assertTrue(lk_res["ok"])
+
+                # 12. List Claims & Evidence Links
+                status, body, _ = self.make_request("/api/research/claims")
+                self.assertEqual(status, 200)
+                claims_data = json.loads(body)
+                self.assertEqual(len(claims_data["claims"]), 1)
+
+                status, body, _ = self.make_request(f"/api/research/claims?claim_id={claim_id}")
+                self.assertEqual(status, 200)
+                links_data = json.loads(body)
+                self.assertEqual(len(links_data["evidence_links"]), 1)
+                self.assertEqual(links_data["evidence_links"][0]["relation"], "supports")
+
+                # 13. Record Decision
+                dec_payload = json.dumps({
+                    "title": "Set archive founding in 1910 for plot tension",
+                    "rationale": "Allows characters to explore older secret records.",
+                    "claim_id": claim_id,
+                    "deviation_from_fact": True,
+                    "impact_on_plot": "Adds pre-war tension to chapter 2.",
+                })
+                status, body, _ = self.make_request(
+                    "/api/research-decision-add",
+                    method="POST",
+                    body=dec_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                dec_res = json.loads(body)
+                self.assertTrue(dec_res["ok"])
+
+                # 14. List Decisions
+                status, body, _ = self.make_request("/api/research/decisions")
+                self.assertEqual(status, 200)
+                dec_data = json.loads(body)
+                self.assertEqual(len(dec_data["decisions"]), 1)
+                self.assertTrue(dec_data["decisions"][0]["deviation_from_fact"])
+
+                # 15. Status after init & ingests & claims & decisions
                 status, body, _ = self.make_request("/api/research/status")
                 self.assertEqual(status, 200)
                 st_data = json.loads(body)
                 self.assertTrue(st_data["initialized"])
                 self.assertEqual(st_data["sources_count"], 1)
                 self.assertEqual(st_data["dossiers_count"], 1)
+                self.assertEqual(st_data["claims_count"], 1)
+                self.assertEqual(st_data["decisions_count"], 1)
             finally:
                 LixityServerHandler.research_dir = orig_rdir
                 LixityServerHandler.source_input = orig_ms

@@ -1060,6 +1060,89 @@ details.nda .row { margin-top: .5rem; }
   line-height: 1.35;
 }
 
+/* --- Onboarding & Project Guidance ----------------------------------- */
+.onboarding-guide {
+  width: 100%;
+  margin: 1.75rem 0 .5rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 1.25rem 1.4rem;
+  text-align: left;
+}
+.og-header {
+  margin-bottom: 1rem;
+}
+.og-header h3 {
+  font-size: .95rem;
+  font-weight: 600;
+  margin: 0 0 .25rem;
+  color: var(--fg);
+}
+.og-header p {
+  font-size: .8rem;
+  color: var(--muted);
+  margin: 0;
+}
+.og-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+.og-step {
+  display: flex;
+  gap: .65rem;
+  align-items: flex-start;
+}
+.og-step-num {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--accent);
+  color: #fff;
+  font-size: .72rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: .1rem;
+}
+.og-step-body strong {
+  display: block;
+  font-size: .8rem;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: .2rem;
+}
+.og-step-body p {
+  font-size: .74rem;
+  color: var(--muted);
+  margin: 0;
+  line-height: 1.35;
+}
+
+.project-structure-hint {
+  display: flex;
+  gap: .5rem;
+  align-items: flex-start;
+  background: rgba(74, 138, 212, 0.05);
+  border: 1px solid rgba(74, 138, 212, 0.18);
+  border-radius: 6px;
+  padding: .6rem .8rem;
+  font-size: .76rem;
+  color: var(--muted);
+  line-height: 1.4;
+  margin-bottom: .85rem;
+}
+.project-structure-hint strong {
+  color: var(--fg);
+}
+.project-structure-hint code {
+  color: var(--accent);
+  font-size: .74rem;
+}
+
 /* --- Native Modals & Template Cards ----------------------------------- */
 dialog.lixity-modal {
   position: fixed;

@@ -38,6 +38,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `*-local/1` schemas, atomic snapshot publication, process locks and restore/conflict/corruption tests.
   No new runtime dependencies. Full-document OCR, external Zotero sync, and hybrid vector retrieval
   remain deferred increments.
+- Factual claims, evidence links, and authorial decisions in `lixity research` and `lixity.research.api`:
+  data models for `Claim` (confidence: `hypothetical`, `evidenced`, `disputed`), `EvidenceLink`
+  (relations: `supports`, `contradicts`, `qualifies`, `contextualizes`), and `Decision`
+  (tracking intentional deviations from historical fact and narrative plot impact). Added CLI subcommands
+  (`claim`, `link-evidence`, `decision`), HTTP server endpoints (`/api/research/claims`, `/api/research/decisions`),
+  and comprehensive relational integrity validation.
+- SOTA Onboarding wizard and project creation dialog in `lixity serve`: Native `<dialog>` modal with
+  drag & drop manuscript import, client-side auto-preview (word count, chapters, language), narrative
+  structure templates (Minimal, 3-Act Structure, Research Novel), and clear project structure hints
+  for non-technical users.
+- Dedicated user and developer onboarding guide (`docs/ONBOARDING.md`): comprehensive walkthrough
+  of project file architecture (`lixity.json`, `manuscript.md`, `research/`), web dashboard workflows,
+  CLI commands, editorial markers, and evidence management.
 
 ### Changed
 

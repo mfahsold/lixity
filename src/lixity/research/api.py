@@ -14,8 +14,13 @@ from .models import (
     ENTITY,
     Activity,
     Blob,
+    Claim,
+    ClaimScope,
+    Decision,
     Dossier,
     Entity,
+    EvidenceLink,
+    EvidenceRelation,
     Extraction,
     Passage,
     Project,
@@ -586,5 +591,246 @@ def get_dossier(project: str | Path, dossier_id: str) -> dict[str, Any]:
         "created_by": dossier.created_by,
         "citations": resolved_citations,
     }
+
+
+def create_claim(
+    project: str | Path,
+    *,
+    title: str,
+    statement: str,
+    confidence: Literal["hypothetical", "evidenced", "disputed"] = "hypothetical",
+    time_period: str | None = None,
+    place: str | None = None,
+    actors: list[str] | None = None,
+    dossier_id: str | None = None,
+    tags: list[str] | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    dossier_ref = None
+    if dossier_id:
+        dossier = snapshot.get(Reference(id=dossier_id), Dossier)
+        dossier_ref = reference(dossier)
+
+    scope = ClaimScope(
+        time_period=time_period.strip() if time_period else None,
+        place=place.strip() if place else None,
+        actors=[a.strip() for a in (actors or []) if a.strip()],
+    )
+
+    values = envelope(snapshot.project.id, actor)
+    claim = Claim(
+        id=values["id"],
+        project_id=values["project_id"],
+        created_at=values["created_at"],
+        created_by=values["created_by"],
+        title=title.strip(),
+        statement=statement.strip(),
+        confidence=confidence,
+        scope=scope,
+        dossier_ref=dossier_ref,
+        tags=[t.strip() for t in (tags or []) if t.strip()],
+    )
+
+    new_snapshot = repository.commit([claim], {}, snapshot)
+    return {
+        "schema_version": "research-claim-local/1",
+        "claim_id": claim.id,
+        "title": claim.title,
+        "confidence": claim.confidence,
+        "snapshot": new_snapshot.digest,
+    }
+
+
+def list_claims(project: str | Path, *, dossier_id: str | None = None) -> dict[str, Any]:
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+
+    claims_list: list[dict[str, Any]] = []
+    for record in snapshot.records.values():
+        if not isinstance(record, Claim) or record.id in withdrawn_or_purged:
+            continue
+        if dossier_id and (record.dossier_ref is None or record.dossier_ref.id != dossier_id):
+            continue
+        claims_list.append({
+            "id": record.id,
+            "title": record.title,
+            "statement": record.statement,
+            "confidence": record.confidence,
+            "scope": {
+                "time_period": record.scope.time_period,
+                "place": record.scope.place,
+                "actors": record.scope.actors,
+            },
+            "dossier_id": record.dossier_ref.id if record.dossier_ref else None,
+            "tags": record.tags,
+            "created_at": record.created_at,
+            "created_by": record.created_by,
+        })
+
+    claims_list.sort(key=lambda c: str(c["created_at"]), reverse=True)
+    return {
+        "schema_version": "research-claims-local/1",
+        "claims": claims_list,
+    }
+
+
+def link_evidence(
+    project: str | Path,
+    *,
+    claim_id: str,
+    passage_id: str,
+    relation: EvidenceRelation = "supports",
+    rationale: str | None = None,
+    reviewer: str = "author",
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    claim = snapshot.get(Reference(id=claim_id), Claim)
+    passage = snapshot.get(Reference(id=passage_id), Passage)
+
+    values = envelope(snapshot.project.id, actor)
+    link = EvidenceLink(
+        id=values["id"],
+        project_id=values["project_id"],
+        created_at=values["created_at"],
+        created_by=values["created_by"],
+        claim_ref=reference(claim),
+        passage_ref=reference(passage),
+        relation=relation,
+        rationale=rationale.strip() if rationale else None,
+        reviewer=reviewer.strip(),
+    )
+
+    new_snapshot = repository.commit([link], {}, snapshot)
+    return {
+        "schema_version": "research-evidence-link-local/1",
+        "evidence_link_id": link.id,
+        "claim_id": claim.id,
+        "passage_id": passage.id,
+        "relation": link.relation,
+        "snapshot": new_snapshot.digest,
+    }
+
+
+def list_evidence_links(project: str | Path, *, claim_id: str | None = None) -> dict[str, Any]:
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+
+    links_list: list[dict[str, Any]] = []
+    for record in snapshot.records.values():
+        if not isinstance(record, EvidenceLink) or record.id in withdrawn_or_purged:
+            continue
+        if claim_id and record.claim_ref.id != claim_id:
+            continue
+
+        citation = _resolve_evidence_citation(repository, snapshot, record.passage_ref)
+        links_list.append({
+            "id": record.id,
+            "claim_id": record.claim_ref.id,
+            "passage_id": record.passage_ref.id,
+            "relation": record.relation,
+            "rationale": record.rationale,
+            "reviewer": record.reviewer,
+            "citation": citation,
+            "created_at": record.created_at,
+            "created_by": record.created_by,
+        })
+
+    links_list.sort(key=lambda item: str(item["created_at"]), reverse=True)
+    return {
+        "schema_version": "research-evidence-links-local/1",
+        "evidence_links": links_list,
+    }
+
+
+def record_decision(
+    project: str | Path,
+    *,
+    title: str,
+    rationale: str,
+    claim_id: str | None = None,
+    deviation_from_fact: bool = False,
+    impact_on_plot: str | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    claim_ref = None
+    if claim_id:
+        claim = snapshot.get(Reference(id=claim_id), Claim)
+        claim_ref = reference(claim)
+
+    values = envelope(snapshot.project.id, actor)
+    decision = Decision(
+        id=values["id"],
+        project_id=values["project_id"],
+        created_at=values["created_at"],
+        created_by=values["created_by"],
+        title=title.strip(),
+        rationale=rationale.strip(),
+        claim_ref=claim_ref,
+        deviation_from_fact=deviation_from_fact,
+        impact_on_plot=impact_on_plot.strip() if impact_on_plot else None,
+    )
+
+    new_snapshot = repository.commit([decision], {}, snapshot)
+    return {
+        "schema_version": "research-decision-local/1",
+        "decision_id": decision.id,
+        "title": decision.title,
+        "deviation_from_fact": decision.deviation_from_fact,
+        "snapshot": new_snapshot.digest,
+    }
+
+
+def list_decisions(project: str | Path) -> dict[str, Any]:
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+
+    decisions_list: list[dict[str, Any]] = []
+    for record in snapshot.records.values():
+        if not isinstance(record, Decision) or record.id in withdrawn_or_purged:
+            continue
+        decisions_list.append({
+            "id": record.id,
+            "title": record.title,
+            "rationale": record.rationale,
+            "claim_id": record.claim_ref.id if record.claim_ref else None,
+            "deviation_from_fact": record.deviation_from_fact,
+            "impact_on_plot": record.impact_on_plot,
+            "created_at": record.created_at,
+            "created_by": record.created_by,
+        })
+
+    decisions_list.sort(key=lambda d: str(d["created_at"]), reverse=True)
+    return {
+        "schema_version": "research-decisions-local/1",
+        "decisions": decisions_list,
+    }
+
 
 

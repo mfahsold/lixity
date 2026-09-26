@@ -18,6 +18,7 @@ from collections.abc import Mapping
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, ClassVar
+from urllib.parse import parse_qs, urlparse
 
 from .characters import presence_report
 from .config import load_project_config, resolve_thresholds
@@ -309,6 +310,14 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._handle_research_dossiers()
             return
 
+        if path == "/api/research/claims":
+            self._handle_research_claims()
+            return
+
+        if path == "/api/research/decisions":
+            self._handle_research_decisions()
+            return
+
         self._json({"ok": False, "message": "Not found"}, 404)
 
     def do_POST(self) -> None:
@@ -410,6 +419,18 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
         if action == "research-compare":
             self._handle_research_compare(payload)
+            return
+
+        if action == "research-claim-add":
+            self._handle_research_claim_add(payload)
+            return
+
+        if action == "research-evidence-link":
+            self._handle_research_evidence_link(payload)
+            return
+
+        if action == "research-decision-add":
+            self._handle_research_decision_add(payload)
             return
 
         self._json({"ok": False, "message": f"Unknown action: {action}"}, 400)
@@ -714,6 +735,8 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         try:
             src_data = research_api.list_sources(root)
             dos_data = research_api.list_dossiers(root)
+            claims_data = research_api.list_claims(root)
+            decisions_data = research_api.list_decisions(root)
             self._json({
                 "ok": True,
                 "initialized": True,
@@ -723,8 +746,12 @@ class LixityServerHandler(BaseHTTPRequestHandler):
                 "project_language": src_data.get("project_language", ""),
                 "sources": src_data.get("sources", []),
                 "dossiers": dos_data.get("dossiers", []),
+                "claims": claims_data.get("claims", []),
+                "decisions": decisions_data.get("decisions", []),
                 "sources_count": len(src_data.get("sources", [])),
                 "dossiers_count": len(dos_data.get("dossiers", [])),
+                "claims_count": len(claims_data.get("claims", [])),
+                "decisions_count": len(decisions_data.get("decisions", [])),
             })
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 500)
@@ -761,6 +788,37 @@ class LixityServerHandler(BaseHTTPRequestHandler):
                 data = research_api.get_dossier(root, dossier_id)
             else:
                 data = research_api.list_dossiers(root)
+            self._json({"ok": True, **data})
+        except (ResearchError, KeyError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_claims(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        dossier_id = None
+        claim_id = None
+        if "?" in self.path:
+            parsed_qs = parse_qs(urlparse(self.path).query)
+            dossier_id = parsed_qs.get("dossier_id", [None])[0]
+            claim_id = parsed_qs.get("claim_id", [None])[0]
+        try:
+            if claim_id:
+                data = research_api.list_evidence_links(root, claim_id=claim_id)
+            else:
+                data = research_api.list_claims(root, dossier_id=dossier_id)
+            self._json({"ok": True, **data})
+        except (ResearchError, KeyError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_decisions(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        try:
+            data = research_api.list_decisions(root)
             self._json({"ok": True, **data})
         except (ResearchError, KeyError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
@@ -888,6 +946,102 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         try:
             res = research_api.compare_source(root, source_id, manuscript)
             self._json({"ok": True, **res})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_claim_add(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+            return
+        title = str(payload.get("title") or "").strip()
+        statement = str(payload.get("statement") or "").strip()
+        if not title or not statement:
+            self._json({"ok": False, "message": "Claim title and statement are required"}, 400)
+            return
+        raw_conf = str(payload.get("confidence") or "hypothetical").strip().lower()
+        confidence = raw_conf if raw_conf in ("hypothetical", "evidenced", "disputed") else "hypothetical"
+        time_period = str(payload.get("time_period") or "").strip() or None
+        place = str(payload.get("place") or "").strip() or None
+        raw_actors = payload.get("actors")
+        actors: list[str] = []
+        if isinstance(raw_actors, str):
+            actors = [a.strip() for a in raw_actors.split(",") if a.strip()]
+        elif isinstance(raw_actors, list):
+            actors = [str(a).strip() for a in raw_actors if str(a).strip()]
+        dossier_id = str(payload.get("dossier_id") or "").strip() or None
+        raw_tags = payload.get("tags")
+        tags: list[str] = []
+        if isinstance(raw_tags, str):
+            tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+        elif isinstance(raw_tags, list):
+            tags = [str(t).strip() for t in raw_tags if str(t).strip()]
+        try:
+            res = research_api.create_claim(
+                root,
+                title=title,
+                statement=statement,
+                confidence=confidence,  # type: ignore[arg-type]
+                time_period=time_period,
+                place=place,
+                actors=actors,
+                dossier_id=dossier_id,
+                tags=tags,
+            )
+            self._json({"ok": True, "message": f"Claim '{title}' created", **res})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_evidence_link(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+            return
+        claim_id = str(payload.get("claim_id") or "").strip()
+        passage_id = str(payload.get("passage_id") or "").strip()
+        if not claim_id or not passage_id:
+            self._json({"ok": False, "message": "claim_id and passage_id are required"}, 400)
+            return
+        raw_rel = str(payload.get("relation") or "supports").strip().lower()
+        relation = raw_rel if raw_rel in ("supports", "contradicts", "qualifies", "contextualizes") else "supports"
+        rationale = str(payload.get("rationale") or "").strip() or None
+        reviewer = str(payload.get("reviewer") or "author").strip()
+        try:
+            res = research_api.link_evidence(
+                root,
+                claim_id=claim_id,
+                passage_id=passage_id,
+                relation=relation,  # type: ignore[arg-type]
+                rationale=rationale,
+                reviewer=reviewer,
+            )
+            self._json({"ok": True, "message": "Evidence linked", **res})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_decision_add(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+            return
+        title = str(payload.get("title") or "").strip()
+        rationale = str(payload.get("rationale") or "").strip()
+        if not title or not rationale:
+            self._json({"ok": False, "message": "Decision title and rationale are required"}, 400)
+            return
+        claim_id = str(payload.get("claim_id") or "").strip() or None
+        deviation_from_fact = bool(payload.get("deviation_from_fact", False))
+        impact_on_plot = str(payload.get("impact_on_plot") or "").strip() or None
+        try:
+            res = research_api.record_decision(
+                root,
+                title=title,
+                rationale=rationale,
+                claim_id=claim_id,
+                deviation_from_fact=deviation_from_fact,
+                impact_on_plot=impact_on_plot,
+            )
+            self._json({"ok": True, "message": f"Decision '{title}' recorded", **res})
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 
