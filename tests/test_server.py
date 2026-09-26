@@ -421,6 +421,27 @@ class TestLixityServer(unittest.TestCase):
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 404)
+
+                # 5. Create project with custom imported manuscript content
+                proj_upload_dir = Path(td) / "uploaded-novel"
+                upload_payload = json.dumps({
+                    "title": "Das verlorene Artefakt",
+                    "language": "de",
+                    "path": str(proj_upload_dir),
+                    "content": "# Das verlorene Artefakt\n\n## Erstes Kapitel\n\nDer Wind pfiff durch die alten Gassen der Stadt.",
+                    "init_research": False,
+                })
+                status, body, _ = self.make_request(
+                    "/api/project-create",
+                    method="POST",
+                    body=upload_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                upload_res = json.loads(body)
+                self.assertTrue(upload_res["ok"])
+                self.assertTrue((proj_upload_dir / "manuscript.md").is_file())
+                self.assertIn("Der Wind pfiff durch die alten Gassen der Stadt.", (proj_upload_dir / "manuscript.md").read_text(encoding="utf-8"))
         finally:
             LixityServerHandler.workspace_root = orig_ws
             LixityServerHandler.source_input = orig_ms
@@ -436,5 +457,9 @@ class TestLixityServer(unittest.TestCase):
         self.assertIn('id="modal-project-open"', html)
         self.assertIn('id="hero-btn-new-project"', html)
         self.assertIn('id="hero-btn-open-project"', html)
+        self.assertIn('id="import-dropzone"', html)
+        self.assertIn('id="import-preview-box"', html)
+        self.assertIn('id="open-dropzone"', html)
+        self.assertIn('id="tab-btn-import"', html)
         self.assertIn('template-card', html)
 

@@ -930,14 +930,96 @@ document.addEventListener("click", async function (event) {
 if (document.getElementById("research-manager")) { initResearchUI(); }
 
 // --- Workspace & Project Modals -------------------------------------------
+var importedFileContent = "";
+
+function switchModalTab(targetPaneId) {
+  document.querySelectorAll(".modal-tab-btn").forEach(function (btn) {
+    var isTarget = btn.dataset.tabTarget === targetPaneId;
+    btn.classList.toggle("active", isTarget);
+    btn.setAttribute("aria-selected", isTarget ? "true" : "false");
+  });
+  document.querySelectorAll(".modal-tab-pane").forEach(function (pane) {
+    pane.style.display = pane.id === targetPaneId ? "block" : "none";
+  });
+}
+
+function detectManuscriptLanguage(text) {
+  var sample = text.slice(0, 10000).toLowerCase();
+  var deWords = (sample.match(/\b(der|die|das|und|nicht|ein|eine|dem|den|mit|fuer|auf)\b/g) || []).length;
+  var enWords = (sample.match(/\b(the|and|that|have|for|not|with|you|this|but|his|from)\b/g) || []).length;
+  return deWords >= enWords ? "de" : "en";
+}
+
+function processImportedFile(file) {
+  if (!file) return;
+  var reader = new FileReader();
+  reader.onload = function (e) {
+    var text = String(e.target.result || "");
+    importedFileContent = text;
+
+    // Detect title: first # Heading or file stem
+    var titleMatch = text.match(/^#\s+([^\n\r]+)/m);
+    var cleanStem = file.name.replace(/\.[^/.]+$/, "").replace(/[-_]+/g, " ");
+    var detectedTitle = titleMatch ? titleMatch[1].trim() : cleanStem;
+
+    // Detect chapters: count lines starting with ##
+    var chapterMatches = text.match(/^##\s+[^\n\r]+/gm);
+    var chapterCount = chapterMatches ? chapterMatches.length : 0;
+
+    // Word count
+    var words = (text.trim().match(/\S+/g) || []).length;
+
+    // Language detection
+    var detectedLang = detectManuscriptLanguage(text);
+
+    // Update UI Preview
+    var previewBox = document.getElementById("import-preview-box");
+    if (previewBox) previewBox.style.display = "flex";
+
+    var fNameEl = document.getElementById("import-fpc-filename");
+    if (fNameEl) fNameEl.textContent = file.name;
+
+    var statsEl = document.getElementById("import-fpc-stats");
+    if (statsEl) {
+      statsEl.textContent = words.toLocaleString() + " Wörter · " + chapterCount + (chapterCount === 1 ? " Kapitel" : " Kapitel");
+    }
+
+    var langEl = document.getElementById("import-fpc-lang");
+    if (langEl) {
+      langEl.textContent = detectedLang === "de" ? "Deutsch" : "English";
+    }
+
+    var titleInput = document.getElementById("import-proj-title");
+    if (titleInput) {
+      titleInput.value = detectedTitle;
+    }
+
+    var langSelect = document.getElementById("import-proj-lang");
+    if (langSelect) {
+      langSelect.value = detectedLang;
+    }
+
+    var submitBtn = document.getElementById("btn-submit-import-project");
+    if (submitBtn) {
+      submitBtn.disabled = false;
+    }
+  };
+  reader.readAsText(file);
+}
+
 document.addEventListener("click", function (event) {
+  var tabBtn = event.target.closest(".modal-tab-btn");
+  if (tabBtn && tabBtn.dataset.tabTarget) {
+    switchModalTab(tabBtn.dataset.tabTarget);
+    return;
+  }
+
   var newBtn = event.target.closest("#btn-modal-new-project, #hero-btn-new-project");
   if (newBtn) {
     var modalNew = document.getElementById("modal-project-create");
     if (modalNew && typeof modalNew.showModal === "function") {
+      switchModalTab("tab-pane-import");
       modalNew.showModal();
-      var input = document.getElementById("new-proj-title");
-      if (input) input.focus();
     }
     return;
   }
@@ -950,6 +1032,20 @@ document.addEventListener("click", function (event) {
       var inputOpen = document.getElementById("open-proj-path");
       if (inputOpen) inputOpen.focus();
     }
+    return;
+  }
+
+  var importDrop = event.target.closest("#import-dropzone");
+  if (importDrop) {
+    var fileInput = document.getElementById("import-file-input");
+    if (fileInput) fileInput.click();
+    return;
+  }
+
+  var openDrop = event.target.closest("#open-dropzone");
+  if (openDrop) {
+    var openFileInput = document.getElementById("open-file-input");
+    if (openFileInput) openFileInput.click();
     return;
   }
 
@@ -970,7 +1066,70 @@ document.addEventListener("click", function (event) {
   }
 });
 
+// Dropzone Drag & Drop events
+["dragenter", "dragover"].forEach(function (eventName) {
+  document.addEventListener(eventName, function (e) {
+    var dropzone = e.target.closest(".file-dropzone");
+    if (dropzone) {
+      e.preventDefault();
+      dropzone.classList.add("dragover");
+    }
+  });
+});
+
+["dragleave", "drop"].forEach(function (eventName) {
+  document.addEventListener(eventName, function (e) {
+    var dropzone = e.target.closest(".file-dropzone");
+    if (dropzone) {
+      dropzone.classList.remove("dragover");
+    }
+  });
+});
+
+document.addEventListener("drop", function (e) {
+  var importDrop = e.target.closest("#import-dropzone");
+  if (importDrop && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+    e.preventDefault();
+    processImportedFile(e.dataTransfer.files[0]);
+    return;
+  }
+
+  var openDrop = e.target.closest("#open-dropzone");
+  if (openDrop && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
+    e.preventDefault();
+    var f = e.dataTransfer.files[0];
+    processImportedFile(f);
+    // Switch to create modal import pane for instant analysis
+    var modalOpen = document.getElementById("modal-project-open");
+    if (modalOpen && typeof modalOpen.close === "function") modalOpen.close();
+    var modalNew = document.getElementById("modal-project-create");
+    if (modalNew && typeof modalNew.showModal === "function") {
+      switchModalTab("tab-pane-import");
+      modalNew.showModal();
+    }
+    return;
+  }
+});
+
 document.addEventListener("change", function (event) {
+  if (event.target.id === "import-file-input" && event.target.files && event.target.files.length) {
+    processImportedFile(event.target.files[0]);
+    return;
+  }
+
+  if (event.target.id === "open-file-input" && event.target.files && event.target.files.length) {
+    var f = event.target.files[0];
+    processImportedFile(f);
+    var modalOpen = document.getElementById("modal-project-open");
+    if (modalOpen && typeof modalOpen.close === "function") modalOpen.close();
+    var modalNew = document.getElementById("modal-project-create");
+    if (modalNew && typeof modalNew.showModal === "function") {
+      switchModalTab("tab-pane-import");
+      modalNew.showModal();
+    }
+    return;
+  }
+
   if (event.target.name === "proj_template") {
     document.querySelectorAll(".template-card").forEach(function (card) {
       card.classList.toggle("active", card.contains(event.target));
@@ -982,6 +1141,37 @@ document.addEventListener("change", function (event) {
   }
 });
 
+// Form: Import existing manuscript
+var formImport = document.getElementById("form-project-import");
+if (formImport) {
+  formImport.addEventListener("submit", function (e) {
+    e.preventDefault();
+    var titleEl = document.getElementById("import-proj-title");
+    var title = titleEl ? titleEl.value.trim() : "";
+    if (!title) return;
+
+    var langEl = document.getElementById("import-proj-lang");
+    var lang = langEl ? langEl.value : "de";
+    var pathEl = document.getElementById("import-proj-path");
+    var folder = pathEl ? pathEl.value.trim() : "";
+    var researchEl = document.getElementById("import-proj-research");
+    var initResearch = Boolean(researchEl && researchEl.checked);
+
+    var submitBtn = document.getElementById("btn-submit-import-project");
+    var modal = document.getElementById("modal-project-create");
+    if (modal && typeof modal.close === "function") modal.close();
+
+    runAction("project-create", {
+      title: title,
+      language: lang,
+      path: folder,
+      content: importedFileContent,
+      init_research: initResearch
+    }, submitBtn);
+  });
+}
+
+// Form: Start new project from scratch
 var formCreate = document.getElementById("form-project-create");
 if (formCreate) {
   formCreate.addEventListener("submit", function (e) {
@@ -1012,6 +1202,7 @@ if (formCreate) {
   });
 }
 
+// Form: Open existing path
 var formOpen = document.getElementById("form-project-open");
 if (formOpen) {
   formOpen.addEventListener("submit", function (e) {

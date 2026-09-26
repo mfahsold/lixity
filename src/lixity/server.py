@@ -526,7 +526,14 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         init_research = bool(payload.get("init_research", False) or template_key == "research")
 
         manuscript_file = target_path / "manuscript.md"
-        if not manuscript_file.exists():
+        custom_content = payload.get("content")
+        if custom_content and isinstance(custom_content, str) and custom_content.strip():
+            try:
+                manuscript_file.write_text(custom_content.strip() + "\n", encoding="utf-8")
+            except OSError as exc:
+                self._json({"ok": False, "message": f"Failed to write manuscript: {exc}"}, 500)
+                return
+        elif not manuscript_file.exists():
             if template_key == "three_act":
                 if lang == "de":
                     ms_content = (
