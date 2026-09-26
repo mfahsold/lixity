@@ -1,14 +1,16 @@
 # Architecture and integration boundaries
 
-This document describes Lixity `1.15.0`. The shared pipeline and explicit
-API threshold mappings require this release or newer.
+This document describes Lixity `1.16.0`. The shared pipeline and explicit
+API threshold mappings were introduced in 1.15.0; the integrated local
+project/research workflows described here require 1.16.0.
 
-Development extension (`1.16.0.dev0`): [local research pilot](research/USAGE.md).
+Experimental extension included in `1.16.0`: [local research pilot](research/USAGE.md).
 `lixity.research` owns explicit-project ingestion, immutable snapshots, exact
 citations and a rebuildable SQLite/FTS5 index. It does not import into
 `lixity.pipeline`. Existing analyze/profile v2 and style v4 remain unchanged.
-The [research RFC](research/README.md) also specifies unimplemented dossier,
-review, OCR and hybrid-search components; those are not current dependencies.
+The pilot also stores dossiers, claims, evidence links and author decisions.
+The [research RFC](research/README.md) additionally specifies review workflows,
+manuscript anchors, OCR and hybrid search; those are not current dependencies.
 
 ## Layers
 
@@ -20,6 +22,13 @@ review, OCR and hybrid-search components; those are not current dependencies.
 | CLI / `lixity.api` | Input/output contracts and threshold resolution | Duplicate analysis algorithms |
 | UI | Render results using shared components and bundled assets | Recompute statistical decisions in JavaScript |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
+
+The development server keeps one selected workspace per process. Opening a
+project selects its existing directory and research archive; importing browser
+file bytes creates a project at an explicit destination. A browser filename does
+not establish the original file's parent directory. An initialized research
+project can be opened before a manuscript exists. Research storage remains
+explicit in the API even when the server chooses it from an opened workspace.
 
 `analyze_document(text, config, thresholds)` returns `DocumentAnalysis` with
 corpus metrics, chapter profiles, paragraph profiles and the fingerprint.
@@ -70,12 +79,23 @@ does not start an HTTP service, store an NDA passphrase or send documents.
 Server adapters must validate origins, hosts, request sizes and payloads,
 restrict file/action access, and handle their own session lifecycle.
 
+Project and research interface labels use the same language-profile resources
+as the analysis dashboard. Python escapes the localized label dictionary into
+an HTML attribute; JavaScript renders records as escaped text and applies
+locale labels without changing stored identifiers or numerical results.
+Seven interface languages do not imply equal linguistic validation: English
+and German currently have the deepest coverage. Shared statistical routines
+operate on language-dependent heuristic inputs.
+
 ## Verification
 
 - Python tests cover orchestration, configuration precedence, language resources
   and final-score dimension flagging.
 - `tests/browser/style-space.cjs` checks synthetic dashboard interactions,
   tooltip escaping, idle rendering and mobile layout using optional Playwright.
+- `tests/browser/research.cjs` uses a disposable loopback server and synthetic
+  source archive to check project opening, record creation, evidence lifecycle
+  states and responsive research controls.
 - The wheel includes both UI scripts, CSS, Python modules and the typing marker.
 - Adapter tests belong with their projects; no private manuscript is needed
   for the engine's regression suite.

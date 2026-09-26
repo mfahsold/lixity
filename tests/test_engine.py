@@ -6,10 +6,14 @@ Covers syllable counting, sentence classification, lexicometry, readability
 indices, idempotent atomic file I/O and formatters.
 """
 
+import io
+import json
 import os
 import sys
 import tempfile
 import unittest
+
+from rich.console import Console
 
 # Ensure the project directory is on the module path
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -215,6 +219,71 @@ class TestCorpusAnalyzer(unittest.TestCase):
         m_en = en_analyzer.analyze_text(sample)
         self.assertEqual(m_en.flesch_variant, "Flesch Reading Ease")
         self.assertNotAlmostEqual(m_de.flesch_de, m_en.flesch_de, places=1)
+
+    def test_prose_metrics_are_invariant_to_markdown_headings(self):
+        for language, speech in (("en", '"The cat sat."'), ("de", "„Die Katze sitzt.“")):
+            with self.subTest(language=language):
+                analyzer = CorpusAnalyzer(CorpusConfig(language=language))
+                short = analyzer.analyze_text(f"# X\n\n## Y\n\n### Z\n\n{speech}\n")
+                long = analyzer.analyze_text(
+                    f"# Extraordinary Encyclopedia\n\n## Multisyllabic Chronicle\n\n"
+                    f"### Unforgettable Interlude\n\n{speech}\n"
+                )
+                self.assertEqual(short.tokens, 3)
+                self.assertEqual(long.tokens, 3)
+                self.assertEqual(short.clean_words, 3)
+                self.assertEqual(long.clean_words, 3)
+                self.assertEqual(short.clean_chars, long.clean_chars)
+                self.assertEqual(short.asl, long.asl)
+                self.assertEqual(short.asw, long.asw)
+                self.assertEqual(short.flesch_de, long.flesch_de)
+                self.assertEqual(short.lix, long.lix)
+                self.assertEqual(short.dialog_ratio, 100.0)
+                self.assertEqual(long.dialog_ratio, 100.0)
+                self.assertEqual(short.chapters[0].words, 3)
+                self.assertEqual(long.chapters[0].words, 3)
+
+    def test_exact_median_preserves_legacy_integer_for_odd_even_and_empty_text(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
+        cases = (
+            ("## Chapter\n\nOne. Two three.\n", 2, 1.5),
+            ("## Chapter\n\nOne. Two three. Four five six.\n", 2, 2.0),
+            ("", 0, 0.0),
+        )
+        for text, legacy, exact in cases:
+            with self.subTest(text=text):
+                metrics = analyzer.analyze_text(text)
+                self.assertEqual(metrics.median_sl, legacy)
+                self.assertEqual(metrics.median_sl_exact, exact)
+                self.assertEqual(metrics.model_dump()["median_sl"], legacy)
+                self.assertEqual(metrics.model_dump()["median_sl_exact"], exact)
+                payload = json.loads(ReportFormatter.to_json(metrics))
+                self.assertIs(type(payload["median_sl"]), int)
+                self.assertIs(type(payload["median_sl_exact"]), float)
+
+    def test_reports_show_exact_localized_median_with_legacy_fallback(self):
+        for language, text, visible in (
+            ("en", "## Chapter\n\nOne. Two three.\n", "1.5 words"),
+            ("de", "## Kapitel\n\nJa. Ich gehe.\n", "1,5 Wörter"),
+        ):
+            with self.subTest(language=language):
+                metrics = CorpusAnalyzer(CorpusConfig(language=language)).analyze_text(text)
+                markdown = ReportFormatter.format_markdown_report(metrics, language_key=language)
+                self.assertIn(visible, markdown)
+                buffer = io.StringIO()
+                console = Console(file=buffer, width=160, force_terminal=False)
+                ReportFormatter.print_rich_report(metrics, console=console, language_key=language)
+                self.assertIn(visible, buffer.getvalue())
+
+                legacy = type(metrics).model_validate(
+                    metrics.model_dump(exclude={"median_sl_exact"})
+                )
+                self.assertIsNone(legacy.median_sl_exact)
+                legacy_visible = "2 words" if language == "en" else "2 Wörter"
+                self.assertIn(
+                    legacy_visible,
+                    ReportFormatter.format_markdown_report(legacy, language_key=language),
+                )
 
 
 class TestFileUtils(unittest.TestCase):

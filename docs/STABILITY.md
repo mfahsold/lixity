@@ -10,7 +10,7 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 
 ### Release verification and limits
 
-The `1.15.0` suite checks English defaults, language resource-key coverage,
+The `1.16.0` suite checks English defaults, language resource-key coverage,
 readability-coefficient dispatch and locale formatting. These are software
 contracts, not empirical validation of linguistic accuracy across seven
 languages. No language-wide accuracy percentage is established by this suite.

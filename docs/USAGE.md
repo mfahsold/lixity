@@ -1,7 +1,8 @@
 # Lixity – Usage & Reference
 
-Development-only archives and lexical search: [Research usage](research/USAGE.md).
-Not included in `v1.15.0`; the manuscript commands below are unchanged.
+Experimental local archives, claims and decisions in 1.16.0:
+[Research usage](research/USAGE.md). For interactive project workflows, see
+[Onboarding](ONBOARDING.md).
 
 Complete command-line and library reference for Lixity. If you are new to the
 project, start with the [README](../README.md); this document goes into detail.
@@ -30,16 +31,16 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.16.0"
 lixity --version
 lixity about
 ```
 
-`v1.15.0` is the release pin. Choose `@main` only to follow development,
+`v1.16.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
-The engine supports Python 3.10+; TOML project configuration needs 3.11+.
+The engine and TOML project configuration support Python 3.10+.
 
 Development install (editable, isolated, with the test suite):
 
@@ -183,11 +184,12 @@ The JSON payload is the full `CorpusMetrics` schema:
 | `clean_words`, `clean_chars` | prose only (appendix removed) |
 | `tokens`, `vocab_types` | token count (N) and distinct types (V) |
 | `ttr`, `guiraud_r`, `yules_k` | lexical diversity measures |
-| `total_sentences`, `asl`, `median_sl`, `std_sl` | sentence metrics |
+| `total_sentences`, `asl`, `median_sl_exact`, `std_sl` | prose sentence metrics; exact median averages the middle pair |
+| `median_sl` | legacy integer upper median, preserved for compatibility |
 | `sentence_dist` | counts and shares of the four sentence classes |
 | `asw` | average syllables per word |
 | `flesch_de`, `flesch_variant`, `lix` | language-calibrated readability indices |
-| `mtld`, `mattr`, `maas_a2` | length-invariant lexical diversity (`null` when too short) |
+| `mtld`, `mattr`, `maas_a2` | less length-sensitive lexical diversity (`null` when too short) |
 | `dialog_words`, `dialog_ratio` | quoted speech |
 | `total_paragraphs`, `avg_paragraph_len`, `single_line_paragraphs` | paragraph economy |
 | `punctuation`, `signal_counts`, `filter_count` | punctuation (language-neutral keys), signal words, perception filters |
@@ -551,7 +553,7 @@ facade is described below under [Library](#library).
 | **Guiraud R** | V / √N | length-stabilised lexical spread; comparable across texts |
 | **Yule's K** | vocabulary repetition measure | 50–70 = stable narrator idiom; higher = more repetitive |
 | **ASW** | average syllables per word | feeds Flesch; ~1.7 is everyday German |
-| **MTLD** | mean segment length until TTR < 0.72 (forward/backward averaged) | ≥ 60 = rich; length-invariant |
+| **MTLD** | mean segment length until TTR < 0.72 (forward/backward averaged) | larger values mean longer diverse segments; requires ≥ 100 tokens |
 | **MATTR** | moving-average TTR over a 50-token window | ≥ 0.70 = rich; the most length-stable index |
 | **Maas a²** | (log N − log V) / (log N)² | lower = richer vocabulary |
 | **Flesch** | language-calibrated Flesch family (Amstad for German) | 65–80 = easy; higher is easier |
@@ -602,7 +604,7 @@ findings stay navigable in the editor.
 What the numbers can and cannot do — the full register (research basis,
 evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 
-- **Short texts:** length-invariant lexical-diversity indices need minimum
+- **Short texts:** less length-sensitive lexical-diversity indices need minimum
   sizes (MTLD/Maas a² ≥ 100 tokens, HD-D ≥ 175, MATTR ≥ window 50);
   below that Lixity returns `null` and the dashboard shows `–`.
 - **Heuristics:** syllables (±5–10 %), suffix-based densities and tense

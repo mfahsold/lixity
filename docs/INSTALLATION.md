@@ -15,8 +15,8 @@ network access. No manuscript upload, account or API key is required.
 | Import `lixity` from your own Python project | Project virtual environment |
 | Edit the engine or develop an adapter | Editable checkout |
 
-Python **3.12 is a practical default**. The engine supports 3.10+, but project
-TOML configuration currently requires 3.11+ (`tomllib`). Git is required for
+Python **3.12 is a practical default**. The engine and project TOML settings support 3.10+; Python 3.10 uses a small
+conditional `tomli` dependency, while 3.11+ uses `tomllib`. Git is required for
 the GitHub source commands. Install [Git](https://git-scm.com/downloads) and
 [uv](https://docs.astral.sh/uv/getting-started/installation/) first if needed.
 Do not run multiple installation routes into the same environment, use `sudo
@@ -27,14 +27,14 @@ pip`, or bypass an externally managed Python environment.
 These commands work in a terminal, including Windows PowerShell:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.16.0"
 lixity --version
 lixity about
 ```
 
-The current release is **v1.15.0**. The tag includes the new UI, shared pipeline
-and rendering security fixes. For reproducible automation, pin this tag or
-its reviewed full commit hash. Read the [migration notes](releases/v1.15.0.md).
+The current release is **v1.16.0**. The tag includes the integrated local project/research workspace,
+seven-language workflows and numerical corrections. For reproducible automation, pin this tag or
+its reviewed full commit hash. Read the [migration notes](releases/v1.16.0.md).
 
 If `lixity` is not found, run `uv tool update-shell`, open a new terminal and
 retry. `uv tool list` shows the installed source. A tool installation does not
@@ -42,8 +42,9 @@ make `import lixity` available to a different Python environment.
 
 ### Development builds instead
 
-The `1.16.0.dev0` development line includes the [local research pilot](research/USAGE.md).
-Release `v1.15.0` does not. It requires SQLite/FTS5 but no new Python dependencies.
+Release `v1.16.0` includes the experimental [local research pilot](research/USAGE.md).
+Research search requires SQLite with FTS5; OCR and external provider integrations
+remain planned features.
 
 To follow unreleased changes, use this **instead**:
 
@@ -68,7 +69,7 @@ selected source/ref: a pinned tag or commit does not move to `main`.
 Restart any running adapter/server after an engine update.
 
 If you already use pipx, the equivalent alternative is
-`pipx install "git+https://github.com/mfahsold/lixity.git@v1.15.0"`, followed by
+`pipx install "git+https://github.com/mfahsold/lixity.git@v1.16.0"`, followed by
 `pipx ensurepath` if necessary; update with `pipx upgrade lixity`.
 
 ## First useful result
@@ -86,16 +87,17 @@ creates JSON metrics, a report and a style passport. Very short texts cannot
 support a meaningful style reference; unavailable results are expected.
 
 Use `--language de` for German, or explicit `--language auto` for detection.
-English is the default. With Python 3.11+, a local `lixity.toml` can hold:
+English is the default. A local `lixity.toml` can hold:
 
 ```toml
 language = "de"
 title = "My manuscript"
 ```
 
-The standalone HTML dashboard is not an editing server. Upload, settings
-submission, NDA management and publication exports require a project adapter;
-the engine package does not install a universal `serve` command.
+For interactive project and research workflows, run `lixity serve manuscript.md`
+or start the project wizard with `lixity serve --no-project`. The standalone HTML
+export remains read-only. NDA management and publication-specific exports require
+a project adapter; see [Onboarding](ONBOARDING.md).
 
 ## Python API: project environment
 
@@ -103,7 +105,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v1.15.0"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v1.16.0"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -112,7 +114,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v1.15.0"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v1.16.0"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```
@@ -146,7 +148,7 @@ package rather than copying engine code into every book project.
 | `git` or `uv` not found | Install the prerequisite and reopen the terminal. |
 | `lixity` not found | Use `uv tool update-shell`, or the chosen venv's executable directly. |
 | `externally-managed-environment` | Use `uv tool` or a venv; do not use `--break-system-packages`. |
-| Project settings ignored on Python 3.10 | Use 3.11+ or explicit CLI flags. |
+| Project settings ignored | Check `lixity.toml` syntax and the selected project path; explicit CLI flags take precedence. |
 | Wrong version after update | Check `uv tool list` and `command -v lixity` (PowerShell: `Get-Command lixity`). |
 | Dependency build error | Try a supported CPython version with binary wheels, e.g. 3.12; retain the full installer error. |
 | HTML lacks settings/NDA controls | Expected for a standalone export; these belong to the embedding adapter. |

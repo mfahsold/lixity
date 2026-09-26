@@ -92,12 +92,13 @@ class TestResearchAnalysis(unittest.TestCase):
 
     def test_short_translation_reports_limits_without_inventing_calibration(self):
         self.file.write_text("A translated note.", encoding="utf-8")
-        source = self.ingest(context={"is_translation": True, "original_language": "Historical variety"})
+        source = self.ingest(context={"is_translation": True, "original_language": "English"})
         result = api.analyze_source(self.project, source["source_id"])
         limits = result["interpretation"]["limitations"]
         self.assertIn("insufficient_chapters", limits)
         self.assertIn("translation", limits)
-        self.assertIn("historical_language", limits)
+        self.assertIn("original_language_supplied", limits)
+        self.assertNotIn("historical_language", limits)
         self.assertEqual(result["interpretation"]["baseline_coverage"]["estimable_features"], 0)
         self.assertEqual(result["style"]["fdr_flagged"], {})
 
@@ -215,6 +216,46 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertIn("guiraud_r", res["register_contrast"])
         self.assertIn("dialogue_pct", res["register_contrast"])
 
+    def test_compare_excludes_headings_front_matter_and_appendix_from_lexical_counts(self):
+        self.file.write_text("## Source title\n\nAurora.\n", encoding="utf-8")
+        source = self.ingest()
+        manuscript = (
+            "# Preface\nPrefaceonly.\n\n"
+            "## Chapter 1\n\nAurora.\n\n"
+            "## Anmerkungen und Literaturverzeichnis\n\nAppendixonly.\n"
+        )
+        result = api.compare_source(self.project, source["source_id"], manuscript)
+        self.assertEqual(result["summary"]["source_tokens"], 1)
+        self.assertEqual(result["summary"]["manuscript_tokens"], 1)
+        self.assertEqual(result["summary"]["jaccard_similarity"], 1.0)
+        self.assertEqual(result["chapter_grounding"][0]["words"], 1)
+        self.assertEqual(len(result["chapter_grounding"]), 1)
+
+    def test_compare_marks_cross_language_lexical_limits(self):
+        self.file.write_text("## Quelle\n\nDas Haus steht.\n", encoding="utf-8")
+        source = self.ingest(language="de")
+        result = api.compare_source(
+            self.project, source["source_id"], "## Chapter\n\nThe house stands.\n", language="en"
+        )
+        self.assertFalse(result["meta"]["lexical_comparable"])
+        self.assertIn("cross_language_lexical_comparison", result["comparison_limits"])
+        self.assertIsInstance(result["summary"]["jaccard_similarity"], float)
+
+    def test_compare_keeps_first_line_of_unheaded_source(self):
+        self.file.write_text("Aurora.\nBorealis.\n", encoding="utf-8")
+        source = self.ingest()
+        result = api.compare_source(self.project, source["source_id"], "## Chapter\n\nAurora.\n")
+        self.assertEqual(result["summary"]["source_tokens"], 2)
+        self.assertEqual(result["summary"]["shared_types"], 1)
+
+    def test_compare_excludes_plain_preface_before_first_chapter(self):
+        self.file.write_text("Aurora.\n", encoding="utf-8")
+        source = self.ingest()
+        manuscript = "Preface label\nPrefaceonly.\n\n## Chapter 1\n\nAurora.\n"
+        result = api.compare_source(self.project, source["source_id"], manuscript)
+        self.assertEqual(result["summary"]["manuscript_tokens"], 1)
+        self.assertEqual(len(result["chapter_grounding"]), 1)
+
     def test_compare_source_cli_and_validation(self):
         from lixity.cli import main
 
@@ -249,4 +290,3 @@ class TestResearchAnalysis(unittest.TestCase):
         api.withdraw(self.project, source["source_id"], reason="testing withdrawal")
         with self.assertRaises(ResearchError):
             api.compare_source(self.project, source["source_id"], ms_file)
-

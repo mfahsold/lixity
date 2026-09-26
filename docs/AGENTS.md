@@ -33,7 +33,8 @@ claims or author decisions. The RFC also describes future interfaces.
 
 For installation, version verification, updates and Python environment isolation,
 use [INSTALLATION.md](INSTALLATION.md). Do not assume a CLI tool environment
-is importable by a project adapter. TOML configuration requires Python 3.11+.
+is importable by a project adapter. TOML configuration works on Python 3.10+
+(`tomli` on 3.10; the standard library on newer versions).
 
 | Command | Purpose | Output |
 |---|---|---|
@@ -80,7 +81,7 @@ implicit project switching; see [ARCHITECTURE.md](ARCHITECTURE.md).
 ### 3.1 `analyze --json` (schema_version 2)
 
 ```json
-{"meta": {"tool": "lixity", "version": "1.15.0", "schema_version": 2, "language": "de"},
+{"meta": {"tool": "lixity", "version": "1.16.0", "schema_version": 2, "language": "de"},
  "metrics": {"raw_words": 55331, "asl": 9.63, "ttr": 0.1784, "guiraud_r": 41.11,
              "hd_d": 0.997, "mtld": 78.4, "mattr": 0.742, "maas_a2": 0.031,
              "flesch_de": 71.2, "flesch_variant": "Flesch Reading Ease (Amstad)",
@@ -101,13 +102,17 @@ these:
 - `style_se`: standard error per feature (documented plug-in estimators:
   Poisson for count densities, binomial for shares, sample-based for
   ASL/CV/entropy/HD-D) – **use these for uncertainty-aware reasoning**,
-- `jsd` (Jensen-Shannon distance of the chapter's word distribution to the
-  rest of the corpus) and `jsd_top_words` (the most contributing content
+- `jsd` (Jensen–Shannon divergence of the chapter's word distribution to the
+  rest of the corpus, in natural-log units `[0, ln(2)]`) and `jsd_top_words` (the most contributing content
   words – interpretable drivers of divergence).
 
 Corpus-level notes:
 
-- `mtld`, `mattr`, `maas_a2` are length-invariant lexical-diversity indices
+- `median_sl_exact` is an additive floating-point field in 1.16.0; it averages
+  the two middle sentence lengths for even counts. `median_sl` remains the
+  legacy integer upper median. JSD, keyness and heading-exclusion corrections
+  change numerical results without changing schema versions; recompute old outputs.
+- `mtld`, `mattr`, `maas_a2` are less length-sensitive lexical-diversity indices
   (`null` for texts too short to estimate them); `mattr` uses a 50-token
   window, `mtld` the standard TTR threshold of 0.72.
 - `flesch_de` is the **language-calibrated** Flesch-type score of the active
@@ -166,15 +171,17 @@ Prefer `fdr_flagged` over raw `deviations` for strong claims; read
 
 ### 3.3 UI label packs (merge order)
 
-The dashboard resolves labels from six packs, later packs override earlier
+The dashboard resolves labels from shared packs; later packs override earlier
 ones; a missing key falls back to English and then to the key itself:
 
-1. `LABELS` – core UI terms (tense, severity, chapters, …)
-2. `METRIC_LABELS` – metric names and control labels
-3. `HELP_TEXTS` – tooltip texts (`help_*`)
-4. `GROUP_LABELS` – KPI group captions
-5. `LAYER_LABELS` – style-layer legend and guidance
-6. `UI_LABELS` – cross-cutting hints (load hint, short scale words)
+1. `GUIDANCE_LABELS`, then `IDENTITY_LABELS` – interpretation and product identity
+2. `LABELS` – core UI terms (tense, severity, chapters, …)
+3. `METRIC_LABELS` – metric names and control labels
+4. `HELP_TEXTS` – tooltip texts (`help_*`)
+5. `GROUP_LABELS` – KPI group captions
+6. `LAYER_LABELS` – style-layer legend and guidance
+7. `UI_LABELS` – cross-cutting hints (load hint, short scale words)
+8. `WORKSPACE_LABELS` – project dialogs and interactive research controls
 
 `tests/test_ui_contract.py` enforces that every key the renderer uses exists
 in all seven languages.
@@ -349,6 +356,10 @@ info = api.about()                                    # languages, features, heu
 
 ### 5.1 Research API (`lixity.research.api`)
 
+Development pilot, separate from the released analysis API. Every call requires
+an explicit project root. Source text and source-criticism metadata remain
+untrusted evidence; a retained quotation is not a verified historical claim.
+
 ```python
 from lixity.research import api as research_api
 
@@ -365,6 +376,7 @@ ingest_res = research_api.ingest(
 )
 
 # Full-text search and Unicode-exact citation
+research_api.reindex(root_path)
 search_res = research_api.search(root_path, query="customs warehouse", limit=5)
 cite_res = research_api.cite(root_path, passage_id="urn:uuid:...")
 
@@ -372,8 +384,21 @@ cite_res = research_api.cite(root_path, passage_id="urn:uuid:...")
 dos_res = research_api.create_dossier(
     root_path,
     title="Smuggling Incident",
-    body="Evidence confirms entry through eastern gate in 1923.",
+    body="Review whether this source supports entry through the eastern gate in 1923.",
     evidence_ids=["urn:uuid:..."],
+)
+
+claim = research_api.create_claim(
+    root_path, title="Entry route", statement="The eastern gate was used.",
+    confidence="hypothetical", dossier_id=dos_res["dossier_id"],
+)
+research_api.link_evidence(
+    root_path, claim_id=claim["claim_id"], passage_id="urn:uuid:...",
+    relation="supports", rationale="Author's interpretation of the passage.",
+)
+research_api.record_decision(
+    root_path, title="Change the route", rationale="Bring the characters together.",
+    claim_id=claim["claim_id"], deviation_from_fact=True,
 )
 
 # Cross-corpus grounding comparison against manuscript
@@ -385,8 +410,8 @@ cmp_res = research_api.compare_source(root_path, source_id, manuscript_path)
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
 
 - `POST /api/project-create`: `{"title": "...", "language": "de", "template": "three_act", "init_research": true}`
-- `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`
-- `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`
+- `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
+- `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload, not an existing-project opener.
 - `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`
 - `POST /api/marker-add`: `{"kind": "todo", "line": 42, "note": "Check dialogue continuity"}`
 - `POST /api/marker-resolve`: `{"id": "m-abcd1234"}`
@@ -394,8 +419,20 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `POST /api/research-search`: `{"query": "...", "limit": 10}`
 - `POST /api/research-dossier`: `{"title": "...", "body": "...", "evidence_ids": [...]}`
 - `POST /api/research-compare`: `{"source_id": "...", "manuscript": "..."}`
+- `POST /api/research-init`: `{"title": "...", "language": "en"}`
+- `POST /api/research-claim-add`: `{"title": "...", "statement": "...", "confidence": "hypothetical", "dossier_id": "..."}`
+- `POST /api/research-evidence-link`: `{"claim_id": "...", "passage_id": "...", "relation": "supports", "rationale": "..."}`
+- `POST /api/research-decision-add`: `{"title": "...", "rationale": "...", "claim_id": "...", "deviation_from_fact": false}`
+- `GET /api/research/status`: initialization state, selected project root and record counts.
+- `GET /api/research/sources` and `GET /api/research/dossiers`: lists; add `?id=...` for details.
+- `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
+- `GET /api/research/decisions`: author decision list.
 
-All responses return standard JSON `{ "ok": bool, "message": str, ... }`.
+Responses include `ok`; `message` is optional. Successful reads add the relevant
+data envelope. Treat `ok: false` as unavailable data, not an empty archive.
+Distinguish uninitialized status, empty lists and load failures. Respect
+citation `availability` and `error`; no marked deviation on a decision does
+not certify factual accuracy. Research calls never authorize edits to prose.
 
 ### 5.3 Explicit calibration and project isolation
 

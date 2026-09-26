@@ -402,6 +402,14 @@ document.addEventListener("click", async function (event) {
   }
 });
 var API = document.body.dataset.api || "";
+var UI_LABELS = {};
+try { UI_LABELS = JSON.parse(document.body.dataset.uiLabels || "{}"); } catch (_) { UI_LABELS = {}; }
+function uiLabel(key) { return UI_LABELS[key] || key; }
+function uiFormat(key, values) {
+  return uiLabel(key).replace(/\{([a-z_]+)\}/g, function(match, name) {
+    return Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : match;
+  });
+}
 // NDA statuses come from the server-rendered data attribute (single source: lixity.status.NdaStatus).
 function ndaStatuses() {
   var el = document.getElementById("nda-status");
@@ -562,9 +570,10 @@ if (fdrFilter) {
 }
 async function runAction(action, payload, button) {
   var status = document.getElementById("ctl-status");
-  if (!status) return;
-  status.className = "ctl-status";
-  status.textContent = "…";
+  if (status) {
+    status.className = "ctl-status";
+    status.textContent = "…";
+  }
   if (button) { button.disabled = true; button.classList.add("busy"); button.setAttribute("aria-busy", "true"); }
   try {
     var res = await fetch(API + "/" + action, {
@@ -573,12 +582,18 @@ async function runAction(action, payload, button) {
       body: JSON.stringify(payload || {})
     });
     var data = await res.json();
-    status.className = "ctl-status " + (data.ok ? "ok" : "err");
-    status.textContent = (data.ok ? "✓ " : "✗ ") + (data.message || "");
-    if (data.reload) { setTimeout(function () { location.reload(); }, 1200); }
+    if (status) {
+      status.className = "ctl-status " + (data.ok ? "ok" : "err");
+      status.textContent = (data.ok ? "✓ " : "✗ ") + (data.message || "");
+    }
+    if (data.ok && data.reload) { setTimeout(function () { location.reload(); }, 1200); }
+    return data;
   } catch (err) {
-    status.className = "ctl-status err";
-    status.textContent = "✗ " + err;
+    if (status) {
+      status.className = "ctl-status err";
+      status.textContent = "✗ " + err;
+    }
+    return { ok: false, message: String(err) };
   } finally {
     if (button) { button.disabled = false; button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
   }
@@ -648,7 +663,11 @@ async function researchApiPost(action, payload) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload || {})
     });
-    return await res.json();
+    var data = await res.json();
+    if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action)) {
+      await refreshResearchProjectInfo();
+    }
+    return data;
   } catch (err) {
     return { ok: false, message: String(err) };
   }
@@ -669,24 +688,49 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
+function researchPassageActions(passageId) {
+  return '<div class="row research-passage-actions">' +
+    '<button type="button" class="ctl" data-use-passage="claim" data-passage-id="' + escapeHtml(passageId) + '">' + escapeHtml(uiLabel("research_use_for_claim")) + '</button>' +
+    '<button type="button" class="ctl" data-use-passage="dossier" data-passage-id="' + escapeHtml(passageId) + '">' + escapeHtml(uiLabel("research_use_for_dossier")) + '</button></div>';
+}
+
+function researchCitationHtml(cite) {
+  var unavailable = Boolean(cite.error) || !["available", "withdrawn"].includes(cite.availability);
+  var withdrawn = cite.availability === "withdrawn";
+  var availability = unavailable ? uiLabel("research_evidence_unavailable") : (withdrawn ? uiLabel("research_evidence_withdrawn_context") : uiLabel("research_evidence_retained_unreviewed"));
+  return '<div class="research-passage-card">' +
+    '<span class="research-badge ' + (unavailable || withdrawn ? 'badge-warning' : 'badge-neutral') + '">' + escapeHtml(availability) + '</span>' +
+    '<div class="ctl-note">' + escapeHtml(cite.source_title || cite.passage_id || cite.id || "") + '</div>' +
+    '<div class="research-passage-quote">' + (!unavailable && cite.verbatim ? escapeHtml(cite.verbatim) : escapeHtml(uiLabel("research_no_quote"))) + '</div>' +
+    (cite.passage_id ? '<code>' + escapeHtml(cite.passage_id) + '</code>' : '') +
+    (!unavailable && !withdrawn && cite.passage_id ? researchPassageActions(cite.passage_id) : '') +
+    '</div>';
+}
+
+function researchDetailsControl(kind, id) {
+  return '<details class="research-details"><summary data-research-detail="' + kind + '" data-record-id="' + escapeHtml(id) + '">' + escapeHtml(uiLabel("research_view_details")) + '</summary><div class="research-details-body"></div></details>';
+}
+
 async function refreshResearchSources() {
   var listHost = document.getElementById("research-sources-list");
   var selectHost = document.getElementById("r-ground-source-select");
   if (!listHost) return;
   var data = await researchApiGet("research/sources");
   if (!data.ok) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || "Failed to load sources") + '</p>';
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_sources_failed")) + '</p>';
     return;
   }
   var sources = data.sources || [];
   if (selectHost) {
-    selectHost.innerHTML = '<option value="">Quelle auswählen...</option>' +
+    var selectedSource = selectHost.value;
+    selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_source")) + '</option>' +
       sources.map(function(s) {
-        return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title) + ' (' + s.passages + ' Passagen)</option>';
+        return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title) + ' (' + escapeHtml(uiFormat("research_passages_count", { count: s.passages })) + ')</option>';
       }).join("");
+    if (sources.some(function(s) { return s.id === selectedSource; })) selectHost.value = selectedSource;
   }
   if (!sources.length) {
-    listHost.innerHTML = '<p class="ctl-note">Noch keine Quellen erfasst.</p>';
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_sources")) + '</p>';
     return;
   }
   listHost.innerHTML = sources.map(function(s) {
@@ -696,10 +740,11 @@ async function refreshResearchSources() {
     return '<div class="research-card">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(s.title) + '</span>' +
-        '<span class="ctl-note">' + s.passages + ' Passagen · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
+        '<span class="ctl-note">' + escapeHtml(uiFormat("research_passages_count", { count: s.passages })) + ' · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
       '</div>' +
       '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(s.id) + '</div>' +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
+      researchDetailsControl("source", s.id) +
     '</div>';
   }).join("");
 }
@@ -709,12 +754,20 @@ async function refreshResearchDossiers() {
   if (!listHost) return;
   var data = await researchApiGet("research/dossiers");
   if (!data.ok) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || "Failed to load dossiers") + '</p>';
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_dossiers_failed")) + '</p>';
     return;
   }
   var dossiers = data.dossiers || [];
+  var dossierSelect = document.getElementById("r-claim-dossier-select");
+  if (dossierSelect) {
+    var selectedDossier = dossierSelect.value;
+    dossierSelect.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_no_dossier")) + '</option>' + dossiers.map(function(d) {
+      return '<option value="' + escapeHtml(d.id) + '">' + escapeHtml(d.title) + '</option>';
+    }).join("");
+    if (dossiers.some(function(d) { return d.id === selectedDossier; })) dossierSelect.value = selectedDossier;
+  }
   if (!dossiers.length) {
-    listHost.innerHTML = '<p class="ctl-note">Noch keine Dossiers angelegt.</p>';
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_dossiers")) + '</p>';
     return;
   }
   listHost.innerHTML = dossiers.map(function(d) {
@@ -724,10 +777,11 @@ async function refreshResearchDossiers() {
     return '<div class="research-card">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
-        '<span class="ctl-note">' + d.evidence_count + ' Evidenzen</span>' +
+        '<span class="ctl-note">' + escapeHtml(uiFormat("research_evidence_count", { count: d.evidence_count })) + '</span>' +
       '</div>' +
       (d.excerpt ? '<p class="ctl-note" style="margin:.3rem 0;color:var(--fg);">' + escapeHtml(d.excerpt) + '</p>' : '') +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
+      researchDetailsControl("dossier", d.id) +
     '</div>';
   }).join("");
 }
@@ -739,34 +793,38 @@ async function refreshResearchClaims() {
   if (!listHost) return;
   var data = await researchApiGet("research/claims");
   if (!data.ok) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || "Failed to load claims") + '</p>';
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_claims_failed")) + '</p>';
     return;
   }
   var claims = data.claims || [];
   if (selectHost) {
-    selectHost.innerHTML = '<option value="">Keine These verknüpft (allgemeine Entscheidung)</option>' +
+    var selectedDecisionClaim = selectHost.value;
+    selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_no_claim_linked")) + '</option>' +
       claims.map(function(c) {
         return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.title) + '</option>';
       }).join("");
+    if (claims.some(function(c) { return c.id === selectedDecisionClaim; })) selectHost.value = selectedDecisionClaim;
   }
   if (linkClaimSelect) {
-    linkClaimSelect.innerHTML = '<option value="">These auswählen...</option>' +
+    var selectedEvidenceClaim = linkClaimSelect.value;
+    linkClaimSelect.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_claim")) + '</option>' +
       claims.map(function(c) {
         return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.title) + '</option>';
       }).join("");
+    if (claims.some(function(c) { return c.id === selectedEvidenceClaim; })) linkClaimSelect.value = selectedEvidenceClaim;
   }
   if (!claims.length) {
-    listHost.innerHTML = '<p class="ctl-note">Noch keine Thesen / Aussagen erfasst.</p>';
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_claims")) + '</p>';
     return;
   }
   listHost.innerHTML = claims.map(function(c) {
     var confClass = c.confidence === "evidenced" ? "badge-success" : (c.confidence === "disputed" ? "badge-warning" : "badge-neutral");
-    var confLabel = c.confidence === "evidenced" ? "Belegt" : (c.confidence === "disputed" ? "Umstritten" : "Hypothetisch");
+    var confLabel = c.confidence === "evidenced" ? uiLabel("research_confidence_evidenced") : (c.confidence === "disputed" ? uiLabel("research_confidence_disputed") : uiLabel("research_confidence_hypothetical"));
     var scopeParts = [];
     if (c.scope) {
-      if (c.scope.time_period) scopeParts.push("Zeit: " + escapeHtml(c.scope.time_period));
-      if (c.scope.place) scopeParts.push("Ort: " + escapeHtml(c.scope.place));
-      if (c.scope.actors && c.scope.actors.length) scopeParts.push("Akteure: " + escapeHtml(c.scope.actors.join(", ")));
+      if (c.scope.time_period) scopeParts.push(escapeHtml(uiLabel("research_scope_time")) + " " + escapeHtml(c.scope.time_period));
+      if (c.scope.place) scopeParts.push(escapeHtml(uiLabel("research_scope_place")) + " " + escapeHtml(c.scope.place));
+      if (c.scope.actors && c.scope.actors.length) scopeParts.push(escapeHtml(uiLabel("research_scope_actors")) + " " + escapeHtml(c.scope.actors.join(", ")));
     }
     var tagsHtml = (c.tags || []).map(function(t) {
       return '<span class="research-tag">' + escapeHtml(t) + '</span>';
@@ -775,14 +833,15 @@ async function refreshResearchClaims() {
     return '<div class="research-card">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(c.title) + '</span>' +
-        '<span class="research-badge ' + confClass + '">' + confLabel + '</span>' +
+        '<span class="research-badge ' + confClass + '">' + escapeHtml(confLabel) + '</span>' +
       '</div>' +
       '<p style="margin:.4rem 0;font-size:.85rem;line-height:1.45;color:var(--fg);">' + escapeHtml(c.statement) + '</p>' +
       (scopeParts.length ? '<div class="ctl-note" style="margin-bottom:.3rem;font-size:.76rem;">' + scopeParts.join(" · ") + '</div>' : '') +
-      '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">These-ID: ' + escapeHtml(c.id) + '</div>' +
+      '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(uiLabel("research_claim_id")) + ' ' + escapeHtml(c.id) + '</div>' +
+      (c.dossier_id ? '<div class="ctl-note">' + escapeHtml(uiLabel("research_dossier")) + ': ' + escapeHtml(c.dossier_id) + '</div>' : '') +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
       '<div class="claim-evidence-subpanel" id="claim-evidence-' + escapeHtml(c.id) + '" style="margin-top:.6rem;padding-top:.4rem;border-top:1px dashed var(--line);">' +
-        '<button type="button" class="ctl" style="font-size:.74rem;padding:.2rem .5rem;" data-load-evidence="' + escapeHtml(c.id) + '">Verknüpfte Belege laden</button>' +
+        '<button type="button" class="ctl" style="font-size:.74rem;padding:.2rem .5rem;" data-load-evidence="' + escapeHtml(c.id) + '">' + escapeHtml(uiLabel("research_load_evidence")) + '</button>' +
       '</div>' +
     '</div>';
   }).join("");
@@ -793,49 +852,59 @@ async function refreshResearchDecisions() {
   if (!listHost) return;
   var data = await researchApiGet("research/decisions");
   if (!data.ok) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || "Failed to load decisions") + '</p>';
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_decisions_failed")) + '</p>';
     return;
   }
   var decisions = data.decisions || [];
   if (!decisions.length) {
-    listHost.innerHTML = '<p class="ctl-note">Noch keine Autorenentscheidungen erfasst.</p>';
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_decisions")) + '</p>';
     return;
   }
   listHost.innerHTML = decisions.map(function(d) {
     var devBadge = d.deviation_from_fact
-      ? '<span class="research-badge badge-warning" title="Bewusste Abweichung von historischer Evidenz">Dichterische Freiheit / Abweichung</span>'
-      : '<span class="research-badge badge-success">Faktentreu</span>';
+      ? '<span class="research-badge badge-warning">' + escapeHtml(uiLabel("research_deliberate_deviation")) + '</span>'
+      : '<span class="research-badge badge-neutral">' + escapeHtml(uiLabel("research_no_deviation_recorded")) + '</span>';
     return '<div class="research-card">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
         devBadge +
       '</div>' +
       '<div style="margin:.4rem 0;font-size:.85rem;line-height:1.45;color:var(--fg);">' + escapeHtml(d.rationale) + '</div>' +
-      (d.impact_on_plot ? '<div class="ctl-note" style="margin:.3rem 0;font-size:.78rem;"><strong>Dramaturgische Wirkung:</strong> ' + escapeHtml(d.impact_on_plot) + '</div>' : '') +
-      (d.claim_id ? '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">Betrifft These: ' + escapeHtml(d.claim_id) + '</div>' : '') +
+      (d.impact_on_plot ? '<div class="ctl-note" style="margin:.3rem 0;font-size:.78rem;"><strong>' + escapeHtml(uiLabel("research_decision_impact")) + '</strong> ' + escapeHtml(d.impact_on_plot) + '</div>' : '') +
+      (d.claim_id ? '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(uiLabel("research_decision_claim")) + ' ' + escapeHtml(d.claim_id) + '</div>' : '') +
     '</div>';
   }).join("");
 }
 
-async function initResearchUI() {
+async function refreshResearchProjectInfo() {
   var status = await researchApiGet("research/status");
+  var activeRootEl = document.getElementById("r-active-root");
+  if (activeRootEl && status && status.ok && status.project_root) {
+    activeRootEl.textContent = uiLabel("research_project") + " " + status.project_root;
+    if (status.initialized) {
+      activeRootEl.textContent = uiFormat("research_project_summary", {
+        root: status.project_root,
+        sources: status.sources_count || 0,
+        dossiers: status.dossiers_count || 0,
+        claims: status.claims_count || 0,
+        decisions: status.decisions_count || 0
+      });
+    }
+  }
+  return status;
+}
+
+async function initResearchUI() {
+  var status = await refreshResearchProjectInfo();
   var initBox = document.getElementById("research-init-box");
   var tabs = document.getElementById("research-tabs");
-  var activeRootEl = document.getElementById("r-active-root");
-  var statusBar = document.getElementById("research-status-bar");
+  document.querySelectorAll(".research-tab-pane").forEach(function(p) { p.style.display = "none"; });
 
-  if (!status || status.ok === false) {
+  if (!status || status.ok !== true) {
     if (initBox) initBox.style.display = "none";
     if (tabs) tabs.style.display = "none";
-    if (statusBar) statusBar.textContent = "Fehler bei Verbindung mit der Recherche-API: " + ((status && status.message) || "Server antwortet nicht");
+    researchStatus(uiFormat("research_api_unavailable", { reason: (status && status.message) || uiLabel("research_no_response") }), false);
     return;
-  }
-
-  if (activeRootEl && status.project_root) {
-    activeRootEl.textContent = "Projekt: " + status.project_root;
-    if (status.initialized) {
-      activeRootEl.textContent += " (" + (status.sources_count || 0) + " Quellen, " + (status.dossiers_count || 0) + " Dossiers, " + (status.claims_count || 0) + " Thesen, " + (status.decisions_count || 0) + " Entscheidungen)";
-    }
   }
 
   if (!status.initialized) {
@@ -858,6 +927,54 @@ async function initResearchUI() {
 }
 
 document.addEventListener("click", async function (event) {
+  var passageBtn = event.target.closest("[data-use-passage]");
+  if (passageBtn) {
+    var forClaim = passageBtn.dataset.usePassage === "claim";
+    var passageField = document.getElementById(forClaim ? "r-link-passage-id" : "r-dos-eids");
+    if (!passageField) return;
+    if (forClaim) {
+      passageField.value = passageBtn.dataset.passageId;
+    } else {
+      var passageIds = passageField.value.split(",").map(function(id) { return id.trim(); }).filter(Boolean);
+      if (!passageIds.includes(passageBtn.dataset.passageId)) passageIds.push(passageBtn.dataset.passageId);
+      passageField.value = passageIds.join(", ");
+    }
+    document.querySelector('[data-rtab="' + (forClaim ? 'claims' : 'dossiers') + '"]').click();
+    passageField.focus();
+    return;
+  }
+
+  var detailsBtn = event.target.closest("[data-research-detail]");
+  if (detailsBtn) {
+    var detailHost = detailsBtn.parentElement.querySelector(".research-details-body");
+    if (detailsBtn.parentElement.open) return;
+    detailHost.textContent = uiLabel("research_details_loading");
+    var isSource = detailsBtn.dataset.researchDetail === "source";
+    var detail = await researchApiGet("research/" + (isSource ? "sources" : "dossiers") + "?id=" + encodeURIComponent(detailsBtn.dataset.recordId));
+    if (!detail.ok) {
+      detailHost.textContent = detail.message || uiLabel(isSource ? "research_load_sources_failed" : "research_load_dossiers_failed");
+      return;
+    }
+    if (isSource) {
+      var context = detail.context || {};
+      var contextRows = ["genre", "created_period", "depicted_period", "place", "perspective", "original_language", "is_translation", "provenance_note"].filter(function(key) {
+        return context[key] !== null && context[key] !== undefined && context[key] !== "";
+      }).map(function(key) {
+        var value = typeof context[key] === "boolean" ? uiLabel(context[key] ? "ctx_yes" : "ctx_no") : context[key];
+        return '<dt>' + escapeHtml(uiLabel("ctx_" + key)) + '</dt><dd>' + escapeHtml(value) + '</dd>';
+      }).join("");
+      detailHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
+        (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '') +
+        '<h4>' + escapeHtml(uiLabel("research_passages")) + '</h4>' + (detail.passages || []).map(function(p) {
+          return researchCitationHtml({availability: "available", passage_id: p.id, verbatim: p.verbatim, source_title: detail.title});
+        }).join("");
+    } else {
+      detailHost.innerHTML = '<div class="research-dossier-body">' + escapeHtml(detail.body) + '</div>' +
+        '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(researchCitationHtml).join("");
+    }
+    return;
+  }
+
   var tabBtn = event.target.closest("[data-rtab]");
   if (tabBtn) {
     document.querySelectorAll(".research-tabs button").forEach(function(b) {
@@ -881,7 +998,7 @@ document.addEventListener("click", async function (event) {
   if (initBtn) {
     var titleInput = document.getElementById("r-init-title");
     var res = await researchApiPost("research-init", { title: titleInput ? titleInput.value : "" });
-    researchStatus(res.message, res.ok);
+    researchStatus(res.ok ? uiLabel("research_init_complete") : res.message, res.ok);
     if (res.ok) initResearchUI();
     return;
   }
@@ -890,7 +1007,7 @@ document.addEventListener("click", async function (event) {
   if (ingestBtn) {
     var retCheck = document.getElementById("r-ingest-retention");
     if (!retCheck || !retCheck.checked) {
-      researchStatus("Lokale Speicherung muss bestätigt werden (--allow-retention)", false);
+      researchStatus(uiLabel("research_retention_required"), false);
       return;
     }
     var titleEl = document.getElementById("r-ingest-title");
@@ -900,14 +1017,14 @@ document.addEventListener("click", async function (event) {
     var tags = (tagsEl && tagsEl.value) ? tagsEl.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
 
     function sendIngest(content, filename) {
-      researchStatus("Erfasse und indiziere Quelle...", true);
+      researchStatus(uiLabel("research_ingesting"), true);
       researchApiPost("research-ingest", {
         content: content,
-        title: (titleEl && titleEl.value.trim()) || filename || "Quelle",
+        title: (titleEl && titleEl.value.trim()) || filename || uiLabel("research_tab_sources"),
         tags: tags,
         allow_retention: true
       }).then(function(res) {
-        researchStatus(res.message, res.ok);
+        researchStatus(res.ok ? uiLabel("research_ingest_complete") : res.message, res.ok);
         if (res.ok) {
           if (titleEl) titleEl.value = "";
           if (tagsEl) tagsEl.value = "";
@@ -927,7 +1044,7 @@ document.addEventListener("click", async function (event) {
     } else if (textEl && textEl.value.trim()) {
       sendIngest(textEl.value, "");
     } else {
-      researchStatus("Bitte Datei auswählen oder Text eingeben", false);
+      researchStatus(uiLabel("research_source_required"), false);
     }
     return;
   }
@@ -936,17 +1053,17 @@ document.addEventListener("click", async function (event) {
   if (searchBtn) {
     var qEl = document.getElementById("r-search-query");
     var query = qEl ? qEl.value.trim() : "";
-    if (!query) { researchStatus("Suchbegriff eingeben", false); return; }
+    if (!query) { researchStatus(uiLabel("research_query_required"), false); return; }
     var resultsHost = document.getElementById("research-search-results");
-    if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">Suche läuft...</p>';
+    if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_searching")) + '</p>';
     var sres = await researchApiPost("research-search", { query: query });
     if (!sres.ok) {
-      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || "Suche fehlgeschlagen") + '</p>';
+      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || uiLabel("research_search_failed")) + '</p>';
       return;
     }
     var hits = sres.hits || [];
     if (!hits.length) {
-      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">Keine Treffer für „' + escapeHtml(query) + '“ gefunden.</p>';
+      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiFormat("research_no_hits", { query: query })) + '</p>';
       return;
     }
     if (resultsHost) {
@@ -954,14 +1071,15 @@ document.addEventListener("click", async function (event) {
         return '<div class="research-passage-card">' +
           '<div class="research-passage-quote">„' + escapeHtml(h.verbatim || "") + '“</div>' +
           '<div class="research-passage-cite">' +
-            'Quelle: <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
+            escapeHtml(uiLabel("research_source")) + ' <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
             'Score: ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
-            'ID: <code style="user-select:all;cursor:pointer;" title="Klicken zum Auswählen">' + escapeHtml(h.passage_id || "") + '</code>' +
+            escapeHtml(uiLabel("research_id")) + ' <code style="user-select:all;cursor:pointer;" title="' + escapeHtml(uiLabel("research_select_id")) + '">' + escapeHtml(h.passage_id || "") + '</code>' +
           '</div>' +
+          researchPassageActions(h.passage_id) +
         '</div>';
       }).join("");
     }
-    researchStatus(hits.length + " Treffer gefunden", true);
+    researchStatus(uiFormat("research_hits_count", { count: hits.length }), true);
     return;
   }
 
@@ -972,7 +1090,7 @@ document.addEventListener("click", async function (event) {
     var dEids = document.getElementById("r-dos-eids");
     var dBody = document.getElementById("r-dos-body");
     var titleVal = dTitle ? dTitle.value.trim() : "";
-    if (!titleVal) { researchStatus("Titel für Dossier erforderlich", false); return; }
+    if (!titleVal) { researchStatus(uiLabel("research_dossier_title_required"), false); return; }
     var tagsArr = (dTags && dTags.value) ? dTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
     var eidsArr = (dEids && dEids.value) ? dEids.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
     var dres = await researchApiPost("research-dossier", {
@@ -981,7 +1099,7 @@ document.addEventListener("click", async function (event) {
       tags: tagsArr,
       evidence_ids: eidsArr
     });
-    researchStatus(dres.message, dres.ok);
+    researchStatus(dres.ok ? uiLabel("research_dossier_complete") : dres.message, dres.ok);
     if (dres.ok) {
       if (dTitle) dTitle.value = "";
       if (dTags) dTags.value = "";
@@ -996,15 +1114,18 @@ document.addEventListener("click", async function (event) {
   if (groundBtn) {
     var srcSelect = document.getElementById("r-ground-source-select");
     var sid = srcSelect ? srcSelect.value : "";
-    if (!sid) { researchStatus("Bitte eine Quelle auswählen", false); return; }
+    if (!sid) { researchStatus(uiLabel("research_select_source_required"), false); return; }
     var gHost = document.getElementById("research-grounding-results");
-    if (gHost) gHost.innerHTML = '<p class="ctl-note">Abgleich wird berechnet...</p>';
+    if (gHost) gHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_grounding")) + '</p>';
     var gres = await researchApiPost("research-compare", { source_id: sid });
     if (!gres.ok) {
-      if (gHost) gHost.innerHTML = '<p class="ctl-note">' + escapeHtml(gres.message || "Abgleich fehlgeschlagen") + '</p>';
+      if (gHost) gHost.innerHTML = '<p class="ctl-note">' + escapeHtml(gres.message || uiLabel("research_ground_failed")) + '</p>';
       return;
     }
     var sum = gres.summary || {};
+    var comparisonMeta = gres.meta || {};
+    var crossLanguage = comparisonMeta.source_language && comparisonMeta.manuscript_language &&
+      comparisonMeta.source_language !== comparisonMeta.manuscript_language;
     var topShared = (gres.lexical_overlap && gres.lexical_overlap.top_shared_terms) || [];
     var sharedWordsHtml = topShared.slice(0, 15).map(function(w) {
       return '<span class="research-tag">' + escapeHtml(w.word) + ' (' + w.total_count + ')</span>';
@@ -1013,7 +1134,7 @@ document.addEventListener("click", async function (event) {
     var chapters = gres.chapter_grounding || [];
     var chRows = chapters.map(function(c) {
       return '<tr>' +
-        '<td>Kap. ' + c.chapter + ' (' + escapeHtml(c.title || "") + ')</td>' +
+        '<td>' + escapeHtml(uiLabel("research_chapter_prefix")) + ' ' + c.chapter + ' (' + escapeHtml(c.title || "") + ')</td>' +
         '<td style="text-align:right;">' + c.overlap_tokens + '</td>' +
         '<td style="text-align:right;">' + (c.grounding_density ? c.grounding_density.toFixed(1) : '0') + '‰</td>' +
       '</tr>';
@@ -1021,15 +1142,17 @@ document.addEventListener("click", async function (event) {
 
     if (gHost) {
       gHost.innerHTML = '<div class="research-card" style="margin-top:.8rem;">' +
-        '<div class="research-card-title" style="margin-bottom:.5rem;">Ergebnisse: ' + escapeHtml(gres.provenance ? gres.provenance.source_title : "") + '</div>' +
-        '<div class="research-compare-metric"><span>Jaccard-Ähnlichkeit (Typen):</span><strong>' + (sum.jaccard_similarity !== undefined ? (sum.jaccard_similarity * 100).toFixed(1) + '%' : 'n/a') + '</strong></div>' +
-        '<div class="research-compare-metric"><span>Gemeinsame Lexem-Typen:</span><strong>' + (sum.shared_types || 0) + '</strong></div>' +
-        '<div class="research-compare-metric"><span>Quell-Wörter / Manuskript-Wörter:</span><span>' + (sum.source_content_words || 0) + ' / ' + (sum.manuscript_content_words || 0) + '</span></div>' +
-        (sharedWordsHtml ? '<div style="margin-top:.6rem;"><div class="ctl-label" style="margin-bottom:.3rem;">Gemeinsame Kernbegriffe</div><div class="research-tags">' + sharedWordsHtml + '</div></div>' : '') +
-        (chRows ? '<div style="margin-top:.8rem;"><div class="ctl-label" style="margin-bottom:.3rem;">Kapiteldichte</div><table style="width:100%;font-size:.8rem;"><thead><tr><th style="text-align:left;">Kapitel</th><th style="text-align:right;">Tokens</th><th style="text-align:right;">Dichte</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
+        '<div class="research-card-title" style="margin-bottom:.5rem;">' + escapeHtml(uiLabel("research_results_for")) + ' ' + escapeHtml(gres.provenance ? gres.provenance.source_title : "") + '</div>' +
+        '<p class="ctl-note">' + escapeHtml(uiLabel("research_comparison_limit")) + '</p>' +
+        (crossLanguage ? '<p class="ctl-note research-comparison-warning" role="status">' + escapeHtml(uiLabel("research_cross_language_limit")) + '</p>' : '') +
+        '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_similarity")) + '</span><strong>' + (sum.jaccard_similarity !== undefined ? (sum.jaccard_similarity * 100).toFixed(1) + '%' : 'n/a') + '</strong></div>' +
+        '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_shared_types")) + '</span><strong>' + (sum.shared_types || 0) + '</strong></div>' +
+        '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_word_counts")) + '</span><span>' + (sum.source_content_words || 0) + ' / ' + (sum.manuscript_content_words || 0) + '</span></div>' +
+        (sharedWordsHtml ? '<div style="margin-top:.6rem;"><div class="ctl-label" style="margin-bottom:.3rem;">' + escapeHtml(uiLabel("research_shared_words")) + '</div><div class="research-tags">' + sharedWordsHtml + '</div></div>' : '') +
+        (chRows ? '<div style="margin-top:.8rem;"><div class="ctl-label" style="margin-bottom:.3rem;">' + escapeHtml(uiLabel("research_chapter_density")) + '</div><table style="width:100%;font-size:.8rem;"><thead><tr><th style="text-align:left;">' + escapeHtml(uiLabel("research_chapter")) + '</th><th style="text-align:right;">' + escapeHtml(uiLabel("research_tokens")) + '</th><th style="text-align:right;">' + escapeHtml(uiLabel("research_density")) + '</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
       '</div>';
     }
-    researchStatus("Abgleich erfolgreich abgeschlossen", true);
+    researchStatus(uiLabel("research_ground_complete"), true);
     return;
   }
 
@@ -1042,11 +1165,12 @@ document.addEventListener("click", async function (event) {
     var cTime = document.getElementById("r-claim-time");
     var cPlace = document.getElementById("r-claim-place");
     var cActors = document.getElementById("r-claim-actors");
+    var cDossier = document.getElementById("r-claim-dossier-select");
 
     var titleVal = cTitle ? cTitle.value.trim() : "";
     var stmtVal = cStmt ? cStmt.value.trim() : "";
     if (!titleVal || !stmtVal) {
-      researchStatus("Kurztitel und historische Aussage sind erforderlich", false);
+      researchStatus(uiLabel("research_claim_required"), false);
       return;
     }
     var tagsArr = (cTags && cTags.value) ? cTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
@@ -1059,9 +1183,10 @@ document.addEventListener("click", async function (event) {
       time_period: cTime ? cTime.value.trim() : "",
       place: cPlace ? cPlace.value.trim() : "",
       actors: actorsArr,
+      dossier_id: cDossier ? cDossier.value : "",
       tags: tagsArr
     });
-    researchStatus(cres.message, cres.ok);
+    researchStatus(cres.ok ? uiLabel("research_claim_complete") : cres.message, cres.ok);
     if (cres.ok) {
       if (cTitle) cTitle.value = "";
       if (cStmt) cStmt.value = "";
@@ -1084,7 +1209,7 @@ document.addEventListener("click", async function (event) {
     var claimVal = lClaim ? lClaim.value.trim() : "";
     var passageVal = lPassage ? lPassage.value.trim() : "";
     if (!claimVal || !passageVal) {
-      researchStatus("These und Passagen-ID erforderlich", false);
+      researchStatus(uiLabel("research_link_required"), false);
       return;
     }
 
@@ -1094,7 +1219,7 @@ document.addEventListener("click", async function (event) {
       relation: lRel ? lRel.value : "supports",
       rationale: lRat ? lRat.value.trim() : ""
     });
-    researchStatus(lres.message, lres.ok);
+    researchStatus(lres.ok ? uiLabel("research_evidence_link_complete") : lres.message, lres.ok);
     if (lres.ok) {
       if (lPassage) lPassage.value = "";
       if (lRat) lRat.value = "";
@@ -1114,7 +1239,7 @@ document.addEventListener("click", async function (event) {
     var dTitleVal = decTitle ? decTitle.value.trim() : "";
     var dRatVal = decRat ? decRat.value.trim() : "";
     if (!dTitleVal || !dRatVal) {
-      researchStatus("Titel und Begründung der Entscheidung sind erforderlich", false);
+      researchStatus(uiLabel("research_decision_required"), false);
       return;
     }
 
@@ -1125,7 +1250,7 @@ document.addEventListener("click", async function (event) {
       impact_on_plot: decPlot ? decPlot.value.trim() : "",
       deviation_from_fact: decDev ? decDev.checked : false
     });
-    researchStatus(dres.message, dres.ok);
+    researchStatus(dres.ok ? uiLabel("research_decision_complete") : dres.message, dres.ok);
     if (dres.ok) {
       if (decTitle) decTitle.value = "";
       if (decRat) decRat.value = "";
@@ -1141,25 +1266,29 @@ document.addEventListener("click", async function (event) {
     var cid = loadEvBtn.dataset.loadEvidence;
     var subpanel = document.getElementById("claim-evidence-" + cid);
     if (!subpanel) return;
-    subpanel.innerHTML = '<span class="ctl-note">Lade Belege...</span>';
+    subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(uiLabel("research_loading_evidence")) + '</span>';
     var evData = await researchApiGet("research/claims?claim_id=" + encodeURIComponent(cid));
     if (!evData.ok) {
-      subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(evData.message || "Fehler beim Laden") + '</span>';
+      subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(evData.message || uiLabel("research_load_evidence_failed")) + '</span>';
       return;
     }
     var links = evData.evidence_links || [];
     if (!links.length) {
-      subpanel.innerHTML = '<span class="ctl-note">Keine Belege mit dieser These verknüpft.</span>';
+      subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(uiLabel("research_no_linked_evidence")) + '</span>';
       return;
     }
-    subpanel.innerHTML = '<div style="font-size:.78rem;font-weight:600;margin-bottom:.3rem;color:var(--fg);">Verknüpfte Belege (' + links.length + '):</div>' +
+    subpanel.innerHTML = '<div style="font-size:.78rem;font-weight:600;margin-bottom:.3rem;color:var(--fg);">' + escapeHtml(uiFormat("research_linked_evidence_count", { count: links.length })) + '</div>' +
       links.map(function(l) {
-        var relBadge = '<span class="research-badge badge-neutral" style="font-size:.7rem;">' + escapeHtml(l.relation) + '</span>';
+        var relBadge = '<span class="research-badge badge-neutral" style="font-size:.7rem;">' + escapeHtml(uiLabel("research_relation_" + l.relation)) + '</span>';
         var cite = l.citation || {};
-        var quote = cite.verbatim ? '„' + escapeHtml(cite.verbatim) + '“' : '<em>(Kein Volltextzitat)</em>';
+        var unavailable = Boolean(cite.error) || !cite.availability;
+        var withdrawn = cite.availability === "withdrawn";
+        var availability = unavailable ? uiLabel("research_evidence_unavailable") : (withdrawn ? uiLabel("research_evidence_withdrawn_context") : uiLabel("research_evidence_retained_unreviewed"));
+        var quote = !unavailable && cite.verbatim ? '„' + escapeHtml(cite.verbatim) + '“' : '<em>' + escapeHtml(uiLabel("research_no_quote")) + '</em>';
         return '<div class="research-passage-card" style="margin:.3rem 0;padding:.4rem .6rem;">' +
           '<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem;">' +
             relBadge +
+            '<span class="research-badge ' + (unavailable || withdrawn ? 'badge-warning' : 'badge-neutral') + '">' + escapeHtml(availability) + '</span>' +
             '<span class="ctl-note" style="font-size:.74rem;">' + escapeHtml(cite.source_title || l.passage_id) + '</span>' +
           '</div>' +
           '<div class="research-passage-quote" style="font-size:.78rem;margin:.2rem 0;">' + quote + '</div>' +
@@ -1186,11 +1315,12 @@ function switchModalTab(targetPaneId) {
   });
 }
 
-function detectManuscriptLanguage(text) {
-  var sample = text.slice(0, 10000).toLowerCase();
-  var deWords = (sample.match(/\b(der|die|das|und|nicht|ein|eine|dem|den|mit|fuer|auf)\b/g) || []).length;
-  var enWords = (sample.match(/\b(the|and|that|have|for|not|with|you|this|but|his|from)\b/g) || []).length;
-  return deWords >= enWords ? "de" : "en";
+function updateImportLanguagePreview() {
+  var langEl = document.getElementById("import-fpc-lang");
+  var langSelect = document.getElementById("import-proj-lang");
+  if (langEl && langSelect && langSelect.selectedOptions.length) {
+    langEl.textContent = langSelect.selectedOptions[0].textContent;
+  }
 }
 
 function processImportedFile(file) {
@@ -1212,9 +1342,6 @@ function processImportedFile(file) {
     // Word count
     var words = (text.trim().match(/\S+/g) || []).length;
 
-    // Language detection
-    var detectedLang = detectManuscriptLanguage(text);
-
     // Update UI Preview
     var previewBox = document.getElementById("import-preview-box");
     if (previewBox) previewBox.style.display = "flex";
@@ -1224,22 +1351,16 @@ function processImportedFile(file) {
 
     var statsEl = document.getElementById("import-fpc-stats");
     if (statsEl) {
-      statsEl.textContent = words.toLocaleString() + " Wörter · " + chapterCount + (chapterCount === 1 ? " Kapitel" : " Kapitel");
+      statsEl.textContent = uiFormat("wizard_preview_stats", {
+        words: words.toLocaleString(document.documentElement.lang || "en"), chapters: chapterCount
+      });
     }
 
-    var langEl = document.getElementById("import-fpc-lang");
-    if (langEl) {
-      langEl.textContent = detectedLang === "de" ? "Deutsch" : "English";
-    }
+    updateImportLanguagePreview();
 
     var titleInput = document.getElementById("import-proj-title");
     if (titleInput) {
       titleInput.value = detectedTitle;
-    }
-
-    var langSelect = document.getElementById("import-proj-lang");
-    if (langSelect) {
-      langSelect.value = detectedLang;
     }
 
     var submitBtn = document.getElementById("btn-submit-import-project");
@@ -1348,6 +1469,9 @@ document.addEventListener("drop", function (e) {
 });
 
 document.addEventListener("change", function (event) {
+  if (event.target.id === "import-proj-lang") {
+    updateImportLanguagePreview();
+  }
   if (event.target.id === "import-file-input" && event.target.files && event.target.files.length) {
     processImportedFile(event.target.files[0]);
     return;
@@ -1364,10 +1488,30 @@ document.addEventListener("change", function (event) {
   }
 });
 
+async function submitProjectForm(form, action, payload, button) {
+  if (button && button.disabled) return;
+  var feedback = form.querySelector(".project-form-status");
+  if (feedback) {
+    feedback.hidden = true;
+    feedback.textContent = "";
+  }
+  var result = await runAction(action, payload, button);
+  if (result && result.ok) {
+    var modal = form.closest("dialog");
+    if (modal && typeof modal.close === "function") modal.close();
+  } else if (feedback) {
+    feedback.className = "ctl-status project-form-status err";
+    feedback.textContent = uiFormat("wizard_action_failed", {
+      reason: (result && result.message) || uiLabel("wizard_unknown_error")
+    });
+    feedback.hidden = false;
+  }
+}
+
 // Form: Import existing manuscript
 var formImport = document.getElementById("form-project-import");
 if (formImport) {
-  formImport.addEventListener("submit", function (e) {
+  formImport.addEventListener("submit", async function (e) {
     e.preventDefault();
     var titleEl = document.getElementById("import-proj-title");
     var title = titleEl ? titleEl.value.trim() : "";
@@ -1381,10 +1525,7 @@ if (formImport) {
     var initResearch = Boolean(researchEl && researchEl.checked);
 
     var submitBtn = document.getElementById("btn-submit-import-project");
-    var modal = document.getElementById("modal-project-create");
-    if (modal && typeof modal.close === "function") modal.close();
-
-    runAction("project-create", {
+    await submitProjectForm(formImport, "project-create", {
       title: title,
       language: lang,
       path: folder,
@@ -1397,7 +1538,7 @@ if (formImport) {
 // Form: Start new project from scratch
 var formCreate = document.getElementById("form-project-create");
 if (formCreate) {
-  formCreate.addEventListener("submit", function (e) {
+  formCreate.addEventListener("submit", async function (e) {
     e.preventDefault();
     var titleEl = document.getElementById("new-proj-title");
     var title = titleEl ? titleEl.value.trim() : "";
@@ -1412,10 +1553,7 @@ if (formCreate) {
     var initResearch = Boolean(researchEl && researchEl.checked);
 
     var submitBtn = document.getElementById("btn-submit-create-project");
-    var modal = document.getElementById("modal-project-create");
-    if (modal && typeof modal.close === "function") modal.close();
-
-    runAction("project-create", {
+    await submitProjectForm(formCreate, "project-create", {
       title: title,
       language: lang,
       path: folder,
@@ -1428,17 +1566,13 @@ if (formCreate) {
 // Form: Open existing path
 var formOpen = document.getElementById("form-project-open");
 if (formOpen) {
-  formOpen.addEventListener("submit", function (e) {
+  formOpen.addEventListener("submit", async function (e) {
     e.preventDefault();
     var pathEl = document.getElementById("open-proj-path");
     var path = pathEl ? pathEl.value.trim() : "";
     if (!path) return;
 
     var submitBtn = document.getElementById("btn-submit-open-project");
-    var modal = document.getElementById("modal-project-open");
-    if (modal && typeof modal.close === "function") modal.close();
-
-    runAction("project-open", { path: path }, submitBtn);
+    await submitProjectForm(formOpen, "project-open", { path: path }, submitBtn);
   });
 }
-

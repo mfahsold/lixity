@@ -7,8 +7,8 @@ publishing exploit details before maintainers can assess the report.
 
 ## Versions and scope
 
-The current release is **v1.15.0**, including dashboard rendering security
-fixes. Reports should identify the exact tag or commit. Fixes are developed
+The current release is **v1.16.0**, including the local project/research server
+and dashboard rendering safeguards. Reports should identify the exact tag or commit. Fixes are developed
 on `main`; backports are evaluated case by case. A development version is not
 a production-support guarantee.
 
@@ -22,14 +22,15 @@ a production-support guarantee.
   notes. Treat it as private even without the original Markdown file.
 - Renderers escape text and use text-based tooltips; this reduces specific XSS
   risks, not a blanket guarantee for every renderer or host integration.
-- HTTP servers, NDA encryption, export tools and document delivery belong to
-  adapters, not the engine's security boundary. Review them independently.
+- The bundled local HTTP server is a separate boundary from the pure analysis
+  engine. NDA encryption, publication exports and document delivery belong to
+  project adapters; review those integrations independently.
 - Custom regular expressions and large inputs can consume CPU or memory.
   Hosts accepting untrusted inputs should impose size, time and concurrency
   limits and must not execute unrestricted user-supplied expressions.
 - Atomic file replacement protects write integrity, not confidentiality or
   authorization. Callers choose writable destinations and file permissions.
-- The development research pilot retains original text and excerpts in
+- The experimental research pilot retains original text and excerpts in
   `research/`. Treat both as private. Explicit retention confirmation does not
   grant rights or authorize redistribution. Local project paths are not remote
   authorization tokens. Use a private local filesystem; shared hostile writers and

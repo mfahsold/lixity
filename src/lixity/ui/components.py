@@ -26,6 +26,7 @@ from ..language_data import (
     UI_LABELS,
 )
 from ..status import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT, Status
+from ..workspace_labels import WORKSPACE_LABELS
 
 _DEFAULT_LABELS = {
     **GUIDANCE_LABELS["en"],
@@ -36,6 +37,7 @@ _DEFAULT_LABELS = {
     **GROUP_LABELS["en"],
     **LAYER_LABELS["en"],
     **UI_LABELS["en"],
+    **WORKSPACE_LABELS["en"],
 }
 
 

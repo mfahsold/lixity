@@ -2,12 +2,13 @@
 
 [RFC](README.md) · [Evidence](EVIDENCE.md)
 
-Status: target design specification for the complete RFC. The local pilot
-(target `1.16.0.dev0`; unreleased and not in release `v1.15.0`) implements the
-immutable source-to-passage subset using strict schema `research-local/1`
+Status: target design specification for the complete RFC. The experimental
+`v1.16.0` pilot implements the immutable source-to-passage subset using strict
+schema `research-local/1`
 (`Project`, `Source`, `SourceVersion`, `Activity`, `Extraction`, `Passage`,
-`Tombstone`). See [USAGE.md](USAGE.md) and [IMPLEMENTATION.md](IMPLEMENTATION.md).
-Claims, EvidenceLinks, Decisions and Dossiers remain planned for Phase 4.
+`Tombstone`) together with Dossiers, Claims, EvidenceLinks and Decisions in
+the pilot's own schema. See [USAGE.md](USAGE.md) and [IMPLEMENTATION.md](IMPLEMENTATION.md).
+The broader interchange model below remains a proposal.
 [The synthetic interchange example](examples/evidence-chain.json) illustrates a
 complete source-to-decision chain; it is not a production database.
 

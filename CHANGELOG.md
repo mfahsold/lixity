@@ -7,60 +7,67 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.16.0] – 2026-09-26
+
 ### Added
 
-- Native `lixity serve` development server: Built-in `ThreadingHTTPServer` with
-  strict loopback binding (`127.0.0.1` / `localhost`), host/origin verification,
-  payload limits, directory traversal protection, live settings API (`/api/settings`),
-  manuscript upload (`/api/load`), inline marker actions (`/api/marker-add`, `/api/marker-resolve`),
-  and `--no-project` clean empty start. Fully decouples development server tooling from
-  individual book project repositories.
-- Cross-corpus research linguistic comparison (`lixity research compare` and `api.compare_source`):
-  bridges archived research sources with literary manuscripts without modifying either document.
-  Computes vocabulary alignment (Jaccard similarity, Szymkiewicz–Simpson overlap coefficient,
-  top shared terms, exclusive source terms), Dunning's G² log-likelihood keyness differential,
-  stylistic/register contrast (ASL, dialogue ratio, Guiraud's R, Yule's K, staccato, kaskade deltas),
-  and per-chapter evidence grounding density (mapping source vocabulary occurrences across chapters).
-- Research workspace architecture proposal: source/version/passage/claim/dossier
-  model, optional Zotero/Docling/Qdrant/Haystack integrations, archival interchange,
-  synthetic evidence-chain example and staged implementation/evaluation plan.
-  The complete design remains a target, not a shipped provider integration.
-- Evidence-based `lixity research` and `lixity.research.api`: explicit project
-  creation, permitted local UTF-8 ingestion with `--allow-retention`, versioned source
-  criticism context, source tagging, lean research analysis adapter connecting archived sources
-  to `lixity.pipeline`, localized read-only source dashboard (`#document-context`), controlled
-  withdrawal, physical purge with dry-run preview, SQLite/FTS5 indexing/search, citation
-  resolution, source listing (`sources`), Dossier management with verifiable evidence
-  citations (`dossier`), and cryptographic integrity audit.
-- Integrated interactive research management UI inside `lixity serve` development dashboard
-  (`--research-project`): web-based source ingestion, tagging, live FTS5 passage search,
-  visual dossier editing, and in-browser manuscript grounding comparison. Independent
-  `*-local/1` schemas, atomic snapshot publication, process locks and restore/conflict/corruption tests.
-  No new runtime dependencies. Full-document OCR, external Zotero sync, and hybrid vector retrieval
-  remain deferred increments.
-- Factual claims, evidence links, and authorial decisions in `lixity research` and `lixity.research.api`:
-  data models for `Claim` (confidence: `hypothetical`, `evidenced`, `disputed`), `EvidenceLink`
-  (relations: `supports`, `contradicts`, `qualifies`, `contextualizes`), and `Decision`
-  (tracking intentional deviations from historical fact and narrative plot impact). Added CLI subcommands
-  (`claim`, `link-evidence`, `decision`), HTTP server endpoints (`/api/research/claims`, `/api/research/decisions`),
-  and comprehensive relational integrity validation.
-- SOTA Onboarding wizard and project creation dialog in `lixity serve`: Native `<dialog>` modal with
-  drag & drop manuscript import, client-side auto-preview (word count, chapters, language), narrative
-  structure templates (Minimal, 3-Act Structure, Research Novel), and clear project structure hints
-  for non-technical users.
-- Dedicated user and developer onboarding guide (`docs/ONBOARDING.md`): comprehensive walkthrough
-  of project file architecture (`lixity.json`, `manuscript.md`, `research/`), web dashboard workflows,
-  CLI commands, editorial markers, and evidence management.
+- Standalone local `lixity serve` with project creation, explicit manuscript import,
+  existing-project opening, live settings and marker controls. Host/Origin checks,
+  loopback binding and request limits protect the local HTTP boundary.
+- Experimental explicit-project research workspace: retained UTF-8 sources,
+  versioned source context, SQLite/FTS5 search, exact passage citations, dossiers,
+  claims, evidence links and author decisions through CLI, Python and HTTP APIs.
+  Retention requires permission; source text is evidence, not an accepted claim.
+- Integrated research tabs with full source/context and dossier views, passage
+  selection for claims/dossiers, claim-to-dossier association, author decisions,
+  visible archive root and counts, and distinct empty/uninitialized/unavailable states.
+- Research withdrawal, purge preview and integrity audit. Purged passages leave
+  content-free reference tombstones so historical evidence chains remain readable
+  without retaining their deleted quotes.
+- Cross-corpus lexical and stylistic comparison using the shared analysis pipeline.
+  Vocabulary overlap is a navigation aid, not proof of factual support.
+- All seven language profiles cover project workflows, research controls, templates
+  and status labels. English and German remain the most developed linguistic cores.
+- Additive `median_sl_exact` JSON metric; text reports display the conventional
+  midpoint median for an even number of sentences. The legacy integer `median_sl`
+  remains available with its original upper-middle semantics.
+- Real-server browser regression for file/folder opening, import/error recovery,
+  research creation and source lifecycle, with desktop and seven-locale mobile checks.
+
+### Fixed
+
+- “Open project” no longer routes file selection or drops silently into new-project
+  import. Existing file/folder paths preserve their original research archive,
+  including empty manuscripts and initialized research folders without manuscripts.
+- Project opening reloads target settings; unsuccessful opening preserves the
+  current workspace. Dialog errors remain visible beside editable inputs.
+- Imported content cannot overwrite an existing manuscript. Generated project
+  settings use valid TOML and preserve quoted titles and the selected language.
+- Source, claim and dossier selections survive background list refreshes. A decision
+  with no recorded deviation is shown neutrally, without implying factual validation.
+- Correct chapter-to-rest JSD probability mass; unequal chapter lengths no longer
+  produce negative divergence for identical lexical distributions.
+- Use all four cells of the term/non-term contingency table for Dunning G².
+  Research comparison uses analyzed prose consistently and reports cross-language
+  comparability limits; shared vocabulary does not establish factual support.
+- Verify retained source bytes before exposing source-detail quotes, matching the
+  integrity checks already used for citations.
+- Align token/syllable/readability/dialogue counts with sentence metrics by excluding
+  Markdown headings consistently from prose measurements.
+- Project TOML works on Python 3.10 through a conditional `tomli` dependency;
+  Python 3.11+ continues to use the standard library.
 
 ### Changed
 
-- Development version advances to `1.16.0.dev0`; released `v1.15.0` is unchanged.
-
-- Clarify that books intended for sale, including self-publishing, require a
-  separate written commercial license. Add visible localized dashboard terms
-  and licensing/contact links; no acceptance dialog or telemetry.
-- Shorten public documentation and fix GitHub math rendering, literal Markdown
-  escapes in HTML blocks, and narrow-screen card spacing.
+- English is the default across CLI, API and local server; automatic language
+  detection requires an explicit choice and import preserves that choice.
+- English onboarding, installation, architecture and methods documentation now
+  separates implemented research workflows from planned provider integrations.
+- Analysis/style JSON schema versions remain 2/4. Corrected numeric outputs require
+  recomputing older analyses before longitudinal comparison. Research stays an
+  experimental family of `*-local/1` contracts.
+- Refreshed public/synthetic screenshots and project presentation; no private
+  manuscripts or real research records are included.
 
 ## [1.15.0] – 2026-09-24
 
@@ -857,7 +864,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.15.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.16.0...HEAD
+[1.16.0]: https://github.com/mfahsold/lixity/compare/v1.15.0...v1.16.0
 [1.15.0]: https://github.com/mfahsold/lixity/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/mfahsold/lixity/compare/v1.13.0...v1.14.0
 [1.13.0]: https://github.com/mfahsold/lixity/compare/v1.12.0...v1.13.0

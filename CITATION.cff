@@ -1,14 +1,14 @@
 cff-version: 1.2.0
 message: "If you use Lixity, please cite it as below."
 title: "Lixity — Quantitative text linguistics, stylometry and self-calibrating style references"
-version: "1.14.0"
-date-released: "2026-09-24"
+version: "1.16.0"
+date-released: "2026-09-26"
 license: LicenseRef-Lixity-Non-Commercial-License-1.0
 repository-code: "https://github.com/mfahsold/lixity"
 url: "https://mfahsold.github.io/lixity/"
 abstract: >-
   Offline, deterministic text-linguistics engine for literary manuscripts:
-  sentence rhythm, length-invariant lexical diversity (HD-D, MTLD, MATTR,
+  sentence rhythm, length-robust lexical diversity (HD-D, MTLD, MATTR,
   Maas, Yule's K), language-calibrated readability, dialogue share,
   paragraph-accurate tense profiles, and a self-calibrating style reference
   (robust median/MAD bands, significance-adjusted z*, Benjamini-Hochberg /

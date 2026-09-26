@@ -295,6 +295,14 @@ def _dominance_label(labels: Mapping[str, str] | None, value: str) -> str:
     return value
 
 
+def _median_display(metrics: CorpusMetrics, language_key: str) -> str:
+    """Render the exact median, falling back to the legacy integer in old payloads."""
+    value = metrics.median_sl_exact
+    if value is None:
+        value = float(metrics.median_sl)
+    return format_num(value, language_key, 0 if value.is_integer() else 1)
+
+
 class ReportFormatter:
     """Formatting of corpus data for terminal, Markdown and JSON."""
 
@@ -374,7 +382,7 @@ class ReportFormatter:
         )
         _row(
             "label_median",
-            f"{m.median_sl} {_t(texts, 'unit_words')}",
+            f"{_median_display(m, language_key)} {_t(texts, 'unit_words')}",
             "t1_median_ref",
             "t1_median_note",
         )
@@ -505,7 +513,7 @@ class ReportFormatter:
             f"| **{_t(texts, 'label_clean_words')}** | **{_n(m.clean_words, 0)} {w}** ({_n(m.clean_chars, 0)} {c}) | {_t(texts, 'md_clean_words')} {chapters_suffix}. |",
             f"| **{_t(texts, 'label_sentences')}** | **{_n(m.total_sentences, 0)} {_t(texts, 'unit_sentences')}** | {_t(texts, 'md_sentences')} |",
             f"| **{_t(texts, 'label_asl')}** | **{_n(m.asl, 2)} {_t(texts, 'unit_words_per_sentence')}** | {_t(texts, 'md_asl')} |",
-            f"| **{_t(texts, 'label_median')}** | **{m.median_sl} {w}** | {_t(texts, 'md_median')} |",
+            f"| **{_t(texts, 'label_median')}** | **{_median_display(m, language_key)} {w}** | {_t(texts, 'md_median')} |",
             f"| **{_t(texts, 'label_std')}** | **{_n(m.std_sl, 2)} {w}** | {_t(texts, 'md_std')} |",
             f"| **{_t(texts, 'label_ttr')}** | **{_n(m.ttr, 4)}** (V = {_n(m.vocab_types, 0)} / N = {_n(m.tokens, 0)}) | {_t(texts, 'md_ttr')} |",
             f"| **{_t(texts, 'label_guiraud')}** | **{_n(m.guiraud_r, 2)}** | {_t(texts, 'md_guiraud')} |",

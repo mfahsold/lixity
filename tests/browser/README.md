@@ -7,6 +7,7 @@ Chromium. Playwright is optional tooling, not a Lixity runtime dependency.
 node tests/browser/style-space.cjs
 node tests/browser/settings.cjs
 node tests/browser/layout.cjs
+node tests/browser/research.cjs
 ```
 
 If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
@@ -14,6 +15,15 @@ its module directory. `PYTHON_BIN` optionally overrides `.venv/bin/python`.
 The test generates a synthetic manuscript, checks canvas interaction, tooltip
 escaping, idle rendering and mobile layout, and prints its temporary screenshot
 directory. It does not read any private manuscript or contact a server.
+
+The research test starts its own disposable loopback server and archive. It checks
+file/folder opening with an empty manuscript, explicit file-picker and drag/drop
+import, cancellation, failed submit recovery, source/dossier detail views,
+claim/evidence/decision creation, unavailable archive state, withdrawal and purge.
+It renders all seven workspace languages at 320 pixels and also checks desktop
+and 390-pixel layouts. It leaves screenshots under `/tmp/lixity-research-ui-*` and
+stops its server on completion. It does not select or alter a running user project.
+Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to use an existing Chromium installation.
 
 The settings test intercepts all requests to a synthetic host. It verifies
 locale-safe values, validation before submission, reset without saving, FDR

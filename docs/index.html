@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Lixity – Quantitative Text Linguistics, Computational Stylometry &amp; Research Workspace</title>
-<meta name="description" content="Lixity turns literary manuscripts into an offline analytical workspace: sentence rhythm, length-invariant lexical diversity (HD-D, Yule's K), paragraph-accurate tense profiling, self-calibrating style references (BH/BY FDR), immutable source archives, and exact citation chains. 100% offline, pure Python, multilingual."/>
+<meta name="description" content="Lixity analyzes Markdown manuscripts offline with sentence rhythm, lexical diversity, tense profiles and within-manuscript style references. Version 1.16.0 includes an experimental explicit-project research archive."/>
 <meta name="keywords" content="computational stylometry, quantitative text linguistics, literary manuscript analysis, research workspace, source criticism, evidence chain, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg FDR, PELT changepoint, macro editing, offline text analytics, digital humanities, editorial software"/>
 <meta name="robots" content="index, follow"/>
 <meta name="author" content="Matthias Fahsold"/>
@@ -22,7 +22,7 @@
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity – Quantitative Text Linguistics, Stylometry &amp; Research Workspace"/>
-<meta property="og:description" content="Self-calibrating style references, tense dynamics, evidence-based research archiving, and publication typography for literary manuscripts – 100% offline, pure Python, 7 languages."/>
+<meta property="og:description" content="Offline manuscript analysis with style references and tense dynamics, plus an experimental explicit-project research archive in v1.16.0."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="1480"/>
@@ -35,7 +35,7 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Research Workspace"/>
-<meta name="twitter:description" content="Self-calibrating style references, tense profiles, evidence-based source archives, and publication-ready typography."/>
+<meta name="twitter:description" content="Offline manuscript analysis with an experimental local research pilot in v1.16.0."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
 
@@ -53,7 +53,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Linguistic & Stylometric Analysis",
       "operatingSystem": "Linux, macOS, Windows",
-      "softwareVersion": "1.15.0",
+      "softwareVersion": "1.16.0",
       "isAccessibleForFree": true,
       "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
       "codeRepository": "https://github.com/mfahsold/lixity",
@@ -86,7 +86,7 @@
           "@type": "ContactPoint",
           "contactType": "Licensing & Commercial Inquiries",
           "email": "mfahsold@googlemail.com",
-          "availableLanguage": ["English", "German"],
+          "availableLanguage": ["English", "German", "French", "Spanish", "Italian", "Portuguese", "Dutch"],
           "areaServed": "Worldwide"
         }
       },
@@ -866,7 +866,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
     <a href="#" class="brand">
       <div class="brand-logo">L</div>
       <span class="brand-name">Lixity</span>
-      <span class="brand-badge">v1.15.0</span>
+      <span class="brand-badge">v1.16.0</span>
     </a>
     <nav class="site-nav">
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md" target="_blank" rel="noopener">Onboarding Guide</a>
@@ -889,13 +889,13 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
   <section class="hero">
     <div class="eyebrow-pill">
       <span class="dot"></span>
-      <span>v1.15.0 Released &middot; 1.16.0 Research Workspace &amp; Native Server</span>
+      <span>v1.16.0 &middot; Experimental Local Research Pilot</span>
     </div>
     <h1 class="hero-title">
-      Quantitative Stylometrics &amp; <span class="gradient">Evidence-Based Research</span>
+      Manuscript Analysis &amp; <span class="gradient">Local Research</span>
     </h1>
     <p class="hero-sub">
-      Lixity turns Markdown manuscripts into an interactive, 100% offline analysis workspace. Compare chapters against the manuscript's intrinsic house style, visualize sentence rhythm and tense friction down to paragraph granularity &ndash; and anchor archival evidence in a tamper-proof citation chain.
+      Lixity turns Markdown manuscripts into an offline analysis workspace. Compare chapters against patterns in the same manuscript and inspect sentence rhythm and tense signals in context. Version 1.16.0 adds a separate experimental local archive for source passages and author notes.
     </p>
     <div class="hero-cta">
       <a class="btn primary" href="https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md" target="_blank" rel="noopener">
@@ -910,11 +910,11 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
     <div class="feature-badge-row">
       <span class="badge-pill">100% Offline &amp; Local</span>
       <span class="badge-pill">Zero Cloud I/O &middot; Confidential</span>
-      <span class="badge-pill">7 Language Profiles (en, de, fr, es, it, pt, nl)</span>
+      <span class="badge-pill">7 UI Languages &middot; Deepest Heuristics in English and German</span>
       <span class="badge-pill">Self-Calibrating Median/MAD Baseline</span>
       <span class="badge-pill">FDR Multiplicity Control (BH/BY)</span>
-      <span class="badge-pill">SQLite FTS5 Full-Text Search</span>
-      <span class="badge-pill">Verifiable Paragraph Citations</span>
+      <span class="badge-pill">Experimental Pilot: SQLite FTS5 Search</span>
+      <span class="badge-pill">Experimental Pilot: Passage Citations</span>
     </div>
   </section>
 
@@ -928,7 +928,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
     <div class="section-header">
       <span class="section-tag">Architecture &amp; Foundations</span>
       <h2 class="section-title">The 5 Core Pillars of Lixity</h2>
-      <p class="section-desc">Lixity unifies mathematically rigorous text linguistics, narratological dramaturgy, typographic publication engineering, and source-critical evidence into a single stateless engine.</p>
+      <p class="section-desc">Lixity combines manuscript analysis and dashboard views. A separate, explicit-project research archive is included experimentally in v1.16.0.</p>
     </div>
 
     <div class="pillars-grid">
@@ -938,7 +938,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
         <div class="pillar-icon">📊</div>
         <h3 class="pillar-title">Stylistics &amp; Corpus Diagnostics</h3>
         <p class="pillar-body">
-          Precise evaluation of macro- and micro-structural sentence architecture: Average Sentence Length (ASL), rhythm Coefficient of Variation (CV), 4 syntactic length tiers (staccato to hypotaxis), 7 language-calibrated readability indices (Flesch, Amstad, LIX), and length-invariant lexical diversity (HD-D, MTLD, Yule's K, Maas a²).
+          Descriptive measures of sentence architecture include Average Sentence Length (ASL), rhythm Coefficient of Variation (CV), four length tiers, language-specific readability formula variants, and lexical diversity indices (HD-D, MTLD, Yule's K, Maas a²). Minimum token counts reduce unstable short-text results; the indices are not length-invariant.
         </p>
         <div class="pillar-tags">
           <span class="pillar-tag">ASL / CV</span>
@@ -1002,7 +1002,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
         <div class="pillar-icon">🔍</div>
         <h3 class="pillar-title">Research &amp; Source Archive</h3>
         <p class="pillar-body">
-          Evidence-based research for historical fiction, investigative journalism, and scholarly non-fiction: tamper-proof UTF-8 source archive with SHA-256 byte integrity, versioned source criticism &amp; cultural context (epoch, location, genre, perspective), fast SQLite FTS5 BM25 search, persistent paragraph citation chains, and strict lifecycle management.
+          The experimental v1.16.0 explicit-project UTF-8 source archive stores byte hashes, user-supplied context, searchable passages, citations, manual claims and authorial decisions. It supports controlled withdrawal and purge; it does not verify historical truth.
         </p>
         <div class="pillar-tags">
           <span class="pillar-tag">SHA-256 Blobs</span>
@@ -1019,7 +1019,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
     <div class="section-header">
       <span class="section-tag">Practical Macro-Editing</span>
       <h2 class="section-title">Macro-Editing Matrix &amp; Editorial Heuristics</h2>
-      <p class="section-desc">Statistical metrics are not an objective quality score or an instruction to rewrite prose; they serve as diagnostic prompts for human macro-editing. Lixity maps statistical signals directly to concrete editorial questions and editing interventions.</p>
+      <p class="section-desc">Statistical metrics are not an objective quality score or an instruction to rewrite prose. They point to passages a human reader may want to inspect. FDR results depend on model assumptions and do not guarantee a fixed false-positive rate for every manuscript.</p>
     </div>
 
     <div class="feature-table-wrapper">
@@ -1037,49 +1037,49 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
             <td><strong>Sentence Rhythm &amp; Length Tiers</strong></td>
             <td><span class="tech-metric">ASL, rhythm CV, staccato (&le;6w), hypotaxis (&gt;25w)</span></td>
             <td class="editorial-callout">
-              <strong>Pacing &amp; Prose Breath:</strong> Verifies whether dialogue or action sequences bounce dynamically or suffocate under monotonous clause stacks. High CV (&gt; 0.70) indicates organic prose.
+              <strong>Pacing:</strong> Sentence-length variation can draw attention to shifts between action, dialogue and reflection.
             </td>
-            <td>Low CV (&lt; 0.40) flags rhythmic monotony (e.g., chains of subject-verb-object main clauses). Sudden hypotaxis spikes stall fast-paced action scenes.</td>
+            <td>Low or high CV and changes in long-sentence frequency invite a read of the passage; neither implies good or bad prose.</td>
           </tr>
           <tr>
-            <td><strong>Length-Invariant Lexical Richness</strong></td>
+            <td><strong>Lexical Diversity</strong></td>
             <td><span class="tech-metric">Hypergeometric HD-D (McCarthy &amp; Jarvis), MTLD, Yule's K</span></td>
             <td class="editorial-callout">
-              <strong>Vocabulary Freshness without Sample-Size Bias:</strong> Unlike raw TTR, HD-D does not penalize or inflate short chapters. Assesses whether vocabulary remains rich across 50,000+ words.
+              <strong>Vocabulary Pattern:</strong> These measures reduce some length sensitivity compared with raw TTR, subject to token floors and corpus context.
             </td>
-            <td>Pronounced drop in HD-D in late chapters exposes author exhaustion. Artificially high HD-D (&gt; 0.90) warns of strained, unnatural thesaurus hunting.</td>
+            <td>A later change may prompt a look at repetition, dialogue mix or topic shifts; it does not identify author fatigue or a quality problem.</td>
           </tr>
           <tr>
             <td><strong>Tense Continuity &amp; Friction</strong></td>
             <td><span class="tech-metric">Present, past, friction rating 0&ndash;3</span></td>
             <td class="editorial-callout">
-              <strong>Timeline &amp; Perspective Discipline:</strong> Detects subconscious drift between retrospective epic past and immediate scenic present at paragraph resolution.
+              <strong>Timeline &amp; Perspective:</strong> Heuristic labels help locate tense changes at paragraph scale.
             </td>
-            <td>Friction score 2&ndash;3 (e.g., past-tense narrative abruptly mixing with unquoted present-tense clauses) requires verification for accidental tense errors.</td>
+            <td>Higher friction may merit a check of quotation, dialogue, flashback or deliberate perspective shifts before treating it as an error.</td>
           </tr>
           <tr>
             <td><strong>Showing vs. Telling &amp; Filters</strong></td>
             <td><span class="tech-metric">Perception verbs, passive voice, nominal style</span></td>
             <td class="editorial-callout">
-              <strong>Sensory Immersion:</strong> Identifies perception filters (<em>saw, heard, felt, noticed</em>) that place an unnecessary buffer between reader and protagonist instead of showing the scene directly.
+              <strong>Register:</strong> Word-pattern counts highlight possible changes in viewpoint or exposition.
             </td>
-            <td>High filter density turns visceral drama into detached police reports. High passive and nominal suffix ratios stifle narrative propulsion.</td>
+            <td>Read passages in context; these constructions can be deliberate and their counts do not measure immersion.</td>
           </tr>
           <tr>
-            <td><strong>FDR Significance Heatmap</strong></td>
+            <td><strong>FDR Heatmap</strong></td>
             <td><span class="tech-metric">Noise-aware z* shrinkage, Benjamini-Hochberg (●), Cliff's &delta;</span></td>
             <td class="editorial-callout">
-              <strong>False-Discovery Protection:</strong> Prevents statistical over-interpretation. A black dot (●) marks strictly confirmed macro departures under false discovery rate control.
+              <strong>Statistical Review:</strong> A dot marks a cell passing the configured FDR procedure under its assumptions. Effect size adds context.
             </td>
-            <td>Only confirmed cells (●) with substantial effect size (Cliff's |&delta;| &gt; 0.47) warrant deep rewrites; mild fluctuations reflect natural artistic variation.</td>
+            <td>Read flagged passages in context; a flag neither proves a defect nor calls for a rewrite. Unflagged passages can still matter artistically.</td>
           </tr>
           <tr>
             <td><strong>Structural &amp; Drift Diagnostics</strong></td>
             <td><span class="tech-metric">PELT changepoints (BIC), Mann-Kendall &tau;, Wasserstein-KS</span></td>
             <td class="editorial-callout">
-              <strong>Narrative Architecture &amp; Regime Shifts:</strong> PELT locates unannounced stylistic regime shifts (e.g., tone rupture at Act II); Mann-Kendall identifies slow, cumulative drift across the manuscript.
+              <strong>Narrative Structure:</strong> These measures locate changes and trends in the selected features.
             </td>
-            <td>Unexpected PELT changepoints uncover author handovers, long writing hiatuses, or tonal inconsistency across character arcs.</td>
+            <td>A change point can prompt review of scene, character or chapter context; it does not identify an author handover or its cause.</td>
           </tr>
           <tr>
             <td><strong>Persistent Work Markers</strong></td>
@@ -1087,7 +1087,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
             <td class="editorial-callout">
               <strong>Traceable Editorial Annotations:</strong> Notes remain anchored right at the target paragraph in Markdown, but vanish cleanly in print (PDF) and digital (EPUB) book exports.
             </td>
-            <td>Content hashes ensure editorial anchors remain intact even as surrounding text shifts during iterative manuscript revision.</td>
+            <td>Content hashes identify the originally marked paragraph; review anchors after manuscript edits.</td>
           </tr>
         </tbody>
       </table>
@@ -1098,7 +1098,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
   <section id="research-workspace">
     <div class="research-container">
       <div class="research-badge-strip">
-        <span class="research-badge">1.16.0.dev0 Research Pilot</span>
+        <span class="research-badge">Experimental Research Pilot in v1.16.0</span>
         <span class="badge-pill">Immutable SHA-256 Storage</span>
         <span class="badge-pill">Cultural Source Criticism</span>
         <span class="badge-pill">Exact Paragraph Citations</span>
@@ -1106,29 +1106,40 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
       </div>
 
       <h2 style="font-family: var(--serif); font-size: 2.1rem; margin: 0 0 0.8rem; color: var(--fg-heading);">
-        Evidence-Based Research &amp; Verifiable Citation Chain
+        Local Research &amp; Traceable Passage Citations
       </h2>
       <p style="color: var(--muted); font-size: 1.05rem; line-height: 1.6; margin: 0 0 1.5rem; max-width: 54rem;">
-        Historical novelists, investigative journalists, and scholarly writers face a monumental challenge: thousands of primary sources, archival records, and witness accounts must remain verifiable across years of drafting. A generic notebook or opaque vector store is insufficient &ndash; Lixity strictly separates <strong>archival evidence</strong>, <strong>cultural context</strong>, and <strong>literary invention</strong>.
+        The experimental research pilot keeps archived source bytes, user-supplied context, manuscript text, and authorial records separate. It helps writers trace a passage behind a claim and record why they made a narrative decision. Sources and claim labels remain material for human review, not certified facts.
       </p>
 
       <div class="research-grid">
         <div class="research-item">
           <h4>1. Immutable Text Archive</h4>
-          <p>Source texts are stored as verbatim UTF-8 bytes with SHA-256 digests. <code>--allow-retention</code> explicitly confirms local storage rights. No silent normalization, zero data loss.</p>
+          <p>Local UTF-8 source bytes are retained with SHA-256 digests after explicit <code>--allow-retention</code> confirmation. Retention does not grant redistribution rights.</p>
         </div>
         <div class="research-item">
           <h4>2. Versioned Source Criticism</h4>
-          <p>Captures composition era, depicted period, location, genre, narrative perspective, and transmission state. Primary archival sources and modern secondary interpretations remain distinct.</p>
+          <p>Stores user-supplied creation period, depicted period, place, genre, perspective, translation status, provenance note, and tags without changing the source bytes.</p>
         </div>
         <div class="research-item">
           <h4>3. Verifiable Passage Citations</h4>
-          <p>Every historical claim links to an immutable paragraph (with deterministic passage UUID) and exact character offsets. Citations remain stable even as manuscript text shifts.</p>
+          <p>Archived passages have UUIDs and Unicode character offsets. Authors may create claims separately, then link a passage as supporting, contradicting, qualifying, or contextual evidence. A link does not prove a claim.</p>
         </div>
         <div class="research-item">
           <h4>4. Governed Lifecycle</h4>
-          <p>Cleanly distinguishes between <strong>Withdrawal</strong> (suppressing contested sources from standard search while preserving citation history) and <strong>Purge</strong> (permanent cryptographic removal with dry-run verification).</p>
+          <p>Withdrawal excludes a source from current search while preserving citation history. Purge removes retained records and unshared source bytes; a dry run previews the effect. Authorial decisions can mark an intentional departure from evidence.</p>
         </div>
+      </div>
+
+      <div class="shot-pair" style="margin-top: 1.5rem;">
+        <figure class="shot">
+          <img src="screenshots/dashboard-research-claims.png" alt="Claims and evidence panel with a synthetic dossier-linked claim and verified passage citation" loading="lazy" decoding="async"/>
+          <figcaption><strong>Claims and evidence:</strong> Inspect full source and dossier details, choose search passages for a claim or dossier, and record links without treating them as verified facts. <a href="screenshots/dashboard-research-claims-mobile.png">Mobile view</a>.</figcaption>
+        </figure>
+        <figure class="shot">
+          <img src="screenshots/dashboard-research-decisions.png" alt="Interactive research panel showing synthetic authorial decisions and associated claims" loading="lazy" decoding="async"/>
+          <figcaption><strong>Authorial decisions:</strong> Record an intentional narrative choice while keeping its relation to evidence visible. <a href="screenshots/dashboard-research-decisions-mobile.png">Mobile view</a>.</figcaption>
+        </figure>
       </div>
 
       <h3 style="margin: 2rem 0 0.6rem; font-size: 1.15rem; color: var(--fg-heading);">Terminal Research Workflow (CLI)</h3>
@@ -1137,7 +1148,7 @@ lixity research init --project ./novel-research --title "1920s Archive" --langua
 
 # 2. Ingest primary source with cultural source criticism and explicit retention
 lixity research ingest --project ./novel-research --file ./sources/police_log_1923.txt \
-  --context '{"genre": "Police Log", "epoch": "1923", "location": "Hamburg", "provenance": "State Archives"}' \
+  --context '{"genre": "Police Log", "created_period": "1923", "place": "Hamburg", "provenance_note": "State Archives"}' \
   --allow-retention
 
 # 3. Build SQLite FTS5 lexical index
@@ -1146,25 +1157,33 @@ lixity research reindex --project ./novel-research
 # 4. Fast lexical full-text search with BM25 ranking
 lixity research search --project ./novel-research --query "dockyard customs" --limit 5
 
-# 5. Resolve immutable passage citation (paragraph, exact offset, source metadata)
+# 5. Resolve a passage citation (paragraph, exact offset, source metadata)
 lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-HERE
 
 # 6. Run linguistic source analysis and generate standalone source dashboard
 lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE
 lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE &gt; source_report.html
 
-# 7. Cross-corpus grounding against manuscript & create dossiers
+# 7. Compare source and manuscript vocabulary; create a dossier
 lixity research compare --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --manuscript ./manuscript.md
-lixity research dossier --project ./novel-research --title "Harbor Evidence" --body "Summary..." --tags "harbor"
+lixity research dossier --project ./novel-research --title "Harbor Evidence" --file "Summary..." --tags "harbor"
 
-# 8. Interactive research dashboard with real-time FTS5 search & visual dossier editor
+# 8. Record a claim, passage relation, and authorial decision
+lixity research claim --project ./novel-research --title "Harbor opening" --statement "The harbor opened in 1923." --confidence hypothetical
+lixity research link-evidence --project ./novel-research --claim-id urn:uuid:CLAIM-UUID-HERE --passage-id urn:uuid:PASSAGE-UUID-HERE --relation supports
+lixity research decision --project ./novel-research --title "Shift opening date" --rationale "Narrative chronology" --claim-id urn:uuid:CLAIM-UUID-HERE --deviation-from-fact
+
+# 9. Open the interactive research dashboard
 lixity serve --research-project ./novel-research --no-project
 
-# 9. Audit repository integrity and snapshot checksums
+# 10. Audit repository integrity and snapshot checksums
 lixity research audit --project ./novel-research</pre>
 
       <p style="margin: 1.2rem 0 0; font-size: 0.88rem; color: var(--subtle);">
-        The research pilot runs 100% locally, offline, and without external Python dependencies. Architecture &amp; RFC design: <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">docs/research/USAGE.md</a> and <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">docs/research/README.md</a>.
+        In the server UI, Open Project loads an existing workspace path and its research archive, including a research-only folder without a manuscript. Manuscript comparison needs a manuscript; importing manuscript text creates a new project. Source and dossier details, direct search-to-evidence actions, and dossier-linked claims are available in the experimental v1.16.0 pilot. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research commands</a> and the broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a>.
+      </p>
+      <p style="margin: 0.6rem 0 0; font-size: 0.88rem; color: var(--subtle);">
+        Source/manuscript comparison uses chapter prose without headings, front matter or the configured appendix. Cross-language lexical scores remain numeric but carry an explicit comparability warning; they are not a factual or linguistic-equivalence verdict.
       </p>
     </div>
   </section>
@@ -1178,7 +1197,7 @@ lixity research audit --project ./novel-research</pre>
     </div>
 
     <!-- 0. Modern Workspace & Project Wizard -->
-    <span class="section-tag">Modern Workspace Management &amp; SOTA Project Wizard</span>
+    <span class="section-tag">Development Workspace &amp; Project Wizard</span>
     <div class="shot-pair">
       <figure class="shot">
         <img src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" width="1152" height="398" loading="eager" fetchpriority="high" decoding="async"/>
@@ -1194,14 +1213,14 @@ lixity research audit --project ./novel-research</pre>
     <span class="section-tag">1. Macro Overview &amp; KPI Strip</span>
     <figure class="shot">
       <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI cards, style heatmap, and tense continuity" width="1480" height="945" loading="lazy" decoding="async"/>
-      <figcaption><strong>From corpus overview to paragraph triage:</strong> Project metrics, sentence length architecture (ASL, staccato, hypotaxis), readability (Flesch, LIX), length-invariant lexical diversity (HD-D, Yule's K, MTLD), and consistency checks in a single, offline HTML report.</figcaption>
+      <figcaption><strong>From corpus overview to paragraph review:</strong> Project metrics, sentence length architecture (ASL, staccato, long sentences), readability formulas (Flesch, LIX), lexical diversity indices (HD-D, Yule's K, MTLD), and within-manuscript comparisons in an offline HTML report.</figcaption>
     </figure>
 
     <!-- 2. Heatmap -->
     <span class="section-tag">2. 16-Feature Departure Matrix</span>
     <figure class="shot">
       <img src="screenshots/dashboard-heatmap.png" alt="Diverging z* heatmap of chapter departures across all 16 linguistic features" width="1702" height="884" loading="lazy" decoding="async"/>
-      <figcaption><strong>Significance-adjusted chapter departures:</strong> Color encodes noise-adjusted z* deviation from the manuscript baseline median. Dots (●) mark cells confirmed statistically significant under Benjamini–Hochberg FDR control (<em>q = 0.05</em>) &ndash; shielded against statistical random noise.</figcaption>
+        <figcaption><strong>Chapter departures:</strong> Color encodes noise-adjusted z* deviation from the manuscript baseline median. Dots (●) mark cells passing the configured Benjamini–Hochberg FDR procedure (<em>q = 0.05</em> by default). The result is a review signal, subject to model assumptions and false positives.</figcaption>
     </figure>
 
     <!-- 3. Paragraph Layer & Work Markers -->
@@ -1279,7 +1298,7 @@ lixity research audit --project ./novel-research</pre>
     <div class="shot-pair">
       <figure class="shot">
         <img src="screenshots/dashboard-research.png" alt="Research Source Dashboard showing source context metadata and stylometric analysis" width="1480" height="960" loading="lazy" decoding="async"/>
-        <figcaption><strong>Verified Source Dashboard:</strong> Archival source version with structured cultural context (Genre, Created Period, Depicted Period, Location, Perspective, Provenance Note) linked directly to the analysis engine.</figcaption>
+        <figcaption><strong>Archived Source Dashboard:</strong> Local source version with user-supplied context (genre, creation and depicted periods, place, perspective and provenance note) linked to the analysis engine. Archive integrity does not certify historical accuracy.</figcaption>
       </figure>
       <figure class="shot">
         <img src="screenshots/cli-research.png" alt="Terminal search and citation resolution showing passage UUIDs and exact character offsets" width="1320" height="780" loading="lazy" decoding="async"/>
@@ -1320,10 +1339,10 @@ lixity serve --port 8765                 # Local development server &amp; intera
 
 # Evidence-based research workspace (pilot)
 lixity research init --project ./research --title "Archival Study"
-lixity research ingest --project ./research log.txt --allow-retention
+lixity research ingest --project ./research --file log.txt --allow-retention
 lixity research search --project ./research --query "warehouse gate"
-lixity research dossier --project ./research --title "Smuggling Dossier" --body "Summary..."
-lixity research compare --project ./research --source &lt;source_id&gt; --manuscript manuscript.md</pre>
+lixity research dossier --project ./research --title "Smuggling Dossier" --file "Summary..."
+lixity research compare --project ./research --source-id &lt;source_id&gt; --manuscript manuscript.md</pre>
     </div>
 
     <div class="card">
@@ -1365,7 +1384,7 @@ dos_res = research_api.create_dossier(proj_path, title="Evidence Brief", body=".
         Install Lixity in an isolated CLI environment on Linux, macOS, or Windows using <a href="https://docs.astral.sh/uv/">uv</a> (or pipx). No account, no API key, and no cloud manuscript uploads required.
       </p>
       <pre class="cmd-block"># Install via uv (recommended; requires Git &amp; uv)
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.16.0"
 
 # Verify installation
 lixity --version

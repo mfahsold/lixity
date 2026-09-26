@@ -13,6 +13,7 @@ import math
 import os
 import sys
 import unittest
+from collections import Counter
 from typing import ClassVar
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -26,6 +27,7 @@ from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
     FingerprintThresholds,
     benjamini_hochberg,
+    dunning_g2,
     jacobi_eigh,
     mad,
     median,
@@ -35,6 +37,28 @@ from lixity.style_fingerprint import (  # noqa: E402
     spearman_rho,
 )
 from lixity.syllables import count_de, count_en  # noqa: E402
+
+
+class TestDunningContingency(unittest.TestCase):
+    def test_complete_separation_counts_term_and_nonterm_cells(self):
+        # Two equiprobable cells each have 50 observations instead of 25.
+        self.assertAlmostEqual(dunning_g2(50, 0, 50, 50), 200 * math.log(2), places=12)
+
+    def test_swapping_corpora_or_term_complement_reverses_direction(self):
+        score = dunning_g2(12, 3, 20, 30)
+        self.assertGreater(score, 0)
+        self.assertAlmostEqual(dunning_g2(3, 12, 30, 20), -score, places=12)
+        self.assertAlmostEqual(dunning_g2(8, 27, 20, 30), -score, places=12)
+
+    def test_equal_rates_and_degenerate_tables_have_no_keyness(self):
+        for counts in ((5, 10, 10, 20), (0, 0, 10, 20), (10, 20, 10, 20), (0, 3, 0, 10)):
+            with self.subTest(counts=counts):
+                self.assertEqual(dunning_g2(*counts), 0.0)
+
+    def test_impossible_observed_counts_are_rejected(self):
+        for counts in ((-1, 1, 10, 10), (11, 1, 10, 10), (1, 11, 10, 10)):
+            with self.subTest(counts=counts), self.assertRaises(ValueError):
+                dunning_g2(*counts)
 
 
 class TestResolveThresholds(unittest.TestCase):
@@ -108,6 +132,24 @@ class TestLixThreshold(unittest.TestCase):
         longer = analyzer.analyze_text("## K\n\nHaus. Hund. Baum. Katze. Fahrrad.\n")
         expected = longer.asl + 1.0 / longer.tokens * 100.0
         self.assertAlmostEqual(longer.lix, expected, places=6)
+
+
+class TestChapterJensenShannon(unittest.TestCase):
+    def test_identical_distributions_have_zero_divergence_with_unequal_lengths(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
+        value, _ = analyzer._jsd_chapter(
+            Counter({"alpha": 90}), Counter({"alpha": 100}), 90, 100
+        )
+        self.assertAlmostEqual(value, 0.0, places=12)
+
+    def test_disjoint_distributions_reach_log_two_with_unequal_lengths(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="de"))
+        value, _ = analyzer._jsd_chapter(
+            Counter({"alpha": 90}), Counter({"alpha": 90, "beta": 10}), 90, 100
+        )
+        self.assertAlmostEqual(value, math.log(2.0), places=12)
+        self.assertGreaterEqual(value, 0.0)
+        self.assertLessEqual(value, math.log(2.0))
 
 
 class TestSyllableRules(unittest.TestCase):

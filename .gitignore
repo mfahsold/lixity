@@ -36,6 +36,7 @@ dmypy.json
 .agents/
 node_modules/
 playwright-report/
+.playwright-cli/
 test-results/
 playwright/.auth/
 *.local.*

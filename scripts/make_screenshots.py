@@ -21,6 +21,7 @@ import shutil
 import subprocess
 import sys
 from pathlib import Path
+from urllib.parse import quote
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 sys.path.insert(0, str(BASE_DIR / "src"))
@@ -311,7 +312,7 @@ def main() -> int:
         shutil.rmtree(research_proj)
     from lixity.research import api as research_api
 
-    research_api.init(research_proj, title="1920s Archival Research", language="en")
+    research_api.init(research_proj, title="Synthetic archival research example", language="en")
     source_text = """## Section 1: Port Authority Log – October 1923
 
 On the cold evening of October 14, 1923, customs officers on the night shift observed suspicious movements near Warehouse 4 in the Free Port zone.
@@ -339,7 +340,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             "depicted_period": "October 1923",
             "place": "Hamburg Free Port Zone",
             "perspective": "Third-Person Administrative",
-            "provenance_note": "Municipal Archives, Record Group 332-1, Item 409",
+            "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
         },
         allow_retention=True,
     )
@@ -353,9 +354,91 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     )
 
     search_res = research_api.search(research_proj, "warehouse customs", limit=1)
-    matches = search_res.get("matches", [])
-    passage_id = matches[0]["passage_id"] if matches else "urn:uuid:sample-passage-uuid"
-    cite_res = research_api.cite(research_proj, passage_id) if matches else {}
+    matches = search_res["hits"]
+    if not matches:
+        raise RuntimeError("Synthetic research source must produce a real passage citation")
+    passage_id = matches[0]["passage_id"]
+    cite_res = research_api.cite(research_proj, passage_id)
+
+    # Read-only browser responses below are serialized from this disposable,
+    # API-created archive. The dashboard itself is the real controls UI.
+    dossier_res = research_api.create_dossier(
+        research_proj,
+        title="Warehouse 4 case notes",
+        body="Synthetic case note: compare the night watchman's account with the customs log.",
+        evidence_ids=[passage_id],
+    )
+    claim_res = research_api.create_claim(
+        research_proj,
+        title="Attempted warehouse entry",
+        statement="The customs log describes an attempted entry at Warehouse 4 in October 1923.",
+        confidence="evidenced",
+        time_period="October 1923",
+        place="Hamburg Free Port Zone",
+        actors=["Night watchman", "Customs officers"],
+        dossier_id=dossier_res["dossier_id"],
+    )
+    research_api.link_evidence(
+        research_proj,
+        claim_id=claim_res["claim_id"],
+        passage_id=passage_id,
+        relation="supports",
+        rationale="The synthetic log describes the attempted entry.",
+    )
+    research_api.record_decision(
+        research_proj,
+        title="Keep the inspection at dawn",
+        rationale="The synthetic source places the transfer at dawn; preserve that sequence.",
+        claim_id=claim_res["claim_id"],
+        impact_on_plot="The crate reaches the customs station in the following scene.",
+    )
+    research_api.record_decision(
+        research_proj,
+        title="Move the discovery scene",
+        rationale="Bring the discovery forward to make the fictional chapter flow clearer.",
+        claim_id=claim_res["claim_id"],
+        deviation_from_fact=True,
+        impact_on_plot="The protagonist arrives before the night watchman calls for help.",
+    )
+    sources_data = research_api.list_sources(research_proj)
+    dossiers_data = research_api.list_dossiers(research_proj)
+    claims_data = research_api.list_claims(research_proj)
+    decisions_data = research_api.list_decisions(research_proj)
+    research_fixture = {
+        "/api/research/status": {
+            "ok": True,
+            "initialized": True,
+            "project_root": "./research-demo",
+            "sources_count": len(sources_data["sources"]),
+            "dossiers_count": len(dossiers_data["dossiers"]),
+            "claims_count": len(claims_data["claims"]),
+            "decisions_count": len(decisions_data["decisions"]),
+        },
+        "/api/research/sources": {"ok": True, **sources_data},
+        "/api/research/dossiers": {"ok": True, **dossiers_data},
+        "/api/research/claims": {"ok": True, **claims_data},
+        "/api/research/claims?claim_id=" + quote(claim_res["claim_id"], safe=""): {
+            "ok": True,
+            **research_api.list_evidence_links(research_proj, claim_id=claim_res["claim_id"]),
+        },
+        "/api/research/decisions": {"ok": True, **decisions_data},
+    }
+    _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
+    research_workspace = _write_html(
+        "dashboard-research-workspace.html",
+        _force_light(render_dashboard(
+            [], [], title="Synthetic archival research", controls=True,
+            labels=resolved.labels, language_name=resolved.name, language_key=resolved.key,
+        )),
+    )
+    for view in ("claims", "decisions"):
+        for suffix, width, height in (("", 1480, 1000), ("-mobile", 390, 1000)):
+            _queue_capture(
+                research_workspace,
+                OUT_DIR / f"dashboard-research-{view}{suffix}.png",
+                width,
+                height,
+            )
 
     cli_research_text = (
         f"$ lixity research search --project ./novel-research --query \"warehouse customs\" --limit 1\n"

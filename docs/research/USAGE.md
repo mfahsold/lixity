@@ -1,12 +1,14 @@
 # Local research pilot
 
-**In local development (target `1.16.0.dev0`), unreleased and not in release `v1.15.0`.**
+**Experimental local pilot included in `v1.16.0`.**
 This pilot archives local UTF-8 text, attaches versioned source criticism context and tags,
 resolves exact citations, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, connects to the analysis pipeline, and performs cross-corpus
-grounding comparisons against manuscripts. It does not implement the entire [RFC](README.md).
+grounding comparisons against manuscripts. Authors can manually record claims,
+passage-to-claim evidence relations and decisions. It does not implement the
+entire [RFC](README.md).
 
-| Available in development | Not implemented |
+| Available in `v1.16.0` | Not implemented |
 | --- | --- |
 | Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
 | SQLite/FTS5 lexical search, instant index rebuild | PDF/OCR, Zotero, network imports, archive exchange |
@@ -17,16 +19,21 @@ grounding comparisons against manuscripts. It does not implement the entire [RFC
 | Integrity audit and snapshot conflict detection | External web scrapers |
 | Source listing & tagging (`lixity research sources`) | Full-document OCR |
 | Dossier creation & inspection (`lixity research dossier`) | |
-| Factual claims & scope (`lixity research claim`) | |
+| User-recorded claims & scope (`lixity research claim`) | |
 | Evidence linking with relations (`lixity research link-evidence`) | |
 | Authorial decisions & fact deviations (`lixity research decision`) | |
 | Cross-corpus linguistic grounding (`lixity research compare`) | |
-| Interactive web research panel in `lixity serve` | |
+| Interactive web research panel in `lixity serve`: source/dossier details, search-to-evidence actions, dossier-linked claims, decisions | |
+
+The server dashboard offers interface text for seven languages. English and
+German have the deepest linguistic analysis heuristics; language selection
+does not translate archived quotations or turn lexical search into semantic
+search. The research CLI's help and errors are English.
 
 ## Try it
 
-Use a development checkout: `make install-dev`, then activate `.venv`.
-Existing release installations do not acquire these commands automatically.
+Install `v1.16.0` or use a development checkout (`make install-dev`), then
+activate `.venv` if applicable.
 Requires SQLite with FTS5; no additional Python dependencies or models.
 
 ```bash
@@ -46,8 +53,8 @@ lixity research cite --project ./novel --passage urn:uuid:YOUR-PASSAGE-UUID
 lixity research analyze --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID
 lixity research dashboard --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID > source.html
 lixity research compare --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --manuscript ./novel.md
-lixity research dossier --project ./novel --title "Reading Room Notes" --body "Opened in 1924." --evidence urn:uuid:YOUR-PASSAGE-UUID
-lixity research dossier --project ./novel --list
+lixity research dossier --project ./novel --title "Reading Room Notes" --file "Notes about a possible 1924 opening." --evidence urn:uuid:YOUR-PASSAGE-UUID
+lixity research dossier --project ./novel
 lixity research claim --project ./novel --title "Archive Founding" --statement "Founded in 1924." --confidence evidenced
 lixity research claim --project ./novel
 lixity research link-evidence --project ./novel --claim-id urn:uuid:YOUR-CLAIM-UUID --passage-id urn:uuid:YOUR-PASSAGE-UUID --relation supports
@@ -70,6 +77,14 @@ capture of each source. Earlier passage IDs still cite their original bytes.
 Repeating a refresh with unchanged bytes is a no-op. Without `--source-id`, each
 ingestion creates a distinct source; identical text is not proof of identity.
 
+`hypothetical`, `evidenced` and `disputed` are user-selected claim labels, not
+computed probabilities or factual verdicts. A claim can exist without an
+evidence link. Links record a `supports`, `contradicts`, `qualifies` or
+`contextualizes` relation to a specific passage; the source and relation still
+need human review. Decisions are separate authorial records, optionally tied
+to a claim. An absent `--deviation-from-fact` flag means no deviation was
+marked, not that the decision was verified as factually faithful.
+
 `--allow-retention` confirms that you may keep a local copy. It does **not** grant
 copyright permission, authorize redistribution or accept a factual claim.
 Passages remain `unreviewed`. All commands emit JSON (except `dashboard` which emits HTML);
@@ -91,7 +106,7 @@ if results["hits"]:
     dossier = api.create_dossier(
         "./novel",
         title="Reading Room Record",
-        body="Verified opening in 1924.",
+        body="Notes about a possible 1924 opening.",
         evidence_ids=[results["hits"][0]["passage_id"]],
         tags=["milestone"],
     )
@@ -129,6 +144,21 @@ The project argument is mandatory. Research never discovers a project from a
 manuscript or reads analysis thresholds. `lixity build` remains unchanged and
 never imports sources or refreshes research indexes.
 
+In the local server, **Open Project** takes a path to an existing
+workspace folder or manuscript file on the server's filesystem and attaches
+that workspace's `research/` archive when present. It also opens an
+initialized research-only folder with no manuscript. Source and record
+management remain available there; manuscript comparison needs a loaded
+manuscript. **New Project → Import
+Manuscript** accepts selected or dropped `.md`/`.txt` text and creates a
+separate project. Use Open Project when returning to an existing research
+archive. Source ingestion in the research panel has its own explicit local
+retention confirmation.
+Select a source or dossier for full details and verified citations. Search
+results can feed a selected passage into **Use for claim** or **Use for dossier**;
+the claim form can also associate an existing dossier. These actions record
+the author's links and notes, not a factual verdict.
+
 ## Storage, lifecycle and recovery
 
 - `research/project.json`: immutable initial project configuration.
@@ -146,7 +176,9 @@ never imports sources or refreshes research indexes.
 - **Purge (`purge`)**: Permanently removes source records, extraction records,
   and passage records from the store and unlinks unshared original blobs. Citations
   for purged passages fail closed with `ResearchError`. Supports `--dry-run` to preview
-  affected records and blobs before deletion.
+  affected records and blobs before deletion. Authored dossiers and evidence
+  links remain for their audit trail, but their purged citations are marked
+  `availability: "purged"` and expose no deleted quotation text.
 
 ### Cross-corpus comparison and evidence grounding
 
@@ -154,12 +186,20 @@ never imports sources or refreshes research indexes.
   manuscript without modifying either document. Computes:
   1. Lexical overlap and alignment (Jaccard similarity, Szymkiewicz–Simpson overlap coefficient,
      top shared terms, exclusive source terms).
-  2. Keyness differential using Dunning's $G^2$ log-likelihood ratio (identifying terms significantly
-     over-represented in the research source vs. the manuscript corpus).
+  2. Signed keyness differential using a full term/nonterm $2\times2$ Dunning
+     $G^2$ log-likelihood table; values can change from development builds.
   3. Register and stylistic contrast (sentence length ASL delta, dialogue ratio delta,
      lexical diversity Guiraud's $R$ and Yule's $K$ deltas, staccato and kaskade deltas).
   4. Per-chapter evidence grounding (mapping occurrences of source vocabulary and top key
      terms across individual manuscript chapters, reporting grounding density per 1,000 words).
+
+Comparison counts and register contrasts use chapter body prose when chapters
+exist, excluding headings, front matter and the configured appendix. If no
+chapter is detected, the remaining text is used after excluding headings and
+the configured appendix. A cross-language comparison still returns numeric
+overlap but sets `meta.lexical_comparable: false` and includes
+`"cross_language_lexical_comparison"` in `comparison_limits`; its lexical
+scores should not be interpreted as directly comparable vocabulary coverage.
 
 Back up the **entire `research/` directory**, preferably while no writer is
 running. Restore it to an explicit project root, run `audit`, then `reindex`.
@@ -190,7 +230,14 @@ NUL bytes is accepted. Search uses literal Unicode words joined with AND; it is
 not stemming, translation or semantic search. BM25 scores are ranks, not truth
 probabilities. Language tags do not translate quotations. Empty queries, stale
 indexes and missing FTS5 support produce errors, not silent fallbacks.
+Source analysis emits `original_language_supplied` when source context names
+an original language; that free-text field alone does not establish historical
+language variety. This replaces the earlier experimental
+`historical_language` limitation code.
 
 Audits check retained records, hashes and citations, not factual accuracy,
-permissions or historical completeness.
+permissions or historical completeness. A citation's `availability` indicates
+whether its source is currently available or withdrawn; a purged passage no
+longer resolves. The web panel displays those evidence states for linked
+passages.
 The [non-commercial licensing rules](../LICENSING.md) still apply.

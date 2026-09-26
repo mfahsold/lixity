@@ -341,8 +341,18 @@ def purge(
     if dry_run:
         new_digest = snapshot.digest
     else:
+        passage_tombstones = [
+            Tombstone(
+                **envelope(snapshot.project.id, actor),
+                target_ref=reference(passage),
+                target_kind="passage",
+                operation="purge",
+                reason=reason,
+            )
+            for passage in passages_to_purge
+        ]
         new_snapshot = repository.commit(
-            [tombstone],
+            [tombstone, *passage_tombstones],
             {},
             snapshot,
             removals=records_to_remove,
@@ -462,6 +472,10 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
         if isinstance(rec, Passage) and rec.extraction_ref.id in extraction_ids
     ]
     passages.sort(key=lambda p: (p.start, p.end))
+    # The detail response exposes verbatim text, so verify it against retained
+    # bytes just as citations do. Snapshot caches each decoded blob by digest.
+    for passage in passages:
+        repository.quote(snapshot, passage)
 
     return {
         "id": source.id,
@@ -534,6 +548,13 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
         for record in snapshot.records.values()
         if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
     }
+    purged_passages = {
+        record.target_ref
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone)
+        and record.operation == "purge"
+        and record.target_kind == "passage"
+    }
 
     dossiers_list = [
         {
@@ -542,6 +563,7 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
             "language": record.language,
             "tags": record.tags,
             "evidence_count": len(record.evidence_refs),
+            "unavailable_evidence_count": sum(ref in purged_passages for ref in record.evidence_refs),
             "created_at": record.created_at,
             "created_by": record.created_by,
             "excerpt": record.body[:300].strip(),
@@ -561,6 +583,15 @@ def _resolve_evidence_citation(repository: Repository, snapshot: Any, ref: Refer
     try:
         return repository.citation(snapshot, snapshot.get(ref, Passage))
     except (ResearchError, KeyError):
+        if ref.id not in snapshot.records and any(
+            isinstance(record, Tombstone)
+            and record.operation == "purge"
+            and record.target_kind == "passage"
+            and record.target_ref == ref
+            for record in snapshot.records.values()
+        ):
+            return {"id": ref.id, "passage_id": ref.id, "availability": "purged",
+                    "error": "Citation unavailable or missing"}
         return {"id": ref.id, "error": "Citation unavailable or missing"}
 
 
@@ -831,6 +862,4 @@ def list_decisions(project: str | Path) -> dict[str, Any]:
         "schema_version": "research-decisions-local/1",
         "decisions": decisions_list,
     }
-
-
 

@@ -34,6 +34,7 @@ from .showing import showing_report
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_dashboard
 from .workspace import discover
+from .workspace_labels import WORKSPACE_LABELS
 
 MAX_PAYLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
 DEFAULT_PORT = 8765
@@ -90,7 +91,7 @@ def collect_artifacts(exports_dir: str) -> list[dict[str, Any]]:
 
 def build_server_dashboard(
     source_input: str | None,
-    language: str = "auto",
+    language: str = "en",
     title: str | None = None,
     thresholds: FingerprintThresholds | None = None,
     controls: bool = True,
@@ -213,9 +214,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
     workspace_root: str = ""
     exports_dir: str = ""
     research_dir: str | None = None
-    language: str = "auto"
+    language: str = "en"
     title: str | None = None
     title_custom: bool = False
+    project_open_overrides: ClassVar[dict[str, Any]] = {}
     thresholds: FingerprintThresholds = FingerprintThresholds()
     dashboard_html: str = ""
     dashboard_info: ClassVar[dict[str, Any]] = {}
@@ -483,6 +485,8 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             z_mild=z_mild,
             z_strong=z_strong,
             fdr_q=fdr_q,
+            fdr_method=self.thresholds.fdr_method,
+            min_chapters=self.thresholds.min_chapters,
             flag_min_severity=flag_min,
             dim_score_threshold=dim_thr,
         )
@@ -549,59 +553,25 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         manuscript_file = target_path / "manuscript.md"
         custom_content = payload.get("content")
         if custom_content and isinstance(custom_content, str) and custom_content.strip():
+            if manuscript_file.exists():
+                self._json({"ok": False, "message": "A manuscript already exists here. Open the project or choose a new import folder."}, 409)
+                return
             try:
                 manuscript_file.write_text(custom_content.strip() + "\n", encoding="utf-8")
             except OSError as exc:
                 self._json({"ok": False, "message": f"Failed to write manuscript: {exc}"}, 500)
                 return
         elif not manuscript_file.exists():
+            template_labels = WORKSPACE_LABELS.get(lang, WORKSPACE_LABELS["en"])
             if template_key == "three_act":
-                if lang == "de":
-                    ms_content = (
-                        f"# {title}\n\n"
-                        "## Erster Akt: Aufbruch\n\n"
-                        "Die gewohnte Welt wird vorgestellt. Ein auslösendes Ereignis stellt die Hauptfiguren vor eine Entscheidung.\n\n"
-                        "## Zweiter Akt: Konfrontation\n\n"
-                        "Herausforderungen, Konflikte und Rückschläge in der neuen Welt. Die Spannung steigt bis zum Wendepunkt.\n\n"
-                        "## Dritter Akt: Rückkehr\n\n"
-                        "Der Höhepunkt, die finale Entscheidung und die Auflösung der offenen Fäden.\n"
-                    )
-                else:
-                    ms_content = (
-                        f"# {title}\n\n"
-                        "## Act I: Departure\n\n"
-                        "The ordinary world is established. An inciting incident forces the protagonist to make a fateful choice.\n\n"
-                        "## Act II: Confrontation\n\n"
-                        "Rising obstacles, conflicts, and trials in an unfamiliar world leading to the crucial midpoint.\n\n"
-                        "## Act III: Resolution\n\n"
-                        "The climax, final showdown, and resolution bringing new perspective and transformation.\n"
-                    )
+                sections = [(f"template_act_{act}", f"template_act_{act}_body") for act in ("one", "two", "three")]
             elif template_key == "research":
-                if lang == "de":
-                    ms_content = (
-                        f"# {title}\n\n"
-                        "## Kapitel 1: Grundlagen und Spuren\n\n"
-                        "Jede Untersuchung beginnt mit einer Frage. Die ersten Quellen geben Zeugnis von Ereignissen, die lange im Verborgenen lagen.\n"
-                    )
-                else:
-                    ms_content = (
-                        f"# {title}\n\n"
-                        "## Chapter 1: Foundations\n\n"
-                        "Every investigation begins with a question. The earliest accounts testify to events long kept in the shadows.\n"
-                    )
+                sections = [("template_research_chapter", "template_research_body")]
             else:
-                if lang == "de":
-                    ms_content = (
-                        f"# {title}\n\n"
-                        "## Kapitel 1\n\n"
-                        "Hier beginnt die Geschichte. Schreiben Sie Ihre ersten Sätze oder fügen Sie Ihr Manuskript ein.\n"
-                    )
-                else:
-                    ms_content = (
-                        f"# {title}\n\n"
-                        "## Chapter 1\n\n"
-                        "The story begins here. Write your opening lines or paste your manuscript content.\n"
-                    )
+                sections = [("template_minimal_chapter", "template_minimal_body")]
+            ms_content = f"# {title}\n\n" + "\n\n".join(
+                f"## {template_labels[heading]}\n\n{template_labels[body]}" for heading, body in sections
+            ) + "\n"
 
             try:
                 manuscript_file.write_text(ms_content, encoding="utf-8")
@@ -611,7 +581,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
         config_file = target_path / "lixity.toml"
         if not config_file.exists():
-            cfg_text = f'[project]\ntitle = "{title}"\nlanguage = "{lang}"\n'
+            cfg_text = f'title = {json.dumps(title, ensure_ascii=False)}\nlanguage = {json.dumps(lang)}\n'
             with contextlib.suppress(OSError):
                 config_file.write_text(cfg_text, encoding="utf-8")
 
@@ -625,7 +595,9 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         self.__class__.research_dir = str(target_path) if (target_path / "research").is_dir() else None
         self.__class__.language = lang
         self.__class__.title = title
-        self.__class__.title_custom = True
+        # A newly created project's title belongs to its config, not to the
+        # server session; a later open must load the next project's title.
+        self.__class__.title_custom = False
         self.refresh()
 
         self._json({
@@ -642,34 +614,80 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._json({"ok": False, "message": "Project or manuscript path is required"}, 400)
             return
 
-        target_path = Path(target_raw).expanduser().resolve()
+        try:
+            target_path = Path(target_raw).expanduser().resolve()
+        except (OSError, RuntimeError) as exc:
+            self._json({"ok": False, "message": f"Invalid project path: {exc}"}, 400)
+            return
         if not target_path.exists():
             self._json({"ok": False, "message": f"Path does not exist: {target_path}"}, 404)
             return
 
         try:
             if target_path.is_file():
+                if target_path.suffix.lower() not in {".md", ".markdown", ".txt"}:
+                    raise ValueError("Unsupported manuscript file type (use .md, .markdown, or .txt)")
                 ws_root = str(target_path.parent)
                 manuscript = str(target_path)
+            elif target_path.is_dir():
+                try:
+                    ws = discover(root=str(target_path))
+                except FileNotFoundError:
+                    if not (target_path / "research").is_dir():
+                        raise
+                    research_api.list_sources(target_path)
+                    ws_root = str(target_path)
+                    manuscript = None
+                else:
+                    ws_root = ws.root
+                    manuscript = ws.manuscript
             else:
-                ws = discover(root=str(target_path))
-                ws_root = ws.root
-                manuscript = ws.manuscript
-        except (FileNotFoundError, ValueError) as exc:
+                raise ValueError("Project path must be a folder or manuscript file")
+
+            if manuscript is not None:
+                # build_server_dashboard historically treats read errors as an
+                # empty manuscript. Opening must fail before switching state.
+                Path(manuscript).read_text(encoding="utf-8")
+
+            settings = load_project_config(ws_root)
+            overrides = self.project_open_overrides
+            same_project = bool(self.workspace_root) and Path(ws_root).resolve() == Path(self.workspace_root).resolve()
+            language = overrides.get("language", settings.get("language", "en"))
+            if language not in LANGUAGE_CHOICES:
+                raise ValueError(f"Unknown project language: {language}")
+            title = overrides.get(
+                "title", self.title if same_project and self.title_custom else settings.get("title")
+            )
+            thresholds = resolve_thresholds(
+                project_config=settings,
+                **{key: overrides[key] for key in (
+                    "z_mild", "z_strong", "fdr_q", "fdr_method", "min_chapters",
+                    "dim_score_threshold", "flag_min_severity",
+                ) if key in overrides},
+            )
+            exports_dir = str(Path(ws_root) / "exports")
+            html, info = build_server_dashboard(
+                manuscript, language=language, title=title, thresholds=thresholds,
+                controls=True, api_base="/api", exports_dir=exports_dir,
+            )
+        except (OSError, UnicodeError, FileNotFoundError, ValueError, TypeError, ResearchError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
             return
 
         self.__class__.workspace_root = ws_root
         self.__class__.source_input = manuscript
-        self.__class__.exports_dir = str(Path(ws_root) / "exports")
+        self.__class__.exports_dir = exports_dir
         self.__class__.research_dir = str(Path(ws_root)) if (Path(ws_root) / "research").is_dir() else None
-        if not self.title_custom:
-            self.__class__.title = None
-        self.refresh()
+        self.__class__.language = language
+        self.__class__.title = title
+        self.__class__.title_custom = "title" in overrides or (same_project and self.title_custom)
+        self.__class__.thresholds = thresholds
+        self.__class__.dashboard_html = html
+        self.__class__.dashboard_info = info
 
         self._json({
             "ok": True,
-            "message": f"Workspace loaded: {Path(manuscript).name}",
+            "message": f"Workspace loaded: {Path(manuscript).name if manuscript else Path(ws_root).name}",
             "workspace_root": ws_root,
             "manuscript": manuscript,
             "reload": True,
@@ -761,10 +779,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         if not root or not (root / "research").is_dir():
             self._json({"ok": False, "message": "Research project not initialized"}, 404)
             return
-        source_id = None
-        if "?" in self.path:
-            params = dict(part.split("=", 1) for part in self.path.split("?", 1)[1].split("&") if "=" in part)
-            source_id = params.get("id")
+        source_id = parse_qs(urlparse(self.path).query).get("id", [None])[0]
         try:
             if source_id:
                 data = research_api.get_source(root, source_id)
@@ -779,10 +794,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         if not root or not (root / "research").is_dir():
             self._json({"ok": False, "message": "Research project not initialized"}, 404)
             return
-        dossier_id = None
-        if "?" in self.path:
-            params = dict(part.split("=", 1) for part in self.path.split("?", 1)[1].split("&") if "=" in part)
-            dossier_id = params.get("id")
+        dossier_id = parse_qs(urlparse(self.path).query).get("id", [None])[0]
         try:
             if dossier_id:
                 data = research_api.get_dossier(root, dossier_id)
@@ -944,7 +956,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._json({"ok": False, "message": "No manuscript loaded or specified for comparison"}, 400)
             return
         try:
-            res = research_api.compare_source(root, source_id, manuscript)
+            res = research_api.compare_source(root, source_id, manuscript, language=self.language)
             self._json({"ok": True, **res})
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
@@ -1054,12 +1066,13 @@ def run_server(
     target_path: str | None = None,
     host: str = DEFAULT_HOST,
     port: int = DEFAULT_PORT,
-    language: str = "auto",
+    language: str = "en",
     title: str | None = None,
     no_project: bool = False,
     thresholds: FingerprintThresholds | None = None,
     open_browser: bool = False,
     research_dir: str | None = None,
+    project_open_overrides: Mapping[str, Any] | None = None,
 ) -> None:
     """Runs the Lixity dashboard development server on loopback."""
     if host not in {"127.0.0.1", "localhost"}:
@@ -1103,7 +1116,11 @@ def run_server(
     LixityServerHandler.research_dir = research_dir
     LixityServerHandler.language = language
     LixityServerHandler.title = title
-    LixityServerHandler.title_custom = title is not None
+    overrides = dict(project_open_overrides or {})
+    if project_open_overrides is None and title is not None:
+        overrides["title"] = title
+    LixityServerHandler.title_custom = "title" in overrides
+    LixityServerHandler.project_open_overrides = overrides
     LixityServerHandler.thresholds = thresholds or FingerprintThresholds()
     LixityServerHandler.refresh()
 

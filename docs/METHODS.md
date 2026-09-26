@@ -18,6 +18,12 @@ median/MAD, FDR correction or eigendecomposition. JSON numbers remain numeric;
 locale-specific decimal separators are applied only when rendering reports.
 See [LOCALIZATION.md](LOCALIZATION.md) for supported profiles and limitations.
 
+Token, syllable, dialogue and sentence measures use prose with Markdown headings
+removed. Chapter labels remain available for navigation; changing a title does
+not change its prose readability. For even sentence counts, `median_sl_exact`
+averages the two middle lengths. The older integer `median_sl` retains its upper
+middle value for JSON compatibility; reports use the exact median.
+
 The 3D dashboard displays up to three derived dimension scores. A point is
 flagged when a completed dimension score reaches the configured absolute
 cutoff on any displayed axis. All feature contributions must be summed before
@@ -158,6 +164,15 @@ Token-level blocks (`cooccurrence`, `keyness`) are computed by
 CLI `style` / `build` / `dashboard`). `StyleFingerprint.from_metrics`
 alone still yields the metric-derived keys only.
 
+Keyness uses the full term/non-term × corpus A/B contingency table. Expected
+counts are row-total × column-total / grand-total, and
+$G^2 = 2\sum O\ln(O/E)$, with zero observed cells contributing zero. Lixity adds
+a direction sign for over-representation in A. This follows the binomial
+likelihood-ratio formulation in [Dunning (1993), §5.3](https://aclanthology.org/J93-1003.pdf).
+Version 1.16.0 includes the non-term cells previously omitted from this calculation;
+recompute older keyness values before comparison. A signed ranking is not a
+multiple-testing-adjusted significance claim.
+
 The passport `meta` block reports `schema_version: 4`, `min_chapters` and
 `flag_min_severity` alongside the z\*/FDR thresholds; `passport_text` adds a
 “Structural diagnostics” line when any feature has a changepoint, significant
@@ -242,9 +257,18 @@ language: $\mathrm{LIX} = \mathrm{ASL} + 100 \cdot \frac{\text{long words}}{\tex
 ## 8. Jensen–Shannon divergence (chapter ↔ rest)
 
 $JSD(P \| Q) = \tfrac12 D_{\mathrm{KL}}(P \| M) + \tfrac12 D_{\mathrm{KL}}(Q \| M)$
-with $M = \tfrac12(P+Q)$ (base-2, so $\in [0,1]$). Driver words are ranked by
-their contribution (using terms of the form $\tfrac12\sum_x p_m(x)\log\frac{p_m(x)}{q(x)}$)
-— interpretable, not a black-box embedding.
+with $M = \tfrac12(P+Q)$. The implementation uses natural logarithms, so the
+divergence is in $[0,\ln 2]$ nats. It is zero for identical distributions,
+regardless of their token counts. Driver words present in the chapter are ranked
+by their additive contribution to this expression, excluding function words.
+Types absent from the chapter contribute half their rest-corpus probability
+times $\ln 2$; their total probability is calculated from the observed rest
+distribution. No square root or base-2 rescaling is applied.
+
+Version 1.16.0 corrects the absent-type probability calculation, which could
+previously produce negative divergence. Recompute older metrics before comparing
+chapter profiles across this release. JSD describes lexical difference, not
+quality, attribution, or historical accuracy.
 
 ## 9. Paragraph layers (within-chapter colouring)
 

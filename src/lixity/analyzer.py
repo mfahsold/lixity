@@ -54,6 +54,7 @@ class SentenceStats:
     total: int
     asl: float
     median: int
+    median_exact: float
     std: float
     cv: float
     distribution: SentenceDistribution
@@ -147,7 +148,7 @@ class CorpusAnalyzer:
         top_n: int = 5,
     ) -> tuple[float, list[str]]:
         """
-        Jensen-Shannon distance of the chapter's word distribution to the rest
+        Jensen-Shannon divergence of the chapter's word distribution to the rest
         of the corpus (leave-one-out, so small chapters are not self-biased).
 
         Returns (jsd, top driver words): contributions are additive per type,
@@ -155,7 +156,7 @@ class CorpusAnalyzer:
 
         Only the chapter's own vocabulary is iterated. Types the chapter does
         not contain contribute exactly ``q * ln(2) / 2`` each, so their total
-        is ``ln(2)/2 * (1 - n_chapter/rest)`` in closed form – an O(chapter
+        is ``ln(2)/2 * (1 - covered_rest_mass)`` in closed form – an O(chapter
         types) computation instead of O(corpus types).
         """
         rest = n_corpus - n_chapter
@@ -163,9 +164,11 @@ class CorpusAnalyzer:
             return 0.0, []
         jsd = 0.0
         contribs: dict[str, float] = {}
+        covered_rest_mass = 0.0
         for w in sorted(chapter_counter):  # deterministic order: bit-identical across runs
             p = chapter_counter[w] / n_chapter
             q = (corpus_counter[w] - chapter_counter[w]) / rest
+            covered_rest_mass += q
             m = 0.5 * (p + q)
             term = p * math.log(p / m)
             if q > 0.0:
@@ -174,7 +177,7 @@ class CorpusAnalyzer:
             contribs[w] = contrib
             jsd += contrib
         # Types absent from the chapter: p = 0, m = q/2 -> contribution q*ln(2)/2.
-        jsd += 0.5 * math.log(2.0) * (1.0 - n_chapter / rest)
+        jsd += 0.5 * math.log(2.0) * max(0.0, 1.0 - covered_rest_mass)
         top = [
             w
             for w, _ in sorted(contribs.items(), key=lambda kv: kv[1], reverse=True)
@@ -204,6 +207,11 @@ class CorpusAnalyzer:
         asl = sum(lengths) / total if total else 0.0
         sorted_lengths = sorted(lengths)
         median_sl = sorted_lengths[total // 2] if total else 0
+        median_exact = (
+            (sorted_lengths[(total - 1) // 2] + sorted_lengths[total // 2]) / 2.0
+            if total
+            else 0.0
+        )
         variance = sum((x - asl) ** 2 for x in lengths) / total if total else 0.0
         std = math.sqrt(variance)
         short = sum(1 for x in lengths if x <= 6)
@@ -218,6 +226,7 @@ class CorpusAnalyzer:
             total=total,
             asl=asl,
             median=median_sl,
+            median_exact=median_exact,
             std=std,
             cv=(std / asl) if asl else 0.0,
             distribution=SentenceDistribution(
@@ -265,16 +274,14 @@ class CorpusAnalyzer:
         self, num: int, title: str, body: str, lw_min: int
     ) -> tuple[ChapterMetrics | None, list[str]]:
         """Per-chapter metrics (style features, uncertainty, tense, JSD input)."""
-        cl_b = _RE_HTML_COMMENT.sub("", body)
+        cl_b = _RE_HEADING_LINE.sub("", _RE_HTML_COMMENT.sub("", body))
         c_words = self._word_re.findall(cl_b)
         if not c_words:
             return None, []
 
         n_cw = len(c_words)
         c_lower = [w.lower() for w in c_words]
-        c_sentences = [
-            s for s in split_sentences(cl_b, self.config.language) if not s.startswith("#")
-        ]
+        c_sentences = split_sentences(cl_b, self.config.language)
         stats = self._sentence_stats(c_sentences)
 
         c_dial = self._dialogue_re.findall(cl_b)
@@ -388,14 +395,15 @@ class CorpusAnalyzer:
             main_text = full_text
         cleaned_full = _RE_HTML_COMMENT.sub("", full_text)
         cleaned_main = _RE_HTML_COMMENT.sub("", main_text)
+        prose_main = _RE_HEADING_LINE.sub("", cleaned_main)
 
         raw_words = len(cleaned_full.split())
-        clean_words = len(cleaned_main.split())
+        clean_words = len(prose_main.split())
         raw_chars = len(cleaned_full)
-        clean_chars = len(cleaned_main)
+        clean_chars = len(prose_main)
 
         # 2. Tokenisation
-        tokens = self._word_re.findall(cleaned_main)
+        tokens = self._word_re.findall(prose_main)
         n_tokens = len(tokens)
         lower_tokens = [t.lower() for t in tokens]
         v_types = len(set(lower_tokens))
@@ -405,9 +413,8 @@ class CorpusAnalyzer:
         ttr = v_types / n_tokens if n_tokens else 0.0
         guiraud_r = v_types / math.sqrt(n_tokens) if n_tokens else 0.0
 
-        # 4. Sentence-length architecture (headings removed: no word carry-over)
-        prose_for_sents = _RE_HEADING_LINE.sub("", cleaned_main)
-        sentences = split_sentences(prose_for_sents, self.config.language)
+        # 4. Sentence-length architecture on the same prose as other metrics.
+        sentences = split_sentences(prose_main, self.config.language)
         stats = self._sentence_stats(sentences)
         start_entropy, first_person_start_rate, _entropy_se = self._starter_stats(sentences)
 
@@ -421,25 +428,25 @@ class CorpusAnalyzer:
         lix = stats.asl + pct_long_words
 
         # 6. Dialogue ratio
-        dialog_matches = self._dialogue_re.findall(cleaned_main)
+        dialog_matches = self._dialogue_re.findall(prose_main)
         dialog_words = sum(len(m.split()) for m in dialog_matches)
         dialog_ratio = (dialog_words / clean_words) * 100.0 if clean_words else 0.0
 
         # 7. Paragraph economy, punctuation, signals
-        total_paras, avg_para_len, single_line_paras = self._paragraph_stats(cleaned_main)
-        punctuation = self._punctuation_profile(cleaned_main)
+        total_paras, avg_para_len, single_line_paras = self._paragraph_stats(prose_main)
+        punctuation = self._punctuation_profile(prose_main)
         signal_counts = {
-            name: len(re.findall(pat, cleaned_main, re.IGNORECASE))
+            name: len(re.findall(pat, prose_main, re.IGNORECASE))
             for name, pat in self.lang.signal_keywords.items()
         }
-        filter_cnt = len(self._filter_re.findall(cleaned_main))
+        filter_cnt = len(self._filter_re.findall(prose_main))
 
         # 8. Style densities (per 1,000 tokens, length-comparable)
-        passive_density = self._density(len(self._passive_re.findall(cleaned_main)), n_tokens)
+        passive_density = self._density(len(self._passive_re.findall(prose_main)), n_tokens)
         nominalization_density = self._density(
-            len(self._nominal_re.findall(cleaned_main)), n_tokens
+            len(self._nominal_re.findall(prose_main)), n_tokens
         )
-        adjective_density = self._density(len(self._adjective_re.findall(cleaned_main)), n_tokens)
+        adjective_density = self._density(len(self._adjective_re.findall(prose_main)), n_tokens)
         modal_density = self._density(sum(1 for t in lower_tokens if t in self._modals), n_tokens)
         filter_density = self._density(filter_cnt, n_tokens)
 
@@ -473,6 +480,7 @@ class CorpusAnalyzer:
             total_sentences=stats.total,
             asl=stats.asl,
             median_sl=stats.median,
+            median_sl_exact=stats.median_exact,
             std_sl=stats.std,
             sentence_dist=stats.distribution,
             asw=asw,

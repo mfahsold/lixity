@@ -158,7 +158,7 @@ def analyze(
     if version.context.is_translation is True:
         limitations.append("translation")
     if version.context.original_language:
-        limitations.append("historical_language")
+        limitations.append("original_language_supplied")
 
     estimable = sum(
         1
@@ -290,23 +290,40 @@ def compare_source_to_manuscript(
     ms_resolved = resolve_language(ms_config, sample_text=ms_text)
     ms_config = ms_config.model_copy(update={"language": ms_resolved.key})
 
+    # The comparison uses chapter prose where chapters exist. This is the same
+    # body segmentation used for the chapter trace, so titles, front matter,
+    # and the configured scholarly appendix cannot inflate lexical overlap.
+    def comparison_prose(text: str, config: CorpusConfig) -> tuple[list[tuple[int, str, str]], str]:
+        first_chapter = re.search(config.chapter_regex, text)
+        chapters = split_chapters(text[first_chapter.start():], config) if first_chapter else []
+        if chapters:
+            bodies = [body for _, _, body in chapters]
+        else:
+            main_text = text.split(config.appendix_marker, 1)[0] if config.appendix_marker else text
+            bodies = [main_text]
+        prose = "\n\n".join(re.sub(r"(?m)^\s{0,3}#{1,6}\s+.*$", "", body) for body in bodies)
+        return chapters, prose
+
+    _, source_prose = comparison_prose(source_text, source_config)
+    ms_chapters, ms_prose = comparison_prose(ms_text, ms_config)
+
     # Core analysis for sentence / register statistics
     source_analyzer = CorpusAnalyzer(source_config)
-    source_metrics = source_analyzer.analyze_text(source_text)
+    source_metrics = source_analyzer.analyze_text(source_prose)
 
     ms_analyzer = CorpusAnalyzer(ms_config)
-    ms_metrics = ms_analyzer.analyze_text(ms_text)
+    ms_metrics = ms_analyzer.analyze_text(ms_prose)
 
     # Word extraction & blacklist filtering
     source_word_re = re.compile(source_resolved.word_regex)
     source_blacklist = source_resolved.function_words | source_resolved.stopwords
-    source_tokens = [w.lower() for w in source_word_re.findall(strip_inline_markup(source_text))]
+    source_tokens = [w.lower() for w in source_word_re.findall(strip_inline_markup(source_prose))]
     source_content = [w for w in source_tokens if len(w) > 1 and w not in source_blacklist]
     source_counter = Counter(source_content)
 
     ms_word_re = re.compile(ms_resolved.word_regex)
     ms_blacklist = ms_resolved.function_words | ms_resolved.stopwords
-    ms_tokens = [w.lower() for w in ms_word_re.findall(strip_inline_markup(ms_text))]
+    ms_tokens = [w.lower() for w in ms_word_re.findall(strip_inline_markup(ms_prose))]
     ms_content = [w for w in ms_tokens if len(w) > 1 and w not in ms_blacklist]
     ms_counter = Counter(ms_content)
 
@@ -400,15 +417,14 @@ def compare_source_to_manuscript(
     }
 
     # Chapter Grounding / Evidence Trace
-    ms_chapters = split_chapters(ms_text, ms_config)
     if not ms_chapters:
-        ms_chapters = [(1, "Document", ms_text)]
+        ms_chapters = [(1, "Document", ms_prose)]
 
     source_key_set = {item["word"] for item in source_key_terms[:10]}
     chapter_grounding: list[dict[str, Any]] = []
 
     for ch_num, ch_title, ch_body in ms_chapters:
-        clean_body = strip_inline_markup(ch_body)
+        clean_body = strip_inline_markup(re.sub(r"(?m)^\s{0,3}#{1,6}\s+.*$", "", ch_body))
         ch_tokens = [w.lower() for w in ms_word_re.findall(clean_body)]
         ch_content = [w for w in ch_tokens if len(w) > 1 and w not in ms_blacklist]
         ch_counter = Counter(ch_content)
@@ -445,7 +461,11 @@ def compare_source_to_manuscript(
             "version": __version__,
             "source_language": source_resolved.key,
             "manuscript_language": ms_resolved.key,
+            "lexical_comparable": source_resolved.key == ms_resolved.key,
         },
+        "comparison_limits": (
+            [] if source_resolved.key == ms_resolved.key else ["cross_language_lexical_comparison"]
+        ),
         "provenance": {
             "project_id": snapshot.project.id,
             "source_id": source.id,

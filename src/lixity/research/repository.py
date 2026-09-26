@@ -202,6 +202,13 @@ class Repository:
         project = snapshot.project
         sequences: set[tuple[str, int]] = set()
         descriptors: dict[str, Blob] = {}
+        purged_passages = {
+            record.target_ref
+            for record in snapshot.records.values()
+            if isinstance(record, Tombstone)
+            and record.operation == "purge"
+            and record.target_kind == "passage"
+        }
         for record in snapshot.records.values():
             if record.project_id != project.id:
                 raise ResearchError("Cross-project reference rejected")
@@ -226,13 +233,15 @@ class Repository:
                 snapshot.get(record.extraction_ref, Extraction)
             elif isinstance(record, Dossier):
                 for ref in record.evidence_refs:
-                    snapshot.get(ref, Passage)
+                    if ref not in purged_passages or ref.id in snapshot.records:
+                        snapshot.get(ref, Passage)
             elif isinstance(record, Claim):
                 if record.dossier_ref:
                     snapshot.get(record.dossier_ref, Dossier)
             elif isinstance(record, EvidenceLink):
                 snapshot.get(record.claim_ref, Claim)
-                snapshot.get(record.passage_ref, Passage)
+                if record.passage_ref not in purged_passages or record.passage_ref.id in snapshot.records:
+                    snapshot.get(record.passage_ref, Passage)
             elif isinstance(record, Decision):
                 if record.claim_ref:
                     snapshot.get(record.claim_ref, Claim)
@@ -287,6 +296,16 @@ class Repository:
                                 parent=current.digest if current else None, entries=entries)
             manifest_bytes = encode(manifest)
             candidate = Snapshot(digest(manifest_bytes), manifest, records)
+            for record in additions:
+                if isinstance(record, Dossier):
+                    for ref in record.evidence_refs:
+                        candidate.get(ref, Passage)
+                elif isinstance(record, EvidenceLink):
+                    candidate.get(record.passage_ref, Passage)
+                elif isinstance(record, Tombstone) and record.operation == "purge" and record.target_kind == "passage":
+                    if current is None or not removals or record.target_ref.id not in removals:
+                        raise ResearchError("Passage purge tombstone requires an accepted passage removal")
+                    current.get(record.target_ref, Passage)
             self.validate(candidate)
             for checksum, content in blobs.items():
                 if digest(content) != checksum:

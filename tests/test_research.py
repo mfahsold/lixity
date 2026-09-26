@@ -85,13 +85,19 @@ class TestResearch(unittest.TestCase):
         self.assertTrue(api.audit(self.project)["ok"])
 
     def test_tampered_source_fails_citation_and_audit(self):
-        self.ingest()
+        source = self.ingest()
+        self.assertEqual(
+            api.get_source(self.project, source["source_id"])["passages"][1]["verbatim"],
+            "The reading room opened in 1924.",
+        )
         api.reindex(self.project)
         passage = api.search(self.project, "1924")["hits"][0]["passage_id"]
         blob = next((self.project / "research" / "blobs").rglob("*"))
         blob.write_bytes(b"tampered")
         with self.assertRaises(ResearchError):
             api.cite(self.project, passage)
+        with self.assertRaises(ResearchError):
+            api.get_source(self.project, source["source_id"])
         self.assertFalse(api.audit(self.project)["ok"])
 
     def test_catalogue_is_rebuildable_and_literal_query_is_safe(self):
@@ -345,5 +351,4 @@ class TestResearch(unittest.TestCase):
                 claim_id="urn:uuid:00000000-0000-4000-8000-000000000000",
                 passage_id=passage_id,
             )
-
 

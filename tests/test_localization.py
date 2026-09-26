@@ -2,10 +2,13 @@
 
 import io
 import json
+import re
 import sys
 import tempfile
 import unittest
 from contextlib import redirect_stdout
+from html import escape
+from html.parser import HTMLParser
 from pathlib import Path
 from unittest.mock import patch
 
@@ -15,6 +18,18 @@ from lixity.cli import main
 from lixity.format import num, pct
 from lixity.language import LANGUAGE_PROFILES
 from lixity.models import CorpusConfig
+from lixity.ui.dashboard import render_dashboard
+from lixity.workspace_labels import WORKSPACE_LABELS
+
+
+class _DashboardBodyParser(HTMLParser):
+    def __init__(self):
+        super().__init__()
+        self.labels = {}
+
+    def handle_starttag(self, tag, attrs):
+        if tag == "body":
+            self.labels = json.loads(dict(attrs)["data-ui-labels"])
 
 
 class TestLocalization(unittest.TestCase):
@@ -48,12 +63,47 @@ class TestLocalization(unittest.TestCase):
         self.assertEqual(api.analyze(text, language="auto")["meta"]["language"], "de")
 
     def test_all_supported_profiles_have_complete_resource_keys(self):
-        for name in ("LABELS", "METRIC_LABELS", "HELP_TEXTS", "GROUP_LABELS", "LAYER_LABELS", "UI_LABELS", "IDENTITY_LABELS", "GUIDANCE_LABELS"):
-            table = getattr(language_data, name)
+        for name in ("LABELS", "METRIC_LABELS", "HELP_TEXTS", "GROUP_LABELS", "LAYER_LABELS", "UI_LABELS", "IDENTITY_LABELS", "GUIDANCE_LABELS", "WORKSPACE_LABELS"):
+            table = WORKSPACE_LABELS if name == "WORKSPACE_LABELS" else getattr(language_data, name)
             for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
                 with self.subTest(resource=name, language=language):
                     self.assertFalse(set(table["en"]) - set(table[language]))
                     self.assertTrue(all(table[language][key].strip() for key in table["en"]))
+
+    def test_workspace_and_research_controls_follow_all_seven_locales(self):
+        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+            with self.subTest(language=language):
+                labels = LANGUAGE_PROFILES[language].labels
+                rendered = render_dashboard([], [], controls=True, labels=labels, language_key=language)
+                parser = _DashboardBodyParser()
+                parser.feed(rendered)
+                self.assertEqual(
+                    {key: parser.labels[key] for key in WORKSPACE_LABELS[language]},
+                    WORKSPACE_LABELS[language],
+                )
+                self.assertEqual(parser.labels["ctx_provenance_note"], labels["ctx_provenance_note"])
+                for key in ("research_tab_claims", "wizard_import_tab", "wizard_open_note"):
+                    self.assertTrue(escape(labels[key]) in rendered, key)
+                self.assertIn('value="supports"', rendered)
+                self.assertNotIn("lixity.json", rendered)
+
+    def test_workspace_labels_are_escaped_in_html_and_json_attribute(self):
+        labels = dict(LANGUAGE_PROFILES["en"].labels)
+        labels["research_hint"] = '"<img src=x onerror=alert(1)>'
+        rendered = render_dashboard([], [], controls=True, labels=labels)
+        parser = _DashboardBodyParser()
+        parser.feed(rendered)
+        self.assertEqual(parser.labels["research_hint"], labels["research_hint"])
+        self.assertNotIn('<img src=x onerror=alert(1)>', rendered)
+
+    def test_workspace_template_placeholders_match_across_locales(self):
+        def fields(value):
+            return set(re.findall(r"\{([a-z_]+)\}", value))
+
+        for key, english in WORKSPACE_LABELS["en"].items():
+            for language in ("de", "fr", "es", "it", "pt", "nl"):
+                with self.subTest(key=key, language=language):
+                    self.assertEqual(fields(WORKSPACE_LABELS[language][key]), fields(english))
 
     def test_readability_dispatch_uses_language_specific_coefficients(self):
         expected = {"en": 27.485, "de": 53.0, "fr": 49.65, "es": 72.135,

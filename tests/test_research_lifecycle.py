@@ -26,6 +26,7 @@ class TestResearchLifecycle(unittest.TestCase):
 
     def test_withdraw_source_version_marks_citations_and_excludes_from_search(self):
         source = self.ingest()
+        self.assertEqual(len(api.get_source(self.project, source["source_id"])["passages"]), 2)
         api.reindex(self.project)
         search_before = api.search(self.project, "Lesesaal")
         self.assertEqual(len(search_before["hits"]), 1)
@@ -53,6 +54,8 @@ class TestResearchLifecycle(unittest.TestCase):
         cite_after = api.cite(self.project, passage_id)
         self.assertEqual(cite_after["availability"], "withdrawn")
         self.assertEqual(cite_after["verbatim"], "Der Lesesaal war gut besucht.")
+        with self.assertRaises(ResearchError):
+            api.get_source(self.project, source["source_id"])
 
         # Analysis fails closed for withdrawn sources
         with self.assertRaises(ResearchError):
@@ -101,6 +104,88 @@ class TestResearchLifecycle(unittest.TestCase):
         self.assertTrue(audit["ok"])
         # Contains Project + Tombstone
         self.assertTrue(any(isinstance(r, Tombstone) for r in repo.snapshot().records.values()))
+
+    def test_purge_retains_authored_records_with_unavailable_evidence(self):
+        source = self.ingest()
+        passage_id = api.get_source(self.project, source["source_id"])["passages"][0]["id"]
+        dossier = api.create_dossier(
+            self.project, "Reading Room File", "The opening year is noted.",
+            evidence_ids=[passage_id],
+        )
+        claim = api.create_claim(
+            self.project, title="Opening year", statement="The room opened in 1924.",
+            confidence="evidenced", dossier_id=dossier["dossier_id"],
+        )
+        link = api.link_evidence(
+            self.project, claim_id=claim["claim_id"], passage_id=passage_id,
+            relation="supports",
+        )
+        decision = api.record_decision(
+            self.project, title="Move opening date", rationale="Plot timing",
+            claim_id=claim["claim_id"], deviation_from_fact=True,
+        )
+        repository = Repository(self.project)
+        before_purge = repository.snapshot()
+        sha = before_purge.records[source["source_version_id"]].blob.sha256
+        blob_path = repository.safe(repository.data / "blobs" / sha)
+        passage_entry = next(entry for entry in before_purge.manifest.entries if entry.ref.id == passage_id)
+        passage_path = repository.record_path(passage_entry)
+
+        api.withdraw(self.project, source["source_id"], reason="Source withdrawn")
+        self.assertEqual(api.get_dossier(self.project, dossier["dossier_id"])["citations"][0]["availability"],
+                         "withdrawn")
+
+        result = api.purge(self.project, source["source_id"], reason="Remove retained source")
+        self.assertEqual(result["purged_passages"], 2)
+        self.assertIn(sha, result["deleted_blobs"])
+        self.assertFalse(blob_path.exists())
+        self.assertFalse(passage_path.exists())
+        self.assertTrue(api.audit(self.project)["ok"])
+        with self.assertRaises(ResearchError):
+            api.cite(self.project, passage_id)
+
+        listed_dossier = api.list_dossiers(self.project)["dossiers"][0]
+        self.assertEqual(listed_dossier["id"], dossier["dossier_id"])
+        self.assertEqual(listed_dossier["unavailable_evidence_count"], 1)
+        resolved = api.get_dossier(self.project, dossier["dossier_id"])["citations"][0]
+        self.assertEqual(resolved["passage_id"], passage_id)
+        self.assertEqual(resolved["availability"], "purged")
+        self.assertNotIn("verbatim", resolved)
+
+        listed_link = api.list_evidence_links(self.project, claim_id=claim["claim_id"])["evidence_links"][0]
+        self.assertEqual(listed_link["id"], link["evidence_link_id"])
+        self.assertEqual(listed_link["citation"]["passage_id"], passage_id)
+        self.assertEqual(listed_link["citation"]["availability"], "purged")
+        self.assertNotIn("verbatim", listed_link["citation"])
+        self.assertEqual(api.list_claims(self.project)["claims"][0]["id"], claim["claim_id"])
+        self.assertEqual(api.list_decisions(self.project)["decisions"][0]["id"], decision["decision_id"])
+        self.assertEqual(self.file.read_bytes(), self.text.encode())
+        with self.assertRaises(ResearchError):
+            api.create_dossier(
+                self.project, "Invalid new file", "Cannot cite purged text.",
+                evidence_ids=[passage_id],
+            )
+        with self.assertRaises(ResearchError):
+            api.link_evidence(
+                self.project, claim_id=claim["claim_id"], passage_id=passage_id,
+            )
+
+    def test_purge_tombstone_cannot_target_an_absent_passage(self):
+        from uuid import uuid4
+
+        from lixity.research.models import Reference
+
+        repository = Repository(self.project)
+        snapshot = repository.snapshot()
+        tombstone = Tombstone(
+            **api.envelope(snapshot.project.id, "tester"),
+            target_ref=Reference(id=uuid4().urn),
+            target_kind="passage",
+            operation="purge",
+            reason="Invalid target",
+        )
+        with self.assertRaises(ResearchError):
+            repository.commit([tombstone], {}, snapshot)
 
     def test_purge_preserves_shared_blob_until_last_reference_is_purged(self):
         first = self.ingest()
@@ -182,4 +267,3 @@ class TestResearchLifecycle(unittest.TestCase):
             "CLI purge test",
         ])
         self.assertEqual(code, 0)
-

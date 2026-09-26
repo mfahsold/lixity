@@ -972,7 +972,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
             p.add_argument("--port", type=int, default=8765, help="Port (default: 8765)")
-            p.add_argument("--language", default="auto", help="Language profile (default: auto)")
+            p.add_argument("--language", default=None, help="Language profile (default: project setting or en; auto is explicit)")
             p.add_argument("--title", default=None, help="Dashboard title (default: filename)")
             p.add_argument("--open", action="store_true", help="Open dashboard in browser")
             p.add_argument(
@@ -1057,8 +1057,12 @@ def main(argv: list[str] | None = None) -> int:
         return run_research(args)
     if getattr(args, "min_chapters", None) is not None and args.min_chapters < 2:
         parser.error("--min-chapters must be at least 2")
-    project_config = load_project_config(getattr(args, "file", None))
+    if args.command == "serve":
+        project_config = {} if args.no_project else load_project_config(args.path)
+    else:
+        project_config = load_project_config(getattr(args, "file", None))
     args._project_config = project_config
+    explicit_language = getattr(args, "language", None)
     if hasattr(args, "language") and args.language is None:
         args.language = project_config.get("language", "en")
 
@@ -1082,17 +1086,31 @@ def main(argv: list[str] | None = None) -> int:
         from .server import run_server
 
         fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+        project_open_overrides = {
+            key: value for key, value in (
+                ("language", explicit_language),
+                ("title", args.title),
+                ("z_mild", args.z_mild),
+                ("z_strong", args.z_strong),
+                ("fdr_q", args.fdr_q),
+                ("fdr_method", args.fdr_method),
+                ("min_chapters", getattr(args, "min_chapters", None)),
+                ("dim_score_threshold", args.dim_threshold),
+                ("flag_min_severity", args.flag_min_severity),
+            ) if value is not None
+        }
         try:
             run_server(
                 target_path=args.path,
                 host=args.host,
                 port=args.port,
                 language=args.language,
-                title=args.title,
+                title=args.title or project_config.get("title"),
                 no_project=args.no_project,
                 thresholds=fp_thresholds,
                 open_browser=args.open,
                 research_dir=args.research_project,
+                project_open_overrides=project_open_overrides,
             )
             return EXIT_OK
         except (OSError, ValueError, RuntimeError) as exc:

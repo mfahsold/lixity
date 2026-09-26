@@ -198,7 +198,11 @@ class CorpusMetrics(BaseModel):
     yules_k: float = Field(description="Yule's characteristic K (stability of authorial vocabulary).")
     total_sentences: int = Field(description="Total sentence count of pure narrative prose.")
     asl: float = Field(description="Average sentence length (ASL).")
-    median_sl: int = Field(description="Median sentence length in words.")
+    median_sl: int = Field(description="Legacy upper median sentence length in words.")
+    median_sl_exact: float | None = Field(
+        default=None,
+        description="Conventional median sentence length; absent in older metric payloads.",
+    )
     std_sl: float = Field(description="Standard deviation of sentence length.")
     sentence_dist: SentenceDistribution = Field(description="Sentence-length architectural profile.")
     asw: float = Field(description="Average syllables per word.")

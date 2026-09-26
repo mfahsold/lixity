@@ -3,8 +3,10 @@
 The experimental research CLI has English help/errors and language-neutral JSON.
 It preserves source text and Unicode quotation offsets without translation or
 normalization. FTS5 word search is not a language-specific linguistic model.
-The seven-language dashboard contract below applies to manuscript analysis;
-there is no research UI yet. See [research limits](research/USAGE.md).
+The local server has an experimental research panel; its interface follows
+the seven dashboard languages. Research content, quotations, claim titles and
+author decisions remain in their entered language. See
+[research limits](research/USAGE.md).
 
 ## Defaults and developer language
 
@@ -20,7 +22,8 @@ English applies. API callers select their language through the argument.
 `LIXITY_LANG` controls CLI/report presentation independently of manuscript
 analysis. Its current message packs are English and German. It does not
 select the manuscript's linguistic model. Dashboard resources cover all seven
-supported languages; full CLI-message parity remains separate work.
+supported languages, including the experimental research panel; full
+CLI-message parity remains separate work.
 
 ## Localization below the interface
 
@@ -34,7 +37,11 @@ supported languages; full CLI-message parity remains separate work.
 
 Supported profiles: English (`en`), German (`de`), French (`fr`), Spanish
 (`es`), Italian (`it`), Portuguese (`pt`) and Dutch (`nl`). Do not infer equal
-accuracy from equal resource-key coverage.
+accuracy from equal resource-key coverage. English and German currently have
+the deepest linguistic heuristics and the most extensive language-specific
+fixtures. The other five profiles provide localized presentation and
+language-specific resources, but their heuristic coverage and validation are
+more limited.
 
 ## Mathematics and scientific interpretation
 

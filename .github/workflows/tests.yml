@@ -13,12 +13,34 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - run: pip install pydantic rich orjson
+      - run: python -m pip install .
       - run: python -m unittest discover -s tests -v
         env:
           PYTHONPATH: src
       - run: pip install pytest
       - run: PYTHONPATH=src python -m pytest -W error -q -p no:asyncio
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: python -m pip install .
+      - run: npm install --no-save playwright@1.59.1
+      - run: npx playwright install --with-deps chromium
+      - name: Check rendered desktop and mobile workflows
+        env:
+          PYTHON_BIN: python
+        run: |
+          node tests/browser/style-space.cjs
+          node tests/browser/settings.cjs
+          node tests/browser/layout.cjs
+          node tests/browser/research.cjs
 
   research-platforms:
     runs-on: ${{ matrix.os }}
@@ -68,6 +90,7 @@ jobs:
               "lixity/ui/assets/dashboard.js",
               "lixity/ui/assets/style-space.js",
               "lixity/pipeline.py",
+              "lixity/workspace_labels.py",
               "lixity/research/api.py",
               "lixity/research/analysis.py",
               "lixity/research/models.py",

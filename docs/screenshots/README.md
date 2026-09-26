@@ -43,10 +43,21 @@ The command fails on runtime errors, missing panels or mobile page overflow.
 - `dashboard-mobile`: 390-pixel mobile overview viewport.
 - `dashboard-dimensions-mobile` / `dashboard-dimensions-dark`: complete panels.
 - `cli-analyze` / `cli-style`: terminal-style excerpts of actual report output.
-- `dashboard-research`: standalone source dashboard with verified source criticism context.
+- `dashboard-research`: standalone source dashboard with synthetic, user-supplied
+  source criticism context; the metadata is not independently verified.
+- `dashboard-research-claims` / `dashboard-research-decisions`: the integrated
+  research manager with a synthetic claim, archive-checked citation link and two
+  contrasting editorial decisions. `-mobile` variants capture the same views
+  at 390 pixels. Read-only browser responses are built from the real research
+  API in ignored `.screenshots/research-workspace-fixture.json`; the displayed
+  project path is shortened to `./research-demo` for portable screenshots.
 - `cli-research`: terminal search & citation workflow with passage IDs and character offsets.
 
 The screenshot helper selects sections by exact ID. It does not crop whichever
 earlier panel happens to mention “markers.” Screenshots illustrate a corpus's
 analysis, not validated editorial judgments or benchmark accuracy. Pixel-level
 output can vary with OS fonts and browser versions.
+
+The research demonstration is generated in `scripts/make_screenshots.py`.
+Its customs log and provenance labels are fictional test data, separate from
+the public-domain Austen sample used for manuscript analysis views.

@@ -25,6 +25,22 @@ async function main() {
   const results = [];
   try {
     const page = await browser.newPage({deviceScaleFactor: 1, reducedMotion: 'reduce'});
+    const fixturePath = path.join(path.dirname(captures[0].source), 'research-workspace-fixture.json');
+    const researchFixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+    await page.addInitScript(({fixture}) => {
+      const nativeFetch = window.fetch.bind(window);
+      window.fetch = (input, options) => {
+        const url = typeof input === 'string' ? input : input.url;
+        if (location.pathname.endsWith('/dashboard-research-workspace.html') &&
+            Object.prototype.hasOwnProperty.call(fixture, url)) {
+          return Promise.resolve(new Response(JSON.stringify(fixture[url]), {
+            status: 200,
+            headers: {'Content-Type': 'application/json'},
+          }));
+        }
+        return nativeFetch(input, options);
+      };
+    }, {fixture: researchFixture});
     page.setDefaultTimeout(10000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -69,6 +85,22 @@ async function main() {
           if (m) m.showModal();
         });
         await save(capture.target, '#modal-project-create .modal-card');
+      } else if (name.startsWith('dashboard-research-claims')) {
+        await page.locator('[data-rtab="claims"]').click();
+        await page.locator('#research-claims-list .research-card').first().waitFor();
+        await page.locator('[data-load-evidence]').first().click();
+        await page.locator('.claim-evidence-subpanel .research-passage-quote').first().waitFor();
+        if (name.includes('mobile')) {
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        }
+        await save(capture.target, '#research-manager');
+      } else if (name.startsWith('dashboard-research-decisions')) {
+        await page.locator('[data-rtab="decisions"]').click();
+        await page.locator('#research-decisions-list .research-card').first().waitFor();
+        if (name.includes('mobile')) {
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        }
+        await save(capture.target, '#research-manager');
       } else {
         await save(capture.target);
       }

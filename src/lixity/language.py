@@ -23,6 +23,7 @@ from .language_data import (
     UI_LABELS,
 )
 from .models import CorpusConfig
+from .workspace_labels import WORKSPACE_LABELS
 
 
 def _suffix_pattern(suffixes: Sequence[str]) -> str:
@@ -111,6 +112,7 @@ def _build_profiles() -> dict[str, LanguageProfile]:
                 **GROUP_LABELS.get(key, GROUP_LABELS["en"]),
                 **LAYER_LABELS.get(key, LAYER_LABELS["en"]),
                 **UI_LABELS.get(key, UI_LABELS["en"]),
+                **WORKSPACE_LABELS.get(key, WORKSPACE_LABELS["en"]),
             },
             lexicon=LEXICON.get(key, {}),
             function_words=_function_words(key),

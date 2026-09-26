@@ -8,6 +8,8 @@ import threading
 import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
+from unittest.mock import patch
+from urllib.parse import quote
 
 from lixity.server import (
     LixityServerHandler,
@@ -165,6 +167,55 @@ class TestLixityServer(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertIn(b'"ok": true', body)
+
+    def test_settings_preserve_threshold_fields_not_exposed_in_ui(self):
+        from lixity.style_fingerprint import FingerprintThresholds
+
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in ("language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info")
+        }
+        try:
+            LixityServerHandler.thresholds = FingerprintThresholds(fdr_method="by", min_chapters=5)
+            status, body, _ = self.make_request(
+                "/api/settings", method="POST",
+                body=json.dumps({"language": "fr"}),
+                headers={"Content-Type": "application/json"},
+            )
+            self.assertEqual(status, 200, body)
+            self.assertEqual(LixityServerHandler.thresholds.fdr_method, "by")
+            self.assertEqual(LixityServerHandler.thresholds.min_chapters, 5)
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
+
+    def test_research_compare_uses_current_analysis_language(self):
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in ("research_dir", "source_input", "language")
+        }
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                project = Path(td)
+                (project / "research").mkdir()
+                manuscript = project / "manuscript.md"
+                manuscript.write_text("## Kapitel\n\nEin synthetischer Absatz.\n", encoding="utf-8")
+                LixityServerHandler.research_dir = str(project)
+                LixityServerHandler.source_input = str(manuscript)
+                LixityServerHandler.language = "de"
+                with patch("lixity.server.research_api.compare_source", return_value={"summary": {}}) as compare:
+                    status, body, _ = self.make_request(
+                        "/api/research-compare", method="POST",
+                        body=json.dumps({"source_id": "synthetic-source"}),
+                        headers={"Content-Type": "application/json"},
+                    )
+                self.assertEqual(status, 200, body)
+                compare.assert_called_once_with(
+                    project, "synthetic-source", str(manuscript), language="de",
+                )
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
 
     def test_post_load_and_markers(self):
         sample_text = "## Act 1\n\nFirst line of the story.\nSecond line.\n"
@@ -428,9 +479,13 @@ class TestLixityServer(unittest.TestCase):
                 LixityServerHandler.source_input = orig_ms
 
     def test_project_create_and_open_workflow(self):
-        orig_ws = LixityServerHandler.workspace_root
-        orig_ms = LixityServerHandler.source_input
-        orig_title = LixityServerHandler.title
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in (
+                "workspace_root", "source_input", "exports_dir", "research_dir",
+                "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info",
+            )
+        }
         try:
             with tempfile.TemporaryDirectory() as td:
                 # 1. Create minimal project
@@ -520,10 +575,8 @@ class TestLixityServer(unittest.TestCase):
                 self.assertTrue((proj_upload_dir / "manuscript.md").is_file())
                 self.assertIn("Der Wind pfiff durch die alten Gassen der Stadt.", (proj_upload_dir / "manuscript.md").read_text(encoding="utf-8"))
         finally:
-            LixityServerHandler.workspace_root = orig_ws
-            LixityServerHandler.source_input = orig_ms
-            LixityServerHandler.title = orig_title
-            LixityServerHandler.refresh()
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
 
     def test_dashboard_welcome_hero_and_modals(self):
         # When no manuscript/chapters loaded, welcome hero and modals must be rendered
@@ -546,31 +599,449 @@ class TestLixityServer(unittest.TestCase):
         self.assertIn('id="r-decision-create-btn"', html)
         self.assertIn('id="r-link-evidence-btn"', html)
 
+    def test_project_templates_use_the_selected_language_and_reloadable_settings(self):
+        from lixity.config import load_project_config
+
+        chapter_titles = {
+            "en": "Chapter 1", "de": "Kapitel 1", "fr": "Chapitre 1",
+            "es": "Capítulo 1", "it": "Capitolo 1", "pt": "Capítulo 1", "nl": "Hoofdstuk 1",
+        }
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in ("workspace_root", "source_input", "exports_dir", "research_dir",
+                         "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info")
+        }
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                for language, heading in chapter_titles.items():
+                    with self.subTest(language=language):
+                        project = Path(directory) / language
+                        title = 'A "quoted" title \\ with a newline\nSecond line'
+                        status, body, _ = self.make_request(
+                            "/api/project-create", method="POST",
+                            body=json.dumps({"title": title, "path": str(project), "language": language}),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        self.assertEqual(status, 200, body)
+                        manuscript = project / "manuscript.md"
+                        self.assertIn(f"## {heading}\n", manuscript.read_text(encoding="utf-8"))
+                        settings = load_project_config(manuscript)
+                        self.assertEqual(settings.get("language"), language)
+                        self.assertEqual(settings.get("title"), title)
+
+                existing = Path(directory) / "en"
+                original_bytes = (existing / "manuscript.md").read_bytes()
+                status, _, _ = self.make_request(
+                    "/api/project-create", method="POST",
+                    body=json.dumps({"title": "Import", "path": str(existing), "content": "Replacement"}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 409)
+                self.assertEqual((existing / "manuscript.md").read_bytes(), original_bytes)
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
+
     def test_project_open_attaches_existing_research(self):
         from lixity.research import api as research_api
-        orig_ws = LixityServerHandler.workspace_root
-        orig_res = LixityServerHandler.research_dir
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in (
+                "workspace_root", "source_input", "exports_dir", "research_dir",
+                "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info",
+            )
+        }
         try:
             with tempfile.TemporaryDirectory() as td:
                 proj_dir = Path(td) / "existing-novel"
                 proj_dir.mkdir()
                 ms_path = proj_dir / "manuscript.md"
-                ms_path.write_text("# Chapter 1\n\nSome text.", encoding="utf-8")
+                ms_path.write_bytes(b"")
+                source_path = Path(td) / "archive-note.txt"
+                source_bytes = b"The reading room opened in 1924.\n\nThe inventory stayed on site.\n"
+                source_path.write_bytes(source_bytes)
                 research_api.init(proj_dir, title="Historical Research")
+                source = research_api.ingest(
+                    proj_dir, source_path, title="Archive Note", allow_retention=True,
+                )
+                passage_id = research_api.get_source(proj_dir, source["source_id"])["passages"][0]["id"]
+                dossier = research_api.create_dossier(
+                    proj_dir, "Reading Room File", "The opening date is recorded.",
+                    evidence_ids=[passage_id],
+                )
+                claim = research_api.create_claim(
+                    proj_dir, title="Opening date", statement="The room opened in 1924.",
+                    confidence="evidenced", dossier_id=dossier["dossier_id"],
+                )
+                research_api.link_evidence(
+                    proj_dir, claim_id=claim["claim_id"], passage_id=passage_id,
+                )
+                decision = research_api.record_decision(
+                    proj_dir, title="Move opening date", rationale="Plot timing",
+                    claim_id=claim["claim_id"], deviation_from_fact=True,
+                )
+                research_files = {
+                    path.relative_to(proj_dir / "research"): path.read_bytes()
+                    for path in (proj_dir / "research").rglob("*") if path.is_file()
+                }
+
+                for open_path in (proj_dir, ms_path):
+                    with self.subTest(open_path=open_path):
+                        status, body, _ = self.make_request(
+                            "/api/project-open",
+                            method="POST",
+                            body=json.dumps({"path": str(open_path)}),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        self.assertEqual(status, 200)
+                        opened = json.loads(body)
+                        self.assertTrue(opened["ok"])
+                        self.assertEqual(Path(opened["workspace_root"]).resolve(), proj_dir.resolve())
+                        self.assertEqual(Path(opened["manuscript"]).resolve(), ms_path.resolve())
+                        self.assertEqual(Path(LixityServerHandler.research_dir).resolve(), proj_dir.resolve())
+                        self.assertTrue(LixityServerHandler.dashboard_info["is_empty"])
+
+                        status, body, _ = self.make_request("/api/research/status")
+                        self.assertEqual(status, 200)
+                        research_status = json.loads(body)
+                        self.assertTrue(research_status["initialized"])
+                        self.assertEqual(research_status["project_title"], "Historical Research")
+                        self.assertEqual(
+                            tuple(research_status[key] for key in (
+                                "sources_count", "dossiers_count", "claims_count", "decisions_count",
+                            )),
+                            (1, 1, 1, 1),
+                        )
+
+                        status, body, _ = self.make_request(
+                            f"/api/research/sources?id={quote(source['source_id'], safe='')}"
+                        )
+                        self.assertEqual(status, 200)
+                        source_data = json.loads(body)
+                        self.assertEqual(source_data["id"], source["source_id"])
+                        self.assertEqual(source_data["passages"][0]["verbatim"],
+                                         "The reading room opened in 1924.")
+
+                        status, body, _ = self.make_request(
+                            f"/api/research/dossiers?id={quote(dossier['dossier_id'], safe='')}"
+                        )
+                        self.assertEqual(status, 200)
+                        dossier_data = json.loads(body)
+                        self.assertEqual(dossier_data["body"], "The opening date is recorded.")
+                        self.assertEqual(dossier_data["citations"][0]["passage_id"], passage_id)
+
+                        status, body, _ = self.make_request("/api/research/claims")
+                        self.assertEqual(status, 200)
+                        claim_data = json.loads(body)["claims"][0]
+                        self.assertEqual(claim_data["id"], claim["claim_id"])
+                        self.assertEqual(claim_data["statement"], "The room opened in 1924.")
+                        self.assertEqual(claim_data["dossier_id"], dossier["dossier_id"])
+
+                        status, body, _ = self.make_request(
+                            f"/api/research/claims?claim_id={claim['claim_id']}"
+                        )
+                        self.assertEqual(status, 200)
+                        evidence_link = json.loads(body)["evidence_links"][0]
+                        self.assertEqual(evidence_link["passage_id"], passage_id)
+                        self.assertEqual(evidence_link["citation"]["verbatim"],
+                                         "The reading room opened in 1924.")
+
+                        status, body, _ = self.make_request("/api/research/decisions")
+                        self.assertEqual(status, 200)
+                        decision_data = json.loads(body)["decisions"][0]
+                        self.assertEqual(decision_data["id"], decision["decision_id"])
+                        self.assertEqual(decision_data["claim_id"], claim["claim_id"])
+                        self.assertTrue(decision_data["deviation_from_fact"])
+
+                        self.assertEqual(ms_path.read_bytes(), b"")
+                        self.assertEqual(source_path.read_bytes(), source_bytes)
+                        self.assertEqual(
+                            {
+                                path.relative_to(proj_dir / "research"): path.read_bytes()
+                                for path in (proj_dir / "research").rglob("*") if path.is_file()
+                            },
+                            research_files,
+                        )
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
+
+    def test_project_open_loads_target_settings_after_project_create(self):
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in (
+                "workspace_root", "source_input", "exports_dir", "research_dir",
+                "language", "title", "title_custom", "thresholds", "dashboard_html",
+                "dashboard_info", "project_open_overrides",
+            )
+        }
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                first = Path(td) / "first"
+                status, body, _ = self.make_request(
+                    "/api/project-create", method="POST",
+                    body=json.dumps({"path": str(first), "title": "First title", "language": "de"}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                status, body, _ = self.make_request(
+                    "/api/settings", method="POST",
+                    body=json.dumps({"title": "Edited first title"}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                self.assertTrue(LixityServerHandler.title_custom)
+                status, body, _ = self.make_request(
+                    "/api/project-open", method="POST",
+                    body=json.dumps({"path": str(first)}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                self.assertEqual(LixityServerHandler.title, "Edited first title")
+                second = Path(td) / "second"
+                second.mkdir()
+                manuscript = second / "manuscript.md"
+                manuscript.write_text("## Chapter One\n\nA synthetic paragraph.\n", encoding="utf-8")
+                (second / "lixity.toml").write_text(
+                    'title = "Second title"\nlanguage = "fr"\nfdr_q = 0.12\n',
+                    encoding="utf-8",
+                )
+                for path in (second, manuscript):
+                    with self.subTest(path=path):
+                        status, body, _ = self.make_request(
+                            "/api/project-open", method="POST",
+                            body=json.dumps({"path": str(path)}),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        self.assertEqual(status, 200, body)
+                        self.assertEqual(LixityServerHandler.language, "fr")
+                        self.assertEqual(LixityServerHandler.title, "Second title")
+                        self.assertEqual(LixityServerHandler.thresholds.fdr_q, 0.12)
+                        self.assertEqual(LixityServerHandler.dashboard_info["language_key"], "fr")
+                        self.assertIn("Second title", LixityServerHandler.dashboard_html)
+
+                LixityServerHandler.project_open_overrides = {
+                    "language": "en", "title": "Session title", "fdr_q": 0.03,
+                }
+                status, body, _ = self.make_request(
+                    "/api/project-open", method="POST",
+                    body=json.dumps({"path": str(second)}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                self.assertEqual(LixityServerHandler.language, "en")
+                self.assertEqual(LixityServerHandler.title, "Session title")
+                self.assertEqual(LixityServerHandler.thresholds.fdr_q, 0.03)
+                self.assertIn("Session title", LixityServerHandler.dashboard_html)
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
+
+    def test_project_open_invalid_targets_keep_current_project(self):
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in (
+                "workspace_root", "source_input", "exports_dir", "research_dir",
+                "language", "title", "title_custom", "thresholds", "dashboard_html",
+                "dashboard_info", "project_open_overrides",
+            )
+        }
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                project = Path(td) / "current"
+                status, body, _ = self.make_request(
+                    "/api/project-create", method="POST",
+                    body=json.dumps({"path": str(project), "title": "Current title", "language": "en"}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                before = {
+                    name: getattr(LixityServerHandler, name)
+                    for name in original_state
+                }
+                unsupported = Path(td) / "image.pdf"
+                unsupported.write_bytes(b"%PDF synthetic")
+                invalid = Path(td) / "invalid.md"
+                invalid.write_bytes(b"\xff\xfe")
+                folder = Path(td) / "invalid-folder"
+                folder.mkdir()
+                (folder / "manuscript.md").write_bytes(b"\xff\xfe")
+                for path in (unsupported, invalid, folder):
+                    with self.subTest(path=path):
+                        status, body, _ = self.make_request(
+                            "/api/project-open", method="POST",
+                            body=json.dumps({"path": str(path)}),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        self.assertEqual(status, 400, body)
+                        self.assertFalse(json.loads(body)["ok"])
+                        self.assertEqual(
+                            {name: getattr(LixityServerHandler, name) for name in before},
+                            before,
+                        )
+                unreadable = Path(td) / "unreadable.md"
+                unreadable.write_text("Synthetic manuscript.\n", encoding="utf-8")
+                read_text = Path.read_text
+
+                def fail_target_read(path, *args, **kwargs):
+                    if path == unreadable:
+                        raise PermissionError("Synthetic unreadable manuscript")
+                    return read_text(path, *args, **kwargs)
+
+                with patch.object(Path, "read_text", fail_target_read):
+                    status, body, _ = self.make_request(
+                        "/api/project-open", method="POST",
+                        body=json.dumps({"path": str(unreadable)}),
+                        headers={"Content-Type": "application/json"},
+                    )
+                self.assertEqual(status, 400, body)
+                self.assertIn("Synthetic unreadable manuscript", json.loads(body)["message"])
+                self.assertEqual(
+                    {name: getattr(LixityServerHandler, name) for name in before}, before,
+                )
+                status, body, _ = self.make_request("/")
+                self.assertEqual(status, 200)
+                self.assertIn(b"Current title", body)
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
+
+    def test_direct_run_server_title_stays_explicit_when_opening_another_project(self):
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in (
+                "workspace_root", "source_input", "exports_dir", "research_dir",
+                "language", "title", "title_custom", "thresholds", "dashboard_html",
+                "dashboard_info", "project_open_overrides",
+            )
+        }
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                first = Path(td) / "first"
+                second = Path(td) / "second"
+                for project, title in ((first, "First title"), (second, "Second title")):
+                    project.mkdir()
+                    (project / "manuscript.md").write_text("## Chapter\n\nSynthetic text.\n", encoding="utf-8")
+                    (project / "lixity.toml").write_text(f'title = "{title}"\n', encoding="utf-8")
+                with (
+                    patch("lixity.server.ThreadingHTTPServer", side_effect=RuntimeError("stop before bind")),
+                    self.assertRaisesRegex(RuntimeError, "stop before bind"),
+                ):
+                    run_server(target_path=str(first), title="Direct override")
+                self.assertEqual(LixityServerHandler.project_open_overrides, {"title": "Direct override"})
+                status, body, _ = self.make_request(
+                    "/api/project-open", method="POST",
+                    body=json.dumps({"path": str(second)}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                self.assertEqual(LixityServerHandler.title, "Direct override")
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
+
+    def test_project_open_research_only_folder_without_manuscript(self):
+        from lixity.research import api as research_api
+
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in (
+                "workspace_root", "source_input", "exports_dir", "research_dir",
+                "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info",
+            )
+        }
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                project = Path(td) / "research-only"
+                project.mkdir()
+                source_path = Path(td) / "public-note.txt"
+                source_bytes = b"The reading room opened in 1924.\n"
+                source_path.write_bytes(source_bytes)
+                research_api.init(project, title="Reading Room Archive")
+                source = research_api.ingest(
+                    project, source_path, title="Opening Note", allow_retention=True,
+                )
+                passage_id = research_api.get_source(project, source["source_id"])["passages"][0]["id"]
+                dossier = research_api.create_dossier(
+                    project, "Opening File", "The opening year is recorded.",
+                    evidence_ids=[passage_id],
+                )
+                before_files = {
+                    path.relative_to(project): path.read_bytes()
+                    for path in project.rglob("*") if path.is_file()
+                }
 
                 status, body, _ = self.make_request(
                     "/api/project-open",
                     method="POST",
-                    body=json.dumps({"path": str(ms_path)}),
+                    body=json.dumps({"path": str(project)}),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 200)
-                res = json.loads(body)
-                self.assertTrue(res["ok"])
-                self.assertEqual(Path(res["workspace_root"]).resolve(), proj_dir.resolve())
-                self.assertEqual(Path(str(LixityServerHandler.research_dir)).resolve(), proj_dir.resolve())
-        finally:
-            LixityServerHandler.workspace_root = orig_ws
-            LixityServerHandler.research_dir = orig_res
-            LixityServerHandler.refresh()
+                opened = json.loads(body)
+                self.assertTrue(opened["ok"])
+                self.assertEqual(opened["workspace_root"], str(project))
+                self.assertIsNone(opened["manuscript"])
+                self.assertIsNone(LixityServerHandler.source_input)
+                self.assertEqual(LixityServerHandler.research_dir, str(project))
+                self.assertTrue(LixityServerHandler.dashboard_info["is_empty"])
 
+                status, body, _ = self.make_request("/api/research/status")
+                self.assertEqual(status, 200)
+                archive = json.loads(body)
+                self.assertTrue(archive["initialized"])
+                self.assertEqual(archive["project_title"], "Reading Room Archive")
+                self.assertEqual(archive["sources_count"], 1)
+                self.assertEqual(archive["dossiers_count"], 1)
+
+                status, body, _ = self.make_request(
+                    f"/api/research/sources?id={source['source_id']}"
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(json.loads(body)["passages"][0]["verbatim"],
+                                 "The reading room opened in 1924.")
+                status, body, _ = self.make_request(
+                    f"/api/research/dossiers?id={dossier['dossier_id']}"
+                )
+                self.assertEqual(status, 200)
+                self.assertEqual(json.loads(body)["citations"][0]["passage_id"], passage_id)
+
+                self.assertEqual(source_path.read_bytes(), source_bytes)
+                self.assertFalse((project / "manuscript.md").exists())
+                self.assertEqual(
+                    {path.relative_to(project): path.read_bytes()
+                     for path in project.rglob("*") if path.is_file()},
+                    before_files,
+                )
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
+
+    def test_project_open_research_fallback_preserves_discovery_errors(self):
+        from lixity.research import api as research_api
+
+        with tempfile.TemporaryDirectory() as td:
+            ambiguous_folder = Path(td) / "ambiguous"
+            ambiguous_folder.mkdir()
+            research_api.init(ambiguous_folder, title="Archive")
+            (ambiguous_folder / "one.md").write_text("# One\n", encoding="utf-8")
+            (ambiguous_folder / "two.md").write_text("# Two\n", encoding="utf-8")
+
+            ordinary_folder = Path(td) / "ordinary"
+            ordinary_folder.mkdir()
+            incomplete_folder = Path(td) / "incomplete"
+            (incomplete_folder / "research").mkdir(parents=True)
+            for path, message in (
+                (ordinary_folder, "No manuscript found"),
+                (ambiguous_folder, "Multiple manuscripts"),
+                (incomplete_folder, "Research store is missing or incomplete"),
+            ):
+                with self.subTest(path=path):
+                    status, body, _ = self.make_request(
+                        "/api/project-open",
+                        method="POST",
+                        body=json.dumps({"path": str(path)}),
+                        headers={"Content-Type": "application/json"},
+                    )
+                    self.assertEqual(status, 400)
+                    self.assertIn(message, json.loads(body)["message"])

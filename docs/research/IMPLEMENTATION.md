@@ -1,19 +1,21 @@
 # Portable research implementation
 
-## First slice
+## Implemented experimental pilot
 
-Implementation status: unreleased pilot under local development (target `1.16.0.dev0`; not in release `v1.15.0`). Commands and limits are
-documented in [USAGE.md](USAGE.md). This is not a release announcement.
+Implementation status: experimental local pilot included in `v1.16.0`.
+Commands and limits are documented in [USAGE.md](USAGE.md).
 
-Implement the source-to-citation path before provider integration or editorial
-review. The RFC remains the target architecture; this slice does not implement
-the entire first increment. Its experimental contract is `research-local/1`,
+The source-to-citation path and manual claim, evidence-link and decision records
+are implemented in this release. The RFC remains a target
+architecture; this slice does not implement the entire first increment. Its
+experimental contract is `research-local/1`,
 separate from the illustrative `research/1` bundle and existing analysis schemas.
 
-Use Python 3.10+, existing Pydantic and the standard library. Keep research I/O
-out of `lixity.pipeline`. No model downloads, remote calls or new dependencies.
+It uses Python 3.10+, existing Pydantic and the standard library. Python 3.10
+loads TOML project settings through the conditional `tomli` dependency.
+Research I/O stays out of `lixity.pipeline`. No model downloads or remote calls.
 
-## Execution plan
+## Components
 
 1. `research/models.py`: strict project/source/version/activity/extraction/passage
    contracts, pinned references, blob descriptors and schema export. Reject
@@ -32,12 +34,45 @@ out of `lixity.pipeline`. No model downloads, remote calls or new dependencies.
    reindex, search, cite, audit, schema, analyze, dashboard, withdraw and purge
    with dry-run preview. Require explicit project selection and local retention
    confirmation. JSON stdout; errors on stderr; dry-run does not write.
-6. `research/models.py` & `research/api.py`: Source tagging, Dossier entities with
-   verifiable evidence references, source listing, and dossier retrieval.
+6. `research/models.py` and `research/api.py`: source tagging, dossiers with
+   passage references, manually recorded claims with scope and confidence,
+   evidence links with explicit relations, and authorial decisions. A selected
+   `evidenced` confidence value or a decision without a deviation flag is not
+   an automated fact check.
 7. `server.py` & `ui/dashboard.py`: Interactive research management panel in the
-   `lixity serve` development dashboard (Sources ingest/listing, FTS5 search,
-   visual Dossier creation, and Manuscript grounding comparison).
-8. Synchronize README, Pages, agent/API guidance and the implementation status.
+   `lixity serve` dashboard (source ingest/listing and full source detail,
+   FTS5 search with direct evidence selection, dossier creation and detail,
+   dossier-linked claims, evidence/decision controls, and manuscript
+   grounding comparison). Opening an existing project path attaches its
+   `research/` archive, including research-only roots with no manuscript;
+   importing manuscript text creates a new project. Manuscript comparison
+   remains unavailable until a manuscript is loaded.
+
+## Current integration boundary
+
+The released pilot includes reliable research-panel state (including
+status errors, record counts and selection retention), explicit display of
+withdrawn or unavailable citations, neutral labels for authorial decisions,
+seven-language interface coverage in the research and workspace views,
+opening research-only project roots, regression checks, and synchronized user
+documentation. English and German still have the deepest analysis heuristics;
+interface translation does not change research JSON or certify a claim. Source
+and dossier details are available in the web panel, as are direct search-to-
+evidence actions and dossier association from the claim form. Purged passage
+references stay visible as unavailable in retained authored records, without
+exposing deleted quotation text. Structured source criticism context input in
+the web panel remains a follow-up; the CLI and Python API accept it now.
+
+Comparison uses chapter body prose for both source and manuscript where
+chapters exist, excluding headings, front matter and the configured appendix
+from lexical counts, register contrasts and chapter traces. Signed keyness
+uses the full term/nonterm $2\times2$ G² table. On a language mismatch the
+result retains numeric overlap but adds `meta.lexical_comparable: false` and
+`comparison_limits: ["cross_language_lexical_comparison"]`; the web panel
+warns that lexical scores are not directly comparable. Source analysis uses
+`original_language_supplied` in place of the earlier experimental
+`historical_language` limitation code, since a supplied original-language
+field does not itself imply historical language variety.
 
 ## Acceptance checks
 
@@ -50,12 +85,13 @@ out of `lixity.pipeline`. No model downloads, remote calls or new dependencies.
 - Controlled withdrawal marks citations and excludes sources from search.
 - Purge with dry-run preview removes records and unshared original blobs.
 - Dossier creation validates evidence references and integrity invariants.
-- Web server endpoints (`/api/research/*`) correctly dispatch and handle errors.
+- Web server endpoints (`/api/research/*`) dispatch and handle errors.
+- Claim, evidence-link and decision records round-trip through the API and CLI.
 - Run the existing checks; analysis output schemas and pipeline remain unchanged.
 
 ## Deferred explicitly
 
-Probabilistic claim synthesis, author decisions, migration of legacy third-party dossiers,
+Probabilistic claim synthesis, automated factual certification, migration of legacy third-party dossiers,
 PDF/OCR pipelines, Zotero synchronization, hybrid vector retrieval, and multi-tenant
 shared cloud services remain separate future increments. Local text ingestion does not imply permission to
 redistribute sources. This pilot is not a hostile multiuser filesystem service.

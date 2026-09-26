@@ -43,8 +43,8 @@ TOOL_KEYS = frozenset(
 def _load_toml(path: Path) -> dict[str, Any]:
     try:
         import tomllib
-    except ModuleNotFoundError:  # pragma: no cover - Python < 3.11
-        return {}
+    except ModuleNotFoundError:  # pragma: no cover - exercised on Python 3.10 in CI
+        import tomli as tomllib
     try:
         with path.open("rb") as fh:
             data = tomllib.load(fh)

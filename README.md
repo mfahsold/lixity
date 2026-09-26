@@ -11,6 +11,8 @@ against the manuscript's own style, then inspect the passages behind each signal
 
 Python 3.10+ · Seven language profiles · No cloud calls.
 
+The experimental local research workspace is included in `v1.16.0`.
+
 **Free only for non-commercial projects.** Using Lixity for a book intended
 for sale—including self-publishing—requires a separate written commercial
 license. [Examples and terms](docs/LICENSING.md).
@@ -24,17 +26,18 @@ lixity build manuscript.md --language en
 Open `exports/manuscript_dashboard.html`.
 [Onboarding Guide](docs/ONBOARDING.md) · [Install Lixity](#installation) · [Usage](docs/USAGE.md) · [Methods](docs/METHODS.md)
 
-## The 5 Core Pillars
+## Analysis and research capabilities
 
-Lixity unifies mathematically rigorous text linguistics, narratological dramaturgy, typographic publication engineering, and source-critical evidence into a single stateless engine.
+Lixity combines text analysis and dashboard presentation. The optional local
+research archive is a separate, explicit-project experimental API.
 
 | Pillar | Scope | Core Techniques & Features |
 | :--- | :--- | :--- |
-| **01. Stylistics & Corpus Diagnostics** | Macro & micro sentence architecture | ASL, rhythm CV, 4 length tiers (staccato to hypotaxis), 7 calibrated readability indices (Flesch, Amstad, LIX), length-invariant lexical diversity (HD-D, MTLD, Yule's K, Maas a²). |
+| **01. Stylistics & Corpus Diagnostics** | Macro & micro sentence architecture | ASL, rhythm CV, 4 length tiers (staccato to hypotaxis), language-specific readability formula variants, and lexical diversity measures (HD-D, MTLD, Yule's K, Maas a²). |
 | **02. Dramaturgy & Tense Profiling** | Paragraph-accurate narrative continuity | Tense classification (present, past, mixed, neutral), 4-tier friction severity rating (0–3), speech ratios, dialogue turns, scene pacing curves, and chapter tension hooks. |
 | **03. Robust 3D Style Space** | Self-calibrating manuscript baseline | Manuscript-intrinsic median ± 2 MAD corridor, noise-aware z\* shrinkage, Benjamini–Hochberg / BY FDR multiplicity control, cyclic Jacobi EVD, and interactive 3D trajectory. |
 | **04. Typographic Publication** | Print & digital publishing vectors | Cairo & Pango PDF engine with subpixel metrics, font hinting control, collision-free tracking: Paperback (135×205 mm), Editorial Proof A4 with line numbers, Mobile 9:16 PDF, and valid EPUB 3.3 with dual NCX/nav navigation. |
-| **05. Evidence-Based Research** | Source archive & verifiable citation chain | Immutable SHA-256 UTF-8 storage, cultural source criticism, SQLite FTS5 search, persistent passage citations, factual claims, evidence links, plot decisions, and cross-corpus comparison. |
+| **05. Research pilot (experimental)** | Local source archive and passage citations | Immutable SHA-256 UTF-8 storage, source criticism, SQLite FTS5 search, manual claims, evidence links, author decisions, and cross-corpus comparison. |
 
 ## Mathematical Core
 
@@ -60,7 +63,7 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 - **Offline & Deterministic:** Identical input produces bit-identical metrics, JSON, and HTML reports.
 - **Self-Calibrating Norms:** House style derived from the manuscript's own median and MAD bands.
-- **Noise-Aware z\* + FDR (BH/BY):** Controlled false discovery rate with configurable severity cuts.
+- **Noise-Aware z\* + FDR (BH/BY):** Configurable significance procedure with assumptions and diagnostic limits.
 - **Effect Sizes & Diagnostics:** Cliff’s δ, Runs test, and lag-1 autocorrelation for every confirmed cell.
 - **Structural Diagnostics:** PELT changepoints, Mann–Kendall trends, Sn/Qn scales, Hill tail index, Wasserstein–KS shift, Goh–Barabási co-occurrence graphs, and Dunning G² keyness.
 - **Latent Style Dimensions:** Spearman rank correlation and cyclic Jacobi eigendecomposition (pure Python stdlib).
@@ -84,7 +87,7 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
   <img src="docs/screenshots/dashboard-heatmap.png" alt="16-feature z* deviation heatmap" width="100%" />
 </p>
 
-*Significance-adjusted departures from house style across all 16 linguistic features. Dots (●) mark cells confirmed by Benjamini–Hochberg / Benjamini–Yekutieli false discovery rate control. Calibrated with expected false positive baseline.*
+*Departures from the manuscript's own style across 16 linguistic features. Dots (●) mark cells passing the configured Benjamini–Hochberg / Benjamini–Yekutieli FDR procedure. These are review signals under model assumptions, not confirmed defects.*
 
 ### 3. Paragraph Inspection & Editorial Work Markers
 
@@ -123,10 +126,19 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 ### 6. Research Workspace & Archival Citations (Pilot)
 
-| Verified Archival Source Dashboard (`lixity research dashboard`) | CLI Full-Text Search & Exact Citation (`lixity research search/cite`) |
+| Archived Source Dashboard (`lixity research dashboard`) | CLI Full-Text Search & Exact Citation (`lixity research search/cite`) |
 | :---: | :---: |
 | <img src="docs/screenshots/dashboard-research.png" alt="Research source dashboard with cultural context metadata" width="100%" /> | <img src="docs/screenshots/cli-research.png" alt="CLI research search and citation" width="100%" /> |
-| *Verified source metadata (genre, era, place, provenance) & stylometrics* | *SQLite FTS5 BM25 search & exact Unicode codepoint character offsets* |
+| *User-supplied source context (genre, period, place, provenance) & stylometrics* | *SQLite FTS5 BM25 search & Unicode codepoint character offsets* |
+
+The [interactive research panel](docs/screenshots/dashboard-research-claims.png)
+provides full source and dossier details, manually recorded claims, and evidence
+links. Search results can feed **Use for claim** or **Use for dossier**; a claim
+can be associated with a dossier. [View decisions](docs/screenshots/dashboard-research-decisions.png)
+or the [claims](docs/screenshots/dashboard-research-claims-mobile.png) and
+[decisions](docs/screenshots/dashboard-research-decisions-mobile.png) mobile views.
+
+<img src="docs/screenshots/dashboard-research-claims.png" alt="Claims and evidence panel with a synthetic dossier-linked claim and verified passage citation" width="100%" />
 
 ### 7. Responsive Mobile Views
 
@@ -134,8 +146,9 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 | :---: | :---: |
 | <img src="docs/screenshots/dashboard-mobile.png" alt="Mobile project header with version, non-commercial license and corpus overview" width="300" /> | <img src="docs/screenshots/dashboard-dimensions-mobile.png" alt="Mobile 3D chapter view with all three dimension cards and readable feature labels" width="300" /> |
 
-Screenshots use the public-domain *Pride and Prejudice* sample; marker notes
-are illustrative and never written back to the source. Open an image for full
+Analysis screenshots use the public-domain *Pride and Prejudice* sample;
+research panel screenshots use synthetic archive records. Marker notes are
+illustrative and never written back to the source. Open an image for full
 resolution. [Screenshot provenance and regeneration](docs/screenshots/README.md).
 
 ## Installation
@@ -145,19 +158,20 @@ Install from GitHub into an isolated CLI environment. Requires Git and
 Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.15.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.16.0"
 lixity --version
 lixity about
 ```
 
-This installs **v1.15.0**, including the new UI, shared pipeline and security
-fixes. The tag stays pinned: upgrading to a future release requires selecting
+This installs **v1.16.0**, including the experimental local research pilot.
+The tag stays pinned: upgrading to a future release requires selecting
 its tag explicitly. Use `@main` only for development builds, or a reviewed
 full commit hash for reproducible deployments.
 
 **[Full installation guide](docs/INSTALLATION.md):** Windows/macOS/Linux,
 pipx alternative, Python API environments, PATH repair, upgrades and removal.
-Python 3.10+ supports the engine; TOML project settings require 3.11+.
+Python 3.10+ supports the engine and TOML project settings; Python 3.10 uses
+the conditional `tomli` dependency.
 
 For engine development:
 
@@ -232,32 +246,32 @@ Full command reference, metric glossary, worked example, and troubleshooting:
 [`docs/AGENTS.md`](docs/AGENTS.md). Project website:
 [mfahsold.github.io/lixity](https://mfahsold.github.io/lixity/).
 
-## What's new in v1.15.0
+## What's new in v1.16.0
 
-**v1.15.0** includes the UI, architecture and security improvements below.
-Read the [release notes and migration checklist](docs/releases/v1.15.0.md)
-before updating an existing project, especially its language defaults.
+**v1.16.0** adds the experimental local research workspace and completes the
+research-panel workflow. Read the [release notes](docs/releases/v1.16.0.md)
+for scope, compatibility, and limits.
 
-- **Explore style in 3D:** rotate and zoom chapter trajectories, toggle the
-  trajectory and threshold box, and select a point to reach its chapter.
-  Mobile layouts preserve feature labels; rotation stops when disabled or
-  the tab is hidden. The picture is a projection, not a writing-quality score.
-- **One analysis path:** CLI, API and project adapters share metrics,
-  paragraph profiling and fingerprint assembly instead of maintaining copies.
-- **Clear project boundaries:** explicit threshold mappings support several
-  projects in one process without changing the working directory.
-- **English by default:** select a manuscript language explicitly or request
-  `--language auto`. Localization covers linguistic profiles, readability
-  coefficients, labels, help text and number presentation.
+- **Local research archive:** explicitly select a project, retain permitted
+  UTF-8 source bytes, verify exact passage citations, and search a disposable
+  SQLite FTS5 index. Research remains an experimental API, separate from analysis.
+- **Connected author workflow:** inspect source and dossier details in the
+  server UI, select passages directly from search for claims or dossiers,
+  associate claims with dossiers, and record decisions without certifying facts.
+- **Evidence lifecycle:** withdrawal removes a source from active search;
+  purge deletes unshared retained bytes while linked authored records show
+  unavailable citations without deleted quotations.
+- **Consistent boundaries:** opening an existing project restores its archive
+  and project settings. The seven-language interface is available throughout
+  the workspace; English and German still have the deepest linguistic cores.
 
-The engine produces offline analysis and HTML. Publication workflows, local
-control servers and encrypted NDA storage belong to project adapters; they
-are not a bundled hosted service or a universal feature of every installation.
+The engine produces offline analysis and HTML, and `lixity serve` provides a
+local project and experimental research workspace. Publication workflows and
+encrypted NDA storage belong to project adapters; Lixity is not a hosted service.
 
 ## Architecture and project adapters
 
-An experimental [local research workspace](docs/research/USAGE.md) (in development
-towards `1.16.0.dev0`; **not in release v1.15.0**) archives UTF-8 sources,
+The experimental [local research workspace](docs/research/USAGE.md) in `v1.16.0` archives UTF-8 sources,
 attaches versioned source criticism context and tags, resolves exact citations, connects to the
 analysis pipeline, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, supports controlled withdrawal and purge, and compares
@@ -298,24 +312,24 @@ scope, guarantees and limitations.
 Detailed formulas, mathematical derivations, and academic citations are documented in [`docs/METHODS.md`](docs/METHODS.md) and [`docs/USAGE.md`](docs/USAGE.md#understanding-the-metrics):
 
 1. **Sentence Architecture & Rhythm** – Average sentence length (ASL), coefficient of variation (CV), and distribution across four syntactic length tiers (staccato ≤ 6 words, medium 7–15, long 16–25, complex hypotaxis > 25 words). Uncovers pacing ruptures, breathlessness, and rhythmic monotony.
-2. **Length-Invariant Lexical Diversity** – Type-Token Ratio (TTR), Guiraud R, hypergeometric HD-D (McCarthy & Jarvis 2010), MTLD, moving-average MATTR, Maas a², and Yule's characteristic K. Guarded by strict token floors so short scenes and expansive chapters remain comparable without sample-size distortion.
-3. **Language-Calibrated Readability** – Standard LIX (Björnsson, words > 6 characters for all languages) and language-specific calibrated Flesch variants: Amstad (de), classic Flesch (en), Kandel-Moles (fr), Szigriszt-Pazos (es), Franchina-Vacca (it), Martins (pt), and Douma (nl).
+2. **Lexical Diversity with Length Guards** – Type-Token Ratio (TTR), Guiraud R, hypergeometric HD-D (McCarthy & Jarvis 2010), MTLD, moving-average MATTR, Maas a², and Yule's characteristic K. Minimum token counts reduce unstable short-text results; none makes chapters of different lengths perfectly comparable.
+3. **Language-Specific Readability Formulas** – Standard LIX (Björnsson, words > 6 characters for all languages) and language-specific Flesch variants: Amstad (de), classic Flesch (en), Kandel-Moles (fr), Szigriszt-Pazos (es), Franchina-Vacca (it), Martins (pt), and Douma (nl). These formula outputs are not a measure of literary quality.
 4. **Narrative Voice & Register** – Dialogue ratio, function-word density (the author's implicit grammatical fingerprint), perception filters ("telling" verbs like *saw*, *heard*, *felt*), modal hedging, passive voice, nominal style suffixes, sentence-starter Shannon entropy, and first-person openings.
 5. **Tense Dynamics & Continuity** – Paragraph-accurate classification into dominant tense (present, past, mixed, neutral) with a 4-tier friction severity rating (0–3) to flag unintended slips between epic past and scenic present.
 
 ## Editorial Practice: The Macro-Editing Matrix
 
-Statistical indicators are not an objective quality score or an instruction to rewrite prose; they serve as diagnostic prompts for human macro-editing. Lixity maps statistical signals directly to concrete editorial questions and editing interventions:
+Statistical indicators are not an objective quality score or an instruction to rewrite prose. The questions below are possible readings of a signal, not diagnoses or required interventions:
 
 | Linguistic Feature | Calculation & Diagnostic Signal | Editorial Interpretation & Practical Editing | Warning Signal & Editorial Intervention |
 | :--- | :--- | :--- | :--- |
-| **Sentence Rhythm & Length Tiers** | ASL, rhythm CV, staccato (≤6w), hypotaxis (>25w) | **Pacing & Prose Breath:** Verifies whether dialogue or action sequences bounce dynamically or suffocate under monotonous clause stacks. High CV (>0.70) indicates organic prose. | Low CV (<0.40) flags rhythmic monotony (e.g., chains of subject-verb-object main clauses). Sudden hypotaxis spikes stall fast-paced action scenes. |
-| **Length-Invariant Lexical Richness** | Hypergeometric HD-D, MTLD, Yule's K, Maas a² | **Vocabulary Freshness without Sample-Size Bias:** Unlike raw TTR, HD-D does not penalize or inflate short chapters. Assesses whether vocabulary remains rich across 50,000+ words. | Pronounced drop in HD-D in late chapters exposes author exhaustion. Artificially high HD-D (>0.90) warns of strained, unnatural thesaurus hunting. |
-| **Tense Continuity & Friction** | Present, past, mixed, neutral; friction rating 0–3 | **Timeline & Perspective Discipline:** Detects subconscious drift between retrospective epic past and immediate scenic present at paragraph resolution. | Friction score 2–3 (e.g., past-tense narrative abruptly mixing with unquoted present-tense clauses) requires verification for accidental tense errors. |
-| **Showing vs. Telling & Filters** | Perception verbs, passive voice, nominal style | **Sensory Immersion:** Identifies perception filters (*saw, heard, felt, noticed*) that place an unnecessary buffer between reader and protagonist instead of showing the scene directly. | High filter density turns visceral drama into detached police reports. High passive and nominal suffix ratios stifle narrative propulsion. |
-| **FDR Significance Heatmap** | Noise-aware z\*, Benjamini–Hochberg (●), Cliff's δ | **False-Discovery Protection:** Prevents statistical over-interpretation. A black dot (●) marks strictly confirmed macro departures under false discovery rate control. | Only confirmed cells (●) with substantial effect size (Cliff's \|δ\| > 0.47) warrant deep rewrites; mild fluctuations reflect natural artistic variation. |
-| **Structural & Drift Diagnostics** | PELT changepoints (BIC), Mann–Kendall τ, Wasserstein–KS | **Narrative Architecture & Regime Shifts:** PELT locates unannounced stylistic regime shifts (e.g., tone rupture at Act II); Mann–Kendall identifies slow, cumulative drift across the manuscript. | Unexpected PELT changepoints uncover author handovers, long writing hiatuses, or tonal inconsistency across character arcs. |
-| **Persistent Work Markers** | Content-hashed `<!-- LIXITY-MARKER -->` tags | **Traceable Editorial Annotations:** Notes remain anchored right at the target paragraph in Markdown, but vanish cleanly in print (PDF) and digital (EPUB) book exports. | Content hashes ensure editorial anchors remain intact even as surrounding text shifts during iterative manuscript revision. |
+| **Sentence Rhythm & Length Tiers** | ASL, rhythm CV, staccato (≤6w), hypotaxis (>25w) | **Pacing:** Variation in sentence length can draw attention to shifts between action, dialogue, and reflection. | Low or high CV and changes in long-sentence frequency invite a read of the affected passage; neither implies good or bad prose. |
+| **Lexical Diversity** | Hypergeometric HD-D, MTLD, Yule's K, Maas a² | **Vocabulary Pattern:** These measures reduce some length sensitivity compared with raw TTR, subject to their token floors and corpus context. | A change late in the manuscript may prompt a look at repetition, dialogue mix, or topic shifts; it does not identify author fatigue or a quality problem. |
+| **Tense Continuity & Friction** | Present, past, mixed, neutral; friction rating 0–3 | **Timeline & Perspective:** Heuristic labels help locate tense changes at paragraph scale. | Higher friction may merit a check of quotation, dialogue, flashback, or deliberate perspective shifts before treating it as an error. |
+| **Showing vs. Telling & Filters** | Perception verbs, passive voice, nominal style | **Register:** Word-pattern counts highlight possible changes in viewpoint or exposition. | Read passages in context; these constructions can be deliberate and their counts do not measure immersion. |
+| **FDR Heatmap** | Noise-aware z\*, Benjamini–Hochberg or BY (●), Cliff's δ | **Statistical Review:** A dot marks a cell passing the configured FDR procedure under its assumptions. Effect size adds context. | Read flagged passages in context; a flag neither proves a defect nor calls for a rewrite. Unflagged passages can still matter artistically. |
+| **Structural & Drift Diagnostics** | PELT changepoints (BIC), Mann–Kendall τ, Wasserstein–KS | **Narrative Structure:** These measures locate changes and trends in the selected features. | A change point can prompt review of scene, character, or chapter context; it does not identify an author handover or its cause. |
+| **Persistent Work Markers** | Content-hashed `<!-- LIXITY-MARKER -->` tags | **Traceable Editorial Annotations:** Notes remain anchored right at the target paragraph in Markdown, but vanish cleanly in print (PDF) and digital (EPUB) book exports. | Content hashes identify the originally marked paragraph; review anchors after manuscript edits. |
 
 ## Work Markers (Editor-Visible)
 
@@ -337,14 +351,24 @@ He walked to the window and watches the rain falling outside.
 
 ## Research Workspace: Evidence-Based Source Archive
 
-Historical novels, investigative non-fiction, and scholarly manuscripts demand an unbroken chain of custody between archived primary sources, cultural context, and narrative synthesis. The experimental research pilot ([`docs/research/USAGE.md`](docs/research/USAGE.md), developing towards `1.16.0.dev0`; not in release `v1.15.0`) provides a dedicated, immutable local evidence repository separate from narrative manuscripts.
+Historical novels, investigative non-fiction, and scholarly manuscripts benefit
+from a traceable connection between archived source text, context, and author
+notes. The experimental research pilot ([`docs/research/USAGE.md`](docs/research/USAGE.md),
+included in `v1.16.0`) provides a local
+archive separate from narrative manuscripts.
 
 ### Untrusted Evidence vs. Narrative Invention
-In Lixity's architecture, archived documents are **untrusted historical evidence**, never instructions or unquestioned facts. Authors and editors maintain strict separation between:
+Archived documents are **untrusted evidence**, never instructions or accepted
+facts. Authors and editors can keep separate records for:
 1. **Raw Document Integrity:** Verifiable SHA-256 byte blobs stored with explicit retention permissions (`--allow-retention`).
 2. **Versioned Source Criticism:** Cultural context (creation date, depicted epoch, location, genre, narrative perspective, and transmission state) attached without altering source bytes.
 3. **Persistent Passage Citations:** Stable passage identifiers (`urn:uuid:...`) anchoring quotations down to exact character offsets, remaining verifiable across revisions.
-4. **Lifecycle Governance:** Controlled distinction between **Withdrawal** (hiding questionable sources from active search while preserving citation audit trails) and **Purge** (permanent cryptographic removal with dry-run verification).
+4. **Claims, Links, and Decisions:** Author-recorded assertions, explicit passage
+   relations, and optional notes about narrative departures. Their labels do
+   not certify factual accuracy.
+5. **Lifecycle Controls:** **Withdrawal** removes a source from active search
+   while retaining citation history; **purge** deletes retained records and
+   unshared source bytes after an optional dry-run preview.
 
 ```bash
 # 1. Initialize a dedicated research workspace
@@ -352,7 +376,7 @@ lixity research init --project ./novel-research --title "1920s Archive" --langua
 
 # 2. Ingest primary source with cultural source criticism and explicit retention
 lixity research ingest --project ./novel-research --file ./sources/police_log_1923.txt \
-  --context '{"genre": "Police Log", "epoch": "1923", "location": "Hamburg", "provenance": "State Archives"}' \
+  --context '{"genre": "Police Log", "created_period": "1923", "place": "Hamburg", "provenance_note": "State Archives"}' \
   --allow-retention
 
 # 3. Fast lexical full-text search with BM25 ranking (SQLite FTS5)
@@ -365,17 +389,38 @@ lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-
 lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE
 lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE > source_report.html
 
-# 6. Cross-corpus grounding against manuscript & create dossiers
+# 6. Compare source and manuscript vocabulary; create a dossier
 lixity research compare --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --manuscript ./manuscript.md
-lixity research dossier --project ./novel-research --title "Harbor Evidence" --body "Summary..." --tags "harbor"
+lixity research dossier --project ./novel-research --title "Harbor Evidence" --file "Summary..." --tags "harbor"
 
-# 7. Lifecycle: withdraw contested source or preview irreversible purge
+# 7. Record a hypothesis, connect one cited passage, and note an authorial choice
+lixity research claim --project ./novel-research --title "Harbor opening" --statement "The harbor opened in 1923." --confidence hypothetical
+lixity research link-evidence --project ./novel-research --claim-id urn:uuid:CLAIM-UUID-HERE --passage-id urn:uuid:PASSAGE-UUID-HERE --relation supports
+lixity research decision --project ./novel-research --title "Shift opening date" --rationale "Narrative chronology" --claim-id urn:uuid:CLAIM-UUID-HERE --deviation-from-fact
+
+# 8. Lifecycle: withdraw a source or preview purge
 lixity research withdraw --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --reason "Contested provenance"
 lixity research purge --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --dry-run
 
-# 8. Interactive research dashboard with real-time FTS5 search & visual dossier editor
+# 9. Interactive research dashboard
 lixity serve --research-project ./novel-research --no-project
 ```
+
+In that dashboard, **Open Project** accepts an existing project folder or
+manuscript path and reconnects its `research/` archive. An initialized
+research-only project folder can be opened without a manuscript; comparison
+then waits for a manuscript. **New Project → Import
+Manuscript** creates a new project from selected file text; it does not reopen
+the source project's research records. See the
+[onboarding guide](docs/ONBOARDING.md) for the full workflow.
+
+Source/manuscript comparison uses chapter body prose, excluding headings,
+front matter and the configured appendix. Cross-language output is marked
+`meta.lexical_comparable: false`; numeric overlap remains available with an
+explicit limit and should not be treated as directly comparable vocabulary.
+The experimental source-analysis limitation code
+`original_language_supplied` replaces `historical_language` because supplied
+original-language metadata alone does not identify a historical variety.
 
 ## Python API for AI Agents
 
@@ -427,7 +472,9 @@ New languages require linguistic resources, localized labels, documented
 readability behavior and regression fixtures—not just a translated menu.
 
 Language-specific heuristics are not equally accurate for every genre or
-dialect. Numerical dispatch and resource-coverage tests are not proof of
+dialect. English and German have the deepest linguistic heuristics; the five
+other named profiles have localized resources and narrower validation.
+Numerical dispatch and resource-coverage tests are not proof of
 empirical linguistic accuracy. See [localization](docs/LOCALIZATION.md) and
 [scientific limitations](docs/STABILITY.md).
 

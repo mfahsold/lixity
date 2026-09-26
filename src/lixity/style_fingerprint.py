@@ -616,28 +616,34 @@ def ks_2sample(x: list[float], y: list[float]) -> tuple[float, float]:
 def dunning_g2(obs_a: int, obs_b: int, total_a: int, total_b: int) -> float:
     """Dunning's G² (log-likelihood ratio) for keyness of a term.
 
-    Compares observed frequency in sub-corpus A vs. sub-corpus B.
+    Compares the full term/non-term by sub-corpus A/B contingency table
+    (Dunning 1993, section 5.3), using natural logarithms.
     Returns a signed G² value: positive = over-represented in A,
     negative = under-represented.  Returns 0.0 when totals are zero
-    or the term is absent from both corpora.
+    or the term has the same rate in both corpora. Observed counts must be
+    between zero and their respective positive corpus totals.
     """
     if total_a <= 0 or total_b <= 0:
         return 0.0
-    c = obs_a + obs_b
-    if c == 0:
+    if not (0 <= obs_a <= total_a and 0 <= obs_b <= total_b):
+        raise ValueError("Term counts must be between zero and corpus totals")
+    if obs_a * total_b == obs_b * total_a:
         return 0.0
+    c = obs_a + obs_b
     n = total_a + total_b
-    e_a = total_a * c / n
-    e_b = total_b * c / n
-
-    g2 = 0.0
-    if obs_a > 0 and e_a > 0.0:
-        g2 += 2.0 * obs_a * math.log(obs_a / e_a)
-    if obs_b > 0 and e_b > 0.0:
-        g2 += 2.0 * obs_b * math.log(obs_b / e_b)
+    cells = (
+        (obs_a, total_a * c / n),
+        (obs_b, total_b * c / n),
+        (total_a - obs_a, total_a * (n - c) / n),
+        (total_b - obs_b, total_b * (n - c) / n),
+    )
+    g2 = max(0.0, 2.0 * math.fsum(
+        observed * math.log(observed / expected)
+        for observed, expected in cells if observed > 0
+    ))
 
     # Sign: positive when A is over-represented
-    if e_a > 0.0 and obs_a / e_a < 1.0:
+    if obs_a * total_b < obs_b * total_a:
         g2 = -g2
     return g2
 

@@ -1,10 +1,10 @@
 # RFC: an evidence-based research workspace for Lixity
 
 Status: **target architecture**, 2026-09-25. An initial [local UTF-8 research pilot](USAGE.md)
-is in local development towards `1.16.0.dev0`; it is unreleased and **not in release `v1.15.0`**.
+is included experimentally in `v1.16.0`.
 The remaining modules, providers and schemas below are proposed, not available.
-See the [implementation scope](IMPLEMENTATION.md) for the first slice. No new
-runtime dependencies are introduced by that slice.
+See the [implementation scope](IMPLEMENTATION.md) for the shipped slice. Python
+3.10 uses conditional `tomli` for TOML project settings.
 
 Companion documents: [research and platform evidence](EVIDENCE.md),
 [data model and interchange example](DATA_MODEL.md).
@@ -45,7 +45,7 @@ Inspected baseline: commit `355d51c215a78b3491031f3d9a6feaa8a3c60087`, Lixity
 | `src/lixity/pipeline.py`: `DocumentAnalysis`, `analyze_document` | Deterministic manuscript analysis. Research must not add fetching, embedding or model inference to this path. |
 | `src/lixity/api.py`, `src/lixity/cli.py` | Stable analysis interfaces. Add a separate research namespace; preserve analyze/profile v2 and style v4. |
 | `src/lixity/models.py`: `DossierStatus`, `CorpusAuditReport` | Existing synchronization summaries, not a source/claim database. Preserve their shapes and meaning; introduce richer research audit output separately. |
-| `src/lixity/config.py`: `TOOL_KEYS`, `_load_toml` | Unknown settings are filtered out; TOML reading is unavailable on Python 3.10. A proposed research configuration needs its own explicit loader, not an assumed existing setting. |
+| `src/lixity/config.py`: `TOOL_KEYS`, `_load_toml` | Unknown settings are filtered out; Python 3.10 reads TOML through conditional `tomli`. Research uses an explicit project root and its own manifest rather than ambient analysis configuration. |
 | `src/lixity/workspace.py` | Builds and rotates analysis outputs. Its bounded output archive is not an evidence-preservation repository. |
 | `src/lixity/io.py`: `FileUtils.atomic_write_if_changed` | Has fallback paths that do not guarantee transactional immutable storage. A research repository needs a separately specified durable commit protocol. |
 | `src/lixity/ui/`, `src/lixity/language_data.py` | Reuse presentation components and localized labels. The static dashboard remains usable without a research service. |
@@ -111,10 +111,11 @@ Avoid maintaining a second independently curated copy of research in that UI.
 
 ### Portable profile
 
-Lixity's core remains unchanged. A future `lixity.research` module provides
-schemas, validation, explicit project resolution, Markdown/JSON imports and
-SQLite catalogue/FTS search. Existing analysis commands do not import providers.
-Research commands must also work before a manuscript has any content.
+Lixity's core remains unchanged. The experimental `lixity.research` pilot
+provides schemas, validation, explicit project roots, local UTF-8 text and
+Markdown ingestion, and SQLite catalogue/FTS search. Broader JSON imports
+remain proposed. Existing analysis commands do not import providers.
+Research commands work before a manuscript has any content.
 
 The optional research extra adds a safe YAML parser for Obsidian-compatible
 dossier frontmatter (proposed: PyYAML with safe loading and schema validation).
@@ -382,7 +383,7 @@ The following are proposed names, not current public interfaces:
 | Project server adapter | Authorizes mutation and remote jobs; displays import/review/drift state using shared UI components. |
 | Existing `DossierStatus` | Keep legacy synchronization status intact. New research audit distinguishes missing evidence, unresolved conflict, stale citation and outdated index. |
 
-Proposed command sketch, **not runnable in 1.15.0**:
+Illustrative future command sketch, **not a runnable `v1.16.0` command reference**:
 
 ```bash
 lixity research init --project ./example
