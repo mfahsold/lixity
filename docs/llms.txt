@@ -82,15 +82,16 @@ not services bundled with the core engine.
 - `lixity showing FILE [--json]` – showing/telling balance per chapter (self-calibrating)
 - `lixity style FILE --json [--z-mild F] [--z-strong F] [--fdr-q F] [--fdr-method bh|by] [--dim-threshold F] [--flag-min-severity 1|2|3]` – self-calibrating style reference (schema v4; thresholds injectable, re-read from meta; Cliff’s δ + baseline diagnostics + structural_diagnostics: PELT/Mann-Kendall/Sn/Qn/Hill + early/late Wasserstein-KS shift + co-occurrence fitness + Dunning keyness)
 - `lixity dashboard FILE [-o ui.html] [--names A,B] [same threshold flags]` – single-file interactive dashboard (clickable KPIs, status strip, structure panels, work markers, full settings group)
-- `lixity serve [FILE] [--host IP] [--port N] [--research-project DIR] [--no-project]` – native loopback HTTP server and interactive dashboard with research workspace
+- `lixity serve [FILE] [--host IP] [--port N] [--research-project DIR] [--no-project]` – native loopback HTTP server with SOTA project creation wizard, workspace switcher, and interactive research panel
 - `lixity research SUBCOMMAND --project DIR [options]` – explicit research store (init, ingest, reindex, search, cite, sources, dossier, compare, withdraw, purge, audit, schema)
 - `lixity build [FILE] [--dry-run] [same threshold flags]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
 - `lixity about --json` – languages, features, heuristics, command list
 - `lixity completion bash|zsh` – shell completion
 
-Python facade: `from lixity import api` – `analyze`, `profile`, `dialogue`,
-`characters`, `pacing`, `motifs`, `showing`, `fingerprint`/`passport`,
-`dashboard`, `markers`/`add_marker`/`resolve_marker`, `about`.
+Python facade:
+- Core analysis: `from lixity import api` – `analyze`, `profile`, `dialogue`, `characters`, `pacing`, `motifs`, `showing`, `fingerprint`/`passport`, `dashboard`, `markers`/`add_marker`/`resolve_marker`, `about`.
+- Research archive: `from lixity.research import api as research_api` – `init`, `ingest`, `reindex`, `search`, `cite`, `list_sources`, `get_source`, `create_dossier`, `list_dossiers`, `get_dossier`, `compare_source`.
+- HTTP action API on `lixity serve`: `POST /api/project-create`, `POST /api/project-open`, `POST /api/load`, `POST /api/settings`, `POST /api/marker-add`, `POST /api/marker-resolve`, `POST /api/research-*`.
 
 ## Key numbers and thresholds
 

@@ -269,7 +269,7 @@ def render_dashboard(
         parts.append(f"<h2>{L('controls')}</h2>")
 
         # Workspace Action Bar
-        parts.append('<div class="ctl-group workspace-bar">')
+        parts.append('<div class="workspace-bar">')
         parts.append('<span class="ctl-label">Workspace</span>')
         parts.append('<div class="row">')
         parts.append(f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>')

@@ -71,7 +71,14 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 ## Visual Analytical Suite
 
-### 1. Macro Departure Heatmap (Noise-Aware z* & FDR)
+### 1. Modern Workspace Management & SOTA Project Creation
+
+| Welcome & Quickstart Hero | Project Creation Wizard & Template Cards |
+| :---: | :---: |
+| <img src="docs/screenshots/dashboard-welcome.png" alt="Welcome and quickstart hero card in empty state" width="100%" /> | <img src="docs/screenshots/dashboard-project-modal.png" alt="Native modal dialog with narrative structure templates" width="100%" /> |
+| *Streamlined workspace initialization in empty/no-project state* | *Native `<dialog>` wizard with Minimal, 3-Act & Research novel templates* |
+
+### 2. Macro Departure Heatmap (Noise-Aware z* & FDR)
 
 <p align="center">
   <img src="docs/screenshots/dashboard-heatmap.png" alt="16-feature z* deviation heatmap" width="100%" />
@@ -79,21 +86,21 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 *Significance-adjusted departures from house style across all 16 linguistic features. Dots (●) mark cells confirmed by Benjamini–Hochberg / Benjamini–Yekutieli false discovery rate control. Calibrated with expected false positive baseline.*
 
-### 2. Paragraph Inspection & Editorial Work Markers
+### 3. Paragraph Inspection & Editorial Work Markers
 
 | Paragraph Style Layer Overlay | Editor-Visible Work Markers |
 | :---: | :---: |
 | <img src="docs/screenshots/dashboard-layer.png" alt="Paragraph style overlay" width="100%" /> | <img src="docs/screenshots/dashboard-markers.png" alt="Editor work markers" width="100%" /> |
 | *Sentence rhythm & syntactic density mapped in context* | *Persistent content-hashed `<!-- LIXITY-MARKER -->` tags* |
 
-### 3. Latent Style Space & House Style Baseline
+### 4. Latent Style Space & House Style Baseline
 
 | 3D Stylistic Space & Style Dimensions | Manuscript Style Reference Bands |
 | :---: | :---: |
 | <img src="docs/screenshots/dashboard-dimensions.png" alt="3D stylistic space and latent style dimensions" width="100%" /> | <img src="docs/screenshots/dashboard-reference.png" alt="Style reference bands" width="100%" /> |
 | *Interactive 3D narrative trajectory & cyclic Jacobi EVD* | *Robust Median/MAD bands with chapter sample counts* |
 
-### 4. Terminal Suite & Deterministic CLI
+### 5. Terminal Suite & Deterministic CLI
 
 | CLI Corpus Diagnostics (`lixity analyze`) | Self-Calibrating Style Reference (`lixity style`) |
 | :---: | :---: |
@@ -114,14 +121,14 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 </details>
 
-### 5. Research Workspace & Archival Citations (Pilot)
+### 6. Research Workspace & Archival Citations (Pilot)
 
 | Verified Archival Source Dashboard (`lixity research dashboard`) | CLI Full-Text Search & Exact Citation (`lixity research search/cite`) |
 | :---: | :---: |
 | <img src="docs/screenshots/dashboard-research.png" alt="Research source dashboard with cultural context metadata" width="100%" /> | <img src="docs/screenshots/cli-research.png" alt="CLI research search and citation" width="100%" /> |
 | *Verified source metadata (genre, era, place, provenance) & stylometrics* | *SQLite FTS5 BM25 search & exact Unicode codepoint character offsets* |
 
-### 6. Responsive Mobile Views
+### 7. Responsive Mobile Views
 
 | Project overview | Complete style-dimension panel |
 | :---: | :---: |

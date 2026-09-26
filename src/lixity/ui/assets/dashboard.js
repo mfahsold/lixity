@@ -923,6 +923,10 @@ document.addEventListener("click", async function (event) {
         (chRows ? '<div style="margin-top:.8rem;"><div class="ctl-label" style="margin-bottom:.3rem;">Kapiteldichte</div><table style="width:100%;font-size:.8rem;"><thead><tr><th style="text-align:left;">Kapitel</th><th style="text-align:right;">Tokens</th><th style="text-align:right;">Dichte</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
       '</div>';
     }
+    researchStatus("Abgleich erfolgreich abgeschlossen", true);
+  }
+});
+
 if (document.getElementById("research-manager")) { initResearchUI(); }
 
 // --- Workspace & Project Modals -------------------------------------------

@@ -1171,14 +1171,27 @@ lixity research audit --project ./novel-research</pre>
   <section id="visual-suite">
     <div class="section-header">
       <span class="section-tag">Visual Suite &amp; UI</span>
-      <h2 class="section-title">Visual Analytical Suite (15 Screenshots)</h2>
+      <h2 class="section-title">Visual Analytical Suite (17 Screenshots)</h2>
       <p class="section-desc">Click any screenshot to inspect it in full native resolution inside the interactive lightbox viewer. All captures reflect real desktop, terminal, and mobile browser sessions.</p>
+    </div>
+
+    <!-- 0. Modern Workspace & Project Wizard -->
+    <span class="section-tag">Modern Workspace Management &amp; SOTA Project Wizard</span>
+    <div class="shot-pair">
+      <figure class="shot">
+        <img src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" width="1152" height="398" loading="eager" fetchpriority="high" decoding="async"/>
+        <figcaption><strong>Welcome &amp; quickstart hero:</strong> Clean, minimalist workspace onboarding displayed when opening Lixity without an active manuscript. Offers one-click project creation and file selection.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="screenshots/dashboard-project-modal.png" alt="Native dialog modal for project creation with template selection cards" width="608" height="526" loading="eager" decoding="async"/>
+        <figcaption><strong>Native &lt;dialog&gt; project wizard:</strong> Accessible modal dialog with backdrop blur, language selection, and tailored narrative structure templates (Minimal, 3-Act Structure, Research Novel with pre-initialized research/ archive).</figcaption>
+      </figure>
     </div>
 
     <!-- 1. Hero Overview -->
     <span class="section-tag">1. Macro Overview &amp; KPI Strip</span>
     <figure class="shot">
-      <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI cards, style heatmap, and tense continuity" width="1480" height="945" loading="eager" fetchpriority="high" decoding="async"/>
+      <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI cards, style heatmap, and tense continuity" width="1480" height="945" loading="lazy" decoding="async"/>
       <figcaption><strong>From corpus overview to paragraph triage:</strong> Project metrics, sentence length architecture (ASL, staccato, hypotaxis), readability (Flesch, LIX), length-invariant lexical diversity (HD-D, Yule's K, MTLD), and consistency checks in a single, offline HTML report.</figcaption>
     </figure>
 
@@ -1300,12 +1313,21 @@ lixity style manuscript.md --json --fdr-method by --min-chapters 4
 
 # Interactive dashboard &amp; idempotent workspace build
 lixity dashboard manuscript.md -o exports/dashboard.html # Standalone single-file HTML
-lixity build manuscript.md --language en  # Idempotent workspace build with archive rotation</pre>
+lixity build manuscript.md --language en  # Idempotent workspace build with archive rotation
+lixity serve --port 8765                 # Local development server &amp; interactive workspace
+
+# Evidence-based research workspace (pilot)
+lixity research init --project ./research --title "Archival Study"
+lixity research ingest --project ./research log.txt --allow-retention
+lixity research search --project ./research --query "warehouse gate"
+lixity research dossier --project ./research --title "Smuggling Dossier" --body "Summary..."
+lixity research compare --project ./research --source &lt;source_id&gt; --manuscript manuscript.md</pre>
     </div>
 
     <div class="card">
       <h3 style="margin-top: 0; color: var(--fg-heading);">Python API for AI Agents</h3>
       <pre class="cmd-block">from lixity import api
+from lixity.research import api as research_api
 
 # 1. Compute corpus KPIs &amp; readability
 metrics = api.analyze(text, language="auto")
@@ -1317,7 +1339,13 @@ reference = api.fingerprint(text, language="en")
 updated_text, marker = api.add_marker(text, kind="pruefen", note="Verify tense shift", line=42)
 
 # 4. Generate standalone interactive dashboard
-dashboard_html = api.dashboard(text, language="en", title="My Novel")</pre>
+dashboard_html = api.dashboard(text, language="en", title="My Novel")
+
+# 5. Research workspace: archival ingestion, FTS5 search &amp; dossiers
+research_api.init(proj_path, title="1920s Investigation", language="en")
+ingest_res = research_api.ingest(proj_path, "customs_1923.txt", allow_retention=True)
+search_res = research_api.search(proj_path, "warehouse customs", limit=5)
+dos_res = research_api.create_dossier(proj_path, title="Evidence Brief", body="...", evidence_ids=[...])</pre>
       <p style="font-size: 0.88rem; color: var(--muted); margin: 0.8rem 0 0;">
         Full interface contracts in <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">docs/AGENTS.md</a> &middot; Mathematical derivations in <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">docs/METHODS.md</a>.
       </p>

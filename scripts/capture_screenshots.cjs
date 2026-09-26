@@ -61,6 +61,14 @@ async function main() {
         for (let index = 0; index < 3; index++) await page.locator('#ch-1 .chip').nth(index).click();
         assert.equal(await page.locator('#ch-1 .ptext.open').count(), 3);
         await save(capture.target, '#ch-1');
+      } else if (name === 'dashboard-welcome.png') {
+        await save(capture.target, '#welcome-hero');
+      } else if (name === 'dashboard-project-modal.png') {
+        await page.evaluate(() => {
+          const m = document.getElementById('modal-project-create');
+          if (m) m.showModal();
+        });
+        await save(capture.target, '#modal-project-create .modal-card');
       } else {
         await save(capture.target);
       }

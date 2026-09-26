@@ -290,7 +290,22 @@ def main() -> int:
         900,
     )
 
-    # 8. Research Source Dashboard & CLI Citation (Research Pilot) ---------
+    # 8. Welcome Hero & Project Creation Modal (empty state) ---------------
+    welcome_dashboard = render_dashboard([], [], title="Lixity", controls=True, language_name=resolved.name, language_key=resolved.key, labels=resolved.labels)
+    _queue_capture(
+        _write_html("dashboard-welcome.html", _force_light(welcome_dashboard)),
+        OUT_DIR / "dashboard-welcome.png",
+        1440,
+        600,
+    )
+    _queue_capture(
+        _write_html("dashboard-project-modal.html", _force_light(welcome_dashboard)),
+        OUT_DIR / "dashboard-project-modal.png",
+        1440,
+        720,
+    )
+
+    # 9. Research Source Dashboard & CLI Citation (Research Pilot) ---------
     research_proj = WORK_DIR / "research-demo"
     if research_proj.exists():
         shutil.rmtree(research_proj)

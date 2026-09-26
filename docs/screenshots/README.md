@@ -33,6 +33,8 @@ The command fails on runtime errors, missing panels or mobile page overflow.
 - `dashboard-light` / `dashboard-dark`: desktop overview viewports.
 - `dashboard-heatmap`: the upper part of the chapter heatmap, not every chapter.
 - `dashboard-layer`: Chapter I with dialogue coloring and three opened paragraphs.
+- `dashboard-welcome`: Welcome & quickstart hero card in the initial empty/no-project state.
+- `dashboard-project-modal`: Native modal dialog with narrative structure templates (Minimal, 3-Act, Research).
 - `dashboard-dimensions`: complete panel, without cutting off the last card.
 - `dashboard-markers`: the actual marker panel; three illustrative notes are
   inserted into an in-memory sample copy only.
