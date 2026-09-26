@@ -250,7 +250,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters pacing motifs showing dashboard style build about completion research"
+    local cmds="analyze profile dialogue characters pacing motifs showing dashboard serve style build about completion research"
     local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
     local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
     if [[ $COMP_CWORD -eq 1 ]]; then
@@ -325,6 +325,7 @@ _lixity() {
     'showing:Showing vs telling balance'
     'style:Self-calibrated style reference'
     'dashboard:Single-file HTML dashboard'
+    'serve:Run local HTTP development server and interactive dashboard'
     'build:Idempotent workspace build'
     'about:Tool metadata for agents'
     'completion:Shell completion script'
@@ -364,6 +365,17 @@ _lixity() {
           ;;
         about)
           _arguments '--json[JSON output]' '--help[Help]'
+          ;;
+        serve)
+          _arguments \
+            '1:path:_files' \
+            '--host[Bind address]:host:' \
+            '--port[Port]:port:' \
+            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--title[Dashboard title]:title:' \
+            '--open[Open in browser]' \
+            '--no-project[Start without preloading a project]' \
+            "${_lixity_style_flags[@]}"
           ;;
         build)
           _arguments \
@@ -837,6 +849,7 @@ def main(argv: list[str] | None = None) -> int:
         ("showing", "Showing vs. telling balance (text/JSON)"),
         ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
+        ("serve", "Run local HTTP development server and interactive dashboard"),
         ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
         ("about", "Tool metadata for agents: languages, features, heuristics"),
         ("completion", "Shell completion script (bash or zsh)"),
@@ -948,6 +961,52 @@ def main(argv: list[str] | None = None) -> int:
                 help="Minimum paragraph severity for flags panel (default 2)",
             )
             continue
+        if name == "serve":
+            p.add_argument(
+                "path",
+                nargs="?",
+                default=None,
+                help="Manuscript file or workspace folder (default: ambient)",
+            )
+            p.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
+            p.add_argument("--port", type=int, default=8765, help="Port (default: 8765)")
+            p.add_argument("--language", default="auto", help="Language profile (default: auto)")
+            p.add_argument("--title", default=None, help="Dashboard title (default: filename)")
+            p.add_argument("--open", action="store_true", help="Open dashboard in browser")
+            p.add_argument(
+                "--no-project",
+                action="store_true",
+                help="Start without preloading a project",
+            )
+            p.add_argument(
+                "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
+            )
+            p.add_argument(
+                "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
+            )
+            p.add_argument(
+                "--fdr-q", type=float, default=None, help="Benjamini-Hochberg q (default 0.05)"
+            )
+            p.add_argument(
+                "--fdr-method",
+                choices=("bh", "by"),
+                default=None,
+                help="FDR method: bh (Benjamini-Hochberg) or by (Benjamini-Yekutieli)",
+            )
+            p.add_argument(
+                "--dim-threshold",
+                type=float,
+                default=None,
+                help="|dimension score| threshold (default 2.5)",
+            )
+            p.add_argument(
+                "--flag-min-severity",
+                type=int,
+                choices=(1, 2, 3),
+                default=None,
+                help="Minimum paragraph severity for flags panel (default 2)",
+            )
+            continue
         p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
         p.add_argument(
@@ -1009,6 +1068,26 @@ def main(argv: list[str] | None = None) -> int:
     if args.command == "about":
         _print_about_json() if args.json else _print_about_text()
         return EXIT_OK
+
+    if args.command == "serve":
+        from .server import run_server
+
+        fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+        try:
+            run_server(
+                target_path=args.path,
+                host=args.host,
+                port=args.port,
+                language=args.language,
+                title=args.title,
+                no_project=args.no_project,
+                thresholds=fp_thresholds,
+                open_browser=args.open,
+            )
+            return EXIT_OK
+        except (OSError, ValueError, RuntimeError) as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
 
     if args.command == "build":
         return _cmd_build(args)

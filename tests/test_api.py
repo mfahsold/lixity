@@ -183,7 +183,7 @@ class TestCliAgentSurface(unittest.TestCase):
         for script in (_BASH_COMPLETION, _ZSH_COMPLETION):
             self.assertIn("lixity", script)
         self.assertIn(
-            "analyze profile dialogue characters pacing motifs showing dashboard style build about completion",
+            "analyze profile dialogue characters pacing motifs showing dashboard serve style build about completion",
             _BASH_COMPLETION,
         )
         self.assertIn("--fdr-method", _BASH_COMPLETION)

@@ -407,6 +407,11 @@ def about() -> dict[str, Any]:
                 "output": "html",
             },
             {
+                "name": "serve",
+                "purpose": "local HTTP development server and interactive dashboard (127.0.0.1)",
+                "output": "server",
+            },
+            {
                 "name": "build",
                 "purpose": "idempotent workspace build (exports/, archive, nda/)",
                 "output": "files",
