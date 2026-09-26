@@ -828,6 +828,9 @@ footer {
   z-index: 10000;
   pointer-events: none;
   max-width: min(24rem, 86vw);
+  max-height: calc(100dvh - 20px);
+  overflow-y: auto;
+  overflow-wrap: anywhere;
   padding: .5rem .75rem;
   border-radius: 6px;
   background: #18181b;
@@ -847,6 +850,7 @@ footer {
 .tooltip-popup.visible {
   opacity: 1;
   visibility: visible;
+  pointer-events: auto;
 }
 
 /* Fallback pure CSS tooltip when JS is disabled */
@@ -1004,13 +1008,19 @@ details.nda .row { margin-top: .5rem; }
 
 /* --- Welcome Hero & Workspace Management ------------------------------ */
 .workspace-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: .45rem .8rem;
   background: var(--surface);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: .65rem .85rem;
-  margin-bottom: .85rem;
+  padding: .55rem .75rem;
 }
+.workspace-bar .row { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
 .welcome-hero {
+  position: relative;
   border: 1px solid var(--line);
   border-radius: 14px;
   background: linear-gradient(135deg, var(--surface) 0%, rgba(74, 138, 212, 0.06) 100%);
@@ -1018,6 +1028,13 @@ details.nda .row { margin-top: .5rem; }
   margin-bottom: 1.5rem;
   text-align: center;
   box-shadow: 0 4px 20px -5px rgba(0, 0, 0, 0.04);
+}
+.welcome-dismiss {
+  position: absolute;
+  top: .7rem;
+  right: .7rem;
+  padding: .3rem .55rem;
+  font-size: .72rem;
 }
 .welcome-inner {
   max-width: 42rem;
@@ -1286,6 +1303,54 @@ dialog.lixity-modal::backdrop {
   overflow-y: auto;
   background: var(--surface);
 }
+.project-path-row {
+  display: flex;
+  align-items: stretch;
+  gap: .5rem;
+}
+.project-path-row input {
+  flex: 1;
+  min-width: 0;
+}
+.project-chooser {
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: .75rem;
+  background: var(--bg);
+}
+.project-chooser-heading,
+.project-chooser-toolbar {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  flex-wrap: wrap;
+}
+.project-chooser-heading { justify-content: space-between; }
+.project-chooser-current { margin: .6rem 0; overflow-wrap: anywhere; }
+.project-chooser-current code { color: var(--fg); }
+.project-chooser-list {
+  list-style: none;
+  margin: .5rem 0 0;
+  padding: 0;
+  max-height: min(34vh, 16rem);
+  overflow-y: auto;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.project-chooser-list li + li { border-top: 1px solid var(--line); }
+.project-chooser-entry {
+  display: flex;
+  align-items: center;
+  gap: .5rem;
+  width: 100%;
+  border: 0;
+  border-radius: 0;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.project-chooser-entry:hover,
+.project-chooser-entry:focus-visible { background: var(--accent-light); }
+#open-project-chooser-status.err { color: var(--flag); }
 .form-group {
   display: flex;
   flex-direction: column;
@@ -1302,6 +1367,8 @@ dialog.lixity-modal::backdrop {
     flex-direction: column;
     gap: .75rem;
   }
+  .project-path-row { flex-direction: column; }
+  .project-path-row button { align-self: flex-start; }
 }
 .form-label {
   display: block;

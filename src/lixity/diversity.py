@@ -2,37 +2,37 @@
 
 Pure, deterministic implementations of the established indices:
 
-- **HD-D** (McCarthy & Jarvis 2010): mean type-variety of 42 random samples of
-  35 consecutive tokens (fixed seed), with a plug-in standard error.
+- **HD-D** (McCarthy & Jarvis 2010): hypergeometric expected type-token ratio
+  of a 42-token draw without replacement from the whole text.
 - **MTLD** (McCarthy & Jarvis 2010): mean segment length until TTR drops below
   0.72, forward and backward averaged.
 - **MATTR** (Covington & McFall 2010): moving-average TTR over a 50-token window.
 - **Maas a²** (Maas 1972): (log N − log V) / (log N)².
 - **Yule's K** (Yule 1944): 10^4 · (Σ m² V_m − N) / N².
 
-Short-text guards follow Bestgen (2024/2025): every index returns ``None``
-below :data:`MIN_TOKENS_LD` tokens instead of an unreliable value.
+HD-D, MTLD and Maas use a local short-text policy of at least
+:data:`MIN_TOKENS_LD` tokens. MATTR requires a full window; Yule's K returns
+zero for empty input. These guards do not establish estimator reliability.
 """
 
 from __future__ import annotations
 
 import math
-import random
 from collections import Counter
 
-# Minimum token count for length-sensitive lexical-diversity indices
-# (Bestgen 2024/2025: all LD indices are unreliable on very short texts).
+# Local minimum length for HD-D, MTLD and Maas; not a universal validity boundary.
 MIN_TOKENS_LD = 100
+HD_D_DRAW_SIZE = 42
 
 
 def hd_d(tokens: list[str], seed: int = 42, min_samples: int = 5) -> float | None:
     """
-    HD-D: length-robust lexical diversity (McCarthy & Jarvis 2010).
+    HD-D: expected TTR of a 42-token hypergeometric draw (McCarthy & Jarvis 2010).
 
-    Mean of the type-variety of 42 random samples of 35 consecutive tokens;
-    variety per sample = 1 - sum(c_t*(c_t-1)) / (n*(n-1)).
-    Deterministic via fixed seed; returns None for texts too short for
-    ``min_samples`` disjoint windows (no reliable statement).
+    Each type contributes its probability of occurring at least once in a draw
+    without replacement, divided by 42. Return None below MIN_TOKENS_LD.
+    ``seed`` and ``min_samples`` remain accepted for caller compatibility but
+    have no effect on this exact calculation.
     """
     value, _ = hd_d_stats(tokens, seed=seed, min_samples=min_samples)
     return value
@@ -41,37 +41,37 @@ def hd_d_stats(
     tokens: list[str], seed: int = 42, min_samples: int = 5
 ) -> tuple[float | None, float]:
     """
-    HD-D with its estimation uncertainty: returns (value, standard error).
+    Return (exact HD-D expectation, computational standard error).
 
-    The standard error is the sample standard deviation of the up to 42
-    sample diversities divided by sqrt(#samples) – the documented plug-in
-    estimator of the HD-D mean.
+    The expectation has no Monte Carlo sampling error, hence the second value
+    is zero. It does not estimate uncertainty about a larger population.
+    ``seed`` and ``min_samples`` are legacy no-op parameters.
     """
     n = len(tokens)
-    sample_size = 35
-    if n < sample_size * min_samples:
+    if n < MIN_TOKENS_LD:
         return None, 0.0
-    max_samples = min(42, n // sample_size)
-    rng = random.Random(seed)  # noqa: S311 – deterministic sampling, not cryptography
-    starts = sorted(rng.sample(range(n - sample_size + 1), max_samples))
-    diversities = []
-    for s in starts:
-        sample = tokens[s : s + sample_size]
-        repeat = sum(c * (c - 1) for c in Counter(sample).values())
-        diversities.append(1.0 - repeat / (sample_size * (sample_size - 1)))
-    mean = sum(diversities) / len(diversities)
-    if len(diversities) < 2:
-        return mean, 0.0
-    variance = sum((d - mean) ** 2 for d in diversities) / (len(diversities) - 1)
-    return mean, math.sqrt(variance) / math.sqrt(len(diversities))
+    # Types with the same frequency have identical draw-presence probabilities.
+    frequency_counts = Counter(Counter(tokens).values())
+    presence = []
+    for frequency, type_count in frequency_counts.items():
+        if n - frequency < HD_D_DRAW_SIZE:
+            probability = 1.0
+        else:
+            # P(type absent) = product((N - f - i) / (N - i)), i=0..41.
+            # log1p/expm1 retain precision for rare types in long texts.
+            log_absence = math.fsum(
+                math.log1p(-frequency / (n - i)) for i in range(HD_D_DRAW_SIZE)
+            )
+            probability = -math.expm1(log_absence)
+        presence.append(type_count * probability)
+    return math.fsum(presence) / HD_D_DRAW_SIZE, 0.0
 def mtld(tokens: list[str], threshold: float = 0.72) -> float | None:
     """
     MTLD: length-invariant lexical diversity (McCarthy & Jarvis 2010).
 
     Mean length of sequential token runs that maintain TTR >= threshold;
     computed forward and backward then averaged. Returns None below
-    ``MIN_TOKENS_LD`` (100) tokens – Bestgen (2024/2025) shows that all
-    lexical-diversity indices are unreliable on very short texts – and
+    ``MIN_TOKENS_LD`` (100) tokens under the local short-text policy and
     when no factor completes (all-unique token sequences).
     """
     n = len(tokens)
@@ -105,9 +105,9 @@ def mattr(tokens: list[str], window: int = 50) -> float | None:
     """
     MATTR: moving-average type-token ratio (Covington & McFall 2010).
 
-    Mean TTR over sliding windows of ``window`` tokens – the only index
-    shown to be stable across all text lengths. None if text is shorter
-    than the window. O(N) via an incremental type counter.
+    Mean TTR over sliding windows of ``window`` tokens. None if text is shorter
+    than the window. O(N) via an incremental type counter. Comparisons require
+    the same window and tokenization; the result is not independent of these choices.
     """
     n = len(tokens)
     if n < window:

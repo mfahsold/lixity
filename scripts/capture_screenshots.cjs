@@ -31,7 +31,8 @@ async function main() {
       const nativeFetch = window.fetch.bind(window);
       window.fetch = (input, options) => {
         const url = typeof input === 'string' ? input : input.url;
-        if (location.pathname.endsWith('/dashboard-research-workspace.html') &&
+        if ((location.pathname.endsWith('/dashboard-research-workspace.html') ||
+             location.pathname.endsWith('/dashboard-project-open.html')) &&
             Object.prototype.hasOwnProperty.call(fixture, url)) {
           return Promise.resolve(new Response(JSON.stringify(fixture[url]), {
             status: 200,
@@ -53,6 +54,8 @@ async function main() {
     }
     async function save(target, selector) {
       await page.mouse.move(0, 0);
+      if (await page.locator('#lixity-tooltip.visible').count()) await page.keyboard.press('Escape');
+      if (await page.locator('#lixity-tooltip').count()) await page.locator('#lixity-tooltip').waitFor({state: 'hidden'});
       const options = {path: target, animations: 'disabled'};
       if (selector) await page.locator(selector).screenshot(options);
       else await page.screenshot(options);
@@ -85,6 +88,12 @@ async function main() {
           if (m) m.showModal();
         });
         await save(capture.target, '#modal-project-create .modal-card');
+      } else if (name.startsWith('dashboard-project-open')) {
+        await page.locator('#btn-modal-open-project').click();
+        await page.locator('#open-proj-choose').click();
+        await page.locator('#open-project-chooser-list button').first().waitFor();
+        assert.ok(await page.locator('#modal-project-open').evaluate(element => element.scrollWidth <= element.clientWidth));
+        await save(capture.target, '#modal-project-open');
       } else if (name.startsWith('dashboard-research-claims')) {
         await page.locator('[data-rtab="claims"]').click();
         await page.locator('#research-claims-list .research-card').first().waitFor();

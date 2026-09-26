@@ -74,12 +74,20 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 ## Visual Analytical Suite
 
-### 1. Modern Workspace Management & SOTA Project Creation
+### 1. Open, import, or create a project
 
 | Welcome & Quickstart Hero | Project Creation Wizard & Template Cards |
 | :---: | :---: |
 | <img src="docs/screenshots/dashboard-welcome.png" alt="Welcome and quickstart hero card in empty state" width="100%" /> | <img src="docs/screenshots/dashboard-project-modal.png" alt="Native modal dialog with narrative structure templates" width="100%" /> |
 | *Streamlined workspace initialization in empty/no-project state* | *Native `<dialog>` wizard with Minimal, 3-Act & Research novel templates* |
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-project-open.png" alt="Open Project with a file and folder browser and a separate import option" width="608" />
+</p>
+
+*Browse existing folders or manuscripts on the computer running Lixity, then
+open the original workspace with its research archive. Import creates a separate
+project. Welcome guidance can be hidden and reopened from the toolbar.*
 
 ### 2. Macro Departure Heatmap (Noise-Aware z* & FDR)
 
@@ -406,11 +414,14 @@ lixity research purge --project ./novel-research --source-id urn:uuid:SOURCE-UUI
 lixity serve --research-project ./novel-research --no-project
 ```
 
-In that dashboard, **Open Project** accepts an existing project folder or
-manuscript path and reconnects its `research/` archive. An initialized
+In that dashboard, **Open Project → Browse files and folders** browses paths on
+the computer running the Lixity server, starting at its user's home directory.
+Use **Home**, **Parent folder**, or the folder list, select a file or folder, then
+confirm with **Open**; typing a path also works. Opening reconnects that
+project's `research/` archive. An initialized
 research-only project folder can be opened without a manuscript; comparison
 then waits for a manuscript. **New Project → Import
-Manuscript** creates a new project from selected file text; it does not reopen
+Manuscript** creates a new project from browser-selected file bytes; it does not reopen
 the source project's research records. See the
 [onboarding guide](docs/ONBOARDING.md) for the full workflow.
 

@@ -137,6 +137,18 @@ class TestApiFacade(unittest.TestCase):
         self.assertIn("de", info["languages"])
         self.assertTrue(info["features"])
         self.assertGreater(info["heuristics"]["z_mild"], 0.0)
+        self.assertEqual(info["heuristics"]["hd_d_method"], "hypergeometric_expected_ttr")
+        self.assertEqual(info["heuristics"]["hd_d_sample_size"], 42)
+        self.assertEqual(info["heuristics"]["hd_d_samples"], 0)
+        self.assertEqual(info["heuristics"]["hd_d_min_tokens"], 100)
+
+    def test_exact_hd_d_matches_chapter_and_corpus_without_invented_se(self):
+        text = "## Chapter\n\n" + "echo " * 100
+        result = api.analyze(text, chapter_regex=r"(?m)^##\s+", project_config={})
+        metrics = result["metrics"]
+        self.assertAlmostEqual(metrics["hd_d"], 1 / 42)
+        self.assertAlmostEqual(metrics["chapters"][0]["hd_d"], 1 / 42)
+        self.assertNotIn("hd_d", metrics["chapters"][0]["style_se"])
 
     def test_facade_is_deterministic(self):
         self.assertEqual(api.analyze(SAMPLE), api.analyze(SAMPLE))

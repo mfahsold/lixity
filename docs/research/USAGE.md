@@ -144,13 +144,16 @@ The project argument is mandatory. Research never discovers a project from a
 manuscript or reads analysis thresholds. `lixity build` remains unchanged and
 never imports sources or refreshes research indexes.
 
-In the local server, **Open Project** takes a path to an existing
-workspace folder or manuscript file on the server's filesystem and attaches
-that workspace's `research/` archive when present. It also opens an
-initialized research-only folder with no manuscript. Source and record
-management remain available there; manuscript comparison needs a loaded
-manuscript. **New Project → Import
-Manuscript** accepts selected or dropped `.md`/`.txt` text and creates a
+In the local server, **Open Project** takes a path to an existing workspace
+folder or manuscript file on the server's filesystem and attaches that
+workspace's `research/` archive when present. **Browse files and folders** lets
+you browse the server computer's paths from its home directory, move with
+**Home** or **Parent folder**, select a manuscript or the current folder, and then
+confirm with **Open**; a typed path remains available. This is not a native OS
+file dialog or a browser upload. An initialized research-only folder opens
+without a manuscript. Source and record management remain available there;
+manuscript comparison needs a loaded manuscript. **New Project → Import
+Manuscript** accepts selected or dropped `.md`/`.txt` bytes and creates a
 separate project. Use Open Project when returning to an existing research
 archive. Source ingestion in the research panel has its own explicit local
 retention confirmation.

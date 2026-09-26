@@ -103,12 +103,14 @@ def render_dashboard(
     language_options: Sequence[Any] | None = None,
     flag_min_severity: int | None = None,
     document_context: Mapping[str, Any] | None = None,
+    enabled_actions: Sequence[str] | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
-    ``controls=True`` adds the local control panel (buttons/dropdown/NDA),
-    which triggers the CLI functions via the UI server (``lixity.ui.server``
-    / the embedding host). ``dialogue``/``characters``/``pacing``/``motifs``/
+    ``controls=True`` adds the local control panel. ``enabled_actions`` limits
+    optional legacy actions to those implemented by the embedding server;
+    ``None`` preserves the full control set for existing hosts.
+    ``dialogue``/``characters``/``pacing``/``motifs``/
     ``showing`` add the optional dialogue-structure, character-presence,
     pacing, motif/repetition and showing/telling panels (see the
     corresponding modules).
@@ -117,6 +119,10 @@ def render_dashboard(
     resolved value from ``fingerprint.thresholds`` (CLI/API/config aware).
     """
     esc = html.escape
+    allowed_actions = set(enabled_actions) if enabled_actions is not None else None
+
+    def action_enabled(action: str) -> bool:
+        return allowed_actions is None or action in allowed_actions
 
     def L(key: str) -> str:
         return esc(label(labels, key))
@@ -208,6 +214,19 @@ def render_dashboard(
         project_header(title, labels, language_name, engine_name),
     ]
 
+    if controls:
+        parts.append(f'<nav class="workspace-bar" aria-label="{L("workspace")}">')
+        parts.append(f'<span class="ctl-label">{L("workspace")}</span>')
+        parts.append('<div class="row">')
+        parts.append(f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>')
+        parts.append(f'<button type="button" class="ctl" id="btn-modal-open-project">📂 {L("open_project")}</button>')
+        show_guidance_hidden = "" if chapters else " hidden"
+        parts.append(f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden}>{L("welcome_show")}</button>')
+        if manuscript_name:
+            parts.append(f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>')
+        parts.append('</div>')
+        parts.append('</nav>')
+
     if status:
         parts.append(status_strip(labels, status))
 
@@ -241,8 +260,10 @@ def render_dashboard(
                 )
         parts.append("</tbody></table></div></section>")
 
-    if not chapters:
-        parts.append('<section class="welcome-hero" id="welcome-hero">')
+    if controls or not chapters:
+        parts.append('<section class="welcome-hero" id="welcome-hero"' + (' hidden' if chapters else '') + '>')
+        if controls:
+            parts.append(f'  <button type="button" class="ctl welcome-dismiss" id="welcome-dismiss" aria-controls="welcome-hero">{L("welcome_dismiss")}</button>')
         parts.append('  <div class="welcome-inner">')
         parts.append(f'    <div class="welcome-badge">Lixity {L("workspace")}</div>')
         parts.append(f'    <h1 class="welcome-title">{L("welcome_title")}</h1>')
@@ -282,32 +303,21 @@ def render_dashboard(
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('controls')}</h2>")
 
-        # Workspace Action Bar
-        parts.append('<div class="workspace-bar">')
-        parts.append(f'<span class="ctl-label">{L("workspace")}</span>')
-        parts.append('<div class="row">')
-        parts.append(f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>')
-        parts.append(f'<button type="button" class="ctl" id="btn-modal-open-project">📂 {L("open_project")}</button>')
-        if manuscript_name:
-            parts.append(f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>')
-        parts.append('</div>')
-        parts.append('</div>')
-
-        # Load manuscript
-        parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
-        parts.append('<div class="row">')
-        parts.append('<input class="ctl" type="file" id="ms-file" accept=".md,.markdown,.txt"/>')
-        parts.append(
-            f'<button class="ctl" data-action="load" data-payload="load">{L("load")}</button>'
-        )
-        if manuscript_name:
+        if action_enabled("load"):
+            parts.append('<div class="ctl-group">')
+            parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
+            parts.append('<div class="row">')
+            parts.append('<input class="ctl" type="file" id="ms-file" accept=".md,.markdown,.txt"/>')
             parts.append(
-                f'<span class="ctl-note">{L("current_manuscript")}: {esc(manuscript_name)}</span>'
+                f'<button class="ctl" data-action="load" data-payload="load">{L("load")}</button>'
             )
-        parts.append("</div>")
-        parts.append(f'<p class="ctl-note">{L("load_hint")}</p>')
-        parts.append("</div>")
+            if manuscript_name:
+                parts.append(
+                    f'<span class="ctl-note">{L("current_manuscript")}: {esc(manuscript_name)}</span>'
+                )
+            parts.append("</div>")
+            parts.append(f'<p class="ctl-note">{L("load_hint")}</p>')
+            parts.append("</div>")
 
         parts.append(settings_form(
             labels, title, current_language, language_options,
@@ -315,59 +325,71 @@ def render_dashboard(
                     flag_min_severity=flag_min_severity),
         ))
 
-        # Analyses & exports
-        parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{L("export")} · {L("run_analysis")}</span>')
-        parts.append('<div class="row">')
-        parts.append(
-            f'<select class="ctl" id="fmt" aria-label="{esc(L("export"))}" '
-            f'title="{esc(label(labels, "help_format"))}">'
-            f'<option value="all">{L("format_all")}</option>'
-            f'<option value="a4">A4</option>'
-            f'<option value="taschenbuch">{L("format_paperback")}</option>'
-            f'<option value="mobile">Mobile</option>'
-            f'<option value="epub">EPUB</option>'
-            "</select>"
-        )
-        parts.append(
-            f'<button class="ctl primary" data-action="export" data-payload="format">'
-            f"{help_term(labels, 'export', L('export'))}</button>"
-        )
-        parts.append(
-            f'<button class="ctl" data-action="analyze">{help_term(labels, "rebuild", L("run_analysis"))}</button>'
-        )
-        parts.extend(
-            f'<button class="ctl" data-action="{action}">{help_term(labels, action, L(action))}</button>'
-            for action in ("sync", "audit", "prune", "gdrive", "rebuild")
-        )
-        parts.append("</div></div>")
+        # Actions advertised by the embedding server.
+        visible_actions = [action for action in
+                           ("analyze", "sync", "audit", "prune", "gdrive", "rebuild")
+                           if action_enabled(action)]
+        if action_enabled("export") or visible_actions:
+            parts.append('<div class="ctl-group">')
+            action_heading = (
+                f'{L("export")} · {L("run_analysis")}'
+                if action_enabled("export") and visible_actions
+                else L("export") if action_enabled("export") else L("run_analysis")
+            )
+            parts.append(f'<span class="ctl-label">{action_heading}</span>')
+            parts.append('<div class="row">')
+            if action_enabled("export"):
+                parts.append(
+                    f'<select class="ctl" id="fmt" aria-label="{esc(L("export"))}" '
+                    f'title="{esc(label(labels, "help_format"))}">'
+                    f'<option value="all">{L("format_all")}</option>'
+                    f'<option value="a4">A4</option>'
+                    f'<option value="taschenbuch">{L("format_paperback")}</option>'
+                    f'<option value="mobile">Mobile</option>'
+                    f'<option value="epub">EPUB</option>'
+                    "</select>"
+                )
+                parts.append(
+                    f'<button class="ctl primary" data-action="export" data-payload="format">'
+                    f"{help_term(labels, 'export', L('export'))}</button>"
+                )
+            if "analyze" in visible_actions:
+                parts.append(
+                    f'<button class="ctl" data-action="analyze">{help_term(labels, "rebuild", L("run_analysis"))}</button>'
+                )
+            parts.extend(
+                f'<button class="ctl" data-action="{action}">{help_term(labels, action, L(action))}</button>'
+                for action in visible_actions if action != "analyze"
+            )
+            parts.append("</div></div>")
 
         parts.append(f'<div class="ctl-status" id="ctl-status" role="status" aria-live="polite">{L("server_hint")}</div>')
         parts.append("</section>")
 
-        parts.append('<section class="panel controls" id="nda-manager">')
-        parts.append(f"<h2>{L('nda_manager')}</h2>")
-        parts.append(f'<p class="ctl-note" id="nda-hint">{L("locked_hint")}</p>')
-        parts.append('<div class="row" id="nda-unlock-row">')
-        parts.append(
-            f'<input class="ctl" type="password" id="nda-passphrase" placeholder="{L("passphrase")}"/>'
-        )
-        parts.append(f'<button class="ctl" id="nda-unlock-btn">{L("unlock")}</button>')
-        parts.append("</div>")
-        parts.append('<div id="nda-table"></div>')
-        parts.append('<div class="row" id="nda-add-row" hidden="hidden">')
-        parts.append(f'<input class="ctl" id="nda-new-name" placeholder="{L("name")}"/>')
-        parts.append(f'<input class="ctl" id="nda-new-contact" placeholder="{L("contact")}"/>')
-        parts.append(f'<input class="ctl" id="nda-new-notes" placeholder="{L("notes")}"/>')
-        parts.append(
-            f'<button class="ctl primary" id="nda-add-btn">{L("create")} + {L("export_pdf")}</button>'
-        )
-        parts.append("</div>")
-        _nda_statuses = json.dumps(NdaStatus.all_values())
-        parts.append(
-            f'<div class="ctl-status" id="nda-status" data-nda-statuses="{_nda_statuses}"></div>'
-        )
-        parts.append("</section>")
+        if action_enabled("nda"):
+            parts.append('<section class="panel controls" id="nda-manager">')
+            parts.append(f"<h2>{L('nda_manager')}</h2>")
+            parts.append(f'<p class="ctl-note" id="nda-hint">{L("locked_hint")}</p>')
+            parts.append('<div class="row" id="nda-unlock-row">')
+            parts.append(
+                f'<input class="ctl" type="password" id="nda-passphrase" placeholder="{L("passphrase")}"/>'
+            )
+            parts.append(f'<button class="ctl" id="nda-unlock-btn">{L("unlock")}</button>')
+            parts.append("</div>")
+            parts.append('<div id="nda-table"></div>')
+            parts.append('<div class="row" id="nda-add-row" hidden="hidden">')
+            parts.append(f'<input class="ctl" id="nda-new-name" placeholder="{L("name")}"/>')
+            parts.append(f'<input class="ctl" id="nda-new-contact" placeholder="{L("contact")}"/>')
+            parts.append(f'<input class="ctl" id="nda-new-notes" placeholder="{L("notes")}"/>')
+            parts.append(
+                f'<button class="ctl primary" id="nda-add-btn">{L("create")} + {L("export_pdf")}</button>'
+            )
+            parts.append("</div>")
+            _nda_statuses = json.dumps(NdaStatus.all_values())
+            parts.append(
+                f'<div class="ctl-status" id="nda-status" data-nda-statuses="{_nda_statuses}"></div>'
+            )
+            parts.append("</section>")
 
         parts.append('<section class="panel controls" id="research-manager">')
         parts.append(f"<h2>{L('research_panel')}</h2>")
@@ -386,7 +408,7 @@ def render_dashboard(
         parts.append('</div>')
 
         parts.append('<div id="research-init-box" class="ctl-group" style="display:none;">')
-        parts.append(f'<span class="ctl-label">{L("research_not_initialized")}</span>')
+        parts.append(f'<span class="ctl-label">{help_term(labels, "research_init", L("research_not_initialized"))}</span>')
         parts.append(f'<p class="ctl-note">{L("research_init_note")}</p>')
         parts.append('<div class="row">')
         parts.append(f'<input class="ctl" id="r-init-title" placeholder="{L("research_project_title")}" style="min-width:200px;"/>')
@@ -396,7 +418,7 @@ def render_dashboard(
 
         parts.append('<div class="research-tab-pane" id="rtab-sources">')
         parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{L("research_ingest_heading")}</span>')
+        parts.append(f'<span class="ctl-label">{help_term(labels, "research_ingest", L("research_ingest_heading"))}</span>')
         parts.append('<div class="row" style="margin-bottom:.5rem;">')
         parts.append('<input class="ctl" type="file" id="r-ingest-file" accept=".txt,.md,.text"/>')
         parts.append(f'<input class="ctl" id="r-ingest-title" placeholder="{L("research_source_title")}" style="min-width:180px;"/>')
@@ -406,7 +428,7 @@ def render_dashboard(
         parts.append(f'<textarea class="ctl" id="r-ingest-text" placeholder="{L("research_source_text")}" rows="3" style="width:100%;font-family:inherit;"></textarea>')
         parts.append('</div>')
         parts.append('<div class="row" style="align-items:center;">')
-        parts.append(f'<label style="display:flex;align-items:center;gap:.3rem;font-size:.85rem;cursor:pointer;"><input type="checkbox" id="r-ingest-retention"/> <span>{L("research_retention")}</span></label>')
+        parts.append(f'<label style="display:flex;align-items:center;gap:.3rem;font-size:.85rem;cursor:pointer;"><input type="checkbox" id="r-ingest-retention" data-help="{L("help_research_ingest")}"/> <span>{L("research_retention")}</span></label>')
         parts.append(f'<button class="ctl primary" id="r-ingest-btn">{L("research_ingest_action")}</button>')
         parts.append('</div>')
         parts.append('</div>')
@@ -415,7 +437,7 @@ def render_dashboard(
 
         parts.append('<div class="research-tab-pane" id="rtab-search" style="display:none;">')
         parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{L("research_search_heading")}</span>')
+        parts.append(f'<span class="ctl-label">{help_term(labels, "research_search", L("research_search_heading"))}</span>')
         parts.append('<div class="row">')
         parts.append(f'<input class="ctl" id="r-search-query" placeholder="{L("research_search_query")}" style="min-width:240px;flex:1;"/>')
         parts.append(f'<button class="ctl primary" id="r-search-btn">{L("research_search_action")}</button>')
@@ -426,11 +448,11 @@ def render_dashboard(
 
         parts.append('<div class="research-tab-pane" id="rtab-dossiers" style="display:none;">')
         parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{L("research_dossier_heading")}</span>')
+        parts.append(f'<span class="ctl-label">{help_term(labels, "research_dossier", L("research_dossier_heading"))}</span>')
         parts.append('<div class="row" style="margin-bottom:.5rem;">')
         parts.append(f'<input class="ctl" id="r-dos-title" placeholder="{L("research_dossier_title")}" style="min-width:220px;"/>')
         parts.append(f'<input class="ctl" id="r-dos-tags" placeholder="{L("research_tags")}" style="min-width:180px;"/>')
-        parts.append(f'<input class="ctl" id="r-dos-eids" placeholder="{L("research_evidence_ids")}" style="flex:1;min-width:200px;"/>')
+        parts.append(f'<input class="ctl" id="r-dos-eids" aria-label="{L("research_evidence_ids")}" data-help="{L("help_research_passage")}" placeholder="{L("research_evidence_ids")}" style="flex:1;min-width:200px;"/>')
         parts.append('</div>')
         parts.append('<div class="row" style="margin-bottom:.5rem;">')
         parts.append(f'<textarea class="ctl" id="r-dos-body" placeholder="{L("research_dossier_body")}" rows="4" style="width:100%;font-family:inherit;"></textarea>')
@@ -445,10 +467,10 @@ def render_dashboard(
         # Tab Pane: Claims & Evidence Links
         parts.append('<div class="research-tab-pane" id="rtab-claims" style="display:none;">')
         parts.append('  <div class="ctl-group">')
-        parts.append(f'    <span class="ctl-label">{L("research_claim_heading")}</span>')
+        parts.append(f'    <span class="ctl-label">{help_term(labels, "research_claim", L("research_claim_heading"))}</span>')
         parts.append('    <div class="row" style="margin-bottom:.5rem;">')
         parts.append(f'      <input class="ctl" id="r-claim-title" placeholder="{L("research_claim_title")}" style="min-width:220px;flex:1;"/>')
-        parts.append('      <select class="ctl" id="r-claim-confidence" style="min-width:140px;">')
+        parts.append(f'      <select class="ctl" id="r-claim-confidence" aria-label="{L("research_confidence_field")}" data-help="{L("help_research_confidence")}" style="min-width:140px;">')
         parts.append(f'        <option value="hypothetical">{L("research_confidence_hypothetical")}</option>')
         parts.append(f'        <option value="evidenced">{L("research_confidence_evidenced")}</option>')
         parts.append(f'        <option value="disputed">{L("research_confidence_disputed")}</option>')
@@ -469,11 +491,11 @@ def render_dashboard(
         parts.append('    </div>')
         parts.append('  </div>')
         parts.append('  <div class="ctl-group" style="margin-top:.8rem;">')
-        parts.append(f'    <span class="ctl-label">{L("research_link_heading")}</span>')
+        parts.append(f'    <span class="ctl-label">{help_term(labels, "research_evidence", L("research_link_heading"))}</span>')
         parts.append('    <div class="row" style="margin-bottom:.5rem;">')
-        parts.append(f'      <select class="ctl" id="r-link-claim-select" style="min-width:220px;flex:1;"><option value="">{L("research_select_claim")}</option></select>')
-        parts.append(f'      <input class="ctl" id="r-link-passage-id" placeholder="{L("research_passage_id")}" style="min-width:220px;flex:1;font-family:monospace;"/>')
-        parts.append('      <select class="ctl" id="r-link-relation" style="min-width:140px;">')
+        parts.append(f'      <select class="ctl" id="r-link-claim-select" aria-label="{L("research_select_claim")}" style="min-width:220px;flex:1;"><option value="">{L("research_select_claim")}</option></select>')
+        parts.append(f'      <input class="ctl" id="r-link-passage-id" aria-label="{L("research_passage_id")}" data-help="{L("help_research_passage")}" placeholder="{L("research_passage_id")}" style="min-width:220px;flex:1;font-family:monospace;"/>')
+        parts.append(f'      <select class="ctl" id="r-link-relation" aria-label="{L("research_relation_field")}" data-help="{L("help_research_relation")}" style="min-width:140px;">')
         parts.append(f'        <option value="supports">{L("research_relation_supports")}</option>')
         parts.append(f'        <option value="contradicts">{L("research_relation_contradicts")}</option>')
         parts.append(f'        <option value="qualifies">{L("research_relation_qualifies")}</option>')
@@ -491,10 +513,10 @@ def render_dashboard(
         # Tab Pane: Decisions
         parts.append('<div class="research-tab-pane" id="rtab-decisions" style="display:none;">')
         parts.append('  <div class="ctl-group">')
-        parts.append(f'    <span class="ctl-label">{L("research_decision_heading")}</span>')
+        parts.append(f'    <span class="ctl-label">{help_term(labels, "research_decision", L("research_decision_heading"))}</span>')
         parts.append('    <div class="row" style="margin-bottom:.5rem;">')
         parts.append(f'      <input class="ctl" id="r-decision-title" placeholder="{L("research_decision_title")}" style="min-width:220px;flex:1;"/>')
-        parts.append(f'      <select class="ctl" id="r-decision-claim-select" style="min-width:220px;flex:1;"><option value="">{L("research_no_claim_linked")}</option></select>')
+        parts.append(f'      <select class="ctl" id="r-decision-claim-select" aria-label="{L("research_select_claim")}" style="min-width:220px;flex:1;"><option value="">{L("research_no_claim_linked")}</option></select>')
         parts.append('    </div>')
         parts.append('    <div class="row" style="margin-bottom:.5rem;">')
         parts.append(f'      <textarea class="ctl" id="r-decision-rationale" placeholder="{L("research_decision_rationale")}" rows="3" style="width:100%;font-family:inherit;"></textarea>')
@@ -505,7 +527,7 @@ def render_dashboard(
         parts.append('    <div class="row" style="align-items:center;justify-content:space-between;">')
         parts.append('      <label style="display:flex;align-items:center;gap:.35rem;font-size:.85rem;cursor:pointer;">')
         parts.append('        <input type="checkbox" id="r-decision-deviation"/>')
-        parts.append(f'        <span>{L("research_deviation_checkbox")}</span>')
+        parts.append(f'        <span>{help_term(labels, "research_deviation", L("research_deviation_checkbox"))}</span>')
         parts.append('      </label>')
         parts.append(f'      <button class="ctl primary" id="r-decision-create-btn">{L("research_decision_action")}</button>')
         parts.append('    </div>')
@@ -515,9 +537,9 @@ def render_dashboard(
 
         parts.append('<div class="research-tab-pane" id="rtab-grounding" style="display:none;">')
         parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{L("research_ground_heading")}</span>')
+        parts.append(f'<span class="ctl-label">{help_term(labels, "research_comparison", L("research_ground_heading"))}</span>')
         parts.append('<div class="row">')
-        parts.append(f'<select class="ctl" id="r-ground-source-select" style="min-width:220px;"><option value="">{L("research_select_source")}</option></select>')
+        parts.append(f'<select class="ctl" id="r-ground-source-select" aria-label="{L("research_select_source")}" style="min-width:220px;"><option value="">{L("research_select_source")}</option></select>')
         parts.append(f'<button class="ctl primary" id="r-ground-btn">{L("research_ground_action")}</button>')
         parts.append('</div>')
         parts.append('</div>')
@@ -563,7 +585,7 @@ def render_dashboard(
         parts.append('          </div>')
         parts.append('        </div>')
         parts.append('        <div class="project-structure-hint">')
-        parts.append(f'          <span>{L("wizard_import_layout")}</span>')
+        parts.append(f'          <span>{help_term(labels, "import_manuscript", L("wizard_import_layout"))}</span>')
         parts.append('        </div>')
         parts.append('        <div class="form-group">')
         parts.append(f'          <label for="import-proj-title" class="form-label">{L("title")}</label>')
@@ -571,7 +593,7 @@ def render_dashboard(
         parts.append('        </div>')
         parts.append('        <div class="form-row">')
         parts.append('          <div style="flex:1;">')
-        parts.append(f'            <label for="import-proj-lang" class="form-label">{L("language")}</label>')
+        parts.append(f'            <label for="import-proj-lang" class="form-label">{help_term(labels, "language", L("language"))}</label>')
         parts.append('            <select class="ctl" id="import-proj-lang" style="width:100%;">')
         for code, name in (("de", "Deutsch"), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("it", "Italiano"), ("pt", "Português"), ("nl", "Nederlands")):
             sel = ' selected' if code == language_key else ''
@@ -607,7 +629,7 @@ def render_dashboard(
         parts.append('        </div>')
         parts.append('        <div class="form-row">')
         parts.append('          <div style="flex:1;">')
-        parts.append(f'            <label for="new-proj-lang" class="form-label">{L("language")}</label>')
+        parts.append(f'            <label for="new-proj-lang" class="form-label">{help_term(labels, "language", L("language"))}</label>')
         parts.append('            <select class="ctl" id="new-proj-lang" style="width:100%;">')
         for code, name in (("de", "Deutsch"), ("en", "English"), ("fr", "Français"), ("es", "Español"), ("it", "Italiano"), ("pt", "Português"), ("nl", "Nederlands")):
             sel = ' selected' if code == language_key else ''
@@ -657,14 +679,32 @@ def render_dashboard(
         parts.append('<dialog class="lixity-modal" id="modal-project-open" closedby="any" aria-labelledby="modal-open-title">')
         parts.append('  <div class="modal-card">')
         parts.append('    <div class="modal-header">')
-        parts.append(f'      <h3 id="modal-open-title">{L("open_project")}</h3>')
+        parts.append(f'      <h3 id="modal-open-title">{help_term(labels, "open_existing", L("open_project"))}</h3>')
         parts.append(f'      <button type="button" class="modal-close" data-close-modal aria-label="{L("modal_close")}">✕</button>')
         parts.append('    </div>')
         parts.append('    <form id="form-project-open" class="modal-body" method="dialog">')
         parts.append('      <div class="form-group">')
         parts.append(f'        <label for="open-proj-path" class="form-label">{L("wizard_open_path")}</label>')
-        parts.append(f'        <input class="ctl" id="open-proj-path" required autofocus placeholder="{L("wizard_open_placeholder")}" style="width:100%;"/>')
+        parts.append('        <div class="project-path-row">')
+        parts.append(f'          <input class="ctl" id="open-proj-path" required autofocus placeholder="{L("wizard_open_placeholder")}"/>')
+        parts.append(f'          <button type="button" class="ctl" id="open-proj-choose" aria-controls="open-project-chooser" aria-expanded="false">{L("wizard_choose_action")}</button>')
+        parts.append('        </div>')
         parts.append(f'        <p class="ctl-note">{L("wizard_open_note")}</p>')
+        parts.append('      </div>')
+        parts.append('      <div class="project-chooser" id="open-project-chooser" role="region" aria-labelledby="open-project-chooser-heading" hidden>')
+        parts.append('        <div class="project-chooser-heading">')
+        parts.append(f'          <strong id="open-project-chooser-heading">{L("wizard_choose_heading")}</strong>')
+        parts.append(f'          <button type="button" class="ctl" id="open-project-chooser-close" aria-label="{L("modal_close")}">✕</button>')
+        parts.append('        </div>')
+        parts.append(f'        <p class="ctl-note">{L("wizard_choose_location")}</p>')
+        parts.append(f'        <p class="ctl-note project-chooser-current">{L("wizard_choose_current")} <code id="open-project-chooser-path"></code></p>')
+        parts.append('        <div class="project-chooser-toolbar">')
+        parts.append(f'          <button type="button" class="ctl" id="open-project-chooser-home">{L("wizard_choose_home")}</button>')
+        parts.append(f'          <button type="button" class="ctl" id="open-project-chooser-parent" disabled>{L("wizard_choose_parent")}</button>')
+        parts.append(f'          <button type="button" class="ctl primary" id="open-project-chooser-select-folder" disabled>{L("wizard_choose_folder")}</button>')
+        parts.append('        </div>')
+        parts.append('        <p class="ctl-note" id="open-project-chooser-status" role="status" aria-live="polite"></p>')
+        parts.append('        <ul class="project-chooser-list" id="open-project-chooser-list" aria-label="' + L("wizard_choose_entries") + '"></ul>')
         parts.append('      </div>')
         parts.append('      <div class="project-structure-hint" style="margin-top:.6rem;">')
         parts.append(f'        <span>{L("wizard_switch_prompt")} <button type="button" class="ctl-link" id="link-switch-to-import" style="background:none;border:none;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:inherit;padding:0;">{L("wizard_switch_action")}</button></span>')

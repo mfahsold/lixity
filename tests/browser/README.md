@@ -17,8 +17,10 @@ escaping, idle rendering and mobile layout, and prints its temporary screenshot
 directory. It does not read any private manuscript or contact a server.
 
 The research test starts its own disposable loopback server and archive. It checks
-file/folder opening with an empty manuscript, explicit file-picker and drag/drop
-import, cancellation, failed submit recovery, source/dossier detail views,
+persistent New/Open/Show guidance actions after dismissal and in a loaded project,
+server-local file/folder opening with an empty manuscript, file-picker and drag/drop
+import (including preserved submitted bytes), cancellation, failed submit recovery,
+and standalone capability gating. It also covers source/dossier detail views,
 claim/evidence/decision creation, unavailable archive state, withdrawal and purge.
 It renders all seven workspace languages at 320 pixels and also checks desktop
 and 390-pixel layouts. It leaves screenshots under `/tmp/lixity-research-ui-*` and

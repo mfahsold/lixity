@@ -28,6 +28,7 @@ from lixity.markers import add_marker  # noqa: E402
 from lixity.style_fingerprint import StyleFingerprint  # noqa: E402
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
+from lixity.workspace_labels import WORKSPACE_LABELS  # noqa: E402
 
 UI_DIR = Path(BASE_DIR) / "src" / "lixity" / "ui"
 LANGUAGES = ("de", "en", "fr", "es", "it", "pt", "nl")
@@ -93,7 +94,8 @@ class TestJsDomContract(unittest.TestCase):
         ids = set(re.findall(r'getElementById\("([^"]+)"\)', script))
         ids.discard("lixity-tooltip")  # created by the script itself
         self.assertTrue(ids)
-        html = _full_dashboard()
+        # Onboarding controls exist only in the empty/research-only state.
+        html = _full_dashboard() + render_dashboard([], [], controls=True)
         missing = sorted(dom_id for dom_id in ids if f'id="{dom_id}"' not in html)
         self.assertEqual(missing, [], f"dashboard.js looks up missing ids: {missing}")
 
@@ -265,7 +267,7 @@ class TestLabelCompleteness(unittest.TestCase):
         keys = self._renderer_help_keys()
         self.assertGreater(len(keys), 20)
         for language in LANGUAGES:
-            pack = HELP_TEXTS.get(language, {})
+            pack = {**HELP_TEXTS.get(language, {}), **WORKSPACE_LABELS.get(language, {})}
             missing = sorted(k for k in keys if f"help_{k}" not in pack)
             self.assertEqual(missing, [], f"{language}: missing help texts {missing}")
 

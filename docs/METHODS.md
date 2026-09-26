@@ -65,10 +65,13 @@ Standard errors per feature (plug-in estimators, fixed constants, see
 | :--- | :--- |
 | Count densities (per 1 000 words) | Poisson: $\mathrm{SE} = \sqrt{\hat{\lambda}/W \cdot 1000^2}$ |
 | Shares (%) | binomial: $\mathrm{SE} = \sqrt{p(1-p)/N}$ |
-| ASL, CV, entropy, HD-D, … | sample-based (variance / delta method) |
+| ASL, CV, entropy, … | sample-based (variance / delta method) |
 
 Larger standard errors reduce the magnitude of $z^*$, limiting noise-driven
-flags. False positives remain possible.
+flags. Exact HD-D has no independent window-sampling SE: its `style_se` entry
+is omitted. The fingerprint's missing-SE fallback of zero denotes no estimated
+measurement SE for this feature, **not** certainty about a larger population.
+False positives remain possible.
 
 ## 3. Thresholds (`FingerprintThresholds`)
 
@@ -99,7 +102,7 @@ flags. False positives remain possible.
 
 Input: one $p$-value per measured cell, $p = P(\lvert Z \rvert \ge \lvert z^* \rvert)$
 (two-sided normal tail). Sort ascending, find the largest $k$ with
-$p_{(k)} \le (k/m) \cdot q \cdot c$, reject $p_{(1)},\dots,p_{(k)}$.
+$p_{(k)} \le (k/m) \cdot q / c$, reject $p_{(1)},\dots,p_{(k)}$.
 Deterministic tie-break by $(\text{chapter}, \text{feature})$. The rejected
 set is `fdr_flagged` — prefer it over raw `deviations` for strong claims.
 
@@ -226,14 +229,37 @@ Documented research directions, **not** current product features:
 | Index | Definition sketch | Guard |
 | :--- | :--- | :--- |
 | Guiraud $R$ | $\mathrm{TTR} \sqrt{N}$ | length-dependent; prefer with HD-D |
-| HD-D | hypergeometric expected TTR of 35-token draws | McCarthy & Jarvis; 42 fixed samples |
+| HD-D | hypergeometric expected TTR of one 42-token draw without replacement from whole-text type frequencies | $\ge 100$ tokens else `null` |
 | MTLD | mean factor length until TTR hits 0.72 | $\ge 100$ tokens else `null` |
 | MATTR | mean TTR over sliding 50-token windows | window length |
-| Maas $a^2$ | $a^2 = (\ln N - H)/\ln^2 N$ | $\ge 100$ tokens |
+| Maas $a^2$ | $a^2 = (\log_{10} N - \log_{10} V)/(\log_{10} N)^2$ | $\ge 100$ tokens; base 10 as in the implementation |
 | Yule $K$ | $10^4 \cdot (\sum m^2 V_m - N)/N^2$ | length-dependent by design |
 
 McCarthy & Jarvis (2010): report MTLD + HD-D + Maas **together**, not a
 single index. See [`STABILITY.md`](STABILITY.md) §1 for length caveats.
+
+For $N$ tokens, type counts $f_t$, and draw size $d=42$, the implemented
+expectation is
+
+$$
+\mathrm{HD\text{-}D} = \frac{1}{d}\sum_t
+\left(1-\frac{\binom{N-f_t}{d}}{\binom{N}{d}}\right),
+$$
+
+where $\binom{N-f_t}{d}=0$ if fewer than $d$ non-$t$ tokens remain. The
+frequency histogram makes the result independent of token order. The public
+`seed` and `min_samples` arguments remain accepted legacy no-ops. The second
+value of `hd_d_stats` is `0.0` because this exact expectation has no Monte
+Carlo sampling error; it does not estimate uncertainty about a population of
+possible texts.
+
+Before version 1.16.0, the `hd_d` key held mean Gini–Simpson diversity over
+sampled, contiguous 35-token windows, with a window-based plug-in SE. Those
+numbers are **not comparable** with corrected HD-D even though the JSON key is
+unchanged. Reanalyze the original manuscript and regenerate chapter metrics,
+style baselines, reports, and passports before comparing or publishing results
+across that boundary. The new 100-token floor also makes values available for
+100–174-token inputs that previously returned `null` by default.
 
 ## 7. Readability (language-calibrated)
 
@@ -279,7 +305,7 @@ the ring marks $\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
 
 ## 10. Determinism contract
 
-- No wall-clock in the analysis path; fixed HD-D sample seed.
+- No wall-clock in the analysis path; HD-D is an exact frequency calculation.
 - Float operations in fixed order on the same interpreter → byte-identical
   HTML/JSON (platform last-bit differences are documented in STABILITY).
 - `python -W error` test run + `mypy --strict` + ruff gate every change.

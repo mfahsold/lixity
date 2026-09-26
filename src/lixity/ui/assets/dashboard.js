@@ -8,8 +8,12 @@
   document.body.classList.add("has-js-tooltips");
 
   var activeEl = null;
+  var touchUntil = 0;
+  var touchHelp = null;
+  var hideTimer = null;
 
   function show(el) {
+    clearTimeout(hideTimer);
     var text = el.getAttribute("data-help") || el.getAttribute("data-tip") || el.getAttribute("title");
     if (!text || !text.trim()) return;
     if (el.hasAttribute("title")) {
@@ -18,6 +22,9 @@
     }
     if (activeEl && activeEl !== el) hide();
     activeEl = el;
+    // Keep help in the native dialog's top layer when its control is inside one.
+    var host = el.closest("dialog[open]") || document.body;
+    if (tip.parentElement !== host) host.appendChild(tip);
     var descriptions = (el.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
     if (descriptions.indexOf(tip.id) === -1) descriptions.push(tip.id);
     el.setAttribute("aria-describedby", descriptions.join(" "));
@@ -28,6 +35,7 @@
   }
 
   function hide() {
+    clearTimeout(hideTimer);
     if (activeEl) {
       var descriptions = (activeEl.getAttribute("aria-describedby") || "").split(/\s+/).filter(function(id) { return id && id !== tip.id; });
       if (descriptions.length) activeEl.setAttribute("aria-describedby", descriptions.join(" "));
@@ -49,25 +57,60 @@
     if (top < 10) {
       top = rect.bottom + 8;
     }
+    top = Math.max(10, Math.min(window.innerHeight - tipH - 10, top));
     tip.style.left = left + "px";
     tip.style.top = top + "px";
   }
 
   document.addEventListener("mouseover", function (e) {
+    if (Date.now() < touchUntil) return;
     var el = e.target.closest("[data-help], [data-tip], [title]");
     if (el && !el.closest(".tooltip-popup")) show(el);
   }, { passive: true });
 
   document.addEventListener("mouseout", function (e) {
+    if (Date.now() < touchUntil) return;
     var el = e.target.closest("[data-help], [data-tip]");
-    if (el) hide();
+    if (el && !el.contains(e.relatedTarget) && !tip.contains(e.relatedTarget)) {
+      hideTimer = setTimeout(hide, 160);
+    }
   }, { passive: true });
+  tip.addEventListener("mouseenter", function() { clearTimeout(hideTimer); });
+  tip.addEventListener("mouseleave", function(e) {
+    if (!activeEl || !activeEl.contains(e.relatedTarget)) hide();
+  });
 
   document.addEventListener("focusin", function(e) {
     var el = e.target.closest("[data-help], [data-tip], [title]");
     if (el) show(el);
   });
   document.addEventListener("focusout", hide);
+
+  document.addEventListener("pointerdown", function(e) {
+    if (e.pointerType === "touch") touchUntil = Date.now() + 1000;
+    var el = e.target.closest(".help[data-help]");
+    if (e.pointerType === "touch" && el && !el.closest("button, a")) {
+      touchHelp = el;
+      var wasOpen = activeEl === el;
+      e.preventDefault();
+      el.focus({preventScroll: true});
+      if (wasOpen) hide();
+      else show(el);
+    } else if (!e.target.closest("[data-help], [data-tip], [title], .tooltip-popup")) {
+      hide();
+    }
+  });
+  document.addEventListener("click", function(e) {
+    if (touchHelp && Date.now() < touchUntil && touchHelp.contains(e.target)) {
+      e.preventDefault();
+      e.stopPropagation();
+    }
+    touchHelp = null;
+  }, true);
+
+  document.addEventListener("close", function(e) {
+    if (activeEl && e.target.contains(activeEl)) hide();
+  }, true);
 
   var posTicking = false;
   function scheduleUpdatePos() {
@@ -84,7 +127,15 @@
   window.addEventListener("resize", scheduleUpdatePos, { passive: true });
 
   document.addEventListener("keydown", function (e) {
-    if (e.key === "Escape" && activeEl) hide();
+    if (e.key === "Escape" && activeEl) {
+      e.preventDefault();
+      hide();
+    } else if ((e.key === "Enter" || e.key === " ") &&
+        e.target.matches(".help[data-help]") && !e.target.closest("button, a")) {
+      e.preventDefault();
+      if (activeEl === e.target) hide();
+      else show(e.target);
+    }
   });
 })();
 
@@ -198,6 +249,7 @@ document.addEventListener("click", function (event) {
   }
 });
 document.addEventListener("keydown", function (event) {
+  if (event.defaultPrevented) return;
   if (event.key === "Escape") {
     closeNoteField();
     document.querySelectorAll(".ptext.open").forEach(function (panel) {
@@ -408,6 +460,30 @@ function uiLabel(key) { return UI_LABELS[key] || key; }
 function uiFormat(key, values) {
   return uiLabel(key).replace(/\{([a-z_]+)\}/g, function(match, name) {
     return Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : match;
+  });
+}
+var welcomeHero = document.getElementById("welcome-hero");
+var welcomeDismiss = document.getElementById("welcome-dismiss");
+var welcomeShow = document.getElementById("welcome-show");
+if (welcomeHero && welcomeDismiss && welcomeShow) {
+  var welcomeStorageKey = "lixity:welcome-dismissed";
+  var welcomeWasDismissed = false;
+  var welcomeInitiallyVisible = !welcomeHero.hidden;
+  try { welcomeWasDismissed = localStorage.getItem(welcomeStorageKey) === "1"; } catch (_) { /* Storage may be unavailable. */ }
+  function setWelcomeVisible(visible, focusTarget) {
+    welcomeHero.hidden = !visible;
+    welcomeShow.hidden = visible;
+    welcomeShow.setAttribute("aria-expanded", String(visible));
+    if (focusTarget) (visible ? welcomeDismiss : welcomeShow).focus();
+  }
+  setWelcomeVisible(welcomeInitiallyVisible && !welcomeWasDismissed, false);
+  welcomeDismiss.addEventListener("click", function() {
+    setWelcomeVisible(false, true);
+    try { localStorage.setItem(welcomeStorageKey, "1"); } catch (_) { /* Keep this page usable without storage. */ }
+  });
+  welcomeShow.addEventListener("click", function() {
+    setWelcomeVisible(true, true);
+    try { localStorage.removeItem(welcomeStorageKey); } catch (_) { /* Keep this page usable without storage. */ }
   });
 }
 // NDA statuses come from the server-rendered data attribute (single source: lixity.status.NdaStatus).
@@ -1059,11 +1135,13 @@ document.addEventListener("click", async function (event) {
     var sres = await researchApiPost("research-search", { query: query });
     if (!sres.ok) {
       if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || uiLabel("research_search_failed")) + '</p>';
+      researchStatus(sres.message || uiLabel("research_search_failed"), false);
       return;
     }
     var hits = sres.hits || [];
     if (!hits.length) {
       if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiFormat("research_no_hits", { query: query })) + '</p>';
+      researchStatus(uiFormat("research_no_hits", { query: query }), true);
       return;
     }
     if (resultsHost) {
@@ -1120,6 +1198,7 @@ document.addEventListener("click", async function (event) {
     var gres = await researchApiPost("research-compare", { source_id: sid });
     if (!gres.ok) {
       if (gHost) gHost.innerHTML = '<p class="ctl-note">' + escapeHtml(gres.message || uiLabel("research_ground_failed")) + '</p>';
+      researchStatus(gres.message || uiLabel("research_ground_failed"), false);
       return;
     }
     var sum = gres.summary || {};
@@ -1563,8 +1642,142 @@ if (formCreate) {
   });
 }
 
+// Browse local paths without changing the project until the form is submitted.
+var openChooser = document.getElementById("open-project-chooser");
+if (openChooser) {
+  var chooseButton = document.getElementById("open-proj-choose");
+  var chooseClose = document.getElementById("open-project-chooser-close");
+  var chooseHome = document.getElementById("open-project-chooser-home");
+  var chooseParent = document.getElementById("open-project-chooser-parent");
+  var chooseFolder = document.getElementById("open-project-chooser-select-folder");
+  var choosePath = document.getElementById("open-project-chooser-path");
+  var chooseList = document.getElementById("open-project-chooser-list");
+  var chooseStatus = document.getElementById("open-project-chooser-status");
+  var openPathInput = document.getElementById("open-proj-path");
+  var currentChoosePath = "";
+  var parentChoosePath = null;
+  var chooseRequest = 0;
+
+  function closeOpenChooser(focusTarget) {
+    chooseRequest++;
+    openChooser.hidden = true;
+    chooseButton.setAttribute("aria-expanded", "false");
+    if (focusTarget) focusTarget.focus();
+  }
+
+  function chooseMessage(message, error) {
+    chooseStatus.textContent = message;
+    chooseStatus.setAttribute("role", error ? "alert" : "status");
+    chooseStatus.classList.toggle("err", Boolean(error));
+  }
+
+  function selectOpenPath(path) {
+    openPathInput.value = path;
+    var formStatus = document.getElementById("open-project-status");
+    if (formStatus) {
+      formStatus.textContent = "";
+      formStatus.hidden = true;
+    }
+    closeOpenChooser(openPathInput);
+  }
+
+  async function loadOpenChooser(path, focusEntry) {
+    var request = ++chooseRequest;
+    currentChoosePath = "";
+    parentChoosePath = null;
+    choosePath.textContent = "";
+    chooseParent.disabled = true;
+    chooseList.replaceChildren();
+    chooseList.setAttribute("aria-busy", "true");
+    chooseFolder.disabled = true;
+    chooseMessage(uiLabel("wizard_choose_loading"), false);
+    try {
+      var url = API + "/project-paths" + (path ? "?path=" + encodeURIComponent(path) : "");
+      var response = await fetch(url);
+      var data = await response.json();
+      if (request !== chooseRequest || openChooser.hidden) return;
+      if (!response.ok || !data.ok || typeof data.path !== "string" || !Array.isArray(data.entries)) {
+        chooseMessage(uiFormat("wizard_choose_failed", {
+          reason: data.message || uiLabel("wizard_unknown_error")
+        }), true);
+        return;
+      }
+      currentChoosePath = data.path;
+      parentChoosePath = typeof data.parent === "string" ? data.parent : null;
+      choosePath.textContent = currentChoosePath;
+      chooseParent.disabled = !parentChoosePath;
+      chooseFolder.disabled = false;
+      data.entries.forEach(function(entry) {
+        if (!entry || typeof entry.name !== "string" || typeof entry.path !== "string" ||
+            !["directory", "manuscript"].includes(entry.kind)) return;
+        var item = document.createElement("li");
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "ctl project-chooser-entry";
+        button.dataset.openPathKind = entry.kind;
+        button.dataset.openPath = entry.path;
+        button.setAttribute("aria-label", uiFormat(
+          entry.kind === "directory" ? "wizard_choose_directory_entry" : "wizard_choose_manuscript_entry",
+          { name: entry.name }
+        ));
+        var icon = document.createElement("span");
+        icon.setAttribute("aria-hidden", "true");
+        icon.textContent = entry.kind === "directory" ? "📁" : "📄";
+        var name = document.createElement("span");
+        name.textContent = entry.name;
+        button.append(icon, name);
+        item.appendChild(button);
+        chooseList.appendChild(item);
+      });
+      chooseMessage(chooseList.children.length === 0 ? uiLabel("wizard_choose_empty") :
+        (data.truncated ? uiLabel("wizard_choose_truncated") : ""), false);
+      if (focusEntry) (chooseList.querySelector("button") || chooseFolder).focus();
+    } catch (error) {
+      if (request === chooseRequest && !openChooser.hidden) {
+        chooseMessage(uiFormat("wizard_choose_failed", { reason: String(error) }), true);
+      }
+    } finally {
+      if (request === chooseRequest) chooseList.removeAttribute("aria-busy");
+    }
+  }
+
+  chooseButton.addEventListener("click", function() {
+    if (!openChooser.hidden) {
+      closeOpenChooser(chooseButton);
+      return;
+    }
+    openChooser.hidden = false;
+    chooseButton.setAttribute("aria-expanded", "true");
+    loadOpenChooser(openPathInput.value.trim() || currentChoosePath || null, false);
+  });
+  chooseClose.addEventListener("click", function() { closeOpenChooser(chooseButton); });
+  chooseHome.addEventListener("click", function() { loadOpenChooser(null, true); });
+  chooseParent.addEventListener("click", function() {
+    if (parentChoosePath) loadOpenChooser(parentChoosePath, true);
+  });
+  chooseFolder.addEventListener("click", function() {
+    if (currentChoosePath) selectOpenPath(currentChoosePath);
+  });
+  chooseList.addEventListener("click", function(event) {
+    var button = event.target.closest("[data-open-path-kind]");
+    if (!button || !chooseList.contains(button)) return;
+    if (button.dataset.openPathKind === "directory") loadOpenChooser(button.dataset.openPath, true);
+    else selectOpenPath(button.dataset.openPath);
+  });
+  document.getElementById("modal-project-open").addEventListener("close", function() {
+    closeOpenChooser(null);
+  });
+}
+
 // Form: Open existing path
 var formOpen = document.getElementById("form-project-open");
+document.querySelectorAll(".project-form-status").forEach(function(status) {
+  var form = status.closest("form");
+  if (form) form.addEventListener("input", function() {
+    status.textContent = "";
+    status.hidden = true;
+  });
+});
 if (formOpen) {
   formOpen.addEventListener("submit", async function (e) {
     e.preventDefault();

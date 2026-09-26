@@ -14,6 +14,7 @@ import os
 import re
 import tempfile
 import webbrowser
+from bisect import insort
 from collections.abc import Mapping
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
@@ -191,6 +192,7 @@ def build_server_dashboard(
         manuscript_name=manuscript_name,
         current_language=language,
         flag_min_severity=resolved_thresholds.flag_min_severity,
+        enabled_actions=("analyze", "rebuild"),
     )
 
     info = {
@@ -304,6 +306,15 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._handle_research_status()
             return
 
+        if path == "/api/project-paths":
+            origin = self.headers.get("Origin")
+            host = self.headers.get("Host", "")
+            if origin is not None and origin not in (f"http://{host}", f"https://{host}"):
+                self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
+                return
+            self._handle_project_paths()
+            return
+
         if path == "/api/research/sources":
             self._handle_research_sources()
             return
@@ -321,6 +332,66 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             return
 
         self._json({"ok": False, "message": "Not found"}, 404)
+
+    def _handle_project_paths(self) -> None:
+        """List one local directory level for the Open Project chooser."""
+        requested = parse_qs(urlparse(self.path).query, keep_blank_values=True).get("path", [""])[0]
+        try:
+            target = Path(requested).expanduser().resolve() if requested else Path.home().resolve()
+            if not target.exists():
+                self._json({"ok": False, "message": "Path does not exist"}, 404)
+                return
+            if target.is_file():
+                if target.suffix.lower() not in {".md", ".markdown", ".txt"}:
+                    self._json({"ok": False, "message": "Unsupported manuscript file type"}, 400)
+                    return
+                target = target.parent
+            if not target.is_dir():
+                self._json({"ok": False, "message": "Path is not a directory"}, 400)
+                return
+
+            selected: list[tuple[int, str, str, str, str]] = []
+            truncated = False
+            with os.scandir(target) as iterator:
+                for entry in iterator:
+                    if entry.name.startswith("."):
+                        continue
+                    try:
+                        entry.name.encode("utf-8")
+                    except UnicodeEncodeError:
+                        # POSIX undecodable byte names cannot round-trip through
+                        # the browser's UTF-8 URL and JSON path contract.
+                        continue
+                    try:
+                        if entry.is_dir():
+                            kind = "directory"
+                        elif entry.is_file() and Path(entry.name).suffix.lower() in {".md", ".markdown", ".txt"}:
+                            kind = "manuscript"
+                        else:
+                            continue
+                    except OSError:
+                        # A broken or inaccessible entry should not hide the
+                        # rest of an otherwise readable directory.
+                        continue
+                    insort(selected, (0 if kind == "directory" else 1, entry.name.casefold(),
+                                      entry.name, entry.path, kind))
+                    if len(selected) > 200:
+                        selected.pop()
+                        truncated = True
+        except PermissionError:
+            self._json({"ok": False, "message": "Directory is not readable"}, 403)
+            return
+        except (OSError, RuntimeError, ValueError):
+            self._json({"ok": False, "message": "Invalid project path"}, 400)
+            return
+
+        self._json({
+            "ok": True, "path": str(target),
+            "parent": str(target.parent) if target.parent != target else None,
+            "entries": [{"name": name, "path": path, "kind": kind}
+                        for _, _, name, path, kind in selected],
+            "truncated": truncated,
+        })
 
     def do_POST(self) -> None:
         path = self.path.split("?", 1)[0]
@@ -369,10 +440,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
         action = path[len("/api/"):].strip("/")
 
-        if action == "rebuild":
+        if action in ("analyze", "rebuild"):
             try:
                 self.refresh()
-                self._json({"ok": True, "message": "Dashboard rebuilt", "reload": True})
+                self._json({"ok": True, "message": "Dashboard analyzed" if action == "analyze" else "Dashboard rebuilt", "reload": True})
             except (OSError, ValueError, RuntimeError) as exc:
                 self._json({"ok": False, "message": str(exc)}, 500)
             return
@@ -397,10 +468,8 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._handle_marker(action, payload)
             return
 
-        if action in ("export", "analyze", "sync", "audit", "prune"):
-            # Acknowledge UI triggers gracefully
-            self.refresh()
-            self._json({"ok": True, "message": f"Action '{action}' executed", "reload": True})
+        if action in ("export", "sync", "audit", "prune", "gdrive"):
+            self._json({"ok": False, "message": f"Action '{action}' is not supported by the standalone server"}, 501)
             return
 
         if action == "research-init":
@@ -508,8 +577,11 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         os.makedirs(target_dir, exist_ok=True)
         target = os.path.join(target_dir, name)
         try:
-            with open(target, "w", encoding="utf-8") as f:
+            with open(target, "x", encoding="utf-8") as f:
                 f.write(content)
+        except FileExistsError:
+            self._json({"ok": False, "message": "A loaded manuscript with this filename already exists. Choose a different filename or open the existing project."}, 409)
+            return
         except OSError as exc:
             self._json({"ok": False, "message": f"Failed to save manuscript: {exc}"}, 500)
             return
@@ -557,7 +629,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
                 self._json({"ok": False, "message": "A manuscript already exists here. Open the project or choose a new import folder."}, 409)
                 return
             try:
-                manuscript_file.write_text(custom_content.strip() + "\n", encoding="utf-8")
+                manuscript_file.write_text(custom_content, encoding="utf-8", newline="")
             except OSError as exc:
                 self._json({"ok": False, "message": f"Failed to write manuscript: {exc}"}, 500)
                 return

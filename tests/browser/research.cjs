@@ -28,7 +28,10 @@ base = Path(sys.argv[1])
 project = base / 'existing-novel'
 project.mkdir()
 (project / 'manuscript.md').write_text('', encoding='utf-8')
+(project / 'chapter "quoted" & <draft>.md').write_text('Synthetic filename fixture.', encoding='utf-8')
 api.init(project, title='Synthetic research')
+research_only = base / 'research-only'
+api.init(research_only, title='Synthetic research-only project')
 source = base / 'source.txt'
 source.write_text('The synthetic archive opened in 1924.', encoding='utf-8')
 api.ingest(project, source, allow_retention=True, title='Synthetic source', context={'provenance_note': 'Synthetic fixture, not an archival record.'})
@@ -40,7 +43,7 @@ LixityServerHandler.exports_dir = str(base / 'exports')
 LixityServerHandler.language = 'en'
 LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
-print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'project': str(project), 'passage': passage}), flush=True)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'project': str(project), 'researchOnly': str(research_only), 'passage': passage}), flush=True)
 server.serve_forever()
 `, artifacts], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, stdio: ['ignore', 'pipe', 'pipe']});
   let stderr = '';
@@ -58,7 +61,7 @@ server.serve_forever()
       (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
        fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined);
     browser = await chromium.launch({headless: true, ...(executablePath ? {executablePath} : {})});
-    const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
+    const page = await browser.newPage({viewport: {width: 1440, height: 1000}, hasTouch: true});
     page.setDefaultTimeout(10000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -66,6 +69,38 @@ server.serve_forever()
     await expect(page.locator('#welcome-hero')).toBeVisible();
     await expect(page.locator('#research-init-box')).toBeVisible();
     assert.equal(await page.locator('.research-tab-pane:visible').count(), 0);
+    // Onboarding is optional and never hides the persistent project actions.
+    await page.locator('#welcome-dismiss').click();
+    await expect(page.locator('#welcome-hero')).not.toBeVisible();
+    await expect(page.locator('#btn-modal-open-project')).toBeVisible();
+    await expect(page.locator('#btn-modal-new-project')).toBeVisible();
+    for (const width of [1440, 390, 320]) {
+      await page.setViewportSize({width, height: 844});
+      await page.reload();
+      await page.evaluate(() => scrollTo(0, 0));
+      await expect(page.locator('#welcome-hero')).not.toBeVisible();
+      assert.ok(await page.locator('.workspace-bar').evaluate(element => {
+        const box = element.getBoundingClientRect();
+        return box.top >= 0 && box.bottom <= innerHeight && box.right <= innerWidth;
+      }), `Collapsed guidance must keep project controls in the first viewport at ${width}px`);
+      await expect(page.locator('#welcome-show')).toBeVisible();
+      await page.locator('.workspace-bar').screenshot({path: path.join(artifacts, `workspace-actions-${width}.png`)});
+    }
+    await page.setViewportSize({width: 1440, height: 1000});
+    await page.locator('#welcome-show').click();
+    await expect(page.locator('#welcome-hero')).toBeVisible();
+    assert.equal(await page.locator('#ms-file, #nda-manager, [data-action=export], [data-action=sync], [data-action=gdrive]').count(), 0, 'Standalone UI must expose supported workflows only');
+    const noStoragePage = await browser.newPage();
+    noStoragePage.on('pageerror', error => errors.push('Blocked storage: ' + error.message));
+    await noStoragePage.addInitScript(() => {
+      Object.defineProperty(window, 'localStorage', {get() { throw new DOMException('Storage disabled', 'SecurityError'); }});
+    });
+    await noStoragePage.goto(fixture.url);
+    await noStoragePage.locator('#welcome-dismiss').click();
+    await expect(noStoragePage.locator('#welcome-hero')).not.toBeVisible();
+    await noStoragePage.locator('#welcome-show').click();
+    await expect(noStoragePage.locator('#welcome-hero')).toBeVisible();
+    await noStoragePage.close();
 
     // Import is an explicit separate workflow and merely selecting it sends no mutation.
     const mutations = [];
@@ -73,9 +108,44 @@ server.serve_forever()
       const endpoint = new URL(request.url()).pathname;
       if (request.method() === 'POST' && /\/api\/(project-|research-)/.test(endpoint)) mutations.push(endpoint);
     });
-    await page.locator('#hero-btn-open-project').click();
+    await page.locator('#btn-modal-open-project').click();
     await expect(page.locator('#modal-project-open')).toBeVisible();
-    assert.equal(await page.locator('#modal-project-open input[type=file]').count(), 0);
+    const openHelp = page.locator('#modal-project-open .help').first();
+    await openHelp.focus();
+    await expect(page.locator('#modal-project-open #lixity-tooltip')).toBeVisible();
+    await expect(page.locator('#lixity-tooltip')).toContainText(/research|archive/i);
+    await page.keyboard.press('Escape');
+    await expect(page.locator('#lixity-tooltip')).not.toBeVisible();
+    await expect(page.locator('#modal-project-open')).toBeVisible();
+    await expect(page.locator('#open-proj-choose')).toBeVisible();
+    await page.locator('#open-proj-path').fill(fixture.project);
+    await page.locator('#open-proj-choose').click();
+    await expect(page.locator('#open-project-chooser-path')).toHaveText(fixture.project);
+    await expect(page.locator('#open-project-chooser-list button').filter({hasText: 'chapter "quoted" & <draft>.md'})).toBeVisible();
+    assert.equal(await page.locator('#open-project-chooser-list draft').count(), 0, 'Filename markup must remain text');
+    await page.locator('#open-project-chooser-close').click();
+    await expect(page.locator('#open-project-chooser')).not.toBeVisible();
+    await expect(page.locator('#open-proj-path')).toHaveValue(fixture.project);
+    assert.deepEqual(mutations, [], 'Browsing and cancelling must not change the workspace');
+    let finishListing;
+    let listingStarted;
+    const listingGate = new Promise(resolve => { finishListing = resolve; });
+    const listingReady = new Promise(resolve => { listingStarted = resolve; });
+    await page.route('**/api/project-paths?*', async route => {
+      listingStarted();
+      await listingGate;
+      await route.fulfill({json: {ok: true, path: '/late-response', parent: '/', entries: [], truncated: false}});
+    });
+    await page.locator('#open-proj-choose').click();
+    await listingReady;
+    await page.locator('#open-project-chooser-close').click();
+    const listingFinished = page.waitForResponse(response => response.url().includes('/api/project-paths?'));
+    finishListing();
+    await listingFinished;
+    await expect(page.locator('#open-project-chooser')).not.toBeVisible();
+    await expect(page.locator('#open-project-chooser-path')).not.toContainText('/late-response');
+    await expect(page.locator('#open-proj-path')).toHaveValue(fixture.project);
+    await page.unroute('**/api/project-paths?*');
     await page.locator('#link-switch-to-import').click();
     await expect(page.locator('#modal-project-open')).not.toBeVisible();
     await expect(page.locator('#modal-project-create #tab-pane-import')).toBeVisible();
@@ -101,14 +171,27 @@ server.serve_forever()
     await page.keyboard.press('Escape');
 
     // Opening an empty manuscript must attach its existing sibling research archive.
-    await page.locator('#hero-btn-open-project').click();
+    await page.locator('#btn-modal-open-project').click();
     const missing = path.join(artifacts, 'missing-project');
     await page.locator('#open-proj-path').fill(missing);
     await page.locator('#btn-submit-open-project').click();
     await expect(page.locator('#open-project-status')).toBeVisible();
     await expect(page.locator('#modal-project-open')).toBeVisible();
     await expect(page.locator('#open-proj-path')).toHaveValue(missing);
-    await page.locator('#open-proj-path').fill(path.join(fixture.project, 'manuscript.md'));
+    // Listing errors preserve the draft and cannot submit an older selection.
+    await page.locator('#open-proj-choose').click();
+    await expect(page.locator('#open-project-chooser-status')).not.toBeEmpty();
+    await expect(page.locator('#open-project-chooser-select-folder')).toBeDisabled();
+    await expect(page.locator('#open-proj-path')).toHaveValue(missing);
+    await page.locator('#open-project-chooser-close').click();
+    await page.locator('#open-proj-path').fill(fixture.project);
+    await expect(page.locator('#open-project-status')).not.toBeVisible();
+    await page.locator('#open-proj-choose').click();
+    await expect(page.locator('#open-project-chooser-path')).toHaveText(fixture.project);
+    await page.locator('#modal-project-open').screenshot({path: path.join(artifacts, 'choose-file-desktop.png')});
+    await page.locator('#open-project-chooser-list button').filter({hasText: /^.*manuscript\.md$/}).click();
+    await expect(page.locator('#open-project-chooser')).not.toBeVisible();
+    await expect(page.locator('#open-proj-path')).toHaveValue(path.join(fixture.project, 'manuscript.md'));
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
     await expect(page.locator('#r-active-root')).toContainText(fixture.project);
     await expect(page.locator('#research-sources-list')).toContainText('Synthetic source');
@@ -126,8 +209,16 @@ server.serve_forever()
     await page.locator('[data-rtab=sources]').click();
     await expect(page.locator('#r-ground-source-select')).toHaveValue(sourceBeforeReopen.sources[0].id);
     // The folder route selects the same archive as the empty manuscript route.
-    await page.locator('#hero-btn-open-project').click();
+    await page.locator('#btn-modal-open-project').click();
     await page.locator('#open-proj-path').fill(fixture.project);
+    await page.locator('#open-proj-choose').click();
+    await expect(page.locator('#open-project-chooser-path')).toHaveText(fixture.project);
+    await page.locator('#open-project-chooser-parent').click();
+    await expect(page.locator('#open-project-chooser-path')).toHaveText(artifacts);
+    await page.locator('#open-project-chooser-list button[data-open-path-kind=directory]').filter({hasText: /^.*existing-novel$/}).click();
+    await expect(page.locator('#open-project-chooser-path')).toHaveText(fixture.project);
+    await page.locator('#open-project-chooser-select-folder').click();
+    await expect(page.locator('#open-proj-path')).toHaveValue(fixture.project);
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
     await expect(page.locator('#modal-project-open')).not.toBeVisible();
     await expect(page.locator('#r-active-root')).toContainText(fixture.project);
@@ -196,6 +287,14 @@ server.serve_forever()
     await expect(page.locator('#research-claims-list')).toContainText(claimTitle);
     await page.locator('[data-rtab=decisions]').click();
     await expect(page.locator('#r-decision-claim-select')).toHaveValue(claimId);
+    const deviationHelp = page.locator('label:has(#r-decision-deviation) .help');
+    await deviationHelp.tap();
+    await expect(page.locator('#lixity-tooltip')).toBeVisible();
+    await expect(page.locator('#lixity-tooltip')).toContainText('does not certify factual accuracy');
+    await expect(page.locator('#r-decision-deviation')).not.toBeChecked();
+    await deviationHelp.tap();
+    await expect(page.locator('#lixity-tooltip')).not.toBeVisible();
+    await expect(page.locator('#r-decision-deviation')).not.toBeChecked();
     await page.locator('#r-decision-deviation').check();
     await page.locator('#r-decision-create-btn').click();
     await expect(page.locator('#research-decisions-list')).toContainText('Move the date');
@@ -220,6 +319,20 @@ server.serve_forever()
     await expect(page.locator('#research-decisions-list')).toContainText('Synthetic decision load failure');
     assert.equal(await page.locator('#research-decisions-list .research-card').count(), 0);
     await page.unroute('**/api/research/decisions');
+
+    await page.route('**/api/research-search', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic search failure'}}));
+    await page.locator('[data-rtab=search]').click();
+    await page.locator('#r-search-btn').click();
+    await expect(page.locator('#research-search-results')).toContainText('Synthetic search failure');
+    await expect(page.locator('#research-status-bar.err')).toContainText('Synthetic search failure');
+    await page.unroute('**/api/research-search');
+    await page.route('**/api/research-compare', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic comparison failure'}}));
+    await page.locator('[data-rtab=grounding]').click();
+    await page.locator('#r-ground-source-select').selectOption(sourceAfterReopen.sources[0].id);
+    await page.locator('#r-ground-btn').click();
+    await expect(page.locator('#research-grounding-results')).toContainText('Synthetic comparison failure');
+    await expect(page.locator('#research-status-bar.err')).toContainText('Synthetic comparison failure');
+    await page.unroute('**/api/research-compare');
 
     // An unavailable status must not expose ingest controls or imply an empty archive.
     await page.route('**/api/research/status', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic archive unavailable'}}));
@@ -264,8 +377,12 @@ server.serve_forever()
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${language} ${tab} mobile overflow`);
       }
       await page.locator('#research-manager').screenshot({path: path.join(artifacts, `locale-${language}-320.png`)});
-      await page.locator('#hero-btn-open-project').click();
+      await page.locator('#btn-modal-open-project').click();
       await expect(page.locator('#open-proj-path')).toBeVisible();
+      await page.locator('#open-proj-path').fill(fixture.project);
+      await page.locator('#open-proj-choose').click();
+      await expect(page.locator('#open-project-chooser-path')).toHaveText(fixture.project);
+      assert.ok(await page.locator('#modal-project-open').evaluate(element => element.scrollWidth <= element.clientWidth), `${language} chooser mobile overflow`);
       await page.locator('#modal-project-open').screenshot({path: path.join(artifacts, `open-${language}-320.png`)});
       await page.locator('#link-switch-to-import').click();
       await expect(page.locator('#import-dropzone')).toBeVisible();
@@ -288,6 +405,54 @@ server.serve_forever()
         await expect(page.locator('.claim-evidence-subpanel')).not.toContainText('The synthetic archive opened in 1924.');
       }
     }
+    // Folder selection also supports an archive with no manuscript at all.
+    await page.locator('#btn-modal-open-project').click();
+    await page.locator('#open-proj-path').fill(fixture.researchOnly);
+    await page.locator('#open-proj-choose').click();
+    await expect(page.locator('#open-project-chooser-path')).toHaveText(fixture.researchOnly);
+    await page.locator('#open-project-chooser-select-folder').click();
+    await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
+    await expect(page.locator('#r-active-root')).toContainText(fixture.researchOnly);
+    await expect(page.locator('#research-init-box')).not.toBeVisible();
+    assert.equal((await (await page.request.get(fixture.url + '/api/research/status')).json()).initialized, true);
+    assert.equal(fs.existsSync(path.join(fixture.researchOnly, 'manuscript.md')), false);
+    // Scratch creation, optional research initialization and explicit byte import
+    // have distinct results and leave previously opened archives unchanged.
+    await page.setViewportSize({width: 1440, height: 1000});
+    await page.locator('#btn-modal-new-project').click();
+    await page.locator('#tab-btn-scratch').click();
+    const scratchProject = path.join(artifacts, 'scratch-project');
+    await page.locator('#new-proj-title').fill('Synthetic new project');
+    await page.locator('#new-proj-path').fill(scratchProject);
+    await page.locator('#new-proj-lang').selectOption('en');
+    await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-create-project').click()]);
+    await expect(page.locator('#welcome-hero')).not.toBeVisible();
+    await expect(page.locator('#welcome-show')).toBeVisible();
+    await page.locator('#welcome-show').click();
+    await expect(page.locator('#welcome-hero')).toBeVisible();
+    await page.locator('#welcome-dismiss').click();
+    await expect(page.locator('#research-init-box')).toBeVisible();
+    await page.locator('#r-init-title').fill('Scratch research');
+    await page.locator('#r-init-btn').click();
+    await expect(page.locator('#research-tabs')).toBeVisible();
+    await page.locator('#r-ingest-title').fill('Scratch source');
+    await page.locator('#r-ingest-text').fill('A synthetic source for a new local project.');
+    await page.locator('#r-ingest-retention').check();
+    await page.locator('#r-ingest-btn').click();
+    await expect(page.locator('#research-sources-list')).toContainText('Scratch source');
+    await expect(page.locator('#r-active-root')).toContainText(scratchProject);
+    const importedProject = path.join(artifacts, 'imported-project');
+    const importedText = '## Imported chapter\n\nA synthetic imported manuscript.';
+    await page.locator('#btn-modal-new-project').click();
+    await page.locator('#tab-btn-import').click();
+    await page.locator('#import-file-input').setInputFiles({name: 'synthetic.md', mimeType: 'text/markdown', buffer: Buffer.from(importedText)});
+    await page.locator('#import-proj-title').fill('Explicit byte import');
+    await page.locator('#import-proj-path').fill(importedProject);
+    await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-import-project').click()]);
+    assert.equal(fs.readFileSync(path.join(importedProject, 'manuscript.md'), 'utf8'), importedText);
+    assert.equal((await (await page.request.get(fixture.url + '/api/research/status')).json()).initialized, false);
+    assert.equal(fs.existsSync(path.join(scratchProject, 'research', 'HEAD.json')), true);
+    assert.equal(fs.readFileSync(path.join(fixture.project, 'manuscript.md'), 'utf8'), '');
     assert.deepEqual(errors, []);
     console.log(`Research: file/folder open, import and error recovery, source/dossier details, claims/evidence/decisions, purge history, seven locales and desktop/mobile layout passed. Screenshots: ${artifacts}`);
   } finally {

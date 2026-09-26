@@ -56,6 +56,14 @@ success is not a security certification for an arbitrary adapter.
   using **MTLD + vocd-D/HD-D + Maas together** – not a single index; each
   captures unique lexical information. The corpus report follows exactly this
   combination.
+- From version 1.16.0, `hd_d` is the exact expected TTR of a 42-token draw
+  without replacement, with a 100-token minimum input. It depends on type
+  frequencies, not token order or a random seed. Earlier releases stored a
+  sampled-window Gini–Simpson measure under the same key; old and new values
+  must not be compared. Reanalyze the original manuscript and regenerate
+  chapter metrics, style baselines, reports, and passports. Exact computation
+  removes Monte Carlo error, not uncertainty about prose beyond the observed
+  text; no independent HD-D measurement SE is estimated for style scores.
 - Bestgen (2024/2025, *The Twofold Length Problem*): **all** LD indices are
   sensitive to very short texts; reliable measurement requires minimum text
   lengths (their analyses use a 60-word floor). Kyle et al. (2024) confirm:
@@ -188,4 +196,3 @@ they are not current product features and must not be cited as such.
 | 49 | No external Delta stylometry | JSD / driver words are in-corpus chapter-vs-rest diagnostics | misread as authorship attribution | 🟡 **documented**: METHODS Track B (not implemented); STABILITY §1 stylometry note |
 | 50 | Dialogue speaker attribution | turns = quotation segments; no speaker ID | “turn” misread as speaker turn | 🟡 **documented**: USAGE `dialogue` section; STABILITY row 27 (patterns per language) |
 | 51 | Research retention & citations | Pilot retains original UTF-8 bytes and pins exact unicode codepoint offsets; SQLite/FTS5 provides rebuildable lexical search; withdrawn sources mark citations `withdrawn`; purged sources fail closed | citations do not imply factual truth; retention requires explicit permission | 🟡 **documented**: USAGE/AGENTS; research pilot is opt-in, explicit-project only; no ambient manuscript I/O |
-

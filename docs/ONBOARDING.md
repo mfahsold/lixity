@@ -62,15 +62,38 @@ lixity serve --no-project --port 8765
 lixity serve ./my-novel --port 8765
 ```
 
-Open `http://127.0.0.1:8765`. **Open Project** accepts the path to an existing
-project folder or manuscript file on the server's filesystem. It also opens a
-research-only folder with an initialized `research/` archive and no manuscript.
-The existing archive remains attached to that workspace. **New Project →
-Import Manuscript** accepts a dropped or selected `.md`/`.txt` file and creates
-a new project from its text. Importing a file does not reopen
-the original project's research archive. Choose **Start New Manuscript** to
-create a project from a template; the Research Novel template initializes a
-local research archive.
+Open `http://127.0.0.1:8765`. The workspace bar directly below the page header
+keeps **New Project** and **Open Project** available after you hide the welcome
+guidance. **Open Project → Browse files and folders** lists paths on the computer
+running Lixity. With an empty path field it starts at that server user's home
+directory; an existing typed manuscript path starts in its parent folder. Use
+**Home** or **Parent folder** to navigate, select a manuscript or **Select this folder**,
+then confirm with **Open**. You can enter a directory or manuscript path directly.
+Browsing or closing the chooser does not switch projects. Files that exist only
+on another browser device do not appear in this server-backed chooser.
+
+Opening a project folder or manuscript file reconnects the `research/` archive
+in its original folder. An initialized research-only folder works without a
+manuscript, too. **New Project → Import Manuscript** instead accepts dropped or
+selected `.md`/`.markdown`/`.txt` bytes from the browser and creates a separate project
+from that text. Import does not reopen the source folder or its research
+archive. Choose **Start New Manuscript** to create a project from a template;
+the Research Novel template initializes a local research archive.
+
+All tabs connected to one server share its active project. The standalone
+server offers **Run analysis** and **Rebuild** for the loaded manuscript;
+publication exports and NDA actions require a project adapter. For generated
+analysis reports, use `lixity build` as shown above.
+
+Use **Hide guidance** to dismiss the welcome panel and **Show guidance** in the
+workspace bar to reopen it. This preference is remembered in the browser when
+local storage is available.
+
+Dotted-underlined terms provide additional explanations: hover, focus with the
+keyboard, or tap them. Press Escape or tap again to dismiss the explanation.
+Help covers project opening/import, source retention, claim confidence, evidence
+relations, author decisions and comparison limits. Statistical settings also
+keep their explanations visible beside the fields.
 
 The dashboard provides chapter and paragraph views, style signals, and the
 research panel for an initialized archive. The local server uses the same

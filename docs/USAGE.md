@@ -487,38 +487,25 @@ The repository ships a complete, reproducible example in `samples/`:
 1. **Reference corpus** – Theodor Fontane, *Effi Briest* (Project Gutenberg
    #5323, public domain), converted to Markdown: `samples/effi-briest.md`
    (36 chapters, ~95,000 words).
-2. **Style corridor** – `lixity build samples/effi-briest.md` publishes the
+2. **Style corridor** – `lixity build samples/effi-briest.md --language de` publishes the
    manuscript's own median ± 2σ band per feature
    (`samples/exports/effi-briest_style.json`).
 3. **Draft** – `samples/effi-briest-folge/effi-briest-folge.md`: the first
    chapter of a sequel about Annie, Effi's daughter.
-4. **Verification** – `lixity analyze samples/effi-briest-folge/effi-briest-folge.md`
-   measures the draft against that corridor.
+4. **Draft metrics** – Analyze the draft with the same language profile, then
+   compare its chapter features with the reference passport. `analyze` does not
+   automatically load a separate reference passport or decide what to revise.
 
-| Feature | Fontane (median) | Corridor (±2σ) | Draft |
-| :--- | ---: | ---: | ---: |
-| ASL | 15.57 | 10.45 – 20.70 | 15.21 |
-| Staccato share | 31.53 % | 19.78 – 43.27 | 28.35 % |
-| Hypotaxis share | 19.13 % | 5.71 – 32.56 | 15.75 % |
-| Sentence-length CV | 0.87 | 0.71 – 1.04 | 0.83 |
-| Dialogue share | 58.44 % | 26.78 – 90.10 | 43.84 % |
-| Function-word share | 44.98 % | 42.41 – 47.56 | 47.64 % |
-| Perception filters | 0.86 | −0.34 – 2.07 | 0.00 |
-| Modals / passive (per 1,000) | 11.37 / 4.50 | 6.41 – 16.34 / 2.11 – 6.88 | 10.85 / 2.58 |
-| Nominalisations (per 1,000) | 14.94 | 8.63 – 21.25 | 18.09 |
-| Adjectives (per 1,000) | 21.18 | 14.41 – 27.95 | 17.05 |
-| Long words | 20.28 % | 15.52 – 25.04 | 17.09 % |
-| Starter entropy | 5.52 bit | 4.87 – 6.18 | 5.36 |
-| First-person starts | 6.57 % | 1.53 – 11.61 | 4.72 % |
-| Guiraud R | 18.11 | 14.61 – 21.62 | 14.91 |
-| HD-D | 0.9924 | 0.9900 – 0.9948 | 0.9898 |
+```sh
+lixity style samples/effi-briest.md --language de --json > /tmp/effi-reference.json
+lixity analyze samples/effi-briest-folge/effi-briest-folge.md --language de --json > /tmp/effi-draft.json
+```
 
-**14 of 16 features** land inside the corridor; the two at its edge are the
-function-word share (+0.08 pp) and HD-D (−0.0002). Three features (dialogue
-share, function-word share, long words) exist per chapter only — for the
-single-chapter draft they are measured on that chapter. The loop is always the
-same: `build` → write → `analyze` → compare → revise – no external style
-dogma, only the author's own distribution.
+Use newly generated values for both texts. Version 1.16.0 corrects HD-D and
+other numerical calculations, so older corridors and draft values are not a
+comparison baseline. Read changes in context: a departure can reflect dialogue,
+topic or a deliberate narrative choice, and matching the reference distribution
+is not evidence of literary quality.
 
 ## Work markers (editor-visible)
 
@@ -605,7 +592,7 @@ What the numbers can and cannot do — the full register (research basis,
 evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 
 - **Short texts:** less length-sensitive lexical-diversity indices need minimum
-  sizes (MTLD/Maas a² ≥ 100 tokens, HD-D ≥ 175, MATTR ≥ window 50);
+  sizes (HD-D/MTLD/Maas a² ≥ 100 tokens, MATTR ≥ window 50);
   below that Lixity returns `null` and the dashboard shows `–`.
 - **Heuristics:** syllables (±5–10 %), suffix-based densities and tense
   patterns are comparable *within* one language, not across languages;

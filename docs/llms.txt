@@ -89,7 +89,7 @@ not services bundled with the core engine.
 - `lixity showing FILE [--json]` – showing/telling balance per chapter (self-calibrating)
 - `lixity style FILE --json [--z-mild F] [--z-strong F] [--fdr-q F] [--fdr-method bh|by] [--dim-threshold F] [--flag-min-severity 1|2|3]` – self-calibrating style reference (schema v4; thresholds injectable, re-read from meta; Cliff’s δ + baseline diagnostics + structural_diagnostics: PELT/Mann-Kendall/Sn/Qn/Hill + early/late Wasserstein-KS shift + co-occurrence fitness + Dunning keyness)
 - `lixity dashboard FILE [-o ui.html] [--names A,B] [same threshold flags]` – single-file interactive dashboard (clickable KPIs, status strip, structure panels, work markers, full settings group)
-- `lixity serve [FILE|FOLDER] [--host IP] [--port N] [--research-project DIR] [--no-project]` – local loopback server with a project wizard and experimental research panel; Open Project accepts an initialized research-only folder without a manuscript and preserves its archive; importing manuscript text creates a new project
+- `lixity serve [FILE|FOLDER] [--host IP] [--port N] [--research-project DIR] [--no-project]` – local loopback server with a persistent New/Open/Show guidance bar, project wizard and experimental research panel; Open Project browses or accepts server-local paths, including research-only folders, and keeps their archives; importing browser-selected manuscript bytes creates a new project. Guidance starts collapsed for loaded projects and can be reopened.
 - `lixity research SUBCOMMAND --project DIR [options]` – experimental explicit-project research store (init, ingest, reindex, search, cite, sources, dossier, claim, link-evidence, decision, compare, withdraw, purge, audit, schema)
 - `lixity build [FILE] [--dry-run] [same threshold flags]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
 - `lixity about --json` – languages, features, heuristics, command list
@@ -98,7 +98,9 @@ not services bundled with the core engine.
 Python facade:
 - Core analysis: `from lixity import api` – `analyze`, `profile`, `dialogue`, `characters`, `pacing`, `motifs`, `showing`, `fingerprint`/`passport`, `dashboard`, `markers`/`add_marker`/`resolve_marker`, `about`.
 - Research archive: `from lixity.research import api as research_api` – `init`, `ingest`, `reindex`, `search`, `cite`, `list_sources`, `get_source`, `create_dossier`, `list_dossiers`, `get_dossier`, `create_claim`, `list_claims`, `link_evidence`, `list_evidence_links`, `record_decision`, `list_decisions`, `compare_source`.
-- HTTP action API on `lixity serve`: `POST /api/project-create`, `POST /api/project-open`, `POST /api/load`, `POST /api/settings`, `POST /api/marker-add`, `POST /api/marker-resolve`, `POST /api/research-*`.
+- HTTP action API on `lixity serve`: `POST /api/project-create`, `POST /api/project-open`, `POST /api/load` (legacy upload; HTTP 409 on an existing saved filename), `POST /api/settings`, `POST /api/marker-add`, `POST /api/marker-resolve`, `POST /api/research-*`. Standalone Run analyses/Rebuild refresh; export/sync/audit/prune/gdrive return HTTP 501 with `ok: false`.
+- Read-only `GET /api/project-paths?path=<encoded path>` browses immediate server-local folders/manuscripts without changing the workspace; opening still requires `POST /api/project-open`.
+- The standalone dashboard shows only implemented optional actions. Embedding adapters should pass `render_dashboard(enabled_actions=...)` for the optional actions they implement; `None` retains legacy full controls.
 
 ## Key numbers and thresholds
 
@@ -106,7 +108,7 @@ Python facade:
 - FDR control: Benjamini–Hochberg default q = 0.05; `--fdr-method by` for Benjamini–Yekutieli (arbitrary dependence)
 - Effect sizes: Cliff’s δ / Vargha–Delaney A on FDR cells; baseline diagnostics (runs, lag-1 ρ, low_power n<8)
 - Structural: PELT changepoints (BIC), Mann–Kendall trends, Sn/Qn beside MAD, Hill tail index, early/late Wasserstein+KS shift, co-occurrence fitness, Dunning keyness
-- Lexical diversity guards: MTLD and Maas a² need >= 100 tokens, HD-D >= 175 tokens, MATTR >= 50-token window
+- Lexical diversity guards: HD-D, MTLD and Maas a² need >= 100 tokens; MATTR needs a >= 50-token window. HD-D is exact expected TTR of a 42-token draw without replacement since 1.16.0; recompute older values and dependent style baselines. Population SE is not estimated for HD-D.
 - Style reference needs several chapters with measurable spread
 
 ## Project

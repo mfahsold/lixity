@@ -14,6 +14,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Standalone local `lixity serve` with project creation, explicit manuscript import,
   existing-project opening, live settings and marker controls. Host/Origin checks,
   loopback binding and request limits protect the local HTTP boundary.
+- A file and folder browser in Open Project selects existing server-local paths
+  without changing the workspace until Open is confirmed. The persistent
+  workspace bar keeps New Project, Open Project and Show guidance available in
+  loaded projects; guidance can be reopened after dismissal.
+- Localized explanations for project and research controls. Shared tooltips work
+  by keyboard and touch, stay visible inside dialogs, and preserve related help.
 - Experimental explicit-project research workspace: retained UTF-8 sources,
   versioned source context, SQLite/FTS5 search, exact passage citations, dossiers,
   claims, evidence links and author decisions through CLI, Python and HTTP APIs.
@@ -36,13 +42,22 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Correct HD-D to hypergeometric expected TTR for a 42-token draw instead of
+  the mislabeled windowed Simpson calculation. The minimum is now 100 tokens;
+  legacy sampling arguments have no effect, and no population SE is reported.
+  Recompute older analyses and dependent style baselines before comparison.
 - “Open project” no longer routes file selection or drops silently into new-project
   import. Existing file/folder paths preserve their original research archive,
   including empty manuscripts and initialized research folders without manuscripts.
 - Project opening reloads target settings; unsuccessful opening preserves the
   current workspace. Dialog errors remain visible beside editable inputs.
-- Imported content cannot overwrite an existing manuscript. Generated project
-  settings use valid TOML and preserve quoted titles and the selected language.
+- Imported content preserves submitted whitespace and line endings and cannot
+  overwrite an existing manuscript. Generated project settings use valid TOML
+  and preserve quoted titles and the selected language.
+- Standalone controls show only implemented actions; Run analyses/Rebuild refresh,
+  while unsupported export/sync/audit/prune/Drive requests return HTTP 501
+  without pretending to produce artifacts. Legacy `/api/load` returns HTTP 409
+  rather than replacing a saved copy with the same filename.
 - Source, claim and dossier selections survive background list refreshes. A decision
   with no recorded deviation is shown neutrally, without implying factual validation.
 - Correct chapter-to-rest JSD probability mass; unequal chapter lengths no longer
@@ -59,6 +74,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Rebuilding the research catalogue flushes a writable file descriptor on
   Windows before atomic publication. Browser checks honor an external Python
   environment in CI as well as the local development environment.
+- Correct the documented Benjamini–Yekutieli harmonic factor and Maas logarithm
+  base to match the existing implementations; no numerical change for these fixes.
 
 ### Changed
 

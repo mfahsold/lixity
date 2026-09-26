@@ -160,7 +160,7 @@ class ChapterMetrics(BaseModel):
     )
     guiraud_r: float = Field(default=0.0, description="Guiraud index R = V / sqrt(N).")
     hd_d: float | None = Field(
-        default=None, description="HD-D lexical diversity (McCarthy & Jarvis 2010)."
+        default=None, description="Expected TTR of a 42-token draw without replacement; null below 100 tokens."
     )
     jsd: float = Field(
         default=0.0, description="Jensen-Shannon divergence of word distribution against remaining corpus."
@@ -177,7 +177,8 @@ class ChapterMetrics(BaseModel):
         description=(
             "Measurement uncertainty (standard error) per style feature. Documented "
             "approximations: Poisson for count densities, binomial for shares, "
-            "ASL/CV/entropy/HD-D plug-ins. Empty = feature not measurable."
+            "ASL/CV/entropy plug-ins. A missing key means no uncertainty estimate; "
+            "HD-D has no population SE estimate."
         ),
     )
 
@@ -237,7 +238,7 @@ class CorpusMetrics(BaseModel):
     modal_density: float = Field(default=0.0, description="Modal verbs per 1,000 words.")
     filter_density: float = Field(default=0.0, description="Perception filter verbs per 1,000 words.")
     hd_d: float | None = Field(
-        default=None, description="HD-D lexical diversity (McCarthy & Jarvis 2010)."
+        default=None, description="Expected TTR of a 42-token draw without replacement; null below 100 tokens."
     )
     mtld: float | None = Field(
         default=None,

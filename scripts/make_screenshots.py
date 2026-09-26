@@ -305,6 +305,9 @@ def main() -> int:
         1440,
         720,
     )
+    open_project_dashboard = _write_html("dashboard-project-open.html", _force_light(welcome_dashboard))
+    for suffix, width in (("", 1440), ("-mobile", 390)):
+        _queue_capture(open_project_dashboard, OUT_DIR / f"dashboard-project-open{suffix}.png", width, 1000)
 
     # 9. Research Source Dashboard & CLI Citation (Research Pilot) ---------
     research_proj = WORK_DIR / "research-demo"
@@ -405,6 +408,15 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     claims_data = research_api.list_claims(research_proj)
     decisions_data = research_api.list_decisions(research_proj)
     research_fixture = {
+        # Synthetic server-local paths demonstrate the chooser without exposing a user's home.
+        "/api/project-paths": {
+            "ok": True, "path": "/home/demo/my-novel", "parent": "/home/demo",
+            "entries": [
+                {"name": "research", "path": "/home/demo/my-novel/research", "kind": "directory"},
+                {"name": "manuscript.md", "path": "/home/demo/my-novel/manuscript.md", "kind": "manuscript"},
+            ],
+            "truncated": False,
+        },
         "/api/research/status": {
             "ok": True,
             "initialized": True,

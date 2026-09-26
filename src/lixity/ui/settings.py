@@ -4,7 +4,7 @@ from collections.abc import Mapping, Sequence
 from typing import Any
 
 from ..style_fingerprint import FingerprintThresholds
-from .components import esc, label
+from .components import esc, help_term, label
 
 
 def settings_form(
@@ -22,7 +22,7 @@ def settings_form(
         '<form id="settings-form" class="settings-form ctl-group" novalidate>',
         f'<h3>{translated("settings")}</h3>',
         '<div class="settings-grid">',
-        f'<div class="setting-field"><label for="set-language">{translated("language")}</label>',
+        f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("language"))}</label>',
         '<select class="ctl" id="set-language">',
     ]
     for code, name in language_options:

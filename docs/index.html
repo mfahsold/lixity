@@ -1174,7 +1174,7 @@ lixity serve --research-project ./novel-research --no-project
 lixity research audit --project ./novel-research</pre>
 
       <p style="margin: 1.2rem 0 0; font-size: 0.88rem; color: var(--subtle);">
-        In the server UI, Open Project loads an existing workspace path and its research archive, including a research-only folder without a manuscript. Manuscript comparison needs a manuscript; importing manuscript text creates a new project. Source and dossier details, direct search-to-evidence actions, and dossier-linked claims are available in the experimental v1.16.0 pilot. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research commands</a> and the broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a>.
+        In the server UI, Open Project offers Browse files and folders for paths on the computer running Lixity. Browse from the server user's home, use Home or Parent folder, select a manuscript or the current folder, then confirm with Open; a typed path also works. Opening reconnects the original workspace and its research archive, including a research-only folder without a manuscript. Manuscript comparison needs a manuscript; browser file import creates a separate project from its bytes. Welcome guidance can be hidden and reopened without hiding the project controls. Source and dossier details, direct search-to-evidence actions, and dossier-linked claims are available in the experimental v1.16.0 pilot. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research commands</a> and the broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a>.
       </p>
       <p style="margin: 0.6rem 0 0; font-size: 0.88rem; color: var(--subtle);">
         Source/manuscript comparison uses chapter prose without headings, front matter or the configured appendix. Cross-language lexical scores remain numeric but carry an explicit comparability warning; they are not a factual or linguistic-equivalence verdict.
@@ -1186,7 +1186,7 @@ lixity research audit --project ./novel-research</pre>
   <section id="visual-suite">
     <div class="section-header">
       <span class="section-tag">Visual Suite &amp; UI</span>
-      <h2 class="section-title">Visual Analytical Suite (17 Screenshots)</h2>
+      <h2 class="section-title">Visual Analytical Suite</h2>
       <p class="section-desc">Click any screenshot to inspect it in full native resolution inside the interactive lightbox viewer. All captures reflect real desktop, terminal, and mobile browser sessions.</p>
     </div>
 
@@ -1194,12 +1194,23 @@ lixity research audit --project ./novel-research</pre>
     <span class="section-tag">Development Workspace &amp; Project Wizard</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" width="1152" height="398" loading="eager" fetchpriority="high" decoding="async"/>
-        <figcaption><strong>Welcome &amp; quickstart hero:</strong> Clean, minimalist workspace onboarding displayed when opening Lixity without an active manuscript. Offers one-click project creation and file selection.</figcaption>
+        <img src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" width="1152" height="630" loading="eager" fetchpriority="high" decoding="async"/>
+        <figcaption><strong>Welcome &amp; quickstart hero:</strong> Optional workspace guidance when opening Lixity without an active manuscript. New Project and Open Project remain available after it is dismissed; Open Project includes a server-backed file/folder chooser.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/dashboard-project-modal.png" alt="Native dialog modal for project creation with template selection cards" width="608" height="526" loading="eager" decoding="async"/>
+        <img src="screenshots/dashboard-project-modal.png" alt="Native dialog modal for project creation with template selection cards" width="606" height="648" loading="eager" decoding="async"/>
         <figcaption><strong>Native &lt;dialog&gt; project wizard:</strong> Accessible modal dialog with backdrop blur, language selection, and tailored narrative structure templates (Minimal, 3-Act Structure, Research Novel with pre-initialized research/ archive).</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img src="screenshots/dashboard-project-open.png" alt="File and folder selection for opening an existing project" width="608" height="630" loading="lazy" decoding="async"/>
+        <figcaption><strong>Open the original project:</strong> Browse files and folders on the computer running Lixity, select a manuscript or folder, and confirm with Open. Its existing research archive stays attached. These paths are synthetic examples.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img src="screenshots/dashboard-project-open-mobile.png" alt="The project chooser at mobile width" width="368" height="704" loading="lazy" decoding="async"/>
+        <figcaption><strong>The same workflow on mobile:</strong> Folder navigation, file selection and typed paths remain available. Importing browser-selected manuscript bytes is a separate action.</figcaption>
       </figure>
     </div>
 

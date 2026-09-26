@@ -17,7 +17,10 @@ from lixity.analyzer import CorpusAnalyzer
 from lixity.cli import main
 from lixity.format import num, pct
 from lixity.language import LANGUAGE_PROFILES
+from lixity.markdown_parser import parse_markdown_blocks
 from lixity.models import CorpusConfig
+from lixity.style_profile import ParagraphProfiler
+from lixity.ui.components import help_term
 from lixity.ui.dashboard import render_dashboard
 from lixity.workspace_labels import WORKSPACE_LABELS
 
@@ -26,10 +29,17 @@ class _DashboardBodyParser(HTMLParser):
     def __init__(self):
         super().__init__()
         self.labels = {}
+        self.help_texts = set()
+        self.elements = {}
 
     def handle_starttag(self, tag, attrs):
+        attributes = dict(attrs)
         if tag == "body":
-            self.labels = json.loads(dict(attrs)["data-ui-labels"])
+            self.labels = json.loads(attributes["data-ui-labels"])
+        if "data-help" in attributes:
+            self.help_texts.add(attributes["data-help"])
+        if "id" in attributes:
+            self.elements[attributes["id"]] = attributes
 
 
 class TestLocalization(unittest.TestCase):
@@ -82,8 +92,21 @@ class TestLocalization(unittest.TestCase):
                     WORKSPACE_LABELS[language],
                 )
                 self.assertEqual(parser.labels["ctx_provenance_note"], labels["ctx_provenance_note"])
-                for key in ("research_tab_claims", "wizard_import_tab", "wizard_open_note"):
+                for key in ("research_tab_claims", "wizard_import_tab", "wizard_open_note",
+                            "wizard_choose_action", "welcome_dismiss", "welcome_show"):
                     self.assertTrue(escape(labels[key]) in rendered, key)
+                self.assertIn(f'<p class="ctl-note">{escape(labels["wizard_choose_location"])}</p>', rendered)
+                for key in ("help_open_existing", "help_import_manuscript", "help_language",
+                            "help_research_init", "help_research_ingest", "help_research_search",
+                            "help_research_dossier", "help_research_claim", "help_research_confidence",
+                            "help_research_evidence", "help_research_passage", "help_research_relation",
+                            "help_research_decision", "help_research_deviation",
+                            "help_research_comparison"):
+                    self.assertIn(labels[key], parser.help_texts, key)
+                self.assertEqual(parser.elements["r-claim-confidence"]["aria-label"],
+                                 labels["research_confidence_field"])
+                self.assertEqual(parser.elements["r-link-relation"]["aria-label"],
+                                 labels["research_relation_field"])
                 self.assertIn('value="supports"', rendered)
                 self.assertNotIn("lixity.json", rendered)
 
@@ -104,6 +127,37 @@ class TestLocalization(unittest.TestCase):
             for language in ("de", "fr", "es", "it", "pt", "nl"):
                 with self.subTest(key=key, language=language):
                     self.assertEqual(fields(WORKSPACE_LABELS[language][key]), fields(english))
+
+    def test_hd_d_help_describes_the_42_token_estimator_in_all_locales(self):
+        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+            with self.subTest(language=language):
+                labels = LANGUAGE_PROFILES[language].labels
+                help_text = labels["help_hd_d"]
+                self.assertIn("42", help_text)
+                self.assertIn(escape(help_text, quote=True), help_term(labels, "hd_d", "HD-D"))
+
+    def test_workspace_actions_remain_available_without_guidance_or_legacy_actions(self):
+        paragraphs, chapters = ParagraphProfiler(CorpusConfig()).profile_blocks(
+            parse_markdown_blocks("## Chapter\n\nThe door opened. The room was quiet.")
+        )
+        html = render_dashboard(chapters, paragraphs, controls=True,
+                                enabled_actions=("analyze", "rebuild"))
+        self.assertLess(html.index('class="workspace-bar"'), html.index('id="welcome-hero"'))
+        self.assertLess(html.index('class="workspace-bar"'), html.index('id="controls"'))
+        self.assertEqual(html.count('id="btn-modal-open-project"'), 1)
+        self.assertIn('id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"', html)
+        self.assertIn('id="welcome-hero" hidden', html)
+        for hidden_action in ('data-action="load"', 'data-action="export"',
+                              'data-action="sync"', 'id="nda-manager"'):
+            self.assertNotIn(hidden_action, html)
+        for visible_action in ('data-action="analyze"', 'data-action="rebuild"',
+                               'id="research-manager"'):
+            self.assertIn(visible_action, html)
+
+        legacy = render_dashboard([], [], controls=True)
+        for legacy_action in ('data-action="load"', 'data-action="export"',
+                              'id="nda-manager"'):
+            self.assertIn(legacy_action, legacy)
 
     def test_readability_dispatch_uses_language_specific_coefficients(self):
         expected = {"en": 27.485, "de": 53.0, "fr": 49.65, "es": 72.135,

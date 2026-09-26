@@ -25,7 +25,7 @@ assumptions; none of these outputs is an objective literary quality score.
 
 ## 2. Commands
 
-On development `main` only, `lixity research` provides a separate experimental
+Since v1.16.0, `lixity research` provides a separate experimental
 source archive and lexical search API. See [research usage](research/USAGE.md)
 for implemented commands and `*-local/1` schemas. Every project is explicit;
 ingestion requires retention permission. Results remain unreviewed, not accepted
@@ -99,12 +99,20 @@ these:
   `function_word_pct`, `long_word_pct`,
   `filter_density`, `modal_density`, `passive_density`,
   `nominalization_density`, `adjective_density` (all per 1,000 words),
-- `style_se`: standard error per feature (documented plug-in estimators:
-  Poisson for count densities, binomial for shares, sample-based for
-  ASL/CV/entropy/HD-D) – **use these for uncertainty-aware reasoning**,
+- `style_se`: available standard-error approximations per feature: Poisson
+  for count densities, binomial for shares, and ASL/CV/entropy plug-ins.
+  HD-D has no population uncertainty estimate and its key is omitted. Missing
+  SE is treated as zero in the style score, not as proof of certainty.
 - `jsd` (Jensen–Shannon divergence of the chapter's word distribution to the
   rest of the corpus, in natural-log units `[0, ln(2)]`) and `jsd_top_words` (the most contributing content
   words – interpretable drivers of divergence).
+
+Since 1.16.0, `hd_d` is the exact expected TTR of a 42-token draw without
+replacement, with a 100-token floor. Earlier values used a different estimator;
+recompute both reference and target analyses before comparing them. The field
+names and schema versions remain unchanged. `about().heuristics` reports
+`hd_d_method`, `hd_d_min_tokens`, `hd_d_sample_size=42` and the retained
+`hd_d_samples=0` key (no Monte Carlo samples).
 
 Corpus-level notes:
 
@@ -191,6 +199,9 @@ in all seven languages.
 The dashboard follows **one interaction model**: every content drill-down is a
 keyboard-reachable `[role="button"]` element carrying a small, uniform data
 vocabulary; every server control is a native `<button>`/`<select>`.
+The workspace bar stays directly below the header: New Project, Open Project and
+Show guidance remain reachable in loaded projects. Guidance starts collapsed
+in loaded projects and can be reopened without changing the active project.
 
 | Hook | Meaning |
 |---|---|
@@ -356,8 +367,8 @@ info = api.about()                                    # languages, features, heu
 
 ### 5.1 Research API (`lixity.research.api`)
 
-Development pilot, separate from the released analysis API. Every call requires
-an explicit project root. Source text and source-criticism metadata remain
+Experimental local pilot in v1.16.0, separate from the analysis API. Every call
+requires an explicit project root. Source text and source-criticism metadata remain
 untrusted evidence; a retained quotation is not a verified historical claim.
 
 ```python
@@ -409,9 +420,10 @@ cmp_res = research_api.compare_source(root_path, source_id, manuscript_path)
 
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
 
+- `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, entries: [{name, path, kind}], truncated}`, where `kind` is `directory` or `manuscript`. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
 - `POST /api/project-create`: `{"title": "...", "language": "de", "template": "three_act", "init_research": true}`
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
-- `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload, not an existing-project opener.
+- `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
 - `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`
 - `POST /api/marker-add`: `{"kind": "todo", "line": 42, "note": "Check dialogue continuity"}`
 - `POST /api/marker-resolve`: `{"id": "m-abcd1234"}`
@@ -427,6 +439,15 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `GET /api/research/sources` and `GET /api/research/dossiers`: lists; add `?id=...` for details.
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
+
+The standalone server renders only its implemented optional controls: Run analyses
+and Rebuild refresh the dashboard. Its `POST /api/export`, `/api/sync`,
+`/api/audit`, `/api/prune` and `/api/gdrive` return HTTP 501 with `ok: false`;
+they do not create artifacts or report success. `render_dashboard` accepts
+`enabled_actions` for embedding adapters to list the optional actions they
+implement. `None` preserves the historical full control set for existing hosts;
+adapters should supply their actual capabilities. Project, settings and research
+controls are independent of that list.
 
 Responses include `ok`; `message` is optional. Successful reads add the relevant
 data envelope. Treat `ok: false` as unavailable data, not an empty archive.

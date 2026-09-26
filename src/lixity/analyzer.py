@@ -16,9 +16,6 @@ from .diversity import (
     hd_d as hd_d_value,
 )
 from .diversity import (
-    hd_d_stats,
-)
-from .diversity import (
     maas_a2 as maas_a2_value,
 )
 from .diversity import (
@@ -309,7 +306,7 @@ class CorpusAnalyzer:
         c_long_words = sum(1 for t in c_words if len(t) > lw_min)
         c_long_pct = (c_long_words / n_cw * 100.0) if n_cw else 0.0
         c_guiraud = len(set(c_lower)) / math.sqrt(n_cw) if n_cw else 0.0
-        c_hd_d, c_hd_d_se = hd_d_stats(c_lower)
+        c_hd_d = hd_d_value(c_lower)
         c_func_pct = (
             sum(1 for t in c_lower if t in self.lang.function_words) / n_cw * 100.0 if n_cw else 0.0
         )
@@ -336,8 +333,7 @@ class CorpusAnalyzer:
             "first_person_start_rate": share_se(c_first_rate, stats.total),
             "guiraud_r": (0.5 * c_guiraud / math.sqrt(n_cw)) if n_cw else 0.0,
         }
-        if c_hd_d is not None:
-            c_se["hd_d"] = c_hd_d_se
+        # Exact rarefaction has no Monte Carlo SE; population uncertainty is not estimated.
 
         chapter = ChapterMetrics(
             num=num,

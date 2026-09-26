@@ -76,6 +76,15 @@ class TestLixityServer(unittest.TestCase):
         html, info = build_server_dashboard(None, language="en", title="Empty Project")
         self.assertIn("<!DOCTYPE html>", html)
         self.assertIn("Empty Project", html)
+        self.assertIn('id="btn-modal-open-project"', html)
+        self.assertIn('id="settings-form"', html)
+        self.assertIn('id="research-manager"', html)
+        self.assertIn('data-action="analyze"', html)
+        self.assertIn('data-action="rebuild"', html)
+        for absent in ('id="ms-file"', 'id="nda-manager"', 'data-action="export"',
+                       'data-action="sync"', 'data-action="audit"', 'data-action="prune"',
+                       'data-action="gdrive"'):
+            self.assertNotIn(absent, html)
         self.assertEqual(info["chapters"], 0)
         self.assertEqual(info["paragraphs"], 0)
         self.assertTrue(info["is_empty"])
@@ -99,6 +108,81 @@ class TestLixityServer(unittest.TestCase):
         self.assertEqual(headers.get("x-frame-options"), "DENY")
         self.assertEqual(headers.get("x-content-type-options"), "nosniff")
 
+    def test_project_paths_lists_one_level_and_preserves_project_state(self):
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in ("workspace_root", "source_input", "research_dir", "language", "title", "dashboard_html")
+        }
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "Zulu").mkdir()
+            (root / "alpha.md").mkdir()
+            (root / ".hidden").mkdir()
+            (root / "Notes.TXT").write_text("Synthetic note.\n", encoding="utf-8")
+            (root / "a & 'note'.md").write_text("Synthetic note.\n", encoding="utf-8")
+            (root / "other.pdf").write_bytes(b"%PDF synthetic")
+            (root / ".private.md").write_text("Hidden.\n", encoding="utf-8")
+            (root / "Zulu" / "nested.md").write_text("Nested.\n", encoding="utf-8")
+            if os.name == "posix":
+                os.mkdir(os.fsencode(root) + b"/bad-\xff.md")
+            with patch("lixity.server.Path.home", return_value=root):
+                status, body, _ = self.make_request("/api/project-paths")
+            self.assertEqual(status, 200, body)
+            result = json.loads(body)
+            self.assertEqual(result["path"], str(root))
+            self.assertEqual(result["parent"], str(root.parent))
+            self.assertEqual(result["entries"], [
+                {"name": "alpha.md", "path": str(root / "alpha.md"), "kind": "directory"},
+                {"name": "Zulu", "path": str(root / "Zulu"), "kind": "directory"},
+                {"name": "a & 'note'.md", "path": str(root / "a & 'note'.md"), "kind": "manuscript"},
+                {"name": "Notes.TXT", "path": str(root / "Notes.TXT"), "kind": "manuscript"},
+            ])
+            self.assertFalse(result["truncated"])
+            status, body, _ = self.make_request(f"/api/project-paths?path={quote(str(root / 'Notes.TXT'), safe='')}")
+            self.assertEqual(status, 200, body)
+            self.assertEqual(json.loads(body)["path"], str(root))
+            empty = root / "Zulu"
+            status, body, _ = self.make_request(f"/api/project-paths?path={quote(str(empty), safe='')}")
+            self.assertEqual(status, 200, body)
+            self.assertEqual(json.loads(body)["entries"], [{
+                "name": "nested.md", "path": str(empty / "nested.md"), "kind": "manuscript",
+            }])
+            self.assertEqual(
+                {name: getattr(LixityServerHandler, name) for name in original_state}, original_state,
+            )
+
+    def test_project_paths_errors_origin_and_bounded_listing(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "item.pdf").write_text("Not a manuscript.\n", encoding="utf-8")
+            for i in range(201):
+                (root / f"folder-{i:03d}").mkdir()
+            path = f"/api/project-paths?path={quote(str(root), safe='')}"
+            status, body, _ = self.make_request(path)
+            self.assertEqual(status, 200, body)
+            result = json.loads(body)
+            self.assertEqual(len(result["entries"]), 200)
+            self.assertTrue(result["truncated"])
+            self.assertEqual(result["entries"][0]["name"], "folder-000")
+            self.assertEqual(result["entries"][-1]["name"], "folder-199")
+            (root / "empty").mkdir()
+            status, body, _ = self.make_request(
+                f"/api/project-paths?path={quote(str(root / 'empty'), safe='')}"
+            )
+            self.assertEqual(status, 200, body)
+            self.assertEqual(json.loads(body)["entries"], [])
+            for target, expected in ((root / "missing", 404), (root / "item.pdf", 400)):
+                status, body, _ = self.make_request(f"/api/project-paths?path={quote(str(target), safe='')}")
+                self.assertEqual(status, expected, body)
+                self.assertFalse(json.loads(body)["ok"])
+            with patch("lixity.server.os.scandir", side_effect=PermissionError("denied")):
+                status, body, _ = self.make_request(path)
+            self.assertEqual(status, 403, body)
+            self.assertFalse(json.loads(body)["ok"])
+            for headers in ({"Origin": "http://evil.example"}, {"Host": "evil.example"}):
+                status, body, _ = self.make_request(path, headers=headers)
+                self.assertEqual(status, 403, body)
+                self.assertFalse(json.loads(body)["ok"])
     def test_untrusted_host_forbidden(self):
         status, body, _ = self.make_request("/", headers={"Host": "evil.example.com"})
         self.assertEqual(status, 403)
@@ -258,6 +342,65 @@ class TestLixityServer(unittest.TestCase):
         )
         self.assertEqual(status, 200)
         self.assertIn(b'"ok": true', body)
+
+    def test_load_rejects_existing_saved_copy_without_switching_project(self):
+        original_state = {
+            name: getattr(LixityServerHandler, name)
+            for name in ("workspace_root", "source_input", "exports_dir", "research_dir", "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info")
+        }
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                exports = Path(td) / "exports"
+                saved = exports / "manuscripts" / "draft.md"
+                saved.parent.mkdir(parents=True)
+                original_bytes = b"## Original\n\nKeep these words.\n"
+                saved.write_bytes(original_bytes)
+                LixityServerHandler.workspace_root = td
+                LixityServerHandler.exports_dir = str(exports)
+                before_source = LixityServerHandler.source_input
+                before_html = LixityServerHandler.dashboard_html
+                status, body, _ = self.make_request(
+                    "/api/load", method="POST",
+                    body=json.dumps({"name": "draft.md", "content": "## Replacement\n\nNew words."}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 409, body)
+                self.assertFalse(json.loads(body)["ok"])
+                self.assertEqual(saved.read_bytes(), original_bytes)
+                self.assertEqual(LixityServerHandler.source_input, before_source)
+                self.assertEqual(LixityServerHandler.dashboard_html, before_html)
+        finally:
+            for name, value in original_state.items():
+                setattr(LixityServerHandler, name, value)
+
+    def test_standalone_unsupported_actions_fail_without_refresh_or_artifacts(self):
+        original_html = LixityServerHandler.dashboard_html
+        original_source = LixityServerHandler.source_input
+        before_artifacts = sorted(Path(self.exports_dir).glob("*"))
+        with patch.object(LixityServerHandler, "refresh", side_effect=AssertionError("unexpected refresh")):
+            for action in ("export", "sync", "audit", "prune", "gdrive"):
+                with self.subTest(action=action):
+                    status, body, _ = self.make_request(
+                        f"/api/{action}", method="POST", body="{}",
+                        headers={"Content-Type": "application/json"},
+                    )
+                    self.assertEqual(status, 501, body)
+                    self.assertFalse(json.loads(body)["ok"])
+        self.assertEqual(LixityServerHandler.dashboard_html, original_html)
+        self.assertEqual(LixityServerHandler.source_input, original_source)
+        self.assertEqual(sorted(Path(self.exports_dir).glob("*")), before_artifacts)
+
+    def test_analysis_and_rebuild_actions_refresh_successfully(self):
+        for action in ("analyze", "rebuild"):
+            with self.subTest(action=action):
+                status, body, _ = self.make_request(
+                    f"/api/{action}", method="POST", body="{}",
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                data = json.loads(body)
+                self.assertTrue(data["ok"])
+                self.assertTrue(data["reload"])
 
     def test_artifact_serving_and_traversal_protection(self):
         test_pdf = Path(self.exports_dir) / "novel.pdf"
@@ -556,11 +699,12 @@ class TestLixityServer(unittest.TestCase):
 
                 # 5. Create project with custom imported manuscript content
                 proj_upload_dir = Path(td) / "uploaded-novel"
+                imported_text = "    An indented opening.\r\n\r\n## Erstes Kapitel\r\n\r\nDer Wind pfiff durch die alten Gassen der Stadt.  "
                 upload_payload = json.dumps({
                     "title": "Das verlorene Artefakt",
                     "language": "de",
                     "path": str(proj_upload_dir),
-                    "content": "# Das verlorene Artefakt\n\n## Erstes Kapitel\n\nDer Wind pfiff durch die alten Gassen der Stadt.",
+                    "content": imported_text,
                     "init_research": False,
                 })
                 status, body, _ = self.make_request(
@@ -573,7 +717,7 @@ class TestLixityServer(unittest.TestCase):
                 upload_res = json.loads(body)
                 self.assertTrue(upload_res["ok"])
                 self.assertTrue((proj_upload_dir / "manuscript.md").is_file())
-                self.assertIn("Der Wind pfiff durch die alten Gassen der Stadt.", (proj_upload_dir / "manuscript.md").read_text(encoding="utf-8"))
+                self.assertEqual((proj_upload_dir / "manuscript.md").read_bytes(), imported_text.encode("utf-8"))
         finally:
             for name, value in original_state.items():
                 setattr(LixityServerHandler, name, value)

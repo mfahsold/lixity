@@ -321,6 +321,7 @@ def dashboard(
 
 def about() -> dict[str, Any]:
     """Tool metadata for agents: version, languages, features, thresholds."""
+    from .diversity import HD_D_DRAW_SIZE, MIN_TOKENS_LD
     from .style_fingerprint import (
         DIM_SCORE_THRESHOLD,
         FEATURES,
@@ -346,8 +347,10 @@ def about() -> dict[str, Any]:
             "n_dimensions": N_DIMENSIONS,
             "dim_score_threshold": DIM_SCORE_THRESHOLD,
             "redundancy_rho": REDUNDANCY_RHO,
-            "hd_d_samples": 42,
-            "hd_d_sample_size": 35,
+            "hd_d_samples": 0,
+            "hd_d_sample_size": HD_D_DRAW_SIZE,
+            "hd_d_method": "hypergeometric_expected_ttr",
+            "hd_d_min_tokens": MIN_TOKENS_LD,
         },
         "commands": [
             {

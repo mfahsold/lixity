@@ -29,7 +29,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
   if (execPath) launchOptions.executablePath = execPath;
   const browser = await chromium.launch(launchOptions);
   try {
-    const page = await browser.newPage();
+    const page = await browser.newPage({hasTouch: true});
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.route('http://lixity.test/**', route => route.fulfill(route.request().url().includes('/api/')
@@ -62,11 +62,31 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.ok(gap >= 12 && gap <= 24, `KPI/chart gap ${gap} at ${width}`);
       const headings = page.locator('#matrix th');
       assert.equal(await headings.locator('.help[data-help]').count(), await headings.count());
-      await headings.locator('.help').nth(3).focus();
+      const sentenceHelp = headings.locator('.help').nth(3);
+      await sentenceHelp.evaluate(element => element.setAttribute('aria-describedby', 'microhint'));
+      await sentenceHelp.focus();
       await page.waitForFunction(() => document.querySelector('#lixity-tooltip').classList.contains('visible'));
       assert.match(await page.locator('#lixity-tooltip').textContent(), /sentence length/i);
+      assert.equal(await sentenceHelp.getAttribute('aria-describedby'), 'microhint lixity-tooltip');
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
+      assert.equal(await sentenceHelp.getAttribute('aria-describedby'), 'microhint');
+      if (width === 1440) {
+        await sentenceHelp.hover();
+        await page.locator('#lixity-tooltip').hover();
+        assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'false', 'Hovering an explanation keeps it readable');
+        await page.keyboard.press('Escape');
+      }
+      if (width === 320) {
+        await sentenceHelp.tap();
+        assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'false');
+        assert.ok(await page.locator('#lixity-tooltip').evaluate(element => {
+          const box = element.getBoundingClientRect();
+          return box.left >= 0 && box.right <= innerWidth && box.top >= 0 && box.bottom <= innerHeight;
+        }), 'Touch help stays inside the viewport');
+        await sentenceHelp.tap();
+        assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
+      }
       if (width <= 390) {
         assert.ok(await page.locator('#matrix table').evaluate(table => table.getBoundingClientRect().width >= 700));
         assert.ok(await page.locator('#dialogue .dist .label').first().evaluate(label => label.getBoundingClientRect().width >= 200));
@@ -75,6 +95,9 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       await page.locator('.settings-advanced summary').click();
       await page.locator('#ch-1 .chip').first().click();
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1);
+      await sentenceHelp.focus();
+      await page.keyboard.press('Escape');
+      assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1, 'Dismissing help must not close an unrelated paragraph');
       for (const selector of ['#flags', '#dist', '#dialogue', '#characters', '#pacing', '#motifs', '#showing', '#heatmap', '#bands', '#dimensions', '#markers', '#matrix', '#controls', '#ch-1']) {
         await page.mouse.move(0, 0);
         await page.evaluate(() => document.activeElement.blur());

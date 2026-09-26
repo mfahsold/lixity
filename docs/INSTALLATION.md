@@ -68,6 +68,13 @@ To remove the CLI later, run `uv tool uninstall lixity`. Upgrades respect the
 selected source/ref: a pinned tag or commit does not move to `main`.
 Restart any running adapter/server after an engine update.
 
+Use one active server for ordinary interactive use. Stop the previous server
+(Ctrl+C in its terminal) before starting the updated one on the same port,
+normally `8765`. Starting another port leaves the old process running with its
+previously loaded Python code and dashboard. A browser reload or a fresh CLI
+version check does not update that running process, including with an editable
+installation. All browser tabs connected to one server share its active project.
+
 If you already use pipx, the equivalent alternative is
 `pipx install "git+https://github.com/mfahsold/lixity.git@v1.16.0"`, followed by
 `pipx ensurepath` if necessary; update with `pipx upgrade lixity`.
@@ -96,8 +103,11 @@ title = "My manuscript"
 
 For interactive project and research workflows, run `lixity serve manuscript.md`
 or start the project wizard with `lixity serve --no-project`. The standalone HTML
-export remains read-only. NDA management and publication-specific exports require
-a project adapter; see [Onboarding](ONBOARDING.md).
+export remains read-only. The server's persistent workspace bar offers
+**Open Project** for an existing folder and its research archive, and
+**New Project → Import Manuscript** for a new project from browser file bytes.
+See [Onboarding](ONBOARDING.md) for the chooser and research flow. NDA management
+and publication-specific exports require a project adapter.
 
 ## Python API: project environment
 
@@ -149,9 +159,9 @@ package rather than copying engine code into every book project.
 | `lixity` not found | Use `uv tool update-shell`, or the chosen venv's executable directly. |
 | `externally-managed-environment` | Use `uv tool` or a venv; do not use `--break-system-packages`. |
 | Project settings ignored | Check `lixity.toml` syntax and the selected project path; explicit CLI flags take precedence. |
-| Wrong version after update | Check `uv tool list` and `command -v lixity` (PowerShell: `Get-Command lixity`). |
+| Wrong version or old controls after update | Check `uv tool list` and `command -v lixity` (PowerShell: `Get-Command lixity`), then stop the old server and restart on the same port. Check that the browser uses that address. |
 | Dependency build error | Try a supported CPython version with binary wheels, e.g. 3.12; retain the full installer error. |
-| HTML lacks settings/NDA controls | Expected for a standalone export; these belong to the embedding adapter. |
+| HTML lacks interactive settings | Expected for a standalone export; use `lixity serve` for the local workspace controls. NDA management requires a project adapter. |
 
 ## Optional shell completion
 
