@@ -95,11 +95,12 @@ def _extract_section(dashboard: str, marker: str) -> str:
     style = style_match.group(1)
     script = script_match.group(1) if script_match else ""
     lang = lang_match.group(1)
+    extra_style = "\n.page { max-width: 1720px !important; }\n" if marker == "heatmap" else ""
     for match in re.finditer(r'<section class="panel"[^>]*>.*?</section>', dashboard, re.DOTALL):
         if f'id="{marker}"' in match.group(0).split(">", 1)[0]:
             return (
                 "<!DOCTYPE html>"
-                f'<html lang="{lang}"><head><meta charset="utf-8"/><style>{style}</style></head>'
+                f'<html lang="{lang}"><head><meta charset="utf-8"/><style>{style}{extra_style}</style></head>'
                 f'<body><div class="page">{match.group(0)}</div><script>{script}</script></body></html>'
             )
     raise SystemExit(f"Section not found: {marker}")
@@ -147,8 +148,8 @@ def main() -> int:
         f"lixity analyze {args.manuscript}",
         console.export_html(inline_styles=True),
         OUT_DIR / "cli-analyze.png",
-        1560,
-        920,
+        1320,
+        840,
     )
 
     # 2. CLI: style passport ----------------------------------------------
@@ -157,8 +158,8 @@ def main() -> int:
         f"lixity style {args.manuscript}",
         f"<pre>{passport}</pre>",
         OUT_DIR / "cli-style.png",
-        1560,
-        920,
+        1320,
+        860,
     )
 
     # 3. Dashboard (light, top area) --------------------------------------
@@ -197,14 +198,14 @@ def main() -> int:
         title=title, labels=resolved.labels, language_name=resolved.name,
         language_key=resolved.key, current_language=resolved.key, controls=True,
     )))
-    _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1600, 1050)
+    _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
 
     # 4. Dashboard (dark) --------------------------------------------------
     _queue_capture(
         _write_html("dashboard-dark.html", _force_dark(dashboard)),
         OUT_DIR / "dashboard-dark.png",
-        1600,
-        1050,
+        1480,
+        945,
     )
 
     # 5. Dashboard sections ------------------------------------------------
@@ -213,8 +214,8 @@ def main() -> int:
             "section-heatmap.html", _extract_section(_force_light(dashboard), "heatmap")
         ),
         OUT_DIR / "dashboard-heatmap.png",
-        1600,
-        950,
+        1750,
+        1000,
     )
     _queue_capture(
         _write_html(
@@ -225,19 +226,23 @@ def main() -> int:
         580,
     )
 
-    # 6. Work markers (temporary copy with three editorial markers) --------
+    # 6. Work markers (temporary copy with representative editorial markers)
     marked = text
     markers_spec = (
         (
             (7, "pruefen", "Verify dialogue tense continuity"),
             (61, "sachcheck", "Fact-check: Netherfield ball timeline"),
             (85, "todo", "Tighten chapter closing cadence"),
+            (120, "achtung", "Check Darcy introduction register & tone"),
+            (180, "pruefen", "Confirm dialogue attribution consistency"),
         )
         if is_en
         else (
             (7, "pruefen", "Tempuswechsel im Dialog prüfen"),
             (61, "sachcheck", "Chronologie: Effis Sterbejahr"),
             (85, "todo", "Kapitelende kürzen?"),
+            (120, "achtung", "Registerwechsel bei Crampas prüfen"),
+            (180, "pruefen", "Sprecherzuordnung im Dialog konsistent"),
         )
     )
     for line, kind, note in markers_spec:
@@ -263,8 +268,8 @@ def main() -> int:
             "section-markers.html", _extract_section(_force_light(marked_dashboard), "markers")
         ),
         OUT_DIR / "dashboard-markers.png",
-        1600,
-        340,
+        1440,
+        380,
     )
 
     # 7. Style layer (draft chapter with the dialogue layer active) --------

@@ -39,6 +39,12 @@ async function main() {
         await save(capture.target, '#dimensions');
       } else if (name === 'dashboard-markers.png') {
         await save(capture.target, '#markers');
+      } else if (name === 'dashboard-heatmap.png') {
+        await page.evaluate(() => {
+          const rows = document.querySelectorAll('table.heatmap tbody tr');
+          for (let i = 20; i < rows.length; i++) rows[i].remove();
+        });
+        await save(capture.target, '#heatmap');
       } else if (name === 'dashboard-layer.png') {
         await page.locator('#style-layer').selectOption('dialogue');
         for (let index = 0; index < 3; index++) await page.locator('#ch-1 .chip').nth(index).click();
@@ -50,7 +56,7 @@ async function main() {
     }
     const base = path.dirname(captures[0].source);
     const output = path.dirname(captures[0].target);
-    await open(path.join(base, 'dashboard.html'), 390, 1000);
+    await open(path.join(base, 'dashboard.html'), 390, 1028);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await save(path.join(output, 'dashboard-mobile.png'));
     await save(path.join(output, 'dashboard-dimensions-mobile.png'), '#dimensions');

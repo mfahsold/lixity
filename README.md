@@ -57,40 +57,52 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 - **Idempotent Workspace Build & Dashboard:** Fully self-contained, single-file interactive HTML dashboard with 7 language profiles.
 - **AI Agent-Ready:** Strict JSON schemas (analyze/profile **v2**, style **v4**), stable `lixity.api` facade, [`docs/AGENTS.md`](docs/AGENTS.md).
 
-## Visual Overview
+## Visual Analytical Suite
 
-| Departure Heatmap (Noise-Aware z* & FDR) | Paragraph Style Layer Overlay |
+### 1. Macro Departure Heatmap (Noise-Aware z* & FDR)
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-heatmap.png" alt="16-feature z* deviation heatmap" width="100%" />
+</p>
+
+*Significance-adjusted departures from house style across all 16 linguistic features. Dots (●) mark cells confirmed by Benjamini–Hochberg / Benjamini–Yekutieli false discovery rate control. Calibrated with expected false positive baseline.*
+
+### 2. Paragraph Inspection & Editorial Work Markers
+
+| Paragraph Style Layer Overlay | Editor-Visible Work Markers |
 | :---: | :---: |
-| <img src="docs/screenshots/dashboard-heatmap.png" alt="z* deviation heatmap" width="100%" /> | <img src="docs/screenshots/dashboard-layer.png" alt="Paragraph style overlay" width="100%" /> |
-| *Significance-adjusted departures from house style* | *Sentence rhythm & syntactic density mapped in context* |
+| <img src="docs/screenshots/dashboard-layer.png" alt="Paragraph style overlay" width="100%" /> | <img src="docs/screenshots/dashboard-markers.png" alt="Editor work markers" width="100%" /> |
+| *Sentence rhythm & syntactic density mapped in context* | *Persistent content-hashed `<!-- LIXITY-MARKER -->` tags* |
 
-| 3D Stylistic Space & Style Dimensions | Editor-Visible Work Markers |
+### 3. Latent Style Space & House Style Baseline
+
+| 3D Stylistic Space & Style Dimensions | Manuscript Style Reference Bands |
 | :---: | :---: |
-| <img src="docs/screenshots/dashboard-dimensions.png" alt="3D stylistic space and latent style dimensions" width="100%" /> | <img src="docs/screenshots/dashboard-markers.png" alt="Editor work markers" width="100%" /> |
-| *Interactive 3D narrative trajectory & cyclic Jacobi EVD* | *Persistent content-hashed `<!-- LIXITY-MARKER -->` tags* |
+| <img src="docs/screenshots/dashboard-dimensions.png" alt="3D stylistic space and latent style dimensions" width="100%" /> | <img src="docs/screenshots/dashboard-reference.png" alt="Style reference bands" width="100%" /> |
+| *Interactive 3D narrative trajectory & cyclic Jacobi EVD* | *Robust Median/MAD bands with chapter sample counts* |
 
-| CLI Corpus Diagnostics | Self-Calibrating Style Reference |
+### 4. Terminal Suite & Deterministic CLI
+
+| CLI Corpus Diagnostics (`lixity analyze`) | Self-Calibrating Style Reference (`lixity style`) |
 | :---: | :---: |
 | <img src="docs/screenshots/cli-analyze.png" alt="CLI analyze output" width="100%" /> | <img src="docs/screenshots/cli-style.png" alt="CLI style reference" width="100%" /> |
-| Terminal metrics and chapter overview | Median/MAD corridor, `z*` shrinkage and effect sizes |
+| *Corpus KPIs, readability indices & sentence rhythm* | *Shrinkage corridor, structural changepoints & drift* |
 
 <details>
-<summary><b>View Dashboard in Dark Mode</b></summary>
+<summary><b>View Dashboard in Dark Mode &amp; Interactive Settings</b></summary>
+<br/>
+
 <p align="center">
   <img src="docs/screenshots/dashboard-dark.png" alt="Lixity Dashboard Dark Mode" width="100%" />
 </p>
+
+<p align="center">
+  <img src="docs/screenshots/dashboard-settings.png" alt="Settings with visible labels, explanations and restore-without-saving" width="100%" />
+</p>
+
 </details>
 
-### Settings and scientific context
-
-![Settings with visible labels, explanations and restore-without-saving](docs/screenshots/dashboard-settings.png)
-
-Choose project settings and detection thresholds. **●** marks FDR-selected
-matrix cells; reference bands show medians and sample counts, not quality targets.
-
-![Style reference bands with medians and chapter sample counts](docs/screenshots/dashboard-reference.png)
-
-### Mobile views
+### 5. Responsive Mobile Views
 
 | Project overview | Complete style-dimension panel |
 | :---: | :---: |
