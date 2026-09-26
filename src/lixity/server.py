@@ -30,7 +30,7 @@ from .motifs import motif_report
 from .pacing import pacing_report
 from .pipeline import analyze_document, resolve_document_config
 from .research import api as research_api
-from .research.repository import ResearchError
+from .research.repository import ResearchConflictError, ResearchError
 from .showing import showing_report
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_dashboard
@@ -41,6 +41,7 @@ MAX_PAYLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
 DEFAULT_PORT = 8765
 DEFAULT_HOST = "127.0.0.1"
 LANGUAGE_CHOICES = ("auto", "de", "en", "fr", "es", "it", "pt", "nl", "generic")
+RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decision"))
 
 MIME_TYPES = {
     ".html": "text/html; charset=utf-8",
@@ -331,6 +332,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._handle_research_decisions()
             return
 
+        if path in ("/api/research/record", "/api/research/history"):
+            self._handle_research_record_read(history=path.endswith("/history"))
+            return
+
         self._json({"ok": False, "message": "Not found"}, 404)
 
     def _handle_project_paths(self) -> None:
@@ -502,6 +507,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
         if action == "research-decision-add":
             self._handle_research_decision_add(payload)
+            return
+
+        if action == "research-record-revise":
+            self._handle_research_record_revise(payload)
             return
 
         self._json({"ok": False, "message": f"Unknown action: {action}"}, 400)
@@ -905,6 +914,70 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             data = research_api.list_decisions(root)
             self._json({"ok": True, **data})
         except (ResearchError, KeyError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_record_read(self, *, history: bool) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        kind = query.get("kind", [""])[0]
+        record_id = query.get("id", [""])[0]
+        if kind not in RESEARCH_RECORD_KINDS or not record_id:
+            self._json({"ok": False, "message": "A valid kind and record ID are required"}, 400)
+            return
+        revision: int | None = None
+        if not history and "revision" in query:
+            raw_revision = query["revision"][0]
+            if len(raw_revision) > 9 or not raw_revision.isdecimal() or int(raw_revision) < 1:
+                self._json({"ok": False, "message": "Revision must be a positive integer"}, 400)
+                return
+            revision = int(raw_revision)
+        try:
+            result = (
+                research_api.record_history(root, kind, record_id)
+                if history else research_api.get_record(root, kind, record_id, revision=revision)
+            )
+            self._json({"ok": True, **result})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_record_revise(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        kind = payload.get("kind")
+        record_id = payload.get("id")
+        changes = payload.get("changes")
+        snapshot = payload.get("expected_snapshot")
+        revision = payload.get("expected_revision")
+        change_kind = payload.get("change_kind")
+        reason = payload.get("reason")
+        actor = payload.get("actor", "local-author")
+        if (
+            not isinstance(kind, str) or kind not in RESEARCH_RECORD_KINDS
+            or not isinstance(record_id, str) or not record_id.strip()
+            or not isinstance(changes, dict) or not changes
+            or not isinstance(snapshot, str) or not snapshot.strip()
+            or type(revision) is not int or revision < 1
+            or change_kind not in ("correction", "supersession")
+            or not isinstance(reason, str) or not reason.strip()
+            or not isinstance(actor, str) or not actor.strip()
+        ):
+            self._json({"ok": False, "message": "Invalid research revision request"}, 400)
+            return
+        try:
+            result = research_api.revise_record(
+                root, kind, record_id, changes=changes,
+                expected_snapshot=snapshot, expected_revision=revision,
+                change_kind=change_kind, reason=reason, actor=actor,
+            )
+            self._json({"ok": True, **result})
+        except ResearchConflictError as exc:
+            self._json({"ok": False, "message": str(exc)}, 409)
+        except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_init(self, payload: dict[str, Any]) -> None:

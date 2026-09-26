@@ -6,16 +6,17 @@ import os
 import sys
 import tempfile
 from collections.abc import Iterator
-from contextlib import contextmanager
+from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any, TypeVar
+from typing import Any, Literal, TypeVar
 
 from pydantic import ValidationError
 
 from .models import (
     ENTITY,
     Activity,
+    AuthoredRecord,
     Blob,
     Claim,
     Decision,
@@ -42,8 +43,15 @@ class ResearchError(ValueError):
     """An invalid, conflicting or unavailable research operation."""
 
 
+class ResearchConflictError(ResearchError):
+    """The caller's accepted snapshot or revision has changed."""
+
+
 def encode(value: StrictModel) -> bytes:
-    return (json.dumps(value.model_dump(mode="json"), ensure_ascii=False,
+    fields = value.model_dump(mode="json")
+    if isinstance(value, AuthoredRecord) and value.change is None:
+        fields.pop("change", None)
+    return (json.dumps(fields, ensure_ascii=False,
                        sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
 
 
@@ -103,11 +111,24 @@ class Snapshot:
     manifest: Manifest
     records: dict[str, Entity]
     texts: dict[str, str] = field(default_factory=dict, repr=False, compare=False)
+    revisions: dict[tuple[str, int], Entity] = field(default_factory=dict)
+
+    def __post_init__(self) -> None:
+        if not self.revisions:
+            object.__setattr__(self, "revisions", {
+                (record.id, record.revision): record for record in self.records.values()
+            })
 
     def get(self, ref: Reference, expected: type[Model]) -> Model:
-        record = self.records.get(ref.id)
-        if not isinstance(record, expected) or record.revision != ref.revision:
+        record = self.revisions.get((ref.id, ref.revision))
+        if not isinstance(record, expected):
             raise ResearchError("Missing or incompatible pinned reference")
+        return record
+
+    def latest(self, record_id: str, expected: type[Model]) -> Model:
+        record = self.records.get(record_id)
+        if not isinstance(record, expected):
+            raise ResearchError("Missing or incompatible record identity")
         return record
 
     @property
@@ -183,12 +204,19 @@ class Repository:
             head = Head.model_validate_json(self.read(self.data / "HEAD.json", maximum=4096))
             manifest = Manifest.model_validate_json(self.verified(self.data / "manifests" / f"{head.sha256}.json", head.sha256))
             records: dict[str, Entity] = {}
+            revisions: dict[tuple[str, int], Entity] = {}
             for entry in manifest.entries:
                 record = ENTITY.validate_json(self.verified(self.record_path(entry), entry.sha256))
-                if record.id in records or reference(record) != entry.ref or record.kind != entry.kind:
+                key = (record.id, record.revision)
+                if key in revisions or reference(record) != entry.ref or record.kind != entry.kind:
                     raise ResearchError("Duplicate or mismatched record identity")
-                records[record.id] = record
-            snapshot = Snapshot(head.sha256, manifest, records)
+                revisions[key] = record
+                previous = records.get(record.id)
+                if previous is not None and previous.kind != record.kind:
+                    raise ResearchError("Record identity cannot change kind")
+                if previous is None or previous.revision < record.revision:
+                    records[record.id] = record
+            snapshot = Snapshot(head.sha256, manifest, records, revisions=revisions)
             self.validate(snapshot)
             if self.read(self.data / "project.json") != encode(snapshot.project):
                 raise ResearchError("Project configuration does not match its accepted revision")
@@ -200,6 +228,22 @@ class Repository:
 
     def validate(self, snapshot: Snapshot) -> None:
         project = snapshot.project
+        histories: dict[str, list[Entity]] = {}
+        for (record_id, number), record in snapshot.revisions.items():
+            if (record_id, number) != (record.id, record.revision) or record_id not in snapshot.records:
+                raise ResearchError("Mismatched revision index")
+            histories.setdefault(record_id, []).append(record)
+        for record in snapshot.records.values():
+            history = histories.get(record.id, [])
+            if len(history) != record.revision or any(
+                (record.id, number) not in snapshot.revisions
+                for number in range(1, record.revision + 1)
+            ):
+                raise ResearchError("Authored revision history must be contiguous")
+            if any(revision.kind != record.kind for revision in history):
+                raise ResearchError("Record identity cannot change kind")
+            if record.revision > 1 and snapshot.manifest.schema_version != "research-manifest-local/2":
+                raise ResearchError("Authored revisions require manifest version 2")
         sequences: set[tuple[str, int]] = set()
         descriptors: dict[str, Blob] = {}
         purged_passages = {
@@ -209,7 +253,7 @@ class Repository:
             and record.operation == "purge"
             and record.target_kind == "passage"
         }
-        for record in snapshot.records.values():
+        for record in snapshot.revisions.values():
             if record.project_id != project.id:
                 raise ResearchError("Cross-project reference rejected")
             if isinstance(record, Project) and record.id != project.id:
@@ -265,6 +309,37 @@ class Repository:
             raise ResearchError("Citation does not match its archived text")
         return snapshot.get(version.source_ref, Source), version
 
+    def _preserve_unpublished_revision(self, path: Path, record: Entity, current: Snapshot | None) -> None:
+        """Preserve a valid unaccepted next revision before reusing its numbered slot.
+
+        The caller holds the writer lock. Accepted authored history is never
+        removed, so the current manifest is authoritative for accepted slots.
+        Restoring only HEAD is unsupported; restore the whole archive instead.
+        """
+        if not path.exists():
+            return
+        content = self.read(path)
+        if content == encode(record):
+            return
+        if (current is None or not isinstance(record, AuthoredRecord)
+                or (record.id, record.revision) in current.revisions):
+            raise ResearchError("Immutable object conflict")
+        previous = current.records.get(record.id)
+        try:
+            unpublished = ENTITY.validate_json(content)
+        except ValidationError:
+            raise ResearchError("Invalid unpublished revision; preserve the archive for recovery") from None
+        if (not isinstance(unpublished, AuthoredRecord) or previous is None
+                or unpublished.id != record.id or unpublished.kind != record.kind
+                or unpublished.project_id != current.project.id
+                or unpublished.revision != record.revision
+                or unpublished.revision != previous.revision + 1):
+            raise ResearchError("Incompatible unpublished revision; preserve the archive for recovery")
+        preserved = self.safe(path.with_name(f"{record.revision}.{digest(content)}.unpublished"))
+        publish(preserved, content)
+        path.unlink()
+        sync_directory(path.parent)
+
     def commit(
         self,
         additions: list[Entity],
@@ -276,32 +351,55 @@ class Repository:
         with self.locked():
             current = self.snapshot() if self.safe(self.data / "HEAD.json").exists() else None
             if (current.digest if current else None) != (expected.digest if expected else None):
-                raise ResearchError("Research snapshot changed; retry from the current HEAD")
+                raise ResearchConflictError("Research snapshot changed; retry from the current HEAD")
             records = dict(current.records) if current else {}
+            revisions = dict(current.revisions) if current else {}
             entries = list(current.manifest.entries) if current else []
 
             if removals:
+                if any(isinstance(records.get(record_id), AuthoredRecord) for record_id in removals):
+                    raise ResearchError("Authored revision history cannot be removed")
                 records = {k: v for k, v in records.items() if k not in removals}
+                revisions = {key: record for key, record in revisions.items() if key[0] not in removals}
                 entries = [e for e in entries if e.ref.id not in removals]
 
             for record in additions:
-                if record.id in records:
-                    raise ResearchError("Accepted records cannot be overwritten")
+                try:
+                    ENTITY.validate_json(encode(record))
+                except ValidationError:
+                    raise ResearchError("Invalid or unsupported research schema") from None
+                previous = records.get(record.id)
+                if previous is not None:
+                    if (not isinstance(record, AuthoredRecord) or previous.kind != record.kind
+                            or record.revision != previous.revision + 1):
+                        raise ResearchError("Accepted records cannot be overwritten; append the next authored revision")
+                elif record.revision != 1:
+                    raise ResearchError("A record must start at revision 1")
                 records[record.id] = record
+                revisions[(record.id, record.revision)] = record
                 entries.append(Entry(kind=record.kind, ref=reference(record), sha256=digest(encode(record))))
             project = next((record for record in records.values() if isinstance(record, Project)), None)
             if project is None:
                 raise ResearchError("Project record required")
-            manifest = Manifest(project_id=project.id, generation=current.manifest.generation + 1 if current else 1,
+            schema: Literal["research-manifest-local/1", "research-manifest-local/2"]
+            schema = ("research-manifest-local/2" if any(record.revision > 1 for record in records.values())
+                      or (current and current.manifest.schema_version == "research-manifest-local/2")
+                      else "research-manifest-local/1")
+            manifest = Manifest(schema_version=schema, project_id=project.id, generation=current.manifest.generation + 1 if current else 1,
                                 parent=current.digest if current else None, entries=entries)
             manifest_bytes = encode(manifest)
-            candidate = Snapshot(digest(manifest_bytes), manifest, records)
+            candidate = Snapshot(digest(manifest_bytes), manifest, records, revisions=revisions)
             for record in additions:
                 if isinstance(record, Dossier):
+                    predecessor = current.records.get(record.id) if current else None
+                    retained = predecessor.evidence_refs if isinstance(predecessor, Dossier) else []
                     for ref in record.evidence_refs:
-                        candidate.get(ref, Passage)
+                        if ref not in retained:
+                            candidate.get(ref, Passage)
                 elif isinstance(record, EvidenceLink):
-                    candidate.get(record.passage_ref, Passage)
+                    predecessor = current.records.get(record.id) if current else None
+                    if not isinstance(predecessor, EvidenceLink) or record.passage_ref != predecessor.passage_ref:
+                        candidate.get(record.passage_ref, Passage)
                 elif isinstance(record, Tombstone) and record.operation == "purge" and record.target_kind == "passage":
                     if current is None or not removals or record.target_ref.id not in removals:
                         raise ResearchError("Passage purge tombstone requires an accepted passage removal")
@@ -316,25 +414,45 @@ class Repository:
                     self.read_blob(record.blob)
                 elif isinstance(record, Passage):
                     self.quote(candidate, record)
-            for record, entry in zip(additions, entries[len(entries) - len(additions):], strict=True):
-                publish(self.record_path(entry), encode(record))
+            created_paths: list[Path] = []
+            try:
+                for record, entry in zip(additions, entries[len(entries) - len(additions):], strict=True):
+                    path = self.record_path(entry)
+                    self._preserve_unpublished_revision(path, record, current)
+                    if (isinstance(record, AuthoredRecord) and record.revision > 1
+                            and not removals and not delete_blobs and not path.exists()):
+                        created_paths.append(path)
+                    publish(path, encode(record))
 
-            if removals and current:
-                for entry in current.manifest.entries:
-                    if entry.ref.id in removals:
-                        rec_path = self.record_path(entry)
-                        if rec_path.exists():
-                            rec_path.unlink()
+                if removals and current:
+                    for entry in current.manifest.entries:
+                        if entry.ref.id in removals:
+                            rec_path = self.record_path(entry)
+                            if rec_path.exists():
+                                rec_path.unlink()
 
-            if delete_blobs:
-                for blob_sha in delete_blobs:
-                    blob_path = self.safe(self.data / "blobs" / blob_sha)
-                    if blob_path.exists():
-                        blob_path.unlink()
+                if delete_blobs:
+                    for blob_sha in delete_blobs:
+                        blob_path = self.safe(self.data / "blobs" / blob_sha)
+                        if blob_path.exists():
+                            blob_path.unlink()
 
-            publish(self.safe(self.data / "project.json"), encode(project))
-            publish(self.safe(self.data / "manifests" / f"{candidate.digest}.json"), manifest_bytes)
-            replace_head(self.safe(self.data / "HEAD.json"), encode(Head(sha256=candidate.digest)))
+                publish(self.safe(self.data / "project.json"), encode(project))
+                publish(self.safe(self.data / "manifests" / f"{candidate.digest}.json"), manifest_bytes)
+                replace_head(self.safe(self.data / "HEAD.json"), encode(Head(sha256=candidate.digest)))
+            except (OSError, ResearchError):
+                # Only clean this attempt's authored revision files when HEAD
+                # never accepted them. Other operations, notably purge, retain
+                # their existing recovery artifacts. Preserved unpublished
+                # bytes are never removed by this cleanup.
+                with suppress(OSError, ResearchError, ValidationError):
+                    head_path = self.safe(self.data / "HEAD.json")
+                    head = Head.model_validate_json(self.read(head_path)) if head_path.exists() else None
+                    if (head.sha256 if head else None) == (current.digest if current else None):
+                        for path in created_paths:
+                            with suppress(OSError):
+                                path.unlink(missing_ok=True)
+                raise
 
             if removals:
                 cache_db = self.safe(self.cache / "catalogue.sqlite3")

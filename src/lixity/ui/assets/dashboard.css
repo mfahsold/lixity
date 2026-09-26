@@ -1351,6 +1351,37 @@ dialog.lixity-modal::backdrop {
 .project-chooser-entry:hover,
 .project-chooser-entry:focus-visible { background: var(--accent-light); }
 #open-project-chooser-status.err { color: var(--flag); }
+.research-record-actions { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+.research-record-actions .ctl { font-size: .75rem; padding: .3rem .55rem; }
+.research-revision-meta, #research-revision-status { margin: .7rem 1.4rem; overflow-wrap: anywhere; }
+.research-revision-updates {
+  margin: 0 1.4rem .7rem;
+  padding: .6rem .75rem;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--warning, #b7791f);
+  border-radius: var(--radius);
+  background: var(--bg);
+  font-size: .8rem;
+}
+.research-revision-updates p { margin: 0 0 .3rem; }
+.research-revision-updates ul { margin: 0; padding-left: 1.2rem; }
+.research-revision-updates li { overflow-wrap: anywhere; }
+.research-revision-fields { display: flex; flex-direction: column; gap: .8rem; }
+.research-revision-fields .ctl { width: 100%; min-width: 0; }
+#research-revision-form { min-height: 0; }
+#research-revision-form > *, .research-revision-fields > * { flex-shrink: 0; }
+#research-revision-form textarea.ctl { min-height: 5rem; }
+#research-revision-field-body { min-height: 12rem; }
+.research-revision-choice { display: grid; gap: .45rem; margin: 0; padding: .7rem; border: 1px solid var(--line); border-radius: var(--radius); }
+.research-revision-choice label { display: flex; align-items: flex-start; gap: .5rem; cursor: pointer; }
+.research-revision-choice label input { margin-top: .25rem; }
+.research-revision-choice small { display: block; color: var(--muted); font-size: .75rem; }
+.research-revision-history-list { display: flex; flex-wrap: wrap; gap: .4rem; list-style: none; margin: 0; padding: 0; }
+.research-revision-history-list button[aria-current="true"] { border-color: var(--accent); color: var(--accent); }
+.research-revision-readonly { display: grid; grid-template-columns: minmax(7rem, 35%) minmax(0, 1fr); gap: .35rem .8rem; margin: .7rem 0; }
+.research-revision-readonly dt { font-weight: 600; color: var(--muted); }
+.research-revision-readonly dd { margin: 0; overflow-wrap: anywhere; white-space: pre-wrap; }
+.research-revision-history-detail { overflow-wrap: anywhere; }
 .form-group {
   display: flex;
   flex-direction: column;
@@ -1363,6 +1394,8 @@ dialog.lixity-modal::backdrop {
   width: 100%;
 }
 @media (max-width: 540px) {
+  .research-revision-readonly { grid-template-columns: minmax(0, 1fr); gap: .1rem; }
+  .research-revision-readonly dd { margin-bottom: .55rem; }
   .form-row {
     flex-direction: column;
     gap: .75rem;

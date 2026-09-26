@@ -162,6 +162,77 @@ results can feed a selected passage into **Use for claim** or **Use for dossier*
 the claim form can also associate an existing dossier. These actions record
 the author's links and notes, not a factual verdict.
 
+## Native editing and history (development)
+
+Issue #9 adds explicit revisions to the existing research workflow. In the
+dashboard, choose **Edit** on a dossier, claim, evidence link or decision.
+Change the fields, select **Correction** for a transcription/wording correction
+or **Supersession** for a changed interpretation or authorial choice, and give
+a reason. Save keeps the record's ID and adds one immutable revision. **History**
+opens earlier accepted versions; it does not restore or overwrite them.
+
+An edit does not create an additional active dossier. Existing associations
+remain pinned to the versions they originally referenced. For example, changing
+a claim does not make its old supporting link evidence for the revised statement;
+the UI shows the earlier claim revision for review. Creating a new association
+uses the target's current revision. Submitting an unchanged association keeps
+its original pin. To review an association against a revised claim or dossier,
+explicitly change its associated revision in the editor. The earlier association
+remains inspectable in history.
+
+The editor preserves its draft when validation, a request or a conflict fails.
+If any archive write occurred since the editor was opened, saving returns a
+conflict. **Reload current** explicitly discards the draft and loads the current
+record; nothing is silently merged or retried. Cancel closes the editor without
+writing.
+
+The same operations extend the existing commands:
+
+```sh
+lixity research dossier --project ./novel --dossier-id DOSSIER_ID --inspect
+lixity research dossier --project ./novel --dossier-id DOSSIER_ID --update \
+  --expected-snapshot SNAPSHOT_SHA256 --expected-revision 1 \
+  --change-kind correction --reason "Correct a transcription" \
+  --title "Revised reading room notes" --file "The corrected working note."
+lixity research dossier --project ./novel --dossier-id DOSSIER_ID --history
+lixity research dossier --project ./novel --dossier-id DOSSIER_ID --revision 1
+```
+
+Use the `snapshot` and `record.revision` returned by `--inspect`. The equivalent
+commands are `claim --claim-id`, `link-evidence --evidence-link-id` and
+`decision --decision-id`, with the same update/history flags and their existing
+content flags. Omitted update fields stay unchanged. An empty optional value
+clears it; empty comma-separated tags/actors/evidence clear those lists.
+`--no-deviation-from-fact` explicitly clears the decision flag.
+Use `--claim-revision N` on evidence links or decisions, or
+`--dossier-revision N` on claims, to select an exact associated revision during
+an update. Leaving that option out preserves an unchanged association's pin.
+
+```python
+current = api.get_record("./novel", "dossier", dossier_id)
+updated = api.revise_record(
+    "./novel", "dossier", dossier_id,
+    changes={"body": "The corrected working note."},
+    expected_snapshot=current["snapshot"],
+    expected_revision=current["record"]["revision"],
+    change_kind="correction", reason="Correct a transcription",
+)
+history = api.record_history("./novel", "dossier", dossier_id)
+original = api.get_record("./novel", "dossier", dossier_id, revision=1)
+```
+
+Source refresh never rewrites authored records. A newer-capture notice compares
+explicit passage citations with the source's latest available capture; the
+original quote remains visible. Copied body text alone does not establish an
+association with a source, and neither filenames nor titles are used to guess
+one. Existing historical imports can therefore remain unchanged until the
+author explicitly revises them.
+
+Historical dossier and evidence-link views resolve their pinned passages.
+Claim and decision views show the current evidence links to their pinned claim
+revision, with each link's ID and revision; they are not a reconstruction of the
+entire archive at an earlier date.
+
 ## Storage, lifecycle and recovery
 
 - `research/project.json`: immutable initial project configuration.
@@ -216,17 +287,29 @@ overwriting another ingestion. Interrupted initialization may leave an incomplet
 directory: preserve it for inspection; `init` refuses to overwrite it.
 
 Files are flushed before publication; directory syncing is used on POSIX.
+If an interrupted authored edit leaves a valid next-revision file outside the
+accepted snapshot, the next save preserves its bytes under a content-addressed
+`.unpublished` filename in that revision directory before retrying. It is a
+recovery artifact, not an accepted revision or an automatic merge. Accepted
+history is never replaced; malformed or foreign files stop the save.
 Power-loss guarantees remain filesystem/platform-specific, not certified by the
 interruption tests. Use a local filesystem, not a shared drive. Internal symlinks
 are rejected; a project directory is not a hostile multiuser sandbox.
 
 ## Limits
 
-The experimental schemas are `research-local/1` and operation-specific `*-local/1`
-envelopes, not the RFC's illustrative `research/1` bundle. Unknown fields and
-versions are rejected. No migration of existing dossiers or the RFC fixture is
-claimed. Source identity metadata cannot yet be edited; refresh creates a new
-source version, not a changed old record.
+The released pilot uses `research-local/1` and operation-specific `*-local/1`
+envelopes, not the RFC's illustrative `research/1` bundle. Native editing in the
+development version adds `research-local/2` for authored revisions and
+`research-manifest-local/2` for snapshots containing them. The first accepted edit
+upgrades that snapshot; reading a revision-1 archive does not rewrite any files.
+Older Lixity versions reject the new snapshot. Back up the whole archive before
+upgrading, use the same supported version for all writers, and restore the full
+backup if reverting to 1.16.0. Never edit HEAD or revision files to downgrade.
+Unknown fields and versions are rejected. Source identity metadata cannot yet
+be edited; refresh creates a new source version, not a changed old record.
+The 25,000-entry snapshot limit includes retained revisions. Status counts show
+current logical records; the audit's `records` count includes their history.
 
 Inputs are at most 2 MiB and 5,000 nonempty paragraphs. Only valid UTF-8 without
 NUL bytes is accepted. Search uses literal Unicode words joined with AND; it is

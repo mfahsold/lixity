@@ -7,6 +7,25 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+
+- Native revision and history workflows for research dossiers, claims, evidence
+  links and author decisions, using the existing CLI, API and dashboard.
+  Explicit corrections and supersessions preserve logical IDs and accepted
+  revisions. Snapshot and revision checks prevent stale drafts from overwriting
+  newer work; failed saves retain browser drafts.
+- Notices when explicitly cited source passages have a newer capture. Existing
+  quotations and authored text remain pinned; evidence links show when they
+  refer to an earlier claim revision.
+
+### Compatibility
+
+- The first authored edit writes `research-local/2` revision records and a
+  `research-manifest-local/2` snapshot. Existing revision-1 files are retained
+  unchanged; reading an archive does not upgrade it. Lixity 1.16.0 cannot read
+  a revised archive. Back up the complete archive before upgrading and keep
+  all writers on a version supporting native revisions.
+
 ## [1.16.0] – 2026-09-26
 
 ### Added

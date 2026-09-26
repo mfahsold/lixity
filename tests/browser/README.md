@@ -27,6 +27,11 @@ and 390-pixel layouts. It leaves screenshots under `/tmp/lixity-research-ui-*` a
 stops its server on completion. It does not select or alter a running user project.
 Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to use an existing Chromium installation.
 
+The same suite exercises native record revisions: edit and history for dossiers,
+claims, evidence links and decisions; cancellation; concurrent and failed saves
+that preserve drafts; newer-source notices with original quotations retained;
+and history dialogs across all seven locales at 320 pixels.
+
 The settings test intercepts all requests to a synthetic host. It verifies
 locale-safe values, validation before submission, reset without saving, FDR
 row filtering, mobile layout and the serif font being limited to the title.

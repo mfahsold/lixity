@@ -24,14 +24,24 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("compare", "Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)"),
         ("sources", "List active sources, versions, tags, and passage counts"),
         ("dossier", "Create, list or inspect research dossiers"),
-        ("claim", "Create or list research claims and hypotheses"),
-        ("link-evidence", "Link a passage citation to a claim as evidence"),
-        ("decision", "Record or list deliberate author decisions and fact deviations"),
+        ("claim", "Create, list or revise research claims and hypotheses"),
+        ("link-evidence", "Create, inspect or revise a passage-to-claim evidence link"),
+        ("decision", "Create, list or revise author decisions and fact deviations"),
         ("withdraw", "Withdraw an archived source or version, marking citations and excluding from search"),
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
     ):
         command = commands.add_parser(name, help=help_text)
         command.add_argument("--project", required=True, help="Explicit project directory")
+        if name in ("dossier", "claim", "link-evidence", "decision"):
+            command.add_argument("--update", action="store_true", help="Revise the named record")
+            command.add_argument("--history", action="store_true", help="List immutable revisions")
+            command.add_argument("--inspect", action="store_true", help="Inspect the latest record")
+            command.add_argument("--revision", type=int, help="Inspect one historical revision")
+            command.add_argument("--expected-snapshot", help="Snapshot digest required for an update")
+            command.add_argument("--expected-revision", type=int, help="Latest revision required for an update")
+            command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update")
+            command.add_argument("--reason", help="Why this authored record is being revised")
+            command.add_argument("--actor", default="local-author")
         if name == "init":
             command.add_argument("--title", required=True)
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
@@ -68,28 +78,34 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--file", help="Path to markdown body file or raw text")
             command.add_argument("--tags", help="Comma-separated tags")
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
-            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
+            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         elif name == "claim":
             command.add_argument("--claim-id", help="Claim UUID to inspect")
             command.add_argument("--title", help="Title for new claim")
             command.add_argument("--statement", help="Full factual statement or hypothesis")
-            command.add_argument("--confidence", choices=("hypothetical", "evidenced", "disputed"), default="hypothetical")
+            command.add_argument("--confidence", choices=("hypothetical", "evidenced", "disputed"))
             command.add_argument("--time-period", help="Temporal scope")
             command.add_argument("--place", help="Geographic scope")
             command.add_argument("--actors", help="Comma-separated key historical actors or entities")
             command.add_argument("--dossier-id", help="Optional associated dossier UUID")
+            command.add_argument("--dossier-revision", type=int, help="Explicit dossier revision to pin on update")
             command.add_argument("--tags", help="Comma-separated tags")
         elif name == "link-evidence":
-            command.add_argument("--claim-id", required=True, help="Claim UUID")
-            command.add_argument("--passage-id", required=True, help="Passage citation UUID")
-            command.add_argument("--relation", choices=("supports", "contradicts", "qualifies", "contextualizes"), default="supports")
+            command.add_argument("--evidence-link-id", help="Evidence-link UUID to inspect or revise")
+            command.add_argument("--claim-id", help="Claim UUID")
+            command.add_argument("--claim-revision", type=int, help="Explicit claim revision to pin on update")
+            command.add_argument("--passage-id", help="Passage citation UUID")
+            command.add_argument("--relation", choices=("supports", "contradicts", "qualifies", "contextualizes"))
             command.add_argument("--rationale", help="Reviewer rationale for link")
-            command.add_argument("--reviewer", default="author", help="Reviewer identifier")
+            command.add_argument("--reviewer", help="Reviewer identifier")
         elif name == "decision":
+            command.add_argument("--decision-id", help="Decision UUID to inspect or revise")
             command.add_argument("--title", help="Title for new author decision")
             command.add_argument("--rationale", help="Artistic or historical rationale")
             command.add_argument("--claim-id", help="Optional claim UUID being decided upon")
-            command.add_argument("--deviation-from-fact", action="store_true", help="Flag intentional deviation from historical evidence")
+            command.add_argument("--claim-revision", type=int, help="Explicit claim revision to pin on update")
+            command.add_argument("--deviation-from-fact", action=argparse.BooleanOptionalAction,
+                                 default=None, help="Set or clear intentional deviation from historical evidence")
             command.add_argument("--impact-on-plot", help="Description of plot or worldbuilding impact")
         elif name in ("withdraw", "purge"):
             command.add_argument("--source-id", required=True, help="Source UUID")
@@ -98,6 +114,78 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--actor", default="local-author")
             if name == "purge":
                 command.add_argument("--dry-run", action="store_true", help="Preview records, passages and blobs to be removed without deleting")
+
+
+def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
+    """Collect only flags supplied for an authored-record update."""
+    kind = args.research_command
+    fields = {
+        "dossier": ("title", "language", "tags", "evidence"),
+        "claim": ("title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"),
+        "link-evidence": ("claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"),
+        "decision": ("title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot"),
+    }[kind]
+    changes: dict[str, Any] = {}
+    for field in fields:
+        value = getattr(args, field)
+        if value is None:
+            continue
+        key = "evidence_ids" if field == "evidence" else field
+        if field in ("tags", "evidence", "actors"):
+            value = [item.strip() for item in value.split(",") if item.strip()]
+        elif field in ("time_period", "place", "dossier_id", "claim_id", "impact_on_plot") or (
+            field == "rationale" and kind == "link-evidence"
+        ):
+            value = value or None
+        changes[key] = value
+    if kind == "dossier" and args.file is not None:
+        body_path = Path(args.file)
+        changes["body"] = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
+    return changes
+
+
+def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
+    """Dispatch explicit history, inspection and revision modes for existing commands."""
+    from . import api
+    from .repository import ResearchError
+
+    command = args.research_command
+    kind = "evidence_link" if command == "link-evidence" else command
+    record_id = getattr(args, {
+        "dossier": "dossier_id", "claim": "claim_id",
+        "link-evidence": "evidence_link_id", "decision": "decision_id",
+    }[command])
+    association_revision = getattr(args, "dossier_revision", None) if command == "claim" else getattr(args, "claim_revision", None)
+    if association_revision is not None and not args.update:
+        raise ResearchError("An explicit associated revision requires --update")
+    requested = args.update or args.history or args.inspect or args.revision is not None
+    if command in ("link-evidence", "decision") and record_id:
+        requested = True
+    if not requested:
+        return None
+    if not record_id:
+        raise ResearchError(f"{kind} ID is required for revision, history or inspection")
+    if sum(bool(mode) for mode in (args.update, args.history, args.inspect, args.revision is not None)) > 1:
+        raise ResearchError("Choose one of --update, --history, --inspect or --revision")
+    if args.update:
+        if not args.expected_snapshot or args.expected_revision is None or not args.change_kind or not args.reason:
+            raise ResearchError("Updates require --expected-snapshot, --expected-revision, --change-kind and --reason")
+        if args.expected_revision < 1:
+            raise ResearchError("Expected revision must be positive")
+        changes = _revision_changes(args)
+        if not changes:
+            raise ResearchError("At least one changed field is required")
+        return api.revise_record(
+            args.project, kind, record_id, changes=changes,
+            expected_snapshot=args.expected_snapshot,
+            expected_revision=args.expected_revision,
+            change_kind=args.change_kind, reason=args.reason, actor=args.actor,
+        )
+    if args.history:
+        return api.record_history(args.project, kind, record_id)
+    if args.revision is not None and args.revision < 1:
+        raise ResearchError("Revision must be positive")
+    return api.get_record(args.project, kind, record_id, revision=args.revision)
 
 
 def run(args: argparse.Namespace) -> int:
@@ -164,6 +252,10 @@ def run(args: argparse.Namespace) -> int:
                 result = api.get_source(args.project, args.source_id)
             else:
                 result = api.list_sources(args.project)
+        elif command in ("dossier", "claim", "link-evidence", "decision") and (
+            revision_result := _revision_action(args)
+        ) is not None:
+            result = revision_result
         elif command == "dossier":
             if getattr(args, "dossier_id", None):
                 result = api.get_dossier(args.project, args.dossier_id)
@@ -178,9 +270,10 @@ def run(args: argparse.Namespace) -> int:
                     args.project,
                     args.title,
                     body,
-                    language=getattr(args, "language", "en"),
+                    language=args.language or "en",
                     tags=tags,
                     evidence_ids=evidence,
+                    actor=args.actor,
                 )
             else:
                 result = api.list_dossiers(args.project)
@@ -196,23 +289,27 @@ def run(args: argparse.Namespace) -> int:
                     args.project,
                     title=args.title,
                     statement=args.statement,
-                    confidence=getattr(args, "confidence", "hypothetical"),
+                    confidence=args.confidence or "hypothetical",
                     time_period=getattr(args, "time_period", None),
                     place=getattr(args, "place", None),
                     actors=actors,
                     dossier_id=getattr(args, "dossier_id", None),
                     tags=tags,
+                    actor=args.actor,
                 )
             else:
                 result = api.list_claims(args.project, dossier_id=getattr(args, "dossier_id", None))
         elif command == "link-evidence":
+            if not args.claim_id or not args.passage_id:
+                raise ResearchError("--claim-id and --passage-id are required to create an evidence link")
             result = api.link_evidence(
                 args.project,
                 claim_id=args.claim_id,
                 passage_id=args.passage_id,
-                relation=args.relation,
+                relation=args.relation or "supports",
                 rationale=getattr(args, "rationale", None),
-                reviewer=getattr(args, "reviewer", "author"),
+                reviewer=args.reviewer or "author",
+                actor=args.actor,
             )
         elif command == "decision":
             if getattr(args, "title", None) and getattr(args, "rationale", None):
@@ -221,8 +318,9 @@ def run(args: argparse.Namespace) -> int:
                     title=args.title,
                     rationale=args.rationale,
                     claim_id=getattr(args, "claim_id", None),
-                    deviation_from_fact=getattr(args, "deviation_from_fact", False),
+                    deviation_from_fact=bool(args.deviation_from_fact),
                     impact_on_plot=getattr(args, "impact_on_plot", None),
+                    actor=args.actor,
                 )
             else:
                 result = api.list_decisions(args.project)

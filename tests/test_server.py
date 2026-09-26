@@ -420,6 +420,102 @@ class TestLixityServer(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_server(host="192.168.1.100")
 
+    def test_research_record_and_history_routes_forward_pinned_revision(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "research").mkdir()
+            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
+                 patch("lixity.server.research_api.get_record", return_value={"record": {"revision": 1}}) as get_record, \
+                 patch("lixity.server.research_api.record_history", return_value={"revisions": []}) as history:
+                status, body, _ = self.make_request(
+                    "/api/research/record?kind=dossier&id=urn%3Auuid%3Adossier&revision=1"
+                )
+                self.assertEqual(status, 200, body)
+                self.assertTrue(json.loads(body)["ok"])
+                get_record.assert_called_once_with(root, "dossier", "urn:uuid:dossier", revision=1)
+                status, body, _ = self.make_request(
+                    "/api/research/history?kind=dossier&id=urn%3Auuid%3Adossier"
+                )
+                self.assertEqual(status, 200, body)
+                self.assertTrue(json.loads(body)["ok"])
+                history.assert_called_once_with(root, "dossier", "urn:uuid:dossier")
+
+    def test_research_revision_route_rejects_invalid_inputs_without_api_call(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "research").mkdir()
+            valid = {
+                "kind": "decision", "id": "urn:uuid:decision", "changes": {"title": "Revised"},
+                "expected_snapshot": "a" * 64, "expected_revision": 1,
+                "change_kind": "correction", "reason": "Correct the heading",
+            }
+            invalid = (
+                {**valid, "changes": "not an object"},
+                {**valid, "changes": {}},
+                {**valid, "expected_revision": True},
+                {**valid, "expected_revision": 0},
+                {**valid, "expected_snapshot": None},
+                {**valid, "reason": None},
+                {**valid, "kind": "source"},
+                {**valid, "kind": ["claim"]},
+            )
+            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
+                 patch("lixity.server.research_api.revise_record") as revise:
+                for payload in invalid:
+                    with self.subTest(payload=payload):
+                        status, body, _ = self.make_request(
+                            "/api/research-record-revise", method="POST", body=json.dumps(payload),
+                            headers={"Content-Type": "application/json"},
+                        )
+                        self.assertEqual(status, 400, body)
+                        self.assertFalse(json.loads(body)["ok"])
+                for path in (
+                    "/api/research/record?kind=decision&id=urn%3Auuid%3Adecision&revision=oops",
+                    "/api/research/record?kind=decision&id=urn%3Auuid%3Adecision&revision=" + "9" * 5000,
+                    "/api/research/history?kind=decision",
+                ):
+                    status, body, _ = self.make_request(path)
+                    self.assertEqual(status, 400, body)
+                revise.assert_not_called()
+
+    def test_research_revision_route_success_conflict_and_project_isolation(self):
+        from lixity.research.repository import ResearchConflictError
+
+        original_source = LixityServerHandler.source_input
+        original_html = LixityServerHandler.dashboard_html
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "research").mkdir()
+            payload = {
+                "kind": "claim", "id": "urn:uuid:claim", "changes": {"place": None},
+                "expected_snapshot": "b" * 64, "expected_revision": 2,
+                "change_kind": "supersession", "reason": "Interpretation changed",
+            }
+            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
+                 patch("lixity.server.research_api.revise_record", return_value={"record": {"revision": 3}}) as revise:
+                status, body, _ = self.make_request(
+                    "/api/research-record-revise", method="POST", body=json.dumps(payload),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                self.assertTrue(json.loads(body)["ok"])
+                revise.assert_called_once_with(
+                    root, "claim", "urn:uuid:claim", changes={"place": None},
+                    expected_snapshot="b" * 64, expected_revision=2,
+                    change_kind="supersession", reason="Interpretation changed",
+                    actor="local-author",
+                )
+            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
+                 patch("lixity.server.research_api.revise_record", side_effect=ResearchConflictError("stale")):
+                status, body, _ = self.make_request(
+                    "/api/research-record-revise", method="POST", body=json.dumps(payload),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 409, body)
+                self.assertFalse(json.loads(body)["ok"])
+        self.assertEqual(LixityServerHandler.source_input, original_source)
+        self.assertEqual(LixityServerHandler.dashboard_html, original_html)
+
     def test_research_endpoints_workflow(self):
         with tempfile.TemporaryDirectory() as rdir:
             orig_rdir = LixityServerHandler.research_dir

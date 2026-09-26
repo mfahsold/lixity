@@ -314,6 +314,151 @@ server.serve_forever()
     assert.equal(await generalDecision.locator('.badge-success').count(), 0, 'No marked deviation is not factual certification');
     await expect(generalDecision.locator('.badge-neutral')).toBeVisible();
 
+    // Revise existing authored records through the same UI without duplicating them.
+    const dossierId = dossiers.dossiers[0].id;
+    const revisionDialog = page.locator('#modal-research-revision');
+    const field = name => page.locator(`#research-revision-field-${name}`);
+    const chooseChange = async (kind = 'correction') => {
+      await page.locator(`[name=research_revision_change_kind][value=${kind}]`).check();
+      await page.locator('#research-revision-reason').fill('Synthetic author review.');
+    };
+    await page.locator('[data-rtab=dossiers]').click();
+    await page.locator(`[data-research-revise=dossier][data-record-id="${dossierId}"]`).click();
+    await expect(field('body')).toHaveValue(/End of synthetic dossier\./);
+    await field('title').fill('Revised synthetic dossier');
+    await field('body').fill('A revised note with <img src=x onerror=alert(1)> as inert text.');
+    await chooseChange();
+    assert.ok((await field('body').boundingBox()).height >= 150, 'Dossier body editor must have usable height');
+    assert.ok((await page.locator('#research-revision-reason').boundingBox()).height >= 65, 'Revision reason must have usable height');
+    await field('title').scrollIntoViewIfNeeded();
+    await revisionDialog.screenshot({path: path.join(artifacts, 'revision-dossier-desktop.png')});
+    await page.locator('#research-revision-reason').scrollIntoViewIfNeeded();
+    await revisionDialog.screenshot({path: path.join(artifacts, 'revision-dossier-reason-desktop.png')});
+    await page.locator('#research-revision-save').click();
+    await expect(revisionDialog).not.toBeVisible();
+    await expect(page.locator('#research-dossiers-list')).toContainText('Revised synthetic dossier');
+    assert.equal((await (await page.request.get(fixture.url + '/api/research/dossiers')).json()).dossiers.length, 2);
+    await page.locator(`[data-research-history=dossier][data-record-id="${dossierId}"]`).click();
+    await page.locator('[data-research-revision="1"]').click();
+    await expect(page.locator('#research-revision-history-detail')).toContainText('End of synthetic dossier.');
+    await page.locator('#research-revision-history-detail').scrollIntoViewIfNeeded();
+    await revisionDialog.screenshot({path: path.join(artifacts, 'revision-dossier-history-desktop.png')});
+    await page.locator('[data-research-revision="2"]').click();
+    await expect(page.locator('#research-revision-history-detail')).toContainText('<img src=x onerror=alert(1)>');
+    assert.equal(await page.locator('#research-revision-history-detail img').count(), 0);
+    await page.keyboard.press('Escape');
+
+    // Stale drafts and failed requests remain editable, with an explicit reload.
+    await page.locator(`[data-research-revise=dossier][data-record-id="${dossierId}"]`).click();
+    await field('title').fill('My unsaved draft');
+    await chooseChange();
+    await page.locator('#research-revision-history-tab').click();
+    await expect(page.locator('[data-research-revision="2"]')).toContainText('Current');
+    await page.locator('#research-revision-edit-tab').click();
+    const concurrent = await (await page.request.get(fixture.url + `/api/research/record?kind=dossier&id=${encodeURIComponent(dossierId)}`)).json();
+    const concurrentResult = await page.request.post(fixture.url + '/api/research-record-revise', {data: {
+      kind: 'dossier', id: dossierId, changes: {title: 'Other editor title'},
+      expected_snapshot: concurrent.snapshot, expected_revision: concurrent.record.revision,
+      change_kind: 'correction', reason: 'Synthetic concurrent edit.'
+    }});
+    assert.equal(concurrentResult.status(), 200);
+    await page.locator('#research-revision-save').click();
+    await expect(page.locator('#research-revision-status')).toContainText('changed');
+    await expect(field('title')).toHaveValue('My unsaved draft');
+    await expect(page.locator('#research-revision-reload')).toBeVisible();
+    await page.locator('#research-revision-reload').click();
+    await expect(field('title')).toHaveValue('Other editor title');
+    await page.locator('#research-revision-history-tab').click();
+    await expect(page.locator('[data-research-revision="3"]')).toContainText('Current');
+    await expect(page.locator('[data-research-revision="2"]')).not.toContainText('Current');
+    await page.locator('#research-revision-edit-tab').click();
+    await field('title').fill('Failed request draft');
+    await chooseChange();
+    let requestStarted;
+    const started = new Promise(resolve => { requestStarted = resolve; });
+    let releaseResponse;
+    const heldResponse = new Promise(resolve => { releaseResponse = resolve; });
+    await page.route('**/api/research-record-revise', async route => {
+      requestStarted();
+      await heldResponse;
+      await route.fulfill({status: 500, json: {ok: false, message: 'Synthetic revision save failure'}});
+    });
+    await page.locator('#research-revision-save').click();
+    await started;
+    await expect(field('title')).toBeDisabled();
+    await expect(page.locator('#research-revision-reason')).toBeDisabled();
+    await expect(page.locator('[name=research_revision_change_kind]').first()).toBeDisabled();
+    releaseResponse();
+    await expect(page.locator('#research-revision-status')).toContainText('Synthetic revision save failure');
+    await expect(field('title')).toHaveValue('Failed request draft');
+    await expect(field('title')).toBeEnabled();
+    await page.unroute('**/api/research-record-revise');
+    await page.keyboard.press('Escape');
+    await page.locator(`[data-research-revise=dossier][data-record-id="${dossierId}"]`).click();
+    await expect(field('title')).toHaveValue('Other editor title');
+    await page.keyboard.press('Escape');
+
+    await page.route('**/api/research/record?*', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic initial history failure'}}));
+    await page.locator(`[data-research-history=dossier][data-record-id="${dossierId}"]`).click();
+    await expect(page.locator('#research-revision-status')).toBeVisible();
+    await expect(page.locator('#research-revision-status')).toContainText('Synthetic initial history failure');
+    await page.keyboard.press('Escape');
+    await page.unroute('**/api/research/record?*');
+
+    await page.locator('[data-rtab=claims]').click();
+    await page.locator(`[data-research-revise=claim][data-record-id="${claimId}"]`).click();
+    await field('statement').fill('The archive possibly opened in 1924.');
+    await chooseChange();
+    await page.locator('#research-revision-save').click();
+    await expect(revisionDialog).not.toBeVisible();
+    await page.locator('[data-load-evidence]').click();
+    const evidenceData = await (await page.request.get(fixture.url + `/api/research/claims?claim_id=${encodeURIComponent(claimId)}`)).json();
+    const evidenceId = evidenceData.evidence_links[0].id;
+    assert.equal(evidenceData.evidence_links[0].claim_revision, 1);
+    assert.equal(evidenceData.evidence_links[0].claim_latest_revision, 2);
+    await page.locator(`[data-research-revise=evidence_link][data-record-id="${evidenceId}"]`).click();
+    await field('relation').selectOption('qualifies');
+    await field('claim_revision').fill('2');
+    await field('rationale').fill('The revised statement needs a qualification.');
+    await chooseChange();
+    await page.locator('#research-revision-save').click();
+    await expect(revisionDialog).not.toBeVisible();
+    const revisedLink = await (await page.request.get(fixture.url + `/api/research/record?kind=evidence_link&id=${encodeURIComponent(evidenceId)}`)).json();
+    const originalLink = await (await page.request.get(fixture.url + `/api/research/record?kind=evidence_link&id=${encodeURIComponent(evidenceId)}&revision=1`)).json();
+    assert.equal(revisedLink.record.claim_ref.revision, 2);
+    assert.equal(originalLink.record.claim_ref.revision, 1);
+    await page.locator(`[data-research-history=claim][data-record-id="${claimId}"]`).click();
+    await expect(page.locator('#research-revision-history-detail')).toContainText(evidenceId);
+    await expect(page.locator('#research-revision-history-detail')).toContainText('Claim · Revision 2');
+    await page.keyboard.press('Escape');
+    await page.locator('[data-rtab=decisions]').click();
+    const decisionId = decisions.decisions[0].id;
+    await page.locator(`[data-research-revise=decision][data-record-id="${decisionId}"]`).click();
+    await field('rationale').fill('Supersede the earlier narrative choice.');
+    await field('deviation_from_fact').uncheck();
+    await chooseChange('supersession');
+    await page.locator('#research-revision-save').click();
+    await expect(revisionDialog).not.toBeVisible();
+    const revisedDecision = await (await page.request.get(fixture.url + `/api/research/record?kind=decision&id=${encodeURIComponent(decisionId)}`)).json();
+    assert.equal(revisedDecision.record.change.change_kind, 'supersession');
+    assert.equal(revisedDecision.record.deviation_from_fact, false);
+    assert.equal((await (await page.request.get(fixture.url + '/api/research/decisions')).json()).decisions.length, 2);
+
+    // New source bytes do not rewrite the dossier or replace its old quotation.
+    execFileSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c',
+      'import sys; from pathlib import Path; from lixity.research import api; p=Path(sys.argv[1]); source=api.list_sources(p)["sources"][0]; f=p.parent/"source-refresh.txt"; f.write_text("The synthetic archive date is disputed.",encoding="utf-8"); api.ingest(p,f,source_id=source["id"],allow_retention=True)',
+      fixture.project], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}});
+    await page.locator('[data-rtab=dossiers]').click();
+    await page.locator(`[data-research-revise=dossier][data-record-id="${dossierId}"]`).click();
+    await expect(page.locator('#research-revision-source-updates')).toBeVisible();
+    await expect(page.locator('#research-revision-source-updates')).toContainText('Synthetic source');
+    await expect(field('body')).toHaveValue('A revised note with <img src=x onerror=alert(1)> as inert text.');
+    await page.setViewportSize({width: 390, height: 844});
+    assert.ok(await revisionDialog.evaluate(element => element.scrollWidth <= element.clientWidth));
+    await revisionDialog.screenshot({path: path.join(artifacts, 'revision-dossier-mobile.png')});
+    await page.keyboard.press('Escape');
+    await page.setViewportSize({width: 1440, height: 1000});
+
     await page.route('**/api/research/decisions', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic decision load failure'}}));
     await page.locator('[data-rtab=decisions]').click();
     await expect(page.locator('#research-decisions-list')).toContainText('Synthetic decision load failure');
@@ -377,6 +522,23 @@ server.serve_forever()
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${language} ${tab} mobile overflow`);
       }
       await page.locator('#research-manager').screenshot({path: path.join(artifacts, `locale-${language}-320.png`)});
+      await page.locator(`[data-research-history=decision][data-record-id="${decisionId}"]`).click();
+      await page.locator('[data-research-revision="1"]').click();
+      await expect(page.locator('#research-revision-history-detail')).toContainText('Bring the opening into the first chapter.');
+      assert.ok(await revisionDialog.evaluate(element => element.scrollWidth <= element.clientWidth), `${language} revision history overflow`);
+      await page.locator('#research-revision-history-detail').scrollIntoViewIfNeeded();
+      await revisionDialog.screenshot({path: path.join(artifacts, `history-${language}-320.png`)});
+      await page.keyboard.press('Escape');
+      if (language === 'en') {
+        await page.locator(`[data-research-revise=decision][data-record-id="${decisionId}"]`).click();
+        await expect(page.locator('#research-revision-field-rationale')).toBeVisible();
+        assert.ok((await page.locator('#research-revision-reason').boundingBox()).height >= 65, 'Mobile revision reason must have usable height');
+        await page.locator('#research-revision-field-title').scrollIntoViewIfNeeded();
+        await revisionDialog.screenshot({path: path.join(artifacts, 'revision-decision-top-320.png')});
+        await page.locator('#research-revision-reason').scrollIntoViewIfNeeded();
+        await revisionDialog.screenshot({path: path.join(artifacts, 'revision-decision-reason-320.png')});
+        await page.keyboard.press('Escape');
+      }
       await page.locator('#btn-modal-open-project').click();
       await expect(page.locator('#open-proj-path')).toBeVisible();
       await page.locator('#open-proj-path').fill(fixture.project);

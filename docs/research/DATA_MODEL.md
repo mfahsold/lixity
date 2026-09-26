@@ -112,7 +112,7 @@ check establishes integrity, not factual accuracy or permission to distribute.
 | Zotero → Source | Preserve native item JSON, library/key/version; attach CSL-JSON as a citation projection. A DOI match suggests a duplicate but does not auto-merge editions or captures. |
 | CSL-JSON file → Source | Import bibliography and allocate internal IDs. Record importer activity; no Zotero sync capability is inferred from a citation export. |
 | SourceVersion → archive | Direct PDF/image/audio bytes or WARC/WACZ references; capture method, date, completeness and rights accompany the hash. |
-| Docling → Extraction/Passage | Preserve native structured output and provenance; map selected regions into retained text selectors. OCR confidence, when present, remains a tool-specific diagnostic. |
+| Unlimited-OCR → Extraction/Passage | Preserve raw output, model/configuration revision and the PDF-to-image page map. Check emitted regions against source pages before mapping retained text selectors. OCR structure/confidence, when present, remains a tool-specific diagnostic. |
 | Records → PROV | Source/extraction/dossier revisions are Entities; transformation runs are Activities; people/tools are Agents. Export `wasDerivedFrom`, `wasGeneratedBy` and association links where supported by records. |
 | Passage → Web Annotation | Target the immutable representation with quote/position selectors; Lixity-specific coordinates use a declared extension context. |
 | Project/dossier snapshot → RO-Crate | Root Dataset plus permitted File/contextual entities, author/tool provenance, identifiers and relationships. Validate the declared export profile; JSON-LD syntax alone is not conformance. |

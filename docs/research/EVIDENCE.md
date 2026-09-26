@@ -61,13 +61,14 @@ No Obsidian plugin is required for the proposed core workflow.
 
 ### Extraction, retrieval and composition
 
-Docling's document model retains structured content and provenance. The extraction
-adapter should preserve its JSON and original page references rather than only
-plain Markdown. Models may download on first use; provision assets and isolate
-network access for a reproducible offline profile.
-[Document model](https://docling-project.github.io/docling/concepts/docling_document/),
-[provenance reference](https://docling-project.github.io/docling/reference/docling_document/#docling_core.types.doc.document.ProvenanceItem),
-[offline options](https://github.com/docling-project/docling/blob/main/docs/usage/advanced_options.md).
+Baidu Unlimited-OCR is the selected self-hosted OCR provider. Its official recipe
+supports image and multi-page inference after PDF rendering. That does not by
+itself establish reliable page selectors or quotation accuracy: the adapter must
+retain raw output and verify its page mapping. Install the optional runtime and
+model explicitly; use the [pinned revisions in the plan](README.md#3-recommended-stack-and-alternatives)
+instead of downloading a moving model branch at runtime.
+[Official recipe](https://github.com/baidu/Unlimited-OCR),
+[official model](https://huggingface.co/baidu/Unlimited-OCR).
 
 SQLite FTS5 offers lexical indexing and ranking. Qdrant supports filtered, named
 vector queries and fusion; the Python client's local mode is positioned for
@@ -122,13 +123,13 @@ purge semantics must not rely on an ETag or a provider URL.
 
 ### Licensing and packaging
 
-Verified upstream declarations include Zotero AGPLv3, Docling MIT with separately
-licensed models, Qdrant Apache-2.0, SQLite public-domain status and BGE-M3 MIT.
+Verified upstream declarations include Zotero AGPLv3, Unlimited-OCR MIT,
+Qdrant Apache-2.0, SQLite public-domain status and BGE-M3 MIT.
 These are component declarations, not a legal determination about any combined
 distribution, and do not grant rights to imported material. Record exact dependency
 and model versions/licenses when packaging the optional runtime.
 [Zotero](https://www.zotero.org/support/licensing),
-[Docling](https://github.com/docling-project/docling),
+[Unlimited-OCR](https://github.com/baidu/Unlimited-OCR),
 [Qdrant](https://github.com/qdrant/qdrant),
 [SQLite](https://www.sqlite.org/copyright.html),
 [BGE-M3](https://huggingface.co/BAAI/bge-m3).

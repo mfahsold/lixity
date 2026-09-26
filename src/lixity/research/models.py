@@ -53,6 +53,38 @@ class Record(StrictModel):
         return value
 
 
+class RevisionChange(StrictModel):
+    """Explicit author intent attached to a replacement authored revision."""
+
+    change_kind: Literal["correction", "supersession"]
+    reason: Annotated[str, Field(min_length=1, max_length=2000)]
+    previous_revision: Annotated[int, Field(ge=1)]
+
+    @field_validator("reason")
+    @classmethod
+    def nonblank_reason(cls, value: str) -> str:
+        if not value.strip():
+            raise ValueError("A revision reason must not be blank")
+        return value
+
+
+class AuthoredRecord(Record):
+    # Frozen authored records intentionally extend the otherwise fixed v1 envelope.
+    schema_version: Literal["research-local/1", "research-local/2"] = "research-local/1"  # type: ignore[assignment]
+    revision: Annotated[int, Field(ge=1)] = 1
+    change: RevisionChange | None = None
+
+    @model_validator(mode="after")
+    def valid_revision(self) -> "AuthoredRecord":
+        if self.revision == 1:
+            if self.schema_version != "research-local/1" or self.change is not None:
+                raise ValueError("Initial authored records retain the revision-1 contract")
+        elif (self.schema_version != "research-local/2" or self.change is None
+              or self.change.previous_revision != self.revision - 1):
+            raise ValueError("Authored revisions require version 2 and their immediate predecessor")
+        return self
+
+
 class Project(Record):
     kind: Literal["project"] = "project"
     title: Annotated[str, Field(min_length=1, max_length=500)]
@@ -126,7 +158,7 @@ class Passage(Record):
         return self
 
 
-class Dossier(Record):
+class Dossier(AuthoredRecord):
     kind: Literal["dossier"] = "dossier"
     title: Annotated[str, Field(min_length=1, max_length=500)]
     language: Language = "en"
@@ -141,7 +173,7 @@ class ClaimScope(StrictModel):
     actors: list[Annotated[str, Field(min_length=1, max_length=100)]] = Field(default_factory=list)
 
 
-class Claim(Record):
+class Claim(AuthoredRecord):
     kind: Literal["claim"] = "claim"
     title: Annotated[str, Field(min_length=1, max_length=500)]
     statement: Annotated[str, Field(min_length=1, max_length=10000)]
@@ -154,7 +186,7 @@ class Claim(Record):
 EvidenceRelation = Literal["supports", "contradicts", "qualifies", "contextualizes"]
 
 
-class EvidenceLink(Record):
+class EvidenceLink(AuthoredRecord):
     kind: Literal["evidence_link"] = "evidence_link"
     claim_ref: Reference
     passage_ref: Reference
@@ -163,7 +195,7 @@ class EvidenceLink(Record):
     reviewer: Annotated[str, Field(min_length=1, max_length=200)] = "author"
 
 
-class Decision(Record):
+class Decision(AuthoredRecord):
     kind: Literal["decision"] = "decision"
     title: Annotated[str, Field(min_length=1, max_length=500)]
     rationale: Annotated[str, Field(min_length=1, max_length=10000)]
@@ -214,7 +246,7 @@ class Entry(StrictModel):
 
 
 class Manifest(StrictModel):
-    schema_version: Literal["research-manifest-local/1"] = "research-manifest-local/1"
+    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2"] = "research-manifest-local/1"
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None

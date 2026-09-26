@@ -107,6 +107,11 @@ class TestLocalization(unittest.TestCase):
                                  labels["research_confidence_field"])
                 self.assertEqual(parser.elements["r-link-relation"]["aria-label"],
                                  labels["research_relation_field"])
+                self.assertIn('id="modal-research-revision"', rendered)
+                self.assertIn('id="research-revision-title">' + escape(labels["research_revision_title"]), rendered)
+                for key in ("research_revision_correction_desc", "research_revision_supersession_desc",
+                            "research_revision_reason", "research_revision_save"):
+                    self.assertIn(escape(labels[key]), rendered)
                 self.assertIn('value="supports"', rendered)
                 self.assertNotIn("lixity.json", rendered)
 

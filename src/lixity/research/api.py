@@ -32,6 +32,19 @@ from .models import (
     reference,
 )
 from .repository import Repository, ResearchError, digest
+from .revisions import (
+    get_record as get_record,
+)
+from .revisions import (
+    record_history as record_history,
+)
+from .revisions import (
+    resolve_evidence_citation,
+    source_updates,
+)
+from .revisions import (
+    revise_record as revise_record,
+)
 
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
 
@@ -137,7 +150,7 @@ def audit(project: str | Path) -> dict[str, Any]:
     head: str | None = None
     try:
         snapshot = repository.snapshot()
-        count = len(snapshot.records)
+        count = len(snapshot.revisions)
         head = snapshot.digest
         checked: set[str] = set()
         for record in snapshot.records.values():
@@ -562,6 +575,7 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
             "title": record.title,
             "language": record.language,
             "tags": record.tags,
+            "revision": record.revision,
             "evidence_count": len(record.evidence_refs),
             "unavailable_evidence_count": sum(ref in purged_passages for ref in record.evidence_refs),
             "created_at": record.created_at,
@@ -580,19 +594,7 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
 
 
 def _resolve_evidence_citation(repository: Repository, snapshot: Any, ref: Reference) -> dict[str, Any]:
-    try:
-        return repository.citation(snapshot, snapshot.get(ref, Passage))
-    except (ResearchError, KeyError):
-        if ref.id not in snapshot.records and any(
-            isinstance(record, Tombstone)
-            and record.operation == "purge"
-            and record.target_kind == "passage"
-            and record.target_ref == ref
-            for record in snapshot.records.values()
-        ):
-            return {"id": ref.id, "passage_id": ref.id, "availability": "purged",
-                    "error": "Citation unavailable or missing"}
-        return {"id": ref.id, "error": "Citation unavailable or missing"}
+    return resolve_evidence_citation(repository, snapshot, ref)
 
 
 def get_dossier(project: str | Path, dossier_id: str) -> dict[str, Any]:
@@ -600,7 +602,7 @@ def get_dossier(project: str | Path, dossier_id: str) -> dict[str, Any]:
     repository = Repository(project)
     snapshot = repository.snapshot()
 
-    dossier = snapshot.get(Reference(id=dossier_id), Dossier)
+    dossier = snapshot.latest(dossier_id, Dossier)
 
     withdrawn_or_purged = {
         record.target_ref.id
@@ -621,6 +623,9 @@ def get_dossier(project: str | Path, dossier_id: str) -> dict[str, Any]:
         "created_at": dossier.created_at,
         "created_by": dossier.created_by,
         "citations": resolved_citations,
+        "revision": dossier.revision,
+        "snapshot": snapshot.digest,
+        "source_updates": source_updates(resolved_citations),
     }
 
 
@@ -642,7 +647,7 @@ def create_claim(
 
     dossier_ref = None
     if dossier_id:
-        dossier = snapshot.get(Reference(id=dossier_id), Dossier)
+        dossier = snapshot.latest(dossier_id, Dossier)
         dossier_ref = reference(dossier)
 
     scope = ClaimScope(
@@ -693,6 +698,7 @@ def list_claims(project: str | Path, *, dossier_id: str | None = None) -> dict[s
             continue
         claims_list.append({
             "id": record.id,
+            "revision": record.revision,
             "title": record.title,
             "statement": record.statement,
             "confidence": record.confidence,
@@ -702,6 +708,7 @@ def list_claims(project: str | Path, *, dossier_id: str | None = None) -> dict[s
                 "actors": record.scope.actors,
             },
             "dossier_id": record.dossier_ref.id if record.dossier_ref else None,
+            "dossier_revision": record.dossier_ref.revision if record.dossier_ref else None,
             "tags": record.tags,
             "created_at": record.created_at,
             "created_by": record.created_by,
@@ -727,7 +734,7 @@ def link_evidence(
     repository = Repository(project)
     snapshot = repository.snapshot()
 
-    claim = snapshot.get(Reference(id=claim_id), Claim)
+    claim = snapshot.latest(claim_id, Claim)
     passage = snapshot.get(Reference(id=passage_id), Passage)
 
     values = envelope(snapshot.project.id, actor)
@@ -774,7 +781,10 @@ def list_evidence_links(project: str | Path, *, claim_id: str | None = None) -> 
         citation = _resolve_evidence_citation(repository, snapshot, record.passage_ref)
         links_list.append({
             "id": record.id,
+            "revision": record.revision,
             "claim_id": record.claim_ref.id,
+            "claim_revision": record.claim_ref.revision,
+            "claim_latest_revision": snapshot.latest(record.claim_ref.id, Claim).revision,
             "passage_id": record.passage_ref.id,
             "relation": record.relation,
             "rationale": record.rationale,
@@ -806,7 +816,7 @@ def record_decision(
 
     claim_ref = None
     if claim_id:
-        claim = snapshot.get(Reference(id=claim_id), Claim)
+        claim = snapshot.latest(claim_id, Claim)
         claim_ref = reference(claim)
 
     values = envelope(snapshot.project.id, actor)
@@ -848,9 +858,11 @@ def list_decisions(project: str | Path) -> dict[str, Any]:
             continue
         decisions_list.append({
             "id": record.id,
+            "revision": record.revision,
             "title": record.title,
             "rationale": record.rationale,
             "claim_id": record.claim_ref.id if record.claim_ref else None,
+            "claim_revision": record.claim_ref.revision if record.claim_ref else None,
             "deviation_from_fact": record.deviation_from_fact,
             "impact_on_plot": record.impact_on_plot,
             "created_at": record.created_at,
@@ -862,4 +874,3 @@ def list_decisions(project: str | Path) -> dict[str, Any]:
         "schema_version": "research-decisions-local/1",
         "decisions": decisions_list,
     }
-

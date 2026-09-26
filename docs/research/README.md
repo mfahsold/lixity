@@ -69,7 +69,7 @@ deployment boundary, not postponement of the data model.
 | Bibliography and reading | Zotero native JSON plus CSL-JSON import/export | Reuse a literature manager. Preserve Zotero library/item identity and version, rather than scraping its internal database. Initial connector is read-only. |
 | Author-controlled records | Versioned JSON + Markdown; JSON Schema 2020-12 | Typed entities and human-editable dossiers, portable through Git. Standard Markdown links remain sufficient; Obsidian-specific views are optional. |
 | Local catalogue and exact search | SQLite + FTS5 | Transactions, filters and lexical search without a daemon. A rebuildable projection, never the only copy of an accepted claim. Detect FTS5 availability explicitly. |
-| PDF and structured-document extraction | Docling in an isolated worker | Preserve document structure, tables, pages and provenance in Docling JSON. Markdown is a reading derivative. OCR/model assets are explicitly installed and versioned. |
+| PDF/image extraction | Baidu Unlimited-OCR in an optional isolated worker | Preserve original bytes, page mapping, raw OCR output and model/configuration provenance. Verify page/region selectors before creating passages. Markdown is a reading derivative; model assets are explicitly installed and pinned. |
 | Semantic and hybrid retrieval | Qdrant | Named dense/sparse vectors, filters and rank fusion. Local client mode for a bounded single-process pilot; a server for shared access and operational scale. Validate backend capabilities rather than assuming parity. |
 | Embeddings and reranking | Local model provider; BGE-M3 as an initial multilingual candidate | Compare German/Italian/English retrieval on the project benchmark. Pin model revision, tokenizer, normalization and dimensions. No claim that this model is universally best. |
 | Pipeline composition | Haystack adapter in the optional runtime | Reuse document stores, retrievers, routing and pipeline composition. Lixity IDs and evidence contracts must not depend on a Haystack `Document` layout or installed major version. |
@@ -79,6 +79,16 @@ deployment boundary, not postponement of the data model.
 | Portable archival export | RO-Crate profile | Bundle permitted objects, metadata, relations and checksums. Declare the exact profile/specification version; validate before claiming conformance. |
 
 Platform references and evidence limitations are in [EVIDENCE.md](EVIDENCE.md).
+The selected OCR model is [Baidu Unlimited-OCR](https://github.com/baidu/Unlimited-OCR),
+replacing the earlier planned Docling worker. As checked on 2026-09-26, upstream
+has no numbered release: pin the official model snapshot
+[`07dea832e22aefee32ad281d4b80551282e1c168`](https://huggingface.co/baidu/Unlimited-OCR/tree/07dea832e22aefee32ad281d4b80551282e1c168)
+and [integration recipe revision `d49ff64`](https://github.com/baidu/Unlimited-OCR/tree/d49ff64afffc1f47ab563dc1c589bc2f78808fa4),
+both dated 2026-07-29. These are reproducibility pins, not invented version numbers
+or evidence that a Lixity integration has been tested. Deployment is self-hosted;
+the selected integration does not depend on Baidu's hosted API. PDF/OCR remains
+unimplemented.
+
 This RFC selects component families, not untested package pins. The provider
 implementation must produce a tested lockfile and model manifest for each
 supported deployment. Provider upgrades are independent of analysis releases.
@@ -290,8 +300,11 @@ Retries are idempotent on project, input checksum and conversion configuration.
    size, permission and provider requirements before fetching or parsing.
 2. **Capture:** archive permitted bytes and response/capture metadata; otherwise
    store a metadata-only version marked unavailable for extraction.
-3. **Extract:** isolate parsers; retain Docling JSON, page labels, table structure,
-   OCR configuration and extraction warnings. Reading Markdown is a derivative.
+3. **Extract:** run Unlimited-OCR in the isolated research runtime; retain raw
+   output, the PDF-to-image page map, model revision, rendering/OCR configuration
+   and warnings. Check emitted regions and table structure against source pages;
+   generated text is untrusted extraction, not a verified original quotation.
+   Reading Markdown is a derivative.
 4. **Annotate:** preserve source-language excerpts; translations are derived
    annotations carrying translator/model provenance, not original quotations.
 5. **Review:** accept or reject claim/evidence suggestions. No import can accept
@@ -453,7 +466,7 @@ measured lexical baseline, not invented universal accuracy percentages.
 | --- | --- | --- |
 | 1. Contracts and portable repository | Entity/schema implementation, revision protocol, synthetic round-trip fixture, catalogue/FTS, migration dry-run | Reference and schema validation; concurrency/crash-recovery tests; existing core checks unchanged |
 | 2. Sources and archives | Read-only Zotero/CSL importer, content-addressed blobs, WARC import, capture/version UI | Duplicate/idempotency tests; deletion and restore exercises; metadata-only export |
-| 3. Extraction and annotation | Docling worker, OCR diagnostics, immutable passage selectors | Page/table/quote fixtures; OCR upgrade without silently retargeting citations |
+| 3. Extraction and annotation | Unlimited-OCR worker, OCR diagnostics, immutable passage selectors | Page/table/quote fixtures; OCR upgrade without silently retargeting citations |
 | 4. Search and evaluation | Qdrant + model provider + Haystack adapter; benchmark report | Measured lexical/dense/hybrid comparison; offline behavior and stale-index tests |
 | 5. Dossier and manuscript workflow | Evidence review, decisions, citation/drift UI and localized labels | End-to-end synthetic author task; keyboard/mobile review; legacy JSON contract tests |
 | 6. Shared runtime and archival export | Authorized service profile, object store adapter, validated RO-Crate export | Access isolation, backup/restore, resource limits and export permission checks |

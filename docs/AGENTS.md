@@ -440,6 +440,32 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
 
+Development native-revision endpoints (issue #9) reuse that explicit workspace:
+
+- `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link` and `decision`.
+- `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
+- `POST /api/research-record-revise`: `{kind, id, changes, expected_snapshot, expected_revision, change_kind, reason}`. `change_kind` is `correction` or `supersession`; reason is required. HTTP 409 means the draft's snapshot/revision is stale; reload explicitly before deciding what to save. HTTP 400 means invalid fields; immutable/unknown fields are rejected.
+
+Python equivalents are `research_api.get_record`, `record_history` and
+`revise_record`. Read/revise returns `research-record-local/1` with `project_id`,
+`snapshot`, `record`, `latest_revision`, `is_latest`, `citations`, `citation_scope`,
+`source_updates` and `reference_updates`. `citation_scope` is `pinned_passages`
+for dossiers and evidence links, or `current_links_to_pinned_claim_revision` for
+claims and decisions. The latter citations include `evidence_link_id`,
+`evidence_link_revision` and `claim_revision`; they do not reconstruct a historical
+archive snapshot. `reference_updates` reports newer revisions of an associated
+claim or dossier without changing its pin.
+
+To repin explicitly, include `claim_revision` in evidence-link/decision changes
+or `dossier_revision` in claim changes. An unchanged associated ID without an
+explicit revision preserves its pin; a different ID without a revision selects
+that target's latest revision. History returns `research-history-local/1`.
+Authored record
+revisions use storage schema `research-local/2`; snapshots containing them use
+`research-manifest-local/2`. Existing revision-1 files and pinned references
+remain intact. Lixity 1.16.0 cannot read the resulting archive. See
+[native editing and compatibility](research/USAGE.md#native-editing-and-history-development).
+
 The standalone server renders only its implemented optional controls: Run analyses
 and Rebuild refresh the dashboard. Its `POST /api/export`, `/api/sync`,
 `/api/audit`, `/api/prune` and `/api/gdrive` return HTTP 501 with `ok: false`;
