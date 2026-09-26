@@ -29,9 +29,12 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("decision", "Create, list or revise author decisions and fact deviations"),
         ("withdraw", "Withdraw an archived source or version, marking citations and excluding from search"),
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
+        ("export", "Export research store to verified archive (.tar.gz)"),
+        ("restore", "Restore research store from verified archive (.tar.gz)"),
     ):
         command = commands.add_parser(name, help=help_text)
-        command.add_argument("--project", required=True, help="Explicit project directory")
+        if name != "restore":
+            command.add_argument("--project", required=True, help="Explicit project directory")
         if name in ("dossier", "claim", "link-evidence", "decision"):
             command.add_argument("--update", action="store_true", help="Revise the named record")
             command.add_argument("--history", action="store_true", help="List immutable revisions")
@@ -114,6 +117,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--actor", default="local-author")
             if name == "purge":
                 command.add_argument("--dry-run", action="store_true", help="Preview records, passages and blobs to be removed without deleting")
+        elif name == "export":
+            command.add_argument("--output", required=True, help="Destination .tar.gz archive path")
+        elif name == "restore":
+            command.add_argument("--from", dest="archive_source", required=True, help="Source .tar.gz archive path")
+            command.add_argument("--to", dest="target_dir", required=True, help="Target project directory")
 
 
 def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
@@ -330,6 +338,10 @@ def run(args: argparse.Namespace) -> int:
         elif command == "purge":
             result = api.purge(args.project, args.source_id, version_id=args.version_id,
                                reason=args.reason, actor=args.actor, dry_run=args.dry_run)
+        elif command == "export":
+            result = api.export_archive(args.project, args.output)
+        elif command == "restore":
+            result = api.restore_archive(args.archive_source, args.target_dir)
         else:
             result = api.audit(args.project)
         print(json.dumps(result, ensure_ascii=False, indent=2))

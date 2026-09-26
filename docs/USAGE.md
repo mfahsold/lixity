@@ -1,6 +1,6 @@
 # Lixity – Usage & Reference
 
-Experimental local archives, claims and decisions in 1.16.0:
+Experimental local archives, claims, decisions, OCR and diagrams in 1.17.0:
 [Research usage](research/USAGE.md). For interactive project workflows, see
 [Onboarding](ONBOARDING.md).
 
@@ -31,12 +31,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.16.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.17.0"
 lixity --version
 lixity about
 ```
 
-`v1.16.0` is the release pin. Choose `@main` only to follow development,
+`v1.17.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.

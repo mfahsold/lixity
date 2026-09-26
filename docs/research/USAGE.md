@@ -1,24 +1,28 @@
 # Local research pilot
 
-**Experimental local pilot included in `v1.16.0`.**
-This pilot archives local UTF-8 text, attaches versioned source criticism context and tags,
+**Experimental local research archive system in `v1.17.0`.**
+This component archives local UTF-8 text and PDF documents, attaches versioned source criticism context and tags,
 resolves exact citations, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, connects to the analysis pipeline, and performs cross-corpus
-grounding comparisons against manuscripts. Authors can manually record claims,
-passage-to-claim evidence relations and decisions. It does not implement the
-entire [RFC](README.md).
+grounding comparisons against manuscripts. Authors can record claims,
+passage-to-claim evidence relations and authorial decisions, with full native revision history.
+It does not implement the entire [RFC](README.md).
 
-| Available in `v1.16.0` | Not implemented |
+| Available in `v1.17.0` | Not implemented |
 | --- | --- |
 | Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
-| SQLite/FTS5 lexical search, instant index rebuild | PDF/OCR, Zotero, network imports, archive exchange |
+| SQLite/FTS5 lexical search, instant index rebuild | Zotero, network imports |
 | Local text / Markdown input, original bytes retained | Multi-tenant team services, cloud hosting |
-| Versioned source criticism context & core analysis adapter | Automated factual proof or rewriting prose |
-| Controlled withdrawal & physical purge with dry-run preview | Ambient configuration discovery |
-| Read-only HTML source dashboard with localized context | Ambient manuscript detection |
-| Integrity audit and snapshot conflict detection | External web scrapers |
-| Source listing & tagging (`lixity research sources`) | Full-document OCR |
-| Dossier creation & inspection (`lixity research dossier`) | |
+| PDF ingestion with self-hosted Baidu Unlimited-OCR boundary | Automated factual proof or rewriting prose |
+| Safe Markdown & offline SVG diagram rendering (flowcharts, sequence) | Ambient configuration discovery |
+| BagIt-style archive export and restore with cryptographic verification | Ambient manuscript detection |
+| Native revisions for dossiers, claims, evidence links & decisions | External web scrapers |
+| Versioned source criticism context & core analysis adapter | |
+| Controlled withdrawal & physical purge with dry-run preview | |
+| Read-only HTML source dashboard with localized context | |
+| Integrity audit and snapshot conflict detection | |
+| Source listing & tagging (`lixity research sources`) | |
+| Dossier creation, editing & history (`lixity research dossier`) | |
 | User-recorded claims & scope (`lixity research claim`) | |
 | Evidence linking with relations (`lixity research link-evidence`) | |
 | Authorial decisions & fact deviations (`lixity research decision`) | |
@@ -280,6 +284,36 @@ running. Restore it to an explicit project root, run `audit`, then `reindex`.
 Never restore only SQLite. Do not commit private source text to a public
 repository: both blobs and passage records contain it.
 
+## Export and restoration
+
+Lixity provides explicit commands to package and restore authoritative research stores
+with cryptographic checksum verification:
+
+```sh
+lixity research export --project ./novel --output ./backup-novel.tar.gz
+lixity research restore --from ./backup-novel.tar.gz --to ./restored-novel
+```
+
+The archive packages all accepted records, revisions, snapshot manifests,
+original source blobs, and project configuration into a gzip-compressed tar archive.
+It includes an explicit `EXPORT_MANIFEST.json` with SHA-256 digests and byte
+lengths for every file. Disposable search indexes (`catalogue.sqlite3`) and lock
+files are excluded.
+
+Restoration requires a clean target directory (it refuses to overwrite an
+existing research store or non-empty project directory). Before placing the store,
+restoration verifies:
+1. Member path safety (rejects path traversal, absolute paths, symlinks, and device nodes).
+2. SHA-256 checksum and byte length of every extracted file against `EXPORT_MANIFEST.json`.
+3. Snapshot rules, contiguous revision histories, and project identities.
+4. Moves the verified store into place atomically.
+
+After restoring, audit and rebuild the search index:
+```sh
+lixity research audit --project ./restored-novel
+lixity research reindex --project ./restored-novel
+```
+
 Writes use an OS lock, immutable publication and atomic HEAD replacement.
 Uncommitted objects left after interruption are ignored, not selected by date.
 Locks release when the process exits. A stale expected HEAD fails rather than
@@ -292,9 +326,26 @@ accepted snapshot, the next save preserves its bytes under a content-addressed
 `.unpublished` filename in that revision directory before retrying. It is a
 recovery artifact, not an accepted revision or an automatic merge. Accepted
 history is never replaced; malformed or foreign files stop the save.
-Power-loss guarantees remain filesystem/platform-specific, not certified by the
-interruption tests. Use a local filesystem, not a shared drive. Internal symlinks
-are rejected; a project directory is not a hostile multiuser sandbox.
+## Self-hosted PDF and OCR extraction
+
+Lixity supports ingesting PDF documents with content-addressed retention of the original PDF bytes alongside extracted plain text:
+
+```bash
+lixity research ingest --project ./novel --file ./document.pdf --allow-retention
+```
+
+The extraction boundary operates in self-hosted, offline environments:
+- **Reproducibility pins**: Baidu Unlimited-OCR model snapshot `07dea832e22aefee32ad281d4b80551282e1c168` and integration recipe revision `d49ff64afffc1f47ab563dc1c589bc2f78808fa4` (recipe date 2026-07-29).
+- **Architecture**: Dual-blob retention where `SourceVersion.blob` stores the bit-exact PDF (`application/pdf`) and `Extraction.text_blob` stores UTF-8 text (`text/plain`). Passages reference exact character spans into the text blob.
+- **Physical page rastering**: Uses local `pdftoppm` to map 1:1 physical page numbers with SHA-256 image checksums.
+- **Worker boundary**: Configurable via `LIXITY_OCR_WORKER` or local text-layer extraction fallback via `pdftotext`. Heavy machine learning frameworks remain completely isolated from Lixity's lightweight runtime.
+
+## Safe Markdown and offline diagram rendering
+
+Dossier body text supports a safe Markdown subset and offline SVG diagram rendering directly in the browser without external dependencies, CDNs, or network access:
+- **Safe Markdown**: Paragraphs, headings (h1–h6), bold, italic, blockquotes, ordered/unordered lists, code spans, code blocks, and GFM tables. Raw HTML is strictly escaped to prevent cross-site scripting (XSS).
+- **Offline diagrams**: Fenced code blocks with `mermaid` syntax are parsed and converted to native inline SVGs by Lixity's built-in vector generator. Supported types include flowcharts (`graph TD`, `graph LR`) and sequence diagrams (`sequenceDiagram`).
+- **Source inspectability**: Any rendered diagram provides a collapsible "Show diagram source" control to view the raw specification.
 
 ## Limits
 

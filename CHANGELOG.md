@@ -5,7 +5,7 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [Unreleased]
+## [1.17.0] – 2026-09-26
 
 ### Added
 
@@ -17,6 +17,53 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Notices when explicitly cited source passages have a newer capture. Existing
   quotations and authored text remain pinned; evidence links show when they
   refer to an earlier claim revision.
+- Offline SVG diagram rendering for dossier bodies: client-side vector diagram
+  generator rendering Mermaid flowcharts (`graph TD/LR`) and sequence diagrams
+  (`sequenceDiagram`) into responsive SVGs without network requests, CDNs, or
+  external runtime libraries. Includes inspectable source toggles and localized
+  labels across all seven supported languages.
+- Self-hosted Baidu Unlimited-OCR extraction boundary: support for PDF document
+  ingestion (`lixity research ingest --file document.pdf`) with dual-blob
+  content-addressed storage (original PDF bytes + extracted plain text). Pinned
+  to official model snapshot `07dea832e22aefee32ad281d4b80551282e1c168` and
+  integration recipe revision `d49ff64afffc1f47ab563dc1c589bc2f78808fa4`.
+  Includes 1:1 physical page rastering via `pdftoppm` with SHA-256 digests,
+  configurable `LIXITY_OCR_WORKER` sub-process execution, and local `pdftotext`
+  extraction fallback.
+- Export and restoration for the research archive: `lixity research export`
+  packages HEAD, manifests, revision records, blobs and project.json into a
+  verified tar.gz with a per-file checksum manifest. `lixity research restore`
+  validates the archive and extracts it to a new directory, refusing to
+  overwrite an existing project. Disposable search indexes are rebuilt
+  separately. The acceptance criterion is a full round trip: export, restore,
+  audit, rebuild search, and resolve citations with the same identities and
+  verbatim text. Does not introduce a separate archive format; reuses the
+  existing storage layout.
+- Safe Markdown rendering in dossier detail and history views: headings,
+  paragraphs, bold, italic, code blocks, lists, blockquotes, tables and safe
+  links rendered client-side from a minimal self-contained renderer with no
+  new runtime dependencies. HTML passthrough is disabled. `javascript:` and
+  `data:` URIs are suppressed. `lixity:` internal links render as inert code
+  spans. A 'Show source' toggle exposes the raw text.
+- Property-based tests (Hypothesis `RuleBasedStateMachine`) for
+  content-addressable storage invariants: encode determinism, round-trip
+  fidelity, snapshot immutability, and contiguous revision history under
+  arbitrary commit sequences.
+- Mutmut configuration targeting the repository and revision modules for
+  mutation testing of data-integrity paths.
+
+### Fixed
+
+- **Purge atomicity**: orphaned record files and blobs are now deleted only
+  *after* HEAD has been atomically rotated to the new snapshot. Previously,
+  a crash or signal between the unlink calls and `replace_head` could leave
+  the archive in a permanently unreadable state. After this fix, an interrupted
+  deletion leaves unreferenced-but-harmless files (recovery: re-run purge);
+  an interrupted HEAD rotation leaves the old snapshot fully intact.
+- **Evidence-ID deduplication**: `create_dossier` now deduplicates passage
+  IDs using `dict.fromkeys`, matching the existing `revise_record` behaviour.
+  Duplicate evidence references in a single dossier creation call no longer
+  produce multiple identical `evidence_refs` entries.
 
 ### Compatibility
 
@@ -903,7 +950,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.16.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.17.0...HEAD
+[1.17.0]: https://github.com/mfahsold/lixity/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/mfahsold/lixity/compare/v1.15.0...v1.16.0
 [1.15.0]: https://github.com/mfahsold/lixity/compare/v1.14.0...v1.15.0
 [1.14.0]: https://github.com/mfahsold/lixity/compare/v1.13.0...v1.14.0

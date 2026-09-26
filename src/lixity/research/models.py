@@ -34,8 +34,8 @@ class Reference(StrictModel):
 
 class Blob(StrictModel):
     sha256: Digest
-    byte_length: Annotated[int, Field(ge=0, le=2 * 1024 * 1024)]
-    media_type: Literal["text/plain"] = "text/plain"
+    byte_length: Annotated[int, Field(ge=0, le=50 * 1024 * 1024)]
+    media_type: Literal["text/plain", "application/pdf", "image/png", "image/jpeg"] = "text/plain"
 
 
 class Record(StrictModel):
@@ -127,9 +127,9 @@ class SourceVersion(Record):
 class Activity(Record):
     kind: Literal["activity"] = "activity"
     source_version_ref: Reference
-    operation: Literal["extract_utf8"] = "extract_utf8"
-    implementation: Literal["utf8-paragraphs/1"] = "utf8-paragraphs/1"
-    status: Literal["succeeded"] = "succeeded"
+    operation: Literal["extract_utf8", "extract_ocr"] = "extract_utf8"
+    implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1"] = "utf8-paragraphs/1"
+    status: Literal["succeeded", "failed"] = "succeeded"
 
 
 class Extraction(Record):

@@ -11,7 +11,7 @@ against the manuscript's own style, then inspect the passages behind each signal
 
 Python 3.10+ · Seven language profiles · No cloud calls.
 
-The experimental local research workspace is included in `v1.16.0`.
+The experimental local research workspace is included in `v1.17.0`.
 
 **Free only for non-commercial projects.** Using Lixity for a book intended
 for sale—including self-publishing—requires a separate written commercial
@@ -166,12 +166,12 @@ Install from GitHub into an isolated CLI environment. Requires Git and
 Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.16.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.17.0"
 lixity --version
 lixity about
 ```
 
-This installs **v1.16.0**, including the experimental local research pilot.
+This installs **v1.17.0**, including the experimental local research pilot.
 The tag stays pinned: upgrading to a future release requires selecting
 its tag explicitly. Use `@main` only for development builds, or a reviewed
 full commit hash for reproducible deployments.
@@ -254,24 +254,26 @@ Full command reference, metric glossary, worked example, and troubleshooting:
 [`docs/AGENTS.md`](docs/AGENTS.md). Project website:
 [mfahsold.github.io/lixity](https://mfahsold.github.io/lixity/).
 
-## What's new in v1.16.0
+## What's new in v1.17.0
 
-**v1.16.0** adds the experimental local research workspace and completes the
-research-panel workflow. Read the [release notes](docs/releases/v1.16.0.md)
-for scope, compatibility, and limits.
+**v1.17.0** introduces native research editing with immutable revisions,
+self-hosted OCR extraction, offline diagram rendering, and cryptographic archive export/restoration.
+Read the [release notes](docs/releases/v1.17.0.md) for scope, compatibility, and limits.
 
-- **Local research archive:** explicitly select a project, retain permitted
-  UTF-8 source bytes, verify exact passage citations, and search a disposable
-  SQLite FTS5 index. Research remains an experimental API, separate from analysis.
-- **Connected author workflow:** inspect source and dossier details in the
-  server UI, select passages directly from search for claims or dossiers,
-  associate claims with dossiers, and record decisions without certifying facts.
-- **Evidence lifecycle:** withdrawal removes a source from active search;
-  purge deletes unshared retained bytes while linked authored records show
-  unavailable citations without deleted quotations.
-- **Consistent boundaries:** opening an existing project restores its archive
-  and project settings. The seven-language interface is available throughout
-  the workspace; English and German still have the deepest linguistic cores.
+- **Native editing & immutable revisions:** edit dossiers, claims, evidence links, and authorial
+  decisions directly in the web UI and CLI. Corrections and supersessions preserve logical IDs
+  and historical citations; concurrent edits are protected against stale overwrites.
+- **Self-hosted Baidu Unlimited-OCR boundary:** ingest PDF documents with dual-blob retention
+  (original PDF bytes + extracted plain text). Pinned to official model snapshot `07dea832e22aefee32ad281d4b80551282e1c168`
+  and recipe revision `d49ff64afffc1f47ab563dc1c589bc2f78808fa4`, with physical page mapping via `pdftoppm`
+  and isolated worker execution.
+- **Safe Markdown & offline diagram rendering:** dossier bodies render headings, tables, blockquotes,
+  and lists safely. Fenced Mermaid code blocks (`graph TD/LR`, `sequenceDiagram`) render as native inline SVGs
+  entirely client-side without external network requests or CDNs, complete with inspectable source toggles.
+- **BagIt-style archive export and restore:** package research archives with SHA-256 manifests via
+  `lixity research export` and restore into clean target directories via `lixity research restore` with full round-trip verification.
+- **Interrupted-save recovery & purge safety:** unaccepted drafts in numbered slots are safely quarantined as
+  `.unpublished` recovery artifacts before retrying; orphan blobs during purge are deleted only after HEAD rotation.
 
 The engine produces offline analysis and HTML, and `lixity serve` provides a
 local project and experimental research workspace. Publication workflows and
@@ -279,11 +281,11 @@ encrypted NDA storage belong to project adapters; Lixity is not a hosted service
 
 ## Architecture and project adapters
 
-The experimental [local research workspace](docs/research/USAGE.md) in `v1.16.0` archives UTF-8 sources,
+The experimental [local research workspace](docs/research/USAGE.md) in `v1.17.0` archives UTF-8 sources and PDFs,
 attaches versioned source criticism context and tags, resolves exact citations, connects to the
 analysis pipeline, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, supports controlled withdrawal and purge, and compares
-vocabulary grounding against literary manuscripts. OCR pipelines and hybrid vector search remain in the
+vocabulary grounding against literary manuscripts. Embeddings and hybrid vector search remain in the
 [target architecture](docs/research/README.md).
 
 CLI commands and the Python API share `lixity.pipeline`: language resolution,
@@ -361,8 +363,8 @@ He walked to the window and watches the rain falling outside.
 
 Historical novels, investigative non-fiction, and scholarly manuscripts benefit
 from a traceable connection between archived source text, context, and author
-notes. The experimental research pilot ([`docs/research/USAGE.md`](docs/research/USAGE.md),
-included in `v1.16.0`) provides a local
+notes. The experimental research workspace ([`docs/research/USAGE.md`](docs/research/USAGE.md),
+included in `v1.17.0`) provides a local
 archive separate from narrative manuscripts.
 
 ### Untrusted Evidence vs. Narrative Invention

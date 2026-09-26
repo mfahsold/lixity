@@ -326,7 +326,8 @@ server.serve_forever()
     await page.locator(`[data-research-revise=dossier][data-record-id="${dossierId}"]`).click();
     await expect(field('body')).toHaveValue(/End of synthetic dossier\./);
     await field('title').fill('Revised synthetic dossier');
-    await field('body').fill('A revised note with <img src=x onerror=alert(1)> as inert text.');
+    const revisedBody = 'A revised note with **important bold** and <img src=x onerror=alert(1)> as inert text.\n\n| Year | Event |\n| :--- | :--- |\n| 1924 | Opening |\n\n```mermaid\ngraph TD\n  A[Start] --> B[Finish]\n```\n\n[internal](lixity:dossier/test-ref) and [bad](javascript:alert(1))';
+    await field('body').fill(revisedBody);
     await chooseChange();
     assert.ok((await field('body').boundingBox()).height >= 150, 'Dossier body editor must have usable height');
     assert.ok((await page.locator('#research-revision-reason').boundingBox()).height >= 65, 'Revision reason must have usable height');
@@ -346,6 +347,18 @@ server.serve_forever()
     await page.locator('[data-research-revision="2"]').click();
     await expect(page.locator('#research-revision-history-detail')).toContainText('<img src=x onerror=alert(1)>');
     assert.equal(await page.locator('#research-revision-history-detail img').count(), 0);
+    await expect(page.locator('#research-revision-history-detail strong')).toContainText('important bold');
+    await expect(page.locator('#research-revision-history-detail table.research-table')).toBeVisible();
+    await expect(page.locator('#research-revision-history-detail svg.research-diagram')).toBeVisible();
+    await expect(page.locator('#research-revision-history-detail .rd-node text')).toContainText(['Start', 'Finish']);
+    await expect(page.locator('#research-revision-history-detail code.lixity-ref')).toContainText('internal (dossier/test-ref)');
+    assert.equal(await page.locator('#research-revision-history-detail a[href*="javascript"]').count(), 0);
+    await page.locator('#research-revision-history-detail [data-source-toggle]').click();
+    await expect(page.locator('#research-revision-history-detail .research-dossier-body-source')).toBeVisible();
+    await expect(page.locator('#research-revision-history-detail .research-dossier-body-rendered')).toBeHidden();
+    await page.locator('#research-revision-history-detail [data-source-toggle]').click();
+    await expect(page.locator('#research-revision-history-detail .research-dossier-body-source')).toBeHidden();
+    await expect(page.locator('#research-revision-history-detail .research-dossier-body-rendered')).toBeVisible();
     await page.keyboard.press('Escape');
 
     // Stale drafts and failed requests remain editable, with an explicit reload.
@@ -452,7 +465,7 @@ server.serve_forever()
     await page.locator(`[data-research-revise=dossier][data-record-id="${dossierId}"]`).click();
     await expect(page.locator('#research-revision-source-updates')).toBeVisible();
     await expect(page.locator('#research-revision-source-updates')).toContainText('Synthetic source');
-    await expect(field('body')).toHaveValue('A revised note with <img src=x onerror=alert(1)> as inert text.');
+    await expect(field('body')).toHaveValue(revisedBody);
     await page.setViewportSize({width: 390, height: 844});
     assert.ok(await revisionDialog.evaluate(element => element.scrollWidth <= element.clientWidth));
     await revisionDialog.screenshot({path: path.join(artifacts, 'revision-dossier-mobile.png')});

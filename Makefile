@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint typecheck check build screenshots clean
+.PHONY: help install install-dev test lint typecheck check build screenshots clean docs-check docs-sync
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -39,6 +39,13 @@ build: ## Build sdist + wheel into dist/
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	$(PYTHON) scripts/make_screenshots.py
+
+docs-check: ## Check documentation version consistency and link integrity
+	$(PYTHON) scripts/sync_docs.py --check
+	PYTHONPATH=src $(VPY) -m pytest tests/test_documentation.py -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
+
+docs-sync: ## Synchronize documentation version references to match __version__
+	$(PYTHON) scripts/sync_docs.py
 
 clean: ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info src/*.egg-info .pytest_cache .mypy_cache \

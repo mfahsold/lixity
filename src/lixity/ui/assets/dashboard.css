@@ -1671,3 +1671,97 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
     border-bottom-color: var(--accent);
   }
 }
+
+/* Safe Markdown Prose Rendering in Dossiers & History */
+.research-dossier-body-wrap { margin: 0.5rem 0 1rem; }
+.research-prose-bar { display: flex; justify-content: flex-end; margin-bottom: 0.35rem; }
+.research-source-toggle { font-size: 0.72rem; padding: 0.2rem 0.5rem; }
+.research-dossier-body-source {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  font-size: 0.82rem;
+  max-height: 25rem;
+  overflow-y: auto;
+}
+.research-prose {
+  line-height: 1.6;
+  font-size: 0.88rem;
+  color: var(--fg);
+  overflow-wrap: break-word;
+}
+.research-prose h1, .research-prose h2, .research-prose h3,
+.research-prose h4, .research-prose h5, .research-prose h6 {
+  margin: 1rem 0 0.4rem;
+  line-height: 1.3;
+  color: var(--fg);
+}
+.research-prose h1 { font-size: 1.25rem; }
+.research-prose h2 { font-size: 1.12rem; }
+.research-prose h3 { font-size: 1.02rem; }
+.research-prose p { margin: 0 0 0.7rem; }
+.research-prose ul, .research-prose ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
+.research-prose li { margin-bottom: 0.25rem; }
+.research-prose blockquote {
+  margin: 0.7rem 0;
+  padding: 0.4rem 0.8rem;
+  border-left: 3px solid var(--accent);
+  background: var(--bg);
+  border-radius: 0 var(--radius) var(--radius) 0;
+}
+.research-prose pre {
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.6rem 0.8rem;
+  overflow-x: auto;
+  font-size: 0.82rem;
+}
+.research-prose code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.85em;
+  background: var(--bg);
+  padding: 0.15rem 0.3rem;
+  border-radius: 3px;
+  border: 1px solid var(--line);
+}
+.research-prose pre code { border: none; padding: 0; background: none; }
+.research-prose hr { border: none; border-top: 1px solid var(--line); margin: 1rem 0; }
+.research-prose .table-wrap { width: 100%; overflow-x: auto; margin: 0.8rem 0; }
+.research-table { width: 100%; border-collapse: collapse; font-size: 0.84rem; }
+.research-table th, .research-table td { padding: 0.4rem 0.65rem; border: 1px solid var(--line); }
+.research-table th { background: var(--bg); font-weight: 600; }
+.research-prose .lixity-ref {
+  display: inline-block;
+  color: var(--accent);
+  border-color: var(--accent-light);
+  background: var(--bg);
+}
+
+/* Offline Diagrams */
+.research-diagram-wrap {
+  margin: 1rem 0;
+  overflow-x: auto;
+  text-align: center;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 1rem 0.5rem;
+}
+.research-diagram {
+  max-width: 100%;
+  height: auto;
+  display: inline-block;
+  vertical-align: middle;
+}
+.research-diagram text { font-family: inherit; }
+.research-diagram-note {
+  font-size: 0.72rem;
+  color: var(--muted);
+  text-align: left;
+  margin-bottom: 0.35rem;
+  padding: 0 0.5rem;
+}

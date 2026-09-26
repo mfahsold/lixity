@@ -10,6 +10,12 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from . import catalogue
+from .archive import (
+    export_archive as export_archive,
+)
+from .archive import (
+    restore_archive as restore_archive,
+)
 from .models import (
     ENTITY,
     Activity,
@@ -31,6 +37,9 @@ from .models import (
     Tombstone,
     reference,
 )
+from .ocr import (
+    extract_pdf_document,
+)
 from .repository import Repository, ResearchError, digest
 from .revisions import (
     get_record as get_record,
@@ -47,6 +56,7 @@ from .revisions import (
 )
 
 MAX_SOURCE_BYTES = 2 * 1024 * 1024
+MAX_PDF_BYTES = 50 * 1024 * 1024
 
 
 def envelope(project_id: str, actor: str) -> dict[str, Any]:
@@ -75,20 +85,50 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     repository = Repository(project)
     snapshot = repository.snapshot()
     path = Path(file).expanduser()
+    is_pdf = path.suffix.lower() == ".pdf"
     if not path.is_file():
-        raise ResearchError("Source must be a local UTF-8 text file")
-    with path.open("rb") as stream:
-        content = stream.read(MAX_SOURCE_BYTES + 1)
-    if not content or len(content) > MAX_SOURCE_BYTES or b"\x00" in content:
-        raise ResearchError("Source must be nonempty text of at most 2 MiB, without NUL bytes")
-    try:
-        text = content.decode("utf-8")
-    except UnicodeDecodeError:
-        raise ResearchError("Only UTF-8 text is supported; PDF/OCR is not implemented") from None
-    spans = [(match.start(), match.start() + len(match.group().rstrip()))
-             for match in re.finditer(r"\S.*?(?=\n\s*\n|\Z)", text, re.DOTALL)]
-    if not spans or len(spans) > 5000:
-        raise ResearchError("Source must contain between 1 and 5000 nonempty paragraphs")
+        raise ResearchError("Source must be a local UTF-8 text file" if not is_pdf else "Source must be a local PDF file")
+
+    blobs_to_commit: dict[str, bytes] = {}
+    if is_pdf:
+        with path.open("rb") as stream:
+            content = stream.read(MAX_PDF_BYTES + 1)
+        if not content or len(content) > MAX_PDF_BYTES:
+            raise ResearchError("PDF source must be nonempty and at most 50 MiB")
+        ocr_res = extract_pdf_document(path)
+        text = ocr_res.full_text
+        spans = ocr_res.spans
+        if not spans or len(spans) > 5000:
+            raise ResearchError("Source must contain between 1 and 5000 nonempty paragraphs")
+        operation: Literal["extract_utf8", "extract_ocr"] = "extract_ocr"
+        implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1"] = "baidu-unlimited-ocr/1"
+        source_checksum = digest(content)
+        text_bytes = text.encode("utf-8")
+        text_checksum = digest(text_bytes)
+        source_blob = Blob(sha256=source_checksum, byte_length=len(content), media_type="application/pdf")
+        text_blob = Blob(sha256=text_checksum, byte_length=len(text_bytes), media_type="text/plain")
+        blobs_to_commit[source_checksum] = content
+        blobs_to_commit[text_checksum] = text_bytes
+    else:
+        with path.open("rb") as stream:
+            content = stream.read(MAX_SOURCE_BYTES + 1)
+        if not content or len(content) > MAX_SOURCE_BYTES or b"\x00" in content:
+            raise ResearchError("Source must be nonempty text of at most 2 MiB, without NUL bytes")
+        try:
+            text = content.decode("utf-8")
+        except UnicodeDecodeError:
+            raise ResearchError("Only UTF-8 text is supported; PDF/OCR is not implemented") from None
+        spans = [(match.start(), match.start() + len(match.group().rstrip()))
+                 for match in re.finditer(r"\S.*?(?=\n\s*\n|\Z)", text, re.DOTALL)]
+        if not spans or len(spans) > 5000:
+            raise ResearchError("Source must contain between 1 and 5000 nonempty paragraphs")
+        operation = "extract_utf8"
+        implementation = "utf8-paragraphs/1"
+        source_checksum = digest(content)
+        source_blob = Blob(sha256=source_checksum, byte_length=len(content), media_type="text/plain")
+        text_blob = source_blob
+        blobs_to_commit[source_checksum] = content
+
     records: list[Entity] = []
     if source_id:
         source = snapshot.get(Reference(id=source_id), Source)
@@ -99,24 +139,25 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
         values.update(title=title or path.name, language=language or snapshot.project.language)
         source = Source.model_validate(values)
         records.append(source)
-    checksum = digest(content)
+
     versions = [record for record in snapshot.records.values()
                 if isinstance(record, SourceVersion) and record.source_ref.id == source.id]
     latest = max(versions, key=lambda record: record.sequence) if versions else None
     source_context = (SourceContext.model_validate(dict(context)) if context is not None
                       else latest.context if latest else SourceContext())
-    if latest is not None and latest.blob.sha256 == checksum and latest.context == source_context:
+    if latest is not None and latest.blob.sha256 == source_checksum and latest.context == source_context:
         repository.read_blob(latest.blob)
         return {"schema_version": "research-ingest-local/1", "source_id": source.id,
                 "source_version_id": latest.id, "snapshot": snapshot.digest,
                 "unchanged": True, "dry_run": dry_run, "passages": len(spans)}
-    descriptor = Blob(sha256=checksum, byte_length=len(content))
+
     version = SourceVersion(**envelope(snapshot.project.id, actor), source_ref=reference(source),
-                            sequence=latest.sequence + 1 if latest else 1, blob=descriptor,
+                            sequence=latest.sequence + 1 if latest else 1, blob=source_blob,
                             retention_confirmed=True, context=source_context)
-    activity = Activity(**envelope(snapshot.project.id, actor), source_version_ref=reference(version))
+    activity = Activity(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),
+                        operation=operation, implementation=implementation, status="succeeded")
     extraction = Extraction(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),
-                            activity_ref=reference(activity), text_blob=descriptor)
+                            activity_ref=reference(activity), text_blob=text_blob)
     records.extend([version, activity, extraction])
     for start, end in spans:
         records.append(Passage(**envelope(snapshot.project.id, actor), extraction_ref=reference(extraction),
@@ -124,7 +165,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
               "source_version_id": version.id, "unchanged": False,
               "passages": len(spans), "dry_run": dry_run}
-    result["snapshot"] = snapshot.digest if dry_run else repository.commit(records, {checksum: content}, snapshot).digest
+    result["snapshot"] = snapshot.digest if dry_run else repository.commit(records, blobs_to_commit, snapshot).digest
     return result
 
 
@@ -157,10 +198,14 @@ def audit(project: str | Path) -> dict[str, Any]:
             if isinstance(record, SourceVersion) and record.blob.sha256 not in checked:
                 repository.read_blob(record.blob)
                 checked.add(record.blob.sha256)
+            elif isinstance(record, Extraction) and record.text_blob.sha256 not in checked:
+                repository.read_blob(record.text_blob)
+                checked.add(record.text_blob.sha256)
             elif isinstance(record, Passage):
                 repository.quote(snapshot, record)
-    except (OSError, ResearchError, ValidationError, UnicodeDecodeError):
-        errors.append("Research integrity check failed: missing, invalid or modified records/bytes")
+    except (OSError, ResearchError, ValidationError, UnicodeDecodeError) as exc:
+        msg = str(exc).strip()
+        errors.append(f"Research integrity check failed: {msg}" if msg else "Research integrity check failed: missing, invalid or modified records/bytes")
     return {"schema_version": "research-audit-local/1", "ok": not errors,
             "snapshot": head, "records": count, "errors": errors,
             "scope": "retained source records and citations; not factual accuracy or index freshness"}
@@ -530,7 +575,7 @@ def create_dossier(
     if not (1 <= len(title) <= 500):
         raise ResearchError("Dossier title must be between 1 and 500 characters")
 
-    evidence_refs = [Reference(id=eid) for eid in (evidence_ids or [])]
+    evidence_refs = [Reference(id=eid) for eid in dict.fromkeys(evidence_ids or [])]
     for ref in evidence_refs:
         snapshot.get(ref, Passage)
 
@@ -778,13 +823,15 @@ def list_evidence_links(project: str | Path, *, claim_id: str | None = None) -> 
         if claim_id and record.claim_ref.id != claim_id:
             continue
 
-        citation = _resolve_evidence_citation(repository, snapshot, record.passage_ref)
+        claim_latest = snapshot.records.get(record.claim_ref.id)
+        claim_latest_revision = claim_latest.revision if isinstance(claim_latest, Claim) else record.claim_ref.revision
+        citation = resolve_evidence_citation(repository, snapshot, record.passage_ref)
         links_list.append({
             "id": record.id,
             "revision": record.revision,
             "claim_id": record.claim_ref.id,
             "claim_revision": record.claim_ref.revision,
-            "claim_latest_revision": snapshot.latest(record.claim_ref.id, Claim).revision,
+            "claim_latest_revision": claim_latest_revision,
             "passage_id": record.passage_ref.id,
             "relation": record.relation,
             "rationale": record.rationale,

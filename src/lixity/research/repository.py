@@ -271,8 +271,12 @@ class Repository:
             elif isinstance(record, Extraction):
                 version = snapshot.get(record.source_version_ref, SourceVersion)
                 activity = snapshot.get(record.activity_ref, Activity)
-                if activity.source_version_ref != record.source_version_ref or version.blob != record.text_blob:
+                if activity.source_version_ref != record.source_version_ref:
                     raise ResearchError("Extraction provenance does not match source bytes")
+                if activity.operation == "extract_utf8" and version.blob != record.text_blob:
+                    raise ResearchError("Extraction provenance does not match source bytes")
+                if descriptors.setdefault(record.text_blob.sha256, record.text_blob) != record.text_blob:
+                    raise ResearchError("Inconsistent descriptors for the same blob")
             elif isinstance(record, Passage):
                 snapshot.get(record.extraction_ref, Extraction)
             elif isinstance(record, Dossier):
@@ -424,19 +428,6 @@ class Repository:
                         created_paths.append(path)
                     publish(path, encode(record))
 
-                if removals and current:
-                    for entry in current.manifest.entries:
-                        if entry.ref.id in removals:
-                            rec_path = self.record_path(entry)
-                            if rec_path.exists():
-                                rec_path.unlink()
-
-                if delete_blobs:
-                    for blob_sha in delete_blobs:
-                        blob_path = self.safe(self.data / "blobs" / blob_sha)
-                        if blob_path.exists():
-                            blob_path.unlink()
-
                 publish(self.safe(self.data / "project.json"), encode(project))
                 publish(self.safe(self.data / "manifests" / f"{candidate.digest}.json"), manifest_bytes)
                 replace_head(self.safe(self.data / "HEAD.json"), encode(Head(sha256=candidate.digest)))
@@ -453,6 +444,22 @@ class Repository:
                             with suppress(OSError):
                                 path.unlink(missing_ok=True)
                 raise
+
+            # Orphan deletion and cache invalidation happen only after HEAD has been
+            # atomically rotated. A crash here leaves unreferenced but harmless files;
+            # a crash before replace_head leaves the old, fully consistent archive intact.
+            if removals and current:
+                for entry in current.manifest.entries:
+                    if entry.ref.id in removals:
+                        rec_path = self.record_path(entry)
+                        with suppress(OSError):
+                            rec_path.unlink(missing_ok=True)
+
+            if delete_blobs:
+                for blob_sha in delete_blobs:
+                    blob_path = self.safe(self.data / "blobs" / blob_sha)
+                    with suppress(OSError):
+                        blob_path.unlink(missing_ok=True)
 
             if removals:
                 cache_db = self.safe(self.cache / "catalogue.sqlite3")

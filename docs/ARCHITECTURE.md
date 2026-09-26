@@ -1,16 +1,17 @@
 # Architecture and integration boundaries
 
-This document describes Lixity `1.16.0`. The shared pipeline and explicit
+This document describes Lixity `1.17.0`. The shared pipeline and explicit
 API threshold mappings were introduced in 1.15.0; the integrated local
-project/research workflows described here require 1.16.0.
+project/research workflows described here require 1.16.0+, with native editing,
+self-hosted OCR boundary, offline diagrams, and verified export/restoration in 1.17.0.
 
-Experimental extension included in `1.16.0`: [local research pilot](research/USAGE.md).
-`lixity.research` owns explicit-project ingestion, immutable snapshots, exact
-citations and a rebuildable SQLite/FTS5 index. It does not import into
+Experimental extension included in `1.17.0`: [local research workspace](research/USAGE.md).
+`lixity.research` owns explicit-project ingestion (UTF-8 text and PDFs), immutable snapshots,
+exact citations, BagIt-style export/restoration, and a rebuildable SQLite/FTS5 index. It does not import into
 `lixity.pipeline`. Existing analyze/profile v2 and style v4 remain unchanged.
-The pilot also stores dossiers, claims, evidence links and author decisions.
+The workspace also stores dossiers, claims, evidence links and author decisions with full native revision history.
 The [research RFC](research/README.md) additionally specifies review workflows,
-manuscript anchors, OCR and hybrid search; those are not current dependencies.
+manuscript anchors, and hybrid vector search; those are not current dependencies.
 
 ## Layers
 

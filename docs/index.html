@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Lixity – Quantitative Text Linguistics, Computational Stylometry &amp; Research Workspace</title>
-<meta name="description" content="Lixity analyzes Markdown manuscripts offline with sentence rhythm, lexical diversity, tense profiles and within-manuscript style references. Version 1.16.0 includes an experimental explicit-project research archive."/>
+<meta name="description" content="Lixity analyzes Markdown manuscripts offline with sentence rhythm, lexical diversity, tense profiles and within-manuscript style references. Version 1.17.0 includes an explicit-project research workspace."/>
 <meta name="keywords" content="computational stylometry, quantitative text linguistics, literary manuscript analysis, research workspace, source criticism, evidence chain, sentence rhythm, lexical diversity, HD-D, Yules K, readability index, Flesch Amstad, LIX, tense profiling, style reference, Benjamini-Hochberg FDR, PELT changepoint, macro editing, offline text analytics, digital humanities, editorial software"/>
 <meta name="robots" content="index, follow"/>
 <meta name="author" content="Matthias Fahsold"/>
@@ -22,7 +22,7 @@
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity – Quantitative Text Linguistics, Stylometry &amp; Research Workspace"/>
-<meta property="og:description" content="Offline manuscript analysis with style references and tense dynamics, plus an experimental explicit-project research archive in v1.16.0."/>
+<meta property="og:description" content="Offline manuscript analysis with style references and tense dynamics, plus an explicit-project research archive in v1.17.0."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="1480"/>
@@ -35,7 +35,7 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Research Workspace"/>
-<meta name="twitter:description" content="Offline manuscript analysis with an experimental local research pilot in v1.16.0."/>
+<meta name="twitter:description" content="Offline manuscript analysis with a local research workspace in v1.17.0."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
 
@@ -53,7 +53,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Linguistic & Stylometric Analysis",
       "operatingSystem": "Linux, macOS, Windows",
-      "softwareVersion": "1.16.0",
+      "softwareVersion": "1.17.0",
       "isAccessibleForFree": true,
       "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
       "codeRepository": "https://github.com/mfahsold/lixity",
@@ -866,7 +866,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
     <a href="#" class="brand">
       <div class="brand-logo">L</div>
       <span class="brand-name">Lixity</span>
-      <span class="brand-badge">v1.16.0</span>
+      <span class="brand-badge">v1.17.0</span>
     </a>
     <nav class="site-nav">
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md" target="_blank" rel="noopener">Onboarding Guide</a>
@@ -889,13 +889,13 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
   <section class="hero">
     <div class="eyebrow-pill">
       <span class="dot"></span>
-      <span>v1.16.0 &middot; Experimental Local Research Pilot</span>
+      <span>v1.17.0 &middot; Research Workspace &amp; Offline Stylometry</span>
     </div>
     <h1 class="hero-title">
       Manuscript Analysis &amp; <span class="gradient">Local Research</span>
     </h1>
     <p class="hero-sub">
-      Lixity turns Markdown manuscripts into an offline analysis workspace. Compare chapters against patterns in the same manuscript and inspect sentence rhythm and tense signals in context. Version 1.16.0 adds a separate experimental local archive for source passages and author notes.
+      Lixity turns Markdown manuscripts into an offline analysis workspace. Compare chapters against patterns in the same manuscript and inspect sentence rhythm and tense signals in context. Version 1.17.0 adds native research editing, self-hosted OCR, and offline diagram rendering.
     </p>
     <div class="hero-cta">
       <a class="btn primary" href="https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md" target="_blank" rel="noopener">
@@ -928,7 +928,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
     <div class="section-header">
       <span class="section-tag">Architecture &amp; Foundations</span>
       <h2 class="section-title">The 5 Core Pillars of Lixity</h2>
-      <p class="section-desc">Lixity combines manuscript analysis and dashboard views. A separate, explicit-project research archive is included experimentally in v1.16.0.</p>
+      <p class="section-desc">Lixity combines manuscript analysis and dashboard views. An explicit-project research workspace is integrated in v1.17.0.</p>
     </div>
 
     <div class="pillars-grid">
@@ -998,11 +998,11 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
 
       <!-- Pillar 5 -->
       <article class="pillar-card highlight">
-        <div class="pillar-num">Pillar 05 &middot; Pilot</div>
+        <div class="pillar-num">Pillar 05 &middot; Workspace</div>
         <div class="pillar-icon">🔍</div>
         <h3 class="pillar-title">Research &amp; Source Archive</h3>
         <p class="pillar-body">
-          The experimental v1.16.0 explicit-project UTF-8 source archive stores byte hashes, user-supplied context, searchable passages, citations, manual claims and authorial decisions. It supports controlled withdrawal and purge; it does not verify historical truth.
+          The explicit-project source archive stores UTF-8 and PDF byte hashes, user-supplied context, searchable passages, citations, manual claims and authorial decisions with immutable revision history and offline diagram rendering. It supports controlled withdrawal and purge; it does not verify historical truth.
         </p>
         <div class="pillar-tags">
           <span class="pillar-tag">SHA-256 Blobs</span>
@@ -1098,7 +1098,7 @@ footer a:hover { color: var(--accent); text-decoration: underline; }
   <section id="research-workspace">
     <div class="research-container">
       <div class="research-badge-strip">
-        <span class="research-badge">Experimental Research Pilot in v1.16.0</span>
+        <span class="research-badge">Research Workspace in v1.17.0</span>
         <span class="badge-pill">Immutable SHA-256 Storage</span>
         <span class="badge-pill">Cultural Source Criticism</span>
         <span class="badge-pill">Exact Paragraph Citations</span>
@@ -1174,7 +1174,7 @@ lixity serve --research-project ./novel-research --no-project
 lixity research audit --project ./novel-research</pre>
 
       <p style="margin: 1.2rem 0 0; font-size: 0.88rem; color: var(--subtle);">
-        In the server UI, Open Project offers Browse files and folders for paths on the computer running Lixity. Browse from the server user's home, use Home or Parent folder, select a manuscript or the current folder, then confirm with Open; a typed path also works. Opening reconnects the original workspace and its research archive, including a research-only folder without a manuscript. Manuscript comparison needs a manuscript; browser file import creates a separate project from its bytes. Welcome guidance can be hidden and reopened without hiding the project controls. Source and dossier details, direct search-to-evidence actions, and dossier-linked claims are available in the experimental v1.16.0 pilot. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research commands</a> and the broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a>.
+        In the server UI, Open Project offers Browse files and folders for paths on the computer running Lixity. Browse from the server user's home, use Home or Parent folder, select a manuscript or the current folder, then confirm with Open; a typed path also works. Opening reconnects the original workspace and its research archive, including a research-only folder without a manuscript. Manuscript comparison needs a manuscript; browser file import creates a separate project from its bytes. Welcome guidance can be hidden and reopened without hiding the project controls. Source and dossier details, direct search-to-evidence actions, and dossier-linked claims are available in the v1.17.0 research workspace. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research commands</a> and the broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a>.
       </p>
       <p style="margin: 0.6rem 0 0; font-size: 0.88rem; color: var(--subtle);">
         Source/manuscript comparison uses chapter prose without headings, front matter or the configured appendix. Cross-language lexical scores remain numeric but carry an explicit comparability warning; they are not a factual or linguistic-equivalence verdict.
@@ -1389,7 +1389,7 @@ dos_res = research_api.create_dossier(proj_path, title="Evidence Brief", body=".
         Install Lixity in an isolated CLI environment on Linux, macOS, or Windows using <a href="https://docs.astral.sh/uv/">uv</a> (or pipx). No account, no API key, and no cloud manuscript uploads required.
       </p>
       <pre class="cmd-block"># Install via uv (recommended; requires Git &amp; uv)
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.16.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.17.0"
 
 # Verify installation
 lixity --version

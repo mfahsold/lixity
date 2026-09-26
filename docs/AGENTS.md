@@ -26,10 +26,11 @@ assumptions; none of these outputs is an objective literary quality score.
 ## 2. Commands
 
 Since v1.16.0, `lixity research` provides a separate experimental
-source archive and lexical search API. See [research usage](research/USAGE.md)
-for implemented commands and `*-local/1` schemas. Every project is explicit;
-ingestion requires retention permission. Results remain unreviewed, not accepted
-claims or author decisions. The RFC also describes future interfaces.
+source archive and lexical search API, extended in v1.17.0 with native revision
+editing, self-hosted OCR extraction, offline diagrams, and archive export/restore.
+See [research usage](research/USAGE.md) for implemented commands and `*-local/1` / `*-local/2` schemas.
+Every project is explicit; ingestion requires retention permission. Results remain
+unreviewed, not accepted claims or author decisions. The RFC also describes future interfaces.
 
 For installation, version verification, updates and Python environment isolation,
 use [INSTALLATION.md](INSTALLATION.md). Do not assume a CLI tool environment
@@ -367,7 +368,7 @@ info = api.about()                                    # languages, features, heu
 
 ### 5.1 Research API (`lixity.research.api`)
 
-Experimental local pilot in v1.16.0, separate from the analysis API. Every call
+Experimental local workspace in v1.17.0, separate from the analysis API. Every call
 requires an explicit project root. Source text and source-criticism metadata remain
 untrusted evidence; a retained quotation is not a verified historical claim.
 
