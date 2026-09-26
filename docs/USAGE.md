@@ -87,6 +87,8 @@ which writes a single HTML file.
 | What repeats itself? | `lixity motifs` | motif presence, top content words, repeated n-grams |
 | Which chapters *tell* instead of *show*? | `lixity showing` | tell/show z, balance per chapter (self-calibrating) |
 | I want to see and click all of it | `lixity dashboard` | single-file HTML, all panels, offline |
+| I want an interactive live server | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
+| I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation, `nda/` |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
 

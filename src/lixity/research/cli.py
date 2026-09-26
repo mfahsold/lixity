@@ -22,6 +22,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("analyze", "Analyze verified source text and return metrics and style reference (JSON)"),
         ("dashboard", "Render local HTML source report"),
         ("compare", "Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)"),
+        ("sources", "List active sources, versions, tags, and passage counts"),
+        ("dossier", "Create, list or inspect research dossiers"),
         ("withdraw", "Withdraw an archived source or version, marking citations and excluding from search"),
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
     ):
@@ -55,6 +57,15 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--version-id", help="Explicit source version UUID")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), help="Manuscript language override")
             command.add_argument("--top-n", type=int, default=20, help="Number of top terms to return (default: 20)")
+        elif name == "sources":
+            command.add_argument("--source-id", help="Optional source UUID to inspect passages")
+        elif name == "dossier":
+            command.add_argument("--dossier-id", help="Dossier UUID to inspect")
+            command.add_argument("--title", help="Title for new dossier")
+            command.add_argument("--file", help="Path to markdown body file or raw text")
+            command.add_argument("--tags", help="Comma-separated tags")
+            command.add_argument("--evidence", help="Comma-separated passage UUIDs")
+            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
         elif name in ("withdraw", "purge"):
             command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
@@ -123,6 +134,31 @@ def run(args: argparse.Namespace) -> int:
                 language=getattr(args, "language", None),
                 top_n=getattr(args, "top_n", 20),
             )
+        elif command == "sources":
+            if getattr(args, "source_id", None):
+                result = api.get_source(args.project, args.source_id)
+            else:
+                result = api.list_sources(args.project)
+        elif command == "dossier":
+            if getattr(args, "dossier_id", None):
+                result = api.get_dossier(args.project, args.dossier_id)
+            elif getattr(args, "title", None) and getattr(args, "file", None):
+                body_path = Path(args.file)
+                body = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
+                raw_tags = getattr(args, "tags", "") or ""
+                tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+                raw_ev = getattr(args, "evidence", "") or ""
+                evidence = [e.strip() for e in raw_ev.split(",") if e.strip()]
+                result = api.create_dossier(
+                    args.project,
+                    args.title,
+                    body,
+                    language=getattr(args, "language", "en"),
+                    tags=tags,
+                    evidence_ids=evidence,
+                )
+            else:
+                result = api.list_dossiers(args.project)
         elif command == "withdraw":
             result = api.withdraw(args.project, args.source_id, version_id=args.version_id,
                                   reason=args.reason, actor=args.actor)

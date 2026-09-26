@@ -39,9 +39,10 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [Installation](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md): prerequisites, development vs release, Windows, updates, first dashboard, troubleshooting
 
 - Current release: 1.15.0; published tag: v1.15.0.
-- Development: 1.16.0.dev0, experimental `lixity research` for explicit-project
-  UTF-8 archives, exact citations, controlled withdrawal/purge and SQLite/FTS5 lexical search.
-  No research UI, claims/dossier review, OCR, remote imports or hybrid retrieval yet.
+- Development: 1.16.0.dev0, evidence-based `lixity research` (explicit-project
+  UTF-8 archives, exact citations, source tagging, dossiers, controlled withdrawal/purge,
+  SQLite/FTS5 lexical search, cross-corpus grounding comparison, and interactive web
+  research UI in `lixity serve`). No external OCR, remote imports or hybrid retrieval yet.
 - [Research pilot](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md): implemented CLI/API, `*-local/1` schemas and limits; retention permission required
 - [Research target architecture](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md): includes unimplemented interfaces; not an executable command reference
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md): shared analysis pipeline, project isolation, engine/adapter boundaries
@@ -81,6 +82,8 @@ not services bundled with the core engine.
 - `lixity showing FILE [--json]` – showing/telling balance per chapter (self-calibrating)
 - `lixity style FILE --json [--z-mild F] [--z-strong F] [--fdr-q F] [--fdr-method bh|by] [--dim-threshold F] [--flag-min-severity 1|2|3]` – self-calibrating style reference (schema v4; thresholds injectable, re-read from meta; Cliff’s δ + baseline diagnostics + structural_diagnostics: PELT/Mann-Kendall/Sn/Qn/Hill + early/late Wasserstein-KS shift + co-occurrence fitness + Dunning keyness)
 - `lixity dashboard FILE [-o ui.html] [--names A,B] [same threshold flags]` – single-file interactive dashboard (clickable KPIs, status strip, structure panels, work markers, full settings group)
+- `lixity serve [FILE] [--host IP] [--port N] [--research-project DIR] [--no-project]` – native loopback HTTP server and interactive dashboard with research workspace
+- `lixity research SUBCOMMAND --project DIR [options]` – explicit research store (init, ingest, reindex, search, cite, sources, dossier, compare, withdraw, purge, audit, schema)
 - `lixity build [FILE] [--dry-run] [same threshold flags]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
 - `lixity about --json` – languages, features, heuristics, command list
 - `lixity completion bash|zsh` – shell completion

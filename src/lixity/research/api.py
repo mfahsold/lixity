@@ -14,6 +14,7 @@ from .models import (
     ENTITY,
     Activity,
     Blob,
+    Dossier,
     Entity,
     Extraction,
     Passage,
@@ -358,4 +359,232 @@ def purge(
         "retained_shared_blobs": sorted(retained_shared_blobs),
         "snapshot": new_digest,
     }
+
+
+def list_sources(project: str | Path) -> dict[str, Any]:
+    """List all active, non-withdrawn sources in the research project with their versions and metadata."""
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+
+    extraction_to_version = {
+        record.id: record.source_version_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Extraction)
+    }
+
+    passages_per_version: dict[str, int] = {}
+    for record in snapshot.records.values():
+        if isinstance(record, Passage):
+            ver_id = extraction_to_version.get(record.extraction_ref.id)
+            if ver_id:
+                passages_per_version[ver_id] = passages_per_version.get(ver_id, 0) + 1
+
+    sources_list: list[dict[str, Any]] = []
+    for record in snapshot.records.values():
+        if not isinstance(record, Source) or record.id in withdrawn_or_purged:
+            continue
+        versions = [
+            v
+            for v in snapshot.records.values()
+            if isinstance(v, SourceVersion) and v.source_ref.id == record.id and v.id not in withdrawn_or_purged
+        ]
+        if not versions:
+            continue
+        latest = max(versions, key=lambda v: v.sequence)
+        sources_list.append(
+            {
+                "id": record.id,
+                "title": record.title,
+                "language": record.language,
+                "version_id": latest.id,
+                "sequence": latest.sequence,
+                "byte_length": latest.blob.byte_length,
+                "sha256": latest.blob.sha256,
+                "context": latest.context.model_dump(),
+                "tags": latest.context.tags,
+                "passages": passages_per_version.get(latest.id, 0),
+            }
+        )
+
+    sources_list.sort(key=lambda s: str(s["title"]).lower())
+    return {
+        "schema_version": "research-sources-local/1",
+        "project_id": snapshot.project.id,
+        "project_title": snapshot.project.title,
+        "project_language": snapshot.project.language,
+        "sources": sources_list,
+    }
+
+
+def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
+    """Retrieve full details of a specific source including its passages."""
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    source = snapshot.get(Reference(id=source_id), Source)
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+    if source.id in withdrawn_or_purged:
+        raise ResearchError("Source has been withdrawn or purged")
+
+    versions = [
+        v
+        for v in snapshot.records.values()
+        if isinstance(v, SourceVersion) and v.source_ref.id == source.id and v.id not in withdrawn_or_purged
+    ]
+    if not versions:
+        raise ResearchError("Source has no active versions")
+    latest = max(versions, key=lambda v: v.sequence)
+
+    extraction_ids = {
+        rec.id
+        for rec in snapshot.records.values()
+        if isinstance(rec, Extraction) and rec.source_version_ref.id == latest.id
+    }
+    passages = [
+        rec
+        for rec in snapshot.records.values()
+        if isinstance(rec, Passage) and rec.extraction_ref.id in extraction_ids
+    ]
+    passages.sort(key=lambda p: (p.start, p.end))
+
+    return {
+        "id": source.id,
+        "title": source.title,
+        "language": source.language,
+        "version_id": latest.id,
+        "sequence": latest.sequence,
+        "byte_length": latest.blob.byte_length,
+        "sha256": latest.blob.sha256,
+        "context": latest.context.model_dump(),
+        "tags": latest.context.tags,
+        "passages": [
+            {
+                "id": p.id,
+                "start": p.start,
+                "end": p.end,
+                "verbatim": p.verbatim,
+            }
+            for p in passages
+        ],
+    }
+
+
+def create_dossier(
+    project: str | Path,
+    title: str,
+    body: str,
+    *,
+    language: str = "en",
+    tags: list[str] | None = None,
+    evidence_ids: list[str] | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    """Create and commit a new Dossier record."""
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    title = title.strip()
+    if not (1 <= len(title) <= 500):
+        raise ResearchError("Dossier title must be between 1 and 500 characters")
+
+    evidence_refs = [Reference(id=eid) for eid in (evidence_ids or [])]
+    for ref in evidence_refs:
+        snapshot.get(ref, Passage)
+
+    dossier = Dossier(
+        **envelope(snapshot.project.id, actor),
+        title=title,
+        language=language,  # type: ignore[arg-type]
+        tags=tags or [],
+        body=body,
+        evidence_refs=evidence_refs,
+    )
+    new_snapshot = repository.commit([dossier], {}, snapshot)
+    return {
+        "schema_version": "research-dossier-local/1",
+        "dossier_id": dossier.id,
+        "title": dossier.title,
+        "snapshot": new_snapshot.digest,
+    }
+
+
+def list_dossiers(project: str | Path) -> dict[str, Any]:
+    """List all active dossiers in the project."""
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+
+    dossiers_list = [
+        {
+            "id": record.id,
+            "title": record.title,
+            "language": record.language,
+            "tags": record.tags,
+            "evidence_count": len(record.evidence_refs),
+            "created_at": record.created_at,
+            "created_by": record.created_by,
+            "excerpt": record.body[:300].strip(),
+        }
+        for record in snapshot.records.values()
+        if isinstance(record, Dossier) and record.id not in withdrawn_or_purged
+    ]
+
+    dossiers_list.sort(key=lambda d: str(d["created_at"]), reverse=True)
+    return {
+        "schema_version": "research-dossiers-local/1",
+        "dossiers": dossiers_list,
+    }
+
+
+def _resolve_evidence_citation(repository: Repository, snapshot: Any, ref: Reference) -> dict[str, Any]:
+    try:
+        return repository.citation(snapshot, snapshot.get(ref, Passage))
+    except (ResearchError, KeyError):
+        return {"id": ref.id, "error": "Citation unavailable or missing"}
+
+
+def get_dossier(project: str | Path, dossier_id: str) -> dict[str, Any]:
+    """Retrieve full details of a specific dossier, including resolved evidence citations."""
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    dossier = snapshot.get(Reference(id=dossier_id), Dossier)
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+    if dossier.id in withdrawn_or_purged:
+        raise ResearchError("Dossier has been withdrawn or purged")
+
+    resolved_citations = [_resolve_evidence_citation(repository, snapshot, ref) for ref in dossier.evidence_refs]
+
+    return {
+        "id": dossier.id,
+        "title": dossier.title,
+        "language": dossier.language,
+        "tags": dossier.tags,
+        "body": dossier.body,
+        "created_at": dossier.created_at,
+        "created_by": dossier.created_by,
+        "citations": resolved_citations,
+    }
+
 

@@ -92,6 +92,7 @@ class TestLixityServer(unittest.TestCase):
         status, body, headers = self.make_request("/")
         self.assertEqual(status, 200)
         self.assertIn(b"<!DOCTYPE html>", body)
+        self.assertIn(b'id="research-manager"', body)
         self.assertTrue(headers.get("content-type", "").startswith("text/html"))
         self.assertEqual(headers.get("x-frame-options"), "DENY")
         self.assertEqual(headers.get("x-content-type-options"), "nosniff")
@@ -224,3 +225,127 @@ class TestLixityServer(unittest.TestCase):
     def test_run_server_validation(self):
         with self.assertRaises(ValueError):
             run_server(host="192.168.1.100")
+
+    def test_research_endpoints_workflow(self):
+        with tempfile.TemporaryDirectory() as rdir:
+            orig_rdir = LixityServerHandler.research_dir
+            orig_ms = LixityServerHandler.source_input
+            try:
+                LixityServerHandler.research_dir = rdir
+                ms_path = Path(rdir) / "ms.md"
+                ms_path.write_text("## Chapter 1\n\nThe archives in Prague were quiet.", encoding="utf-8")
+                LixityServerHandler.source_input = str(ms_path)
+
+                # 1. Status before init
+                status, body, _ = self.make_request("/api/research/status")
+                self.assertEqual(status, 200)
+                data = json.loads(body)
+                self.assertFalse(data["initialized"])
+
+                # 2. Init
+                init_payload = json.dumps({"title": "Test Archive", "language": "en"})
+                status, body, _ = self.make_request(
+                    "/api/research-init",
+                    method="POST",
+                    body=init_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                data = json.loads(body)
+                self.assertTrue(data["ok"])
+
+                # 3. Ingest without retention fails
+                bad_ingest = json.dumps({"content": "A historic letter from 1924.", "title": "Letter"})
+                status, body, _ = self.make_request(
+                    "/api/research-ingest",
+                    method="POST",
+                    body=bad_ingest,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 400)
+
+                # 4. Ingest with retention succeeds
+                ok_ingest = json.dumps({
+                    "content": "The archives in Prague were established in 1924.\n\nThey contain letters.",
+                    "title": "Prague Records",
+                    "allow_retention": True,
+                    "tags": ["history", "prague"],
+                })
+                status, body, _ = self.make_request(
+                    "/api/research-ingest",
+                    method="POST",
+                    body=ok_ingest,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                src_res = json.loads(body)
+                self.assertTrue(src_res["ok"])
+                source_id = src_res["source_id"]
+
+                # 5. List sources
+                status, body, _ = self.make_request("/api/research/sources")
+                self.assertEqual(status, 200)
+                sources_data = json.loads(body)
+                self.assertEqual(len(sources_data["sources"]), 1)
+                self.assertEqual(sources_data["sources"][0]["tags"], ["history", "prague"])
+
+                # 6. Search
+                search_payload = json.dumps({"query": "Prague"})
+                status, body, _ = self.make_request(
+                    "/api/research-search",
+                    method="POST",
+                    body=search_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                search_res = json.loads(body)
+                self.assertTrue(len(search_res["hits"]) >= 1)
+                passage_id = search_res["hits"][0]["passage_id"]
+
+                # 7. Create Dossier
+                dossier_payload = json.dumps({
+                    "title": "Prague Investigation",
+                    "body": "Evidence confirms the establishment in 1924.",
+                    "tags": ["summary"],
+                    "evidence_ids": [passage_id],
+                })
+                status, body, _ = self.make_request(
+                    "/api/research-dossier",
+                    method="POST",
+                    body=dossier_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                dos_res = json.loads(body)
+                self.assertTrue(dos_res["ok"])
+
+                # 8. List Dossiers
+                status, body, _ = self.make_request("/api/research/dossiers")
+                self.assertEqual(status, 200)
+                dos_data = json.loads(body)
+                self.assertEqual(len(dos_data["dossiers"]), 1)
+                self.assertEqual(dos_data["dossiers"][0]["evidence_count"], 1)
+
+                # 9. Compare source against manuscript
+                cmp_payload = json.dumps({"source_id": source_id})
+                status, body, _ = self.make_request(
+                    "/api/research-compare",
+                    method="POST",
+                    body=cmp_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                cmp_res = json.loads(body)
+                self.assertTrue(cmp_res["ok"])
+                self.assertIn("jaccard_similarity", cmp_res["summary"])
+
+                # 10. Status after init & ingests
+                status, body, _ = self.make_request("/api/research/status")
+                self.assertEqual(status, 200)
+                st_data = json.loads(body)
+                self.assertTrue(st_data["initialized"])
+                self.assertEqual(st_data["sources_count"], 1)
+                self.assertEqual(st_data["dossiers_count"], 1)
+            finally:
+                LixityServerHandler.research_dir = orig_rdir
+                LixityServerHandler.source_input = orig_ms

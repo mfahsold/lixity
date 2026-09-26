@@ -1151,7 +1151,14 @@ lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-
 lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE
 lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE &gt; source_report.html
 
-# 7. Audit repository integrity and snapshot checksums
+# 7. Cross-corpus grounding against manuscript & create dossiers
+lixity research compare --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --manuscript ./manuscript.md
+lixity research dossier --project ./novel-research --title "Harbor Evidence" --body "Summary..." --tags "harbor"
+
+# 8. Interactive research dashboard with real-time FTS5 search & visual dossier editor
+lixity serve --research-project ./novel-research --no-project
+
+# 9. Audit repository integrity and snapshot checksums
 lixity research audit --project ./novel-research</pre>
 
       <p style="margin: 1.2rem 0 0; font-size: 0.88rem; color: var(--subtle);">

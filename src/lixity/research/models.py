@@ -8,7 +8,7 @@ from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator,
 Identifier = Annotated[str, Field(pattern=r"^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Language = Literal["en", "de", "fr", "es", "it", "pt", "nl", "generic"]
-Kind = Literal["project", "source", "source_version", "activity", "extraction", "passage", "tombstone"]
+Kind = Literal["project", "source", "source_version", "activity", "extraction", "passage", "tombstone", "dossier"]
 
 
 class StrictModel(BaseModel):
@@ -67,6 +67,7 @@ class SourceContext(StrictModel):
     original_language: ContextLabel | None = None
     is_translation: bool | None = None
     provenance_note: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+    tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
 
 
 class SourceVersion(Record):
@@ -113,15 +114,24 @@ class Passage(Record):
         return self
 
 
+class Dossier(Record):
+    kind: Literal["dossier"] = "dossier"
+    title: Annotated[str, Field(min_length=1, max_length=500)]
+    language: Language = "en"
+    tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
+    body: Annotated[str, Field(min_length=1, max_length=2 * 1024 * 1024)]
+    evidence_refs: list[Reference] = Field(default_factory=list)
+
+
 class Tombstone(Record):
     kind: Literal["tombstone"] = "tombstone"
     target_ref: Reference
-    target_kind: Literal["source", "source_version", "activity", "extraction", "passage"]
+    target_kind: Literal["source", "source_version", "activity", "extraction", "passage", "dossier"]
     operation: Literal["withdraw", "purge"]
     reason: Annotated[str, Field(min_length=1, max_length=500)]
 
 
-Entity = Annotated[Project | Source | SourceVersion | Activity | Extraction | Passage | Tombstone,
+Entity = Annotated[Project | Source | SourceVersion | Activity | Extraction | Passage | Tombstone | Dossier,
                    Field(discriminator="kind")]
 ENTITY: TypeAdapter[Entity] = TypeAdapter(Entity)
 

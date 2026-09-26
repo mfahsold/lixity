@@ -632,3 +632,299 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
     runAction(btn.dataset.action, payload, btn);
   });
 });
+
+// --- Research & Dossier Management -----------------------------------------
+function researchStatus(message, ok) {
+  var el = document.getElementById("research-status-bar");
+  if (!el) return;
+  el.className = "ctl-status " + (ok ? "ok" : "err");
+  el.textContent = (ok ? "✓ " : "✗ ") + (message || "");
+}
+
+async function researchApiPost(action, payload) {
+  try {
+    var res = await fetch(API + "/" + action, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload || {})
+    });
+    return await res.json();
+  } catch (err) {
+    return { ok: false, message: String(err) };
+  }
+}
+
+async function researchApiGet(endpoint) {
+  try {
+    var res = await fetch(API + "/" + endpoint);
+    return await res.json();
+  } catch (err) {
+    return { ok: false, message: String(err) };
+  }
+}
+
+function escapeHtml(str) {
+  var div = document.createElement("div");
+  div.textContent = str || "";
+  return div.innerHTML;
+}
+
+async function refreshResearchSources() {
+  var listHost = document.getElementById("research-sources-list");
+  var selectHost = document.getElementById("r-ground-source-select");
+  if (!listHost) return;
+  var data = await researchApiGet("research/sources");
+  if (!data.ok) {
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || "Failed to load sources") + '</p>';
+    return;
+  }
+  var sources = data.sources || [];
+  if (selectHost) {
+    selectHost.innerHTML = '<option value="">Quelle auswählen...</option>' +
+      sources.map(function(s) {
+        return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title) + ' (' + s.passages + ' Passagen)</option>';
+      }).join("");
+  }
+  if (!sources.length) {
+    listHost.innerHTML = '<p class="ctl-note">Noch keine Quellen erfasst.</p>';
+    return;
+  }
+  listHost.innerHTML = sources.map(function(s) {
+    var tagsHtml = (s.tags || []).map(function(t) {
+      return '<span class="research-tag">' + escapeHtml(t) + '</span>';
+    }).join(" ");
+    return '<div class="research-card">' +
+      '<div class="research-card-header">' +
+        '<span class="research-card-title">' + escapeHtml(s.title) + '</span>' +
+        '<span class="ctl-note">' + s.passages + ' Passagen · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
+      '</div>' +
+      '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(s.id) + '</div>' +
+      (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
+    '</div>';
+  }).join("");
+}
+
+async function refreshResearchDossiers() {
+  var listHost = document.getElementById("research-dossiers-list");
+  if (!listHost) return;
+  var data = await researchApiGet("research/dossiers");
+  if (!data.ok) {
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || "Failed to load dossiers") + '</p>';
+    return;
+  }
+  var dossiers = data.dossiers || [];
+  if (!dossiers.length) {
+    listHost.innerHTML = '<p class="ctl-note">Noch keine Dossiers angelegt.</p>';
+    return;
+  }
+  listHost.innerHTML = dossiers.map(function(d) {
+    var tagsHtml = (d.tags || []).map(function(t) {
+      return '<span class="research-tag">' + escapeHtml(t) + '</span>';
+    }).join(" ");
+    return '<div class="research-card">' +
+      '<div class="research-card-header">' +
+        '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
+        '<span class="ctl-note">' + d.evidence_count + ' Evidenzen</span>' +
+      '</div>' +
+      (d.excerpt ? '<p class="ctl-note" style="margin:.3rem 0;color:var(--fg);">' + escapeHtml(d.excerpt) + '</p>' : '') +
+      (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
+    '</div>';
+  }).join("");
+}
+
+async function initResearchUI() {
+  var status = await researchApiGet("research/status");
+  var initBox = document.getElementById("research-init-box");
+  var tabs = document.getElementById("research-tabs");
+  if (!status.initialized) {
+    if (initBox) initBox.style.display = "block";
+    if (tabs) tabs.style.display = "none";
+    document.querySelectorAll(".research-tab-pane").forEach(function(p) { p.style.display = "none"; });
+    return;
+  }
+  if (initBox) initBox.style.display = "none";
+  if (tabs) tabs.style.display = "flex";
+  var activeTab = document.querySelector(".research-tabs button.active");
+  var targetPane = activeTab ? "rtab-" + activeTab.dataset.rtab : "rtab-sources";
+  document.querySelectorAll(".research-tab-pane").forEach(function(p) {
+    p.style.display = p.id === targetPane ? "block" : "none";
+  });
+  refreshResearchSources();
+  refreshResearchDossiers();
+}
+
+document.addEventListener("click", async function (event) {
+  var tabBtn = event.target.closest("[data-rtab]");
+  if (tabBtn) {
+    document.querySelectorAll(".research-tabs button").forEach(function(b) {
+      b.classList.remove("active");
+      b.setAttribute("aria-selected", "false");
+    });
+    tabBtn.classList.add("active");
+    tabBtn.setAttribute("aria-selected", "true");
+    var targetId = "rtab-" + tabBtn.dataset.rtab;
+    document.querySelectorAll(".research-tab-pane").forEach(function(pane) {
+      pane.style.display = pane.id === targetId ? "block" : "none";
+    });
+    if (tabBtn.dataset.rtab === "sources") refreshResearchSources();
+    if (tabBtn.dataset.rtab === "dossiers") refreshResearchDossiers();
+    return;
+  }
+
+  var initBtn = event.target.closest("#r-init-btn");
+  if (initBtn) {
+    var titleInput = document.getElementById("r-init-title");
+    var res = await researchApiPost("research-init", { title: titleInput ? titleInput.value : "" });
+    researchStatus(res.message, res.ok);
+    if (res.ok) initResearchUI();
+    return;
+  }
+
+  var ingestBtn = event.target.closest("#r-ingest-btn");
+  if (ingestBtn) {
+    var retCheck = document.getElementById("r-ingest-retention");
+    if (!retCheck || !retCheck.checked) {
+      researchStatus("Lokale Speicherung muss bestätigt werden (--allow-retention)", false);
+      return;
+    }
+    var titleEl = document.getElementById("r-ingest-title");
+    var tagsEl = document.getElementById("r-ingest-tags");
+    var textEl = document.getElementById("r-ingest-text");
+    var fileEl = document.getElementById("r-ingest-file");
+    var tags = (tagsEl && tagsEl.value) ? tagsEl.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
+
+    function sendIngest(content, filename) {
+      researchStatus("Erfasse und indiziere Quelle...", true);
+      researchApiPost("research-ingest", {
+        content: content,
+        title: (titleEl && titleEl.value.trim()) || filename || "Quelle",
+        tags: tags,
+        allow_retention: true
+      }).then(function(res) {
+        researchStatus(res.message, res.ok);
+        if (res.ok) {
+          if (titleEl) titleEl.value = "";
+          if (tagsEl) tagsEl.value = "";
+          if (textEl) textEl.value = "";
+          if (fileEl) fileEl.value = "";
+          retCheck.checked = false;
+          refreshResearchSources();
+        }
+      });
+    }
+
+    if (fileEl && fileEl.files && fileEl.files.length) {
+      var file = fileEl.files[0];
+      var reader = new FileReader();
+      reader.onload = function() { sendIngest(reader.result, file.name); };
+      reader.readAsText(file);
+    } else if (textEl && textEl.value.trim()) {
+      sendIngest(textEl.value, "");
+    } else {
+      researchStatus("Bitte Datei auswählen oder Text eingeben", false);
+    }
+    return;
+  }
+
+  var searchBtn = event.target.closest("#r-search-btn");
+  if (searchBtn) {
+    var qEl = document.getElementById("r-search-query");
+    var query = qEl ? qEl.value.trim() : "";
+    if (!query) { researchStatus("Suchbegriff eingeben", false); return; }
+    var resultsHost = document.getElementById("research-search-results");
+    if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">Suche läuft...</p>';
+    var sres = await researchApiPost("research-search", { query: query });
+    if (!sres.ok) {
+      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || "Suche fehlgeschlagen") + '</p>';
+      return;
+    }
+    var hits = sres.hits || [];
+    if (!hits.length) {
+      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">Keine Treffer für „' + escapeHtml(query) + '“ gefunden.</p>';
+      return;
+    }
+    if (resultsHost) {
+      resultsHost.innerHTML = hits.map(function(h) {
+        return '<div class="research-passage-card">' +
+          '<div class="research-passage-quote">„' + escapeHtml(h.verbatim || "") + '“</div>' +
+          '<div class="research-passage-cite">' +
+            'Quelle: <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
+            'Score: ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
+            'ID: <code style="user-select:all;cursor:pointer;" title="Klicken zum Auswählen">' + escapeHtml(h.passage_id || "") + '</code>' +
+          '</div>' +
+        '</div>';
+      }).join("");
+    }
+    researchStatus(hits.length + " Treffer gefunden", true);
+    return;
+  }
+
+  var dosBtn = event.target.closest("#r-dos-create-btn");
+  if (dosBtn) {
+    var dTitle = document.getElementById("r-dos-title");
+    var dTags = document.getElementById("r-dos-tags");
+    var dEids = document.getElementById("r-dos-eids");
+    var dBody = document.getElementById("r-dos-body");
+    var titleVal = dTitle ? dTitle.value.trim() : "";
+    if (!titleVal) { researchStatus("Titel für Dossier erforderlich", false); return; }
+    var tagsArr = (dTags && dTags.value) ? dTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
+    var eidsArr = (dEids && dEids.value) ? dEids.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
+    var dres = await researchApiPost("research-dossier", {
+      title: titleVal,
+      body: dBody ? dBody.value : "",
+      tags: tagsArr,
+      evidence_ids: eidsArr
+    });
+    researchStatus(dres.message, dres.ok);
+    if (dres.ok) {
+      if (dTitle) dTitle.value = "";
+      if (dTags) dTags.value = "";
+      if (dEids) dEids.value = "";
+      if (dBody) dBody.value = "";
+      refreshResearchDossiers();
+    }
+    return;
+  }
+
+  var groundBtn = event.target.closest("#r-ground-btn");
+  if (groundBtn) {
+    var srcSelect = document.getElementById("r-ground-source-select");
+    var sid = srcSelect ? srcSelect.value : "";
+    if (!sid) { researchStatus("Bitte eine Quelle auswählen", false); return; }
+    var gHost = document.getElementById("research-grounding-results");
+    if (gHost) gHost.innerHTML = '<p class="ctl-note">Abgleich wird berechnet...</p>';
+    var gres = await researchApiPost("research-compare", { source_id: sid });
+    if (!gres.ok) {
+      if (gHost) gHost.innerHTML = '<p class="ctl-note">' + escapeHtml(gres.message || "Abgleich fehlgeschlagen") + '</p>';
+      return;
+    }
+    var sum = gres.summary || {};
+    var topShared = (gres.lexical_overlap && gres.lexical_overlap.top_shared_terms) || [];
+    var sharedWordsHtml = topShared.slice(0, 15).map(function(w) {
+      return '<span class="research-tag">' + escapeHtml(w.word) + ' (' + w.total_count + ')</span>';
+    }).join(" ");
+
+    var chapters = gres.chapter_grounding || [];
+    var chRows = chapters.map(function(c) {
+      return '<tr>' +
+        '<td>Kap. ' + c.chapter + ' (' + escapeHtml(c.title || "") + ')</td>' +
+        '<td style="text-align:right;">' + c.overlap_tokens + '</td>' +
+        '<td style="text-align:right;">' + (c.grounding_density ? c.grounding_density.toFixed(1) : '0') + '‰</td>' +
+      '</tr>';
+    }).join("");
+
+    if (gHost) {
+      gHost.innerHTML = '<div class="research-card" style="margin-top:.8rem;">' +
+        '<div class="research-card-title" style="margin-bottom:.5rem;">Ergebnisse: ' + escapeHtml(gres.provenance ? gres.provenance.source_title : "") + '</div>' +
+        '<div class="research-compare-metric"><span>Jaccard-Ähnlichkeit (Typen):</span><strong>' + (sum.jaccard_similarity !== undefined ? (sum.jaccard_similarity * 100).toFixed(1) + '%' : 'n/a') + '</strong></div>' +
+        '<div class="research-compare-metric"><span>Gemeinsame Lexem-Typen:</span><strong>' + (sum.shared_types || 0) + '</strong></div>' +
+        '<div class="research-compare-metric"><span>Quell-Wörter / Manuskript-Wörter:</span><span>' + (sum.source_content_words || 0) + ' / ' + (sum.manuscript_content_words || 0) + '</span></div>' +
+        (sharedWordsHtml ? '<div style="margin-top:.6rem;"><div class="ctl-label" style="margin-bottom:.3rem;">Gemeinsame Kernbegriffe</div><div class="research-tags">' + sharedWordsHtml + '</div></div>' : '') +
+        (chRows ? '<div style="margin-top:.8rem;"><div class="ctl-label" style="margin-bottom:.3rem;">Kapiteldichte</div><table style="width:100%;font-size:.8rem;"><thead><tr><th style="text-align:left;">Kapitel</th><th style="text-align:right;">Tokens</th><th style="text-align:right;">Dichte</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
+      '</div>';
+    }
+    researchStatus("Abgleich erfolgreich abgeschlossen", true);
+  }
+});
+
+if (document.getElementById("research-manager")) { initResearchUI(); }

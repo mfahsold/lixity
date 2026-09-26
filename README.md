@@ -247,11 +247,12 @@ are not a bundled hosted service or a universal feature of every installation.
 
 ## Architecture and project adapters
 
-An experimental [local research pilot](docs/research/USAGE.md) (in development
+An experimental [local research workspace](docs/research/USAGE.md) (in development
 towards `1.16.0.dev0`; **not in release v1.15.0**) archives UTF-8 sources,
-attaches versioned source criticism context, resolves exact citations, connects to the
-analysis pipeline, supports controlled withdrawal and purge, and provides SQLite lexical
-search. Dossier review, interactive research UI, OCR and hybrid search remain in the
+attaches versioned source criticism context and tags, resolves exact citations, connects to the
+analysis pipeline, manages dossiers with cited evidence, provides an interactive web
+management UI in `lixity serve`, supports controlled withdrawal and purge, and compares
+vocabulary grounding against literary manuscripts. OCR pipelines and hybrid vector search remain in the
 [target architecture](docs/research/README.md).
 
 CLI commands and the Python API share `lixity.pipeline`: language resolution,
@@ -355,9 +356,16 @@ lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-
 lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE
 lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE > source_report.html
 
-# 6. Lifecycle: withdraw contested source or preview irreversible purge
+# 6. Cross-corpus grounding against manuscript & create dossiers
+lixity research compare --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --manuscript ./manuscript.md
+lixity research dossier --project ./novel-research --title "Harbor Evidence" --body "Summary..." --tags "harbor"
+
+# 7. Lifecycle: withdraw contested source or preview irreversible purge
 lixity research withdraw --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --reason "Contested provenance"
 lixity research purge --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --dry-run
+
+# 8. Interactive research dashboard with real-time FTS5 search & visual dossier editor
+lixity serve --research-project ./novel-research --no-project
 ```
 
 ## Python API for AI Agents

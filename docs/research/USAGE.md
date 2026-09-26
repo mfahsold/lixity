@@ -1,20 +1,24 @@
 # Local research pilot
 
 **In local development (target `1.16.0.dev0`), unreleased and not in release `v1.15.0`.**
-No research management UI yet. This slice archives local UTF-8 text, attaches
-versioned source criticism context, resolves exact citations, connects to the
-analysis pipeline and renders a read-only source dashboard. It does not implement
-the entire [RFC](README.md).
+This pilot archives local UTF-8 text, attaches versioned source criticism context and tags,
+resolves exact citations, manages dossiers with cited evidence, provides an interactive web
+management UI in `lixity serve`, connects to the analysis pipeline, and performs cross-corpus
+grounding comparisons against manuscripts. It does not implement the entire [RFC](README.md).
 
 | Available in development | Not implemented |
 | --- | --- |
-| Explicit project, immutable captures, paragraph citations | Claims, author decisions, dossier editing |
-| SQLite/FTS5 lexical search, manual index rebuild | Embeddings, hybrid search, Qdrant, Haystack |
+| Explicit project, immutable captures, paragraph citations | Claims, author decisions (probabilistic) |
+| SQLite/FTS5 lexical search, instant index rebuild | Embeddings, dense hybrid search, Qdrant, Haystack |
 | Local text / Markdown input, original bytes retained | PDF/OCR, Zotero, network imports, archive exchange |
-| Versioned source criticism context & core analysis adapter | Team services, interactive management UI |
+| Versioned source criticism context & core analysis adapter | Multi-tenant team services, cloud hosting |
 | Controlled withdrawal & physical purge with dry-run preview | Automated factual proof or rewriting prose |
 | Read-only HTML source dashboard with localized context | Ambient configuration discovery |
 | Integrity audit and snapshot conflict detection | Ambient manuscript detection |
+| Source listing & tagging (`lixity research sources`) | External web scrapers |
+| Dossier creation & inspection (`lixity research dossier`) | Automatic claim reconciliation |
+| Cross-corpus linguistic grounding (`lixity research compare`) | Full-document OCR |
+| Interactive web research panel in `lixity serve` | |
 
 ## Try it
 
@@ -27,6 +31,7 @@ lixity research init --project ./novel --title "Novel research" --language en
 lixity research ingest --project ./novel --file ./notes.txt --allow-retention --dry-run
 lixity research ingest --project ./novel --file ./notes.txt --context ./context.json --allow-retention
 lixity research reindex --project ./novel
+lixity research sources --project ./novel
 lixity research search --project ./novel --query "reading room" --limit 5
 lixity research audit --project ./novel
 ```
@@ -38,6 +43,8 @@ lixity research cite --project ./novel --passage urn:uuid:YOUR-PASSAGE-UUID
 lixity research analyze --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID
 lixity research dashboard --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID > source.html
 lixity research compare --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --manuscript ./novel.md
+lixity research dossier --project ./novel --title "Reading Room Notes" --body "Opened in 1924." --evidence urn:uuid:YOUR-PASSAGE-UUID
+lixity research dossier --project ./novel --list
 lixity research withdraw --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "License revoked"
 lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --dry-run
 lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "GDPR deletion"
@@ -45,6 +52,9 @@ lixity research ingest --project ./novel --file ./revised-notes.txt \
   --source-id urn:uuid:YOUR-SOURCE-UUID --allow-retention
 lixity research reindex --project ./novel
 lixity research schema
+
+# Or launch the interactive web dashboard with integrated research panel:
+lixity serve --research-project ./novel --no-project
 ```
 
 Replace the uppercase placeholders with returned IDs. Search uses the newest
@@ -64,11 +74,20 @@ A failed audit returns `ok: false` and exit code `1`. Other errors go to stderr 
 from lixity.research import api
 
 api.init("./novel", title="Novel research", language="en")
-capture = api.ingest("./novel", "notes.txt", allow_retention=True, context={"genre": "diary"})
+capture = api.ingest("./novel", "notes.txt", allow_retention=True, context={"genre": "diary", "tags": ["archive"]})
 api.reindex("./novel")
+sources = api.list_sources("./novel")
 results = api.search("./novel", "reading room", limit=5)
 if results["hits"]:
     citation = api.cite("./novel", results["hits"][0]["passage_id"])
+    dossier = api.create_dossier(
+        "./novel",
+        title="Reading Room Record",
+        body="Verified opening in 1924.",
+        evidence_ids=[results["hits"][0]["passage_id"]],
+        tags=["milestone"],
+    )
+dossiers = api.list_dossiers("./novel")
 analysis = api.analyze_source("./novel", capture["source_id"])
 html = api.source_dashboard("./novel", capture["source_id"])
 comparison = api.compare_source("./novel", capture["source_id"], "novel.md")

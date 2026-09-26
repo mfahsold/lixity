@@ -17,6 +17,7 @@ from .models import (
     ENTITY,
     Activity,
     Blob,
+    Dossier,
     Entity,
     Entry,
     Extraction,
@@ -220,6 +221,9 @@ class Repository:
                     raise ResearchError("Extraction provenance does not match source bytes")
             elif isinstance(record, Passage):
                 snapshot.get(record.extraction_ref, Extraction)
+            elif isinstance(record, Dossier):
+                for ref in record.evidence_refs:
+                    snapshot.get(ref, Passage)
             elif isinstance(record, Tombstone):
                 pass
 

@@ -25,15 +25,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   model, optional Zotero/Docling/Qdrant/Haystack integrations, archival interchange,
   synthetic evidence-chain example and staged implementation/evaluation plan.
   The complete design remains a target, not a shipped provider integration.
-- Experimental `lixity research` and `lixity.research.api`: explicit project
-  creation, permitted local UTF-8 ingestion, versioned source criticism context,
-  lean research analysis adapter connecting archived sources to `lixity.pipeline`,
-  localized read-only source dashboard (`#document-context`), controlled withdrawal,
-  physical purge with dry-run preview, SQLite/FTS5 indexing/search, citation
-  resolution and integrity audit. Independent `*-local/1` schemas, atomic snapshot
-  publication, process locks and restore/conflict/corruption tests. No new runtime
-  dependencies. Claims, dossiers, interactive research UI, OCR and hybrid retrieval
-  remain unimplemented.
+- Evidence-based `lixity research` and `lixity.research.api`: explicit project
+  creation, permitted local UTF-8 ingestion with `--allow-retention`, versioned source
+  criticism context, source tagging, lean research analysis adapter connecting archived sources
+  to `lixity.pipeline`, localized read-only source dashboard (`#document-context`), controlled
+  withdrawal, physical purge with dry-run preview, SQLite/FTS5 indexing/search, citation
+  resolution, source listing (`sources`), Dossier management with verifiable evidence
+  citations (`dossier`), and cryptographic integrity audit.
+- Integrated interactive research management UI inside `lixity serve` development dashboard
+  (`--research-project`): web-based source ingestion, tagging, live FTS5 passage search,
+  visual dossier editing, and in-browser manuscript grounding comparison. Independent
+  `*-local/1` schemas, atomic snapshot publication, process locks and restore/conflict/corruption tests.
+  No new runtime dependencies. Full-document OCR, external Zotero sync, and hybrid vector retrieval
+  remain deferred increments.
 
 ### Changed
 

@@ -8,12 +8,15 @@ and serves generated export artifacts.
 
 from __future__ import annotations
 
+import contextlib
 import json
 import os
 import re
+import tempfile
 import webbrowser
 from collections.abc import Mapping
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 from typing import Any, ClassVar
 
 from .characters import presence_report
@@ -24,6 +27,8 @@ from .markers import add_marker, list_markers, resolve_marker
 from .motifs import motif_report
 from .pacing import pacing_report
 from .pipeline import analyze_document, resolve_document_config
+from .research import api as research_api
+from .research.repository import ResearchError
 from .showing import showing_report
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_dashboard
@@ -206,12 +211,25 @@ class LixityServerHandler(BaseHTTPRequestHandler):
     source_input: str | None = None
     workspace_root: str = ""
     exports_dir: str = ""
+    research_dir: str | None = None
     language: str = "auto"
     title: str | None = None
     title_custom: bool = False
     thresholds: FingerprintThresholds = FingerprintThresholds()
     dashboard_html: str = ""
     dashboard_info: ClassVar[dict[str, Any]] = {}
+
+    @classmethod
+    def get_research_root(cls) -> Path | None:
+        """Resolves the active research project root if one exists."""
+        if cls.research_dir:
+            p = Path(cls.research_dir).expanduser().resolve()
+            return p if p.is_dir() else None
+        if cls.workspace_root:
+            p = Path(cls.workspace_root).resolve()
+            if (p / "research").is_dir():
+                return p
+        return None
 
     @classmethod
     def refresh(cls) -> None:
@@ -277,6 +295,18 @@ class LixityServerHandler(BaseHTTPRequestHandler):
                 self._send(200, content, ctype)
             except OSError:
                 self._json({"ok": False, "message": "Failed to read artifact"}, 500)
+            return
+
+        if path == "/api/research/status":
+            self._handle_research_status()
+            return
+
+        if path == "/api/research/sources":
+            self._handle_research_sources()
+            return
+
+        if path == "/api/research/dossiers":
+            self._handle_research_dossiers()
             return
 
         self._json({"ok": False, "message": "Not found"}, 404)
@@ -352,6 +382,26 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             # Acknowledge UI triggers gracefully
             self.refresh()
             self._json({"ok": True, "message": f"Action '{action}' executed", "reload": True})
+            return
+
+        if action == "research-init":
+            self._handle_research_init(payload)
+            return
+
+        if action == "research-ingest":
+            self._handle_research_ingest(payload)
+            return
+
+        if action == "research-search":
+            self._handle_research_search(payload)
+            return
+
+        if action == "research-dossier":
+            self._handle_research_dossier(payload)
+            return
+
+        if action == "research-compare":
+            self._handle_research_compare(payload)
             return
 
         self._json({"ok": False, "message": f"Unknown action: {action}"}, 400)
@@ -490,6 +540,195 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
         self._json({"ok": False, "message": f"Unknown marker action: {action}"}, 400)
 
+    def _handle_research_status(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({
+                "ok": True,
+                "initialized": False,
+                "project_root": str(root or self.workspace_root or ""),
+            })
+            return
+        try:
+            src_data = research_api.list_sources(root)
+            dos_data = research_api.list_dossiers(root)
+            self._json({
+                "ok": True,
+                "initialized": True,
+                "project_root": str(root),
+                "project_id": src_data.get("project_id", ""),
+                "project_title": src_data.get("project_title", ""),
+                "project_language": src_data.get("project_language", ""),
+                "sources": src_data.get("sources", []),
+                "dossiers": dos_data.get("dossiers", []),
+                "sources_count": len(src_data.get("sources", [])),
+                "dossiers_count": len(dos_data.get("dossiers", [])),
+            })
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 500)
+
+    def _handle_research_sources(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        source_id = None
+        if "?" in self.path:
+            params = dict(part.split("=", 1) for part in self.path.split("?", 1)[1].split("&") if "=" in part)
+            source_id = params.get("id")
+        try:
+            if source_id:
+                data = research_api.get_source(root, source_id)
+            else:
+                data = research_api.list_sources(root)
+            self._json({"ok": True, **data})
+        except (ResearchError, KeyError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_dossiers(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        dossier_id = None
+        if "?" in self.path:
+            params = dict(part.split("=", 1) for part in self.path.split("?", 1)[1].split("&") if "=" in part)
+            dossier_id = params.get("id")
+        try:
+            if dossier_id:
+                data = research_api.get_dossier(root, dossier_id)
+            else:
+                data = research_api.list_dossiers(root)
+            self._json({"ok": True, **data})
+        except (ResearchError, KeyError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_init(self, payload: dict[str, Any]) -> None:
+        target_root = Path(self.research_dir or self.workspace_root or ".").resolve()
+        title = str(payload.get("title") or target_root.name or "Research").strip()
+        lang = str(payload.get("language") or "en").strip().lower()
+        try:
+            res = research_api.init(target_root, title=title, language=lang)
+            self.__class__.research_dir = str(target_root)
+            self._json({"ok": True, "message": f"Research initialized for '{title}'", **res})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_ingest(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+            return
+        if payload.get("allow_retention") is not True:
+            self._json({"ok": False, "message": "Explicit retention permission is required (allow_retention: true)"}, 400)
+            return
+
+        content = payload.get("content") or payload.get("text")
+        file_path = payload.get("file")
+        title = payload.get("title") or (Path(str(file_path)).name if file_path else "Untitled Source")
+        language = payload.get("language") or None
+        raw_tags = payload.get("tags")
+        tags: list[str] = []
+        if isinstance(raw_tags, str):
+            tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+        elif isinstance(raw_tags, list):
+            tags = [str(t).strip() for t in raw_tags if str(t).strip()]
+        context = {"tags": tags} if tags else None
+
+        try:
+            if content is not None:
+                if not isinstance(content, str) or not content.strip():
+                    self._json({"ok": False, "message": "Source content cannot be empty"}, 400)
+                    return
+                with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as tf:
+                    tf.write(content)
+                    temp_path = tf.name
+                try:
+                    res = research_api.ingest(root, temp_path, allow_retention=True, title=title, language=language, context=context)
+                finally:
+                    with contextlib.suppress(OSError):
+                        os.unlink(temp_path)
+            elif file_path:
+                res = research_api.ingest(root, str(file_path), allow_retention=True, title=title, language=language, context=context)
+            else:
+                self._json({"ok": False, "message": "Either 'content' or 'file' must be provided"}, 400)
+                return
+
+            with contextlib.suppress(ResearchError, OSError, ValueError):
+                research_api.reindex(root)
+
+            self._json({"ok": True, "message": f"Source '{title}' ingested successfully", **res})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_search(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+            return
+        query = str(payload.get("query") or "").strip()
+        if not query:
+            self._json({"ok": False, "message": "Empty query"}, 400)
+            return
+        limit = int(payload.get("limit") or 20)
+        try:
+            res = research_api.search(root, query, limit=limit)
+            self._json({"ok": True, **res})
+        except (ResearchError, OSError, ValueError):
+            try:
+                research_api.reindex(root)
+                res = research_api.search(root, query, limit=limit)
+                self._json({"ok": True, **res})
+            except (ResearchError, OSError, ValueError) as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_dossier(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 400)
+            return
+        title = str(payload.get("title") or "").strip()
+        body = str(payload.get("body") or "").strip()
+        if not title:
+            self._json({"ok": False, "message": "Dossier title is required"}, 400)
+            return
+        lang = str(payload.get("language") or "en").strip().lower()
+        raw_tags = payload.get("tags")
+        tags: list[str] = []
+        if isinstance(raw_tags, str):
+            tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
+        elif isinstance(raw_tags, list):
+            tags = [str(t).strip() for t in raw_tags if str(t).strip()]
+        raw_eids = payload.get("evidence_ids")
+        evidence_ids: list[str] = []
+        if isinstance(raw_eids, list):
+            evidence_ids = [str(e).strip() for e in raw_eids if str(e).strip()]
+
+        try:
+            res = research_api.create_dossier(root, title=title, body=body, language=lang, tags=tags, evidence_ids=evidence_ids)
+            self._json({"ok": True, "message": f"Dossier '{title}' created", **res})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_compare(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        source_id = str(payload.get("source_id") or "").strip()
+        if not source_id:
+            self._json({"ok": False, "message": "source_id is required"}, 400)
+            return
+        manuscript = payload.get("manuscript") or self.source_input
+        if not manuscript:
+            self._json({"ok": False, "message": "No manuscript loaded or specified for comparison"}, 400)
+            return
+        try:
+            res = research_api.compare_source(root, source_id, manuscript)
+            self._json({"ok": True, **res})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
     def log_message(self, format: str, *args: Any) -> None:
         """Quiet: suppress default request logging."""
         return
@@ -504,6 +743,7 @@ def run_server(
     no_project: bool = False,
     thresholds: FingerprintThresholds | None = None,
     open_browser: bool = False,
+    research_dir: str | None = None,
 ) -> None:
     """Runs the Lixity dashboard development server on loopback."""
     if host not in {"127.0.0.1", "localhost"}:
@@ -544,6 +784,7 @@ def run_server(
     LixityServerHandler.source_input = source_input
     LixityServerHandler.workspace_root = workspace_root
     LixityServerHandler.exports_dir = exports_dir
+    LixityServerHandler.research_dir = research_dir
     LixityServerHandler.language = language
     LixityServerHandler.title = title
     LixityServerHandler.title_custom = title is not None

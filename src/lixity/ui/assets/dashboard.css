@@ -921,6 +921,41 @@ details.nda .row { margin-top: .5rem; }
 .ctl-status.ok { color: var(--present); }
 .ctl-status.err { color: var(--flag); }
 .ctl-status:empty, #nda-table:empty { display: none; }
+
+/* --- Research & Dossier Management ----------------------------------- */
+.research-tabs { border-bottom: 1px solid var(--line); padding-bottom: .5rem; margin-bottom: 1rem; }
+.research-tabs button.ctl.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.research-tab-pane { display: grid; gap: var(--space-3); }
+.research-card {
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  padding: .65rem .85rem;
+  background: var(--surface);
+  margin-block: .4rem;
+}
+.research-card-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .4rem; }
+.research-card-title { font-weight: 600; font-size: .88rem; }
+.research-tags { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
+.research-tag {
+  font-size: .7rem;
+  padding: .1rem .45rem;
+  border-radius: 999px;
+  background: var(--accent-light);
+  color: var(--accent);
+  border: 1px solid var(--line);
+}
+.research-passage-card {
+  border-left: 3px solid var(--accent);
+  background: var(--neutral);
+  padding: .5rem .7rem;
+  margin-block: .4rem;
+  border-radius: 0 4px 4px 0;
+  font-size: .84rem;
+}
+.research-passage-quote { font-style: italic; margin-bottom: .25rem; }
+.research-passage-cite { font-size: .75rem; color: var(--muted); }
+.research-compare-metric { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); padding: .3rem 0; font-size: .84rem; }
+
 .page > *, .panel > * { margin-block: 0; }
 body.only-flags .chapter { display: none; }
 body.only-flags .chapter.has-flags { display: block; }

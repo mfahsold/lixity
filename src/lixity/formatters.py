@@ -155,7 +155,7 @@ REPORT_TEXTS_DE: dict[str, str] = {
     "sec_1_4": "### 1.4 Kapitelweise Vergleichsmatrix (Linguistische Tiefenprofile)",
     "md_col_tempus": "Dominantes Tempus",
     "md_intro_sentence": "Die empirische Verteilung der Sätze des Haupttextes:",
-    # Markdown 1.1 – neutrale Einordnungen
+    # Markdown 1.1 – neutral baseline assessments
     "md_raw_words": "Volltext inklusive Anhang.",
     "md_clean_words": "Reine Romanprosa.",
     "md_sentences": "Satzgesamtzahl des Haupttextes.",

@@ -236,3 +236,40 @@ class TestResearch(unittest.TestCase):
             self.assertIn("--allow-retention", output.getvalue())
         result = subprocess.run([sys.executable, "-c", "import sys; import lixity.pipeline; print(any(name.startswith('lixity.research') for name in sys.modules))"], capture_output=True, text=True, check=True)
         self.assertEqual(result.stdout.strip(), "False")
+
+    def test_sources_listing_and_dossier_management(self):
+        ingested = self.ingest(context={"genre": "chronicle", "tags": ["dolomites", "history"]})
+        sources = api.list_sources(self.project)
+        self.assertEqual(len(sources["sources"]), 1)
+        src = sources["sources"][0]
+        self.assertEqual(src["id"], ingested["source_id"])
+        self.assertEqual(src["tags"], ["dolomites", "history"])
+        self.assertEqual(src["context"]["genre"], "chronicle")
+        self.assertEqual(src["passages"], 2)
+
+        details = api.get_source(self.project, ingested["source_id"])
+        self.assertEqual(details["id"], ingested["source_id"])
+        self.assertEqual(len(details["passages"]), 2)
+        passage_id = details["passages"][0]["id"]
+
+        # Create dossier referencing this passage
+        dossier = api.create_dossier(
+            self.project,
+            "Alpine Historical Overview",
+            "# Overview\n\nThe expedition was documented in detail.",
+            tags=["overview", "mountains"],
+            evidence_ids=[passage_id],
+        )
+        self.assertEqual(dossier["schema_version"], "research-dossier-local/1")
+        dossiers = api.list_dossiers(self.project)
+        self.assertEqual(len(dossiers["dossiers"]), 1)
+        self.assertEqual(dossiers["dossiers"][0]["title"], "Alpine Historical Overview")
+        self.assertEqual(dossiers["dossiers"][0]["tags"], ["overview", "mountains"])
+
+        # Inspect dossier
+        loaded = api.get_dossier(self.project, dossier["dossier_id"])
+        self.assertEqual(loaded["title"], "Alpine Historical Overview")
+        self.assertEqual(len(loaded["citations"]), 1)
+        self.assertEqual(loaded["citations"][0]["passage_id"], passage_id)
+        self.assertEqual(loaded["citations"][0]["verbatim"], "Café in Zürich.")
+

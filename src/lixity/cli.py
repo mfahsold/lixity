@@ -259,10 +259,10 @@ _lixity_complete() {
     fi
     case "$prev" in
         research)
-            COMPREPLY=( $(compgen -W "init ingest reindex search cite audit schema analyze dashboard compare withdraw purge" -- "$cur") )
+            COMPREPLY=( $(compgen -W "init ingest reindex search cite audit schema analyze dashboard compare sources dossier withdraw purge" -- "$cur") )
             return 0
             ;;
-        --project)
+        --project|--research-project|--research-dir)
             COMPREPLY=( $(compgen -d -- "$cur") )
             return 0
             ;;
@@ -343,7 +343,7 @@ _lixity() {
       case $words[1] in
         research)
           _arguments \
-            '1:action:(init ingest reindex search cite audit schema analyze dashboard compare withdraw purge)' \
+            '1:action:(init ingest reindex search cite audit schema analyze dashboard compare sources dossier withdraw purge)' \
             '--project[Explicit project root]:directory:_files -/' \
             '--file[UTF-8 source]:file:_files' \
             '--manuscript[Path to manuscript file]:file:_files' \
@@ -376,6 +376,7 @@ _lixity() {
             '--title[Dashboard title]:title:' \
             '--open[Open in browser]' \
             '--no-project[Start without preloading a project]' \
+            '--research-project[Explicit research project root]:directory:_files -/' \
             "${_lixity_style_flags[@]}"
           ;;
         build)
@@ -980,6 +981,13 @@ def main(argv: list[str] | None = None) -> int:
                 help="Start without preloading a project",
             )
             p.add_argument(
+                "--research-project",
+                "--research-dir",
+                dest="research_project",
+                default=None,
+                help="Explicit research project root for evidence management",
+            )
+            p.add_argument(
                 "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
             )
             p.add_argument(
@@ -1084,6 +1092,7 @@ def main(argv: list[str] | None = None) -> int:
                 no_project=args.no_project,
                 thresholds=fp_thresholds,
                 open_browser=args.open,
+                research_dir=args.research_project,
             )
             return EXIT_OK
         except (OSError, ValueError, RuntimeError) as exc:
