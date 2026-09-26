@@ -167,6 +167,28 @@ def source_dashboard(project: str | Path, source_id: str, *, version_id: str | N
     return analyze(project, source_id, version_id=version_id, thresholds=thresholds).dashboard()
 
 
+def compare_source(
+    project: str | Path,
+    source_id: str,
+    manuscript: str | Path,
+    *,
+    version_id: str | None = None,
+    language: str | None = None,
+    top_n: int = 20,
+) -> dict[str, Any]:
+    """Compare verified research source against manuscript text or file."""
+    from .analysis import compare_source_to_manuscript
+
+    return compare_source_to_manuscript(
+        project,
+        source_id,
+        manuscript,
+        version_id=version_id,
+        language=language,
+        top_n=top_n,
+    )
+
+
 def withdraw(
     project: str | Path,
     source_id: str,

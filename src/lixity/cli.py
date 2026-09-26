@@ -259,14 +259,14 @@ _lixity_complete() {
     fi
     case "$prev" in
         research)
-            COMPREPLY=( $(compgen -W "init ingest reindex search cite audit schema analyze dashboard withdraw purge" -- "$cur") )
+            COMPREPLY=( $(compgen -W "init ingest reindex search cite audit schema analyze dashboard compare withdraw purge" -- "$cur") )
             return 0
             ;;
         --project)
             COMPREPLY=( $(compgen -d -- "$cur") )
             return 0
             ;;
-        --file)
+        --file|--manuscript)
             COMPREPLY=( $(compgen -f -- "$cur") )
             return 0
             ;;
@@ -343,9 +343,10 @@ _lixity() {
       case $words[1] in
         research)
           _arguments \
-            '1:action:(init ingest reindex search cite audit schema analyze dashboard withdraw purge)' \
+            '1:action:(init ingest reindex search cite audit schema analyze dashboard compare withdraw purge)' \
             '--project[Explicit project root]:directory:_files -/' \
             '--file[UTF-8 source]:file:_files' \
+            '--manuscript[Path to manuscript file]:file:_files' \
             '--title[Source or project title]:title:' \
             '--language[Language]:language:(en de fr es it pt nl generic)' \
             '--actor[Local actor]:actor:' \

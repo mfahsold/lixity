@@ -9,6 +9,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Native `lixity serve` development server: Built-in `ThreadingHTTPServer` with
+  strict loopback binding (`127.0.0.1` / `localhost`), host/origin verification,
+  payload limits, directory traversal protection, live settings API (`/api/settings`),
+  manuscript upload (`/api/load`), inline marker actions (`/api/marker-add`, `/api/marker-resolve`),
+  and `--no-project` clean empty start. Fully decouples development server tooling from
+  individual book project repositories.
+- Cross-corpus research linguistic comparison (`lixity research compare` and `api.compare_source`):
+  bridges archived research sources with literary manuscripts without modifying either document.
+  Computes vocabulary alignment (Jaccard similarity, Szymkiewicz–Simpson overlap coefficient,
+  top shared terms, exclusive source terms), Dunning's G² log-likelihood keyness differential,
+  stylistic/register contrast (ASL, dialogue ratio, Guiraud's R, Yule's K, staccato, kaskade deltas),
+  and per-chapter evidence grounding density (mapping source vocabulary occurrences across chapters).
 - Research workspace architecture proposal: source/version/passage/claim/dossier
   model, optional Zotero/Docling/Qdrant/Haystack integrations, archival interchange,
   synthetic evidence-chain example and staged implementation/evaluation plan.

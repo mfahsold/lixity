@@ -21,6 +21,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("audit", "Check retained records, hashes and citation positions"),
         ("analyze", "Analyze verified source text and return metrics and style reference (JSON)"),
         ("dashboard", "Render local HTML source report"),
+        ("compare", "Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)"),
         ("withdraw", "Withdraw an archived source or version, marking citations and excluding from search"),
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
     ):
@@ -48,6 +49,12 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
             command.add_argument("--thresholds", help="Path to JSON file or JSON string of analysis thresholds")
+        elif name == "compare":
+            command.add_argument("--source-id", required=True, help="Source UUID")
+            command.add_argument("--manuscript", required=True, help="Path to manuscript file")
+            command.add_argument("--version-id", help="Explicit source version UUID")
+            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), help="Manuscript language override")
+            command.add_argument("--top-n", type=int, default=20, help="Number of top terms to return (default: 20)")
         elif name in ("withdraw", "purge"):
             command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
@@ -107,6 +114,15 @@ def run(args: argparse.Namespace) -> int:
             html = api.source_dashboard(args.project, args.source_id, version_id=args.version_id, thresholds=thresholds)
             sys.stdout.write(html)
             return 0
+        elif command == "compare":
+            result = api.compare_source(
+                args.project,
+                args.source_id,
+                args.manuscript,
+                version_id=args.version_id,
+                language=getattr(args, "language", None),
+                top_n=getattr(args, "top_n", 20),
+            )
         elif command == "withdraw":
             result = api.withdraw(args.project, args.source_id, version_id=args.version_id,
                                   reason=args.reason, actor=args.actor)

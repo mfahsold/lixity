@@ -37,6 +37,7 @@ Use a `passage_id` from search and a `source_id` from ingestion:
 lixity research cite --project ./novel --passage urn:uuid:YOUR-PASSAGE-UUID
 lixity research analyze --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID
 lixity research dashboard --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID > source.html
+lixity research compare --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --manuscript ./novel.md
 lixity research withdraw --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "License revoked"
 lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --dry-run
 lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "GDPR deletion"
@@ -70,6 +71,7 @@ if results["hits"]:
     citation = api.cite("./novel", results["hits"][0]["passage_id"])
 analysis = api.analyze_source("./novel", capture["source_id"])
 html = api.source_dashboard("./novel", capture["source_id"])
+comparison = api.compare_source("./novel", capture["source_id"], "novel.md")
 api.withdraw("./novel", capture["source_id"], reason="License revoked")
 preview = api.purge("./novel", capture["source_id"], dry_run=True)
 report = api.audit("./novel")
@@ -97,6 +99,19 @@ never imports sources or refreshes research indexes.
   and passage records from the store and unlinks unshared original blobs. Citations
   for purged passages fail closed with `ResearchError`. Supports `--dry-run` to preview
   affected records and blobs before deletion.
+
+### Cross-corpus comparison and evidence grounding
+
+- **Linguistic comparison (`compare`)**: Connects an archived research source with a literary
+  manuscript without modifying either document. Computes:
+  1. Lexical overlap and alignment (Jaccard similarity, Szymkiewicz–Simpson overlap coefficient,
+     top shared terms, exclusive source terms).
+  2. Keyness differential using Dunning's $G^2$ log-likelihood ratio (identifying terms significantly
+     over-represented in the research source vs. the manuscript corpus).
+  3. Register and stylistic contrast (sentence length ASL delta, dialogue ratio delta,
+     lexical diversity Guiraud's $R$ and Yule's $K$ deltas, staccato and kaskade deltas).
+  4. Per-chapter evidence grounding (mapping occurrences of source vocabulary and top key
+     terms across individual manuscript chapters, reporting grounding density per 1,000 words).
 
 Back up the **entire `research/` directory**, preferably while no writer is
 running. Restore it to an explicit project root, run `audit`, then `reindex`.

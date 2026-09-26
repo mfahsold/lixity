@@ -163,3 +163,90 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertEqual(blocks[-1]["start_line"], 5)
         self.assertEqual(blocks[-1]["end_line"], 5)
         self.assertEqual(blocks[-1]["text"], "A visible paragraph.")
+
+    def test_compare_source_to_manuscript_grounding_and_keyness(self):
+        source_doc = self.root / "climbing_history.md"
+        source_doc.write_text(
+            "The expedition reached the high alpine granite ridge. "
+            "Rope and ice axes were essential during the stormy ascent. "
+            "The glacier was treacherous with deep crevasses and falling rocks. "
+            "Climbing higher required great endurance and steady footing.\n",
+            encoding="utf-8",
+        )
+        source = api.ingest(self.project, source_doc, allow_retention=True)
+
+        manuscript_file = self.root / "novel.md"
+        manuscript_file.write_text(
+            "## Chapter 1: The Ascent\n\n"
+            "The guide checked the climbing rope and secured the ice axes. "
+            "They climbed toward the cold glacier under gray skies. "
+            "Each step on the granite ridge was dangerous.\n\n"
+            "## Chapter 2: The Café\n\n"
+            "The waiter served warm coffee and fresh bread. "
+            "She read the morning newspaper quietly by the window. "
+            "Outside, cars and bicycles passed along the crowded street.\n",
+            encoding="utf-8",
+        )
+
+        res = api.compare_source(self.project, source["source_id"], manuscript_file)
+        self.assertEqual(res["schema_version"], "research-comparison-local/1")
+        self.assertEqual(res["provenance"]["source_id"], source["source_id"])
+        self.assertGreater(res["summary"]["jaccard_similarity"], 0.0)
+        self.assertGreater(res["summary"]["shared_types"], 0)
+
+        # Shared terms
+        shared_words = [item["word"] for item in res["lexical_overlap"]["top_shared_terms"]]
+        self.assertIn("climbing", shared_words)
+        self.assertIn("glacier", shared_words)
+        self.assertIn("granite", shared_words)
+        self.assertIn("rope", shared_words)
+
+        # Chapter grounding
+        grounding = res["chapter_grounding"]
+        self.assertEqual(len(grounding), 2)
+        # Chapter 1 should have high grounding density
+        self.assertGreater(grounding[0]["overlap_types"], 0)
+        self.assertGreater(grounding[0]["grounding_density"], 0.0)
+        # Chapter 2 should have 0 or much lower grounding density
+        self.assertLess(grounding[1]["grounding_density"], grounding[0]["grounding_density"])
+
+        # Register contrast
+        self.assertIn("asl", res["register_contrast"])
+        self.assertIn("guiraud_r", res["register_contrast"])
+        self.assertIn("dialogue_pct", res["register_contrast"])
+
+    def test_compare_source_cli_and_validation(self):
+        from lixity.cli import main
+
+        source_doc = self.root / "expedition.md"
+        source_doc.write_text("Alpine glacier climbing expedition notes.", encoding="utf-8")
+        source = api.ingest(self.project, source_doc, allow_retention=True)
+
+        ms_file = self.root / "book.md"
+        ms_file.write_text("# Chapter 1\n\nGlacier climbing expedition.", encoding="utf-8")
+
+        stdout = io.StringIO()
+        with contextlib.redirect_stdout(stdout):
+            code = main([
+                "research", "compare",
+                "--project", str(self.project),
+                "--source-id", source["source_id"],
+                "--manuscript", str(ms_file),
+            ])
+        self.assertEqual(code, 0)
+        data = json.loads(stdout.getvalue())
+        self.assertEqual(data["schema_version"], "research-comparison-local/1")
+
+        # Invalid top_n
+        with self.assertRaises(ValueError):
+            api.compare_source(self.project, source["source_id"], ms_file, top_n=0)
+
+        # Non-existent manuscript path
+        with self.assertRaises(ResearchError):
+            api.compare_source(self.project, source["source_id"], "nonexistent_file.md")
+
+        # Withdrawn source fails
+        api.withdraw(self.project, source["source_id"], reason="testing withdrawal")
+        with self.assertRaises(ResearchError):
+            api.compare_source(self.project, source["source_id"], ms_file)
+
