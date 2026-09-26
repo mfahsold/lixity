@@ -965,8 +965,30 @@ details.nda .row { margin-top: .5rem; }
   font-size: .84rem;
 }
 .research-passage-quote { font-style: italic; margin-bottom: .25rem; }
-.research-passage-cite { font-size: .75rem; color: var(--muted); }
 .research-compare-metric { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); padding: .3rem 0; font-size: .84rem; }
+.research-badge {
+  font-size: .68rem;
+  font-weight: 600;
+  padding: .15rem .45rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: .03em;
+}
+.research-badge.badge-success {
+  background: rgba(46, 125, 50, 0.12);
+  color: #2e7d32;
+  border: 1px solid rgba(46, 125, 50, 0.25);
+}
+.research-badge.badge-warning {
+  background: rgba(237, 108, 2, 0.12);
+  color: #ed6c02;
+  border: 1px solid rgba(237, 108, 2, 0.25);
+}
+.research-badge.badge-neutral {
+  background: rgba(120, 120, 120, 0.12);
+  color: var(--muted);
+  border: 1px solid var(--line);
+}
 
 /* --- Welcome Hero & Workspace Management ------------------------------ */
 .workspace-bar {

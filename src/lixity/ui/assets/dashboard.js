@@ -732,10 +732,112 @@ async function refreshResearchDossiers() {
   }).join("");
 }
 
+async function refreshResearchClaims() {
+  var listHost = document.getElementById("research-claims-list");
+  var selectHost = document.getElementById("r-decision-claim-select");
+  var linkClaimSelect = document.getElementById("r-link-claim-select");
+  if (!listHost) return;
+  var data = await researchApiGet("research/claims");
+  if (!data.ok) {
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || "Failed to load claims") + '</p>';
+    return;
+  }
+  var claims = data.claims || [];
+  if (selectHost) {
+    selectHost.innerHTML = '<option value="">Keine These verknüpft (allgemeine Entscheidung)</option>' +
+      claims.map(function(c) {
+        return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.title) + '</option>';
+      }).join("");
+  }
+  if (linkClaimSelect) {
+    linkClaimSelect.innerHTML = '<option value="">These auswählen...</option>' +
+      claims.map(function(c) {
+        return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.title) + '</option>';
+      }).join("");
+  }
+  if (!claims.length) {
+    listHost.innerHTML = '<p class="ctl-note">Noch keine Thesen / Aussagen erfasst.</p>';
+    return;
+  }
+  listHost.innerHTML = claims.map(function(c) {
+    var confClass = c.confidence === "evidenced" ? "badge-success" : (c.confidence === "disputed" ? "badge-warning" : "badge-neutral");
+    var confLabel = c.confidence === "evidenced" ? "Belegt" : (c.confidence === "disputed" ? "Umstritten" : "Hypothetisch");
+    var scopeParts = [];
+    if (c.scope) {
+      if (c.scope.time_period) scopeParts.push("Zeit: " + escapeHtml(c.scope.time_period));
+      if (c.scope.place) scopeParts.push("Ort: " + escapeHtml(c.scope.place));
+      if (c.scope.actors && c.scope.actors.length) scopeParts.push("Akteure: " + escapeHtml(c.scope.actors.join(", ")));
+    }
+    var tagsHtml = (c.tags || []).map(function(t) {
+      return '<span class="research-tag">' + escapeHtml(t) + '</span>';
+    }).join(" ");
+
+    return '<div class="research-card">' +
+      '<div class="research-card-header">' +
+        '<span class="research-card-title">' + escapeHtml(c.title) + '</span>' +
+        '<span class="research-badge ' + confClass + '">' + confLabel + '</span>' +
+      '</div>' +
+      '<p style="margin:.4rem 0;font-size:.85rem;line-height:1.45;color:var(--fg);">' + escapeHtml(c.statement) + '</p>' +
+      (scopeParts.length ? '<div class="ctl-note" style="margin-bottom:.3rem;font-size:.76rem;">' + scopeParts.join(" · ") + '</div>' : '') +
+      '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">These-ID: ' + escapeHtml(c.id) + '</div>' +
+      (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
+      '<div class="claim-evidence-subpanel" id="claim-evidence-' + escapeHtml(c.id) + '" style="margin-top:.6rem;padding-top:.4rem;border-top:1px dashed var(--line);">' +
+        '<button type="button" class="ctl" style="font-size:.74rem;padding:.2rem .5rem;" data-load-evidence="' + escapeHtml(c.id) + '">Verknüpfte Belege laden</button>' +
+      '</div>' +
+    '</div>';
+  }).join("");
+}
+
+async function refreshResearchDecisions() {
+  var listHost = document.getElementById("research-decisions-list");
+  if (!listHost) return;
+  var data = await researchApiGet("research/decisions");
+  if (!data.ok) {
+    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || "Failed to load decisions") + '</p>';
+    return;
+  }
+  var decisions = data.decisions || [];
+  if (!decisions.length) {
+    listHost.innerHTML = '<p class="ctl-note">Noch keine Autorenentscheidungen erfasst.</p>';
+    return;
+  }
+  listHost.innerHTML = decisions.map(function(d) {
+    var devBadge = d.deviation_from_fact
+      ? '<span class="research-badge badge-warning" title="Bewusste Abweichung von historischer Evidenz">Dichterische Freiheit / Abweichung</span>'
+      : '<span class="research-badge badge-success">Faktentreu</span>';
+    return '<div class="research-card">' +
+      '<div class="research-card-header">' +
+        '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
+        devBadge +
+      '</div>' +
+      '<div style="margin:.4rem 0;font-size:.85rem;line-height:1.45;color:var(--fg);">' + escapeHtml(d.rationale) + '</div>' +
+      (d.impact_on_plot ? '<div class="ctl-note" style="margin:.3rem 0;font-size:.78rem;"><strong>Dramaturgische Wirkung:</strong> ' + escapeHtml(d.impact_on_plot) + '</div>' : '') +
+      (d.claim_id ? '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">Betrifft These: ' + escapeHtml(d.claim_id) + '</div>' : '') +
+    '</div>';
+  }).join("");
+}
+
 async function initResearchUI() {
   var status = await researchApiGet("research/status");
   var initBox = document.getElementById("research-init-box");
   var tabs = document.getElementById("research-tabs");
+  var activeRootEl = document.getElementById("r-active-root");
+  var statusBar = document.getElementById("research-status-bar");
+
+  if (!status || status.ok === false) {
+    if (initBox) initBox.style.display = "none";
+    if (tabs) tabs.style.display = "none";
+    if (statusBar) statusBar.textContent = "Fehler bei Verbindung mit der Recherche-API: " + ((status && status.message) || "Server antwortet nicht");
+    return;
+  }
+
+  if (activeRootEl && status.project_root) {
+    activeRootEl.textContent = "Projekt: " + status.project_root;
+    if (status.initialized) {
+      activeRootEl.textContent += " (" + (status.sources_count || 0) + " Quellen, " + (status.dossiers_count || 0) + " Dossiers, " + (status.claims_count || 0) + " Thesen, " + (status.decisions_count || 0) + " Entscheidungen)";
+    }
+  }
+
   if (!status.initialized) {
     if (initBox) initBox.style.display = "block";
     if (tabs) tabs.style.display = "none";
@@ -751,6 +853,8 @@ async function initResearchUI() {
   });
   refreshResearchSources();
   refreshResearchDossiers();
+  refreshResearchClaims();
+  refreshResearchDecisions();
 }
 
 document.addEventListener("click", async function (event) {
@@ -768,6 +872,8 @@ document.addEventListener("click", async function (event) {
     });
     if (tabBtn.dataset.rtab === "sources") refreshResearchSources();
     if (tabBtn.dataset.rtab === "dossiers") refreshResearchDossiers();
+    if (tabBtn.dataset.rtab === "claims") refreshResearchClaims();
+    if (tabBtn.dataset.rtab === "decisions") refreshResearchDecisions();
     return;
   }
 
@@ -924,6 +1030,143 @@ document.addEventListener("click", async function (event) {
       '</div>';
     }
     researchStatus("Abgleich erfolgreich abgeschlossen", true);
+    return;
+  }
+
+  var claimBtn = event.target.closest("#r-claim-create-btn");
+  if (claimBtn) {
+    var cTitle = document.getElementById("r-claim-title");
+    var cConf = document.getElementById("r-claim-confidence");
+    var cTags = document.getElementById("r-claim-tags");
+    var cStmt = document.getElementById("r-claim-statement");
+    var cTime = document.getElementById("r-claim-time");
+    var cPlace = document.getElementById("r-claim-place");
+    var cActors = document.getElementById("r-claim-actors");
+
+    var titleVal = cTitle ? cTitle.value.trim() : "";
+    var stmtVal = cStmt ? cStmt.value.trim() : "";
+    if (!titleVal || !stmtVal) {
+      researchStatus("Kurztitel und historische Aussage sind erforderlich", false);
+      return;
+    }
+    var tagsArr = (cTags && cTags.value) ? cTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
+    var actorsArr = (cActors && cActors.value) ? cActors.value.split(",").map(function(a){ return a.trim(); }).filter(Boolean) : [];
+
+    var cres = await researchApiPost("research-claim-add", {
+      title: titleVal,
+      statement: stmtVal,
+      confidence: cConf ? cConf.value : "hypothetical",
+      time_period: cTime ? cTime.value.trim() : "",
+      place: cPlace ? cPlace.value.trim() : "",
+      actors: actorsArr,
+      tags: tagsArr
+    });
+    researchStatus(cres.message, cres.ok);
+    if (cres.ok) {
+      if (cTitle) cTitle.value = "";
+      if (cStmt) cStmt.value = "";
+      if (cTags) cTags.value = "";
+      if (cTime) cTime.value = "";
+      if (cPlace) cPlace.value = "";
+      if (cActors) cActors.value = "";
+      refreshResearchClaims();
+    }
+    return;
+  }
+
+  var linkEvBtn = event.target.closest("#r-link-evidence-btn");
+  if (linkEvBtn) {
+    var lClaim = document.getElementById("r-link-claim-select");
+    var lPassage = document.getElementById("r-link-passage-id");
+    var lRel = document.getElementById("r-link-relation");
+    var lRat = document.getElementById("r-link-rationale");
+
+    var claimVal = lClaim ? lClaim.value.trim() : "";
+    var passageVal = lPassage ? lPassage.value.trim() : "";
+    if (!claimVal || !passageVal) {
+      researchStatus("These und Passagen-ID erforderlich", false);
+      return;
+    }
+
+    var lres = await researchApiPost("research-evidence-link", {
+      claim_id: claimVal,
+      passage_id: passageVal,
+      relation: lRel ? lRel.value : "supports",
+      rationale: lRat ? lRat.value.trim() : ""
+    });
+    researchStatus(lres.message, lres.ok);
+    if (lres.ok) {
+      if (lPassage) lPassage.value = "";
+      if (lRat) lRat.value = "";
+      refreshResearchClaims();
+    }
+    return;
+  }
+
+  var decBtn = event.target.closest("#r-decision-create-btn");
+  if (decBtn) {
+    var decTitle = document.getElementById("r-decision-title");
+    var decClaim = document.getElementById("r-decision-claim-select");
+    var decRat = document.getElementById("r-decision-rationale");
+    var decPlot = document.getElementById("r-decision-plot");
+    var decDev = document.getElementById("r-decision-deviation");
+
+    var dTitleVal = decTitle ? decTitle.value.trim() : "";
+    var dRatVal = decRat ? decRat.value.trim() : "";
+    if (!dTitleVal || !dRatVal) {
+      researchStatus("Titel und Begründung der Entscheidung sind erforderlich", false);
+      return;
+    }
+
+    var dres = await researchApiPost("research-decision-add", {
+      title: dTitleVal,
+      rationale: dRatVal,
+      claim_id: decClaim ? decClaim.value.trim() : "",
+      impact_on_plot: decPlot ? decPlot.value.trim() : "",
+      deviation_from_fact: decDev ? decDev.checked : false
+    });
+    researchStatus(dres.message, dres.ok);
+    if (dres.ok) {
+      if (decTitle) decTitle.value = "";
+      if (decRat) decRat.value = "";
+      if (decPlot) decPlot.value = "";
+      if (decDev) decDev.checked = false;
+      refreshResearchDecisions();
+    }
+    return;
+  }
+
+  var loadEvBtn = event.target.closest("[data-load-evidence]");
+  if (loadEvBtn) {
+    var cid = loadEvBtn.dataset.loadEvidence;
+    var subpanel = document.getElementById("claim-evidence-" + cid);
+    if (!subpanel) return;
+    subpanel.innerHTML = '<span class="ctl-note">Lade Belege...</span>';
+    var evData = await researchApiGet("research/claims?claim_id=" + encodeURIComponent(cid));
+    if (!evData.ok) {
+      subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(evData.message || "Fehler beim Laden") + '</span>';
+      return;
+    }
+    var links = evData.evidence_links || [];
+    if (!links.length) {
+      subpanel.innerHTML = '<span class="ctl-note">Keine Belege mit dieser These verknüpft.</span>';
+      return;
+    }
+    subpanel.innerHTML = '<div style="font-size:.78rem;font-weight:600;margin-bottom:.3rem;color:var(--fg);">Verknüpfte Belege (' + links.length + '):</div>' +
+      links.map(function(l) {
+        var relBadge = '<span class="research-badge badge-neutral" style="font-size:.7rem;">' + escapeHtml(l.relation) + '</span>';
+        var cite = l.citation || {};
+        var quote = cite.verbatim ? '„' + escapeHtml(cite.verbatim) + '“' : '<em>(Kein Volltextzitat)</em>';
+        return '<div class="research-passage-card" style="margin:.3rem 0;padding:.4rem .6rem;">' +
+          '<div style="display:flex;align-items:center;gap:.4rem;margin-bottom:.2rem;">' +
+            relBadge +
+            '<span class="ctl-note" style="font-size:.74rem;">' + escapeHtml(cite.source_title || l.passage_id) + '</span>' +
+          '</div>' +
+          '<div class="research-passage-quote" style="font-size:.78rem;margin:.2rem 0;">' + quote + '</div>' +
+          (l.rationale ? '<div class="ctl-note" style="font-size:.72rem;">' + escapeHtml(l.rationale) + '</div>' : '') +
+        '</div>';
+      }).join("");
+    return;
   }
 });
 
@@ -1044,10 +1287,17 @@ document.addEventListener("click", function (event) {
     return;
   }
 
-  var openDrop = event.target.closest("#open-dropzone");
-  if (openDrop) {
-    var openFileInput = document.getElementById("open-file-input");
-    if (openFileInput) openFileInput.click();
+  var switchToImportBtn = event.target.closest("#link-switch-to-import");
+  if (switchToImportBtn) {
+    var modalOpen = document.getElementById("modal-project-open");
+    if (modalOpen && typeof modalOpen.close === "function") modalOpen.close();
+    var modalNew = document.getElementById("modal-project-create");
+    if (modalNew && typeof modalNew.showModal === "function") {
+      switchModalTab("tab-pane-import");
+      modalNew.showModal();
+      var dropzone = document.getElementById("import-dropzone");
+      if (dropzone) dropzone.focus();
+    }
     return;
   }
 
@@ -1095,40 +1345,11 @@ document.addEventListener("drop", function (e) {
     processImportedFile(e.dataTransfer.files[0]);
     return;
   }
-
-  var openDrop = e.target.closest("#open-dropzone");
-  if (openDrop && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
-    e.preventDefault();
-    var f = e.dataTransfer.files[0];
-    processImportedFile(f);
-    // Switch to create modal import pane for instant analysis
-    var modalOpen = document.getElementById("modal-project-open");
-    if (modalOpen && typeof modalOpen.close === "function") modalOpen.close();
-    var modalNew = document.getElementById("modal-project-create");
-    if (modalNew && typeof modalNew.showModal === "function") {
-      switchModalTab("tab-pane-import");
-      modalNew.showModal();
-    }
-    return;
-  }
 });
 
 document.addEventListener("change", function (event) {
   if (event.target.id === "import-file-input" && event.target.files && event.target.files.length) {
     processImportedFile(event.target.files[0]);
-    return;
-  }
-
-  if (event.target.id === "open-file-input" && event.target.files && event.target.files.length) {
-    var f = event.target.files[0];
-    processImportedFile(f);
-    var modalOpen = document.getElementById("modal-project-open");
-    if (modalOpen && typeof modalOpen.close === "function") modalOpen.close();
-    var modalNew = document.getElementById("modal-project-create");
-    if (modalNew && typeof modalNew.showModal === "function") {
-      switchModalTab("tab-pane-import");
-      modalNew.showModal();
-    }
     return;
   }
 

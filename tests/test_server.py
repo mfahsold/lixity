@@ -534,9 +534,43 @@ class TestLixityServer(unittest.TestCase):
         self.assertIn('id="modal-project-open"', html)
         self.assertIn('id="hero-btn-new-project"', html)
         self.assertIn('id="hero-btn-open-project"', html)
-        self.assertIn('id="import-dropzone"', html)
-        self.assertIn('id="import-preview-box"', html)
-        self.assertIn('id="open-dropzone"', html)
+        self.assertIn('id="open-proj-path"', html)
+        self.assertIn('id="link-switch-to-import"', html)
         self.assertIn('id="tab-btn-import"', html)
         self.assertIn('template-card', html)
+
+        # Research tabs and controls
+        self.assertIn('data-rtab="claims"', html)
+        self.assertIn('data-rtab="decisions"', html)
+        self.assertIn('id="r-claim-create-btn"', html)
+        self.assertIn('id="r-decision-create-btn"', html)
+        self.assertIn('id="r-link-evidence-btn"', html)
+
+    def test_project_open_attaches_existing_research(self):
+        from lixity.research import api as research_api
+        orig_ws = LixityServerHandler.workspace_root
+        orig_res = LixityServerHandler.research_dir
+        try:
+            with tempfile.TemporaryDirectory() as td:
+                proj_dir = Path(td) / "existing-novel"
+                proj_dir.mkdir()
+                ms_path = proj_dir / "manuscript.md"
+                ms_path.write_text("# Chapter 1\n\nSome text.", encoding="utf-8")
+                research_api.init(proj_dir, title="Historical Research")
+
+                status, body, _ = self.make_request(
+                    "/api/project-open",
+                    method="POST",
+                    body=json.dumps({"path": str(ms_path)}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                res = json.loads(body)
+                self.assertTrue(res["ok"])
+                self.assertEqual(Path(res["workspace_root"]).resolve(), proj_dir.resolve())
+                self.assertEqual(Path(str(LixityServerHandler.research_dir)).resolve(), proj_dir.resolve())
+        finally:
+            LixityServerHandler.workspace_root = orig_ws
+            LixityServerHandler.research_dir = orig_res
+            LixityServerHandler.refresh()
 
