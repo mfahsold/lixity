@@ -3,9 +3,12 @@
 This document describes Lixity `1.15.0`. The shared pipeline and explicit
 API threshold mappings require this release or newer.
 
-Proposed extension: [research workspace RFC](research/README.md), with an
-evidence model, archive and third-party integration plan. This is a design under
-discussion; it does not describe implemented research commands or dependencies.
+Development extension (`1.16.0.dev0`): [local research pilot](research/USAGE.md).
+`lixity.research` owns explicit-project ingestion, immutable snapshots, exact
+citations and a rebuildable SQLite/FTS5 index. It does not import into
+`lixity.pipeline`. Existing analyze/profile v2 and style v4 remain unchanged.
+The [research RFC](research/README.md) also specifies unimplemented dossier,
+review, OCR and hybrid-search components; those are not current dependencies.
 
 ## Layers
 

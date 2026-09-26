@@ -4,6 +4,8 @@ PYTHON ?= python3
 VENV ?= .venv
 VPY := $(VENV)/bin/python
 RUFF_CACHE ?= /tmp/ruff_cache
+MYPY_CACHE ?= /tmp/mypy_cache
+PYTEST_CACHE ?= /tmp/pytest_cache
 
 help: ## Show this help
 	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | \
@@ -22,13 +24,13 @@ install-dev: ## Create .venv and install with dev extras
 	"$(VPY)" -m lixity.cli --version
 
 test: ## Run the full test suite (warnings as errors)
-	PYTHONPATH=src $(VPY) -m pytest -W error -q -p no:asyncio
+	PYTHONPATH=src $(VPY) -m pytest -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 
 lint: ## Ruff lint (src, tests, scripts)
 	RUFF_CACHE_DIR=$(RUFF_CACHE) $(VENV)/bin/ruff check src tests scripts
 
 typecheck: ## mypy --strict on the package
-	$(VENV)/bin/mypy --strict src
+	MYPY_CACHE_DIR=$(MYPY_CACHE) $(VENV)/bin/mypy --strict src
 
 check: lint typecheck test ## Everything CI cares about locally
 

@@ -216,9 +216,12 @@ are not a bundled hosted service or a universal feature of every installation.
 
 ## Architecture and project adapters
 
-A [research workspace RFC](docs/research/README.md) proposes source archives,
-evidence-linked dossiers and optional hybrid search using established platforms
-and formats. It is a documented proposal, not an available feature.
+An experimental [local research pilot](docs/research/USAGE.md) (in development
+towards `1.16.0.dev0`; **not in release v1.15.0**) archives UTF-8 sources,
+attaches versioned source criticism context, resolves exact citations, connects to the
+analysis pipeline, supports controlled withdrawal and purge, and provides SQLite lexical
+search. Dossier review, interactive research UI, OCR and hybrid search remain in the
+[target architecture](docs/research/README.md).
 
 CLI commands and the Python API share `lixity.pipeline`: language resolution,
 paragraph profiling and fingerprint construction have one implementation.

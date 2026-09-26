@@ -187,3 +187,5 @@ they are not current product features and must not be cited as such.
 | 48 | `characters` empty names | empty `--names` used to return `figures: []` silently | caller mistake looks like “no characters” | 🟠 → **fixed** (v1.12.0): CLI exit 1 (`err_no_names`); API `ValueError` (no NER — names come from the caller) |
 | 49 | No external Delta stylometry | JSD / driver words are in-corpus chapter-vs-rest diagnostics | misread as authorship attribution | 🟡 **documented**: METHODS Track B (not implemented); STABILITY §1 stylometry note |
 | 50 | Dialogue speaker attribution | turns = quotation segments; no speaker ID | “turn” misread as speaker turn | 🟡 **documented**: USAGE `dialogue` section; STABILITY row 27 (patterns per language) |
+| 51 | Research retention & citations | Pilot retains original UTF-8 bytes and pins exact unicode codepoint offsets; SQLite/FTS5 provides rebuildable lexical search; withdrawn sources mark citations `withdrawn`; purged sources fail closed | citations do not imply factual truth; retention requires explicit permission | 🟡 **documented**: USAGE/AGENTS; research pilot is opt-in, explicit-project only; no ambient manuscript I/O |
+

@@ -25,6 +25,12 @@ assumptions; none of these outputs is an objective literary quality score.
 
 ## 2. Commands
 
+On development `main` only, `lixity research` provides a separate experimental
+source archive and lexical search API. See [research usage](research/USAGE.md)
+for implemented commands and `*-local/1` schemas. Every project is explicit;
+ingestion requires retention permission. Results remain unreviewed, not accepted
+claims or author decisions. The RFC also describes future interfaces.
+
 For installation, version verification, updates and Python environment isolation,
 use [INSTALLATION.md](INSTALLATION.md). Do not assume a CLI tool environment
 is importable by a project adapter. TOML configuration requires Python 3.11+.

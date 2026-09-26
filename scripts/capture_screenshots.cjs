@@ -6,7 +6,11 @@ const assert = require('node:assert/strict');
 
 async function main() {
   const captures = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-  const browser = await chromium.launch({headless: true});
+  const launchOptions = {headless: true};
+  if (process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH) {
+    launchOptions.executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH;
+  }
+  const browser = await chromium.launch(launchOptions);
   const results = [];
   try {
     const page = await browser.newPage({deviceScaleFactor: 1, reducedMotion: 'reduce'});

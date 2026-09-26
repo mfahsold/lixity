@@ -1,5 +1,11 @@
 # Language and localization contract
 
+The experimental research CLI has English help/errors and language-neutral JSON.
+It preserves source text and Unicode quotation offsets without translation or
+normalization. FTS5 word search is not a language-specific linguistic model.
+The seven-language dashboard contract below applies to manuscript analysis;
+there is no research UI yet. See [research limits](research/USAGE.md).
+
 ## Defaults and developer language
 
 Documentation, comments and docstrings are English. Localized resource values,

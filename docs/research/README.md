@@ -1,8 +1,10 @@
 # RFC: an evidence-based research workspace for Lixity
 
-Status: **proposed**, 2026-09-25. This is a design contribution, not a shipped
-feature. Commands, modules and schemas described below do not exist unless
-explicitly identified as current. No new runtime dependencies are introduced.
+Status: **target architecture**, 2026-09-25. An initial [local UTF-8 research pilot](USAGE.md)
+is in local development towards `1.16.0.dev0`; it is unreleased and **not in release `v1.15.0`**.
+The remaining modules, providers and schemas below are proposed, not available.
+See the [implementation scope](IMPLEMENTATION.md) for the first slice. No new
+runtime dependencies are introduced by that slice.
 
 Companion documents: [research and platform evidence](EVIDENCE.md),
 [data model and interchange example](DATA_MODEL.md).

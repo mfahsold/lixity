@@ -227,6 +227,22 @@ class FingerprintThresholds:
     dim_score_threshold: float = 2.5  # |dimension score| from here: flagged on that axis
     flag_min_severity: int = 2  # paragraph severity floor for the flags panel (1|2|3)
 
+    def __post_init__(self) -> None:
+        for name in ("z_mild", "z_strong", "fdr_q", "dim_score_threshold"):
+            value = getattr(self, name)
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or not math.isfinite(value):
+                raise ValueError(f"{name} must be a finite number")
+        if not 0 <= self.z_mild <= self.z_strong:
+            raise ValueError("Deviation thresholds must satisfy 0 <= z_mild <= z_strong")
+        if not 0 < self.fdr_q < 1 or self.fdr_method not in ("bh", "by"):
+            raise ValueError("FDR requires 0 < fdr_q < 1 and method bh or by")
+        if self.dim_score_threshold <= 0:
+            raise ValueError("dim_score_threshold must be positive")
+        if isinstance(self.min_chapters, bool) or not isinstance(self.min_chapters, int) or self.min_chapters < 2:
+            raise ValueError("min_chapters must be an integer of at least 2")
+        if isinstance(self.flag_min_severity, bool) or not isinstance(self.flag_min_severity, int) or self.flag_min_severity not in (1, 2, 3):
+            raise ValueError("flag_min_severity must be 1, 2 or 3")
+
 
 def median(values: list[float]) -> float:
     return statistics.median(values)

@@ -250,7 +250,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters pacing motifs showing dashboard style build about completion"
+    local cmds="analyze profile dialogue characters pacing motifs showing dashboard style build about completion research"
     local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
     local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
     if [[ $COMP_CWORD -eq 1 ]]; then
@@ -258,6 +258,18 @@ _lixity_complete() {
         return 0
     fi
     case "$prev" in
+        research)
+            COMPREPLY=( $(compgen -W "init ingest reindex search cite audit schema analyze dashboard withdraw purge" -- "$cur") )
+            return 0
+            ;;
+        --project)
+            COMPREPLY=( $(compgen -d -- "$cur") )
+            return 0
+            ;;
+        --file)
+            COMPREPLY=( $(compgen -f -- "$cur") )
+            return 0
+            ;;
         --language)
             COMPREPLY=( $(compgen -W "auto de en fr es it pt nl generic" -- "$cur") )
             return 0
@@ -279,6 +291,10 @@ _lixity_complete() {
             return 0
             ;;
     esac
+    if [[ ${COMP_WORDS[1]} == research ]]; then
+        COMPREPLY=( $(compgen -W "--project --file --title --language --actor --source-id --version-id --reason --allow-retention --dry-run --context --thresholds --query --limit --passage --help" -- "$cur") )
+        return 0
+    fi
     COMPREPLY=( $(compgen -W "$opts $style_opts" -- "$cur") )
     COMPREPLY+=( $(compgen -f -- "$cur") )
 }
@@ -312,6 +328,7 @@ _lixity() {
     'build:Idempotent workspace build'
     'about:Tool metadata for agents'
     'completion:Shell completion script'
+    'research:Experimental local research archive and lexical search'
   )
   _arguments -C \
     '--version[Print version and exit]' \
@@ -323,6 +340,25 @@ _lixity() {
       ;;
     args)
       case $words[1] in
+        research)
+          _arguments \
+            '1:action:(init ingest reindex search cite audit schema analyze dashboard withdraw purge)' \
+            '--project[Explicit project root]:directory:_files -/' \
+            '--file[UTF-8 source]:file:_files' \
+            '--title[Source or project title]:title:' \
+            '--language[Language]:language:(en de fr es it pt nl generic)' \
+            '--actor[Local actor]:actor:' \
+            '--source-id[Source identifier]:id:' \
+            '--version-id[Explicit source version identifier]:id:' \
+            '--reason[Reason for action]:reason:' \
+            '--allow-retention[Confirm local retention permission]' \
+            '--dry-run[Preview without writing]' \
+            '--context[Source criticism context JSON file]:file:_files' \
+            '--thresholds[Analysis thresholds]:thresholds:' \
+            '--query[Literal search words]:query:' \
+            '--limit[Maximum hits]:limit:' \
+            '--passage[Immutable passage ID]:id:'
+          ;;
         completion)
           _values 'shell' bash zsh sh
           ;;
@@ -788,6 +824,9 @@ def main(argv: list[str] | None = None) -> int:
     )
     parser.add_argument("--version", action="version", version=f"lixity {__version__}")
     sub = parser.add_subparsers(dest="command", required=True, metavar="command")
+    from .research.cli import configure as configure_research
+
+    configure_research(sub.add_parser("research", help="Experimental local sources, citations and lexical search (JSON)"))
     for name, help_text in (
         ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
         ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
@@ -944,6 +983,10 @@ def main(argv: list[str] | None = None) -> int:
             help="Minimum paragraph severity for flags panel (default 2)",
         )
     args = parser.parse_args(argv)
+    if args.command == "research":
+        from .research.cli import run as run_research
+
+        return run_research(args)
     if getattr(args, "min_chapters", None) is not None and args.min_chapters < 2:
         parser.error("--min-chapters must be at least 2")
     project_config = load_project_config(getattr(args, "file", None))

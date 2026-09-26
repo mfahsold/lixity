@@ -30,6 +30,14 @@ and grants no commercial permission.
 Contact [mfahsold@googlemail.com](mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20License)
 with your project, intended publication and use of Lixity.
 
+## Rights in imported research sources and citations
+
+Using `lixity research ingest --allow-retention` confirms that you have permission
+to retain a local copy of that material. It does not grant or transfer copyright,
+authorize redistribution, or place imported text under LNCL-1.0. Your manuscript
+text, imported source texts, and Lixity's software code remain under their own
+separate respective rights and licenses.
+
 ## Source-available, not Open Source
 
 Open Source licenses allow commercial use; a non-commercial restriction does

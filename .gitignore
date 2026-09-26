@@ -52,6 +52,8 @@ nda/
 lixity-dashboard.html
 /manuscripts/
 /private/
+/.lixity/
+/research/
 
 # Secrets & private stores (never commit)
 .env

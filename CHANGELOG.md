@@ -12,9 +12,20 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Research workspace architecture proposal: source/version/passage/claim/dossier
   model, optional Zotero/Docling/Qdrant/Haystack integrations, archival interchange,
   synthetic evidence-chain example and staged implementation/evaluation plan.
-  Documentation only; no research commands or runtime dependencies are added.
+  The complete design remains a target, not a shipped provider integration.
+- Experimental `lixity research` and `lixity.research.api`: explicit project
+  creation, permitted local UTF-8 ingestion, versioned source criticism context,
+  lean research analysis adapter connecting archived sources to `lixity.pipeline`,
+  localized read-only source dashboard (`#document-context`), controlled withdrawal,
+  physical purge with dry-run preview, SQLite/FTS5 indexing/search, citation
+  resolution and integrity audit. Independent `*-local/1` schemas, atomic snapshot
+  publication, process locks and restore/conflict/corruption tests. No new runtime
+  dependencies. Claims, dossiers, interactive research UI, OCR and hybrid retrieval
+  remain unimplemented.
 
 ### Changed
+
+- Development version advances to `1.16.0.dev0`; released `v1.15.0` is unchanged.
 
 - Clarify that books intended for sale, including self-publishing, require a
   separate written commercial license. Add visible localized dashboard terms

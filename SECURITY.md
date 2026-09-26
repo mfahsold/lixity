@@ -29,6 +29,12 @@ a production-support guarantee.
   limits and must not execute unrestricted user-supplied expressions.
 - Atomic file replacement protects write integrity, not confidentiality or
   authorization. Callers choose writable destinations and file permissions.
+- The development research pilot retains original text and excerpts in
+  `research/`. Treat both as private. Explicit retention confirmation does not
+  grant rights or authorize redistribution. Local project paths are not remote
+  authorization tokens. Use a private local filesystem; shared hostile writers and
+  disk-level cryptographic shredding are outside this pilot's scope (controlled
+  logical withdrawal and physical object deletion with dry-run preview are supported).
 
 ## Repository and deployment hygiene
 

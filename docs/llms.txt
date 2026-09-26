@@ -39,6 +39,11 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [Installation](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md): prerequisites, development vs release, Windows, updates, first dashboard, troubleshooting
 
 - Current release: 1.15.0; published tag: v1.15.0.
+- Development: 1.16.0.dev0, experimental `lixity research` for explicit-project
+  UTF-8 archives, exact citations, controlled withdrawal/purge and SQLite/FTS5 lexical search.
+  No research UI, claims/dossier review, OCR, remote imports or hybrid retrieval yet.
+- [Research pilot](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md): implemented CLI/API, `*-local/1` schemas and limits; retention permission required
+- [Research target architecture](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md): includes unimplemented interfaces; not an executable command reference
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md): shared analysis pipeline, project isolation, engine/adapter boundaries
 - [Localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): English defaults, seven linguistic profiles, mathematical invariants and limitations
 - [README](https://github.com/mfahsold/lixity#readme): overview, install, CLI quick start, capabilities, license
@@ -51,7 +56,9 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.15.0)
 - Project page: https://mfahsold.github.io/lixity/
 
-Reports/CLI messages: English default, German via LIXITY_LANG=de. JSON contracts:
+Analysis reports/CLI messages: English default, German via LIXITY_LANG=de.
+The research pilot currently uses English help/errors and language-neutral JSON;
+source quotations retain their original language. Analysis JSON contracts:
 schema_version 2 (analyze/profile, language-neutral tense values
 present/past/mixed/neutral) and 4 (style reference, with structural_diagnostics).
 

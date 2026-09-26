@@ -68,8 +68,12 @@ _LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 
 def parse_markdown_blocks(content: str) -> list[dict[str, Any]]:
     """Parses Markdown content into semantic blocks and filters editorial HTML comments."""
-    # Remove editorial comments (<!-- ... -->) completely
-    clean_content = re.sub(r"<!--.*?-->", "", content, flags=re.DOTALL)
+    clean_content = re.sub(
+        r"<!--.*?-->",
+        lambda match: "".join(character for character in match.group()
+                             if character in "\r\n\v\f\x1c\x1d\x1e\x85\u2028\u2029"),
+        content, flags=re.DOTALL,
+    )
     lines = clean_content.splitlines()
 
     blocks: list[dict[str, Any]] = []

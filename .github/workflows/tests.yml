@@ -20,6 +20,19 @@ jobs:
       - run: pip install pytest
       - run: PYTHONPATH=src python -m pytest -W error -q -p no:asyncio
 
+  research-platforms:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [windows-latest, macos-latest]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - run: python -m pip install . pytest
+      - run: python -m pytest tests/test_research.py tests/test_research_analysis.py tests/test_research_lifecycle.py -W error -q -p no:asyncio
+
   lint:
     runs-on: ubuntu-latest
     steps:
@@ -55,6 +68,12 @@ jobs:
               "lixity/ui/assets/dashboard.js",
               "lixity/ui/assets/style-space.js",
               "lixity/pipeline.py",
+              "lixity/research/api.py",
+              "lixity/research/analysis.py",
+              "lixity/research/models.py",
+              "lixity/research/repository.py",
+              "lixity/research/catalogue.py",
+              "lixity/research/cli.py",
               "lixity/_version.py",
           }
           missing = sorted(required - names)

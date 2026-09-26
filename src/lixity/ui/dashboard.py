@@ -101,6 +101,7 @@ def render_dashboard(
     current_language: str | None = None,
     language_options: Sequence[Any] | None = None,
     flag_min_severity: int | None = None,
+    document_context: Mapping[str, Any] | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -201,6 +202,36 @@ def render_dashboard(
 
     if status:
         parts.append(status_strip(labels, status))
+
+    if document_context:
+        parts.append(panel_start("document-context", labels, "source_context"))
+        parts.append('<div class="table-wrap"><table><tbody>')
+        if "source_version_id" in document_context:
+            parts.append(
+                f'<tr><th scope="row">{L("ctx_source_version")}</th>'
+                f'<td><code>{esc(document_context["source_version_id"])}</code></td></tr>'
+            )
+        ctx_fields = (
+            ("genre", "ctx_genre"),
+            ("created_period", "ctx_created_period"),
+            ("depicted_period", "ctx_depicted_period"),
+            ("place", "ctx_place"),
+            ("perspective", "ctx_perspective"),
+            ("original_language", "ctx_original_language"),
+            ("is_translation", "ctx_is_translation"),
+            ("provenance_note", "ctx_provenance_note"),
+        )
+        for field_name, label_key in ctx_fields:
+            val = document_context.get(field_name)
+            if val is not None:
+                if isinstance(val, bool):
+                    val_str = L("ctx_yes") if val else L("ctx_no")
+                else:
+                    val_str = str(val)
+                parts.append(
+                    f'<tr><th scope="row">{L(label_key)}</th><td>{esc(val_str)}</td></tr>'
+                )
+        parts.append("</tbody></table></div></section>")
 
     if controls:
         parts.append('<section class="panel controls" id="controls">')

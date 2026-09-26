@@ -421,6 +421,13 @@ def about() -> dict[str, Any]:
                 "purpose": "shell completion script",
                 "output": "script",
             },
+            {
+                "name": "research",
+                "purpose": "experimental local UTF-8 source archive, exact citations and SQLite lexical search; explicit project required",
+                "output": "json",
+                "status": "experimental",
+                "schema_version": "research-local/1",
+            },
         ],
         "license": "Lixity Non-Commercial License 1.0 (LNCL-1.0)",
     }

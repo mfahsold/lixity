@@ -2,10 +2,14 @@
 
 [RFC](README.md) · [Evidence](EVIDENCE.md)
 
-Status: design specification, not an implemented Lixity API or a published JSON
-Schema. The implementation should generate and version JSON Schema 2020-12 from
-the agreed models. [The synthetic interchange example](examples/evidence-chain.json)
-illustrates a complete source-to-decision chain; it is not a production database.
+Status: target design specification for the complete RFC. The local pilot
+(target `1.16.0.dev0`; unreleased and not in release `v1.15.0`) implements the
+immutable source-to-passage subset using strict schema `research-local/1`
+(`Project`, `Source`, `SourceVersion`, `Activity`, `Extraction`, `Passage`,
+`Tombstone`). See [USAGE.md](USAGE.md) and [IMPLEMENTATION.md](IMPLEMENTATION.md).
+Claims, EvidenceLinks, Decisions and Dossiers remain planned for Phase 4.
+[The synthetic interchange example](examples/evidence-chain.json) illustrates a
+complete source-to-decision chain; it is not a production database.
 
 ## 1. Common envelope and identity
 

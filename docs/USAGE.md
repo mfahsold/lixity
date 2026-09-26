@@ -1,5 +1,8 @@
 # Lixity – Usage & Reference
 
+Development-only archives and lexical search: [Research usage](research/USAGE.md).
+Not included in `v1.15.0`; the manuscript commands below are unchanged.
+
 Complete command-line and library reference for Lixity. If you are new to the
 project, start with the [README](../README.md); this document goes into detail.
 

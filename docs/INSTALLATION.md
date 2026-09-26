@@ -42,6 +42,9 @@ make `import lixity` available to a different Python environment.
 
 ### Development builds instead
 
+The `1.16.0.dev0` development line includes the [local research pilot](research/USAGE.md).
+Release `v1.15.0` does not. It requires SQLite/FTS5 but no new Python dependencies.
+
 To follow unreleased changes, use this **instead**:
 
 ```sh
