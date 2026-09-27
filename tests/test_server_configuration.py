@@ -63,3 +63,13 @@ class TestServerConfiguration(unittest.TestCase):
             self.assertEqual(run.call_args.kwargs["project_open_overrides"], {
                 "language": "de", "title": "Override", "fdr_q": 0.03,
             })
+
+    def test_serve_passes_debug_flag(self):
+        with patch("lixity.server.run_server") as run:
+            self.assertEqual(main(["serve", "--no-project", "--debug"]), 0)
+        self.assertTrue(run.call_args.kwargs["debug"])
+
+        with patch("lixity.server.run_server") as run:
+            self.assertEqual(main(["serve", "--no-project"]), 0)
+        self.assertFalse(run.call_args.kwargs["debug"])
+

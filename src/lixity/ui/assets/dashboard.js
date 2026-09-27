@@ -1,4 +1,63 @@
 (function () {
+  var isDebug = (function() {
+    if (window.LIXITY_DEBUG) return true;
+    var meta = document.querySelector('meta[name="lixity-debug"]');
+    if (meta && meta.content === "true") return true;
+    try {
+      return localStorage.getItem("lixity_debug") === "1";
+    } catch (_) {
+      return false;
+    }
+  })();
+
+  var LixityLog = {
+    isDebug: function() { return isDebug; },
+    setDebug: function(enable) {
+      isDebug = !!enable;
+      try {
+        if (isDebug) localStorage.setItem("lixity_debug", "1");
+        else localStorage.removeItem("lixity_debug");
+      } catch (_) {}
+      console.info("[Lixity] Debug logging " + (isDebug ? "enabled" : "disabled"));
+    },
+    debug: function() {
+      if (isDebug && console.debug) {
+        console.debug.apply(console, ["[Lixity:debug]"].concat(Array.prototype.slice.call(arguments)));
+      }
+    },
+    info: function() {
+      if (isDebug && console.info) {
+        console.info.apply(console, ["[Lixity:info]"].concat(Array.prototype.slice.call(arguments)));
+      }
+    },
+    warn: function() {
+      if (console.warn) {
+        console.warn.apply(console, ["[Lixity:warn]"].concat(Array.prototype.slice.call(arguments)));
+      }
+    },
+    error: function() {
+      if (console.error) {
+        console.error.apply(console, ["[Lixity:error]"].concat(Array.prototype.slice.call(arguments)));
+      }
+    },
+    api: function(method, url, durationMs, status, details) {
+      if (!isDebug) return;
+      var label = "[Lixity:api] " + method + " " + url + " -> " + status + " (" + durationMs.toFixed(1) + "ms)";
+      if (status >= 400) {
+        console.error(label, details !== undefined ? details : "");
+      } else {
+        console.debug(label, details !== undefined ? details : "");
+      }
+    }
+  };
+
+  window.LixityLog = LixityLog;
+  window.setLixityDebug = LixityLog.setDebug;
+
+  if (isDebug) {
+    console.info("[Lixity] Debug mode active. API logs and runtime diagnostics are enabled. Use setLixityDebug(false) to disable.");
+  }
+
   var tip = document.createElement("div");
   tip.id = "lixity-tooltip";
   tip.className = "tooltip-popup";
@@ -387,16 +446,20 @@ if (layer) {
   applyLayer();
 }
 async function markerApi(payload) {
+  var t0 = performance.now();
+  var url = API + "/marker-" + payload._action;
   try {
-    var res = await fetch(API + "/marker-" + payload._action, {
+    var res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
     var data = await res.json();
+    LixityLog.api("POST", url, performance.now() - t0, res.status, data);
     if (data.ok) { setTimeout(function () { location.reload(); }, 800); }
     return data;
   } catch (err) {
+    LixityLog.error("markerApi error:", err);
     return { ok: false, message: String(err) };
   }
 }
@@ -502,14 +565,19 @@ function ndaStatus(message, ok) {
   el.textContent = (ok ? "✓ " : "✗ ") + (message || "");
 }
 async function ndaApi(path, payload) {
+  var t0 = performance.now();
+  var url = API + "/" + path;
   try {
-    var res = await fetch(API + "/" + path, {
+    var res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload || {})
     });
-    return await res.json();
+    var data = await res.json();
+    LixityLog.api("POST", url, performance.now() - t0, res.status, data);
+    return data;
   } catch (err) {
+    LixityLog.error("ndaApi error:", err);
     return { ok: false, message: String(err) };
   }
 }
@@ -651,13 +719,16 @@ async function runAction(action, payload, button) {
     status.textContent = "…";
   }
   if (button) { button.disabled = true; button.classList.add("busy"); button.setAttribute("aria-busy", "true"); }
+  var t0 = performance.now();
+  var url = API + "/" + action;
   try {
-    var res = await fetch(API + "/" + action, {
+    var res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload || {})
     });
     var data = await res.json();
+    LixityLog.api("POST", url, performance.now() - t0, res.status, data);
     if (status) {
       status.className = "ctl-status " + (data.ok ? "ok" : "err");
       status.textContent = (data.ok ? "✓ " : "✗ ") + (data.message || "");
@@ -665,6 +736,7 @@ async function runAction(action, payload, button) {
     if (data.ok && data.reload) { setTimeout(function () { location.reload(); }, 1200); }
     return data;
   } catch (err) {
+    LixityLog.error("runAction (" + action + ") error:", err);
     if (status) {
       status.className = "ctl-status err";
       status.textContent = "✗ " + err;
@@ -733,27 +805,36 @@ function researchStatus(message, ok) {
 }
 
 async function researchApiPost(action, payload) {
+  var t0 = performance.now();
+  var url = API + "/" + action;
   try {
-    var res = await fetch(API + "/" + action, {
+    var res = await fetch(url, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload || {})
     });
     var data = await res.json();
+    LixityLog.api("POST", url, performance.now() - t0, res.status, data);
     if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action)) {
       await refreshResearchProjectInfo();
     }
     return data;
   } catch (err) {
+    LixityLog.error("researchApiPost (" + action + ") error:", err);
     return { ok: false, message: String(err) };
   }
 }
 
 async function researchApiGet(endpoint) {
+  var t0 = performance.now();
+  var url = API + "/" + endpoint;
   try {
-    var res = await fetch(API + "/" + endpoint);
-    return await res.json();
+    var res = await fetch(url);
+    var data = await res.json();
+    LixityLog.api("GET", url, performance.now() - t0, res.status, data);
+    return data;
   } catch (err) {
+    LixityLog.error("researchApiGet (" + endpoint + ") error:", err);
     return { ok: false, message: String(err) };
   }
 }
@@ -2314,8 +2395,10 @@ if (researchRevisionDialog) {
     }
     revisionPending(true);
     var session = revisionState.session;
+    var t0 = performance.now();
+    var reviseUrl = API + "/research-record-revise";
     try {
-      var response = await fetch(API + "/research-record-revise", {
+      var response = await fetch(reviseUrl, {
         method: "POST", headers: {"Content-Type": "application/json"},
         body: JSON.stringify({kind: revisionState.kind, id: revisionState.id, changes: changes,
           expected_snapshot: revisionState.current.snapshot,
@@ -2323,11 +2406,13 @@ if (researchRevisionDialog) {
           change_kind: choice.value, reason: revisionReason.value.trim()})
       });
       var data = await response.json();
+      LixityLog.api("POST", reviseUrl, performance.now() - t0, response.status, data);
       if (session !== revisionState.session) return;
       if (response.status === 409) {
         revisionStatus(uiLabel("research_revision_conflict"), true);
         revisionReload.hidden = false;
       } else if (!response.ok || !data.ok) {
+        LixityLog.error("research-record-revise failed:", data);
         revisionStatus(uiFormat("research_revision_save_failed", {reason: data.message || uiLabel("wizard_unknown_error")}), true);
       } else {
         revisionPending(false);
@@ -2338,6 +2423,7 @@ if (researchRevisionDialog) {
         refreshResearchDecisions();
       }
     } catch (error) {
+      LixityLog.error("research-record-revise error:", error);
       if (session === revisionState.session)
         revisionStatus(uiFormat("research_revision_save_failed", {reason: String(error)}), true);
     } finally {
@@ -2748,12 +2834,15 @@ if (openChooser) {
     chooseList.setAttribute("aria-busy", "true");
     chooseFolder.disabled = true;
     chooseMessage(uiLabel("wizard_choose_loading"), false);
+    var t0 = performance.now();
+    var url = API + "/project-paths" + (path ? "?path=" + encodeURIComponent(path) : "");
     try {
-      var url = API + "/project-paths" + (path ? "?path=" + encodeURIComponent(path) : "");
       var response = await fetch(url);
       var data = await response.json();
+      LixityLog.api("GET", url, performance.now() - t0, response.status, data);
       if (request !== chooseRequest || openChooser.hidden) return;
       if (!response.ok || !data.ok || typeof data.path !== "string" || !Array.isArray(data.entries)) {
+        LixityLog.warn("loadOpenChooser response issue:", data);
         if (path) {
           chooseMessage(uiLabel("wizard_choose_stale_path") || (data.message || uiLabel("wizard_unknown_error")), true);
           setTimeout(function() {
@@ -2799,6 +2888,7 @@ if (openChooser) {
         (data.truncated ? uiLabel("wizard_choose_truncated") : ""), false);
       if (focusEntry) (chooseList.querySelector("button") || chooseFolder).focus();
     } catch (error) {
+      LixityLog.error("loadOpenChooser error:", error);
       if (request === chooseRequest && !openChooser.hidden) {
         chooseMessage(uiFormat("wizard_choose_failed", { reason: String(error) }), true);
       }

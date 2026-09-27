@@ -14,6 +14,7 @@
   try {
     data = JSON.parse(raw);
   } catch (e) {
+    if (window.LixityLog) window.LixityLog.warn("style-space: failed to parse data-dim3d JSON:", e);
     return;
   }
 
@@ -27,10 +28,19 @@
     minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero"
   });
   var thresholdFormat = new Intl.NumberFormat(data.language || "en");
-  if (!points.length) return;
+  if (!points.length) {
+    if (window.LixityLog) window.LixityLog.debug("style-space: no 3D points to render");
+    return;
+  }
 
   var ctx = canvas.getContext("2d");
-  if (!ctx) return;
+  if (!ctx) {
+    if (window.LixityLog) window.LixityLog.error("style-space: failed to obtain canvas 2D context");
+    return;
+  }
+  if (window.LixityLog) {
+    window.LixityLog.debug("style-space: initialized with " + points.length + " points, threshold " + threshold);
+  }
 
   var yaw = 0.55;
   var pitch = 0.35;

@@ -104,6 +104,7 @@ def render_dashboard(
     flag_min_severity: int | None = None,
     document_context: Mapping[str, Any] | None = None,
     enabled_actions: Sequence[str] | None = None,
+    debug: bool = False,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -206,6 +207,7 @@ def render_dashboard(
         "<head>",
         '<meta charset="utf-8"/>',
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
+        *(('<meta name="lixity-debug" content="true"/>',) if debug else ()),
         f"<title>{esc(title)} – {L('app_suffix')}</title>",
         f"<style>{_CSS}</style>",
         "</head>",

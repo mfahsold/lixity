@@ -1,6 +1,7 @@
 """Tests for lixity.server – loopback development server and interactive dashboard."""
 
 import http.client
+import io
 import json
 import os
 import shutil
@@ -1376,3 +1377,45 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(detail["context"]["origin_url"], "https://example.org/synthetic.pdf")
             finally:
                 LixityServerHandler.research_dir = orig_rdir
+
+    def test_server_debug_mode_logging(self):
+        orig_debug = LixityServerHandler.debug
+        try:
+            LixityServerHandler.debug = True
+            LixityServerHandler.refresh()
+            with patch("sys.stderr", new_callable=io.StringIO) as fake_stderr:
+                status, body, _ = self.make_request("/")
+                self.assertEqual(status, 200)
+                html_text = body.decode("utf-8")
+                self.assertIn('<meta name="lixity-debug" content="true"/>', html_text)
+                self.assertIn("[server:debug]", fake_stderr.getvalue())
+
+                # Test 400 bad request logging
+                fake_stderr.seek(0)
+                fake_stderr.truncate()
+                status_bad, _, _ = self.make_request(
+                    "/api/marker-add",
+                    method="POST",
+                    body=json.dumps({"kind": "note"}),  # missing chapter & paragraph
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status_bad, 400)
+                self.assertIn("HTTP 400", fake_stderr.getvalue())
+        finally:
+            LixityServerHandler.debug = orig_debug
+            LixityServerHandler.refresh()
+
+    def test_server_debug_mode_quiet_when_disabled(self):
+        orig_debug = LixityServerHandler.debug
+        try:
+            LixityServerHandler.debug = False
+            LixityServerHandler.refresh()
+            with patch("sys.stderr", new_callable=io.StringIO) as fake_stderr:
+                status, body, _ = self.make_request("/")
+                self.assertEqual(status, 200)
+                html_text = body.decode("utf-8")
+                self.assertNotIn('<meta name="lixity-debug"', html_text)
+                self.assertEqual(fake_stderr.getvalue(), "")
+        finally:
+            LixityServerHandler.debug = orig_debug
+            LixityServerHandler.refresh()

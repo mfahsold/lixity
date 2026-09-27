@@ -1015,6 +1015,11 @@ def main(argv: list[str] | None = None) -> int:
                 default=None,
                 help="Minimum paragraph severity for flags panel (default 2)",
             )
+            p.add_argument(
+                "--debug",
+                action="store_true",
+                help="Enable verbose request logging, stack traces, and browser devtools debugging",
+            )
             continue
         p.add_argument("file", help="Markdown manuscript")
         p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
@@ -1111,6 +1116,7 @@ def main(argv: list[str] | None = None) -> int:
                 open_browser=args.open,
                 research_dir=args.research_project,
                 project_open_overrides=project_open_overrides,
+                debug=args.debug,
             )
             return EXIT_OK
         except (OSError, ValueError, RuntimeError) as exc:

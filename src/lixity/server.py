@@ -14,10 +14,12 @@ import contextlib
 import json
 import os
 import re
+import sys
 import tempfile
 import webbrowser
 from bisect import insort
 from collections.abc import Mapping
+from datetime import datetime, timezone
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from pathlib import Path
 from typing import Any, ClassVar
@@ -101,6 +103,7 @@ def build_server_dashboard(
     controls: bool = True,
     api_base: str = "/api",
     exports_dir: str | None = None,
+    debug: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Generates the interactive dashboard HTML and returns (html, info_dict)."""
     text = ""
@@ -207,6 +210,7 @@ def build_server_dashboard(
         current_language=language,
         flag_min_severity=resolved_thresholds.flag_min_severity,
         enabled_actions=("analyze", "rebuild"),
+        debug=debug,
     )
 
     info = {
@@ -236,6 +240,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
     title_custom: bool = False
     project_open_overrides: ClassVar[dict[str, Any]] = {}
     thresholds: FingerprintThresholds = FingerprintThresholds()
+    debug: ClassVar[bool] = False
     dashboard_html: str = ""
     dashboard_info: ClassVar[dict[str, Any]] = {}
 
@@ -262,6 +267,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             controls=True,
             api_base="/api",
             exports_dir=cls.exports_dir,
+            debug=cls.debug,
         )
 
     def _send(self, code: int, body: bytes, content_type: str) -> None:
@@ -276,6 +282,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def _json(self, payload: Mapping[str, Any], code: int = 200) -> None:
+        if self.debug and code >= 400:
+            msg = payload.get("message", "")
+            sys.stderr.write(f"[server:debug] HTTP {code} on {self.command} {self.path}: {msg}\n")
+            sys.stderr.flush()
         self._send(
             code,
             json.dumps(payload, ensure_ascii=False).encode("utf-8"),
@@ -1247,8 +1257,12 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def log_message(self, format: str, *args: Any) -> None:
-        """Quiet: suppress default request logging."""
-        return
+        """Suppress default request logging unless debug mode is active."""
+        if not self.debug:
+            return
+        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
+        sys.stderr.write(f"[{now}] [server:debug] {self.address_string()} - {format % args}\n")
+        sys.stderr.flush()
 
 
 def run_server(
@@ -1262,11 +1276,13 @@ def run_server(
     open_browser: bool = False,
     research_dir: str | None = None,
     project_open_overrides: Mapping[str, Any] | None = None,
+    debug: bool = False,
 ) -> None:
     """Runs the Lixity dashboard development server on loopback."""
     if host not in {"127.0.0.1", "localhost"}:
         raise ValueError("Only loopback addresses (127.0.0.1, localhost) are permitted")
 
+    is_debug = bool(debug or os.environ.get("LIXITY_DEBUG", "").lower() in ("1", "true", "yes"))
     source_input: str | None = None
     workspace_root: str = os.getcwd()
     exports_dir: str = os.path.join(workspace_root, "exports")
@@ -1299,6 +1315,7 @@ def run_server(
 
     os.makedirs(exports_dir, exist_ok=True)
 
+    LixityServerHandler.debug = is_debug
     LixityServerHandler.source_input = source_input
     LixityServerHandler.workspace_root = workspace_root
     LixityServerHandler.exports_dir = exports_dir
@@ -1316,9 +1333,10 @@ def run_server(
     server = ThreadingHTTPServer((host, port), LixityServerHandler)
     url = f"http://{host}:{port}/"
     info = LixityServerHandler.dashboard_info
+    debug_tag = " (debug mode active)" if is_debug else ""
 
     print(
-        f"[OK] Lixity server running: {url}\n"
+        f"[OK] Lixity server running: {url}{debug_tag}\n"
         f"     {info.get('chapters')} chapters · {info.get('paragraphs')} paragraphs · "
         f"{info.get('artifacts')} artifacts (profile: {info.get('language')})\n"
         f"     Stop with Ctrl+C"
