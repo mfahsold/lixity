@@ -973,6 +973,11 @@ class StyleFingerprint:
     structural_diagnostics: dict[str, Any] = field(default_factory=dict)
     thresholds: FingerprintThresholds = field(default_factory=FingerprintThresholds)
 
+    @property
+    def measured_cells(self) -> int:
+        """Number of chapter-feature cells supporting the consistency ratio."""
+        return sum(len(cells) for cells in self.z_scores.values())
+
     @classmethod
     def from_metrics(
         cls, metrics: Any, thresholds: FingerprintThresholds | None = None
@@ -987,7 +992,9 @@ class StyleFingerprint:
             se_col: dict[int, float] = {}
             for chapter in chapters:
                 raw = getattr(chapter, field_name, None)
-                col[chapter.num] = float(raw) if isinstance(raw, int | float) else None
+                col[chapter.num] = (
+                    float(raw) if isinstance(raw, int | float) and chapter.words > 0 else None
+                )
                 se_raw = getattr(chapter, "style_se", {}).get(field_name)
                 se_col[chapter.num] = float(se_raw) if isinstance(se_raw, int | float) else 0.0
             values[field_name] = col
@@ -1336,6 +1343,7 @@ class StyleFingerprint:
                 "expected_false_positives": round(self.expected_false_positives, 2),
             },
             "consistency": round(self.consistency, 4),
+            "measured_cells": self.measured_cells,
             "baseline_diagnostics": self.baseline_diagnostics,
             STRUCTURAL_DIAGNOSTICS_KEY: self.structural_diagnostics,
             "features": features,
@@ -1391,8 +1399,12 @@ class StyleFingerprint:
                     f"({t('constant')})   [{unit}]"
                 )
         lines.append("=" * 72)
+        consistency_text = (
+            f"{format_num(self.consistency * 100, language_key, 1)} %"
+            if self.measured_cells else "–"
+        )
         lines.append(
-            f"{t('consistency')}: {format_num(self.consistency * 100, language_key, 1)} % "
+            f"{t('consistency')}: {consistency_text} "
             f"{t('cells_in_band')} (z*)"
         )
         lines.append(

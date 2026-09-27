@@ -424,6 +424,9 @@ def render_dashboard(
         parts.append(f'<input class="ctl" id="r-ingest-title" placeholder="{L("research_source_title")}" style="min-width:180px;"/>')
         parts.append(f'<input class="ctl" id="r-ingest-tags" placeholder="{L("research_tags_example")}" style="min-width:180px;"/>')
         parts.append('</div>')
+        parts.append(f'<label for="r-ingest-origin-url">{L("ctx_origin_url")}</label>')
+        parts.append('<input class="ctl" type="url" id="r-ingest-origin-url" maxlength="2000" aria-describedby="r-ingest-origin-help" placeholder="https://example.org/source" style="width:100%;margin:.3rem 0;"/>')
+        parts.append(f'<p class="ctl-note" id="r-ingest-origin-help">{L("research_origin_url_help")}</p>')
         parts.append('<div class="row" id="r-ocr-diagnostic-box" style="margin-bottom:.5rem;display:none;"></div>')
         parts.append('<div class="row" style="margin-bottom:.5rem;">')
         parts.append(f'<textarea class="ctl" id="r-ingest-text" placeholder="{L("research_source_text")}" rows="3" style="width:100%;font-family:inherit;"></textarea>')
@@ -835,9 +838,9 @@ def render_dashboard(
     if fingerprint is not None:
         style_tiles.append(
             kpi(
-                P(fingerprint.consistency * 100, 0),
+                P(fingerprint.consistency * 100, 0) if fingerprint.measured_cells else "–",
                 help_term(labels, "consistency", L("consistency")),
-                bar=fingerprint.consistency * 100,
+                bar=fingerprint.consistency * 100 if fingerprint.measured_cells else None,
                 jump="#heatmap",
             )
         )

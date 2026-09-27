@@ -564,11 +564,20 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(status, 400)
 
                 # 4. Ingest with retention succeeds
+                for invalid_url in (0, False, [], {}, "javascript:alert(1)"):
+                    status, body, _ = self.make_request(
+                        "/api/research-ingest", method="POST",
+                        body=json.dumps({"content": "Synthetic invalid source.",
+                                         "allow_retention": True, "origin_url": invalid_url}),
+                        headers={"Content-Type": "application/json"},
+                    )
+                    self.assertEqual(status, 400, body)
                 ok_ingest = json.dumps({
                     "content": "The archives in Prague were established in 1924.\n\nThey contain letters.",
                     "title": "Prague Records",
                     "allow_retention": True,
                     "tags": ["history", "prague"],
+                    "origin_url": "https://example.org/prague",
                 })
                 status, body, _ = self.make_request(
                     "/api/research-ingest",
@@ -587,6 +596,8 @@ class TestLixityServer(unittest.TestCase):
                 sources_data = json.loads(body)
                 self.assertEqual(len(sources_data["sources"]), 1)
                 self.assertEqual(sources_data["sources"][0]["tags"], ["history", "prague"])
+                self.assertEqual(sources_data["sources"][0]["context"]["origin_url"],
+                                 "https://example.org/prague")
 
                 # 6. Search
                 search_payload = json.dumps({"query": "Prague"})
@@ -1316,6 +1327,9 @@ class TestLixityServer(unittest.TestCase):
     def test_research_ingest_content_base64_pdf(self):
         import base64
         import sys
+
+        from lixity.research import api as research_api
+
         tests_dir = str(Path(__file__).parent)
         if tests_dir not in sys.path:
             sys.path.insert(0, tests_dir)
@@ -1343,6 +1357,7 @@ class TestLixityServer(unittest.TestCase):
                     "title": "Document Title",
                     "allow_retention": True,
                     "tags": ["primary", "pdf"],
+                    "origin_url": "https://example.org/synthetic.pdf",
                 })
                 status, body, _ = self.make_request(
                     "/api/research-ingest",
@@ -1355,6 +1370,7 @@ class TestLixityServer(unittest.TestCase):
                 self.assertTrue(res["ok"])
                 self.assertIn("source_id", res)
                 self.assertGreaterEqual(res.get("passages", 0), 1)
+                detail = research_api.get_source(td, res["source_id"])
+                self.assertEqual(detail["context"]["origin_url"], "https://example.org/synthetic.pdf")
             finally:
                 LixityServerHandler.research_dir = orig_rdir
-

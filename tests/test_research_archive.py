@@ -24,7 +24,8 @@ class TestResearchArchive(unittest.TestCase):
             b"The reading room opened in 1924.\r\n\r\nArchive records were preserved.\r\n"
         )
         api.init(self.project, title="Original Archive", language="en")
-        self.ingested = api.ingest(self.project, self.source_file, allow_retention=True)
+        self.ingested = api.ingest(self.project, self.source_file, allow_retention=True,
+                                   origin_url="https://example.org/synthetic-archive")
 
         # Create authored records
         src_detail = api.get_source(self.project, self.ingested["source_id"])
@@ -116,6 +117,7 @@ class TestResearchArchive(unittest.TestCase):
         # Resolve citation
         cite = api.cite(target_dir, self.passage_id)
         self.assertEqual(cite["verbatim"], "The reading room opened in 1924.")
+        self.assertEqual(cite["context"]["origin_url"], "https://example.org/synthetic-archive")
 
         # Resolve revision history on restored project
         history = api.record_history(target_dir, "dossier", self.dossier_id)

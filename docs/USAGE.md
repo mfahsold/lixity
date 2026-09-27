@@ -792,3 +792,18 @@ plus a wheel packaging job. Contribution workflow:
 
 Lixity Non-Commercial License 1.0 (LNCL-1.0) – see [`LICENSE`](../LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
+
+## Unavailable consistency and empty manuscripts (current main)
+
+The dashboard and text style report show “–” when there are no measurable
+chapter–feature cells. Empty chapters do not contribute measurements. A single
+chapter or a manuscript below the configured `min_chapters` can also be
+unavailable even when it contains words. Increasing that minimum deliberately
+requires more evidence before a ratio is shown.
+
+Style JSON v4 adds `measured_cells`. If it is zero, the legacy numeric
+`consistency: 1.0` is an unavailable-value sentinel retained for compatibility;
+do not present it as 100%. When measured, consistency counts cells with
+`abs(z*) < z_mild`, not whole chapters. A high result is not a quality verdict.
+The [interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
+explains a practical review loop and short-text limits.

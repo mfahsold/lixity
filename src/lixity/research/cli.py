@@ -62,6 +62,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--allow-retention", action="store_true", help="Confirm permission to retain a local copy, not to redistribute it")
             command.add_argument("--dry-run", action="store_true", help="Validate and preview; do not write")
             command.add_argument("--context", help="Path to JSON file containing source criticism context")
+            command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
         elif name == "search":
             command.add_argument("--query", required=True)
             command.add_argument("--limit", type=int, choices=range(1, 101), default=20, metavar="1..100")
@@ -227,7 +228,7 @@ def run(args: argparse.Namespace) -> int:
 
             result = api.ingest(args.project, args.file, allow_retention=args.allow_retention,
                                 source_id=args.source_id, title=args.title, language=args.language,
-                                actor=args.actor, dry_run=args.dry_run, context=context,
+                                actor=args.actor, dry_run=args.dry_run, context=context, origin_url=args.origin_url,
                                 progress_callback=_cli_progress)
         elif command == "reindex":
             result = api.reindex(args.project)

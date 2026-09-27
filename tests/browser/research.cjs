@@ -194,6 +194,9 @@ server.serve_forever()
     await expect(page.locator('#open-proj-path')).toHaveValue(path.join(fixture.project, 'manuscript.md'));
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
     await expect(page.locator('#r-active-root')).toContainText(fixture.project);
+    const consistencyTile = page.locator('.kpi').filter({has: page.locator('[data-help]')}).filter({hasText: 'Consistency'}).first();
+    await expect(consistencyTile).toContainText('–');
+    assert.equal(await consistencyTile.locator('.kpi-bar').count(), 0);
     await expect(page.locator('#research-sources-list')).toContainText('Synthetic source');
     await page.locator('[data-research-detail=source]').click();
     await expect(page.locator('#research-sources-list .research-details-body')).toContainText('Synthetic fixture, not an archival record.');
@@ -523,6 +526,32 @@ server.serve_forever()
       await expect(page.locator('html')).toHaveAttribute('lang', language);
       await expect(page.locator('[data-rtab=sources]')).toHaveText(sourcesLabel);
       if (language === 'de') {
+        const ocrStates = {
+          ready: 'OCR-Worker konfiguriert',
+          native_only: 'PDF-Textebene verfügbar',
+          partial: 'PDF-Einrichtung unvollständig',
+          misconfigured_worker: 'OCR-Worker nicht ausführbar',
+          missing_dependencies: 'PDF-Werkzeuge fehlen',
+          future_state: 'OCR-Status unbekannt'
+        };
+        for (const [status, label] of Object.entries(ocrStates)) {
+          await page.route('**/api/research/status', async route => {
+            const response = await route.fetch();
+            const body = await response.json();
+            body.ocr = {status, guidance: ['English backend guidance must not leak']};
+            await route.fulfill({response, json: body});
+          });
+          await page.reload();
+          await expect(page.locator('#r-ocr-diagnostic-box')).toContainText(label);
+          await expect(page.locator('#r-ocr-diagnostic-box')).not.toContainText('English backend');
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          if (status === 'native_only') {
+            await page.locator('[data-rtab="sources"]').click();
+            await page.locator('#research-manager').screenshot({path: path.join(artifacts, 'ocr-origin-de-320.png')});
+          }
+          await page.unroute('**/api/research/status');
+        }
+        await page.reload();
         await page.locator('[data-rtab=grounding]').click();
         await page.locator('#r-ground-source-select').selectOption(sourceAfterReopen.sources[0].id);
         await page.locator('#r-ground-btn').click();
@@ -611,10 +640,19 @@ server.serve_forever()
     await page.locator('#r-init-btn').click();
     await expect(page.locator('#research-tabs')).toBeVisible();
     await page.locator('#r-ingest-title').fill('Scratch source');
+    await page.locator('#r-ingest-origin-url').fill('javascript:alert(1)');
     await page.locator('#r-ingest-text').fill('A synthetic source for a new local project.');
     await page.locator('#r-ingest-retention').check();
     await page.locator('#r-ingest-btn').click();
+    await expect(page.locator('#research-status-bar')).toContainText('HTTP(S)');
+    await expect(page.locator('#r-ingest-title')).toHaveValue('Scratch source');
+    await expect(page.locator('#r-ingest-text')).toHaveValue('A synthetic source for a new local project.');
+    await page.locator('#r-ingest-origin-url').fill('https://example.org/source?a=1&b=2');
+    await page.locator('#r-ingest-btn').click();
+    await expect(page.locator('#r-ingest-origin-url')).toHaveValue('');
     await expect(page.locator('#research-sources-list')).toContainText('Scratch source');
+    await page.locator('[data-research-detail="source"]').first().click();
+    await expect(page.locator('#research-sources-list')).toContainText('https://example.org/source?a=1&b=2');
     await expect(page.locator('#r-active-root')).toContainText(scratchProject);
     const importedProject = path.join(artifacts, 'imported-project');
     const importedText = '## Imported chapter\n\nA synthetic imported manuscript.';

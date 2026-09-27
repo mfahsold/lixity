@@ -38,6 +38,89 @@ class TestResearch(unittest.TestCase):
         self.assertEqual(citation["verification"], "unreviewed")
         self.assertTrue(api.audit(self.project)["ok"])
 
+    def test_origin_url_capture_refresh_and_citation(self):
+        first = self.ingest(origin_url="https://example.org/archive?a=1&b=2#page")
+        api.reindex(self.project)
+        passage = api.search(self.project, "1924")["hits"][0]["passage_id"]
+        snapshot = Repository(self.project).snapshot()
+        self.assertEqual(snapshot.manifest.schema_version, "research-manifest-local/2")
+        version = snapshot.records[first["source_version_id"]]
+        self.assertEqual(version.schema_version, "research-local/2")
+        self.assertTrue(self.ingest(source_id=first["source_id"])["unchanged"])
+        refreshed = self.ingest(source_id=first["source_id"], origin_url="https://example.org/revised")
+        self.assertFalse(refreshed["unchanged"])
+        self.assertEqual(api.cite(self.project, passage)["context"]["origin_url"],
+                         "https://example.org/archive?a=1&b=2#page")
+        self.assertEqual(api.get_source(self.project, first["source_id"])["context"]["origin_url"],
+                         "https://example.org/revised")
+        self.assertTrue(api.audit(self.project)["ok"])
+
+    def test_origin_url_rejects_invalid_input_without_writing(self):
+        before = Repository(self.project).snapshot().digest
+        for url in ("javascript:alert(1)", "file:///tmp/source", "https://", "not a URL",
+                    "https://user:password@example.org/", "https://example.org/\n", 123,
+                    "https://example.org/a b", "https://example.org:bad/"):
+            with self.subTest(url=url), self.assertRaises(ValueError):
+                self.ingest(origin_url=url)
+            self.assertEqual(Repository(self.project).snapshot().digest, before)
+
+    def test_no_origin_url_keeps_version_one_encoding(self):
+        from lixity.research.repository import encode
+        result = self.ingest()
+        snapshot = Repository(self.project).snapshot()
+        self.assertEqual(snapshot.manifest.schema_version, "research-manifest-local/1")
+        self.assertNotIn(b"origin_url", encode(snapshot.records[result["source_version_id"]]))
+
+    def test_origin_url_requires_versioned_record_and_manifest(self):
+        from dataclasses import replace
+
+        from lixity.research.models import Manifest, SourceVersion
+
+        result = self.ingest(origin_url="https://example.org/source")
+        repository = Repository(self.project)
+        snapshot = repository.snapshot()
+        version = snapshot.records[result["source_version_id"]]
+        with self.assertRaisesRegex(ValueError, "Origin URL requires"):
+            SourceVersion.model_validate({**version.model_dump(), "schema_version": "research-local/1"})
+        v1_manifest = Manifest.model_validate({**snapshot.manifest.model_dump(),
+                                              "schema_version": "research-manifest-local/1"})
+        with self.assertRaisesRegex(ResearchError, "manifest version 2"):
+            repository.validate(replace(snapshot, manifest=v1_manifest))
+
+    def test_origin_url_can_be_cleared_without_rewriting_citations(self):
+        first = self.ingest(origin_url="https://example.org/source", context={"tags": ["note"]})
+        detail = api.get_source(self.project, first["source_id"])
+        passage = detail["passages"][0]["id"]
+        self.ingest(source_id=first["source_id"], context={"tags": ["note"], "origin_url": None})
+        latest = api.get_source(self.project, first["source_id"])
+        self.assertNotIn("origin_url", latest["context"])
+        self.assertEqual(latest["context"]["tags"], ["note"])
+        self.assertEqual(api.cite(self.project, passage)["context"]["origin_url"], "https://example.org/source")
+
+    def test_invalid_provenance_is_rejected_before_pdf_extraction(self):
+        pdf = self.root / "synthetic.pdf"
+        pdf.write_bytes(b"%PDF-1.4 synthetic invalid-input fixture")
+        before = Repository(self.project).snapshot().digest
+        with (
+            patch("lixity.research.api.extract_pdf_document", side_effect=AssertionError("must not extract")),
+            self.assertRaises(ValueError),
+        ):
+            api.ingest(self.project, pdf, allow_retention=True, origin_url="javascript:invalid")
+        self.assertEqual(Repository(self.project).snapshot().digest, before)
+
+    def test_cli_origin_url_reaches_source_context(self):
+        from lixity.cli import main
+
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
+            code = main(["research", "ingest", "--project", str(self.project),
+                         "--file", str(self.source), "--allow-retention",
+                         "--origin-url", "https://example.org/cli-source"])
+        self.assertEqual(code, 0)
+        result = json.loads(output.getvalue())
+        self.assertEqual(api.get_source(self.project, result["source_id"])["context"]["origin_url"],
+                         "https://example.org/cli-source")
+
     def test_refresh_keeps_old_citations_and_excludes_old_search_hits(self):
         first = self.ingest()
         api.reindex(self.project)
@@ -351,4 +434,3 @@ class TestResearch(unittest.TestCase):
                 claim_id="urn:uuid:00000000-0000-4000-8000-000000000000",
                 passage_id=passage_id,
             )
-

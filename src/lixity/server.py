@@ -1035,6 +1035,22 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             tags = [str(t).strip() for t in raw_tags if str(t).strip()]
         context = {"tags": tags} if tags else None
 
+        def ingest_file(path: str) -> dict[str, Any]:
+            return research_api.ingest(
+                root, path, allow_retention=True, title=title, language=language,
+                context=context, origin_url=payload.get("origin_url"),
+            )
+
+        def ingest_bytes(data: bytes, suffix: str) -> dict[str, Any]:
+            with tempfile.NamedTemporaryFile("wb", suffix=suffix, delete=False) as upload:
+                upload.write(data)
+                temp_path = upload.name
+            try:
+                return ingest_file(temp_path)
+            finally:
+                with contextlib.suppress(OSError):
+                    os.unlink(temp_path)
+
         try:
             if content_base64 is not None:
                 try:
@@ -1046,29 +1062,15 @@ class LixityServerHandler(BaseHTTPRequestHandler):
                     self._json({"ok": False, "message": "Source content cannot be empty"}, 400)
                     return
                 ext = Path(filename).suffix.lower() if filename and Path(filename).suffix else ".pdf"
-                with tempfile.NamedTemporaryFile("wb", suffix=ext, delete=False) as tf:
-                    tf.write(raw_bytes)
-                    temp_path = tf.name
-                try:
-                    res = research_api.ingest(root, temp_path, allow_retention=True, title=title, language=language, context=context)
-                finally:
-                    with contextlib.suppress(OSError):
-                        os.unlink(temp_path)
+                res = ingest_bytes(raw_bytes, ext)
             elif content is not None:
                 if not isinstance(content, str) or not content.strip():
                     self._json({"ok": False, "message": "Source content cannot be empty"}, 400)
                     return
                 ext = Path(filename).suffix.lower() if filename and Path(filename).suffix else ".txt"
-                with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=ext, delete=False) as tf:
-                    tf.write(content)
-                    temp_path = tf.name
-                try:
-                    res = research_api.ingest(root, temp_path, allow_retention=True, title=title, language=language, context=context)
-                finally:
-                    with contextlib.suppress(OSError):
-                        os.unlink(temp_path)
+                res = ingest_bytes(content.encode("utf-8"), ext)
             elif file_path:
-                res = research_api.ingest(root, str(file_path), allow_retention=True, title=title, language=language, context=context)
+                res = ingest_file(str(file_path))
             else:
                 self._json({"ok": False, "message": "Either 'content', 'content_base64' or 'file' must be provided"}, 400)
                 return

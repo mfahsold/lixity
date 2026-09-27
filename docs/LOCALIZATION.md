@@ -1,5 +1,13 @@
 # Language and localization contract
 
+On current main, the browser OCR badge and setup instructions resolve stable
+diagnostic codes through the same seven-language workspace pack as other research
+controls. `ready` means an executable is configured, not verified recognition.
+Unknown codes receive a localized fallback. English backend guidance remains in
+CLI/API JSON and is not copied into the localized badge. The origin-URL field,
+validation hint and metadata label use the same pack; source URLs and quotations
+are never translated. Other research operational errors may still be English.
+
 The experimental research CLI has English help/errors and language-neutral JSON.
 It preserves source text and Unicode quotation offsets without translation or
 normalization. FTS5 word search is not a language-specific linguistic model.

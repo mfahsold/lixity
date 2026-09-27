@@ -1409,12 +1409,17 @@ async function refreshResearchProjectInfo() {
   if (ocrBox && status && status.ocr) {
     var ocr = status.ocr;
     var badgeClass = ocr.status === "ready" ? "ok" : (ocr.status === "native_only" ? "note" : "err");
-    var labelText = ocr.status === "ready"
-      ? "OCR: Baidu Unlimited-OCR worker active"
-      : (ocr.status === "native_only"
-         ? "PDF: Native text extraction active (Poppler)"
-         : ("OCR: " + ocr.status));
-    var guidanceText = (ocr.guidance && ocr.guidance[0]) ? ocr.guidance[0] : "";
+    var ocrLabels = {
+      ready: ["research_ocr_ready", "research_ocr_ready_help"],
+      native_only: ["research_ocr_native", "research_ocr_native_help"],
+      partial: ["research_ocr_partial", "research_ocr_partial_help"],
+      misconfigured_worker: ["research_ocr_worker_error", "research_ocr_worker_error_help"],
+      missing_dependencies: ["research_ocr_missing", "research_ocr_missing_help"]
+    };
+    var ocrKeys = Object.prototype.hasOwnProperty.call(ocrLabels, ocr.status)
+      ? ocrLabels[ocr.status] : ["research_ocr_unknown", "research_ocr_unknown_help"];
+    var labelText = uiLabel(ocrKeys[0]);
+    var guidanceText = uiLabel(ocrKeys[1]);
     ocrBox.style.display = "flex";
     ocrBox.style.alignItems = "center";
     ocrBox.innerHTML = '<span class="badge ' + badgeClass + '" style="font-size:.75rem;padding:2px 6px;">' +
@@ -1487,7 +1492,7 @@ document.addEventListener("click", async function (event) {
     }
     if (isSource) {
       var context = detail.context || {};
-      var contextRows = ["genre", "created_period", "depicted_period", "place", "perspective", "original_language", "is_translation", "provenance_note"].filter(function(key) {
+      var contextRows = ["genre", "created_period", "depicted_period", "place", "perspective", "original_language", "is_translation", "provenance_note", "origin_url"].filter(function(key) {
         return context[key] !== null && context[key] !== undefined && context[key] !== "";
       }).map(function(key) {
         var value = typeof context[key] === "boolean" ? uiLabel(context[key] ? "ctx_yes" : "ctx_no") : context[key];
@@ -1554,6 +1559,18 @@ document.addEventListener("click", async function (event) {
       researchStatus(uiLabel("research_retention_required"), false);
       return;
     }
+    var originEl = document.getElementById("r-ingest-origin-url");
+    var originUrl = originEl ? originEl.value.trim() : "";
+    if (originUrl) {
+      try {
+        var parsedOrigin = new URL(originUrl);
+        if (!["http:", "https:"].includes(parsedOrigin.protocol) || parsedOrigin.username || parsedOrigin.password || /[\s\\]/.test(originUrl)) throw new Error("invalid");
+      } catch (_) {
+        researchStatus(uiLabel("research_origin_url_invalid"), false);
+        if (originEl) originEl.focus();
+        return;
+      }
+    }
     var titleEl = document.getElementById("r-ingest-title");
     var tagsEl = document.getElementById("r-ingest-tags");
     var textEl = document.getElementById("r-ingest-text");
@@ -1566,6 +1583,7 @@ document.addEventListener("click", async function (event) {
       var payload = {
         title: (titleEl && titleEl.value.trim()) || filename || uiLabel("research_tab_sources"),
         filename: filename,
+        origin_url: originUrl || null,
         tags: tags,
         allow_retention: true
       };
@@ -1582,6 +1600,7 @@ document.addEventListener("click", async function (event) {
         researchStatus(msg, res.ok);
         if (res.ok) {
           if (titleEl) titleEl.value = "";
+          if (originEl) originEl.value = "";
           if (tagsEl) tagsEl.value = "";
           if (textEl) textEl.value = "";
           if (fileEl) fileEl.value = "";

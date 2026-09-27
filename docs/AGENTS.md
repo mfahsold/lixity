@@ -134,6 +134,13 @@ Corpus-level notes:
 
 ### 3.2 `style --json` (style reference, schema_version 4)
 
+Current main adds integer `measured_cells`: the number of chapter–feature cells
+supporting the consistency ratio. Empty chapters do not count. At zero, the
+legacy numeric `consistency: 1.0` is a compatibility sentinel, not a measurement;
+render it as unavailable. Dashboard and CLI text use “–”. Older payloads without
+the count do not establish availability from `consistency` alone. A measured
+ratio counts cells with `abs(z*) < z_mild`, not chapters and not literary quality.
+
 ```json
 {"meta": {"schema_version": 4, "n_chapters": 25, "n_features": 16,
           "expected_false_positives": 5.0, "fdr_q": 0.05,
@@ -530,3 +537,11 @@ When building autonomous coding, editing, or research agents that consume Lixity
 5. **Always inspect active metadata:**
    Do not hardcode threshold assumptions. Read `meta.z_mild`, `meta.z_strong`, `meta.fdr_q`, and `meta.expected_false_positives`
    directly from the JSON output of `lixity style --json`.
+
+## Source origin URLs (current main)
+
+Research ingestion accepts optional `origin_url` (CLI `--origin-url`, Python
+keyword, HTTP `/api/research-ingest` field), retained as `context.origin_url`.
+It is validated HTTP(S) metadata and is never fetched. Captures containing it
+use `research-local/2` with `research-manifest-local/2`; earlier records retain
+their original bytes. See [research compatibility](research/USAGE.md#origin-url-and-capture-provenance).

@@ -242,8 +242,8 @@ class Repository:
                 raise ResearchError("Authored revision history must be contiguous")
             if any(revision.kind != record.kind for revision in history):
                 raise ResearchError("Record identity cannot change kind")
-            if record.revision > 1 and snapshot.manifest.schema_version != "research-manifest-local/2":
-                raise ResearchError("Authored revisions require manifest version 2")
+            if record.schema_version == "research-local/2" and snapshot.manifest.schema_version != "research-manifest-local/2":
+                raise ResearchError("Version 2 records require manifest version 2")
         sequences: set[tuple[str, int]] = set()
         descriptors: dict[str, Blob] = {}
         purged_passages = {
@@ -386,7 +386,7 @@ class Repository:
             if project is None:
                 raise ResearchError("Project record required")
             schema: Literal["research-manifest-local/1", "research-manifest-local/2"]
-            schema = ("research-manifest-local/2" if any(record.revision > 1 for record in records.values())
+            schema = ("research-manifest-local/2" if any(record.schema_version == "research-local/2" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/2")
                       else "research-manifest-local/1")
             manifest = Manifest(schema_version=schema, project_id=project.id, generation=current.manifest.generation + 1 if current else 1,

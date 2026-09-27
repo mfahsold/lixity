@@ -12,6 +12,17 @@ The broader interchange model below remains a proposal.
 [The synthetic interchange example](examples/evidence-chain.json) illustrates a
 complete source-to-decision chain; it is not a production database.
 
+## Implemented origin-URL extension (current main)
+
+The local implementation adds optional validated `SourceContext.origin_url`.
+It belongs to a source capture, not to the immutable source identity. A capture
+with this field uses `SourceVersion.schema_version = "research-local/2"` and
+requires a v2 manifest. URL-free v1 context serializes without the new key;
+existing files are never rewritten. This is distinct from authored v2 revisions.
+An older reader rejects URL-bearing records rather than dropping provenance.
+See [the executable contract and refresh semantics](USAGE.md#origin-url-and-capture-provenance).
+The illustrative RFC fields below are still not the local storage schema.
+
 ## 1. Common envelope and identity
 
 Each record has `id` (UUID URI), `kind`, `revision` (positive integer), `project_id`,

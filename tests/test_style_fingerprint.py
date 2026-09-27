@@ -26,6 +26,7 @@ from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
     FEATURES,
+    FingerprintThresholds,
     StyleFingerprint,
     benjamini_hochberg,
     jacobi_eigh,
@@ -56,6 +57,23 @@ SAMPLE = (
 
 
 class TestRobustStatistics(unittest.TestCase):
+    def test_unmeasured_consistency_is_explicit(self):
+        for text in ("", "## One\n\n## Two\n", "## One\n\nThe rain fell."):
+            with self.subTest(text=text):
+                fp = StyleFingerprint.from_metrics(CorpusAnalyzer(CorpusConfig(language="en", chapter_regex=r"(?m)^##\s+")).analyze_text(text))
+                self.assertEqual(fp.measured_cells, 0)
+                self.assertEqual(fp.passport()["measured_cells"], 0)
+                self.assertIsInstance(fp.passport()["consistency"], float)
+                self.assertIn("Consistency: –", fp.passport_text())
+
+    def test_measured_consistency_and_custom_minimum(self):
+        metrics = CorpusAnalyzer(CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")).analyze_text(SAMPLE)
+        fp = StyleFingerprint.from_metrics(metrics)
+        self.assertGreater(fp.measured_cells, 0)
+        self.assertNotIn("Consistency: –", fp.passport_text())
+        below = StyleFingerprint.from_metrics(metrics, FingerprintThresholds(min_chapters=3))
+        self.assertEqual(below.measured_cells, 0)
+
     def test_median(self):
         self.assertEqual(median([1.0, 2.0, 3.0]), 2.0)
         self.assertEqual(median([1.0, 2.0, 3.0, 4.0]), 2.5)

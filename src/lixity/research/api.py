@@ -81,6 +81,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
            source_id: str | None = None, title: str | None = None,
            language: str | None = None, actor: str = "local-author", dry_run: bool = False,
            context: Mapping[str, Any] | None = None,
+           origin_url: str | None = None,
            progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (--allow-retention)")
@@ -90,6 +91,25 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     is_pdf = path.suffix.lower() == ".pdf"
     if not path.is_file():
         raise ResearchError("Source must be a local UTF-8 text file" if not is_pdf else "Source must be a local PDF file")
+
+    records: list[Entity] = []
+    if source_id:
+        source = snapshot.get(Reference(id=source_id), Source)
+        if (title is not None and title != source.title) or (language is not None and language != source.language):
+            raise ResearchError("Source refresh cannot change its title or language in this pilot")
+    else:
+        values = envelope(snapshot.project.id, actor)
+        values.update(title=title or path.name, language=language or snapshot.project.language)
+        source = Source.model_validate(values)
+        records.append(source)
+
+    versions = [record for record in snapshot.records.values()
+                if isinstance(record, SourceVersion) and record.source_ref.id == source.id]
+    latest = max(versions, key=lambda record: record.sequence) if versions else None
+    source_context = (SourceContext.model_validate(dict(context)) if context is not None
+                      else latest.context if latest else SourceContext())
+    if origin_url is not None:
+        source_context = SourceContext.model_validate({**source_context.model_dump(), "origin_url": origin_url})
 
     if progress_callback:
         progress_callback("read", f"Reading source file {path.name}...")
@@ -124,7 +144,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
         try:
             text = content.decode("utf-8")
         except UnicodeDecodeError:
-            raise ResearchError("Only UTF-8 text is supported; PDF/OCR is not implemented") from None
+            raise ResearchError("Text sources must be UTF-8; use a .pdf file for PDF extraction") from None
         spans = [(match.start(), match.start() + len(match.group().rstrip()))
                  for match in re.finditer(r"\S.*?(?=\n\s*\n|\Z)", text, re.DOTALL)]
         if not spans or len(spans) > 5000:
@@ -136,22 +156,6 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
         text_blob = source_blob
         blobs_to_commit[source_checksum] = content
 
-    records: list[Entity] = []
-    if source_id:
-        source = snapshot.get(Reference(id=source_id), Source)
-        if (title is not None and title != source.title) or (language is not None and language != source.language):
-            raise ResearchError("Source refresh cannot change its title or language in this pilot")
-    else:
-        values = envelope(snapshot.project.id, actor)
-        values.update(title=title or path.name, language=language or snapshot.project.language)
-        source = Source.model_validate(values)
-        records.append(source)
-
-    versions = [record for record in snapshot.records.values()
-                if isinstance(record, SourceVersion) and record.source_ref.id == source.id]
-    latest = max(versions, key=lambda record: record.sequence) if versions else None
-    source_context = (SourceContext.model_validate(dict(context)) if context is not None
-                      else latest.context if latest else SourceContext())
     if latest is not None and latest.blob.sha256 == source_checksum and latest.context == source_context:
         repository.read_blob(latest.blob)
         return {"schema_version": "research-ingest-local/1", "source_id": source.id,
@@ -159,6 +163,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
                 "unchanged": True, "dry_run": dry_run, "passages": len(spans)}
 
     version = SourceVersion(**envelope(snapshot.project.id, actor), source_ref=reference(source),
+                            schema_version="research-local/2" if source_context.origin_url else "research-local/1",
                             sequence=latest.sequence + 1 if latest else 1, blob=source_blob,
                             retention_confirmed=True, context=source_context)
     activity = Activity(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),

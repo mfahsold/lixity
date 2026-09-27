@@ -166,9 +166,9 @@ results can feed a selected passage into **Use for claim** or **Use for dossier*
 the claim form can also associate an existing dossier. These actions record
 the author's links and notes, not a factual verdict.
 
-## Native editing and history (development)
+## Native editing and history
 
-Issue #9 adds explicit revisions to the existing research workflow. In the
+Version 1.17.0 adds explicit revisions to the research workflow. In the
 dashboard, choose **Edit** on a dossier, claim, evidence link or decision.
 Change the fields, select **Correction** for a transcription/wording correction
 or **Supersession** for a changed interpretation or authorial choice, and give
@@ -241,7 +241,7 @@ entire archive at an earlier date.
 
 - `research/project.json`: immutable initial project configuration.
 - `research/revisions/`: immutable, schema-checked records.
-- `research/blobs/`: SHA-256-addressed original UTF-8 bytes; no normalization.
+- `research/blobs/`: SHA-256-addressed original text/PDF bytes and extracted text; original bytes are not normalized.
 - `research/manifests/`: complete snapshots; `research/HEAD.json` selects one.
 - `.lixity/research/`: disposable catalogue and writer lock.
 
@@ -326,24 +326,142 @@ accepted snapshot, the next save preserves its bytes under a content-addressed
 `.unpublished` filename in that revision directory before retrying. It is a
 recovery artifact, not an accepted revision or an automatic merge. Accepted
 history is never replaced; malformed or foreign files stop the save.
+## Origin URL and capture provenance
+
+Current main adds an optional **Origin URL** field to the browser source import,
+`--origin-url` to the CLI and `origin_url=` to `api.ingest`. The value is retained
+as `SourceVersion.context.origin_url`, independently of title, tags and
+`provenance_note`. Source details, source listings and citation context expose it.
+
+```sh
+lixity research ingest --project ./novel --file ./notes.txt --allow-retention \
+  --origin-url https://example.org/archive/notes
+```
+
+```python
+api.ingest("./novel", "notes.txt", allow_retention=True,
+           origin_url="https://example.org/archive/notes",
+           context={"tags": ["archive"], "provenance_note": "Author-supplied context."})
+```
+
+The URL must be absolute HTTP(S), at most 2,000 characters, without credentials,
+whitespace or control characters. It is stored as submitted, never requested or
+used to accept a claim. Prefer stable source addresses over signed links with
+private query tokens. The browser displays it as escaped text. Failed validation
+keeps the draft; successful import clears the field with the rest of the form.
+
+On refresh, an omitted `origin_url` retains the context selected by the existing
+API: supplied `context`, or the latest capture's context when omitted. An explicit
+URL overrides `context.origin_url`. Changing only the URL creates a new capture;
+identical bytes and context remain a no-op. To clear a URL deliberately, supply a
+context mapping with `origin_url: null` (and any other metadata to retain).
+Earlier citations resolve their own capture and retain the original URL. URLs,
+filenames and titles never establish source identity automatically.
+
+**Compatibility:** source versions carrying a URL use `research-local/2`, still
+at record revision 1, with a `research-manifest-local/2` snapshot. Their sequence
+counts source captures; it is separate from authored-record revision history.
+URL-free v1 records omit the new field entirely and retain their old encoding.
+Reading an old archive does not migrate it. Lixity 1.17.0 and earlier reject
+URL-bearing source records, including when they already support authored v2
+revisions. Back up before this write, use compatible builds for every writer,
+and restore the complete pre-upgrade backup to roll back. Do not edit schemas
+or delete provenance fields by hand.
+
 ## Self-hosted PDF and OCR extraction
 
-Lixity supports ingesting PDF documents with content-addressed retention of the original PDF bytes alongside extracted plain text:
+PDF ingestion retains the original PDF bytes and extracted UTF-8 text as
+separate content-addressed blobs:
 
-```bash
+```sh
 lixity research ingest --project ./novel --file ./document.pdf --allow-retention
 ```
 
-The extraction boundary operates in self-hosted, offline environments:
-- **Reproducibility pins**: Baidu Unlimited-OCR model snapshot `07dea832e22aefee32ad281d4b80551282e1c168` and integration recipe revision `d49ff64afffc1f47ab563dc1c589bc2f78808fa4` (recipe date 2026-07-29).
-- **Architecture**: Dual-blob retention where `SourceVersion.blob` stores the bit-exact PDF (`application/pdf`) and `Extraction.text_blob` stores UTF-8 text (`text/plain`). Passages reference exact character spans into the text blob.
-- **Physical page rastering**: Uses local `pdftoppm` to map 1:1 physical page numbers with SHA-256 image checksums.
-- **Worker boundary**: Configurable via `LIXITY_OCR_WORKER` or local text-layer extraction fallback via `pdftotext`. Heavy machine learning frameworks remain completely isolated from Lixity's lightweight runtime.
-- **Diagnostics and status check**: Run `lixity research ocr-status` to inspect local setup, binary availability, and worker configuration:
-  ```bash
-  lixity research ocr-status
-  ```
-  The command outputs JSON reporting `status` (`ready`, `native_only`, `misconfigured_worker`, `poppler_missing`), tool availability, and actionable configuration guidance. The same diagnostic is reported via `/api/research/ocr-status` and shown as an interactive status badge in the web research panel.
+Current main also accepts native binary PDF upload through the browser file
+input. It reads the selected file as base64 for transport and passes the decoded
+bytes through the same import API as text and server-local files. The browser
+shows reading/extraction/completion states and prevents duplicate submits while
+waiting. This is not a streamed per-page progress feed.
+
+### Native PDFs versus scans
+
+Install local Poppler tools: `poppler-utils` on Debian/Ubuntu, or `poppler` with
+Homebrew. Both `pdftotext` and `pdftoppm` must be visible on the server's PATH.
+`pdftoppm` rasterizes physical pages at 150 dpi; `pdftotext` extracts text layers.
+Without page rasterization, native fallback only attempts page one, so treat
+`partial` as incomplete setup rather than full multi-page support.
+
+An image-only scan has no usable text layer and requires an external self-hosted
+worker. Lixity does not install or start that worker. Run current-main diagnostics
+in the same environment as the server:
+
+```sh
+lixity research ocr-status
+```
+
+The same information is available at `GET /api/research/ocr-status` and in
+`GET /api/research/status`. The dashboard maps these codes to localized labels:
+
+| Code | Configuration detected | Action |
+| --- | --- | --- |
+| `ready` | Executable worker and pdftoppm found | Test an authorized scan and inspect extracted text |
+| `native_only` | Both Poppler tools, no worker | Native PDFs work; configure a worker for scans |
+| `partial` | Worker or pdftotext available, pdftoppm missing | Install the rasterizer before multi-page use |
+| `misconfigured_worker` | Configured worker missing or not executable | Check path, permissions and service environment |
+| `missing_dependencies` | No complete usable setup | Install Poppler and optionally a scan worker |
+
+Diagnostics inspect executable availability, not model weights, snapshot
+integrity, GPU resources, worker connectivity or recognition accuracy. The
+returned model/recipe identifiers are configuration constants, not attestations.
+`ready` therefore means configured, not an end-to-end health check.
+
+### Worker interface
+
+Set `LIXITY_OCR_WORKER` to one executable path or a command name on PATH. It is
+invoked directly as `[worker, request_file]`, without shell parsing or embedded
+arguments. Use an absolute path without `~` for portable service configuration.
+Set the variable in the service's environment and restart the server; exporting
+it in another terminal does not update an existing process.
+
+The temporary request JSON contains:
+
+```json
+{
+  "model_snapshot": "07dea832e22aefee32ad281d4b80551282e1c168",
+  "recipe_revision": "d49ff64afffc1f47ab563dc1c589bc2f78808fa4",
+  "pdf_path": "/absolute/path/to/input.pdf",
+  "pages": [{"page_number": 1, "sha256": "<rendered PNG SHA-256>"}]
+}
+```
+
+Those are the implementation's Baidu Unlimited-OCR integration pins (recipe date
+2026-07-29). The worker must arrange its own runtime and model provisioning;
+this interface does not prove that an arbitrary executable uses those weights.
+The request includes PDF access and page checksums, not image paths or image
+bytes. A worker that needs raster images must obtain them from the local PDF.
+
+Return JSON on stdout; send logs to stderr:
+
+```json
+{"blocks": [{"page_number": 1, "text": "Synthetic reading room note."}], "warnings": []}
+```
+
+Optional block fields are `box` and `confidence`. The implementation joins
+nonempty block text with blank lines, times out the worker after 120 seconds,
+and may use native text extraction if the worker fails. Validate the extracted
+text against a known scan. Do not infer OCR success from successful extraction
+of an existing PDF text layer.
+
+### What is actually retained
+
+`SourceVersion.blob` points to original PDF bytes; `Extraction.text_blob` points
+to extracted UTF-8 text. Passages cite exact character spans in that text.
+The extraction boundary computes page images, boxes and warnings, but the current
+archive does **not** persist those as audited page/coordinate/confidence records.
+Likewise, it does not persist an attestation of which model ran. Inspect the
+original PDF for visual verification and retain operational diagnostics separately
+when needed. Core import is local; a user-configured worker has its own network
+behavior and must be deployed according to the project's privacy requirements.
 
 ## Safe Markdown and offline diagram rendering
 
@@ -355,8 +473,7 @@ Dossier body text supports a safe Markdown subset and offline SVG diagram render
 ## Limits
 
 The released pilot uses `research-local/1` and operation-specific `*-local/1`
-envelopes, not the RFC's illustrative `research/1` bundle. Native editing in the
-development version adds `research-local/2` for authored revisions and
+envelopes, not the RFC's illustrative `research/1` bundle. Native editing in version 1.17.0 adds `research-local/2` for authored revisions and
 `research-manifest-local/2` for snapshots containing them. The first accepted edit
 upgrades that snapshot; reading a revision-1 archive does not rewrite any files.
 Older Lixity versions reject the new snapshot. Back up the whole archive before
@@ -367,8 +484,9 @@ be edited; refresh creates a new source version, not a changed old record.
 The 25,000-entry snapshot limit includes retained revisions. Status counts show
 current logical records; the audit's `records` count includes their history.
 
-Inputs are at most 2 MiB and 5,000 nonempty paragraphs. Only valid UTF-8 without
-NUL bytes is accepted. Search uses literal Unicode words joined with AND; it is
+Text inputs are at most 2 MiB and must be valid UTF-8 without NUL bytes.
+PDF inputs are at most 50 MiB. Both routes allow at most 5,000 nonempty extracted
+passages. Search uses literal Unicode words joined with AND; it is
 not stemming, translation or semantic search. BM25 scores are ranks, not truth
 probabilities. Language tags do not translate quotations. Empty queries, stale
 indexes and missing FTS5 support produce errors, not silent fallbacks.

@@ -1,9 +1,19 @@
 """Strict contracts for the local source-to-citation pilot, not the entire RFC."""
 
 from datetime import datetime
-from typing import Annotated, Literal
+from typing import Annotated, Any, Literal
+from urllib.parse import urlsplit
 
-from pydantic import BaseModel, ConfigDict, Field, TypeAdapter, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    TypeAdapter,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 Identifier = Annotated[str, Field(pattern=r"^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
@@ -111,10 +121,38 @@ class SourceContext(StrictModel):
     original_language: ContextLabel | None = None
     is_translation: bool | None = None
     provenance_note: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+    origin_url: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
     tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
+
+    @field_validator("origin_url")
+    @classmethod
+    def valid_origin_url(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        invalid = "Origin URL must be an absolute HTTP(S) URL without credentials or whitespace"
+        if any(char.isspace() or ord(char) < 32 or ord(char) == 127 for char in value):
+            raise ValueError(invalid)
+        try:
+            parsed = urlsplit(value)
+            port = parsed.port
+            if (parsed.scheme not in ("http", "https") or not parsed.hostname
+                    or parsed.username is not None or parsed.password is not None
+                    or "\\" in value or (port is not None and not 1 <= port <= 65535)):
+                raise ValueError(invalid)
+        except ValueError:
+            raise ValueError(invalid) from None
+        return value
+
+    @model_serializer(mode="wrap")
+    def serialize_context(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        result: dict[str, Any] = handler(self)
+        if self.origin_url is None:
+            result.pop("origin_url", None)
+        return result
 
 
 class SourceVersion(Record):
+    schema_version: Literal["research-local/1", "research-local/2"] = "research-local/1"  # type: ignore[assignment]
     kind: Literal["source_version"] = "source_version"
     source_ref: Reference
     sequence: Annotated[int, Field(ge=1)]
@@ -122,6 +160,12 @@ class SourceVersion(Record):
     retention_confirmed: Literal[True]
     redistribution: Literal["unknown"] = "unknown"
     context: SourceContext = Field(default_factory=SourceContext)
+
+    @model_validator(mode="after")
+    def valid_provenance_version(self) -> "SourceVersion":
+        if self.context.origin_url is not None and self.schema_version != "research-local/2":
+            raise ValueError("Origin URL requires source version schema research-local/2")
+        return self
 
 
 class Activity(Record):
