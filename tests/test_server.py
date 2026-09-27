@@ -531,6 +531,15 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(status, 200)
                 data = json.loads(body)
                 self.assertFalse(data["initialized"])
+                self.assertIn("ocr", data)
+                self.assertIn("status", data["ocr"])
+
+                # 1b. Dedicated OCR status endpoint
+                ocr_status_code, ocr_body, _ = self.make_request("/api/research/ocr-status")
+                self.assertEqual(ocr_status_code, 200)
+                ocr_json = json.loads(ocr_body)
+                self.assertTrue(ocr_json["ok"])
+                self.assertIn("model_snapshot", ocr_json)
 
                 # 2. Init
                 init_payload = json.dumps({"title": "Test Archive", "language": "en"})
@@ -1285,3 +1294,67 @@ class TestLixityServer(unittest.TestCase):
                     )
                     self.assertEqual(status, 400)
                     self.assertIn(message, json.loads(body)["message"])
+
+    def test_server_status_detects_stale_manuscript_path(self):
+        stale_path = str(Path(tempfile.gettempdir()) / "nonexistent_manuscript_stale_reference.md")
+        html, info = build_server_dashboard(stale_path, language="en")
+        self.assertTrue(info["is_missing"])
+        self.assertIn("file missing", html)
+
+        original_source = LixityServerHandler.source_input
+        try:
+            LixityServerHandler.source_input = stale_path
+            LixityServerHandler.refresh()
+            status, body, _ = self.make_request("/")
+            self.assertEqual(status, 200)
+            self.assertIn(b"file missing", body)
+            self.assertTrue(LixityServerHandler.dashboard_info.get("is_missing"))
+        finally:
+            LixityServerHandler.source_input = original_source
+            LixityServerHandler.refresh()
+
+    def test_research_ingest_content_base64_pdf(self):
+        import base64
+        import sys
+        tests_dir = str(Path(__file__).parent)
+        if tests_dir not in sys.path:
+            sys.path.insert(0, tests_dir)
+        from test_research_ocr import make_synthetic_pdf
+
+        with tempfile.TemporaryDirectory() as td:
+            orig_rdir = LixityServerHandler.research_dir
+            try:
+                LixityServerHandler.research_dir = td
+                init_payload = json.dumps({"title": "Base64 PDF Archive", "language": "de"})
+                status, _, _ = self.make_request(
+                    "/api/research-init",
+                    method="POST",
+                    body=init_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+
+                pdf_bytes = make_synthetic_pdf("Native Base64 PDF Ingest Test Passage.")
+                b64_str = base64.b64encode(pdf_bytes).decode("ascii")
+
+                ingest_payload = json.dumps({
+                    "content_base64": b64_str,
+                    "filename": "document.pdf",
+                    "title": "Document Title",
+                    "allow_retention": True,
+                    "tags": ["primary", "pdf"],
+                })
+                status, body, _ = self.make_request(
+                    "/api/research-ingest",
+                    method="POST",
+                    body=ingest_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                res = json.loads(body)
+                self.assertTrue(res["ok"])
+                self.assertIn("source_id", res)
+                self.assertGreaterEqual(res.get("passages", 0), 1)
+            finally:
+                LixityServerHandler.research_dir = orig_rdir
+

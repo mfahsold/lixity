@@ -339,6 +339,11 @@ The extraction boundary operates in self-hosted, offline environments:
 - **Architecture**: Dual-blob retention where `SourceVersion.blob` stores the bit-exact PDF (`application/pdf`) and `Extraction.text_blob` stores UTF-8 text (`text/plain`). Passages reference exact character spans into the text blob.
 - **Physical page rastering**: Uses local `pdftoppm` to map 1:1 physical page numbers with SHA-256 image checksums.
 - **Worker boundary**: Configurable via `LIXITY_OCR_WORKER` or local text-layer extraction fallback via `pdftotext`. Heavy machine learning frameworks remain completely isolated from Lixity's lightweight runtime.
+- **Diagnostics and status check**: Run `lixity research ocr-status` to inspect local setup, binary availability, and worker configuration:
+  ```bash
+  lixity research ocr-status
+  ```
+  The command outputs JSON reporting `status` (`ready`, `native_only`, `misconfigured_worker`, `poppler_missing`), tool availability, and actionable configuration guidance. The same diagnostic is reported via `/api/research/ocr-status` and shown as an interactive status badge in the web research panel.
 
 ## Safe Markdown and offline diagram rendering
 

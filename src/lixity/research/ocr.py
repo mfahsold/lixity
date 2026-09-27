@@ -21,6 +21,7 @@ import subprocess
 import tempfile
 from dataclasses import dataclass, field
 from pathlib import Path
+from typing import Any
 
 from .repository import ResearchError
 
@@ -211,3 +212,65 @@ def extract_pdf_document(
         spans=spans,
         warnings=warnings,
     )
+
+
+def get_ocr_diagnostics(worker_cmd: str | None = None) -> dict[str, Any]:
+    """Inspect and report runtime diagnostic status for OCR and PDF extraction."""
+    pdftoppm_path = shutil.which("pdftoppm")
+    pdftotext_path = shutil.which("pdftotext")
+    cmd = worker_cmd or os.environ.get("LIXITY_OCR_WORKER")
+
+    worker_executable = False
+    worker_resolved: str | None = None
+    if cmd:
+        resolved = shutil.which(cmd)
+        if resolved and os.access(resolved, os.X_OK):
+            worker_executable = True
+            worker_resolved = str(resolved)
+        else:
+            p = Path(cmd).expanduser().resolve()
+            if p.is_file() and os.access(p, os.X_OK):
+                worker_executable = True
+                worker_resolved = str(p)
+
+    guidance: list[str] = []
+    if cmd and not worker_executable:
+        status = "misconfigured_worker"
+        guidance.append(
+            f"Configured OCR worker '{cmd}' was not found or is not executable. Verify file path and execute permissions."
+        )
+    elif worker_executable and pdftoppm_path:
+        status = "ready"
+    elif worker_executable and not pdftoppm_path:
+        status = "partial"
+        guidance.append("OCR worker is configured, but pdftoppm is missing. Install poppler-utils for page rasterization.")
+    elif pdftotext_path and pdftoppm_path:
+        status = "native_only"
+        guidance.append(
+            f"Native PDF extraction is available via poppler. To enable OCR for scanned pages, configure self-hosted Baidu Unlimited-OCR worker via LIXITY_OCR_WORKER (recipe {INTEGRATION_RECIPE_REVISION})."
+        )
+    elif pdftotext_path and not pdftoppm_path:
+        status = "partial"
+        guidance.append("pdftoppm is missing. Install poppler-utils for page rasterization and coordinate mapping.")
+    else:
+        status = "missing_dependencies"
+        guidance.append("Install poppler-utils (apt install poppler-utils / brew install poppler) for PDF text extraction.")
+        guidance.append(f"For scanned documents, configure LIXITY_OCR_WORKER with snapshot {MODEL_SNAPSHOT[:8]}.")
+
+    return {
+        "status": status,
+        "pdftoppm_available": bool(pdftoppm_path),
+        "pdftoppm_path": pdftoppm_path,
+        "pdftotext_available": bool(pdftotext_path),
+        "pdftotext_path": pdftotext_path,
+        "worker_configured": bool(cmd),
+        "worker_cmd": cmd,
+        "worker_executable": worker_executable,
+        "worker_path": worker_resolved,
+        "model_snapshot": MODEL_SNAPSHOT,
+        "recipe_revision": INTEGRATION_RECIPE_REVISION,
+        "recipe_date": RECIPE_DATE,
+        "implementation_id": IMPLEMENTATION_ID,
+        "guidance": guidance,
+    }
+

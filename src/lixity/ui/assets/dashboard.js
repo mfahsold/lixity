@@ -1405,6 +1405,22 @@ async function refreshResearchProjectInfo() {
       });
     }
   }
+  var ocrBox = document.getElementById("r-ocr-diagnostic-box");
+  if (ocrBox && status && status.ocr) {
+    var ocr = status.ocr;
+    var badgeClass = ocr.status === "ready" ? "ok" : (ocr.status === "native_only" ? "note" : "err");
+    var labelText = ocr.status === "ready"
+      ? "OCR: Baidu Unlimited-OCR worker active"
+      : (ocr.status === "native_only"
+         ? "PDF: Native text extraction active (Poppler)"
+         : ("OCR: " + ocr.status));
+    var guidanceText = (ocr.guidance && ocr.guidance[0]) ? ocr.guidance[0] : "";
+    ocrBox.style.display = "flex";
+    ocrBox.style.alignItems = "center";
+    ocrBox.innerHTML = '<span class="badge ' + badgeClass + '" style="font-size:.75rem;padding:2px 6px;">' +
+      escapeHtml(labelText) + '</span>' +
+      (guidanceText ? '<small class="ctl-note" style="margin-left:.5rem;font-size:.72rem;">' + escapeHtml(guidanceText) + '</small>' : '');
+  }
   return status;
 }
 
@@ -1544,15 +1560,26 @@ document.addEventListener("click", async function (event) {
     var fileEl = document.getElementById("r-ingest-file");
     var tags = (tagsEl && tagsEl.value) ? tagsEl.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
 
-    function sendIngest(content, filename) {
-      researchStatus(uiLabel("research_ingesting"), true);
-      researchApiPost("research-ingest", {
-        content: content,
+    function sendIngest(content, filename, isBase64) {
+      researchStatus(uiLabel("research_ingesting_extracting") || uiLabel("research_ingesting"), true);
+      if (ingestBtn) ingestBtn.disabled = true;
+      var payload = {
         title: (titleEl && titleEl.value.trim()) || filename || uiLabel("research_tab_sources"),
+        filename: filename,
         tags: tags,
         allow_retention: true
-      }).then(function(res) {
-        researchStatus(res.ok ? uiLabel("research_ingest_complete") : res.message, res.ok);
+      };
+      if (isBase64) {
+        payload.content_base64 = content;
+      } else {
+        payload.content = content;
+      }
+      researchApiPost("research-ingest", payload).then(function(res) {
+        if (ingestBtn) ingestBtn.disabled = false;
+        var msg = res.ok
+          ? (uiLabel("research_ingest_complete") + (res.passages ? " (" + res.passages + " passages)" : ""))
+          : (res.message || "Failed");
+        researchStatus(msg, res.ok);
         if (res.ok) {
           if (titleEl) titleEl.value = "";
           if (tagsEl) tagsEl.value = "";
@@ -1561,16 +1588,30 @@ document.addEventListener("click", async function (event) {
           retCheck.checked = false;
           refreshResearchSources();
         }
+      }).catch(function(err) {
+        if (ingestBtn) ingestBtn.disabled = false;
+        researchStatus(String(err), false);
       });
     }
 
     if (fileEl && fileEl.files && fileEl.files.length) {
       var file = fileEl.files[0];
+      researchStatus(uiLabel("research_ingesting_reading") || "Reading file…", true);
+      var isPdf = file.name.toLowerCase().endsWith(".pdf");
       var reader = new FileReader();
-      reader.onload = function() { sendIngest(reader.result, file.name); };
-      reader.readAsText(file);
+      if (isPdf) {
+        reader.onload = function() {
+          var dataUrl = String(reader.result || "");
+          var base64 = dataUrl.split(",")[1] || "";
+          sendIngest(base64, file.name, true);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        reader.onload = function() { sendIngest(reader.result, file.name, false); };
+        reader.readAsText(file);
+      }
     } else if (textEl && textEl.value.trim()) {
-      sendIngest(textEl.value, "");
+      sendIngest(textEl.value, "", false);
     } else {
       researchStatus(uiLabel("research_source_required"), false);
     }
@@ -2379,6 +2420,7 @@ document.addEventListener("click", function (event) {
 
   var openBtn = event.target.closest("#btn-modal-open-project, #hero-btn-open-project");
   if (openBtn) {
+    renderRecentProjects();
     var modalOpen = document.getElementById("modal-project-open");
     if (modalOpen && typeof modalOpen.showModal === "function") {
       modalOpen.showModal();
@@ -2475,6 +2517,91 @@ document.addEventListener("change", function (event) {
   }
 });
 
+var RECENT_PROJECTS_KEY = "lixity:recent-projects";
+
+function getRecentProjects() {
+  try {
+    var raw = localStorage.getItem(RECENT_PROJECTS_KEY);
+    if (!raw) return [];
+    var parsed = JSON.parse(raw);
+    if (Array.isArray(parsed)) {
+      return parsed.filter(function(p) { return typeof p === "string" && p.trim().length > 0; });
+    }
+  } catch (_) {}
+  return [];
+}
+
+function addRecentProject(path) {
+  if (!path || typeof path !== "string") return;
+  var norm = path.trim();
+  if (!norm) return;
+  var recents = getRecentProjects().filter(function(p) { return p !== norm; });
+  recents.unshift(norm);
+  if (recents.length > 8) recents = recents.slice(0, 8);
+  try {
+    localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recents));
+  } catch (_) {}
+}
+
+function removeRecentProject(path) {
+  var recents = getRecentProjects().filter(function(p) { return p !== path; });
+  try {
+    localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recents));
+  } catch (_) {}
+}
+
+function renderRecentProjects() {
+  var wrap = document.getElementById("open-project-recent");
+  var list = document.getElementById("open-project-recent-list");
+  if (!wrap || !list) return;
+  var recents = getRecentProjects();
+  if (!recents.length) {
+    wrap.style.display = "none";
+    list.replaceChildren();
+    return;
+  }
+  wrap.style.display = "block";
+  list.replaceChildren();
+  recents.forEach(function(path) {
+    var chip = document.createElement("span");
+    chip.className = "recent-project-chip";
+    chip.style.cssText = "display:inline-flex;align-items:center;background:var(--card-bg, #222);border:1px solid var(--border-color, #444);border-radius:4px;padding:2px 8px;font-size:.78rem;";
+
+    var btn = document.createElement("button");
+    btn.type = "button";
+    btn.className = "ctl-inline-btn";
+    btn.style.cssText = "background:none;border:none;color:inherit;cursor:pointer;padding:0;font-family:inherit;font-size:inherit;text-decoration:underline;";
+    var parts = path.replace(/[/\\]+$/, "").split(/[/\\]/);
+    var label = parts[parts.length - 1] || path;
+    btn.textContent = label;
+    btn.title = path;
+    btn.addEventListener("click", function() {
+      var input = document.getElementById("open-proj-path");
+      if (input) {
+        input.value = path;
+        input.focus();
+      }
+    });
+
+    var del = document.createElement("button");
+    del.type = "button";
+    del.className = "ctl-inline-del";
+    del.style.cssText = "background:none;border:none;color:var(--text-muted, #888);cursor:pointer;margin-left:6px;padding:0 2px;font-size:.8rem;line-height:1;";
+    del.textContent = "✕";
+    del.setAttribute("aria-label", (uiLabel("remove_recent_project") || "Remove") + " " + path);
+    del.title = uiLabel("remove_recent_project") || "Remove";
+    del.addEventListener("click", function(e) {
+      e.stopPropagation();
+      removeRecentProject(path);
+      renderRecentProjects();
+    });
+
+    chip.appendChild(btn);
+    chip.appendChild(del);
+    list.appendChild(chip);
+  });
+}
+
 async function submitProjectForm(form, action, payload, button) {
   if (button && button.disabled) return;
   var feedback = form.querySelector(".project-form-status");
@@ -2484,6 +2611,9 @@ async function submitProjectForm(form, action, payload, button) {
   }
   var result = await runAction(action, payload, button);
   if (result && result.ok) {
+    if (action === "project-open" && payload && payload.path) {
+      addRecentProject(payload.path);
+    }
     var modal = form.closest("dialog");
     if (modal && typeof modal.close === "function") modal.close();
   } else if (feedback) {
@@ -2605,6 +2735,15 @@ if (openChooser) {
       var data = await response.json();
       if (request !== chooseRequest || openChooser.hidden) return;
       if (!response.ok || !data.ok || typeof data.path !== "string" || !Array.isArray(data.entries)) {
+        if (path) {
+          chooseMessage(uiLabel("wizard_choose_stale_path") || (data.message || uiLabel("wizard_unknown_error")), true);
+          setTimeout(function() {
+            if (request === chooseRequest && !openChooser.hidden) {
+              loadOpenChooser(null, focusEntry);
+            }
+          }, 1200);
+          return;
+        }
         chooseMessage(uiFormat("wizard_choose_failed", {
           reason: data.message || uiLabel("wizard_unknown_error")
         }), true);

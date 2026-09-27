@@ -8,6 +8,8 @@ and serves generated export artifacts.
 
 from __future__ import annotations
 
+import base64
+import binascii
 import contextlib
 import json
 import os
@@ -104,19 +106,24 @@ def build_server_dashboard(
     text = ""
     is_empty = True
     manuscript_name = ""
+    is_missing = False
 
-    if source_input and os.path.isfile(source_input):
-        try:
-            with open(source_input, encoding="utf-8") as f:
-                text = f.read()
-            is_empty = not text.strip()
+    if source_input:
+        if os.path.isfile(source_input):
+            try:
+                with open(source_input, encoding="utf-8") as f:
+                    text = f.read()
+                is_empty = not text.strip()
+                manuscript_name = os.path.basename(source_input)
+            except OSError:
+                text = ""
+        else:
+            is_missing = True
             manuscript_name = os.path.basename(source_input)
-        except OSError:
-            text = ""
 
     doc_title = title or (
         os.path.splitext(manuscript_name)[0]
-        if manuscript_name
+        if manuscript_name and not is_missing
         else ("No Project Loaded" if language != "de" else "Kein Projekt geladen")
     )
 
@@ -142,9 +149,15 @@ def build_server_dashboard(
     status_items = [
         {
             "key": "manuscript",
-            "state": "ok" if manuscript_name else "unknown",
-            "detail": manuscript_name or (
-                "none loaded" if resolved.key != "de" else "kein Manuskript geladen"
+            "state": "error" if is_missing else ("warn" if is_empty and manuscript_name else ("ok" if manuscript_name else "unknown")),
+            "detail": (
+                f"{manuscript_name} ({'file missing' if resolved.key != 'de' else 'Datei nicht gefunden'})"
+                if is_missing
+                else (
+                    f"{manuscript_name} ({'empty' if resolved.key != 'de' else 'leer'})"
+                    if is_empty and manuscript_name
+                    else (manuscript_name or ("none loaded" if resolved.key != "de" else "kein Manuskript geladen"))
+                )
             ),
         },
         {
@@ -205,6 +218,7 @@ def build_server_dashboard(
         "language": resolved.name,
         "language_key": resolved.key,
         "is_empty": is_empty,
+        "is_missing": is_missing,
     }
     return html_doc, info
 
@@ -305,6 +319,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
         if path == "/api/research/status":
             self._handle_research_status()
+            return
+
+        if path == "/api/research/ocr-status":
+            self._json({"ok": True, **research_api.ocr_status()})
             return
 
         if path == "/api/project-paths":
@@ -824,11 +842,13 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
     def _handle_research_status(self) -> None:
         root = self.get_research_root()
+        ocr_diag = research_api.ocr_status()
         if not root or not (root / "research").is_dir():
             self._json({
                 "ok": True,
                 "initialized": False,
                 "project_root": str(root or self.workspace_root or ""),
+                "ocr": ocr_diag,
             })
             return
         try:
@@ -851,6 +871,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
                 "dossiers_count": len(dos_data.get("dossiers", [])),
                 "claims_count": len(claims_data.get("claims", [])),
                 "decisions_count": len(decisions_data.get("decisions", [])),
+                "ocr": ocr_diag,
             })
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 500)
@@ -1001,8 +1022,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             return
 
         content = payload.get("content") or payload.get("text")
+        content_base64 = payload.get("content_base64")
+        filename = str(payload.get("filename") or "").strip()
         file_path = payload.get("file")
-        title = payload.get("title") or (Path(str(file_path)).name if file_path else "Untitled Source")
+        title = payload.get("title") or (Path(filename).name if filename else (Path(str(file_path)).name if file_path else "Untitled Source"))
         language = payload.get("language") or None
         raw_tags = payload.get("tags")
         tags: list[str] = []
@@ -1013,11 +1036,30 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         context = {"tags": tags} if tags else None
 
         try:
-            if content is not None:
+            if content_base64 is not None:
+                try:
+                    raw_bytes = base64.b64decode(content_base64)
+                except (ValueError, binascii.Error) as exc:
+                    self._json({"ok": False, "message": f"Invalid base64 payload: {exc}"}, 400)
+                    return
+                if not raw_bytes:
+                    self._json({"ok": False, "message": "Source content cannot be empty"}, 400)
+                    return
+                ext = Path(filename).suffix.lower() if filename and Path(filename).suffix else ".pdf"
+                with tempfile.NamedTemporaryFile("wb", suffix=ext, delete=False) as tf:
+                    tf.write(raw_bytes)
+                    temp_path = tf.name
+                try:
+                    res = research_api.ingest(root, temp_path, allow_retention=True, title=title, language=language, context=context)
+                finally:
+                    with contextlib.suppress(OSError):
+                        os.unlink(temp_path)
+            elif content is not None:
                 if not isinstance(content, str) or not content.strip():
                     self._json({"ok": False, "message": "Source content cannot be empty"}, 400)
                     return
-                with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=".txt", delete=False) as tf:
+                ext = Path(filename).suffix.lower() if filename and Path(filename).suffix else ".txt"
+                with tempfile.NamedTemporaryFile("w", encoding="utf-8", suffix=ext, delete=False) as tf:
                     tf.write(content)
                     temp_path = tf.name
                 try:
@@ -1028,7 +1070,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             elif file_path:
                 res = research_api.ingest(root, str(file_path), allow_retention=True, title=title, language=language, context=context)
             else:
-                self._json({"ok": False, "message": "Either 'content' or 'file' must be provided"}, 400)
+                self._json({"ok": False, "message": "Either 'content', 'content_base64' or 'file' must be provided"}, 400)
                 return
 
             with contextlib.suppress(ResearchError, OSError, ValueError):

@@ -431,7 +431,7 @@ class ReportFormatter:
             "t1_filter_note",
         )
         # The Flesch row is labelled by the language-calibrated formula name.
-        flesch_cells = [m.flesch_variant or "Flesch Reading Ease", f"{_n(m.flesch_de, 1)}"]
+        flesch_cells = [m.flesch_variant or "Flesch Reading Ease", f"{_n(m.flesch_de, 1)}" if m.tokens else "–"]
         if show_reference:
             flesch_cells.append(_t(texts, "t1_flesch_ref"))
         if show_assessment:
@@ -521,8 +521,8 @@ class ReportFormatter:
             f"| **{_t(texts, 'label_mtld')}** | **{f'{_n(m.mtld, 1)}' if m.mtld is not None else '–'}** | {_t(texts, 'md_mtld')} |",
             f"| **{_t(texts, 'label_mattr')}** | **{f'{_n(m.mattr, 3)}' if m.mattr is not None else '–'}** | {_t(texts, 'md_mattr')} |",
             f"| **{_t(texts, 'label_maas')}** | **{f'{_n(m.maas_a2, 4)}' if m.maas_a2 is not None else '–'}** | {_t(texts, 'md_maas')} |",
-            f"| **{m.flesch_variant or 'Flesch Reading Ease'}** | **{_n(m.flesch_de, 1)}** | {_t(texts, 'md_flesch')} |",
-            f"| **{_t(texts, 'label_lix')}** | **{_n(m.lix, 1)}** | {_t(texts, 'md_lix')} |",
+            f"| **{m.flesch_variant or 'Flesch Reading Ease'}** | **{f'{_n(m.flesch_de, 1)}' if m.tokens else '–'}** | {_t(texts, 'md_flesch')} |",
+            f"| **{_t(texts, 'label_lix')}** | **{f'{_n(m.lix, 1)}' if m.tokens else '–'}** | {_t(texts, 'md_lix')} |",
             f"| **{_t(texts, 'label_dialog')}** | **{_n(m.dialog_words, 0)} {w} ({_p(m.dialog_ratio, 2)})** | {_t(texts, 'md_dialog')} |",
             f"| **{_t(texts, 'label_paras')}** | **{m.total_paragraphs}** ({_n(m.avg_paragraph_len, 1)} {_t(texts, 'unit_words_per_paragraph')}) | {_t(texts, 'md_paras')} |",
             "",

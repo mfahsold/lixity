@@ -1,7 +1,7 @@
 """Explicit-project API for local evidence ingestion, lookup and integrity checks."""
 
 import re
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
@@ -39,6 +39,7 @@ from .models import (
 )
 from .ocr import (
     extract_pdf_document,
+    get_ocr_diagnostics,
 )
 from .repository import Repository, ResearchError, digest
 from .revisions import (
@@ -79,7 +80,8 @@ def init(project: str | Path, *, title: str, language: str = "en", actor: str = 
 def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = False,
            source_id: str | None = None, title: str | None = None,
            language: str | None = None, actor: str = "local-author", dry_run: bool = False,
-           context: Mapping[str, Any] | None = None) -> dict[str, Any]:
+           context: Mapping[str, Any] | None = None,
+           progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (--allow-retention)")
     repository = Repository(project)
@@ -89,12 +91,17 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     if not path.is_file():
         raise ResearchError("Source must be a local UTF-8 text file" if not is_pdf else "Source must be a local PDF file")
 
+    if progress_callback:
+        progress_callback("read", f"Reading source file {path.name}...")
+
     blobs_to_commit: dict[str, bytes] = {}
     if is_pdf:
         with path.open("rb") as stream:
             content = stream.read(MAX_PDF_BYTES + 1)
         if not content or len(content) > MAX_PDF_BYTES:
             raise ResearchError("PDF source must be nonempty and at most 50 MiB")
+        if progress_callback:
+            progress_callback("ocr", "Rasterizing PDF pages and extracting text via OCR/poppler...")
         ocr_res = extract_pdf_document(path)
         text = ocr_res.full_text
         spans = ocr_res.spans
@@ -159,13 +166,19 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     extraction = Extraction(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),
                             activity_ref=reference(activity), text_blob=text_blob)
     records.extend([version, activity, extraction])
+    if progress_callback:
+        progress_callback("passages", f"Segmenting {len(spans)} verified passages...")
     for start, end in spans:
         records.append(Passage(**envelope(snapshot.project.id, actor), extraction_ref=reference(extraction),
                                start=start, end=end, verbatim=text[start:end], language=source.language))
     result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
               "source_version_id": version.id, "unchanged": False,
               "passages": len(spans), "dry_run": dry_run}
+    if progress_callback:
+        progress_callback("commit", "Publishing records to research store...")
     result["snapshot"] = snapshot.digest if dry_run else repository.commit(records, blobs_to_commit, snapshot).digest
+    if progress_callback:
+        progress_callback("complete", f"Source '{source.title}' ingested ({len(spans)} passages).")
     return result
 
 
@@ -213,6 +226,11 @@ def audit(project: str | Path) -> dict[str, Any]:
 
 def schema() -> dict[str, Any]:
     return {"$schema": "https://json-schema.org/draft/2020-12/schema", **ENTITY.json_schema()}
+
+
+def ocr_status(worker_cmd: str | None = None) -> dict[str, Any]:
+    """Inspect and report the runtime diagnostic status for OCR and PDF extraction."""
+    return get_ocr_diagnostics(worker_cmd=worker_cmd)
 
 
 def analyze_source(project: str | Path, source_id: str, *, version_id: str | None = None,

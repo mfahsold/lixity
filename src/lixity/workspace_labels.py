@@ -283,6 +283,12 @@ _ROWS = {
     "research_show_source": ("Show source", "Quelltext anzeigen", "Afficher la source", "Mostrar fuente", "Mostra sorgente", "Mostrar fonte", "Broncode tonen"),
     "research_show_preview": ("Show preview", "Vorschau anzeigen", "Afficher l'aperçu", "Mostrar vista previa", "Mostra anteprima", "Mostrar pré-visualização", "Voorbeeld tonen"),
     "research_diagram_source": ("Diagram source", "Diagramm-Quelltext", "Source du diagramme", "Código del diagrama", "Sorgente del diagramma", "Fonte do diagrama", "Diagrambron"),
+    "research_ingesting_reading": ("Reading file…", "Lese Datei…", "Lecture du fichier…", "Leyendo archivo…", "Lettura del file…", "Lendo arquivo…", "Bestand lezen…"),
+    "research_ingesting_extracting": ("Extracting text and passages…", "Extrahiere Text und Passagen…", "Extraction du texte et des passages…", "Extrayendo texto y pasajes…", "Estrazione di testo e brani…", "Extraindo texto e trechos…", "Tekst en passages extraheren…"),
+    "research_ocr_status_heading": ("OCR setup & diagnostics", "OCR-Einrichtung & Diagnose", "Configuration et diagnostic OCR", "Configuración y diagnóstico de OCR", "Configurazione e diagnostica OCR", "Configuração e diagnóstico de OCR", "OCR-installatie en diagnostiek"),
+    "wizard_choose_stale_path": ("Path no longer exists; showing home folder.", "Pfad existiert nicht mehr; zeige Basisordner.", "Le chemin n'existe plus ; affichage du dossier personnel.", "La ruta ya no existe; mostrando carpeta personal.", "Il percorso non esiste più; mostro la cartella principale.", "O caminho não existe mais; mostrando a pasta inicial.", "Pad bestaat niet meer; toont thuismap."),
+    "recent_projects_heading": ("Recent projects", "Zuletzt geöffnet", "Projets récents", "Proyectos recientes", "Progetti recenti", "Projetos recentes", "Recente projecten"),
+    "remove_recent_project": ("Remove", "Entfernen", "Supprimer", "Eliminar", "Rimuovi", "Remover", "Verwijderen"),
 }
 
 if any(len(values) != len(_LANGUAGES) for values in _ROWS.values()):

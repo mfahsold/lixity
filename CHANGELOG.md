@@ -5,6 +5,33 @@ All notable changes to Lixity are documented in this file.
 The format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/);
 this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+### Added
+
+- **OCR diagnostics and status check**: `lixity research ocr-status` CLI command and
+  `/api/research/ocr-status` HTTP endpoint diagnosing poppler tools (`pdftoppm`, `pdftotext`),
+  worker executable permissions, model snapshot integrity, and actionable setup guidance.
+  Included in the research panel status bar with interactive status badge.
+- **Staged import progress and native PDF upload**: Base64 binary PDF ingestion directly
+  through the browser dashboard with step-by-step progress feedback (`Reading file…` ->
+  `Extracting text and passages…` -> `Complete`), button locking during ingestion, and
+  CLI progress reporting on stderr via `progress_callback`.
+- **Recent projects management**: Quick-access recent projects list in the Open Project modal
+  with path chips and single-click removal, persisting in local browser storage.
+- **Graceful stale path recovery**: Project folder chooser warns on deleted or inaccessible paths
+  and automatically falls back to the user's home folder without breaking the modal UI.
+
+### Fixed
+
+- **Empty manuscript metrics and KPI display**: Text with zero tokens or words now correctly
+  evaluates readability (Flesch, LIX) to `0.0` rather than the formula intercept (206.835 / 180.0).
+  KPI tiles, Table 1, and Markdown reports display a clean empty indicator `"–"` for ASL, ASW,
+  Flesch, LIX, Staccato, Dialogue, and lexical diversity when no tokens are present.
+- **Stale manuscript file references**: The server dashboard now detects when an active manuscript
+  path no longer exists on disk, displaying a prominent error badge (`"file missing (stale reference)"`)
+  and preventing unhandled file errors during analysis.
+
 ## [1.17.0] – 2026-09-26
 
 ### Added

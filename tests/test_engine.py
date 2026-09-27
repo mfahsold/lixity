@@ -387,6 +387,34 @@ class TestReportFormatter(unittest.TestCase):
         self.assertIn('"asl":', json_str)
         self.assertIn('"ttr":', json_str)
 
+    def test_empty_manuscript_metrics_and_formatting(self):
+        for lang in ("en", "de"):
+            analyzer = CorpusAnalyzer(CorpusConfig(language=lang))
+            m = analyzer.analyze_text("")
+            self.assertEqual(m.clean_words, 0)
+            self.assertEqual(m.tokens, 0)
+            self.assertEqual(m.flesch_de, 0.0)
+            self.assertEqual(m.lix, 0.0)
+            self.assertEqual(m.asl, 0.0)
+            self.assertEqual(m.asw, 0.0)
+
+            markdown = ReportFormatter.format_markdown_report(m, language_key=lang)
+            self.assertNotIn("206.8", markdown)
+            self.assertNotIn("180.0", markdown)
+            self.assertIn("| **–** |", markdown)
+
+            from lixity.ui.dashboard import render_dashboard
+            html = render_dashboard(
+                chapters=[],
+                paragraphs=[],
+                metrics=m,
+                fingerprint=None,
+                language_key=lang,
+                title="Empty",
+            )
+            self.assertNotIn("206.8", html)
+            self.assertNotIn("180.0", html)
+
 
 if __name__ == "__main__":
     unittest.main()

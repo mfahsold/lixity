@@ -31,10 +31,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
         ("export", "Export research store to verified archive (.tar.gz)"),
         ("restore", "Restore research store from verified archive (.tar.gz)"),
+        ("ocr-status", "Inspect runtime diagnostic status for OCR and PDF extraction"),
     ):
         command = commands.add_parser(name, help=help_text)
-        if name != "restore":
+        if name not in ("restore", "ocr-status"):
             command.add_argument("--project", required=True, help="Explicit project directory")
+        elif name == "ocr-status":
+            command.add_argument("--project", help="Optional project directory")
+            command.add_argument("--worker-cmd", help="Explicit OCR worker binary or command to inspect")
         if name in ("dossier", "claim", "link-evidence", "decision"):
             command.add_argument("--update", action="store_true", help="Revise the named record")
             command.add_argument("--history", action="store_true", help="List immutable revisions")
@@ -217,9 +221,14 @@ def run(args: argparse.Namespace) -> int:
                     context = json.loads(context_path.read_text(encoding="utf-8"))
                 else:
                     context = json.loads(args.context)
+            def _cli_progress(stage: str, message: str) -> None:
+                if sys.stderr.isatty():
+                    print(f"[{stage}] {message}", file=sys.stderr)
+
             result = api.ingest(args.project, args.file, allow_retention=args.allow_retention,
                                 source_id=args.source_id, title=args.title, language=args.language,
-                                actor=args.actor, dry_run=args.dry_run, context=context)
+                                actor=args.actor, dry_run=args.dry_run, context=context,
+                                progress_callback=_cli_progress)
         elif command == "reindex":
             result = api.reindex(args.project)
         elif command == "search":
@@ -342,6 +351,8 @@ def run(args: argparse.Namespace) -> int:
             result = api.export_archive(args.project, args.output)
         elif command == "restore":
             result = api.restore_archive(args.archive_source, args.target_dir)
+        elif command == "ocr-status":
+            result = api.ocr_status(getattr(args, "worker_cmd", None))
         else:
             result = api.audit(args.project)
         print(json.dumps(result, ensure_ascii=False, indent=2))

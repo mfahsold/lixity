@@ -201,6 +201,55 @@ print(json.dumps(resp))
         with self.assertRaisesRegex(ResearchError, "nonempty and at most 50 MiB"):
             api.ingest(self.project, empty_pdf, allow_retention=True)
 
+    def test_ocr_diagnostics_and_cli_status(self) -> None:
+        import json
+        from io import StringIO
+        from unittest.mock import patch
+
+        from lixity.cli import main
+        from lixity.research.ocr import get_ocr_diagnostics
+
+        diag = get_ocr_diagnostics()
+        self.assertIn("status", diag)
+        self.assertIn("pdftoppm_available", diag)
+        self.assertIn("pdftotext_available", diag)
+        self.assertIn("model_snapshot", diag)
+        self.assertIn("recipe_revision", diag)
+        self.assertIn("guidance", diag)
+
+        # Test CLI invocation
+        buf = StringIO()
+        with patch("sys.stdout", buf):
+            code = main(["research", "ocr-status"])
+        self.assertEqual(code, 0)
+        cli_out = json.loads(buf.getvalue())
+        self.assertEqual(cli_out["model_snapshot"], MODEL_SNAPSHOT)
+        self.assertEqual(cli_out["recipe_revision"], INTEGRATION_RECIPE_REVISION)
+
+        # Test misconfigured worker diagnosis
+        bad_diag = get_ocr_diagnostics(worker_cmd="/nonexistent/path/to/worker")
+        self.assertEqual(bad_diag["status"], "misconfigured_worker")
+        self.assertTrue(any("not found or is not executable" in g for g in bad_diag["guidance"]))
+
+    def test_ingest_progress_callback(self) -> None:
+        pdf_bytes = make_synthetic_pdf("Progress callback test document text.")
+        pdf_path = self.root / "progress.pdf"
+        pdf_path.write_bytes(pdf_bytes)
+
+        events: list[tuple[str, str]] = []
+
+        def callback(stage: str, msg: str) -> None:
+            events.append((stage, msg))
+
+        res = api.ingest(self.project, pdf_path, allow_retention=True, progress_callback=callback)
+        self.assertIn("source_id", res)
+        stages = [e[0] for e in events]
+        self.assertIn("read", stages)
+        self.assertIn("ocr", stages)
+        self.assertIn("passages", stages)
+        self.assertIn("commit", stages)
+        self.assertIn("complete", stages)
+
 
 if __name__ == "__main__":
     unittest.main()

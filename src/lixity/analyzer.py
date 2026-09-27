@@ -189,6 +189,8 @@ class CorpusAnalyzer:
     def readability(self, asl: float, asw: float) -> tuple[float, str]:
         """Language-calibrated Reading Ease score and formula name; not clipped to 0–100."""
         rd = READABILITY.get(self.lang.key, READABILITY["generic"])
+        if asl == 0.0 and asw == 0.0:
+            return 0.0, rd["name"]
         score = rd["constant"] - rd["asl_coef"] * asl - rd["asw_coef"] * asw
         return score, rd["name"]
 
@@ -417,11 +419,16 @@ class CorpusAnalyzer:
         # 5. Readability & complexity (language-calibrated Flesch family + LIX)
         total_syllables = sum(self.count_syllables(t) for t in tokens)
         asw = total_syllables / n_tokens if n_tokens else 0.0
-        flesch_de, flesch_variant = self.readability(stats.asl, asw)
-        lw_min = self.long_word_min()
-        long_words = sum(1 for t in tokens if len(t) > lw_min)
-        pct_long_words = (long_words / n_tokens) * 100.0 if n_tokens else 0.0
-        lix = stats.asl + pct_long_words
+        if n_tokens == 0 or stats.total == 0:
+            flesch_de = 0.0
+            flesch_variant = self.readability(0.0, 0.0)[1]
+            lix = 0.0
+        else:
+            flesch_de, flesch_variant = self.readability(stats.asl, asw)
+            lw_min = self.long_word_min()
+            long_words = sum(1 for t in tokens if len(t) > lw_min)
+            pct_long_words = (long_words / n_tokens) * 100.0 if n_tokens else 0.0
+            lix = stats.asl + pct_long_words
 
         # 6. Dialogue ratio
         dialog_matches = self._dialogue_re.findall(prose_main)

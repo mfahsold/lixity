@@ -420,10 +420,11 @@ def render_dashboard(
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{help_term(labels, "research_ingest", L("research_ingest_heading"))}</span>')
         parts.append('<div class="row" style="margin-bottom:.5rem;">')
-        parts.append('<input class="ctl" type="file" id="r-ingest-file" accept=".txt,.md,.text"/>')
+        parts.append('<input class="ctl" type="file" id="r-ingest-file" accept=".txt,.md,.text,.pdf"/>')
         parts.append(f'<input class="ctl" id="r-ingest-title" placeholder="{L("research_source_title")}" style="min-width:180px;"/>')
         parts.append(f'<input class="ctl" id="r-ingest-tags" placeholder="{L("research_tags_example")}" style="min-width:180px;"/>')
         parts.append('</div>')
+        parts.append('<div class="row" id="r-ocr-diagnostic-box" style="margin-bottom:.5rem;display:none;"></div>')
         parts.append('<div class="row" style="margin-bottom:.5rem;">')
         parts.append(f'<textarea class="ctl" id="r-ingest-text" placeholder="{L("research_source_text")}" rows="3" style="width:100%;font-family:inherit;"></textarea>')
         parts.append('</div>')
@@ -691,6 +692,10 @@ def render_dashboard(
         parts.append('        </div>')
         parts.append(f'        <p class="ctl-note">{L("wizard_open_note")}</p>')
         parts.append('      </div>')
+        parts.append('      <div class="recent-projects-wrap" id="open-project-recent" style="display:none;margin-bottom:.75rem;">')
+        parts.append(f'        <span class="ctl-label" style="font-size:.78rem;font-weight:600;margin-bottom:.3rem;display:block;">{L("recent_projects_heading")}</span>')
+        parts.append('        <div class="recent-projects-chips" id="open-project-recent-list" style="display:flex;flex-wrap:wrap;gap:.4rem;"></div>')
+        parts.append('      </div>')
         parts.append('      <div class="project-chooser" id="open-project-chooser" role="region" aria-labelledby="open-project-chooser-heading" hidden>')
         parts.append('        <div class="project-chooser-heading">')
         parts.append(f'          <strong id="open-project-chooser-heading">{L("wizard_choose_heading")}</strong>')
@@ -769,59 +774,60 @@ def render_dashboard(
     lexis_tiles: list[str] = []
     style_tiles: list[str] = []
     if metrics is not None:
+        has_tokens = bool(metrics.tokens)
         scope_tiles.append(kpi(N(metrics.total_sentences, 0), L("sentences"), jump="#matrix"))
-        rhythm_tiles.append(kpi(N(metrics.asl, 2), help_term(labels, "asl", "ASL"), jump="#dist"))
+        rhythm_tiles.append(kpi(N(metrics.asl, 2) if has_tokens else "–", help_term(labels, "asl", "ASL"), jump="#dist"))
         rhythm_tiles.append(
             kpi(
-                P(metrics.staccato_pct),
+                P(metrics.staccato_pct) if has_tokens else "–",
                 help_term(labels, "staccato", L("feat_staccato")),
-                bar=metrics.staccato_pct,
+                bar=metrics.staccato_pct if has_tokens else None,
                 jump="#dist",
             )
         )
         language_tiles.append(
             kpi(
-                P(metrics.dialog_ratio),
+                P(metrics.dialog_ratio) if (has_tokens and metrics.clean_words) else "–",
                 help_term(labels, "dialogue", L("dialogue")),
-                bar=metrics.dialog_ratio,
+                bar=metrics.dialog_ratio if (has_tokens and metrics.clean_words) else None,
                 jump="#chapters",
                 layer="dialogue",
             )
         )
         language_tiles.append(
-            kpi(N(metrics.flesch_de, 1), help_term(labels, "flesch", "Flesch"), jump="#bands")
+            kpi(N(metrics.flesch_de, 1) if has_tokens else "–", help_term(labels, "flesch", "Flesch"), jump="#bands")
         )
         language_tiles.append(
-            kpi(N(metrics.lix, 1), help_term(labels, "lix", "LIX"), jump="#bands")
+            kpi(N(metrics.lix, 1) if has_tokens else "–", help_term(labels, "lix", "LIX"), jump="#bands")
         )
-        lexis_tiles.append(kpi(N(metrics.ttr, 4), help_term(labels, "ttr", "TTR"), jump="#bands"))
+        lexis_tiles.append(kpi(N(metrics.ttr, 4) if has_tokens else "–", help_term(labels, "ttr", "TTR"), jump="#bands"))
         lexis_tiles.append(
-            kpi(N(metrics.guiraud_r, 2), help_term(labels, "guiraud", "Guiraud R"), jump="#bands")
+            kpi(N(metrics.guiraud_r, 2) if has_tokens else "–", help_term(labels, "guiraud", "Guiraud R"), jump="#bands")
         )
         lexis_tiles.append(
-            kpi(N(metrics.yules_k, 1), help_term(labels, "yules", "Yule&#8217;s K"), jump="#bands")
+            kpi(N(metrics.yules_k, 1) if has_tokens else "–", help_term(labels, "yules", "Yule&#8217;s K"), jump="#bands")
         )
-        hd_d_value = N(metrics.hd_d, 3) if getattr(metrics, "hd_d", None) is not None else "–"
+        hd_d_value = N(metrics.hd_d, 3) if (has_tokens and getattr(metrics, "hd_d", None) is not None) else "–"
         lexis_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D"), jump="#bands"))
-        mtld_value = N(metrics.mtld, 1) if getattr(metrics, "mtld", None) is not None else "–"
+        mtld_value = N(metrics.mtld, 1) if (has_tokens and getattr(metrics, "mtld", None) is not None) else "–"
         lexis_tiles.append(kpi(mtld_value, help_term(labels, "mtld", "MTLD"), jump="#bands"))
-        mattr_value = N(metrics.mattr, 3) if getattr(metrics, "mattr", None) is not None else "–"
+        mattr_value = N(metrics.mattr, 3) if (has_tokens and getattr(metrics, "mattr", None) is not None) else "–"
         lexis_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR"), jump="#bands"))
-        maas_value = N(metrics.maas_a2, 3) if getattr(metrics, "maas_a2", None) is not None else "–"
+        maas_value = N(metrics.maas_a2, 3) if (has_tokens and getattr(metrics, "maas_a2", None) is not None) else "–"
         lexis_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
         language_tiles.append(
             kpi(
-                P(metrics.first_person_start_rate),
+                P(metrics.first_person_start_rate) if has_tokens else "–",
                 help_term(labels, "first_start", L("feat_ich_start")),
-                bar=metrics.first_person_start_rate,
+                bar=metrics.first_person_start_rate if has_tokens else None,
                 jump="#heatmap",
             )
         )
     language_tiles.append(
         kpi(
-            P(function_pct),
+            P(function_pct) if (metrics is not None and metrics.tokens) else "–",
             help_term(labels, "function_words", L("function_words")),
-            bar=function_pct,
+            bar=function_pct if (metrics is not None and metrics.tokens) else None,
             jump="#chapters",
             layer="function",
         )
