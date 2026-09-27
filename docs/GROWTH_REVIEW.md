@@ -1,77 +1,126 @@
 # Discoverability and product communication review
 
-Reviewed 2026-09-24. These are **proposals**, not evidence of increased traffic,
-rankings, citations or revenue. No analytics, tracking, external submissions,
-commercial services or license changes have been activated.
+Reviewed 2026-09-27 against the repository, public HTTP responses and the primary
+sources linked below. GEO here means visibility in generative search answers,
+not geographic metadata. Recommendations are not measured ranking improvements.
+No analytics, paid tools, search-account verification, link outreach or external
+submissions were enabled. The scope is public product material, never manuscripts
+or research archives.
 
-## Positioning and constraints
+## Findings and changes
 
-Lixity is a local manuscript-analysis engine, not a hosted editor or a general
-AI writing service. Its strongest demonstrable benefits are private/offline
-analysis, chapter-level inspection, transparent methods and reproducible
-reports. LNCL-1.0 permits non-commercial use; paid editing/publishing workflows
-must not be advertised as automatically licensed. See the actual [license](../LICENSE).
+| Finding | Product change | Remaining limit |
+| --- | --- | --- |
+| Most useful instructions were Markdown links off the landing page | Three substantial HTML guides: installation, metric interpretation and research/PDF; descriptive URLs and links from the homepage | Search indexing and citation selection are external decisions |
+| Long homepage duplicated all style rules inline | Homepage and guides use one cacheable stylesheet and the same visual system | No claim of a measured Core Web Vitals gain |
+| Sitemap contained only the homepage | Added the three real canonical guide URLs, with actual content-update dates | Submit the sitemap in verified search accounts when available |
+| OCR and publication wording overpromised core capabilities | Separate native PDF extraction, configured scan workers and adapter publication features; distinguish current-main changes from the release | Worker availability is not inference/model verification |
+| Geographic GEO tags, keyword metadata and a German alternate locale suggested signals without corresponding content | Removed misleading/redundant metadata; retained accurate canonical/social metadata | A German page would need a real maintained translation |
+| Machine-readable software metadata used source-code properties on a single application type | Identify both SoftwareApplication and SoftwareSourceCode; remove unsupported organization/service detail | No fake ratings, review counts or rich-result guarantee |
+| Existing `llms.txt` was useful but incomplete | Link practical HTML guides; state release scope and research limits | Convenience index, not an indexing prerequisite or visibility guarantee |
 
-## Recommended order
+The new guides answer user tasks rather than repeat a feature catalogue:
 
-| Priority | Repository finding | Proposed improvement | Verification |
+- [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html): reproducible install, synthetic first run and inaccessible project troubleshooting.
+- [Interpret manuscript metrics](https://mfahsold.github.io/lixity/guides/interpretation.html): consistency, unavailable data, sample floors and a human review workflow.
+- [Archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html): provenance, native PDFs versus scans, worker setup and backup verification.
+
+## What the best-practice sources support
+
+### Useful pages and discoverable navigation
+
+Google recommends clear organization, descriptive titles and link text, useful
+original content and current information. It does not use the keywords meta tag.
+For Lixity this supports a small set of specific guides with copyable examples,
+visible limitations and links to the implemented API, rather than many shallow
+keyword variants. [Google SEO Starter Guide](https://developers.google.com/search/docs/fundamentals/seo-starter-guide).
+
+### AI search uses the same technical foundations
+
+Google describes ordinary SEO fundamentals as applicable to AI Overviews and AI
+Mode. Important content should be available as text and linked internally;
+there is no special required AI file or schema. Eligibility does not guarantee
+inclusion. Lixity's response is readable static HTML and precise answers, with
+`llms.txt` kept as an optional convenience. [Google AI features guidance](https://developers.google.com/search/docs/appearance/ai-features).
+
+### Structured data must describe the visible product
+
+Structured data should match visible, accurate content and not advertise hidden
+or misleading claims. Lixity marks the real software entity, license and source
+repository. It does not invent reviews, prices for unoffered services or FAQ
+eligibility. `codeRepository` belongs to SoftwareSourceCode.
+[Google structured-data policies](https://developers.google.com/search/docs/appearance/structured-data/sd-policies),
+[Schema.org SoftwareSourceCode](https://schema.org/SoftwareSourceCode).
+
+### Crawling policy belongs at the host root
+
+A robots file controls crawling only at the corresponding host root. The public
+check on 2026-09-27 returned HTTP 404 for `https://mfahsold.github.io/robots.txt`
+and HTTP 200 for the project homepage. The repository file is served at
+`/lixity/robots.txt`, so its bot rules are a template, not effective host policy.
+A missing root file is not evidence of a block; recheck actual hosting responses
+and search inspection tools. Do not change unrelated host policy from this repo.
+[Google robots placement](https://developers.google.com/crawling/docs/robots-txt/create-robots-txt).
+
+The sitemap lists canonical public HTML pages only. Dates reflect content edits,
+not every deployment. It is a discovery hint, not an indexing command.
+[Google sitemap guidance](https://developers.google.com/search/docs/crawling-indexing/sitemaps/build-sitemap).
+
+### Search retrieval and model training are different choices
+
+OpenAI documents OAI-SearchBot for search discovery and GPTBot for model training;
+the controls are independent. Enabling training is not a prerequisite for search
+visibility. The existing training-crawler policy was not changed. If the maintainer
+later configures host-root robots or a custom domain, decide these policies
+separately and verify them at the actual origin.
+[OpenAI crawler documentation](https://developers.openai.com/api/docs/bots).
+
+### Measure citations separately from adoption
+
+Bing's AI Performance preview reports citations, cited pages and grounding
+queries for supported experiences. These are channel-specific observations;
+they do not measure installs, trust or revenue. Its documentation also describes
+preview dimensions such as topics and citation share; availability may vary.
+Use actual account data before making claims about Lixity's visibility.
+[Bing AI Performance announcement](https://blogs.bing.com/webmaster/February-2026/Introducing-AI-Performance-in-Bing-Webmaster-Tools-Public-Preview),
+[Bing AI Performance reference](https://www.bing.com/webmasters/help/ai-performance-9f8e7d6c).
+
+## Prioritized follow-up opportunities
+
+| Priority | Next action | Evidence of success | Owner / prerequisite |
 | --- | --- | --- | --- |
-| P0 | Installation previously listed competing commands without a clear first outcome | Completed: one default route, explicit dev/release distinction, canonical installation guide, first-dashboard command, Windows/API/update help | Clean-environment install and CLI smoke test |
-| P1 | Pages is largely one long feature page; methods and guides link out to GitHub | Publish useful, separately addressable HTML pages for installation, interpretation and methods, with unique titles, canonical URLs and internal links | Check rendered content, navigation, indexing eligibility and sitemap entries |
-| P1 | Screenshots demonstrate features but not an end-to-end decision | Add a public-domain, read-only interactive demo and a short walkthrough: identify an unusual chapter, inspect a paragraph, interpret the uncertainty | No private text, contacts or adapter endpoints in the demo |
-| P1 | README starts with technical breadth | Lead with the task, intended user, one screenshot, a minimal working example and explicit limitations; retain formulas lower down | Ask new users to create their first dashboard without assistance |
-| P1 | Large feature list and structured commercial offer may imply more than the package delivers | Distinguish shipped engine, optional adapters and proposed services; review claims such as bespoke language training before retaining them | Every claim maps to code, documentation or a real available service |
-| P2 | No evidence-based search/citation measurement in this review | Verify the site in Google Search Console and Bing Webmaster Tools; inspect queries, indexed pages and AI citations where available | Establish a baseline before changing copy; citations are not installs or revenue |
-| P2 | Seven analysis languages but only an English landing page | Add a genuinely translated German landing page first, then further languages only with maintained content parity and correct hreflang | Language-specific examples and human review, not keyword-swapped pages |
-| P2 | Installation is source-based | Consider signed/tagged release artifacts and a tested release-install matrix; do not imply PyPI availability until deliberately published | Install the actual release on supported OS/Python combinations |
+| P1 | Verify this URL-prefix property in Google Search Console and Bing Webmaster Tools; submit the sitemap | Canonical URLs discovered, indexed status inspected, baseline queries recorded | Maintainer access to the accounts; no credentials were available in this review |
+| P1 | Publish a genuinely translated German entry guide after language review | Useful German content with reciprocal hreflang and consistent limitations | Maintained translation, not seven keyword-swapped copies |
+| P1 | Provide a compact public-domain interactive sample and a two-minute walkthrough | A new user can inspect a chapter and explain why a signal is not a verdict | Public-domain rights checked; no private archive or adapter endpoints |
+| P2 | Expand the methods walkthrough with one reproducible public example per common question | Readers can reproduce the result and find the estimator reference | Existing methods and sample corpus; no unsupported accuracy claims |
+| P2 | Review actual query gaps before writing further guides | Impressions/query intent align with a useful new answer | Baseline account data; avoid speculative content volume |
+| P2 | Consider an independently maintained project domain only if operationally useful | Stable canonical redirects, host-root control and no broken links | Maintainer decision and domain access; not required for these improvements |
+| P2 | Share useful examples with relevant writing/digital-humanities communities | Qualified feedback and voluntary references | Separate authorization for any outreach or posting |
 
-## SEO: concrete technical observations
+These are recommendations, not scheduled work or external actions. Commercial
+positioning must continue to reflect LNCL-1.0: books intended for sale, including
+self-publishing, need a separate written commercial license. Do not label the
+project open source or imply that research use exempts commercial projects.
 
-- `docs/index.html` already includes a canonical URL, social previews, alt text,
-  structured data and meaningful HTML. Improve useful content before adding
-  more metadata. Keep screenshot dimensions and version claims synchronized.
-- `docs/sitemap.xml` currently lists only the landing page. Expand it only when
-  real, public canonical pages exist; fragments are not separate pages.
-- `docs/robots.txt` is deployed at `/lixity/robots.txt`. Crawlers use the host-root
-  robots file, not a project-subdirectory file. A custom domain or control of
-  `mfahsold.github.io/robots.txt` would be required for authoritative robots
-  policy. Do not treat the existing file as proof of crawler access rules.
-  [Google robots documentation](https://developers.google.com/search/docs/crawling-indexing/robots/intro).
-- The deployment uploads `docs/` as static files; Markdown guides are not
-  converted into styled documentation by this workflow. A small static build
-  can improve readable, indexable guide pages without adding an app framework.
-- Avoid unsupported accuracy, performance and popularity claims. In particular,
-  review absolute “length-invariant” wording against each estimator's limitations.
+## Measurement after publication
 
-## GEO: generative-engine visibility, not geolocation
+**First 30 days:** verify public responses, canonical and sitemap selection,
+mobile usability and indexing in the maintainer's search accounts. Record a
+baseline of landing pages, queries, impressions and clicks. If available, record
+Bing's cited pages and citation counts separately. Do not treat an ad-hoc chatbot
+answer as a stable rank.
 
-The geographic meta tags about Hamburg do not implement generative-engine
-optimization. Recommended work is clear, citable, accessible content: answer
-real questions, identify the software and version consistently, link methods
-and caveats, and distinguish observations from claims.
+**At 60 days:** compare like periods and annotate releases, outages and content
+changes. Review branded versus non-branded discovery and which guide answers
+actual questions. Inspect citation context for correctness, not only frequency.
+Without an experimental control, correlation is not proof that an edit caused
+an increase.
 
-Google says its ordinary search fundamentals remain applicable to AI search;
-there is no special required schema markup. Do not promise that `llms.txt`,
-FAQ markup or a particular phrase will produce citations. Keep `llms.txt`
-accurate as a convenience, not as a replacement for usable HTML.
-[Google AI-search guidance](https://developers.google.com/search/docs/fundamentals/ai-optimization-guide).
+**At 90 days:** prioritize one or two demonstrated gaps, such as German
+onboarding or a worked method example. Assess whether users can complete a
+synthetic first-dashboard task. Use opt-in feedback or existing aggregate data;
+adding telemetry requires a separate privacy/product decision.
 
-Bing's AI Performance report can help inspect cited pages and grounding
-queries. Use it as one channel-specific signal, not a cross-engine ranking or
-a measure of product adoption.
-[Bing AI Performance](https://www.bing.com/webmasters/help/ai-performance-9f8e7d6c).
-
-## Adoption and sales communication
-
-Use “Try a public sample”, “Install locally” and “Understand the results” as
-the main journey. Make privacy, prerequisites and non-commercial licensing
-visible before installation. Keep any commercial-license inquiry separate;
-do not advertise a checkout, enterprise support or paid service that is not
-actually available and approved.
-
-Potential next assets: a two-minute annotated walkthrough, task-specific
-examples for authors and researchers, a truthful comparison of engine versus
-adapter capabilities, and a compact FAQ on short-text limits, supported
-languages, offline use and licensing. Measure successful onboarding, not
-just stars or page views. No tracking should be added without a separate
-privacy and consent decision.
+The review cannot report current search impressions, indexing coverage, AI
+citations or conversion rates: no authenticated search-performance data was
+available. This distinction should remain explicit in future updates.

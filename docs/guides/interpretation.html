@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Understand Manuscript Metrics and Style Consistency | Lixity</title>
+<meta name="description" content="Interpret Lixity's consistency, readability, lexical diversity and chapter deviations. Learn why empty manuscripts show a dash and why metrics are not quality scores."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/guides/interpretation.html"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="Understand Manuscript Metrics and Style Consistency"/>
+<meta property="og:description" content="Read chapter-level signals with their data requirements, uncertainty and heuristic limits."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/guides/interpretation.html"/>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to guide</a>
+<main class="guide" id="content">
+<a href="../">Lixity · Documentation</a>
+<h1>Understand manuscript metrics and style consistency</h1>
+<p>Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.</p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-27">27 September 2026</time></p>
+<nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html" aria-current="page">Interpret results</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
+
+<h2 id="consistency">What does consistency measure?</h2>
+<p>Consistency is the proportion of measured chapter–feature cells whose significance-adjusted deviation stays below the active mild threshold. A cell is one feature in one chapter, such as sentence length in chapter two. This is not simply the percentage of chapters that pass a test.</p>
+<p>The baseline uses the chapter median and median absolute deviation (MAD). The default mild threshold is <code>|z*| &lt; 2.5</code>; project and session settings can change it. A high percentage indicates fewer threshold crossings in this particular analysis. It does not certify narrative continuity, factual accuracy or literary merit. Constant features may remain within the band, so even a measured 100% needs contextual interpretation.</p>
+
+<h2 id="empty">Why does an empty manuscript show “–”?</h2>
+<p>On current main, the dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.</p>
+<p>For API compatibility, style JSON schema version 4 retains the historical numeric <code>consistency</code> value. The new <code>measured_cells</code> field identifies the supporting count. When it is zero, the retained value <code>1.0</code> is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.</p>
+
+<h2 id="minimums">How much text is enough?</h2>
+<table>
+<thead><tr><th>Signal</th><th>Implementation guard</th><th>Interpretation</th></tr></thead>
+<tbody>
+<tr><td>Style reference</td><td>At least the configured measurable chapter count; default 2</td><td>A technical floor, not proof of statistical reliability. Several substantive chapters are more informative.</td></tr>
+<tr><td>HD-D, MTLD, Maas a²</td><td>At least 100 tokens</td><td>Shorter inputs return unavailable results. Length robustness does not eliminate every sample effect.</td></tr>
+<tr><td>MATTR</td><td>A 50-token window</td><td>Compare results only with consistent tokenization and settings.</td></tr>
+<tr><td>Readability</td><td>Language-specific formula and count heuristics</td><td>Formula estimates describe surface structure; they do not determine an individual reader's understanding.</td></tr>
+</tbody></table>
+
+<h2 id="review">A practical review loop</h2>
+<ol>
+<li>Check the manuscript path, selected language and chapter boundaries. English is the default; automatic language detection is an explicit choice.</li>
+<li>Inspect an unusual chapter in the matrix or style bands. Distinguish raw threshold crossings from the separately computed FDR-selected cells.</li>
+<li>Open the associated paragraphs and read the passage. A dialogue scene or deliberate change of narrator may explain the pattern.</li>
+<li>Record your interpretation or a work marker if useful. A diagnostic does not decide whether to edit.</li>
+<li>After changing the manuscript, compare results using the same analysis version, language and thresholds.</li>
+</ol>
+<p>For example, a synthetic chapter consisting of short dialogue may differ sharply from a descriptive chapter. That contrast can be intentional. Neither moving both toward a common average nor maximizing consistency is a general writing objective.</p>
+
+<h2 id="fdr">Does FDR make a flagged passage objectively wrong?</h2>
+<p>No. Benjamini–Hochberg and Benjamini–Yekutieli address multiple statistical comparisons under their assumptions. They do not assess prose quality or establish that every flagged cell represents a meaningful problem. Dependence, small samples, constant features and uncertainty estimates affect interpretation. The baseline diagnostics expose some of these limitations; they do not remove them.</p>
+
+<h2 id="languages">Are the seven languages equally accurate?</h2>
+<p>The interface and language profiles cover English, German, French, Spanish, Italian, Portuguese and Dutch. English and German have the deepest linguistic heuristics. Complete translations of interface text do not establish equal linguistic accuracy. Mathematical identifiers stay language-neutral; quotations retain their original language.</p>
+<p>Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">estimator definitions and scientific references</a>, <a href="https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md">stability and limitations</a>, and <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">JSON contracts</a>. For a first run, follow the <a href="installation.html#first-dashboard">synthetic dashboard example</a>.</p>
+<footer><a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a></footer>
+</main>
+</body>
+</html>

@@ -26,6 +26,18 @@ lixity build manuscript.md --language en
 Open `exports/manuscript_dashboard.html`.
 [Onboarding Guide](docs/ONBOARDING.md) · [Install Lixity](#installation) · [Usage](docs/USAGE.md) · [Methods](docs/METHODS.md)
 
+Practical web guides: [install and open a project](https://mfahsold.github.io/lixity/guides/installation.html),
+[interpret manuscript metrics](https://mfahsold.github.io/lixity/guides/interpretation.html),
+and [archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html).
+
+**On current main (after the tagged release):** consistency displays “–” when
+there are no measurable chapter–feature cells; OCR setup guidance follows the
+dashboard language; source import accepts an optional origin URL. Browser PDF
+upload retains original bytes. Text-layer PDFs use local Poppler tools; scan
+OCR still requires a separately configured self-hosted worker. An origin URL is
+retained provenance, not a remote import. Read the [research reference](docs/research/USAGE.md)
+and [unreleased changes](CHANGELOG.md#unreleased) before upgrading an archive.
+
 ## Analysis and research capabilities
 
 Lixity combines text analysis and dashboard presentation. The optional local
@@ -36,7 +48,7 @@ research archive is a separate, explicit-project experimental API.
 | **01. Stylistics & Corpus Diagnostics** | Macro & micro sentence architecture | ASL, rhythm CV, 4 length tiers (staccato to hypotaxis), language-specific readability formula variants, and lexical diversity measures (HD-D, MTLD, Yule's K, Maas a²). |
 | **02. Dramaturgy & Tense Profiling** | Paragraph-accurate narrative continuity | Tense classification (present, past, mixed, neutral), 4-tier friction severity rating (0–3), speech ratios, dialogue turns, scene pacing curves, and chapter tension hooks. |
 | **03. Robust 3D Style Space** | Self-calibrating manuscript baseline | Manuscript-intrinsic median ± 2 MAD corridor, noise-aware z\* shrinkage, Benjamini–Hochberg / BY FDR multiplicity control, cyclic Jacobi EVD, and interactive 3D trajectory. |
-| **04. Typographic Publication** | Print & digital publishing vectors | Cairo & Pango PDF engine with subpixel metrics, font hinting control, collision-free tracking: Paperback (135×205 mm), Editorial Proof A4 with line numbers, Mobile 9:16 PDF, and valid EPUB 3.3 with dual NCX/nav navigation. |
+| **04. Project integration** | Shared analysis and dashboard building blocks | Explicit configuration, versioned JSON, work markers and reusable UI. Typesetting, EPUB/PDF publication and delivery belong to separate project adapters, not the core package. |
 | **05. Research pilot (experimental)** | Local source archive and passage citations | Immutable SHA-256 UTF-8 storage, source criticism, SQLite FTS5 search, manual claims, evidence links, author decisions, and cross-corpus comparison. |
 
 ## Mathematical Core

@@ -43,8 +43,11 @@ make `import lixity` available to a different Python environment.
 ### Development builds instead
 
 Release `v1.17.0` includes the experimental [local research workspace](research/USAGE.md).
-Research search requires SQLite with FTS5; OCR and external provider integrations
-remain planned features.
+Research search requires SQLite with FTS5. PDF extraction uses local Poppler
+tools or a separately configured OCR worker; external provider integrations
+remain outside the implemented pilot. Current main adds browser PDF upload,
+OCR diagnostics, localized setup guidance, origin URLs and neutral consistency
+when there are no measurable cells. These are not in the existing release tag.
 
 To follow unreleased changes, use this **instead**:
 
@@ -178,3 +181,32 @@ the first existing `$fpath` directory is writable.
 
 See the [usage reference](USAGE.md), [architecture](ARCHITECTURE.md) and
 [contributor guide](../CONTRIBUTING.md) for the next steps.
+
+## Server environment and project access
+
+Start the server with the intended project explicitly:
+
+```sh
+lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765
+```
+
+The folder browser sees the server process's filesystem. If an existing project
+is unavailable after a restart, check the process user, sandbox/container mounts,
+directory permissions and the explicit project argument. A path that works in
+your terminal is not necessarily visible to a service running in isolation.
+Use **Open Project** to reconnect the original archive; manuscript upload creates
+a separate project and is not a repair for missing filesystem access.
+
+Updating the package or exporting an environment variable does not change an
+already running server. Restart the intended service, then verify the displayed
+project path. Keep private archives outside the engine checkout.
+
+For PDF import, make `pdftotext` and `pdftoppm` available in that same environment.
+Debian/Ubuntu package: `poppler-utils`; Homebrew package: `poppler`.
+Run `lixity research ocr-status` on current main. Scans require a separately
+configured `LIXITY_OCR_WORKER`; native extraction cannot read an image-only page.
+See [the extraction contract](research/USAGE.md#self-hosted-pdf-and-ocr-extraction).
+
+The [browser installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
+provides a synthetic first-dashboard example and links to interpretation and
+source/PDF workflows.

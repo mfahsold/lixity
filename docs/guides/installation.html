@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Install Lixity and Open a Manuscript Locally</title>
+<meta name="description" content="Install Lixity from GitHub, create an offline manuscript dashboard, and reconnect an existing project. Includes release pins and server troubleshooting."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/guides/installation.html"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="Install Lixity and Open a Manuscript Locally"/>
+<meta property="og:description" content="A practical path from installation to a local manuscript dashboard and research workspace."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/guides/installation.html"/>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to guide</a>
+<main class="guide" id="content">
+<a href="../">Lixity · Documentation</a>
+<h1>Install Lixity and open a manuscript locally</h1>
+<p>Lixity analyzes Markdown manuscripts on your computer. It produces an interactive dashboard with sentence rhythm, vocabulary, readability and chapter-level style signals. No manuscript upload or account is required for core analysis.</p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-27">27 September 2026</time></p>
+<nav class="guide-nav" aria-label="Guides"><a href="installation.html" aria-current="page">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
+
+<h2 id="requirements">What do I need?</h2>
+<p>Use Python 3.10 or newer, Git, and <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. Python 3.12 is the documented default. Downloading the package and its dependencies requires an internet connection; core manuscript analysis runs offline afterward. Linux, macOS and Windows are supported. PDF research import has additional local prerequisites described in the <a href="research-pdf.html#ocr">OCR guide</a>.</p>
+<div class="notice-box"><strong>License:</strong> Lixity is source-available under LNCL-1.0. Free use is limited to projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">licensing examples</a>.</div>
+
+<h2 id="install">Install a reproducible release</h2>
+<pre><code>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.17.0"
+lixity --version
+lixity about</code></pre>
+<p>The tag selects a fixed release. If the command is not found, run <code>uv tool update-shell</code>, reopen the terminal and try again. Lixity is installed from GitHub; these instructions do not assume a PyPI package.</p>
+<p><strong>Current-main features:</strong> the origin-URL field, localized OCR diagnostics and neutral consistency display described in these guides are additions after the tagged release. To use them deliberately, replace the installation with:</p>
+<pre><code>uv tool install --force --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"</code></pre>
+<p><code>main</code> changes over time. Record the installed commit for reproducible automation and review the <a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">changelog</a>. Installing or updating Lixity does not restart an already running server.</p>
+
+<h2 id="first-dashboard">Create the first dashboard</h2>
+<p>Save this synthetic text as <code>sample.md</code>. Two short chapters are sufficient to exercise the workflow, but not to establish a reliable stylistic baseline.</p>
+<pre><code>## Chapter 1
+
+The rain stopped. Mara opened the window. The street was quiet.
+
+## Chapter 2
+
+At the library, Mara examined a handwritten catalogue while the keeper searched the shelves.</code></pre>
+<pre><code>lixity dashboard sample.md --language en -o sample-dashboard.html</code></pre>
+<p>Open <code>sample-dashboard.html</code> in your browser. For reliable exploration, use a longer manuscript with several chapters and read the <a href="interpretation.html">interpretation guide</a>. Analysis defaults to English; use <code>--language de</code> for German or choose <code>--language auto</code> explicitly for heuristic detection.</p>
+
+<h2 id="existing-project">Open an existing project and research archive</h2>
+<pre><code>lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765</code></pre>
+<p>Replace the example path with your project directory. Open <code>http://127.0.0.1:8765/</code>, then verify the displayed project path and title. <strong>Open Project</strong> reconnects an existing folder and its research archive. <strong>New Project → Import Manuscript</strong> creates a separate project from uploaded manuscript bytes; use it only when that is your intention.</p>
+<p>For a research-only workspace, an initialized archive can be opened without a manuscript. Source records remain available; comparing sources with manuscript text needs a loaded manuscript.</p>
+
+<h2 id="troubleshooting">The project exists, but the server cannot open it</h2>
+<p>The browser's folder chooser shows the filesystem visible to the server process. A container, sandbox or service account can have different access from your terminal. Verify the process user, directory mounts and read permissions. Start the service with the explicit project path and an environment that can access that folder. Avoid creating a replacement project merely because an isolated server cannot see the original.</p>
+<p>After changing packages, filesystem access or <code>LIXITY_OCR_WORKER</code>, restart the intended server through its service manager or terminal and verify the project again. Do not start a second server on the same port and assume the browser switched to it.</p>
+
+<h2 id="python-api">Using the Python API?</h2>
+<p>Install Lixity in the consuming project's virtual environment. A <code>uv tool</code> environment is isolated and does not make <code>import lixity</code> available to unrelated Python processes. Pass explicit project configuration when integrating multiple projects.</p>
+<p>Continue with the <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">full installation reference</a>, <a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">shared pipeline architecture</a>, or <a href="research-pdf.html">research source workflow</a>.</p>
+<footer><a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a></footer>
+</main>
+</body>
+</html>

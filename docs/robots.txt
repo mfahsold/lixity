@@ -1,8 +1,14 @@
+# Deployment note: this file is under /lixity/ on GitHub Pages.
+# Only /robots.txt at the host root controls crawlers. This is a policy template.
 # Lixity – https://mfahsold.github.io/lixity/
 User-agent: *
 Allow: /
 
-# AI / LLM crawlers explicitly welcome (agent-friendly documentation)
+# Search retrieval and training crawlers are distinct policies.
+User-agent: OAI-SearchBot
+Allow: /
+
+# Existing training-crawler permissions retained.
 User-agent: GPTBot
 Allow: /
 

@@ -8,6 +8,7 @@ node tests/browser/style-space.cjs
 node tests/browser/settings.cjs
 node tests/browser/layout.cjs
 node tests/browser/research.cjs
+node tests/browser/docs.cjs
 ```
 
 If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
@@ -31,6 +32,12 @@ The same suite exercises native record revisions: edit and history for dossiers,
 claims, evidence links and decisions; cancellation; concurrent and failed saves
 that preserve drafts; newer-source notices with original quotations retained;
 and history dialogs across all seven locales at 320 pixels.
+
+It also checks localized OCR status/fallback labels and imports a source with an
+origin URL. The docs suite loads the public static files through intercepted
+local routes: all four HTML pages at 1440, 390 and 320 pixels, with JavaScript
+enabled and disabled. It checks canonical URLs, assets, console errors, overflow
+and navigation; screenshots stay under `/tmp/lixity-public-docs-*`.
 
 The settings test intercepts all requests to a synthetic host. It verifies
 locale-safe values, validation before submission, reset without saving, FDR

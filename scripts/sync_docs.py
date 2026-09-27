@@ -84,6 +84,12 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
         ),
     ]
 
+    # Static guides share the release-install convention with the main docs.
+    rules.extend((guide, [
+        (r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
+         f"git+https://github.com/mfahsold/lixity.git@v{version}"),
+    ]) for guide in sorted((ROOT / "docs" / "guides").glob("*.html")))
+
     for file_path, replacements in rules:
         if not file_path.is_file():
             continue

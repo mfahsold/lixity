@@ -32,6 +32,21 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - API: install into the consuming project's venv, not a separate tool environment.
 - dev: `git clone … && make install-dev && make check`
 
+## Practical HTML guides
+
+- [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html)
+- [Interpret metrics and consistency](https://mfahsold.github.io/lixity/guides/interpretation.html)
+- [Archive sources and use PDF/OCR](https://mfahsold.github.io/lixity/guides/research-pdf.html)
+
+Current main (after the release tag): origin-URL metadata in source import,
+localized browser OCR guidance, native browser PDF upload and neutral consistency
+without measurable cells. Source URLs are never fetched. URL-bearing captures
+require research-local/2 and manifest v2; old readers reject them. Style JSON v4
+adds measured_cells; zero means the numeric consistency=1.0 is unavailable, not 100%.
+Scan OCR requires a separately configured worker. Diagnostics inspect executables,
+not model integrity or recognition quality. Archived citations currently use
+character spans in extracted text, not a persisted physical-page/box contract.
+
 ## Primary documentation
 
 - Calibration: `--min-chapters` on style/dashboard/build; API `min_chapters` and explicit `project_config={}` for threshold isolation. Defaults are not active project settings.
@@ -78,7 +93,7 @@ not a quality ranking. Rotation is opt-in and pauses when the page is hidden.
 Publication servers and encrypted NDA storage are project-adapter features,
 not services bundled with the core engine.
 
-## Commands (all offline, deterministic, UTF-8)
+## Commands (local analysis and explicit-project research)
 
 - `lixity analyze FILE --json` – corpus metrics + per-chapter style features (schema v2 meta)
 - `lixity profile FILE` – paragraph-accurate tense/style profiles
@@ -90,7 +105,7 @@ not services bundled with the core engine.
 - `lixity style FILE --json [--z-mild F] [--z-strong F] [--fdr-q F] [--fdr-method bh|by] [--dim-threshold F] [--flag-min-severity 1|2|3]` – self-calibrating style reference (schema v4; thresholds injectable, re-read from meta; Cliff’s δ + baseline diagnostics + structural_diagnostics: PELT/Mann-Kendall/Sn/Qn/Hill + early/late Wasserstein-KS shift + co-occurrence fitness + Dunning keyness)
 - `lixity dashboard FILE [-o ui.html] [--names A,B] [same threshold flags]` – single-file interactive dashboard (clickable KPIs, status strip, structure panels, work markers, full settings group)
 - `lixity serve [FILE|FOLDER] [--host IP] [--port N] [--research-project DIR] [--no-project]` – local loopback server with a persistent New/Open/Show guidance bar, project wizard and experimental research panel; Open Project browses or accepts server-local paths, including research-only folders, and keeps their archives; importing browser-selected manuscript bytes creates a new project. Guidance starts collapsed for loaded projects and can be reopened.
-- `lixity research SUBCOMMAND --project DIR [options]` – experimental explicit-project research store (init, ingest, reindex, search, cite, sources, dossier, claim, link-evidence, decision, compare, withdraw, purge, audit, schema)
+- `lixity research SUBCOMMAND --project DIR [options]` – experimental explicit-project research store (init, ingest, reindex, search, cite, sources, dossier, claim, link-evidence, decision, compare, withdraw, purge, audit, schema, ocr-status, export, restore)
 - `lixity build [FILE] [--dry-run] [same threshold flags]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
 - `lixity about --json` – languages, features, heuristics, command list
 - `lixity completion bash|zsh` – shell completion
