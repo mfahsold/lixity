@@ -69,8 +69,13 @@ RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
 .venv/bin/mypy --strict src
 ```
 
-CI (`.github/workflows/tests.yml`) runs the same checks on Python 3.10–3.13
-plus a wheel packaging job. Optional local hooks:
+CI (`.github/workflows/tests.yml`) runs the same checks on Python 3.10–3.13,
+research checks on macOS and Windows, browser checks, and wheel packaging.
+Native PDF integration tests need Poppler (`pdftotext` and `pdftoppm`); CI installs
+it on Linux and macOS. Locally, follow [the PDF setup](docs/INSTALLATION.md).
+Tests requiring an unavailable Poppler executable report an explicit skip;
+the synthetic worker subprocess test runs on every platform without a model.
+Optional local hooks:
 `pre-commit install` (trailing whitespace, YAML check, ruff `--fix` — see
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml)). Tags matching `v*`
 build a wheel and open a GitHub Release (`.github/workflows/release.yml`);

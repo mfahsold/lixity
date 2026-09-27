@@ -3,6 +3,7 @@
 import http.client
 import json
 import os
+import shutil
 import tempfile
 import threading
 import unittest
@@ -1324,6 +1325,7 @@ class TestLixityServer(unittest.TestCase):
             LixityServerHandler.source_input = original_source
             LixityServerHandler.refresh()
 
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_research_ingest_content_base64_pdf(self):
         import base64
         import sys

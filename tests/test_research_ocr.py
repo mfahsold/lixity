@@ -1,15 +1,19 @@
 """Tests for self-hosted Baidu Unlimited-OCR extraction boundary and PDF ingestion."""
 
+import shutil
+import subprocess
 import sys
 import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
+from unittest.mock import patch
 
 from lixity.research import api
 from lixity.research.models import Activity, Extraction, Passage, SourceVersion
 from lixity.research.ocr import (
     INTEGRATION_RECIPE_REVISION,
     MODEL_SNAPSHOT,
+    PageImage,
     extract_pdf_document,
     render_pdf_pages,
 )
@@ -50,6 +54,7 @@ class ResearchOCRTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
+    @unittest.skipUnless(shutil.which("pdftoppm"), "requires Poppler pdftoppm")
     def test_render_pdf_pages(self) -> None:
         pdf_bytes = make_synthetic_pdf("Historical record of the 1924 expedition.")
         pdf_path = self.root / "sample.pdf"
@@ -62,6 +67,7 @@ class ResearchOCRTest(unittest.TestCase):
         self.assertGreater(len(pages[0].image_bytes), 0)
         self.assertEqual(len(pages[0].sha256), 64)
 
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_extract_pdf_document_local_text_layer(self) -> None:
         content = "Archival field note paragraph one.\n\nArchival field note paragraph two."
         pdf_bytes = make_synthetic_pdf(content)
@@ -84,7 +90,8 @@ class ResearchOCRTest(unittest.TestCase):
             f"""#!{sys.executable}
 import sys, json
 
-req = json.load(open(sys.argv[1]))
+with open(sys.argv[1], encoding="utf-8") as stream:
+    req = json.load(stream)
 assert req["model_snapshot"] == "{MODEL_SNAPSHOT}"
 assert req["recipe_revision"] == "{INTEGRATION_RECIPE_REVISION}"
 assert len(req["pages"]) == 1
@@ -106,12 +113,25 @@ print(json.dumps(resp))
         pdf_path = self.root / "worker_test.pdf"
         pdf_path.write_bytes(pdf_bytes)
 
-        res = extract_pdf_document(pdf_path, worker_cmd=str(worker_script))
+        # Use the current interpreter on every OS; Windows does not execute
+        # Python shebangs. Rasterization has its own real Poppler integration test.
+        run = subprocess.run
+        def run_worker(args, **kwargs):
+            return run([sys.executable, *args], **kwargs)
+
+        with (
+            patch("lixity.research.ocr.render_pdf_pages", return_value=[
+                PageImage(page_number=1, image_bytes=b"synthetic", sha256="a" * 64),
+            ]),
+            patch("lixity.research.ocr.subprocess.run", side_effect=run_worker),
+        ):
+            res = extract_pdf_document(pdf_path, worker_cmd=str(worker_script))
         self.assertEqual(res.full_text, "Extracted OCR text line A.\n\nExtracted OCR text line B.")
         self.assertEqual(len(res.blocks), 2)
         self.assertEqual(res.blocks[0].confidence, 0.99)
         self.assertEqual(len(res.spans), 2)
 
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_pdf_ingest_lifecycle_audit_cite_and_search(self) -> None:
         pdf_bytes = make_synthetic_pdf("Botanical observations in the alpine meadow.")
         pdf_path = self.root / "botany.pdf"
@@ -169,6 +189,7 @@ print(json.dumps(resp))
         reingest = api.ingest(self.project, pdf_path, allow_retention=True, source_id=ingested["source_id"])
         self.assertTrue(reingest["unchanged"])
 
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_pdf_archive_export_and_restore_roundtrip(self) -> None:
         pdf_bytes = make_synthetic_pdf("Geological survey data 1926.")
         pdf_path = self.root / "geology.pdf"
@@ -231,6 +252,7 @@ print(json.dumps(resp))
         self.assertEqual(bad_diag["status"], "misconfigured_worker")
         self.assertTrue(any("not found or is not executable" in g for g in bad_diag["guidance"]))
 
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_ingest_progress_callback(self) -> None:
         pdf_bytes = make_synthetic_pdf("Progress callback test document text.")
         pdf_path = self.root / "progress.pdf"

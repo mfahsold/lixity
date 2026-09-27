@@ -154,7 +154,15 @@ class TestResearchArchive(unittest.TestCase):
         unpack_dir = self.root / "tamper_unpack"
         unpack_dir.mkdir()
         with tarfile.open(archive_path, "r:gz") as tar:
-            tar.extractall(path=unpack_dir)  # noqa: S202
+            for member in tar.getmembers():
+                if member.isfile():
+                    target = unpack_dir / member.name
+                    self.assertTrue(target.resolve().is_relative_to(unpack_dir.resolve()))
+                    target.parent.mkdir(parents=True, exist_ok=True)
+                    stream = tar.extractfile(member)
+                    assert stream is not None
+                    with stream:
+                        target.write_bytes(stream.read())
 
         # Find a revision file and tamper with its bytes
         rev_files = list(unpack_dir.glob("research/revisions/**/*.json"))
