@@ -9,6 +9,19 @@ For installation and version checks, see [Installation](INSTALLATION.md).
 Commercial use, including work on a book intended for sale, requires a
 separate written license; see [Licensing](LICENSING.md).
 
+## Choose your starting point
+
+| What you have | Start here |
+| --- | --- |
+| A Markdown manuscript | Analyze or build it below; keep the original file in its project folder. |
+| An existing Lixity project | Use **Open Project** or `lixity serve /path/to/project` to reconnect its archive. |
+| No manuscript yet | Run `lixity serve --no-project` and choose a project template. |
+| Sources already in Zotero | Initialize a research project, then preview and capture selected attachments in the Zotero workflow below. |
+
+A generated HTML dashboard is a read-only analysis export. The local server adds
+project management and research actions; it does not become a full manuscript
+editor or a publication service.
+
 ## Start with a manuscript
 
 From a project folder containing `manuscript.md`, run:
@@ -121,7 +134,11 @@ lixity research reindex --project ./my-novel
 lixity research search --project ./my-novel --query "Zürich"
 ```
 
-Search returns passage IDs. Use an actual ID from the result when recording a
+By default, CLI search returns source passage IDs. Use `--scope all` to search
+current dossiers, claims and decisions as well; the dashboard uses this combined
+view by default. Authored records are not source citations. Reindex after changes.
+
+Source-passage search returns passage IDs. Use an actual ID from the result when recording a
 claim and its supporting, contradicting, qualifying, or contextual evidence:
 
 ```sh
@@ -204,6 +221,20 @@ and does not synchronize future changes automatically.
 The first capture with a structured Zotero reference writes a v3 source version
 and manifest. Current readers retain v1/v2 support; older readers reject v3. Back
 up before upgrading and use the same supported version for all archive writers.
+
+## Check your first session and return later
+
+Before relying on a new workspace, check that the displayed project path is the
+intended folder, the analysis language matches the manuscript, and a sample
+quotation resolves to the expected source text. For a Zotero capture, also check
+its original-item link and metadata. Search success alone does not verify a claim.
+
+Stop the local server with Ctrl+C. After a restart, start Zotero if needed and run
+`lixity serve /path/to/project` again; open the existing project rather than
+importing the manuscript into a second folder. See [restart instructions](INSTALLATION.md#start-again-after-a-computer-restart)
+for OCR environment and server details. Back up the manuscript separately from
+the research archive; paired research/Zotero backups exclude manuscripts and
+external linked attachments.
 
 For implemented commands, storage behavior, withdrawal/purge semantics, and
 limits, see [Research usage](research/USAGE.md). The broader

@@ -17,7 +17,7 @@ and missing evidence; do not turn diagnostic scores into quality verdicts.
 
 Lixity turns a Markdown manuscript into quantitative text linguistics:
 sentence rhythm, lexical diversity, readability, dialogue share,
-paragraph-accurate tense profiles, and a **self-calibrating style reference**.
+paragraph-level heuristic tense profiles, and a **self-calibrating style reference**.
 Style references use the manuscript's own robust median/MAD baseline.
 Heuristic threshold hits, FDR-selected cells and paragraph tense flags are
 different result sets. Readability formulas have their own language-specific
@@ -40,7 +40,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | Command | Purpose | Output |
 |---|---|---|
 | `lixity analyze FILE --json` | corpus metrics + per-chapter style features | JSON (meta + metrics) |
-| `lixity profile FILE` | paragraph-accurate tense/style profiles | JSON (meta + chapters + paragraphs) |
+| `lixity profile FILE` | paragraph-level heuristic tense/style profiles | JSON (meta + chapters + paragraphs) |
 | `lixity dialogue FILE [--json]` | dialogue turn structure (turns, lengths, per chapter) | text / JSON |
 | `lixity characters FILE --names A,B [--json]` | character presence per chapter | text / JSON |
 | `lixity pacing FILE [--json]` | scenes, pacing signals, chapter hooks | text / JSON |
@@ -253,7 +253,8 @@ the editorial loop: every row jumps to its paragraph (with the “flagged only�
 filter preselected) and offers a quick `+ To-do` button that writes the
 marker without navigating. Marker writes go through the embedding server's
 action API (`{"action": "marker-add", "kind": …, "line": …, "note": …}`);
-the library itself never writes files.
+the pure renderer does not persist marker edits. The bundled local server and
+research APIs do write files within their explicitly selected project.
 
 ### 3.5 Structure modules (`dialogue`, `characters`, `pacing`, `motifs`, `showing`)
 
@@ -319,7 +320,8 @@ are quotation segments.
 
 - **z*** = significance-adjusted deviation: `z* = (x − median) / √(σ² + SE²)`
   with σ = 1.4826·MAD. Small chapters have large SE – their deviations are
-  shrunk, so they cannot produce false alarms.
+  shrunk when an SE estimate is available. This reduces one source of noise;
+  false alarms and model misspecification remain possible.
 - **Thresholds**: |z*| ≥ 2.5 noticeable, ≥ 3.5 strong (injectable via
   `--z-mild` / `--z-strong` / `--fdr-q` / `--fdr-method` /
   `--dim-threshold` / `--flag-min-severity`, API kwargs, the control-server
@@ -464,7 +466,7 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
 
-Development native-revision endpoints (issue #9) reuse that explicit workspace:
+Native-revision endpoints (since v1.17.0) reuse that explicit workspace:
 
 - `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link` and `decision`.
 - `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
@@ -528,8 +530,9 @@ analysis result, rather than recalculating the corpus through multiple calls.
 - Input is UTF-8 Markdown; chapters are `## ` headings (configurable);
   the appendix starts at `## Anmerkungen und Literaturverzeichnis`
   (configurable via `CorpusConfig.appendix_marker`).
-- HTML comments (`<!-- … -->`) are ignored by the analysis – use them for
-  work markers that must never appear in rendered output.
+- HTML comments (`<!-- … -->`) are excluded from prose metrics. Work-marker
+  comments are deliberately shown as notes in the review dashboard; do not put
+  secrets in them or assume all downstream exporters remove them.
 - Never modify the manuscript when only reading metrics is required.
   Lixity itself is read-only for `analyze`/`profile`/`style`.
 

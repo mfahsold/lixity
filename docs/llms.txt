@@ -2,13 +2,13 @@
 
 > Lixity is a deterministic, offline text-linguistics engine for literary
 > manuscripts: sentence rhythm, lexical diversity with short-text guards, readability,
-> register signals, paragraph-accurate tense profiles, a self-calibrating
+> register signals, paragraph-level heuristic tense profiles with line anchors, a self-calibrating
 > style reference (median/MAD bands, significance-adjusted z*, Benjamini-Hochberg
 > or Benjamini-Yekutieli FDR), and structural diagnostics (PELT
 > changepoints, Mann-Kendall trends, Sn/Qn scales, Hill tail index,
 > early/late Wasserstein-KS shift, content-word co-occurrence fitness,
 > Dunning keyness). It never
-> judges style against external norms. Pure Python, 7 languages (de, en, fr,
+> produces a literary-quality verdict. Pure Python, 7 languages (de, en, fr,
 > es, it, pt, nl) plus a generic fallback, no cloud calls in core analysis.
 > Fixed analysis input and settings produce deterministic metrics; research
 > records include generated IDs and timestamps.
@@ -62,6 +62,27 @@ Current text can still contain obsolete statements; search does not resolve them
 See [Unlimited-OCR integration boundaries](https://mfahsold.github.io/lixity/research/OCR_INTEGRATION.md)
 for the source-grounded runtime comparison and acceptance criteria.
 
+## Zotero and media boundaries
+
+Release v1.19.0 adds optional local Zotero CLI/Python/dashboard
+integration: explicit library/collection browsing, selected PDF/text capture
+with retention consent, explicit refresh and original-item links. Images, audio
+and video remain in Zotero. Structured identities require research-local/3
+captures and v3 manifests; old readers reject these. No cloud API, direct library
+writes or automatic sync. Identical-byte PDF metadata refresh reuses extraction.
+research zotero-export creates an additive RIS/files/provenance bundle;
+zotero-backup and zotero-restore pair the research archive with a closed Zotero
+data directory. Manuscripts, profiles and external linked files are excluded.
+No automatic migration or removal of historical evidence. See research/USAGE.md.
+
+## Returning to an existing project
+
+Run `lixity serve /path/to/project` after a restart; no reimport or archive
+initialization is required. Start Zotero separately for live catalogue access.
+Previously retained evidence remains available without Zotero. Lixity installs
+no automatic startup service. OCR environment variables must be supplied to the
+new server process. Restart running servers after a package update.
+
 ## Primary documentation
 
 - Calibration: `--min-chapters` on style/dashboard/build; API `min_chapters` and explicit `project_config={}` for threshold isolation. Defaults are not active project settings.
@@ -77,7 +98,7 @@ for the source-grounded runtime comparison and acceptance criteria.
   BagIt-style export/restoration, SQLite/FTS5 lexical search, cross-corpus comparison,
   and interactive web research UI in `lixity serve`).
   No remote imports, factual certification or hybrid retrieval yet.
-- [Research workspace](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md): implemented CLI/API, `*-local/1` and `*-local/2` schemas and limits; retention permission required
+- [Research workspace](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md): implemented CLI/API, versioned local schemas (including v3 Zotero captures) and limits; retention permission required
 - [Research target architecture](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md): includes unimplemented interfaces; not an executable command reference
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md): shared analysis pipeline, project isolation, engine/adapter boundaries
 - [Localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): English defaults, seven linguistic profiles, mathematical invariants and limitations
@@ -111,7 +132,7 @@ not services bundled with the core engine.
 ## Commands (local analysis and explicit-project research)
 
 - `lixity analyze FILE --json` – corpus metrics + per-chapter style features (schema v2 meta)
-- `lixity profile FILE` – paragraph-accurate tense/style profiles
+- `lixity profile FILE` – paragraph-level heuristic tense/style profiles with line anchors
 - `lixity dialogue FILE [--json]` – dialogue turn structure (turns, turn lengths, per chapter)
 - `lixity characters FILE --names A,B [--json]` – character presence per chapter (aliases supported)
 - `lixity pacing FILE [--json]` – scene breaks, pacing signals, chapter hook score
@@ -120,7 +141,7 @@ not services bundled with the core engine.
 - `lixity style FILE --json [--z-mild F] [--z-strong F] [--fdr-q F] [--fdr-method bh|by] [--dim-threshold F] [--flag-min-severity 1|2|3]` – self-calibrating style reference (schema v4; thresholds injectable, re-read from meta; Cliff’s δ + baseline diagnostics + structural_diagnostics: PELT/Mann-Kendall/Sn/Qn/Hill + early/late Wasserstein-KS shift + co-occurrence fitness + Dunning keyness)
 - `lixity dashboard FILE [-o ui.html] [--names A,B] [same threshold flags]` – single-file interactive dashboard (clickable KPIs, status strip, structure panels, work markers, full settings group)
 - `lixity serve [FILE|FOLDER] [--host IP] [--port N] [--research-project DIR] [--no-project]` – local loopback server with a persistent New/Open/Show guidance bar, project wizard and experimental research panel; Open Project browses or accepts server-local paths, including research-only folders, and keeps their archives; importing browser-selected manuscript bytes creates a new project. Guidance starts collapsed for loaded projects and can be reopened.
-- `lixity research SUBCOMMAND --project DIR [options]` – experimental explicit-project research store (init, ingest, reindex, search, cite, sources, dossier, claim, link-evidence, decision, compare, withdraw, purge, audit, schema, ocr-status, export, restore)
+- `lixity research SUBCOMMAND --project DIR [options]` – experimental explicit-project research store (init, ingest, reindex, search, cite, sources, dossier, claim, link-evidence, decision, compare, withdraw, purge, audit, schema, ocr-status, export, restore, zotero, zotero-ingest, zotero-export, zotero-backup, zotero-restore)
 - `lixity build [FILE] [--dry-run] [same threshold flags]` – idempotent workspace build into `exports/` (zero writes for unchanged input)
 - `lixity about --json` – languages, features, heuristics, command list
 - `lixity completion bash|zsh` – shell completion
@@ -151,14 +172,3 @@ Python facade:
   and *Pride and Prejudice* (Austen, 1813, #1342); unmodified PG source files plus Markdown
   conversions, not relicensed by the LNCL
 - Third-party: pydantic (MIT), rich (MIT), orjson (MIT/Apache-2.0)
-
-Release v1.19.0 adds optional local Zotero CLI/Python/dashboard
-integration: explicit library/collection browsing, selected PDF/text capture
-with retention consent, explicit refresh and original-item links. Images, audio
-and video remain in Zotero. Structured identities require research-local/3
-captures and v3 manifests; old readers reject these. No cloud API, direct library
-writes or automatic sync. Identical-byte PDF metadata refresh reuses extraction.
-research zotero-export creates an additive RIS/files/provenance bundle;
-zotero-backup and zotero-restore pair the research archive with a closed Zotero
-data directory. Manuscripts, profiles and external linked files are excluded.
-No automatic migration or removal of historical evidence. See research/USAGE.md.

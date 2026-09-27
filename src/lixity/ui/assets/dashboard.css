@@ -1,14 +1,14 @@
 :root {
-  --bg: #f8f9fa;
+  --bg: #f8fafc;
   --surface: #ffffff;
-  --fg: #1d2129;
-  --fg-secondary: #4b5563;
-  --muted: #656d78;
-  --line: #e6e9ee;
-  --line-strong: #d0d7de;
-  --accent: #2b5c8f;
-  --accent-hover: #1f456e;
-  --accent-light: #eef3f9;
+  --fg: #1e293b;
+  --fg-secondary: #475569;
+  --muted: #526176;
+  --line: #e2e8f0;
+  --line-strong: #94a3b8;
+  --accent: #245b85;
+  --accent-hover: #1b4566;
+  --accent-light: #eaf2f8;
   --accent-focus: rgba(43, 92, 143, 0.25);
   --present: #2d8664;
   --present-light: #e6f4ea;
@@ -18,6 +18,9 @@
   --neutral: #d8dee6;
   --flag: #c0392b;
   --flag-light: #fce8e6;
+  --action-bg: #245b85;
+  --action-hover: #1b4566;
+  --on-action: #ffffff;
   --radius: 10px;
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -43,7 +46,7 @@ body {
   padding: 2.25rem 1.5rem 4rem;
   background: var(--bg);
   color: var(--fg);
-  font: 14.5px/1.55 var(--font);
+  font: 1rem/1.6 var(--font);
   -webkit-font-smoothing: antialiased;
 }
 .page { max-width: 72rem; margin: 0 auto; display: flex; flex-direction: column; gap: var(--space-4); }
@@ -226,9 +229,9 @@ h2 {
 .kpi-link:active { transform: translateY(0); }
 
 /* --- Focus & anchors (keyboard accessibility) -------------------------- */
-:where(a, button, select, input, .chip, .help, [role="button"]):focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+:where(a, button, select, input, textarea, summary, .chip, .help, [role="button"]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
   border-radius: 4px;
 }
 .chapter, .ptext, .panel, section[id] { scroll-margin-top: 4.5rem; }
@@ -384,7 +387,7 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 .ptext.open .ptext-inner { padding: .8rem 1rem; }
 .ptext .anchor { color: var(--muted); font-size: .76rem; font-weight: 600; font-variant-numeric: tabular-nums; }
 .ptext .stats { color: var(--muted); font-size: .75rem; margin: .1rem 0 .45rem; line-height: 1.4; }
-.ptext p { margin: .4rem 0 0; font-size: .88rem; line-height: 1.6; overflow-wrap: anywhere; }
+.ptext p { margin: .6rem 0 0; max-width: 72ch; font-size: 1rem; line-height: 1.7; overflow-wrap: anywhere; }
 .ptext .row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
 
 /* --- Style passport band chart (data-ink, no numeric table) ----------- */
@@ -405,8 +408,8 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 }
 .band-row:focus-visible {
   background: color-mix(in srgb, var(--accent) 7%, transparent);
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 .band-label { color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .band-row:hover .band-label { color: var(--fg); }
@@ -890,16 +893,19 @@ body:not(.has-js-tooltips) .help:focus::after {
 .marker-note.saved { border-color: var(--present); color: var(--present); }
 .marker-note.failed { border-color: var(--flag); color: var(--flag); }
 .marker-note.gone { opacity: 0; }
-.ctl-group { display: grid; gap: var(--space-3); padding: 0; }
+.ctl-group { display: grid; gap: var(--space-3); padding: 0; min-width: 0; }
+.ctl-group > * { min-width: 0; }
+input[type="file"].ctl { max-width: 100%; }
 .ctl-group + .ctl-group { border-top: 1px solid var(--line); padding-top: var(--space-4); }
 .ctl-label { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
 .ctl-note { color: var(--muted); font-size: .8rem; margin: 0; }
 button.ctl, select.ctl, input.ctl, textarea.ctl {
   font: inherit;
-  font-size: .8rem;
-  padding: .38rem .72rem;
+  font-size: .875rem;
+  min-height: 2.5rem;
+  padding: .45rem .8rem;
   border-radius: 6px;
-  border: 1px solid var(--line);
+  border: 1px solid var(--line-strong);
   background: var(--surface);
   color: var(--fg);
   cursor: pointer;
@@ -930,8 +936,8 @@ button.ctl.busy::before {
   animation: ctl-spin .7s linear infinite;
 }
 @keyframes ctl-spin { to { transform: rotate(360deg); } }
-button.ctl.primary { background: var(--accent); border-color: var(--accent); color: #fff; }
-button.ctl.primary:hover { opacity: .92; color: #fff; }
+button.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: 650; }
+button.ctl.primary:hover { background: var(--action-hover); color: var(--on-action); }
 details.nda { border: 1px solid var(--line); border-radius: 8px; padding: .5rem .7rem; margin-top: .6rem; }
 details.nda summary { cursor: pointer; font-size: .84rem; }
 details.nda .row { margin-top: .5rem; }
@@ -942,7 +948,7 @@ details.nda .row { margin-top: .5rem; }
 
 /* --- Research & Dossier Management ----------------------------------- */
 .research-tabs { border-bottom: 1px solid var(--line); padding-bottom: .5rem; margin-bottom: 1rem; }
-.research-tabs button.ctl.active { background: var(--accent); color: #fff; border-color: var(--accent); }
+.research-tabs button.ctl.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); box-shadow: inset 0 -3px 0 var(--on-action); font-weight: 650; }
 .research-tab-pane { display: grid; gap: var(--space-3); }
 #research-manager .ctl-group { grid-template-columns: minmax(0, 1fr); }
 #research-manager .ctl-group > * { min-width: 0; }
@@ -1023,7 +1029,8 @@ details.nda .row { margin-top: .5rem; }
   position: relative;
   border: 1px solid var(--line);
   border-radius: 14px;
-  background: linear-gradient(135deg, var(--surface) 0%, rgba(74, 138, 212, 0.06) 100%);
+  background: var(--surface);
+  border-top: 3px solid var(--accent);
   padding: 2.5rem 1.75rem;
   margin-bottom: 1.5rem;
   text-align: center;
@@ -1044,10 +1051,9 @@ details.nda .row { margin-top: .5rem; }
   align-items: center;
 }
 .welcome-badge {
-  font-size: .68rem;
-  font-weight: 700;
-  letter-spacing: .08em;
-  text-transform: uppercase;
+  font-size: .8rem;
+  font-weight: 650;
+  letter-spacing: .01em;
   color: var(--accent);
   background: var(--accent-light);
   border: 1px solid var(--line);
@@ -1150,8 +1156,8 @@ details.nda .row { margin-top: .5rem; }
   width: 22px;
   height: 22px;
   border-radius: 50%;
-  background: var(--accent);
-  color: #fff;
+  background: var(--action-bg);
+  color: var(--on-action);
   font-size: .72rem;
   font-weight: 700;
   display: flex;
@@ -1447,8 +1453,8 @@ dialog.lixity-modal::backdrop {
   background: var(--accent-light);
 }
 .file-dropzone:focus-visible {
-  outline: 2px solid var(--accent);
-  outline-offset: 2px;
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
 }
 .file-dropzone.dropzone-compact {
   padding: 1rem .85rem;
@@ -1603,16 +1609,16 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
 /* --- Dark mode -------------------------------------------------------- */
 @media (prefers-color-scheme: dark) {
   :root {
-    --bg: #0e1013;
-    --surface: #15181d;
-    --fg: #e4e7ec;
-    --fg-secondary: #9ca3af;
-    --muted: #88919e;
-    --line: #21252d;
-    --line-strong: #323842;
-    --accent: #4a8ad4;
-    --accent-hover: #5d9fe8;
-    --accent-light: #182230;
+    --bg: #0b0d12;
+    --surface: #181d29;
+    --fg: #eef2f8;
+    --fg-secondary: #b6c2d2;
+    --muted: #9aa5b8;
+    --line: #283144;
+    --line-strong: #64748b;
+    --accent: #93c5fd;
+    --accent-hover: #bfdbfe;
+    --accent-light: #202f43;
     --accent-focus: rgba(74, 138, 212, 0.35);
     --neutral: #2c323d;
     --present: #34d399;
@@ -1688,8 +1694,8 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
   overflow-y: auto;
 }
 .research-prose {
-  line-height: 1.6;
-  font-size: 0.88rem;
+  line-height: 1.7;
+  font-size: 1rem;
   color: var(--fg);
   overflow-wrap: break-word;
 }
@@ -1702,7 +1708,7 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
 .research-prose h1 { font-size: 1.25rem; }
 .research-prose h2 { font-size: 1.12rem; }
 .research-prose h3 { font-size: 1.02rem; }
-.research-prose p { margin: 0 0 0.7rem; }
+.research-prose p { margin: 0 0 0.9rem; max-width: 72ch; }
 .research-prose ul, .research-prose ol { margin: 0 0 0.7rem; padding-left: 1.3rem; }
 .research-prose li { margin-bottom: 0.25rem; }
 .research-prose blockquote {
@@ -1764,4 +1770,9 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
   text-align: left;
   margin-bottom: 0.35rem;
   padding: 0 0.5rem;
+}
+
+/* Primary controls have a larger touch target without expanding data plots. */
+@media (pointer: coarse) {
+  button.ctl, select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
 }

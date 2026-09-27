@@ -32,6 +32,7 @@ from ..workspace_labels import WORKSPACE_LABELS
 from .components import (
     artifact_href,
     band_chart,
+    contrast_text,
     help_term,
     kpi,
     label,
@@ -1226,8 +1227,10 @@ def render_dashboard(
                         f'<td class="z zero"{cell_attrs} title="{esc(tooltip, quote=True)}">0{marker}</td>'
                     )
                 else:
+                    background = z_color(z)
                     parts.append(
-                        f'<td class="z" style="background:{z_color(z)}"{cell_attrs} '
+                        f'<td class="z" style="background:{background};'
+                        f'color:{contrast_text(background)}"{cell_attrs} '
                         f'title="{esc(tooltip, quote=True)}">{N(z, 1, signed=True)}{marker}</td>'
                     )
             parts.append("</tr>")

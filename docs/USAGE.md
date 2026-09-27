@@ -1,7 +1,7 @@
 # Lixity – Usage & Reference
 
-Experimental local archives, claims, decisions, OCR and diagrams in 1.17.0:
-[Research usage](research/USAGE.md). For interactive project workflows, see
+For the experimental research workspace, including Zotero capture, current-record
+search, citations, backups and OCR, see [Research usage](research/USAGE.md). For interactive project workflows, see
 [Onboarding](ONBOARDING.md).
 
 Complete command-line and library reference for Lixity. If you are new to the
@@ -20,6 +20,10 @@ project, start with the [README](../README.md); this document goes into detail.
 9. [Troubleshooting](#troubleshooting)
 10. [Development](#development)
 11. [License](#license)
+12. [Unavailable consistency and empty manuscripts](#unavailable-consistency-and-empty-manuscripts-since-v1180)
+13. [Debug logging](#debug-logging-since-v1190)
+14. [Research search scopes](#research-search-scopes-since-v1190)
+15. [Zotero integration](#zotero-integration-since-v1190)
 
 ## Installation
 
@@ -72,7 +76,7 @@ lixity style     manuscript.md               # self-calibrated style reference
 lixity dashboard manuscript.md -o ui.html    # HTML dashboard
 ```
 
-All commands read a Markdown manuscript and write to stdout, except `dashboard`,
+The commands in this quick start read a Markdown manuscript and write to stdout, except `dashboard`,
 which writes a single HTML file.
 
 ## Which command for which question?
@@ -93,10 +97,11 @@ which writes a single HTML file.
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation, `nda/` |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
 
-## Development dashboard workflow
+## Dashboard workflow
 
-The `1.15.0` release adds the shared pipeline and the 3D style-space
-interaction. These features are not promised for the older `v1.14.0` tag.
+The current release uses the shared analysis pipeline for CLI, HTML exports and
+the local server. A generated dashboard supports analysis navigation offline;
+project and research actions require the local server.
 
 ```bash
 lixity dashboard manuscript.md --language en -o dashboard.html
@@ -406,7 +411,7 @@ The dashboard contains:
   CLI): tell/show mean z and the per-chapter balance bars (positive = showing),
 - the **style heatmap**: chapter × feature matrix of significance-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
-  house mean), plus the expected-false-positive/FDR footnote; cells jump to
+  manuscript median), plus the expected-false-positive/FDR footnote; cells jump to
   the chapter and activate the matching style layer,
 - the **style reference** panel (median, ±2σ band, outlier count per
   feature): **each band row is clickable** and jumps to that feature's
@@ -443,7 +448,7 @@ manuscript, creates the subfolders `exports/` (with `exports/archive/`) and
 `nda/`, and publishes all analysis artifacts:
 
 - `exports/<slug>_metrics.json` – full corpus metrics (schema_version 2 meta),
-- `exports/<slug>_profile.json` – paragraph-accurate tense profiles,
+- `exports/<slug>_profile.json` – paragraph-level heuristic tense profiles with line anchors,
 - `exports/<slug>_style.json` – self-calibrated style reference (schema v4),
 - `exports/<slug>_style_passport.txt` – human-readable style reference (legacy file name),
 - `exports/<slug>_report.md` – Markdown dossier report,
@@ -594,7 +599,7 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 - **Short texts:** less length-sensitive lexical-diversity indices need minimum
   sizes (HD-D/MTLD/Maas a² ≥ 100 tokens, MATTR ≥ window 50);
   below that Lixity returns `null` and the dashboard shows `–`.
-- **Heuristics:** syllables (±5–10 %), suffix-based densities and tense
+- **Heuristics:** syllables (error rate not established by a gold-standard corpus here), suffix-based densities and tense
   patterns are comparable *within* one language, not across languages;
   heuristics measure what is in the text, they are not ground truth.
 - **`signal_counts`:** empty (`{}`) unless the caller supplies
@@ -618,9 +623,10 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
   versions the last floating-point bits may differ.
 - **Dashboard size** grows with paragraph count (~2 MB for 95k words) by
   design — self-contained and offline.
-- **Accessibility:** colour is never the only channel (values printed, band
-  chart by shape); dense paragraph strips are a documented WCAG 2.5.8
-  exception with keyboard access and click-to-read.
+- **Accessibility:** numeric labels and text details complement analytical colour
+  scales. Dense paragraph strips offer keyboard access and click-to-read; the
+  3D canvas remains pointer-operated. These provisions and automated checks do
+  not establish full accessibility conformance.
 
 ## Library
 
@@ -629,7 +635,11 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 For automation, AI agents, and straightforward scripting, use the deterministic facade:
 
 ```python
+from pathlib import Path
+
 from lixity import api
+
+text = Path("manuscript.md").read_text(encoding="utf-8")
 
 # 1. Analyze corpus KPIs
 res = api.analyze(text, language="auto")
@@ -784,8 +794,8 @@ RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
 Screenshots for README and project page are generated reproducibly from the
 bundled public-domain sample with headless Chromium:
 `python3 scripts/make_screenshots.py` (writes `docs/screenshots/`, including a
-demonstration status strip). CI runs lint and tests on Python 3.10 and 3.12
-plus a wheel packaging job. Contribution workflow:
+demonstration status strip). CI runs the core tests on Python 3.10–3.13, research checks on macOS and Windows,
+browser checks, lint/type checks and wheel packaging checks. Contribution workflow:
 [`CONTRIBUTING.md`](../CONTRIBUTING.md).
 
 ## License

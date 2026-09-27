@@ -91,8 +91,10 @@ False positives remain possible.
   default 2.5 this is ≈ 1.24 % of $m$.
 - Injectability: CLI `--z-mild/--z-strong/--fdr-q/--fdr-method/--dim-threshold/--flag-min-severity`
   on `style`, `dashboard`, `build`; API kwargs of the same names; the
-  control-server settings form persists `z_mild`, `z_strong`, `fdr_q`,
-  `flag_min_severity`, `dim_score_threshold`. Project defaults may live in
+  control-server settings form applies `z_mild`, `z_strong`, `fdr_q`,
+  `flag_min_severity`, `dim_score_threshold` to the current server session.
+  It preserves the existing `fdr_method`; configure that through the CLI,
+  Python API or project configuration. Project defaults may live in
   `[tool.lixity]` / `lixity.toml` / `~/.config/lixity.toml`
   (CLI flag > UI session > project config > user config > code default).
 - Every passport reports the **active** values under `meta.*` — never
@@ -195,8 +197,8 @@ Documented research directions, **not** current product features:
   caveats (empty `signal_counts`, filter-list definitions, pacing without
   dividers, no NER/speaker attribution) are registered in STABILITY §2
   and summarised in AGENTS §3.5.
-- **OHCO / TEI**: the hierarchical ordered corpus of hypotheses (OHCO) and
-  TEI XML are the scholarly interchange standards. Lixity’s input contract
+- **OHCO / TEI**: OHCO means [Ordered Hierarchy of Content Objects](https://experts.illinois.edu/en/publications/what-is-text-really/),
+  a document-model thesis; TEI supplies scholarly text-encoding guidelines. Lixity’s input contract
   is UTF-8 Markdown with `## ` chapter headings (configurable
   `chapter_regex` / `appendix_marker`); a TEI→Markdown ingest path would be
   the natural bridge, not a second analysis core.
@@ -266,17 +268,20 @@ across that boundary. The new 100-token floor also makes values available for
 Seven published formulas, selected by profile; constants are fixed and
 covered by hand-computed tests:
 
-| Lang | Formula (name) | ASL / word-share terms |
+| Lang | Formula (name) | Implemented formula |
 | :---: | :--- | :--- |
-| de | Amstad / Flesch-De | $180 - 20\cdot\mathrm{ASL} - 58.5\cdot\%S$ |
-| en | Flesch | $206.835 - 1.015\cdot\mathrm{ASL} - 84.6\cdot\%S$ |
-| fr | Kandel-Moles | $207.0 - 1.015\cdot\mathrm{ASL} - 73.6\cdot\%S$ |
-| es | Szigriszt-Pazos | $206.835 - 20\cdot\mathrm{ASL} - 62.35\cdot\%S$ |
-| it | Franchina-Vacca | $217.0 - 1.3\cdot\mathrm{ASL} - 60.0\cdot\%S$ |
-| pt | Martins | $248.835 - 1.015\cdot\mathrm{ASL} - 84.6\cdot\%S$ |
-| nl | Douma | $207.0 - 0.93\cdot\mathrm{ASL} - 77.0\cdot\%S$ |
+| de | Amstad / Flesch-De | $180 - 1.0\cdot\mathrm{ASL} - 58.5\cdot\mathrm{ASW}$ |
+| en | Flesch | $206.835 - 1.015\cdot\mathrm{ASL} - 84.6\cdot\mathrm{ASW}$ |
+| fr | Kandel-Moles | $207.0 - 1.015\cdot\mathrm{ASL} - 73.6\cdot\mathrm{ASW}$ |
+| es | Szigriszt-Pazos | $206.835 - 1.0\cdot\mathrm{ASL} - 62.35\cdot\mathrm{ASW}$ |
+| it | Franchina-Vacca | $217.0 - 1.3\cdot\mathrm{ASL} - 60.0\cdot\mathrm{ASW}$ |
+| pt | Martins | $248.835 - 1.015\cdot\mathrm{ASL} - 84.6\cdot\mathrm{ASW}$ |
+| nl | Douma | $207.0 - 0.93\cdot\mathrm{ASL} - 77.0\cdot\mathrm{ASW}$ |
 
-$S$ = syllables per 100 words (heuristic syllable counter). **LIX** uses the
+$\mathrm{ASL}$ = words per sentence; $\mathrm{ASW}$ = syllables per word
+(heuristic syllable counter), not syllables per 100 words. These scores are
+not clipped to 0–100. The coefficients above match `language_data.READABILITY`;
+correct formula dispatch is not empirical validation on every manuscript. **LIX** uses the
 standard Björnsson cut: words with **more than six characters**, for every
 language: $\mathrm{LIX} = \mathrm{ASL} + 100 \cdot \frac{\text{long words}}{\text{tokens}}$.
 
@@ -316,7 +321,7 @@ the ring marks $\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
 | :--- | :--- |
 | CLI | `--z-mild`, `--z-strong`, `--fdr-q`, `--fdr-method`, `--dim-threshold`, `--flag-min-severity` (see USAGE) |
 | API | `api.fingerprint(..., z_mild=…, fdr_q=…, fdr_method=…, …)` |
-| Control UI | Settings group → POST `/api/settings` → `ui_server.UIHandler` |
+| Control UI | Settings group → POST `/api/settings` → `lixity.server.LixityServerHandler` |
 | Embedders | `build_dashboard_html(..., z_mild=…, z_strong=…, fdr_q=…, flag_min_severity=…, dim_score_threshold=…)` |
 | Config file | `[tool.lixity]` in `pyproject.toml`, or `lixity.toml` / `~/.config/lixity.toml` |
 | Tests | `FingerprintThresholds(...)` + passport `meta` |

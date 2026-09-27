@@ -32,7 +32,8 @@ lixity --version
 lixity about
 ```
 
-The current release is **v1.19.0**. The tag includes the integrated local project/research workspace,
+The current release is **v1.19.0**. The tag includes the local project/research workspace,
+Zotero capture and paired backup tools, search across current authored records,
 seven-language workflows and numerical corrections. For reproducible automation, pin this tag or
 its reviewed full commit hash. Read the [release notes](releases/v1.19.0.md).
 
@@ -40,14 +41,12 @@ If `lixity` is not found, run `uv tool update-shell`, open a new terminal and
 retry. `uv tool list` shows the installed source. A tool installation does not
 make `import lixity` available to a different Python environment.
 
-### Development builds instead
+### Optional research prerequisites
 
-Release `v1.17.0` includes the experimental [local research workspace](research/USAGE.md).
-Research search requires SQLite with FTS5. PDF extraction uses local Poppler
-tools or a separately configured OCR worker. Release v1.18.0 includes browser PDF upload,
-OCR diagnostics, localized setup guidance, origin URLs and neutral consistency
-when there are no measurable cells. Release v1.19.0 adds debug logging controls, search
-across current authored records, Zotero integration and paired backup tools.
+The experimental research workspace is included in the release; it does not
+require a development installation. Research search requires SQLite with FTS5.
+For text PDFs, install Poppler separately; scanned PDFs require a configured OCR
+worker. Neither Zotero nor an OCR model is installed with the Python package.
 
 Zotero is a separate optional application. Install a native build for your operating
 system and enable its local API in Settings → Advanced. Use Zotero 10 or later for
@@ -58,6 +57,8 @@ See the [Zotero setup and migration reference](research/USAGE.md#zotero-desktop-
 Back up the existing archive before creating v3 captures; all readers and writers
 must support that format. Installing a newer package does not migrate sources
 or change a running server.
+
+### Development builds instead
 
 To follow unreleased changes, use this **instead**:
 
@@ -78,7 +79,9 @@ lixity --version
 ```
 
 To remove the CLI later, run `uv tool uninstall lixity`. Upgrades respect the
-selected source/ref: a pinned tag or commit does not move to `main`.
+selected source/ref: a pinned tag or commit does not move to a newer release or
+`main`. To adopt a different release, repeat the installation command with its
+explicit tag and `--force`.
 Restart any running adapter/server after an engine update.
 
 Use one active server for ordinary interactive use. Stop the previous server
@@ -121,6 +124,22 @@ export remains read-only. The server's persistent workspace bar offers
 **New Project → Import Manuscript** for a new project from browser file bytes.
 See [Onboarding](ONBOARDING.md) for the chooser and research flow. NDA management
 and publication-specific exports require a project adapter.
+
+## Start again after a computer restart
+
+Start Zotero separately if you use its catalogue, then reopen a terminal and run:
+
+```sh
+lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765
+```
+
+Open `http://127.0.0.1:8765`. No reinstall, reimport or research initialization is
+needed for an existing project. Lixity does not install an automatic startup
+service. Use your original project folder to retain its research history.
+If you configured OCR through environment variables, provide the same worker
+path and timeout to this new server process; shell variables are not project
+settings. Retained evidence remains readable when Zotero is closed, but browsing
+its live library and capturing attachments requires Zotero to be running.
 
 ## Python API: project environment
 

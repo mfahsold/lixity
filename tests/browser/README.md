@@ -9,6 +9,7 @@ node tests/browser/settings.cjs
 node tests/browser/layout.cjs
 node tests/browser/research.cjs
 node tests/browser/docs.cjs
+node tests/browser/visual-consistency.cjs
 ```
 
 If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
@@ -53,6 +54,12 @@ local routes: all four HTML pages at 1440, 390 and 320 pixels, with JavaScript
 enabled and disabled. It checks canonical URLs, assets, console errors, overflow
 and navigation, heading order and explicit content-image dimensions; screenshots
 stay under `/tmp/lixity-public-docs-*`.
+
+The visual-consistency suite compares shared color roles between Pages and a
+synthetic dashboard in light/dark mode at 1440 and 320 pixels. It checks primary
+action contrast and target size, keyboard focus, reduced motion, increased text
+spacing and theme switching. Screenshots stay under `/tmp/lixity-visual-consistency-*`.
+These targeted checks are not a full WCAG conformance audit.
 
 The settings test intercepts all requests to a synthetic host. It verifies
 locale-safe values, validation before submission, reset without saving, FDR

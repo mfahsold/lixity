@@ -44,15 +44,19 @@ The rain stopped. Mara opened the window. The street was quiet.
 
 At the library, Mara examined a handwritten catalogue while the keeper searched the shelves.</code></pre>
 <pre><code>lixity dashboard sample.md --language en -o sample-dashboard.html</code></pre>
-<p>Open <code>sample-dashboard.html</code> in your browser. For reliable exploration, use a longer manuscript with several chapters and read the <a href="interpretation.html">interpretation guide</a>. Analysis defaults to English; use <code>--language de</code> for German or choose <code>--language auto</code> explicitly for heuristic detection.</p>
+<p>Open <code>sample-dashboard.html</code> in your browser. For more informative exploration, use a longer manuscript with several chapters and read the <a href="interpretation.html">interpretation guide</a>. Analysis defaults to English; use <code>--language de</code> for German or choose <code>--language auto</code> explicitly for heuristic detection.</p>
 
 <h2 id="zotero">Optional Zotero Desktop</h2>
-<p>Install Zotero separately and enable its local API in Settings → Advanced. Zotero 10 or later provides the instance identity required for safe refresh. No cloud account is needed: Lixity reads the local service at <code>127.0.0.1:23119</code>. The server dashboard can browse collections and capture selected PDF/text attachments after retention consent. Images, audio and video remain in Zotero. Read the <a href="research-pdf.html#zotero">capture and migration guide</a> before upgrading an existing archive to v3.</p>
+<p>Install Zotero separately and enable its local API in Settings → Advanced. Zotero 10 or later provides the instance identity required for safe refresh. Run Zotero on the same computer as the Lixity server. No cloud account is needed: Lixity reads the local service at <code>127.0.0.1:23119</code>. The server dashboard can browse collections and capture selected PDF/text attachments after retention consent. Images, audio and video remain in Zotero. Download cloud-only attachments before capture. Closing Zotero stops browsing and refresh, but already retained evidence remains available in Lixity. Read the <a href="research-pdf.html#zotero">capture and migration guide</a> before upgrading an existing archive to v3.</p>
 
 <h2 id="existing-project">Open an existing project and research archive</h2>
 <pre><code>lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765</code></pre>
 <p>Replace the example path with your project directory. Open <code>http://127.0.0.1:8765/</code>, then verify the displayed project path and title. <strong>Open Project</strong> reconnects an existing folder and its research archive. <strong>New Project → Import Manuscript</strong> creates a separate project from uploaded manuscript bytes; use it only when that is your intention.</p>
 <p>For a research-only workspace, an initialized archive can be opened without a manuscript. Source records remain available; comparing sources with manuscript text needs a loaded manuscript.</p>
+
+<h2 id="restart">Start again after restarting your computer</h2>
+<p>The standard installation does not register an automatic startup service. Open a terminal and rerun the same <code>lixity serve</code> command with your project path, then open the local address. Start Zotero as well if you need catalogue browsing or source refresh. Reapply any OCR environment settings before launching Lixity; an export made in an earlier terminal is not persistent configuration.</p>
+<p>Use <code>Ctrl+C</code> in that terminal to stop the server. Existing research records stay on disk. If port 8765 is already in use, identify the existing server or choose another port; do not stop an unrelated process blindly.</p>
 
 <h2 id="troubleshooting">The project exists, but the server cannot open it</h2>
 <p>The browser's folder chooser shows the filesystem visible to the server process. A container, sandbox or service account can have different access from your terminal. Verify the process user, directory mounts and read permissions. Start the service with the explicit project path and an environment that can access that folder. Avoid creating a replacement project merely because an isolated server cannot see the original.</p>

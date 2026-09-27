@@ -93,13 +93,22 @@ repo settings once).
 3. Run `make docs-check` (or `make docs-sync` to update release references), then
    the affected browser checks from `tests/browser/README.md`.
 4. Check page titles, descriptions, canonical URLs, internal links and sitemap
-   entries. Keep `llms.txt` factual; it is not a search visibility guarantee.
+   entries. `tests/test_pages.py` checks that staged HTML canonicals match the
+   sitemap. Regenerate public screenshots after visual changes, review them,
+   and update their HTML dimensions; label unreleased appearances explicitly. Keep `llms.txt` factual; it is not a search visibility guarantee.
 5. Preview publication with `python3 scripts/stage_pages.py --output /tmp/lixity-pages-preview`
    using a new output directory. Pages uploads this selected tree, not all of
    `docs/`. New public paths must be added deliberately to the staging rules.
 6. Review staged paths and content. Exclude `.planning/`, local reports, private
    source bytes and machine-specific settings. After an authorized push, verify
    CI and the public deployment; do not infer success from a local build alone.
+
+For UI work, run `node tests/browser/visual-consistency.cjs` as described in
+[the browser guide](tests/browser/README.md). It protects common palette roles,
+action and heatmap contrast, focus and enlarged text-spacing behavior; it is not
+a full accessibility audit. Ground new design claims in
+[the documented evidence](docs/ARCHITECTURE.md#visual-consistency-and-evidence),
+not an assumed universal font, hue or performance gain.
 
 Search visibility work should prioritize useful HTML answers and accurate
 product boundaries. Cite primary guidance for changing SEO/GEO practices and

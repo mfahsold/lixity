@@ -45,7 +45,7 @@
       "@id": "https://mfahsold.github.io/lixity/#software",
       "name": "Lixity",
       "alternateName": "Lixity – Quantitative Text Linguistics & Stylometry",
-      "description": "Deterministic, dependency-light, multilingual text linguistics engine and evidence-based research workspace for literary manuscripts, authors, editors, publishers, and AI agents.",
+      "description": "Local, dependency-light manuscript analysis with multilingual linguistic heuristics and an experimental research workspace for sources, citations and author decisions.",
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Linguistic & Stylometric Analysis",
       "operatingSystem": "Linux, macOS, Windows",
@@ -138,8 +138,8 @@
       <span class="badge-pill">Local Manuscript Analysis</span>
       <span class="badge-pill">No Cloud Calls in Core Analysis</span>
       <span class="badge-pill">7 UI Languages &middot; Deepest Heuristics in English and German</span>
-      <span class="badge-pill">Self-Calibrating Median/MAD Baseline</span>
-      <span class="badge-pill">FDR Multiplicity Control (BH/BY)</span>
+      <span class="badge-pill">Within-Manuscript Median/MAD Baseline</span>
+      <span class="badge-pill">Multiple-Comparison Procedures (BH/BY)</span>
       <span class="badge-pill">Experimental Pilot: SQLite FTS5 Search</span>
       <span class="badge-pill">Experimental Pilot: Passage Citations</span>
     </div>
@@ -192,7 +192,7 @@
         <div class="pillar-icon">⏱️</div>
         <h3 class="pillar-title">Dramaturgy &amp; Tense Profiling</h3>
         <p class="pillar-body">
-          Paragraph-accurate tense continuity without heuristic guessing: detects unintended slips between retrospective epic past and immediate scenic present. Rates tense mixtures across a 4-tier friction severity scale (0&ndash;3). Evaluates dialogue ratios, turn lengths, pacing curves, and chapter tension hooks.
+          Paragraph-level heuristics locate present/past patterns and assign a tense-mixture friction rating (0&ndash;3). Dialogue ratios, turn lengths and pacing indicators offer additional context. These signals cannot determine whether a tense shift is intentional or measure dramatic tension; inspect the surrounding prose.
         </p>
         <div class="pillar-tags">
           <span class="pillar-tag">Present / Past</span>
@@ -208,10 +208,10 @@
         <div class="pillar-icon">🎯</div>
         <h3 class="pillar-title">Robust 3D Style Space</h3>
         <p class="pillar-body">
-          No external dogma: the manuscript is its own baseline. House style is derived robustly via median &plusmn; 2 MAD. Chapter deviations are noise-adjusted via analytical z* shrinkage and controlled via Benjamini–Hochberg / BY FDR. Unsupervised latent style axes and interactive 3D narrative trajectories via cyclic Jacobi EVD.
+          Compare chapters against the same manuscript using median &plusmn; 2σ reference bands (σ = 1.4826 MAD) and noise-adjusted z* deviations. Benjamini–Hochberg or Benjamini–Yekutieli procedures select cells for review under statistical assumptions. A 3D projection summarizes feature relationships; its axes are not established narrative categories.
         </p>
         <div class="pillar-tags">
-          <span class="pillar-tag">Median ± 2 MAD</span>
+          <span class="pillar-tag">Median ± 2σ</span>
           <span class="pillar-tag">z* Shrinkage</span>
           <span class="pillar-tag">BH/BY FDR</span>
           <span class="pillar-tag">3D Jacobi-EVD</span>
@@ -267,7 +267,7 @@
             <th style="width: 22%;">Linguistic Feature</th>
             <th style="width: 18%;">Calculation &amp; Signal</th>
             <th style="width: 32%;">Editorial Role &amp; Application</th>
-            <th style="width: 28%;">Warning Signal &amp; Intervention</th>
+            <th style="width: 28%;">Context to Check</th>
           </tr>
         </thead>
         <tbody>
@@ -296,7 +296,7 @@
             <td>Higher friction may merit a check of quotation, dialogue, flashback or deliberate perspective shifts before treating it as an error.</td>
           </tr>
           <tr>
-            <td><strong>Showing vs. Telling &amp; Filters</strong></td>
+            <td><strong>Perception &amp; Exposition Patterns</strong></td>
             <td><span class="tech-metric">Perception verbs, passive voice, nominal style</span></td>
             <td class="editorial-callout">
               <strong>Register:</strong> Word-pattern counts highlight possible changes in viewpoint or exposition.
@@ -337,9 +337,9 @@
     <div class="research-container">
       <div class="research-badge-strip">
         <span class="research-badge">Research Workspace in v1.19.0</span>
-        <span class="badge-pill">Immutable SHA-256 Storage</span>
+        <span class="badge-pill">Checksum-Addressed Source Storage</span>
         <span class="badge-pill">Cultural Source Criticism</span>
-        <span class="badge-pill">Exact Paragraph Citations</span>
+        <span class="badge-pill">Retained-Text Passage Citations</span>
         <span class="badge-pill">SQLite FTS5 Full-Text Search</span>
       </div>
 
@@ -352,8 +352,8 @@
 
       <div class="research-grid">
         <div class="research-item">
-          <h3>1. Immutable Text Archive</h3>
-          <p>Local UTF-8 source bytes are retained with SHA-256 digests after explicit <code>--allow-retention</code> confirmation. Retention does not grant redistribution rights.</p>
+          <h3>1. Retained Source Archive</h3>
+          <p>Local UTF-8 text or original PDF bytes are retained with SHA-256 digests after explicit <code>--allow-retention</code> confirmation. Retention does not grant redistribution rights.</p>
         </div>
         <div class="research-item">
           <h3>2. Versioned Source Criticism</h3>
@@ -370,11 +370,12 @@
       </div>
 
       <figure class="shot" style="margin-top: 1.5rem;">
-        <img src="screenshots/dashboard-research-claims.png" width="1152" height="915" alt="Claims and evidence panel with a synthetic dossier-linked claim and verified passage citation" loading="lazy" decoding="async"/>
+        <img width="1152" height="1085" src="screenshots/dashboard-research-claims.png" alt="Claims and evidence panel with a synthetic dossier-linked claim and verified passage citation" loading="lazy" decoding="async"/>
         <figcaption><strong>Claims and evidence:</strong> Inspect full source and dossier details, choose search passages for a claim or dossier, and record links without treating them as verified facts. View the <a href="screenshots/dashboard-research-claims-mobile.png">mobile claims panel</a>, <a href="screenshots/dashboard-research-decisions.png">authorial decisions</a>, or <a href="screenshots/dashboard-research-decisions-mobile.png">mobile decisions panel</a>.</figcaption>
       </figure>
 
       <h3 style="margin: 2rem 0 0.6rem; font-size: 1.15rem; color: var(--fg-heading);">Terminal Research Workflow (CLI)</h3>
+      <p>This illustrative workflow assumes locally saved, authorized source files. Replace example paths and UUID placeholders with your files and the identifiers returned by preceding commands. Initialize an archive only once.</p>
       <pre class="cmd-block"># 1. Initialize a dedicated research workspace
 lixity research init --project ./novel-research --title "1920s Archive" --language en
 
@@ -386,7 +387,7 @@ lixity research ingest --project ./novel-research --file ./sources/police_log_19
 # 3. Build SQLite FTS5 lexical index
 lixity research reindex --project ./novel-research
 
-# 4. Fast lexical full-text search with BM25 ranking
+# 4. Search source passages; add --scope all for current authored records
 lixity research search --project ./novel-research --query "dockyard customs" --limit 5
 
 # 5. Resolve a passage citation (paragraph, exact offset, source metadata)
@@ -412,7 +413,7 @@ lixity serve --research-project ./novel-research --no-project
 lixity research audit --project ./novel-research</pre>
 
       <p style="margin: 1.2rem 0 0; font-size: 0.88rem; color: var(--subtle);">
-        In the server UI, Open Project offers Browse files and folders for paths on the computer running Lixity. Browse from the server user's home, use Home or Parent folder, select a manuscript or the current folder, then confirm with Open; a typed path also works. Opening reconnects the original workspace and its research archive, including a research-only folder without a manuscript. Manuscript comparison needs a manuscript; browser file import creates a separate project from its bytes. Welcome guidance can be hidden and reopened without hiding the project controls. Source and dossier details, direct search-to-evidence actions, and dossier-linked claims are available in the v1.19.0 research workspace. <strong>Included in v1.19.0:</strong> optional Zotero Desktop integration adds collection browsing, selected PDF/text capture, explicit refresh and original-item links. Media management stays in Zotero; Lixity preserves evidence and authored decisions. Additive migration export and paired backup tools are available; migration is explicit and does not remove archive history. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research commands</a> and the broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a>.
+        In the server UI, Open Project offers Browse files and folders for paths on the computer running Lixity. Browse from the server user's home, use Home or Parent folder, select a manuscript or the current folder, then confirm with Open; a typed path also works. Opening reconnects the original workspace and its research archive, including a research-only folder without a manuscript. Manuscript comparison needs a manuscript; browser file import creates a separate project from its bytes. Welcome guidance can be hidden and reopened without hiding the project controls. Source and dossier details, direct search-to-evidence actions, and dossier-linked claims are available in the v1.19.0 research workspace. <strong>Included in v1.19.0:</strong> optional Zotero Desktop integration adds collection browsing, selected PDF/text capture, explicit refresh and original-item links. Media management stays in Zotero; Lixity preserves evidence and authored decisions. Zotero must run on the same computer as the Lixity server for browsing or refresh; retained evidence remains accessible when Zotero is closed. There is no automatic background synchronization or audio/video transcription. Additive migration export and paired backup tools are available; migration is explicit and does not remove archive history. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research commands</a> and the broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a>.
       </p>
       <p style="margin: 0.6rem 0 0; font-size: 0.88rem; color: var(--subtle);">
         Source/manuscript comparison uses chapter prose without headings, front matter or the configured appendix. Cross-language lexical scores remain numeric but carry an explicit comparability warning; they are not a factual or linguistic-equivalence verdict.
@@ -425,29 +426,29 @@ lixity research audit --project ./novel-research</pre>
     <div class="section-header">
       <span class="section-tag">Visual Suite &amp; UI</span>
       <h2 class="section-title">Visual Analytical Suite</h2>
-      <p class="section-desc">Click any screenshot to inspect it in full native resolution inside the interactive lightbox viewer. All captures reflect real desktop, terminal, and mobile browser sessions.</p>
+      <p class="section-desc">Click a screenshot to inspect a recorded desktop, terminal or mobile session. Screenshots show current main, including UI refinements not yet released in v1.19.0. All examples use public-domain or synthetic content.</p>
     </div>
 
     <!-- 0. Modern Workspace & Project Wizard -->
     <span class="section-tag">Development Workspace &amp; Project Wizard</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" width="1152" height="630" loading="lazy" decoding="async"/>
+        <img width="1152" height="646" src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" loading="lazy" decoding="async"/>
         <figcaption><strong>Welcome &amp; quickstart hero:</strong> Optional workspace guidance when opening Lixity without an active manuscript. New Project and Open Project remain available after it is dismissed; Open Project includes a server-backed file/folder chooser.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/dashboard-project-modal.png" alt="Native dialog modal for project creation with template selection cards" width="606" height="648" loading="lazy" decoding="async"/>
-        <figcaption><strong>Native &lt;dialog&gt; project wizard:</strong> Accessible modal dialog with backdrop blur, language selection, and tailored narrative structure templates (Minimal, 3-Act Structure, Research Novel with pre-initialized research/ archive).</figcaption>
+        <img width="606" height="648" src="screenshots/dashboard-project-modal.png" alt="Native dialog modal for project creation with template selection cards" loading="lazy" decoding="async"/>
+        <figcaption><strong>Native &lt;dialog&gt; project wizard:</strong> Native dialog with language selection and narrative structure templates (Minimal, 3-Act Structure, Research Novel with pre-initialized research/ archive).</figcaption>
       </figure>
     </div>
 
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-project-open.png" alt="File and folder selection for opening an existing project" width="608" height="630" loading="lazy" decoding="async"/>
+        <img width="608" height="670" src="screenshots/dashboard-project-open.png" alt="File and folder selection for opening an existing project" loading="lazy" decoding="async"/>
         <figcaption><strong>Open the original project:</strong> Browse files and folders on the computer running Lixity, select a manuscript or folder, and confirm with Open. Its existing research archive stays attached. These paths are synthetic examples.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/dashboard-project-open-mobile.png" alt="The project chooser at mobile width" width="368" height="704" loading="lazy" decoding="async"/>
+        <img width="368" height="704" src="screenshots/dashboard-project-open-mobile.png" alt="The project chooser at mobile width" loading="lazy" decoding="async"/>
         <figcaption><strong>The same workflow on mobile:</strong> Folder navigation, file selection and typed paths remain available. Importing browser-selected manuscript bytes is a separate action.</figcaption>
       </figure>
     </div>
@@ -455,14 +456,14 @@ lixity research audit --project ./novel-research</pre>
     <!-- 1. Hero Overview -->
     <span class="section-tag">1. Macro Overview &amp; KPI Strip</span>
     <figure class="shot">
-      <img src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI cards, style heatmap, and tense continuity" width="1480" height="945" loading="lazy" decoding="async"/>
+      <img width="1480" height="945" src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI cards, style heatmap, and tense continuity" loading="lazy" decoding="async"/>
       <figcaption><strong>From corpus overview to paragraph review:</strong> Project metrics, sentence length architecture (ASL, staccato, long sentences), readability formulas (Flesch, LIX), lexical diversity indices (HD-D, Yule's K, MTLD), and within-manuscript comparisons in an offline HTML report.</figcaption>
     </figure>
 
     <!-- 2. Heatmap -->
     <span class="section-tag">2. 16-Feature Departure Matrix</span>
     <figure class="shot">
-      <img src="screenshots/dashboard-heatmap.png" alt="Diverging z* heatmap of chapter departures across all 16 linguistic features" width="1702" height="884" loading="lazy" decoding="async"/>
+      <img width="1702" height="899" src="screenshots/dashboard-heatmap.png" alt="Diverging z* heatmap of chapter departures across all 16 linguistic features" loading="lazy" decoding="async"/>
         <figcaption><strong>Chapter departures:</strong> Color encodes noise-adjusted z* deviation from the manuscript baseline median. Dots (●) mark cells passing the configured Benjamini–Hochberg FDR procedure (<em>q = 0.05</em> by default). The result is a review signal, subject to model assumptions and false positives.</figcaption>
     </figure>
 
@@ -470,11 +471,11 @@ lixity research audit --project ./novel-research</pre>
     <span class="section-tag">3. Paragraph Inspection &amp; Work Markers</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-layer.png" alt="Chapter I with active dialogue layer and expanded paragraphs showing line anchors" width="1152" height="431" loading="lazy" decoding="async"/>
+        <img width="1152" height="542" src="screenshots/dashboard-layer.png" alt="Chapter I with active dialogue layer and expanded paragraphs showing line anchors" loading="lazy" decoding="async"/>
         <figcaption><strong>Paragraph context instead of abstract scores:</strong> Expanded paragraphs display verbatim prose with line anchors, tense classification (present/past/mixed), and local sentence rhythm in immediate context.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/dashboard-markers.png" alt="Persistent editorial work markers with status chips and inline notes" width="1152" height="298" loading="lazy" decoding="async"/>
+        <img width="1152" height="305" src="screenshots/dashboard-markers.png" alt="Persistent editorial work markers with status chips and inline notes" loading="lazy" decoding="async"/>
         <figcaption><strong>Persistent work markers:</strong> Standard HTML comments (<code>CHECK</code>, <code>FACT-CHECK</code>, <code>TO-DO</code>) with content-hash IDs that remain visible in editors. Publication adapters determine their treatment in PDF and EPUB exports.</figcaption>
       </figure>
     </div>
@@ -483,12 +484,12 @@ lixity research audit --project ./novel-research</pre>
     <span class="section-tag">4. Latent Style Space &amp; House Style Corridor</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-dimensions.png" alt="Complete 3D chapter trajectory and all three style dimension cards" width="1152" height="605" loading="lazy" decoding="async"/>
+        <img width="1152" height="616" src="screenshots/dashboard-dimensions.png" alt="Complete 3D chapter trajectory and all three style dimension cards" loading="lazy" decoding="async"/>
         <figcaption><strong>3D style space &amp; latent dimensions:</strong> Unsupervised derivation of narrative chapter trajectories via cyclic Jacobi EVD in pure Python. Displays feature loadings, rotates freely, and links every data point directly to its chapter.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/dashboard-reference.png" alt="Style reference bands with medians, dispersion, and sample counts" width="1152" height="878" loading="lazy" decoding="async"/>
-        <figcaption><strong>Manuscript reference bands:</strong> Robust median &plusmn; 2 MAD corridors derived exclusively from this manuscript. Sample sizes and deviation thresholds remain fully transparent.</figcaption>
+        <img width="1152" height="897" src="screenshots/dashboard-reference.png" alt="Style reference bands with medians, dispersion, and sample counts" loading="lazy" decoding="async"/>
+        <figcaption><strong>Manuscript reference bands:</strong> Robust median &plusmn; 2σ corridors (σ = 1.4826 MAD) derived exclusively from this manuscript. Sample sizes and deviation thresholds remain fully transparent.</figcaption>
       </figure>
     </div>
 
@@ -496,11 +497,11 @@ lixity research audit --project ./novel-research</pre>
     <span class="section-tag">5. Terminal Suite &amp; Deterministic CLI</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with rich terminal report" width="1320" height="840" loading="lazy" decoding="async"/>
+        <img width="1320" height="840" src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with rich terminal report" loading="lazy" decoding="async"/>
         <figcaption><code>lixity analyze</code> &ndash; Rich terminal report with corpus KPIs, readability indices, tense distribution, and sentence length architecture at a glance.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/cli-style.png" alt="Lixity CLI style reference report" width="1320" height="860" loading="lazy" decoding="async"/>
+        <img width="1320" height="860" src="screenshots/cli-style.png" alt="Lixity CLI style reference report" loading="lazy" decoding="async"/>
         <figcaption><code>lixity style</code> &ndash; Self-calibrating style reference with median/MAD bounds, z* values, and structural diagnostics (PELT changepoints, Mann–Kendall trends, Sn/Qn scales).</figcaption>
       </figure>
     </div>
@@ -509,29 +510,29 @@ lixity research audit --project ./novel-research</pre>
     <span class="section-tag">6. Dark Mode &amp; Interactive Settings</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-settings.png" alt="Settings panel with visible field labels and threshold explanations" width="1110" height="508" loading="lazy" decoding="async"/>
-        <figcaption><strong>Self-documenting settings:</strong> Project preferences, numerical threshold calibration with pre-commit validation, and reset safety against unintended disk modifications.</figcaption>
+        <img width="1110" height="539" src="screenshots/dashboard-settings.png" alt="Settings panel with visible field labels and threshold explanations" loading="lazy" decoding="async"/>
+        <figcaption><strong>Project and analysis settings:</strong> Project preferences, numerical threshold calibration with pre-commit validation, and reset safety against unintended disk modifications.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/dashboard-dimensions-dark.png" alt="Dark 3D style space and three dimension cards" width="1152" height="605" loading="lazy" decoding="async"/>
+        <img width="1152" height="617" src="screenshots/dashboard-dimensions-dark.png" alt="Dark 3D style space and three dimension cards" loading="lazy" decoding="async"/>
         <figcaption><strong>Style space in dark mode:</strong> Identical metrics, threshold bounding boxes, and feature cards &ndash; rendered in a high-contrast dark theme.</figcaption>
       </figure>
     </div>
 
     <figure class="shot">
-      <img src="screenshots/dashboard-dark.png" alt="Lixity overall dashboard in dark mode" width="1480" height="945" loading="lazy" decoding="async"/>
-      <figcaption><strong>Full macro dashboard in dark mode:</strong> Focused, low-glare workspace designed for late-night editing sessions.</figcaption>
+      <img width="1480" height="945" src="screenshots/dashboard-dark.png" alt="Lixity overall dashboard in dark mode" loading="lazy" decoding="async"/>
+      <figcaption><strong>Full macro dashboard in dark mode:</strong> An alternative dark palette for readers who prefer it; choose the theme that is comfortable in your environment.</figcaption>
     </figure>
 
     <!-- 7. Mobile Views -->
     <span class="section-tag">7. Responsive Mobile Views</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-mobile.png" alt="Mobile project overview with Lixity version and corpus metrics" width="390" height="1028" loading="lazy" decoding="async"/>
+        <img width="390" height="1028" src="screenshots/dashboard-mobile.png" alt="Mobile project overview with Lixity version and corpus metrics" loading="lazy" decoding="async"/>
         <figcaption><strong>Mobile overview:</strong> Project header, version stamp, license state, and responsive metric tiles on small screens.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/dashboard-dimensions-mobile.png" alt="Mobile style dimensions panel with stacked controls" width="366" height="1272" loading="lazy" decoding="async"/>
+        <img width="366" height="1360" src="screenshots/dashboard-dimensions-mobile.png" alt="Mobile style dimensions panel with stacked controls" loading="lazy" decoding="async"/>
         <figcaption><strong>Touch-ready stylometrics:</strong> Stacked 3D controls, readable feature loadings, and complete chapter outlier listings for mobile inspection.</figcaption>
       </figure>
     </div>
@@ -540,11 +541,11 @@ lixity research audit --project ./novel-research</pre>
     <span class="section-tag">8. Research Pilot &amp; Archival Evidence</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-research.png" alt="Research Source Dashboard showing source context metadata and stylometric analysis" width="1480" height="960" loading="lazy" decoding="async"/>
+        <img width="1480" height="960" src="screenshots/dashboard-research.png" alt="Research Source Dashboard showing source context metadata and stylometric analysis" loading="lazy" decoding="async"/>
         <figcaption><strong>Archived Source Dashboard:</strong> Local source version with user-supplied context (genre, creation and depicted periods, place, perspective and provenance note) linked to the analysis engine. Archive integrity does not certify historical accuracy.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/cli-research.png" alt="Terminal search and citation resolution showing passage UUIDs and exact character offsets" width="1320" height="780" loading="lazy" decoding="async"/>
+        <img width="1320" height="780" src="screenshots/cli-research.png" alt="Terminal search and citation resolution showing passage UUIDs and exact character offsets" loading="lazy" decoding="async"/>
         <figcaption><strong>CLI Full-Text Search &amp; Exact Citation:</strong> SQLite FTS5 BM25 search returning passage UUIDs, followed by citation resolution down to exact Unicode codepoint character offsets.</figcaption>
       </figure>
     </div>
@@ -565,11 +566,11 @@ lixity analyze manuscript.md              # Visual terminal report
 lixity analyze manuscript.md --json       # Machine-readable JSON (schema v2)
 
 # Tense profiling &amp; narrative dynamics
-lixity profile manuscript.md              # Paragraph-accurate tense &amp; style profile
+lixity profile manuscript.md              # Paragraph-level tense heuristics &amp; style profile
 lixity dialogue manuscript.md             # Speech ratios &amp; dialogue turns
 lixity characters manuscript.md --names "Anna,Ralf" # Character presence
-lixity pacing manuscript.md               # Scene tempo &amp; chapter hooks
-lixity showing manuscript.md              # Showing vs. telling balance
+lixity pacing manuscript.md               # Pacing indicators &amp; chapter-ending patterns
+lixity showing manuscript.md              # Perception, passive and exposition heuristics
 
 # Self-calibrating style reference &amp; structural diagnostics
 lixity style manuscript.md                # Median/MAD bounds, z*, FDR matrix
@@ -657,7 +658,7 @@ lixity build manuscript.md --language en</pre>
           <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--emerald); margin-bottom: 0.3rem;">Free of Charge &middot; LNCL-1.0</div>
           <h3 style="margin: 0 0 0.5rem; color: var(--fg-heading);">Non-Commercial Edition</h3>
           <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 0.8rem;">
-            Free for private writing, academic research, education, and manuscripts not intended for sale.
+            Free for private writing, research and education only when the project has no commercial purpose. These categories are not blanket exemptions.
           </p>
           <ul style="font-size: 0.84rem; color: var(--subtle); padding-left: 1.2rem; margin: 0;">
             <li>Full stylometric engine &amp; all 7 language profiles</li>
@@ -675,7 +676,7 @@ lixity build manuscript.md --language en</pre>
           <ul style="font-size: 0.84rem; color: var(--subtle); padding-left: 1.2rem; margin: 0;">
             <li>Applies to print books, ebooks, audiobooks, and print-on-demand</li>
             <li>Applies equally to traditional authors and independent self-publishers</li>
-            <li>Obtain written terms before publishing or first sale</li>
+            <li>Obtain written permission before using Lixity for a commercial project</li>
           </ul>
         </div>
       </div>
@@ -691,7 +692,7 @@ lixity build manuscript.md --language en</pre>
           <div class="meta-val">Matthias Fahsold</div>
         </div>
         <div class="contact-meta-item">
-          <div class="meta-label">Location &amp; Jurisdiction</div>
+          <div class="meta-label">Maintainer Location</div>
           <div class="meta-val">Hamburg, Germany</div>
           <div style="font-size: 0.78rem; color: var(--subtle);">CET / CEST (UTC+1 / UTC+2)</div>
         </div>
@@ -702,9 +703,9 @@ lixity build manuscript.md --language en</pre>
           </div>
         </div>
         <div class="contact-meta-item">
-          <div class="meta-label">Response Window</div>
-          <div class="meta-val">24&ndash;48 business hours</div>
-          <div style="font-size: 0.78rem; color: var(--subtle);">Monday through Friday</div>
+          <div class="meta-label">Project Operator</div>
+          <div class="meta-val">ROST Services GmbH</div>
+          <div style="font-size: 0.78rem; color: var(--subtle);"><a href="#impressum">Legal notice and company contact</a></div>
         </div>
       </div>
     </div>
@@ -737,6 +738,7 @@ lixity build manuscript.md --language en</pre>
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">Research Pilot</a> &middot;
       <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">Licensing Terms</a> &middot;
       <a href="llms.txt">llms.txt</a> &middot;
+      <a href="sitemap.xml">Sitemap</a> &middot;
       <a href="#impressum" lang="de">Impressum</a>
     </div>
   </footer>

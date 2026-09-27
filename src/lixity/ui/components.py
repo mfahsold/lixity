@@ -52,6 +52,17 @@ def esc(value: object) -> str:
     return html.escape(str(value))
 
 
+def contrast_text(background: str) -> str:
+    """Choose black or white by WCAG sRGB luminance for an opaque #RRGGBB fill."""
+    channels = [int(background[i:i + 2], 16) / 255 for i in (1, 3, 5)]
+    linear = [v / 12.92 if v <= 0.04045 else ((v + 0.055) / 1.055) ** 2.4
+              for v in channels]
+    luminance = sum(c * w for c, w in zip(linear, (0.2126, 0.7152, 0.0722), strict=True))
+    black_ratio = (luminance + 0.05) / 0.05
+    white_ratio = 1.05 / (luminance + 0.05)
+    return "#000000" if black_ratio >= white_ratio else "#ffffff"
+
+
 def project_header(
     title: str, labels: Mapping[str, str] | None = None,
     language_name: str = "", engine_name: str = "Lixity",

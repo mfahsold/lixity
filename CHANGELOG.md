@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Harmonized dashboard and Pages action colors, neutral surfaces and local title
+  fonts. Increased reading-text and primary-control sizes, strengthened keyboard
+  focus and active-tab cues, and respected reduced motion on Pages.
+- Heatmap labels now choose contrasting text independently of the system theme;
+  data colors and analysis results are unchanged. Narrow file controls wrap
+  within the workspace at mobile widths.
+- Reviewed installation, onboarding, research and public guides against current
+  behavior; clarified release versus main documentation and refreshed example
+  screenshots. Corrected documented readability coefficients and syllable units
+  to match the existing implementation, without changing calculations.
+
 ## [1.19.0] – 2026-09-27
 
 ### Added

@@ -2,12 +2,12 @@
 
 [RFC](README.md) · [Evidence](EVIDENCE.md)
 
-Status: target design specification for the complete RFC. The experimental
-`v1.16.0` pilot implements the immutable source-to-passage subset using strict
-schema `research-local/1`
-(`Project`, `Source`, `SourceVersion`, `Activity`, `Extraction`, `Passage`,
-`Tombstone`) together with Dossiers, Claims, EvidenceLinks and Decisions in
-the pilot's own schema. See [USAGE.md](USAGE.md) and [IMPLEMENTATION.md](IMPLEMENTATION.md).
+Status: target design specification for the complete RFC. The implemented
+v1.19.0 local workspace supports immutable source captures and passages, native
+authored revisions (dossiers, claims, evidence links and decisions), origin URLs
+and structured Zotero references. Local records use `research-local/1`, `/2` or
+`/3` according to record kind and fields; these are not the illustrative RFC
+schema below. See [USAGE.md](USAGE.md) and [IMPLEMENTATION.md](IMPLEMENTATION.md).
 The broader interchange model below remains a proposal.
 [The synthetic interchange example](examples/evidence-chain.json) illustrates a
 complete source-to-decision chain; it is not a production database.

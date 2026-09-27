@@ -1,7 +1,6 @@
 # Local research pilot
 
 **Experimental local research archive system, extended in `v1.19.0`.**
-The baseline table below records v1.18.0; subsequent sections identify v1.19.0 additions.
 This component archives local UTF-8 text and PDF documents, attaches versioned source criticism context and tags,
 resolves exact citations, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, connects to the analysis pipeline, and performs cross-corpus
@@ -9,16 +8,18 @@ grounding comparisons against manuscripts. Authors can record claims,
 passage-to-claim evidence relations and authorial decisions, with full native revision history.
 It does not implement the entire [RFC](README.md).
 
-| Available in `v1.18.0` | Not implemented |
+| Available in `v1.19.0` | Not implemented |
 | --- | --- |
 | Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
-| SQLite/FTS5 lexical search, instant index rebuild | Remote web imports |
+| SQLite/FTS5 lexical search over passages and current authored records; disposable index rebuild | Remote web imports |
 | Local text / Markdown input, original bytes retained | Multi-tenant team services, cloud hosting |
 | PDF ingestion with self-hosted Baidu Unlimited-OCR boundary | Automated factual proof or rewriting prose |
 | Safe Markdown & offline SVG diagram rendering (flowcharts, sequence) | Ambient configuration discovery |
 | BagIt-style archive export and restore with cryptographic verification | Ambient manuscript detection |
 | Native revisions for dossiers, claims, evidence links & decisions | External web scrapers |
 | Versioned source criticism context & core analysis adapter | |
+| Optional local Zotero catalogue browsing and selected PDF/text captures | Audio/video transcription or image understanding |
+| Additive Zotero migration export and paired research/Zotero backup | Automatic bidirectional Zotero synchronization |
 | Controlled withdrawal & physical purge with dry-run preview | |
 | Read-only HTML source dashboard with localized context | |
 | Integrity audit and snapshot conflict detection | |
@@ -273,7 +274,7 @@ and immutable revisions need no migration for this search extension.
 For a character overview, maintain a short dedicated dossier with explicit
 sections for decisions, proposals and open questions, and link the supporting
 research. A long current dossier may still contain obsolete sentences. Search
-finds the accepted revision; an author must reconcile those sentences and record
+finds the current stored revision; an author must reconcile those sentences and record
 the correction through the native revision workflow.
 
 ## Python API
@@ -698,8 +699,13 @@ Dossier body text supports a safe Markdown subset and offline SVG diagram render
 
 ## Limits
 
-The released pilot uses `research-local/1` and operation-specific `*-local/1`
-envelopes, not the RFC's illustrative `research/1` bundle. Native editing in version 1.17.0 adds `research-local/2` for authored revisions and
+The released pilot uses versioned `research-local/*` records and
+operation-specific envelopes, not the RFC's illustrative `research/1` bundle.
+Do not assume every command or stored record has the same schema version.
+Structured Zotero captures require `research-local/3` and v3 manifests; unified
+search uses `research-search-local/2`, while source-only search retains v1.
+
+Native editing in version 1.17.0 adds `research-local/2` for authored revisions and
 `research-manifest-local/2` for snapshots containing them. The first accepted edit
 upgrades that snapshot; reading a revision-1 archive does not rewrite any files.
 Older Lixity versions reject the new snapshot. Back up the whole archive before

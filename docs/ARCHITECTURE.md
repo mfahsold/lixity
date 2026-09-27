@@ -75,6 +75,48 @@ is required. Chapter-title tooltips are created as text nodes, not executable
 markup. Rendering and point picking share projected coordinates. Animation
 is scheduled only while rotation is enabled and the page is visible.
 
+### Visual consistency and evidence
+
+Current main (after v1.19.0) aligns the local dashboard and Pages around the same
+neutral surfaces and blue action palette. The existing stylesheets remain separate
+so exported dashboards stay self-contained; browser checks compare the common
+color roles. Filled actions use `#245b85` with white text in both themes, while
+links and focus rings use a lighter blue on dark surfaces. Analytical diverging
+colors retain their meaning. Heatmap text selects black or white from the actual
+cell luminance, independently of the surrounding theme.
+
+The presentation follows these evidence-informed constraints:
+
+- [WCAG contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
+  guides text contrast; visible focus outlines supplement color changes.
+- [WCAG target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
+  specifies a 24 CSS-pixel minimum with exceptions. Primary workspace controls
+  use at least 40 pixels and 44 on coarse pointers as a product choice; this is
+  not a claim that every compact data mark meets the enhanced 44-pixel criterion.
+- [NN/g's controlled eye-tracking experiment](https://www.nngroup.com/articles/flat-ui-less-attention-cause-uncertainty/)
+  supports retaining visible button boundaries and link cues. Its findability
+  tasks do not establish a Lixity-specific productivity improvement.
+- [Reading research reviewed by Kevin Larson](https://learn.microsoft.com/en-us/typography/develop/word-recognition)
+  informs the use of mixed-case labels rather than forced uppercase. System sans
+  fonts serve controls and reading text; local serif fonts distinguish titles.
+  No single typeface, blue hue or line width is asserted to be universally optimal.
+- Reading paragraphs use relative font sizes, generous leading and a 72-character
+  maximum measure where appropriate. This is a design choice, not an empirical
+  optimum. [WCAG text spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html)
+  concerns preserving content and functionality when users override spacing;
+  its override values are not mandatory default typography.
+
+Desktop/mobile rendering, keyboard focus, text-spacing overrides, reduced motion
+and both themes are checked with synthetic content. Automated checks and the
+selected contrast audits do not constitute a complete accessibility certification
+or replace testing with readers and assistive technologies.
+
+Pages publishes `sitemap.xml` containing the canonical landing page and HTML
+guides. Submit its public URL in Google Search Console; a sitemap aids discovery
+but does not guarantee indexing. The project-path `robots.txt` is a policy
+template, not the effective host-root crawler policy. Keep sitemap entries in
+step with the HTML publication boundary and use real modification dates.
+
 Optional mutation controls need a separate project server. The engine alone
 does not start an HTTP service, store an NDA passphrase or send documents.
 Server adapters must validate origins, hosts, request sizes and payloads,

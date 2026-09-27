@@ -1,6 +1,8 @@
 # Product screenshots
 
-These are browser captures of the actual development version, not mockups.
+These are browser captures of current main after v1.19.0, not mockups. They
+include the unreleased palette, typography and control-size improvements; the
+1.19.0 tag retains its original appearance.
 The default source is `samples/pride-and-prejudice.md`, the public-domain
 Austen sample documented in `samples/README.md`. No private manuscript,
 NDA record, passphrase or live project server is used.

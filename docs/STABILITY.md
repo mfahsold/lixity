@@ -53,8 +53,9 @@ See [Research usage](research/USAGE.md) for operational limits.
   0.6745 is the dual factor used in `robust_z`. Lixity never treats sample
   SD as the house-style spread when MAD is available.
 - Significance-adjusted $z^* = (x-\tilde x)/\sqrt{\sigma_{\mathrm{MAD}}^2+\mathrm{SE}^2}$
-  shrinks short chapters (Poisson/binomial plug-in SEs) so a 120-word chapter
-  cannot outrank an 8,000-word chapter on a pure robust z.
+  shrinks deviations when an SE estimate is available (including Poisson/binomial
+  plug-ins). It does not guarantee that a short chapter cannot outrank a long
+  one, remove false positives, or validate the underlying linguistic model.
 - Benjamini–Hochberg at $q=0.05$ is the default multiplicity control over
   chapter × feature cells; Benjamini–Yekutieli ($c=\sum 1/i$) is available via
   `fdr_method="by"` / `--fdr-method by` when dependence among features is
@@ -157,11 +158,18 @@ they are not current product features and must not be cited as such.
 - Colour must never be the only channel (SC 1.4.1, 1.3.3): the heatmap
   prints the numeric z* values, the band chart encodes band/median/outliers
   by position and shape, every chip reveals tense + value as text on click.
-- Non-text contrast ≥ 3:1 (SC 1.4.11), text ≥ 4.5:1 (SC 1.4.3): palette kept
-  (blue/orange diverging = colour-blind-safe canonical pair, grey midpoint).
-- Target size ≥ 24×24 px (SC 2.5.8): paragraph chips are deliberately dense
-  (18 px) – documented exception with keyboard access and click-to-read.
-- Diverging scales only with a meaningful midpoint (the chapter mean).
+- Contrast targets are 3:1 for relevant non-text UI and 4.5:1 for normal text.
+  Current main after v1.19.0 chooses heatmap text from each cell’s luminance and
+  tests the full blue/orange scale. This does not certify every canvas mark or
+  every color-vision condition; numeric labels remain essential.
+- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. Dense
+  18-pixel paragraph chips need further target-size assessment; keyboard access
+  alone does not establish an exception. Primary controls are larger on current
+  main, but the entire interface is not claimed to conform to WCAG.
+- Diverging scales have a meaningful midpoint: zero deviation from the
+  within-manuscript reference (median in the robust style calculation).
+- See [visual design rationale](ARCHITECTURE.md#visual-consistency-and-evidence)
+  for evidence, typography choices and the limits of automated UI checks.
 
 
 ## 2. Stability register
@@ -172,7 +180,7 @@ they are not current product features and must not be cited as such.
 | 2 | Label packs | missing translations fall back to English silently | untranslated UI goes unnoticed | 🟠 → **fixed**: completeness test over the 7 languages for a required key set |
 | 3 | LD indices on short texts | literature shows unreliability below ~60 words | Bestgen 2024; Kyle et al. 2024 | 🔴 → **fixed**: MTLD ≥ 100 tokens, Maas ≥ 100, MATTR ≥ window (50); otherwise `null` + help texts updated |
 | 4 | Style fingerprint with few chapters | median/MAD unstable for n < 5; dimensions need spread | baseline sigma = 0 for single chapters | 🟠 → **fixed** (v1.3.0): panels hidden when no measurable spread; **documented** minimum chapters |
-| 5 | Heuristic syllable counting | ±5–10 % error, language-specific rules | no gold-standard corpus in-repo | 🟡 **documented**; used only as a relative signal, formula names shown |
+| 5 | Heuristic syllable counting | language-specific rules; no validated aggregate error rate | no gold-standard corpus in-repo | 🟡 **documented**; used only as a relative signal, formula names shown |
 | 6 | Tense patterns | curated alternations + productive `-te`/`-ed` have FP/FN on ambiguous forms | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth |
 | 7 | Packaging | a wheel could miss `ui/assets/*` or `py.typed` | config exists, never verified in CI | 🟠 → **fixed**: CI job builds a wheel and asserts assets + typing marker are inside |
 | 8 | Book hook / venv | fallback `python3` without lixity breaks the hook | `pyproject` pin + `.venv` | 🟡 **documented** in book `docs/ARCHITECTURE.md`; hook prefers `.venv/bin/python` |

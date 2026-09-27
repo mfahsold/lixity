@@ -1,8 +1,8 @@
 # Sample corpus – provenance and licensing
 
-All sample texts are **public domain** and are **not** covered by the Lixity
-Non-Commercial License: that license applies to the software, not to these
-texts. The unmodified Project Gutenberg source files keep their original
+The two historical source works are **public domain** and are **not** covered
+by the Lixity Non-Commercial License. The separate original sequel draft is
+not public domain; its existing license status is listed below. The unmodified Project Gutenberg source files keep their original
 header and license notice and must not be redistributed without it.
 
 | File | Work | Source | Legal status |

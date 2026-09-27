@@ -31,21 +31,42 @@ Practical web guides: [install and open a project](https://mfahsold.github.io/li
 [interpret manuscript metrics](https://mfahsold.github.io/lixity/guides/interpretation.html),
 and [archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html).
 
-**Included in v1.18.0:** consistency displays “–” when
-there are no measurable chapter–feature cells; OCR setup guidance follows the
-dashboard language; source import accepts an optional origin URL. Browser PDF
-upload retains original bytes. Text-layer PDFs use local Poppler tools; scan
-OCR still requires a separately configured self-hosted worker. An origin URL is
-retained provenance, not a remote import. Read the [research reference](docs/research/USAGE.md)
-and [v1.18.0 release notes](docs/releases/v1.18.0.md) before upgrading an archive.
+## Choose your workflow
 
-**New in v1.19.0:** use the optional [Zotero Desktop bridge](docs/research/USAGE.md#zotero-desktop-bridge-since-v1190) to manage literature and media in Zotero while Lixity retains selected PDF/text evidence and authored decisions. The dashboard browses collections and attachments, captures with consent, explicitly refreshes linked sources and opens originals in Zotero. CLI tools support additive migration export and verified paired backup/restore. Structured attachment identities prevent accidental duplicate captures; earlier quotations remain reproducible. Zotero is optional, with no cloud account or background synchronization required.
+| Goal | Start here |
+| :--- | :--- |
+| Inspect a Markdown manuscript offline | [Quick start](#quick-start), then the [interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html) |
+| Open or create a local project | [Onboarding](docs/ONBOARDING.md): `lixity serve --no-project --port 8765` |
+| Manage literature in Zotero and retain selected evidence | [Zotero Desktop setup](docs/research/USAGE.md#zotero-desktop-bridge-since-v1190) |
+| Search sources, dossiers and author decisions | [Current-record search](docs/research/USAGE.md#search-current-authored-records-since-v1190): `--scope all` or a type filter |
+| Integrate the engine or automate a workflow | [Python and JSON contracts](docs/AGENTS.md), [architecture](docs/ARCHITECTURE.md) |
+| Understand a result or its limits | [Methods](docs/METHODS.md), [stability and validation limits](docs/STABILITY.md) |
 
-Research search can include current dossiers,
-claims and decisions with `--scope all` or a type filter. The dashboard offers
-the same selection and opens authored hits in the existing revision viewer.
-Default CLI/API source search remains compatible. See the
-[current-record search contract](docs/research/USAGE.md#search-current-authored-records-since-v1190).
+## Current release: v1.19.0
+
+The optional **Zotero Desktop bridge** lets Zotero manage literature and media
+while Lixity retains selected PDF/text evidence, dossiers, claims and author
+decisions. Browse collections and attachments, explicitly capture or refresh a
+source, and open its original in Zotero. Structured attachment identities help
+avoid duplicate captures; historical passage citations remain available.
+Migration export is additive, and paired backup/restore tools cover the research
+archive and an explicitly closed Zotero data directory.
+
+Research search now includes current dossiers, claims and decisions with
+`--scope all` or a type filter. Source search remains the CLI/API default.
+
+**Boundaries:** Zotero is optional and needs no cloud account. The bridge does
+not synchronize in the background or write changes back to Zotero. Images,
+audio and video can be managed there, but Lixity does not transcribe or analyze
+those media. Text-layer PDFs use local Poppler tools; scanned PDFs require a
+separately configured OCR worker. The optional CPU reference worker is
+experimental and checkout-only. Retaining source bytes requires consent; an
+origin URL records provenance and does not fetch a remote document.
+
+Read the [release notes](docs/releases/v1.19.0.md) before upgrading an archive.
+Documentation on `main` may describe newer changes; use the
+[tagged documentation](https://github.com/mfahsold/lixity/tree/v1.19.0/docs) for
+the released package and [changelog](CHANGELOG.md) for subsequent changes.
 
 ## Analysis and research capabilities
 
@@ -54,11 +75,11 @@ research archive is a separate, explicit-project experimental API.
 
 | Pillar | Scope | Core Techniques & Features |
 | :--- | :--- | :--- |
-| **01. Stylistics & Corpus Diagnostics** | Macro & micro sentence architecture | ASL, rhythm CV, 4 length tiers (staccato to hypotaxis), language-specific readability formula variants, and lexical diversity measures (HD-D, MTLD, Yule's K, Maas a²). |
-| **02. Dramaturgy & Tense Profiling** | Paragraph-accurate narrative continuity | Tense classification (present, past, mixed, neutral), 4-tier friction severity rating (0–3), speech ratios, dialogue turns, scene pacing curves, and chapter tension hooks. |
-| **03. Robust 3D Style Space** | Self-calibrating manuscript baseline | Manuscript-intrinsic median ± 2 MAD corridor, noise-aware z\* shrinkage, Benjamini–Hochberg / BY FDR multiplicity control, cyclic Jacobi EVD, and interactive 3D trajectory. |
+| **01. Stylistics & Corpus Diagnostics** | Macro & micro sentence architecture | ASL, rhythm CV, 4 sentence-length tiers, language-specific readability formula variants, and lexical diversity measures (HD-D, MTLD, Yule's K, Maas a²). |
+| **02. Narrative & Tense Heuristics** | Paragraph-level review signals | Tense classification (present, past, mixed, neutral), 4-tier friction severity rating (0–3), speech ratios, dialogue turns, scene pacing curves, and chapter tension hooks. |
+| **03. Robust 3D Style Space** | Self-calibrating manuscript baseline | Manuscript-intrinsic median ± 2σ corridor (σ = 1.4826 MAD), noise-aware z\* shrinkage, Benjamini–Hochberg / BY FDR multiplicity control, cyclic Jacobi EVD, and interactive 3D trajectory. |
 | **04. Project integration** | Shared analysis and dashboard building blocks | Explicit configuration, versioned JSON, work markers and reusable UI. Typesetting, EPUB/PDF publication and delivery belong to separate project adapters, not the core package. |
-| **05. Research pilot (experimental)** | Local source archive and passage citations | Immutable SHA-256 UTF-8 storage, source criticism, SQLite FTS5 search, manual claims, evidence links, author decisions, and cross-corpus comparison. |
+| **05. Research pilot (experimental)** | Local source archive and passage citations | SHA-256-verified original and extracted source bytes, source criticism, SQLite FTS5 search, optional Zotero capture, dossiers, manual claims, evidence links, and author decisions. |
 
 ## Mathematical Core
 
@@ -68,7 +89,7 @@ research archive is a separate, explicit-project experimental API.
 | Noise-aware z\* = (x − x̃) / √(σ² + SE²) | Shrinks sampling noise in short chapters via analytical SE |
 | BH / BY FDR at q (default: 0.05) | Multiplicity-controlled `fdr_flagged` cells |
 | Expected FP = m · P(\|Z\| ≥ z_mild) | Calibration against statistical over-interpretation |
-| Cliff’s δ / Vargha–Delaney Â₁₂ | Standardized non-parametric effect size for confirmed cells |
+| Cliff’s δ / Vargha–Delaney Â₁₂ | Standardized non-parametric effect size for flagged cells |
 | Runs test + Lag-1 ρ₁ | Exchangeability diagnostics (I.I.D. baseline assumption) |
 | Spearman ρ + cyclic Jacobi EVD | Latent style dimensions and principal axes (pure stdlib) |
 | PELT changepoints (BIC) | Locates structural regime shifts in the house style |
@@ -82,18 +103,21 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 ## Key Capabilities
 
-- **Offline & Deterministic:** Identical input produces bit-identical metrics, JSON, and HTML reports.
+- **Offline & Reproducible Analysis:** Fixed inputs, settings and interpreter produce repeatable metrics. Floating-point last bits may differ across platforms; research revisions also carry identifiers and timestamps.
 - **Self-Calibrating Norms:** House style derived from the manuscript's own median and MAD bands.
 - **Noise-Aware z\* + FDR (BH/BY):** Configurable significance procedure with assumptions and diagnostic limits.
-- **Effect Sizes & Diagnostics:** Cliff’s δ, Runs test, and lag-1 autocorrelation for every confirmed cell.
+- **Effect Sizes & Diagnostics:** Cliff’s δ, Runs test, and lag-1 autocorrelation for flagged cells.
 - **Structural Diagnostics:** PELT changepoints, Mann–Kendall trends, Sn/Qn scales, Hill tail index, Wasserstein–KS shift, Goh–Barabási co-occurrence graphs, and Dunning G² keyness.
 - **Latent Style Dimensions:** Spearman rank correlation and cyclic Jacobi eigendecomposition (pure Python stdlib).
-- **Paragraph-Accurate Tense Profiling:** Present, past, mixed, neutral with a 0–3 friction severity scale.
+- **Paragraph-Level Tense Profiling:** Present, past, mixed, neutral with a 0–3 friction severity scale.
 - **Narratological Structure Modules:** Dialogue turn structure, character presence, scene/pacing curves, motifs, and showing vs. telling balance.
 - **Idempotent Workspace Build & Dashboard:** Fully self-contained, single-file interactive HTML dashboard with 7 language profiles.
 - **AI Agent-Ready:** Strict JSON schemas (analyze/profile **v2**, style **v4**), stable `lixity.api` facade, [`docs/AGENTS.md`](docs/AGENTS.md).
 
 ## Visual Analytical Suite
+
+Screenshots show current `main`, including UI refinements not yet released in
+v1.19.0. They use public-domain or synthetic examples.
 
 ### 1. Open, import, or create a project
 
@@ -224,9 +248,11 @@ lixity build manuscript.md --language en
 
 Open `exports/manuscript_dashboard.html`. Use `--language de` for German or
 explicit `--language auto` for detection. No account, API key or upload is needed.
-Settings/NDA actions require a project adapter, not just the standalone HTML.
+For live settings, project management and research editing, run `lixity serve`.
+Standalone HTML is an analysis report, not a running project server. Publication
+exports and encrypted NDA storage belong to separate project adapters.
 
-Other commands:
+Other commands (all analysis commands default to English):
 
 ```bash
 lixity serve --no-project --port 8765        # Native dev server & onboarding wizard
@@ -268,43 +294,17 @@ lixity analyze samples/effi-briest.md --language de  # German – Fontane, 36 ch
 lixity analyze samples/pride-and-prejudice.md  # English – Austen, 61 chapters
 ```
 
-Reports and CLI messages appear in English by default; `LIXITY_LANG=de` switches them to German.
+CLI message localization is separate from analysis language: `LIXITY_LANG=de`
+selects German CLI messages, while `--language de` selects German analysis.
 
 Full command reference, metric glossary, worked example, and troubleshooting:
 [`docs/USAGE.md`](docs/USAGE.md). Agent-facing JSON contracts:
 [`docs/AGENTS.md`](docs/AGENTS.md). Project website:
 [mfahsold.github.io/lixity](https://mfahsold.github.io/lixity/).
 
-## What's new in v1.17.0
-
-**v1.17.0** introduces native research editing with immutable revisions,
-self-hosted OCR extraction, offline diagram rendering, and cryptographic archive export/restoration.
-Read the [release notes](docs/releases/v1.17.0.md) for scope, compatibility, and limits.
-
-- **Native editing & immutable revisions:** edit dossiers, claims, evidence links, and authorial
-  decisions directly in the web UI and CLI. Corrections and supersessions preserve logical IDs
-  and historical citations; concurrent edits are protected against stale overwrites.
-- **Self-hosted Baidu Unlimited-OCR boundary:** ingest PDF documents with dual-blob retention
-  (original PDF bytes + extracted plain text). The boundary requests model snapshot
-  `07dea832e22aefee32ad281d4b80551282e1c168` and Baidu source revision
-  `d49ff64afffc1f47ab563dc1c589bc2f78808fa4`. A separately deployed adapter must
-  implement the worker protocol; these identifiers do not attest which model ran.
-  See the [upstream integration assessment](docs/research/OCR_INTEGRATION.md).
-- **Safe Markdown & offline diagram rendering:** dossier bodies render headings, tables, blockquotes,
-  and lists safely. Fenced Mermaid code blocks (`graph TD/LR`, `sequenceDiagram`) render as native inline SVGs
-  entirely client-side without external network requests or CDNs, complete with inspectable source toggles.
-- **BagIt-style archive export and restore:** package research archives with SHA-256 manifests via
-  `lixity research export` and restore into clean target directories via `lixity research restore` with full round-trip verification.
-- **Interrupted-save recovery & purge safety:** unaccepted drafts in numbered slots are safely quarantined as
-  `.unpublished` recovery artifacts before retrying; orphan blobs during purge are deleted only after HEAD rotation.
-
-The engine produces offline analysis and HTML, and `lixity serve` provides a
-local project and experimental research workspace. Publication workflows and
-encrypted NDA storage belong to project adapters; Lixity is not a hosted service.
-
 ## Architecture and project adapters
 
-The experimental [local research workspace](docs/research/USAGE.md) in `v1.17.0` archives UTF-8 sources and PDFs,
+The experimental [local research workspace](docs/research/USAGE.md) archives UTF-8 sources and PDFs,
 attaches versioned source criticism context and tags, resolves exact citations, connects to the
 analysis pipeline, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, supports controlled withdrawal and purge, and compares
@@ -344,11 +344,11 @@ scope, guarantees and limitations.
 
 Detailed formulas, mathematical derivations, and academic citations are documented in [`docs/METHODS.md`](docs/METHODS.md) and [`docs/USAGE.md`](docs/USAGE.md#understanding-the-metrics):
 
-1. **Sentence Architecture & Rhythm** – Average sentence length (ASL), coefficient of variation (CV), and distribution across four syntactic length tiers (staccato ≤ 6 words, medium 7–15, long 16–25, complex hypotaxis > 25 words). Uncovers pacing ruptures, breathlessness, and rhythmic monotony.
+1. **Sentence Architecture & Rhythm** – Average sentence length (ASL), coefficient of variation (CV), and distribution across four syntactic length tiers (staccato ≤ 6 words, medium 7–15, long 16–25, very long > 25 words). These length bins can prompt a closer reading of rhythm; sentence length alone does not establish syntactic complexity or pacing quality.
 2. **Lexical Diversity with Length Guards** – Type-Token Ratio (TTR), Guiraud R, hypergeometric HD-D (McCarthy & Jarvis 2010), MTLD, moving-average MATTR, Maas a², and Yule's characteristic K. Minimum token counts reduce unstable short-text results; none makes chapters of different lengths perfectly comparable.
 3. **Language-Specific Readability Formulas** – Standard LIX (Björnsson, words > 6 characters for all languages) and language-specific Flesch variants: Amstad (de), classic Flesch (en), Kandel-Moles (fr), Szigriszt-Pazos (es), Franchina-Vacca (it), Martins (pt), and Douma (nl). These formula outputs are not a measure of literary quality.
 4. **Narrative Voice & Register** – Dialogue ratio, function-word density (the author's implicit grammatical fingerprint), perception filters ("telling" verbs like *saw*, *heard*, *felt*), modal hedging, passive voice, nominal style suffixes, sentence-starter Shannon entropy, and first-person openings.
-5. **Tense Dynamics & Continuity** – Paragraph-accurate classification into dominant tense (present, past, mixed, neutral) with a 4-tier friction severity rating (0–3) to flag unintended slips between epic past and scenic present.
+5. **Tense Dynamics & Continuity** – Paragraph-level heuristic classification into dominant tense (present, past, mixed, neutral) with a 4-tier friction severity rating (0–3) to highlight possible changes. The heuristic cannot determine whether a shift was intended.
 
 ## Editorial Practice: The Macro-Editing Matrix
 
@@ -356,13 +356,13 @@ Statistical indicators are not an objective quality score or an instruction to r
 
 | Linguistic Feature | Calculation & Diagnostic Signal | Editorial Interpretation & Practical Editing | Warning Signal & Editorial Intervention |
 | :--- | :--- | :--- | :--- |
-| **Sentence Rhythm & Length Tiers** | ASL, rhythm CV, staccato (≤6w), hypotaxis (>25w) | **Pacing:** Variation in sentence length can draw attention to shifts between action, dialogue, and reflection. | Low or high CV and changes in long-sentence frequency invite a read of the affected passage; neither implies good or bad prose. |
+| **Sentence Rhythm & Length Tiers** | ASL, rhythm CV, short (≤6w), very long (>25w) | **Pacing:** Variation in sentence length can draw attention to shifts between action, dialogue, and reflection. | Low or high CV and changes in long-sentence frequency invite a read of the affected passage; neither implies good or bad prose. |
 | **Lexical Diversity** | Hypergeometric HD-D, MTLD, Yule's K, Maas a² | **Vocabulary Pattern:** These measures reduce some length sensitivity compared with raw TTR, subject to their token floors and corpus context. | A change late in the manuscript may prompt a look at repetition, dialogue mix, or topic shifts; it does not identify author fatigue or a quality problem. |
 | **Tense Continuity & Friction** | Present, past, mixed, neutral; friction rating 0–3 | **Timeline & Perspective:** Heuristic labels help locate tense changes at paragraph scale. | Higher friction may merit a check of quotation, dialogue, flashback, or deliberate perspective shifts before treating it as an error. |
 | **Showing vs. Telling & Filters** | Perception verbs, passive voice, nominal style | **Register:** Word-pattern counts highlight possible changes in viewpoint or exposition. | Read passages in context; these constructions can be deliberate and their counts do not measure immersion. |
 | **FDR Heatmap** | Noise-aware z\*, Benjamini–Hochberg or BY (●), Cliff's δ | **Statistical Review:** A dot marks a cell passing the configured FDR procedure under its assumptions. Effect size adds context. | Read flagged passages in context; a flag neither proves a defect nor calls for a rewrite. Unflagged passages can still matter artistically. |
 | **Structural & Drift Diagnostics** | PELT changepoints (BIC), Mann–Kendall τ, Wasserstein–KS | **Narrative Structure:** These measures locate changes and trends in the selected features. | A change point can prompt review of scene, character, or chapter context; it does not identify an author handover or its cause. |
-| **Persistent Work Markers** | Content-hashed `<!-- LIXITY-MARKER -->` tags | **Traceable Editorial Annotations:** Notes remain anchored right at the target paragraph in Markdown, but vanish cleanly in print (PDF) and digital (EPUB) book exports. | Content hashes identify the originally marked paragraph; review anchors after manuscript edits. |
+| **Persistent Work Markers** | Content-hashed `<!-- LIXITY-MARKER -->` tags | **Traceable Editorial Annotations:** HTML comments keep notes beside the target paragraph in Markdown. Export visibility depends on the converter and its settings. | Content hashes identify the originally marked paragraph; review anchors after manuscript edits. |
 
 ## Work Markers (Editor-Visible)
 
@@ -373,8 +373,8 @@ Work markers are standard HTML comment lines placed directly above the target pa
 He walked to the window and watches the rain falling outside.
 ```
 
-- Visible in VS Code, Obsidian, Neovim, Ulysses; **completely invisible in book exports**
-  (Pandoc, Typst, and LaTeX treat HTML comments natively as comments).
+- Editable as HTML comments in Markdown editors. Rendering and export behavior
+  depend on the editor or converter; inspect the generated book.
 - Deterministic content-hash IDs remain anchored even as surrounding text shifts during revision.
 - Clicking a marker kind in the dashboard opens an inline note field directly in the document
   (`Enter` saves, `Esc` cancels).
@@ -387,7 +387,7 @@ He walked to the window and watches the rain falling outside.
 Historical novels, investigative non-fiction, and scholarly manuscripts benefit
 from a traceable connection between archived source text, context, and author
 notes. The experimental research workspace ([`docs/research/USAGE.md`](docs/research/USAGE.md),
-included in `v1.17.0`) provides a local
+first introduced in `v1.17.0`) provides a local
 archive separate from narrative manuscripts.
 
 ### Untrusted Evidence vs. Narrative Invention
@@ -577,9 +577,9 @@ use or sale. [Licensing guide](docs/LICENSING.md) · [Full terms](LICENSE).
 | Attribute | Details |
 | :--- | :--- |
 | **Maintainer & Lead Architect** | **Matthias Fahsold** |
-| **Location & Jurisdiction** | **Hamburg, Germany** (Central European Time, UTC+1 / UTC+2) |
+| **Maintainer location** | **Hamburg, Germany** (Central European Time, UTC+1 / UTC+2) |
+| **Project operator** | ROST Services GmbH, Rümpel, Germany · [Impressum](https://mfahsold.github.io/lixity/#impressum) |
 | **Direct Contact** | [mfahsold@googlemail.com](mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry) |
-| **Response Window** | Typically within 24–48 business hours (Mon–Fri) |
 | **Security Advisories** | [`SECURITY.md`](SECURITY.md) |
 | **Contributing Guide** | [`CONTRIBUTING.md`](CONTRIBUTING.md) |
 

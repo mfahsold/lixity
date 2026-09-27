@@ -3,8 +3,9 @@
 Reviewed 2026-09-27 against the repository, public HTTP responses and the primary
 sources linked below. GEO here means visibility in generative search answers,
 not geographic metadata. Recommendations are not measured ranking improvements.
-No analytics, paid tools, search-account verification, link outreach or external
-submissions were enabled. The scope is public product material, never manuscripts
+No analytics, paid tools, link outreach or search-account submissions were
+enabled. The user-supplied Google verification meta tag is published; ownership
+confirmation inside Search Console has not been observed. The scope is public product material, never manuscripts
 or research archives.
 
 ## Findings and changes
@@ -24,6 +25,22 @@ The new guides answer user tasks rather than repeat a feature catalogue:
 - [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html): reproducible install, synthetic first run and inaccessible project troubleshooting.
 - [Interpret manuscript metrics](https://mfahsold.github.io/lixity/guides/interpretation.html): consistency, unavailable data, sample floors and a human review workflow.
 - [Archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html): provenance, native PDFs versus scans, worker setup and backup verification.
+
+## Published site status
+
+GitHub Pages uses the repository's explicit staging allowlist and Actions
+workflow. The branch-based deployment was disabled to avoid competing publication
+paths. The landing page includes the supplied ROST Services GmbH legal notice,
+linked from every HTML guide, plus a direct sitemap link. Publishing the Google
+verification token makes ownership verification possible; it is not itself a
+verified account or an indexing result.
+
+The shared site stylesheet supports light/dark appearance, visible keyboard
+focus and reduced motion. Current main aligns its colors and typography with
+the local workspace. Targeted automated contrast checks and desktop/mobile
+browser checks are useful regression evidence, not a complete accessibility
+certification or a new Lighthouse score. The rationale and sources are in
+[Architecture](ARCHITECTURE.md#visual-consistency-and-evidence).
 
 ## What the best-practice sources support
 

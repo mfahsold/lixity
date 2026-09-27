@@ -2,12 +2,34 @@
 
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
+from html.parser import HTMLParser
 from pathlib import Path
 
 from scripts.stage_pages import stage
 
 
 class TestPagesStaging(unittest.TestCase):
+    def test_sitemap_covers_published_html_canonicals(self):
+        class Canonicals(HTMLParser):
+            def handle_starttag(self, tag, attrs):
+                values = dict(attrs)
+                if tag == "link" and values.get("rel") == "canonical":
+                    canonical_urls.append(values["href"])
+
+        docs = Path(__file__).resolve().parents[1] / "docs"
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "site"
+            stage(docs, output)
+            canonical_urls = []
+            for page in output.rglob("*.html"):
+                Canonicals().feed(page.read_text(encoding="utf-8"))
+            # This XML is maintained repository content, never an imported document.
+            listed = [node.text for node in ET.parse(output / "sitemap.xml")  # noqa: S314
+                      .findall("{*}url/{*}loc")]
+            self.assertEqual(len(listed), len(set(listed)))
+            self.assertCountEqual(listed, canonical_urls)
+
     def test_only_product_paths_are_published(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
