@@ -4,6 +4,7 @@ on:
     branches: ["main"]
     paths:
       - "docs/**"
+      - "scripts/stage_pages.py"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 permissions:
@@ -22,8 +23,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: actions/configure-pages@v6
+      - name: Stage public product documentation
+        run: python3 scripts/stage_pages.py --output "$RUNNER_TEMP/lixity-pages"
       - uses: actions/upload-pages-artifact@v5
         with:
-          path: docs
+          path: ${{ runner.temp }}/lixity-pages
       - id: deployment
         uses: actions/deploy-pages@v5

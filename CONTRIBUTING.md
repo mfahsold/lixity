@@ -25,6 +25,30 @@ See [licensing examples](docs/LICENSING.md).
 - Never commit manuscripts, dashboards under `exports/`, or secrets —
   see [`.gitignore`](.gitignore) and [`SECURITY.md`](SECURITY.md).
 
+## Where work belongs
+
+| Material | Location | Commit / publish |
+| --- | --- | --- |
+| Engine behavior and shared UI | `src/lixity/` | Commit with relevant checks |
+| Regression coverage and reusable tooling | `tests/`, `scripts/` | Commit when it protects or operates the product |
+| Installation, usage, methods, interfaces and supported architecture | `docs/` and README | Maintain as product documentation; label proposals and unreleased behavior |
+| Repository-wide agent rules | `AGENTS.md` | Commit concise, durable guidance |
+| Task plans, session notes, temporary implementation decisions | `.planning/` | Local only, ignored; old tracked plans are preserved locally under `.planning/legacy/` |
+| Browser screenshots, traces and diagnostic scratch output | `.artifacts/` or `/tmp` | Local only; reviewed public examples are a separate deliberate addition |
+| Manuscripts, retained research bytes, backups and credentials | Separate project storage | Never include in engine commits or public artifacts |
+
+Keep `docs/AGENTS.md` focused on using Lixity's automation interface, rather than
+instructions for developing this repository. The research RFC remains durable
+product architecture, explicitly marked as a proposal; an agent's task checklist
+does not belong there. Do not duplicate these rules in tool-specific instruction
+trees without a concrete integration need.
+
+Ignore rules affect untracked files only. Review tracked and staged paths before
+each commit; avoid blanket staging and forced additions. When removing an old
+plan from public sources, preserve a local copy first. Removing a file from the
+current tree does not remove it from Git history; do not rewrite history as part
+of routine documentation cleanup.
+
 ## Development setup
 
 Start with the [installation guide](docs/INSTALLATION.md) for prerequisites,
@@ -53,6 +77,28 @@ build a wheel and open a GitHub Release (`.github/workflows/release.yml`);
 pushes to `main` under `docs/` deploy GitHub Pages
 (`.github/workflows/pages.yml` — enable Pages → Source: GitHub Actions in
 repo settings once).
+
+### Updating documentation and Pages
+
+1. Change the canonical command/API reference with the behavior; explain limits
+   and intentional schema compatibility changes.
+2. Update the README entrypoints, changelog and relevant HTML guides in
+   `docs/guides/`. Reuse `docs/assets/site.css`; keep main-only features distinct
+   from the current tagged release.
+3. Run `make docs-check` (or `make docs-sync` to update release references), then
+   the affected browser checks from `tests/browser/README.md`.
+4. Check page titles, descriptions, canonical URLs, internal links and sitemap
+   entries. Keep `llms.txt` factual; it is not a search visibility guarantee.
+5. Preview publication with `python3 scripts/stage_pages.py --output /tmp/lixity-pages-preview`
+   using a new output directory. Pages uploads this selected tree, not all of
+   `docs/`. New public paths must be added deliberately to the staging rules.
+6. Review staged paths and content. Exclude `.planning/`, local reports, private
+   source bytes and machine-specific settings. After an authorized push, verify
+   CI and the public deployment; do not infer success from a local build alone.
+
+Search visibility work should prioritize useful HTML answers and accurate
+product boundaries. Cite primary guidance for changing SEO/GEO practices and
+separate recommendations from measured traffic or citation results.
 
 ## Pull requests
 

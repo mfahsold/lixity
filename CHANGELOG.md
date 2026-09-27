@@ -7,12 +7,32 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- Source import now accepts an optional origin URL in the UI, CLI and Python/HTTP
+  APIs. URLs are retained as capture context without network access; old citations
+  preserve their original provenance. URL-bearing captures require `research-local/2`
+  and v2 manifests, which older readers reject. URL-free v1 encoding is preserved.
+- Browser OCR setup labels and guidance use all seven workspace locales. Configured
+  workers are no longer described as verified or active inference services.
+- Consistency displays “–” when no chapter–feature cells are measurable. Empty
+  chapters no longer manufacture measurements. Style JSON v4 adds `measured_cells`
+  while retaining the legacy numeric consistency sentinel for compatibility.
+- Text/PDF browser imports share temporary-file handling and parameter forwarding.
+- Public guides cover installation, metric interpretation, origin URLs, PDF/OCR
+  setup and backup verification. Pages uses one shared stylesheet, internal guide
+  navigation and an expanded sitemap; release and current-main features are distinct.
+- Separate local planning under `.planning/` from product documentation; preserve
+  earlier tracked plans locally and remove them from public sources. Repository
+  guidance documents the boundary, and Pages stages only approved product paths.
+  Ignore agent worktrees and test artifacts without hiding public examples or tests.
+
 ### Added
 
 - **OCR diagnostics and status check**: `lixity research ocr-status` CLI command and
   `/api/research/ocr-status` HTTP endpoint diagnosing poppler tools (`pdftoppm`, `pdftotext`),
-  worker executable permissions, model snapshot integrity, and actionable setup guidance.
-  Included in the research panel status bar with interactive status badge.
+  worker executable permissions, configured model identifiers, and actionable setup guidance.
+  Included in the research panel status bar. It does not verify model integrity or inference.
 - **Staged import progress and native PDF upload**: Base64 binary PDF ingestion directly
   through the browser dashboard with step-by-step progress feedback (`Reading file…` ->
   `Extracting text and passages…` -> `Complete`), button locking during ingestion, and

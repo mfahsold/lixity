@@ -26,6 +26,35 @@ localization and UI components over parallel implementations.
 - Validate the affected behavior and report what was actually tested. For UI
   changes, inspect rendered desktop and mobile states, not just HTML strings.
 
+## Product, documentation and local work
+
+- Commit product code, relevant tests, reusable tooling and maintained product
+  documentation only. Keep task plans, session notes, agent handoffs and local
+  review logs in ignored `.planning/` or `/tmp`, never under `docs/`.
+- Keep private manuscripts, source archives, backup bundles and credentials in
+  their project storage outside this repository. `.planning/` is not a vault
+  for private source material or secrets. Use `.artifacts/` or `/tmp` for local
+  screenshots, traces and test output; publish only reviewed synthetic examples.
+- `AGENTS.md` governs repository work; `docs/AGENTS.md` documents the product's
+  automation interface. `CONTRIBUTING.md` explains contributor workflows. Extend
+  these existing entrypoints instead of creating competing instruction trees.
+- Product docs explain current behavior, limitations, installation, interfaces
+  and durable architecture decisions. Label RFC proposals and current-main
+  additions explicitly; do not present execution checklists as user guidance.
+- Reuse the shared pipeline, research API, UI label packs and Pages stylesheet.
+  Consolidate touched behavior only when it removes a concrete inconsistency;
+  avoid unrelated rewrites or parallel abstractions.
+- Keep README, command references, changelog, HTML guides and `llms.txt` aligned
+  when behavior changes. Use `scripts/sync_docs.py` for release pins. A source
+  change does not authorize a release or imply that a running service restarted.
+- Pages publishes an explicit set via `scripts/stage_pages.py`; update that
+  boundary deliberately when adding public documentation. Inspect generated
+  output, local links, desktop/mobile rendering and version claims.
+- Before committing, inspect both `git diff --cached --name-status` and
+  `git diff --cached`. Stage explicit product paths; do not force-add ignored
+  planning or assume `.gitignore` removes already tracked files. Preserve local
+  planning before removing it from the tracked/public tree.
+
 Typical checks: `make check`; optional browser checks are documented in
 `tests/browser/README.md`. Setup is in `docs/INSTALLATION.md`, architecture in
 `docs/ARCHITECTURE.md`, and automation contracts in `docs/AGENTS.md`.
