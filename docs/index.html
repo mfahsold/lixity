@@ -98,7 +98,7 @@
     <nav class="site-nav">
       <a href="guides/installation.html">Onboarding Guide</a>
       <a href="#guides">Guides</a>
-      <a href="#editorial-matrix">Macro-Editing Matrix</a>
+      <a href="#core-pillars">What you can do</a>
       <a href="#research-workspace">Research &amp; Citations</a>
       <a href="#visual-suite">Screenshots</a>
       <a href="#cli-api">CLI &amp; API</a>
@@ -122,7 +122,7 @@
       Manuscript Analysis &amp; <span class="gradient">Local Research</span>
     </h1>
     <p class="hero-sub">
-      Lixity turns Markdown manuscripts into an offline analysis workspace. Compare chapters against patterns in the same manuscript and inspect sentence rhythm and tense signals in context. The local research workspace preserves sources, citations and author decisions. PDF text extraction uses local tools; scanned PDFs need a separately configured OCR worker.
+      Lixity helps authors examine their Markdown manuscripts and keep the research behind their books organized. Work locally, inspect results alongside the text and keep editorial judgment in your hands.
     </p>
     <div class="hero-cta">
       <a class="btn primary" href="guides/installation.html">
@@ -138,10 +138,6 @@
       <span class="badge-pill">Local Manuscript Analysis</span>
       <span class="badge-pill">No Cloud Calls in Core Analysis</span>
       <span class="badge-pill">7 UI Languages &middot; Deepest Heuristics in English and German</span>
-      <span class="badge-pill">Within-Manuscript Median/MAD Baseline</span>
-      <span class="badge-pill">Multiple-Comparison Procedures (BH/BY)</span>
-      <span class="badge-pill">Experimental Pilot: SQLite FTS5 Search</span>
-      <span class="badge-pill">Experimental Pilot: Passage Citations</span>
     </div>
   </section>
 
@@ -149,6 +145,52 @@
   <div class="notice-box">
     <strong>Licensing Notice:</strong> Lixity is source-available under LNCL-1.0 and free for projects with no commercial purpose. Research and education are not blanket exemptions for commercial projects. Manuscripts or books intended <strong>for sale</strong> (including commercial publishing, self-publishing, and print-on-demand) require a separate written commercial license. <a href="#licensing">Details &amp; Inquiries</a>.
   </div>
+
+  <!-- Task overview; retain the existing anchor for incoming links. -->
+  <section id="core-pillars">
+    <div class="section-header">
+      <span class="section-tag">Writing and research</span>
+      <h2 class="section-title">Explore your manuscript. Keep your research traceable.</h2>
+      <p class="section-desc">Examine the language of your text, compare chapters and connect research with the decisions behind your book.</p>
+    </div>
+    <div class="pillars-grid">
+      <article class="pillar-card">
+        <h3 class="pillar-title">Understand your writing</h3>
+        <p class="pillar-body">Explore sentence rhythm, vocabulary, dialogue and tense in your manuscript. Read the passages behind the results to judge what matters for your text.</p>
+        <a href="guides/interpretation.html#editorial-matrix">Explore the language signals</a>
+      </article>
+      <article class="pillar-card">
+        <h3 class="pillar-title">Compare your chapters</h3>
+        <p class="pillar-body">See how chapters differ from the rest of your manuscript. Compare their language patterns and examine where those patterns change as the book progresses.</p>
+        <a href="guides/interpretation.html#consistency">Understand chapter comparisons</a>
+      </article>
+      <article class="pillar-card">
+        <h3 class="pillar-title">Connect research and decisions</h3>
+        <p class="pillar-body">Bring selected sources from Zotero or local files into your research workspace. Link passages to claims, build dossiers and record the reasoning behind your authorial decisions.</p>
+        <p class="research-status">Experimental research workspace</p>
+        <a href="guides/research-pdf.html">Follow the source-to-decision workflow</a>
+      </article>
+    </div>
+    <p>Lixity runs locally. Analysis highlights patterns for human review; it does not grade literary quality or establish whether a claim is true.</p>
+  </section>
+
+  <section id="editorial-matrix">
+    <div class="section-header">
+      <h2 class="section-title">Read a change in context</h2>
+      <p class="section-desc">A chapter of short dialogue may look very different from a descriptive passage. The comparison helps you locate that change; reading the text tells you whether it serves the story.</p>
+    </div>
+    <p>Open the relevant paragraphs and add a work marker if you want to revisit them. Review notes stay near their passages in the manuscript.</p>
+    <p><a href="guides/interpretation.html#review">Follow a practical review loop</a> · <a href="guides/interpretation.html#editorial-matrix">Look up a metric and its limits</a></p>
+  </section>
+
+  <section id="research-workspace">
+    <div class="section-header">
+      <h2 class="section-title">Keep the evidence behind a decision</h2>
+      <p class="section-desc">A source dates an event to 1923, but your story moves it to 1924. Keep the source passage, link it to the historical claim and record why you chose a different date. The evidence and the fictional decision remain distinct.</p>
+    </div>
+    <p>The experimental workspace retains selected PDF/text sources and revision history. Zotero can manage your source catalogue; Lixity connects retained passages with your dossiers, claims and decisions.</p>
+    <p><a href="guides/research-pdf.html#zotero">Connect Zotero</a> · <a href="guides/research-pdf.html#cli-workflow">Work through the CLI example</a> · <a href="guides/research-pdf.html#backup">Back up your research</a></p>
+  </section>
 
   <section id="guides">
     <h2>Start with a practical guide</h2>
@@ -159,266 +201,6 @@
       <article><h3><a href="guides/research-pdf.html">Archive sources, PDFs and citations</a></h3><p>Record an origin URL, distinguish native PDFs from scans, configure OCR and test a backup.</p></article>
     </div>
     <p><strong>New in v1.19.0:</strong> local Zotero collection browsing and evidence capture, current-record research search, additive migration and verified paired backups. See the <a href="releases/v1.19.0.md">release notes</a> for scope and compatibility.</p>
-  </section>
-
-  <!-- SECTION 1: THE 5 CORE PILLARS -->
-  <section id="core-pillars">
-    <div class="section-header">
-      <span class="section-tag">Architecture &amp; Foundations</span>
-      <h2 class="section-title">The 5 Core Pillars of Lixity</h2>
-      <p class="section-desc">Lixity combines manuscript analysis and dashboard views. An explicit-project research workspace is integrated in v1.19.0.</p>
-    </div>
-
-    <div class="pillars-grid">
-      <!-- Pillar 1 -->
-      <article class="pillar-card">
-        <div class="pillar-num">Pillar 01</div>
-        <div class="pillar-icon">📊</div>
-        <h3 class="pillar-title">Stylistics &amp; Corpus Diagnostics</h3>
-        <p class="pillar-body">
-          Descriptive measures of sentence architecture include Average Sentence Length (ASL), rhythm Coefficient of Variation (CV), four length tiers, language-specific readability formula variants, and lexical diversity indices (HD-D, MTLD, Yule's K, Maas a²). Minimum token counts reduce unstable short-text results; the indices are not length-invariant.
-        </p>
-        <div class="pillar-tags">
-          <span class="pillar-tag">ASL / CV</span>
-          <span class="pillar-tag">HD-D / MTLD</span>
-          <span class="pillar-tag">Yule's K</span>
-          <span class="pillar-tag">Flesch-Amstad</span>
-        </div>
-      </article>
-
-      <!-- Pillar 2 -->
-      <article class="pillar-card">
-        <div class="pillar-num">Pillar 02</div>
-        <div class="pillar-icon">⏱️</div>
-        <h3 class="pillar-title">Dramaturgy &amp; Tense Profiling</h3>
-        <p class="pillar-body">
-          Paragraph-level heuristics locate present/past patterns and assign a tense-mixture friction rating (0&ndash;3). Dialogue ratios, turn lengths and pacing indicators offer additional context. These signals cannot determine whether a tense shift is intentional or measure dramatic tension; inspect the surrounding prose.
-        </p>
-        <div class="pillar-tags">
-          <span class="pillar-tag">Present / Past</span>
-          <span class="pillar-tag">Friction 0–3</span>
-          <span class="pillar-tag">Dialogue Turns</span>
-          <span class="pillar-tag">Pacing Hooks</span>
-        </div>
-      </article>
-
-      <!-- Pillar 3 -->
-      <article class="pillar-card">
-        <div class="pillar-num">Pillar 03</div>
-        <div class="pillar-icon">🎯</div>
-        <h3 class="pillar-title">Robust 3D Style Space</h3>
-        <p class="pillar-body">
-          Compare chapters against the same manuscript using median &plusmn; 2σ reference bands (σ = 1.4826 MAD) and noise-adjusted z* deviations. Benjamini–Hochberg or Benjamini–Yekutieli procedures select cells for review under statistical assumptions. A 3D projection summarizes feature relationships; its axes are not established narrative categories.
-        </p>
-        <div class="pillar-tags">
-          <span class="pillar-tag">Median ± 2σ</span>
-          <span class="pillar-tag">z* Shrinkage</span>
-          <span class="pillar-tag">BH/BY FDR</span>
-          <span class="pillar-tag">3D Jacobi-EVD</span>
-        </div>
-      </article>
-
-      <!-- Pillar 4 -->
-      <article class="pillar-card">
-        <div class="pillar-num">Pillar 04</div>
-        <div class="pillar-icon">📖</div>
-        <h3 class="pillar-title">Shared Project Integration</h3>
-        <p class="pillar-body">
-          Reuse the analysis pipeline, versioned JSON and interactive dashboard in an explicit project. Work markers keep review notes near their passages. Typesetting, PDF/EPUB publication, recipient delivery and encrypted NDA storage belong to separate project adapters; they are not bundled core services.
-        </p>
-        <div class="pillar-tags">
-          <span class="pillar-tag">Python API</span>
-          <span class="pillar-tag">Explicit Configuration</span>
-          <span class="pillar-tag">Reusable Dashboard</span>
-          <span class="pillar-tag">Adapter Boundary</span>
-        </div>
-      </article>
-
-      <!-- Pillar 5 -->
-      <article class="pillar-card highlight">
-        <div class="pillar-num">Pillar 05 &middot; Workspace</div>
-        <div class="pillar-icon">🔍</div>
-        <h3 class="pillar-title">Research &amp; Source Archive</h3>
-        <p class="pillar-body">
-          The explicit-project source archive stores UTF-8 and PDF byte hashes, user-supplied context, searchable passages, citations, manual claims and authorial decisions with immutable revision history and offline diagram rendering. It supports controlled withdrawal and purge; it does not verify historical truth.
-        </p>
-        <div class="pillar-tags">
-          <span class="pillar-tag">SHA-256 Blobs</span>
-          <span class="pillar-tag">Source Criticism</span>
-          <span class="pillar-tag">SQLite FTS5</span>
-          <span class="pillar-tag">Passage Citations</span>
-        </div>
-      </article>
-    </div>
-  </section>
-
-  <!-- SECTION 2: EDITORIAL MACRO-EDITING MATRIX -->
-  <section id="editorial-matrix">
-    <div class="section-header">
-      <span class="section-tag">Practical Macro-Editing</span>
-      <h2 class="section-title">Macro-Editing Matrix &amp; Editorial Heuristics</h2>
-      <p class="section-desc">Statistical metrics are not an objective quality score or an instruction to rewrite prose. They point to passages a human reader may want to inspect. FDR results depend on model assumptions and do not guarantee a fixed false-positive rate for every manuscript.</p>
-    </div>
-
-    <div class="feature-table-wrapper">
-      <table class="editorial-table">
-        <thead>
-          <tr>
-            <th style="width: 22%;">Linguistic Feature</th>
-            <th style="width: 18%;">Calculation &amp; Signal</th>
-            <th style="width: 32%;">Editorial Role &amp; Application</th>
-            <th style="width: 28%;">Context to Check</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr>
-            <td><strong>Sentence Rhythm &amp; Length Tiers</strong></td>
-            <td><span class="tech-metric">ASL, rhythm CV, staccato (&le;6w), hypotaxis (&gt;25w)</span></td>
-            <td class="editorial-callout">
-              <strong>Pacing:</strong> Sentence-length variation can draw attention to shifts between action, dialogue and reflection.
-            </td>
-            <td>Low or high CV and changes in long-sentence frequency invite a read of the passage; neither implies good or bad prose.</td>
-          </tr>
-          <tr>
-            <td><strong>Lexical Diversity</strong></td>
-            <td><span class="tech-metric">Hypergeometric HD-D (McCarthy &amp; Jarvis), MTLD, Yule's K</span></td>
-            <td class="editorial-callout">
-              <strong>Vocabulary Pattern:</strong> These measures reduce some length sensitivity compared with raw TTR, subject to token floors and corpus context.
-            </td>
-            <td>A later change may prompt a look at repetition, dialogue mix or topic shifts; it does not identify author fatigue or a quality problem.</td>
-          </tr>
-          <tr>
-            <td><strong>Tense Continuity &amp; Friction</strong></td>
-            <td><span class="tech-metric">Present, past, friction rating 0&ndash;3</span></td>
-            <td class="editorial-callout">
-              <strong>Timeline &amp; Perspective:</strong> Heuristic labels help locate tense changes at paragraph scale.
-            </td>
-            <td>Higher friction may merit a check of quotation, dialogue, flashback or deliberate perspective shifts before treating it as an error.</td>
-          </tr>
-          <tr>
-            <td><strong>Perception &amp; Exposition Patterns</strong></td>
-            <td><span class="tech-metric">Perception verbs, passive voice, nominal style</span></td>
-            <td class="editorial-callout">
-              <strong>Register:</strong> Word-pattern counts highlight possible changes in viewpoint or exposition.
-            </td>
-            <td>Read passages in context; these constructions can be deliberate and their counts do not measure immersion.</td>
-          </tr>
-          <tr>
-            <td><strong>FDR Heatmap</strong></td>
-            <td><span class="tech-metric">Noise-aware z* shrinkage, Benjamini-Hochberg (●), Cliff's &delta;</span></td>
-            <td class="editorial-callout">
-              <strong>Statistical Review:</strong> A dot marks a cell passing the configured FDR procedure under its assumptions. Effect size adds context.
-            </td>
-            <td>Read flagged passages in context; a flag neither proves a defect nor calls for a rewrite. Unflagged passages can still matter artistically.</td>
-          </tr>
-          <tr>
-            <td><strong>Structural &amp; Drift Diagnostics</strong></td>
-            <td><span class="tech-metric">PELT changepoints (BIC), Mann-Kendall &tau;, Wasserstein-KS</span></td>
-            <td class="editorial-callout">
-              <strong>Narrative Structure:</strong> These measures locate changes and trends in the selected features.
-            </td>
-            <td>A change point can prompt review of scene, character or chapter context; it does not identify an author handover or its cause.</td>
-          </tr>
-          <tr>
-            <td><strong>Persistent Work Markers</strong></td>
-            <td><span class="tech-metric">&lt;!-- LIXITY-MARKER id="..." kind="pruefen" --&gt;</span></td>
-            <td class="editorial-callout">
-              <strong>Traceable Editorial Annotations:</strong> Notes remain anchored near the target paragraph in Markdown. Export treatment is controlled by the project adapter.
-            </td>
-            <td>Content hashes identify the originally marked paragraph; review anchors after manuscript edits.</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-  </section>
-
-  <!-- SECTION 3: RESEARCH WORKSPACE & CITATION CHAIN -->
-  <section id="research-workspace">
-    <div class="research-container">
-      <div class="research-badge-strip">
-        <span class="research-badge">Research Workspace in v1.19.0</span>
-        <span class="badge-pill">Checksum-Addressed Source Storage</span>
-        <span class="badge-pill">Cultural Source Criticism</span>
-        <span class="badge-pill">Retained-Text Passage Citations</span>
-        <span class="badge-pill">SQLite FTS5 Full-Text Search</span>
-      </div>
-
-      <h2 style="font-family: var(--serif); font-size: 2.1rem; margin: 0 0 0.8rem; color: var(--fg-heading);">
-        Local Research &amp; Traceable Passage Citations
-      </h2>
-      <p style="color: var(--muted); font-size: 1.05rem; line-height: 1.6; margin: 0 0 1.5rem; max-width: 54rem;">
-        The experimental research pilot keeps archived source bytes, user-supplied context, manuscript text, and authorial records separate. It helps writers trace a passage behind a claim and record why they made a narrative decision. Sources and claim labels remain material for human review, not certified facts.
-      </p>
-
-      <div class="research-grid">
-        <div class="research-item">
-          <h3>1. Retained Source Archive</h3>
-          <p>Local UTF-8 text or original PDF bytes are retained with SHA-256 digests after explicit <code>--allow-retention</code> confirmation. Retention does not grant redistribution rights.</p>
-        </div>
-        <div class="research-item">
-          <h3>2. Versioned Source Criticism</h3>
-          <p>Stores user-supplied creation period, depicted period, place, genre, perspective, translation status, provenance note, and tags without changing the source bytes.</p>
-        </div>
-        <div class="research-item">
-          <h3>3. Verifiable Passage Citations</h3>
-          <p>Archived passages have UUIDs and Unicode character offsets. Authors may create claims separately, then link a passage as supporting, contradicting, qualifying, or contextual evidence. A link does not prove a claim.</p>
-        </div>
-        <div class="research-item">
-          <h3>4. Governed Lifecycle</h3>
-          <p>Withdrawal excludes a source from current search while preserving citation history. Purge removes retained records and unshared source bytes; a dry run previews the effect. Authorial decisions can mark an intentional departure from evidence.</p>
-        </div>
-      </div>
-
-      <figure class="shot" style="margin-top: 1.5rem;">
-        <img width="1152" height="1085" src="screenshots/dashboard-research-claims.png" alt="Claims and evidence panel with a synthetic dossier-linked claim and verified passage citation" loading="lazy" decoding="async"/>
-        <figcaption><strong>Claims and evidence:</strong> Inspect full source and dossier details, choose search passages for a claim or dossier, and record links without treating them as verified facts. View the <a href="screenshots/dashboard-research-claims-mobile.png">mobile claims panel</a>, <a href="screenshots/dashboard-research-decisions.png">authorial decisions</a>, or <a href="screenshots/dashboard-research-decisions-mobile.png">mobile decisions panel</a>.</figcaption>
-      </figure>
-
-      <h3 style="margin: 2rem 0 0.6rem; font-size: 1.15rem; color: var(--fg-heading);">Terminal Research Workflow (CLI)</h3>
-      <p>This illustrative workflow assumes locally saved, authorized source files. Replace example paths and UUID placeholders with your files and the identifiers returned by preceding commands. Initialize an archive only once.</p>
-      <pre class="cmd-block"># 1. Initialize a dedicated research workspace
-lixity research init --project ./novel-research --title "1920s Archive" --language en
-
-# 2. Ingest primary source with cultural source criticism and explicit retention
-lixity research ingest --project ./novel-research --file ./sources/police_log_1923.txt \
-  --context '{"genre": "Police Log", "created_period": "1923", "place": "Hamburg", "provenance_note": "State Archives"}' \
-  --allow-retention
-
-# 3. Build SQLite FTS5 lexical index
-lixity research reindex --project ./novel-research
-
-# 4. Search source passages; add --scope all for current authored records
-lixity research search --project ./novel-research --query "dockyard customs" --limit 5
-
-# 5. Resolve a passage citation (paragraph, exact offset, source metadata)
-lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-HERE
-
-# 6. Run linguistic source analysis and generate standalone source dashboard
-lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE
-lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE &gt; source_report.html
-
-# 7. Compare source and manuscript vocabulary; create a dossier
-lixity research compare --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --manuscript ./manuscript.md
-lixity research dossier --project ./novel-research --title "Harbor Evidence" --file "Summary..." --tags "harbor"
-
-# 8. Record a claim, passage relation, and authorial decision
-lixity research claim --project ./novel-research --title "Harbor opening" --statement "The harbor opened in 1923." --confidence hypothetical
-lixity research link-evidence --project ./novel-research --claim-id urn:uuid:CLAIM-UUID-HERE --passage-id urn:uuid:PASSAGE-UUID-HERE --relation supports
-lixity research decision --project ./novel-research --title "Shift opening date" --rationale "Narrative chronology" --claim-id urn:uuid:CLAIM-UUID-HERE --deviation-from-fact
-
-# 9. Open the interactive research dashboard
-lixity serve --research-project ./novel-research --no-project
-
-# 10. Audit repository integrity and snapshot checksums
-lixity research audit --project ./novel-research</pre>
-
-      <p style="margin: 1.2rem 0 0; font-size: 0.88rem; color: var(--subtle);">
-        In the server UI, Open Project offers Browse files and folders for paths on the computer running Lixity. Browse from the server user's home, use Home or Parent folder, select a manuscript or the current folder, then confirm with Open; a typed path also works. Opening reconnects the original workspace and its research archive, including a research-only folder without a manuscript. Manuscript comparison needs a manuscript; browser file import creates a separate project from its bytes. Welcome guidance can be hidden and reopened without hiding the project controls. Source and dossier details, direct search-to-evidence actions, and dossier-linked claims are available in the v1.19.0 research workspace. <strong>Included in v1.19.0:</strong> optional Zotero Desktop integration adds collection browsing, selected PDF/text capture, explicit refresh and original-item links. Media management stays in Zotero; Lixity preserves evidence and authored decisions. Zotero must run on the same computer as the Lixity server for browsing or refresh; retained evidence remains accessible when Zotero is closed. There is no automatic background synchronization or audio/video transcription. Additive migration export and paired backup tools are available; migration is explicit and does not remove archive history. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research commands</a> and the broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a>.
-      </p>
-      <p style="margin: 0.6rem 0 0; font-size: 0.88rem; color: var(--subtle);">
-        Source/manuscript comparison uses chapter prose without headings, front matter or the configured appendix. Cross-language lexical scores remain numeric but carry an explicit comparability warning; they are not a factual or linguistic-equivalence verdict.
-      </p>
-    </div>
   </section>
 
   <!-- SECTION 4: VISUAL ANALYTICAL SUITE (SCREENSHOTS) -->
@@ -558,6 +340,8 @@ lixity research audit --project ./novel-research</pre>
       <h2 class="section-title">CLI Commands &amp; Python API for AI Agents</h2>
       <p class="section-desc">Lixity offers deterministic, versioned JSON contracts (analyze/profile <code>v2</code>, style <code>v4</code>) and stable POSIX exit codes for autonomous coding and editing agents.</p>
     </div>
+    <p>Integrate the shared analysis pipeline and dashboard into an explicit project through the Python API and versioned JSON. Reuse the same analysis across command-line and browser workflows.</p>
+    <p>Typesetting, PDF/EPUB publication, recipient delivery and encrypted NDA storage belong to separate project adapters; they are not bundled Lixity services. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">integration architecture</a>.</p>
 
     <div class="card">
       <h3 style="margin-top: 0; color: var(--fg-heading);">Command-Line Interface (CLI)</h3>

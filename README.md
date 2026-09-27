@@ -68,18 +68,20 @@ Documentation on `main` may describe newer changes; use the
 [tagged documentation](https://github.com/mfahsold/lixity/tree/v1.19.0/docs) for
 the released package and [changelog](CHANGELOG.md) for subsequent changes.
 
-## Analysis and research capabilities
+## What you can do
 
-Lixity combines text analysis and dashboard presentation. The optional local
-research archive is a separate, explicit-project experimental API.
+Explore your manuscript and keep your research traceable.
 
-| Pillar | Scope | Core Techniques & Features |
+| Task | What Lixity helps you do | Learn more |
 | :--- | :--- | :--- |
-| **01. Stylistics & Corpus Diagnostics** | Macro & micro sentence architecture | ASL, rhythm CV, 4 sentence-length tiers, language-specific readability formula variants, and lexical diversity measures (HD-D, MTLD, Yule's K, Maas a²). |
-| **02. Narrative & Tense Heuristics** | Paragraph-level review signals | Tense classification (present, past, mixed, neutral), 4-tier friction severity rating (0–3), speech ratios, dialogue turns, scene pacing curves, and chapter tension hooks. |
-| **03. Robust 3D Style Space** | Self-calibrating manuscript baseline | Manuscript-intrinsic median ± 2σ corridor (σ = 1.4826 MAD), noise-aware z\* shrinkage, Benjamini–Hochberg / BY FDR multiplicity control, cyclic Jacobi EVD, and interactive 3D trajectory. |
-| **04. Project integration** | Shared analysis and dashboard building blocks | Explicit configuration, versioned JSON, work markers and reusable UI. Typesetting, EPUB/PDF publication and delivery belong to separate project adapters, not the core package. |
-| **05. Research pilot (experimental)** | Local source archive and passage citations | SHA-256-verified original and extracted source bytes, source criticism, SQLite FTS5 search, optional Zotero capture, dossiers, manual claims, evidence links, and author decisions. |
+| **Understand your writing** | Explore sentence rhythm, vocabulary, dialogue and tense. Read the passages behind the results to judge what matters for your text. | [Language signals and their limits](https://mfahsold.github.io/lixity/guides/interpretation.html#editorial-matrix) |
+| **Compare your chapters** | See how chapters differ from the rest of the manuscript and where language patterns change as the book progresses. | [Chapter comparisons](https://mfahsold.github.io/lixity/guides/interpretation.html#consistency) |
+| **Connect research and decisions** | Bring selected sources from Zotero or local files into the experimental research workspace. Link passages to claims, build dossiers and record the reasoning behind authorial decisions. | [Research workflow](https://mfahsold.github.io/lixity/guides/research-pdf.html) |
+
+Lixity runs locally. Analysis highlights patterns for human review; it does not
+grade literary quality or establish whether a claim is true. Work markers keep
+review notes near their passages. For shared pipeline, Python API and dashboard
+integration, see [Architecture and project adapters](#architecture-and-project-adapters).
 
 ## Mathematical Core
 

@@ -360,7 +360,7 @@ p.section-desc {
   max-width: 52rem;
 }
 
-/* 5 Core Pillars Grid */
+/* Task overview; class names retained for the shared site layout. */
 .pillars-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(min(100%, 21rem), 1fr));
@@ -414,6 +414,7 @@ p.section-desc {
   margin: 0 0 1.2rem;
   flex: 1 0 auto;
 }
+.research-status { color: var(--muted); font-size: .85rem; margin: 0 0 .8rem; }
 .pillar-tags {
   display: flex;
   flex-wrap: wrap;

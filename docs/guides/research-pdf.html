@@ -83,6 +83,44 @@ lixity research search --project ./restored-sample --query "reading room"</code>
 
 <p><strong>Included in v1.19.0:</strong> <code>research zotero-backup</code> pairs the research archive with an explicitly selected, closed Zotero data directory. <code>research zotero-restore</code> verifies the file inventory and checksums before restoring both into a new directory. It never overwrites a working library. The closure confirmation is your responsibility; the command does not stop Zotero or guarantee that it is closed. Manuscripts, application profiles and external linked attachments require separate backup. Open the restored library separately and resolve a known citation before relying on the backup. Consult the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">command reference</a> before relying on the pair as your recovery plan.</p>
 
+<h2 id="cli-workflow">From a source to an authorial decision: CLI workflow</h2>
+      <p>This illustrative workflow assumes locally saved, authorized source files. Replace example paths and UUID placeholders with your files and the identifiers returned by preceding commands. Initialize an archive only once. The dossier command reads a UTF-8 Markdown file; prepare <code>./sources/harbor-dossier.md</code> before that step.</p>
+      <pre><code># 1. Initialize a dedicated research workspace
+lixity research init --project ./novel-research --title "1920s Archive" --language en
+
+# 2. Ingest primary source with cultural source criticism and explicit retention
+lixity research ingest --project ./novel-research --file ./sources/police_log_1923.txt \
+  --context '{"genre": "Police Log", "created_period": "1923", "place": "Hamburg", "provenance_note": "State Archives"}' \
+  --allow-retention
+
+# 3. Build SQLite FTS5 lexical index
+lixity research reindex --project ./novel-research
+
+# 4. Search source passages; add --scope all for current authored records
+lixity research search --project ./novel-research --query "dockyard customs" --limit 5
+
+# 5. Resolve a passage citation (paragraph, exact offset, source metadata)
+lixity research cite --project ./novel-research --passage urn:uuid:PASSAGE-UUID-HERE
+
+# 6. Run linguistic source analysis and generate standalone source dashboard
+lixity research analyze --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE
+lixity research dashboard --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE &gt; source_report.html
+
+# 7. Compare source and manuscript vocabulary; create a dossier
+lixity research compare --project ./novel-research --source-id urn:uuid:SOURCE-UUID-HERE --manuscript ./manuscript.md
+lixity research dossier --project ./novel-research --title "Harbor Evidence" --file ./sources/harbor-dossier.md --tags "harbor"
+
+# 8. Record a claim, passage relation, and authorial decision
+lixity research claim --project ./novel-research --title "Harbor opening" --statement "The harbor opened in 1923." --confidence hypothetical
+lixity research link-evidence --project ./novel-research --claim-id urn:uuid:CLAIM-UUID-HERE --passage-id urn:uuid:PASSAGE-UUID-HERE --relation supports
+lixity research decision --project ./novel-research --title "Shift opening date" --rationale "Narrative chronology" --claim-id urn:uuid:CLAIM-UUID-HERE --deviation-from-fact
+
+# 9. Open the interactive research dashboard
+lixity serve --research-project ./novel-research --no-project
+
+# 10. Audit repository integrity and snapshot checksums
+lixity research audit --project ./novel-research</code></pre>
+
 <h2 id="limits">Input and research limits</h2>
 <p>Text inputs must be nonempty UTF-8 without NUL bytes, at most 2 MiB; PDFs are at most 50 MiB. Both imports are limited to 5,000 nonempty extracted passages. Search is lexical SQLite FTS5/BM25, not semantic retrieval or translation. A source refresh does not update authored claims or decisions automatically.</p>
 <p>See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research reference</a> for CLI/API details. The broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a> includes unimplemented interfaces. Read <a href="interpretation.html">metric interpretation</a> before comparing a source with a manuscript.</p>

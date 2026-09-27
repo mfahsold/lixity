@@ -9,6 +9,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Changed
 
+- Reorganized the website and README around manuscript exploration, chapter
+  comparison and traceable research. Moved detailed review signals and the
+  research CLI walkthrough into the corresponding guides; integration details
+  remain with the developer interfaces.
 - Harmonized dashboard and Pages action colors, neutral surfaces and local title
   fonts. Increased reading-text and primary-control sizes, strengthened keyboard
   focus and active-tab cues, and respected reduced motion on Pages.

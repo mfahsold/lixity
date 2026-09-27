@@ -49,6 +49,79 @@
 </ol>
 <p>For example, a synthetic chapter consisting of short dialogue may differ sharply from a descriptive chapter. That contrast can be intentional. Neither moving both toward a common average nor maximizing consistency is a general writing objective.</p>
 
+<h2 id="editorial-matrix">Signals and questions for review</h2>
+<p>Use this reference to connect a measurement with a question to investigate. None of these signals establishes a writing defect.</p>
+<div class="feature-table-wrapper">
+      <table class="editorial-table">
+        <thead>
+          <tr>
+            <th style="width: 22%;">Linguistic Feature</th>
+            <th style="width: 18%;">Calculation &amp; Signal</th>
+            <th style="width: 32%;">Editorial Role &amp; Application</th>
+            <th style="width: 28%;">Context to Check</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Sentence Rhythm &amp; Length Tiers</strong></td>
+            <td><span class="tech-metric">ASL, rhythm CV, staccato (&le;6w), very long (&gt;25w)</span></td>
+            <td class="editorial-callout">
+              <strong>Pacing:</strong> Sentence-length variation can draw attention to shifts between action, dialogue and reflection.
+            </td>
+            <td>Low or high CV and changes in long-sentence frequency invite a read of the passage; neither implies good or bad prose.</td>
+          </tr>
+          <tr>
+            <td><strong>Lexical Diversity</strong></td>
+            <td><span class="tech-metric">Hypergeometric HD-D (McCarthy &amp; Jarvis), MTLD, Yule's K</span></td>
+            <td class="editorial-callout">
+              <strong>Vocabulary Pattern:</strong> These measures reduce some length sensitivity compared with raw TTR, subject to token floors and corpus context.
+            </td>
+            <td>A later change may prompt a look at repetition, dialogue mix or topic shifts; it does not identify author fatigue or a quality problem.</td>
+          </tr>
+          <tr>
+            <td><strong>Tense Continuity &amp; Friction</strong></td>
+            <td><span class="tech-metric">Present, past, friction rating 0&ndash;3</span></td>
+            <td class="editorial-callout">
+              <strong>Timeline &amp; Perspective:</strong> Heuristic labels help locate tense changes at paragraph scale.
+            </td>
+            <td>Higher friction may merit a check of quotation, dialogue, flashback or deliberate perspective shifts before treating it as an error.</td>
+          </tr>
+          <tr>
+            <td><strong>Perception &amp; Exposition Patterns</strong></td>
+            <td><span class="tech-metric">Perception verbs, passive voice, nominal style</span></td>
+            <td class="editorial-callout">
+              <strong>Register:</strong> Word-pattern counts highlight possible changes in viewpoint or exposition.
+            </td>
+            <td>Read passages in context; these constructions can be deliberate and their counts do not measure immersion.</td>
+          </tr>
+          <tr>
+            <td><strong>FDR Heatmap</strong></td>
+            <td><span class="tech-metric">Noise-aware z* shrinkage, Benjamini-Hochberg (●), Cliff's &delta;</span></td>
+            <td class="editorial-callout">
+              <strong>Statistical Review:</strong> A dot marks a cell passing the configured FDR procedure under its assumptions. Effect size adds context.
+            </td>
+            <td>Read flagged passages in context; a flag neither proves a defect nor calls for a rewrite. Unflagged passages can still matter artistically.</td>
+          </tr>
+          <tr>
+            <td><strong>Structural &amp; Drift Diagnostics</strong></td>
+            <td><span class="tech-metric">PELT changepoints (BIC), Mann-Kendall &tau;, Wasserstein-KS</span></td>
+            <td class="editorial-callout">
+              <strong>Narrative Structure:</strong> These measures locate changes and trends in the selected features.
+            </td>
+            <td>A change point can prompt review of scene, character or chapter context; it does not identify an author handover or its cause.</td>
+          </tr>
+          <tr>
+            <td><strong>Persistent Work Markers</strong></td>
+            <td><span class="tech-metric">&lt;!-- LIXITY-MARKER id="..." kind="pruefen" --&gt;</span></td>
+            <td class="editorial-callout">
+              <strong>Traceable Editorial Annotations:</strong> Notes remain anchored near the target paragraph in Markdown. Export treatment is controlled by the project adapter.
+            </td>
+            <td>Content hashes identify the originally marked paragraph; review anchors after manuscript edits.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
 <h2 id="fdr">Does FDR make a flagged passage objectively wrong?</h2>
 <p>No. Benjamini–Hochberg and Benjamini–Yekutieli address multiple statistical comparisons under their assumptions. They do not assess prose quality or establish that every flagged cell represents a meaningful problem. Dependence, small samples, constant features and uncertainty estimates affect interpretation. The baseline diagnostics expose some of these limitations; they do not remove them.</p>
 
