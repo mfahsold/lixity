@@ -276,9 +276,11 @@ Read the [release notes](docs/releases/v1.17.0.md) for scope, compatibility, and
   decisions directly in the web UI and CLI. Corrections and supersessions preserve logical IDs
   and historical citations; concurrent edits are protected against stale overwrites.
 - **Self-hosted Baidu Unlimited-OCR boundary:** ingest PDF documents with dual-blob retention
-  (original PDF bytes + extracted plain text). Pinned to official model snapshot `07dea832e22aefee32ad281d4b80551282e1c168`
-  and recipe revision `d49ff64afffc1f47ab563dc1c589bc2f78808fa4`, with physical page mapping via `pdftoppm`
-  and isolated worker execution.
+  (original PDF bytes + extracted plain text). The boundary requests model snapshot
+  `07dea832e22aefee32ad281d4b80551282e1c168` and Baidu source revision
+  `d49ff64afffc1f47ab563dc1c589bc2f78808fa4`. A separately deployed adapter must
+  implement the worker protocol; these identifiers do not attest which model ran.
+  See the [upstream integration assessment](docs/research/OCR_INTEGRATION.md).
 - **Safe Markdown & offline diagram rendering:** dossier bodies render headings, tables, blockquotes,
   and lists safely. Fenced Mermaid code blocks (`graph TD/LR`, `sequenceDiagram`) render as native inline SVGs
   entirely client-side without external network requests or CDNs, complete with inspectable source toggles.

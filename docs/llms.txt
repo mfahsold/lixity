@@ -46,6 +46,9 @@ adds measured_cells; zero means the numeric consistency=1.0 is unavailable, not 
 Scan OCR requires a separately configured worker. Diagnostics inspect executables,
 not model integrity or recognition quality. Archived citations currently use
 character spans in extracted text, not a persisted physical-page/box contract.
+The worker protocol is Lixity-specific; upstream infer.py is not a drop-in worker.
+See [Unlimited-OCR integration boundaries](https://mfahsold.github.io/lixity/research/OCR_INTEGRATION.md)
+for the source-grounded runtime comparison and acceptance criteria.
 
 ## Primary documentation
 

@@ -206,6 +206,9 @@ Debian/Ubuntu package: `poppler-utils`; Homebrew package: `poppler`.
 Run `lixity research ocr-status` on current main. Scans require a separately
 configured `LIXITY_OCR_WORKER`; native extraction cannot read an image-only page.
 See [the extraction contract](research/USAGE.md#self-hosted-pdf-and-ocr-extraction).
+The [Unlimited-OCR integration guide](research/OCR_INTEGRATION.md) compares the
+official inference routes and this custom boundary. Upstream `infer.py` is not
+a drop-in `LIXITY_OCR_WORKER` executable; no model runtime or adapter is bundled.
 
 The [browser installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
 provides a synthetic first-dashboard example and links to interpretation and

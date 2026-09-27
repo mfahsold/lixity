@@ -52,6 +52,7 @@ lixity research ingest --project ./sample-project --file ./document.pdf --allow-
 <p>On Debian/Ubuntu, the package is <code>poppler-utils</code>; on macOS with Homebrew, it is <code>poppler</code>. Verify that <code>pdftotext</code> and <code>pdftoppm</code> are on the server's PATH. The browser diagnostic follows the selected interface language; CLI JSON uses stable status codes and English guidance.</p>
 
 <h2 id="worker">Connect an existing self-hosted worker</h2>
+<p>Baidu's official inference tools do not implement Lixity's worker JSON protocol. A separate adapter is required. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/OCR_INTEGRATION.md">Unlimited-OCR integration guide</a> compares the official runtimes, verified source pins and remaining limitations; no model server or adapter is bundled.</p>
 <p>Set <code>LIXITY_OCR_WORKER</code> to a single executable path, not a shell command with arguments. The worker receives one argument: a temporary JSON request-file path. It returns JSON on stdout with text blocks and physical page numbers. Lixity applies a 120-second worker timeout and may fall back to the native text layer if the worker fails. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#self-hosted-pdf-and-ocr-extraction">worker interface and limitations</a> before building an adapter.</p>
 <pre><code>export LIXITY_OCR_WORKER=/absolute/path/to/ocr-worker
 lixity research ocr-status

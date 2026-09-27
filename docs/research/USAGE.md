@@ -417,6 +417,10 @@ returned model/recipe identifiers are configuration constants, not attestations.
 
 ### Worker interface
 
+Read [Unlimited-OCR integration and deployment boundaries](OCR_INTEGRATION.md)
+before provisioning inference. Baidu's official entrypoints do not implement
+this custom worker protocol; a separate adapter is required.
+
 Set `LIXITY_OCR_WORKER` to one executable path or a command name on PATH. It is
 invoked directly as `[worker, request_file]`, without shell parsing or embedded
 arguments. Use an absolute path without `~` for portable service configuration.

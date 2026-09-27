@@ -26,6 +26,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   earlier tracked plans locally and remove them from public sources. Repository
   guidance documents the boundary, and Pages stages only approved product paths.
   Ignore agent worktrees and test artifacts without hiding public examples or tests.
+- Document the verified Unlimited-OCR source pins, custom adapter requirement,
+  upstream runtime differences and limits of OCR provenance and diagnostics.
+- PDF CI installs Poppler on Linux/macOS; dependency-dependent tests report explicit
+  skips elsewhere. The mock worker runs across platforms, and the synthetic
+  archive-tampering fixture avoids deprecated implicit tar extraction behavior.
 
 ### Added
 

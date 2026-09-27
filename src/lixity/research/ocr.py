@@ -1,16 +1,13 @@
-"""Self-hosted OCR extraction boundary for Lixity research archives.
+"""Custom worker boundary and native PDF extraction for research archives.
 
-Implements the extraction boundary for self-hosted Baidu Unlimited-OCR:
-- Official pinned model snapshot: 07dea832e22aefee32ad281d4b80551282e1c168
-- Official integration recipe revision: d49ff64afffc1f47ab563dc1c589bc2f78808fa4
-- Recipe date: 2026-07-29
+Model and Baidu source revisions are requested identifiers, not attestations
+of the deployed runtime. An external adapter must implement this protocol;
+upstream inference entrypoints do not implement it directly.
 
-Pipeline stages:
-1. Retain permitted original PDF/image bytes with content-addressed checksums.
-2. Render PDF pages to image blobs with an explicit 1:1 physical page mapping.
-3. Dispatch to local pinned OCR worker or page extraction boundary.
-4. Retain canonical UTF-8 text and extraction warnings.
-5. Generate verified passages with page numbers and coordinate selectors.
+Page images, block coordinates and warnings exist only in the runtime result.
+The research API retains original PDF bytes and extracted UTF-8 text, with
+character-span passages; it does not persist audited page/box provenance.
+See docs/research/OCR_INTEGRATION.md for upstream compatibility and limitations.
 """
 
 import hashlib
@@ -273,4 +270,3 @@ def get_ocr_diagnostics(worker_cmd: str | None = None) -> dict[str, Any]:
         "implementation_id": IMPLEMENTATION_ID,
         "guidance": guidance,
     }
-
