@@ -24,10 +24,10 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 
 ## Install (GitHub source, not PyPI)
 
-- CLI: `uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.17.0"`
+- CLI: `uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.18.0"`
 - Verify: `lixity --version` and `lixity about`.
 - Update chosen source: `uv tool upgrade lixity`; pinned refs stay pinned.
-- Development builds: replace `@v1.17.0` with `@main` deliberately.
+- Development builds: replace `@v1.18.0` with `@main` deliberately.
 - Engine and TOML project settings: Python 3.10+ (`tomli` is conditional on Python 3.10).
 - API: install into the consuming project's venv, not a separate tool environment.
 - dev: `git clone … && make install-dev && make check`
@@ -57,7 +57,7 @@ for the source-grounded runtime comparison and acceptance criteria.
 
 - [Installation](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md): prerequisites, development vs release, Windows, updates, first dashboard, troubleshooting
 
-- Current release: 1.17.0; release tag: v1.17.0.
+- Current release: 1.18.0; release tag: v1.18.0.
 - Research workspace in 1.17.0: evidence-based `lixity research` (explicit-project
   UTF-8 and PDF archives, exact citations, source tagging, dossiers, controlled withdrawal/purge,
   claims, passage evidence links, authorial decisions with native immutable revisions,
@@ -76,7 +76,7 @@ for the source-grounded runtime comparison and acceptance criteria.
 - [docs/STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): research basis, caveats, platform differences
 - [CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development setup, PR checklist
 - [SECURITY.md](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): threat model and private reporting
-- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.17.0)
+- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.18.0)
 - Project page: https://mfahsold.github.io/lixity/
 
 Analysis reports/CLI messages: English default, German via LIXITY_LANG=de.

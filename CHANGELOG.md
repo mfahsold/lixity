@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.18.0] – 2026-09-27
+
 ### Changed
 
 - Source import now accepts an optional origin URL in the UI, CLI and Python/HTTP
@@ -1002,7 +1004,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.17.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.18.0...HEAD
+[1.18.0]: https://github.com/mfahsold/lixity/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/mfahsold/lixity/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/mfahsold/lixity/compare/v1.15.0...v1.16.0
 [1.15.0]: https://github.com/mfahsold/lixity/compare/v1.14.0...v1.15.0

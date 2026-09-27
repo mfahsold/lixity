@@ -31,12 +31,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.17.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.18.0"
 lixity --version
 lixity about
 ```
 
-`v1.17.0` is the release pin. Choose `@main` only to follow development,
+`v1.18.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.

@@ -178,12 +178,12 @@ Install from GitHub into an isolated CLI environment. Requires Git and
 Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.17.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.18.0"
 lixity --version
 lixity about
 ```
 
-This installs **v1.17.0**, including the experimental local research pilot.
+This installs **v1.18.0**, including the experimental local research pilot.
 The tag stays pinned: upgrading to a future release requires selecting
 its tag explicitly. Use `@main` only for development builds, or a reviewed
 full commit hash for reproducible deployments.
