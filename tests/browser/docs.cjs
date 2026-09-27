@@ -40,6 +40,13 @@ const routes = ['', 'guides/installation.html', 'guides/interpretation.html', 'g
         for (const route of routes) {
           await page.goto('http://lixity.test/lixity/' + route);
           assert.equal(await page.locator('h1').count(), 1);
+          const headings = await page.locator('h1,h2,h3,h4,h5,h6').evaluateAll(nodes => nodes.map(node => Number(node.tagName[1])));
+          headings.forEach((level, index) => {
+            if (index) assert.ok(level <= headings[index - 1] + 1, `${route} skips a heading level`);
+          });
+          assert.deepEqual(await page.locator('main img').evaluateAll(nodes => nodes
+            .filter(node => !(Number(node.getAttribute('width')) > 0 && Number(node.getAttribute('height')) > 0))
+            .map(node => node.getAttribute('src'))), [], `${route} has images without dimensions`);
           assert.ok((await page.title()).length > 10);
           assert.ok((await page.locator('main').innerText()).length > 1000);
           assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), 'https://mfahsold.github.io/lixity/' + route);

@@ -51,7 +51,8 @@ validate a real library migration.
 The docs suite loads public static files through intercepted
 local routes: all four HTML pages at 1440, 390 and 320 pixels, with JavaScript
 enabled and disabled. It checks canonical URLs, assets, console errors, overflow
-and navigation; screenshots stay under `/tmp/lixity-public-docs-*`.
+and navigation, heading order and explicit content-image dimensions; screenshots
+stay under `/tmp/lixity-public-docs-*`.
 
 The settings test intercepts all requests to a synthetic host. It verifies
 locale-safe values, validation before submission, reset without saving, FDR

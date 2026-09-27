@@ -352,25 +352,25 @@
 
       <div class="research-grid">
         <div class="research-item">
-          <h4>1. Immutable Text Archive</h4>
+          <h3>1. Immutable Text Archive</h3>
           <p>Local UTF-8 source bytes are retained with SHA-256 digests after explicit <code>--allow-retention</code> confirmation. Retention does not grant redistribution rights.</p>
         </div>
         <div class="research-item">
-          <h4>2. Versioned Source Criticism</h4>
+          <h3>2. Versioned Source Criticism</h3>
           <p>Stores user-supplied creation period, depicted period, place, genre, perspective, translation status, provenance note, and tags without changing the source bytes.</p>
         </div>
         <div class="research-item">
-          <h4>3. Verifiable Passage Citations</h4>
+          <h3>3. Verifiable Passage Citations</h3>
           <p>Archived passages have UUIDs and Unicode character offsets. Authors may create claims separately, then link a passage as supporting, contradicting, qualifying, or contextual evidence. A link does not prove a claim.</p>
         </div>
         <div class="research-item">
-          <h4>4. Governed Lifecycle</h4>
+          <h3>4. Governed Lifecycle</h3>
           <p>Withdrawal excludes a source from current search while preserving citation history. Purge removes retained records and unshared source bytes; a dry run previews the effect. Authorial decisions can mark an intentional departure from evidence.</p>
         </div>
       </div>
 
       <figure class="shot" style="margin-top: 1.5rem;">
-        <img src="screenshots/dashboard-research-claims.png" alt="Claims and evidence panel with a synthetic dossier-linked claim and verified passage citation" loading="lazy" decoding="async"/>
+        <img src="screenshots/dashboard-research-claims.png" width="1152" height="915" alt="Claims and evidence panel with a synthetic dossier-linked claim and verified passage citation" loading="lazy" decoding="async"/>
         <figcaption><strong>Claims and evidence:</strong> Inspect full source and dossier details, choose search passages for a claim or dossier, and record links without treating them as verified facts. View the <a href="screenshots/dashboard-research-claims-mobile.png">mobile claims panel</a>, <a href="screenshots/dashboard-research-decisions.png">authorial decisions</a>, or <a href="screenshots/dashboard-research-decisions-mobile.png">mobile decisions panel</a>.</figcaption>
       </figure>
 
@@ -432,11 +432,11 @@ lixity research audit --project ./novel-research</pre>
     <span class="section-tag">Development Workspace &amp; Project Wizard</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" width="1152" height="630" loading="eager" fetchpriority="high" decoding="async"/>
+        <img src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" width="1152" height="630" loading="lazy" decoding="async"/>
         <figcaption><strong>Welcome &amp; quickstart hero:</strong> Optional workspace guidance when opening Lixity without an active manuscript. New Project and Open Project remain available after it is dismissed; Open Project includes a server-backed file/folder chooser.</figcaption>
       </figure>
       <figure class="shot">
-        <img src="screenshots/dashboard-project-modal.png" alt="Native dialog modal for project creation with template selection cards" width="606" height="648" loading="eager" decoding="async"/>
+        <img src="screenshots/dashboard-project-modal.png" alt="Native dialog modal for project creation with template selection cards" width="606" height="648" loading="lazy" decoding="async"/>
         <figcaption><strong>Native &lt;dialog&gt; project wizard:</strong> Accessible modal dialog with backdrop blur, language selection, and tailored narrative structure templates (Minimal, 3-Act Structure, Research Novel with pre-initialized research/ archive).</figcaption>
       </figure>
     </div>
@@ -787,6 +787,8 @@ const modalClose = document.getElementById('lightboxClose');
 
 document.querySelectorAll('figure.shot img').forEach(img => {
   img.addEventListener('click', () => {
+    modalImg.width = img.naturalWidth;
+    modalImg.height = img.naturalHeight;
     modalImg.src = img.src;
     modalImg.alt = img.alt;
     modal.classList.add('active');
