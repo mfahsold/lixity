@@ -24,10 +24,10 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 
 ## Install (GitHub source, not PyPI)
 
-- CLI: `uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.18.0"`
+- CLI: `uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.19.0"`
 - Verify: `lixity --version` and `lixity about`.
 - Update chosen source: `uv tool upgrade lixity`; pinned refs stay pinned.
-- Development builds: replace `@v1.18.0` with `@main` deliberately.
+- Development builds: replace `@v1.19.0` with `@main` deliberately.
 - Engine and TOML project settings: Python 3.10+ (`tomli` is conditional on Python 3.10).
 - API: install into the consuming project's venv, not a separate tool environment.
 - dev: `git clone … && make install-dev && make check`
@@ -38,7 +38,7 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 - [Interpret metrics and consistency](https://mfahsold.github.io/lixity/guides/interpretation.html)
 - [Archive sources and use PDF/OCR](https://mfahsold.github.io/lixity/guides/research-pdf.html)
 
-Current main (after the release tag): origin-URL metadata in source import,
+Included in v1.18.0: origin-URL metadata in source import,
 localized browser OCR guidance, native browser PDF upload and neutral consistency
 without measurable cells. Source URLs are never fetched. URL-bearing captures
 require research-local/2 and manifest v2; old readers reject them. Style JSON v4
@@ -47,6 +47,18 @@ Scan OCR requires a separately configured worker. Diagnostics inspect executable
 not model integrity or recognition quality. Archived citations currently use
 character spans in extracted text, not a persisted physical-page/box contract.
 The worker protocol is Lixity-specific; upstream infer.py is not a drop-in worker.
+Debug controls (serve --debug, LIXITY_DEBUG, setLixityDebug) are included in v1.19.0. Server-enabled browser debug returns on reload even after
+setLixityDebug(false). Backend request lines have timestamps; error details do not.
+research sources and research ocr-status already emit JSON: no --json flag.
+ocr-status has no --language flag. Source URL: .sources[0].context.origin_url.
+Python api.fingerprint('') exposes measured_cells; api.profile('') does not.
+POST /api/analyze returns a dashboard reload acknowledgement, not analysis data.
+v1.19.0 also adds research search --scope all|dossiers|claims|decisions.
+Default CLI/API scope sources retains research-search-local/1; other scopes emit
+research-search-local/2 with typed hits. Only passage hits are source citations.
+Authored hits include record_id/revision/title/excerpt and search only current
+revisions, not history. Reindex after changes. Dashboard search defaults to all.
+Current text can still contain obsolete statements; search does not resolve them.
 See [Unlimited-OCR integration boundaries](https://mfahsold.github.io/lixity/research/OCR_INTEGRATION.md)
 for the source-grounded runtime comparison and acceptance criteria.
 
@@ -57,7 +69,7 @@ for the source-grounded runtime comparison and acceptance criteria.
 
 - [Installation](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md): prerequisites, development vs release, Windows, updates, first dashboard, troubleshooting
 
-- Current release: 1.18.0; release tag: v1.18.0.
+- Current release: 1.19.0; release tag: v1.19.0.
 - Research workspace in 1.17.0: evidence-based `lixity research` (explicit-project
   UTF-8 and PDF archives, exact citations, source tagging, dossiers, controlled withdrawal/purge,
   claims, passage evidence links, authorial decisions with native immutable revisions,
@@ -76,7 +88,7 @@ for the source-grounded runtime comparison and acceptance criteria.
 - [docs/STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): research basis, caveats, platform differences
 - [CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development setup, PR checklist
 - [SECURITY.md](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): threat model and private reporting
-- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.18.0)
+- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.19.0)
 - Project page: https://mfahsold.github.io/lixity/
 
 Analysis reports/CLI messages: English default, German via LIXITY_LANG=de.
@@ -139,3 +151,14 @@ Python facade:
   and *Pride and Prejudice* (Austen, 1813, #1342); unmodified PG source files plus Markdown
   conversions, not relicensed by the LNCL
 - Third-party: pydantic (MIT), rich (MIT), orjson (MIT/Apache-2.0)
+
+Release v1.19.0 adds optional local Zotero CLI/Python/dashboard
+integration: explicit library/collection browsing, selected PDF/text capture
+with retention consent, explicit refresh and original-item links. Images, audio
+and video remain in Zotero. Structured identities require research-local/3
+captures and v3 manifests; old readers reject these. No cloud API, direct library
+writes or automatic sync. Identical-byte PDF metadata refresh reuses extraction.
+research zotero-export creates an additive RIS/files/provenance bundle;
+zotero-backup and zotero-restore pair the research archive with a closed Zotero
+data directory. Manuscripts, profiles and external linked files are excluded.
+No automatic migration or removal of historical evidence. See research/USAGE.md.

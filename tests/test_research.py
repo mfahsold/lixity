@@ -194,6 +194,43 @@ class TestResearch(unittest.TestCase):
         api.reindex(self.project)
         self.assertEqual(len(api.search(self.project, "Café")["hits"]), 1)
 
+    def test_scoped_search_cli_and_old_cache_rebuild(self):
+        import sqlite3
+
+        from lixity.cli import main
+
+        self.ingest()
+        dossier = api.create_dossier(self.project, "Synthetic inspector", "Plays the violin.")
+        api.reindex(self.project)
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            code = main(["research", "search", "--project", str(self.project),
+                         "--query", "inspector", "--scope", "dossiers"])
+        self.assertEqual(code, 0)
+        self.assertEqual(json.loads(output.getvalue())["hits"][0]["record_id"], dossier["dossier_id"])
+        path = self.project / ".lixity/research/catalogue.sqlite3"
+        with contextlib.closing(sqlite3.connect(path)) as connection, connection:
+            connection.execute("DROP TABLE documents")
+        self.assertEqual(len(api.search(self.project, "1924")["hits"]), 1)
+        with self.assertRaisesRegex(ResearchError, "reindex"):
+            api.search(self.project, "inspector", scope="all")
+        api.reindex(self.project)
+        self.assertEqual(len(api.search(self.project, "inspector", scope="all")["hits"]), 1)
+
+    def test_combined_search_excludes_withdrawn_sources_and_checks_citation_bytes(self):
+        source = self.ingest()
+        api.reindex(self.project)
+        self.assertEqual(len(api.search(self.project, "1924", scope="all")["hits"]), 1)
+        api.withdraw(self.project, source["source_id"], reason="Synthetic withdrawal")
+        api.reindex(self.project)
+        self.assertEqual(api.search(self.project, "1924", scope="all")["hits"], [])
+        self.ingest()
+        api.reindex(self.project)
+        blob = next((self.project / "research/blobs").rglob("*"))
+        blob.write_bytes(b"tampered")
+        with self.assertRaises(ResearchError):
+            api.search(self.project, "1924", scope="all")
+
     def test_invalid_text_and_size_are_rejected(self):
         for content in (b"", b"\xff", b"binary\x00text", b" " * 20):
             self.source.write_bytes(content)
@@ -434,3 +471,18 @@ class TestResearch(unittest.TestCase):
                 claim_id="urn:uuid:00000000-0000-4000-8000-000000000000",
                 passage_id=passage_id,
             )
+
+    def test_identical_pdf_metadata_refresh_reuses_verified_extraction(self):
+        from lixity.research.ocr import OCRBlock, OCRExtractionResult
+        pdf = self.root / 'scan.pdf'
+        pdf.write_bytes(b'%PDF-1.4 synthetic extraction fixture')
+        text = 'The reading room opened in 1924.'
+        extracted = OCRExtractionResult(full_text=text, blocks=[OCRBlock(page_number=1, text=text)],
+                                        spans=[(0,len(text))], pages=[])
+        with patch('lixity.research.api.extract_pdf_document', return_value=extracted):
+            first = api.ingest(self.project, pdf, allow_retention=True)
+        with patch('lixity.research.api.extract_pdf_document', side_effect=AssertionError('unchanged bytes must reuse')):
+            result = api.ingest(self.project, pdf, source_id=first['source_id'],
+                                allow_retention=True, origin_url='https://example.org/metadata')
+        self.assertFalse(result['unchanged'])
+        self.assertTrue(api.audit(self.project)['ok'])

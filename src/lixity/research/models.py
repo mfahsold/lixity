@@ -110,6 +110,18 @@ class Source(Record):
 ContextLabel = Annotated[str, Field(min_length=1, max_length=500)]
 
 
+class ExternalReference(StrictModel):
+    """Versioned local Zotero identity; independent of mutable prose metadata."""
+
+    provider: Literal["zotero"] = "zotero"
+    server_id: Annotated[str, Field(min_length=1, max_length=200)]
+    library: Annotated[str, Field(pattern=r"^(users/(0|[1-9][0-9]*)|groups/[1-9][0-9]*)$")]
+    item_key: Annotated[str, Field(pattern=r"^[A-Z0-9]{8}$")]
+    attachment_key: Annotated[str, Field(pattern=r"^[A-Z0-9]{8}$")]
+    item_version: Annotated[int, Field(ge=0)]
+    attachment_version: Annotated[int, Field(ge=0)]
+
+
 class SourceContext(StrictModel):
     """User-supplied source criticism, not verified facts or inferred identities."""
 
@@ -123,6 +135,7 @@ class SourceContext(StrictModel):
     provenance_note: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
     origin_url: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
     tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
+    external_reference: ExternalReference | None = None
 
     @field_validator("origin_url")
     @classmethod
@@ -148,11 +161,13 @@ class SourceContext(StrictModel):
         result: dict[str, Any] = handler(self)
         if self.origin_url is None:
             result.pop("origin_url", None)
+        if self.external_reference is None:
+            result.pop("external_reference", None)
         return result
 
 
 class SourceVersion(Record):
-    schema_version: Literal["research-local/1", "research-local/2"] = "research-local/1"  # type: ignore[assignment]
+    schema_version: Literal["research-local/1", "research-local/2", "research-local/3"] = "research-local/1"  # type: ignore[assignment]
     kind: Literal["source_version"] = "source_version"
     source_ref: Reference
     sequence: Annotated[int, Field(ge=1)]
@@ -163,7 +178,9 @@ class SourceVersion(Record):
 
     @model_validator(mode="after")
     def valid_provenance_version(self) -> "SourceVersion":
-        if self.context.origin_url is not None and self.schema_version != "research-local/2":
+        if self.context.external_reference is not None and self.schema_version != "research-local/3":
+            raise ValueError("External reference requires source version schema research-local/3")
+        if self.context.origin_url is not None and self.schema_version == "research-local/1":
             raise ValueError("Origin URL requires source version schema research-local/2")
         return self
 
@@ -290,7 +307,7 @@ class Entry(StrictModel):
 
 
 class Manifest(StrictModel):
-    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2"] = "research-manifest-local/1"
+    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3"] = "research-manifest-local/1"
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None

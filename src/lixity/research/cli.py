@@ -14,7 +14,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
     commands.add_parser("schema", help="Export the experimental entity JSON schema")
     for name, help_text in (
         ("init", "Create an explicit local research project"),
-        ("ingest", "Archive local UTF-8 text; no PDF/OCR or network access"),
+        ("ingest", "Archive local UTF-8 text or PDF; scans require a configured OCR worker"),
         ("reindex", "Rebuild the disposable SQLite/FTS5 search index"),
         ("search", "Search the latest source versions with literal words"),
         ("cite", "Resolve an immutable source passage"),
@@ -31,14 +31,47 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
         ("export", "Export research store to verified archive (.tar.gz)"),
         ("restore", "Restore research store from verified archive (.tar.gz)"),
+        ("zotero-backup", "Back up research and a closed Zotero data directory together"),
+        ("zotero-restore", "Verify and restore a paired backup into a new directory"),
+        ("zotero-export", "Export active captures and provenance for additive Zotero import"),
+        ("zotero", "Preview a local Zotero library or item attachments (read-only)"),
+        ("zotero-ingest", "Capture one selected local Zotero PDF/text attachment"),
         ("ocr-status", "Inspect runtime diagnostic status for OCR and PDF extraction"),
     ):
         command = commands.add_parser(name, help=help_text)
-        if name not in ("restore", "ocr-status"):
+        if name not in ("restore", "ocr-status", "zotero-restore"):
             command.add_argument("--project", required=True, help="Explicit project directory")
         elif name == "ocr-status":
             command.add_argument("--project", help="Optional project directory")
             command.add_argument("--worker-cmd", help="Explicit OCR worker binary or command to inspect")
+        if name == "zotero-backup":
+            command.add_argument("--data-dir", required=True)
+            command.add_argument("--output", required=True)
+            command.add_argument("--confirm-zotero-closed", action="store_true")
+        elif name == "zotero-restore":
+            command.add_argument("--from", dest="archive_source", required=True)
+            command.add_argument("--to", dest="target_dir", required=True)
+        if name == "zotero-export":
+            command.add_argument("--output", required=True, help="New directory for RIS, files and provenance manifest")
+            command.add_argument("--allow-retention", action="store_true")
+            command.add_argument("--dry-run", action="store_true")
+        if name in ("zotero", "zotero-ingest"):
+            command.add_argument("--library", required=True, help="Explicit Zotero library: users/0 or groups/<id>")
+            if name == "zotero":
+                choice = command.add_mutually_exclusive_group()
+                choice.add_argument("--query", default="")
+                choice.add_argument("--item-key", help="Inspect an item and its attachments")
+                choice.add_argument("--collections", action="store_true", help="List collections")
+                command.add_argument("--collection-key", help="Restrict item search to this collection")
+                command.add_argument("--limit", type=int, choices=range(1, 101), default=20, metavar="1..100")
+                command.add_argument("--start", type=int, default=0, help="Zero-based page offset")
+            else:
+                command.add_argument("--attachment-key", required=True)
+                command.add_argument("--source-id", help="Explicitly refresh a matching prior capture")
+                command.add_argument("--expected-server-id", help="Require the previewed Zotero instance")
+                command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+                command.add_argument("--allow-retention", action="store_true")
+                command.add_argument("--dry-run", action="store_true")
         if name in ("dossier", "claim", "link-evidence", "decision"):
             command.add_argument("--update", action="store_true", help="Revise the named record")
             command.add_argument("--history", action="store_true", help="List immutable revisions")
@@ -65,6 +98,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
         elif name == "search":
             command.add_argument("--query", required=True)
+            command.add_argument("--scope", choices=("sources", "dossiers", "claims", "decisions", "all"),
+                                 default="sources", help="Search sources (default) or current authored records")
             command.add_argument("--limit", type=int, choices=range(1, 101), default=20, metavar="1..100")
         elif name == "cite":
             command.add_argument("--passage", required=True)
@@ -230,10 +265,32 @@ def run(args: argparse.Namespace) -> int:
                                 source_id=args.source_id, title=args.title, language=args.language,
                                 actor=args.actor, dry_run=args.dry_run, context=context, origin_url=args.origin_url,
                                 progress_callback=_cli_progress)
+        elif command in ("zotero-backup", "zotero-restore"):
+            from . import zotero_backup
+            if command == "zotero-backup":
+                result = zotero_backup.backup(args.project, args.data_dir, args.output,
+                                              confirm_closed=args.confirm_zotero_closed)
+            else:
+                result = zotero_backup.restore(args.archive_source, args.target_dir)
+        elif command == "zotero-export":
+            from . import zotero
+            result = zotero.export_library(args.project, args.output, allow_retention=args.allow_retention,
+                                            dry_run=args.dry_run)
+        elif command in ("zotero", "zotero-ingest"):
+            from . import zotero
+            if command == "zotero" and args.collections:
+                result = zotero.collections(args.project, library=args.library, start=args.start)
+            elif command == "zotero":
+                result = zotero.browse(args.project, library=args.library, query=args.query,
+                                       item_key=args.item_key, limit=args.limit, start=args.start, collection_key=args.collection_key)
+            else:
+                result = zotero.ingest(args.project, library=args.library, attachment_key=args.attachment_key,
+                                       source_id=args.source_id, language=args.language, expected_server_id=args.expected_server_id,
+                                       allow_retention=args.allow_retention, dry_run=args.dry_run)
         elif command == "reindex":
             result = api.reindex(args.project)
         elif command == "search":
-            result = api.search(args.project, args.query, limit=args.limit)
+            result = api.search(args.project, args.query, limit=args.limit, scope=args.scope)
         elif command == "cite":
             result = api.cite(args.project, args.passage)
         elif command == "analyze":

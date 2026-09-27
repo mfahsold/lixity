@@ -1,11 +1,11 @@
 # Architecture and integration boundaries
 
-This document describes Lixity `1.17.0`. The shared pipeline and explicit
-API threshold mappings were introduced in 1.15.0; the integrated local
-project/research workflows described here require 1.16.0+, with native editing,
-self-hosted OCR boundary, offline diagrams, and verified export/restoration in 1.17.0.
+This document describes Lixity `1.19.0`. The shared pipeline and explicit API threshold mappings were introduced
+in 1.15.0; integrated local project/research workflows arrived in 1.16.0, followed
+by native editing, the self-hosted OCR boundary, offline diagrams and verified
+export/restoration in 1.17.0.
 
-Experimental extension included in `1.17.0`: [local research workspace](research/USAGE.md).
+Experimental extension: [local research workspace](research/USAGE.md).
 `lixity.research` owns explicit-project ingestion (UTF-8 text and PDFs), immutable snapshots,
 exact citations, BagIt-style export/restoration, and a rebuildable SQLite/FTS5 index. It does not import into
 `lixity.pipeline`. Existing analyze/profile v2 and style v4 remain unchanged.
@@ -100,3 +100,44 @@ operate on language-dependent heuristic inputs.
 - The wheel includes both UI scripts, CSS, Python modules and the typing marker.
 - Adapter tests belong with their projects; no private manuscript is needed
   for the engine's regression suite.
+
+## External research libraries (since v1.19.0)
+
+The optional `research.zotero` adapter lets Zotero Desktop lead media
+and bibliographic cataloguing. Lixity owns selected immutable evidence captures,
+analysis, claims, dossiers and author decisions. It calls the documented local
+HTTP API, rather than reading Zotero's database or incorporating its application
+code. This boundary avoids maintaining another general media manager and keeps
+existing projects independent of Zotero availability after capture.
+
+This follows the separation used by [Zettlr's reference-manager integration](https://docs.zettlr.com/en/editor/citations.html),
+though Zettlr primarily reads exported bibliographies and Lixity captures evidence
+through the [Zotero local API](https://www.zotero.org/support/dev/web_api/v3/local_api).
+[novelWriter's tags and references](https://novelwriter.io/docs/usage/tags_and_references.html)
+illustrate the complementary authoring concern: connecting story notes and scenes.
+
+The intended commercial value is the path from source to evidence, linguistic
+analysis and an explicit author decision. The expected maintenance benefit is an
+engineering judgment, not measured sales ROI. The adapter is optional, adds no
+runtime dependency and leaves Lixity's license unchanged. Zotero is a separately
+installed product; no bundled distribution or license compatibility claim is made.
+
+The adapter also exports active source captures as an additive RIS bundle with
+original files and a mapping manifest. Import happens through Zotero's supported
+import workflow. The export does not delete local sources, alter citations or
+write Zotero's database. The bridge uses stable external attachment identities
+to distinguish a repeated capture from an explicit refresh. A migration source
+tag and matching original-byte checksum allow an existing evidence source to be
+associated with its imported Zotero attachment. Titles alone never establish identity.
+
+Source versions with `external_reference` use `research-local/3`; their snapshots
+use `research-manifest-local/3`. Readers support prior v1/v2 records without
+rewriting them. Older applications reject v3 instead of silently dropping the
+external identity. Evidence captures and references remain in Lixity backups;
+Zotero's library and unselected media require their own backup.
+
+Zotero is optional for existing analysis and retained evidence. There is no
+automatic background or cloud synchronization. Images, audio and video can be
+managed in Zotero, but are not made searchable evidence by the PDF/text bridge.
+See [research usage](research/USAGE.md#zotero-desktop-bridge-since-v1190)
+for implemented behavior and portability limits.

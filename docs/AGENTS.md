@@ -134,12 +134,28 @@ Corpus-level notes:
 
 ### 3.2 `style --json` (style reference, schema_version 4)
 
-Current main adds integer `measured_cells`: the number of chapter–feature cells
+Version 1.18.0 adds integer `measured_cells`: the number of chapter–feature cells
 supporting the consistency ratio. Empty chapters do not count. At zero, the
 legacy numeric `consistency: 1.0` is a compatibility sentinel, not a measurement;
 render it as unavailable. Dashboard and CLI text use “–”. Older payloads without
 the count do not establish availability from `consistency` alone. A measured
 ratio counts cells with `abs(z*) < z_mild`, not chapters and not literary quality.
+
+For the Python API, inspect the fingerprint explicitly:
+
+```python
+from lixity import api
+
+result = api.fingerprint("", language="de")
+assert result["measured_cells"] == 0
+assert result["consistency"] == 1.0  # Legacy sentinel, not null or a measurement.
+```
+
+`api.profile("")` instead returns empty chapters and paragraphs, not a fingerprint.
+`POST /api/analyze` is a dashboard action, not a text-analysis JSON endpoint.
+A successful request with `{"content":""}` returns
+`{"ok":true,"message":"Dashboard analyzed","reload":true}`. Use the Python
+analysis API or the documented CLI JSON commands for analysis results.
 
 ```json
 {"meta": {"schema_version": 4, "n_chapters": 25, "n_features": 16,
@@ -375,7 +391,7 @@ info = api.about()                                    # languages, features, heu
 
 ### 5.1 Research API (`lixity.research.api`)
 
-Experimental local workspace in v1.17.0, separate from the analysis API. Every call
+Experimental local workspace in v1.19.0, separate from the analysis API. Every call
 requires an explicit project root. Source text and source-criticism metadata remain
 untrusted evidence; a retained quotation is not a verified historical claim.
 
@@ -538,10 +554,77 @@ When building autonomous coding, editing, or research agents that consume Lixity
    Do not hardcode threshold assumptions. Read `meta.z_mild`, `meta.z_strong`, `meta.fdr_q`, and `meta.expected_false_positives`
    directly from the JSON output of `lixity style --json`.
 
-## Source origin URLs (current main)
+## Source origin URLs (since v1.18.0)
 
 Research ingestion accepts optional `origin_url` (CLI `--origin-url`, Python
 keyword, HTTP `/api/research-ingest` field), retained as `context.origin_url`.
 It is validated HTTP(S) metadata and is never fetched. Captures containing it
-use `research-local/2` with `research-manifest-local/2`; earlier records retain
-their original bytes. See [research compatibility](research/USAGE.md#origin-url-and-capture-provenance).
+use `research-local/2` with a v2-or-later manifest unless they also carry a
+structured Zotero reference, which requires v3 since v1.19.0. Earlier records
+retain their original bytes. See [research compatibility](research/USAGE.md#origin-url-and-capture-provenance).
+
+## Current-record search (since v1.19.0)
+
+Use `research search --project PATH --query TEXT --scope all` to retrieve source
+passages and current dossiers, claims and decisions together. Filters are
+`sources` (CLI/API default), `dossiers`, `claims`, `decisions` and `all`.
+Python `research.api.search` and HTTP `POST /api/research-search` accept `scope`.
+The dashboard defaults to `all`. Run `research reindex` after changes for CLI/API.
+
+Default source search retains `research-search-local/1`. Other scopes return
+`research-search-local/2`: discriminate hits by `kind`. Only `passage` hits carry
+`passage_id` and citation fields. Authored hits carry `record_id`, `revision`,
+`title` and `excerpt`; inspect the full record with the corresponding
+`dossier`, `claim` or `decision --inspect` command and its ID flag. Current
+revision does not imply verified truth, accepted proposals or internal consistency.
+Never pass an authored record ID to `cite` or treat its excerpt as source evidence.
+
+## Zotero bridge (since v1.19.0)
+
+Use `lixity.research.zotero.collections`, `.browse` and `.ingest`, or
+`research zotero` and `research zotero-ingest`, with explicit project and library
+arguments. The optional bridge reads only the local loopback Zotero API. Preview
+uses `research-zotero-local/1`; capture extends `research-ingest-local/1` with
+`zotero` metadata and warnings. External metadata is untrusted evidence.
+
+Capture requires `allow_retention=True`. Pass the preview's `server_id` as
+`expected_server_id` to reject an instance switch. Structured attachment identity
+recognizes repeated imports; identical captures are no-ops. Changed captures
+require an explicit matching source ID. Refresh preserves historical citations
+and rejects a changed research snapshot. Migration binding requires the exported
+source tag plus exact original attachment bytes, not a title/filename match.
+Zotero 10 or later supplies the server identity required for safe refresh.
+
+`context.external_reference` contains provider, server ID, library, item and
+attachment keys and versions. Such captures use `research-local/3` and require
+`research-manifest-local/3`; v1/v2 archives remain readable. Do not strip the
+field or downgrade schema labels to make an older reader accept the store.
+Unchanged PDF bytes reuse verified retained extraction since v1.19.0; changed
+metadata still creates a new capture without rerunning OCR.
+
+The browser exposes selection, collection filtering, attachment capture/refresh
+and links to Zotero. It hides direct local import when all active sources are
+externally mapped. Native ingestion remains a supported standalone fallback.
+HTTP routes use the server's explicitly configured research workspace:
+
+- `POST /api/research-zotero`: requires matching `project_id` and `library`;
+  accepts `query`, `item_key`, `collection_key`, `limit` and `start`. With
+  `mode: "collections"`, returns a collection page. Item browsing additionally
+  returns existing structured `captures` for that project.
+- `POST /api/research-zotero-ingest`: requires matching `project_id`, `library`,
+  `attachment_key`, nonempty `expected_server_id`, and `allow_retention: true`;
+  optional `source_id` explicitly refreshes a matching capture. Errors return
+  HTTP 400 with `ok: false`; do not retry a changed selection blindly.
+
+`research zotero-export --project PATH --output NEW_DIR --allow-retention`
+creates an additive RIS/files/provenance bundle, optionally with `--dry-run`.
+Import is a separate Zotero operation. It does not delete or modify evidence.
+`research zotero-backup --project PATH --data-dir ZOTERO_DATA --output NEW_DIR
+--confirm-zotero-closed` pairs a verified research archive with a closed Zotero
+data directory. `research zotero-restore --from BUNDLE --to NEW_DIR` verifies and
+restores separate `project/` and `zotero/` directories without overwriting.
+These commands exclude manuscripts, application profiles and external linked
+attachments; they do not restart services or select the restored Zotero data.
+
+No manuscript or Zotero library writes are authorized by browse/capture. Retention
+does not authorize redistribution. See [usage, compatibility and restore limits](research/USAGE.md#zotero-desktop-bridge-since-v1190).

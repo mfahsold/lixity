@@ -1,9 +1,12 @@
 # RFC: an evidence-based research workspace for Lixity
 
-Status: **target architecture**, 2026-09-25. An initial [local UTF-8 research pilot](USAGE.md)
-is included experimentally in `v1.16.0`.
-The remaining modules, providers and schemas below are proposed, not available.
-See the [implementation scope](IMPLEMENTATION.md) for the shipped slice. Python
+Status: **target architecture**, originally drafted 2026-09-25. The initial
+[local research pilot](USAGE.md) shipped experimentally in `v1.16.0`; `v1.18.0`
+includes PDF extraction, native authored revisions and verified archive restoration.
+Release `v1.19.0` adds Zotero integration and scoped current-record search.
+The broader providers and interchange schemas below remain proposals unless
+explicitly identified as implemented. See the [implementation scope](IMPLEMENTATION.md)
+and [command reference](USAGE.md) for the supported boundaries. Python
 3.10 uses conditional `tomli` for TOML project settings.
 
 Companion documents: [research and platform evidence](EVIDENCE.md),
@@ -86,8 +89,9 @@ has no numbered release: pin the official model snapshot
 and [integration recipe revision `d49ff64`](https://github.com/baidu/Unlimited-OCR/tree/d49ff64afffc1f47ab563dc1c589bc2f78808fa4),
 both dated 2026-07-29. These are reproducibility pins, not invented version numbers
 or evidence that a Lixity integration has been tested. Deployment is self-hosted;
-the selected integration does not depend on Baidu's hosted API. PDF/OCR remains
-unimplemented.
+the selected integration does not depend on Baidu's hosted API. Local PDF text
+extraction and the external-worker protocol are implemented; a production OCR
+runtime is not bundled. See [deployment boundaries](OCR_INTEGRATION.md).
 
 This RFC selects component families, not untested package pins. The provider
 implementation must produce a tested lockfile and model manifest for each
@@ -117,30 +121,48 @@ citations. It can be a consumer of a future Lixity evidence API, but chat histor
 and retrieved fragments do not replace author-reviewed claims or source retention.
 Avoid maintaining a second independently curated copy of research in that UI.
 
+### Implemented Zotero boundary (since v1.19.0)
+
+Zotero can be the leading catalogue for bibliography and media. Lixity retains
+selected immutable evidence captures, exact citations and authored records; it
+does not duplicate Zotero's general media management. The local API bridge reads
+selected PDF/text attachments. `research zotero-export` produces an additive RIS
+bundle with original files and a mapping manifest for import through Zotero.
+Export does not remove the evidence archive or rewrite existing citations.
+
+Structured external references use `research-local/3` source-version records and
+`research-manifest-local/3` snapshots. New readers also accept v1/v2 archives; older
+readers reject v3. This compatibility boundary is independent of the RFC's proposed
+`research/1` interchange schema. See [Research usage](USAGE.md) for exact commands,
+identity matching, explicit refresh and backup requirements. No cloud synchronization
+or direct Zotero database modification is implemented.
+
 ## 4. Deployment profiles
 
 ### Portable profile
 
 Lixity's core remains unchanged. The experimental `lixity.research` pilot
-provides schemas, validation, explicit project roots, local UTF-8 text and
-Markdown ingestion, and SQLite catalogue/FTS search. Broader JSON imports
-remain proposed. Existing analysis commands do not import providers.
+provides schemas, validation, explicit project roots, local UTF-8 text,
+Markdown and PDF ingestion, and SQLite catalogue/FTS search. v1.19.0 adds
+an optional Zotero Desktop bridge and additive RIS migration export; broader
+CSL-JSON imports remain proposed. Existing analysis commands do not import providers.
 Research commands work before a manuscript has any content.
 
-The optional research extra adds a safe YAML parser for Obsidian-compatible
-dossier frontmatter (proposed: PyYAML with safe loading and schema validation).
-This is an explicit dependency decision for research, not a new analysis-core
-dependency. Accept only JSON-compatible mappings/scalars/lists; reject aliases,
+A proposed optional research extra would add a safe YAML parser for
+Obsidian-compatible dossier frontmatter (candidate: PyYAML with safe loading
+and schema validation). This would be an explicit research dependency decision,
+not a new analysis-core dependency. Accept only JSON-compatible mappings/scalars/lists; reject aliases,
 custom tags, multiple documents and oversized metadata before model validation.
 
-The project may be edited in Obsidian or another editor. Zotero may run separately
-or supply a CSL-JSON export. No account, server or GPU is required for catalogue,
+The proposed working-copy workflow permits editing in Obsidian or another editor;
+accepted archive records remain immutable. Zotero runs separately; CSL-JSON
+interchange remains a proposed additional route. No account, server or GPU is required for catalogue,
 dossiers, citation validation or lexical search.
 
 ### Local research runtime
 
-A separately installed worker environment (reference target Python 3.12) runs
-Docling, model inference, Qdrant client and Haystack integration. Communicate via
+A separately installed worker environment (reference target Python 3.12) would run
+Unlimited-OCR inference, Qdrant client and Haystack integration. Communicate via
 a versioned job/result JSON protocol over subprocess stdin/stdout; use file/blob
 references instead of shell-interpolated arguments. Provider logs use stderr.
 The runtime can be replaced by a service without changing canonical entities.
@@ -174,7 +196,7 @@ flowchart LR
     F[PDFs / notes / WARC] --> I
     I --> R[Canonical JSON records and Markdown dossiers]
     I --> B[Immutable original blobs]
-    B --> D[Docling worker]
+    B --> D[Optional Unlimited-OCR worker]
     D --> X[Versioned extraction and passage locators]
     R --> C[SQLite catalogue and FTS]
     X --> C
@@ -392,7 +414,7 @@ The following are proposed names, not current public interfaces:
 | `src/lixity/research/catalogue.py` | SQLite migrations/projections, FTS search and dependency traversal. |
 | `src/lixity/research/api.py` | `validate`, `search`, `resolve_citation`, `audit`, import/export contracts. Provider-neutral results. |
 | `src/lixity/research/cli.py` | Lazily registered `lixity research` commands, clean JSON stdout and established exit codes. |
-| Optional runtime/distribution | Zotero, Docling, Qdrant, Haystack and model adapters; no imports from the core analysis pipeline. |
+| Optional runtime/distribution | Zotero, Unlimited-OCR, Qdrant, Haystack and model adapters; no imports from the core analysis pipeline. |
 | Project server adapter | Authorizes mutation and remote jobs; displays import/review/drift state using shared UI components. |
 | Existing `DossierStatus` | Keep legacy synchronization status intact. New research audit distinguishes missing evidence, unresolved conflict, stale citation and outdated index. |
 

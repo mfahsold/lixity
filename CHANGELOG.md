@@ -7,6 +7,48 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.19.0] – 2026-09-27
+
+### Added
+
+- Optional Zotero Desktop integration through its local read API: browse explicit
+  libraries and collections, inspect attachments, capture selected PDF/text files
+  with consent, refresh linked sources and open originals from the dashboard.
+  Images, audio and video stay in Zotero; no cloud account or background sync.
+- Structured Zotero attachment identities in `research-local/3` captures and v3
+  manifests, with duplicate prevention and explicit refresh on changed captures.
+  Older readers reject v3; previous quotations and archive history are preserved.
+- Additive RIS migration export with source identity tags and original files;
+  paired backups of the research archive and an explicitly closed Zotero data
+  directory, restored only into a new destination after checksum verification.
+  Manuscripts, application profiles and external linked files need separate backup.
+
+- Optional research search scopes for current dossiers, claims and decisions,
+  using the shared FTS5 catalogue. Typed `research-search-local/2` hits expose
+  record identity, revision and excerpts; default source-only CLI/API search
+  retains v1. The seven-language dashboard searches all types by default and
+  opens authored hits in the existing revision viewer. History is not indexed.
+- Server debug logging through `serve --debug` or `LIXITY_DEBUG`, with browser
+  API/runtime diagnostics and `setLixityDebug()` controls (added after v1.18.0).
+
+### Fixed
+
+- Align maintained guides and automation examples with the shipped v1.18.0
+  CLI/API contracts, Portuguese UI locale, and released origin URL, PDF/OCR
+  diagnostics and unavailable-consistency behavior. Correct research ingest help
+  to mention PDF support and the separate scan worker requirement.
+- Reuse existing PDF extraction when a refresh changes metadata but retains
+  identical original bytes; preserve extracted text and earlier citations.
+- Document debug precedence on reload and timestamp scope.
+- Preserve source criticism when binding an existing capture to Zotero. Treat
+  personal-library aliases as one attachment identity and reject ambiguous links.
+- Reject failed, malformed or incomplete configured OCR worker output instead of
+  silently falling back. Keep unknown confidence unset and preserve physical page
+  order. `LIXITY_OCR_TIMEOUT` accepts 1–3600 seconds (default 120).
+- Add an experimental checkout-only Unlimited-OCR CPU adapter with pinned model
+  weights, page checksums and truncation checks. Its external runtime and model
+  weights are optional and are not bundled in the Python package.
+
 ## [1.18.0] – 2026-09-27
 
 ### Changed
@@ -1004,7 +1046,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.18.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.19.0...HEAD
+[1.19.0]: https://github.com/mfahsold/lixity/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/mfahsold/lixity/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/mfahsold/lixity/compare/v1.16.0...v1.17.0
 [1.16.0]: https://github.com/mfahsold/lixity/compare/v1.15.0...v1.16.0

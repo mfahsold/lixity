@@ -1298,6 +1298,122 @@ function researchRevisionActions(kind, id) {
     '</div>';
 }
 
+// Zotero remains an external catalogue. Only explicit captures enter evidence storage.
+var zoteroProjectId = null;
+var zoteroSelection = null;
+var zoteroNextRequest = null;
+var zoteroRequestSerial = 0;
+
+function zoteroLibraryIdentity(library) {
+  return /^users\/(0|[1-9]\d*)$/.test(library || "") ? "users/0" : library;
+}
+
+function zoteroOpenLink(library, key) {
+  if (!/^[A-Z0-9]{8}$/.test(key || "") || !/^(users\/\d+|groups\/[1-9]\d*)$/.test(library || "")) return "";
+  var prefix = library.startsWith("groups/") ? library : "library";
+  return '<a class="ctl" href="zotero://select/' + prefix + '/items/' + key + '">' + escapeHtml(uiLabel("zotero_open")) + '</a>';
+}
+
+function clearZoteroSelection() {
+  zoteroRequestSerial++;
+  zoteroSelection = null;
+  zoteroNextRequest = null;
+  var host = document.getElementById("r-zotero-results");
+  if (host) host.textContent = "";
+  var retention = document.getElementById("r-zotero-retention");
+  if (retention) retention.checked = false;
+}
+
+async function browseZotero(request) {
+  var serial = ++zoteroRequestSerial;
+  var host = document.getElementById("r-zotero-results");
+  host.textContent = uiLabel("research_loading");
+  var result = await researchApiPost("research-zotero", request);
+  if (serial !== zoteroRequestSerial || request.project_id !== zoteroProjectId) return;
+  if (!result.ok) { host.textContent = result.message || uiLabel("research_search_failed"); return; }
+  zoteroSelection = {request: request, result: result};
+  zoteroNextRequest = result.next_start === null || result.next_start === undefined ? null : Object.assign({}, request, {start: result.next_start});
+  var items = result.attachments || result.items || [];
+  host.innerHTML = items.map(function(item, index) {
+    var data = item.data || {};
+    var capture = (result.captures || []).find(function(c) {
+      return c.server_id === result.server_id && zoteroLibraryIdentity(c.library) === zoteroLibraryIdentity(request.library) && c.attachment_key === item.key;
+    });
+    var supported = ["application/pdf", "text/plain", "text/markdown"].includes(data.contentType) &&
+      ["imported_file", "imported_url", "linked_file"].includes(data.linkMode);
+    var changed = capture && (capture.attachment_version !== item.version ||
+      (result.item && capture.item_version !== result.item.version));
+    return '<div class="research-card"><strong>' + escapeHtml(data.title || item.key) + '</strong>' +
+      '<p class="ctl-note">' + escapeHtml(data.contentType || data.itemType || "") + '</p>' +
+      (capture ? '<p class="ctl-note">' + escapeHtml(uiLabel(changed ? "zotero_metadata_changed" : "zotero_linked")) + '</p>' : '') +
+      '<div class="row">' + zoteroOpenLink(request.library, item.key) +
+      (data.itemType === "attachment" ? (supported && result.server_id ? '<button type="button" class="ctl primary" data-zotero-capture="' + index + '">' +
+        escapeHtml(uiLabel(capture ? "zotero_refresh" : "zotero_capture")) + '</button>' : '<span class="ctl-note">' + escapeHtml(uiLabel("zotero_media")) + '</span>') :
+        '<button type="button" class="ctl" data-zotero-item="' + index + '">' + escapeHtml(uiLabel("research_view_details")) + '</button>') + '</div></div>';
+  }).join("") + (zoteroNextRequest ? '<button type="button" class="ctl" id="r-zotero-more">' + escapeHtml(uiLabel("zotero_more")) + '</button>' : '');
+  if (!items.length) host.textContent = uiFormat("research_hits_count", {count: 0});
+}
+
+document.addEventListener("change", function(event) {
+  if (["r-zotero-library", "r-zotero-collection"].includes(event.target.id)) {
+    clearZoteroSelection();
+    if (event.target.id === "r-zotero-library") {
+      document.getElementById("r-zotero-collection").innerHTML = '<option value="">' + escapeHtml(uiLabel("zotero_all")) + '</option>';
+      document.getElementById("r-zotero-collections").dataset.start = "0";
+    }
+  }
+});
+
+document.addEventListener("click", async function(event) {
+  var button = event.target.closest("#r-zotero-browse, #r-zotero-collections, #r-zotero-more, [data-zotero-item], [data-zotero-capture]");
+  if (!button || button.disabled || !zoteroProjectId) return;
+  button.disabled = true;
+  try {
+    var request = {project_id: zoteroProjectId, library: document.getElementById("r-zotero-library").value.trim()};
+    if (button.id === "r-zotero-collections") {
+      request.mode = "collections";
+      request.start = Number(button.dataset.start || 0);
+      var collections = await researchApiPost("research-zotero", request);
+      if (!collections.ok) { researchStatus(collections.message, false); return; }
+      if (request.project_id !== zoteroProjectId || request.library !== document.getElementById("r-zotero-library").value.trim()) return;
+      var select = document.getElementById("r-zotero-collection");
+      if (!request.start) select.innerHTML = '<option value="">' + escapeHtml(uiLabel("zotero_all")) + '</option>';
+      (collections.collections || []).forEach(function(c) { select.add(new Option(c.data.name, c.key)); });
+      button.dataset.start = String(collections.next_start || 0);
+      button.textContent = uiLabel(collections.next_start ? "zotero_more" : "zotero_collections");
+    } else if (button.id === "r-zotero-browse") {
+      request.query = document.getElementById("r-zotero-query").value.trim();
+      request.collection_key = document.getElementById("r-zotero-collection").value || null;
+      await browseZotero(request);
+    } else if (button.id === "r-zotero-more") {
+      if (zoteroNextRequest) await browseZotero(zoteroNextRequest);
+    } else if (zoteroSelection) {
+      var selection = zoteroSelection;
+      var items = selection.result.attachments || selection.result.items || [];
+      var item = items[Number(button.dataset.zoteroItem || button.dataset.zoteroCapture)];
+      if (!item) return;
+      if (button.hasAttribute("data-zotero-item")) {
+        await browseZotero({project_id: selection.request.project_id, library: selection.request.library, item_key: item.key});
+      } else {
+        if (!document.getElementById("r-zotero-retention").checked) { researchStatus(uiLabel("research_retention_required"), false); return; }
+        var captured = (selection.result.captures || []).find(function(c) {
+          return c.server_id === selection.result.server_id && zoteroLibraryIdentity(c.library) === zoteroLibraryIdentity(selection.request.library) && c.attachment_key === item.key;
+        });
+        var response = await researchApiPost("research-zotero-ingest", {project_id: selection.request.project_id,
+          library: selection.request.library, attachment_key: item.key, expected_server_id: selection.result.server_id,
+          source_id: captured ? captured.source_id : null, allow_retention: true});
+        if (selection.request.project_id !== zoteroProjectId) return;
+        researchStatus(response.ok ? uiLabel("research_ingest_complete") : response.message, response.ok);
+        if (response.ok) {
+          document.getElementById("r-zotero-retention").checked = false;
+          await refreshResearchSources();
+          await browseZotero(selection.request);
+        }
+      }
+    }
+  } finally { button.disabled = false; }
+});
+
 async function refreshResearchSources() {
   var listHost = document.getElementById("research-sources-list");
   var selectHost = document.getElementById("r-ground-source-select");
@@ -1308,6 +1424,11 @@ async function refreshResearchSources() {
     return;
   }
   var sources = data.sources || [];
+  var localImport = document.getElementById("r-local-import");
+  if (localImport) localImport.hidden = sources.length > 0 && sources.every(function(s) { return s.context && s.context.external_reference; });
+  var external = sources.find(function(s) { return s.context && s.context.external_reference; });
+  var libraryInput = document.getElementById("r-zotero-library");
+  if (external && libraryInput && !zoteroSelection) libraryInput.value = external.context.external_reference.library;
   if (selectHost) {
     var selectedSource = selectHost.value;
     selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_source")) + '</option>' +
@@ -1331,6 +1452,7 @@ async function refreshResearchSources() {
       '</div>' +
       '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(s.id) + '</div>' +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
+      (s.context && s.context.external_reference ? zoteroOpenLink(s.context.external_reference.library, s.context.external_reference.item_key) : "") +
       researchDetailsControl("source", s.id) +
     '</div>';
   }).join("");
@@ -1473,6 +1595,10 @@ async function refreshResearchDecisions() {
 
 async function refreshResearchProjectInfo() {
   var status = await researchApiGet("research/status");
+  if (zoteroProjectId !== (status.project_id || null)) {
+    clearZoteroSelection();
+    zoteroProjectId = status.project_id || null;
+  }
   var activeRootEl = document.getElementById("r-active-root");
   if (activeRootEl && status && status.ok && status.project_root) {
     activeRootEl.textContent = uiLabel("research_project") + " " + status.project_root;
@@ -1725,7 +1851,8 @@ document.addEventListener("click", async function (event) {
     if (!query) { researchStatus(uiLabel("research_query_required"), false); return; }
     var resultsHost = document.getElementById("research-search-results");
     if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_searching")) + '</p>';
-    var sres = await researchApiPost("research-search", { query: query });
+    var scopeEl = document.getElementById("r-search-scope");
+    var sres = await researchApiPost("research-search", { query: query, scope: scopeEl ? scopeEl.value : "sources" });
     if (!sres.ok) {
       if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || uiLabel("research_search_failed")) + '</p>';
       researchStatus(sres.message || uiLabel("research_search_failed"), false);
@@ -1739,6 +1866,19 @@ document.addEventListener("click", async function (event) {
     }
     if (resultsHost) {
       resultsHost.innerHTML = hits.map(function(h) {
+        if (["dossier", "claim", "decision"].indexOf(h.kind) !== -1) {
+          var statusLabel = h.kind === "claim"
+            ? uiLabel("research_confidence_" + h.confidence)
+            : h.kind === "decision" ? uiLabel(h.deviation_from_fact ? "research_deliberate_deviation" : "research_no_deviation_recorded") : "";
+          return '<div class="research-passage-card">' +
+            '<div class="research-card-title">' + escapeHtml(h.title || "") + '</div>' +
+            '<div class="ctl-note">' + escapeHtml(uiLabel("research_revision_kind_" + h.kind)) + ' · ' +
+              escapeHtml(uiFormat("research_revision_number", {revision: h.revision})) + '</div>' +
+            (statusLabel ? '<div class="ctl-note">' + escapeHtml(statusLabel) + '</div>' : '') +
+            '<p class="research-passage-quote">' + escapeHtml(h.excerpt || "") + '</p>' +
+            '<button type="button" class="ctl" data-research-history="' + h.kind + '" data-record-id="' + escapeHtml(h.record_id) + '">' +
+              escapeHtml(uiLabel("research_view_details")) + '</button></div>';
+        }
         return '<div class="research-passage-card">' +
           '<div class="research-passage-quote">„' + escapeHtml(h.verbatim || "") + '“</div>' +
           '<div class="research-passage-cite">' +

@@ -26,11 +26,11 @@
 <div class="notice-box"><strong>License:</strong> Lixity is source-available under LNCL-1.0. Free use is limited to projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">licensing examples</a>.</div>
 
 <h2 id="install">Install a reproducible release</h2>
-<pre><code>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.18.0"
+<pre><code>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.19.0"
 lixity --version
 lixity about</code></pre>
 <p>The tag selects a fixed release. If the command is not found, run <code>uv tool update-shell</code>, reopen the terminal and try again. Lixity is installed from GitHub; these instructions do not assume a PyPI package.</p>
-<p><strong>Current-main features:</strong> the origin-URL field, localized OCR diagnostics and neutral consistency display described in these guides are additions after the tagged release. To use them deliberately, replace the installation with:</p>
+<p><strong>Included in v1.18.0:</strong> the origin-URL field, browser PDF upload, localized OCR diagnostics and neutral consistency display described in these guides. Release v1.19.0 adds debug logging controls, search across current authored records and optional Zotero integration. To follow development deliberately, replace the installation with:</p>
 <pre><code>uv tool install --force --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"</code></pre>
 <p><code>main</code> changes over time. Record the installed commit for reproducible automation and review the <a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">changelog</a>. Installing or updating Lixity does not restart an already running server.</p>
 
@@ -45,6 +45,9 @@ The rain stopped. Mara opened the window. The street was quiet.
 At the library, Mara examined a handwritten catalogue while the keeper searched the shelves.</code></pre>
 <pre><code>lixity dashboard sample.md --language en -o sample-dashboard.html</code></pre>
 <p>Open <code>sample-dashboard.html</code> in your browser. For reliable exploration, use a longer manuscript with several chapters and read the <a href="interpretation.html">interpretation guide</a>. Analysis defaults to English; use <code>--language de</code> for German or choose <code>--language auto</code> explicitly for heuristic detection.</p>
+
+<h2 id="zotero">Optional Zotero Desktop</h2>
+<p>Install Zotero separately and enable its local API in Settings → Advanced. Zotero 10 or later provides the instance identity required for safe refresh. No cloud account is needed: Lixity reads the local service at <code>127.0.0.1:23119</code>. The server dashboard can browse collections and capture selected PDF/text attachments after retention consent. Images, audio and video remain in Zotero. Read the <a href="research-pdf.html#zotero">capture and migration guide</a> before upgrading an existing archive to v3.</p>
 
 <h2 id="existing-project">Open an existing project and research archive</h2>
 <pre><code>lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765</code></pre>

@@ -242,8 +242,8 @@ class Repository:
                 raise ResearchError("Authored revision history must be contiguous")
             if any(revision.kind != record.kind for revision in history):
                 raise ResearchError("Record identity cannot change kind")
-            if record.schema_version == "research-local/2" and snapshot.manifest.schema_version != "research-manifest-local/2":
-                raise ResearchError("Version 2 records require manifest version 2")
+            if int(record.schema_version.rsplit("/", 1)[1]) > int(snapshot.manifest.schema_version.rsplit("/", 1)[1]):
+                raise ResearchError(f"Version {record.schema_version[-1]} records require manifest version {record.schema_version[-1]} or later")
         sequences: set[tuple[str, int]] = set()
         descriptors: dict[str, Blob] = {}
         purged_passages = {
@@ -385,8 +385,10 @@ class Repository:
             project = next((record for record in records.values() if isinstance(record, Project)), None)
             if project is None:
                 raise ResearchError("Project record required")
-            schema: Literal["research-manifest-local/1", "research-manifest-local/2"]
-            schema = ("research-manifest-local/2" if any(record.schema_version == "research-local/2" for record in records.values())
+            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3"]
+            schema = ("research-manifest-local/3" if any(record.schema_version == "research-local/3" for record in records.values())
+                      or (current and current.manifest.schema_version == "research-manifest-local/3")
+                      else "research-manifest-local/2" if any(record.schema_version == "research-local/2" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/2")
                       else "research-manifest-local/1")
             manifest = Manifest(schema_version=schema, project_id=project.id, generation=current.manifest.generation + 1 if current else 1,

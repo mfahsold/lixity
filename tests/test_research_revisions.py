@@ -32,6 +32,38 @@ class TestResearchRevisions(unittest.TestCase):
             change_kind=change_kind, reason="Author reviewed this change.", actor="test-author",
         )
 
+    def test_search_finds_latest_authored_records_without_turning_them_into_citations(self):
+        self.revise("dossier", self.dossier, {"body": "Retiredword"})
+        self.revise("dossier", self.dossier, {"body": "Currentword in the reading room."})
+        self.revise("decision", self.decision, {"impact_on_plot": "Currentword changes the opening."})
+        self.revise("claim", self.claim, {"actors": ["Currentword"]})
+        api.reindex(self.project)
+        self.assertEqual(api.search(self.project, "Currentword")["hits"], [])
+        found = api.search(self.project, "Currentword", scope="all")
+        self.assertEqual(found["schema_version"], "research-search-local/2")
+        self.assertEqual({hit["kind"] for hit in found["hits"]}, {"dossier", "claim", "decision"})
+        dossier = next(hit for hit in found["hits"] if hit["kind"] == "dossier")
+        self.assertEqual((dossier["record_id"], dossier["revision"]), (self.dossier, 3))
+        self.assertIn("Currentword", dossier["excerpt"])
+        self.assertNotIn("passage_id", dossier)
+        self.assertEqual(api.search(self.project, "Retiredword", scope="all")["hits"], [])
+        self.assertEqual(len(api.search(self.project, "Currentword", scope="decisions")["hits"]), 1)
+        self.assertEqual(len(api.search(self.project, "Currentword", scope="all", limit=1)["hits"]), 1)
+        combined = api.search(self.project, "reading room", scope="all")["hits"]
+        self.assertIn("passage", {hit["kind"] for hit in combined})
+        self.assertIn("dossier", {hit["kind"] for hit in combined})
+        source = next(hit for hit in combined if hit["kind"] == "passage")
+        self.assertEqual(api.cite(self.project, source["passage_id"])["verbatim"], source["verbatim"])
+        self.assertEqual(api.search(self.project, '" OR NOT () *', scope="all")["hits"], [])
+        with self.assertRaises(ResearchError):
+            api.search(self.project, "room", scope="invalid")
+        self.revise("dossier", self.dossier, {"body": "Freshword"})
+        with self.assertRaisesRegex(ResearchError, "stale"):
+            api.search(self.project, "Currentword", scope="all")
+        api.reindex(self.project)
+        self.assertEqual(api.search(self.project, "Currentword", scope="dossiers")["hits"], [])
+        self.assertEqual(len(api.search(self.project, "Freshword", scope="dossiers")["hits"]), 1)
+
     def test_dossier_revision_preserves_identity_history_and_links(self):
         before = Repository(self.project).snapshot()
         original_path = Repository(self.project).record_path(next(e for e in before.manifest.entries if e.ref.id == self.dossier))

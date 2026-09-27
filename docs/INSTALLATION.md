@@ -27,14 +27,14 @@ pip`, or bypass an externally managed Python environment.
 These commands work in a terminal, including Windows PowerShell:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.18.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.19.0"
 lixity --version
 lixity about
 ```
 
-The current release is **v1.18.0**. The tag includes the integrated local project/research workspace,
+The current release is **v1.19.0**. The tag includes the integrated local project/research workspace,
 seven-language workflows and numerical corrections. For reproducible automation, pin this tag or
-its reviewed full commit hash. Read the [release notes](releases/v1.17.0.md).
+its reviewed full commit hash. Read the [release notes](releases/v1.19.0.md).
 
 If `lixity` is not found, run `uv tool update-shell`, open a new terminal and
 retry. `uv tool list` shows the installed source. A tool installation does not
@@ -44,10 +44,20 @@ make `import lixity` available to a different Python environment.
 
 Release `v1.17.0` includes the experimental [local research workspace](research/USAGE.md).
 Research search requires SQLite with FTS5. PDF extraction uses local Poppler
-tools or a separately configured OCR worker; external provider integrations
-remain outside the implemented pilot. Current main adds browser PDF upload,
+tools or a separately configured OCR worker. Release v1.18.0 includes browser PDF upload,
 OCR diagnostics, localized setup guidance, origin URLs and neutral consistency
-when there are no measurable cells. These are not in the existing release tag.
+when there are no measurable cells. Release v1.19.0 adds debug logging controls, search
+across current authored records, Zotero integration and paired backup tools.
+
+Zotero is a separate optional application. Install a native build for your operating
+system and enable its local API in Settings → Advanced. Use Zotero 10 or later for
+stable local instance identity and safe capture refresh. Lixity connects only to
+`127.0.0.1:23119`; it does not install Zotero, launch it, modify its database or
+configure synchronization. A cloud account is unnecessary for this local workflow.
+See the [Zotero setup and migration reference](research/USAGE.md#zotero-desktop-bridge-since-v1190).
+Back up the existing archive before creating v3 captures; all readers and writers
+must support that format. Installing a newer package does not migrate sources
+or change a running server.
 
 To follow unreleased changes, use this **instead**:
 
@@ -79,7 +89,7 @@ version check does not update that running process, including with an editable
 installation. All browser tabs connected to one server share its active project.
 
 If you already use pipx, the equivalent alternative is
-`pipx install "git+https://github.com/mfahsold/lixity.git@v1.18.0"`, followed by
+`pipx install "git+https://github.com/mfahsold/lixity.git@v1.19.0"`, followed by
 `pipx ensurepath` if necessary; update with `pipx upgrade lixity`.
 
 ## First useful result
@@ -118,7 +128,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v1.18.0"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v1.19.0"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -127,7 +137,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v1.18.0"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v1.19.0"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```
@@ -203,12 +213,14 @@ project path. Keep private archives outside the engine checkout.
 
 For PDF import, make `pdftotext` and `pdftoppm` available in that same environment.
 Debian/Ubuntu package: `poppler-utils`; Homebrew package: `poppler`.
-Run `lixity research ocr-status` on current main. Scans require a separately
+Run `lixity research ocr-status` (available since v1.18.0). Scans require a separately
 configured `LIXITY_OCR_WORKER`; native extraction cannot read an image-only page.
 See [the extraction contract](research/USAGE.md#self-hosted-pdf-and-ocr-extraction).
 The [Unlimited-OCR integration guide](research/OCR_INTEGRATION.md) compares the
 official inference routes and this custom boundary. Upstream `infer.py` is not
-a drop-in `LIXITY_OCR_WORKER` executable; no model runtime or adapter is bundled.
+a drop-in `LIXITY_OCR_WORKER` executable. The Python package installs neither a
+model runtime nor a worker executable. The source checkout includes an experimental
+CPU adapter; its separately prepared runtime is described in that guide.
 
 The [browser installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
 provides a synthetic first-dashboard example and links to interpretation and

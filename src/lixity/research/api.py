@@ -41,7 +41,7 @@ from .ocr import (
     extract_pdf_document,
     get_ocr_diagnostics,
 )
-from .repository import Repository, ResearchError, digest
+from .repository import Repository, ResearchConflictError, ResearchError, digest
 from .revisions import (
     get_record as get_record,
 )
@@ -81,12 +81,14 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
            source_id: str | None = None, title: str | None = None,
            language: str | None = None, actor: str = "local-author", dry_run: bool = False,
            context: Mapping[str, Any] | None = None,
-           origin_url: str | None = None,
+           origin_url: str | None = None, expected_snapshot: str | None = None,
            progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (--allow-retention)")
     repository = Repository(project)
     snapshot = repository.snapshot()
+    if expected_snapshot is not None and snapshot.digest != expected_snapshot:
+        raise ResearchConflictError("Research snapshot changed; reload and retry capture")
     path = Path(file).expanduser()
     is_pdf = path.suffix.lower() == ".pdf"
     if not path.is_file():
@@ -122,9 +124,22 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
             raise ResearchError("PDF source must be nonempty and at most 50 MiB")
         if progress_callback:
             progress_callback("ocr", "Rasterizing PDF pages and extracting text via OCR/poppler...")
-        ocr_res = extract_pdf_document(path)
-        text = ocr_res.full_text
-        spans = ocr_res.spans
+        if latest is not None and latest.blob.sha256 == digest(content):
+            repository.read_blob(latest.blob)
+            prior = [record for record in snapshot.records.values() if isinstance(record, Extraction)
+                     and record.source_version_ref.id == latest.id]
+            if len(prior) != 1:
+                raise ResearchError("PDF refresh requires one verified retained extraction")
+            text = repository.read_blob(prior[0].text_blob).decode("utf-8")
+            passages = sorted((record for record in snapshot.records.values() if isinstance(record, Passage)
+                               and record.extraction_ref.id == prior[0].id), key=lambda record: record.start)
+            if any(text[passage.start:passage.end] != passage.verbatim for passage in passages):
+                raise ResearchError("Retained PDF extraction does not match its passages")
+            spans = [(passage.start, passage.end) for passage in passages]
+        else:
+            ocr_res = extract_pdf_document(path)
+            text = ocr_res.full_text
+            spans = ocr_res.spans
         if not spans or len(spans) > 5000:
             raise ResearchError("Source must contain between 1 and 5000 nonempty paragraphs")
         operation: Literal["extract_utf8", "extract_ocr"] = "extract_ocr"
@@ -163,7 +178,8 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
                 "unchanged": True, "dry_run": dry_run, "passages": len(spans)}
 
     version = SourceVersion(**envelope(snapshot.project.id, actor), source_ref=reference(source),
-                            schema_version="research-local/2" if source_context.origin_url else "research-local/1",
+                            schema_version=("research-local/3" if source_context.external_reference else
+                                            "research-local/2" if source_context.origin_url else "research-local/1"),
                             sequence=latest.sequence + 1 if latest else 1, blob=source_blob,
                             retention_confirmed=True, context=source_context)
     activity = Activity(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),
@@ -191,8 +207,8 @@ def reindex(project: str | Path) -> dict[str, Any]:
     return catalogue.reindex(Repository(project))
 
 
-def search(project: str | Path, query: str, *, limit: int = 20) -> dict[str, Any]:
-    return catalogue.search(Repository(project), query, limit=limit)
+def search(project: str | Path, query: str, *, limit: int = 20, scope: str = "sources") -> dict[str, Any]:
+    return catalogue.search(Repository(project), query, limit=limit, scope=scope)
 
 
 def cite(project: str | Path, passage_id: str) -> dict[str, Any]:

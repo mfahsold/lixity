@@ -11,7 +11,8 @@ against the manuscript's own style, then inspect the passages behind each signal
 
 Python 3.10+ · Seven language profiles · No cloud calls.
 
-The experimental local research workspace is included in `v1.17.0`.
+The current release is **v1.19.0**, including the experimental local research workspace.
+Read the [v1.19.0 release notes](docs/releases/v1.19.0.md) for Zotero setup and archive compatibility.
 
 **Free only for non-commercial projects.** Using Lixity for a book intended
 for sale—including self-publishing—requires a separate written commercial
@@ -30,13 +31,21 @@ Practical web guides: [install and open a project](https://mfahsold.github.io/li
 [interpret manuscript metrics](https://mfahsold.github.io/lixity/guides/interpretation.html),
 and [archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html).
 
-**On current main (after the tagged release):** consistency displays “–” when
+**Included in v1.18.0:** consistency displays “–” when
 there are no measurable chapter–feature cells; OCR setup guidance follows the
 dashboard language; source import accepts an optional origin URL. Browser PDF
 upload retains original bytes. Text-layer PDFs use local Poppler tools; scan
 OCR still requires a separately configured self-hosted worker. An origin URL is
 retained provenance, not a remote import. Read the [research reference](docs/research/USAGE.md)
-and [unreleased changes](CHANGELOG.md#unreleased) before upgrading an archive.
+and [v1.18.0 release notes](docs/releases/v1.18.0.md) before upgrading an archive.
+
+**New in v1.19.0:** use the optional [Zotero Desktop bridge](docs/research/USAGE.md#zotero-desktop-bridge-since-v1190) to manage literature and media in Zotero while Lixity retains selected PDF/text evidence and authored decisions. The dashboard browses collections and attachments, captures with consent, explicitly refreshes linked sources and opens originals in Zotero. CLI tools support additive migration export and verified paired backup/restore. Structured attachment identities prevent accidental duplicate captures; earlier quotations remain reproducible. Zotero is optional, with no cloud account or background synchronization required.
+
+Research search can include current dossiers,
+claims and decisions with `--scope all` or a type filter. The dashboard offers
+the same selection and opens authored hits in the existing revision viewer.
+Default CLI/API source search remains compatible. See the
+[current-record search contract](docs/research/USAGE.md#search-current-authored-records-since-v1190).
 
 ## Analysis and research capabilities
 
@@ -178,12 +187,12 @@ Install from GitHub into an isolated CLI environment. Requires Git and
 Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.18.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.19.0"
 lixity --version
 lixity about
 ```
 
-This installs **v1.18.0**, including the experimental local research pilot.
+This installs **v1.19.0**, including the experimental local research pilot.
 The tag stays pinned: upgrading to a future release requires selecting
 its tag explicitly. Use `@main` only for development builds, or a reviewed
 full commit hash for reproducible deployments.

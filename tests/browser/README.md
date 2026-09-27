@@ -34,7 +34,21 @@ that preserve drafts; newer-source notices with original quotations retained;
 and history dialogs across all seven locales at 320 pixels.
 
 It also checks localized OCR status/fallback labels and imports a source with an
-origin URL. The docs suite loads the public static files through intercepted
+origin URL.
+
+The research suite also filters search to current dossiers, verifies typed
+revision results without source-citation actions, opens their revision viewer,
+and captures the search view at desktop and mobile widths.
+
+The research suite also mocks the Zotero local bridge: collection filtering,
+attachment inspection, inert external titles, retention consent and instance-bound
+capture, a fully mapped archive with direct import hidden, and continued evidence
+access while Zotero is unavailable followed by successful retry. It renders the
+Zotero controls at desktop and mobile widths. These
+fixtures do not establish compatibility with a running Zotero installation or
+validate a real library migration.
+
+The docs suite loads public static files through intercepted
 local routes: all four HTML pages at 1440, 390 and 320 pixels, with JavaScript
 enabled and disabled. It checks canonical URLs, assets, console errors, overflow
 and navigation; screenshots stay under `/tmp/lixity-public-docs-*`.

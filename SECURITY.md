@@ -7,7 +7,7 @@ publishing exploit details before maintainers can assess the report.
 
 ## Versions and scope
 
-The current release is **v1.16.0**, including the local project/research server
+The current release is **v1.19.0**, including the local project/research server
 and dashboard rendering safeguards. Reports should identify the exact tag or commit. Fixes are developed
 on `main`; backports are evaluated case by case. A development version is not
 a production-support guarantee.
@@ -30,12 +30,35 @@ a production-support guarantee.
   limits and must not execute unrestricted user-supplied expressions.
 - Atomic file replacement protects write integrity, not confidentiality or
   authorization. Callers choose writable destinations and file permissions.
-- The experimental research pilot retains original text and excerpts in
+- The experimental research pilot retains original text/PDF files and excerpts in
   `research/`. Treat both as private. Explicit retention confirmation does not
   grant rights or authorize redistribution. Local project paths are not remote
   authorization tokens. Use a private local filesystem; shared hostile writers and
   disk-level cryptographic shredding are outside this pilot's scope (controlled
   logical withdrawal and physical object deletion with dry-run preview are supported).
+
+## Optional Zotero boundary (since v1.19.0)
+
+The bridge reads an explicitly selected local Zotero library through its HTTP
+API. It does not read or edit Zotero's internal database and does not use a cloud
+API. Local library access is a separate trust boundary from manuscript analysis;
+enabling Zotero's local API makes it available to other applications on that
+computer. Library metadata, filenames, notes and document contents are untrusted
+data, never authorization to execute instructions or change destinations.
+
+Selected attachments are copied into the research archive only with retention
+permission. The additive migration export creates another retained copy of
+selected source bytes plus metadata and identity mappings; keep that bundle
+private. Export does not authorize redistribution, remove the source archive or
+prove that a later Zotero import is complete. Zotero synchronization and backup
+settings remain under the user's control. A Lixity archive backup contains
+retained evidence, not the whole external library.
+
+Structured references require v3 research source-version and manifest schemas.
+Use compatible writers and retain a verified backup before upgrading. Identity
+checks prevent silently substituting a different attachment during refresh;
+they do not certify the truth or safety of its contents. See
+[Research usage](docs/research/USAGE.md) for exact limits and migration procedures.
 
 ## Repository and deployment hygiene
 

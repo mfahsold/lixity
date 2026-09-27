@@ -198,10 +198,57 @@ server.serve_forever()
     await expect(consistencyTile).toContainText('–');
     assert.equal(await consistencyTile.locator('.kpi-bar').count(), 0);
     await expect(page.locator('#research-sources-list')).toContainText('Synthetic source');
+    await expect(page.locator('#zotero-box')).toBeVisible();
+    let zoteroCapture = null;
+    await page.route('**/api/research-zotero*', async route => {
+      const payload = route.request().postDataJSON();
+      assert.ok(payload.project_id.startsWith('urn:uuid:'));
+      assert.equal(payload.library, 'users/0');
+      if (route.request().url().endsWith('-ingest')) {
+        zoteroCapture = payload;
+        await route.fulfill({json: {ok: true, passages: 1}});
+      } else if (payload.mode === 'collections') {
+        await route.fulfill({json: {ok: true, collections: [{key: 'STUVWXYZ', data: {name: 'Synthetic collection'}}], next_start: null}});
+      } else {
+        const item = {key: 'ABCDEFGH', version: 1, data: {itemType: 'book', title: '<img src=x onerror=alert(1)> Synthetic Zotero'}};
+        const attachments = [{key:'JKLMNPQR', version: 1, data: {itemType:'attachment', title:'Synthetic text', contentType:'text/plain', linkMode:'imported_file'}},
+          {key:'23456789', version:1, data:{itemType:'attachment', title:'Synthetic audio', contentType:'audio/wav', linkMode:'imported_file'}}];
+        await route.fulfill({json: {ok:true, server_id:'synthetic-instance', next_start:null, captures:[],
+          ...(payload.item_key ? {item, attachments} : {items:[item]})}});
+      }
+    });
+    await page.locator('#r-zotero-collections').click();
+    await expect(page.locator('#r-zotero-collection')).toContainText('Synthetic collection');
+    await page.locator('#r-zotero-collection').selectOption('STUVWXYZ');
+    await page.locator('#r-zotero-browse').click();
+    await expect(page.locator('#r-zotero-results')).toContainText('<img src=x onerror=alert(1)>');
+    assert.equal(await page.locator('#r-zotero-results img').count(), 0);
+    await page.locator('[data-zotero-item]').click();
+    await expect(page.locator('#r-zotero-results')).toContainText('Synthetic audio');
+    assert.equal(await page.locator('[data-zotero-capture]').count(), 1);
+    await page.locator('[data-zotero-capture]').click();
+    assert.equal(zoteroCapture, null, 'Capture must require explicit retention');
+    for (const width of [1440,390]) {
+      await page.setViewportSize({width,height:1000});
+      await page.locator('#zotero-box').scrollIntoViewIfNeeded();
+      await page.locator('#zotero-box').screenshot({path:path.join(artifacts, `zotero-${width}.png`)});
+      assert.ok(await page.locator('#zotero-box').evaluate(e => e.getBoundingClientRect().right <= innerWidth));
+    }
+    await page.locator('#r-zotero-retention').check();
+    await page.locator('[data-zotero-capture]').click();
+    await expect(page.locator('#r-zotero-retention')).not.toBeChecked();
+    assert.equal(zoteroCapture.attachment_key, 'JKLMNPQR');
+    assert.equal(zoteroCapture.expected_server_id, 'synthetic-instance');
+    assert.equal(zoteroCapture.allow_retention, true);
+    await page.unroute('**/api/research-zotero*');
+    await page.setViewportSize({width:1440,height:1000});
+
     await page.locator('[data-research-detail=source]').click();
     await expect(page.locator('#research-sources-list .research-details-body')).toContainText('Synthetic fixture, not an archival record.');
     await expect(page.locator('#research-sources-list .research-details-body')).toContainText('The synthetic archive opened in 1924.');
-    assert.deepEqual(mutations, ['/api/project-create', '/api/project-open', '/api/project-open']);
+    assert.deepEqual(mutations, ['/api/project-create', '/api/project-open', '/api/project-open',
+      '/api/research-zotero', '/api/research-zotero', '/api/research-zotero',
+      '/api/research-zotero-ingest', '/api/research-zotero']);
     assert.equal(fs.readFileSync(path.join(fixture.project, 'manuscript.md'), 'utf8'), '');
     await expect(page.locator('#r-active-root')).toContainText('1 sources, 1 dossiers, 0 claims, 0 decisions');
     await expect(page.locator('#research-init-box')).not.toBeVisible();
@@ -253,6 +300,23 @@ server.serve_forever()
     await expect(page.locator('#r-active-root')).toContainText('1 claims');
     await page.locator('#r-link-claim-select').selectOption(claimId);
     await page.locator('[data-rtab=search]').click();
+    await page.locator('#r-search-scope').selectOption('dossiers');
+    await page.locator('#r-search-query').fill('Opening');
+    await page.locator('#r-search-btn').click();
+    await expect(page.locator('#research-search-results')).toContainText('Synthetic dossier');
+    await expect(page.locator('#research-search-results')).toContainText('Revision 1');
+    assert.equal(await page.locator('#research-search-results [data-use-passage]').count(), 0);
+    await page.locator('#research-search-results [data-research-history]').click();
+    await expect(page.locator('#modal-research-revision')).toBeVisible();
+    await expect(page.locator('#modal-research-revision')).toContainText('End of synthetic dossier.');
+    await page.locator('#modal-research-revision [data-close-modal]').first().click();
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({width, height: 900});
+      assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+      await page.locator('#rtab-search').screenshot({path: path.join(artifacts, `search-records-${width}.png`)});
+    }
+    await page.setViewportSize({width: 1440, height: 1000});
+    await page.locator('#r-search-scope').selectOption('sources');
     await page.locator('#r-search-query').fill('archive');
     await page.locator('#r-search-btn').click();
     await page.locator('#research-search-results [data-use-passage=claim]').click();
@@ -316,6 +380,24 @@ server.serve_forever()
     await expect(generalDecision).toBeVisible();
     assert.equal(await generalDecision.locator('.badge-success').count(), 0, 'No marked deviation is not factual certification');
     await expect(generalDecision.locator('.badge-neutral')).toBeVisible();
+
+    await page.locator('[data-rtab=search]').click();
+    await page.locator('#r-search-scope').selectOption('decisions');
+    await page.locator('#r-search-query').fill('meeting');
+    await page.locator('#r-search-btn').click();
+    await expect(page.locator('#research-search-results')).toContainText('Move the date');
+    await expect(page.locator('#research-search-results')).toContainText('Deliberate deviation');
+    await page.locator('#research-search-results [data-research-history=decision]').click();
+    await expect(page.locator('#research-revision-history-detail')).toContainText('Earlier meeting.');
+    await page.locator('#modal-research-revision [data-close-modal]').first().click();
+    await page.locator('#r-search-scope').selectOption('claims');
+    await page.locator('#r-search-query').fill('Archivist');
+    await page.locator('#r-search-btn').click();
+    await expect(page.locator('#research-search-results')).toContainText(claimTitle);
+    await expect(page.locator('#research-search-results')).toContainText('Hypothetical');
+    assert.equal(await page.locator('#research-search-results img').count(), 0);
+    assert.equal(await page.locator('#research-search-results [data-use-passage]').count(), 0);
+    await page.locator('#r-search-scope').selectOption('sources');
 
     // Revise existing authored records through the same UI without duplicating them.
     const dossierId = dossiers.dossiers[0].id;
@@ -443,7 +525,7 @@ server.serve_forever()
     const originalLink = await (await page.request.get(fixture.url + `/api/research/record?kind=evidence_link&id=${encodeURIComponent(evidenceId)}&revision=1`)).json();
     assert.equal(revisedLink.record.claim_ref.revision, 2);
     assert.equal(originalLink.record.claim_ref.revision, 1);
-    await page.locator(`[data-research-history=claim][data-record-id="${claimId}"]`).click();
+    await page.locator(`#research-claims-list [data-research-history=claim][data-record-id="${claimId}"]`).click();
     await expect(page.locator('#research-revision-history-detail')).toContainText(evidenceId);
     await expect(page.locator('#research-revision-history-detail')).toContainText('Claim · Revision 2');
     await page.keyboard.press('Escape');
@@ -654,6 +736,39 @@ server.serve_forever()
     await page.locator('[data-research-detail="source"]').first().click();
     await expect(page.locator('#research-sources-list')).toContainText('https://example.org/source?a=1&b=2');
     await expect(page.locator('#r-active-root')).toContainText(scratchProject);
+    // A fully mapped archive retains evidence access while Zotero is offline.
+    execFileSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+import sys
+from pathlib import Path
+from lixity.research import api
+project = Path(sys.argv[1])
+source = api.list_sources(project)['sources'][0]
+text = project / 'synthetic-zotero.txt'
+text.write_text('A synthetic source for a new local project.', encoding='utf-8')
+context = dict(source['context'])
+context['external_reference'] = {'provider': 'zotero', 'server_id': 'synthetic-instance',
+    'library': 'users/0', 'item_key': 'ABCDEFGH', 'attachment_key': 'JKLMNPQR',
+    'item_version': 1, 'attachment_version': 1}
+api.ingest(project, text, source_id=source['id'], allow_retention=True, context=context)
+`, scratchProject], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}});
+    await page.reload();
+    await expect(page.locator('#r-local-import')).not.toBeVisible();
+    await expect(page.locator('#research-sources-list')).toContainText('Scratch source');
+    await expect(page.locator('#research-sources-list a[href="zotero://select/library/items/ABCDEFGH"]')).toBeVisible();
+    let zoteroOffline = true;
+    await page.route('**/api/research-zotero', route => route.fulfill({json: zoteroOffline
+      ? {ok: false, message: 'Synthetic Zotero unavailable; start the selected profile.'}
+      : {ok: true, server_id: 'synthetic-instance', items: [], next_start: null, captures: []}}));
+    await page.locator('#r-zotero-browse').click();
+    await expect(page.locator('#r-zotero-results')).toContainText('Synthetic Zotero unavailable');
+    await expect(page.locator('#r-zotero-browse')).toBeEnabled();
+    await page.locator('[data-research-detail="source"]').first().click();
+    await expect(page.locator('#research-sources-list')).toContainText('A synthetic source for a new local project.');
+    zoteroOffline = false;
+    await page.locator('#r-zotero-browse').click();
+    await expect(page.locator('#r-zotero-results')).not.toContainText('Synthetic Zotero unavailable');
+    await expect(page.locator('#r-zotero-browse')).toBeEnabled();
+    await page.unroute('**/api/research-zotero');
     const importedProject = path.join(artifacts, 'imported-project');
     const importedText = '## Imported chapter\n\nA synthetic imported manuscript.';
     await page.locator('#btn-modal-new-project').click();

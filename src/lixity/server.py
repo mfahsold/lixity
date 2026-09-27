@@ -513,6 +513,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._handle_research_ingest(payload)
             return
 
+        if action in ("research-zotero", "research-zotero-ingest"):
+            self._handle_research_zotero(payload, capture=action.endswith("-ingest"))
+            return
+
         if action == "research-search":
             self._handle_research_search(payload)
             return
@@ -1092,6 +1096,39 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 
+    def _handle_research_zotero(self, payload: dict[str, Any], *, capture: bool) -> None:
+        from .research import zotero
+        from .research.repository import Repository
+
+        root = self.get_research_root()
+        try:
+            if not root or not (root / "research").is_dir():
+                raise ResearchError("Research project not initialized")
+            snapshot = Repository(root).snapshot()
+            if payload.get("project_id") != snapshot.project.id:
+                raise ResearchError("Research project changed; reload the Zotero selection")
+            library = payload.get("library", "")
+            if capture:
+                if payload.get("allow_retention") is not True:
+                    raise ResearchError("Explicit local retention permission is required")
+                if not isinstance(payload.get("expected_server_id"), str) or not payload["expected_server_id"]:
+                    raise ResearchError("Preview a Zotero instance before capture")
+                result = zotero.ingest(root, library=library, attachment_key=payload.get("attachment_key", ""),
+                                       source_id=payload.get("source_id"), allow_retention=True,
+                                       expected_server_id=payload["expected_server_id"])
+            elif payload.get("mode") == "collections":
+                result = zotero.collections(root, library=library, start=payload.get("start", 0))
+            else:
+                result = zotero.browse(root, library=library, query=payload.get("query", ""),
+                                       item_key=payload.get("item_key"), collection_key=payload.get("collection_key"),
+                                       limit=payload.get("limit", 20), start=payload.get("start", 0))
+                sources = research_api.list_sources(root)["sources"]
+                result["captures"] = [{"source_id": source["id"], **source["context"]["external_reference"]}
+                                      for source in sources if source["context"].get("external_reference")]
+            self._json({"ok": True, **result})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
     def _handle_research_search(self, payload: dict[str, Any]) -> None:
         root = self.get_research_root()
         if not root or not (root / "research").is_dir():
@@ -1101,14 +1138,15 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         if not query:
             self._json({"ok": False, "message": "Empty query"}, 400)
             return
-        limit = int(payload.get("limit") or 20)
+        limit = payload.get("limit", 20)
+        scope = payload.get("scope", "sources")
         try:
-            res = research_api.search(root, query, limit=limit)
+            res = research_api.search(root, query, limit=limit, scope=scope)
             self._json({"ok": True, **res})
         except (ResearchError, OSError, ValueError):
             try:
                 research_api.reindex(root)
-                res = research_api.search(root, query, limit=limit)
+                res = research_api.search(root, query, limit=limit, scope=scope)
                 self._json({"ok": True, **res})
             except (ResearchError, OSError, ValueError) as exc:
                 self._json({"ok": False, "message": str(exc)}, 400)

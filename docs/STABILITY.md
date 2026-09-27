@@ -10,7 +10,7 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 
 ### Release verification and limits
 
-The `1.16.0` suite checks English defaults, language resource-key coverage,
+The maintained suite checks English defaults, language resource-key coverage,
 readability-coefficient dispatch and locale formatting. These are software
 contracts, not empirical validation of linguistic accuracy across seven
 languages. No language-wide accuracy percentage is established by this suite.
@@ -23,6 +23,29 @@ the canvas is not yet available. Textual dimension information remains visible.
 Engine tests use synthetic/public samples. Project adapters and optional local
 servers have separate trust boundaries and need their own tests; core test
 success is not a security certification for an arbitrary adapter.
+
+### Research and external-library limits
+
+The optional Zotero integration is included in `v1.19.0`.
+Zotero can lead the source/media catalogue; Lixity retains immutable evidence
+and authored records. These stores have complementary responsibilities and
+separate backup requirements. Lixity's integrity audit checks retained bytes,
+references and citations, not the completeness of an external library.
+
+Synthetic native Zotero 10.0.3 tests on Linux ARM64 cover text/PDF imports and
+bridge text capture, refresh and search. This is a bounded integration check,
+not a general platform certification or a test of a user's complete collection.
+Automatic background/cloud synchronization and audio/video transcription are
+not implemented. PDF extraction and a configured OCR worker do not establish
+recognition accuracy; review text against scans when exact quotations matter.
+
+RIS migration is additive. Preserve the original evidence archive and verify
+attachment identities, bytes, retained citations and restoration before retiring
+a prior workflow. Structured external references require `research-local/3` and
+`research-manifest-local/3`; older applications reject these snapshots. Current
+readers also accept v1/v2. Search across current authored records does not resolve
+contradictory prose or promote a hypothesis to an accepted author decision.
+See [Research usage](research/USAGE.md) for operational limits.
 
 **Robust statistics & multiplicity control.**
 - MAD with the 1.4826 consistency constant ($1/\Phi^{-1}(3/4)$, R/DescTools
@@ -195,4 +218,4 @@ they are not current product features and must not be cited as such.
 | 48 | `characters` empty names | empty `--names` used to return `figures: []` silently | caller mistake looks like “no characters” | 🟠 → **fixed** (v1.12.0): CLI exit 1 (`err_no_names`); API `ValueError` (no NER — names come from the caller) |
 | 49 | No external Delta stylometry | JSD / driver words are in-corpus chapter-vs-rest diagnostics | misread as authorship attribution | 🟡 **documented**: METHODS Track B (not implemented); STABILITY §1 stylometry note |
 | 50 | Dialogue speaker attribution | turns = quotation segments; no speaker ID | “turn” misread as speaker turn | 🟡 **documented**: USAGE `dialogue` section; STABILITY row 27 (patterns per language) |
-| 51 | Research retention & citations | Pilot retains original UTF-8 bytes and pins exact unicode codepoint offsets; SQLite/FTS5 provides rebuildable lexical search; withdrawn sources mark citations `withdrawn`; purged sources fail closed | citations do not imply factual truth; retention requires explicit permission | 🟡 **documented**: USAGE/AGENTS; research pilot is opt-in, explicit-project only; no ambient manuscript I/O |
+| 51 | Research retention & citations | Pilot retains original UTF-8/PDF bytes and pins exact unicode codepoint offsets; SQLite/FTS5 provides rebuildable lexical search; withdrawn sources mark citations `withdrawn`; purged sources fail closed | citations do not imply factual truth; retention requires explicit permission | 🟡 **documented**: USAGE/AGENTS; research pilot is opt-in, explicit-project only; no ambient manuscript I/O |

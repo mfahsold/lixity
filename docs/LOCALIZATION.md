@@ -1,6 +1,6 @@
 # Language and localization contract
 
-On current main, the browser OCR badge and setup instructions resolve stable
+Since v1.18.0, the browser OCR badge and setup instructions resolve stable
 diagnostic codes through the same seven-language workspace pack as other research
 controls. `ready` means an executable is configured, not verified recognition.
 Unknown codes receive a localized fallback. English backend guidance remains in
@@ -15,6 +15,12 @@ The local server has an experimental research panel; its interface follows
 the seven dashboard languages. Research content, quotations, claim titles and
 author decisions remain in their entered language. See
 [research limits](research/USAGE.md).
+
+Release v1.19.0 adds Zotero collection browsing, capture/refresh,
+retention prompts and original-item links to the same seven-language workspace
+pack. Collection names, attachment titles and external metadata remain in their
+original language. CLI/API diagnostics remain English. Localization does not
+imply that media contents are transcribed, translated or verified.
 
 ## Defaults and developer language
 

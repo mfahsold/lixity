@@ -419,6 +419,22 @@ def render_dashboard(
         parts.append('</div>')
 
         parts.append('<div class="research-tab-pane" id="rtab-sources">')
+        parts.append('<div class="ctl-group" id="zotero-box">')
+        parts.append('<h3>Zotero</h3>')
+        parts.append(f'<p class="ctl-note">{L("zotero_intro")}</p>')
+        parts.append('<div class="row">')
+        parts.append(f'<label for="r-zotero-library">{L("zotero_library")}</label>')
+        parts.append('<input class="ctl" id="r-zotero-library" value="users/0" placeholder="users/0" style="max-width:100%;"/>')
+        parts.append(f'<button type="button" class="ctl" id="r-zotero-collections">{L("zotero_collections")}</button>')
+        parts.append(f'<select class="ctl" id="r-zotero-collection" aria-label="{L("zotero_all")}" style="max-width:100%;"><option value="">{L("zotero_all")}</option></select>')
+        parts.append('</div><div class="row">')
+        parts.append(f'<input class="ctl" id="r-zotero-query" aria-label="{L("research_search_query")}" placeholder="{L("research_search_query")}" style="flex:1;min-width:0;"/>')
+        parts.append(f'<button type="button" class="ctl primary" id="r-zotero-browse">{L("zotero_browse")}</button>')
+        parts.append('</div>')
+        parts.append(f'<label><input type="checkbox" id="r-zotero-retention"/> {L("research_retention")}</label>')
+        parts.append('<div id="r-zotero-results" aria-live="polite"></div></div>')
+        parts.append('<div id="r-local-import">')
+
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{help_term(labels, "research_ingest", L("research_ingest_heading"))}</span>')
         parts.append('<div class="row" style="margin-bottom:.5rem;">')
@@ -438,6 +454,8 @@ def render_dashboard(
         parts.append(f'<button class="ctl primary" id="r-ingest-btn">{L("research_ingest_action")}</button>')
         parts.append('</div>')
         parts.append('</div>')
+        parts.append('</div>')
+        parts.append(f'<h3>{L("zotero_retained")}</h3>')
         parts.append('<div id="research-sources-list"></div>')
         parts.append('</div>')
 
@@ -446,6 +464,12 @@ def render_dashboard(
         parts.append(f'<span class="ctl-label">{help_term(labels, "research_search", L("research_search_heading"))}</span>')
         parts.append('<div class="row">')
         parts.append(f'<input class="ctl" id="r-search-query" placeholder="{L("research_search_query")}" style="min-width:240px;flex:1;"/>')
+        parts.append(f'<select class="ctl" id="r-search-scope" aria-label="{L("research_search_scope")}">')
+        for scope, scope_label in (("all", "research_search_all"), ("sources", "research_tab_sources"),
+                             ("dossiers", "research_tab_dossiers"), ("claims", "research_tab_claims"),
+                             ("decisions", "research_tab_decisions")):
+            parts.append(f'<option value="{scope}">{L(scope_label)}</option>')
+        parts.append('</select>')
         parts.append(f'<button class="ctl primary" id="r-search-btn">{L("research_search_action")}</button>')
         parts.append('</div>')
         parts.append('</div>')

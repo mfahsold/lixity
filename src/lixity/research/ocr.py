@@ -12,6 +12,7 @@ See docs/research/OCR_INTEGRATION.md for upstream compatibility and limitations.
 
 import hashlib
 import json
+import math
 import os
 import shutil
 import subprocess
@@ -41,7 +42,7 @@ class OCRBlock:
     page_number: int
     text: str
     box: list[float] | None = None
-    confidence: float = 1.0
+    confidence: float | None = None
 
 
 @dataclass
@@ -94,6 +95,50 @@ def render_pdf_pages(pdf_path: Path) -> list[PageImage]:
         return pages
 
 
+def worker_timeout() -> int:
+    try:
+        seconds = int(os.environ.get("LIXITY_OCR_TIMEOUT", "120"))
+    except ValueError as error:
+        raise ResearchError("LIXITY_OCR_TIMEOUT must be an integer from 1 to 3600 seconds") from error
+    if not 1 <= seconds <= 3600:
+        raise ResearchError("LIXITY_OCR_TIMEOUT must be an integer from 1 to 3600 seconds")
+    return seconds
+
+
+def _worker_blocks(response: Any, pages: list[PageImage]) -> tuple[list[OCRBlock], list[str]]:
+    if not isinstance(response, dict) or not isinstance(response.get("blocks"), list):
+        raise ResearchError("Invalid OCR worker response")
+    expected = {page.page_number for page in pages}
+    if not expected or len(response["blocks"]) > 5000:
+        raise ResearchError("OCR requires rendered page coverage and at most 5000 blocks")
+    blocks: list[OCRBlock] = []
+    for block in response["blocks"]:
+        if (not isinstance(block, dict) or type(block.get("page_number")) is not int
+                or block["page_number"] not in expected or not isinstance(block.get("text"), str)
+                or not block["text"].strip()):
+            raise ResearchError("Invalid OCR block text or page number")
+        confidence = block.get("confidence")
+        if confidence is not None and (type(confidence) not in (float, int)
+                or not math.isfinite(confidence) or not 0 <= confidence <= 1):
+            raise ResearchError("Invalid OCR confidence")
+        box = block.get("box")
+        if box is not None and (not isinstance(box, list) or len(box) != 4 or
+                any(type(value) not in (float, int) or not math.isfinite(value) for value in box)):
+            raise ResearchError("Invalid OCR block coordinates")
+        blocks.append(OCRBlock(page_number=block["page_number"], text=block["text"].strip(),
+                               box=box, confidence=confidence))
+    completed = response.get("completed_pages", [])
+    if not isinstance(completed, list) or any(type(page) is not int or page not in expected for page in completed):
+        raise ResearchError("Invalid OCR completed pages")
+    if {block.page_number for block in blocks} | set(completed) != expected:
+        raise ResearchError("OCR worker returned incomplete page coverage")
+    warnings = response.get("warnings", [])
+    if not isinstance(warnings, list) or any(not isinstance(value, str) for value in warnings):
+        raise ResearchError("Invalid OCR warnings")
+    blocks.sort(key=lambda block: block.page_number)
+    return blocks, warnings
+
+
 def extract_pdf_with_worker(
     pdf_path: Path,
     pages: list[PageImage],
@@ -121,24 +166,16 @@ def extract_pdf_with_worker(
                     capture_output=True,
                     text=True,
                     check=False,
-                    timeout=120,
+                    timeout=worker_timeout(),
                 )
                 if proc.returncode == 0:
                     resp = json.loads(proc.stdout)
-                    blocks = [
-                        OCRBlock(
-                            page_number=int(b.get("page_number", 1)),
-                            text=str(b.get("text", "")).strip(),
-                            box=b.get("box"),
-                            confidence=float(b.get("confidence", 1.0)),
-                        )
-                        for b in resp.get("blocks", [])
-                    ]
-                    full_text = "\n\n".join(b.text for b in blocks if b.text)
-                    return full_text, blocks, resp.get("warnings", [])
-                warnings.append(f"OCR worker exited with code {proc.returncode}: {proc.stderr.strip()[:200]}")
+                    blocks, warnings = _worker_blocks(resp, pages)
+                    full_text = "\n\n".join(b.text for b in blocks)
+                    return full_text, blocks, warnings
+                raise ResearchError(f"OCR worker exited with code {proc.returncode}; no capture was retained")
             except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
-                warnings.append(f"OCR worker failed: {exc}")
+                raise ResearchError("OCR worker failed or timed out; no partial capture was retained") from exc
 
     # 2. Local fallback using system pdftotext with per-page tracking
     pdftotext = shutil.which("pdftotext")
@@ -253,6 +290,13 @@ def get_ocr_diagnostics(worker_cmd: str | None = None) -> dict[str, Any]:
         status = "missing_dependencies"
         guidance.append("Install poppler-utils (apt install poppler-utils / brew install poppler) for PDF text extraction.")
         guidance.append(f"For scanned documents, configure LIXITY_OCR_WORKER with snapshot {MODEL_SNAPSHOT[:8]}.")
+
+    if cmd:
+        try:
+            worker_timeout()
+        except ResearchError as error:
+            status = "misconfigured_worker"
+            guidance.append(str(error))
 
     return {
         "status": status,

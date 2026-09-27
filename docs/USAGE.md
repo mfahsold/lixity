@@ -31,12 +31,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.18.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.19.0"
 lixity --version
 lixity about
 ```
 
-`v1.18.0` is the release pin. Choose `@main` only to follow development,
+`v1.19.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
@@ -793,7 +793,7 @@ plus a wheel packaging job. Contribution workflow:
 Lixity Non-Commercial License 1.0 (LNCL-1.0) – see [`LICENSE`](../LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
 
-## Unavailable consistency and empty manuscripts (current main)
+## Unavailable consistency and empty manuscripts (since v1.18.0)
 
 The dashboard and text style report show “–” when there are no measurable
 chapter–feature cells. Empty chapters do not contribute measurements. A single
@@ -807,3 +807,57 @@ do not present it as 100%. When measured, consistency counts cells with
 `abs(z*) < z_mild`, not whole chapters. A high result is not a quality verdict.
 The [interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
 explains a practical review loop and short-text limits.
+
+## Debug logging (since v1.19.0)
+
+Start the local server with `lixity serve /absolute/path/to/project --debug`,
+or set `LIXITY_DEBUG=1` in its environment (`true` and `yes` also enable it).
+This enables backend request logging and emits a debug meta tag in the dashboard.
+In the browser console, `setLixityDebug(true)` enables verbose API and runtime
+diagnostics; `setLixityDebug(false)` disables verbose logging for the active page
+and removes the saved local preference. Warnings and errors still log.
+
+On reload, a truthy `window.LIXITY_DEBUG` or the server's debug meta tag takes
+precedence over local storage. Disabling logging in the console therefore does
+not survive reload when the server enables debug mode. To keep it off, restart
+the server without `--debug` and without an enabling `LIXITY_DEBUG` value, then
+clear the browser preference with `setLixityDebug(false)`.
+
+Backend request lines include a timestamp; separate error-detail lines currently
+do not. Browser API diagnostics include method, URL, status, elapsed milliseconds
+and response details, but no explicit wall-clock timestamp. Logs may contain
+source content or paths; review them before sharing.
+
+## Research search scopes (since v1.19.0)
+
+`lixity research search --project ./novel --query "inspector" --scope all`
+searches source passages and current dossiers, claims and decisions together.
+Use `--scope dossiers`, `claims` or `decisions` to narrow the results; omitted
+scope retains the source-only CLI contract. Run `research reindex --project
+./novel` after changes. The dashboard's Search tab defaults to all record types.
+See the [research reference](research/USAGE.md#search-current-authored-records-since-v1190)
+for response versions and the distinction between authored records and citations.
+
+## Zotero integration (since v1.19.0)
+
+Zotero can be the leading catalogue for literature, images, audio and video.
+Lixity captures selected PDF/text evidence and maintains dossiers, claims and
+author decisions. It remains usable without Zotero.
+
+In the server dashboard, open Research → Sources, select an explicit Zotero
+library and collection, browse items and inspect attachments. Confirm retention
+before capturing a supported file. Existing linked sources offer explicit refresh
+and an Open in Zotero link. Refresh preserves previous citations; it does not
+rewrite authored conclusions. Media files remain in Zotero without automatic
+transcription or visual analysis.
+
+The CLI offers `research zotero`, `zotero-ingest`, `zotero-export`,
+`zotero-backup` and `zotero-restore`. Export is additive: review and import the
+RIS bundle in Zotero, verify original attachment bytes and bind existing source
+identities before considering any retirement of an older workflow. The paired
+backup requires Zotero to be closed and does not include manuscripts, profiles
+or files linked outside its data directory.
+
+See the [Zotero bridge reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
+for setup, pagination, dry runs, v3 compatibility, identity matching and recovery.
+There is no automatic migration, bidirectional synchronization or archive deletion.

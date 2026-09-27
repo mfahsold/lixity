@@ -2,7 +2,8 @@
 
 Lixity analyzes a Markdown manuscript on your computer. Its metrics describe
 patterns to inspect; they do not rate literary quality or prescribe edits. The
-research workspace described below is an **experimental local pilot in `v1.16.0`**.
+research workspace remains **experimental in `v1.19.0`**. This release includes
+Zotero integration and search across current authored records.
 
 For installation and version checks, see [Installation](INSTALLATION.md).
 Commercial use, including work on a book intended for sale, requires a
@@ -101,7 +102,7 @@ analysis engine as the CLI. Statistical flags are prompts for human review;
 their assumptions and limits are explained in [Stability](STABILITY.md).
 In a research-only workspace, source, claim, dossier and decision controls
 remain available; manuscript comparison requires a manuscript to be loaded.
-Select a source or dossier to inspect its full record and citations. Search
+Select a source or dossier to inspect its full record and citations. Source-passage search
 results offer **Use for claim** and **Use for dossier** actions; the claim form
 can associate a dossier. After source purge, retained authored records show
 their affected citations as unavailable rather than displaying deleted text.
@@ -109,7 +110,7 @@ their affected citations as unavailable rather than displaying deleted text.
 ## Research workflow
 
 Research commands always name a project root. Ingestion retains original
-UTF-8 bytes only after explicit local retention permission. It does not grant
+UTF-8 text or PDF bytes only after explicit local retention permission. It does not grant
 redistribution rights or verify historical claims.
 
 ```sh
@@ -144,6 +145,65 @@ means no deviation was marked; it does not certify factual accuracy. Dossiers
 collect notes and cited passages. The CLI and web research panel can inspect
 these records; the web panel also supports source ingestion, lexical search,
 direct evidence selection, dossier association, and manuscript comparison.
+
+## Use Zotero for sources and media (since v1.19.0)
+
+Zotero can be your main catalogue for literature, PDFs, images, audio and video.
+Keep bibliographic corrections and general media organization there. Lixity
+retains selected PDF/text captures for exact quotations, analysis and authored
+claims, dossiers and decisions. A Zotero attachment changing later must not change
+an earlier quotation silently. Neither importing a file nor selecting a claim's
+confidence label verifies its content.
+
+Install Zotero separately on the computer running Lixity and enable its local API.
+Select the intended library explicitly, preview its entries, then capture only the
+attachments you want to retain as evidence. The bridge requires local retention
+permission and locally available attachment files. It does not transcribe audio
+or video; image-only PDF scans still need a configured OCR worker. See the
+[Zotero setup and command reference](research/USAGE.md#zotero-desktop-bridge-since-v1190).
+
+### First Zotero capture
+
+After upgrading Lixity, stop the previous server with Ctrl+C and start it again.
+A browser reload does not load updated Python code, including in an editable
+checkout. Verify the intended project path in the dashboard before importing.
+
+In Zotero 10 or later, enable Settings → Advanced → Allow other applications on
+this computer to communicate with Zotero. Start Zotero and ensure the attachment
+is downloaded locally. For an already initialized research project:
+
+```sh
+lixity research zotero --project ./novel --library users/0 --collections
+lixity research zotero --project ./novel --library users/0 --query "reading room"
+lixity research zotero --project ./novel --library users/0 --item-key ABCDEFGH
+lixity research zotero-ingest --project ./novel --library users/0 --attachment-key JKLMNPQR --allow-retention --dry-run
+lixity research zotero-ingest --project ./novel --library users/0 --attachment-key JKLMNPQR --allow-retention
+lixity research reindex --project ./novel
+lixity research search --project ./novel --query "reading room"
+```
+
+Replace the example project path, query and eight-character keys with your
+previewed entries; the attachment key differs from its parent item key. Use the
+returned `server_id` with `--expected-server-id` when scripting a preview followed
+by capture. `--allow-retention` confirms permission to keep the selected bytes.
+The dry run previews changes without writing the research archive.
+
+In the dashboard, the equivalent flow is Research → Sources → Zotero: choose the
+explicit library and collection, inspect an item, confirm retention and capture
+a PDF/text attachment. Review its source details and a quotation against the
+original. Unsupported media remain in Zotero.
+
+For an existing Lixity source collection, `research zotero-export` creates an
+additive RIS import bundle containing original files and a migration manifest.
+Import that bundle into Zotero and verify the result before changing the workflow.
+Keep the existing Lixity archive: its citations and authored records are still
+the evidence history. Save and test backups of both stores before retiring any
+previous source-management process. The export is not a complete Zotero backup
+and does not synchronize future changes automatically.
+
+The first capture with a structured Zotero reference writes a v3 source version
+and manifest. Current readers retain v1/v2 support; older readers reject v3. Back
+up before upgrading and use the same supported version for all archive writers.
 
 For implemented commands, storage behavior, withdrawal/purge semantics, and
 limits, see [Research usage](research/USAGE.md). The broader

@@ -1,6 +1,7 @@
 # Local research pilot
 
-**Experimental local research archive system in `v1.17.0`.**
+**Experimental local research archive system, extended in `v1.19.0`.**
+The baseline table below records v1.18.0; subsequent sections identify v1.19.0 additions.
 This component archives local UTF-8 text and PDF documents, attaches versioned source criticism context and tags,
 resolves exact citations, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, connects to the analysis pipeline, and performs cross-corpus
@@ -8,10 +9,10 @@ grounding comparisons against manuscripts. Authors can record claims,
 passage-to-claim evidence relations and authorial decisions, with full native revision history.
 It does not implement the entire [RFC](README.md).
 
-| Available in `v1.17.0` | Not implemented |
+| Available in `v1.18.0` | Not implemented |
 | --- | --- |
 | Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
-| SQLite/FTS5 lexical search, instant index rebuild | Zotero, network imports |
+| SQLite/FTS5 lexical search, instant index rebuild | Remote web imports |
 | Local text / Markdown input, original bytes retained | Multi-tenant team services, cloud hosting |
 | PDF ingestion with self-hosted Baidu Unlimited-OCR boundary | Automated factual proof or rewriting prose |
 | Safe Markdown & offline SVG diagram rendering (flowcharts, sequence) | Ambient configuration discovery |
@@ -34,11 +35,141 @@ German have the deepest linguistic analysis heuristics; language selection
 does not translate archived quotations or turn lexical search into semantic
 search. The research CLI's help and errors are English.
 
+## Zotero Desktop bridge (since v1.19.0)
+
+Zotero can manage the library, bibliographic metadata and media; Lixity retains
+selected evidence captures and manages analysis, dossiers, claims and decisions.
+This optional CLI/Python/dashboard integration is available since v1.19.0. It adds no Python dependencies. Start Zotero on the same computer
+and enable **Settings → Advanced → Allow other applications on this computer to
+communicate with Zotero**. No account, cloud API key or plugin is required.
+The bridge reads the local API; it never writes Zotero's database or library.
+
+```bash
+# Preview pages; use the returned next_start as --start for further pages.
+lixity research zotero --project ./novel --library users/0 --collections
+lixity research zotero --project ./novel --library users/0 --query "history" --limit 20
+# Replace illustrative keys and SERVER_ID with preview results.
+lixity research zotero --project ./novel --library users/0 --collection-key ABCDEFGH
+lixity research zotero --project ./novel --library users/0 --item-key ABCDEFGH
+lixity research zotero-ingest --project ./novel --library users/0 --attachment-key JKLMNPQR --expected-server-id SERVER_ID --allow-retention --dry-run
+lixity research zotero-ingest --project ./novel --library users/0 --attachment-key JKLMNPQR --expected-server-id SERVER_ID --allow-retention
+lixity research reindex --project ./novel
+```
+
+Every call requires an explicit project and library. Use `users/0` for the local
+user library or `groups/<numeric-id>` for a locally available group library.
+Preview returns `research-zotero-local/1`, metadata and an instance `server_id`.
+An item preview includes a page of attachments. Collections are paged in batches
+of 100; item pages accept a limit of 1–100. `next_start` is a continuation hint,
+not a total count; a final full page may lead to an empty page. External metadata
+and notes remain untrusted evidence.
+
+Capture selects one locally available PDF, UTF-8 text or Markdown attachment.
+The existing ingestion pipeline retains stable bytes, the parent title and origin
+URL. `provenance_note` records a bounded summary of creators, date, parent and
+attachment versions. `context.external_reference` separately records provider,
+server identity, library, parent/attachment keys and versions. This is not a
+lossless bibliography export. Invalid URLs or overlong metadata fail without
+publishing a capture. Language comes from the flag or project, not Zotero metadata.
+Images, audio and video remain in Zotero; Lixity does not transcribe or index them.
+Scanned PDFs require the separately configured OCR worker.
+
+A repeated capture of the same instance/library/attachment finds its existing
+active source. Identical bytes and context are a no-op, rather than a duplicate.
+If the capture changed, explicitly pass its Lixity `--source-id` to refresh it.
+The attachment identity must match; existing source criticism and tags are
+preserved. Changed captures preserve earlier citations. A changed research
+snapshot fails the operation instead of overwriting concurrent work. Titles and
+languages retain the existing source-refresh restrictions. There is no automatic
+background synchronization or content-based deduplication across different items.
+
+Structured identity and safe refresh require the server identity provided by
+Zotero 10 or later. An older client supporting the local endpoints may create
+an unstructured CLI/Python capture, but safe refresh and identity deduplication
+are unavailable. The browser requires a previewed server identity for capture.
+
+The research dashboard lets users choose a library and collection, search items,
+inspect attachments, open originals in Zotero and capture or refresh selected
+PDF/text attachments after confirming retention. It marks captured attachments
+and metadata-version changes. This indication is not a comparison of file bytes.
+When every active source has a structured external reference, the dashboard hides
+the separate local-import form. Native CLI/API import remains available for
+standalone projects and recovery; retained evidence history is not removed.
+
+The bridge uses GET requests to `127.0.0.1:23119`, with a 10-second socket timeout,
+bounded responses, no proxies or redirects. Files must resolve to local regular
+files; download cloud-only attachments in Zotero first. Dry runs require retention
+consent and validate/extract input, but leave the research store unchanged.
+Temporary capture files are removed afterward. Do not grant retention merely
+because a file is visible in Zotero: visibility is not redistribution permission.
+
+Python entrypoints are `lixity.research.zotero.collections`, `.browse` and
+`.ingest`, with explicit `project` and `library` arguments. They are independent
+of manuscript analysis. Standard research export includes retained captures and
+provenance, not the external library. Use the paired backup below for both stores.
+
+### Additive migration to Zotero
+
+```sh
+lixity research zotero-export --project ./novel --output ./zotero-import --allow-retention --dry-run
+lixity research zotero-export --project ./novel --output ./zotero-import --allow-retention
+```
+
+The destination must not exist. Export produces `library.ris`, `files/` and
+`migration.json` (`research-zotero-export-local/1`). It selects the newest active
+capture for each active source; withdrawn sources/captures are excluded. Original
+bytes, source IDs, context and SHA-256 hashes are retained in the bundle. RIS
+contains title, language, tags, origin URL and provenance notes, with an explicit
+`lixity-source:<UUID>` tag and attachment file URI. Keep the reviewed bundle at
+its exported location while importing RIS: attachment URIs are absolute.
+
+Import `library.ris` through Zotero's import workflow and check its attachments.
+This is additive: it neither deletes old Lixity evidence nor reconciles duplicate
+Zotero imports. To bind an existing Lixity source, run `zotero-ingest` with its
+`--source-id` and the imported attachment key. The parent must retain the exported
+migration tag and the attachment bytes must exactly match the current capture.
+Binding updates capture provenance while preserving source IDs and older citations.
+A filename, title or similar text is never enough to establish this identity.
+
+Before retiring duplicate workflows, compare active source counts and bindings,
+audit the research archive, resolve representative old citations, and verify a
+paired restore. A successful export is not proof that a project's migration has
+finished. Preserve the pre-migration backup until restoration has been tested.
+
+### Paired Zotero/research backup and restore
+
+Close Zotero before starting; `--confirm-zotero-closed` is the caller's explicit
+confirmation, not automatic process detection. Specify the **data directory**
+containing `zotero.sqlite`, not the application profile.
+
+```sh
+lixity research zotero-backup --project ./novel --data-dir /path/to/Zotero --output ./paired-backup --confirm-zotero-closed
+lixity research zotero-restore --from ./paired-backup --to ./restored-pair
+lixity research audit --project ./restored-pair/project
+lixity research reindex --project ./restored-pair/project
+```
+
+Both destinations must be new; existing directories are never overwritten.
+The bundle contains `research.tar.gz`, a copy of the Zotero data directory, and
+`BACKUP.json` (`research-zotero-backup-local/1`) with SHA-256 checksums and sizes.
+Backup audits research and checks that Zotero files remain unchanged during
+copying. Restore checks the complete inventory, checksums and research archive
+before publishing `project/` and `zotero/` beneath the new destination. It does
+not switch a running Zotero instance or restart Lixity.
+
+Symlinks and special files are rejected; the paired inventory is limited to
+10 GiB. External linked attachments, manuscripts and application profiles are
+excluded. Use Zotero stored attachments for self-contained media backup, and
+back up excluded project material separately. Verify restored Zotero data in a
+separate instance before adopting it; byte verification alone does not establish
+application-level usability or that an external attachment was included.
+
 ## Try it
 
-Install `v1.16.0` or use a development checkout (`make install-dev`), then
+Install `v1.19.0` or use a development checkout (`make install-dev`), then
 activate `.venv` if applicable.
 Requires SQLite with FTS5; no additional Python dependencies or models.
+PDF extraction has separate prerequisites described below.
 
 ```bash
 lixity research init --project ./novel --title "Novel research" --language en
@@ -49,6 +180,12 @@ lixity research sources --project ./novel
 lixity research search --project ./novel --query "reading room" --limit 5
 lixity research audit --project ./novel
 ```
+
+`research sources` and `research ocr-status` already return JSON; neither accepts
+`--json`. The listing command is `sources`, not `list-sources`. `ocr-status`
+does not accept `--language`: its CLI guidance is English, while the browser
+localizes guidance in de/en/fr/es/it/pt/nl. Use named `--project` and `--file`
+arguments for initialization and ingestion, as shown above.
 
 Use a `passage_id` from search and a `source_id` from ingestion:
 
@@ -78,8 +215,9 @@ lixity serve --research-project ./novel --no-project
 
 Replace the uppercase placeholders with returned IDs. Search uses the newest
 capture of each source. Earlier passage IDs still cite their original bytes.
-Repeating a refresh with unchanged bytes is a no-op. Without `--source-id`, each
-ingestion creates a distinct source; identical text is not proof of identity.
+Repeating a refresh with unchanged bytes and context is a no-op. For native `ingest`, omitting `--source-id` creates a distinct source; identical
+text is not proof of identity. Zotero capture instead uses its structured external
+identity to recognize an already captured attachment.
 
 `hypothetical`, `evidenced` and `disputed` are user-selected claim labels, not
 computed probabilities or factual verdicts. A claim can exist without an
@@ -94,6 +232,49 @@ copyright permission, authorize redistribution or accept a factual claim.
 Passages remain `unreviewed`. All commands emit JSON (except `dashboard` which emits HTML);
 exit codes are `0` success, `1` operational/integrity failure and `2` CLI usage error.
 A failed audit returns `ok: false` and exit code `1`. Other errors go to stderr without source contents.
+
+## Search current authored records (since v1.19.0)
+
+The default CLI/Python/HTTP search still searches source passages and returns
+`research-search-local/1`. Select `--scope all`, `dossiers`, `claims` or
+`decisions` to include current authored records with a typed
+`research-search-local/2` response:
+
+```sh
+lixity research reindex --project ./novel
+lixity research search --project ./novel --query "inspector" --scope all
+lixity research search --project ./novel --query "inspector" --scope decisions
+```
+
+Python: `api.search("./novel", "inspector", scope="all")`.
+HTTP: `POST /api/research-search` with `{"query":"inspector","scope":"all"}`.
+The dashboard defaults to **All records** and offers the same type filters.
+Its details button opens the existing record history with the current revision.
+
+Source hits have `kind: "passage"` and retain their citation fields. Authored
+hits have `kind`, `record_id`, `revision`, `title` and a plain-text `excerpt`;
+they have no `passage_id` and cannot be used as source citations. Claim hits
+include the author-selected `confidence`; decision hits include
+`deviation_from_fact`. A match does not make a claim verified or a proposal final.
+
+The shared disposable FTS5 catalogue indexes current dossier bodies/tags, claim
+statements/tags/scope, decision rationales/plot impact, and their titles. It does
+not index revision history or revision reasons. `all` also indexes source titles
+and current source passages. Titles receive extra ranking weight; scores are
+lexical relevance, not authority. Query words must all occur in one record;
+there is no semantic search, identity resolution or automatic contradiction
+resolution. The result limit applies across all matching types. Use type filters
+when numerous source hits obscure authored records.
+
+Reindex after authored changes or when upgrading an old catalogue. CLI/Python
+report stale or missing indexes; the dashboard rebuilds them on demand. Archives
+and immutable revisions need no migration for this search extension.
+
+For a character overview, maintain a short dedicated dossier with explicit
+sections for decisions, proposals and open questions, and link the supporting
+research. A long current dossier may still contain obsolete sentences. Search
+finds the accepted revision; an author must reconcile those sentences and record
+the correction through the native revision workflow.
 
 ## Python API
 
@@ -328,10 +509,19 @@ recovery artifact, not an accepted revision or an automatic merge. Accepted
 history is never replaced; malformed or foreign files stop the save.
 ## Origin URL and capture provenance
 
-Current main adds an optional **Origin URL** field to the browser source import,
+Version 1.18.0 adds an optional **Origin URL** field to the browser source import,
 `--origin-url` to the CLI and `origin_url=` to `api.ingest`. The value is retained
 as `SourceVersion.context.origin_url`, independently of title, tags and
 `provenance_note`. Source details, source listings and citation context expose it.
+In the `research sources` JSON response, the first source's current URL is at
+`.sources[0].context.origin_url`.
+
+Since v1.19.0, refreshing identical PDF bytes reuses the retained
+extraction after verifying the original blob, extracted text and passage spans.
+Changing only context, including the origin URL or Zotero binding, creates a new
+capture and passage records without rerunning OCR. Identical bytes and context
+remain a no-op. Earlier citations remain valid. Version 1.18.0 reruns extraction
+for this operation; changed PDF bytes still require extraction in v1.19.0.
 
 ```sh
 lixity research ingest --project ./novel --file ./notes.txt --allow-retention \
@@ -358,8 +548,9 @@ context mapping with `origin_url: null` (and any other metadata to retain).
 Earlier citations resolve their own capture and retain the original URL. URLs,
 filenames and titles never establish source identity automatically.
 
-**Compatibility:** source versions carrying a URL use `research-local/2`, still
-at record revision 1, with a `research-manifest-local/2` snapshot. Their sequence
+**Compatibility:** source versions carrying a URL without a structured external
+reference use `research-local/2`, still at record revision 1, with a v2-or-later
+manifest. Zotero bindings in v1.19.0 require record and manifest v3. Their sequence
 counts source captures; it is separate from authored-record revision history.
 URL-free v1 records omit the new field entirely and retain their old encoding.
 Reading an old archive does not migrate it. Lixity 1.17.0 and earlier reject
@@ -377,7 +568,7 @@ separate content-addressed blobs:
 lixity research ingest --project ./novel --file ./document.pdf --allow-retention
 ```
 
-Current main also accepts native binary PDF upload through the browser file
+Version 1.18.0 also accepts native binary PDF upload through the browser file
 input. It reads the selected file as base64 for transport and passes the decoded
 bytes through the same import API as text and server-local files. The browser
 shows reading/extraction/completion states and prevents duplicate submits while
@@ -392,7 +583,7 @@ Without page rasterization, native fallback only attempts page one, so treat
 `partial` as incomplete setup rather than full multi-page support.
 
 An image-only scan has no usable text layer and requires an external self-hosted
-worker. Lixity does not install or start that worker. Run current-main diagnostics
+worker. Lixity does not install or start that worker. Run the diagnostics included in v1.18.0
 in the same environment as the server:
 
 ```sh
@@ -407,7 +598,7 @@ The same information is available at `GET /api/research/ocr-status` and in
 | `ready` | Executable worker and pdftoppm found | Test an authorized scan and inspect extracted text |
 | `native_only` | Both Poppler tools, no worker | Native PDFs work; configure a worker for scans |
 | `partial` | Worker or pdftotext available, pdftoppm missing | Install the rasterizer before multi-page use |
-| `misconfigured_worker` | Configured worker missing or not executable | Check path, permissions and service environment |
+| `misconfigured_worker` | Configured worker missing/not executable, or invalid worker timeout | Check path, permissions, service environment and `LIXITY_OCR_TIMEOUT` |
 | `missing_dependencies` | No complete usable setup | Install Poppler and optionally a scan worker |
 
 Diagnostics inspect executable availability, not model weights, snapshot
@@ -424,6 +615,8 @@ this custom worker protocol; a separate adapter is required.
 Set `LIXITY_OCR_WORKER` to one executable path or a command name on PATH. It is
 invoked directly as `[worker, request_file]`, without shell parsing or embedded
 arguments. Use an absolute path without `~` for portable service configuration.
+`LIXITY_OCR_TIMEOUT` sets the worker subprocess deadline in seconds: an integer
+from 1 to 3600, default 120. This is a total invocation deadline, not per page.
 Set the variable in the service's environment and restart the server; exporting
 it in another terminal does not update an existing process.
 
@@ -450,11 +643,40 @@ Return JSON on stdout; send logs to stderr:
 {"blocks": [{"page_number": 1, "text": "Synthetic reading room note."}], "warnings": []}
 ```
 
-Optional block fields are `box` and `confidence`. The implementation joins
-nonempty block text with blank lines, times out the worker after 120 seconds,
-and may use native text extraction if the worker fails. Validate the extracted
-text against a known scan. Do not infer OCR success from successful extraction
-of an existing PDF text layer.
+Since v1.19.0, worker responses are validated before accepting a capture.
+Every block needs a nonempty string `text` and an integer `page_number` from the
+rendered request pages; at most 5,000 blocks are accepted. Optional `box` contains
+four finite numbers. Optional `confidence` must be a finite number from 0 to 1;
+omission or `null` means **unknown**, never an implicit score of 1.0. A supplied
+score is worker-reported, not an independently calibrated accuracy estimate.
+
+Every requested page must be covered by a block or listed in optional
+`completed_pages`. Use that integer list for pages successfully inspected with
+no readable text, such as a blank page; never use it to conceal a failed page.
+For example, a two-page document with a blank second page may return:
+
+```json
+{"blocks": [{"page_number": 1, "text": "Synthetic note."}], "completed_pages": [2], "warnings": []}
+```
+
+Warnings, when supplied, must be a list of strings. Blocks are ordered by page
+number while retaining their supplied order within each page; their trimmed text
+is joined with blank lines. Coverage validates what the worker reports, not
+whether it recognized every word. A completely textless document still cannot
+be ingested as a searchable source.
+
+A configured worker's nonzero exit, timeout, malformed response or missing page
+coverage fails the import without retaining partial evidence. There is no silent
+native-text fallback after worker failure. With no worker configured, native
+text-layer extraction remains available and can omit scanned pages; inspect mixed
+PDFs for completeness. A successful native import is not an OCR-success claim.
+
+An optional experimental CPU adapter is available in a source checkout as
+`scripts/ocr_unlimited_cpu_worker.py`.
+It is not installed as a Lixity CLI command and does not download its runtime or
+weights. See [its preparation and limits](OCR_INTEGRATION.md#experimental-cpu-adapter)
+before selecting it as the worker. Validate output against known scans, including
+page ordering, blank pages and failed/truncated generation.
 
 ### What is actually retained
 

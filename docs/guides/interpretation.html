@@ -26,7 +26,7 @@
 <p>The baseline uses the chapter median and median absolute deviation (MAD). The default mild threshold is <code>|z*| &lt; 2.5</code>; project and session settings can change it. A high percentage indicates fewer threshold crossings in this particular analysis. It does not certify narrative continuity, factual accuracy or literary merit. Constant features may remain within the band, so even a measured 100% needs contextual interpretation.</p>
 
 <h2 id="empty">Why does an empty manuscript show “–”?</h2>
-<p>On current main, the dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.</p>
+<p>Since v1.18.0, the dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.</p>
 <p>For API compatibility, style JSON schema version 4 retains the historical numeric <code>consistency</code> value. The new <code>measured_cells</code> field identifies the supporting count. When it is zero, the retained value <code>1.0</code> is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.</p>
 
 <h2 id="minimums">How much text is enough?</h2>

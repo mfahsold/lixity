@@ -1,5 +1,7 @@
 """Tests for self-hosted Baidu Unlimited-OCR extraction boundary and PDF ingestion."""
 
+import json
+import os
 import shutil
 import subprocess
 import sys
@@ -271,6 +273,51 @@ print(json.dumps(resp))
         self.assertIn("passages", stages)
         self.assertIn("commit", stages)
         self.assertIn("complete", stages)
+
+    def test_worker_rejects_incomplete_pages_without_silent_native_fallback(self):
+        from lixity.research.ocr import extract_pdf_with_worker
+        pages = [PageImage(page_number=i, image_bytes=b'fixture', sha256='a'*64) for i in (1,2)]
+        response = subprocess.CompletedProcess([], 0, stdout=json.dumps({'blocks':[{'page_number':1,'text':'Only first page'}]}), stderr='')
+        with patch('lixity.research.ocr.subprocess.run', return_value=response), self.assertRaisesRegex(ResearchError, 'page'):
+            extract_pdf_with_worker(self.root/'synthetic.pdf', pages, worker_cmd='synthetic-worker')
+
+    def test_worker_timeout_and_unknown_confidence(self):
+        from lixity.research.ocr import extract_pdf_with_worker
+        pages = [PageImage(page_number=1, image_bytes=b'fixture', sha256='a'*64)]
+        response = subprocess.CompletedProcess([],0,stdout=json.dumps({'blocks':[{'page_number':1,'text':'Complete page'}]}),stderr='')
+        with patch.dict(os.environ, {'LIXITY_OCR_TIMEOUT':'600'}), patch('lixity.research.ocr.subprocess.run',return_value=response) as run:
+            _, blocks, _ = extract_pdf_with_worker(self.root/'synthetic.pdf',pages,worker_cmd='synthetic-worker')
+            self.assertEqual(run.call_args.kwargs['timeout'],600)
+            self.assertIsNone(blocks[0].confidence)
+
+    def test_worker_orders_pages_stably_before_building_archived_text(self):
+        from lixity.research.ocr import extract_pdf_with_worker
+        pages = [PageImage(page_number=i, image_bytes=b'fixture', sha256='a'*64) for i in (1,2)]
+        response = subprocess.CompletedProcess([], 0, stdout=json.dumps({'blocks':[
+            {'page_number':2,'text':'Second page'}, {'page_number':1,'text':'First paragraph'},
+            {'page_number':1,'text':'Next paragraph'}]}), stderr='')
+        with patch('lixity.research.ocr.subprocess.run', return_value=response):
+            text, blocks, _ = extract_pdf_with_worker(self.root/'synthetic.pdf', pages, worker_cmd='synthetic-worker')
+        self.assertEqual(text, 'First paragraph\n\nNext paragraph\n\nSecond page')
+        self.assertEqual([b.page_number for b in blocks], [1,1,2])
+
+    def test_worker_invalid_timeout_and_failure_never_fall_back(self):
+        from lixity.research.ocr import extract_pdf_with_worker, get_ocr_diagnostics
+        pages = [PageImage(page_number=1, image_bytes=b'fixture', sha256='a'*64)]
+        for value in ('zero','0','3601'):
+            with self.subTest(value=value), patch.dict(os.environ, {'LIXITY_OCR_TIMEOUT':value}), patch('lixity.research.ocr.subprocess.run') as run:
+                with self.assertRaisesRegex(ResearchError, 'LIXITY_OCR_TIMEOUT'):
+                    extract_pdf_with_worker(self.root/'synthetic.pdf', pages, worker_cmd='synthetic-worker')
+                run.assert_not_called()
+                diag = get_ocr_diagnostics(worker_cmd=sys.executable)
+                self.assertEqual(diag['status'], 'misconfigured_worker')
+                self.assertTrue(any('LIXITY_OCR_TIMEOUT' in g for g in diag['guidance']))
+        for failure in (subprocess.CompletedProcess([], 1, stdout='', stderr='Failure'), subprocess.TimeoutExpired('worker', 1)):
+            kwargs = {'side_effect':failure} if isinstance(failure, Exception) else {'return_value':failure}
+            with self.subTest(failure=str(failure)), patch('lixity.research.ocr.subprocess.run', **kwargs) as run:
+                with self.assertRaises(ResearchError):
+                    extract_pdf_with_worker(self.root/'synthetic.pdf', pages, worker_cmd='synthetic-worker')
+                self.assertEqual(run.call_count, 1)
 
 
 if __name__ == "__main__":

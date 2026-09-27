@@ -631,6 +631,25 @@ class TestLixityServer(unittest.TestCase):
                 dos_res = json.loads(body)
                 self.assertTrue(dos_res["ok"])
 
+                # An authored write invalidates the cache; scoped HTTP search rebuilds it.
+                status, body, _ = self.make_request(
+                    "/api/research-search", method="POST",
+                    body=json.dumps({"query": "confirms", "scope": "dossiers"}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200)
+                scoped = json.loads(body)
+                self.assertEqual(scoped["schema_version"], "research-search-local/2")
+                self.assertEqual(scoped["hits"][0]["kind"], "dossier")
+                self.assertEqual(scoped["hits"][0]["record_id"], dos_res["dossier_id"])
+                for invalid in ({"scope": "unknown"}, {"scope": []}, {"limit": "bad"}, {"limit": 0}):
+                    status, body, _ = self.make_request(
+                        "/api/research-search", method="POST",
+                        body=json.dumps({"query": "confirms", **invalid}),
+                        headers={"Content-Type": "application/json"},
+                    )
+                    self.assertEqual(status, 400, body)
+
                 # 8. List Dossiers
                 status, body, _ = self.make_request("/api/research/dossiers")
                 self.assertEqual(status, 200)
@@ -1419,3 +1438,24 @@ class TestLixityServer(unittest.TestCase):
         finally:
             LixityServerHandler.debug = orig_debug
             LixityServerHandler.refresh()
+
+    def test_zotero_routes_bind_current_project_and_require_retention(self):
+        from lixity.research import api
+        from lixity.research.repository import Repository
+        with tempfile.TemporaryDirectory() as directory:
+            api.init(directory, title='Synthetic Zotero UI')
+            project_id = Repository(directory).snapshot().project.id
+            with patch.object(LixityServerHandler, 'get_research_root', return_value=Path(directory)):
+                with patch('lixity.research.zotero.browse', return_value={'items': []}) as browse:
+                    status, body, _ = self.make_request('/api/research-zotero', 'POST',
+                        json.dumps({'project_id': project_id, 'library':'users/0'}), {'Content-Type':'application/json'})
+                    self.assertEqual(status, 200)
+                    self.assertTrue(json.loads(body)['ok'])
+                    self.assertEqual(browse.call_args.args[0], Path(directory))
+                with patch('lixity.research.zotero.ingest') as ingest:
+                    for payload in ({'project_id':'wrong','library':'users/0','allow_retention':True},
+                                    {'project_id':project_id,'library':'users/0','allow_retention':False}):
+                        status, _, _ = self.make_request('/api/research-zotero-ingest', 'POST', json.dumps(payload),
+                                                        {'Content-Type':'application/json'})
+                        self.assertEqual(status, 400)
+                    ingest.assert_not_called()

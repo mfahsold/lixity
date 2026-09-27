@@ -12,16 +12,44 @@ The broader interchange model below remains a proposal.
 [The synthetic interchange example](examples/evidence-chain.json) illustrates a
 complete source-to-decision chain; it is not a production database.
 
-## Implemented origin-URL extension (current main)
+## Implemented origin-URL extension (since v1.18.0)
 
 The local implementation adds optional validated `SourceContext.origin_url`.
 It belongs to a source capture, not to the immutable source identity. A capture
-with this field uses `SourceVersion.schema_version = "research-local/2"` and
-requires a v2 manifest. URL-free v1 context serializes without the new key;
+with this field and no structured external reference uses
+`SourceVersion.schema_version = "research-local/2"` and requires a v2-or-later
+manifest. A structured external reference requires v3, as described below. URL-free v1 context serializes without the new key;
 existing files are never rewritten. This is distinct from authored v2 revisions.
 An older reader rejects URL-bearing records rather than dropping provenance.
 See [the executable contract and refresh semantics](USAGE.md#origin-url-and-capture-provenance).
 The illustrative RFC fields below are still not the local storage schema.
+
+## Implemented external identity (since v1.19.0)
+
+`SourceContext.external_reference` stores a structured local Zotero binding:
+`provider` (`zotero`), `server_id`, explicit `library`, parent `item_key`,
+`attachment_key`, `item_version` and `attachment_version`. Keys and library
+syntax are validated; versions are nonnegative integers. This identity is
+independent of the human-readable, bounded `provenance_note` summary.
+
+A source capture carrying this field uses `research-local/3` and requires
+`research-manifest-local/3`. Readers retain support for v1/v2; absent optional
+fields are omitted from their serialized context and existing files are not
+rewritten. Older readers reject v3 rather than silently losing the binding.
+Back up before the first v3 write and use compatible readers/writers afterward.
+
+Deduplication matches provider, local server identity, library and attachment
+key within the explicit project. Changed capture metadata/bytes require an
+explicit refresh of the matching source ID. Legacy-source migration additionally
+requires the exported source tag and exact retained attachment bytes. A
+snapshot guard prevents publishing a capture against a changed research state.
+These rules do not establish bibliographic equivalence across machines, Zotero
+instances or duplicate items, and are not a background synchronization protocol.
+
+The additive RIS migration bundle has `research-zotero-export-local/1` metadata;
+paired research/Zotero backups use `research-zotero-backup-local/1`. These are
+separate transfer contracts, not replacements for immutable research manifests.
+See [migration and restore scope](USAGE.md#additive-migration-to-zotero).
 
 ## 1. Common envelope and identity
 
