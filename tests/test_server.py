@@ -745,6 +745,23 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(len(dec_data["decisions"]), 1)
                 self.assertTrue(dec_data["decisions"][0]["deviation_from_fact"])
 
+                # 14b. Claim-Evidence Matrix endpoint (json, md, csv)
+                status, body, _ = self.make_request("/api/research/matrix?format=json")
+                self.assertEqual(status, 200)
+                matrix_json = json.loads(body)
+                self.assertTrue(matrix_json["ok"])
+                self.assertEqual(matrix_json["summary"]["total_claims"], 1)
+
+                status, body, headers = self.make_request("/api/research/matrix?format=md")
+                self.assertEqual(status, 200)
+                self.assertIn("text/markdown", headers.get("content-type", ""))
+                self.assertIn("# Research Claim-Evidence Matrix", body.decode("utf-8"))
+
+                status, body, headers = self.make_request("/api/research/matrix?format=csv")
+                self.assertEqual(status, 200)
+                self.assertIn("text/csv", headers.get("content-type", ""))
+                self.assertIn("claim_id,title", body.decode("utf-8"))
+
                 # 15. Status after init & ingests & claims & decisions
                 status, body, _ = self.make_request("/api/research/status")
                 self.assertEqual(status, 200)

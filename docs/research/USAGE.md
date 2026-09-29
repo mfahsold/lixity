@@ -31,6 +31,7 @@ It does not implement the entire [RFC](README.md).
 | User-recorded claims & scope (`lixity research claim`) | |
 | Evidence linking with relations (`lixity research link-evidence`) | |
 | Authorial decisions & fact deviations (`lixity research decision`) | |
+| Claim-evidence matrix export (`lixity research matrix`) | |
 | Cross-corpus linguistic grounding (`lixity research compare`) | |
 | Interactive web research panel in `lixity serve`: source/dossier details, search-to-evidence actions, dossier-linked claims, decisions | |
 
@@ -241,6 +242,8 @@ lixity research claim --project ./novel
 lixity research link-evidence --project ./novel --claim-id urn:uuid:YOUR-CLAIM-UUID --passage-id urn:uuid:YOUR-PASSAGE-UUID --relation supports
 lixity research decision --project ./novel --title "Move date to 1914" --rationale "Plot tension" --claim-id urn:uuid:YOUR-CLAIM-UUID --deviation-from-fact
 lixity research decision --project ./novel
+lixity research matrix --project ./novel --format md
+lixity research matrix --project ./novel --format csv --output ./claim-matrix.csv
 lixity research withdraw --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "License revoked"
 lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --dry-run
 lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "GDPR deletion"
@@ -328,6 +331,23 @@ Large dossiers can be inspected and updated incrementally without transferring o
 - `lixity research dossier --project ./p --dossier-id <ID> --section "Timeline"`: returns only the named section.
 - `lixity research dossier --project ./p --dossier-id <ID> --update --section "Timeline" --file ./new_timeline.md ...`: updates only that section in the latest dossier body.
 - Decisions can explicitly link affected dossiers with `--dossier-id <ID>` or `--dossiers <ID1,ID2>`. If a linked decision is revised after the dossier, inspecting the dossier reports `review_needed: true` with `decision_reviews`, allowing authors to track plot and historical decisions without speculative auto-rewriting.
+
+### Claim-evidence matrix export
+
+Authors can export a consolidated overview matrix connecting user claims, supporting and contradicting evidence citations, associated dossiers, and decisions:
+
+```bash
+# Markdown table summary to stdout:
+lixity research matrix --project ./novel --format md
+
+# CSV export for spreadsheet review:
+lixity research matrix --project ./novel --format csv --output ./claim-matrix.csv
+
+# Machine-readable JSON:
+lixity research matrix --project ./novel --format json
+```
+
+The matrix highlights deliberate narrative deviations from fact (`deviation_from_fact: true`), aggregates evidence support counts (`+N / -N`), and is accessible via the web API (`GET /api/research/matrix?format=json|md|csv`) and the dashboard export button.
 
 ## Python API
 

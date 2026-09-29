@@ -38,6 +38,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("zotero", "Preview a local Zotero library or item attachments (read-only)"),
         ("zotero-ingest", "Capture one selected local Zotero PDF/text attachment"),
         ("ocr-status", "Inspect runtime diagnostic status for OCR and PDF extraction"),
+        ("matrix", "Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)"),
     ):
         command = commands.add_parser(name, help=help_text)
         if name not in ("restore", "ocr-status", "zotero-restore"):
@@ -171,6 +172,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
         elif name == "restore":
             command.add_argument("--from", dest="archive_source", required=True, help="Source .tar.gz archive path")
             command.add_argument("--to", dest="target_dir", required=True, help="Target project directory")
+        elif name == "matrix":
+            command.add_argument("--format", choices=("md", "csv", "json"), default="md",
+                                 help="Output format: md (markdown), csv, or json (default: md)")
+            command.add_argument("--output", help="Optional output file destination")
 
 
 def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
@@ -501,6 +506,21 @@ def run(args: argparse.Namespace) -> int:
             result = api.restore_archive(args.archive_source, args.target_dir)
         elif command == "ocr-status":
             result = api.ocr_status(getattr(args, "worker_cmd", None))
+        elif command == "matrix":
+            raw = api.claim_matrix(args.project, format=args.format)
+            if getattr(args, "output", None):
+                out_path = Path(args.output).expanduser().resolve()
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                if isinstance(raw, str):
+                    out_path.write_text(raw, encoding="utf-8")
+                else:
+                    out_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+                result = {"ok": True, "output": str(out_path), "format": args.format}
+            else:
+                if isinstance(raw, str):
+                    print(raw, end="")
+                    return 0
+                result = raw
         else:
             result = api.audit(args.project)
         print(json.dumps(result, ensure_ascii=False, indent=2))

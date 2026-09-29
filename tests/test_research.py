@@ -1,5 +1,6 @@
 """Portable research stores evidence independently of manuscript analysis."""
 
+import argparse
 import contextlib
 import io
 import json
@@ -9,7 +10,7 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
-from lixity.research import api
+from lixity.research import api, cli
 from lixity.research.models import Decision, Dossier
 from lixity.research.repository import Repository, ResearchError
 
@@ -535,6 +536,16 @@ class TestResearch(unittest.TestCase):
         self.assertEqual(sec["section"], "Timeline")
         self.assertEqual(sec["content"], "1924: First opening.")
 
+        # Full get_dossier includes sections and section_map
+        full = api.get_dossier(self.project, did)
+        self.assertEqual(full["sections"], ["Main Title", "Background", "Timeline"])
+        self.assertIn("Background", full["section_map"])
+        self.assertEqual(full["section_map"]["Timeline"], "1924: First opening.")
+
+        # list_dossiers includes sections list
+        dlist = api.list_dossiers(self.project)
+        self.assertEqual(dlist["dossiers"][0]["sections"], ["Main Title", "Background", "Timeline"])
+
         # Non-existent section raises ResearchError
         with self.assertRaisesRegex(ResearchError, "Section 'Unknown' not found"):
             api.get_dossier(self.project, did, section="Unknown")
@@ -627,4 +638,94 @@ class TestResearch(unittest.TestCase):
         d_info_redec_cleared = api.get_dossier(self.project, did)
         self.assertFalse(d_info_redec_cleared["review_needed"])
         self.assertEqual(d_info_redec_cleared["decision_reviews"][0]["status"], "current")
+
+    def test_claim_matrix_json_md_csv(self):
+        # 1. Empty matrix
+        empty_json = api.claim_matrix(self.project, format="json")
+        self.assertEqual(empty_json["summary"]["total_claims"], 0)
+        self.assertEqual(empty_json["claims"], [])
+
+        empty_md = api.claim_matrix(self.project, format="md")
+        self.assertIn("# Research Claim-Evidence Matrix: Research", empty_md)
+        self.assertIn("*(no claims recorded)*", empty_md)
+
+        empty_csv = api.claim_matrix(self.project, format="csv")
+        self.assertIn("claim_id,title,confidence", empty_csv)
+
+        # 2. Add source, claim, evidence link, and decision
+        ingested = self.ingest()
+        details = api.get_source(self.project, ingested["source_id"])
+        pid = details["passages"][0]["id"]
+
+        claim = api.create_claim(
+            self.project,
+            title="Meeting 1912",
+            statement="Secret meeting took place in Zurich.",
+            confidence="evidenced",
+            place="Zürich",
+        )
+        cid = claim["claim_id"]
+
+        api.link_evidence(
+            self.project,
+            claim_id=cid,
+            passage_id=pid,
+            relation="supports",
+            rationale="Witness account",
+        )
+
+        api.record_decision(
+            self.project,
+            title="Shift to 1914",
+            rationale="Better narrative pacing",
+            claim_id=cid,
+            deviation_from_fact=True,
+        )
+
+        # 3. Verify JSON output
+        matrix = api.claim_matrix(self.project, format="json")
+        self.assertEqual(matrix["schema_version"], "research-claim-matrix-local/1")
+        self.assertEqual(matrix["summary"]["total_claims"], 1)
+        self.assertEqual(matrix["summary"]["supported_claims"], 1)
+        self.assertEqual(matrix["summary"]["deviation_claims"], 1)
+        self.assertEqual(matrix["summary"]["total_evidence_links"], 1)
+        self.assertEqual(matrix["summary"]["total_decisions"], 1)
+        c_entry = matrix["claims"][0]
+        self.assertEqual(c_entry["claim_id"], cid)
+        self.assertEqual(c_entry["status"], "supported")
+        self.assertTrue(c_entry["has_deviation"])
+        self.assertEqual(len(c_entry["evidence"]), 1)
+        self.assertEqual(len(c_entry["decisions"]), 1)
+
+        # 4. Verify Markdown output
+        matrix_md = api.claim_matrix(self.project, format="md")
+        self.assertIn("Meeting 1912", matrix_md)
+        self.assertIn("[DEVIATION]", matrix_md)
+        self.assertIn("+1 / -0", matrix_md)
+
+        # 5. Verify CSV output
+        matrix_csv = api.claim_matrix(self.project, format="csv")
+        self.assertIn("Meeting 1912", matrix_csv)
+        self.assertIn("Shift to 1914", matrix_csv)
+        self.assertIn("yes", matrix_csv)
+
+    def test_cli_matrix_dispatch(self):
+        parser = argparse.ArgumentParser()
+        cli.configure(parser)
+
+        # 1. Test matrix md stdout
+        args_md = parser.parse_args(["matrix", "--project", str(self.project), "--format", "md"])
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = cli.run(args_md)
+        self.assertEqual(code, 0)
+        self.assertIn("# Research Claim-Evidence Matrix", buf.getvalue())
+
+        # 2. Test matrix csv output file
+        out_file = self.root / "matrix.csv"
+        args_csv = parser.parse_args(["matrix", "--project", str(self.project), "--format", "csv", "--output", str(out_file)])
+        code = cli.run(args_csv)
+        self.assertEqual(code, 0)
+        self.assertTrue(out_file.is_file())
+        self.assertIn("claim_id,title", out_file.read_text(encoding="utf-8"))
 

@@ -1,5 +1,7 @@
 """Explicit-project API for local evidence ingestion, lookup and integrity checks."""
 
+import csv
+import io
 import re
 from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
@@ -651,6 +653,35 @@ def create_dossier(
     }
 
 
+def extract_sections(body: str) -> dict[str, str]:
+    """Extract heading sections from a markdown body (mapping heading title to content)."""
+    sections: dict[str, str] = {}
+    lines = body.splitlines(keepends=True)
+    current_title: str | None = None
+    current_lines: list[str] = []
+    preamble_lines: list[str] = []
+    for line in lines:
+        match = re.match(r"^(#{1,3})\s+(.+?)\s*#*$", line.strip())
+        if match:
+            if current_title is not None:
+                sections[current_title] = "".join(current_lines).strip()
+            elif preamble_lines and "".join(preamble_lines).strip():
+                label = "Introduction" if match.group(2).strip().lower() == "overview" else "Overview"
+                sections[label] = "".join(preamble_lines).strip()
+            current_title = match.group(2).strip()
+            current_lines = []
+        else:
+            if current_title is not None:
+                current_lines.append(line)
+            else:
+                preamble_lines.append(line)
+    if current_title is not None:
+        sections[current_title] = "".join(current_lines).strip()
+    elif preamble_lines and "".join(preamble_lines).strip():
+        sections["Overview"] = "".join(preamble_lines).strip()
+    return sections
+
+
 def list_dossiers(project: str | Path) -> dict[str, Any]:
     """List all active dossiers in the project."""
     repository = Repository(project)
@@ -695,6 +726,7 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
             "created_at": record.created_at,
             "created_by": record.created_by,
             "excerpt": record.body[:300].strip(),
+            "sections": list(extract_sections(record.body).keys()),
             "review_needed": dossier_reviews.get(record.id, False),
         }
         for record in snapshot.records.values()
@@ -710,35 +742,6 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
 
 def _resolve_evidence_citation(repository: Repository, snapshot: Any, ref: Reference) -> dict[str, Any]:
     return resolve_evidence_citation(repository, snapshot, ref)
-
-
-def extract_sections(body: str) -> dict[str, str]:
-    """Extract heading sections from a markdown body (mapping heading title to content)."""
-    sections: dict[str, str] = {}
-    lines = body.splitlines(keepends=True)
-    current_title: str | None = None
-    current_lines: list[str] = []
-    preamble_lines: list[str] = []
-    for line in lines:
-        match = re.match(r"^(#{1,3})\s+(.+?)\s*#*$", line.strip())
-        if match:
-            if current_title is not None:
-                sections[current_title] = "".join(current_lines).strip()
-            elif preamble_lines and "".join(preamble_lines).strip():
-                label = "Introduction" if match.group(2).strip().lower() == "overview" else "Overview"
-                sections[label] = "".join(preamble_lines).strip()
-            current_title = match.group(2).strip()
-            current_lines = []
-        else:
-            if current_title is not None:
-                current_lines.append(line)
-            else:
-                preamble_lines.append(line)
-    if current_title is not None:
-        sections[current_title] = "".join(current_lines).strip()
-    elif preamble_lines and "".join(preamble_lines).strip():
-        sections["Overview"] = "".join(preamble_lines).strip()
-    return sections
 
 
 def update_section(body: str, section_title: str, new_content: str) -> str:
@@ -840,6 +843,8 @@ def get_dossier(project: str | Path, dossier_id: str, *,
         "language": dossier.language,
         "tags": dossier.tags,
         "body": dossier.body,
+        "sections": list(sections.keys()),
+        "section_map": sections,
         "created_at": dossier.created_at,
         "created_by": dossier.created_by,
         "citations": resolved_citations,
@@ -1109,3 +1114,229 @@ def list_decisions(project: str | Path) -> dict[str, Any]:
         "schema_version": "research-decisions-local/1",
         "decisions": decisions_list,
     }
+
+
+def claim_matrix(
+    project: str | Path,
+    *,
+    format: Literal["json", "md", "csv"] = "json",
+) -> dict[str, Any] | str:
+    """Generate a structured claim-evidence-decision matrix."""
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+
+    withdrawn_or_purged = {
+        record.target_ref.id
+        for record in snapshot.records.values()
+        if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
+    }
+
+    # Map dossiers by ID (latest revision)
+    dossiers_by_id: dict[str, Dossier] = {}
+    for record in snapshot.records.values():
+        if (isinstance(record, Dossier) and record.id not in withdrawn_or_purged
+                and (record.id not in dossiers_by_id or record.revision > dossiers_by_id[record.id].revision)):
+            dossiers_by_id[record.id] = record
+
+    # Map claims by ID (latest revision)
+    claims_by_id: dict[str, Claim] = {}
+    for record in snapshot.records.values():
+        if (isinstance(record, Claim) and record.id not in withdrawn_or_purged
+                and (record.id not in claims_by_id or record.revision > claims_by_id[record.id].revision)):
+            claims_by_id[record.id] = record
+
+    # Evidence links grouped by claim_id
+    evidence_by_claim: dict[str, list[dict[str, Any]]] = {}
+    total_evidence_count = 0
+    for record in snapshot.records.values():
+        if isinstance(record, EvidenceLink) and record.id not in withdrawn_or_purged:
+            cid = record.claim_ref.id
+            if cid not in evidence_by_claim:
+                evidence_by_claim[cid] = []
+            citation = resolve_evidence_citation(repository, snapshot, record.passage_ref)
+            evidence_by_claim[cid].append({
+                "link_id": record.id,
+                "relation": record.relation,
+                "rationale": record.rationale,
+                "passage_id": record.passage_ref.id,
+                "source_title": citation.get("source_title", ""),
+                "verbatim": citation.get("verbatim", ""),
+                "citation": citation,
+            })
+            total_evidence_count += 1
+
+    # Decisions grouped by claim_id
+    decisions_by_claim: dict[str, list[dict[str, Any]]] = {}
+    unlinked_decisions: list[dict[str, Any]] = []
+    total_decisions_count = 0
+    for record in snapshot.records.values():
+        if isinstance(record, Decision) and record.id not in withdrawn_or_purged:
+            dec_item = {
+                "decision_id": record.id,
+                "title": record.title,
+                "rationale": record.rationale,
+                "deviation_from_fact": record.deviation_from_fact,
+                "impact_on_plot": record.impact_on_plot,
+            }
+            if record.claim_ref:
+                cid = record.claim_ref.id
+                if cid not in decisions_by_claim:
+                    decisions_by_claim[cid] = []
+                decisions_by_claim[cid].append(dec_item)
+            else:
+                unlinked_decisions.append(dec_item)
+            total_decisions_count += 1
+
+    matrix_claims: list[dict[str, Any]] = []
+    supported_count = 0
+    contradicted_count = 0
+    unverified_count = 0
+    deviation_count = 0
+
+    sorted_claims = sorted(claims_by_id.values(), key=lambda c: str(c.created_at))
+    for claim in sorted_claims:
+        c_evidence = evidence_by_claim.get(claim.id, [])
+        c_decisions = decisions_by_claim.get(claim.id, [])
+
+        counts = {
+            "supports": sum(1 for e in c_evidence if e["relation"] == "supports"),
+            "contradicts": sum(1 for e in c_evidence if e["relation"] == "contradicts"),
+            "qualifies": sum(1 for e in c_evidence if e["relation"] == "qualifies"),
+            "contextualizes": sum(1 for e in c_evidence if e["relation"] == "contextualizes"),
+            "total": len(c_evidence),
+        }
+
+        has_deviation = any(d["deviation_from_fact"] for d in c_decisions)
+        if has_deviation:
+            deviation_count += 1
+
+        if counts["contradicts"] > 0:
+            status = "contradicted"
+            contradicted_count += 1
+        elif counts["supports"] > 0:
+            status = "supported"
+            supported_count += 1
+        else:
+            status = "unverified"
+            unverified_count += 1
+
+        dossier_title = None
+        dossier_id = claim.dossier_ref.id if claim.dossier_ref else None
+        if dossier_id and dossier_id in dossiers_by_id:
+            dossier_title = dossiers_by_id[dossier_id].title
+
+        matrix_claims.append({
+            "claim_id": claim.id,
+            "revision": claim.revision,
+            "title": claim.title,
+            "statement": claim.statement,
+            "confidence": claim.confidence,
+            "scope": {
+                "time_period": claim.scope.time_period,
+                "place": claim.scope.place,
+                "actors": claim.scope.actors,
+            },
+            "dossier_id": dossier_id,
+            "dossier_title": dossier_title,
+            "status": status,
+            "has_deviation": has_deviation,
+            "evidence_counts": counts,
+            "evidence": c_evidence,
+            "decisions": c_decisions,
+            "created_at": claim.created_at,
+        })
+
+    summary = {
+        "total_claims": len(matrix_claims),
+        "supported_claims": supported_count,
+        "contradicted_claims": contradicted_count,
+        "unverified_claims": unverified_count,
+        "deviation_claims": deviation_count,
+        "total_evidence_links": total_evidence_count,
+        "total_decisions": total_decisions_count,
+    }
+
+    if format == "json":
+        return {
+            "schema_version": "research-claim-matrix-local/1",
+            "project_id": snapshot.project.id,
+            "project_title": snapshot.project.title,
+            "summary": summary,
+            "claims": matrix_claims,
+            "unlinked_decisions": unlinked_decisions,
+        }
+
+    if format == "csv":
+        out = io.StringIO()
+        writer = csv.writer(out)
+        writer.writerow([
+            "claim_id",
+            "title",
+            "confidence",
+            "status",
+            "has_deviation",
+            "dossier",
+            "statement",
+            "evidence_relation",
+            "source_title",
+            "passage_quote",
+            "decision_title",
+            "deviation_from_fact",
+        ])
+        for c in matrix_claims:
+            ev_list = c["evidence"] or [{}]
+            dec_list = c["decisions"] or [{}]
+            for ev in ev_list:
+                for dec in dec_list:
+                    writer.writerow([
+                        c["claim_id"],
+                        c["title"],
+                        c["confidence"],
+                        c["status"],
+                        "yes" if c["has_deviation"] else "no",
+                        c["dossier_title"] or "",
+                        c["statement"],
+                        ev.get("relation", ""),
+                        ev.get("source_title", ""),
+                        ev.get("verbatim", ""),
+                        dec.get("title", ""),
+                        "yes" if dec.get("deviation_from_fact") else ("no" if dec else ""),
+                    ])
+        return out.getvalue()
+
+    # format == "md"
+    lines = [
+        f"# Research Claim-Evidence Matrix: {snapshot.project.title}",
+        "",
+        f"- **Project ID:** `{snapshot.project.id}`",
+        f"- **Total Claims:** {summary['total_claims']}",
+        f"- **Supported:** {summary['supported_claims']} · **Contradicted:** {summary['contradicted_claims']} · **Unverified:** {summary['unverified_claims']}",
+        f"- **Deliberate Deviations from Fact:** {summary['deviation_claims']}",
+        f"- **Total Evidence Citations:** {summary['total_evidence_links']}",
+        "",
+        "| Claim | Confidence | Status | Dossier | Evidence (Supp / Contradict / Total) | Decisions / Deviations |",
+        "| :--- | :--- | :--- | :--- | :--- | :--- |",
+    ]
+    if not matrix_claims:
+        lines.append("| *(no claims recorded)* | – | – | – | – | – |")
+    else:
+        for c in matrix_claims:
+            counts = c["evidence_counts"]
+            ev_str = f"+{counts['supports']} / -{counts['contradicts']} (total: {counts['total']})"
+            dec_str = ", ".join(
+                f"{d['title']}{' [DEVIATION]' if d['deviation_from_fact'] else ''}"
+                for d in c["decisions"]
+            ) or "–"
+            dossier_str = c["dossier_title"] or "–"
+            dev_badge = " [DEVIATION]" if c["has_deviation"] else ""
+            clean_stmt = c["statement"].replace("\n", " ").replace("|", "\\|")
+            if len(clean_stmt) > 80:
+                clean_stmt = clean_stmt[:80] + "..."
+            clean_title = c["title"].replace("|", "\\|")
+            lines.append(
+                f"| **{clean_title}**<br/>*{clean_stmt}* | "
+                f"`{c['confidence']}` | `{c['status']}`{dev_badge} | {dossier_str} | {ev_str} | {dec_str} |"
+            )
+
+    return "\n".join(lines) + "\n"
+

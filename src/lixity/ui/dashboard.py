@@ -519,6 +519,7 @@ def render_dashboard(
         parts.append('    </div>')
         parts.append('    <div class="row">')
         parts.append(f'      <button class="ctl primary" id="r-claim-create-btn">{L("research_claim_action")}</button>')
+        parts.append('      <button type="button" class="ctl secondary" id="r-claim-matrix-btn" style="margin-left:.5rem;">Export Claim Matrix</button>')
         parts.append('    </div>')
         parts.append('  </div>')
         parts.append('  <div class="ctl-group" style="margin-top:.8rem;">')

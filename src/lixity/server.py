@@ -369,6 +369,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._handle_research_decisions()
             return
 
+        if path == "/api/research/matrix":
+            self._handle_research_matrix()
+            return
+
         if path in ("/api/research/record", "/api/research/history"):
             self._handle_research_record_read(history=path.endswith("/history"))
             return
@@ -1003,6 +1007,31 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         try:
             data = research_api.list_decisions(root)
             self._json({"ok": True, **data})
+        except (ResearchError, KeyError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_matrix(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        fmt = query.get("format", ["json"])[0].lower()
+        if fmt not in ("json", "md", "csv"):
+            fmt = "json"
+        try:
+            if fmt == "json":
+                res_json = research_api.claim_matrix(root, format="json")
+                if isinstance(res_json, dict):
+                    self._json({"ok": True, **res_json})
+                else:
+                    self._json({"ok": True, "matrix": res_json})
+            elif fmt == "csv":
+                res_csv = research_api.claim_matrix(root, format="csv")
+                self._send(200, str(res_csv).encode("utf-8"), "text/csv; charset=utf-8")
+            else:
+                res_md = research_api.claim_matrix(root, format="md")
+                self._send(200, str(res_md).encode("utf-8"), "text/markdown; charset=utf-8")
         except (ResearchError, KeyError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 

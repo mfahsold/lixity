@@ -929,3 +929,7 @@ Release v1.20.0 streamlines research ingestion and index maintenance:
   a dossier flags that dossier with `review_needed: true` in the API and displays an
   amber review badge in the web dashboard, ensuring authorial choices remain visibly
   connected to compiled evidence without automated rewriting.
+- **Claim-evidence matrix export:** `lixity research matrix --project ./novel --format md|csv|json`
+  compiles all active claims, linked supporting/contradicting passages, associated dossiers,
+  and creative decisions (highlighting intentional fact deviations) into a unified tabular
+  overview for authors and editors.

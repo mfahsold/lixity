@@ -1486,6 +1486,10 @@ async function refreshResearchDossiers() {
     var reviewBadge = d.review_needed
       ? '<span class="research-badge badge-warning" style="margin-left:.4rem;" title="' + escapeHtml(uiLabel("research_review_needed")) + '">' + escapeHtml(uiLabel("research_review_needed")) + '</span>'
       : '';
+    var sectionsBadges = (d.sections && d.sections.length)
+      ? '<div class="research-dossier-sections"><span class="ctl-note" style="font-size:.72rem;">' + escapeHtml(uiLabel("research_sections")) + ':</span> ' +
+        d.sections.map(function(s) { return '<span class="research-tag research-tag-section">' + escapeHtml(s) + '</span>'; }).join(" ") + '</div>'
+      : '';
     return '<div class="research-card">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
@@ -1494,6 +1498,7 @@ async function refreshResearchDossiers() {
         (d.revision ? '<span class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", { revision: d.revision })) + '</span>' : '') +
       '</div>' +
       (d.excerpt ? '<p class="ctl-note" style="margin:.3rem 0;color:var(--fg);">' + escapeHtml(d.excerpt) + '</p>' : '') +
+      sectionsBadges +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
       researchDetailsControl("dossier", d.id) +
       researchRevisionActions("dossier", d.id) +
@@ -1736,10 +1741,29 @@ document.addEventListener("click", async function (event) {
       if (sections.length) {
         sectionsHtml = '<div class="research-dossier-outline" style="margin:.4rem 0 .8rem;padding:.3rem .6rem;background:var(--bg-subtle, rgba(0,0,0,0.03));border-radius:4px;font-size:.78rem;">' +
           '<strong>' + escapeHtml(uiLabel("research_sections")) + ':</strong> ' +
-          sections.map(function(sec) { return '<span class="research-tag" style="margin-left:.3rem;">' + escapeHtml(sec) + '</span>'; }).join("") +
+          sections.map(function(sec) { return '<span class="research-tag research-tag-section" style="margin-left:.3rem;">' + escapeHtml(sec) + '</span>'; }).join("") +
           '</div>';
       }
-      detailHost.innerHTML = reviewAlert + sectionsHtml + researchDossierBodyHtml(detail.body) +
+      var bodyHtml = "";
+      if (detail.section_map && Object.keys(detail.section_map).length > 1) {
+        var secKeys = Object.keys(detail.section_map);
+        var secBlocks = secKeys.map(function(k) {
+          return '<details class="research-dossier-section-block" open>' +
+            '<summary><span>' + escapeHtml(k) + '</span></summary>' +
+            '<div class="research-prose">' + renderSafeMarkdown(detail.section_map[k]) + '</div>' +
+          '</details>';
+        }).join("");
+        bodyHtml = '<div class="research-dossier-body-wrap">' +
+          '<div class="research-prose-bar">' +
+            '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
+          '</div>' +
+          '<div class="research-dossier-body-rendered">' + secBlocks + '</div>' +
+          '<pre class="research-dossier-body-source" hidden>' + escapeHtml(detail.body || "") + '</pre>' +
+        '</div>';
+      } else {
+        bodyHtml = researchDossierBodyHtml(detail.body);
+      }
+      detailHost.innerHTML = reviewAlert + sectionsHtml + bodyHtml +
         '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(researchCitationHtml).join("");
     }
     return;
@@ -1872,6 +1896,16 @@ document.addEventListener("click", async function (event) {
     return;
   }
 
+function highlightSearchTerms(text, query) {
+  if (!text || !query) return escapeHtml(text || "");
+  var terms = query.trim().split(/\s+/).filter(function(t) { return t.length > 0; });
+  if (!terms.length) return escapeHtml(text);
+  var escapedTerms = terms.map(function(t) { return t.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); });
+  var regex = new RegExp('(' + escapedTerms.join('|') + ')', 'gi');
+  var escaped = escapeHtml(text);
+  return escaped.replace(regex, '<mark class="search-hit">$1</mark>');
+}
+
   var searchBtn = event.target.closest("#r-search-btn");
   if (searchBtn) {
     var qEl = document.getElementById("r-search-query");
@@ -1911,12 +1945,12 @@ document.addEventListener("click", async function (event) {
             '<div class="ctl-note">' + escapeHtml(uiLabel("research_revision_kind_" + h.kind)) + ' · ' +
               escapeHtml(uiFormat("research_revision_number", {revision: h.revision})) + '</div>' +
             (statusLabel ? '<div class="ctl-note">' + escapeHtml(statusLabel) + '</div>' : '') +
-            '<p class="research-passage-quote">' + escapeHtml(h.excerpt || "") + '</p>' +
+            '<p class="research-passage-quote">' + highlightSearchTerms(h.excerpt || "", query) + '</p>' +
             '<button type="button" class="ctl" data-research-history="' + h.kind + '" data-record-id="' + escapeHtml(h.record_id) + '">' +
               escapeHtml(uiLabel("research_view_details")) + '</button></div>';
         }
         return '<div class="research-passage-card">' +
-          '<div class="research-passage-quote">„' + escapeHtml(h.verbatim || "") + '“</div>' +
+          '<div class="research-passage-quote">„' + highlightSearchTerms(h.verbatim || "", query) + '“</div>' +
           '<div class="research-passage-cite">' +
             escapeHtml(uiLabel("research_source")) + ' <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
             'Score: ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
@@ -2052,6 +2086,31 @@ document.addEventListener("click", async function (event) {
       if (cPlace) cPlace.value = "";
       if (cActors) cActors.value = "";
       refreshResearchClaims();
+    }
+    return;
+  }
+
+  var matrixBtn = event.target.closest("#r-claim-matrix-btn");
+  if (matrixBtn) {
+    try {
+      var resp = await fetch("/api/research/matrix?format=md");
+      if (!resp.ok) {
+        researchStatus("Failed to generate claim matrix", false);
+        return;
+      }
+      var mdText = await resp.text();
+      var blob = new Blob([mdText], { type: "text/markdown;charset=utf-8" });
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement("a");
+      a.href = url;
+      a.download = "claim-evidence-matrix.md";
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+      researchStatus("Claim matrix exported successfully", true);
+    } catch (e) {
+      researchStatus("Export failed: " + (e.message || e), false);
     }
     return;
   }
