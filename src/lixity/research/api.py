@@ -197,7 +197,23 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
               "passages": len(spans), "dry_run": dry_run}
     if progress_callback:
         progress_callback("commit", "Publishing records to research store...")
-    result["snapshot"] = snapshot.digest if dry_run else repository.commit(records, blobs_to_commit, snapshot).digest
+    if dry_run:
+        result["snapshot"] = snapshot.digest
+    else:
+        while True:
+            try:
+                result["snapshot"] = repository.commit(records, blobs_to_commit, snapshot).digest
+                break
+            except ResearchConflictError as exc:
+                if expected_snapshot is not None:
+                    raise
+                fresh = repository.snapshot()
+                if source_id:
+                    fresh_versions = [r for r in fresh.records.values() if isinstance(r, SourceVersion) and r.source_ref.id == source.id]
+                    fresh_latest = max(fresh_versions, key=lambda r: r.sequence) if fresh_versions else None
+                    if (latest is None and fresh_latest is not None) or (latest and fresh_latest and latest.id != fresh_latest.id):
+                        raise ResearchConflictError("Source was modified concurrently; reload and retry capture") from exc
+                snapshot = fresh
     if progress_callback:
         progress_callback("complete", f"Source '{source.title}' ingested ({len(spans)} passages).")
     return result
@@ -207,8 +223,8 @@ def reindex(project: str | Path) -> dict[str, Any]:
     return catalogue.reindex(Repository(project))
 
 
-def search(project: str | Path, query: str, *, limit: int = 20, scope: str = "sources") -> dict[str, Any]:
-    return catalogue.search(Repository(project), query, limit=limit, scope=scope)
+def search(project: str | Path, query: str, *, limit: int = 20, scope: str = "sources", ensure_fresh: bool = False) -> dict[str, Any]:
+    return catalogue.search(Repository(project), query, limit=limit, scope=scope, ensure_fresh=ensure_fresh)
 
 
 def cite(project: str | Path, passage_id: str) -> dict[str, Any]:
@@ -681,8 +697,56 @@ def _resolve_evidence_citation(repository: Repository, snapshot: Any, ref: Refer
     return resolve_evidence_citation(repository, snapshot, ref)
 
 
-def get_dossier(project: str | Path, dossier_id: str) -> dict[str, Any]:
-    """Retrieve full details of a specific dossier, including resolved evidence citations."""
+def extract_sections(body: str) -> dict[str, str]:
+    """Extract heading sections from a markdown body (mapping heading title to content)."""
+    sections: dict[str, str] = {}
+    lines = body.splitlines(keepends=True)
+    current_title: str | None = None
+    current_lines: list[str] = []
+    preamble_lines: list[str] = []
+    for line in lines:
+        match = re.match(r"^(#{1,3})\s+(.+?)\s*#*$", line.strip())
+        if match:
+            if current_title is not None:
+                sections[current_title] = "".join(current_lines).strip()
+            elif preamble_lines and "".join(preamble_lines).strip():
+                label = "Introduction" if match.group(2).strip().lower() == "overview" else "Overview"
+                sections[label] = "".join(preamble_lines).strip()
+            current_title = match.group(2).strip()
+            current_lines = []
+        else:
+            if current_title is not None:
+                current_lines.append(line)
+            else:
+                preamble_lines.append(line)
+    if current_title is not None:
+        sections[current_title] = "".join(current_lines).strip()
+    elif preamble_lines and "".join(preamble_lines).strip():
+        sections["Overview"] = "".join(preamble_lines).strip()
+    return sections
+
+
+def update_section(body: str, section_title: str, new_content: str) -> str:
+    """Replace an existing section heading in markdown body or append it if not present."""
+    clean_title = section_title.strip()
+    pattern = re.compile(r"^(#{1,3})\s+" + re.escape(clean_title) + r"\s*#*$", re.IGNORECASE | re.MULTILINE)
+    match = pattern.search(body)
+    if not match:
+        prefix = "\n\n" if body and not body.endswith("\n\n") else ""
+        return f"{body}{prefix}## {clean_title}\n\n{new_content.strip()}\n"
+    start = match.end()
+    level = len(match.group(1))
+    next_heading = re.compile(r"^#{1," + str(level) + r"}\s+", re.MULTILINE)
+    next_match = next_heading.search(body, start)
+    end = next_match.start() if next_match else len(body)
+    return body[:start] + "\n\n" + new_content.strip() + "\n\n" + body[end:].lstrip()
+
+
+def get_dossier(project: str | Path, dossier_id: str, *,
+                section: str | None = None,
+                summary: bool = False,
+                include_citations: bool = True) -> dict[str, Any]:
+    """Retrieve details of a specific dossier with optional section or summary bounding."""
     repository = Repository(project)
     snapshot = repository.snapshot()
 
@@ -696,7 +760,64 @@ def get_dossier(project: str | Path, dossier_id: str) -> dict[str, Any]:
     if dossier.id in withdrawn_or_purged:
         raise ResearchError("Dossier has been withdrawn or purged")
 
-    resolved_citations = [_resolve_evidence_citation(repository, snapshot, ref) for ref in dossier.evidence_refs]
+    decision_reviews: list[dict[str, Any]] = []
+    for record in snapshot.records.values():
+        if isinstance(record, Decision) and record.id not in withdrawn_or_purged:
+            linked = any(ref.id == dossier.id for ref in record.dossier_refs)
+            if not linked and record.claim_ref:
+                claim = snapshot.records.get(record.claim_ref.id)
+                if isinstance(claim, Claim) and claim.dossier_ref and claim.dossier_ref.id == dossier.id:
+                    linked = True
+            if linked:
+                needs_review = record.created_at > dossier.created_at
+                decision_reviews.append({
+                    "decision_id": record.id,
+                    "title": record.title,
+                    "revision": record.revision,
+                    "status": "review_needed" if needs_review else "current",
+                    "reason": (
+                        f"Decision '{record.title}' was revised (rev {record.revision})" if record.revision > 1
+                        else f"Decision '{record.title}' was created after dossier"
+                    ) if needs_review else None,
+                })
+
+    sections = extract_sections(dossier.body)
+    if summary:
+        resolved_citations = [_resolve_evidence_citation(repository, snapshot, ref) for ref in dossier.evidence_refs] if include_citations else []
+        return {
+            "id": dossier.id,
+            "title": dossier.title,
+            "language": dossier.language,
+            "tags": dossier.tags,
+            "revision": dossier.revision,
+            "snapshot": snapshot.digest,
+            "created_at": dossier.created_at,
+            "created_by": dossier.created_by,
+            "body_length": len(dossier.body),
+            "sections": list(sections.keys()),
+            "citation_count": len(dossier.evidence_refs),
+            "excerpt": dossier.body[:500] + ("..." if len(dossier.body) > 500 else ""),
+            "decision_reviews": decision_reviews,
+            "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
+            "source_updates": source_updates(resolved_citations) if include_citations else [],
+        }
+
+    if section is not None:
+        matched = next((k for k in sections if k.lower() == section.strip().lower()), None)
+        if matched is None:
+            raise ResearchError(f"Section '{section}' not found in dossier; available: {', '.join(sections.keys()) or 'none'}")
+        return {
+            "id": dossier.id,
+            "title": dossier.title,
+            "revision": dossier.revision,
+            "snapshot": snapshot.digest,
+            "section": matched,
+            "content": sections[matched],
+            "decision_reviews": decision_reviews,
+            "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
+        }
+
+    resolved_citations = [_resolve_evidence_citation(repository, snapshot, ref) for ref in dossier.evidence_refs] if include_citations else []
 
     return {
         "id": dossier.id,
@@ -710,6 +831,8 @@ def get_dossier(project: str | Path, dossier_id: str) -> dict[str, Any]:
         "revision": dossier.revision,
         "snapshot": snapshot.digest,
         "source_updates": source_updates(resolved_citations),
+        "decision_reviews": decision_reviews,
+        "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
     }
 
 
@@ -895,6 +1018,7 @@ def record_decision(
     claim_id: str | None = None,
     deviation_from_fact: bool = False,
     impact_on_plot: str | None = None,
+    dossier_ids: list[str] | None = None,
     actor: str = "local-author",
 ) -> dict[str, Any]:
     repository = Repository(project)
@@ -904,6 +1028,13 @@ def record_decision(
     if claim_id:
         claim = snapshot.latest(claim_id, Claim)
         claim_ref = reference(claim)
+
+    dossier_refs = []
+    if dossier_ids:
+        for did in dict.fromkeys(dossier_ids):
+            if did.strip():
+                dossier = snapshot.latest(did.strip(), Dossier)
+                dossier_refs.append(reference(dossier))
 
     values = envelope(snapshot.project.id, actor)
     decision = Decision(
@@ -916,6 +1047,7 @@ def record_decision(
         claim_ref=claim_ref,
         deviation_from_fact=deviation_from_fact,
         impact_on_plot=impact_on_plot.strip() if impact_on_plot else None,
+        dossier_refs=dossier_refs,
     )
 
     new_snapshot = repository.commit([decision], {}, snapshot)
@@ -924,6 +1056,7 @@ def record_decision(
         "decision_id": decision.id,
         "title": decision.title,
         "deviation_from_fact": decision.deviation_from_fact,
+        "dossier_ids": [ref.id for ref in decision.dossier_refs],
         "snapshot": new_snapshot.digest,
     }
 
@@ -949,6 +1082,7 @@ def list_decisions(project: str | Path) -> dict[str, Any]:
             "rationale": record.rationale,
             "claim_id": record.claim_ref.id if record.claim_ref else None,
             "claim_revision": record.claim_ref.revision if record.claim_ref else None,
+            "dossier_ids": [ref.id for ref in record.dossier_refs],
             "deviation_from_fact": record.deviation_from_fact,
             "impact_on_plot": record.impact_on_plot,
             "created_at": record.created_at,

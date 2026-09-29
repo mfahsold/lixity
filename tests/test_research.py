@@ -10,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from lixity.research import api
+from lixity.research.models import Decision, Dossier
 from lixity.research.repository import Repository, ResearchError
 
 
@@ -486,3 +487,142 @@ class TestResearch(unittest.TestCase):
                                 allow_retention=True, origin_url='https://example.org/metadata')
         self.assertFalse(result['unchanged'])
         self.assertTrue(api.audit(self.project)['ok'])
+
+    def test_search_auto_refresh_and_strict_mode(self):
+        self.ingest()
+        api.reindex(self.project)
+        self.assertEqual(len(api.search(self.project, "1924")["hits"]), 1)
+
+        # Ingest a second file causing index to become stale
+        second = self.root / "second.txt"
+        second.write_text("UniqueKeyword123 appeared in the archive.", encoding="utf-8")
+        api.ingest(self.project, second, allow_retention=True)
+
+        # Strict mode (default in api.search) raises ResearchError
+        with self.assertRaisesRegex(ResearchError, "reindex"):
+            api.search(self.project, "UniqueKeyword123", ensure_fresh=False)
+
+        # ensure_fresh=True automatically refreshes and finds the new hit
+        res = api.search(self.project, "UniqueKeyword123", ensure_fresh=True)
+        self.assertEqual(len(res["hits"]), 1)
+        self.assertTrue(any("refreshed" in w for w in res.get("warnings", [])))
+
+        # Query with 0 hits in sources includes hint to try --scope all
+        no_hit_res = api.search(self.project, "NonExistentWordXYZ", ensure_fresh=True)
+        self.assertEqual(no_hit_res["hits"], [])
+        self.assertTrue(any("--scope all" in w for w in no_hit_res.get("warnings", [])))
+
+    def test_dossier_bounded_reads_and_section_update(self):
+        body = (
+            "# Main Title\n\n"
+            "Introductory text.\n\n"
+            "## Background\n\n"
+            "This is historical background.\n\n"
+            "## Timeline\n\n"
+            "1924: First opening.\n"
+        )
+        dossier = api.create_dossier(self.project, "Test Dossier", body)
+        did = dossier["dossier_id"]
+
+        # Summary view
+        summary = api.get_dossier(self.project, did, summary=True)
+        self.assertEqual(summary["sections"], ["Main Title", "Background", "Timeline"])
+        self.assertIn("Introductory text", summary["excerpt"])
+        self.assertFalse(summary["review_needed"])
+
+        # Section-bounded read
+        sec = api.get_dossier(self.project, did, section="Timeline")
+        self.assertEqual(sec["section"], "Timeline")
+        self.assertEqual(sec["content"], "1924: First opening.")
+
+        # Non-existent section raises ResearchError
+        with self.assertRaisesRegex(ResearchError, "Section 'Unknown' not found"):
+            api.get_dossier(self.project, did, section="Unknown")
+
+        # Section update helper
+        updated_body = api.update_section(body, "Timeline", "1914: Altered opening date.")
+        self.assertIn("1914: Altered opening date.", updated_body)
+        self.assertNotIn("1924: First opening.", updated_body)
+        self.assertIn("This is historical background.", updated_body)
+
+        # Preamble extraction and heading-less dossier extraction
+        preamble_body = "Opening preamble notes.\n\n## Timeline\n1924: Event."
+        sections_preamble = api.extract_sections(preamble_body)
+        self.assertIn("Overview", sections_preamble)
+        self.assertEqual(sections_preamble["Overview"], "Opening preamble notes.")
+        self.assertEqual(sections_preamble["Timeline"], "1924: Event.")
+
+        headingless = "Single paragraph without any markdown headings."
+        sections_plain = api.extract_sections(headingless)
+        self.assertEqual(sections_plain.get("Overview"), headingless)
+
+    def test_decision_dossier_linking_and_review_needed_tracking(self):
+        dossier = api.create_dossier(self.project, "Charter Dossier", "## Facts\nFounded in 1924.")
+        did = dossier["dossier_id"]
+
+        # Record a decision linked to this dossier
+        dec = api.record_decision(
+            self.project,
+            title="Alter charter date",
+            rationale="Dramaturgic necessity",
+            dossier_ids=[did],
+            deviation_from_fact=True,
+        )
+        dec_id = dec["decision_id"]
+        self.assertEqual(dec["dossier_ids"], [did])
+
+        # Inspect dossier - decision was created after dossier -> flagged
+        d_info = api.get_dossier(self.project, did)
+        self.assertTrue(d_info["review_needed"])
+        self.assertEqual(len(d_info["decision_reviews"]), 1)
+        self.assertEqual(d_info["decision_reviews"][0]["decision_id"], dec_id)
+
+        # Revise dossier to incorporate the decision
+        repo = Repository(self.project)
+        snap = repo.snapshot()
+        d_record = snap.latest(did, Dossier)
+        revised_dossier = api.revise_record(
+            self.project, "dossier", did,
+            changes={"body": "## Facts\nFounded in 1914 per artistic decision."},
+            expected_snapshot=snap.digest,
+            expected_revision=d_record.revision,
+            change_kind="correction",
+            reason="Adopted altered date",
+        )
+        self.assertEqual(revised_dossier["record"]["revision"], 2)
+
+        # Now dossier is revised after decision -> review is no longer needed
+        d_info_after = api.get_dossier(self.project, did)
+        self.assertFalse(d_info_after["review_needed"])
+        self.assertEqual(d_info_after["decision_reviews"][0]["status"], "current")
+
+        # Now revise the decision again -> triggers review_needed again
+        snap2 = repo.snapshot()
+        dec_record = snap2.latest(dec_id, Decision)
+        api.revise_record(
+            self.project, "decision", dec_id,
+            changes={"rationale": "Updated rationale for 1912."},
+            expected_snapshot=snap2.digest,
+            expected_revision=dec_record.revision,
+            change_kind="correction",
+            reason="Change plot date again",
+        )
+        d_info_redec = api.get_dossier(self.project, did)
+        self.assertTrue(d_info_redec["review_needed"])
+        self.assertEqual(d_info_redec["decision_reviews"][0]["status"], "review_needed")
+
+        # Revise dossier a second time to adopt the new decision revision
+        snap3 = repo.snapshot()
+        d_record2 = snap3.latest(did, Dossier)
+        api.revise_record(
+            self.project, "dossier", did,
+            changes={"body": "## Facts\nFounded in 1912 per second artistic decision."},
+            expected_snapshot=snap3.digest,
+            expected_revision=d_record2.revision,
+            change_kind="correction",
+            reason="Adopted second altered date",
+        )
+        d_info_redec_cleared = api.get_dossier(self.project, did)
+        self.assertFalse(d_info_redec_cleared["review_needed"])
+        self.assertEqual(d_info_redec_cleared["decision_reviews"][0]["status"], "current")
+

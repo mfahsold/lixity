@@ -87,7 +87,15 @@ def reindex(repository: Repository) -> dict[str, Any]:
         return {"schema_version": "research-index-local/1", "snapshot": snapshot.digest, "passages": count}
 
 
-def search(repository: Repository, query: str, *, limit: int = 20, scope: str = "sources") -> dict[str, Any]:
+def search(
+    repository: Repository,
+    query: str,
+    *,
+    limit: int = 20,
+    scope: str = "sources",
+    ensure_fresh: bool = False,
+    refreshed: bool = False,
+) -> dict[str, Any]:
     if not isinstance(query, str) or not query.strip() or len(query) > 1000:
         raise ResearchError("Search requires 1–1000 characters")
     if type(limit) is not int or not 1 <= limit <= 100:
@@ -97,15 +105,37 @@ def search(repository: Repository, query: str, *, limit: int = 20, scope: str = 
     snapshot = repository.snapshot()
     selected = current_versions(snapshot)
     path = repository.safe(repository.cache / "catalogue.sqlite3")
+    if ensure_fresh:
+        needs_reindex = not path.is_file()
+        if not needs_reindex:
+            try:
+                conn = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
+                try:
+                    conn.execute("PRAGMA trusted_schema=OFF")
+                    meta = conn.execute("SELECT snapshot FROM metadata").fetchall()
+                    if meta != [(snapshot.digest,)]:
+                        needs_reindex = True
+                finally:
+                    conn.close()
+            except sqlite3.Error:
+                needs_reindex = True
+        if needs_reindex:
+            reindex(repository)
+            return search(repository, query, limit=limit, scope=scope, ensure_fresh=False, refreshed=True)
+
     terms = re.findall(r"[^\W_]+", query, re.UNICODE)
     expression = " AND ".join('"' + term + '"' for term in terms)
     hits: list[dict[str, Any]] = []
+    warnings: list[str] = ["Search index was refreshed to current project snapshot"] if refreshed else []
     try:
         connection = sqlite3.connect(path.as_uri() + "?mode=ro", uri=True)
         try:
             connection.execute("PRAGMA trusted_schema=OFF")
             metadata = connection.execute("SELECT snapshot FROM metadata").fetchall()
             if metadata != [(snapshot.digest,)]:
+                if ensure_fresh:
+                    reindex(repository)
+                    return search(repository, query, limit=limit, scope=scope, ensure_fresh=False, refreshed=True)
                 raise ResearchError("Search index is stale; run research reindex")
             if scope != "sources":
                 rows = connection.execute(
@@ -135,7 +165,7 @@ def search(repository: Repository, query: str, *, limit: int = 20, scope: str = 
                     hits.append(hit)
                 return {"schema_version": "research-search-local/2", "project_id": snapshot.project.id,
                         "snapshot": snapshot.digest, "mode": "lexical", "scope": scope,
-                        "hits": hits, "completeness": "complete", "warnings": []}
+                        "hits": hits, "completeness": "complete", "warnings": warnings}
             rows = connection.execute(
                 "SELECT passage_id, bm25(passages) FROM passages WHERE passages MATCH ? ORDER BY bm25(passages), passage_id LIMIT ?",
                 (expression, limit),
@@ -154,6 +184,8 @@ def search(repository: Repository, query: str, *, limit: int = 20, scope: str = 
             connection.close()
     except sqlite3.Error:
         raise ResearchError("Search index unavailable; run research reindex with an FTS5-enabled SQLite") from None
+    if scope == "sources" and not hits:
+        warnings.append("No source passage matches found; try --scope all to search dossiers, claims, and decisions.")
     return {"schema_version": "research-search-local/1", "project_id": snapshot.project.id,
             "snapshot": snapshot.digest, "mode": "lexical", "hits": hits,
-            "completeness": "complete", "warnings": []}
+            "completeness": "complete", "warnings": warnings}

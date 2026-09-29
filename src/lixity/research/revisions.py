@@ -30,7 +30,7 @@ FIELDS = {
     "dossier": {"title", "body", "language", "tags", "evidence_ids"},
     "claim": {"title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"},
     "evidence_link": {"claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"},
-    "decision": {"title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot"},
+    "decision": {"title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot", "dossier_ids"},
 }
 
 
@@ -197,7 +197,7 @@ def revise_record(
         raise ResearchError("The change contains unknown or immutable fields")
     values = previous.model_dump(mode="json")
     direct = {k: v for k, v in changes.items() if k not in
-              {"evidence_ids", "dossier_id", "claim_id", "claim_revision", "dossier_revision", "passage_id", "time_period", "place", "actors"}}
+              {"evidence_ids", "dossier_id", "claim_id", "claim_revision", "dossier_revision", "passage_id", "time_period", "place", "actors", "dossier_ids"}}
     for name in ("title", "statement", "rationale", "reviewer", "impact_on_plot"):
         if isinstance(direct.get(name), str):
             direct[name] = direct[name].strip()
@@ -224,6 +224,11 @@ def revise_record(
         if isinstance(previous, (EvidenceLink, Decision)) and ("claim_id" in changes or "claim_revision" in changes):
             identifier = changes.get("claim_id", previous.claim_ref.id if previous.claim_ref else None)
             values["claim_ref"] = _association(snapshot, identifier, Claim, previous.claim_ref, changes.get("claim_revision"))
+        if isinstance(previous, Decision) and "dossier_ids" in changes:
+            ids = changes["dossier_ids"]
+            if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids):
+                raise ResearchError("Dossier IDs must be a list of dossier identifiers")
+            values["dossier_refs"] = [_association(snapshot, i, Dossier, None, None) for i in dict.fromkeys(ids) if i]
         if isinstance(previous, EvidenceLink) and "passage_id" in changes:
             values["passage_ref"] = Reference(id=changes["passage_id"]).model_dump()
         values.update(schema_version="research-local/2", revision=previous.revision + 1,

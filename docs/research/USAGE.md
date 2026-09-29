@@ -109,6 +109,30 @@ Python entrypoints are `lixity.research.zotero.collections`, `.browse` and
 of manuscript analysis. Standard research export includes retained captures and
 provenance, not the external library. Use the paired backup below for both stores.
 
+### Literature Acquisition Workflow (URL → Zotero Reference → Attachment → Evidence)
+
+Literature moves through four distinct, verifiable states:
+
+1. **Reference saved**: Register the bibliographic reference in Zotero (via browser connector, DOI translator, or manual entry). Metadata exists in Zotero, but this does not imply a local PDF or retained copy.
+2. **Attachment available**: Download the PDF/full text inside Zotero (`contentType: application/pdf`, `linkMode: imported_file`). Verify attachment availability in Lixity with `lixity research zotero --library users/0 --item-key <KEY>`.
+3. **Evidence captured**: Ingest the local attachment into the Lixity research store with `lixity research zotero-ingest --attachment-key <KEY> --expected-server-id <SERVER_ID> --allow-retention [--progress]`. Lixity retains the PDF bytes, extracts passages, and establishes an immutable source version.
+4. **Passage cited / Claim linked**: Search passages (`lixity research search --query "..."`) and cite verified passages into dossiers (`--evidence <UUID>`) or claims (`lixity research link-evidence`).
+
+```bash
+# 1 & 2. Find saved reference in Zotero and inspect available local attachments
+lixity research zotero --project ./novel --library users/0 --query "customs ledger"
+lixity research zotero --project ./novel --library users/0 --item-key <ITEM_KEY>
+
+# 3. Ingest selected attachment into Lixity with visible progress
+lixity research zotero-ingest --project ./novel --library users/0 \
+  --attachment-key <ATTACHMENT_KEY> --expected-server-id <SERVER_ID> --allow-retention --progress
+
+# 4. Search refreshed index and cite verified passage into a dossier
+lixity research search --project ./novel --query "port authority"
+lixity research dossier --project ./novel --title "Harbor Authority" \
+  --file ./notes.md --evidence <PASSAGE_UUID>
+```
+
 ### Additive migration to Zotero
 
 ```sh
@@ -164,6 +188,18 @@ excluded. Use Zotero stored attachments for self-contained media backup, and
 back up excluded project material separately. Verify restored Zotero data in a
 separate instance before adopting it; byte verification alone does not establish
 application-level usability or that an external attachment was included.
+
+#### Backup Scope Comparison
+
+| Scope / Content | `research export` | `research zotero-backup` |
+|---|---|---|
+| Retained source bytes & extracted passages | Yes | Yes |
+| Authored claims, evidence links, dossiers, decisions | Yes | Yes |
+| Full research revision history & snapshot digests | Yes | Yes |
+| Zotero database (`zotero.sqlite`) & metadata | No | Yes |
+| Zotero stored PDF/text originals (`storage/`) | No | Yes |
+| Zotero external linked files (outside data dir) | No | No (store as internal attachment to include) |
+| Manuscript prose & application browser profiles | No | No (maintain project/profile backup separately) |
 
 ## Try it
 
@@ -267,15 +303,28 @@ there is no semantic search, identity resolution or automatic contradiction
 resolution. The result limit applies across all matching types. Use type filters
 when numerous source hits obscure authored records.
 
-Reindex after authored changes or when upgrading an old catalogue. CLI/Python
-report stale or missing indexes; the dashboard rebuilds them on demand. Archives
-and immutable revisions need no migration for this search extension.
+CLI search automatically refreshes stale or missing indexes by default to avoid
+interrupting research tasks with manual maintenance detours. Callers who require
+strict validation can pass `--strict` to fail fast when the index is not up to date.
+When a query produces zero passage hits under the default `sources` scope, the
+response warnings suggest trying `--scope all` to search authored records.
 
-For a character overview, maintain a short dedicated dossier with explicit
-sections for decisions, proposals and open questions, and link the supporting
-research. A long current dossier may still contain obsolete sentences. Search
-finds the current stored revision; an author must reconcile those sentences and record
-the correction through the native revision workflow.
+### Batch ingestion and non-interactive progress
+
+- **Batch ingest**: Pass multiple files to `lixity research ingest --project ./p --file a.pdf b.txt --allow-retention`.
+  It returns `research-batch-ingest-local/1` detailing per-item outcomes (`succeeded`, `failed`, `items`), ensuring
+  partial batch success is preserved even if one file fails validation.
+- **Progress reporting**: Add `--progress` to `ingest` or `zotero-ingest`. Phase notifications with elapsed
+  seconds are streamed to `stderr`, keeping `stdout` strictly machine-readable JSON.
+
+### Section-bounded dossier inspection and revision
+
+Large dossiers can be inspected and updated incrementally without transferring oversized JSON payloads:
+
+- `lixity research dossier --project ./p --dossier-id <ID> --summary`: returns metadata, section heading outline, citation count, and a text excerpt.
+- `lixity research dossier --project ./p --dossier-id <ID> --section "Timeline"`: returns only the named section.
+- `lixity research dossier --project ./p --dossier-id <ID> --update --section "Timeline" --file ./new_timeline.md ...`: updates only that section in the latest dossier body.
+- Decisions can explicitly link affected dossiers with `--dossier-id <ID>` or `--dossiers <ID1,ID2>`. If a linked decision is revised after the dossier, inspecting the dossier reports `review_needed: true` with `decision_reviews`, allowing authors to track plot and historical decisions without speculative auto-rewriting.
 
 ## Python API
 

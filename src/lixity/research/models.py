@@ -263,6 +263,7 @@ class Decision(AuthoredRecord):
     claim_ref: Reference | None = None
     deviation_from_fact: bool = False
     impact_on_plot: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+    dossier_refs: list[Reference] = Field(default_factory=list)
 
 
 class Tombstone(Record):

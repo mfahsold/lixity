@@ -4,6 +4,7 @@ import http.client
 import json
 import re
 import tempfile
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlencode, urlsplit
@@ -126,13 +127,18 @@ def browse(project: str | Path, *, library: str, query: str = "", item_key: str 
 
 def ingest(project: str | Path, *, library: str, attachment_key: str, allow_retention: bool = False,
            source_id: str | None = None, language: str | None = None, dry_run: bool = False,
-           expected_server_id: str | None = None) -> dict[str, Any]:
+           expected_server_id: str | None = None, expected_snapshot: str | None = None,
+           progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
     """Capture one selected local attachment through the existing evidence pipeline."""
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (--allow-retention)")
     snapshot = Repository(project).snapshot()
+    if expected_snapshot is not None and snapshot.digest != expected_snapshot:
+        raise ResearchError("Research snapshot changed; reload the Zotero selection")
     library = _library(library)
     attachment_key = _key(attachment_key)
+    if progress_callback:
+        progress_callback("zotero-resolve", f"Resolving Zotero attachment {attachment_key}...")
     reader = _Reader()
     attachment = reader.item(library, attachment_key)
     if expected_server_id is not None and reader.server_id != expected_server_id:
@@ -216,6 +222,8 @@ def ingest(project: str | Path, *, library: str, attachment_key: str, allow_rete
         raise ResearchError("Zotero attachment is not an available local regular file; download it in Zotero first")
     is_pdf = media_type == "application/pdf"
     maximum = api.MAX_PDF_BYTES if is_pdf else api.MAX_SOURCE_BYTES
+    if progress_callback:
+        progress_callback("zotero-read", f"Reading attachment {path.name}...")
     with path.open("rb") as stream:
         content = stream.read(maximum + 1)
     if not content or len(content) > maximum:
@@ -227,8 +235,10 @@ def ingest(project: str | Path, *, library: str, attachment_key: str, allow_rete
         target = Path(directory) / ("attachment.pdf" if is_pdf else "attachment.txt")
         target.write_bytes(content)
         result = api.ingest(project, target, allow_retention=True, source_id=source_id,
-                            title=None if source_id else title, language=language, context=context, expected_snapshot=snapshot.digest,
-                            dry_run=dry_run or (bool(linked) and not explicit_source))
+                            title=None if source_id else title, language=language, context=context,
+                            expected_snapshot=expected_snapshot or snapshot.digest,
+                            dry_run=dry_run or (bool(linked) and not explicit_source),
+                            progress_callback=progress_callback)
         if linked and not explicit_source:
             if not result["unchanged"]:
                 raise ResearchError("Zotero capture changed; explicitly pass --source-id to refresh it")

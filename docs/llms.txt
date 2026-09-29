@@ -57,8 +57,13 @@ v1.19.0 also adds research search --scope all|dossiers|claims|decisions.
 Default CLI/API scope sources retains research-search-local/1; other scopes emit
 research-search-local/2 with typed hits. Only passage hits are source citations.
 Authored hits include record_id/revision/title/excerpt and search only current
-revisions, not history. Reindex after changes. Dashboard search defaults to all.
-Current text can still contain obsolete statements; search does not resolve them.
+revisions, not history. CLI search automatically refreshes stale indexes unless
+--strict is passed. Dashboard search defaults to all. Batch ingest accepts multiple
+files with per-item outcomes; --progress streams phase heartbeats on stderr.
+Dossiers support bounded --summary and --section reads and section-level updates.
+Decisions link dossiers via --dossier-id/--dossiers; get_dossier marks review_needed
+when linked decisions are created or revised after the dossier. Current text can still
+contain obsolete statements; review_needed tracks changed decisions without auto-rewriting.
 See [Unlimited-OCR integration boundaries](https://mfahsold.github.io/lixity/research/OCR_INTEGRATION.md)
 for the source-grounded runtime comparison and acceptance criteria.
 

@@ -221,6 +221,156 @@ class TestResearchRevisionCli(unittest.TestCase):
             self.assertEqual(original["record"]["claim_ref"]["revision"], 1)
             self.assertTrue(api.audit(project)["ok"])
 
+    def test_cli_batch_ingest_and_progress(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "project"
+            f1 = Path(td) / "doc1.txt"
+            f2 = Path(td) / "doc2.txt"
+            f1.write_text("First document content.", encoding="utf-8")
+            f2.write_text("Second document content.", encoding="utf-8")
+            api.init(project, title="Batch Project")
+
+            stderr_buf = io.StringIO()
+            with contextlib.redirect_stderr(stderr_buf):
+                status, batch_res = self.run_json(
+                    "ingest", "--project", str(project),
+                    "--file", str(f1), str(f2),
+                    "--allow-retention", "--progress",
+                )
+            self.assertEqual(status, 0)
+            self.assertEqual(batch_res["schema_version"], "research-batch-ingest-local/1")
+            self.assertEqual(batch_res["succeeded"], 2)
+            self.assertEqual(batch_res["failed"], 0)
+            self.assertEqual(len(batch_res["items"]), 2)
+            self.assertTrue(batch_res["items"][0]["ok"])
+            self.assertTrue(batch_res["items"][1]["ok"])
+            # stderr contains progress phases
+            self.assertIn("[read]", stderr_buf.getvalue())
+            self.assertIn("[complete]", stderr_buf.getvalue())
+
+    def test_cli_search_auto_fresh_and_strict(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "project"
+            f1 = Path(td) / "doc.txt"
+            f1.write_text("A distinctive keyword appears here.", encoding="utf-8")
+            api.init(project, title="Search Project")
+            api.ingest(project, f1, allow_retention=True)
+            # Do NOT manually reindex; test that CLI search automatically refreshes
+            status, res = self.run_json(
+                "search", "--project", str(project),
+                "--query", "distinctive",
+            )
+            self.assertEqual(status, 0)
+            self.assertEqual(len(res["hits"]), 1)
+
+            # Test that --strict fails if index is stale
+            f2 = Path(td) / "doc2.txt"
+            f2.write_text("Another text file added.", encoding="utf-8")
+            api.ingest(project, f2, allow_retention=True)
+
+            err_buf = io.StringIO()
+            with contextlib.redirect_stderr(err_buf):
+                status2 = cli.run(self.parse(
+                    "search", "--project", str(project),
+                    "--query", "Another", "--strict",
+                ))
+            self.assertNotEqual(status2, 0)
+            self.assertIn("stale", err_buf.getvalue())
+
+    def test_cli_dossier_summary_section_and_section_update(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "project"
+            api.init(project, title="Dossier Project")
+            body = "# Overview\n\nInitial facts.\n\n## Section A\n\nContent of A.\n\n## Section B\n\nContent of B."
+            dossier = api.create_dossier(project, "Doc Dossier", body)
+            did = dossier["dossier_id"]
+
+            # CLI --summary
+            status, summary = self.run_json(
+                "dossier", "--project", str(project),
+                "--dossier-id", did, "--summary",
+            )
+            self.assertEqual(status, 0)
+            self.assertEqual(summary["sections"], ["Overview", "Section A", "Section B"])
+            self.assertIn("Initial facts", summary["excerpt"])
+
+            # CLI --section
+            status, sec = self.run_json(
+                "dossier", "--project", str(project),
+                "--dossier-id", did, "--section", "Section A",
+            )
+            self.assertEqual(status, 0)
+            self.assertEqual(sec["content"], "Content of A.")
+
+            # CLI --update --section
+            new_sec = Path(td) / "new_sec.txt"
+            new_sec.write_text("Revised content of A.", encoding="utf-8")
+            snap = api.get_dossier(project, did)["snapshot"]
+            status, updated = self.run_json(
+                "dossier", "--project", str(project),
+                "--dossier-id", did, "--update",
+                "--section", "Section A", "--file", str(new_sec),
+                "--expected-snapshot", snap, "--expected-revision", "1",
+                "--change-kind", "correction", "--reason", "Update Section A",
+            )
+            self.assertEqual(status, 0)
+            self.assertIn("Revised content of A.", updated["record"]["body"])
+            self.assertIn("Content of B.", updated["record"]["body"])
+
+            # CLI --update --section without --file should fail with clear error
+            err_buf = io.StringIO()
+            with contextlib.redirect_stderr(err_buf):
+                err_status = cli.run(self.parse(
+                    "dossier", "--project", str(project),
+                    "--dossier-id", did, "--update",
+                    "--section", "Section B",
+                    "--expected-snapshot", updated["snapshot"], "--expected-revision", "2",
+                    "--change-kind", "correction", "--reason", "Missing file",
+                ))
+            self.assertNotEqual(err_status, 0)
+            self.assertIn("requires --file", err_buf.getvalue())
+
+    def test_cli_decision_with_dossier_link(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "project"
+            api.init(project, title="Decision Project")
+            dossier1 = api.create_dossier(project, "Dossier 1", "Body text")
+            dossier2 = api.create_dossier(project, "Dossier 2", "Second body")
+            did1 = dossier1["dossier_id"]
+            did2 = dossier2["dossier_id"]
+
+            status, dec = self.run_json(
+                "decision", "--project", str(project),
+                "--title", "Dramaturgical adjustment",
+                "--rationale", "Enhance pacing",
+                "--dossier-id", did1,
+            )
+            self.assertEqual(status, 0)
+            self.assertEqual(dec["dossier_ids"], [did1])
+            dec_id = dec["decision_id"]
+
+            # Inspect dossier 1 via CLI: should have review_needed
+            status, d_info = self.run_json(
+                "dossier", "--project", str(project),
+                "--dossier-id", did1,
+            )
+            self.assertEqual(status, 0)
+            self.assertTrue(d_info["review_needed"])
+            self.assertEqual(len(d_info["decision_reviews"]), 1)
+
+            # Update decision to link both dossiers
+            snap = d_info["snapshot"]
+            status, updated_dec = self.run_json(
+                "decision", "--project", str(project),
+                "--decision-id", dec_id, "--update",
+                "--dossiers", f"{did1},{did2}",
+                "--expected-snapshot", snap, "--expected-revision", "1",
+                "--change-kind", "correction", "--reason", "Link second dossier",
+            )
+            self.assertEqual(status, 0)
+            self.assertEqual(updated_dec["record"]["dossier_refs"][0]["id"], did1)
+            self.assertEqual(updated_dec["record"]["dossier_refs"][1]["id"], did2)
+
     def run_json_on_error(self, *args: str) -> tuple[int, str]:
         output = io.StringIO()
         with contextlib.redirect_stdout(output):
@@ -230,3 +380,4 @@ class TestResearchRevisionCli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

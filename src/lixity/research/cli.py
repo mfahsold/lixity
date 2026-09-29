@@ -3,6 +3,7 @@
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -72,6 +73,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
                 command.add_argument("--allow-retention", action="store_true")
                 command.add_argument("--dry-run", action="store_true")
+                command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
         if name in ("dossier", "claim", "link-evidence", "decision"):
             command.add_argument("--update", action="store_true", help="Revise the named record")
             command.add_argument("--history", action="store_true", help="List immutable revisions")
@@ -87,7 +89,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
             command.add_argument("--actor", default="local-author")
         elif name == "ingest":
-            command.add_argument("--file", required=True)
+            command.add_argument("--file", nargs="+", required=True, help="Path(s) to local UTF-8 text or PDF file(s)")
             command.add_argument("--title")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
             command.add_argument("--source-id", help="Refresh this source without invalidating old citations")
@@ -96,11 +98,13 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--dry-run", action="store_true", help="Validate and preview; do not write")
             command.add_argument("--context", help="Path to JSON file containing source criticism context")
             command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
+            command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
         elif name == "search":
             command.add_argument("--query", required=True)
             command.add_argument("--scope", choices=("sources", "dossiers", "claims", "decisions", "all"),
                                  default="sources", help="Search sources (default) or current authored records")
             command.add_argument("--limit", type=int, choices=range(1, 101), default=20, metavar="1..100")
+            command.add_argument("--strict", action="store_true", help="Fail if search index is stale instead of refreshing automatically")
         elif name == "cite":
             command.add_argument("--passage", required=True)
         elif name in ("analyze", "dashboard"):
@@ -122,6 +126,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--tags", help="Comma-separated tags")
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+            command.add_argument("--summary", action="store_true", help="Return metadata, section outline, and body excerpt without full text")
+            command.add_argument("--section", help="Inspect or update only the named heading section")
+            command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
         elif name == "claim":
             command.add_argument("--claim-id", help="Claim UUID to inspect")
             command.add_argument("--title", help="Title for new claim")
@@ -147,6 +154,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--rationale", help="Artistic or historical rationale")
             command.add_argument("--claim-id", help="Optional claim UUID being decided upon")
             command.add_argument("--claim-revision", type=int, help="Explicit claim revision to pin on update")
+            command.add_argument("--dossier-id", help="Associated dossier UUID")
+            command.add_argument("--dossiers", help="Comma-separated dossier UUIDs impacted by this decision")
             command.add_argument("--deviation-from-fact", action=argparse.BooleanOptionalAction,
                                  default=None, help="Set or clear intentional deviation from historical evidence")
             command.add_argument("--impact-on-plot", help="Description of plot or worldbuilding impact")
@@ -186,9 +195,30 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
         ):
             value = value or None
         changes[key] = value
+    if kind == "decision":
+        dossier_ids = []
+        if getattr(args, "dossier_id", None):
+            dossier_ids.append(args.dossier_id.strip())
+        if getattr(args, "dossiers", None):
+            dossier_ids.extend([d.strip() for d in args.dossiers.split(",") if d.strip()])
+        if dossier_ids:
+            changes["dossier_ids"] = list(dict.fromkeys(dossier_ids))
     if kind == "dossier" and args.file is not None:
         body_path = Path(args.file)
-        changes["body"] = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
+        new_content = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
+        if getattr(args, "section", None):
+            from . import api
+            record_id = getattr(args, "dossier_id", None)
+            if record_id:
+                current_dossier = api.get_dossier(args.project, record_id)
+                changes["body"] = api.update_section(current_dossier["body"], args.section, new_content)
+            else:
+                changes["body"] = new_content
+        else:
+            changes["body"] = new_content
+    elif kind == "dossier" and getattr(args, "section", None) and getattr(args, "update", False):
+        from .repository import ResearchError
+        raise ResearchError("Updating a dossier section requires --file with new section content")
     return changes
 
 
@@ -257,14 +287,52 @@ def run(args: argparse.Namespace) -> int:
                     context = json.loads(context_path.read_text(encoding="utf-8"))
                 else:
                     context = json.loads(args.context)
-            def _cli_progress(stage: str, message: str) -> None:
-                if sys.stderr.isatty():
-                    print(f"[{stage}] {message}", file=sys.stderr)
+            start_time = time.monotonic()
 
-            result = api.ingest(args.project, args.file, allow_retention=args.allow_retention,
-                                source_id=args.source_id, title=args.title, language=args.language,
-                                actor=args.actor, dry_run=args.dry_run, context=context, origin_url=args.origin_url,
-                                progress_callback=_cli_progress)
+            def _cli_progress(stage: str, message: str) -> None:
+                if getattr(args, "progress", False) or sys.stderr.isatty():
+                    elapsed = time.monotonic() - start_time
+                    print(f"[{stage}] ({elapsed:.1f}s) {message}", file=sys.stderr, flush=True)
+
+            files = args.file if isinstance(args.file, list) else [args.file]
+            if len(files) > 1:
+                if args.source_id:
+                    raise ResearchError("Cannot specify --source-id when ingesting multiple files")
+                items: list[dict[str, Any]] = []
+                succeeded = 0
+                failed = 0
+                def _ingest_one(file_item: Any) -> tuple[dict[str, Any], bool]:
+                    try:
+                        res = api.ingest(args.project, file_item, allow_retention=args.allow_retention,
+                                         language=args.language, actor=args.actor, dry_run=args.dry_run,
+                                         context=context, origin_url=args.origin_url,
+                                         progress_callback=_cli_progress)
+                        return ({"file": str(file_item), "ok": True, "source_id": res["source_id"], "passages": res["passages"]}, True)
+                    except (ResearchError, OSError, ValueError) as exc:
+                        return ({"file": str(file_item), "ok": False, "error": str(exc)}, False)
+
+                for f in files:
+                    item, ok = _ingest_one(f)
+                    items.append(item)
+                    if ok:
+                        succeeded += 1
+                    else:
+                        failed += 1
+                result = {
+                    "schema_version": "research-batch-ingest-local/1",
+                    "items": items,
+                    "succeeded": succeeded,
+                    "failed": failed,
+                    "total": len(files),
+                    "dry_run": args.dry_run,
+                }
+                sys.stdout.write(json.dumps(result, indent=2) + "\n")
+                return 1 if failed > 0 else 0
+            else:
+                result = api.ingest(args.project, files[0], allow_retention=args.allow_retention,
+                                    source_id=args.source_id, title=args.title, language=args.language,
+                                    actor=args.actor, dry_run=args.dry_run, context=context, origin_url=args.origin_url,
+                                    progress_callback=_cli_progress)
         elif command in ("zotero-backup", "zotero-restore"):
             from . import zotero_backup
             if command == "zotero-backup":
@@ -284,13 +352,23 @@ def run(args: argparse.Namespace) -> int:
                 result = zotero.browse(args.project, library=args.library, query=args.query,
                                        item_key=args.item_key, limit=args.limit, start=args.start, collection_key=args.collection_key)
             else:
+                start_time = time.monotonic()
+
+                def _zotero_progress(stage: str, message: str) -> None:
+                    if getattr(args, "progress", False) or sys.stderr.isatty():
+                        elapsed = time.monotonic() - start_time
+                        print(f"[{stage}] ({elapsed:.1f}s) {message}", file=sys.stderr, flush=True)
+
                 result = zotero.ingest(args.project, library=args.library, attachment_key=args.attachment_key,
                                        source_id=args.source_id, language=args.language, expected_server_id=args.expected_server_id,
-                                       allow_retention=args.allow_retention, dry_run=args.dry_run)
+                                       allow_retention=args.allow_retention, dry_run=args.dry_run,
+                                       progress_callback=_zotero_progress)
         elif command == "reindex":
             result = api.reindex(args.project)
         elif command == "search":
-            result = api.search(args.project, args.query, limit=args.limit, scope=args.scope)
+            result = api.search(args.project, args.query, limit=args.limit, scope=args.scope, ensure_fresh=not args.strict)
+            if not args.strict and any("refreshed" in w for w in result.get("warnings", [])):
+                print("[search] Search index was refreshed to current snapshot (use --strict to require manual reindexing)", file=sys.stderr)
         elif command == "cite":
             result = api.cite(args.project, args.passage)
         elif command == "analyze":
@@ -333,7 +411,13 @@ def run(args: argparse.Namespace) -> int:
             result = revision_result
         elif command == "dossier":
             if getattr(args, "dossier_id", None):
-                result = api.get_dossier(args.project, args.dossier_id)
+                result = api.get_dossier(
+                    args.project,
+                    args.dossier_id,
+                    section=getattr(args, "section", None),
+                    summary=getattr(args, "summary", False),
+                    include_citations=not getattr(args, "omit_citations", False),
+                )
             elif getattr(args, "title", None) and getattr(args, "file", None):
                 body_path = Path(args.file)
                 body = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
@@ -388,6 +472,11 @@ def run(args: argparse.Namespace) -> int:
             )
         elif command == "decision":
             if getattr(args, "title", None) and getattr(args, "rationale", None):
+                dossier_ids = []
+                if getattr(args, "dossier_id", None):
+                    dossier_ids.append(args.dossier_id.strip())
+                if getattr(args, "dossiers", None):
+                    dossier_ids.extend([d.strip() for d in args.dossiers.split(",") if d.strip()])
                 result = api.record_decision(
                     args.project,
                     title=args.title,
@@ -395,6 +484,7 @@ def run(args: argparse.Namespace) -> int:
                     claim_id=getattr(args, "claim_id", None),
                     deviation_from_fact=bool(args.deviation_from_fact),
                     impact_on_plot=getattr(args, "impact_on_plot", None),
+                    dossier_ids=dossier_ids or None,
                     actor=args.actor,
                 )
             else:

@@ -1141,15 +1141,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         limit = payload.get("limit", 20)
         scope = payload.get("scope", "sources")
         try:
-            res = research_api.search(root, query, limit=limit, scope=scope)
+            res = research_api.search(root, query, limit=limit, scope=scope, ensure_fresh=True)
             self._json({"ok": True, **res})
-        except (ResearchError, OSError, ValueError):
-            try:
-                research_api.reindex(root)
-                res = research_api.search(root, query, limit=limit, scope=scope)
-                self._json({"ok": True, **res})
-            except (ResearchError, OSError, ValueError) as exc:
-                self._json({"ok": False, "message": str(exc)}, 400)
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_dossier(self, payload: dict[str, Any]) -> None:
         root = self.get_research_root()
