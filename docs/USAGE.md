@@ -24,6 +24,8 @@ project, start with the [README](../README.md); this document goes into detail.
 13. [Debug logging](#debug-logging-since-v1190)
 14. [Research search scopes](#research-search-scopes-since-v1190)
 15. [Zotero integration](#zotero-integration-since-v1190)
+16. [Native NDA tracking and isolated keying](#native-nda-tracking-and-isolated-keying-since-v1200)
+17. [Research batch workflow and index ergonomics](#research-batch-workflow-and-index-ergonomics-since-v1200)
 
 ## Installation
 
@@ -761,6 +763,23 @@ All `None` patterns fall back to the curated defaults of the selected language
 profile in `lixity.language_data` — adding a language is a data-layer entry,
 not a code change.
 
+### Project NDA configuration (`[nda]`)
+
+Configured under `[nda]` in `lixity.toml`:
+
+```toml
+[nda]
+provider = "native"                   # "native" (built-in encrypted storage) or "project"
+key_env = "LIXITY_PROJECT_KEY"        # env var holding the 256-bit AES-GCM encryption key
+required = false                      # if true, lixity build fails when key/status is missing
+```
+
+| Field | Default | Purpose |
+| :--- | :--- | :--- |
+| `provider` | `native` | Storage provider (`native` stores AES-GCM encrypted records in `nda/nda.enc.json`). |
+| `key_env` | `None` | Environment variable name providing the symmetric decryption key. |
+| `required` | `false` | When true, enforces valid NDA records during `lixity build`. |
+
 ## Troubleshooting
 
 | Symptom | Cause and fix |
@@ -871,3 +890,42 @@ or files linked outside its data directory.
 See the [Zotero bridge reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
 for setup, pagination, dry runs, v3 compatibility, identity matching and recovery.
 There is no automatic migration, bidirectional synchronization or archive deletion.
+
+## Native NDA tracking and isolated keying (since v1.20.0)
+
+Lixity includes native project NDA tracking and isolated keying. A project can
+track disclosure status, recipient agreements, and access permissions locally in
+encrypted form without relying on external cloud vaults.
+
+When `[nda]` is configured with `provider = "native"`, records are stored under
+`nda/nda.enc.json` encrypted with AES-256-GCM. The encryption key is supplied
+through the environment variable named in `key_env` (e.g. `LIXITY_PROJECT_KEY`).
+
+- **Workspace build enforcement:** `lixity build manuscript.md` checks NDA status.
+  If `required = true` is set in `lixity.toml`, the build verifies that the key
+  is present and decryption succeeds.
+- **Server API:** The local server exposes `GET /api/project/nda` and
+  `POST /api/project/nda`, allowing project managers and authorized authors to
+  review or update NDA records directly from the Project Settings panel.
+- **Key isolation:** The encryption key is never logged, persisted in dashboard
+  HTML, or written to unencrypted project files.
+
+## Research batch workflow and index ergonomics (since v1.20.0)
+
+Release v1.20.0 streamlines research ingestion and index maintenance:
+
+- **Batch ingestion:** `lixity research batch-ingest --project ./novel --allow-retention [--progress] ./sources/*.txt`
+  ingests multiple files in a single invocation, emitting structured per-file outcomes
+  under `research-batch-ingest-local/1`. When `--progress` is passed, live phase
+  heartbeats stream to stderr.
+- **Auto-fresh index caching:** `lixity research search` checks whether the FTS5
+  index is stale compared to the HEAD manifest mtime. If stale, it automatically
+  rebuilds the index before querying, eliminating manual `reindex` friction in common
+  workflows. Pass `--strict` to fail fast instead of auto-rebuilding.
+- **Section-bounded reads:** `lixity research read --project ./novel --dossier-id <UUID> --section "Historical Notes"`
+  extracts only the requested section from long dossiers, keeping agent context and
+  author reviews focused.
+- **Decision-dossier review tracking:** Recording or revising a decision linked to
+  a dossier flags that dossier with `review_needed: true` in the API and displays an
+  amber review badge in the web dashboard, ensuring authorial choices remain visibly
+  connected to compiled evidence without automated rewriting.

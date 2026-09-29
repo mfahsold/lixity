@@ -18,7 +18,7 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Install Lixity and open a manuscript locally</h1>
 <p>Lixity analyzes Markdown manuscripts on your computer. It produces an interactive dashboard with sentence rhythm, vocabulary, readability and chapter-level style signals. No manuscript upload or account is required for core analysis.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-27">27 September 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-29">29 September 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html" aria-current="page">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="requirements">What do I need?</h2>
@@ -30,7 +30,7 @@
 lixity --version
 lixity about</code></pre>
 <p>The tag selects a fixed release. If the command is not found, run <code>uv tool update-shell</code>, reopen the terminal and try again. Lixity is installed from GitHub; these instructions do not assume a PyPI package.</p>
-<p><strong>Included in v1.18.0:</strong> the origin-URL field, browser PDF upload, localized OCR diagnostics and neutral consistency display described in these guides. Release v1.19.0 adds debug logging controls, search across current authored records and optional Zotero integration. To follow development deliberately, replace the installation with:</p>
+<p><strong>Included in v1.18.0 &amp; v1.19.0:</strong> origin-URL metadata, browser PDF uploads, localized OCR diagnostics, Zotero integration and scoped search. Release v1.20.0 adds native project NDA encryption, multi-file batch ingestion with live progress, auto-fresh search index caching, section-bounded reading and decision-dossier review tracking. To follow development deliberately, replace the installation with:</p>
 <pre><code>uv tool install --force --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"</code></pre>
 <p><code>main</code> changes over time. Record the installed commit for reproducible automation and review the <a href="https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md">changelog</a>. Installing or updating Lixity does not restart an already running server.</p>
 

@@ -1,9 +1,15 @@
 # RFC: an evidence-based research workspace for Lixity
 
+> [!IMPORTANT]
+> **Architectural RFC vs. Implemented Commands**
+> This document specifies an architectural vision and target RFC. It contains both implemented foundations and speculative future interfaces (e.g., vector embeddings, multi-tenant cloud APIs).
+> For currently implemented CLI commands, operational guides, and stable schemas, see **[Research Usage & CLI Reference](USAGE.md)** and **[Portable Implementation Status](IMPLEMENTATION.md)**.
+
 Status: **target architecture**, originally drafted 2026-09-25. The initial
 [local research pilot](USAGE.md) shipped experimentally in `v1.16.0`; `v1.18.0`
 includes PDF extraction, native authored revisions and verified archive restoration.
-Release `v1.19.0` adds Zotero integration and scoped current-record search.
+Release `v1.19.0` added Zotero integration and scoped search. Release `v1.20.0` adds
+batch ingestion, auto-fresh indexing, section-bounded reading, and decision review tracking.
 The broader providers and interchange schemas below remain proposals unless
 explicitly identified as implemented. See the [implementation scope](IMPLEMENTATION.md)
 and [command reference](USAGE.md) for the supported boundaries. Python

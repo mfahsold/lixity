@@ -42,30 +42,21 @@ and [archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research
 | Integrate the engine or automate a workflow | [Python and JSON contracts](docs/AGENTS.md), [architecture](docs/ARCHITECTURE.md) |
 | Understand a result or its limits | [Methods](docs/METHODS.md), [stability and validation limits](docs/STABILITY.md) |
 
-## Current release: v1.19.0
+## Current release: v1.20.0
 
-The optional **Zotero Desktop bridge** lets Zotero manage literature and media
-while Lixity retains selected PDF/text evidence, dossiers, claims and author
-decisions. Browse collections and attachments, explicitly capture or refresh a
-source, and open its original in Zotero. Structured attachment identities help
-avoid duplicate captures; historical passage citations remain available.
-Migration export is additive, and paired backup/restore tools cover the research
-archive and an explicitly closed Zotero data directory.
+Release v1.20.0 streamlines research workflows and introduces native project NDA protection:
 
-Research search now includes current dossiers, claims and decisions with
-`--scope all` or a type filter. Source search remains the CLI/API default.
+- **Research batch ingestion:** `lixity research batch-ingest` imports multiple text or PDF sources in one invocation, emitting structured per-file outcomes (`research-batch-ingest-local/1`) and streaming `--progress` heartbeats on stderr.
+- **Auto-fresh index caching:** `lixity research search` transparently checks the HEAD manifest timestamp and rebuilds stale FTS5 projections without requiring manual `reindex` calls (pass `--strict` to fail fast).
+- **Bounded dossier reading:** `lixity research read --section <NAME>` and section-level updates allow focused review of long dossiers.
+- **Decision-dossier review tracking:** Linking an authorial decision to a dossier tracks review needs (`review_needed: true`), surfacing an amber review badge in the web dashboard.
+- **Native project NDA encryption:** Isolated symmetric encryption (`ProjectNdaProvider`, `nda/nda.enc.json`, AES-256-GCM) with key isolation and enforcement during `lixity build`.
 
-**Boundaries:** Zotero is optional and needs no cloud account. The bridge does
-not synchronize in the background or write changes back to Zotero. Images,
-audio and video can be managed there, but Lixity does not transcribe or analyze
-those media. Text-layer PDFs use local Poppler tools; scanned PDFs require a
-separately configured OCR worker. The optional CPU reference worker is
-experimental and checkout-only. Retaining source bytes requires consent; an
-origin URL records provenance and does not fetch a remote document.
+The optional **Zotero Desktop bridge** (since v1.19.0) continues to let Zotero manage literature and media while Lixity retains selected evidence, dossiers, claims and author decisions.
 
-Read the [release notes](docs/releases/v1.19.0.md) before upgrading an archive.
+Read the [v1.20.0 release notes](docs/releases/v1.20.0.md) before upgrading an archive.
 Documentation on `main` may describe newer changes; use the
-[tagged documentation](https://github.com/mfahsold/lixity/tree/v1.19.0/docs) for
+[tagged documentation](https://github.com/mfahsold/lixity/tree/v1.20.0/docs) for
 the released package and [changelog](CHANGELOG.md) for subsequent changes.
 
 ## What you can do
@@ -252,7 +243,8 @@ Open `exports/manuscript_dashboard.html`. Use `--language de` for German or
 explicit `--language auto` for detection. No account, API key or upload is needed.
 For live settings, project management and research editing, run `lixity serve`.
 Standalone HTML is an analysis report, not a running project server. Publication
-exports and encrypted NDA storage belong to separate project adapters.
+typesetting and delivery adapters remain external, while native encrypted NDA
+tracking is built into Lixity (`ProjectNdaProvider` and `lixity build`).
 
 Other commands (all analysis commands default to English):
 

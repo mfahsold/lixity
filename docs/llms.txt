@@ -57,13 +57,13 @@ v1.19.0 also adds research search --scope all|dossiers|claims|decisions.
 Default CLI/API scope sources retains research-search-local/1; other scopes emit
 research-search-local/2 with typed hits. Only passage hits are source citations.
 Authored hits include record_id/revision/title/excerpt and search only current
-revisions, not history. CLI search automatically refreshes stale indexes unless
---strict is passed. Dashboard search defaults to all. Batch ingest accepts multiple
-files with per-item outcomes; --progress streams phase heartbeats on stderr.
-Dossiers support bounded --summary and --section reads and section-level updates.
-Decisions link dossiers via --dossier-id/--dossiers; get_dossier marks review_needed
-when linked decisions are created or revised after the dossier. Current text can still
-contain obsolete statements; review_needed tracks changed decisions without auto-rewriting.
+revisions, not history. Dashboard search defaults to all.
+Release v1.20.0 adds multi-file batch ingestion (research-batch-ingest-local/1)
+with live heartbeats (--progress), auto-fresh search index caching (rebuilding
+transparently unless --strict is passed), bounded dossier reads (--section, --summary),
+and decision-dossier review tracking (marking review_needed: true when linked decisions
+are recorded or revised). v1.20.0 also adds native project NDA encryption and tracking
+under [nda] in lixity.toml (AES-256-GCM via ProjectNdaProvider and lixity build).
 See [Unlimited-OCR integration boundaries](https://mfahsold.github.io/lixity/research/OCR_INTEGRATION.md)
 for the source-grounded runtime comparison and acceptance criteria.
 
@@ -96,9 +96,10 @@ new server process. Restart running servers after a package update.
 - [Installation](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md): prerequisites, development vs release, Windows, updates, first dashboard, troubleshooting
 
 - Current release: 1.20.0; release tag: v1.20.0.
-- Research workspace in 1.17.0: evidence-based `lixity research` (explicit-project
+- Research workspace (v1.20.0): evidence-based `lixity research` (explicit-project
   UTF-8 and PDF archives, exact citations, source tagging, dossiers, controlled withdrawal/purge,
   claims, passage evidence links, authorial decisions with native immutable revisions,
+  batch ingest, section reads, auto-fresh indexing, review tracking,
   self-hosted Baidu Unlimited-OCR extraction boundary, offline SVG diagrams,
   BagIt-style export/restoration, SQLite/FTS5 lexical search, cross-corpus comparison,
   and interactive web research UI in `lixity serve`).

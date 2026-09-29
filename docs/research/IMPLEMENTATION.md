@@ -2,7 +2,7 @@
 
 ## Implemented experimental pilot
 
-Implementation status: experimental local workspace in `v1.19.0`. The first UTF-8 pilot shipped in `v1.16.0`.
+Implementation status: experimental local workspace in `v1.20.0`. The first UTF-8 pilot shipped in `v1.16.0`.
 Commands and limits are documented in [USAGE.md](USAGE.md).
 
 The source-to-citation path and manual claim, evidence-link and decision records
@@ -10,8 +10,11 @@ are implemented, alongside PDF extraction, authored revision history and verifie
 archive export/restoration. The RFC remains a target architecture. Local contracts
 use `research-local/1` and `/2`; v1.19.0 adds `/3` for source versions carrying
 a structured external reference, with a corresponding v3 manifest. New readers
-preserve support for v1/v2; older readers reject v3. These contracts remain separate
-from the illustrative `research/1` bundle and existing analysis schemas.
+preserve support for v1/v2; older readers reject v3. Release v1.20.0 adds
+batch ingestion (`research-batch-ingest-local/1`), auto-fresh query index
+caching, section-bounded dossier reading, and decision-dossier review tracking.
+These contracts remain separate from the illustrative `research/1` bundle and
+existing analysis schemas.
 
 It uses Python 3.10+, existing Pydantic and the standard library. Python 3.10
 loads TOML project settings through the conditional `tomli` dependency.
@@ -31,21 +34,24 @@ or contact a cloud library.
    corrupt objects, path escapes, conflicts and incomplete initialization.
 3. `research/catalogue.py`: disposable SQLite/FTS5 projection tied to one manifest.
    Search only the newest version of each source; exact historical citations
-   remain resolvable. v1.19.0 also indexes the current dossier, claim and
-   decision revisions through explicit scopes; the CLI default remains source
-   passages. Reject stale indexes rather than silently mixing snapshots.
+   remain resolvable. v1.19.0 also indexes current dossier, claim and
+   decision revisions through explicit scopes. Since v1.20.0, search checks
+   manifest mtime and refreshes stale projections automatically unless `--strict`
+   is requested.
 4. `research/analysis.py`: lean research analysis adapter reusing the existing
    `lixity.pipeline` without ambient configuration, mapping paragraphs to exact
    passage citations and source criticism context, with localized read-only dashboard.
 5. `research/api.py` and `research/cli.py`: init, local text/PDF ingest with context,
+   multi-file batch ingest (`research batch-ingest`), section-bounded dossier reads,
    reindex, search, cite, audit, schema, analyze, dashboard, withdraw and purge
    with dry-run preview. Require explicit project selection and local retention
-   confirmation. JSON stdout; errors on stderr; ingestion dry-run leaves the
-   research archive unchanged.
+   confirmation. JSON stdout; errors on stderr; `--progress` streams heartbeats.
 6. `research/models.py` and `research/api.py`: source tagging, dossiers with
-   passage references, manually recorded claims with scope and confidence,
-   evidence links with explicit relations, and authorial decisions. A selected
-   `evidenced` confidence value or a decision without a deviation flag is not
+   passage references and structured sections, manually recorded claims with
+   scope and confidence, evidence links with explicit relations, and authorial
+   decisions with dossier associations. A decision linked to a dossier updates
+   its review status (`review_needed`), keeping the revision loop transparent.
+   A selected `evidenced` confidence value or an unset deviation flag is not
    an automated fact check.
 7. `server.py` & `ui/dashboard.py`: Interactive research management panel in the
    `lixity serve` dashboard (source ingest/listing and full source detail,

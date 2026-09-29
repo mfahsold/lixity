@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Lixity – Offline Manuscript Analysis &amp; Local Research</title>
-<meta name="description" content="Lixity analyzes Markdown manuscripts offline with sentence rhythm, lexical diversity, tense profiles and within-manuscript style references. Version 1.19.0 includes an explicit-project research workspace."/>
+<meta name="description" content="Lixity analyzes Markdown manuscripts offline with sentence rhythm, lexical diversity, tense profiles and within-manuscript style references. Version 1.20.0 includes an explicit-project research workspace, batch ergonomics, and native NDA encryption."/>
 <meta name="robots" content="index, follow"/>
 <meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0" />
 <meta name="author" content="Matthias Fahsold"/>
@@ -16,7 +16,7 @@
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity – Quantitative Text Linguistics, Stylometry &amp; Research Workspace"/>
-<meta property="og:description" content="Offline manuscript analysis with style references and tense dynamics, plus an explicit-project research archive in v1.19.0."/>
+<meta property="og:description" content="Offline manuscript analysis with style references and tense dynamics, plus an explicit-project research archive and native NDA encryption in v1.20.0."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="1480"/>
@@ -28,7 +28,7 @@
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Research Workspace"/>
-<meta name="twitter:description" content="Offline manuscript analysis with a local research workspace in v1.19.0."/>
+<meta name="twitter:description" content="Offline manuscript analysis with a local research workspace and native NDA protection in v1.20.0."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
 
@@ -116,13 +116,13 @@
   <section class="hero">
     <div class="eyebrow-pill">
       <span class="dot"></span>
-      <span>v1.19.0 &middot; Research Workspace &amp; Offline Stylometry</span>
+      <span>v1.20.0 &middot; Research Workspace, Batch Ergonomics &amp; Native NDA</span>
     </div>
     <h1 class="hero-title">
       Manuscript Analysis &amp; <span class="gradient">Local Research</span>
     </h1>
     <p class="hero-sub">
-      Lixity helps authors examine their Markdown manuscripts and keep the research behind their books organized. Work locally, inspect results alongside the text and keep editorial judgment in your hands.
+      Lixity helps authors examine their Markdown manuscripts and keep the research behind their books organized. Work locally, inspect results alongside the text and keep editorial judgment and artistic sovereignty in your hands.
     </p>
     <div class="hero-cta">
       <a class="btn primary" href="guides/installation.html">
@@ -137,7 +137,8 @@
     <div class="feature-badge-row">
       <span class="badge-pill">Local Manuscript Analysis</span>
       <span class="badge-pill">No Cloud Calls in Core Analysis</span>
-      <span class="badge-pill">7 UI Languages &middot; Deepest Heuristics in English and German</span>
+      <span class="badge-pill">Deterministic Metrics &middot; No Automated Rewriting</span>
+      <span class="badge-pill">Native AES-256 NDA Isolation</span>
     </div>
   </section>
 
@@ -200,7 +201,7 @@
       <article><h3><a href="guides/interpretation.html">Understand manuscript metrics</a></h3><p>Read consistency, lexical diversity and style deviations with their data requirements and limits.</p></article>
       <article><h3><a href="guides/research-pdf.html">Archive sources, PDFs and citations</a></h3><p>Record an origin URL, distinguish native PDFs from scans, configure OCR and test a backup.</p></article>
     </div>
-    <p><strong>New in v1.19.0:</strong> local Zotero collection browsing and evidence capture, current-record research search, additive migration and verified paired backups. See the <a href="releases/v1.19.0.md">release notes</a> for scope and compatibility.</p>
+    <p><strong>New in v1.20.0:</strong> multi-file batch ingestion with live progress, auto-fresh search index caching, section-bounded dossier reading, decision-dossier review tracking, and native project NDA encryption. See the <a href="releases/v1.20.0.md">release notes</a> for scope and compatibility.</p>
   </section>
 
   <!-- SECTION 4: VISUAL ANALYTICAL SUITE (SCREENSHOTS) -->
@@ -208,7 +209,7 @@
     <div class="section-header">
       <span class="section-tag">Visual Suite &amp; UI</span>
       <h2 class="section-title">Visual Analytical Suite</h2>
-      <p class="section-desc">Click a screenshot to inspect a recorded desktop, terminal or mobile session. Screenshots show current main, including UI refinements not yet released in v1.19.0. All examples use public-domain or synthetic content.</p>
+      <p class="section-desc">Click a screenshot to inspect a recorded desktop, terminal or mobile session. Screenshots show current main and release v1.20.0. All examples use public-domain or synthetic content.</p>
     </div>
 
     <!-- 0. Modern Workspace & Project Wizard -->
@@ -341,7 +342,7 @@
       <p class="section-desc">Lixity offers deterministic, versioned JSON contracts (analyze/profile <code>v2</code>, style <code>v4</code>) and stable POSIX exit codes for autonomous coding and editing agents.</p>
     </div>
     <p>Integrate the shared analysis pipeline and dashboard into an explicit project through the Python API and versioned JSON. Reuse the same analysis across command-line and browser workflows.</p>
-    <p>Typesetting, PDF/EPUB publication, recipient delivery and encrypted NDA storage belong to separate project adapters; they are not bundled Lixity services. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">integration architecture</a>.</p>
+    <p>Typesetting, PDF/EPUB publication and external delivery adapters remain outside Lixity, while native encrypted NDA tracking and isolated keying are built into Lixity. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">integration architecture</a>.</p>
 
     <div class="card">
       <h3 style="margin-top: 0; color: var(--fg-heading);">Command-Line Interface (CLI)</h3>
@@ -360,17 +361,17 @@ lixity showing manuscript.md              # Perception, passive and exposition h
 lixity style manuscript.md                # Median/MAD bounds, z*, FDR matrix
 lixity style manuscript.md --json --fdr-method by --min-chapters 4
 
-# Interactive dashboard &amp; idempotent workspace build
+# Interactive dashboard &amp; idempotent workspace build with NDA tracking
 lixity dashboard manuscript.md -o exports/dashboard.html # Standalone single-file HTML
-lixity build manuscript.md --language en  # Idempotent workspace build with archive rotation
+lixity build manuscript.md --language en  # Idempotent workspace build with archive rotation &amp; NDA check
 lixity serve --port 8765                 # Local development server &amp; interactive workspace
 
-# Evidence-based research workspace (pilot)
+# Evidence-based research workspace (since v1.20.0 with batch &amp; sections)
 lixity research init --project ./research --title "Archival Study"
-lixity research ingest --project ./research --file log.txt --allow-retention
-lixity research search --project ./research --query "warehouse gate"
+lixity research batch-ingest --project ./research --allow-retention --progress ./sources/*.txt
+lixity research search --project ./research --query "warehouse gate" # Auto-fresh cache
 lixity research dossier --project ./research --title "Smuggling Dossier" --file "Summary..."
-lixity research compare --project ./research --source-id &lt;source_id&gt; --manuscript manuscript.md</pre>
+lixity research read --project ./research --dossier-id &lt;dossier_id&gt; --section "Customs Ledger"</pre>
     </div>
 
     <div class="card">

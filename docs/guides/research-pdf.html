@@ -18,15 +18,16 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Archive sources and import PDFs with local OCR</h1>
 <p>Lixity's experimental research workspace retains local sources and connects exact passages with dossiers, claims and author decisions. Every operation names a project. Sources remain evidence for human review; an import, citation or integrity audit does not certify their factual accuracy.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-27">27 September 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-29">29 September 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html" aria-current="page">Sources and PDF/OCR</a></nav>
-<div class="notice-box"><strong>Version scope:</strong> Local research, the PDF extraction boundary, the dedicated origin-URL field, browser PDF upload and localized OCR diagnostics were included in v1.18.0. Zotero integration, scoped search and paired backups are included in v1.19.0. See <a href="installation.html#install">installation choices</a>.</div>
+<div class="notice-box"><strong>Version scope:</strong> Local research and OCR boundaries were included in v1.18.0; Zotero integration and scoped search in v1.19.0. Release v1.20.0 adds multi-file batch ingestion with live progress, auto-fresh search index caching, section-bounded reading, and decision review tracking. See <a href="installation.html#install">installation choices</a>.</div>
 
 <h2 id="import">Import a local source</h2>
 <p>Start with a source you are allowed to retain. This synthetic example assumes you saved a short note as <code>source.txt</code>. Initialize only a new research archive:</p>
 <pre><code>lixity research init --project ./sample-project --title "Sample research" --language en
 lixity research ingest --project ./sample-project --file ./source.txt --allow-retention --origin-url https://example.org/archive/source
-lixity research reindex --project ./sample-project
+# Or ingest multiple files in batch with live progress heartbeats (since v1.20.0):
+lixity research batch-ingest --project ./sample-project --allow-retention --progress ./sources/*.txt
 lixity research search --project ./sample-project --query "reading room"</code></pre>
 <p><code>--allow-retention</code> confirms your permission to keep source bytes locally. It neither grants redistribution rights nor makes a claim true. Avoid importing sensitive sources into public repositories.</p>
 <p>In the dashboard, open <strong>Research → Sources</strong>, choose a text or PDF file (or paste text), enter an optional title, tags and origin URL, then explicitly confirm retention. Import locks the button while processing. Successful import clears the form; rejected submissions retain it for correction. In a project whose active sources are all linked to Zotero, this direct-import form is hidden in favor of Zotero capture; the standalone import API remains available.</p>
@@ -42,9 +43,8 @@ lixity research search --project ./sample-project --query "reading room"</code><
 <p>For existing sources, <code>research zotero-export</code> produces an additive RIS bundle with retained files, identity tags and provenance. Import and review it in Zotero, verify the exact original bytes, then bind the existing Lixity sources. Export does not delete or replace the archive. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#zotero-desktop-bridge-since-v1190">setup, migration and compatibility reference</a> for the complete procedure.</p>
 
 <h2 id="search">Find the current authored position</h2>
-<p><strong>Included in v1.19.0:</strong> the dashboard Search tab includes sources, current dossiers, claims and decisions, with a selector to narrow the search. Authored hits show their type and revision; <strong>View details</strong> opens the existing revision viewer. Only source passages can be cited as evidence.</p>
-<pre><code>lixity research reindex --project ./sample-project
-lixity research search --project ./sample-project --query "inspector" --scope all
+<p><strong>Included in v1.19.0 &amp; v1.20.0:</strong> the dashboard Search tab includes sources, current dossiers, claims and decisions, with a selector to narrow the search. Search checks manifest timestamps and automatically updates the projection if stale, removing manual <code>reindex</code> requirements in standard workflows. Authored hits show their type and revision; <strong>View details</strong> opens the existing revision viewer. Only source passages can be cited as evidence.</p>
+<pre><code>lixity research search --project ./sample-project --query "inspector" --scope all
 lixity research search --project ./sample-project --query "inspector" --scope decisions</code></pre>
 <p>The CLI defaults to source passages when <code>--scope</code> is omitted. Search matches words in current records, not their history. It does not resolve ambiguous names, reconcile contradictory statements or decide whether a proposal is final. Keep a concise character dossier with separate decisions, proposals and open questions, linked to supporting research.</p>
 
