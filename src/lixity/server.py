@@ -341,7 +341,8 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             return
 
         if path == "/api/research/ocr-status":
-            self._json({"ok": True, **research_api.ocr_status()})
+            probe = parse_qs(urlparse(self.path).query).get("probe", ["0"])[0] in ("1", "true")
+            self._json({"ok": True, **research_api.ocr_status(probe=probe)})
             return
 
         if path == "/api/project-paths":

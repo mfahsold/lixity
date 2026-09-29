@@ -729,3 +729,16 @@ class TestResearch(unittest.TestCase):
         self.assertTrue(out_file.is_file())
         self.assertIn("claim_id,title", out_file.read_text(encoding="utf-8"))
 
+    def test_cli_ocr_status_probe(self):
+        parser = argparse.ArgumentParser()
+        cli.configure(parser)
+
+        args = parser.parse_args(["ocr-status", "--probe"])
+        buf = io.StringIO()
+        with contextlib.redirect_stdout(buf):
+            code = cli.run(args)
+        self.assertEqual(code, 0)
+        data = json.loads(buf.getvalue())
+        self.assertIn("probe", data)
+        self.assertIn("status", data)
+

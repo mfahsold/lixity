@@ -46,6 +46,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         elif name == "ocr-status":
             command.add_argument("--project", help="Optional project directory")
             command.add_argument("--worker-cmd", help="Explicit OCR worker binary or command to inspect")
+            command.add_argument("--probe", action="store_true", help="Execute a live test probe against the configured OCR worker")
         if name == "zotero-backup":
             command.add_argument("--data-dir", required=True)
             command.add_argument("--output", required=True)
@@ -100,6 +101,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--context", help="Path to JSON file containing source criticism context")
             command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
             command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
+            command.add_argument("--fallback", "--allow-fallback", dest="fallback", action="store_true", help="Allow fallback to native PDF text layer if OCR worker fails or times out")
         elif name == "search":
             command.add_argument("--query", required=True)
             command.add_argument("--scope", choices=("sources", "dossiers", "claims", "decisions", "all"),
@@ -311,6 +313,7 @@ def run(args: argparse.Namespace) -> int:
                         res = api.ingest(args.project, file_item, allow_retention=args.allow_retention,
                                          language=args.language, actor=args.actor, dry_run=args.dry_run,
                                          context=context, origin_url=args.origin_url,
+                                         allow_fallback=getattr(args, "fallback", False),
                                          progress_callback=_cli_progress)
                         return ({"file": str(file_item), "ok": True, "source_id": res["source_id"], "passages": res["passages"]}, True)
                     except (ResearchError, OSError, ValueError) as exc:
@@ -337,6 +340,7 @@ def run(args: argparse.Namespace) -> int:
                 result = api.ingest(args.project, files[0], allow_retention=args.allow_retention,
                                     source_id=args.source_id, title=args.title, language=args.language,
                                     actor=args.actor, dry_run=args.dry_run, context=context, origin_url=args.origin_url,
+                                    allow_fallback=getattr(args, "fallback", False),
                                     progress_callback=_cli_progress)
         elif command in ("zotero-backup", "zotero-restore"):
             from . import zotero_backup
@@ -505,7 +509,7 @@ def run(args: argparse.Namespace) -> int:
         elif command == "restore":
             result = api.restore_archive(args.archive_source, args.target_dir)
         elif command == "ocr-status":
-            result = api.ocr_status(getattr(args, "worker_cmd", None))
+            result = api.ocr_status(getattr(args, "worker_cmd", None), probe=getattr(args, "probe", False))
         elif command == "matrix":
             raw = api.claim_matrix(args.project, format=args.format)
             if getattr(args, "output", None):

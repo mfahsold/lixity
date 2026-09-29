@@ -660,8 +660,10 @@ worker. Lixity does not install or start that worker. Run the diagnostics includ
 in the same environment as the server:
 
 ```sh
-lixity research ocr-status
+lixity research ocr-status [--worker-cmd PATH] [--probe]
 ```
+
+Pass `--probe` (or query `GET /api/research/ocr-status?probe=1`) to execute a live synthetic test probe against the worker, validating protocol compliance, response latency and execution before starting batch ingestion. Probe verification updates the reported status to `ready (probed)`.
 
 The same information is available at `GET /api/research/ocr-status` and in
 `GET /api/research/status`. The dashboard maps these codes to localized labels:
@@ -677,7 +679,9 @@ The same information is available at `GET /api/research/ocr-status` and in
 Diagnostics inspect executable availability, not model weights, snapshot
 integrity, GPU resources, worker connectivity or recognition accuracy. The
 returned model/recipe identifiers are configuration constants, not attestations.
-`ready` therefore means configured, not an end-to-end health check.
+`ready` therefore means configured, not an end-to-end health check; use `--probe` to verify live execution.
+
+When ingesting PDFs with a configured OCR worker, authors can pass `--fallback` (or set `LIXITY_OCR_FALLBACK=1`) to allow automatic fallback to Poppler's native `pdftotext` extraction if the OCR worker times out or fails (e.g. GPU out of memory), recording a structured warning in the extraction result. By default (`--fallback` omitted), worker failures strictly reject the capture to prevent silent degradation.
 
 ### Worker interface
 

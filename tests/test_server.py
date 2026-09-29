@@ -543,6 +543,13 @@ class TestLixityServer(unittest.TestCase):
                 self.assertTrue(ocr_json["ok"])
                 self.assertIn("model_snapshot", ocr_json)
 
+                # 1c. Dedicated OCR status endpoint with probe
+                ocr_probe_code, ocr_probe_body, _ = self.make_request("/api/research/ocr-status?probe=1")
+                self.assertEqual(ocr_probe_code, 200)
+                ocr_probe_json = json.loads(ocr_probe_body)
+                self.assertTrue(ocr_probe_json["ok"])
+                self.assertIn("probe", ocr_probe_json)
+
                 # 2. Init
                 init_payload = json.dumps({"title": "Test Archive", "language": "en"})
                 status, body, _ = self.make_request(

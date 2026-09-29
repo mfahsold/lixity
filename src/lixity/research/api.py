@@ -2,6 +2,7 @@
 
 import csv
 import io
+import os
 import re
 from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
@@ -84,6 +85,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
            language: str | None = None, actor: str = "local-author", dry_run: bool = False,
            context: Mapping[str, Any] | None = None,
            origin_url: str | None = None, expected_snapshot: str | None = None,
+           allow_fallback: bool = False,
            progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (--allow-retention)")
@@ -139,7 +141,8 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
                 raise ResearchError("Retained PDF extraction does not match its passages")
             spans = [(passage.start, passage.end) for passage in passages]
         else:
-            ocr_res = extract_pdf_document(path)
+            effective_fallback = allow_fallback or os.environ.get("LIXITY_OCR_FALLBACK", "").lower() in ("1", "true", "yes")
+            ocr_res = extract_pdf_document(path, allow_fallback=effective_fallback)
             text = ocr_res.full_text
             spans = ocr_res.spans
         if not spans or len(spans) > 5000:
@@ -267,9 +270,9 @@ def schema() -> dict[str, Any]:
     return {"$schema": "https://json-schema.org/draft/2020-12/schema", **ENTITY.json_schema()}
 
 
-def ocr_status(worker_cmd: str | None = None) -> dict[str, Any]:
+def ocr_status(worker_cmd: str | None = None, *, probe: bool = False) -> dict[str, Any]:
     """Inspect and report the runtime diagnostic status for OCR and PDF extraction."""
-    return get_ocr_diagnostics(worker_cmd=worker_cmd)
+    return get_ocr_diagnostics(worker_cmd=worker_cmd, probe=probe)
 
 
 def analyze_source(project: str | Path, source_id: str, *, version_id: str | None = None,

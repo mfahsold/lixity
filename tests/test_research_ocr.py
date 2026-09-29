@@ -17,6 +17,9 @@ from lixity.research.ocr import (
     MODEL_SNAPSHOT,
     PageImage,
     extract_pdf_document,
+    get_ocr_diagnostics,
+    get_pdf_page_count,
+    probe_ocr_worker,
     render_pdf_pages,
 )
 from lixity.research.repository import Repository, ResearchError
@@ -318,6 +321,84 @@ print(json.dumps(resp))
                 with self.assertRaises(ResearchError):
                     extract_pdf_with_worker(self.root/'synthetic.pdf', pages, worker_cmd='synthetic-worker')
                 self.assertEqual(run.call_count, 1)
+
+    def test_get_pdf_page_count(self) -> None:
+        pdf_bytes = make_synthetic_pdf("Single page text.")
+        pdf_path = self.root / "single.pdf"
+        pdf_path.write_bytes(pdf_bytes)
+        count = get_pdf_page_count(pdf_path)
+        self.assertEqual(count, 1)
+
+    def test_probe_ocr_worker_success_and_failure(self) -> None:
+        # 1. Non-executable worker
+        fail_res = probe_ocr_worker("/nonexistent/worker")
+        self.assertFalse(fail_res["ok"])
+        self.assertIn("not executable", fail_res["error"])
+
+        # 2. Mock worker responding to probe
+        probe_worker = self.root / "probe_worker.py"
+        probe_worker.write_text(
+            f"""#!{sys.executable}
+import sys, json
+with open(sys.argv[1], encoding="utf-8") as stream:
+    req = json.load(stream)
+assert req.get("probe") is True
+resp = {{
+    "blocks": [{{"page_number": 1, "text": "Probe OK", "confidence": 1.0}}],
+    "warnings": []
+}}
+print(json.dumps(resp))
+""",
+            encoding="utf-8",
+        )
+        probe_worker.chmod(0o755)
+
+        run = subprocess.run
+        def run_probe(args, **kwargs):
+            return run([sys.executable, *args], **kwargs)
+
+        with patch("lixity.research.ocr.subprocess.run", side_effect=run_probe):
+            diag = get_ocr_diagnostics(worker_cmd=str(probe_worker), probe=True)
+            self.assertEqual(diag["status"], "ready (probed)")
+            self.assertTrue(diag["probe"]["ok"])
+            self.assertEqual(diag["probe"]["blocks_count"], 1)
+
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
+    def test_explicit_fallback_mode_when_worker_fails(self) -> None:
+        pdf_bytes = make_synthetic_pdf("Archival document with native text layer.")
+        pdf_path = self.root / "fallback_doc.pdf"
+        pdf_path.write_bytes(pdf_bytes)
+
+        # Worker that fails with exit code 1
+        failing_worker = self.root / "failing_worker.py"
+        failing_worker.write_text(
+            f"""#!{sys.executable}
+import sys
+sys.stderr.write("GPU Out of Memory error\\n")
+sys.exit(1)
+""",
+            encoding="utf-8",
+        )
+        failing_worker.chmod(0o755)
+
+        run = subprocess.run
+        def run_fail(args, **kwargs):
+            if str(args[0]) == str(failing_worker):
+                return run([sys.executable, *args], **kwargs)
+            return run(args, **kwargs)
+
+        # Without fallback -> ResearchError
+        with (
+            patch("lixity.research.ocr.subprocess.run", side_effect=run_fail),
+            self.assertRaisesRegex(ResearchError, "OCR worker exited with code 1"),
+        ):
+            extract_pdf_document(pdf_path, worker_cmd=str(failing_worker), allow_fallback=False)
+
+        # With fallback -> Falls back to native poppler pdftotext with warning
+        with patch("lixity.research.ocr.subprocess.run", side_effect=run_fail):
+            res = extract_pdf_document(pdf_path, worker_cmd=str(failing_worker), allow_fallback=True)
+            self.assertIn("Archival document with native text layer.", res.full_text)
+            self.assertTrue(any("fallback" in w.lower() for w in res.warnings))
 
 
 if __name__ == "__main__":
