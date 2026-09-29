@@ -104,6 +104,7 @@ def build_server_dashboard(
     api_base: str = "/api",
     exports_dir: str | None = None,
     debug: bool = False,
+    nda_enabled: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Generates the interactive dashboard HTML and returns (html, info_dict)."""
     text = ""
@@ -209,7 +210,7 @@ def build_server_dashboard(
         manuscript_name=manuscript_name,
         current_language=language,
         flag_min_severity=resolved_thresholds.flag_min_severity,
-        enabled_actions=("analyze", "rebuild"),
+        enabled_actions=("analyze", "rebuild", "nda") if nda_enabled else ("analyze", "rebuild"),
         debug=debug,
     )
 
@@ -241,6 +242,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
     project_open_overrides: ClassVar[dict[str, Any]] = {}
     thresholds: FingerprintThresholds = FingerprintThresholds()
     debug: ClassVar[bool] = False
+    nda_provider: ClassVar[Any] = None
     dashboard_html: str = ""
     dashboard_info: ClassVar[dict[str, Any]] = {}
 
@@ -259,6 +261,12 @@ class LixityServerHandler(BaseHTTPRequestHandler):
     @classmethod
     def refresh(cls) -> None:
         """Re-analyzes the active manuscript and updates cached dashboard HTML."""
+        if cls.workspace_root:
+            from .nda import get_project_nda_provider
+            cls.nda_provider = get_project_nda_provider(cls.workspace_root)
+        else:
+            cls.nda_provider = None
+        nda_enabled = bool(cls.nda_provider and cls.nda_provider.is_available())
         cls.dashboard_html, cls.dashboard_info = build_server_dashboard(
             cls.source_input,
             language=cls.language,
@@ -268,6 +276,7 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             api_base="/api",
             exports_dir=cls.exports_dir,
             debug=cls.debug,
+            nda_enabled=nda_enabled,
         )
 
     def _send(self, code: int, body: bytes, content_type: str) -> None:
@@ -499,6 +508,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
         if action.startswith("marker-"):
             self._handle_marker(action, payload)
+            return
+
+        if action.startswith("nda-"):
+            self._handle_nda(action, payload)
             return
 
         if action in ("export", "sync", "audit", "prune", "gdrive"):
@@ -739,7 +752,9 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         try:
             if target_path.is_file():
                 if target_path.suffix.lower() not in {".md", ".markdown", ".txt"}:
-                    raise ValueError("Unsupported manuscript file type (use .md, .markdown, or .txt)")
+                    raise ValueError(
+                        "Unsupported manuscript file type (use .md, .markdown, or .txt)"
+                    )
                 ws_root = str(target_path.parent)
                 manuscript = str(target_path)
             elif target_path.is_dir():
@@ -764,7 +779,10 @@ class LixityServerHandler(BaseHTTPRequestHandler):
 
             settings = load_project_config(ws_root)
             overrides = self.project_open_overrides
-            same_project = bool(self.workspace_root) and Path(ws_root).resolve() == Path(self.workspace_root).resolve()
+            same_project = (
+                bool(self.workspace_root)
+                and Path(ws_root).resolve() == Path(self.workspace_root).resolve()
+            )
             language = overrides.get("language", settings.get("language", "en"))
             if language not in LANGUAGE_CHOICES:
                 raise ValueError(f"Unknown project language: {language}")
@@ -773,24 +791,53 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             )
             thresholds = resolve_thresholds(
                 project_config=settings,
-                **{key: overrides[key] for key in (
-                    "z_mild", "z_strong", "fdr_q", "fdr_method", "min_chapters",
-                    "dim_score_threshold", "flag_min_severity",
-                ) if key in overrides},
+                **{
+                    key: overrides[key]
+                    for key in (
+                        "z_mild",
+                        "z_strong",
+                        "fdr_q",
+                        "fdr_method",
+                        "min_chapters",
+                        "dim_score_threshold",
+                        "flag_min_severity",
+                    )
+                    if key in overrides
+                },
             )
             exports_dir = str(Path(ws_root) / "exports")
+            from .nda import get_project_nda_provider
+
+            provider = get_project_nda_provider(ws_root)
+            nda_enabled = bool(provider and provider.is_available())
             html, info = build_server_dashboard(
-                manuscript, language=language, title=title, thresholds=thresholds,
-                controls=True, api_base="/api", exports_dir=exports_dir,
+                manuscript,
+                language=language,
+                title=title,
+                thresholds=thresholds,
+                controls=True,
+                api_base="/api",
+                exports_dir=exports_dir,
+                nda_enabled=nda_enabled,
             )
-        except (OSError, UnicodeError, FileNotFoundError, ValueError, TypeError, ResearchError) as exc:
+        except (
+            OSError,
+            UnicodeError,
+            FileNotFoundError,
+            ValueError,
+            TypeError,
+            ResearchError,
+        ) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
             return
 
         self.__class__.workspace_root = ws_root
         self.__class__.source_input = manuscript
         self.__class__.exports_dir = exports_dir
-        self.__class__.research_dir = str(Path(ws_root)) if (Path(ws_root) / "research").is_dir() else None
+        self.__class__.research_dir = (
+            str(Path(ws_root)) if (Path(ws_root) / "research").is_dir() else None
+        )
+        self.__class__.nda_provider = provider
         self.__class__.language = language
         self.__class__.title = title
         self.__class__.title_custom = "title" in overrides or (same_project and self.title_custom)
@@ -798,13 +845,15 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         self.__class__.dashboard_html = html
         self.__class__.dashboard_info = info
 
-        self._json({
-            "ok": True,
-            "message": f"Workspace loaded: {Path(manuscript).name if manuscript else Path(ws_root).name}",
-            "workspace_root": ws_root,
-            "manuscript": manuscript,
-            "reload": True,
-        })
+        self._json(
+            {
+                "ok": True,
+                "message": f"Workspace loaded: {Path(manuscript).name if manuscript else Path(ws_root).name}",
+                "workspace_root": ws_root,
+                "manuscript": manuscript,
+                "reload": True,
+            }
+        )
 
     def _handle_marker(self, action: str, payload: dict[str, Any]) -> None:
         src = self.source_input
@@ -833,11 +882,13 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             new_text, marker = add_marker(text, kind, note, line)
             FileUtils.atomic_write_if_changed(src, new_text)
             self.refresh()
-            self._json({
-                "ok": True,
-                "message": f"Marker added: {marker.id} ({kind}) before line {line}",
-                "reload": True,
-            })
+            self._json(
+                {
+                    "ok": True,
+                    "message": f"Marker added: {marker.id} ({kind}) before line {line}",
+                    "reload": True,
+                }
+            )
             return
 
         if action == "marker-resolve":
@@ -858,35 +909,39 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         root = self.get_research_root()
         ocr_diag = research_api.ocr_status()
         if not root or not (root / "research").is_dir():
-            self._json({
-                "ok": True,
-                "initialized": False,
-                "project_root": str(root or self.workspace_root or ""),
-                "ocr": ocr_diag,
-            })
+            self._json(
+                {
+                    "ok": True,
+                    "initialized": False,
+                    "project_root": str(root or self.workspace_root or ""),
+                    "ocr": ocr_diag,
+                }
+            )
             return
         try:
             src_data = research_api.list_sources(root)
             dos_data = research_api.list_dossiers(root)
             claims_data = research_api.list_claims(root)
             decisions_data = research_api.list_decisions(root)
-            self._json({
-                "ok": True,
-                "initialized": True,
-                "project_root": str(root),
-                "project_id": src_data.get("project_id", ""),
-                "project_title": src_data.get("project_title", ""),
-                "project_language": src_data.get("project_language", ""),
-                "sources": src_data.get("sources", []),
-                "dossiers": dos_data.get("dossiers", []),
-                "claims": claims_data.get("claims", []),
-                "decisions": decisions_data.get("decisions", []),
-                "sources_count": len(src_data.get("sources", [])),
-                "dossiers_count": len(dos_data.get("dossiers", [])),
-                "claims_count": len(claims_data.get("claims", [])),
-                "decisions_count": len(decisions_data.get("decisions", [])),
-                "ocr": ocr_diag,
-            })
+            self._json(
+                {
+                    "ok": True,
+                    "initialized": True,
+                    "project_root": str(root),
+                    "project_id": src_data.get("project_id", ""),
+                    "project_title": src_data.get("project_title", ""),
+                    "project_language": src_data.get("project_language", ""),
+                    "sources": src_data.get("sources", []),
+                    "dossiers": dos_data.get("dossiers", []),
+                    "claims": claims_data.get("claims", []),
+                    "decisions": decisions_data.get("decisions", []),
+                    "sources_count": len(src_data.get("sources", [])),
+                    "dossiers_count": len(dos_data.get("dossiers", [])),
+                    "claims_count": len(claims_data.get("claims", [])),
+                    "decisions_count": len(decisions_data.get("decisions", [])),
+                    "ocr": ocr_diag,
+                }
+            )
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 500)
 
@@ -972,7 +1027,8 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         try:
             result = (
                 research_api.record_history(root, kind, record_id)
-                if history else research_api.get_record(root, kind, record_id, revision=revision)
+                if history
+                else research_api.get_record(root, kind, record_id, revision=revision)
             )
             self._json({"ok": True, **result})
         except (ResearchError, OSError, ValueError) as exc:
@@ -992,22 +1048,35 @@ class LixityServerHandler(BaseHTTPRequestHandler):
         reason = payload.get("reason")
         actor = payload.get("actor", "local-author")
         if (
-            not isinstance(kind, str) or kind not in RESEARCH_RECORD_KINDS
-            or not isinstance(record_id, str) or not record_id.strip()
-            or not isinstance(changes, dict) or not changes
-            or not isinstance(snapshot, str) or not snapshot.strip()
-            or type(revision) is not int or revision < 1
+            not isinstance(kind, str)
+            or kind not in RESEARCH_RECORD_KINDS
+            or not isinstance(record_id, str)
+            or not record_id.strip()
+            or not isinstance(changes, dict)
+            or not changes
+            or not isinstance(snapshot, str)
+            or not snapshot.strip()
+            or type(revision) is not int
+            or revision < 1
             or change_kind not in ("correction", "supersession")
-            or not isinstance(reason, str) or not reason.strip()
-            or not isinstance(actor, str) or not actor.strip()
+            or not isinstance(reason, str)
+            or not reason.strip()
+            or not isinstance(actor, str)
+            or not actor.strip()
         ):
             self._json({"ok": False, "message": "Invalid research revision request"}, 400)
             return
         try:
             result = research_api.revise_record(
-                root, kind, record_id, changes=changes,
-                expected_snapshot=snapshot, expected_revision=revision,
-                change_kind=change_kind, reason=reason, actor=actor,
+                root,
+                kind,
+                record_id,
+                changes=changes,
+                expected_snapshot=snapshot,
+                expected_revision=revision,
+                change_kind=change_kind,
+                reason=reason,
+                actor=actor,
             )
             self._json({"ok": True, **result})
         except ResearchConflictError as exc:
@@ -1081,12 +1150,20 @@ class LixityServerHandler(BaseHTTPRequestHandler):
                 if not isinstance(content, str) or not content.strip():
                     self._json({"ok": False, "message": "Source content cannot be empty"}, 400)
                     return
-                ext = Path(filename).suffix.lower() if filename and Path(filename).suffix else ".txt"
+                ext = (
+                    Path(filename).suffix.lower() if filename and Path(filename).suffix else ".txt"
+                )
                 res = ingest_bytes(content.encode("utf-8"), ext)
             elif file_path:
                 res = ingest_file(str(file_path))
             else:
-                self._json({"ok": False, "message": "Either 'content', 'content_base64' or 'file' must be provided"}, 400)
+                self._json(
+                    {
+                        "ok": False,
+                        "message": "Either 'content', 'content_base64' or 'file' must be provided",
+                    },
+                    400,
+                )
                 return
 
             with contextlib.suppress(ResearchError, OSError, ValueError):
@@ -1111,20 +1188,37 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             if capture:
                 if payload.get("allow_retention") is not True:
                     raise ResearchError("Explicit local retention permission is required")
-                if not isinstance(payload.get("expected_server_id"), str) or not payload["expected_server_id"]:
+                if (
+                    not isinstance(payload.get("expected_server_id"), str)
+                    or not payload["expected_server_id"]
+                ):
                     raise ResearchError("Preview a Zotero instance before capture")
-                result = zotero.ingest(root, library=library, attachment_key=payload.get("attachment_key", ""),
-                                       source_id=payload.get("source_id"), allow_retention=True,
-                                       expected_server_id=payload["expected_server_id"])
+                result = zotero.ingest(
+                    root,
+                    library=library,
+                    attachment_key=payload.get("attachment_key", ""),
+                    source_id=payload.get("source_id"),
+                    allow_retention=True,
+                    expected_server_id=payload["expected_server_id"],
+                )
             elif payload.get("mode") == "collections":
                 result = zotero.collections(root, library=library, start=payload.get("start", 0))
             else:
-                result = zotero.browse(root, library=library, query=payload.get("query", ""),
-                                       item_key=payload.get("item_key"), collection_key=payload.get("collection_key"),
-                                       limit=payload.get("limit", 20), start=payload.get("start", 0))
+                result = zotero.browse(
+                    root,
+                    library=library,
+                    query=payload.get("query", ""),
+                    item_key=payload.get("item_key"),
+                    collection_key=payload.get("collection_key"),
+                    limit=payload.get("limit", 20),
+                    start=payload.get("start", 0),
+                )
                 sources = research_api.list_sources(root)["sources"]
-                result["captures"] = [{"source_id": source["id"], **source["context"]["external_reference"]}
-                                      for source in sources if source["context"].get("external_reference")]
+                result["captures"] = [
+                    {"source_id": source["id"], **source["context"]["external_reference"]}
+                    for source in sources
+                    if source["context"].get("external_reference")
+                ]
             self._json({"ok": True, **result})
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
@@ -1169,7 +1263,9 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             evidence_ids = [str(e).strip() for e in raw_eids if str(e).strip()]
 
         try:
-            res = research_api.create_dossier(root, title=title, body=body, language=lang, tags=tags, evidence_ids=evidence_ids)
+            res = research_api.create_dossier(
+                root, title=title, body=body, language=lang, tags=tags, evidence_ids=evidence_ids
+            )
             self._json({"ok": True, "message": f"Dossier '{title}' created", **res})
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
@@ -1185,7 +1281,9 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             return
         manuscript = payload.get("manuscript") or self.source_input
         if not manuscript:
-            self._json({"ok": False, "message": "No manuscript loaded or specified for comparison"}, 400)
+            self._json(
+                {"ok": False, "message": "No manuscript loaded or specified for comparison"}, 400
+            )
             return
         try:
             res = research_api.compare_source(root, source_id, manuscript, language=self.language)
@@ -1204,7 +1302,9 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._json({"ok": False, "message": "Claim title and statement are required"}, 400)
             return
         raw_conf = str(payload.get("confidence") or "hypothetical").strip().lower()
-        confidence = raw_conf if raw_conf in ("hypothetical", "evidenced", "disputed") else "hypothetical"
+        confidence = (
+            raw_conf if raw_conf in ("hypothetical", "evidenced", "disputed") else "hypothetical"
+        )
         time_period = str(payload.get("time_period") or "").strip() or None
         place = str(payload.get("place") or "").strip() or None
         raw_actors = payload.get("actors")
@@ -1247,7 +1347,11 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._json({"ok": False, "message": "claim_id and passage_id are required"}, 400)
             return
         raw_rel = str(payload.get("relation") or "supports").strip().lower()
-        relation = raw_rel if raw_rel in ("supports", "contradicts", "qualifies", "contextualizes") else "supports"
+        relation = (
+            raw_rel
+            if raw_rel in ("supports", "contradicts", "qualifies", "contextualizes")
+            else "supports"
+        )
         rationale = str(payload.get("rationale") or "").strip() or None
         reviewer = str(payload.get("reviewer") or "author").strip()
         try:
@@ -1288,6 +1392,117 @@ class LixityServerHandler(BaseHTTPRequestHandler):
             self._json({"ok": True, "message": f"Decision '{title}' recorded", **res})
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_nda(self, action: str, payload: dict[str, Any]) -> None:
+        if self.nda_provider is None or not self.nda_provider.is_available():
+            self._json(
+                {"ok": False, "message": "NDA management is not enabled for this project"}, 404
+            )
+            return
+
+        if action == "nda-list":
+            try:
+                records = self.nda_provider.list_records()
+                self._json({"ok": True, "records": records})
+            except PermissionError as exc:
+                self._json({"ok": False, "message": str(exc), "locked": True}, 403)
+            except (OSError, RuntimeError, ValueError, KeyError):
+                self._json({"ok": False, "message": "Failed to read NDA store"}, 500)
+            return
+
+        if action == "nda-unlock":
+            passphrase = str(payload.get("passphrase") or "")
+            ok = self.nda_provider.unlock(passphrase)
+            if ok:
+                try:
+                    records = self.nda_provider.list_records()
+                except (OSError, RuntimeError, PermissionError, ValueError, KeyError):
+                    records = []
+                self._json({"ok": True, "message": "NDA store unlocked", "records": records})
+            else:
+                self._json({"ok": False, "message": "Invalid passphrase"}, 401)
+            return
+
+        if action == "nda-add":
+            name = str(payload.get("name") or "").strip()
+            contact = str(payload.get("contact") or "").strip()
+            notes = str(payload.get("notes") or "").strip()
+            if not name:
+                self._json({"ok": False, "message": "Recipient name is required"}, 400)
+                return
+            try:
+                record = self.nda_provider.add_record(name, contact, notes)
+                self._json(
+                    {
+                        "ok": True,
+                        "message": f"NDA created for {name}",
+                        "id": record["id"],
+                        "record": record,
+                    }
+                )
+            except PermissionError as exc:
+                self._json({"ok": False, "message": str(exc), "locked": True}, 403)
+            except ValueError as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+            except (OSError, RuntimeError, KeyError):
+                self._json({"ok": False, "message": "Failed to add NDA record"}, 500)
+            return
+
+        if action == "nda-update":
+            rec_id = str(payload.get("id") or "").strip()
+            status = str(payload.get("status") or "").strip()
+            if not rec_id or not status:
+                self._json({"ok": False, "message": "Record ID and status are required"}, 400)
+                return
+            try:
+                record = self.nda_provider.update_status(rec_id, status)
+                self._json(
+                    {"ok": True, "message": f"Status updated to '{status}'", "record": record}
+                )
+            except KeyError as exc:
+                self._json({"ok": False, "message": str(exc)}, 404)
+            except ValueError as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+            except PermissionError as exc:
+                self._json({"ok": False, "message": str(exc), "locked": True}, 403)
+            except (OSError, RuntimeError):
+                self._json({"ok": False, "message": "Failed to update NDA record"}, 500)
+            return
+
+        if action == "nda-export":
+            rec_id = str(payload.get("id") or "").strip()
+            if not rec_id:
+                self._json({"ok": False, "message": "Record ID is required"}, 400)
+                return
+            try:
+                pdf = self.nda_provider.export_pdf(rec_id)
+                self._json({"ok": True, "message": f"NDA exported as {pdf}", "pdf": pdf})
+            except KeyError as exc:
+                self._json({"ok": False, "message": str(exc)}, 404)
+            except PermissionError as exc:
+                self._json({"ok": False, "message": str(exc), "locked": True}, 403)
+            except (OSError, RuntimeError, ValueError):
+                self._json({"ok": False, "message": "Failed to export NDA"}, 500)
+            return
+
+        if action == "nda-delete":
+            rec_id = str(payload.get("id") or "").strip()
+            if not rec_id:
+                self._json({"ok": False, "message": "Record ID is required"}, 400)
+                return
+            try:
+                ok = self.nda_provider.delete_record(rec_id)
+                if ok:
+                    self._json({"ok": True, "message": "NDA record deleted"})
+                else:
+                    self._json({"ok": False, "message": f"NDA record not found: {rec_id}"}, 404)
+            except PermissionError as exc:
+                self._json({"ok": False, "message": str(exc), "locked": True}, 403)
+            except (OSError, RuntimeError, KeyError, ValueError):
+                self._json({"ok": False, "message": "Failed to delete NDA record"}, 500)
+            return
+
+        self._json({"ok": False, "message": f"Unknown NDA action: {action}"}, 400)
 
     def log_message(self, format: str, *args: Any) -> None:
         """Suppress default request logging unless debug mode is active."""

@@ -36,6 +36,8 @@ TOOL_KEYS = frozenset(
         "chapter_regex",
         "appendix_marker",
         "min_paragraph_length_for_oneliner",
+        "nda",
+        "capabilities",
     }
 )
 

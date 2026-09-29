@@ -7,6 +7,36 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.20.0] – 2026-09-29
+
+### Added
+
+- Research workflow ergonomics and friction reduction (Issue #11):
+  - Automatic fresh FTS5 search indexing by default when catalogue is stale, with
+    an explicit `--strict` flag to fail instead of reindexing.
+  - Multi-file batch ingestion returning `research-batch-ingest-local/1` with per-file
+    outcomes, error resilience, and progress reporting to stderr with `--progress`.
+  - Section-bounded dossier reads via `--summary` and `--section <name>`, as well as
+    section-level revision targeting without overwriting entire dossiers.
+  - Decision-dossier linking and automated `review_needed` tracking when decisions
+    affecting a dossier are added or updated.
+  - 4-phase Zotero literature acquisition walkthrough and backup scope comparison
+    table in documentation (`docs/research/USAGE.md`).
+- Project-isolated NDA management provider and server endpoints (Issue #12):
+  - Configurable project capability interface (`ProjectNdaProvider`) with PBKDF2
+    key derivation, authenticated encryption (AES-GCM / HMAC fallback), record CRUD,
+    and synthetic PDF export.
+  - Project isolation: recipient names, notes, passphrases, and keys remain strictly
+    in project-owned `<project>/nda/` and are never emitted to server logs.
+  - Dynamically enabled NDA management tab in `lixity serve` when projects configure
+    `[nda]` or contain project NDA capability.
+- Research dashboard web UI improvements (`lixity serve`):
+  - Visual `⚠️ Review needed` badge on dossier cards and warning banner in dossier
+    inspector with linked decision rationale.
+  - Outline summary of sections in dossier inspector view.
+  - Scope guidance hint in research search when scoped search yields 0 hits, with
+    one-click option to switch to all records.
+
 ### Changed
 
 - Reorganized the website and README around manuscript exploration, chapter
@@ -1063,7 +1093,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.19.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.20.0...HEAD
+[1.20.0]: https://github.com/mfahsold/lixity/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/mfahsold/lixity/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/mfahsold/lixity/compare/v1.17.0...v1.18.0
 [1.17.0]: https://github.com/mfahsold/lixity/compare/v1.16.0...v1.17.0

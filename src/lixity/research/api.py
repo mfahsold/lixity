@@ -669,6 +669,20 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
         and record.target_kind == "passage"
     }
 
+    dossier_reviews: dict[str, bool] = {}
+    for record in snapshot.records.values():
+        if isinstance(record, Decision) and record.id not in withdrawn_or_purged:
+            for ref in record.dossier_refs:
+                dos = snapshot.records.get(ref.id)
+                if isinstance(dos, Dossier) and record.created_at > dos.created_at:
+                    dossier_reviews[dos.id] = True
+            if record.claim_ref:
+                claim = snapshot.records.get(record.claim_ref.id)
+                if isinstance(claim, Claim) and claim.dossier_ref:
+                    dos = snapshot.records.get(claim.dossier_ref.id)
+                    if isinstance(dos, Dossier) and record.created_at > dos.created_at:
+                        dossier_reviews[dos.id] = True
+
     dossiers_list = [
         {
             "id": record.id,
@@ -681,6 +695,7 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
             "created_at": record.created_at,
             "created_by": record.created_by,
             "excerpt": record.body[:300].strip(),
+            "review_needed": dossier_reviews.get(record.id, False),
         }
         for record in snapshot.records.values()
         if isinstance(record, Dossier) and record.id not in withdrawn_or_purged

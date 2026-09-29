@@ -1483,9 +1483,13 @@ async function refreshResearchDossiers() {
     var tagsHtml = (d.tags || []).map(function(t) {
       return '<span class="research-tag">' + escapeHtml(t) + '</span>';
     }).join(" ");
+    var reviewBadge = d.review_needed
+      ? '<span class="research-badge badge-warning" style="margin-left:.4rem;" title="' + escapeHtml(uiLabel("research_review_needed")) + '">' + escapeHtml(uiLabel("research_review_needed")) + '</span>'
+      : '';
     return '<div class="research-card">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
+        reviewBadge +
         '<span class="ctl-note">' + escapeHtml(uiFormat("research_evidence_count", { count: d.evidence_count })) + '</span>' +
         (d.revision ? '<span class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", { revision: d.revision })) + '</span>' : '') +
       '</div>' +
@@ -1711,7 +1715,31 @@ document.addEventListener("click", async function (event) {
           return researchCitationHtml({availability: "available", passage_id: p.id, verbatim: p.verbatim, source_title: detail.title});
         }).join("");
     } else {
-      detailHost.innerHTML = researchDossierBodyHtml(detail.body) +
+      var reviewAlert = "";
+      if (detail.review_needed && detail.decision_reviews && detail.decision_reviews.length) {
+        var needed = detail.decision_reviews.filter(function(r) { return r.status === "review_needed"; });
+        if (needed.length) {
+          reviewAlert = '<div class="banner banner-warning" style="margin:.5rem 0 .8rem;padding:.4rem .7rem;font-size:.82rem;background:rgba(217,119,6,0.1);border-left:3px solid var(--warn, #d97706);border-radius:3px;">' +
+            '<strong>⚠️ ' + escapeHtml(uiLabel("research_review_needed")) + ':</strong> ' +
+            needed.map(function(n) { return escapeHtml(n.reason || n.title); }).join(" · ") +
+            '</div>';
+        }
+      }
+      var sections = detail.sections || [];
+      if (!sections.length && detail.body) {
+        var secMatches = detail.body.match(/^#{1,3}\s+(.+)$/gm);
+        if (secMatches) {
+          sections = secMatches.map(function(s) { return s.replace(/^#{1,3}\s+/, "").trim(); });
+        }
+      }
+      var sectionsHtml = "";
+      if (sections.length) {
+        sectionsHtml = '<div class="research-dossier-outline" style="margin:.4rem 0 .8rem;padding:.3rem .6rem;background:var(--bg-subtle, rgba(0,0,0,0.03));border-radius:4px;font-size:.78rem;">' +
+          '<strong>' + escapeHtml(uiLabel("research_sections")) + ':</strong> ' +
+          sections.map(function(sec) { return '<span class="research-tag" style="margin-left:.3rem;">' + escapeHtml(sec) + '</span>'; }).join("") +
+          '</div>';
+      }
+      detailHost.innerHTML = reviewAlert + sectionsHtml + researchDossierBodyHtml(detail.body) +
         '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(researchCitationHtml).join("");
     }
     return;
@@ -1860,7 +1888,15 @@ document.addEventListener("click", async function (event) {
     }
     var hits = sres.hits || [];
     if (!hits.length) {
-      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiFormat("research_no_hits", { query: query })) + '</p>';
+      var currentScope = scopeEl ? scopeEl.value : "sources";
+      var scopeHint = "";
+      if (currentScope !== "all") {
+        scopeHint = '<div style="margin-top:.5rem;">' +
+          '<span class="ctl-note">' + escapeHtml(uiLabel("research_search_scope_hint")) + ' </span>' +
+          '<button type="button" class="ctl ctl-sm" id="r-search-all-btn">' + escapeHtml(uiLabel("research_search_all_records")) + '</button>' +
+          '</div>';
+      }
+      if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiFormat("research_no_hits", { query: query })) + '</p>' + scopeHint;
       researchStatus(uiFormat("research_no_hits", { query: query }), true);
       return;
     }
@@ -1891,6 +1927,15 @@ document.addEventListener("click", async function (event) {
       }).join("");
     }
     researchStatus(uiFormat("research_hits_count", { count: hits.length }), true);
+    return;
+  }
+
+  var searchAllBtn = event.target.closest("#r-search-all-btn");
+  if (searchAllBtn) {
+    var scopeSel = document.getElementById("r-search-scope");
+    if (scopeSel) scopeSel.value = "all";
+    var sBtn = document.getElementById("r-search-btn");
+    if (sBtn) sBtn.click();
     return;
   }
 

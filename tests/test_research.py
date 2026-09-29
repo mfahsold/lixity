@@ -576,6 +576,7 @@ class TestResearch(unittest.TestCase):
         self.assertTrue(d_info["review_needed"])
         self.assertEqual(len(d_info["decision_reviews"]), 1)
         self.assertEqual(d_info["decision_reviews"][0]["decision_id"], dec_id)
+        self.assertTrue(api.list_dossiers(self.project)["dossiers"][0]["review_needed"])
 
         # Revise dossier to incorporate the decision
         repo = Repository(self.project)
@@ -595,6 +596,7 @@ class TestResearch(unittest.TestCase):
         d_info_after = api.get_dossier(self.project, did)
         self.assertFalse(d_info_after["review_needed"])
         self.assertEqual(d_info_after["decision_reviews"][0]["status"], "current")
+        self.assertFalse(api.list_dossiers(self.project)["dossiers"][0]["review_needed"])
 
         # Now revise the decision again -> triggers review_needed again
         snap2 = repo.snapshot()
