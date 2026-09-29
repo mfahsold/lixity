@@ -131,6 +131,10 @@ lixity research zotero --project ./novel --library users/0 --item-key <ITEM_KEY>
 lixity research zotero-ingest --project ./novel --library users/0 \
   --attachment-key <ATTACHMENT_KEY> --expected-server-id <SERVER_ID> --allow-retention --progress
 
+# Or batch-ingest all eligible PDF/text attachments of a parent item:
+lixity research zotero-ingest --project ./novel --library users/0 \
+  --item-key <ITEM_KEY> --expected-server-id <SERVER_ID> --allow-retention
+
 # 4. Search refreshed index and cite verified passage into a dossier
 lixity research search --project ./novel --query "port authority"
 lixity research dossier --project ./novel --title "Harbor Authority" \
@@ -524,6 +528,14 @@ entire archive at an earlier date.
      lexical diversity Guiraud's $R$ and Yule's $K$ deltas, staccato and kaskade deltas).
   4. Per-chapter evidence grounding (mapping occurrences of source vocabulary and top key
      terms across individual manuscript chapters, reporting grounding density per 1,000 words).
+
+Reports can be emitted as JSON (default) or formatted Markdown:
+
+```bash
+# Output structured Markdown report to terminal or file
+lixity research compare --project ./novel --source-id <UUID> --manuscript ./novel.md --format md
+lixity research compare --project ./novel --source-id <UUID> --manuscript ./novel.md --format md --output ./grounding-report.md
+```
 
 Comparison counts and register contrasts use chapter body prose when chapters
 exist, excluding headings, front matter and the configured appendix. If no

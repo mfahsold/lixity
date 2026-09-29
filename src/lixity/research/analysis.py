@@ -7,7 +7,7 @@ from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal, overload
 
 from .._version import __version__
 from ..analyzer import CorpusAnalyzer
@@ -219,6 +219,7 @@ def analyze(
     return SourceAnalysisResult(report_dict, dashboard_html)
 
 
+@overload
 def compare_source_to_manuscript(
     project: str | Path,
     source_id: str,
@@ -227,7 +228,33 @@ def compare_source_to_manuscript(
     version_id: str | None = None,
     language: str | None = None,
     top_n: int = 20,
-) -> dict[str, Any]:
+    format: Literal["json"] = "json",
+) -> dict[str, Any]: ...
+
+
+@overload
+def compare_source_to_manuscript(
+    project: str | Path,
+    source_id: str,
+    manuscript: str | Path,
+    *,
+    version_id: str | None = None,
+    language: str | None = None,
+    top_n: int = 20,
+    format: Literal["md"],
+) -> str: ...
+
+
+def compare_source_to_manuscript(
+    project: str | Path,
+    source_id: str,
+    manuscript: str | Path,
+    *,
+    version_id: str | None = None,
+    language: str | None = None,
+    top_n: int = 20,
+    format: Literal["json", "md"] = "json",
+) -> dict[str, Any] | str:
     """Compare verified research source against manuscript text or file.
 
     Evaluates lexical overlap, Dunning's G² keyness differential, stylistic/register
@@ -454,7 +481,7 @@ def compare_source_to_manuscript(
             }
         )
 
-    return {
+    result: dict[str, Any] = {
         "schema_version": "research-comparison-local/1",
         "meta": {
             "tool": "lixity",
@@ -498,3 +525,117 @@ def compare_source_to_manuscript(
         "register_contrast": register_contrast,
         "chapter_grounding": chapter_grounding,
     }
+
+    if format == "md":
+        return format_compare_markdown(result)
+    return result
+
+
+def format_compare_markdown(data: dict[str, Any]) -> str:
+    """Format cross-corpus comparison dictionary as Markdown."""
+    prov = data.get("provenance", {})
+    summary = data.get("summary", {})
+    meta = data.get("meta", {})
+    source_title = prov.get("source_title", "Research Source")
+    source_id = prov.get("source_id", "")
+
+    lines = [
+        f"# Cross-Corpus Grounding Report: {source_title} vs Manuscript",
+        "",
+        f"- **Source ID:** `{source_id}` (version `{prov.get('source_version_id', '')}`)",
+        f"- **Source Language:** `{meta.get('source_language', '')}` · **Manuscript Language:** `{meta.get('manuscript_language', '')}`",
+        f"- **Lexically Comparable:** `{'Yes' if meta.get('lexical_comparable') else 'No (cross-language)'}`",
+    ]
+    if data.get("comparison_limits"):
+        lines.append(f"- **Limitations:** {', '.join(data['comparison_limits'])}")
+    lines.append("")
+
+    lines.extend([
+        "## Summary Metrics",
+        "",
+        "| Metric | Source | Manuscript | Overlap / Similarity |",
+        "| :--- | :--- | :--- | :--- |",
+        f"| **Total Tokens** | {summary.get('source_tokens', 0):,} | {summary.get('manuscript_tokens', 0):,} | – |",
+        f"| **Content Words** | {summary.get('source_content_words', 0):,} | {summary.get('manuscript_content_words', 0):,} | – |",
+        f"| **Vocabulary Types** | {summary.get('source_vocabulary_types', 0):,} | {summary.get('manuscript_vocabulary_types', 0):,} | {summary.get('shared_types', 0):,} shared |",
+        f"| **Jaccard Similarity** | – | – | {summary.get('jaccard_similarity', 0.0):.4f} |",
+        f"| **Overlap Coefficient** | – | – | {summary.get('overlap_coefficient', 0.0):.4f} |",
+        "",
+    ])
+
+    reg = data.get("register_contrast", {})
+    if reg:
+        lines.extend([
+            "## Register & Stylistic Contrast",
+            "",
+            "| Feature | Source | Manuscript | Delta (MS - Source) |",
+            "| :--- | :--- | :--- | :--- |",
+        ])
+        labels = {
+            "asl": "Average Sentence Length (ASL)",
+            "dialogue_pct": "Dialogue Ratio",
+            "guiraud_r": "Guiraud R (Richness)",
+            "yules_k": "Yule's K (Concentration)",
+            "staccato_pct": "Staccato Sentences (%)",
+            "kaskade_pct": "Cascade Sentences (%)",
+        }
+        for k, lbl in labels.items():
+            if k in reg:
+                item = reg[k]
+                lines.append(f"| **{lbl}** | {item.get('source', 0.0)} | {item.get('manuscript', 0.0)} | {item.get('delta', 0.0):+g} |")
+        lines.append("")
+
+    keyness = data.get("keyness", {})
+    source_keys = keyness.get("source_key_terms", [])
+    ms_keys = keyness.get("manuscript_key_terms", [])
+    if source_keys or ms_keys:
+        lines.extend([
+            "## Distinctive Key Terms (Dunning G²)",
+            "",
+            "### Over-represented in Research Source",
+            "",
+            "| Term | G² Score | Source Count | Manuscript Count |",
+            "| :--- | :--- | :--- | :--- |",
+        ])
+        if not source_keys:
+            lines.append("| *(none)* | – | – | – |")
+        else:
+            lines.extend(
+                f"| **{item['word']}** | {item['g2']} | {item['source_count']} | {item['manuscript_count']} |"
+                for item in source_keys[:10]
+            )
+        lines.append("")
+
+        lines.extend([
+            "### Over-represented in Manuscript",
+            "",
+            "| Term | G² Score | Manuscript Count | Source Count |",
+            "| :--- | :--- | :--- | :--- |",
+        ])
+        if not ms_keys:
+            lines.append("| *(none)* | – | – | – |")
+        else:
+            lines.extend(
+                f"| **{item['word']}** | {item['g2']} | {item['manuscript_count']} | {item['source_count']} |"
+                for item in ms_keys[:10]
+            )
+        lines.append("")
+
+    chapters = data.get("chapter_grounding", [])
+    if chapters:
+        lines.extend([
+            "## Chapter Grounding Trace",
+            "",
+            "| Chapter | Title | Words | Overlap Types | Density (‰) | Key Terms Grounded |",
+            "| :--- | :--- | :--- | :--- | :--- | :--- |",
+        ])
+        for ch in chapters:
+            key_terms = ", ".join(ch.get("key_terms_present", [])) or "–"
+            lines.append(
+                f"| {ch.get('chapter', 1)} | {ch.get('title', 'Chapter')} | {ch.get('words', 0):,} | "
+                f"{ch.get('overlap_types', 0)} ({ch.get('overlap_tokens', 0)} tok) | "
+                f"{ch.get('grounding_density', 0.0):.1f}‰ | {key_terms} |"
+            )
+        lines.append("")
+
+    return "\n".join(lines) + "\n"

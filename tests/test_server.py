@@ -1483,3 +1483,18 @@ class TestLixityServer(unittest.TestCase):
                                                         {'Content-Type':'application/json'})
                         self.assertEqual(status, 400)
                     ingest.assert_not_called()
+                with patch('lixity.research.zotero.ingest_item', return_value={'schema_version': 'research-zotero-batch-ingest-local/1'}) as ingest_item:
+                    status, body, _ = self.make_request(
+                        '/api/research-zotero-ingest', 'POST',
+                        json.dumps({
+                            'project_id': project_id,
+                            'library': 'users/0',
+                            'item_key': 'ABCDEFGH',
+                            'allow_retention': True,
+                            'expected_server_id': 'srv-1',
+                        }),
+                        {'Content-Type': 'application/json'}
+                    )
+                    self.assertEqual(status, 200)
+                    ingest_item.assert_called_once()
+                    self.assertEqual(ingest_item.call_args.kwargs['item_key'], 'ABCDEFGH')

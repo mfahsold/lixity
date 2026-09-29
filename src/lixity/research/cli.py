@@ -5,7 +5,7 @@ import json
 import sys
 import time
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from pydantic import ValidationError
 
@@ -69,8 +69,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 command.add_argument("--limit", type=int, choices=range(1, 101), default=20, metavar="1..100")
                 command.add_argument("--start", type=int, default=0, help="Zero-based page offset")
             else:
-                command.add_argument("--attachment-key", required=True)
-                command.add_argument("--source-id", help="Explicitly refresh a matching prior capture")
+                key_group = command.add_mutually_exclusive_group(required=True)
+                key_group.add_argument("--attachment-key", nargs="+", help="One or more Zotero attachment keys")
+                key_group.add_argument("--item-key", help="Zotero parent item key to ingest all eligible attachments")
+                command.add_argument("--source-id", help="Explicitly refresh a matching prior capture (single attachment only)")
                 command.add_argument("--expected-server-id", help="Require the previewed Zotero instance")
                 command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
                 command.add_argument("--allow-retention", action="store_true")
@@ -120,6 +122,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--version-id", help="Explicit source version UUID")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), help="Manuscript language override")
             command.add_argument("--top-n", type=int, default=20, help="Number of top terms to return (default: 20)")
+            command.add_argument("--format", choices=("json", "md"), default="json", help="Output format: json or md (markdown) (default: json)")
+            command.add_argument("--output", help="Optional output file destination")
         elif name == "sources":
             command.add_argument("--source-id", help="Optional source UUID to inspect passages")
         elif name == "dossier":
@@ -368,10 +372,46 @@ def run(args: argparse.Namespace) -> int:
                         elapsed = time.monotonic() - start_time
                         print(f"[{stage}] ({elapsed:.1f}s) {message}", file=sys.stderr, flush=True)
 
-                result = zotero.ingest(args.project, library=args.library, attachment_key=args.attachment_key,
-                                       source_id=args.source_id, language=args.language, expected_server_id=args.expected_server_id,
-                                       allow_retention=args.allow_retention, dry_run=args.dry_run,
-                                       progress_callback=_zotero_progress)
+                if getattr(args, "item_key", None):
+                    if getattr(args, "source_id", None):
+                        raise ResearchError("--source-id cannot be used when ingesting an item with multiple attachments")
+                    result = zotero.ingest_item(
+                        args.project,
+                        library=args.library,
+                        item_key=args.item_key,
+                        language=args.language,
+                        expected_server_id=args.expected_server_id,
+                        allow_retention=args.allow_retention,
+                        dry_run=args.dry_run,
+                        progress_callback=_zotero_progress,
+                    )
+                else:
+                    att_keys = args.attachment_key if isinstance(args.attachment_key, list) else [args.attachment_key]
+                    if len(att_keys) == 1:
+                        result = zotero.ingest(
+                            args.project,
+                            library=args.library,
+                            attachment_key=att_keys[0],
+                            source_id=args.source_id,
+                            language=args.language,
+                            expected_server_id=args.expected_server_id,
+                            allow_retention=args.allow_retention,
+                            dry_run=args.dry_run,
+                            progress_callback=_zotero_progress,
+                        )
+                    else:
+                        if getattr(args, "source_id", None):
+                            raise ResearchError("--source-id cannot be used when ingesting multiple attachments")
+                        result = zotero.ingest_attachments(
+                            args.project,
+                            library=args.library,
+                            attachment_keys=att_keys,
+                            language=args.language,
+                            expected_server_id=args.expected_server_id,
+                            allow_retention=args.allow_retention,
+                            dry_run=args.dry_run,
+                            progress_callback=_zotero_progress,
+                        )
         elif command == "reindex":
             result = api.reindex(args.project)
         elif command == "search":
@@ -401,14 +441,29 @@ def run(args: argparse.Namespace) -> int:
             sys.stdout.write(html)
             return 0
         elif command == "compare":
-            result = api.compare_source(
+            format_choice: Literal["json", "md"] = "md" if getattr(args, "format", "json") == "md" else "json"
+            raw = api.compare_source(
                 args.project,
                 args.source_id,
                 args.manuscript,
                 version_id=args.version_id,
                 language=getattr(args, "language", None),
                 top_n=getattr(args, "top_n", 20),
+                format=format_choice,
             )
+            if getattr(args, "output", None):
+                out_path = Path(args.output).expanduser().resolve()
+                out_path.parent.mkdir(parents=True, exist_ok=True)
+                if isinstance(raw, str):
+                    out_path.write_text(raw, encoding="utf-8")
+                else:
+                    out_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+                result = {"ok": True, "output": str(out_path), "format": format_choice}
+            else:
+                if isinstance(raw, str):
+                    print(raw, end="")
+                    return 0
+                result = raw
         elif command == "sources":
             if getattr(args, "source_id", None):
                 result = api.get_source(args.project, args.source_id)

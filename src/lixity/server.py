@@ -1223,14 +1223,23 @@ class LixityServerHandler(BaseHTTPRequestHandler):
                     or not payload["expected_server_id"]
                 ):
                     raise ResearchError("Preview a Zotero instance before capture")
-                result = zotero.ingest(
-                    root,
-                    library=library,
-                    attachment_key=payload.get("attachment_key", ""),
-                    source_id=payload.get("source_id"),
-                    allow_retention=True,
-                    expected_server_id=payload["expected_server_id"],
-                )
+                if payload.get("item_key") and not payload.get("attachment_key"):
+                    result = zotero.ingest_item(
+                        root,
+                        library=library,
+                        item_key=payload["item_key"],
+                        allow_retention=True,
+                        expected_server_id=payload["expected_server_id"],
+                    )
+                else:
+                    result = zotero.ingest(
+                        root,
+                        library=library,
+                        attachment_key=payload.get("attachment_key", ""),
+                        source_id=payload.get("source_id"),
+                        allow_retention=True,
+                        expected_server_id=payload["expected_server_id"],
+                    )
             elif payload.get("mode") == "collections":
                 result = zotero.collections(root, library=library, start=payload.get("start", 0))
             else:

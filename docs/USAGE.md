@@ -933,3 +933,9 @@ Release v1.20.0 streamlines research ingestion and index maintenance:
   compiles all active claims, linked supporting/contradicting passages, associated dossiers,
   and creative decisions (highlighting intentional fact deviations) into a unified tabular
   overview for authors and editors.
+- **Zotero batch capture:** `lixity research zotero-ingest --project ./novel --library users/0 --item-key <KEY> --allow-retention`
+  captures all eligible PDF and text attachments of a parent reference item in a single command,
+  emitting structured per-attachment results under `research-zotero-batch-ingest-local/1`.
+- **Cross-corpus grounding reports:** `lixity research compare --project ./novel --source-id <UUID> --manuscript ./novel.md --format md [--output <FILE>]`
+  exports lexical overlap, Dunning $G^2$ keyness differentials, stylistic/register contrasts,
+  and per-chapter grounding traces directly into readable Markdown reports.

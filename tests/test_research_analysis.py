@@ -278,6 +278,29 @@ class TestResearchAnalysis(unittest.TestCase):
         data = json.loads(stdout.getvalue())
         self.assertEqual(data["schema_version"], "research-comparison-local/1")
 
+        # Test markdown format via API
+        md_text = api.compare_source(self.project, source["source_id"], ms_file, format="md")
+        self.assertIsInstance(md_text, str)
+        self.assertIn("# Cross-Corpus Grounding Report:", md_text)
+        self.assertIn("## Summary Metrics", md_text)
+        self.assertIn("## Chapter Grounding Trace", md_text)
+
+        # Test CLI with --format md and --output
+        out_file = self.root / "comparison_report.md"
+        stdout_md = io.StringIO()
+        with contextlib.redirect_stdout(stdout_md):
+            code_md = main([
+                "research", "compare",
+                "--project", str(self.project),
+                "--source-id", source["source_id"],
+                "--manuscript", str(ms_file),
+                "--format", "md",
+                "--output", str(out_file),
+            ])
+        self.assertEqual(code_md, 0)
+        self.assertTrue(out_file.exists())
+        self.assertIn("# Cross-Corpus Grounding Report:", out_file.read_text(encoding="utf-8"))
+
         # Invalid top_n
         with self.assertRaises(ValueError):
             api.compare_source(self.project, source["source_id"], ms_file, top_n=0)

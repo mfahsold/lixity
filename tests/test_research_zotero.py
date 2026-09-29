@@ -257,3 +257,65 @@ class TestZotero(unittest.TestCase):
             again = zotero.ingest(self.project, library='users/0', attachment_key='JKLMNPQR', allow_retention=True)
         self.assertEqual(first['source_id'], again['source_id'])
         self.assertTrue(again['unchanged'])
+
+    def test_ingest_item_captures_all_eligible_attachments(self):
+        file2 = self.root / "synthetic2.txt"
+        file2.write_text("Second archival document text.", encoding="utf-8")
+        attachment2 = {"key": "STUVWXYZ", "version": 1, "data": {
+            "itemType": "attachment", "parentItem": "ABCDEFGH", "title": "Second Scan",
+            "contentType": "text/plain", "linkMode": "linked_file"}}
+
+        def multi_response(path):
+            if "STUVWXYZ/file/view/url" in path:
+                return file2.as_uri().encode(), "test-instance"
+            if path.endswith("/items/STUVWXYZ"):
+                return json.dumps(attachment2).encode(), "test-instance"
+            if "/children" in path:
+                return json.dumps([self.attachment, attachment2]).encode(), "test-instance"
+            return self.response(path)
+
+        with patch.object(zotero, "_request", side_effect=multi_response):
+            with self.assertRaisesRegex(ResearchError, "retention"):
+                zotero.ingest_item(self.project, library="users/0", item_key="ABCDEFGH", allow_retention=False)
+
+            result = zotero.ingest_item(self.project, library="users/0", item_key="ABCDEFGH", allow_retention=True)
+            self.assertEqual(result["schema_version"], "research-zotero-batch-ingest-local/1")
+            self.assertEqual(result["parent_item_key"], "ABCDEFGH")
+            self.assertEqual(result["total"], 2)
+            self.assertEqual(result["succeeded"], 2)
+            self.assertEqual(result["failed"], 0)
+            self.assertEqual(len(result["items"]), 2)
+            self.assertTrue(result["items"][0]["ok"])
+            self.assertTrue(result["items"][1]["ok"])
+
+        from lixity.cli import main
+        with patch.object(zotero, "_request", side_effect=multi_response):
+            out_item = io.StringIO()
+            with contextlib.redirect_stdout(out_item):
+                code = main([
+                    "research", "zotero-ingest",
+                    "--project", str(self.project),
+                    "--library", "users/0",
+                    "--item-key", "ABCDEFGH",
+                    "--allow-retention",
+                    "--dry-run",
+                ])
+            self.assertEqual(code, 0)
+            data_item = json.loads(out_item.getvalue())
+            self.assertEqual(data_item["schema_version"], "research-zotero-batch-ingest-local/1")
+            self.assertTrue(data_item["dry_run"])
+
+            out_att = io.StringIO()
+            with contextlib.redirect_stdout(out_att):
+                code = main([
+                    "research", "zotero-ingest",
+                    "--project", str(self.project),
+                    "--library", "users/0",
+                    "--attachment-key", "JKLMNPQR", "STUVWXYZ",
+                    "--allow-retention",
+                    "--dry-run",
+                ])
+            self.assertEqual(code, 0)
+            data_att = json.loads(out_att.getvalue())
+            self.assertEqual(data_att["schema_version"], "research-zotero-batch-ingest-local/1")
+            self.assertEqual(data_att["total"], 2)

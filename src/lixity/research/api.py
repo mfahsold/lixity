@@ -7,7 +7,7 @@ import re
 from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal
+from typing import Any, Literal, overload
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -291,6 +291,7 @@ def source_dashboard(project: str | Path, source_id: str, *, version_id: str | N
     return analyze(project, source_id, version_id=version_id, thresholds=thresholds).dashboard()
 
 
+@overload
 def compare_source(
     project: str | Path,
     source_id: str,
@@ -299,10 +300,46 @@ def compare_source(
     version_id: str | None = None,
     language: str | None = None,
     top_n: int = 20,
-) -> dict[str, Any]:
+    format: Literal["json"] = "json",
+) -> dict[str, Any]: ...
+
+
+@overload
+def compare_source(
+    project: str | Path,
+    source_id: str,
+    manuscript: str | Path,
+    *,
+    version_id: str | None = None,
+    language: str | None = None,
+    top_n: int = 20,
+    format: Literal["md"],
+) -> str: ...
+
+
+def compare_source(
+    project: str | Path,
+    source_id: str,
+    manuscript: str | Path,
+    *,
+    version_id: str | None = None,
+    language: str | None = None,
+    top_n: int = 20,
+    format: Literal["json", "md"] = "json",
+) -> dict[str, Any] | str:
     """Compare verified research source against manuscript text or file."""
     from .analysis import compare_source_to_manuscript
 
+    if format == "md":
+        return compare_source_to_manuscript(
+            project,
+            source_id,
+            manuscript,
+            version_id=version_id,
+            language=language,
+            top_n=top_n,
+            format="md",
+        )
     return compare_source_to_manuscript(
         project,
         source_id,
@@ -310,6 +347,7 @@ def compare_source(
         version_id=version_id,
         language=language,
         top_n=top_n,
+        format="json",
     )
 
 

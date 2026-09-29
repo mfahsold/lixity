@@ -248,6 +248,104 @@ def ingest(project: str | Path, *, library: str, attachment_key: str, allow_rete
             "warnings": ["Explicit capture only; Zotero changes are not synchronized automatically."]}
 
 
+def ingest_attachments(
+    project: str | Path,
+    *,
+    library: str,
+    attachment_keys: list[str],
+    allow_retention: bool = False,
+    language: str | None = None,
+    dry_run: bool = False,
+    expected_server_id: str | None = None,
+    expected_snapshot: str | None = None,
+    progress_callback: Callable[[str, str], None] | None = None,
+) -> dict[str, Any]:
+    """Ingest multiple local attachments through the existing evidence pipeline."""
+    if allow_retention is not True:
+        raise ResearchError("Explicit local retention permission is required (--allow-retention)")
+
+    def _safe_ingest(att_key: str) -> dict[str, Any]:
+        try:
+            res = ingest(
+                project,
+                library=library,
+                attachment_key=att_key,
+                allow_retention=allow_retention,
+                language=language,
+                dry_run=dry_run,
+                expected_server_id=expected_server_id,
+                expected_snapshot=expected_snapshot,
+                progress_callback=progress_callback,
+            )
+            return {
+                "attachment_key": att_key,
+                "ok": True,
+                "source_id": res.get("source_id"),
+                "passages": res.get("passages", 0),
+            }
+        except (ResearchError, OSError, ValueError) as exc:
+            return {"attachment_key": att_key, "ok": False, "error": str(exc)}
+
+    results = [_safe_ingest(k) for k in attachment_keys]
+    succeeded = sum(1 for r in results if r["ok"])
+    failed = sum(1 for r in results if not r["ok"])
+
+    return {
+        "schema_version": "research-zotero-batch-ingest-local/1",
+        "items": results,
+        "succeeded": succeeded,
+        "failed": failed,
+        "total": len(attachment_keys),
+        "dry_run": dry_run,
+    }
+
+
+def ingest_item(
+    project: str | Path,
+    *,
+    library: str,
+    item_key: str,
+    allow_retention: bool = False,
+    language: str | None = None,
+    dry_run: bool = False,
+    expected_server_id: str | None = None,
+    expected_snapshot: str | None = None,
+    progress_callback: Callable[[str, str], None] | None = None,
+) -> dict[str, Any]:
+    """Ingest all eligible local attachments associated with a parent Zotero item."""
+    if allow_retention is not True:
+        raise ResearchError("Explicit local retention permission is required (--allow-retention)")
+    reader = _Reader()
+    library = _library(library)
+    item_key = _key(item_key)
+    path = f"{library}/items/{item_key}/children"
+    values = reader.json(path + "?format=json&limit=100")
+    if not isinstance(values, list):
+        raise ResearchError("Invalid Zotero item children response")
+    attachments = [
+        item for item in [_item(v) for v in values]
+        if item["data"].get("itemType") == "attachment"
+        and item["data"].get("contentType") in ("application/pdf", "text/plain", "text/markdown")
+        and item["data"].get("linkMode") in ("imported_file", "imported_url", "linked_file")
+    ]
+    if not attachments:
+        raise ResearchError(f"No eligible PDF or text attachments found under Zotero item '{item_key}'")
+
+    batch = ingest_attachments(
+        project,
+        library=library,
+        attachment_keys=[att["key"] for att in attachments],
+        allow_retention=allow_retention,
+        language=language,
+        dry_run=dry_run,
+        expected_server_id=expected_server_id,
+        expected_snapshot=expected_snapshot,
+        progress_callback=progress_callback,
+    )
+    batch["parent_item_key"] = item_key
+    return batch
+
+
 def export_library(project: str | Path, output: str | Path, *, allow_retention: bool = False,
                    dry_run: bool = False) -> dict[str, Any]:
     """Export active captures as an additive RIS import bundle; never edit evidence."""

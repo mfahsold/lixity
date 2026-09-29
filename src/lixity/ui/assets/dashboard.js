@@ -2022,6 +2022,11 @@ function highlightSearchTerms(text, query) {
       return '<span class="research-tag">' + escapeHtml(w.word) + ' (' + w.total_count + ')</span>';
     }).join(" ");
 
+    var sourceKeyTerms = (gres.keyness && gres.keyness.source_key_terms) || [];
+    var keyTermsHtml = sourceKeyTerms.slice(0, 15).map(function(k) {
+      return '<span class="research-tag" style="border-color:var(--accent);">' + escapeHtml(k.word) + ' (G² ' + k.g2 + ')</span>';
+    }).join(" ");
+
     var chapters = gres.chapter_grounding || [];
     var chRows = chapters.map(function(c) {
       return '<tr>' +
@@ -2040,6 +2045,7 @@ function highlightSearchTerms(text, query) {
         '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_shared_types")) + '</span><strong>' + (sum.shared_types || 0) + '</strong></div>' +
         '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_word_counts")) + '</span><span>' + (sum.source_content_words || 0) + ' / ' + (sum.manuscript_content_words || 0) + '</span></div>' +
         (sharedWordsHtml ? '<div style="margin-top:.6rem;"><div class="ctl-label" style="margin-bottom:.3rem;">' + escapeHtml(uiLabel("research_shared_words")) + '</div><div class="research-tags">' + sharedWordsHtml + '</div></div>' : '') +
+        (keyTermsHtml ? '<div style="margin-top:.6rem;"><div class="ctl-label" style="margin-bottom:.3rem;">' + escapeHtml(uiLabel("research_source_key_terms")) + '</div><div class="research-tags">' + keyTermsHtml + '</div></div>' : '') +
         (chRows ? '<div style="margin-top:.8rem;"><div class="ctl-label" style="margin-bottom:.3rem;">' + escapeHtml(uiLabel("research_chapter_density")) + '</div><table style="width:100%;font-size:.8rem;"><thead><tr><th style="text-align:left;">' + escapeHtml(uiLabel("research_chapter")) + '</th><th style="text-align:right;">' + escapeHtml(uiLabel("research_tokens")) + '</th><th style="text-align:right;">' + escapeHtml(uiLabel("research_density")) + '</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
       '</div>';
     }
