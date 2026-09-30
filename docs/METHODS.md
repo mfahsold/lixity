@@ -115,9 +115,10 @@ set is `fdr_flagged` — prefer it over raw `deviations` for strong claims.
 
 ## 4a. Effect sizes (magnitude, not just significance)
 
-For every FDR-confirmed cell the passport carries Cliff's $\delta$ and the
-implied Vargha–Delaney $\hat{A}_{12} = (\delta + 1)/2$, labelled with
-Romano et al.'s bands:
+For every FDR-confirmed cell the passport carries Cliff's $\delta$, labelled
+with Romano et al.'s bands. The implied Vargha–Delaney $\hat{A}_{12} =
+(\delta + 1)/2$ is a deterministic restatement of $\delta$ and is **not**
+emitted separately:
 
 | $\lvert\delta\rvert$ | Label |
 | :--- | :--- |

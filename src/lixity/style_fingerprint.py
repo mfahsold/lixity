@@ -331,21 +331,6 @@ def cliff_delta(x: list[float], y: list[float]) -> float:
     return (wins - losses) / n if n else 0.0
 
 
-def vargha_delaney_a(x: list[float], y: list[float]) -> float:
-    """Vargha-Delaney A = P(X>Y) + 0.5·P(X=Y) = (δ + 1) / 2."""
-    if not x or not y:
-        return 0.5
-    wins = ties = 0
-    for a in x:
-        for b in y:
-            if a > b:
-                wins += 1
-            elif a == b:
-                ties += 1
-    n = len(x) * len(y)
-    return (wins + 0.5 * ties) / n if n else 0.5
-
-
 def effect_label(delta: float) -> str:
     """Romano et al. (2006) bands for |Cliff's delta|."""
     a = abs(delta)

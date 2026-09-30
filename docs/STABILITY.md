@@ -63,9 +63,10 @@ See [Research usage](research/USAGE.md) for operational limits.
   400-cell matrix. Expected false positives at $|z^*|\ge 2.5$
   are reported (`expected_false_positives`) so no deviation is called
   “significant” in isolation.
-- Surviving FDR cells carry **Cliff’s $\delta$** (Romano bands: negligible /
-  small / medium / large) and the implied Vargha–Delaney $\hat{A}_{12}$ so
-  magnitude is never confused with significance alone.
+- Surviving FDR cells carry **Cliff’s $\delta$** under Romano bands
+  (negligible / small / medium / large) in `effect_magnitudes`, so magnitude is
+  never confused with significance alone. No separate Vargha–Delaney value is
+  reported; $\hat{A}_{12} = (\delta + 1)/2$ is derivable from $\delta$.
 - Baseline **exchangeability diagnostics** (runs test about the series
   median, lag-1 autocorrelation vs $1/\sqrt{n}$, `low_power` for $n<8$)
   flag series where the i.i.d. FDR model is optimistic — the passport’s
