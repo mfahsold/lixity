@@ -521,7 +521,9 @@ entire archive at an earlier date.
 - **Linguistic comparison (`compare`)**: Connects an archived research source with a literary
   manuscript without modifying either document. Computes:
   1. Lexical overlap and alignment (Jaccard similarity, Szymkiewicz–Simpson overlap coefficient,
-     top shared terms, exclusive source terms).
+     top shared terms, exclusive source terms). The term lists are capped by
+     `--top-n` (default 20; 1–100), which changes how much of the table is
+     reported.
   2. Signed keyness differential using a full term/nonterm $2\times2$ Dunning
      $G^2$ log-likelihood table; values can change from development builds.
   3. Register and stylistic contrast (sentence length ASL delta, dialogue ratio delta,

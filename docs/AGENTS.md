@@ -119,6 +119,10 @@ recompute both reference and target analyses before comparing them. The field
 names and schema versions remain unchanged. `about().heuristics` reports
 `hd_d_method`, `hd_d_min_tokens`, `hd_d_sample_size=42` and the retained
 `hd_d_samples=0` key (no Monte Carlo samples).
+The `seed` and `min_samples` parameters of `lixity.diversity.hd_d()` and
+`hd_d_stats()` are accepted but ignored and now emit a `DeprecationWarning`;
+they are removed in v1.24.0. They belonged to the superseded Monte Carlo
+estimator and have had no effect since v1.16.0.
 
 Corpus-level notes:
 

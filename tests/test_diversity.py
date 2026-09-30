@@ -25,7 +25,17 @@ class HypergeometricHDDTests(unittest.TestCase):
         grouped = ["a"] * 100 + ["b"] * 100
         alternating = [token for _ in range(100) for token in ("a", "b")]
         self.assertEqual(hd_d(grouped), hd_d(alternating))
-        self.assertEqual(hd_d(grouped), hd_d(grouped, seed=123, min_samples=99))
+        # The legacy sampling arguments are still accepted and still ignored,
+        # but they now announce that they do nothing.
+        with self.assertWarns(DeprecationWarning) as caught:
+            self.assertEqual(hd_d(grouped), hd_d(grouped, seed=123, min_samples=99))
+        self.assertIn("v1.24.0", str(caught.warning))
+
+    def test_hd_d_is_silent_without_legacy_arguments(self) -> None:
+        """The whole suite runs under -W error, so the normal call must not warn."""
+        tokens = [f"w{i}" for i in range(200)]
+        self.assertIsNotNone(hd_d(tokens))
+        self.assertIsNotNone(hd_d_stats(tokens)[0])
 
     def test_short_text_guard_is_shared_lexical_diversity_floor(self) -> None:
         self.assertEqual(hd_d_stats(["a"] * 99), (None, 0.0))

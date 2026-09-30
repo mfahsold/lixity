@@ -18,35 +18,68 @@ zero for empty input. These guards do not establish estimator reliability.
 from __future__ import annotations
 
 import math
+import warnings
 from collections import Counter
+from typing import Any
 
 # Local minimum length for HD-D, MTLD and Maas; not a universal validity boundary.
 MIN_TOKENS_LD = 100
 HD_D_DRAW_SIZE = 42
 
 
-def hd_d(tokens: list[str], seed: int = 42, min_samples: int = 5) -> float | None:
+_UNSET: Any = object()
+
+
+def _warn_legacy_sampling_args(seed: Any, min_samples: Any) -> None:
+    """Warn about the no-op sampling arguments left over from Monte Carlo HD-D.
+
+    They are silently ignored, so a caller who passes them has no reason to
+    believe the value had any effect. Deprecated in v1.22.0, removed in
+    v1.24.0; HD-D has been an exact expectation since v1.16.0 and needs neither.
+    """
+    if seed is _UNSET and min_samples is _UNSET:
+        return
+    passed = [name for name, value in (("seed", seed), ("min_samples", min_samples))
+              if value is not _UNSET]
+    warnings.warn(
+        f"hd_d({'/'.join(passed)}) is accepted but ignored: HD-D has been an exact "
+        f"hypergeometric expectation since v1.16.0 and performs no sampling. These "
+        f"parameters are removed in v1.24.0.",
+        DeprecationWarning,
+        stacklevel=3,
+    )
+
+
+def hd_d(
+    tokens: list[str], *, seed: Any = _UNSET, min_samples: Any = _UNSET
+) -> float | None:
     """
     HD-D: expected TTR of a 42-token hypergeometric draw (McCarthy & Jarvis 2010).
 
     Each type contributes its probability of occurring at least once in a draw
     without replacement, divided by 42. Return None below MIN_TOKENS_LD.
-    ``seed`` and ``min_samples`` remain accepted for caller compatibility but
-    have no effect on this exact calculation.
+
+    ``seed`` and ``min_samples`` are accepted but ignored, and warn. Deprecated
+    in v1.22.0, removed in v1.24.0.
     """
-    value, _ = hd_d_stats(tokens, seed=seed, min_samples=min_samples)
+    _warn_legacy_sampling_args(seed, min_samples)
+    value, _ = hd_d_stats(tokens)
     return value
 
+
 def hd_d_stats(
-    tokens: list[str], seed: int = 42, min_samples: int = 5
+    tokens: list[str], *, seed: Any = _UNSET, min_samples: Any = _UNSET
 ) -> tuple[float | None, float]:
     """
     Return (exact HD-D expectation, computational standard error).
 
     The expectation has no Monte Carlo sampling error, hence the second value
     is zero. It does not estimate uncertainty about a larger population.
-    ``seed`` and ``min_samples`` are legacy no-op parameters.
+
+    ``seed`` and ``min_samples`` are accepted but ignored, and warn. Deprecated
+    in v1.22.0, removed in v1.24.0.
     """
+    _warn_legacy_sampling_args(seed, min_samples)
     n = len(tokens)
     if n < MIN_TOKENS_LD:
         return None, 0.0
