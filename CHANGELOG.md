@@ -7,6 +7,31 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.21.0] – 2026-09-30
+
+### Added
+
+- Research engine — claim-evidence matrix export (Issue #11):
+  - `lixity research matrix --format md|csv|json [--output FILE]` generates a
+    structured table of claims with linked evidence, confidence levels, and source keys.
+  - `claim_matrix()` API for programmatic access.
+- Research engine — Zotero batch ingest (Issue #11):
+  - `lixity research zotero-ingest --item-key <KEY>` ingests all eligible PDF and
+    text attachments of a Zotero parent item with per-attachment error isolation.
+  - Multi `--attachment-key` support for batch ingestion in a single call.
+  - `lixity research ocr-status --probe` / `ocr_status(probe=True)` pre-flight OCR probe.
+  - `--fallback` / `LIXITY_OCR_FALLBACK=1` for Poppler `pdftotext` fallback; reliable
+    multi-page PDF detection via `pdfinfo` or binary `/Count` scan.
+- Research engine — cross-corpus Markdown grounding report (Issue #11):
+  - `lixity research compare --format md [--output FILE]` exports Jaccard similarity,
+    Dunning G² key terms, chapter density table, and top-N term breakdowns as Markdown.
+  - `compare_source(..., format="md")` API with overloaded return types for mypy strict.
+- Web dashboard — research panel improvements:
+  - Search-hit highlighting via `<mark class="search-hit">` wrappers in results.
+  - Collapsible dossier section outlines in list cards with section overview badges.
+  - Compare/grounding card renders Dunning G² key terms with accent border styling.
+- Localization: `research_source_key_terms` label added in 7 languages (EN/DE/FR/ES/IT/PT/NL).
+
 ## [1.20.0] – 2026-09-29
 
 ### Added
@@ -1093,7 +1118,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.20.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.21.0...HEAD
+[1.21.0]: https://github.com/mfahsold/lixity/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/mfahsold/lixity/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/mfahsold/lixity/compare/v1.18.0...v1.19.0
 [1.18.0]: https://github.com/mfahsold/lixity/compare/v1.17.0...v1.18.0

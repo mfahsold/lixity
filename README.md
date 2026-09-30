@@ -11,7 +11,7 @@ against the manuscript's own style, then inspect the passages behind each signal
 
 Python 3.10+ · Seven language profiles · No cloud calls.
 
-The current release is **v1.20.0**, including the experimental local research workspace.
+The current release is **v1.21.0**, including the experimental local research workspace.
 Read the [v1.20.0 release notes](docs/releases/v1.20.0.md) for research ergonomics, NDA capability, and archive compatibility.
 
 **Free only for non-commercial projects.** Using Lixity for a book intended
@@ -204,12 +204,12 @@ Install from GitHub into an isolated CLI environment. Requires Git and
 Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.20.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.21.0"
 lixity --version
 lixity about
 ```
 
-This installs **v1.20.0**, including the experimental local research pilot.
+This installs **v1.21.0**, including the experimental local research pilot.
 The tag stays pinned: upgrading to a future release requires selecting
 its tag explicitly. Use `@main` only for development builds, or a reviewed
 full commit hash for reproducible deployments.
