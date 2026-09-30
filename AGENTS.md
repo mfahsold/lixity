@@ -38,6 +38,10 @@ localization and UI components over parallel implementations.
 - `AGENTS.md` governs repository work; `docs/AGENTS.md` documents the product's
   automation interface. `CONTRIBUTING.md` explains contributor workflows. Extend
   these existing entrypoints instead of creating competing instruction trees.
+- `AGENT_PROFILE.md` holds the agent operating rules — verify before asserting,
+  never let a formatter rewrite unrelated code, check an issue's premise against
+  the base before implementing it, data boundaries, and escalation. It is
+  delegated to from here, not a competing tree.
 - Product docs explain current behavior, limitations, installation, interfaces
   and durable architecture decisions. Label RFC proposals and current-main
   additions explicitly; do not present execution checklists as user guidance.
@@ -57,7 +61,8 @@ localization and UI components over parallel implementations.
 
 Typical checks: `make check`; optional browser checks are documented in
 `tests/browser/README.md`. Setup is in `docs/INSTALLATION.md`, architecture in
-`docs/ARCHITECTURE.md`, and automation contracts in `docs/AGENTS.md`.
+`docs/ARCHITECTURE.md`, automation contracts in `docs/AGENTS.md`, and agent
+operating rules in `AGENT_PROFILE.md`.
 
 Statistical signals support a human review; they are not an objective quality
 score or an instruction to rewrite prose. Do not infer tasks from diagnostics.

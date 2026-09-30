@@ -466,6 +466,31 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
 
+NDA management (present only when the active project declares the capability):
+
+- Capability is per project and re-resolved on every project switch. When the
+  project has no NDA capability, every `nda-*` action answers HTTP 404 with
+  `{"ok": false, "message": "NDA management is not enabled for this project"}`.
+  Treat that as "capability absent", not as "no records exist", and do not retry
+  against another project.
+- `POST /api/nda-list`: `{}`; returns the project's records. Answered with a
+  lock notice while the encrypted store is still locked.
+- `POST /api/nda-unlock`: `{"passphrase": "..."}`; unlocks the encrypted store
+  for the lifetime of the server process. A wrong passphrase is rejected without
+  revealing whether any record exists.
+- `POST /api/nda-add`: `{"name": "...", "contact": "...", "notes": "..."}`.
+- `POST /api/nda-update`: `{"id": "...", "status": "..."}`; an unknown status is
+  rejected with HTTP 400.
+- `POST /api/nda-export`: `{"id": "..."}`; writes a project-owned PDF receipt and
+  returns its file name. If the project ships `scripts/export_nda.py` that script
+  is used, otherwise a built-in single-page PDF is generated.
+- `POST /api/nda-delete`: `{"id": "..."}`.
+
+Recipient names, contacts and passphrases are project-owned data. Do not copy
+them into logs, issue trackers or any external system. Encrypted stores live
+under `<project>/nda/` and are portable with the project; a project without a
+passphrase keeps its records in the unencrypted structured store.
+
 Native-revision endpoints (since v1.17.0) reuse that explicit workspace:
 
 - `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link` and `decision`.
@@ -490,7 +515,7 @@ Authored record
 revisions use storage schema `research-local/2`; snapshots containing them use
 `research-manifest-local/2`. Existing revision-1 files and pinned references
 remain intact. Lixity 1.16.0 cannot read the resulting archive. See
-[native editing and compatibility](research/USAGE.md#native-editing-and-history-development).
+[native editing and compatibility](research/USAGE.md#native-editing-and-history).
 
 The standalone server renders only its implemented optional controls: Run analyses
 and Rebuild refresh the dashboard. Its `POST /api/export`, `/api/sync`,

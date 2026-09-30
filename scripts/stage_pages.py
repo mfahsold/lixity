@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT_FILES = {
     ".nojekyll", "index.html", "robots.txt", "sitemap.xml", "llms.txt",
-    "AGENTS.md", "ARCHITECTURE.md", "GROWTH_REVIEW.md", "INSTALLATION.md",
+    "AGENT_PROFILE.md", "AGENTS.md", "ARCHITECTURE.md", "GROWTH_REVIEW.md", "INSTALLATION.md",
     "LICENSING.md", "LOCALIZATION.md", "METHODS.md", "ONBOARDING.md",
     "SECURITY_REVIEW.md", "STABILITY.md", "USAGE.md",
 }

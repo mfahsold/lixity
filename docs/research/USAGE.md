@@ -1,6 +1,6 @@
-# Local research pilot
+# Local research archive
 
-**Experimental local research archive system, extended in `v1.20.0`.**
+**Experimental local research archive system, extended in `v1.21.0`.**
 This component archives local UTF-8 text and PDF documents, attaches versioned source criticism context and tags,
 resolves exact citations, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, connects to the analysis pipeline, and performs cross-corpus
@@ -8,7 +8,7 @@ grounding comparisons against manuscripts. Authors can record claims,
 passage-to-claim evidence relations and authorial decisions, with full native revision history.
 It does not implement the entire [RFC](README.md).
 
-| Available in `v1.20.0` | Not implemented |
+| Available in `v1.21.0` | Not implemented |
 | --- | --- |
 | Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
 | SQLite/FTS5 lexical search over passages and current authored records; auto-fresh transparent cache refresh | Remote web imports |

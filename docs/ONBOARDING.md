@@ -246,7 +246,7 @@ its original-item link and metadata. Search success alone does not verify a clai
 
 Stop the local server with Ctrl+C. After a restart, start Zotero if needed and run
 `lixity serve /path/to/project` again; open the existing project rather than
-importing the manuscript into a second folder. See [restart instructions](INSTALLATION.md#start-again-after-a-computer-restart)
+importing the manuscript into a second folder. See [server lifecycle and restart instructions](INSTALLATION.md#running-the-server)
 for OCR environment and server details. Back up the manuscript separately from
 the research archive; paired research/Zotero backups exclude manuscripts and
 external linked attachments.
