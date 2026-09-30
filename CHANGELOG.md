@@ -55,6 +55,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `nda` encrypt/decrypt return annotations no longer depend on the undeclared
   optional `cryptography` package being installed, which broke strict mypy in
   the configuration CI uses.
+- The documentation version-drift check now enforces that statements asserting
+  the current release name the single source of truth, instead of only checking
+  whether its own pinned strings need rewriting.
 
 ### Removed
 - `layout.py` and `inline_markdown_to_html()`: unreachable code with no
