@@ -47,7 +47,7 @@ and [archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research
 Release v1.22.0 is a maintenance and architecture release. Since v1.20.0 introduced native project NDA protection:
 
 - **Research batch ingestion:** `lixity research batch-ingest` imports multiple text or PDF sources in one invocation, emitting structured per-file outcomes (`research-batch-ingest-local/1`) and streaming `--progress` heartbeats on stderr.
-- **Auto-fresh index caching:** `lixity research search` transparently checks the HEAD manifest timestamp and rebuilds stale FTS5 projections without requiring manual `reindex` calls (pass `--strict` to fail fast).
+- **Auto-fresh index caching:** `lixity research search` compares the snapshot digest recorded in the index against the current one and rebuilds stale FTS5 projections without requiring manual `reindex` calls (pass `--strict` to fail fast).
 - **Bounded dossier reading:** `lixity research read --section <NAME>` and section-level updates allow focused review of long dossiers.
 - **Decision-dossier review tracking:** Linking an authorial decision to a dossier tracks review needs (`review_needed: true`), surfacing an amber review badge in the web dashboard.
 - **Native project NDA encryption:** Isolated symmetric encryption (`ProjectNdaProvider`, `nda/nda.enc.json`, AES-256-GCM) with key isolation and enforcement during `lixity build`.

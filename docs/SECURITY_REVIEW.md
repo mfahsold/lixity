@@ -48,4 +48,4 @@ not exhaustively scanned.
 - Update/release processes should pin reviewed refs; GitHub Pages does not make
   a private development server safe to expose.
 
-See [SECURITY.md](../SECURITY.md) for reporting and deployment guidance.
+See [SECURITY.md](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) for reporting and deployment guidance.

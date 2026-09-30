@@ -360,7 +360,7 @@ initialize completion with `autoload -Uz compinit; compinit`. Do not assume
 the first existing `$fpath` directory is writable.
 
 See the [usage reference](USAGE.md), [architecture](ARCHITECTURE.md) and
-[contributor guide](../CONTRIBUTING.md) for the next steps.
+[contributor guide](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md) for the next steps.
 
 ## Server environment and project access
 

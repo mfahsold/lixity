@@ -48,6 +48,6 @@ is an existing software-specific alternative, but not an Open Source license.
 Its organizational permissions differ from a strict project-based rule, so it
 has **not** replaced LNCL-1.0.
 
-This guide explains the intended policy; [LICENSE](../LICENSE) contains the
+This guide explains the intended policy; [LICENSE](https://github.com/mfahsold/lixity/blob/main/LICENSE) contains the
 terms. Have a qualified lawyer review the wording and commercial agreement,
 especially projects that become commercial after earlier private use.

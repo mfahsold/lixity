@@ -36,7 +36,7 @@ or contact a cloud library.
    Search only the newest version of each source; exact historical citations
    remain resolvable. v1.19.0 also indexes current dossier, claim and
    decision revisions through explicit scopes. Since v1.20.0, search checks
-   manifest mtime and refreshes stale projections automatically unless `--strict`
+   current snapshot digest and refreshes stale projections automatically unless `--strict`
    is requested.
 4. `research/analysis.py`: lean research analysis adapter reusing the existing
    `lixity.pipeline` without ambient configuration, mapping paragraphs to exact

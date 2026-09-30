@@ -48,6 +48,62 @@ class TestDocumentation(unittest.TestCase):
         release_notes = ROOT / "docs" / "releases" / f"v{__version__}.md"
         self.assertTrue(release_notes.is_file(), f"Missing release notes file: {release_notes}")
 
+    def test_published_tree_has_no_broken_links(self):
+        """The staged Pages output must resolve every relative link it ships.
+
+        Staging flattens ``docs/<name>`` to ``/<name>``, so a link that is
+        correct when browsing the checkout can still break on the site. This
+        validates the staged tree rather than the repository, which is what a
+        reader actually receives.
+        """
+        import sys
+        import tempfile
+
+        sys.path.insert(0, str(ROOT / "scripts"))
+        from stage_pages import stage
+
+        with tempfile.TemporaryDirectory() as td:
+            output = Path(td) / "site"
+            stage(ROOT / "docs", output)
+
+            def anchors(md: Path) -> set[str]:
+                found = set()
+                for line in md.read_text(encoding="utf-8").splitlines():
+                    if line.startswith("#"):
+                        slug = re.sub(r"[^\w\s-]", "", line.lstrip("#").strip().lower())
+                        found.add(re.sub(r"\s+", "-", slug))
+                return found
+
+            broken: list[str] = []
+            for md in output.rglob("*.md"):
+                for m in re.finditer(
+                    r"\]\((?!https?://|mailto:)([^)#]+)(?:#([^)]*))?\)",
+                    md.read_text(encoding="utf-8"),
+                ):
+                    target, anchor = m.group(1), m.group(2)
+                    resolved = (md.parent / target).resolve()
+                    where = f"{md.relative_to(output)} -> {target}"
+                    if not resolved.exists():
+                        broken.append(where)
+                    elif anchor and anchor not in anchors(resolved):
+                        broken.append(f"{where}#{anchor}")
+            self.assertEqual(broken, [], f"Broken links in the published site: {broken}")
+
+    def test_repository_root_documents_are_linked_by_absolute_url(self):
+        """Nothing outside docs/ is published, so cross-references must be absolute."""
+        root_docs = {"README.md", "CONTRIBUTING.md", "SECURITY.md", "LICENSE", "CHANGELOG.md"}
+        offenders: list[str] = []
+        for md in (ROOT / "docs").rglob("*.md"):
+            for m in re.finditer(r"\]\((?!https?://|mailto:|#)([^)]+)\)", md.read_text(encoding="utf-8")):
+                target = m.group(1).split("#")[0]
+                if target.startswith("../") and target[3:] in root_docs:
+                    offenders.append(f"{md.relative_to(ROOT)} -> {target}")
+        self.assertEqual(
+            offenders, [],
+            "These targets are not published; link them by absolute repository URL: "
+            f"{offenders}",
+        )
+
     def test_markdown_relative_links_resolve(self):
         broken: list[tuple[str, str]] = []
         for md_file in list(ROOT.glob("*.md")) + list((ROOT / "docs").rglob("*.md")):

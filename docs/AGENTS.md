@@ -440,7 +440,20 @@ research_api.record_decision(
 
 # Cross-corpus grounding comparison against manuscript
 cmp_res = research_api.compare_source(root_path, source_id, manuscript_path)
+
+# Claim-evidence matrix. Data and rendering are separate calls.
+matrix = research_api.claim_matrix_data(root_path)              # dict
+markdown = research_api.render_claim_matrix(matrix, format="md")  # str
+csv_text  = research_api.render_claim_matrix(matrix, format="csv")
+both = research_api.claim_matrix_format(root_path, format="md")   # dict | str
 ```
+
+`compare_source_to_manuscript()` is the data-only form of `compare_source`;
+both return a dictionary unless `format="md"` is requested.
+`claim_matrix(project, format=...)` is **deprecated** since v1.22.0, warns on
+use, and is removed in v1.23.0 — call `claim_matrix_data()` and
+`render_claim_matrix()` instead. The JSON payload and the
+`lixity research matrix` CLI output are unchanged.
 
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 

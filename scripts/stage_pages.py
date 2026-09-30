@@ -1,16 +1,48 @@
 #!/usr/bin/env python3
-"""Stage public product documentation without publishing the entire docs tree."""
+"""Stage public product documentation without publishing the entire docs tree.
+
+The output mirrors the published GitHub Pages layout: ``docs/<name>`` is
+flattened to ``/<name>``. A relative link inside the published documentation
+therefore resolves only if its target is also published, which is why nothing
+outside ``docs/`` is staged -- those files are referenced by absolute repository
+URL instead. ``tests/test_documentation.py`` enforces the result against the
+staged tree rather than the checkout, because a link can be correct in the
+checkout and still break on the site.
+"""
 
 import argparse
 import shutil
 from pathlib import Path
 
-ROOT_FILES = {
-    ".nojekyll", "index.html", "robots.txt", "sitemap.xml", "llms.txt",
-    "AGENT_PROFILE.md", "AGENTS.md", "ARCHITECTURE.md", "GROWTH_REVIEW.md", "INSTALLATION.md",
-    "LICENSING.md", "LOCALIZATION.md", "METHODS.md", "ONBOARDING.md",
-    "SECURITY_REVIEW.md", "STABILITY.md", "USAGE.md",
+#: Approved files inside ``docs/``, keyed by their path relative to it.
+#:
+#: Nothing outside ``docs/`` is published. Repository-root documents (README,
+#: CONTRIBUTING, SECURITY, LICENSE, CHANGELOG) are written for browsing inside
+#: the checkout, where ``docs/`` is a real subdirectory; flattening them onto the
+#: site root would break every ``docs/...`` link they contain. The documentation
+#: therefore references them by absolute repository URL instead, which resolves
+#: correctly in both contexts.
+DOCS_ROOT_FILES = {
+    ".nojekyll",
+    "index.html",
+    "robots.txt",
+    "sitemap.xml",
+    "llms.txt",
+    "AGENT_PROFILE.md",
+    "AGENTS.md",
+    "ARCHITECTURE.md",
+    "GROWTH_REVIEW.md",
+    "INSTALLATION.md",
+    "LICENSING.md",
+    "LOCALIZATION.md",
+    "METHODS.md",
+    "ONBOARDING.md",
+    "SECURITY_REVIEW.md",
+    "STABILITY.md",
+    "USAGE.md",
 }
+
+#: Approved subtrees, keyed by their first path segment.
 PUBLIC_TREES = {
     "assets": {".css", ".js", ".svg", ".png", ".woff2"},
     "guides": {".html"},
@@ -33,7 +65,7 @@ def stage(source: Path, output: Path) -> int:
             raise ValueError(f"Symlink in documentation source: {relative}")
         if not path.is_file():
             continue
-        approved = str(relative) in ROOT_FILES or (
+        approved = str(relative) in DOCS_ROOT_FILES or (
             len(relative.parts) > 1
             and not any(part.startswith(".") for part in relative.parts)
             and path.suffix in PUBLIC_TREES.get(relative.parts[0], set())

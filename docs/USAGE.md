@@ -5,7 +5,7 @@ search, citations, backups and OCR, see [Research usage](research/USAGE.md). For
 [Onboarding](ONBOARDING.md).
 
 Complete command-line and library reference for Lixity. If you are new to the
-project, start with the [README](../README.md); this document goes into detail.
+project, start with the [README](https://github.com/mfahsold/lixity/blob/main/README.md); this document goes into detail.
 
 **Contents**
 
@@ -815,11 +815,11 @@ bundled public-domain sample with headless Chromium:
 `python3 scripts/make_screenshots.py` (writes `docs/screenshots/`, including a
 demonstration status strip). CI runs the core tests on Python 3.10–3.13, research checks on macOS and Windows,
 browser checks, lint/type checks and wheel packaging checks. Contribution workflow:
-[`CONTRIBUTING.md`](../CONTRIBUTING.md).
+[`CONTRIBUTING.md`](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
 
 ## License
 
-Lixity Non-Commercial License 1.0 (LNCL-1.0) – see [`LICENSE`](../LICENSE).
+Lixity Non-Commercial License 1.0 (LNCL-1.0) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
 
 ## Unavailable consistency and empty manuscripts (since v1.18.0)
@@ -919,7 +919,7 @@ Release v1.20.0 streamlines research ingestion and index maintenance:
   under `research-batch-ingest-local/1`. When `--progress` is passed, live phase
   heartbeats stream to stderr.
 - **Auto-fresh index caching:** `lixity research search` checks whether the FTS5
-  index is stale compared to the HEAD manifest mtime. If stale, it automatically
+  index records a snapshot digest that differs from the current one. If stale, it automatically
   rebuilds the index before querying, eliminating manual `reindex` friction in common
   workflows. Pass `--strict` to fail fast instead of auto-rebuilding.
 - **Section-bounded reads:** `lixity research read --project ./novel --dossier-id <UUID> --section "Historical Notes"`
