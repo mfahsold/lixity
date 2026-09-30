@@ -104,6 +104,26 @@ class TestDocumentation(unittest.TestCase):
             f"{offenders}",
         )
 
+    def test_stability_register_rows_keep_their_column_count(self):
+        r"""An unescaped ``|`` inside a cell splits it and breaks the rendered row.
+
+        The register is a fixed five-column table, so a row whose pipe count
+        differs from the header renders with the wrong columns. Escaped pipes
+        (``\|``) are literal and must not count.
+        """
+        import re
+
+        lines = (ROOT / "docs" / "STABILITY.md").read_text(encoding="utf-8").splitlines()
+        header = next(i for i, line in enumerate(lines) if line.startswith("| # |"))
+        expected = lines[header].replace("\\|", "").count("|")
+        broken = [
+            (n, line.count("|") - expected)
+            for n, line in enumerate(lines, start=1)
+            if re.match(r"^\| *\d+ *\|", line)
+            and line.replace("\\|", "").count("|") != expected
+        ]
+        self.assertEqual(broken, [], f"Stability rows with a broken column count: {broken}")
+
     def test_markdown_relative_links_resolve(self):
         broken: list[tuple[str, str]] = []
         for md_file in list(ROOT.glob("*.md")) + list((ROOT / "docs").rglob("*.md")):

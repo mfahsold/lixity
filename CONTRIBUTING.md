@@ -33,6 +33,7 @@ See [licensing examples](docs/LICENSING.md).
 | Regression coverage and reusable tooling | `tests/`, `scripts/` | Commit when it protects or operates the product |
 | Installation, usage, methods, interfaces and supported architecture | `docs/` and README | Maintain as product documentation; label proposals and unreleased behavior |
 | Repository-wide agent rules | `AGENTS.md` | Commit concise, durable guidance |
+| Agent operating rules that `AGENTS.md` delegates to | `AGENT_PROFILE.md` | Commit only durable rules; a session log belongs in `.planning/` |
 | Task plans, session notes, temporary implementation decisions | `.planning/` | Local only, ignored; old tracked plans are preserved locally under `.planning/legacy/` |
 | Browser screenshots, traces and diagnostic scratch output | `.artifacts/` or `/tmp` | Local only; reviewed public examples are a separate deliberate addition |
 | Manuscripts, retained research bytes, backups and credentials | Separate project storage | Never include in engine commits or public artifacts |
@@ -59,7 +60,15 @@ installed version; neither installs into global Python.
 ```bash
 make install-dev          # or: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make check                # ruff + mypy --strict + pytest -W error
+make docs-check           # version pins, changelog, staged-site link integrity
 ```
+
+To exercise the dashboard locally, `make serve` starts a background instance
+through `scripts/lixity-start.sh` (PID file, `status`/`restart`/`stop`), and
+`make stop` shuts it down. Override the port with `make serve LIXITY_PORT=9000`.
+Windows uses `scripts/lixity-start.ps1` with the same lifecycle. See
+[running the server](docs/INSTALLATION.md#running-the-server) for the
+systemd/launchd/Task Scheduler equivalents.
 
 Without make:
 
@@ -99,6 +108,23 @@ repo settings once).
 5. Preview publication with `python3 scripts/stage_pages.py --output /tmp/lixity-pages-preview`
    using a new output directory. Pages uploads this selected tree, not all of
    `docs/`. New public paths must be added deliberately to the staging rules.
+
+   Two invariants matter for links, because staging flattens `docs/<name>` to
+   `/<name>`:
+
+   - **Nothing outside `docs/` is published.** Repository-root documents are
+     written for browsing inside the checkout, where `docs/` is a real
+     subdirectory, so flattening them onto the site root would break every
+     `docs/...` link they contain. Reference `README.md`, `CONTRIBUTING.md`,
+     `SECURITY.md`, `LICENSE` and `CHANGELOG.md` by absolute repository URL
+     (`https://github.com/mfahsold/lixity/blob/main/<name>`) — correct both in
+     the checkout and on Pages. A `../NAME` link resolves locally and 404s
+     publicly.
+   - `tests/test_documentation.py` stages the docs and validates every relative
+     link and heading anchor against the **staged tree**. The pre-existing
+     checkout-only link test cannot see this class of breakage, which is why
+     the staged-tree test exists. Run `make docs-check` before concluding a
+     documentation change is link-safe.
 6. Review staged paths and content. Exclude `.planning/`, local reports, private
    source bytes and machine-specific settings. After an authorized push, verify
    CI and the public deployment; do not infer success from a local build alone.
@@ -122,7 +148,15 @@ separate recommendations from measured traffic or citation results.
 3. Update `CHANGELOG.md` under `[Unreleased]`.
 4. New metrics: document formulas in `docs/METHODS.md` and caveats in
    `docs/STABILITY.md`.
-5. All tests, mypy and ruff must pass.
+5. A behaviour that degrades instead of failing must announce itself. If a
+   fallback guess can change a result the user relies on, return unknown and
+   report it — undeterminable is not absent. Distinguish "could not read",
+   "could not parse" and "not present" in the message.
+6. A deprecated parameter keeps working but warns, states the version it will
+   be removed in, and gets a test that pins both the warning and the silence of
+   the current call path. The suite runs under `-W error`, so a warning that
+   fires during normal use fails the build.
+7. All tests, mypy and ruff must pass.
 
 ## Reporting bugs
 

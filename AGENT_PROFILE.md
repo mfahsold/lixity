@@ -124,11 +124,48 @@ Keep the two separate:
 - **Durable behaviour** — promote to a real test. (The NDA PDF cross-reference
   validation and the strict/non-strict search contract were already, or became,
   ordinary unit tests.)
-- **One-off issue verification** — a throwaway script under the ignored
-  `.planning/`, with its result posted to the issue. Do not commit a script
-  hardcoded to issue numbers; it becomes meaningless the moment they close.
+- **One-off issue verification** — a throwaway script under `.planning/`, which
+  is gitignored and therefore local-only, with its result posted to the issue.
+  Do not commit a script hardcoded to issue numbers; it becomes meaningless the
+  moment they close. Nothing under `.planning/` exists in a fresh clone, so
+  never cite a path there as if a reader could open it.
 
-## 8. Before you finish
+## 8. Never guess where you could tell
+
+The most expensive defects in this codebase are not crashes. They are places
+where a failure is converted into a plausible-looking value, and the run then
+succeeds with results nobody asked for. Three real instances, all now fixed:
+
+- `get_pdf_page_count()` returned `1` when it could measure neither Poppler's
+  `pdfinfo` nor a raw page-tree scan. A page tree in a compressed object stream
+  is not greppable, so a 3-page PDF measured as 1. The extractor then looped
+  over page 1, produced non-empty text, and the capture **succeeded with an
+  empty warnings list**.
+- `_load_toml()` returned `{}` for an unparseable `lixity.toml`, so one
+  unclosed quote reverted the run to default language and thresholds and still
+  exited `0`. The JSON looked authoritative and matched nothing configured.
+- A project's `nda_provider.py` was caught only for four exception types, so an
+  adapter raising `RuntimeError` at import time disabled the whole feature
+  instead of degrading — and the degraded path was silent anyway.
+
+The rule they share: **undeterminable is not the same as absent.** When a
+fallback guess can change an answer the user relies on, return unknown and say
+so. Concretely:
+
+- Return `None`/`None`-ish from a measurement you cannot make; do not default it.
+- If a fallback keeps the tool working, it must announce itself — a
+  `warnings.warn` for a library, a structured warning field where one already
+  exists (the OCR path has a `warnings` list that reaches the ingest envelope).
+- Distinguish "could not read", "could not parse" and "not present" in the
+  message. They have different causes and different fixes.
+- Never let a plugin boundary's failure be silent or narrowly caught. Catch
+  broadly there — it is the one place blanket `except Exception` is correct —
+  but never `BaseException`, so interrupts still propagate.
+- The whole test suite runs under `-W error`. A test that a valid call path
+  stays warning-free is worth writing; a warning that fires during normal
+  operation will fail the build for everyone.
+
+## 9. Before you finish
 
 - `make check` — ruff, `mypy --strict src`, and the full suite under `-W error`.
 - `make docs-check` — version pins, changelog and relative links.
