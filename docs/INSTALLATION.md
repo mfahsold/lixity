@@ -27,12 +27,12 @@ pip`, or bypass an externally managed Python environment.
 These commands work in a terminal, including Windows PowerShell:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.21.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.22.0"
 lixity --version
 lixity about
 ```
 
-The current release is **v1.21.0**. The tag includes the local project/research workspace,
+The current release is **v1.22.0**. The tag includes the local project/research workspace,
 Zotero capture and paired backup tools, search across current authored records,
 seven-language workflows and numerical corrections. For reproducible automation, pin this tag or
 its reviewed full commit hash. Read the [release notes](releases/v1.20.0.md).
@@ -92,7 +92,7 @@ version check does not update that running process, including with an editable
 installation. All browser tabs connected to one server share its active project.
 
 If you already use pipx, the equivalent alternative is
-`pipx install "git+https://github.com/mfahsold/lixity.git@v1.21.0"`, followed by
+`pipx install "git+https://github.com/mfahsold/lixity.git@v1.22.0"`, followed by
 `pipx ensurepath` if necessary; update with `pipx upgrade lixity`.
 
 ## First useful result
@@ -125,21 +125,172 @@ export remains read-only. The server's persistent workspace bar offers
 See [Onboarding](ONBOARDING.md) for the chooser and research flow. NDA management
 and publication-specific exports require a project adapter.
 
-## Start again after a computer restart
+## Running the server
 
-Start Zotero separately if you use its catalogue, then reopen a terminal and run:
+`lixity serve` starts a loopback-only HTTP server on `127.0.0.1:8765` (default port).
+Open `http://127.0.0.1:8765/` in your browser. The server is strictly local:
+no manuscript bytes leave your machine. All browser tabs share one running instance.
+
+```sh
+# Simplest: foreground, Ctrl+C to stop
+lixity serve /path/to/project --open        # --open launches the browser automatically
+
+# Open a project on a custom port
+lixity serve /path/to/project --port 9000
+
+# Start without preloading a project (open one from the dashboard wizard)
+lixity serve --no-project
+```
+
+If port 8765 is already occupied, Lixity prints a clear error with the kill command.
+Use `--port <PORT>` to start on a different port instead.
+
+### Managed background start (Linux and macOS)
+
+`scripts/lixity-start.sh` in the source checkout manages a PID-file-backed
+background instance, so you can start, stop and check status without keeping a
+terminal open:
+
+```sh
+scripts/lixity-start.sh start            # start in background
+scripts/lixity-start.sh status           # check if running
+scripts/lixity-start.sh restart          # stop then start
+scripts/lixity-start.sh stop             # stop (SIGTERM, SIGKILL after 5 s)
+
+# Custom port or project directory
+LIXITY_PORT=9000 LIXITY_DIR=/path/to/project scripts/lixity-start.sh start
+scripts/lixity-start.sh start --port 9000 --open /path/to/project
+```
+
+State lives in `${XDG_RUNTIME_DIR:-~/.local/share/lixity}/`: `lixity.pid` and
+`lixity.log` (rotated to `lixity.log.1` on every start). `status` verifies that
+the recorded PID is still a Lixity process, so a recycled PID is not mistaken
+for a running server.
+
+From an editable checkout you can also use `make`:
+
+```sh
+make serve                     # start background instance on default port
+make serve LIXITY_PORT=9000    # custom port
+make stop                      # stop the managed instance
+```
+
+### Managed background start (Windows)
+
+`scripts/lixity-start.ps1` provides the same lifecycle on Windows. It runs on
+Windows PowerShell 5.1 and PowerShell 7+:
+
+```powershell
+# Allow user-scope script execution (once per machine):
+Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
+
+.\scripts\lixity-start.ps1 start               # start in background
+.\scripts\lixity-start.ps1 status              # check if running
+.\scripts\lixity-start.ps1 restart             # stop then start
+.\scripts\lixity-start.ps1 stop                # stop the running process
+.\scripts\lixity-start.ps1 start -Port 9000    # custom port
+.\scripts\lixity-start.ps1 start -Open         # also open the browser
+```
+
+State lives in `%LOCALAPPDATA%\lixity\`. Windows offers no console-signal
+delivery for a detached process, so `stop` terminates the process rather than
+performing the interrupt-based shutdown that `lixity serve` does on Ctrl+C.
+
+### Auto-start on login — Linux (systemd user service)
+
+`scripts/lixity.service` starts Lixity automatically at login. Install it once
+per user account:
+
+```sh
+mkdir -p ~/.config/systemd/user
+cp scripts/lixity.service ~/.config/systemd/user/lixity.service
+
+# Edit ExecStart to point to your lixity binary (check: which lixity)
+nano ~/.config/systemd/user/lixity.service
+
+systemctl --user daemon-reload
+systemctl --user enable --now lixity    # enable + start immediately
+
+# Management
+systemctl --user status  lixity
+systemctl --user restart lixity
+journalctl --user -u lixity -f          # live log
+
+# To start even without an open login session:
+loginctl enable-linger $USER
+```
+
+The port comes from the unit's `Environment=LIXITY_PORT=` line and is referenced
+as `${LIXITY_PORT}`. systemd performs plain variable substitution only, so a
+shell-style `${LIXITY_PORT:-8765}` default is **not** expanded and would pass a
+non-numeric value to `--port`. To change the port, override both lines:
+
+```sh
+systemctl --user edit lixity
+# → add under [Service]:
+#   Environment=LIXITY_PORT=9000
+#   ExecStart=%h/.local/bin/lixity serve --host 127.0.0.1 --port ${LIXITY_PORT}
+```
+
+The unit deliberately omits `ProtectSystem=`/`ProtectHome=`. The server writes
+`exports/` and the research archive inside the manuscript project directory, so
+a read-only filesystem would break it for any project outside your home
+directory.
+
+### Auto-start on login — macOS (launchd agent)
+
+```sh
+# Edit the plist: set the correct path to your lixity binary (check: which lixity)
+# and optionally set a WorkingDirectory for your project.
+nano scripts/lixity.plist
+
+cp scripts/lixity.plist ~/Library/LaunchAgents/com.lixity.serve.plist
+launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.lixity.serve.plist
+
+# Management
+launchctl kickstart -k gui/$(id -u)/com.lixity.serve   # restart
+launchctl kill SIGTERM gui/$(id -u)/com.lixity.serve   # stop
+tail -f /tmp/lixity-stdout.log                        # live log
+
+# Disable auto-start
+launchctl bootout gui/$(id -u)/com.lixity.serve
+```
+
+### Auto-start on login — Windows (Task Scheduler)
+
+For a fully automated start on Windows login without a visible PowerShell window,
+register the script as a Task Scheduler task:
+
+```powershell
+$script    = Join-Path $PWD "scripts\lixity-start.ps1"
+$action    = New-ScheduledTaskAction -Execute "powershell.exe" `
+              -Argument "-NonInteractive -WindowStyle Hidden -File `"$script`" start"
+$trigger   = New-ScheduledTaskTrigger -AtLogOn -User $env:USERNAME
+$settings  = New-ScheduledTaskSettingsSet -ExecutionTimeLimit 0 -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1)
+Register-ScheduledTask -TaskName "Lixity Dashboard" `
+    -Action $action -Trigger $trigger -Settings $settings -RunLevel Limited
+```
+
+Manage it from Task Scheduler GUI (`taskschd.msc`) or PowerShell:
+
+```powershell
+Start-ScheduledTask  -TaskName "Lixity Dashboard"
+Stop-ScheduledTask   -TaskName "Lixity Dashboard"
+Unregister-ScheduledTask -TaskName "Lixity Dashboard" -Confirm:$false  # remove
+```
+
+### After a computer restart (quick reference)
+
+If you do not use one of the auto-start methods above, reopen a terminal and run:
 
 ```sh
 lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765
 ```
 
-Open `http://127.0.0.1:8765`. No reinstall, reimport or research initialization is
-needed for an existing project. Lixity does not install an automatic startup
-service. Use your original project folder to retain its research history.
-If you configured OCR through environment variables, provide the same worker
-path and timeout to this new server process; shell variables are not project
-settings. Retained evidence remains readable when Zotero is closed, but browsing
-its live library and capturing attachments requires Zotero to be running.
+Open `http://127.0.0.1:8765`. No reinstall or reimport is needed for an existing
+project. If you use OCR environment variables, supply the same values again;
+shell variables are not saved in project settings. Retained evidence is readable
+while Zotero is closed, but capturing new attachments requires Zotero running.
 
 ## Python API: project environment
 
@@ -147,7 +298,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v1.21.0"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v1.22.0"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -156,7 +307,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v1.21.0"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v1.22.0"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```

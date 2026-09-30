@@ -1,0 +1,71 @@
+# lixity.service — systemd user service unit for Lixity (Linux)
+#
+# Installation (once per user account):
+#
+#   mkdir -p ~/.config/systemd/user
+#   cp scripts/lixity.service ~/.config/systemd/user/lixity.service
+#   systemctl --user daemon-reload
+#   systemctl --user enable --now lixity
+#
+# Then manage with:
+#   systemctl --user start   lixity
+#   systemctl --user stop    lixity
+#   systemctl --user restart lixity
+#   systemctl --user status  lixity
+#   journalctl --user -u lixity -f       # live log
+#
+# Change the port without editing this file:
+#   systemctl --user edit lixity
+#   → override BOTH lines under [Service]:
+#       Environment=LIXITY_PORT=9000
+#       ExecStart=%h/.local/bin/lixity serve --host 127.0.0.1 --port ${LIXITY_PORT}
+#
+#   ${LIXITY_PORT} is plain systemd variable substitution.  The shell-style
+#   ${LIXITY_PORT:-8765} form is NOT supported: systemd passes it through
+#   verbatim, which would hand a non-numeric value to --port.
+#
+# To start automatically without an open login session:
+#   loginctl enable-linger $USER
+
+[Unit]
+Description=Lixity manuscript analysis dashboard
+Documentation=https://github.com/mfahsold/lixity
+# No network dependency is declared on purpose: the server binds loopback only.
+
+[Service]
+Type=simple
+
+# The port is expanded from this line, so it is the single source of truth.
+Environment=LIXITY_PORT=8765
+
+# Adjust ExecStart to match your installation (check: which lixity):
+#   uv tool install → %h/.local/bin/lixity
+#   project venv    → a path under your project directory
+ExecStart=%h/.local/bin/lixity serve --host 127.0.0.1 --port ${LIXITY_PORT}
+
+# Working directory: set to your manuscript project root, or leave unset to
+# start without a preloaded project and pick one in the dashboard wizard.
+# WorkingDirectory=%h/manuscripts/my-novel
+
+# Restart the server automatically if it crashes (not on a clean stop).
+Restart=on-failure
+RestartSec=3s
+
+# Make `systemctl stop` graceful: run_server() catches KeyboardInterrupt so it
+# closes the listening socket and reports the shutdown instead of being killed.
+KillSignal=SIGINT
+TimeoutStopSec=10s
+
+# Logs go to journald (readable with: journalctl --user -u lixity).
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=lixity
+
+# Hardening is deliberately minimal.  The server writes exports/ and the
+# research archive inside the manuscript project directory, so ProtectSystem=
+# and ProtectHome= would break it for any project outside the home directory.
+# NoNewPrivileges is safe and keeps.
+NoNewPrivileges=true
+
+[Install]
+WantedBy=default.target

@@ -1,0 +1,78 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN"
+  "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  lixity.plist — launchd user agent for Lixity (macOS)
+
+  Installation:
+    cp scripts/lixity.plist ~/Library/LaunchAgents/com.lixity.serve.plist
+    launchctl load ~/Library/LaunchAgents/com.lixity.serve.plist
+
+  Management:
+    launchctl start  com.lixity.serve
+    launchctl stop   com.lixity.serve
+    launchctl unload ~/Library/LaunchAgents/com.lixity.serve.plist   # disable autostart
+
+  Logs:
+    tail -f /tmp/lixity-stdout.log
+    tail -f /tmp/lixity-stderr.log
+
+  Edit the ProgramArguments array to change port or add a project path:
+    <string>- -port</string><string>9000</string>
+    <string>/Users/you/manuscripts/my-novel</string>
+-->
+<plist version="1.0">
+<dict>
+  <!-- Unique reverse-DNS label — must match the filename without .plist -->
+  <key>Label</key>
+  <string>com.lixity.serve</string>
+
+  <!-- Path to the lixity binary.
+       uv tool install   → /Users/<you>/.local/bin/lixity  (check: which lixity)
+       project venv      → /Users/<you>/manuscripts/my-novel/.venv/bin/lixity
+       Homebrew Python   → adjust accordingly                                   -->
+  <key>ProgramArguments</key>
+  <array>
+    <string>/Users/Shared/.local/bin/lixity</string>
+    <string>serve</string>
+    <string>--host</string>
+    <string>127.0.0.1</string>
+    <string>--port</string>
+    <string>8765</string>
+  </array>
+
+  <!-- Start automatically when the user logs in. -->
+  <key>RunAtLoad</key>
+  <true/>
+
+  <!-- Restart automatically if the process exits unexpectedly. -->
+  <key>KeepAlive</key>
+  <dict>
+    <key>SuccessfulExit</key>
+    <false/>
+  </dict>
+
+  <!-- Throttle rapid restart loops (seconds). -->
+  <key>ThrottleInterval</key>
+  <integer>5</integer>
+
+  <!-- Log files (plain text, readable without tools). -->
+  <key>StandardOutPath</key>
+  <string>/tmp/lixity-stdout.log</string>
+  <key>StandardErrorPath</key>
+  <string>/tmp/lixity-stderr.log</string>
+
+  <!-- Working directory: set to your project root if desired.
+  <key>WorkingDirectory</key>
+  <string>/Users/you/manuscripts/my-novel</string>
+  -->
+
+  <!-- Optional environment variables.
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>LIXITY_PORT</key>
+    <string>8765</string>
+  </dict>
+  -->
+</dict>
+</plist>

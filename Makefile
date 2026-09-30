@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint typecheck check build screenshots clean docs-check docs-sync
+.PHONY: help install install-dev test lint typecheck check build screenshots clean docs-check docs-sync serve stop
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -50,3 +50,26 @@ docs-sync: ## Synchronize documentation version references to match __version__
 clean: ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info src/*.egg-info .pytest_cache .mypy_cache \
 	  .ruff_cache htmlcov .coverage
+
+LIXITY_PORT ?= 8765
+LIXITY_LAUNCHER := $(wildcard scripts/lixity-start.sh)
+
+serve: ## Start the managed Lixity dashboard (default port 8765). Override with LIXITY_PORT.
+	@if [ -n "$(LIXITY_LAUNCHER)" ]; then \
+	    LIXITY_PORT=$(LIXITY_PORT) bash $(LIXITY_LAUNCHER) start; \
+	else \
+	    echo "[--]  scripts/lixity-start.sh missing; starting in the foreground instead."; \
+	    $(VENV)/bin/lixity serve --host 127.0.0.1 --port $(LIXITY_PORT); \
+	fi
+
+stop: ## Stop the managed Lixity dashboard instance.
+	@if [ -n "$(LIXITY_LAUNCHER)" ]; then \
+	    LIXITY_PORT=$(LIXITY_PORT) bash $(LIXITY_LAUNCHER) stop; \
+	else \
+	    pids=$$(lsof -ti :$(LIXITY_PORT) 2>/dev/null || true); \
+	    if [ -n "$$pids" ]; then \
+	        kill $$pids && echo "[OK]  Stopped PID(s) $$pids on port $(LIXITY_PORT)."; \
+	    else \
+	        echo "[--]  Nothing is listening on port $(LIXITY_PORT)."; \
+	    fi; \
+	fi
