@@ -5,9 +5,11 @@ import io
 import json
 import os
 import shutil
+import socket
 import tempfile
 import threading
 import unittest
+from contextlib import redirect_stderr
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
@@ -127,7 +129,7 @@ class TestLixityServer(unittest.TestCase):
             (root / "Zulu" / "nested.md").write_text("Nested.\n", encoding="utf-8")
             if os.name == "posix":
                 os.mkdir(os.fsencode(root) + b"/bad-\xff.md")
-            with patch("lixity.server.Path.home", return_value=root):
+            with patch("lixity.server.routes_project.Path.home", return_value=root):
                 status, body, _ = self.make_request("/api/project-paths")
             self.assertEqual(status, 200, body)
             result = json.loads(body)
@@ -177,7 +179,7 @@ class TestLixityServer(unittest.TestCase):
                 status, body, _ = self.make_request(f"/api/project-paths?path={quote(str(target), safe='')}")
                 self.assertEqual(status, expected, body)
                 self.assertFalse(json.loads(body)["ok"])
-            with patch("lixity.server.os.scandir", side_effect=PermissionError("denied")):
+            with patch("lixity.server.routes_project.os.scandir", side_effect=PermissionError("denied")):
                 status, body, _ = self.make_request(path)
             self.assertEqual(status, 403, body)
             self.assertFalse(json.loads(body)["ok"])
@@ -289,7 +291,7 @@ class TestLixityServer(unittest.TestCase):
                 LixityServerHandler.research_dir = str(project)
                 LixityServerHandler.source_input = str(manuscript)
                 LixityServerHandler.language = "de"
-                with patch("lixity.server.research_api.compare_source", return_value={"summary": {}}) as compare:
+                with patch("lixity.server.routes_research.research_api.compare_source", return_value={"summary": {}}) as compare:
                     status, body, _ = self.make_request(
                         "/api/research-compare", method="POST",
                         body=json.dumps({"source_id": "synthetic-source"}),
@@ -422,13 +424,35 @@ class TestLixityServer(unittest.TestCase):
         with self.assertRaises(ValueError):
             run_server(host="192.168.1.100")
 
+    def test_run_server_reports_occupied_port_before_setup(self):
+        """A busy port must abort with guidance instead of a bare OSError."""
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as blocker:
+            blocker.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+            blocker.bind(("127.0.0.1", 0))
+            blocker.listen(1)
+            busy_port = blocker.getsockname()[1]
+
+            # Prove the probe is what aborts: setup must not have run yet.
+            with patch("lixity.server.runtime.discover") as discover, \
+                 patch("lixity.server.runtime.os.makedirs") as makedirs, \
+                 self.assertRaises(SystemExit) as raised, \
+                 redirect_stderr(io.StringIO()) as stderr:
+                run_server(host="127.0.0.1", port=busy_port, no_project=True)
+
+            self.assertEqual(raised.exception.code, 1)
+            message = stderr.getvalue()
+            self.assertIn(f"Port {busy_port} is already in use", message)
+            self.assertIn("--port", message)
+            discover.assert_not_called()
+            makedirs.assert_not_called()
+
     def test_research_record_and_history_routes_forward_pinned_revision(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "research").mkdir()
             with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.research_api.get_record", return_value={"record": {"revision": 1}}) as get_record, \
-                 patch("lixity.server.research_api.record_history", return_value={"revisions": []}) as history:
+                 patch("lixity.server.routes_research.research_api.get_record", return_value={"record": {"revision": 1}}) as get_record, \
+                 patch("lixity.server.routes_research.research_api.record_history", return_value={"revisions": []}) as history:
                 status, body, _ = self.make_request(
                     "/api/research/record?kind=dossier&id=urn%3Auuid%3Adossier&revision=1"
                 )
@@ -462,7 +486,7 @@ class TestLixityServer(unittest.TestCase):
                 {**valid, "kind": ["claim"]},
             )
             with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.research_api.revise_record") as revise:
+                 patch("lixity.server.routes_research.research_api.revise_record") as revise:
                 for payload in invalid:
                     with self.subTest(payload=payload):
                         status, body, _ = self.make_request(
@@ -494,7 +518,7 @@ class TestLixityServer(unittest.TestCase):
                 "change_kind": "supersession", "reason": "Interpretation changed",
             }
             with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.research_api.revise_record", return_value={"record": {"revision": 3}}) as revise:
+                 patch("lixity.server.routes_research.research_api.revise_record", return_value={"record": {"revision": 3}}) as revise:
                 status, body, _ = self.make_request(
                     "/api/research-record-revise", method="POST", body=json.dumps(payload),
                     headers={"Content-Type": "application/json"},
@@ -508,7 +532,7 @@ class TestLixityServer(unittest.TestCase):
                     actor="local-author",
                 )
             with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.research_api.revise_record", side_effect=ResearchConflictError("stale")):
+                 patch("lixity.server.routes_research.research_api.revise_record", side_effect=ResearchConflictError("stale")):
                 status, body, _ = self.make_request(
                     "/api/research-record-revise", method="POST", body=json.dumps(payload),
                     headers={"Content-Type": "application/json"},
@@ -1229,7 +1253,7 @@ class TestLixityServer(unittest.TestCase):
                     (project / "manuscript.md").write_text("## Chapter\n\nSynthetic text.\n", encoding="utf-8")
                     (project / "lixity.toml").write_text(f'title = "{title}"\n', encoding="utf-8")
                 with (
-                    patch("lixity.server.ThreadingHTTPServer", side_effect=RuntimeError("stop before bind")),
+                    patch("lixity.server.runtime.ThreadingHTTPServer", side_effect=RuntimeError("stop before bind")),
                     self.assertRaisesRegex(RuntimeError, "stop before bind"),
                 ):
                     run_server(target_path=str(first), title="Direct override")
