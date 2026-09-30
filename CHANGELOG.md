@@ -49,6 +49,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   bare `OSError`.
 - `research search --strict` reports a missing index as such instead of blaming
   FTS5 availability.
+- The server lifecycle launchers detected readiness by grepping the log for the
+  startup banner, which a block-buffered daemon never writes; they now probe
+  the port.
 
 ### Removed
 - `layout.py` and `inline_markdown_to_html()`: unreachable code with no
