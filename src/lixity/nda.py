@@ -51,7 +51,7 @@ def _encrypt_bytes(key: bytes, plaintext: bytes) -> bytes:
 
         nonce = secrets.token_bytes(12)
         aesgcm = AESGCM(key)
-        ciphertext = aesgcm.encrypt(nonce, plaintext, None)
+        ciphertext: bytes = aesgcm.encrypt(nonce, plaintext, None)
         return b"gcm:" + nonce + ciphertext
     except ImportError:
         # Standard library authenticated keystream fallback
@@ -76,7 +76,8 @@ def _decrypt_bytes(key: bytes, payload: bytes) -> bytes:
         nonce, ciphertext = body[:12], body[12:]
         aesgcm = AESGCM(key)
         try:
-            return aesgcm.decrypt(nonce, ciphertext, None)
+            recovered: bytes = aesgcm.decrypt(nonce, ciphertext, None)
+            return recovered
         except InvalidTag as exc:
             raise ValueError("Authentication tag mismatch: incorrect passphrase or corrupted data") from exc
     elif payload.startswith(b"std:"):
