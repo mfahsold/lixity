@@ -164,7 +164,9 @@ class TestServerNdaIntegration(unittest.TestCase):
         status_exp, exp_data = self.make_post("/api/nda-export", {"id": rec_id})
         self.assertEqual(status_exp, 200)
         self.assertTrue(exp_data.get("ok"))
-        self.assertTrue((self.proj_nda / "nda" / "nda_1.pdf").is_file())
+        pdf = self.proj_nda / "nda" / "nda_1.pdf"
+        self.assertTrue(pdf.is_file())
+        self.assert_valid_pdf(pdf.read_bytes())
 
         # 6. Delete record
         status_del, del_data = self.make_post("/api/nda-delete", {"id": rec_id})
@@ -228,6 +230,43 @@ class TestServerNdaIntegration(unittest.TestCase):
         records = fresh_provider.list_records()
         self.assertEqual(len(records), 1)
         self.assertEqual(records[0]["name"], "Secret Recipient")
+
+
+    @staticmethod
+    def assert_valid_pdf(data: bytes) -> None:
+        """A PDF is only usable if its cross-reference table is actually correct.
+
+        A hardcoded xref looks plausible but breaks as soon as the byte length of
+        the preceding content changes, which is what a recipient-specific header
+        does on every single export.
+        """
+        assert data.startswith(b"%PDF-1.4"), "missing PDF header"
+        assert data.rstrip().endswith(b"%%EOF"), "missing EOF marker"
+
+        declared_start = int(data[data.rindex(b"startxref\n") + 10:].split()[0])
+        xref_at = data.rindex(b"\nxref\n") + 1
+        assert declared_start == xref_at, (
+            f"startxref {declared_start} does not point at the xref table at {xref_at}"
+        )
+
+        # "xref\n<first> <count>\n" followed by <count> fixed-width 20-byte entries.
+        start = xref_at + len(b"xref\n")
+        first_token = data[start:].split(b"\n", 1)[0]
+        first, _, count_token = first_token.partition(b" ")
+        first, count = int(first), int(count_token)
+        table = start + len(first_token) + 1
+        for index in range(first + 1, first + count):
+            entry = data[table + 20 * index: table + 20 * index + 20]
+            assert len(entry) == 20, "truncated xref entry"
+            offset = int(entry[:10])
+            assert data[offset:].startswith(f"{index} 0 obj".encode()), (
+                f"xref entry {index} points at byte {offset}, "
+                f"which holds {data[offset:offset + 12]!r}"
+            )
+
+        # Every page object must declare its font, otherwise viewers show a blank
+        # page and text extraction fails with "Unknown font tag".
+        assert b"/Font << /F1" in data, "no font resource declared"
 
 
 if __name__ == "__main__":

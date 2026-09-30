@@ -9,6 +9,7 @@ and passphrases are never emitted to logs.
 from __future__ import annotations
 
 import base64
+import contextlib
 import hashlib
 import hmac
 import json
@@ -182,7 +183,7 @@ class ProjectNdaProvider:
             tmp.write_text(json.dumps(envelope, indent=2), encoding="utf-8")
             os.replace(tmp, self.enc_file)
             if self.json_file.is_file():
-                with contextlib_suppress():
+                with contextlib.suppress(OSError):
                     self.json_file.unlink()
         else:
             tmp = self.nda_dir / ".records.json.tmp"
@@ -282,24 +283,64 @@ class ProjectNdaProvider:
             except (subprocess.SubprocessError, OSError):
                 pass
 
-        # Built-in synthetic PDF / text receipt generator
-        header = f"%PDF-1.4\n% Lixity NDA Agreement Document\n% Recipient ID: {record['id']}\n"
-        body = (
-            "1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n"
-            "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n"
-            "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R >>\nendobj\n"
-            "4 0 obj\n<< /Length 100 >>\nstream\nBT /F1 12 Tf 50 800 Td (Non-Disclosure Agreement) Tj ET\nendstream\nendobj\n"
-            "xref\n0 5\n0000000000 65535 f \n0000000010 00000 n \n0000000059 00000 n \n0000000116 00000 n \n0000000196 00000 n \n"
-            "trailer\n<< /Size 5 /Root 1 0 R >>\nstartxref\n350\n%%EOF\n"
-        )
-        target_path.write_bytes((header + body).encode("utf-8"))
+        # Built-in fallback: a real, minimal single-page PDF receipt.
+        target_path.write_bytes(_minimal_pdf(
+            "Non-Disclosure Agreement",
+            [
+                "Lixity NDA Agreement Receipt",
+                f"Recipient ID: {record['id']}",
+                f"Recipient: {record.get('name', '')}",
+                f"Contact: {record.get('contact', '')}",
+            ],
+        ))
         return pdf_name
 
 
-def contextlib_suppress() -> Any:
-    import contextlib
+def _pdf_escape(text: str) -> str:
+    """Escape a string for use inside a PDF literal string object."""
+    return text.replace("\\", r"\\").replace("(", r"\(").replace(")", r"\)")
 
-    return contextlib.suppress(OSError)
+
+def _minimal_pdf(title: str, lines: list[str]) -> bytes:
+    """Build a valid single-page PDF 1.4 document.
+
+    Object offsets and the ``startxref`` value are computed from the assembled
+    bytes. A hardcoded cross-reference table silently breaks as soon as the
+    content length changes.
+    """
+    content_ops = ["BT", "/F1 18 Tf", "56 780 Td", f"({_pdf_escape(title)}) Tj", "/F1 11 Tf"]
+    for line in lines:
+        if not line:
+            continue
+        content_ops += ["0 -18 Td", f"({_pdf_escape(line)}) Tj"]
+    content_ops.append("ET")
+    stream = "\n".join(content_ops).encode("latin-1", "replace")
+
+    objects = [
+        b"<< /Type /Catalog /Pages 2 0 R >>",
+        b"<< /Type /Pages /Kids [3 0 R] /Count 1 >>",
+        b"<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] "
+        b"/Resources << /Font << /F1 5 0 R >> >> /Contents 4 0 R >>",
+        b"<< /Length " + str(len(stream)).encode("ascii") + b" >>\nstream\n" + stream + b"\nendstream",
+        b"<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>",
+    ]
+
+    out = bytearray(b"%PDF-1.4\n% Lixity NDA receipt\n")
+    offsets = []
+    for number, body in enumerate(objects, start=1):
+        offsets.append(len(out))
+        out += f"{number} 0 obj\n".encode("ascii") + body + b"\nendobj\n"
+
+    xref_at = len(out)
+    out += f"xref\n0 {len(objects) + 1}\n".encode("ascii")
+    out += b"0000000000 65535 f \n"
+    for offset in offsets:
+        out += f"{offset:010d} 00000 n \n".encode("ascii")
+    out += (
+        f"trailer\n<< /Size {len(objects) + 1} /Root 1 0 R >>\n"
+        f"startxref\n{xref_at}\n%%EOF\n"
+    ).encode("ascii")
+    return bytes(out)
 
 
 def has_nda_support(project_root: str | Path | None) -> bool:
