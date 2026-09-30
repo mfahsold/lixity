@@ -76,6 +76,17 @@ recorded_pid() {
     tr -dc '0-9' < "$PID_FILE" 2>/dev/null || true
 }
 
+# True once the port accepts a TCP connection.
+#
+# Deliberately not a log grep: the server prints its banner with print(), and
+# stdout redirected to a file is block-buffered, so for a long-running process
+# the banner can sit in the buffer indefinitely. A log-based readiness check
+# therefore never succeeds. Connecting to the port is both direct and
+# buffering-independent.
+port_accepts_connections() {
+    (exec 3<>"/dev/tcp/${HOST}/${PORT}") 2>/dev/null && exec 3<&- && exec 3>&-
+}
+
 port_in_use() {
     if command -v ss &>/dev/null; then
         ss -tln 2>/dev/null | grep -qE "[:.]${PORT}[[:space:]]"
@@ -115,9 +126,9 @@ cmd_start() {
     PID=$!
     echo "$PID" > "$PID_FILE"
 
-    # Wait up to 5 s for the server to report itself ready.
-    for _ in $(seq 1 20); do
-        if grep -q "Lixity server running" "$LOG_FILE" 2>/dev/null; then
+    # Wait up to 15 s for the port to accept connections.
+    for _ in $(seq 1 60); do
+        if port_accepts_connections; then
             info "Lixity started (PID ${PID}) → http://${HOST}:${PORT}/"
             info "Log: ${LOG_FILE}"
             exit 0
@@ -131,9 +142,10 @@ cmd_start() {
         sleep 0.25
     done
 
-    # Still alive but never announced readiness — report it, but say so honestly.
-    info "Lixity process is running (PID ${PID}) but has not confirmed readiness."
-    info "Check: ${LOG_FILE}"
+    # Alive but not listening yet. Say so honestly instead of claiming success.
+    echo "[ERR] Lixity is running (PID ${PID}) but ${HOST}:${PORT} is not accepting" >&2
+    echo "       connections after 15 s. Check: ${LOG_FILE}" >&2
+    exit 1
 }
 
 cmd_stop() {

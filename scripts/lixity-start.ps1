@@ -56,6 +56,25 @@ function Get-LixityProcess {
     return $proc
 }
 
+function Test-PortAccepts {
+    <#
+      True once the port accepts a TCP connection.
+
+      Deliberately not a log grep. The server prints its banner with Write-Output,
+      and redirected stdout is block-buffered, so for a long-running process the
+      banner may sit in the buffer indefinitely and a log-based readiness check
+      would never succeed. Connecting is direct and buffering-independent.
+    #>
+    $client = New-Object System.Net.Sockets.TcpClient
+    try {
+        $task = $client.ConnectAsync($BindHost, $Port)
+        if (-not $task.Wait(500)) { return $false }
+        return $client.Connected
+    }
+    catch { return $false }
+    finally { $client.Close() }
+}
+
 function Test-PortInUse {
     # Get-NetTCPConnection ships with Windows 8/Server 2012 and newer.  If the
     # NetTCPIP module is unavailable, report "free" and let lixity report the
@@ -107,27 +126,25 @@ function Start-Lixity {
     if ($env:OS -eq "Windows_NT") { $startArgs["WindowStyle"] = "Hidden" }
     $proc = Start-Process @startArgs
 
-    # Give it up to 5 s to report readiness on stdout.
-    $deadline = (Get-Date).AddSeconds(5)
+    # Give it up to 15 s to accept connections.
+    $deadline = (Get-Date).AddSeconds(15)
     $ready = $false
     while ((Get-Date) -lt $deadline) {
         Start-Sleep -Milliseconds 250
-        if ((Test-Path $LogFile) -and
-            (Select-String -Path $LogFile -Pattern "Lixity server running" -Quiet)) {
-            $ready = $true
-            break
-        }
+        if (Test-PortAccepts) { $ready = $true; break }
         if ($proc.HasExited) { break }
     }
 
     $proc.Id | Set-Content $PidFile
 
-    if ($ready -or -not $proc.HasExited) {
+    if ($ready) {
         Write-Host "[OK]  Lixity started (PID $($proc.Id)) -> http://${BindHost}:${Port}/"
         Write-Host "      Log: $LogFile"
     } else {
         Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
-        throw "[ERR] Lixity failed to start (exit code $($proc.ExitCode)). Check: $ErrFile"
+        $why = if ($proc.HasExited) { "exited with code $($proc.ExitCode)" }
+                else { "did not start accepting connections on ${BindHost}:${Port}" }
+        throw "[ERR] Lixity $why. Check: $ErrFile"
     }
 }
 
