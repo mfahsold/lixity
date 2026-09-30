@@ -52,6 +52,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The server lifecycle launchers detected readiness by grepping the log for the
   startup banner, which a block-buffered daemon never writes; they now probe
   the port.
+- `nda` encrypt/decrypt return annotations no longer depend on the undeclared
+  optional `cryptography` package being installed, which broke strict mypy in
+  the configuration CI uses.
 
 ### Removed
 - `layout.py` and `inline_markdown_to_html()`: unreachable code with no
