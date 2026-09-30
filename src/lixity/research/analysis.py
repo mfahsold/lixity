@@ -7,7 +7,7 @@ from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Any, Literal, overload
+from typing import Any
 
 from .._version import __version__
 from ..analyzer import CorpusAnalyzer
@@ -219,7 +219,6 @@ def analyze(
     return SourceAnalysisResult(report_dict, dashboard_html)
 
 
-@overload
 def compare_source_to_manuscript(
     project: str | Path,
     source_id: str,
@@ -228,37 +227,12 @@ def compare_source_to_manuscript(
     version_id: str | None = None,
     language: str | None = None,
     top_n: int = 20,
-    format: Literal["json"] = "json",
-) -> dict[str, Any]: ...
-
-
-@overload
-def compare_source_to_manuscript(
-    project: str | Path,
-    source_id: str,
-    manuscript: str | Path,
-    *,
-    version_id: str | None = None,
-    language: str | None = None,
-    top_n: int = 20,
-    format: Literal["md"],
-) -> str: ...
-
-
-def compare_source_to_manuscript(
-    project: str | Path,
-    source_id: str,
-    manuscript: str | Path,
-    *,
-    version_id: str | None = None,
-    language: str | None = None,
-    top_n: int = 20,
-    format: Literal["json", "md"] = "json",
-) -> dict[str, Any] | str:
+) -> dict[str, Any]:
     """Compare verified research source against manuscript text or file.
 
     Evaluates lexical overlap, Dunning's G² keyness differential, stylistic/register
-    contrast, and per-chapter evidence grounding.
+    contrast, and per-chapter evidence grounding. Returns the plain result
+    dictionary; use `format_compare_markdown` to render it.
     """
     if top_n < 1 or top_n > 100:
         raise ValueError("top_n must be between 1 and 100")
@@ -526,8 +500,6 @@ def compare_source_to_manuscript(
         "chapter_grounding": chapter_grounding,
     }
 
-    if format == "md":
-        return format_compare_markdown(result)
     return result
 
 

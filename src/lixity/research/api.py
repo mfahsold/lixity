@@ -4,6 +4,7 @@ import csv
 import io
 import os
 import re
+import warnings
 from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
@@ -327,28 +328,22 @@ def compare_source(
     top_n: int = 20,
     format: Literal["json", "md"] = "json",
 ) -> dict[str, Any] | str:
-    """Compare verified research source against manuscript text or file."""
-    from .analysis import compare_source_to_manuscript
+    """Compare verified research source against manuscript text or file.
 
-    if format == "md":
-        return compare_source_to_manuscript(
-            project,
-            source_id,
-            manuscript,
-            version_id=version_id,
-            language=language,
-            top_n=top_n,
-            format="md",
-        )
-    return compare_source_to_manuscript(
+    Returns the comparison dictionary, or its Markdown rendering when
+    ``format="md"``. Use `compare_source_to_manuscript` for the data alone.
+    """
+    from .analysis import compare_source_to_manuscript, format_compare_markdown
+
+    result = compare_source_to_manuscript(
         project,
         source_id,
         manuscript,
         version_id=version_id,
         language=language,
         top_n=top_n,
-        format="json",
     )
+    return format_compare_markdown(result) if format == "md" else result
 
 
 def withdraw(
@@ -1157,12 +1152,36 @@ def list_decisions(project: str | Path) -> dict[str, Any]:
     }
 
 
+_FORMAT_SENTINEL = object()
+
+
 def claim_matrix(
     project: str | Path,
     *,
-    format: Literal["json", "md", "csv"] = "json",
+    format: Literal["json", "md", "csv"] | object = _FORMAT_SENTINEL,
 ) -> dict[str, Any] | str:
-    """Generate a structured claim-evidence-decision matrix."""
+    """Return the claim-evidence-decision matrix.
+
+    Returns plain data. For rendered output call `render_claim_matrix`, or
+    `claim_matrix_format` to get data and rendering in one call.
+
+    Deprecated: passing ``format=``. It is accepted for two releases and will be
+    removed in v1.23.0; use `render_claim_matrix` instead.
+    """
+    if format is not _FORMAT_SENTINEL:
+        warnings.warn(
+            "claim_matrix(format=...) is deprecated and will be removed in v1.23.0; "
+            "call claim_matrix() for data and render_claim_matrix(data, format=...) "
+            "for rendered output",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        return claim_matrix_format(project, format=format)  # type: ignore[arg-type]
+    return claim_matrix_data(project)
+
+
+def claim_matrix_data(project: str | Path) -> dict[str, Any]:
+    """Compute the claim-evidence-decision matrix as plain data."""
     repository = Repository(project)
     snapshot = repository.snapshot()
 
@@ -1297,15 +1316,24 @@ def claim_matrix(
         "total_decisions": total_decisions_count,
     }
 
-    if format == "json":
-        return {
-            "schema_version": "research-claim-matrix-local/1",
-            "project_id": snapshot.project.id,
-            "project_title": snapshot.project.title,
-            "summary": summary,
-            "claims": matrix_claims,
-            "unlinked_decisions": unlinked_decisions,
-        }
+    return {
+        "schema_version": "research-claim-matrix-local/1",
+        "project_id": snapshot.project.id,
+        "project_title": snapshot.project.title,
+        "summary": summary,
+        "claims": matrix_claims,
+        "unlinked_decisions": unlinked_decisions,
+    }
+
+
+def render_claim_matrix(
+    data: dict[str, Any], *, format: Literal["md", "csv"] = "md"
+) -> str:
+    """Render a `claim_matrix` result as Markdown or CSV."""
+    project_id = data.get("project_id", "")
+    project_title = data.get("project_title", "")
+    summary = data.get("summary", {})
+    matrix_claims = data.get("claims", [])
 
     if format == "csv":
         out = io.StringIO()
@@ -1345,11 +1373,10 @@ def claim_matrix(
                     ])
         return out.getvalue()
 
-    # format == "md"
     lines = [
-        f"# Research Claim-Evidence Matrix: {snapshot.project.title}",
+        f"# Research Claim-Evidence Matrix: {project_title}",
         "",
-        f"- **Project ID:** `{snapshot.project.id}`",
+        f"- **Project ID:** `{project_id}`",
         f"- **Total Claims:** {summary['total_claims']}",
         f"- **Supported:** {summary['supported_claims']} · **Contradicted:** {summary['contradicted_claims']} · **Unverified:** {summary['unverified_claims']}",
         f"- **Deliberate Deviations from Fact:** {summary['deviation_claims']}",
@@ -1381,3 +1408,10 @@ def claim_matrix(
 
     return "\n".join(lines) + "\n"
 
+
+def claim_matrix_format(
+    project: str | Path, *, format: Literal["json", "md", "csv"] = "json"
+) -> dict[str, Any] | str:
+    """Data and rendering in one call, selected by `format`."""
+    data = claim_matrix_data(project)
+    return data if format == "json" else render_claim_matrix(data, format=format)

@@ -123,6 +123,12 @@ def search(
             reindex(repository)
             return search(repository, query, limit=limit, scope=scope, ensure_fresh=False, refreshed=True)
 
+    if not path.is_file():
+        # Distinguish "never built" from "unusable". Without this the missing
+        # file surfaces as sqlite's "unable to open database file", which the
+        # handler below reports as an FTS5 problem the user cannot act on.
+        raise ResearchError("Search index not built; run research reindex")
+
     terms = re.findall(r"[^\W_]+", query, re.UNICODE)
     expression = " AND ".join('"' + term + '"' for term in terms)
     hits: list[dict[str, Any]] = []

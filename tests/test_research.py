@@ -640,17 +640,39 @@ class TestResearch(unittest.TestCase):
         self.assertEqual(d_info_redec_cleared["decision_reviews"][0]["status"], "current")
 
     def test_claim_matrix_json_md_csv(self):
-        # 1. Empty matrix
-        empty_json = api.claim_matrix(self.project, format="json")
-        self.assertEqual(empty_json["summary"]["total_claims"], 0)
-        self.assertEqual(empty_json["claims"], [])
+        # 1. Empty matrix. claim_matrix() returns data; render_claim_matrix() renders it.
+        empty_data = api.claim_matrix_data(self.project)
+        self.assertEqual(empty_data["summary"]["total_claims"], 0)
+        self.assertEqual(empty_data["claims"], [])
 
-        empty_md = api.claim_matrix(self.project, format="md")
+        empty_md = api.render_claim_matrix(empty_data, format="md")
         self.assertIn("# Research Claim-Evidence Matrix: Research", empty_md)
         self.assertIn("*(no claims recorded)*", empty_md)
 
-        empty_csv = api.claim_matrix(self.project, format="csv")
+        empty_csv = api.render_claim_matrix(empty_data, format="csv")
         self.assertIn("claim_id,title,confidence", empty_csv)
+
+        # The combined entry point delegates to both.
+        self.assertEqual(api.claim_matrix_format(self.project, format="json"), empty_data)
+        self.assertEqual(api.claim_matrix_format(self.project, format="md"), empty_md)
+        self.assertEqual(api.claim_matrix_format(self.project, format="csv"), empty_csv)
+
+    def test_claim_matrix_format_argument_is_deprecated(self):
+        """v1.21.0 shipped claim_matrix(format=...); it warns and is removed in v1.23.0."""
+        # The default call must stay warning-free: the suite runs under -W error.
+        self.assertEqual(api.claim_matrix(self.project), api.claim_matrix_data(self.project))
+
+        for fmt in ("json", "md", "csv"):
+            with self.assertWarns(DeprecationWarning) as caught:
+                legacy = api.claim_matrix(self.project, format=fmt)
+            self.assertIn("v1.23.0", str(caught.warning))
+            self.assertEqual(legacy, api.claim_matrix_format(self.project, format=fmt))
+
+    def test_claim_matrix_data_and_renderer_agree(self):
+        data = api.claim_matrix_data(self.project)
+        self.assertIsInstance(data, dict)
+        self.assertIsInstance(api.render_claim_matrix(data, format="md"), str)
+        self.assertIsInstance(api.render_claim_matrix(data, format="csv"), str)
 
         # 2. Add source, claim, evidence link, and decision
         ingested = self.ingest()
@@ -683,7 +705,7 @@ class TestResearch(unittest.TestCase):
         )
 
         # 3. Verify JSON output
-        matrix = api.claim_matrix(self.project, format="json")
+        matrix = api.claim_matrix_data(self.project)
         self.assertEqual(matrix["schema_version"], "research-claim-matrix-local/1")
         self.assertEqual(matrix["summary"]["total_claims"], 1)
         self.assertEqual(matrix["summary"]["supported_claims"], 1)
@@ -698,13 +720,13 @@ class TestResearch(unittest.TestCase):
         self.assertEqual(len(c_entry["decisions"]), 1)
 
         # 4. Verify Markdown output
-        matrix_md = api.claim_matrix(self.project, format="md")
+        matrix_md = api.render_claim_matrix(matrix, format="md")
         self.assertIn("Meeting 1912", matrix_md)
         self.assertIn("[DEVIATION]", matrix_md)
         self.assertIn("+1 / -0", matrix_md)
 
         # 5. Verify CSV output
-        matrix_csv = api.claim_matrix(self.project, format="csv")
+        matrix_csv = api.render_claim_matrix(matrix, format="csv")
         self.assertIn("Meeting 1912", matrix_csv)
         self.assertIn("Shift to 1914", matrix_csv)
         self.assertIn("yes", matrix_csv)

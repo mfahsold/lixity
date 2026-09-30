@@ -566,20 +566,19 @@ def run(args: argparse.Namespace) -> int:
         elif command == "ocr-status":
             result = api.ocr_status(getattr(args, "worker_cmd", None), probe=getattr(args, "probe", False))
         elif command == "matrix":
-            raw = api.claim_matrix(args.project, format=args.format)
+            matrix = api.claim_matrix_data(args.project)
+            rendered = None if args.format == "json" else api.render_claim_matrix(matrix, format=args.format)
+            payload_text = rendered if rendered is not None else json.dumps(matrix, ensure_ascii=False, indent=2)
             if getattr(args, "output", None):
                 out_path = Path(args.output).expanduser().resolve()
                 out_path.parent.mkdir(parents=True, exist_ok=True)
-                if isinstance(raw, str):
-                    out_path.write_text(raw, encoding="utf-8")
-                else:
-                    out_path.write_text(json.dumps(raw, ensure_ascii=False, indent=2), encoding="utf-8")
+                out_path.write_text(payload_text, encoding="utf-8")
                 result = {"ok": True, "output": str(out_path), "format": args.format}
+            elif rendered is not None:
+                print(rendered, end="")
+                return 0
             else:
-                if isinstance(raw, str):
-                    print(raw, end="")
-                    return 0
-                result = raw
+                result = matrix
         else:
             result = api.audit(args.project)
         print(json.dumps(result, ensure_ascii=False, indent=2))
