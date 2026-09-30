@@ -17,6 +17,7 @@ from lixity.research.ocr import (
     MODEL_SNAPSHOT,
     PageImage,
     extract_pdf_document,
+    extract_pdf_with_worker,
     get_ocr_diagnostics,
     get_pdf_page_count,
     probe_ocr_worker,
@@ -328,6 +329,33 @@ print(json.dumps(resp))
         pdf_path.write_bytes(pdf_bytes)
         count = get_pdf_page_count(pdf_path)
         self.assertEqual(count, 1)
+
+    def test_get_pdf_page_count_returns_none_when_undeterminable(self) -> None:
+        """An unmeasurable page tree must report unknown, never guess 1.
+
+        A guessed 1 makes the native extractor capture exactly one page of a
+        multi-page document and still report success.
+        """
+        unreadable = self.root / "compressed-tree.pdf"
+        unreadable.write_bytes(b"%PDF-1.4\n1 0 obj << /Type /Catalog >>\nendobj\ntrailer\n%%EOF\n")
+        with patch("lixity.research.ocr.shutil.which", return_value=None):
+            self.assertIsNone(get_pdf_page_count(unreadable))
+
+    def test_native_extraction_refuses_to_capture_partial_pdf(self) -> None:
+        """Without a determinable page count the capture must fail, not truncate."""
+        unreadable = self.root / "no-page-tree.pdf"
+        unreadable.write_bytes(b"%PDF-1.4\n1 0 obj << /Type /Catalog >>\nendobj\ntrailer\n%%EOF\n")
+        with (
+            patch("lixity.research.ocr.render_pdf_pages", return_value=[]),
+            patch("lixity.research.ocr.shutil.which", return_value="/usr/bin/pdftotext"),
+            self.assertRaises(ResearchError) as raised,
+        ):
+            extract_pdf_with_worker(unreadable, [], allow_fallback=True)
+        message = str(raised.exception)
+        self.assertIn("Cannot determine the page count", message)
+        self.assertIn("part of it", message)
+        # The message has to say what to do, not only what went wrong.
+        self.assertIn("Install Poppler", message)
 
     def test_probe_ocr_worker_success_and_failure(self) -> None:
         # 1. Non-executable worker

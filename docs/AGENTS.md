@@ -504,6 +504,15 @@ them into logs, issue trackers or any external system. Encrypted stores live
 under `<project>/nda/` and are portable with the project; a project without a
 passphrase keeps its records in the unencrypted structured store.
 
+**Project-supplied extensions degrade loudly, never silently.** A project may
+supply `nda_provider.py` (a `Provider` or `NdaProvider` class) and
+`scripts/export_nda.py`. If either fails to load or run, Lixity falls back to
+the built-in implementation and emits a `UserWarning` naming the file and the
+failure. An adapter that raises *any* exception at import time is contained
+rather than propagated -- `KeyboardInterrupt` and `SystemExit` still propagate.
+Treat a warning here as a real defect in the project extension: without it, a
+broken adapter would silently disable the project's custom NDA behaviour.
+
 Native-revision endpoints (since v1.17.0) reuse that explicit workspace:
 
 - `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link` and `decision`.

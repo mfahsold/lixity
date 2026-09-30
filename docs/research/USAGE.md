@@ -693,6 +693,12 @@ integrity, GPU resources, worker connectivity or recognition accuracy. The
 returned model/recipe identifiers are configuration constants, not attestations.
 `ready` therefore means configured, not an end-to-end health check; use `--probe` to verify live execution.
 
+Native extraction never captures a partial document. If Poppler's `pdfinfo` is
+absent and the page tree is not readable in the raw file -- typically because a
+modern producer stored it in a compressed object stream -- the capture is
+refused with an explicit error rather than silently retaining only the first
+page. Install Poppler or configure `LIXITY_OCR_WORKER` to ingest such a file.
+
 When ingesting PDFs with a configured OCR worker, authors can pass `--fallback` (or set `LIXITY_OCR_FALLBACK=1`) to allow automatic fallback to Poppler's native `pdftotext` extraction if the OCR worker times out or fails (e.g. GPU out of memory), recording a structured warning in the extraction result. By default (`--fallback` omitted), worker failures strictly reject the capture to prevent silent degradation.
 
 ### Worker interface

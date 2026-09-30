@@ -97,8 +97,17 @@ def render_pdf_pages(pdf_path: Path) -> list[PageImage]:
         return pages
 
 
-def get_pdf_page_count(pdf_path: Path) -> int:
-    """Determine the physical page count of a PDF file using pdfinfo or structure inspection."""
+def get_pdf_page_count(pdf_path: Path) -> int | None:
+    """Determine the physical page count of a PDF, or ``None`` if undeterminable.
+
+    Tries Poppler's ``pdfinfo`` first, then a raw scan for the page-tree
+    ``/Count``. The raw scan cannot see a page tree held in a compressed
+    object stream, which is how most modern producers emit it.
+
+    Returning ``None`` rather than a guess matters: a caller that treats this
+    as a page count will extract only that many pages, so defaulting to 1
+    silently truncates a multi-page document while still succeeding.
+    """
     pdfinfo = shutil.which("pdfinfo")
     if pdfinfo:
         try:
@@ -120,7 +129,7 @@ def get_pdf_page_count(pdf_path: Path) -> int:
     except OSError:
         pass
 
-    return 1
+    return None
 
 
 def worker_timeout() -> int:
@@ -220,6 +229,14 @@ def extract_pdf_with_worker(
     if pdftotext:
         blocks = []
         page_count = len(pages) if pages else get_pdf_page_count(pdf_path)
+        if page_count is None:
+            raise ResearchError(
+                "Cannot determine the page count of this PDF, so the native extractor "
+                "would capture only part of it. Poppler's pdfinfo is not available and "
+                "the page tree is not readable in the raw file (it is probably in a "
+                "compressed object stream). Install Poppler, or configure "
+                "LIXITY_OCR_WORKER with --allow-retention to use an OCR worker instead."
+            )
         for p_idx in range(1, page_count + 1):
             cmd_args = [pdftotext, "-f", str(p_idx), "-l", str(p_idx), str(pdf_path), "-"]
             try:

@@ -15,6 +15,7 @@ import hmac
 import json
 import os
 import secrets
+import warnings
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Protocol
@@ -280,8 +281,15 @@ class ProjectNdaProvider:
                     cmd, cwd=str(self.project_root), check=True, capture_output=True, timeout=10
                 )
                 return pdf_name
-            except (subprocess.SubprocessError, OSError):
-                pass
+            except (subprocess.SubprocessError, OSError) as exc:
+                # The built-in receipt is a working substitute, but the project
+                # author cannot debug a script they are never told has failed.
+                warnings.warn(
+                    f"Project export_nda.py failed ({exc.__class__.__name__}); "
+                    f"generated the built-in NDA receipt instead. The project's own "
+                    f"template and fields were not used.",
+                    stacklevel=2,
+                )
 
         # Built-in fallback: a real, minimal single-page PDF receipt.
         target_path.write_bytes(_minimal_pdf(
@@ -386,7 +394,18 @@ def get_project_nda_provider(project_root: str | Path | None) -> NdaProvider | N
                 provider_cls = getattr(mod, "Provider", getattr(mod, "NdaProvider", None))
                 if provider_cls:
                     return provider_cls(root)  # type: ignore[no-any-return]
-        except (ImportError, AttributeError, OSError, TypeError):
-            # Fall back to standard ProjectNdaProvider if custom adapter fails to load
-            pass
+        except Exception as exc:  # noqa: BLE001 - plugin boundary, see comment
+            # This is a plugin boundary: the module is project-supplied code and
+            # anything it raises at import time (a typo, a missing dependency, a
+            # statement at module level) must not take down NDA management. The
+            # previous narrower tuple let RuntimeError and SyntaxError escape,
+            # so a broken adapter disabled the feature instead of degrading.
+            # BaseException is deliberately not caught: KeyboardInterrupt and
+            # SystemExit must still propagate.
+            warnings.warn(
+                f"Project nda_provider.py failed to load ({exc.__class__.__name__}: {exc}); "
+                f"using the built-in ProjectNdaProvider instead. The project's custom "
+                f"NDA behaviour is not active.",
+                stacklevel=2,
+            )
     return ProjectNdaProvider(root)

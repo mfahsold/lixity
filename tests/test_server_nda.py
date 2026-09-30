@@ -8,7 +8,7 @@ import unittest
 from http.server import ThreadingHTTPServer
 from pathlib import Path
 
-from lixity.nda import ProjectNdaProvider
+from lixity.nda import ProjectNdaProvider, get_project_nda_provider
 from lixity.server import LixityServerHandler
 from lixity.status import NdaStatus
 
@@ -267,6 +267,41 @@ class TestServerNdaIntegration(unittest.TestCase):
         # Every page object must declare its font, otherwise viewers show a blank
         # page and text extraction fails with "Unknown font tag".
         assert b"/Font << /F1" in data, "no font resource declared"
+
+
+class ProjectAdapterFallbackTest(unittest.TestCase):
+    """A broken project-owned extension must announce itself, not fail silently."""
+
+    def test_broken_nda_provider_warns_and_falls_back(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "proj"
+            (project / "nda").mkdir(parents=True)
+            (project / "nda_provider.py").write_text(
+                "raise RuntimeError('adapter is broken')\n", encoding="utf-8"
+            )
+            with self.assertWarns(UserWarning) as caught:
+                provider = get_project_nda_provider(project)
+            self.assertIsInstance(provider, ProjectNdaProvider)
+            message = str(caught.warning)
+            self.assertIn("nda_provider.py", message)
+            self.assertIn("not active", message)
+
+    def test_working_nda_provider_does_not_warn(self) -> None:
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "proj"
+            (project / "nda").mkdir(parents=True)
+            (project / "nda_provider.py").write_text(
+                "from lixity.nda import ProjectNdaProvider\n"
+                "class Provider(ProjectNdaProvider):\n    pass\n",
+                encoding="utf-8",
+            )
+            import warnings as _warnings
+
+            with _warnings.catch_warnings(record=True) as caught:
+                _warnings.simplefilter("always")
+                provider = get_project_nda_provider(project)
+            self.assertEqual([w for w in caught if "nda_provider.py" in str(w.message)], [])
+            self.assertTrue(provider.is_available())
 
 
 if __name__ == "__main__":
