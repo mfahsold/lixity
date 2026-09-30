@@ -1,10 +1,17 @@
 """Regression checks for public documentation rendering."""
 
 import re
+import sys
 import unittest
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
+
+# scripts/ holds the documentation maintenance entrypoint. Set up once here
+# rather than inside a single test: doing it in a test body made the import work
+# only for whichever tests happened to run after it, so a test ordered earlier
+# failed on ModuleNotFoundError.
+sys.path.insert(0, str(ROOT / "scripts"))
 
 
 class TestDocumentation(unittest.TestCase):
@@ -26,8 +33,6 @@ class TestDocumentation(unittest.TestCase):
                 self.assertIn("commercial license", content)
 
     def test_documentation_version_consistency(self):
-        import sys
-        sys.path.insert(0, str(ROOT / "scripts"))
         from sync_docs import check_or_sync_files, get_version
 
         version = get_version()
@@ -36,6 +41,42 @@ class TestDocumentation(unittest.TestCase):
             drift, [],
             f"Documentation version drift detected for v{version}. Run 'python scripts/sync_docs.py' to update."
         )
+
+    def test_current_version_claims_match_single_source_of_truth(self):
+        """Currency claims must name the current release.
+
+        check_or_sync_files only reports whether its own pinned-string list has
+        anything left to rewrite, so it is silent about any version claim in
+        wording it does not enumerate. That blind spot is how the published
+        site came to advertise v1.20.0 while both the CLI check and the test
+        suite reported success. find_version_drift is the invariant that
+        covers the rest.
+        """
+        from sync_docs import find_version_drift, get_version
+
+        self.assertEqual(find_version_drift(get_version()), [])
+
+    def test_version_drift_check_reports_findings_when_claims_are_stale(self):
+        """Prove the invariant detects stale claims instead of always passing.
+
+        Runs the same scan with a deliberately wrong Single-Source-of-Truth
+        version. Every current-version claim in the tree then disagrees and
+        must be reported, which is the condition the old check could not see.
+        """
+        from sync_docs import find_version_drift, get_version
+
+        current = get_version()
+        findings = find_version_drift("0.0.1-not-a-version")
+        self.assertTrue(
+            findings,
+            "find_version_drift reported nothing against a wrong SSOT version, "
+            "so it cannot be relied on to catch stale claims",
+        )
+        # Findings must be actionable: file, line, and the expected version.
+        for finding in findings:
+            self.assertRegex(finding, r"\S+:\d+: .*v0\.0\.1-not-a-version")
+        # Against the real version the same scan is clean.
+        self.assertEqual(find_version_drift(current), [])
 
     def test_changelog_matches_current_version(self):
         from lixity import __version__

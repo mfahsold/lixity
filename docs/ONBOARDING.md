@@ -2,7 +2,7 @@
 
 Lixity analyzes a Markdown manuscript on your computer. Its metrics describe
 patterns to inspect; they do not rate literary quality or prescribe edits. The
-research workspace is **experimental in `v1.20.0`**. This release includes
+research workspace is **experimental** (added in `v1.20.0`). This release includes
 batch ingestion, section-bounded reading, auto-fresh query indexing, decision-dossier
 review tracking, Zotero integration, and native project NDA management.
 

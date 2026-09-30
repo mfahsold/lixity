@@ -62,7 +62,7 @@ Release v1.20.0 adds multi-file batch ingestion (research-batch-ingest-local/1)
 with live heartbeats (--progress), auto-fresh search index caching (rebuilding
 transparently unless --strict is passed), bounded dossier reads (--section, --summary),
 and decision-dossier review tracking (marking review_needed: true when linked decisions
-are recorded or revised). v1.20.0 also adds native project NDA encryption and tracking
+are recorded or revised). Release v1.20.0 also adds native project NDA encryption and tracking
 under [nda] in lixity.toml (AES-256-GCM via ProjectNdaProvider and lixity build).
 See [Unlimited-OCR integration boundaries](https://mfahsold.github.io/lixity/research/OCR_INTEGRATION.md)
 for the source-grounded runtime comparison and acceptance criteria.
@@ -96,7 +96,7 @@ new server process. Restart running servers after a package update.
 - [Installation](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md): prerequisites, development vs release, Windows, updates, first dashboard, server lifecycle and port conflicts, managed background start, systemd/launchd/Task Scheduler auto-start, troubleshooting
 
 - Current release: 1.22.0; release tag: v1.22.0.
-- Research workspace (v1.20.0): evidence-based `lixity research` (explicit-project
+- Research workspace (since v1.20.0): evidence-based `lixity research` (explicit-project
   UTF-8 and PDF archives, exact citations, source tagging, dossiers, controlled withdrawal/purge,
   claims, passage evidence links, authorial decisions with native immutable revisions,
   batch ingest, section reads, auto-fresh indexing, review tracking,
