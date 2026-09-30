@@ -23,6 +23,13 @@ from lixity.server import (
 )
 
 
+def _free_port() -> int:
+    """Reserve and release a port so the server's pre-bind probe finds it free."""
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+        probe.bind(("127.0.0.1", 0))
+        return probe.getsockname()[1]
+
+
 class TestLixityServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -1256,7 +1263,10 @@ class TestLixityServer(unittest.TestCase):
                     patch("lixity.server.runtime.ThreadingHTTPServer", side_effect=RuntimeError("stop before bind")),
                     self.assertRaisesRegex(RuntimeError, "stop before bind"),
                 ):
-                    run_server(target_path=str(first), title="Direct override")
+                    # An explicit free port: run_server now probes the port before
+                    # setup, so relying on the default 8765 being unused makes the
+                    # test depend on whatever else is listening on this machine.
+                    run_server(target_path=str(first), title="Direct override", port=_free_port())
                 self.assertEqual(LixityServerHandler.project_open_overrides, {"title": "Direct override"})
                 status, body, _ = self.make_request(
                     "/api/project-open", method="POST",
