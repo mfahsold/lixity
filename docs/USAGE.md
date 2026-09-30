@@ -746,6 +746,14 @@ workspace discovery starts in the current directory. The configured `title`
 is used by both `dashboard` and `build`; artifact filenames still follow the
 manuscript filename. An explicit `--language` overrides the project language.
 
+A `lixity.toml`, `pyproject.toml` or `~/.config/lixity.toml` that exists but
+cannot be read or parsed emits a `UserWarning` naming the file, and its settings
+are ignored in favour of code defaults. No config file at all is silent. The
+distinction matters: a malformed file previously reverted the run to default
+language and thresholds while still exiting `0`, so the JSON looked authoritative
+and matched nothing the project had asked for. After any such warning, re-read
+`meta.language`, `meta.z_mild` and `meta.fdr_q` to confirm what actually applied.
+
 | Field | Default | Purpose |
 | :--- | :--- | :--- |
 | `language` | `de` | Language profile key (`auto` when set by the CLI). |

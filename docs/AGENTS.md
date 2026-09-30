@@ -62,7 +62,12 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
   always re-read active values from `passport.meta` (`z_mild`, `z_strong`,
   `fdr_q`, `fdr_method`, `dim_score_threshold`), never assume the defaults.
   Project-wide defaults: `[tool.lixity]` / `lixity.toml` / `~/.config/lixity.toml`
-  (CLI flag > UI session > project > user > code).
+  (CLI flag > UI session > project > user > code). A config file that is present
+  but unreadable or malformed emits a `UserWarning` naming the file; its settings
+  are then ignored and code defaults apply. Absent is silent, unreadable is not —
+  otherwise a typo silently changes the reported language and thresholds while
+  the command still exits `0`. Treat that warning as a configuration defect and
+  re-read `meta` to confirm which settings actually applied.
 - Exit codes: `0` success, `1` file/processing error, `2` usage error (argparse).
   Errors go to stderr as `[error] …` lines (`LIXITY_LANG=de` switches the
   user-facing messages to German); stdout carries only the payload.

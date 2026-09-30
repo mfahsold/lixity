@@ -11,6 +11,7 @@ forward-compatible configs stay loadable.
 from __future__ import annotations
 
 import os
+import warnings
 from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
@@ -50,7 +51,23 @@ def _load_toml(path: Path) -> dict[str, Any]:
     try:
         with path.open("rb") as fh:
             data = tomllib.load(fh)
-    except (OSError, ValueError):
+    except OSError as exc:
+        warnings.warn(
+            f"Could not read {path}: {exc}. Its settings are ignored.",
+            stacklevel=2,
+        )
+        return {}
+    except tomllib.TOMLDecodeError as exc:
+        # A malformed config silently reverts language, thresholds and corpus
+        # patterns to defaults, so the analysis runs and reports numbers that
+        # do not match what the project asked for. Unreadable is not the same
+        # as absent, and only one of the two may be quiet.
+        warnings.warn(
+            f"Could not parse {path}: {exc}. Its settings are ignored and code "
+            f"defaults apply -- check the reported language and thresholds, they "
+            f"are probably not the ones you configured.",
+            stacklevel=2,
+        )
         return {}
     if path.name == "pyproject.toml":
         tool = data.get("tool") or {}

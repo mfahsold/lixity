@@ -44,3 +44,47 @@ class TestApiConfiguration(unittest.TestCase):
             with redirect_stdout(output):
                 self.assertEqual(main(["style", str(path), "--json", "--min-chapters", "4"]), 0)
             self.assertEqual(json.loads(output.getvalue())["meta"]["min_chapters"], 4)
+
+    def test_malformed_project_config_warns_and_names_the_file(self) -> None:
+        """A broken config must not silently revert the analysis to defaults.
+
+        An unparseable lixity.toml used to be treated as absent, so a run
+        reported the default language and thresholds while exiting 0 -- the
+        numbers looked authoritative and matched nothing the project asked for.
+        """
+        from lixity.config import load_project_config
+
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td)
+            (project / "lixity.toml").write_text('title = "Unclosed\nlanguage = de\n', encoding="utf-8")
+            with self.assertWarns(UserWarning) as caught:
+                self.assertEqual(load_project_config(project), {})
+            message = str(caught.warning)
+            self.assertIn("lixity.toml", message)
+            self.assertIn("Could not parse", message)
+            # The message has to say the consequence, not just the cause.
+            self.assertIn("language and thresholds", message)
+
+    def test_unreadable_project_config_warns(self) -> None:
+        """An unreadable config is also not the same as an absent one."""
+        from lixity.config import _load_toml
+
+        with tempfile.TemporaryDirectory() as td:
+            target = Path(td) / "lixity.toml"
+            target.write_text('title = "Fine"\n', encoding="utf-8")
+            with patch("pathlib.Path.open", side_effect=PermissionError("denied")), \
+                 self.assertWarns(UserWarning) as caught:
+                self.assertEqual(_load_toml(target), {})
+            self.assertIn("Could not read", str(caught.warning))
+
+    def test_valid_project_config_stays_silent(self) -> None:
+        """The whole suite runs under -W error, so a valid config must not warn."""
+        from lixity.config import load_project_config
+
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td)
+            (project / "lixity.toml").write_text('title = "My Book"\nlanguage = "de"\n', encoding="utf-8")
+            self.assertEqual(
+                load_project_config(project),
+                {"title": "My Book", "language": "de"},
+            )
