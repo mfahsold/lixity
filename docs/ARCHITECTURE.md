@@ -22,7 +22,20 @@ manuscript anchors, and hybrid vector search; those are not current dependencies
 | `lixity.pipeline` | Resolve document language; assemble one analysis result | Implicit file reads or mutable global project state |
 | CLI / `lixity.api` | Input/output contracts and threshold resolution | Duplicate analysis algorithms |
 | UI | Render results using shared components and bundled assets | Recompute statistical decisions in JavaScript |
+| `lixity.server` | Loopback HTTP transport, request parsing and response envelopes | Analysis decisions, project state resolution, domain logic |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
+
+The native server is a package rather than one module, because it is the only
+place where transport, state and domain calls meet. `runtime` owns bind checks
+and startup; `views` owns dashboard rendering and is independent of HTTP;
+`_state` owns workspace state and is the single writer via `refresh()`; `_base`
+owns response helpers and the Host/Origin guards; `routes_project`,
+`routes_research`, `routes_nda` and `routes_markers` each own their handlers and
+are composed into one `BaseHTTPRequestHandler` in `handler`. Route handlers
+parse and shape requests and then delegate; they do not resolve project state or
+reimplement domain rules, and the research routes call `lixity.research.api`
+rather than touching the repository. Because each group is a plain class, a
+route module can be read and type-checked on its own.
 
 The development server keeps one selected workspace per process. Opening a
 project selects its existing directory and research archive; importing browser

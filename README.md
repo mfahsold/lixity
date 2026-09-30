@@ -11,8 +11,8 @@ against the manuscript's own style, then inspect the passages behind each signal
 
 Python 3.10+ · Seven language profiles · No cloud calls.
 
-The current release is **v1.21.0**, including the experimental local research workspace.
-Read the [v1.20.0 release notes](docs/releases/v1.20.0.md) for research ergonomics, NDA capability, and archive compatibility.
+The current release is **v1.22.0**, including the experimental local research workspace.
+Read the [v1.22.0 release notes](docs/releases/v1.22.0.md) for research ergonomics, NDA capability, and archive compatibility.
 
 **Free only for non-commercial projects.** Using Lixity for a book intended
 for sale—including self-publishing—requires a separate written commercial
@@ -42,9 +42,9 @@ and [archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research
 | Integrate the engine or automate a workflow | [Python and JSON contracts](docs/AGENTS.md), [architecture](docs/ARCHITECTURE.md) |
 | Understand a result or its limits | [Methods](docs/METHODS.md), [stability and validation limits](docs/STABILITY.md) |
 
-## Current release: v1.20.0
+## Current release: v1.22.0
 
-Release v1.20.0 streamlines research workflows and introduces native project NDA protection:
+Release v1.22.0 is a maintenance and architecture release. Since v1.20.0 introduced native project NDA protection:
 
 - **Research batch ingestion:** `lixity research batch-ingest` imports multiple text or PDF sources in one invocation, emitting structured per-file outcomes (`research-batch-ingest-local/1`) and streaming `--progress` heartbeats on stderr.
 - **Auto-fresh index caching:** `lixity research search` transparently checks the HEAD manifest timestamp and rebuilds stale FTS5 projections without requiring manual `reindex` calls (pass `--strict` to fail fast).
@@ -54,9 +54,9 @@ Release v1.20.0 streamlines research workflows and introduces native project NDA
 
 The optional **Zotero Desktop bridge** (since v1.19.0) continues to let Zotero manage literature and media while Lixity retains selected evidence, dossiers, claims and author decisions.
 
-Read the [v1.20.0 release notes](docs/releases/v1.20.0.md) before upgrading an archive.
+Read the [v1.22.0 release notes](docs/releases/v1.22.0.md) before upgrading an archive.
 Documentation on `main` may describe newer changes; use the
-[tagged documentation](https://github.com/mfahsold/lixity/tree/v1.20.0/docs) for
+[tagged documentation](https://github.com/mfahsold/lixity/tree/v1.22.0/docs) for
 the released package and [changelog](CHANGELOG.md) for subsequent changes.
 
 ## What you can do
@@ -204,12 +204,12 @@ Install from GitHub into an isolated CLI environment. Requires Git and
 Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.21.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.22.0"
 lixity --version
 lixity about
 ```
 
-This installs **v1.21.0**, including the experimental local research pilot.
+This installs **v1.22.0**, including the experimental local research pilot.
 The tag stays pinned: upgrading to a future release requires selecting
 its tag explicitly. Use `@main` only for development builds, or a reviewed
 full commit hash for reproducible deployments.

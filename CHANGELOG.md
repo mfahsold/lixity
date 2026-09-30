@@ -7,6 +7,56 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.22.0] - 2026-09-30
+
+### Changed
+- `lixity.server` split from one 1655-line module into a focused package
+  (`runtime`, `views`, `_state`, `_base`, `routes_project`, `routes_research`,
+  `routes_nda`, `routes_markers`, `handler`, `constants`). The public import
+  surface is unchanged.
+- HTTP routing is declarative via `GET_ROUTES`/`POST_ROUTES` tables, replacing
+  the `do_GET`/`do_POST` if-ladders.
+- Research API separates data from rendering:
+  `compare_source_to_manuscript()` returns only data (the `format` parameter and
+  two `@overload` stubs removed), and `claim_matrix_data()` /
+  `render_claim_matrix()` replace the mixed `claim_matrix(format=...)`.
+- Cross-platform server lifecycle scripts: `scripts/lixity-start.sh`,
+  `scripts/lixity-start.ps1`, `scripts/lixity.service`, `scripts/lixity.plist`,
+  plus `make serve` and `make stop`.
+
+### Deprecated
+- `research_api.claim_matrix(project, format=...)` emits a `DeprecationWarning`
+  and will be removed in v1.23.0. Use `claim_matrix_data()`,
+  `render_claim_matrix()`, or `claim_matrix_format()`. JSON output and the
+  `lixity research matrix` CLI are unchanged.
+
+### Fixed
+- NDA PDF receipts now contain a valid cross-reference table and declare a font
+  resource; previously no text was extractable.
+- `lixity serve` reports an occupied port with actionable guidance instead of a
+  bare `OSError`.
+- `research search --strict` reports a missing index as such instead of blaming
+  FTS5 availability.
+
+### Removed
+- `layout.py` and `inline_markdown_to_html()`: unreachable code with no
+  references outside their own test.
+- `vargha_delaney_a()`, `contextlib_suppress()` and `parse_markdown_file()`:
+  dead helpers. Vargha–Delaney A was never emitted; `METHODS.md`,
+  `STABILITY.md` and `llms.txt` now describe the Cliff's δ labels that are
+  actually reported.
+
+### Docs
+- `AGENT_PROFILE.md` added and delegated to from `AGENTS.md`.
+- NDA HTTP endpoints documented in `docs/AGENTS.md` §5.2.
+- `ARCHITECTURE.md` documents the server package; `docs/research/USAGE.md`
+  retitled from "pilot" to "archive".
+
+### Verified
+- Issues #10, #11 and #12 checked as 30 executable assertions mapped onto their
+  stated claims; 30/30 pass. Evidence posted to each issue.
+
+
 ## [1.21.0] – 2026-09-30
 
 ### Added
@@ -1119,6 +1169,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   helpers.
 
 [Unreleased]: https://github.com/mfahsold/lixity/compare/v1.21.0...HEAD
+[1.22.0]: https://github.com/mfahsold/lixity/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/mfahsold/lixity/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/mfahsold/lixity/compare/v1.19.0...v1.20.0
 [1.19.0]: https://github.com/mfahsold/lixity/compare/v1.18.0...v1.19.0
