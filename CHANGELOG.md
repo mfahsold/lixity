@@ -29,8 +29,20 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and will be removed in v1.23.0. Use `claim_matrix_data()`,
   `render_claim_matrix()`, or `claim_matrix_format()`. JSON output and the
   `lixity research matrix` CLI are unchanged.
+- `lixity.diversity.hd_d()` and `hd_d_stats()` accepted `seed` and
+  `min_samples` as no-ops left over from the superseded Monte Carlo estimator.
+  They are now keyword-only, warn when passed, and are removed in v1.24.0.
 
 ### Fixed
+- **Silent analysis change**: a malformed `lixity.toml` was treated as absent,
+  so the run reported default language and thresholds and still exited `0`. A
+  present-but-unreadable or unparseable file now warns and names the path.
+- **Silent capture truncation**: an undeterminable PDF page count was assumed to
+  be 1, so a multi-page document could be captured as one page and still report
+  success. The extractor now refuses with actionable guidance.
+- **Project NDA adapter**: an adapter raising at import time disabled the
+  feature instead of falling back, and the fallback was silent. It is now caught
+  as `Exception` (never `BaseException`) and announces itself.
 - NDA PDF receipts now contain a valid cross-reference table and declare a font
   resource; previously no text was extractable.
 - `lixity serve` reports an occupied port with actionable guidance instead of a
@@ -47,14 +59,26 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   actually reported.
 
 ### Docs
-- `AGENT_PROFILE.md` added and delegated to from `AGENTS.md`.
+- `AGENT_PROFILE.md` added and delegated to from `AGENTS.md`, with agent
+  operating rules covering verification, formatters, data boundaries,
+  escalation, and the silent-degradation failures this release fixed.
 - NDA HTTP endpoints documented in `docs/AGENTS.md` §5.2.
 - `ARCHITECTURE.md` documents the server package; `docs/research/USAGE.md`
   retitled from "pilot" to "archive".
+- `STABILITY.md` gains register rows 52-55; two long-standing rows were
+  rendering with the wrong column count because of unescaped `|` in table cells.
+- Published-surface audit: six `../` links resolved in the checkout but 404'd on
+  Pages, because staging flattens `docs/<name>` to `/<name>`. Now absolute URLs,
+  with two tests validating the staged tree rather than the checkout.
+- Four documents described the search freshness check as comparing manifest
+  timestamps; it compares the recorded snapshot digest. Corrected.
 
 ### Verified
 - Issues #10, #11 and #12 checked as 30 executable assertions mapped onto their
-  stated claims; 30/30 pass. Evidence posted to each issue.
+  stated claims; 30/30 pass. Evidence posted to each issue and all three closed,
+  with the remaining work split into #13 and #14.
+- 564 tests, 2764 subtests under `-W error`; the staged Pages output resolves
+  all 94 of its relative links and heading anchors.
 
 
 ## [1.21.0] – 2026-09-30
