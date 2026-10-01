@@ -1039,7 +1039,47 @@ details.nda .row { margin-top: .5rem; }
 .ctl-status { color: var(--muted); font-size: .8rem; min-height: 1.2em; margin-top: .5rem; }
 .ctl-status.ok { color: var(--present); }
 .ctl-status.err { color: var(--flag); }
+.ctl-status.loading {
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+}
+.ctl-status.loading::before {
+  content: "";
+  display: inline-block;
+  width: .75rem;
+  height: .75rem;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ctl-spin .7s linear infinite;
+  flex-shrink: 0;
+}
 .ctl-status:empty, #nda-table:empty { display: none; }
+
+.loading-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  color: var(--muted);
+  font-size: .84rem;
+  padding: .5rem .75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  margin-block: .4rem;
+}
+.loading-spinner {
+  width: .85rem;
+  height: .85rem;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ctl-spin .7s linear infinite;
+  flex-shrink: 0;
+}
+
 
 .research-tabs {
   display: flex;

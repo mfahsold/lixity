@@ -274,3 +274,15 @@ def status_strip(
             f'<span class="status-detail">{detail}</span></span>'
         )
     return '<div class="status-strip">' + "".join(entries) + "</div>"
+
+
+def loading_state(text: str, element_id: str | None = None, role: str = "status") -> str:
+    """Centralised accessible loading indicator with animated spinner."""
+    id_attr = f' id="{esc(element_id, quote=True)}"' if element_id else ""
+    return (
+        f'<div class="loading-state"{id_attr} role="{esc(role)}">'
+        f'<span class="loading-spinner" aria-hidden="true"></span>'
+        f'<span class="loading-text">{esc(text)}</span>'
+        f"</div>"
+    )
+

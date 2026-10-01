@@ -796,12 +796,20 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
   });
 });
 
-// --- Research & Dossier Management -----------------------------------------
 function researchStatus(message, ok) {
   var el = document.getElementById("research-status-bar");
   if (!el) return;
-  el.className = "ctl-status " + (ok ? "ok" : "err");
-  el.textContent = (ok ? "✓ " : "✗ ") + (message || "");
+  if (ok === "loading") {
+    el.className = "ctl-status loading";
+    el.textContent = message || uiLabel("research_loading");
+  } else if (!message) {
+    el.className = "ctl-status";
+    el.textContent = "";
+  } else {
+    var isOk = Boolean(ok);
+    el.className = "ctl-status " + (isOk ? "ok" : "err");
+    el.textContent = (isOk ? "✓ " : "✗ ") + message;
+  }
 }
 
 async function researchApiPost(action, payload) {
@@ -1418,6 +1426,10 @@ async function refreshResearchSources() {
   var listHost = document.getElementById("research-sources-list");
   var selectHost = document.getElementById("r-ground-source-select");
   if (!listHost) return;
+  if (!listHost.children.length) {
+    listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
+      escapeHtml(uiLabel("research_loading")) + '</span></div>';
+  }
   var data = await researchApiGet("research/sources");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_sources_failed")) + '</p>';
@@ -1461,6 +1473,10 @@ async function refreshResearchSources() {
 async function refreshResearchDossiers() {
   var listHost = document.getElementById("research-dossiers-list");
   if (!listHost) return;
+  if (!listHost.children.length) {
+    listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
+      escapeHtml(uiLabel("research_loading")) + '</span></div>';
+  }
   var data = await researchApiGet("research/dossiers");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_dossiers_failed")) + '</p>';
@@ -1511,6 +1527,10 @@ async function refreshResearchClaims() {
   var selectHost = document.getElementById("r-decision-claim-select");
   var linkClaimSelect = document.getElementById("r-link-claim-select");
   if (!listHost) return;
+  if (!listHost.children.length) {
+    listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
+      escapeHtml(uiLabel("research_loading")) + '</span></div>';
+  }
   var data = await researchApiGet("research/claims");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_claims_failed")) + '</p>';
@@ -1573,6 +1593,10 @@ async function refreshResearchClaims() {
 async function refreshResearchDecisions() {
   var listHost = document.getElementById("research-decisions-list");
   if (!listHost) return;
+  if (!listHost.children.length) {
+    listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
+      escapeHtml(uiLabel("research_loading")) + '</span></div>';
+  }
   var data = await researchApiGet("research/decisions");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_decisions_failed")) + '</p>';
@@ -1603,13 +1627,18 @@ async function refreshResearchDecisions() {
 }
 
 async function refreshResearchProjectInfo() {
+  var activeRootEl = document.getElementById("r-active-root");
+  if (activeRootEl && (!activeRootEl.textContent || activeRootEl.textContent.trim() === "")) {
+    activeRootEl.className = "ctl-status loading";
+    activeRootEl.textContent = uiLabel("research_loading");
+  }
   var status = await researchApiGet("research/status");
   if (zoteroProjectId !== (status.project_id || null)) {
     clearZoteroSelection();
     zoteroProjectId = status.project_id || null;
   }
-  var activeRootEl = document.getElementById("r-active-root");
   if (activeRootEl && status && status.ok && status.project_root) {
+    activeRootEl.className = "ctl-note";
     activeRootEl.textContent = uiLabel("research_project") + " " + status.project_root;
     if (status.initialized) {
       activeRootEl.textContent = uiFormat("research_project_summary", {
@@ -1620,6 +1649,9 @@ async function refreshResearchProjectInfo() {
         decisions: status.decisions_count || 0
       });
     }
+  } else if (activeRootEl && status && !status.ok) {
+    activeRootEl.className = "ctl-status err";
+    activeRootEl.textContent = status.message || uiLabel("research_status_unavailable");
   }
   var ocrBox = document.getElementById("r-ocr-diagnostic-box");
   if (ocrBox && status && status.ocr) {
@@ -1646,6 +1678,7 @@ async function refreshResearchProjectInfo() {
 }
 
 async function initResearchUI() {
+  researchStatus(uiLabel("research_loading"), "loading");
   var status = await refreshResearchProjectInfo();
   var initBox = document.getElementById("research-init-box");
   var tabs = document.getElementById("research-tabs");
@@ -1662,6 +1695,7 @@ async function initResearchUI() {
     if (initBox) initBox.style.display = "block";
     if (tabs) tabs.style.display = "none";
     document.querySelectorAll(".research-tab-pane").forEach(function(p) { p.style.display = "none"; });
+    researchStatus("", true);
     return;
   }
   if (initBox) initBox.style.display = "none";
@@ -1671,6 +1705,7 @@ async function initResearchUI() {
   document.querySelectorAll(".research-tab-pane").forEach(function(p) {
     p.style.display = p.id === targetPane ? "block" : "none";
   });
+  researchStatus("", true);
   refreshResearchSources();
   refreshResearchDossiers();
   refreshResearchClaims();

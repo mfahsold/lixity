@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
-from .components import esc, help_term, label
+from .components import esc, help_term, label, loading_state
 
 
 def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
@@ -17,7 +17,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append(f"<h2>{L('research_panel')}</h2>")
     parts.append('<div class="row" style="align-items:center;justify-content:space-between;margin:0;">')
     parts.append(f'<p class="ctl-note" id="research-hint" style="margin:0;">{L("research_hint")}</p>')
-    parts.append('<span class="ctl-note" id="r-active-root" style="font-weight:500;"></span>')
+    parts.append(f'<span class="ctl-status loading" id="r-active-root" style="font-weight:500;">{L("research_loading")}</span>')
     parts.append('</div>')
 
     parts.append('<div class="row research-tabs" id="research-tabs" role="tablist">')
@@ -76,7 +76,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append('</div>')
     parts.append('</div>')
     parts.append(f'<h3>{L("zotero_retained")}</h3>')
-    parts.append('<div id="research-sources-list"></div>')
+    parts.append(f'<div id="research-sources-list">{loading_state(label(labels, "research_loading"))}</div>')
     parts.append('</div>')
 
     parts.append('<div class="research-tab-pane" id="rtab-search" style="display:none;">')
@@ -111,7 +111,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append(f'<button class="ctl primary" id="r-dos-create-btn">{L("research_dossier_action")}</button>')
     parts.append('</div>')
     parts.append('</div>')
-    parts.append('<div id="research-dossiers-list"></div>')
+    parts.append(f'<div id="research-dossiers-list">{loading_state(label(labels, "research_loading"))}</div>')
     parts.append('</div>')
 
     # Tab Pane: Claims & Evidence Links
@@ -158,7 +158,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append(f'      <button class="ctl primary" id="r-link-evidence-btn">{L("research_link_action")}</button>')
     parts.append('    </div>')
     parts.append('  </div>')
-    parts.append('  <div id="research-claims-list"></div>')
+    parts.append(f'  <div id="research-claims-list">{loading_state(label(labels, "research_loading"))}</div>')
     parts.append('</div>')
 
     # Tab Pane: Decisions
@@ -183,7 +183,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append(f'      <button class="ctl primary" id="r-decision-create-btn">{L("research_decision_action")}</button>')
     parts.append('    </div>')
     parts.append('  </div>')
-    parts.append('  <div id="research-decisions-list"></div>')
+    parts.append(f'  <div id="research-decisions-list">{loading_state(label(labels, "research_loading"))}</div>')
     parts.append('</div>')
 
     parts.append('<div class="research-tab-pane" id="rtab-grounding" style="display:none;">')

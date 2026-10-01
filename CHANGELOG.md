@@ -8,6 +8,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- **Visual loading feedback for Research Workspace**: Added centralized accessible loading indicators (`loading_state()`, `.loading-spinner`, `.ctl-status.loading`) and localized labels across 7 languages, providing immediate visual feedback in the header and list views while research project data and records are being initialized or retrieved.
 - **Structural diagnostics panel in Web UI**: Integrated PELT changepoints (stylistic phase shifts across chapters), Mann-Kendall monotonic trend tests (gradual stylistic drift), and early-vs-late distribution shifts (Wasserstein distance and Kolmogorov-Smirnov test) into the web dashboard style suite (`#structural`), complete with clickable chapter anchors and full localization across 7 languages.
 - **Fluid responsiveness enhancements**: Refined multi-column and table layouts across tablet, mobile, and intermediate viewports; enabled fluid clamp sizing for the 3D stylistic space canvas, prevented table scrollbar overflows on compact metadata tables, and improved touch target minimum sizes for mobile devices.
 ### Changed
