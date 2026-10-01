@@ -5,9 +5,10 @@
 #
 # Compatible with Windows PowerShell 5.1 and PowerShell 7+ (no PS7-only syntax).
 #
-# A PID file is written to %LOCALAPPDATA%\lixity\lixity.pid so that stop/status
-# can locate the running instance.  Log output goes to %LOCALAPPDATA%\lixity\lixity.log
-# (stdout) and lixity.log.err (stderr); both are truncated on every start.
+# A PID file is written to %LOCALAPPDATA%\lixity\lixity-<Port>.pid (with fallback to
+# lixity.pid for port 8765) so that stop/status can locate the running instance.
+# Log output goes to %LOCALAPPDATA%\lixity\lixity-<Port>.log (stdout) and
+# lixity-<Port>.log.err (stderr); both are truncated on every start.
 #
 # Environment variables (defaults for the matching parameters):
 #   LIXITY_PORT   Port to listen on (default: 8765)
@@ -37,9 +38,13 @@ param(
 $ErrorActionPreference = "Stop"
 
 $RuntimeDir = Join-Path $env:LOCALAPPDATA "lixity"
-$PidFile    = Join-Path $RuntimeDir "lixity.pid"
-$LogFile    = Join-Path $RuntimeDir "lixity.log"
-$ErrFile    = Join-Path $RuntimeDir "lixity.log.err"
+$PidFile    = Join-Path $RuntimeDir "lixity-$Port.pid"
+$LegacyPid  = Join-Path $RuntimeDir "lixity.pid"
+if ($Port -eq 8765 -and -not (Test-Path $PidFile) -and (Test-Path $LegacyPid)) {
+    $PidFile = $LegacyPid
+}
+$LogFile    = Join-Path $RuntimeDir "lixity-$Port.log"
+$ErrFile    = Join-Path $RuntimeDir "lixity-$Port.log.err"
 
 function Get-LixityProcess {
     <#
@@ -47,12 +52,19 @@ function Get-LixityProcess {
 
       The process-name check guards against PID reuse: a recycled PID would
       otherwise make stop/status target an unrelated process.
+      Stale PID files are cleaned up.
     #>
     if (-not (Test-Path $PidFile)) { return $null }
     $ProcessId = [int](Get-Content $PidFile -Raw).Trim()
     $proc = Get-Process -Id $ProcessId -ErrorAction SilentlyContinue
-    if (-not $proc) { return $null }
-    if ($proc.ProcessName -notlike "lixity*") { return $null }
+    if (-not $proc) {
+        Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+        return $null
+    }
+    if ($proc.ProcessName -notlike "lixity*") {
+        Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+        return $null
+    }
     return $proc
 }
 
@@ -91,13 +103,23 @@ function Resolve-Lixity {
     throw "[ERR] lixity not found. Install with: uv tool install 'git+https://github.com/mfahsold/lixity.git'"
 }
 
+function Remove-PidFiles {
+    Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+    if ($Port -eq 8765 -and (Test-Path $LegacyPid)) {
+        Remove-Item $LegacyPid -Force -ErrorAction SilentlyContinue
+    }
+}
+
 function Start-Lixity {
     $running = Get-LixityProcess
     if ($running) {
-        Write-Host "[OK]  Lixity is already running (PID $($running.Id)) -> http://${BindHost}:${Port}/"
-        return
+        if (Test-PortAccepts) {
+            Write-Host "[OK]  Lixity is already running (PID $($running.Id)) -> http://${BindHost}:${Port}/"
+            return
+        }
+        Remove-PidFiles
     }
-    if (Test-Path $PidFile) { Remove-Item $PidFile -Force }
+    Remove-PidFiles
 
     if (Test-PortInUse) {
         $owner = (Get-NetTCPConnection -LocalPort $Port -State Listen -ErrorAction SilentlyContinue).OwningProcess | Select-Object -First 1
@@ -136,12 +158,15 @@ function Start-Lixity {
     }
 
     $proc.Id | Set-Content $PidFile
+    if ($Port -eq 8765) {
+        $proc.Id | Set-Content $LegacyPid -ErrorAction SilentlyContinue
+    }
 
     if ($ready) {
         Write-Host "[OK]  Lixity started (PID $($proc.Id)) -> http://${BindHost}:${Port}/"
         Write-Host "      Log: $LogFile"
     } else {
-        Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+        Remove-PidFiles
         $why = if ($proc.HasExited) { "exited with code $($proc.ExitCode)" }
                 else { "did not start accepting connections on ${BindHost}:${Port}" }
         throw "[ERR] Lixity $why. Check: $ErrFile"
@@ -151,7 +176,7 @@ function Start-Lixity {
 function Stop-Lixity {
     $running = Get-LixityProcess
     if (-not $running) {
-        if (Test-Path $PidFile) { Remove-Item $PidFile -Force }
+        Remove-PidFiles
         Write-Host "[--]  Lixity is not running."
         return
     }
@@ -159,15 +184,21 @@ function Stop-Lixity {
     # terminates the process.  Use `systemctl`-style graceful stops on Linux/macOS.
     Stop-Process -Id $running.Id
     $running.WaitForExit(5000) | Out-Null
-    Remove-Item $PidFile -Force -ErrorAction SilentlyContinue
+    Remove-PidFiles
     Write-Host "[OK]  Lixity stopped (PID $($running.Id))."
 }
 
 function Get-LixityStatus {
     $running = Get-LixityProcess
     if ($running) {
-        Write-Host "[OK]  Lixity is running (PID $($running.Id)) -> http://${BindHost}:${Port}/"
+        if (Test-PortAccepts) {
+            Write-Host "[OK]  Lixity is running (PID $($running.Id)) -> http://${BindHost}:${Port}/"
+        } else {
+            Write-Host "[--]  Lixity (PID $($running.Id)) is alive but http://${BindHost}:${Port}/ is not responding."
+            exit 1
+        }
     } else {
+        Remove-PidFiles
         Write-Host "[--]  Lixity is not running."
         exit 1
     }

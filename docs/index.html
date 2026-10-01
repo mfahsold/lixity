@@ -3,8 +3,9 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Lixity – Offline Manuscript Analysis &amp; Local Research</title>
-<meta name="description" content="Lixity analyzes Markdown manuscripts offline with sentence rhythm, lexical diversity, tense profiles and within-manuscript style references. Version 1.22.0 includes an explicit-project research workspace, batch ergonomics, native NDA encryption, and readable NDA PDF receipts."/>
+<title>Lixity – Offline Stylometry &amp; Manuscript Analysis for Authors</title>
+<meta name="description" content="Deterministic offline manuscript analysis, stylometry, sentence rhythm and within-manuscript style references for authors and editors. Privacy-first local text linguistics without cloud calls or AI prose rewriting. Version 1.22.0."/>
+<meta name="keywords" content="stylometry, manuscript analysis, creative writing, text linguistics, novel editing, offline manuscript tool, showing vs telling, sentence rhythm, literary analytics, python stylometry"/>
 <meta name="robots" content="index, follow"/>
 <meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0" />
 <meta name="author" content="Matthias Fahsold"/>
@@ -15,8 +16,8 @@
 <!-- Open Graph / Facebook -->
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
-<meta property="og:title" content="Lixity – Quantitative Text Linguistics, Stylometry &amp; Research Workspace"/>
-<meta property="og:description" content="Offline manuscript analysis with style references and tense dynamics, plus an explicit-project research archive and native NDA encryption in v1.22.0."/>
+<meta property="og:title" content="Lixity – Offline Stylometry &amp; Manuscript Analysis for Authors"/>
+<meta property="og:description" content="Deterministic offline manuscript analysis, stylometry, tense dynamics and local research archive. Privacy-first local linguistics for authors and editors in v1.22.0."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="1480"/>
@@ -27,8 +28,8 @@
 
 <!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Lixity – Quantitative Text Linguistics &amp; Research Workspace"/>
-<meta name="twitter:description" content="Offline manuscript analysis with a local research workspace and native NDA protection in v1.22.0."/>
+<meta name="twitter:title" content="Lixity – Offline Stylometry &amp; Manuscript Analysis for Authors"/>
+<meta name="twitter:description" content="Deterministic offline manuscript analysis with stylometry, sentence rhythm and local research archive. 100% private, no cloud calls or AI rewriting."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
 
@@ -79,6 +80,52 @@
       "name": "Lixity",
       "description": "Quantitative Text Linguistics & Stylometry for Literary Manuscripts",
       "inLanguage": "en"
+    },
+    {
+      "@type": "FAQPage",
+      "@id": "https://mfahsold.github.io/lixity/#faq",
+      "mainEntity": [
+        {
+          "@type": "Question",
+          "name": "How does Lixity analyze manuscripts without sending data to the cloud?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Lixity is a local Python engine and development server that runs entirely on your own computer. All text linguistics, stylometry algorithms, and heuristic metrics execute offline without network requests, telemetry, or external cloud processing."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Does Lixity rewrite manuscript text using generative AI?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "No. Lixity computes deterministic, reproducible metrics (sentence length rhythm, lexical diversity, dialogue ratio, perception filters, and tense distribution). It provides quantitative diagnostics and interactive visualizations, leaving all artistic and editorial decisions entirely to the author."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What manuscript languages are supported?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Lixity supports German, English, French, Spanish, Italian, Portuguese, and Dutch with tailored linguistic tokenization, syllabification, stop words, and filter verb heuristics. An automatic language detection mode and language-neutral mathematical metrics are also included."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "What is a within-manuscript style reference?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Instead of judging a manuscript against arbitrary external corpora, Lixity self-calibrates against the author's own baseline across chapters. It identifies statistically significant outliers in sentence rhythm, pacing, or register using False Discovery Rate (FDR) bounds."
+          }
+        },
+        {
+          "@type": "Question",
+          "name": "Is Lixity free for authors?",
+          "acceptedAnswer": {
+            "@type": "Answer",
+            "text": "Lixity is free for private writing, teaching, and academic research under the LNCL-1.0 license. Works intended for commercial sale, including self-publishing and print-on-demand, require a separate commercial license."
+          }
+        }
+      ]
     }
   ]
 }
@@ -102,6 +149,7 @@
       <a href="#research-workspace">Research &amp; Citations</a>
       <a href="#visual-suite">Screenshots</a>
       <a href="#cli-api">CLI &amp; API</a>
+      <a href="#faq">FAQ</a>
       <a href="#installation">Installation</a>
       <a href="#licensing">Licensing</a>
     </nav>
@@ -119,10 +167,10 @@
       <span>v1.22.0 &middot; Sturdier Defaults, Server Package, Lifecycle Tooling</span>
     </div>
     <h1 class="hero-title">
-      Manuscript Analysis &amp; <span class="gradient">Local Research</span>
+      Offline Stylometry &amp; <span class="gradient">Manuscript Analysis</span>
     </h1>
     <p class="hero-sub">
-      Lixity helps authors examine their Markdown manuscripts and keep the research behind their books organized. Work locally, inspect results alongside the text and keep editorial judgment and artistic sovereignty in your hands.
+      Quantitative text linguistics, sentence rhythm and within-manuscript style references for authors and editors. Inspect diagnostics alongside your Markdown text, keep your research organized, and preserve 100% creative privacy without cloud calls or AI prose rewriting.
     </p>
     <div class="hero-cta">
       <a class="btn primary" href="guides/installation.html">
@@ -424,6 +472,41 @@ lixity build manuscript.md --language en</pre>
       <p style="font-size: 0.88rem; color: var(--muted); margin: 0.8rem 0 0;">
         Open <code>exports/manuscript_dashboard.html</code> in any modern browser. Full setup guide for Windows/macOS, shell completions, and troubleshooting: <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">docs/INSTALLATION.md</a>.
       </p>
+    </div>
+  </section>
+
+  <!-- SECTION 6.5: FREQUENTLY ASKED QUESTIONS -->
+  <section id="faq">
+    <div class="section-header">
+      <span class="section-tag">Frequently Asked Questions</span>
+      <h2 class="section-title">Common Questions &amp; Architectural Answers</h2>
+      <p class="section-desc">Essential information about offline privacy, linguistic heuristics, and licensing for authors.</p>
+    </div>
+    <div class="pillars-grid">
+      <article class="pillar-card">
+        <h3 class="pillar-title">How does Lixity analyze manuscripts without the cloud?</h3>
+        <p class="pillar-body">Lixity is a local Python engine and development server that runs entirely on your own machine. All linguistic parsing, syllabification, statistical computations, and dashboard generation happen in local memory without outbound network traffic or cloud dependencies.</p>
+      </article>
+      <article class="pillar-card">
+        <h3 class="pillar-title">Does Lixity rewrite prose using generative AI?</h3>
+        <p class="pillar-body">No. Lixity computes deterministic, transparent metrics (sentence length rhythm, lexical diversity, dialogue ratio, perception filter verbs, and tense distribution). It provides diagnostics, leaving all stylistic and editorial decisions entirely to the author.</p>
+      </article>
+      <article class="pillar-card">
+        <h3 class="pillar-title">What languages are supported?</h3>
+        <p class="pillar-body">Full heuristic support is available for German, English, French, Spanish, Italian, Portuguese, and Dutch. An automatic language detection mode and language-neutral mathematical metrics are also built in.</p>
+      </article>
+      <article class="pillar-card">
+        <h3 class="pillar-title">What is a within-manuscript style reference?</h3>
+        <p class="pillar-body">Instead of measuring your prose against arbitrary external books, Lixity uses your own manuscript's chapters as a self-calibrating baseline. It flags statistically significant outliers in sentence rhythm, pacing, or register using False Discovery Rate (FDR) bounds.</p>
+      </article>
+      <article class="pillar-card">
+        <h3 class="pillar-title">Is Lixity free for authors?</h3>
+        <p class="pillar-body">Lixity is source-available and free for private writing, educational use, and academic research under the LNCL-1.0 license. Works intended for commercial sale (including self-publishing and print-on-demand) require a separate commercial license.</p>
+      </article>
+      <article class="pillar-card">
+        <h3 class="pillar-title">Can I connect my historical research and sources?</h3>
+        <p class="pillar-body">Yes. The built-in research workspace lets you archive source passages, link evidence to specific chapters, record authorial decisions, and compare source vocabulary against manuscript grounding with full provenance tracking.</p>
+      </article>
     </div>
   </section>
 

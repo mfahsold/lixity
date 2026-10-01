@@ -34,13 +34,15 @@ dmypy.json
 .local/
 .codex/
 .agents/
+.antigravity/
+.gemini/
 .worktrees/
 .superpowers/
 /docs/superpowers/plans/
 /docs/superpowers/specs/
-/.planning/
-/.artifacts/
-/.pytest-artifacts/
+.planning/
+.artifacts/
+.pytest-artifacts/
 .mutmut-cache
 node_modules/
 playwright-report/
@@ -89,10 +91,16 @@ config.local.json
 .DS_Store
 Thumbs.db
 
-# Editor & logs
+# Editor, state, logs & temporary files
 *.log
+*.log.*
+*.pid
 *.swp
 *.swo
+*~
+*.tmp
+*.bak
+*.orig
 .idea/
 .vscode/
 .history/

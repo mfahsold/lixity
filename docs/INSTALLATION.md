@@ -162,10 +162,10 @@ LIXITY_PORT=9000 LIXITY_DIR=/path/to/project scripts/lixity-start.sh start
 scripts/lixity-start.sh start --port 9000 --open /path/to/project
 ```
 
-State lives in `${XDG_RUNTIME_DIR:-~/.local/share/lixity}/`: `lixity.pid` and
-`lixity.log` (rotated to `lixity.log.1` on every start). `status` verifies that
-the recorded PID is still a Lixity process, so a recycled PID is not mistaken
-for a running server.
+State lives in `${XDG_RUNTIME_DIR:-~/.local/share/lixity}/`: `lixity-<PORT>.pid`
+(fallback: `lixity.pid` for port 8765) and `lixity-<PORT>.log` (rotated to `.log.1` on start).
+`status` verifies that the recorded PID is a live Lixity process responding on that port,
+and automatically cleans up stale or recycled PID files.
 
 From an editable checkout you can also use `make`:
 

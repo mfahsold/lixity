@@ -751,8 +751,9 @@ cannot be read or parsed emits a `UserWarning` naming the file, and its settings
 are ignored in favour of code defaults. No config file at all is silent. The
 distinction matters: a malformed file previously reverted the run to default
 language and thresholds while still exiting `0`, so the JSON looked authoritative
-and matched nothing the project had asked for. After any such warning, re-read
-`meta.language`, `meta.z_mild` and `meta.fdr_q` to confirm what actually applied.
+and matched nothing the project had asked for. After any such warning, verify
+`meta.language` in the JSON and check applied thresholds in the server dashboard
+or pass explicit CLI flags to ensure your intended parameters applied.
 
 | Field | Default | Purpose |
 | :--- | :--- | :--- |

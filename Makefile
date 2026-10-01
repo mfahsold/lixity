@@ -56,7 +56,7 @@ LIXITY_LAUNCHER := $(wildcard scripts/lixity-start.sh)
 
 serve: ## Start the managed Lixity dashboard (default port 8765). Override with LIXITY_PORT.
 	@if [ -n "$(LIXITY_LAUNCHER)" ]; then \
-	    LIXITY_PORT=$(LIXITY_PORT) bash $(LIXITY_LAUNCHER) start; \
+	    bash $(LIXITY_LAUNCHER) start --port $(LIXITY_PORT); \
 	else \
 	    echo "[--]  scripts/lixity-start.sh missing; starting in the foreground instead."; \
 	    $(VENV)/bin/lixity serve --host 127.0.0.1 --port $(LIXITY_PORT); \
@@ -64,7 +64,7 @@ serve: ## Start the managed Lixity dashboard (default port 8765). Override with 
 
 stop: ## Stop the managed Lixity dashboard instance.
 	@if [ -n "$(LIXITY_LAUNCHER)" ]; then \
-	    LIXITY_PORT=$(LIXITY_PORT) bash $(LIXITY_LAUNCHER) stop; \
+	    bash $(LIXITY_LAUNCHER) stop --port $(LIXITY_PORT); \
 	else \
 	    pids=$$(lsof -ti :$(LIXITY_PORT) 2>/dev/null || true); \
 	    if [ -n "$$pids" ]; then \

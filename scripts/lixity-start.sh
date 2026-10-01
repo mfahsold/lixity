@@ -10,22 +10,69 @@
 #   LIXITY_DIR    Project path to open (optional)
 #
 # State lives in ${XDG_RUNTIME_DIR:-~/.local/share/lixity}/:
-#   lixity.pid   PID of the managed instance
-#   lixity.log   stdout+stderr of the current instance (rotated to .log.1)
+#   lixity-<PORT>.pid   PID of the managed instance for PORT (fallback: lixity.pid for 8765)
+#   lixity-<PORT>.log   stdout+stderr of the instance (rotated to .log.1 on start)
 #
 # Exit codes: 0 success, 1 failure or "not running" for `status`.
 
 set -euo pipefail
 
-# ── Configuration ─────────────────────────────────────────────────────────────
+# ── Configuration Defaults ───────────────────────────────────────────────────
 PORT="${LIXITY_PORT:-8765}"
 HOST="${LIXITY_HOST:-127.0.0.1}"
 DIR="${LIXITY_DIR:-}"
 OPEN_BROWSER=0
 
-RUNTIME_DIR="${XDG_RUNTIME_DIR:-${HOME}/.local/share/lixity}"
-PID_FILE="${RUNTIME_DIR}/lixity.pid"
-LOG_FILE="${RUNTIME_DIR}/lixity.log"
+# ── Argument parsing ──────────────────────────────────────────────────────────
+case "${1:-}" in
+    -h|--help|help)
+        sed -n '2,15p' "$0"
+        exit 0
+        ;;
+esac
+
+COMMAND="${1:-start}"
+if [ $# -gt 0 ]; then
+    shift
+fi
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        --port)    PORT="${2:?--port needs a value}"; shift 2 ;;
+        --port=*)  PORT="${1#*=}"; shift ;;
+        --host)    HOST="${2:?--host needs a value}"; shift 2 ;;
+        --open)    OPEN_BROWSER=1; shift ;;
+        -h|--help) sed -n '2,15p' "$0"; exit 0 ;;
+        *)         DIR="$1"; shift ;;
+    esac
+done
+
+# ── Runtime State Paths ───────────────────────────────────────────────────────
+resolve_runtime_dir() {
+    if [ -n "${XDG_RUNTIME_DIR:-}" ] && [ -d "$XDG_RUNTIME_DIR" ] && [ -w "$XDG_RUNTIME_DIR" ]; then
+        echo "$XDG_RUNTIME_DIR"
+    elif mkdir -p "${HOME}/.local/share/lixity" 2>/dev/null && [ -w "${HOME}/.local/share/lixity" ]; then
+        echo "${HOME}/.local/share/lixity"
+    else
+        local fallback_dir="/tmp/lixity-${EUID:-${UID:-$(id -u)}}"
+        mkdir -p "$fallback_dir" 2>/dev/null || true
+        echo "$fallback_dir"
+    fi
+}
+
+RUNTIME_DIR="$(resolve_runtime_dir)"
+
+resolve_pid_file() {
+    local target="${RUNTIME_DIR}/lixity-${PORT}.pid"
+    if [ ! -f "$target" ] && [ "$PORT" = "8765" ] && [ -f "${RUNTIME_DIR}/lixity.pid" ]; then
+        echo "${RUNTIME_DIR}/lixity.pid"
+    else
+        echo "$target"
+    fi
+}
+
+PID_FILE="$(resolve_pid_file)"
+LOG_FILE="${RUNTIME_DIR}/lixity-${PORT}.log"
 
 # ── Helpers ───────────────────────────────────────────────────────────────────
 die()  { echo "[ERR] $*" >&2; exit 1; }
@@ -53,23 +100,28 @@ read_cmdline() {
 }
 
 # True when the recorded PID is alive and still looks like a Lixity server.
-#
-# The command-line check guards against PID reuse (a recorded PID recycled by an
-# unrelated process would otherwise make status/stop target the wrong process).
-# When the command line cannot be read we fall back to plain liveness rather than
-# reporting a false "not running".
+# Stale PID files or recycled PIDs from unrelated processes are cleaned up.
 recorded_pid_is_live() {
     [ -s "$PID_FILE" ] || return 1
     local pid cmdline
     pid="$(tr -dc '0-9' < "$PID_FILE")"
-    [ -n "$pid" ] || return 1
-    kill -0 "$pid" 2>/dev/null || return 1
+    [ -n "$pid" ] || { rm -f "$PID_FILE"; return 1; }
+    if ! kill -0 "$pid" 2>/dev/null; then
+        rm -f "$PID_FILE"
+        return 1
+    fi
     cmdline="$(read_cmdline "$pid")"
-    [ -n "$cmdline" ] || return 0
-    case "$cmdline" in
-        *lixity*) return 0 ;;
-        *)         return 1 ;;
-    esac
+    if [ -n "$cmdline" ]; then
+        case "$cmdline" in
+            *lixity*) return 0 ;;
+            *)
+                # Recycled PID pointing at an unrelated process
+                rm -f "$PID_FILE"
+                return 1
+                ;;
+        esac
+    fi
+    return 0
 }
 
 recorded_pid() {
@@ -77,12 +129,6 @@ recorded_pid() {
 }
 
 # True once the port accepts a TCP connection.
-#
-# Deliberately not a log grep: the server prints its banner with print(), and
-# stdout redirected to a file is block-buffered, so for a long-running process
-# the banner can sit in the buffer indefinitely. A log-based readiness check
-# therefore never succeeds. Connecting to the port is both direct and
-# buffering-independent.
 port_accepts_connections() {
     (exec 3<>"/dev/tcp/${HOST}/${PORT}") 2>/dev/null && exec 3<&- && exec 3>&-
 }
@@ -97,13 +143,25 @@ port_in_use() {
     fi
 }
 
+clean_pid_file() {
+    rm -f "$PID_FILE"
+    if [ "$PORT" = "8765" ]; then
+        rm -f "${RUNTIME_DIR}/lixity.pid"
+    fi
+}
+
 # ── Commands ──────────────────────────────────────────────────────────────────
 cmd_start() {
     if recorded_pid_is_live; then
-        info "Lixity is already running (PID $(recorded_pid)) → http://${HOST}:${PORT}/"
-        exit 0
+        local live_pid
+        live_pid="$(recorded_pid)"
+        if port_accepts_connections; then
+            info "Lixity is already running (PID ${live_pid}) → http://${HOST}:${PORT}/"
+            exit 0
+        fi
+        clean_pid_file
     fi
-    rm -f "$PID_FILE"
+    clean_pid_file
 
     if port_in_use; then
         die "Port ${PORT} is already in use by another process.
@@ -125,6 +183,10 @@ cmd_start() {
     nohup "$LIXITY_BIN" "${SERVE_ARGS[@]}" > "$LOG_FILE" 2>&1 &
     PID=$!
     echo "$PID" > "$PID_FILE"
+    if [ "$PORT" = "8765" ]; then
+        # Maintain compatibility for tools reading legacy lixity.pid
+        cp -f "$PID_FILE" "${RUNTIME_DIR}/lixity.pid" 2>/dev/null || true
+    fi
 
     # Wait up to 15 s for the port to accept connections.
     for _ in $(seq 1 60); do
@@ -134,7 +196,7 @@ cmd_start() {
             exit 0
         fi
         if ! kill -0 "$PID" 2>/dev/null; then
-            rm -f "$PID_FILE"
+            clean_pid_file
             echo "[ERR] Lixity exited during startup:" >&2
             sed 's/^/      /' "$LOG_FILE" >&2 2>/dev/null || true
             exit 1
@@ -149,8 +211,8 @@ cmd_start() {
 }
 
 cmd_stop() {
-    if ! recorded_pid_is_live; then
-        rm -f "$PID_FILE"
+    if ! recorded_pid_is_live || ! port_accepts_connections; then
+        clean_pid_file
         info "Lixity is not running."
         exit 0
     fi
@@ -165,7 +227,7 @@ cmd_stop() {
         kill -9 "$PID" 2>/dev/null || true
         sleep 0.5
     fi
-    rm -f "$PID_FILE"
+    clean_pid_file
     info "Lixity stopped (PID ${PID})."
 }
 
@@ -175,29 +237,19 @@ cmd_restart() {
 }
 
 cmd_status() {
-    if recorded_pid_is_live; then
-        info "Lixity is running (PID $(recorded_pid)) → http://${HOST}:${PORT}/"
+    if recorded_pid_is_live && port_accepts_connections; then
+        local pid
+        pid="$(recorded_pid)"
+        info "Lixity is running (PID ${pid}) → http://${HOST}:${PORT}/"
+        exit 0
     else
+        clean_pid_file
         echo "[--]  Lixity is not running."
         exit 1
     fi
 }
 
-# ── Argument parsing ──────────────────────────────────────────────────────────
-COMMAND="${1:-start}"
-shift || true
-
-while [[ $# -gt 0 ]]; do
-    case "$1" in
-        --port)    PORT="${2:?--port needs a value}"; shift 2 ;;
-        --port=*)  PORT="${1#*=}"; shift ;;
-        --host)    HOST="${2:?--host needs a value}"; shift 2 ;;
-        --open)    OPEN_BROWSER=1; shift ;;
-        -h|--help) sed -n '2,14p' "$0"; exit 0 ;;
-        *)         DIR="$1"; shift ;;
-    esac
-done
-
+# ── Dispatch ──────────────────────────────────────────────────────────────────
 case "$COMMAND" in
     start)   cmd_start   ;;
     stop)    cmd_stop    ;;

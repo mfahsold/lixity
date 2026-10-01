@@ -7,6 +7,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- **Port-scoped server lifecycle**: `scripts/lixity-start.sh` and `scripts/lixity-start.ps1`
+  now scope PID and log files per port (`lixity-<PORT>.pid` / `.log`), preventing
+  cross-port `stop` signals and ensuring multi-instance isolation.
+- **Stale and recycled PID handling**: `status` and `stop` verify port responsiveness
+  and automatically clean up stale or recycled PID files without targeting unrelated processes.
+- **Config recovery documentation**: corrected `docs/USAGE.md` to remove references to
+  non-existent threshold fields in the CLI JSON meta block.
+
 ## [1.22.0] - 2026-09-30
 
 ### Changed
