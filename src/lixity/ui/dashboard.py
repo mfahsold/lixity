@@ -45,6 +45,7 @@ from .components import (
 )
 from .dimensions import style_dimensions
 from .settings import settings_form
+from .structural import style_structural
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
 _CSS = (_ASSET_DIR / "dashboard.css").read_text(encoding="utf-8")
@@ -1325,6 +1326,7 @@ def render_dashboard(
         parts.append("</div></section>")
 
         parts.append(style_dimensions(chapters, fingerprint, labels, language_key))
+        parts.append(style_structural(chapters, fingerprint, labels, language_key))
 
         # --- Work markers (editor-visible, set from the dashboard) -------
         if markers is not None:

@@ -128,6 +128,7 @@ class TestJsDomContract(unittest.TestCase):
             'id="pacing"',
             'id="motifs"',
             'id="showing"',
+            'id="structural"',
             'class="table-wrap"',
             "data-marker-resolve=",
             'data-jump="#ch-',
@@ -237,7 +238,7 @@ class TestLabelCompleteness(unittest.TestCase):
 
     @staticmethod
     def _renderer_help_keys() -> set[str]:
-        source = (UI_DIR / "dashboard.py").read_text(encoding="utf-8")
+        source = "\n".join(f.read_text(encoding="utf-8") for f in sorted(UI_DIR.glob("*.py")))
         keys = set(re.findall(r"help_term\(\s*labels,\s*[\"']([a-z_]+)[\"']", source))
         keys |= {
             "asl",
@@ -392,6 +393,32 @@ class TestShowDontTellComponents(unittest.TestCase):
         # the numeric band/median/outlier text is available on demand, not printed
         self.assertRegex(html, r'class="band" title="[^"]*(Median|median)[^"]*"')
         self.assertNotIn('class="num">…', html)
+
+    def test_structural_panel_contract(self):
+        """Structural diagnostics panel renders changepoints, trends and shifts."""
+        from lixity.api import analyze_document
+        from lixity.style_fingerprint import FingerprintThresholds
+
+        multi_sample = (
+            "## Kap 1\n\nIch trinke Kaffee. Der Morgen dämmert. Ich gehe zur Tür.\n\n"
+            "## Kap 2\n\nIch trinke Tee. Die Straße schweigt. Ich sehe den Regen.\n\n"
+            "## Kap 3\n\nDas Haus wurde verkauft. Die Tür war verschlossen worden. Die Entscheidung fiel schwer.\n\n"
+            "## Kap 4\n\nDas Haus wurde besichtigt und die Miete war bezahlt worden. Die Beschreibung der Wohnung wirkte sachlich.\n\n"
+        )
+        config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
+        res = analyze_document(multi_sample, config, FingerprintThresholds())
+        html = render_dashboard(
+            res.chapters,
+            res.paragraphs,
+            metrics=res.metrics,
+            fingerprint=res.fingerprint,
+            title="Multi-Chapter Test",
+        )
+        self.assertIn('id="structural"', html)
+        self.assertIn('class="structural-grid"', html)
+        self.assertIn('class="structural-card"', html)
+        self.assertIn('class="badge badge-jump"', html)
+        self.assertIn('data-jump="#ch-', html)
 
 
 if __name__ == "__main__":

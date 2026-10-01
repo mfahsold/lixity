@@ -7,6 +7,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- **Structural diagnostics panel in Web UI**: Integrated PELT changepoints (stylistic phase shifts across chapters), Mann-Kendall monotonic trend tests (gradual stylistic drift), and early-vs-late distribution shifts (Wasserstein distance and Kolmogorov-Smirnov test) into the web dashboard style suite (`#structural`), complete with clickable chapter anchors and full localization across 7 languages.
+- **Fluid responsiveness enhancements**: Refined multi-column and table layouts across tablet, mobile, and intermediate viewports; enabled fluid clamp sizing for the 3D stylistic space canvas, prevented table scrollbar overflows on compact metadata tables, and improved touch target minimum sizes for mobile devices.
+
 ### Fixed
 - **Port-scoped server lifecycle**: `scripts/lixity-start.sh` and `scripts/lixity-start.ps1`
   now scope PID and log files per port (`lixity-<PORT>.pid` / `.log`), preventing
