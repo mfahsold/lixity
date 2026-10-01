@@ -205,7 +205,38 @@ def render_dashboard(
         project_header(title, labels, language_name, engine_name),
     ]
 
+    has_chapters = bool(chapters) and total_words > 0
+    default_view = "analysis" if has_chapters else "research"
+
     if controls:
+        parts.append(
+            '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
+            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
+            f'<span class="view-nav-icon" aria-hidden="true">📚</span> '
+            f'<span class="view-nav-label">{L("workspace_research")}</span>'
+            '</button>'
+            f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
+            f'<span class="view-nav-icon" aria-hidden="true">📊</span> '
+            f'<span class="view-nav-label">{L("workspace_analysis")}</span>'
+            '</button>'
+            f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" aria-controls="view-pane-project" aria-selected="false">'
+            f'<span class="view-nav-icon" aria-hidden="true">⚙️</span> '
+            f'<span class="view-nav-label">{L("workspace_project")}</span>'
+            '</button>'
+            '</nav>'
+        )
+
+    if status:
+        parts.append(status_strip(labels, status))
+
+    if controls:
+        # --- PANE 1: RESEARCH & DOSSIERS ---
+        parts.append(f'<div class="view-pane{" active" if default_view == "research" else ""}" id="view-pane-research" data-view-pane="research" role="tabpanel" aria-labelledby="tab-view-research">')
+        parts.append(render_research_panel(labels))
+        parts.append('</div>')
+
+        # --- PANE 2: PROJECT & SETTINGS ---
+        parts.append('<div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">')
         parts.append(f'<nav class="workspace-bar" aria-label="{L("workspace")}">')
         parts.append(f'<span class="ctl-label">{L("workspace")}</span>')
         parts.append('<div class="row">')
@@ -217,9 +248,6 @@ def render_dashboard(
             parts.append(f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>')
         parts.append('</div>')
         parts.append('</nav>')
-
-    if status:
-        parts.append(status_strip(labels, status))
 
     if document_context:
         parts.append(panel_start("document-context", labels, "source_context"))
@@ -382,8 +410,49 @@ def render_dashboard(
             )
             parts.append("</section>")
 
-        parts.append(render_research_panel(labels))
+        if artifacts:
+            parts.append('<section class="panel">')
+            parts.append(f"<h2>{help_term(labels, 'artifacts', L('artifacts'))}</h2>")
+            parts.append('<div class="artifacts">')
+            for art in artifacts:
+                name = esc(str(art.get("name", "")))
+                meta_bits = []
+                if art.get("size_kb") is not None:
+                    meta_bits.append(f"{N(art['size_kb'], 0)} KB")
+                if art.get("pages"):
+                    meta_bits.append(f"{art['pages']} {label(labels, 'pages')}")
+                meta = " · ".join(meta_bits)
+                href = artifact_href(art.get("href"))
+                link = (
+                    f'<a href="{esc(str(href))}" target="_blank" rel="noopener">{L("open")}</a>'
+                    if href
+                    else ""
+                )
+                parts.append(
+                    f'<div class="artifact"><span class="name">{name}</span>'
+                    f'<span class="meta">{esc(meta)}</span>{link}</div>'
+                )
+            parts.append("</div></section>")
+
         parts.append(render_project_modals(labels, language_key, language_options))
+        parts.append('</div>')
+
+        # --- PANE 3: MANUSCRIPT & ANALYSIS ---
+        parts.append(f'<div class="view-pane{" active" if default_view == "analysis" else ""}" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">')
+
+    if not has_chapters:
+        parts.append(
+            '<div class="panel empty-analysis-state">'
+            '<div class="empty-state-icon" aria-hidden="true">📖</div>'
+            f'<h2>{L("analysis_empty_title")}</h2>'
+            f'<p class="ctl-note" style="max-width:60ch;margin:0 auto 1.2rem;line-height:1.5;">{L("analysis_empty_desc")}</p>'
+            '<div class="row" style="justify-content:center;gap:.6rem;">'
+            f'<button type="button" class="ctl primary" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
+            f'<button type="button" class="ctl" data-switch-view="research">{L("analysis_empty_to_research")}</button>'
+            '</div>'
+            '</div>'
+        )
+        parts.append('<div class="analysis-empty-metrics" hidden>')
 
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [
@@ -783,8 +852,14 @@ def render_dashboard(
             parts.append("</tr>")
         parts.append("</tbody></table></div></section>")
 
-    # --- Publications -----------------------------------------------------
-    if artifacts:
+    if not has_chapters:
+        parts.append("</div>")
+
+    if controls:
+        parts.append("</div>")
+
+    # --- Publications (for standalone non-interactive reports) ------------
+    if not controls and artifacts:
         parts.append('<section class="panel">')
         parts.append(f"<h2>{help_term(labels, 'artifacts', L('artifacts'))}</h2>")
         parts.append('<div class="artifacts">')

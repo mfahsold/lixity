@@ -1968,3 +1968,173 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
   button.ctl, select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
   .badge-jump, .band-row, .row-link { min-height: 2.5rem; }
 }
+
+/* Top Workspace View Navigation */
+.view-navigation {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0.8rem 0 1.2rem;
+  padding: 0.3rem;
+  background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow-x: auto;
+}
+.view-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  padding: 0.55rem 1.1rem;
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--fg);
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: calc(var(--radius) - 2px);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+.view-nav-tab:hover {
+  background: var(--bg);
+  border-color: var(--line-subtle, var(--line));
+}
+.view-nav-tab.active {
+  background: var(--bg);
+  color: var(--accent);
+  border-color: var(--line);
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+.view-nav-icon {
+  font-size: 1.05rem;
+  line-height: 1;
+}
+.view-pane {
+  display: none;
+}
+.view-pane.active {
+  display: block;
+  animation: fadeInPane 0.15s ease-in-out;
+}
+@keyframes fadeInPane {
+  from { opacity: 0; transform: translateY(2px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Empty Analysis State */
+.empty-analysis-state {
+  text-align: center;
+  padding: 3.5rem 1.5rem;
+  margin: 1.5rem 0;
+  background: var(--bg-subtle, rgba(0, 0, 0, 0.02));
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+}
+.empty-analysis-state .empty-state-icon {
+  font-size: 3rem;
+  margin-bottom: 0.8rem;
+  line-height: 1;
+}
+.empty-analysis-state h2 {
+  font-size: 1.3rem;
+  margin: 0 0 0.5rem;
+  color: var(--fg);
+}
+
+/* GFM Markdown & Document Typography Standards */
+.markdown-body h1, .research-prose h1 {
+  font-size: 1.35rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line);
+  padding-bottom: 0.35rem;
+  margin: 1.2rem 0 0.6rem;
+}
+.markdown-body h2, .research-prose h2 {
+  font-size: 1.18rem;
+  font-weight: 600;
+  border-bottom: 1px solid var(--line-subtle, var(--line));
+  padding-bottom: 0.25rem;
+  margin: 1.1rem 0 0.5rem;
+}
+.markdown-body h3, .research-prose h3 {
+  font-size: 1.05rem;
+  font-weight: 600;
+  margin: 0.9rem 0 0.4rem;
+}
+.markdown-body h4, .research-prose h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0.8rem 0 0.3rem;
+}
+.markdown-body del, .research-prose del {
+  text-decoration: line-through;
+  opacity: 0.75;
+}
+.markdown-body .task-list-item, .research-prose .task-list-item {
+  list-style-type: none;
+  margin-left: -1rem;
+  display: flex;
+  align-items: baseline;
+  gap: 0.45rem;
+}
+.task-list-item-checkbox {
+  margin: 0;
+  vertical-align: middle;
+  cursor: default;
+}
+.math-inline {
+  font-family: "Cambria Math", "STIX Two Math", "KaTeX_Math", Georgia, serif;
+  font-style: italic;
+  padding: 0.1rem 0.3rem;
+  background: var(--bg-subtle, rgba(0, 0, 0, 0.04));
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+.math-display {
+  display: block;
+  text-align: center;
+  margin: 0.8rem 0;
+  padding: 0.6rem;
+  background: var(--bg-subtle, rgba(0, 0, 0, 0.03));
+  border: 1px solid var(--line-subtle, var(--line));
+  border-radius: var(--radius);
+  overflow-x: auto;
+  font-family: "Cambria Math", "STIX Two Math", "KaTeX_Math", Georgia, serif;
+  font-style: italic;
+}
+.research-source-view-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 0.8rem 0 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid var(--line);
+}
+.research-source-doc-wrap {
+  margin: 0.6rem 0 1rem;
+}
+.research-source-doc-raw {
+  white-space: pre-wrap;
+  word-break: break-word;
+  background: var(--bg);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+  font-size: 0.82rem;
+  max-height: 25rem;
+  overflow-y: auto;
+}
+.research-claim-statement,
+.research-decision-rationale,
+.research-decision-impact {
+  font-size: 0.88rem;
+  line-height: 1.5;
+  color: var(--fg);
+}
+
+@media print {
+  .view-navigation { display: none !important; }
+  .view-pane { display: block !important; }
+}

@@ -1,5 +1,6 @@
 """Explicit-project API for local evidence ingestion, lookup and integrity checks."""
 
+import contextlib
 import csv
 import io
 import os
@@ -628,6 +629,22 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
     for passage in passages:
         repository.quote(snapshot, passage)
 
+    full_text = ""
+    extractions = [
+        rec
+        for rec in snapshot.records.values()
+        if isinstance(rec, Extraction) and rec.id in extraction_ids
+    ]
+    if extractions:
+        chk = extractions[0].text_blob.sha256
+        if chk in snapshot.texts:
+            full_text = snapshot.texts[chk]
+        else:
+            with contextlib.suppress(ResearchError, OSError):
+                full_text = repository.read_blob(extractions[0].text_blob).decode("utf-8", errors="replace")
+    if not full_text and passages:
+        full_text = "\n\n".join(p.verbatim for p in passages if p.verbatim)
+
     return {
         "id": source.id,
         "title": source.title,
@@ -636,6 +653,7 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
         "sequence": latest.sequence,
         "byte_length": latest.blob.byte_length,
         "sha256": latest.blob.sha256,
+        "text": full_text,
         "context": latest.context.model_dump(),
         "tags": latest.context.tags,
         "passages": [
