@@ -47,9 +47,9 @@ def label(labels: Mapping[str, str] | None, key: str) -> str:
     return source.get(key, _DEFAULT_LABELS.get(key, key))
 
 
-def esc(value: object) -> str:
+def esc(value: object, quote: bool = True) -> str:
     """HTML-escapes any value (single helper for the whole UI)."""
-    return html.escape(str(value))
+    return html.escape(str(value), quote=quote)
 
 
 def contrast_text(background: str) -> str:

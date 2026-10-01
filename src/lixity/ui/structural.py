@@ -9,28 +9,7 @@ from ..status import ContractKeys
 from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint
 from ..style_profile import ChapterProfile
 from .components import esc, help_term, label
-
-_FEATURE_HELP = {
-    "asl": "asl",
-    "staccato_pct": "staccato",
-    "kaskade_pct": "kaskade",
-    "sentence_cv": "cv",
-    "dialog_pct": "dialogue",
-    "function_word_pct": "function_words",
-    "filter_density": "perception",
-    "modal_density": "modal",
-    "passive_density": "passive",
-    "nominalization_density": "nominal",
-    "adjective_density": "adjective",
-    "long_word_pct": "lix",
-    "start_entropy": "start_entropy",
-    "first_person_start_rate": "first_start",
-    "guiraud_r": "guiraud",
-    "hd_d": "hd_d",
-    "mtld": "mtld",
-    "mattr": "mattr",
-    "maas_a2": "maas",
-}
+from .heatmap import FEATURE_HELP_KEYS as _FEATURE_HELP
 
 
 def style_structural(

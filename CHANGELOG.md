@@ -10,6 +10,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Added
 - **Structural diagnostics panel in Web UI**: Integrated PELT changepoints (stylistic phase shifts across chapters), Mann-Kendall monotonic trend tests (gradual stylistic drift), and early-vs-late distribution shifts (Wasserstein distance and Kolmogorov-Smirnov test) into the web dashboard style suite (`#structural`), complete with clickable chapter anchors and full localization across 7 languages.
 - **Fluid responsiveness enhancements**: Refined multi-column and table layouts across tablet, mobile, and intermediate viewports; enabled fluid clamp sizing for the 3D stylistic space canvas, prevented table scrollbar overflows on compact metadata tables, and improved touch target minimum sizes for mobile devices.
+### Changed
+- **Frontend architecture modularization**: Refactored the monolithic 1600-line `render_dashboard()` in `src/lixity/ui/dashboard.py` into focused, single-responsibility modules: `modals.py` (project creation, open, and research revisions), `research_panel.py` (Zotero ingest, search, dossiers, claims & evidence, editorial decisions, grounding), `narration.py` (sentence distribution, dialogue, characters, pacing, motifs, showing vs. telling), `heatmap.py` (z-score heatmap matrix and self-calibrating style passport reference bands), and `markers_panel.py` (work markers table). Preserved all DOM IDs, CSS class contracts, and multi-language support.
+- **Client-side API consistency**: Standardized the research matrix endpoint URL in `dashboard.js` to dynamically prefix `(API || "/api")`, avoiding hardcoded root path assumptions.
+- **Touch and tablet research tab responsiveness**: Enhanced `.research-tabs` with clean touch-friendly horizontal swipe scrolling and flex-gap on tablet and mobile viewports.
 
 ### Fixed
 - **Port-scoped server lifecycle**: `scripts/lixity-start.sh` and `scripts/lixity-start.ps1`

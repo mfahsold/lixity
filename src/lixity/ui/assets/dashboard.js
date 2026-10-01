@@ -2099,7 +2099,7 @@ function highlightSearchTerms(text, query) {
   var matrixBtn = event.target.closest("#r-claim-matrix-btn");
   if (matrixBtn) {
     try {
-      var resp = await fetch("/api/research/matrix?format=md");
+      var resp = await fetch((API || "/api") + "/research/matrix?format=md");
       if (!resp.ok) {
         researchStatus("Failed to generate claim matrix", false);
         return;
