@@ -88,6 +88,9 @@ async function restoreFileReads(page) {
   const browser = await chromium.launch(launchOptions);
   try {
     const page = await browser.newPage({viewport: {width: 1440, height: 900}});
+    // Keep chooser interception enabled between waits: removing the last listener
+    // makes Playwright toggle it asynchronously and race the next activation.
+    page.on('filechooser', () => {});
     const errors = [];
     const submissions = [];
     const projectSubmissions = [];
