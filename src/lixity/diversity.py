@@ -177,7 +177,7 @@ def maas_a2(n_tokens: int, v_types: int) -> float | None:
 
     Requires ``MIN_TOKENS_LD`` tokens; shorter texts return None.
     """
-    if n_tokens < MIN_TOKENS_LD or v_types <= 1:
+    if n_tokens < MIN_TOKENS_LD or v_types <= 0:
         return None
     log_n = math.log10(n_tokens)
     log_v = math.log10(v_types)

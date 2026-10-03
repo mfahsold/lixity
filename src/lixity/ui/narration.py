@@ -160,6 +160,8 @@ def render_pacing_panel(
         return format_num(value, language_key, decimals)
 
     parts: list[str] = [panel_start("pacing", labels, "panel_pacing")]
+    if pacing.get("scenes_are_chapters", False):
+        parts.append(f'<p class="ctl-note">{L("pacing_units_note")}</p>')
     parts.append('<div class="kpi-row">')
     parts.append(kpi(N(pacing.get("scenes", 0), 0), L("pac_scenes")))
     parts.append(kpi(N(pacing.get("avg_scene_words", 0.0), 0), L("pac_avg_scene")))
@@ -256,14 +258,28 @@ def render_showing_panel(
     def N(value: float, decimals: int = 1, signed: bool = False) -> str:
         return format_num(value, language_key, decimals, signed)
 
+    showing_chapters = showing["chapter_list"]
+    comparable = len(showing_chapters) >= 3 and any(
+        float(chapter.get("tell_z", 0.0) or 0.0) != 0.0
+        or float(chapter.get("show_z", 0.0) or 0.0) != 0.0
+        for chapter in showing_chapters
+    )
     parts: list[str] = [panel_start("showing", labels, "panel_showing")]
+    parts.append(f'<p class="ctl-note">{L("showing_context_note")}</p>')
+    if not comparable:
+        parts.append(f'<p class="ctl-note">{L("showing_unavailable_note")}</p>')
     parts.append('<div class="kpi-row">')
-    parts.append(kpi(N(showing.get("tell_z_mean", 0.0), 2, signed=True), L("show_tell")))
-    parts.append(kpi(N(showing.get("show_z_mean", 0.0), 2, signed=True), L("show_show")))
-    parts.append(kpi(N(showing.get("balance_mean", 0.0), 2, signed=True), L("show_balance")))
+    parts.append(kpi(
+        N(showing.get("tell_z_mean", 0.0), 2, signed=True) if comparable else "–", L("show_tell")
+    ))
+    parts.append(kpi(
+        N(showing.get("show_z_mean", 0.0), 2, signed=True) if comparable else "–", L("show_show")
+    ))
+    parts.append(kpi(
+        N(showing.get("balance_mean", 0.0), 2, signed=True) if comparable else "–", L("show_balance")
+    ))
     parts.append("</div>")
 
-    showing_chapters = showing["chapter_list"]
     max_abs = (
         max((abs(float(c.get("balance", 0.0))) for c in showing_chapters), default=0.0) or 1.0
     )
@@ -272,13 +288,15 @@ def render_showing_panel(
         num = int(chapter.get("chapter_num", 0))
         balance = float(chapter.get("balance", 0.0))
         width = min(100.0, abs(balance) / max_abs * 100.0)
+        bar = f'<i style="width:{width:.1f}%"></i>' if comparable else ""
+        value = N(balance, 2, signed=True) if comparable else "–"
         title_attr = esc(chapter.get("title", ""))
         parts.append(
             f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
             f'title="{title_attr}">'
             f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
-            f'<span class="bar"><i style="width:{width:.1f}%"></i></span>'
-            f'<span class="val">{N(balance, 2, signed=True)}</span>'
+            f'<span class="bar">{bar}</span>'
+            f'<span class="val">{value}</span>'
             f"</div>"
         )
     parts.append("</div></section>")

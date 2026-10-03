@@ -79,6 +79,30 @@ class TestZotero(unittest.TestCase):
             self.assertTrue(result["dry_run"])
         self.assertEqual(Repository(self.project).snapshot().digest, before)
 
+    def test_import_preserves_runtime_warnings_in_single_and_batch_results(self):
+        warning = "Synthetic extraction warning requiring review."
+        ingest = api.ingest
+
+        def warned_ingest(*args, **kwargs):
+            return {**ingest(*args, **kwargs), "warnings": [warning]}
+
+        before = Repository(self.project).snapshot().digest
+        with (
+            patch.object(zotero, "_request", side_effect=self.response),
+            patch.object(api, "ingest", side_effect=warned_ingest),
+        ):
+            result = zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR",
+                                   allow_retention=True, dry_run=True)
+            self.assertEqual(result["schema_version"], "research-ingest-local/1")
+            self.assertEqual(result["warnings"][0], warning)
+            self.assertTrue(any("not synchronized" in note for note in result["warnings"]))
+            batch = zotero.ingest_attachments(self.project, library="users/0", attachment_keys=["JKLMNPQR"],
+                                             allow_retention=True, dry_run=True)
+            self.assertEqual(batch["schema_version"], "research-zotero-batch-ingest-local/1")
+            self.assertEqual((batch["succeeded"], batch["failed"]), (1, 0))
+            self.assertEqual(batch["items"][0]["warnings"], result["warnings"])
+        self.assertEqual(Repository(self.project).snapshot().digest, before)
+
     def test_rejects_path_injection_and_unsupported_media(self):
         with patch.object(zotero, "_request", side_effect=self.response) as request:
             for library in ("../users/0", "users/0/items", "https://example.org", "groups/0"):

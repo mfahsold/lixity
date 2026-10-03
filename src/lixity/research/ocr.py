@@ -429,7 +429,7 @@ def get_ocr_diagnostics(worker_cmd: str | None = None, *, probe: bool = False) -
             probe_info = probe_ocr_worker(cmd)
             if not probe_info["ok"]:
                 guidance.append(f"Worker probe failed: {probe_info['error']}")
-            else:
+            elif status == "ready":
                 status = "ready (probed)"
         elif cmd and not worker_executable:
             probe_info = {"ok": False, "error": f"Configured worker '{cmd}' is not executable"}

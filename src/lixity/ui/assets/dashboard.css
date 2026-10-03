@@ -1596,6 +1596,9 @@ dialog.lixity-modal::backdrop {
   cursor: pointer;
 }
 .file-dropzone {
+  width: 100%;
+  font: inherit;
+  color: var(--fg);
   border: 2px dashed var(--line-strong);
   border-radius: var(--radius-md);
   padding: 1.6rem 1.25rem;
@@ -1620,6 +1623,18 @@ dialog.lixity-modal::backdrop {
 .file-dropzone.dropzone-compact {
   padding: 1rem .85rem;
   gap: .4rem;
+}
+.manuscript-file-name {
+  overflow-wrap: anywhere;
+}
+.manuscript-file-name:empty {
+  display: none;
+}
+.nda-manager > summary {
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 1rem;
+  padding: .35rem 0;
 }
 .dropzone-icon {
   color: var(--accent);

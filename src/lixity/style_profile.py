@@ -281,7 +281,7 @@ class ParagraphProfiler:
 
             severity = classify_severity(switch, mixed, min(present, past), self.thresholds)
 
-            dialogue_words = sum(len(m.split()) for m in self._dialogue.findall(clean))
+            dialogue_words = sum(len(self._word.findall(m)) for m in self._dialogue.findall(clean))
             dialogue_pct = (dialogue_words / words * 100.0) if words else 0.0
             tokens = [t.lower() for t in self._word.findall(clean)]
             function_word_pct = (

@@ -119,6 +119,29 @@ class TestCorpusAnalyzer(unittest.TestCase):
         self.assertGreater(metrics.dialog_words, 0)
         self.assertGreater(metrics.dialog_ratio, 0.0)
 
+    def test_dialogue_share_uses_the_same_tokens_as_structure_reports(self):
+        from lixity.dialogue import dialogue_report
+        from lixity.pacing import pacing_report
+
+        for language, speech, expected_words, expected_share in (
+            ("en", '"Hi , !"', 1, 100.0),
+            ("en", '"Hi,there!" noise.', 2, 200 / 3),
+            ("de", '„Ja , !“', 1, 100.0),
+            ("de", '„Ja,doch!“ weiter.', 2, 200 / 3),
+        ):
+            with self.subTest(language=language, speech=speech):
+                config = CorpusConfig(language=language)
+                text = f"## Speech\n\n{speech}\n"
+                metrics = CorpusAnalyzer(config).analyze_text(text)
+                dialogue = dialogue_report(text, config)
+                pacing = pacing_report(text, config)
+                self.assertEqual(metrics.dialog_words, expected_words)
+                self.assertAlmostEqual(metrics.dialog_ratio, expected_share)
+                self.assertAlmostEqual(metrics.chapters[0].dialog_pct, expected_share)
+                self.assertAlmostEqual(metrics.dialog_ratio, dialogue.dialogue_pct)
+                self.assertAlmostEqual(metrics.dialog_ratio, pacing.chapter_list[0].dialogue_pct)
+                self.assertLessEqual(metrics.chapters[0].dialog_pct, 100.0)
+
     def test_appendix_separation(self):
         sample = (
             "## Kapitel 1\n\n"

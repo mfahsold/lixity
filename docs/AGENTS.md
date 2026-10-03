@@ -22,6 +22,9 @@ Style references use the manuscript's own robust median/MAD baseline.
 Heuristic threshold hits, FDR-selected cells and paragraph tense flags are
 different result sets. Readability formulas have their own language-specific
 assumptions; none of these outputs is an objective literary quality score.
+Research sources never enter that baseline automatically. Source analysis
+is `source_internal`; an explicit source–manuscript comparison returns a
+separate lexical/register report, not a recalibrated manuscript fingerprint.
 
 ## 2. Commands
 
@@ -132,10 +135,18 @@ Corpus-level notes:
   change numerical results without changing schema versions; recompute old outputs.
 - `mtld`, `mattr`, `maas_a2` are less length-sensitive lexical-diversity indices
   (`null` for texts too short to estimate them); `mattr` uses a 50-token
-  window, `mtld` the standard TTR threshold of 0.72.
+  window, `mtld` the standard TTR threshold of 0.72. The 100-token floor for
+  HD-D, MTLD and Maas is a local policy, not a reliability guarantee.
+  Maas accepts one type: `tokens=100`, `vocab_types=1` gives `maas_a2=0.5`.
 - `flesch_de` is the **language-calibrated** Flesch-type score of the active
   profile; `flesch_variant` names the formula used (Amstad, Flesch,
-  Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma).
+  Kandel-Moles, Szigriszt-Pazos, Franchina-Vacca, Martins, Douma). Values are
+  not clipped to 0–100 and do not measure an individual reader's comprehension.
+- `dialog_words` and `dialog_ratio` use the same configured `word_regex`
+  for quoted tokens and the `tokens` denominator. Chapter `dialog_pct` uses
+  chapter `words`. The legacy whitespace count `clean_words` is unchanged.
+  Regenerate older dialogue and dependent style results before comparison;
+  existing field names and schema versions are retained.
 - `punctuation` uses language-neutral keys (`periods`, `commas`, `dashes`,
   `colons`, `semicolons`, `questions`, `exclamations`, `ellipses`), so agents
   can parse them independent of the UI language.
@@ -236,6 +247,22 @@ The workspace bar stays directly below the header: New Project, Open Project and
 Show guidance remain reachable in loaded projects. Guidance starts collapsed
 in loaded projects and can be reopened without changing the active project.
 
+**Since v1.23.0:** Research & Dossiers, Manuscript & Analysis, and
+Project & Settings are separate views; the workspace bar is available in all
+three. Choosing or dropping a manuscript changes the displayed filename only.
+In the native server, **Continue to import…** opens the existing import dialog,
+whose confirmation creates a separate project through the existing project-create
+action. Returning to an existing archive uses Open Project. Embedding hosts with
+the load capability retain **Analyze manuscript now →** and the existing
+`POST /api/load` payload `{name, content}`.
+
+Local source/dossier filters inspect loaded titles, tags and IDs, plus dossier
+excerpts and section names. They send no API request while typing, preserve
+loaded detail nodes and keep all association options. They do not replace
+full-text archive search. Capability-gated NDA controls are inside a native
+details element that starts collapsed; backend routes and authorization are
+unchanged.
+
 | Hook | Meaning |
 |---|---|
 | `data-jump="<anchor>"` | scroll to a panel/row/column and flash it (`#feat-<field>` = heatmap column) |
@@ -298,7 +325,12 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
   vs. showing signals (dialogue, staccato) as robust z against the book's own
   chapter medians; `balance = show_z − tell_z` (positive = showing).
   Documented fallback: if MAD = 0 (majority of chapters share the median), the
-  standard deviation is used. Heuristic composite, **not** a quality verdict.
+  standard deviation is used when nonzero. Fewer than three chapters give zero
+  component scores; `most_telling=[]` and `most_showing=[]` when all balances
+  are identical. Numeric fallback zeros do not support a ranking or an artistic
+  equivalence claim. Heuristic composite, **not** a quality verdict.
+  The dashboard shows `–` for fewer than three chapters or absent comparative
+  signals; JSON fallback scores retain their numeric representation.
 
 **Boundary note.** Structure modules are deterministic in-text proxies.
 Heuristics (hook score, filter/signal counts, n-gram repetition) measure
@@ -376,9 +408,18 @@ are quotation segments.
   “flagged” KPI and the `#flags` panel. Use `flagged_paragraphs()` for the
   sorted list (severity desc, line asc) instead of re-implementing the cut.
 - **Caveats**: per-chapter TTR is length-dependent (compare Guiraud R or
-  HD-D instead); density features are heuristic counts (suffix/marker
+  HD-D alongside it, with sampling context); Guiraud is also length-dependent.
+  Density features are heuristic counts (suffix/marker
   regexes per language profile) – comparable within one language only;
   chapters under ~200 words have noisy starter/entropy estimates (SE grows).
+- **Scene or voice comparisons**: use comparable language, scope and discourse
+  mode, then inspect the prose. Short ASL, low `filter_density` or a high
+  showing balance do not establish effective pace, immersion or prose quality.
+  `feat_asl`, `feat_dialog` and similar identifiers are localized display-label
+  keys, not API functions. Model/style fields are `asl`, `dialog_pct`,
+  `filter_density` and `nominalization_density`; corpus dialogue share is
+  `dialog_ratio`. Style feature identifiers appear in `features[].feature`
+  and deviation/FDR entries. Preserve units and scope when reporting them.
 
 ## 5. Python API (stable facade)
 
@@ -457,12 +498,27 @@ csv_text  = research_api.render_claim_matrix(matrix, format="csv")
 both = research_api.claim_matrix_format(root_path, format="md")   # dict | str
 ```
 
-`compare_source_to_manuscript()` is the data-only form of `compare_source`;
-both return a dictionary unless `format="md"` is requested.
+`research_api.compare_source()` returns a dictionary by default, or a string
+with `format="md"`. The implementation helper
+`lixity.research.analysis.compare_source_to_manuscript()` is data-only and
+always returns a dictionary.
 `claim_matrix(project, format=...)` is **deprecated** since v1.22.0, warns on
-use, and is removed in v1.23.0 — call `claim_matrix_data()` and
-`render_claim_matrix()` instead. The JSON payload and the
+use, and remains available in v1.23.0. Removal is deferred to a future release;
+call `claim_matrix_data()` and `render_claim_matrix()` instead. The JSON payload and the
 `lixity research matrix` CLI output are unchanged.
+
+`research-ingest-local/1` adds `warnings: list[str]` to new, dry-run and
+unchanged responses. Successful local and Zotero batch items preserve these
+warnings; Zotero single captures also retain the existing explicit-capture
+notice. An empty list means no runtime extraction warning, not proven OCR
+accuracy. Warnings are not persisted in the archive, and existing keys, types
+and schema identifiers remain unchanged.
+
+`research ocr-status --probe` is diagnostic: it exits `0` even when
+`probe.ok` is false. A health gate must inspect `probe.ok`, configuration status
+and dependencies. A successful probe upgrades only `ready` to `ready (probed)`;
+it does not override `partial` or `misconfigured_worker`. It is not model/GPU
+certification. See [OCR usage and limits](research/USAGE.md#native-pdfs-versus-scans).
 
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 

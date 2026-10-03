@@ -245,7 +245,8 @@ def ingest(project: str | Path, *, library: str, attachment_key: str, allow_rete
             result["dry_run"] = dry_run
     return {**result, "zotero": {"library": library, "attachment_key": attachment_key,
                                 "item_key": parent["key"], "server_id": reader.server_id},
-            "warnings": ["Explicit capture only; Zotero changes are not synchronized automatically."]}
+            "warnings": [*result.get("warnings", []),
+                         "Explicit capture only; Zotero changes are not synchronized automatically."]}
 
 
 def ingest_attachments(
@@ -282,6 +283,7 @@ def ingest_attachments(
                 "ok": True,
                 "source_id": res.get("source_id"),
                 "passages": res.get("passages", 0),
+                "warnings": res.get("warnings", []),
             }
         except (ResearchError, OSError, ValueError) as exc:
             return {"attachment_key": att_key, "ok": False, "error": str(exc)}

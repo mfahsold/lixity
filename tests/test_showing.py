@@ -49,6 +49,24 @@ class TestShowingReport(unittest.TestCase):
         self.assertIn(2, report.most_telling)
         self.assertIn(1, report.most_showing)
 
+    def test_rankings_require_a_distinguishable_chapter_balance(self):
+        samples = (
+            "## One\n\n" + NEUTRAL,
+            "## One\n\n»Komm!«\n\n## Two\n\nEr spürte die Kälte.",
+            "\n".join(f"## {number}\n\n{NEUTRAL}" for number in range(1, 5)),
+        )
+        for text in samples:
+            with self.subTest(text=text):
+                report = showing_report(text, DE)
+                self.assertTrue(report.chapter_list)
+                self.assertEqual({chapter.balance for chapter in report.chapter_list}, {0.0})
+                self.assertEqual(report.most_telling, [])
+                self.assertEqual(report.most_showing, [])
+                payload = report.to_dict()
+                self.assertEqual(payload["most_telling"], [])
+                self.assertEqual(payload["most_showing"], [])
+                self.assertIsInstance(payload["balance_mean"], float)
+
     def test_balance_definition(self):
         report = showing_report(TEXT, DE)
         for chapter in report.chapter_list:

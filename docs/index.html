@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Lixity – Offline Stylometry &amp; Manuscript Analysis for Authors</title>
-<meta name="description" content="Deterministic offline manuscript analysis, stylometry, sentence rhythm and within-manuscript style references for authors and editors. Privacy-first local text linguistics without cloud calls or AI prose rewriting. Version 1.22.0."/>
+<meta name="description" content="Deterministic offline manuscript analysis, stylometry, sentence rhythm and within-manuscript style references for authors and editors. Privacy-first local text linguistics without cloud calls or AI prose rewriting. Version 1.23.0."/>
 <meta name="keywords" content="stylometry, manuscript analysis, creative writing, text linguistics, novel editing, offline manuscript tool, showing vs telling, sentence rhythm, literary analytics, python stylometry"/>
 <meta name="robots" content="index, follow"/>
 <meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0" />
@@ -17,7 +17,7 @@
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:title" content="Lixity – Offline Stylometry &amp; Manuscript Analysis for Authors"/>
-<meta property="og:description" content="Deterministic offline manuscript analysis, stylometry, tense dynamics and local research archive. Privacy-first local linguistics for authors and editors in v1.22.0."/>
+<meta property="og:description" content="Deterministic offline manuscript analysis, stylometry, tense dynamics and local research archive. Privacy-first local linguistics for authors and editors in v1.23.0."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="1480"/>
@@ -50,7 +50,7 @@
       "applicationCategory": "UtilitiesApplication",
       "applicationSubCategory": "Linguistic & Stylometric Analysis",
       "operatingSystem": "Linux, macOS, Windows",
-      "softwareVersion": "1.22.0",
+      "softwareVersion": "1.23.0",
       "isAccessibleForFree": true,
       "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
       "codeRepository": "https://github.com/mfahsold/lixity",
@@ -140,7 +140,7 @@
     <a href="#" class="brand">
       <div class="brand-logo">L</div>
       <span class="brand-name">Lixity</span>
-      <span class="brand-badge">v1.22.0</span>
+      <span class="brand-badge">v1.23.0</span>
     </a>
     <nav class="site-nav">
       <a href="guides/installation.html">Onboarding Guide</a>
@@ -164,7 +164,7 @@
   <section class="hero">
     <div class="eyebrow-pill">
       <span class="dot"></span>
-      <span>v1.22.0 &middot; Sturdier Defaults, Server Package, Lifecycle Tooling</span>
+      <span>v1.23.0 &middot; Clearer Workflows, Contextual Diagnostics, Import Warnings</span>
     </div>
     <h1 class="hero-title">
       Offline Stylometry &amp; <span class="gradient">Manuscript Analysis</span>
@@ -249,7 +249,9 @@
       <article><h3><a href="guides/interpretation.html">Understand manuscript metrics</a></h3><p>Read consistency, lexical diversity and style deviations with their data requirements and limits.</p></article>
       <article><h3><a href="guides/research-pdf.html">Archive sources, PDFs and citations</a></h3><p>Record an origin URL, distinguish native PDFs from scans, configure OCR and test a backup.</p></article>
     </div>
-    <p><strong>New in v1.22.0:</strong> the server is now a focused package with declarative routing, cross-platform lifecycle scripts (<code>make serve</code> / <code>make stop</code>), NDA PDF receipts that actually contain extractable text, and a set of fixes so that an invalid <code>lixity.toml</code>, an undeterminable PDF page count, or a plugin that raises at import no longer fail silently. See the <a href="releases/v1.22.0.md">release notes</a> for scope and compatibility.</p>
+    <p><strong>New in v1.23.0:</strong> clearer workspace navigation and local research filters, consistent dialogue token counts, unavailable Show/Tell comparisons shown as dashes, chapter-based scene estimates with explicit units, and PDF extraction warnings preserved through imports. Localized help explains descriptive signals and intentional register differences. See the <a href="releases/v1.23.0.md">release notes</a> for scope and compatibility.</p>
+    <p>Switch between Research &amp; Dossiers, Manuscript &amp; Analysis, and Project &amp; Settings. New/Open and optional guidance remain available in every view. Choosing or dropping a manuscript shows its filename without submitting it; <strong>Continue to import…</strong> opens the import dialog, and confirmation creates a separate project. Use Open Project to return to an existing archive. <a href="guides/installation.html#existing-project">Follow the project workflow</a>.</p>
+    <p>Current-main source and dossier lists filter loaded titles, tags and IDs locally; dossiers also match excerpts and section names. Use Research → Search for full-text archive search. Association choices remain complete, and the capability-gated NDA manager starts collapsed.</p>
   </section>
 
   <!-- SECTION 4: VISUAL ANALYTICAL SUITE (SCREENSHOTS) -->
@@ -257,129 +259,217 @@
     <div class="section-header">
       <span class="section-tag">Visual Suite &amp; UI</span>
       <h2 class="section-title">Visual Analytical Suite</h2>
-      <p class="section-desc">Click a screenshot to inspect a recorded desktop, terminal or mobile session. Screenshots show current main and release v1.22.0. All examples use public-domain or synthetic content.</p>
+      <p class="section-desc">Captured on 3 October 2026 from the v1.23.0 UI. Click an image to inspect it, or follow its full-size link. Analysis uses the public-domain <em>Pride and Prejudice</em> sample; project and research workflows use synthetic files, paths and customs-case records.</p>
     </div>
+    <p>Dialog images show complete forms, including confirmation controls. Long dialogs scroll in the application; these captures include the full content.</p>
 
-    <!-- 0. Modern Workspace & Project Wizard -->
-    <span class="section-tag">Development Workspace &amp; Project Wizard</span>
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="646" src="screenshots/dashboard-welcome.png" alt="Lixity Welcome and Quickstart Hero card in empty/no-project state" loading="lazy" decoding="async"/>
-        <figcaption><strong>Welcome &amp; quickstart hero:</strong> Optional workspace guidance when opening Lixity without an active manuscript. New Project and Open Project remain available after it is dismissed; Open Project includes a server-backed file/folder chooser.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="606" height="648" src="screenshots/dashboard-project-modal.png" alt="Native dialog modal for project creation with template selection cards" loading="lazy" decoding="async"/>
-        <figcaption><strong>Native &lt;dialog&gt; project wizard:</strong> Native dialog with language selection and narrative structure templates (Minimal, 3-Act Structure, Research Novel with pre-initialized research/ archive).</figcaption>
-      </figure>
-    </div>
+    <span class="section-tag">1. Project navigation, settings &amp; import</span>
 
     <div class="shot-pair">
       <figure class="shot">
-        <img width="608" height="670" src="screenshots/dashboard-project-open.png" alt="File and folder selection for opening an existing project" loading="lazy" decoding="async"/>
-        <figcaption><strong>Open the original project:</strong> Browse files and folders on the computer running Lixity, select a manuscript or folder, and confirm with Open. Its existing research archive stays attached. These paths are synthetic examples.</figcaption>
+        <img width="1440" height="930" src="screenshots/dashboard-welcome.png" alt="Empty workspace with New Project, Open Project, three view tabs and optional guidance" loading="lazy" decoding="async"/>
+        <figcaption><strong>Welcome &amp; project navigation:</strong> New/Open actions and optional guidance remain reachable across the three views. <a href="screenshots/dashboard-welcome.png">Full-size image</a>.</figcaption>
       </figure>
       <figure class="shot">
-        <img width="368" height="704" src="screenshots/dashboard-project-open-mobile.png" alt="The project chooser at mobile width" loading="lazy" decoding="async"/>
-        <figcaption><strong>The same workflow on mobile:</strong> Folder navigation, file selection and typed paths remain available. Importing browser-selected manuscript bytes is a separate action.</figcaption>
+        <img width="608" height="690" src="screenshots/dashboard-project-modal.png" alt="Start new manuscript dialog with narrative structure template choices" loading="lazy" decoding="async"/>
+        <figcaption><strong>Create from a template:</strong> Choose a title, language and starting structure before confirming a new project. <a href="screenshots/dashboard-project-modal.png">Full-size image</a>.</figcaption>
       </figure>
     </div>
 
-    <!-- 1. Hero Overview -->
-    <span class="section-tag">1. Macro Overview &amp; KPI Strip</span>
-    <figure class="shot">
-      <img width="1480" height="945" src="screenshots/dashboard-light.png" alt="Lixity interactive HTML dashboard with grouped KPI cards, style heatmap, and tense continuity" loading="lazy" decoding="async"/>
-      <figcaption><strong>From corpus overview to paragraph review:</strong> Project metrics, sentence length architecture (ASL, staccato, long sentences), readability formulas (Flesch, LIX), lexical diversity indices (HD-D, Yule's K, MTLD), and within-manuscript comparisons in an offline HTML report.</figcaption>
-    </figure>
-
-    <!-- 2. Heatmap -->
-    <span class="section-tag">2. 16-Feature Departure Matrix</span>
-    <figure class="shot">
-      <img width="1702" height="899" src="screenshots/dashboard-heatmap.png" alt="Diverging z* heatmap of chapter departures across all 16 linguistic features" loading="lazy" decoding="async"/>
-        <figcaption><strong>Chapter departures:</strong> Color encodes noise-adjusted z* deviation from the manuscript baseline median. Dots (●) mark cells passing the configured Benjamini–Hochberg FDR procedure (<em>q = 0.05</em> by default). The result is a review signal, subject to model assumptions and false positives.</figcaption>
-    </figure>
-
-    <!-- 3. Paragraph Layer & Work Markers -->
-    <span class="section-tag">3. Paragraph Inspection &amp; Work Markers</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img width="1152" height="542" src="screenshots/dashboard-layer.png" alt="Chapter I with active dialogue layer and expanded paragraphs showing line anchors" loading="lazy" decoding="async"/>
-        <figcaption><strong>Paragraph context instead of abstract scores:</strong> Expanded paragraphs display verbatim prose with line anchors, tense classification (present/past/mixed), and local sentence rhythm in immediate context.</figcaption>
+        <img width="608" height="670" src="screenshots/dashboard-project-open.png" alt="Open Project dialog with a synthetic server-local file and folder chooser" loading="lazy" decoding="async"/>
+        <figcaption><strong>Open an existing project:</strong> Choose a folder or manuscript, then confirm Open to reconnect its existing research archive. <a href="screenshots/dashboard-project-open.png">Full-size image</a>.</figcaption>
       </figure>
       <figure class="shot">
-        <img width="1152" height="305" src="screenshots/dashboard-markers.png" alt="Persistent editorial work markers with status chips and inline notes" loading="lazy" decoding="async"/>
-        <figcaption><strong>Persistent work markers:</strong> Standard HTML comments (<code>CHECK</code>, <code>FACT-CHECK</code>, <code>TO-DO</code>) with content-hash IDs that remain visible in editors. Publication adapters determine their treatment in PDF and EPUB exports.</figcaption>
+        <img width="368" height="802" src="screenshots/dashboard-project-open-mobile.png" alt="Mobile Open Project dialog with synthetic folder navigation and a typed project path" loading="lazy" decoding="async"/>
+        <figcaption><strong>Open Project on mobile:</strong> Browse server-local paths or enter a path; selection alone does not open a project. <a href="screenshots/dashboard-project-open-mobile.png">Full-size image</a>.</figcaption>
       </figure>
     </div>
 
-    <!-- 4. 3D Space & Reference Bands -->
-    <span class="section-tag">4. Latent Style Space &amp; House Style Corridor</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img width="1152" height="616" src="screenshots/dashboard-dimensions.png" alt="Complete 3D chapter trajectory and all three style dimension cards" loading="lazy" decoding="async"/>
-        <figcaption><strong>3D style space &amp; latent dimensions:</strong> Unsupervised derivation of narrative chapter trajectories via cyclic Jacobi EVD in pure Python. Displays feature loadings, rotates freely, and links every data point directly to its chapter.</figcaption>
+        <img width="1152" height="748" src="screenshots/dashboard-project-settings.png" alt="Project and Settings view with a native manuscript picker, saved settings and collapsed NDA manager" loading="lazy" decoding="async"/>
+        <figcaption><strong>Project &amp; Settings:</strong> Choose or drop a manuscript before Continue to import. Settings change after Apply; the optional NDA manager starts collapsed. <a href="screenshots/dashboard-project-settings.png">Full-size image</a>.</figcaption>
       </figure>
       <figure class="shot">
-        <img width="1152" height="897" src="screenshots/dashboard-reference.png" alt="Style reference bands with medians, dispersion, and sample counts" loading="lazy" decoding="async"/>
-        <figcaption><strong>Manuscript reference bands:</strong> Robust median &plusmn; 2σ corridors (σ = 1.4826 MAD) derived exclusively from this manuscript. Sample sizes and deviation thresholds remain fully transparent.</figcaption>
+        <img width="366" height="953" src="screenshots/dashboard-project-settings-mobile.png" alt="Mobile Project and Settings view with manuscript selection and analysis preferences" loading="lazy" decoding="async"/>
+        <figcaption><strong>Project &amp; Settings on mobile:</strong> The same manuscript, language and threshold controls in a narrow layout. File selection alone sends no request. <a href="screenshots/dashboard-project-settings-mobile.png">Full-size image</a>.</figcaption>
       </figure>
     </div>
 
-    <!-- 5. Terminal Suite -->
-    <span class="section-tag">5. Terminal Suite &amp; Deterministic CLI</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img width="1320" height="840" src="screenshots/cli-analyze.png" alt="Lixity CLI analyze command with rich terminal report" loading="lazy" decoding="async"/>
-        <figcaption><code>lixity analyze</code> &ndash; Rich terminal report with corpus KPIs, readability indices, tense distribution, and sentence length architecture at a glance.</figcaption>
+        <img width="608" height="808" src="screenshots/dashboard-project-import.png" alt="Import Manuscript dialog with a synthetic filename, local preview and project settings" loading="lazy" decoding="async"/>
+        <figcaption><strong>Review an import:</strong> Preview the selected file, title and language locally. Confirmation creates a separate project; use Open Project for an existing archive. <a href="screenshots/dashboard-project-import.png">Full-size image</a>.</figcaption>
       </figure>
       <figure class="shot">
-        <img width="1320" height="860" src="screenshots/cli-style.png" alt="Lixity CLI style reference report" loading="lazy" decoding="async"/>
-        <figcaption><code>lixity style</code> &ndash; Self-calibrating style reference with median/MAD bounds, z* values, and structural diagnostics (PELT changepoints, Mann–Kendall trends, Sn/Qn scales).</figcaption>
+        <img width="368" height="964" src="screenshots/dashboard-project-import-mobile.png" alt="Mobile import dialog showing a synthetic manuscript preview and explicit confirmation" loading="lazy" decoding="async"/>
+        <figcaption><strong>Review an import on mobile:</strong> The file remains a local selection until confirmation; cancelling leaves the current project unchanged. <a href="screenshots/dashboard-project-import-mobile.png">Full-size image</a>.</figcaption>
       </figure>
     </div>
 
-    <!-- 6. Dark Mode & Settings -->
-    <span class="section-tag">6. Dark Mode &amp; Interactive Settings</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img width="1110" height="539" src="screenshots/dashboard-settings.png" alt="Settings panel with visible field labels and threshold explanations" loading="lazy" decoding="async"/>
-        <figcaption><strong>Project and analysis settings:</strong> Project preferences, numerical threshold calibration with pre-commit validation, and reset safety against unintended disk modifications.</figcaption>
+        <img width="1152" height="157" src="screenshots/dashboard-nda.png" alt="Expanded native NDA details panel showing a locked demo store with no agreements" loading="lazy" decoding="async"/>
+        <figcaption><strong>Locked NDA preview:</strong> The native details panel starts collapsed. This expanded locked-state preview contains no agreements, passphrase or private records. <a href="screenshots/dashboard-nda.png">Full-size image</a>.</figcaption>
       </figure>
       <figure class="shot">
-        <img width="1152" height="617" src="screenshots/dashboard-dimensions-dark.png" alt="Dark 3D style space and three dimension cards" loading="lazy" decoding="async"/>
-        <figcaption><strong>Style space in dark mode:</strong> Identical metrics, threshold bounding boxes, and feature cards &ndash; rendered in a high-contrast dark theme.</figcaption>
+        <img width="366" height="148" src="screenshots/dashboard-nda-mobile.png" alt="Mobile expanded NDA details panel showing the locked demo store without agreement records" loading="lazy" decoding="async"/>
+        <figcaption><strong>Locked NDA preview on mobile:</strong> The optional confidentiality controls use the same collapsible panel at mobile width; no agreement is created. <a href="screenshots/dashboard-nda-mobile.png">Full-size image</a>.</figcaption>
       </figure>
     </div>
 
-    <figure class="shot">
-      <img width="1480" height="945" src="screenshots/dashboard-dark.png" alt="Lixity overall dashboard in dark mode" loading="lazy" decoding="async"/>
-      <figcaption><strong>Full macro dashboard in dark mode:</strong> An alternative dark palette for readers who prefer it; choose the theme that is comfortable in your environment.</figcaption>
-    </figure>
+    <span class="section-tag">2. Manuscript overview &amp; departure heatmap</span>
 
-    <!-- 7. Mobile Views -->
-    <span class="section-tag">7. Responsive Mobile Views</span>
     <div class="shot-pair">
       <figure class="shot">
-        <img width="390" height="1028" src="screenshots/dashboard-mobile.png" alt="Mobile project overview with Lixity version and corpus metrics" loading="lazy" decoding="async"/>
-        <figcaption><strong>Mobile overview:</strong> Project header, version stamp, license state, and responsive metric tiles on small screens.</figcaption>
+        <img width="1480" height="945" src="screenshots/dashboard-light.png" alt="Manuscript and Analysis view with global project navigation and corpus metric cards" loading="lazy" decoding="async"/>
+        <figcaption><strong>Analysis overview:</strong> Sentence rhythm, readability and lexical signals for the public-domain sample. Statistical signals support a human review. <a href="screenshots/dashboard-light.png">Full-size image</a>.</figcaption>
       </figure>
       <figure class="shot">
-        <img width="366" height="1360" src="screenshots/dashboard-dimensions-mobile.png" alt="Mobile style dimensions panel with stacked controls" loading="lazy" decoding="async"/>
-        <figcaption><strong>Touch-ready stylometrics:</strong> Stacked 3D controls, readable feature loadings, and complete chapter outlier listings for mobile inspection.</figcaption>
+        <img width="390" height="1028" src="screenshots/dashboard-mobile.png" alt="Mobile analysis overview with project actions, view tabs and corpus metrics" loading="lazy" decoding="async"/>
+        <figcaption><strong>Analysis overview on mobile:</strong> Project navigation and grouped corpus metrics remain available at mobile width. <a href="screenshots/dashboard-mobile.png">Full-size image</a>.</figcaption>
       </figure>
     </div>
 
-    <!-- 8. Research Pilot & Archival Evidence -->
-    <span class="section-tag">8. Research Pilot &amp; Archival Evidence</span>
+      <figure class="shot">
+        <img width="1702" height="899" src="screenshots/dashboard-heatmap.png" alt="First 20 chapter rows of the 16-feature manuscript departure heatmap" loading="lazy" decoding="async"/>
+        <figcaption><strong>Chapter departure heatmap:</strong> Noise-adjusted z* values compare chapters with this manuscript’s baseline. Dots mark cells selected by the configured FDR procedure. These are review signals under model assumptions, not confirmed defects; only the first 20 rows are shown. <a href="screenshots/dashboard-heatmap.png">Full-size image</a>.</figcaption>
+      </figure>
+
+    <span class="section-tag">3. Paragraph inspection &amp; work markers</span>
+
     <div class="shot-pair">
       <figure class="shot">
-        <img width="1480" height="960" src="screenshots/dashboard-research.png" alt="Research Source Dashboard showing source context metadata and stylometric analysis" loading="lazy" decoding="async"/>
-        <figcaption><strong>Archived Source Dashboard:</strong> Local source version with user-supplied context (genre, creation and depicted periods, place, perspective and provenance note) linked to the analysis engine. Archive integrity does not certify historical accuracy.</figcaption>
+        <img width="1152" height="541" src="screenshots/dashboard-layer.png" alt="Chapter I with dialogue coloring and three opened paragraphs with source line anchors" loading="lazy" decoding="async"/>
+        <figcaption><strong>Paragraph style layer:</strong> Verbatim sample prose with source line anchors, tense classification and local sentence rhythm. <a href="screenshots/dashboard-layer.png">Full-size image</a>.</figcaption>
       </figure>
       <figure class="shot">
-        <img width="1320" height="780" src="screenshots/cli-research.png" alt="Terminal search and citation resolution showing passage UUIDs and exact character offsets" loading="lazy" decoding="async"/>
-        <figcaption><strong>CLI Full-Text Search &amp; Exact Citation:</strong> SQLite FTS5 BM25 search returning passage UUIDs, followed by citation resolution down to exact Unicode codepoint character offsets.</figcaption>
+        <img width="1152" height="305" src="screenshots/dashboard-markers.png" alt="Five illustrative work markers with source line links, statuses and inline notes" loading="lazy" decoding="async"/>
+        <figcaption><strong>Editorial work markers:</strong> Synthetic notes are added only to an in-memory sample copy. The public-domain source file is unchanged. <a href="screenshots/dashboard-markers.png">Full-size image</a>.</figcaption>
       </figure>
     </div>
+
+    <span class="section-tag">4. Style dimensions &amp; manuscript reference bands</span>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1152" height="616" src="screenshots/dashboard-dimensions.png" alt="Complete three-dimensional chapter trajectory and three latent style dimension cards" loading="lazy" decoding="async"/>
+        <figcaption><strong>Chapter style space:</strong> Chapter positions and feature loadings describe variation within the manuscript, with links back to each chapter. <a href="screenshots/dashboard-dimensions.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="1152" height="897" src="screenshots/dashboard-reference.png" alt="Complete manuscript reference bands with medians, dispersion and chapter sample counts" loading="lazy" decoding="async"/>
+        <figcaption><strong>Reference bands:</strong> Robust median/MAD corridors with visible sample counts and deviation thresholds. <a href="screenshots/dashboard-reference.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="366" height="1300" src="screenshots/dashboard-dimensions-mobile.png" alt="Mobile style dimension panel with stacked controls and all three feature cards" loading="lazy" decoding="async"/>
+        <figcaption><strong>Style dimensions on mobile:</strong> The complete dimension panel with stacked controls and readable feature loadings. <a href="screenshots/dashboard-dimensions-mobile.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="1152" height="617" src="screenshots/dashboard-dimensions-dark.png" alt="Dark theme chapter style trajectory and all three dimension cards" loading="lazy" decoding="async"/>
+        <figcaption><strong>Style dimensions in dark mode:</strong> The same chapter analysis and feature loadings in the dark palette. <a href="screenshots/dashboard-dimensions-dark.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <span class="section-tag">5. Terminal reports &amp; display settings</span>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1320" height="840" src="screenshots/cli-analyze.png" alt="Terminal excerpt of lixity analyze with corpus metrics, readability and sentence rhythm" loading="lazy" decoding="async"/>
+        <figcaption><strong>Corpus diagnostics:</strong> Actual lixity analyze output for the public-domain manuscript sample. <a href="screenshots/cli-analyze.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="1320" height="860" src="screenshots/cli-style.png" alt="Terminal excerpt of lixity style with reference bands, changepoints and drift diagnostics" loading="lazy" decoding="async"/>
+        <figcaption><strong>Style reference:</strong> Actual lixity style output with within-manuscript bounds and structural diagnostics. <a href="screenshots/cli-style.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1110" height="539" src="screenshots/dashboard-settings.png" alt="Shared settings form with language, title and expanded detection thresholds" loading="lazy" decoding="async"/>
+        <figcaption><strong>Expanded analysis settings:</strong> Threshold changes take effect after Apply. Restoring defaults fills the form without saving until Apply. <a href="screenshots/dashboard-settings.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="1480" height="945" src="screenshots/dashboard-dark.png" alt="Dark Manuscript and Analysis overview with project actions and corpus metric cards" loading="lazy" decoding="async"/>
+        <figcaption><strong>Analysis in dark mode:</strong> An alternative palette for the same public-domain manuscript analysis. <a href="screenshots/dashboard-dark.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <span class="section-tag">6. Research lists, archive search &amp; review records</span>
+
+    <p>Local list filters inspect loaded metadata without sending requests while typing. They preserve opened details and complete association choices. Full-text archive search is a separate action in the Search tab.</p>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1152" height="2073" src="screenshots/dashboard-research-sources.png" alt="Synthetic customs-case source list with a local metadata filter and an opened source detail" loading="lazy" decoding="async"/>
+        <figcaption><strong>Retained sources:</strong> Filter loaded titles, tags and IDs in the synthetic customs case. The filter does not search retained source text. <a href="screenshots/dashboard-research-sources.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="366" height="2991" src="screenshots/dashboard-research-sources-mobile.png" alt="Mobile synthetic customs-case source list with a metadata filter and opened details" loading="lazy" decoding="async"/>
+        <figcaption><strong>Sources on mobile:</strong> The same local source filter, archive metadata and detail controls at mobile width. <a href="screenshots/dashboard-research-sources-mobile.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1152" height="1311" src="screenshots/dashboard-research-dossiers.png" alt="Synthetic customs-case dossier list with a local metadata filter, excerpts and section labels" loading="lazy" decoding="async"/>
+        <figcaption><strong>Dossiers:</strong> Local dossier filters also match excerpts and section names; they do not search full dossier bodies. <a href="screenshots/dashboard-research-dossiers.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="366" height="1945" src="screenshots/dashboard-research-dossiers-mobile.png" alt="Mobile filtered synthetic customs-case dossier list with sections and record actions" loading="lazy" decoding="async"/>
+        <figcaption><strong>Dossiers on mobile:</strong> Inspect dossier excerpts, sections and record details in a narrow layout. <a href="screenshots/dashboard-research-dossiers-mobile.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1152" height="458" src="screenshots/dashboard-research-search.png" alt="Synthetic customs-case archive Search results with passage IDs and reuse actions" loading="lazy" decoding="async"/>
+        <figcaption><strong>Full-text archive search:</strong> Submit an explicit query, then inspect retained passages or use them for a claim or dossier. <a href="screenshots/dashboard-research-search.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="366" height="839" src="screenshots/dashboard-research-search-mobile.png" alt="Mobile synthetic archive Search results with passage excerpts, IDs and reuse actions" loading="lazy" decoding="async"/>
+        <figcaption><strong>Archive search on mobile:</strong> Search uses retained text and remains separate from the local list filters. <a href="screenshots/dashboard-research-search-mobile.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1152" height="1095" src="screenshots/dashboard-research-claims.png" alt="Synthetic dossier-linked customs claim with an expanded evidence quote and archive citation" loading="lazy" decoding="async"/>
+        <figcaption><strong>Claims &amp; evidence:</strong> Evidence links retain the quoted passage and citation provenance. Archive integrity does not establish historical accuracy. <a href="screenshots/dashboard-research-claims.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="366" height="1821" src="screenshots/dashboard-research-claims-mobile.png" alt="Mobile synthetic customs claim with expanded evidence quote and citation provenance" loading="lazy" decoding="async"/>
+        <figcaption><strong>Claims on mobile:</strong> Review the same claim, original passage and evidence link in a narrow layout. <a href="screenshots/dashboard-research-claims-mobile.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1152" height="949" src="screenshots/dashboard-research-decisions.png" alt="Contrasting synthetic editorial decisions linked to a customs-case research claim" loading="lazy" decoding="async"/>
+        <figcaption><strong>Editorial decisions:</strong> Author-recorded choices can preserve or deliberately depart from source evidence; the records are not automatic factual verdicts. <a href="screenshots/dashboard-research-decisions.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="366" height="1395" src="screenshots/dashboard-research-decisions-mobile.png" alt="Mobile synthetic editorial decision records with rationale and linked claims" loading="lazy" decoding="async"/>
+        <figcaption><strong>Decisions on mobile:</strong> The same decision records, rationale and claim links at mobile width. <a href="screenshots/dashboard-research-decisions-mobile.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <div class="shot-pair">
+      <figure class="shot">
+        <img width="1480" height="960" src="screenshots/dashboard-research.png" alt="Archived synthetic source analysis with user-supplied cultural context and linguistic metrics" loading="lazy" decoding="async"/>
+        <figcaption><strong>Archived source analysis:</strong> Genre, period, place and provenance metadata are supplied by the user and remain unverified context. <a href="screenshots/dashboard-research.png">Full-size image</a>.</figcaption>
+      </figure>
+      <figure class="shot">
+        <img width="1240" height="1768" src="screenshots/cli-research.png" alt="Complete terminal research search and citation output with passage IDs and Unicode codepoint offsets" loading="lazy" decoding="async"/>
+        <figcaption><strong>CLI search &amp; citation:</strong> Complete search/cite output from the disposable synthetic archive, including passage IDs and exact character offsets. <a href="screenshots/cli-research.png">Full-size image</a>.</figcaption>
+      </figure>
+    </div>
+
+    <p>These captures contain public-domain or synthetic content, illustrative marker notes and a locked demo NDA store. No private manuscript or agreement is used. <a href="screenshots/README.md">Screenshot provenance and regeneration</a>.</p>
   </section>
 
   <!-- SECTION 5: CLI & API -->
@@ -461,7 +551,7 @@ dos_res = research_api.create_dossier(proj_path, title="Evidence Brief", body=".
         Install Lixity in an isolated CLI environment on Linux, macOS, or Windows using <a href="https://docs.astral.sh/uv/">uv</a> (or pipx). No account, no API key, and no cloud manuscript uploads required.
       </p>
       <pre class="cmd-block"># Install via uv (recommended; requires Git &amp; uv)
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.22.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"
 
 # Verify installation
 lixity --version

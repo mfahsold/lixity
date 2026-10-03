@@ -5,7 +5,7 @@ from __future__ import annotations
 import math
 import unittest
 
-from lixity.diversity import hd_d, hd_d_stats
+from lixity.diversity import hd_d, hd_d_stats, maas_a2
 
 
 class HypergeometricHDDTests(unittest.TestCase):
@@ -45,6 +45,15 @@ class HypergeometricHDDTests(unittest.TestCase):
         tokens = ["common"] * 100_000 + ["rare"]
         expected = (1 + 42 / len(tokens)) / 42
         self.assertAlmostEqual(hd_d(tokens), expected, places=14)
+
+
+class MaasTests(unittest.TestCase):
+    def test_single_type_has_a_defined_value_above_the_existing_token_floor(self) -> None:
+        self.assertEqual(maas_a2(100, 1), 0.5)
+        self.assertEqual(maas_a2(100, 100), 0.0)
+        self.assertIsNone(maas_a2(99, 1))
+        self.assertIsNone(maas_a2(0, 0))
+        self.assertIsNone(maas_a2(100, 0))
 
 
 if __name__ == "__main__":

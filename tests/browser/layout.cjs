@@ -44,10 +44,13 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.ok(page.url().endsWith('#license-terms'));
       assert.equal(await page.locator('.license-links a').count(), 2);
       await page.locator('.project-header').screenshot({path: `/tmp/lixity-license-${width}.png`});
+      await page.locator('#tab-view-project').click();
+      await page.locator('#nda-manager > summary').click();
       await page.evaluate(() => ndaRender([{id: '" data-injected="yes', name: '<img src=x onerror="window.ndaInjected=1">', contact: '<script>bad()</script>', pdf: '<svg onload="window.ndaInjected=1">', status: 'draft'}]));
       assert.equal(await page.locator('#nda-table img, #nda-table script, #nda-table svg, #nda-table [data-injected]').count(), 0);
       assert.equal(await page.locator('#nda-table [data-nda-export]').getAttribute('data-nda-export'), '" data-injected="yes');
       assert.ok(await page.locator('#nda-table').textContent().then(text => text.includes('<img src=x')));
+      await page.locator('#tab-view-analysis').click();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `page overflow at ${width}`);
       assert.equal(await page.locator('.panel > table').count(), 0);
       const panelGaps = await page.locator('.panel').evaluateAll(panels => panels.flatMap(panel => {
@@ -92,13 +95,16 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         assert.ok(await page.locator('#dialogue .dist .label').first().evaluate(label => label.getBoundingClientRect().width >= 200));
         assert.ok(await page.locator('.band').first().evaluate(band => band.getBoundingClientRect().width >= 150));
       }
+      await page.locator('#tab-view-project').click();
       await page.locator('.settings-advanced summary').click();
+      await page.locator('#tab-view-analysis').click();
       await page.locator('#ch-1 .chip').first().click();
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1);
       await sentenceHelp.focus();
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1, 'Dismissing help must not close an unrelated paragraph');
       for (const selector of ['#flags', '#dist', '#dialogue', '#characters', '#pacing', '#motifs', '#showing', '#heatmap', '#bands', '#dimensions', '#markers', '#matrix', '#controls', '#ch-1']) {
+        await page.locator(selector === '#controls' ? '#tab-view-project' : '#tab-view-analysis').click();
         await page.mouse.move(0, 0);
         await page.evaluate(() => document.activeElement.blur());
         await page.locator(selector).screenshot({path: `/tmp/lixity-layout-${width}-${selector.slice(1)}.png`});

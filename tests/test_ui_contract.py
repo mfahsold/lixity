@@ -95,7 +95,11 @@ class TestJsDomContract(unittest.TestCase):
         ids.discard("lixity-tooltip")  # created by the script itself
         self.assertTrue(ids)
         # Onboarding controls exist only in the empty/research-only state.
-        html = _full_dashboard() + render_dashboard([], [], controls=True)
+        html = (
+            _full_dashboard()
+            + render_dashboard([], [], controls=True)
+            + render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
+        )
         missing = sorted(dom_id for dom_id in ids if f'id="{dom_id}"' not in html)
         self.assertEqual(missing, [], f"dashboard.js looks up missing ids: {missing}")
 
@@ -327,6 +331,7 @@ class TestLabelCompleteness(unittest.TestCase):
             "pac_avg_scene",
             "pac_hook",
             "pac_hook_mean",
+            "pacing_units_note",
             "panel_motifs",
             "mot_phrase",
             "mot_count",
@@ -338,6 +343,8 @@ class TestLabelCompleteness(unittest.TestCase):
             "show_tell",
             "show_show",
             "show_balance",
+            "showing_context_note",
+            "showing_unavailable_note",
             "panel_flags",
             "flags_stage",
             "flags_excerpt",
@@ -357,6 +364,64 @@ class TestLabelCompleteness(unittest.TestCase):
 
 class TestShowDontTellComponents(unittest.TestCase):
     """The visual (data-ink) components are part of the render."""
+
+    def test_pacing_explains_chapter_fallback_without_changing_legacy_exports(self):
+        from lixity.pacing import pacing_report
+        from lixity.ui.narration import render_pacing_panel
+
+        config = CorpusConfig(language="de")
+        note = "No explicit scene breaks: these units are chapters, not detected scenes."
+        labels = {"pacing_units_note": note}
+        fallback = pacing_report("## One\n\nDer Regen fiel. Die Stadt schwieg.", config).to_dict()
+        self.assertTrue(fallback["scenes_are_chapters"])
+        rendered = render_pacing_panel(fallback, labels, "en")
+        self.assertIn(f'<p class="ctl-note">{note}</p>', rendered)
+        self.assertIn('data-jump="#ch-1"', rendered)
+
+        explicit = pacing_report("## One\n\nDer Regen fiel.\n\n---\n\nDie Stadt schwieg.", config).to_dict()
+        self.assertFalse(explicit["scenes_are_chapters"])
+        self.assertNotIn(note, render_pacing_panel(explicit, labels, "en"))
+        legacy = {key: value for key, value in fallback.items() if key != "scenes_are_chapters"}
+        self.assertNotIn(note, render_pacing_panel(legacy, labels, "en"))
+
+    def test_showing_marks_unavailable_comparisons_and_preserves_measured_values(self):
+        from lixity.showing import showing_report
+        from lixity.ui.narration import render_showing_panel
+
+        config = CorpusConfig(language="de")
+        neutral = "Der Regen fiel. Die Stadt schwieg. Der Abend kam."
+        labels = {
+            "showing_unavailable_note": "No comparable chapter signals are available.",
+            "showing_context_note": "These language signals are proxies; consider register and context.",
+        }
+        for text in (
+            f"## One\n\n{neutral}",
+            SAMPLE,
+            "\n".join(f"## {number}\n\n{neutral}" for number in range(1, 4)),
+        ):
+            with self.subTest(text=text):
+                report = showing_report(text, config).to_dict()
+                rendered = render_showing_panel(report, labels, "en")
+                self.assertEqual(re.findall(r'class="kpi"><b>([^<]+)</b>', rendered), ["–"] * 3)
+                self.assertEqual(
+                    re.findall(r'class="val">([^<]+)</span>', rendered),
+                    ["–"] * len(report["chapter_list"]),
+                )
+                self.assertNotIn('<i style="width:', rendered)
+                for note in labels.values():
+                    self.assertIn(f'<p class="ctl-note">{note}</p>', rendered)
+
+        varying = SAMPLE + "\n".join(f"## {number}\n\n{neutral}" for number in range(3, 6))
+        report = showing_report(varying, config).to_dict()
+        self.assertTrue(any(chapter["balance"] for chapter in report["chapter_list"]))
+        rendered = render_showing_panel(report, labels, "en")
+        values = re.findall(r'class="kpi"><b>([^<]+)</b>', rendered)
+        self.assertEqual(len(values), 3)
+        for value in values:
+            self.assertRegex(value, r"^[+-]\d+\.\d{2}$")
+        self.assertNotIn(labels["showing_unavailable_note"], rendered)
+        self.assertIn(labels["showing_context_note"], rendered)
+        self.assertIn('<i style="width:', rendered)
 
     def test_status_strip_renders_component_states(self):
         text = SAMPLE

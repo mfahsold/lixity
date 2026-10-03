@@ -123,6 +123,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
         progress_callback("read", f"Reading source file {path.name}...")
 
     blobs_to_commit: dict[str, bytes] = {}
+    extraction_warnings: list[str] = []
     if is_pdf:
         with path.open("rb") as stream:
             content = stream.read(MAX_PDF_BYTES + 1)
@@ -147,6 +148,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
             ocr_res = extract_pdf_document(path, allow_fallback=effective_fallback)
             text = ocr_res.full_text
             spans = ocr_res.spans
+            extraction_warnings = ocr_res.warnings
         if not spans or len(spans) > 5000:
             raise ResearchError("Source must contain between 1 and 5000 nonempty paragraphs")
         operation: Literal["extract_utf8", "extract_ocr"] = "extract_ocr"
@@ -182,7 +184,8 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
         repository.read_blob(latest.blob)
         return {"schema_version": "research-ingest-local/1", "source_id": source.id,
                 "source_version_id": latest.id, "snapshot": snapshot.digest,
-                "unchanged": True, "dry_run": dry_run, "passages": len(spans)}
+                "unchanged": True, "dry_run": dry_run, "passages": len(spans),
+                "warnings": extraction_warnings}
 
     version = SourceVersion(**envelope(snapshot.project.id, actor), source_ref=reference(source),
                             schema_version=("research-local/3" if source_context.external_reference else
@@ -201,7 +204,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
                                start=start, end=end, verbatim=text[start:end], language=source.language))
     result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
               "source_version_id": version.id, "unchanged": False,
-              "passages": len(spans), "dry_run": dry_run}
+              "passages": len(spans), "dry_run": dry_run, "warnings": extraction_warnings}
     if progress_callback:
         progress_callback("commit", "Publishing records to research store...")
     if dry_run:
@@ -1183,12 +1186,12 @@ def claim_matrix(
     Returns plain data. For rendered output call `render_claim_matrix`, or
     `claim_matrix_format` to get data and rendering in one call.
 
-    Deprecated: passing ``format=``. It is accepted for two releases and will be
-    removed in v1.23.0; use `render_claim_matrix` instead.
+    Deprecated: passing ``format=``. The compatibility wrapper remains accepted
+    until a future release; use `render_claim_matrix` instead.
     """
     if format is not _FORMAT_SENTINEL:
         warnings.warn(
-            "claim_matrix(format=...) is deprecated and will be removed in v1.23.0; "
+            "claim_matrix(format=...) is deprecated and will be removed in a future release; "
             "call claim_matrix() for data and render_claim_matrix(data, format=...) "
             "for rendered output",
             DeprecationWarning,

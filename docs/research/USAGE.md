@@ -13,7 +13,7 @@ It does not implement the entire [RFC](README.md).
 | Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
 | SQLite/FTS5 lexical search over passages and current authored records; auto-fresh transparent cache refresh | Remote web imports |
 | Local text / Markdown input, original bytes retained | Multi-tenant team services, cloud hosting |
-| Multi-file batch ingestion with `--progress` heartbeats | External web scrapers |
+| Multi-file batch ingestion with `--progress` phase notifications | External web scrapers |
 | Section-bounded dossier reads (`--section`) | Audio/video transcription or image understanding |
 | Decision-dossier review tracking (`review_needed`) | Automatic bidirectional Zotero synchronization |
 | PDF ingestion with self-hosted Baidu Unlimited-OCR boundary | Automated factual proof or rewriting prose |
@@ -276,8 +276,10 @@ marked, not that the decision was verified as factually faithful.
 
 `--allow-retention` confirms that you may keep a local copy. It does **not** grant
 copyright permission, authorize redistribution or accept a factual claim.
-Passages remain `unreviewed`. All commands emit JSON (except `dashboard` which emits HTML);
-exit codes are `0` success, `1` operational/integrity failure and `2` CLI usage error.
+Passages remain `unreviewed`. Commands normally emit JSON; `dashboard` emits
+HTML, `matrix` defaults to Markdown with CSV/JSON options, and `compare`
+can emit Markdown with `--format md`.
+Exit codes are `0` success, `1` operational/integrity failure and `2` CLI usage error.
 A failed audit returns `ok: false` and exit code `1`. Other errors go to stderr without source contents.
 
 ## Search current authored records (since v1.19.0)
@@ -326,6 +328,8 @@ response warnings suggest trying `--scope all` to search authored records.
   partial batch success is preserved even if one file fails validation.
 - **Progress reporting**: Add `--progress` to `ingest` or `zotero-ingest`. Phase notifications with elapsed
   seconds are streamed to `stderr`, keeping `stdout` strictly machine-readable JSON.
+  These are phase-boundary notifications, not periodic heartbeats, JSONL events
+  or a per-page stream during worker inference.
 
 ### Section-bounded dossier inspection and revision
 
@@ -406,6 +410,15 @@ The project argument is mandatory. Research never discovers a project from a
 manuscript or reads analysis thresholds. `lixity build` remains unchanged and
 never imports sources or refreshes research indexes.
 
+Source analysis uses the shared engine on the selected archived source version,
+with its recorded language and explicit threshold overrides. Its interpretation
+is `source_internal`, with `context_status: user_supplied_unverified`.
+Manuscript project thresholds and corpus settings are not silently inherited.
+Genre, period, place, translation and original-language metadata supply context;
+they do not validate the source or turn historical travel accounts and
+monographs into the manuscript's stylistic baseline. Retaining or searching a
+source does not change manuscript analysis.
+
 In the local server, **Open Project** takes a path to an existing workspace
 folder or manuscript file on the server's filesystem and attaches that
 workspace's `research/` archive when present. **Browse files and folders** lets
@@ -423,6 +436,17 @@ Select a source or dossier for full details and verified citations. Search
 results can feed a selected passage into **Use for claim** or **Use for dossier**;
 the claim form can also associate an existing dossier. These actions record
 the author's links and notes, not a factual verdict.
+
+**Since v1.23.0:** Research & Dossiers is a separate dashboard view;
+New Project, Open Project and optional guidance remain accessible from every
+view. Local source and dossier filters match case-insensitive substrings in
+loaded titles, tags and IDs; dossiers also match excerpts and section names.
+These filters send no request while typing and do not search retained source
+text. Use the Search tab for full-text archive search. Filtering keeps loaded
+details and leaves association dropdowns complete. Selecting a manuscript under
+Project & Settings sends no request; **Continue to import…** opens the existing
+import dialog, and confirmation creates a separate project. Use Open Project
+when returning to this archive.
 
 ## Native editing and history
 
@@ -531,6 +555,13 @@ entire archive at an earlier date.
   4. Per-chapter evidence grounding (mapping occurrences of source vocabulary and top key
      terms across individual manuscript chapters, reporting grounding density per 1,000 words).
 
+Comparison requires an explicit source and manuscript, or a deliberate Grounding
+action for the currently loaded manuscript. It returns a separate report and
+does not recalibrate either text's fingerprint. Grounding here means vocabulary
+occurrence, not semantic entailment, chronology validation or proof that a claim
+is supported. Source integrity and exact quotations establish what was retained,
+not its factual truth.
+
 Reports can be emitted as JSON (default) or formatted Markdown:
 
 ```bash
@@ -546,6 +577,12 @@ the configured appendix. A cross-language comparison still returns numeric
 overlap but sets `meta.lexical_comparable: false` and includes
 `"cross_language_lexical_comparison"` in `comparison_limits`; its lexical
 scores should not be interpreted as directly comparable vocabulary coverage.
+Comparison uses the source's language and the explicit manuscript language
+(English by default), with code-default corpus parsing. It does not inherit a
+manuscript project's custom `chapter_regex` or `appendix_marker`; inspect its
+chapter trace before comparing it with a differently configured dashboard.
+Guiraud and register deltas remain sensitive to length, language and discourse
+mode; matching a source's values is not a writing-quality objective.
 
 Back up the **entire `research/` directory**, preferably while no writer is
 running. Restore it to an explicit project root, run `audit`, then `reindex`.
@@ -660,14 +697,17 @@ input. It reads the selected file as base64 for transport and passes the decoded
 bytes through the same import API as text and server-local files. The browser
 shows reading/extraction/completion states and prevents duplicate submits while
 waiting. This is not a streamed per-page progress feed.
+Successful local and Zotero captures also show returned warnings in the import
+status. Read those messages; a successful capture is not proof of OCR accuracy.
 
 ### Native PDFs versus scans
 
 Install local Poppler tools: `poppler-utils` on Debian/Ubuntu, or `poppler` with
 Homebrew. Both `pdftotext` and `pdftoppm` must be visible on the server's PATH.
 `pdftoppm` rasterizes physical pages at 150 dpi; `pdftotext` extracts text layers.
-Without page rasterization, native fallback only attempts page one, so treat
-`partial` as incomplete setup rather than full multi-page support.
+Without page rasterization, the configured scan worker cannot receive normal
+page inputs. Native text extraction may still work when the page count can be
+determined; `partial` does not indicate a complete OCR setup.
 
 An image-only scan has no usable text layer and requires an external self-hosted
 worker. Lixity does not install or start that worker. Run the diagnostics included in v1.18.0
@@ -677,7 +717,12 @@ in the same environment as the server:
 lixity research ocr-status [--worker-cmd PATH] [--probe]
 ```
 
-Pass `--probe` (or query `GET /api/research/ocr-status?probe=1`) to execute a live synthetic test probe against the worker, validating protocol compliance, response latency and execution before starting batch ingestion. Probe verification updates the reported status to `ready (probed)`.
+Pass `--probe` (or query `GET /api/research/ocr-status?probe=1`) to execute a
+synthetic worker request and report protocol handling and latency. A successful
+probe upgrades only `ready` to `ready (probed)`; it cannot override an invalid
+timeout (`misconfigured_worker`) or missing rasterizer (`partial`). Inspect
+`probe.ok` and configuration/dependency fields together. The diagnostic CLI
+still exits `0` when the probe fails, so exit status alone is not a health gate.
 
 The same information is available at `GET /api/research/ocr-status` and in
 `GET /api/research/status`. The dashboard maps these codes to localized labels:
@@ -690,12 +735,13 @@ The same information is available at `GET /api/research/ocr-status` and in
 | `misconfigured_worker` | Configured worker missing/not executable, or invalid worker timeout | Check path, permissions, service environment and `LIXITY_OCR_TIMEOUT` |
 | `missing_dependencies` | No complete usable setup | Install Poppler and optionally a scan worker |
 
-Diagnostics inspect executable availability, not model weights, snapshot
-integrity, GPU resources, worker connectivity or recognition accuracy. The
+Configuration diagnostics inspect executable availability, not model weights,
+snapshot integrity, GPU resources or recognition accuracy. A synthetic probe
+checks only that request, not real-model or GPU validation. The
 returned model/recipe identifiers are configuration constants, not attestations.
 `ready` therefore means configured, not an end-to-end health check; use `--probe` to verify live execution.
 
-Native extraction never captures a partial document. If Poppler's `pdfinfo` is
+Native extraction refuses an undeterminable page count. If Poppler's `pdfinfo` is
 absent and the page tree is not readable in the raw file -- typically because a
 modern producer stored it in a compressed object stream -- the capture is
 refused with an explicit error rather than silently retaining only the first
@@ -762,9 +808,10 @@ is joined with blank lines. Coverage validates what the worker reports, not
 whether it recognized every word. A completely textless document still cannot
 be ingested as a searchable source.
 
-A configured worker's nonzero exit, timeout, malformed response or missing page
-coverage fails the import without retaining partial evidence. There is no silent
-native-text fallback after worker failure. With no worker configured, native
+A configured worker's nonzero exit or timeout fails the import by default;
+explicit `--fallback` / `LIXITY_OCR_FALLBACK` can permit native text extraction
+with a warning. Invalid block structure or missing reported page coverage still
+fails closed. There is no silent native-text fallback. With no worker configured, native
 text-layer extraction remains available and can omit scanned pages; inspect mixed
 PDFs for completeness. A successful native import is not an OCR-success claim.
 
@@ -781,6 +828,14 @@ page ordering, blank pages and failed/truncated generation.
 to extracted UTF-8 text. Passages cite exact character spans in that text.
 The extraction boundary computes page images, boxes and warnings, but the current
 archive does **not** persist those as audited page/coordinate/confidence records.
+The `research-ingest-local/1` response now includes runtime `warnings: list[str]`
+for committed, dry-run and unchanged results. Clean native/text extraction and
+reused retained extraction return `[]`; an unchanged response does not recover
+warnings from an earlier import. Successful `research-batch-ingest-local/1`
+items preserve warnings, as do Zotero single/batch captures alongside the
+existing explicit-capture notice. Existing keys, types and schema identifiers
+are unchanged. Save diagnostics separately if needed: these warnings are not
+persisted in source or extraction records.
 Likewise, it does not persist an attestation of which model ran. Inspect the
 original PDF for visual verification and retain operational diagnostics separately
 when needed. Core import is local; a user-configured worker has its own network

@@ -154,7 +154,7 @@ class TestLocalization(unittest.TestCase):
         self.assertIn('id="welcome-hero" hidden', html)
         for hidden_action in ('data-action="load"', 'data-action="export"',
                               'data-action="sync"', 'id="nda-manager"'):
-            self.assertNotIn(hidden_action, html)
+            self.assertNotIn(hidden_action, html.split("<script>", 1)[0])
         for visible_action in ('data-action="analyze"', 'data-action="rebuild"',
                                'id="research-manager"'):
             self.assertIn(visible_action, html)

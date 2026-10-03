@@ -7,16 +7,56 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.23.0] - 2026-10-03
+
 ### Added
+- **Local research list filters:** Sources and dossiers can be filtered by title,
+  tags and ID; dossiers also match excerpts and section names. Filtering uses
+  loaded metadata, keeps opened details and association options, and sends no
+  request while typing. Full-text research search remains a separate action.
 - **Visual loading feedback for Research Workspace**: Added centralized accessible loading indicators (`loading_state()`, `.loading-spinner`, `.ctl-status.loading`) and localized labels across 7 languages, providing immediate visual feedback in the header and list views while research project data and records are being initialized or retrieved.
 - **Structural diagnostics panel in Web UI**: Integrated PELT changepoints (stylistic phase shifts across chapters), Mann-Kendall monotonic trend tests (gradual stylistic drift), and early-vs-late distribution shifts (Wasserstein distance and Kolmogorov-Smirnov test) into the web dashboard style suite (`#structural`), complete with clickable chapter anchors and full localization across 7 languages.
 - **Fluid responsiveness enhancements**: Refined multi-column and table layouts across tablet, mobile, and intermediate viewports; enabled fluid clamp sizing for the 3D stylistic space canvas, prevented table scrollbar overflows on compact metadata tables, and improved touch target minimum sizes for mobile devices.
 ### Changed
+- Metric help in all seven languages now distinguishes descriptive signals from
+  literary judgement: Guiraud remains length-sensitive, Flesch can exceed 0–100,
+  long sentences do not establish syntactic nesting, and style bands are not
+  mandatory targets. Show/Tell explains intentional register differences;
+  chapter-based scene estimates disclose their units.
+- English and German terminal/Markdown reports use neutral sentence-length
+  descriptions and no longer infer syntactic complexity or pace from length.
+- The deprecated `research_api.claim_matrix(format=...)` compatibility wrapper
+  remains available. Its previously announced v1.23 removal is deferred to a
+  future release; the data and rendering replacements remain recommended.
+- **Workspace navigation:** Research & Dossiers, Manuscript & Analysis, and
+  Project & Settings have separate views. New Project, Open Project and optional
+  guidance remain accessible from every view.
+- **Manuscript selection:** File selection and drag/drop show the filename without
+  submitting. The native server's **Continue to import…** opens the existing import
+  dialog; confirmation creates a separate project. Embedding hosts with the load
+  capability retain **Analyze manuscript now →** and the existing load payload.
+- **NDA presentation:** The capability-gated manager is a native details panel,
+  collapsed initially; its backend behavior is unchanged.
 - **Frontend architecture modularization**: Refactored the monolithic 1600-line `render_dashboard()` in `src/lixity/ui/dashboard.py` into focused, single-responsibility modules: `modals.py` (project creation, open, and research revisions), `research_panel.py` (Zotero ingest, search, dossiers, claims & evidence, editorial decisions, grounding), `narration.py` (sentence distribution, dialogue, characters, pacing, motifs, showing vs. telling), `heatmap.py` (z-score heatmap matrix and self-calibrating style passport reference bands), and `markers_panel.py` (work markers table). Preserved all DOM IDs, CSS class contracts, and multi-language support.
 - **Client-side API consistency**: Standardized the research matrix endpoint URL in `dashboard.js` to dynamically prefix `(API || "/api")`, avoiding hardcoded root path assumptions.
 - **Touch and tablet research tab responsiveness**: Enhanced `.research-tabs` with clean touch-friendly horizontal swipe scrolling and flex-gap on tablet and mobile viewports.
 
 ### Fixed
+- Dialogue token counts use the configured word tokenizer for both numerator
+  and denominator, matching chapter, paragraph, dialogue and pacing reports and avoiding
+  punctuation-only counts above 100%.
+- Show/Tell ranking arrays stay empty when chapter balances cannot be
+  distinguished. The dashboard shows unavailable comparisons as dashes for
+  fewer than three chapters or absent comparative signals.
+- Maas a² returns its defined value for a corpus with a single word type when
+  the existing 100-token minimum is met.
+- A successful OCR worker probe no longer hides an invalid timeout or missing
+  rasterizer. PDF extraction warnings survive explicit native fallback through
+  local, batch and Zotero import results and appear in dashboard import status.
+- Manuscript selection stays locked against duplicate submissions while reading.
+  Import previews clear before a replacement read, ignore obsolete completions
+  and remain unconfirmable on read failure. The import file picker also supports
+  click, Enter and Space without an empty-selector error.
 - **Port-scoped server lifecycle**: `scripts/lixity-start.sh` and `scripts/lixity-start.ps1`
   now scope PID and log files per port (`lixity-<PORT>.pid` / `.log`), preventing
   cross-port `stop` signals and ensuring multi-instance isolation.
@@ -24,6 +64,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and automatically clean up stale or recycled PID files without targeting unrelated processes.
 - **Config recovery documentation**: corrected `docs/USAGE.md` to remove references to
   non-existent threshold fields in the CLI JSON meta block.
+
+### Documentation
+- Regenerated and reviewed 35 screenshots using public-domain analysis text and
+  synthetic project/research fixtures; README and Pages galleries include mobile
+  states, complete dialog forms and full-size links.
+- Methods and workflow guides clarify minimum-data guards, manuscript-only style
+  baselines, heuristic limitations, phase progress messages and OCR health checks.
 
 ## [1.22.0] - 2026-09-30
 
@@ -1219,7 +1266,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.21.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.23.0...HEAD
+[1.23.0]: https://github.com/mfahsold/lixity/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/mfahsold/lixity/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/mfahsold/lixity/compare/v1.20.0...v1.21.0
 [1.20.0]: https://github.com/mfahsold/lixity/compare/v1.19.0...v1.20.0

@@ -8,6 +8,8 @@ node tests/browser/style-space.cjs
 node tests/browser/settings.cjs
 node tests/browser/layout.cjs
 node tests/browser/research.cjs
+node tests/browser/list-filters.cjs
+node tests/browser/project-controls.cjs
 node tests/browser/docs.cjs
 node tests/browser/visual-consistency.cjs
 ```
@@ -29,7 +31,20 @@ and 390-pixel layouts. It leaves screenshots under `/tmp/lixity-research-ui-*` a
 stops its server on completion. It does not select or alter a running user project.
 Set `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` to use an existing Chromium installation.
 
-The same suite exercises native record revisions: edit and history for dossiers,
+The list-filters suite uses a disposable synthetic archive. It checks source and
+dossier metadata matching, inert titles, preserved detail DOM, no API requests
+while typing, delayed list refresh, complete association options and their
+selected values. It inspects all seven languages at 1440 and 320 pixels and saves
+screenshots under `/tmp/lixity-list-filters-*`.
+
+The project-controls suite checks manuscript file/drop selection and inert
+filenames, explicit native import confirmation, the existing embedding load
+payload, persistent New/Open/guidance across the three views, and the initially
+collapsed capability-gated NDA panel. Its synthetic examples and intercepted
+requests exercise desktop/mobile layouts and seven languages; screenshots stay
+under `/tmp/lixity-project-controls-*`.
+
+The research suite also exercises native record revisions: edit and history for dossiers,
 claims, evidence links and decisions; cancellation; concurrent and failed saves
 that preserve drafts; newer-source notices with original quotations retained;
 and history dialogs across all seven locales at 320 pixels.

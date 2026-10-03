@@ -18,12 +18,13 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Understand manuscript metrics and style consistency</h1>
 <p>Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-27">27 September 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-03">3 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html" aria-current="page">Interpret results</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="consistency">What does consistency measure?</h2>
 <p>Consistency is the proportion of measured chapter–feature cells whose significance-adjusted deviation stays below the active mild threshold. A cell is one feature in one chapter, such as sentence length in chapter two. This is not simply the percentage of chapters that pass a test.</p>
 <p>The baseline uses the chapter median and median absolute deviation (MAD). The default mild threshold is <code>|z*| &lt; 2.5</code>; project and session settings can change it. A high percentage indicates fewer threshold crossings in this particular analysis. It does not certify narrative continuity, factual accuracy or literary merit. Constant features may remain within the band, so even a measured 100% needs contextual interpretation.</p>
+<p>Retained research sources do not enter this manuscript baseline. An archived source is analyzed against its own chapters (<code>source_internal</code>); source–manuscript comparison is a separate, explicit lexical and register report. Travel accounts, monographs and their period or genre labels are evidence and user-supplied context, not an automatic writing standard. Archive integrity checks retained bytes and citations, not historical truth.</p>
 
 <h2 id="empty">Why does an empty manuscript show “–”?</h2>
 <p>Since v1.18.0, the dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.</p>
@@ -36,8 +37,11 @@
 <tr><td>Style reference</td><td>At least the configured measurable chapter count; default 2</td><td>A technical floor, not proof of statistical reliability. Several substantive chapters are more informative.</td></tr>
 <tr><td>HD-D, MTLD, Maas a²</td><td>At least 100 tokens</td><td>Shorter inputs return unavailable results. Length robustness does not eliminate every sample effect.</td></tr>
 <tr><td>MATTR</td><td>A 50-token window</td><td>Compare results only with consistent tokenization and settings.</td></tr>
+<tr><td>Showing/telling ranking</td><td>At least three chapters with distinguishable balance scores</td><td>Otherwise the ranking lists are empty; numeric zero fallback scores do not establish artistic equivalence.</td></tr>
 <tr><td>Readability</td><td>Language-specific formula and count heuristics</td><td>Formula estimates describe surface structure; they do not determine an individual reader's understanding.</td></tr>
 </tbody></table>
+<p>A token floor is an implementation policy, not a quality threshold. Maas remains defined for repetition: 100 repetitions of one token give <code>maas_a2 = 0.5</code>. Guiraud <code>V/√N</code> still depends on length and corpus composition. Flesch-family values can fall outside 0–100; they estimate surface structure, not reader understanding.</p>
+<p>The showing/telling panel displays “–” with an explanation when there are fewer than three chapters or no comparative signals. Numeric fallback zeros remain in JSON for compatibility; they do not justify a ranking.</p>
 
 <h2 id="review">A practical review loop</h2>
 <ol>
@@ -48,6 +52,7 @@
 <li>After changing the manuscript, compare results using the same analysis version, language and thresholds.</li>
 </ol>
 <p>For example, a synthetic chapter consisting of short dialogue may differ sharply from a descriptive chapter. That contrast can be intentional. Neither moving both toward a common average nor maximizing consistency is a general writing objective.</p>
+<p>For a scene or narrative-voice comparison, choose passages with comparable language, scope and discourse mode, then read the source text alongside sentence rhythm, dialogue, vocabulary and register measures. A dialogue-heavy scene and an expository scene need not share a target distribution. Short sentences do not establish dramatic pace, and few perception-filter verbs do not establish immersion. The tools do not identify speakers or validate a narrator's artistic voice.</p>
 
 <h2 id="editorial-matrix">Signals and questions for review</h2>
 <p>Use this reference to connect a measurement with a question to investigate. None of these signals establishes a writing defect.</p>
@@ -127,9 +132,11 @@
 
 <h2 id="tense">What can tense and pacing labels tell me?</h2>
 <p>Tense labels, dialogue detection, pacing indicators and showing/telling patterns are language-dependent heuristics. Quoted speech, ambiguous word forms and unconventional punctuation can affect them. A friction rating locates mixed signals; it does not determine whether a flashback or tense change is mistaken. Read the original paragraph before making an editorial decision.</p>
+<p>Without explicit scene dividers, <code>scenes_are_chapters</code> is true: scene counts are chapter placeholders, not detected narrative transitions. Dialogue shares count quoted and total words with the same configured token regex; quotation marks still do not identify a speaker.</p>
 
 <h2 id="visuals">Read the values as well as the colors</h2>
 <p>Use the labels, numerical values and selected thresholds alongside a chart's colors. Interface accent colors identify links and controls; analysis colors encode a particular measure or state. A prominent or saturated cell does not necessarily represent a large effect, a reliable estimate or a writing problem. Theme preference does not change the underlying analysis.</p>
+<p>Display label keys such as <code>feat_asl</code> are not API functions or result fields. Read actual model keys: corpus metrics use <code>asl</code>, <code>dialog_ratio</code> and <code>filter_density</code>; chapter metrics use <code>asl</code>, <code>dialog_pct</code> and <code>filter_density</code>. Style feature identifiers appear in <code>features[].feature</code> and deviation/FDR entries. Keep the scope and units with each reported value.</p>
 
 <h2 id="languages">Are the seven languages equally accurate?</h2>
 <p>The interface and language profiles cover English, German, French, Spanish, Italian, Portuguese and Dutch. English and German have the deepest linguistic heuristics. Complete translations of interface text do not establish equal linguistic accuracy. Mathematical identifiers stay language-neutral; quotations retain their original language.</p>

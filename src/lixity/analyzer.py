@@ -284,7 +284,7 @@ class CorpusAnalyzer:
         stats = self._sentence_stats(c_sentences)
 
         c_dial = self._dialogue_re.findall(cl_b)
-        c_dial_words = sum(len(m.split()) for m in c_dial)
+        c_dial_words = sum(len(self._word_re.findall(m)) for m in c_dial)
         c_dial_pct = (c_dial_words / n_cw) * 100.0 if n_cw else 0.0
         c_ttr = len(set(c_lower)) / n_cw if n_cw else 0.0
         c_signals = {
@@ -432,8 +432,8 @@ class CorpusAnalyzer:
 
         # 6. Dialogue ratio
         dialog_matches = self._dialogue_re.findall(prose_main)
-        dialog_words = sum(len(m.split()) for m in dialog_matches)
-        dialog_ratio = (dialog_words / clean_words) * 100.0 if clean_words else 0.0
+        dialog_words = sum(len(self._word_re.findall(m)) for m in dialog_matches)
+        dialog_ratio = (dialog_words / n_tokens) * 100.0 if n_tokens else 0.0
 
         # 7. Paragraph economy, punctuation, signals
         total_paras, avg_para_len, single_line_paras = self._paragraph_stats(prose_main)

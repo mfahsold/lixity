@@ -10,6 +10,12 @@ every `meta` block.
 
 ## 1. Robust house-style baseline
 
+The reference population is the supplied manuscript's measurable chapters.
+Retained research sources, including travel accounts and monographs, are not
+added to that population. Source analysis uses the same engine on one archived
+source version and labels its interpretation `source_internal`; an explicit
+source–manuscript comparison produces a separate report, not a new baseline.
+
 ### Language and presentation boundary
 
 Language selection changes tokenization, linguistic feature extraction and
@@ -23,6 +29,13 @@ removed. Chapter labels remain available for navigation; changing a title does
 not change its prose readability. For even sentence counts, `median_sl_exact`
 averages the two middle lengths. The older integer `median_sl` retains its upper
 middle value for JSON compatibility; reports use the exact median.
+
+Corpus `dialog_words` and chapter dialogue counts use the configured
+`word_regex`, as do their denominators (`tokens` and chapter `words`). Thus
+`dialog_ratio` and chapter `dialog_pct` count the same token unit inside and
+outside detected quotations. The legacy whitespace count `clean_words` is
+unchanged and is not the dialogue-ratio denominator. Recompute older dialogue
+reports and dependent style results before comparing across this correction.
 
 The 3D dashboard displays up to three derived dimension scores. A point is
 flagged when a completed dimension score reaches the configured absolute
@@ -39,9 +52,12 @@ Per feature $f$ over $n$ measurable chapters with values $x_1,\dots,x_n$:
 | Spread | $\mathrm{MAD} = \mathrm{median}(\lvert x_i - \tilde{x}\rvert)$ | 0 for $n < 2$ |
 | Sigma | $\sigma = 1.4826 \cdot \mathrm{MAD}$ | 1.4826 = $1/\Phi^{-1}(0.75)$ (DescTools/R default) |
 
-A feature is **measurable** only when $n \ge$ `FingerprintThresholds.min_chapters`
-(default 2) and $\sigma > 0$; otherwise its baseline is zeroed and it stays out
-of the fingerprint.
+A chapter–feature cell is **measurable** when the feature has at least
+`FingerprintThresholds.min_chapters` observations (default 2). Below this floor,
+the baseline is zeroed and no cells are scored. Constant features can still
+produce measured zero deviations; derived dimensions and spread-based
+diagnostics require positive $\sigma$. Availability and informative variation
+are different conditions.
 
 ## 2. Significance-adjusted deviation (z*)
 
@@ -241,6 +257,12 @@ Documented research directions, **not** current product features:
 McCarthy & Jarvis (2010): report MTLD + HD-D + Maas **together**, not a
 single index. See [`STABILITY.md`](STABILITY.md) §1 for length caveats.
 
+The 100-token floor is a local short-text policy, not a universal reliability
+threshold. Maas is defined for a one-type text: $N=100$, $V=1$ gives $a^2=0.5$.
+Only a nonpositive type count or an input below the token floor is unavailable;
+repetition alone is not a missing measurement. Guiraud $R=V/\sqrt{N}$ remains
+length-dependent and does not make arbitrary texts directly comparable.
+
 For $N$ tokens, type counts $f_t$, and draw size $d=42$, the implemented
 expectation is
 
@@ -308,6 +330,14 @@ Each chapter is its own reference: robust $z$ of the paragraph value against
 that chapter’s paragraph median/MAD ($n \ge 3$ measurable paragraphs, else
 skipped). Layer fill uses the absolute value span (min–max per dimension);
 the ring marks $\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
+
+The separate showing/telling composite standardizes each raw signal against
+the manuscript's chapter median/MAD, then averages the telling and showing
+groups. If MAD is zero, it uses population standard deviation when available.
+Fewer than three chapters or zero spread produce zero component scores.
+`most_telling` and `most_showing` are empty when all balances are identical,
+including this insufficient-data fallback; chapter-order ties are not evidence
+of a ranking. These signals describe relative patterns, not prose quality.
 
 ## 10. Determinism contract
 

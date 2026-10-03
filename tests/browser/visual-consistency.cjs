@@ -63,6 +63,8 @@ const contrast = (first, second) => {
         }));
         assert.ok(heatmapColors.length > 0);
         heatmapColors.forEach(([text, fill]) => assert.ok(contrast(text, fill) >= 4.5, `${theme} heatmap label contrast`));
+        await app.locator('#tab-view-project').focus();
+        await app.keyboard.press('Enter');
         for (const [page, selector, label] of [[app, 'button.ctl.primary', 'app'], [site, '.btn.primary', 'site']]) {
           const control = page.locator(selector).filter({visible: true}).first();
           await control.focus();

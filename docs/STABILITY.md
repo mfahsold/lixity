@@ -30,7 +30,16 @@ The optional Zotero integration is included in `v1.19.0`.
 Zotero can lead the source/media catalogue; Lixity retains immutable evidence
 and authored records. These stores have complementary responsibilities and
 separate backup requirements. Lixity's integrity audit checks retained bytes,
-references and citations, not the completeness of an external library.
+references and citations, not factual truth, chronology or the completeness of
+an external library. Test fixtures and a successful audit do not establish that
+an entire private collection has been validated.
+
+Research retention does not change the manuscript's style reference. Each
+source analysis is `source_internal`, with user-supplied context explicitly
+unverified. Historical travel accounts and monographs remain evidence selected
+for review, not an automatic stylistic norm. Source–manuscript comparison is an
+explicit, separate lexical/register report; shared words do not prove that a
+passage supports a claim or that its historical context is appropriate.
 
 Synthetic native Zotero 10.0.3 tests on Linux ARM64 cover text/PDF imports and
 bridge text capture, refresh and search. This is a bounded integration check,
@@ -96,6 +105,10 @@ See [Research usage](research/USAGE.md) for operational limits.
 - MATTR and MTLD correlate only weakly (≈0.07 in one corpus) – they measure
   different things (local repetition vs. global variation); the UI shows
   both, side by side.
+- The implementation's 100-token floor for HD-D, MTLD and Maas is a local
+  policy, not a quality or reliability boundary. Guiraud remains sensitive to
+  length, language and corpus composition. Maas accepts one observed type:
+  100 repetitions give $a^2=0.5$, not an unavailable result.
 
 **Readability & stylistics.**
 - Amstad (1978) recalibrates Flesch for German; Kandel-Moles, Szigriszt-Pazos,
@@ -104,6 +117,18 @@ See [Research usage](research/USAGE.md) for operational limits.
   linguistic dimensions that matter for comprehension — Lixity therefore
   names the formula variant (`flesch_variant`) and treats the score as a
   relative, language-local signal, never a cross-language quality ranking.
+  Formula values are not clipped to 0–100 and do not establish an individual
+  reader's comprehension.
+- Dialogue shares use the configured word regex for both quoted tokens and
+  total tokens. `clean_words` retains its legacy whitespace-count meaning.
+  This correction can change prior dialogue ratios and dependent style results
+  without changing JSON field names; regenerate them before comparison.
+- Showing/telling ranks are absent (`most_telling=[]`, `most_showing=[]`) when
+  balances are indistinguishable, including fewer than three chapters. Numeric
+  zero fallback scores remain in the report; they are not evidence of equal
+  artistic effect. Without explicit scene dividers, pacing scenes are chapter
+  placeholders. Short sentences and sparse perception filters do not by
+  themselves establish effective pacing, immersion or prose quality.
 - Foregrounding theory (Mukařovský / standard stylistics): deviation from
   a text’s *own* norm is the literary signal. The self-calibrating house
   style is that norm — a cultural-science reading of “what is remarkable

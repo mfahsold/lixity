@@ -155,6 +155,9 @@ def showing_report(
     ]
 
     ranked = sorted(chapter_list, key=lambda item: item.balance)
+    # Unmeasurable or identical balances do not support a chapter ranking.
+    if ranked[0].balance == ranked[-1].balance:
+        ranked = []
     return ShowingReport(
         language=config.language,
         chapters=len(chapter_list),

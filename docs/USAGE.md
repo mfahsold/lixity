@@ -37,12 +37,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.22.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"
 lixity --version
 lixity about
 ```
 
-`v1.22.0` is the release pin. Choose `@main` only to follow development,
+`v1.23.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
@@ -104,6 +104,26 @@ which writes a single HTML file.
 The current release uses the shared analysis pipeline for CLI, HTML exports and
 the local server. A generated dashboard supports analysis navigation offline;
 project and research actions require the local server.
+
+**Since v1.23.0:** The server dashboard has three views:
+**Research & Dossiers**, **Manuscript & Analysis**, and **Project & Settings**.
+New Project, Open Project and optional guidance remain accessible in every view.
+
+Under Project & Settings, choose or drop a Markdown/plain-text manuscript to see
+its filename. Selection alone sends no request. In the native server,
+**Continue to import…** opens the existing **Import Manuscript** dialog with that
+selection. Confirming the dialog creates a separate project; use **Open Project**
+to reconnect an existing folder and its research archive. Embedding hosts that
+advertise the load capability instead show **Analyze manuscript now →**, retaining
+their existing load action and payload.
+
+Source and dossier list filters match case-insensitive substrings in loaded
+titles, tags and IDs; dossiers also match excerpts and section names. Typing
+does not request the server or search source text. Use Research → Search for
+full-text archive search. Filters keep loaded details and leave association
+dropdowns complete, including records hidden from the list. The NDA manager is
+a native details panel, initially collapsed and shown only when that capability
+is available; opening it does not change the NDA backend.
 
 ```bash
 lixity dashboard manuscript.md --language en -o dashboard.html
@@ -188,7 +208,7 @@ The JSON payload is the full `CorpusMetrics` schema:
 | Field | Meaning |
 | :--- | :--- |
 | `raw_words`, `raw_chars` | full text including appendix |
-| `clean_words`, `clean_chars` | prose only (appendix removed) |
+| `clean_words`, `clean_chars` | prose only (appendix removed); `clean_words` retains its whitespace count |
 | `tokens`, `vocab_types` | token count (N) and distinct types (V) |
 | `ttr`, `guiraud_r`, `yules_k` | lexical diversity measures |
 | `total_sentences`, `asl`, `median_sl_exact`, `std_sl` | prose sentence metrics; exact median averages the middle pair |
@@ -197,10 +217,15 @@ The JSON payload is the full `CorpusMetrics` schema:
 | `asw` | average syllables per word |
 | `flesch_de`, `flesch_variant`, `lix` | language-calibrated readability indices |
 | `mtld`, `mattr`, `maas_a2` | less length-sensitive lexical diversity (`null` when too short) |
-| `dialog_words`, `dialog_ratio` | quoted speech |
+| `dialog_words`, `dialog_ratio` | quoted word tokens and their percentage of `tokens`, using the same configured `word_regex` |
 | `total_paragraphs`, `avg_paragraph_len`, `single_line_paragraphs` | paragraph economy |
 | `punctuation`, `signal_counts`, `filter_count` | punctuation (language-neutral keys), signal words, perception filters |
 | `chapters` | per-chapter metrics (words, sentences, ASL, TTR, dialogue, motifs, dominance) |
+
+Chapter `dialog_pct` likewise divides quoted tokens by chapter `words`.
+The corrected dialogue calculation can change older ratios and dependent style
+results; regenerate both sides of a comparison with the same analysis version.
+The JSON keys and legacy `clean_words` count remain unchanged.
 
 ### `lixity profile`
 
@@ -321,6 +346,13 @@ chapter medians, and the balance `show_z − tell_z`.
 - Fallback (documented): when the median absolute deviation is zero (the
   majority of chapters share the median — common for share features such as
   dialogue), the standard deviation is used so the signal is not lost.
+- With fewer than three chapters, component z-scores fall back to zero. When
+  all chapter balances are identical, `most_telling` and `most_showing` are
+  empty lists, including this insufficient-data case. Empty ranks mean no
+  distinguishable ordering, not identical artistic effect.
+- The dashboard shows comparison values as `–` with an explanation when there
+  are fewer than three chapters or no nonzero comparative signals. Raw JSON
+  fallback scores remain numeric for compatibility.
 - Deliberate telling is a stylistic device — the report ranks and locates,
   it does not judge. The underlying signals are also visible per chapter in
   the dashboard's style heatmap and layer.
@@ -406,7 +438,8 @@ The dashboard contains:
   present, chapter span, longest gap and a presence bar per figure,
 - a **pacing curve** (when pacing data is supplied or computed by the CLI):
   scenes, average scene length, hook mean and one bar per chapter (ASL, the
-  lower the faster) with its hook score,
+  sentence-length proxy) with its hook score. When `scenes_are_chapters` is
+  true, the panel identifies scene counts as chapter placeholders,
 - a **motifs & repetition** panel (when data is supplied or computed by the
   CLI): motif presence and the most repeated phrases with their chapters,
 - a **narrative distance** panel (when data is supplied or computed by the
@@ -539,24 +572,42 @@ facade is described below under [Library](#library).
 
 ## Understanding the metrics
 
-| Metric | Definition | Rule of thumb |
+Compare scenes or narrative voices using comparable language, passage length,
+chapter boundaries and discourse mode. Inspect the prose alongside the values:
+a dialogue scene and an expository scene may deliberately differ. Neither
+short sentences nor low perception-filter counts establish effective pacing,
+immersion or a writing defect. There is no automatic narrator-voice assessment.
+
+| Metric | Definition | Interpretation limits |
 | :--- | :--- | :--- |
-| **ASL** | average sentence length in words | 8–11.5 = short, paratactic; higher = more complex |
+| **ASL** | average sentence length in words | describes length, not syntactic complexity or dramatic pace by itself |
 | **Median / σ** | middle sentence length and spread | a low median with high σ means short base plus bursts |
-| **TTR** | type-token ratio V/N | 0.17–0.22 for novel-length prose; falls as texts grow |
-| **Guiraud R** | V / √N | length-stabilised lexical spread; comparable across texts |
-| **Yule's K** | vocabulary repetition measure | 50–70 = stable narrator idiom; higher = more repetitive |
-| **ASW** | average syllables per word | feeds Flesch; ~1.7 is everyday German |
+| **TTR** | type-token ratio V/N | sensitive to length, topic and tokenization; no universal novel target |
+| **Guiraud R** | V / √N | remains length-dependent; compare with sampling and corpus context |
+| **Yule's K** | vocabulary repetition measure | repetition does not establish a stable narrator or a quality verdict |
+| **ASW** | average syllables per word | a language-dependent heuristic input to readability formulas |
 | **MTLD** | mean segment length until TTR < 0.72 (forward/backward averaged) | larger values mean longer diverse segments; requires ≥ 100 tokens |
-| **MATTR** | moving-average TTR over a 50-token window | ≥ 0.70 = rich; the most length-stable index |
-| **Maas a²** | (log N − log V) / (log N)² | lower = richer vocabulary |
-| **Flesch** | language-calibrated Flesch family (Amstad for German) | 65–80 = easy; higher is easier |
-| **LIX** | ASL + share of long words (Björnsson: more than six characters, all languages) | < 40 = accessible, > 50 = demanding |
-| **Dialogue ratio** | share of words inside quoted speech | 5–15 % typical for narrative prose |
-| **Function words** | share of articles, pronouns, prepositions, conjunctions, particles, auxiliaries, modals | high share = grammatical glue, implicit style |
-| **Perception filters** | verbs of perception/sensation ("sah", "hörte", "fühlte") | few = showing, many = telling |
-| **Sentence classes** | staccato ≤ 6, medium 7–15, long 16–25, complex > 25 words | describes the rhythm architecture |
+| **MATTR** | moving-average TTR over a 50-token window | describes local repetition; compare the same window and tokenization |
+| **Maas a²** | (log₁₀ N − log₁₀ V) / (log₁₀ N)² | requires ≥ 100 tokens; lower means more types at the same N, not better prose |
+| **Flesch** | language-calibrated Flesch family (Amstad for German) | formula output is not clipped to 0–100; not reader comprehension |
+| **LIX** | ASL + share of long words (Björnsson: more than six characters, all languages) | a surface-structure estimate, not a universal difficulty or quality threshold |
+| **Dialogue ratio** | share of configured word tokens inside detected quotations | quotation and token regexes affect counts; no speaker attribution |
+| **Function words** | share of articles, pronouns, prepositions, conjunctions, particles, auxiliaries, modals | language-profile counts describe grammatical patterns, not artistic value |
+| **Perception filters** | verbs of perception/sensation ("sah", "hörte", "fühlte") | curated pattern counts; narrative distance still requires reading in context |
+| **Sentence classes** | staccato ≤ 6, medium 7–15, long 16–25, very long > 25 words | length bins; the legacy `complex_*` keys do not establish syntactic nesting |
 | **Tense severity** | 0 = neutral, 1 = watch, 2 = conspicuous, 3 = strong friction | flags switches and mixtures for review |
+
+The 100-token minimum is a local short-text policy, not a reliability guarantee.
+Maas is valid for a one-type text: 100 repetitions produce `maas_a2=0.5`.
+Unavailable estimates are `null` in JSON and shown as `–` in the dashboard;
+legacy zero values on empty input must not be interpreted as measured quality.
+
+Use actual JSON fields when automating: corpus metrics have `asl`,
+`dialog_ratio`, `filter_density` and `nominalization_density`; chapter metrics
+use `asl`, `dialog_pct`, `filter_density` and `nominalization_density`.
+The style passport stores these feature identifiers in `features[].feature`
+and its deviation/FDR entries. Display keys such as `feat_asl` and `feat_dialog`
+belong to localized labels, not callable API functions or result fields.
 
 ## Manuscript format & how to operate lixity
 
@@ -600,7 +651,8 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 
 - **Short texts:** less length-sensitive lexical-diversity indices need minimum
   sizes (HD-D/MTLD/Maas a² ≥ 100 tokens, MATTR ≥ window 50);
-  below that Lixity returns `null` and the dashboard shows `–`.
+  below that Lixity returns `null` and the dashboard shows `–`. These guards
+  do not establish reliability above the floor or assess prose quality.
 - **Heuristics:** syllables (error rate not established by a gold-standard corpus here), suffix-based densities and tense
   patterns are comparable *within* one language, not across languages;
   heuristics measure what is in the text, they are not ground truth.
@@ -619,6 +671,11 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 - **No external Delta stylometry:** divergence metrics (JSD driver words)
   are in-corpus diagnostics for *this* manuscript, not authorship
   attribution against an external reference corpus.
+- **Research reference scope:** retained sources never become the manuscript's
+  baseline automatically. Source analysis is `source_internal`; explicit
+  source–manuscript comparison returns separate vocabulary/register contrasts.
+  Historical genre, period and place labels remain unverified context, not
+  stylistic norms or factual proof.
 - **Self-calibration needs several chapters** with measurable spread; a
   single chapter hides the heatmap instead of showing noise.
 - **Determinism** is byte-identical on the same interpreter; across Python
@@ -925,8 +982,8 @@ Release v1.20.0 streamlines research ingestion and index maintenance:
 
 - **Batch ingestion:** `lixity research batch-ingest --project ./novel --allow-retention [--progress] ./sources/*.txt`
   ingests multiple files in a single invocation, emitting structured per-file outcomes
-  under `research-batch-ingest-local/1`. When `--progress` is passed, live phase
-  heartbeats stream to stderr.
+  under `research-batch-ingest-local/1`. With `--progress`, phase progress
+  messages go to stderr; they are not periodic heartbeats.
 - **Auto-fresh index caching:** `lixity research search` checks whether the FTS5
   index records a snapshot digest that differs from the current one. If stale, it automatically
   rebuilds the index before querying, eliminating manual `reindex` friction in common

@@ -576,6 +576,8 @@ figure.shot img {
   display: block;
   width: 100%;
   height: auto;
+  max-height: 36rem;
+  object-fit: contain;
   border-bottom: 1px solid var(--border);
   cursor: zoom-in;
 }

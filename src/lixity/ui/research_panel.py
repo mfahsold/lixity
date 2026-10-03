@@ -76,6 +76,8 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append('</div>')
     parts.append('</div>')
     parts.append(f'<h3>{L("zotero_retained")}</h3>')
+    parts.append(f'<input class="ctl" type="search" id="r-filter-sources" aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}" style="width:100%;margin-bottom:.5rem;"/>')
+    parts.append('<p class="ctl-note" id="r-filter-sources-status" aria-live="polite" hidden></p>')
     parts.append(f'<div id="research-sources-list">{loading_state(label(labels, "research_loading"))}</div>')
     parts.append('</div>')
 
@@ -111,6 +113,8 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append(f'<button class="ctl primary" id="r-dos-create-btn">{L("research_dossier_action")}</button>')
     parts.append('</div>')
     parts.append('</div>')
+    parts.append(f'<input class="ctl" type="search" id="r-filter-dossiers" aria-label="{L("research_filter_dossiers")}" placeholder="{L("research_filter_dossiers")}" style="width:100%;margin-bottom:.5rem;"/>')
+    parts.append('<p class="ctl-note" id="r-filter-dossiers-status" aria-live="polite" hidden></p>')
     parts.append(f'<div id="research-dossiers-list">{loading_state(label(labels, "research_loading"))}</div>')
     parts.append('</div>')
 

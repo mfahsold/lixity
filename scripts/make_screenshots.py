@@ -135,6 +135,7 @@ def main() -> int:
     WORK_DIR.mkdir(exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Screenshots from {manuscript.relative_to(BASE_DIR)} ({resolved.key})")
+    native_actions = ("analyze", "rebuild", "nda")
 
     # 1. CLI: rich corpus report -----------------------------------------
     console = Console(
@@ -192,14 +193,27 @@ def main() -> int:
         labels=resolved.labels,
         language_name=resolved.name,
         language_key=resolved.key,
+        current_language=resolved.key,
+        manuscript_name=manuscript.name,
+        controls=True,
+        enabled_actions=native_actions,
     )
     dashboard_path = _write_html("dashboard.html", _force_light(dashboard))
-    _write_html("dashboard-settings.html", _force_light(render_dashboard(
+    settings_dashboard = _write_html("dashboard-settings.html", _force_light(render_dashboard(
         chapters, paragraphs, metrics=metrics, fingerprint=fingerprint,
         title=title, labels=resolved.labels, language_name=resolved.name,
         language_key=resolved.key, current_language=resolved.key, controls=True,
+        manuscript_name=manuscript.name, enabled_actions=native_actions,
     )))
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
+    for view in ("project-settings", "project-import", "nda"):
+        for suffix, width in (("", 1480), ("-mobile", 390)):
+            _queue_capture(
+                settings_dashboard,
+                OUT_DIR / f"dashboard-{view}{suffix}.png",
+                width,
+                1050,
+            )
 
     # 4. Dashboard (dark) --------------------------------------------------
     _queue_capture(
@@ -292,12 +306,16 @@ def main() -> int:
     )
 
     # 8. Welcome Hero & Project Creation Modal (empty state) ---------------
-    welcome_dashboard = render_dashboard([], [], title="Lixity", controls=True, language_name=resolved.name, language_key=resolved.key, labels=resolved.labels)
+    welcome_dashboard = render_dashboard(
+        [], [], title="Lixity", controls=True, language_name=resolved.name,
+        language_key=resolved.key, current_language=resolved.key,
+        labels=resolved.labels, enabled_actions=native_actions,
+    )
     _queue_capture(
         _write_html("dashboard-welcome.html", _force_light(welcome_dashboard)),
         OUT_DIR / "dashboard-welcome.png",
         1440,
-        600,
+        930,
     )
     _queue_capture(
         _write_html("dashboard-project-modal.html", _force_light(welcome_dashboard)),
@@ -337,6 +355,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     ingest_res = research_api.ingest(
         research_proj,
         customs_file,
+        title="Port Authority Customs Log (synthetic)",
         context={
             "genre": "Official Customs Register",
             "created_period": "1923",
@@ -344,6 +363,29 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             "place": "Hamburg Free Port Zone",
             "perspective": "Third-Person Administrative",
             "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
+            "tags": ["Customs", "Warehouse 4"],
+        },
+        allow_retention=True,
+    )
+    weather_file = WORK_DIR / "harbor_weather_notes.txt"
+    weather_file.write_text(
+        "## Harbor Weather Notes\n\n"
+        "Mist covered the harbor before sunrise. A light wind carried drizzle "
+        "across the eastern pier, and the quay lamps remained lit.\n\n"
+        "## Setting Observations\n\n"
+        "The observer recorded wet cobblestones and distant bell signals. "
+        "These invented notes support a fictional scene; they are not historical evidence.\n",
+        encoding="utf-8",
+    )
+    weather_res = research_api.ingest(
+        research_proj,
+        weather_file,
+        title="Harbor Weather Notes (synthetic)",
+        context={
+            "genre": "Fictional setting notes",
+            "place": "Imaginary harbor",
+            "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
+            "tags": ["Weather", "Setting"],
         },
         allow_retention=True,
     )
@@ -368,8 +410,19 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     dossier_res = research_api.create_dossier(
         research_proj,
         title="Warehouse 4 case notes",
-        body="Synthetic case note: compare the night watchman's account with the customs log.",
+        body="## Timeline\n\nCompare the night watchman's account with the synthetic customs log.\n\n"
+        "## Open Questions\n\nKeep source quotations separate from the author's fictional scene decisions.",
+        tags=["Warehouse", "Timeline"],
         evidence_ids=[passage_id],
+    )
+    weather_passage = research_api.get_source(research_proj, weather_res["source_id"])["passages"][0]["id"]
+    research_api.create_dossier(
+        research_proj,
+        title="Harbor setting notes",
+        body="## Weather\n\nUse the synthetic notes to review the harbor scene's atmosphere.\n\n"
+        "## Scene Planning\n\nThe weather and setting are fictional examples, not verified historical claims.",
+        tags=["Weather", "Setting"],
+        evidence_ids=[weather_passage],
     )
     claim_res = research_api.create_claim(
         research_proj,
@@ -407,7 +460,14 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     dossiers_data = research_api.list_dossiers(research_proj)
     claims_data = research_api.list_claims(research_proj)
     decisions_data = research_api.list_decisions(research_proj)
+    workspace_search = research_api.search(
+        research_proj, "warehouse customs", scope="sources", ensure_fresh=True,
+    )
     research_fixture = {
+        "/api/nda-list": {
+            "ok": False, "locked": True, "records": [],
+            "message": "NDA manager is locked in this synthetic demonstration.",
+        },
         # Synthetic server-local paths demonstrate the chooser without exposing a user's home.
         "/api/project-paths": {
             "ok": True, "path": "/home/demo/my-novel", "parent": "/home/demo",
@@ -421,6 +481,13 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             "ok": True,
             "initialized": True,
             "project_root": "./research-demo",
+            "project_id": sources_data["project_id"],
+            "project_title": sources_data["project_title"],
+            "project_language": sources_data["project_language"],
+            "sources": sources_data["sources"],
+            "dossiers": dossiers_data["dossiers"],
+            "claims": claims_data["claims"],
+            "decisions": decisions_data["decisions"],
             "sources_count": len(sources_data["sources"]),
             "dossiers_count": len(dossiers_data["dossiers"]),
             "claims_count": len(claims_data["claims"]),
@@ -434,16 +501,26 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             **research_api.list_evidence_links(research_proj, claim_id=claim_res["claim_id"]),
         },
         "/api/research/decisions": {"ok": True, **decisions_data},
+        "/api/research-search": {"ok": True, **workspace_search},
     }
+    for source in sources_data["sources"]:
+        research_fixture["/api/research/sources?id=" + quote(source["id"], safe="")] = {
+            "ok": True, **research_api.get_source(research_proj, source["id"]),
+        }
+    for dossier in dossiers_data["dossiers"]:
+        research_fixture["/api/research/dossiers?id=" + quote(dossier["id"], safe="")] = {
+            "ok": True, **research_api.get_dossier(research_proj, dossier["id"]),
+        }
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",
         _force_light(render_dashboard(
             [], [], title="Synthetic archival research", controls=True,
             labels=resolved.labels, language_name=resolved.name, language_key=resolved.key,
+            current_language=resolved.key, enabled_actions=native_actions,
         )),
     )
-    for view in ("claims", "decisions"):
+    for view in ("sources", "dossiers", "search", "claims", "decisions"):
         for suffix, width, height in (("", 1480, 1000), ("-mobile", 390, 1000)):
             _queue_capture(
                 research_workspace,
@@ -460,7 +537,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     )
     _terminal_shot(
         "lixity research search & cite",
-        f"<pre>{html.escape(cli_research_text)}</pre>",
+        f'<pre style="white-space:pre-wrap;overflow-wrap:anywhere">{html.escape(cli_research_text)}</pre>',
         OUT_DIR / "cli-research.png",
         1320,
         780,

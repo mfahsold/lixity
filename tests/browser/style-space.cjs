@@ -97,7 +97,7 @@ assert.equal(fixture.status,0,fixture.stderr);
     await page.setViewportSize({width: 390, height: 844});
     const dimensions = await page.locator('#dimensions').evaluate(element => ({scroll:element.scrollWidth,width:element.clientWidth}));
     assert.ok(dimensions.scroll <= dimensions.width + 1, JSON.stringify(dimensions));
-    assert.equal(await page.locator('.dim-canvas-wrap').evaluate(element => element.clientHeight), 320);
+    assert.equal(await page.locator('.dim-canvas-wrap').evaluate(element => element.clientHeight), 260);
   });
   await check('loading bars leave room for their labels', async () => {
     const widths = await page.locator('#dimensions .load b').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width));

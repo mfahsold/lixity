@@ -227,6 +227,8 @@ var reduceMotion = window.matchMedia
   && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
 function scrollAndFlash(target) {
+  var view = target.closest(".view-pane");
+  if (view) switchActiveView(view.dataset.viewPane);
   target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   target.classList.add("flash");
   setTimeout(function () { target.classList.remove("flash"); }, 1400);
@@ -258,7 +260,8 @@ function activate(el) {
   if (el.hasAttribute("data-line")) { jumpToLine(el); return; }
   var key = el.getAttribute("data-layer");
   if (key && layer) { layer.value = key; applyLayer(); }
-  var target = document.querySelector(el.getAttribute("data-jump") || "");
+  var jump = el.getAttribute("data-jump");
+  var target = jump ? document.querySelector(jump) : null;
   if (target) scrollAndFlash(target);
 }
 
@@ -320,7 +323,7 @@ document.addEventListener("keydown", function (event) {
   }
   if (event.key !== "Enter" && event.key !== " ") return;
   var el = event.target.closest ? event.target.closest(INTERACTIVE) : null;
-  if (el && !el.closest(".controls") && !isMarkerControl(event.target)) {
+  if (el && el.tagName !== "BUTTON" && !el.closest(".controls") && !isMarkerControl(event.target)) {
     event.preventDefault();
     activate(el);
   }
@@ -779,15 +782,23 @@ document.querySelectorAll("[data-action]").forEach(function (btn) {
     if (btn.dataset.payload === "load") {
       var input = document.getElementById("ms-file");
       if (!input.files || !input.files.length) {
-        var status = document.getElementById("ctl-status");
-        status.className = "ctl-status err";
-        status.textContent = "✗ " + (input.getAttribute("accept") || "File");
+        manuscriptFileError();
         return;
       }
       var file = input.files[0];
+      if (!supportedManuscriptFile(file)) { manuscriptFileError(); return; }
+      btn.disabled = true;
+      btn.classList.add("busy");
+      btn.setAttribute("aria-busy", "true");
       var reader = new FileReader();
       reader.onload = function () {
-        runAction("load", { name: file.name, content: reader.result });
+        runAction("load", { name: file.name, content: reader.result }, btn);
+      };
+      reader.onerror = function () {
+        manuscriptFileError("manuscript_read_failed");
+        btn.disabled = false;
+        btn.classList.remove("busy");
+        btn.removeAttribute("aria-busy");
       };
       reader.readAsText(file);
       return;
@@ -1428,7 +1439,11 @@ document.addEventListener("click", async function(event) {
           library: selection.request.library, attachment_key: item.key, expected_server_id: selection.result.server_id,
           source_id: captured ? captured.source_id : null, allow_retention: true});
         if (selection.request.project_id !== zoteroProjectId) return;
-        researchStatus(response.ok ? uiLabel("research_ingest_complete") : response.message, response.ok);
+        var captureMessage = response.ok ? uiLabel("research_ingest_complete") : response.message;
+        if (response.ok && Array.isArray(response.warnings) && response.warnings.length) {
+          captureMessage += " " + response.warnings.join(" ");
+        }
+        researchStatus(captureMessage, response.ok);
         if (response.ok) {
           document.getElementById("r-zotero-retention").checked = false;
           await refreshResearchSources();
@@ -1437,6 +1452,28 @@ document.addEventListener("click", async function(event) {
       }
     }
   } finally { button.disabled = false; }
+});
+
+function filterResearchList(kind) {
+  var input = document.getElementById("r-filter-" + kind);
+  var list = document.getElementById("research-" + kind + "-list");
+  var status = document.getElementById("r-filter-" + kind + "-status");
+  if (!input || !list || !status) return;
+  var query = input.value.trim();
+  var normalized = query.toLowerCase();
+  var cards = list.querySelectorAll(".research-card[data-filter-text]");
+  var matches = 0;
+  cards.forEach(function(card) {
+    card.hidden = Boolean(normalized) && !card.dataset.filterText.includes(normalized);
+    if (!card.hidden) matches++;
+  });
+  status.hidden = !normalized || !cards.length || matches > 0;
+  status.textContent = status.hidden ? "" : uiFormat("research_no_hits", {query: query});
+}
+
+document.addEventListener("input", function(event) {
+  if (event.target.id === "r-filter-sources") filterResearchList("sources");
+  if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
 });
 
 async function refreshResearchSources() {
@@ -1450,6 +1487,7 @@ async function refreshResearchSources() {
   var data = await researchApiGet("research/sources");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_sources_failed")) + '</p>';
+    filterResearchList("sources");
     return;
   }
   var sources = data.sources || [];
@@ -1468,13 +1506,15 @@ async function refreshResearchSources() {
   }
   if (!sources.length) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_sources")) + '</p>';
+    filterResearchList("sources");
     return;
   }
   listHost.innerHTML = sources.map(function(s) {
     var tagsHtml = (s.tags || []).map(function(t) {
       return '<span class="research-tag">' + escapeHtml(t) + '</span>';
     }).join(" ");
-    return '<div class="research-card">' +
+    var filterText = [s.title, s.id].concat(s.tags || []).join(" ").toLowerCase();
+    return '<div class="research-card" data-filter-text="' + escapeHtml(filterText).replace(/"/g, "&quot;") + '">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(s.title) + '</span>' +
         '<span class="ctl-note">' + escapeHtml(uiFormat("research_passages_count", { count: s.passages })) + ' · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
@@ -1485,6 +1525,7 @@ async function refreshResearchSources() {
       researchDetailsControl("source", s.id) +
     '</div>';
   }).join("");
+  filterResearchList("sources");
 }
 
 async function refreshResearchDossiers() {
@@ -1497,6 +1538,7 @@ async function refreshResearchDossiers() {
   var data = await researchApiGet("research/dossiers");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_dossiers_failed")) + '</p>';
+    filterResearchList("dossiers");
     return;
   }
   var dossiers = data.dossiers || [];
@@ -1510,6 +1552,7 @@ async function refreshResearchDossiers() {
   }
   if (!dossiers.length) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_dossiers")) + '</p>';
+    filterResearchList("dossiers");
     return;
   }
   listHost.innerHTML = dossiers.map(function(d) {
@@ -1523,7 +1566,8 @@ async function refreshResearchDossiers() {
       ? '<div class="research-dossier-sections"><span class="ctl-note" style="font-size:.72rem;">' + escapeHtml(uiLabel("research_sections")) + ':</span> ' +
         d.sections.map(function(s) { return '<span class="research-tag research-tag-section">' + escapeHtml(s) + '</span>'; }).join(" ") + '</div>'
       : '';
-    return '<div class="research-card">' +
+    var filterText = [d.title, d.id, d.excerpt].concat(d.tags || [], d.sections || []).join(" ").toLowerCase();
+    return '<div class="research-card" data-filter-text="' + escapeHtml(filterText).replace(/"/g, "&quot;") + '">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
         reviewBadge +
@@ -1537,6 +1581,7 @@ async function refreshResearchDossiers() {
       researchRevisionActions("dossier", d.id) +
     '</div>';
   }).join("");
+  filterResearchList("dossiers");
 }
 
 async function refreshResearchClaims() {
@@ -1948,6 +1993,9 @@ document.addEventListener("click", async function (event) {
         var msg = res.ok
           ? (uiLabel("research_ingest_complete") + (res.passages ? " (" + res.passages + " passages)" : ""))
           : (res.message || "Failed");
+        if (res.ok && Array.isArray(res.warnings) && res.warnings.length) {
+          msg += " " + res.warnings.join(" ");
+        }
         researchStatus(msg, res.ok);
         if (res.ok) {
           if (titleEl) titleEl.value = "";
@@ -2778,6 +2826,36 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
 
 // --- Workspace & Project Modals -------------------------------------------
 var importedFileContent = "";
+var importedFileRead = 0;
+var manuscriptFile = null;
+var manuscriptInput = document.getElementById("ms-file") || document.getElementById("manuscript-import-file");
+var manuscriptButton = document.querySelector('[data-action="load"]') || document.getElementById("manuscript-import-btn");
+
+function supportedManuscriptFile(file) {
+  return file && /\.(md|markdown|txt)$/i.test(file.name);
+}
+
+function manuscriptFileError(key) {
+  var status = document.getElementById("ctl-status");
+  if (status) {
+    status.className = "ctl-status err";
+    status.textContent = uiLabel(key || "manuscript_file_invalid");
+  }
+}
+
+function selectManuscriptFiles(files) {
+  if (!manuscriptInput) return;
+  var valid = files && files.length === 1 && supportedManuscriptFile(files[0]);
+  if (valid) manuscriptFile = files[0];
+  var transfer = new DataTransfer();
+  if (manuscriptFile) transfer.items.add(manuscriptFile);
+  manuscriptInput.files = transfer.files;
+  if (!valid) { manuscriptFileError(); return; }
+  document.getElementById("manuscript-file-name").textContent = manuscriptFile.name;
+  if (manuscriptButton && !manuscriptButton.hasAttribute("aria-busy")) manuscriptButton.disabled = false;
+  var status = document.getElementById("ctl-status");
+  if (status) { status.className = "ctl-status"; status.textContent = ""; }
+}
 
 function switchModalTab(targetPaneId) {
   document.querySelectorAll(".modal-tab-btn").forEach(function (btn) {
@@ -2800,8 +2878,22 @@ function updateImportLanguagePreview() {
 
 function processImportedFile(file) {
   if (!file) return;
+  var submitBtn = document.getElementById("btn-submit-import-project");
+  if (submitBtn && submitBtn.hasAttribute("aria-busy")) return;
+  var read = ++importedFileRead;
+  importedFileContent = "";
+  if (submitBtn) submitBtn.disabled = true;
+  var previewBox = document.getElementById("import-preview-box");
+  if (previewBox) previewBox.style.display = "none";
+  var feedback = document.getElementById("import-project-status");
+  if (feedback) {
+    feedback.className = "ctl-status project-form-status loading";
+    feedback.textContent = uiLabel("research_ingesting_reading");
+    feedback.hidden = false;
+  }
   var reader = new FileReader();
   reader.onload = function (e) {
+    if (read !== importedFileRead) return;
     var text = String(e.target.result || "");
     importedFileContent = text;
 
@@ -2838,15 +2930,37 @@ function processImportedFile(file) {
       titleInput.value = detectedTitle;
     }
 
-    var submitBtn = document.getElementById("btn-submit-import-project");
-    if (submitBtn) {
+    if (submitBtn && !submitBtn.hasAttribute("aria-busy")) {
       submitBtn.disabled = false;
+    }
+    if (feedback) { feedback.textContent = ""; feedback.hidden = true; }
+  };
+  reader.onerror = function () {
+    if (read !== importedFileRead) return;
+    if (feedback) {
+      feedback.className = "ctl-status project-form-status err";
+      feedback.textContent = uiLabel("manuscript_read_failed");
+      feedback.hidden = false;
     }
   };
   reader.readAsText(file);
 }
 
 document.addEventListener("click", function (event) {
+  var manuscriptDrop = event.target.closest("#manuscript-dropzone");
+  if (manuscriptDrop && event.target !== manuscriptInput) {
+    if (manuscriptInput) manuscriptInput.click();
+    return;
+  }
+  if (event.target.closest("#manuscript-import-btn") && manuscriptFile) {
+    var importModal = document.getElementById("modal-project-create");
+    if (importModal && typeof importModal.showModal === "function") {
+      switchModalTab("tab-pane-import");
+      importModal.showModal();
+      processImportedFile(manuscriptFile);
+    }
+    return;
+  }
   var tabBtn = event.target.closest(".modal-tab-btn");
   if (tabBtn && tabBtn.dataset.tabTarget) {
     switchModalTab(tabBtn.dataset.tabTarget);
@@ -2880,7 +2994,7 @@ document.addEventListener("click", function (event) {
   var importDrop = event.target.closest("#import-dropzone");
   if (importDrop) {
     var fileInput = document.getElementById("import-file-input");
-    if (fileInput) fileInput.click();
+    if (fileInput && event.target !== fileInput) fileInput.click();
     return;
   }
 
@@ -2936,6 +3050,11 @@ document.addEventListener("click", function (event) {
 });
 
 document.addEventListener("drop", function (e) {
+  if (e.target.closest("#manuscript-dropzone")) {
+    e.preventDefault();
+    selectManuscriptFiles(e.dataTransfer && e.dataTransfer.files);
+    return;
+  }
   var importDrop = e.target.closest("#import-dropzone");
   if (importDrop && e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files.length) {
     e.preventDefault();
@@ -2945,6 +3064,10 @@ document.addEventListener("drop", function (e) {
 });
 
 document.addEventListener("change", function (event) {
+  if (event.target === manuscriptInput) {
+    selectManuscriptFiles(event.target.files);
+    return;
+  }
   if (event.target.id === "import-proj-lang") {
     updateImportLanguagePreview();
   }

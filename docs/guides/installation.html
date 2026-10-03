@@ -18,7 +18,7 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Install Lixity and open a manuscript locally</h1>
 <p>Lixity analyzes Markdown manuscripts on your computer. It produces an interactive dashboard with sentence rhythm, vocabulary, readability and chapter-level style signals. No manuscript upload or account is required for core analysis.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-29">29 September 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-03">3 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html" aria-current="page">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="requirements">What do I need?</h2>
@@ -26,7 +26,7 @@
 <div class="notice-box"><strong>License:</strong> Lixity is source-available under LNCL-1.0. Free use is limited to projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">licensing examples</a>.</div>
 
 <h2 id="install">Install a reproducible release</h2>
-<pre><code>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.22.0"
+<pre><code>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"
 lixity --version
 lixity about</code></pre>
 <p>The tag selects a fixed release. If the command is not found, run <code>uv tool update-shell</code>, reopen the terminal and try again. Lixity is installed from GitHub; these instructions do not assume a PyPI package.</p>
@@ -53,6 +53,8 @@ At the library, Mara examined a handwritten catalogue while the keeper searched 
 <pre><code>lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765</code></pre>
 <p>Replace the example path with your project directory. Open <code>http://127.0.0.1:8765/</code>, then verify the displayed project path and title. <strong>Open Project</strong> reconnects an existing folder and its research archive. <strong>New Project → Import Manuscript</strong> creates a separate project from uploaded manuscript bytes; use it only when that is your intention.</p>
 <p>For a research-only workspace, an initialized archive can be opened without a manuscript. Source records remain available; comparing sources with manuscript text needs a loaded manuscript.</p>
+<p><strong>Since v1.23.0:</strong> Research &amp; Dossiers, Manuscript &amp; Analysis, and Project &amp; Settings are separate views. New Project, Open Project and optional guidance remain available in every view. Under Project &amp; Settings, choosing or dropping a manuscript shows its filename without submitting it. <strong>Continue to import…</strong> opens the existing Import Manuscript dialog; confirmation creates a separate project. Use Open Project to return to the original archive.</p>
+<p>Current-main source and dossier lists filter loaded metadata locally; use Research → Search to search retained text. NDA controls start collapsed when the project provides that capability. Embedding hosts with a load capability retain <strong>Analyze manuscript now →</strong> for their existing manuscript-load action.</p>
 
 <h2 id="restart">Running the server day to day</h2>
 <p><code>lixity serve</code> binds <code>127.0.0.1:8765</code> by default and is strictly local: no manuscript bytes leave the machine. Every browser tab shares the one running instance. If the port is already occupied, Lixity stops before doing any setup work and prints the conflicting port together with the commands to open, relocate or stop the existing instance — instead of failing with a bare socket error.</p>

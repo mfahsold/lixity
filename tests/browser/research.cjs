@@ -194,19 +194,22 @@ server.serve_forever()
     await expect(page.locator('#open-proj-path')).toHaveValue(path.join(fixture.project, 'manuscript.md'));
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
     await expect(page.locator('#r-active-root')).toContainText(fixture.project);
+    await page.locator('#tab-view-analysis').click();
     const consistencyTile = page.locator('.kpi').filter({has: page.locator('[data-help]')}).filter({hasText: 'Consistency'}).first();
     await expect(consistencyTile).toContainText('–');
     assert.equal(await consistencyTile.locator('.kpi-bar').count(), 0);
+    await page.locator('#tab-view-research').click();
     await expect(page.locator('#research-sources-list')).toContainText('Synthetic source');
     await expect(page.locator('#zotero-box')).toBeVisible();
     let zoteroCapture = null;
+    const zoteroWarning = 'Synthetic OCR fallback: <img src=x onerror=alert(1)> review native text.';
     await page.route('**/api/research-zotero*', async route => {
       const payload = route.request().postDataJSON();
       assert.ok(payload.project_id.startsWith('urn:uuid:'));
       assert.equal(payload.library, 'users/0');
       if (route.request().url().endsWith('-ingest')) {
         zoteroCapture = payload;
-        await route.fulfill({json: {ok: true, passages: 1}});
+        await route.fulfill({json: {ok: true, passages: 1, warnings: [zoteroWarning]}});
       } else if (payload.mode === 'collections') {
         await route.fulfill({json: {ok: true, collections: [{key: 'STUVWXYZ', data: {name: 'Synthetic collection'}}], next_start: null}});
       } else {
@@ -237,6 +240,13 @@ server.serve_forever()
     await page.locator('#r-zotero-retention').check();
     await page.locator('[data-zotero-capture]').click();
     await expect(page.locator('#r-zotero-retention')).not.toBeChecked();
+    await expect(page.locator('#research-status-bar.ok')).toContainText(zoteroWarning);
+    assert.equal(await page.locator('#research-status-bar img').count(), 0, 'Warning markup must remain text');
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({width, height: 1000});
+      await page.locator('#research-status-bar').screenshot({path: path.join(artifacts, `zotero-warning-${width}.png`)});
+      assert.ok(await page.locator('#research-status-bar').evaluate(e => e.getBoundingClientRect().right <= innerWidth));
+    }
     assert.equal(zoteroCapture.attachment_key, 'JKLMNPQR');
     assert.equal(zoteroCapture.expected_server_id, 'synthetic-instance');
     assert.equal(zoteroCapture.allow_retention, true);
@@ -272,6 +282,7 @@ server.serve_forever()
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
     await expect(page.locator('#modal-project-open')).not.toBeVisible();
     await expect(page.locator('#r-active-root')).toContainText(fixture.project);
+    await page.locator('#tab-view-research').click();
     const sourceAfterReopen = await (await page.request.get(fixture.url + '/api/research/sources')).json();
     assert.deepEqual(sourceAfterReopen.sources, sourceBeforeReopen.sources);
     await page.locator('[data-rtab=dossiers]').click();
@@ -699,6 +710,7 @@ server.serve_forever()
     await page.locator('#open-project-chooser-select-folder').click();
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
     await expect(page.locator('#r-active-root')).toContainText(fixture.researchOnly);
+    await page.locator('#tab-view-research').click();
     await expect(page.locator('#research-init-box')).not.toBeVisible();
     assert.equal((await (await page.request.get(fixture.url + '/api/research/status')).json()).initialized, true);
     assert.equal(fs.existsSync(path.join(fixture.researchOnly, 'manuscript.md')), false);
@@ -717,6 +729,7 @@ server.serve_forever()
     await page.locator('#welcome-show').click();
     await expect(page.locator('#welcome-hero')).toBeVisible();
     await page.locator('#welcome-dismiss').click();
+    await page.locator('#tab-view-research').click();
     await expect(page.locator('#research-init-box')).toBeVisible();
     await page.locator('#r-init-title').fill('Scratch research');
     await page.locator('#r-init-btn').click();
@@ -730,8 +743,23 @@ server.serve_forever()
     await expect(page.locator('#r-ingest-title')).toHaveValue('Scratch source');
     await expect(page.locator('#r-ingest-text')).toHaveValue('A synthetic source for a new local project.');
     await page.locator('#r-ingest-origin-url').fill('https://example.org/source?a=1&b=2');
+    const localWarning = 'Synthetic extraction note: <img src=x onerror=alert(1)> check captured passages.';
+    await page.route('**/api/research-ingest', async route => {
+      const response = await route.fetch();
+      const body = await response.json();
+      await route.fulfill({response, json: {...body, warnings: [localWarning]}});
+    });
     await page.locator('#r-ingest-btn').click();
     await expect(page.locator('#r-ingest-origin-url')).toHaveValue('');
+    await expect(page.locator('#research-status-bar.ok')).toContainText(localWarning);
+    assert.equal(await page.locator('#research-status-bar img').count(), 0, 'Warning markup must remain text');
+    await page.unroute('**/api/research-ingest');
+    for (const width of [1440, 390]) {
+      await page.setViewportSize({width, height: 1000});
+      await page.locator('#research-status-bar').screenshot({path: path.join(artifacts, `local-warning-${width}.png`)});
+      assert.ok(await page.locator('#research-status-bar').evaluate(e => e.getBoundingClientRect().right <= innerWidth));
+    }
+    await page.setViewportSize({width: 1440, height: 1000});
     await expect(page.locator('#research-sources-list')).toContainText('Scratch source');
     await page.locator('[data-research-detail="source"]').first().click();
     await expect(page.locator('#research-sources-list')).toContainText('https://example.org/source?a=1&b=2');

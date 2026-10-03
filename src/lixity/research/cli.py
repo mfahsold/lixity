@@ -319,7 +319,8 @@ def run(args: argparse.Namespace) -> int:
                                          context=context, origin_url=args.origin_url,
                                          allow_fallback=getattr(args, "fallback", False),
                                          progress_callback=_cli_progress)
-                        return ({"file": str(file_item), "ok": True, "source_id": res["source_id"], "passages": res["passages"]}, True)
+                        return ({"file": str(file_item), "ok": True, "source_id": res["source_id"],
+                                 "passages": res["passages"], "warnings": res.get("warnings", [])}, True)
                     except (ResearchError, OSError, ValueError) as exc:
                         return ({"file": str(file_item), "ok": False, "error": str(exc)}, False)
 

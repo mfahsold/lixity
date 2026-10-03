@@ -209,6 +209,17 @@ def render_dashboard(
     default_view = "analysis" if has_chapters else "research"
 
     if controls:
+        parts.append(f'<nav class="workspace-bar" aria-label="{L("workspace")}">')
+        parts.append(f'<span class="ctl-label">{L("workspace")}</span>')
+        parts.append('<div class="row">')
+        parts.append(f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>')
+        parts.append(f'<button type="button" class="ctl" id="btn-modal-open-project">📂 {L("open_project")}</button>')
+        show_guidance_hidden = "" if chapters else " hidden"
+        parts.append(f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden}>{L("welcome_show")}</button>')
+        if manuscript_name:
+            parts.append(f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>')
+        parts.append('</div>')
+        parts.append('</nav>')
         parts.append(
             '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
             f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
@@ -228,26 +239,6 @@ def render_dashboard(
 
     if status:
         parts.append(status_strip(labels, status))
-
-    if controls:
-        # --- PANE 1: RESEARCH & DOSSIERS ---
-        parts.append(f'<div class="view-pane{" active" if default_view == "research" else ""}" id="view-pane-research" data-view-pane="research" role="tabpanel" aria-labelledby="tab-view-research">')
-        parts.append(render_research_panel(labels))
-        parts.append('</div>')
-
-        # --- PANE 2: PROJECT & SETTINGS ---
-        parts.append('<div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">')
-        parts.append(f'<nav class="workspace-bar" aria-label="{L("workspace")}">')
-        parts.append(f'<span class="ctl-label">{L("workspace")}</span>')
-        parts.append('<div class="row">')
-        parts.append(f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>')
-        parts.append(f'<button type="button" class="ctl" id="btn-modal-open-project">📂 {L("open_project")}</button>')
-        show_guidance_hidden = "" if chapters else " hidden"
-        parts.append(f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden}>{L("welcome_show")}</button>')
-        if manuscript_name:
-            parts.append(f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>')
-        parts.append('</div>')
-        parts.append('</nav>')
 
     if document_context:
         parts.append(panel_start("document-context", labels, "source_context"))
@@ -319,24 +310,31 @@ def render_dashboard(
         parts.append('</section>')
 
     if controls:
+        # Project actions and optional guidance stay available in every view.
+        parts.append(f'<div class="view-pane{" active" if default_view == "research" else ""}" id="view-pane-research" data-view-pane="research" role="tabpanel" aria-labelledby="tab-view-research">')
+        parts.append(render_research_panel(labels))
+        parts.append('</div>')
+        parts.append('<div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">')
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('controls')}</h2>")
 
+        parts.append('<div class="ctl-group">')
+        parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
+        file_input_id = "ms-file" if action_enabled("load") else "manuscript-import-file"
+        parts.append(f'<input type="file" id="{file_input_id}" accept=".md,.markdown,.txt" hidden/>')
+        parts.append(f'<button type="button" class="file-dropzone dropzone-compact" id="manuscript-dropzone" aria-label="{L("wizard_drop_aria")}" aria-describedby="manuscript-drop-hint manuscript-file-name">')
+        parts.append(f'<strong>{L("dropzone_drop_here")} <span class="ctl-link">{L("dropzone_browse")}</span></strong>')
+        parts.append(f'<span class="ctl-note" id="manuscript-drop-hint">{L("dropzone_hint")}</span>')
+        parts.append('</button>')
+        parts.append('<p class="ctl-note manuscript-file-name" id="manuscript-file-name" role="status" aria-live="polite"></p>')
+        parts.append('<div class="row">')
         if action_enabled("load"):
-            parts.append('<div class="ctl-group">')
-            parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
-            parts.append('<div class="row">')
-            parts.append('<input class="ctl" type="file" id="ms-file" accept=".md,.markdown,.txt"/>')
-            parts.append(
-                f'<button class="ctl" data-action="load" data-payload="load">{L("load")}</button>'
-            )
-            if manuscript_name:
-                parts.append(
-                    f'<span class="ctl-note">{L("current_manuscript")}: {esc(manuscript_name)}</span>'
-                )
-            parts.append("</div>")
-            parts.append(f'<p class="ctl-note">{L("load_hint")}</p>')
-            parts.append("</div>")
+            parts.append(f'<button type="button" class="ctl primary" data-action="load" data-payload="load" disabled>{L("dropzone_action")}</button>')
+        else:
+            parts.append(f'<button type="button" class="ctl primary" id="manuscript-import-btn" disabled>{L("manuscript_import_action")}</button>')
+        parts.append('</div>')
+        parts.append(f'<p class="ctl-note">{L("manuscript_load_hint") if action_enabled("load") else L("manuscript_import_hint")}</p>')
+        parts.append('</div>')
 
         parts.append(settings_form(
             labels, title, current_language, language_options,
@@ -386,8 +384,8 @@ def render_dashboard(
         parts.append("</section>")
 
         if action_enabled("nda"):
-            parts.append('<section class="panel controls" id="nda-manager">')
-            parts.append(f"<h2>{L('nda_manager')}</h2>")
+            parts.append('<details class="panel controls nda-manager" id="nda-manager">')
+            parts.append(f'<summary>{L("nda_accordion")}</summary>')
             parts.append(f'<p class="ctl-note" id="nda-hint">{L("locked_hint")}</p>')
             parts.append('<div class="row" id="nda-unlock-row">')
             parts.append(
@@ -408,7 +406,7 @@ def render_dashboard(
             parts.append(
                 f'<div class="ctl-status" id="nda-status" data-nda-statuses="{_nda_statuses}"></div>'
             )
-            parts.append("</section>")
+            parts.append("</details>")
 
         if artifacts:
             parts.append('<section class="panel">')
@@ -434,8 +432,8 @@ def render_dashboard(
                 )
             parts.append("</div></section>")
 
-        parts.append(render_project_modals(labels, language_key, language_options))
         parts.append('</div>')
+        parts.append(render_project_modals(labels, language_key, language_options))
 
         # --- PANE 3: MANUSCRIPT & ANALYSIS ---
         parts.append(f'<div class="view-pane{" active" if default_view == "analysis" else ""}" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">')

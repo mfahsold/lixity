@@ -1,5 +1,7 @@
 """Tests for self-hosted Baidu Unlimited-OCR extraction boundary and PDF ingestion."""
 
+import contextlib
+import io
 import json
 import os
 import shutil
@@ -385,11 +387,37 @@ print(json.dumps(resp))
         def run_probe(args, **kwargs):
             return run([sys.executable, *args], **kwargs)
 
-        with patch("lixity.research.ocr.subprocess.run", side_effect=run_probe):
+        with (
+            patch("lixity.research.ocr.shutil.which", side_effect=lambda name: sys.executable if name == "pdftoppm" else None),
+            patch("lixity.research.ocr.render_pdf_pages", return_value=[]),
+            patch("lixity.research.ocr.subprocess.run", side_effect=run_probe),
+        ):
             diag = get_ocr_diagnostics(worker_cmd=str(probe_worker), probe=True)
             self.assertEqual(diag["status"], "ready (probed)")
             self.assertTrue(diag["probe"]["ok"])
             self.assertEqual(diag["probe"]["blocks_count"], 1)
+
+        for timeout in ("invalid", "0", "3601"):
+            with (
+                self.subTest(timeout=timeout),
+                patch.dict(os.environ, {"LIXITY_OCR_TIMEOUT": timeout}),
+                patch("lixity.research.ocr.shutil.which", side_effect=lambda name: sys.executable if name == "pdftoppm" else None),
+                patch("lixity.research.ocr.render_pdf_pages", return_value=[]),
+                patch("lixity.research.ocr.subprocess.run", side_effect=run_probe),
+            ):
+                diag = get_ocr_diagnostics(worker_cmd=str(probe_worker), probe=True)
+                self.assertTrue(diag["probe"]["ok"])
+                self.assertEqual(diag["status"], "misconfigured_worker")
+                self.assertTrue(any("LIXITY_OCR_TIMEOUT" in hint for hint in diag["guidance"]))
+
+        with (
+            patch("lixity.research.ocr.shutil.which", return_value=None),
+            patch("lixity.research.ocr.subprocess.run", side_effect=run_probe),
+        ):
+            diag = get_ocr_diagnostics(worker_cmd=str(probe_worker), probe=True)
+            self.assertTrue(diag["probe"]["ok"])
+            self.assertEqual(diag["status"], "partial")
+            self.assertTrue(any("pdftoppm is missing" in hint for hint in diag["guidance"]))
 
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_explicit_fallback_mode_when_worker_fails(self) -> None:
@@ -427,6 +455,46 @@ sys.exit(1)
             res = extract_pdf_document(pdf_path, worker_cmd=str(failing_worker), allow_fallback=True)
             self.assertIn("Archival document with native text layer.", res.full_text)
             self.assertTrue(any("fallback" in w.lower() for w in res.warnings))
+
+        with (
+            patch.dict(os.environ, {"LIXITY_OCR_WORKER": str(failing_worker)}),
+            patch("lixity.research.ocr.subprocess.run", side_effect=run_fail),
+        ):
+            preview = api.ingest(self.project, pdf_path, allow_retention=True,
+                                 allow_fallback=True, dry_run=True)
+            self.assertEqual(preview["warnings"], res.warnings)
+            self.assertEqual(len(api.list_sources(self.project)["sources"]), 0)
+            captured = api.ingest(self.project, pdf_path, allow_retention=True, allow_fallback=True)
+            self.assertEqual(captured["schema_version"], "research-ingest-local/1")
+            self.assertEqual(captured["warnings"], res.warnings)
+            reused = api.ingest(self.project, pdf_path, allow_retention=True,
+                                source_id=captured["source_id"])
+            self.assertTrue(reused["unchanged"])
+            self.assertEqual(reused["warnings"], [])
+
+            from lixity.cli import main
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
+                code = main(["research", "ingest", "--project", str(self.project),
+                             "--file", str(pdf_path), "--allow-retention", "--fallback", "--dry-run"])
+            self.assertEqual(code, 0)
+            self.assertEqual(json.loads(output.getvalue())["warnings"], res.warnings)
+
+            text_path = self.root / "native.txt"
+            text_path.write_text("Synthetic source with no extraction warning.", encoding="utf-8")
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output), contextlib.redirect_stderr(io.StringIO()):
+                code = main(["research", "ingest", "--project", str(self.project),
+                             "--file", str(pdf_path), str(self.root / "missing.txt"), str(text_path),
+                             "--allow-retention", "--fallback", "--dry-run"])
+            self.assertEqual(code, 1)
+            batch = json.loads(output.getvalue())
+            self.assertEqual(batch["schema_version"], "research-batch-ingest-local/1")
+            self.assertEqual((batch["succeeded"], batch["failed"]), (2, 1))
+            self.assertEqual(batch["items"][0]["warnings"], res.warnings)
+            self.assertFalse(batch["items"][1]["ok"])
+            self.assertEqual(batch["items"][2]["warnings"], [])
+        self.assertTrue(api.audit(self.project)["ok"])
 
 
 if __name__ == "__main__":

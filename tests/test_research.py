@@ -658,14 +658,14 @@ class TestResearch(unittest.TestCase):
         self.assertEqual(api.claim_matrix_format(self.project, format="csv"), empty_csv)
 
     def test_claim_matrix_format_argument_is_deprecated(self):
-        """v1.21.0 shipped claim_matrix(format=...); it warns and is removed in v1.23.0."""
+        """The deprecated format wrapper still warns and retains its output contract."""
         # The default call must stay warning-free: the suite runs under -W error.
         self.assertEqual(api.claim_matrix(self.project), api.claim_matrix_data(self.project))
 
         for fmt in ("json", "md", "csv"):
             with self.assertWarns(DeprecationWarning) as caught:
                 legacy = api.claim_matrix(self.project, format=fmt)
-            self.assertIn("v1.23.0", str(caught.warning))
+            self.assertIn("future release", str(caught.warning))
             self.assertEqual(legacy, api.claim_matrix_format(self.project, format=fmt))
 
     def test_claim_matrix_data_and_renderer_agree(self):
@@ -763,4 +763,3 @@ class TestResearch(unittest.TestCase):
         data = json.loads(buf.getvalue())
         self.assertIn("probe", data)
         self.assertIn("status", data)
-

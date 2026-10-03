@@ -116,6 +116,31 @@ class TestParagraphProfiler(unittest.TestCase):
         config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+", appendix_marker="## Anhang")
         return ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(md))
 
+    def test_dialogue_tokenization_agrees_across_profile_api_and_pipeline(self):
+        from lixity import api
+        from lixity.pipeline import analyze_document
+        from lixity.style_fingerprint import FingerprintThresholds
+
+        for language, speech, tokens, whitespace_words, share in (
+            ("en", '"Hi , !"', 1, 3, 100.0),
+            ("en", '"Hi,there!" noise.', 3, 2, 66.7),
+            ("de", '„Ja , !“', 1, 3, 100.0),
+            ("de", '„Ja,doch!“ weiter.', 3, 2, 66.7),
+        ):
+            with self.subTest(language=language, speech=speech):
+                text = f"## Speech\n\n{speech}\n"
+                result = api.profile(text, language=language, project_config={})
+                self.assertEqual(result["meta"]["schema_version"], 2)
+                self.assertEqual(result["paragraphs"][0]["dialogue_pct"], share)
+                self.assertEqual(result["chapters"][0]["dialog_pct"], share)
+                self.assertIs(type(result["paragraphs"][0]["dialogue_pct"]), float)
+                analysis = analyze_document(text, CorpusConfig(language=language), FingerprintThresholds())
+                self.assertEqual(analysis.paragraphs[0].dialogue_pct, share)
+                self.assertEqual(analysis.chapters[0].dialog_pct, share)
+                self.assertEqual(analysis.metrics.clean_words, whitespace_words)
+                self.assertEqual(analysis.metrics.tokens, tokens)
+                self.assertEqual(round(analysis.metrics.dialog_ratio, 1), share)
+
     def test_present_and_past_paragraphs(self):
         md = (
             "## Kapitel 1\n\n"

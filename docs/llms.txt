@@ -24,10 +24,10 @@ https://github.com/mfahsold/lixity/blob/main/LICENSE
 
 ## Install (GitHub source, not PyPI)
 
-- CLI: `uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.22.0"`
+- CLI: `uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"`
 - Verify: `lixity --version` and `lixity about`.
 - Update chosen source: `uv tool upgrade lixity`; pinned refs stay pinned.
-- Development builds: replace `@v1.22.0` with `@main` deliberately.
+- Development builds: replace `@v1.23.0` with `@main` deliberately.
 - Engine and TOML project settings: Python 3.10+ (`tomli` is conditional on Python 3.10).
 - API: install into the consuming project's venv, not a separate tool environment.
 - dev: `git clone … && make install-dev && make check`
@@ -59,13 +59,36 @@ research-search-local/2 with typed hits. Only passage hits are source citations.
 Authored hits include record_id/revision/title/excerpt and search only current
 revisions, not history. Dashboard search defaults to all.
 Release v1.20.0 adds multi-file batch ingestion (research-batch-ingest-local/1)
-with live heartbeats (--progress), auto-fresh search index caching (rebuilding
+with phase progress messages on stderr (--progress), auto-fresh search index caching (rebuilding
 transparently unless --strict is passed), bounded dossier reads (--section, --summary),
 and decision-dossier review tracking (marking review_needed: true when linked decisions
 are recorded or revised). Release v1.20.0 also adds native project NDA encryption and tracking
 under [nda] in lixity.toml (AES-256-GCM via ProjectNdaProvider and lixity build).
 See [Unlimited-OCR integration boundaries](https://mfahsold.github.io/lixity/research/OCR_INTEGRATION.md)
 for the source-grounded runtime comparison and acceptance criteria.
+
+Since v1.23.0: the server dashboard separates Research
+& Dossiers, Manuscript & Analysis, and Project & Settings; New/Open/optional
+guidance remain available in every view. Manuscript file/drop selection shows
+the filename without a request. Native Continue to import… opens the existing
+Import Manuscript dialog; confirmation creates a separate project. Use Open
+Project for an existing archive. Embedding load capability retains Analyze
+manuscript now → and POST /api/load {name, content}. Capability-gated NDA controls
+start collapsed in a native details panel; backend behavior is unchanged.
+Local source/dossier filters match loaded titles/tags/IDs (also dossier excerpts
+and section names), send no typing requests, preserve loaded details and leave
+association options complete. They do not search source text; use Research Search.
+Dialogue ratios share the configured word tokenizer across corpus, chapters,
+paragraph profiles, dialogue and pacing. Unavailable Show/Tell comparisons render
+as dashes; identical balances produce no ranking. Scene fallback labels chapters
+as units. Lexical markers and style bands are descriptive, not literary targets;
+Guiraud remains length-sensitive and Flesch is not bounded to 0–100.
+Research ingest results add runtime warnings: list[str], propagated through batch
+and Zotero summaries and dashboard import status. They are not archived; unchanged
+PDF reuse performs no extraction and reports no new extraction warnings.
+OCR probes do not override invalid configuration. ocr-status keeps exit 0 for
+diagnostics; inspect status and probe.ok for readiness. Progress is phase-based,
+not a periodic heartbeat. Workers/fallback remain explicit and optional.
 
 ## Zotero and media boundaries
 
@@ -95,7 +118,7 @@ new server process. Restart running servers after a package update.
 
 - [Installation](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md): prerequisites, development vs release, Windows, updates, first dashboard, server lifecycle and port conflicts, managed background start, systemd/launchd/Task Scheduler auto-start, troubleshooting
 
-- Current release: 1.22.0; release tag: v1.22.0.
+- Current release: 1.23.0; release tag: v1.23.0.
 - Research workspace (since v1.20.0): evidence-based `lixity research` (explicit-project
   UTF-8 and PDF archives, exact citations, source tagging, dossiers, controlled withdrawal/purge,
   claims, passage evidence links, authorial decisions with native immutable revisions,
@@ -115,7 +138,7 @@ new server process. Restart running servers after a package update.
 - [docs/STABILITY.md](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): research basis, caveats, platform differences
 - [CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md): development setup, PR checklist
 - [SECURITY.md](https://github.com/mfahsold/lixity/blob/main/SECURITY.md): threat model and private reporting
-- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.22.0)
+- [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md): release history (current: 1.23.0)
 - Project page: https://mfahsold.github.io/lixity/
 
 Analysis reports/CLI messages: English default, German via LIXITY_LANG=de.
@@ -154,7 +177,7 @@ not services bundled with the core engine.
 
 Python facade:
 - Core analysis: `from lixity import api` – `analyze`, `profile`, `dialogue`, `characters`, `pacing`, `motifs`, `showing`, `fingerprint`/`passport`, `dashboard`, `markers`/`add_marker`/`resolve_marker`, `about`.
-- Research archive: `from lixity.research import api as research_api` – `init`, `ingest`, `reindex`, `search`, `cite`, `list_sources`, `get_source`, `create_dossier`, `list_dossiers`, `get_dossier`, `create_claim`, `list_claims`, `link_evidence`, `list_evidence_links`, `record_decision`, `list_decisions`, `compare_source`, `claim_matrix_data`, `render_claim_matrix`, `claim_matrix_format`. `claim_matrix(project, format=...)` is deprecated since v1.22.0 and removed in v1.23.0; it warned only — the JSON payload is unchanged.
+- Research archive: `from lixity.research import api as research_api` – `init`, `ingest`, `reindex`, `search`, `cite`, `list_sources`, `get_source`, `create_dossier`, `list_dossiers`, `get_dossier`, `create_claim`, `list_claims`, `link_evidence`, `list_evidence_links`, `record_decision`, `list_decisions`, `compare_source`, `claim_matrix_data`, `render_claim_matrix`, `claim_matrix_format`. `claim_matrix(project, format=...)` is deprecated since v1.22.0 and retained in v1.23.0; removal is deferred to a future release. The JSON payload is unchanged.
 - HTTP action API on `lixity serve`: `POST /api/project-create`, `POST /api/project-open`, `POST /api/load` (legacy upload; HTTP 409 on an existing saved filename), `POST /api/settings`, `POST /api/marker-add`, `POST /api/marker-resolve`, `POST /api/research-*`. Standalone Run analyses/Rebuild refresh; export/sync/audit/prune/gdrive return HTTP 501 with `ok: false`.
 - Read-only `GET /api/project-paths?path=<encoded path>` browses immediate server-local folders/manuscripts without changing the workspace; opening still requires `POST /api/project-open`.
 - The standalone dashboard shows only implemented optional actions. Embedding adapters should pass `render_dashboard(enabled_actions=...)` for the optional actions they implement; `None` retains legacy full controls.

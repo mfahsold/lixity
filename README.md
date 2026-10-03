@@ -11,8 +11,8 @@ against the manuscript's own style, then inspect the passages behind each signal
 
 Python 3.10+ · Seven language profiles · No cloud calls.
 
-The current release is **v1.22.0**, including the experimental local research workspace.
-Read the [v1.22.0 release notes](docs/releases/v1.22.0.md) for research ergonomics, NDA capability, and archive compatibility.
+The current release is **v1.23.0**, including the experimental local research workspace.
+Read the [v1.23.0 release notes](docs/releases/v1.23.0.md) for workspace improvements, metric corrections and import warnings.
 
 **Free only for non-commercial projects.** Using Lixity for a book intended
 for sale—including self-publishing—requires a separate written commercial
@@ -42,22 +42,41 @@ and [archive sources and PDFs](https://mfahsold.github.io/lixity/guides/research
 | Integrate the engine or automate a workflow | [Python and JSON contracts](docs/AGENTS.md), [architecture](docs/ARCHITECTURE.md) |
 | Understand a result or its limits | [Methods](docs/METHODS.md), [stability and validation limits](docs/STABILITY.md) |
 
-## Current release: v1.22.0
+## Current release: v1.23.0
 
-Release v1.22.0 is a maintenance and architecture release. Since v1.20.0 introduced native project NDA protection:
+Release v1.23.0 makes the workspace easier to navigate and the diagnostics easier
+to interpret:
 
-- **Research batch ingestion:** `lixity research batch-ingest` imports multiple text or PDF sources in one invocation, emitting structured per-file outcomes (`research-batch-ingest-local/1`) and streaming `--progress` heartbeats on stderr.
-- **Auto-fresh index caching:** `lixity research search` compares the snapshot digest recorded in the index against the current one and rebuilds stale FTS5 projections without requiring manual `reindex` calls (pass `--strict` to fail fast).
-- **Bounded dossier reading:** `lixity research read --section <NAME>` and section-level updates allow focused review of long dossiers.
-- **Decision-dossier review tracking:** Linking an authorial decision to a dossier tracks review needs (`review_needed: true`), surfacing an amber review badge in the web dashboard.
-- **Native project NDA encryption:** Isolated symmetric encryption (`ProjectNdaProvider`, `nda/nda.enc.json`, AES-256-GCM) with key isolation and enforcement during `lixity build`.
+- **Clear project workflows:** three workspace views, persistent New/Open actions,
+  file selection before explicit import, local source/dossier filters and an
+  initially collapsed NDA manager.
+- **Consistent dialogue counts:** corpus, chapter, paragraph, dialogue and pacing ratios use
+  the same configured word tokenizer, including adjacent punctuation.
+- **Honest diagnostic limits:** unavailable Show/Tell comparisons display dashes;
+  chapter-based scene estimates explain their units. Localized help describes
+  literary signals without turning them into quality scores or writing rules.
+- **Visible PDF import warnings:** invalid OCR configuration remains unready, and
+  explicit native fallback carries extraction warnings through local, batch and
+  Zotero import results.
+- **Reviewed visual documentation:** 35 desktop and mobile screenshots cover
+  project dialogs, research workflows, analysis views and optional NDA controls.
 
 The optional **Zotero Desktop bridge** (since v1.19.0) continues to let Zotero manage literature and media while Lixity retains selected evidence, dossiers, claims and author decisions.
 
-Read the [v1.22.0 release notes](docs/releases/v1.22.0.md) before upgrading an archive.
+Read the [v1.23.0 release notes](docs/releases/v1.23.0.md) before upgrading an archive.
 Documentation on `main` may describe newer changes; use the
-[tagged documentation](https://github.com/mfahsold/lixity/tree/v1.22.0/docs) for
+[tagged documentation](https://github.com/mfahsold/lixity/tree/v1.23.0/docs) for
 the released package and [changelog](CHANGELOG.md) for subsequent changes.
+
+The server dashboard separates Research & Dossiers,
+Manuscript & Analysis, and Project & Settings. New Project, Open Project and
+optional guidance remain accessible from every view. Selecting or dropping a
+manuscript shows its filename without submitting it. In the native server,
+**Continue to import…** opens the existing Import Manuscript dialog; confirmation
+creates a separate project. Use **Open Project** to return to an existing archive.
+Source and dossier lists have local metadata filters, and the NDA manager starts
+collapsed when available. See the [dashboard workflow](docs/USAGE.md#dashboard-workflow)
+for import, embedding and filter boundaries.
 
 ## What you can do
 
@@ -82,7 +101,7 @@ integration, see [Architecture and project adapters](#architecture-and-project-a
 | Noise-aware z\* = (x − x̃) / √(σ² + SE²) | Shrinks sampling noise in short chapters via analytical SE |
 | BH / BY FDR at q (default: 0.05) | Multiplicity-controlled `fdr_flagged` cells |
 | Expected FP = m · P(\|Z\| ≥ z_mild) | Calibration against statistical over-interpretation |
-| Cliff’s δ / Vargha–Delaney Â₁₂ | Standardized non-parametric effect size for flagged cells |
+| Cliff’s δ | Non-parametric effect-size labels for flagged cells |
 | Runs test + Lag-1 ρ₁ | Exchangeability diagnostics (I.I.D. baseline assumption) |
 | Spearman ρ + cyclic Jacobi EVD | Latent style dimensions and principal axes (pure stdlib) |
 | PELT changepoints (BIC) | Locates structural regime shifts in the house style |
@@ -109,93 +128,118 @@ Thresholds (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`, 
 
 ## Visual Analytical Suite
 
-Screenshots show current `main`, including UI refinements not yet released in
-v1.19.0. They use public-domain or synthetic examples.
+These captures show the **v1.23.0 UI** on 3 October 2026. Click any image for its full-size PNG. Manuscript
+analysis uses the public-domain *Pride and Prejudice* sample; project and research
+workflows use synthetic files, paths and customs-case archive records.
+Dialog images show complete forms; long dialogs scroll in the application.
 
-### 1. Open, import, or create a project
+### 1. Project navigation, settings & import
 
-| Welcome & Quickstart Hero | Project Creation Wizard & Template Cards |
+| Welcome & project navigation | Create from a template |
 | :---: | :---: |
-| <img src="docs/screenshots/dashboard-welcome.png" alt="Welcome and quickstart hero card in empty state" width="100%" /> | <img src="docs/screenshots/dashboard-project-modal.png" alt="Native modal dialog with narrative structure templates" width="100%" /> |
-| *Streamlined workspace initialization in empty/no-project state* | *Native `<dialog>` wizard with Minimal, 3-Act & Research novel templates* |
+| <a href="docs/screenshots/dashboard-welcome.png"><img src="docs/screenshots/dashboard-welcome.png" alt="Empty workspace with New Project, Open Project, three view tabs and optional guidance" width="100%" /></a> | <a href="docs/screenshots/dashboard-project-modal.png"><img src="docs/screenshots/dashboard-project-modal.png" alt="Start new manuscript dialog with narrative structure template choices" width="100%" /></a> |
+| *New/Open actions and optional guidance remain reachable across the three views.* | *Choose a title, language and starting structure before confirming a new project.* |
 
-<p align="center">
-  <img src="docs/screenshots/dashboard-project-open.png" alt="Open Project with a file and folder browser and a separate import option" width="608" />
-</p>
-
-*Browse existing folders or manuscripts on the computer running Lixity, then
-open the original workspace with its research archive. Import creates a separate
-project. Welcome guidance can be hidden and reopened from the toolbar.*
-
-### 2. Macro Departure Heatmap (Noise-Aware z* & FDR)
-
-<p align="center">
-  <img src="docs/screenshots/dashboard-heatmap.png" alt="16-feature z* deviation heatmap" width="100%" />
-</p>
-
-*Departures from the manuscript's own style across 16 linguistic features. Dots (●) mark cells passing the configured Benjamini–Hochberg / Benjamini–Yekutieli FDR procedure. These are review signals under model assumptions, not confirmed defects.*
-
-### 3. Paragraph Inspection & Editorial Work Markers
-
-| Paragraph Style Layer Overlay | Editor-Visible Work Markers |
+| Open an existing project | Open Project on mobile |
 | :---: | :---: |
-| <img src="docs/screenshots/dashboard-layer.png" alt="Paragraph style overlay" width="100%" /> | <img src="docs/screenshots/dashboard-markers.png" alt="Editor work markers" width="100%" /> |
-| *Sentence rhythm & syntactic density mapped in context* | *Persistent content-hashed `<!-- LIXITY-MARKER -->` tags* |
+| <a href="docs/screenshots/dashboard-project-open.png"><img src="docs/screenshots/dashboard-project-open.png" alt="Open Project dialog with a synthetic server-local file and folder chooser" width="100%" /></a> | <a href="docs/screenshots/dashboard-project-open-mobile.png"><img src="docs/screenshots/dashboard-project-open-mobile.png" alt="Mobile Open Project dialog with synthetic folder navigation and a typed project path" width="300" /></a> |
+| *Choose a folder or manuscript, then confirm Open to reconnect its existing research archive.* | *Browse server-local paths or enter a path; selection alone does not open a project.* |
 
-### 4. Latent Style Space & House Style Baseline
-
-| 3D Stylistic Space & Style Dimensions | Manuscript Style Reference Bands |
+| Project & Settings | Project & Settings on mobile |
 | :---: | :---: |
-| <img src="docs/screenshots/dashboard-dimensions.png" alt="3D stylistic space and latent style dimensions" width="100%" /> | <img src="docs/screenshots/dashboard-reference.png" alt="Style reference bands" width="100%" /> |
-| *Interactive 3D narrative trajectory & cyclic Jacobi EVD* | *Robust Median/MAD bands with chapter sample counts* |
+| <a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project and Settings view with a native manuscript picker, saved settings and collapsed NDA manager" width="100%" /></a> | <a href="docs/screenshots/dashboard-project-settings-mobile.png"><img src="docs/screenshots/dashboard-project-settings-mobile.png" alt="Mobile Project and Settings view with manuscript selection and analysis preferences" width="300" /></a> |
+| *Choose or drop a manuscript before Continue to import. Settings change after Apply; the optional NDA manager starts collapsed.* | *The same manuscript, language and threshold controls in a narrow layout. File selection alone sends no request.* |
 
-### 5. Terminal Suite & Deterministic CLI
-
-| CLI Corpus Diagnostics (`lixity analyze`) | Self-Calibrating Style Reference (`lixity style`) |
+| Review an import | Review an import on mobile |
 | :---: | :---: |
-| <img src="docs/screenshots/cli-analyze.png" alt="CLI analyze output" width="100%" /> | <img src="docs/screenshots/cli-style.png" alt="CLI style reference" width="100%" /> |
-| *Corpus KPIs, readability indices & sentence rhythm* | *Shrinkage corridor, structural changepoints & drift* |
+| <a href="docs/screenshots/dashboard-project-import.png"><img src="docs/screenshots/dashboard-project-import.png" alt="Import Manuscript dialog with a synthetic filename, local preview and project settings" width="100%" /></a> | <a href="docs/screenshots/dashboard-project-import-mobile.png"><img src="docs/screenshots/dashboard-project-import-mobile.png" alt="Mobile import dialog showing a synthetic manuscript preview and explicit confirmation" width="300" /></a> |
+| *Preview the selected file, title and language locally. Confirmation creates a separate project; use Open Project for an existing archive.* | *The file remains a local selection until confirmation; cancelling leaves the current project unchanged.* |
 
-<details>
-<summary><b>View Dashboard in Dark Mode &amp; Interactive Settings</b></summary>
-<br/>
-
-<p align="center">
-  <img src="docs/screenshots/dashboard-dark.png" alt="Lixity Dashboard Dark Mode" width="100%" />
-</p>
-
-<p align="center">
-  <img src="docs/screenshots/dashboard-settings.png" alt="Settings with visible labels, explanations and restore-without-saving" width="100%" />
-</p>
-
-</details>
-
-### 6. Research Workspace & Archival Citations (Pilot)
-
-| Archived Source Dashboard (`lixity research dashboard`) | CLI Full-Text Search & Exact Citation (`lixity research search/cite`) |
+| Locked NDA preview | Locked NDA preview on mobile |
 | :---: | :---: |
-| <img src="docs/screenshots/dashboard-research.png" alt="Research source dashboard with cultural context metadata" width="100%" /> | <img src="docs/screenshots/cli-research.png" alt="CLI research search and citation" width="100%" /> |
-| *User-supplied source context (genre, period, place, provenance) & stylometrics* | *SQLite FTS5 BM25 search & Unicode codepoint character offsets* |
+| <a href="docs/screenshots/dashboard-nda.png"><img src="docs/screenshots/dashboard-nda.png" alt="Expanded native NDA details panel showing a locked demo store with no agreements" width="100%" /></a> | <a href="docs/screenshots/dashboard-nda-mobile.png"><img src="docs/screenshots/dashboard-nda-mobile.png" alt="Mobile expanded NDA details panel showing the locked demo store without agreement records" width="300" /></a> |
+| *The native details panel starts collapsed. This expanded locked-state preview contains no agreements, passphrase or private records.* | *The optional confidentiality controls use the same collapsible panel at mobile width; no agreement is created.* |
 
-The [interactive research panel](docs/screenshots/dashboard-research-claims.png)
-provides full source and dossier details, manually recorded claims, and evidence
-links. Search results can feed **Use for claim** or **Use for dossier**; a claim
-can be associated with a dossier. [View decisions](docs/screenshots/dashboard-research-decisions.png)
-or the [claims](docs/screenshots/dashboard-research-claims-mobile.png) and
-[decisions](docs/screenshots/dashboard-research-decisions-mobile.png) mobile views.
+### 2. Manuscript overview & departure heatmap
 
-<img src="docs/screenshots/dashboard-research-claims.png" alt="Claims and evidence panel with a synthetic dossier-linked claim and verified passage citation" width="100%" />
-
-### 7. Responsive Mobile Views
-
-| Project overview | Complete style-dimension panel |
+| Analysis overview | Analysis overview on mobile |
 | :---: | :---: |
-| <img src="docs/screenshots/dashboard-mobile.png" alt="Mobile project header with version, non-commercial license and corpus overview" width="300" /> | <img src="docs/screenshots/dashboard-dimensions-mobile.png" alt="Mobile 3D chapter view with all three dimension cards and readable feature labels" width="300" /> |
+| <a href="docs/screenshots/dashboard-light.png"><img src="docs/screenshots/dashboard-light.png" alt="Manuscript and Analysis view with global project navigation and corpus metric cards" width="100%" /></a> | <a href="docs/screenshots/dashboard-mobile.png"><img src="docs/screenshots/dashboard-mobile.png" alt="Mobile analysis overview with project actions, view tabs and corpus metrics" width="300" /></a> |
+| *Sentence rhythm, readability and lexical signals for the public-domain sample. Statistical signals support a human review.* | *Project navigation and grouped corpus metrics remain available at mobile width.* |
 
-Analysis screenshots use the public-domain *Pride and Prejudice* sample;
-research panel screenshots use synthetic archive records. Marker notes are
-illustrative and never written back to the source. Open an image for full
-resolution. [Screenshot provenance and regeneration](docs/screenshots/README.md).
+<a href="docs/screenshots/dashboard-heatmap.png"><img src="docs/screenshots/dashboard-heatmap.png" alt="First 20 chapter rows of the 16-feature manuscript departure heatmap" width="100%" /></a>
+
+*Noise-adjusted z\* values compare chapters with this manuscript’s baseline. Dots mark cells selected by the configured FDR procedure. These are review signals under model assumptions, not confirmed defects; only the first 20 rows are shown.*
+
+### 3. Paragraph inspection & work markers
+
+| Paragraph style layer | Editorial work markers |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-layer.png"><img src="docs/screenshots/dashboard-layer.png" alt="Chapter I with dialogue coloring and three opened paragraphs with source line anchors" width="100%" /></a> | <a href="docs/screenshots/dashboard-markers.png"><img src="docs/screenshots/dashboard-markers.png" alt="Five illustrative work markers with source line links, statuses and inline notes" width="100%" /></a> |
+| *Verbatim sample prose with source line anchors, tense classification and local sentence rhythm.* | *Synthetic notes are added only to an in-memory sample copy. The public-domain source file is unchanged.* |
+
+### 4. Style dimensions & manuscript reference bands
+
+| Chapter style space | Reference bands |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-dimensions.png"><img src="docs/screenshots/dashboard-dimensions.png" alt="Complete three-dimensional chapter trajectory and three latent style dimension cards" width="100%" /></a> | <a href="docs/screenshots/dashboard-reference.png"><img src="docs/screenshots/dashboard-reference.png" alt="Complete manuscript reference bands with medians, dispersion and chapter sample counts" width="100%" /></a> |
+| *Chapter positions and feature loadings describe variation within the manuscript, with links back to each chapter.* | *Robust median/MAD corridors with visible sample counts and deviation thresholds.* |
+
+| Style dimensions on mobile | Style dimensions in dark mode |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-dimensions-mobile.png"><img src="docs/screenshots/dashboard-dimensions-mobile.png" alt="Mobile style dimension panel with stacked controls and all three feature cards" width="300" /></a> | <a href="docs/screenshots/dashboard-dimensions-dark.png"><img src="docs/screenshots/dashboard-dimensions-dark.png" alt="Dark theme chapter style trajectory and all three dimension cards" width="100%" /></a> |
+| *The complete dimension panel with stacked controls and readable feature loadings.* | *The same chapter analysis and feature loadings in the dark palette.* |
+
+### 5. Terminal reports & display settings
+
+| Corpus diagnostics | Style reference |
+| :---: | :---: |
+| <a href="docs/screenshots/cli-analyze.png"><img src="docs/screenshots/cli-analyze.png" alt="Terminal excerpt of lixity analyze with corpus metrics, readability and sentence rhythm" width="100%" /></a> | <a href="docs/screenshots/cli-style.png"><img src="docs/screenshots/cli-style.png" alt="Terminal excerpt of lixity style with reference bands, changepoints and drift diagnostics" width="100%" /></a> |
+| *Actual lixity analyze output for the public-domain manuscript sample.* | *Actual lixity style output with within-manuscript bounds and structural diagnostics.* |
+
+| Expanded analysis settings | Analysis in dark mode |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-settings.png"><img src="docs/screenshots/dashboard-settings.png" alt="Shared settings form with language, title and expanded detection thresholds" width="100%" /></a> | <a href="docs/screenshots/dashboard-dark.png"><img src="docs/screenshots/dashboard-dark.png" alt="Dark Manuscript and Analysis overview with project actions and corpus metric cards" width="100%" /></a> |
+| *Threshold changes take effect after Apply. Restoring defaults fills the form without saving until Apply.* | *An alternative palette for the same public-domain manuscript analysis.* |
+
+### 6. Research lists, archive search & review records
+
+Local list filters inspect loaded metadata without sending requests while typing.
+They preserve opened details and complete association choices. Full-text archive
+search is a separate action in the Search tab.
+
+| Retained sources | Sources on mobile |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-research-sources.png"><img src="docs/screenshots/dashboard-research-sources.png" alt="Synthetic customs-case source list with a local metadata filter and an opened source detail" width="100%" /></a> | <a href="docs/screenshots/dashboard-research-sources-mobile.png"><img src="docs/screenshots/dashboard-research-sources-mobile.png" alt="Mobile synthetic customs-case source list with a metadata filter and opened details" width="300" /></a> |
+| *Filter loaded titles, tags and IDs in the synthetic customs case. The filter does not search retained source text.* | *The same local source filter, archive metadata and detail controls at mobile width.* |
+
+| Dossiers | Dossiers on mobile |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-research-dossiers.png"><img src="docs/screenshots/dashboard-research-dossiers.png" alt="Synthetic customs-case dossier list with a local metadata filter, excerpts and section labels" width="100%" /></a> | <a href="docs/screenshots/dashboard-research-dossiers-mobile.png"><img src="docs/screenshots/dashboard-research-dossiers-mobile.png" alt="Mobile filtered synthetic customs-case dossier list with sections and record actions" width="300" /></a> |
+| *Local dossier filters also match excerpts and section names; they do not search full dossier bodies.* | *Inspect dossier excerpts, sections and record details in a narrow layout.* |
+
+| Full-text archive search | Archive search on mobile |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-research-search.png"><img src="docs/screenshots/dashboard-research-search.png" alt="Synthetic customs-case archive Search results with passage IDs and reuse actions" width="100%" /></a> | <a href="docs/screenshots/dashboard-research-search-mobile.png"><img src="docs/screenshots/dashboard-research-search-mobile.png" alt="Mobile synthetic archive Search results with passage excerpts, IDs and reuse actions" width="300" /></a> |
+| *Submit an explicit query, then inspect retained passages or use them for a claim or dossier.* | *Search uses retained text and remains separate from the local list filters.* |
+
+| Claims & evidence | Claims on mobile |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-research-claims.png"><img src="docs/screenshots/dashboard-research-claims.png" alt="Synthetic dossier-linked customs claim with an expanded evidence quote and archive citation" width="100%" /></a> | <a href="docs/screenshots/dashboard-research-claims-mobile.png"><img src="docs/screenshots/dashboard-research-claims-mobile.png" alt="Mobile synthetic customs claim with expanded evidence quote and citation provenance" width="300" /></a> |
+| *Evidence links retain the quoted passage and citation provenance. Archive integrity does not establish historical accuracy.* | *Review the same claim, original passage and evidence link in a narrow layout.* |
+
+| Editorial decisions | Decisions on mobile |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-research-decisions.png"><img src="docs/screenshots/dashboard-research-decisions.png" alt="Contrasting synthetic editorial decisions linked to a customs-case research claim" width="100%" /></a> | <a href="docs/screenshots/dashboard-research-decisions-mobile.png"><img src="docs/screenshots/dashboard-research-decisions-mobile.png" alt="Mobile synthetic editorial decision records with rationale and linked claims" width="300" /></a> |
+| *Author-recorded choices can preserve or deliberately depart from source evidence; the records are not automatic factual verdicts.* | *The same decision records, rationale and claim links at mobile width.* |
+
+| Archived source analysis | CLI search & citation |
+| :---: | :---: |
+| <a href="docs/screenshots/dashboard-research.png"><img src="docs/screenshots/dashboard-research.png" alt="Archived synthetic source analysis with user-supplied cultural context and linguistic metrics" width="100%" /></a> | <a href="docs/screenshots/cli-research.png"><img src="docs/screenshots/cli-research.png" alt="Complete terminal research search and citation output with passage IDs and Unicode codepoint offsets" width="100%" /></a> |
+| *Genre, period, place and provenance metadata are supplied by the user and remain unverified context.* | *Complete search/cite output from the disposable synthetic archive, including passage IDs and exact character offsets.* |
+
+These screenshots illustrate workflows and statistical signals, not validated
+editorial judgments. [Screenshot provenance and regeneration](docs/screenshots/README.md).
 
 ## Installation
 
@@ -204,12 +248,12 @@ Install from GitHub into an isolated CLI environment. Requires Git and
 Python 3.12. Source-available under LNCL-1.0, **non-commercial use only**, not PyPI.
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.22.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"
 lixity --version
 lixity about
 ```
 
-This installs **v1.22.0**, including the experimental local research pilot.
+This installs **v1.23.0**, including the experimental local research pilot.
 The tag stays pinned: upgrading to a future release requires selecting
 its tag explicitly. Use `@main` only for development builds, or a reviewed
 full commit hash for reproducible deployments.
