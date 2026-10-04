@@ -42,7 +42,7 @@ search. The research CLI's help and errors are English.
 
 ## Research workflows
 
-These workflows are available in v1.24.0. Install that release or a later
+These workflows are available in v1.24.1. Install that release or a later
 compatible version; upgrading a fixed older tag does not select a newer release.
 
 ### Read reports in the terminal

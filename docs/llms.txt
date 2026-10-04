@@ -7,7 +7,7 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 1.24.0; release tag: v1.24.0.
+Current release: 1.24.1; release tag: v1.24.1.
 
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
@@ -40,7 +40,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from GitHub, not PyPI:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.1"
 lixity --version
 lixity about
 ```
@@ -122,7 +122,7 @@ controls require the lower-level renderer or an adapter.
 For research, import `from lixity.research import api as research_api`.
 Use `claim_matrix_data(project)`, then `render_claim_matrix(data, format="md")`
 or `format="csv"`. The deprecated `claim_matrix(project, format=...)` wrapper
-remains accepted in v1.24.0; removal is deferred. CLI matrix output is unchanged.
+remains accepted in v1.24.1; removal is deferred. CLI matrix output is unchanged.
 
 HTTP routes are dashboard actions: `POST /api/analyze` acknowledges a refresh
 with `reload: true`, not analysis data. `GET /api/project-paths` only browses;

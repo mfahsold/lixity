@@ -336,9 +336,9 @@ def _extract_pdf_with_backend(
             warnings.append(f"OCR worker failed ({worker_error}); fallback to native poppler pdftotext extraction.")
 
     # 2. Local fallback using system pdftotext with per-page tracking
+    timeout = worker_timeout()
     pdftotext = shutil.which("pdftotext")
     if pdftotext:
-        timeout = worker_timeout()
         deadline = time.monotonic() + timeout
         blocks = []
         page_count = len(pages) if pages else get_pdf_page_count(pdf_path, timeout=timeout)

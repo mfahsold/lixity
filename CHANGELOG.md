@@ -7,6 +7,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.24.1] - 2026-10-04
+
+### Fixed
+- Native PDF extraction validates its timeout before checking for Poppler tools,
+  so invalid settings fail consistently whether or not Poppler is installed.
+  This is the first published artifact release for the features introduced by
+  the v1.24.0 source tag; that tag is retained without binary release assets.
+
 ## [1.24.0] - 2026-10-04
 
 ### Added
@@ -1331,7 +1339,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.24.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.24.1...HEAD
+[1.24.1]: https://github.com/mfahsold/lixity/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/mfahsold/lixity/compare/v1.23.0...v1.24.0
 [1.23.0]: https://github.com/mfahsold/lixity/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/mfahsold/lixity/compare/v1.21.0...v1.22.0

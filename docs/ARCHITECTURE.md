@@ -1,6 +1,6 @@
 # Architecture and integration boundaries
 
-This document describes the shared architecture through v1.24.0.
+This document describes the shared architecture through v1.24.1.
 The shared pipeline and explicit API threshold mappings were introduced
 in 1.15.0; integrated local project/research workflows arrived in 1.16.0, followed
 by native editing, the self-hosted OCR boundary, offline diagrams and verified

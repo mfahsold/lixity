@@ -564,14 +564,17 @@ sys.exit(1)
                 self.assertEqual(before, {path: path.read_bytes() for path in self.project.rglob("*") if path.is_file()})
 
     def test_native_invalid_timeout_is_actionable_without_running_tools(self):
-        with (patch.dict(os.environ, {"LIXITY_OCR_BACKEND": "native", "LIXITY_OCR_TIMEOUT": "0"}),
-              patch("lixity.research.ocr.subprocess.run") as run):
-            diag = get_ocr_diagnostics()
-            self.assertEqual(diag["status"], "misconfigured_backend")
-            self.assertTrue(any("LIXITY_OCR_TIMEOUT" in hint for hint in diag["guidance"]))
-            with self.assertRaisesRegex(ResearchError, "LIXITY_OCR_TIMEOUT"):
-                extract_pdf_with_worker(self.root / "synthetic.pdf", [PageImage(1, b"image", "hash")])
-            run.assert_not_called()
+        for executable in (None, "synthetic-pdftotext"):
+            with (self.subTest(native_tool=executable),
+                  patch.dict(os.environ, {"LIXITY_OCR_BACKEND": "native", "LIXITY_OCR_TIMEOUT": "0"}),
+                  patch("lixity.research.ocr.shutil.which", return_value=executable),
+                  patch("lixity.research.ocr.subprocess.run") as run):
+                diag = get_ocr_diagnostics()
+                self.assertEqual(diag["status"], "misconfigured_backend")
+                self.assertTrue(any("LIXITY_OCR_TIMEOUT" in hint for hint in diag["guidance"]))
+                with self.assertRaisesRegex(ResearchError, "LIXITY_OCR_TIMEOUT"):
+                    extract_pdf_with_worker(self.root / "synthetic.pdf", [PageImage(1, b"image", "hash")])
+                run.assert_not_called()
 
 
 if __name__ == "__main__":

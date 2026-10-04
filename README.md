@@ -12,7 +12,7 @@ behind it. You decide what matters for your manuscript.
 
 [Get started](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v1.24.0 release notes](docs/releases/v1.24.0.md)
+[v1.24.1 release notes](docs/releases/v1.24.1.md)
 
 Free for projects with no commercial purpose. A book intended for sale,
 including self-publishing, requires a separate written commercial license.
@@ -26,12 +26,12 @@ For help installing these tools, or to use pipx instead, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.1"
 lixity --version
 ```
 
 This installs the released version. For later upgrades, choose the next release
-tag explicitly. [Release notes](docs/releases/v1.24.0.md) describe compatibility
+tag explicitly. [Release notes](docs/releases/v1.24.1.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 Version 1.24 adds scene registers and project targets, guided conflict

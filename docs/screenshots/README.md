@@ -1,6 +1,6 @@
 # Product screenshots
 
-Browser captures of **v1.24.0**, taken on **4 October 2026**. The
+Browser captures of **v1.24.1**, taken on **4 October 2026**. The
 [project page](https://mfahsold.github.io/lixity/) introduces each feature with
 a selected image. Use the links below for related views and full-size images.
 

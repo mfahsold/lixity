@@ -504,7 +504,7 @@ with `format="md"`. The implementation helper
 `lixity.research.analysis.compare_source_to_manuscript()` is data-only and
 always returns a dictionary.
 `claim_matrix(project, format=...)` is **deprecated** since v1.22.0, warns on
-use, and remains available in v1.24.0. Removal is deferred to a future release;
+use, and remains available in v1.24.1. Removal is deferred to a future release;
 call `claim_matrix_data()` and `render_claim_matrix()` instead. The JSON payload and the
 `lixity research matrix` CLI output are unchanged.
 

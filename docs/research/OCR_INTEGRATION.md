@@ -6,7 +6,7 @@ A source checkout also contains an experimental CPU adapter; no model server,
 weights or production-tested inference runtime ship with the Python package.
 For import commands and the exact worker JSON, see [Research usage](USAGE.md#worker-interface).
 
-Lixity v1.24.0 also supports locally installed Tesseract without this adapter.
+Since v1.24, Lixity also supports locally installed Tesseract without this adapter.
 New native Poppler and Tesseract captures use
 accurate local implementation identifiers and require a v4 archive reader;
 cached legacy provenance is preserved. See [local OCR setup and compatibility](USAGE.md#use-local-ocr-without-a-worker-service).
@@ -86,7 +86,7 @@ There is no basis here for inventing a calibrated confidence value for each
 recognized block.
 
 The external worker boundary has these narrower guarantees; local provenance
-and fallback behavior in v1.24.0 are described above and below:
+and fallback behavior in v1.24.1 are described above and below:
 
 | Area | Implemented behavior | Operational consequence |
 | --- | --- | --- |
