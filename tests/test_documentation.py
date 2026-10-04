@@ -78,6 +78,53 @@ class TestDocumentation(unittest.TestCase):
         # Against the real version the same scan is clean.
         self.assertEqual(find_version_drift(current), [])
 
+    def test_next_release_syncs_current_note_links_and_preserves_history(self):
+        import tempfile
+        from unittest.mock import patch
+
+        from sync_docs import check_or_sync_files, find_version_drift, get_version
+
+        current = get_version()
+        major, minor, _ = current.split(".")
+        next_version = f"{major}.{int(minor) + 1}.0"
+        originals = {
+            "README.md": (ROOT / "README.md").read_text(encoding="utf-8"),
+            "docs/index.html": (ROOT / "docs/index.html").read_text(encoding="utf-8"),
+            "docs/INSTALLATION.md": (ROOT / "docs/INSTALLATION.md").read_text(encoding="utf-8"),
+            "docs/guides/installation.html": (ROOT / "docs/guides/installation.html").read_text(encoding="utf-8"),
+        }
+        historical = {
+            "README.md": "\nSince v1.16.0: [HD-D release](docs/releases/v1.16.0.md).\n",
+            "docs/index.html": '\n<p>Since v1.16.0: <a href="releases/v1.16.0.md">HD-D release</a>.</p>\n',
+            "docs/INSTALLATION.md": "\nSince v1.16.0: [HD-D release](releases/v1.16.0.md).\n",
+            "docs/guides/installation.html": '\n<p>Since v1.16.0: <a href="../releases/v1.16.0.md">release history</a>.</p>\n',
+        }
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            for name, text in originals.items():
+                (root / name).parent.mkdir(parents=True, exist_ok=True)
+                (root / name).write_text(text + historical[name], encoding="utf-8")
+            with patch("sync_docs.ROOT", root):
+                self.assertCountEqual(check_or_sync_files(next_version, check_only=True), originals)
+                for name, text in originals.items():
+                    self.assertEqual((root / name).read_text(encoding="utf-8"), text + historical[name])
+
+                check_or_sync_files(next_version)
+                self.assertEqual(find_version_drift(next_version), [])
+                for name in originals:
+                    content = (root / name).read_text(encoding="utf-8")
+                    self.assertIn(f"releases/v{next_version}.md", content)
+                    self.assertNotIn(f"releases/v{current}.md", content)
+                    self.assertIn(historical[name], content)
+                    # Keep the label current but make only its target stale.
+                    (root / name).write_text(
+                        content.replace(f"releases/v{next_version}.md", f"releases/v{current}.md", 1),
+                        encoding="utf-8",
+                    )
+                findings = find_version_drift(next_version)
+                self.assertEqual(len(findings), 4)
+                self.assertTrue(all("current release-note target" in finding for finding in findings))
+
     def test_changelog_matches_current_version(self):
         from lixity import __version__
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

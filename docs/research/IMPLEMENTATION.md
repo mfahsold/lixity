@@ -45,7 +45,7 @@ or contact a cloud library.
    multi-file batch ingest (`research batch-ingest`), section-bounded dossier reads,
    reindex, search, cite, audit, schema, analyze, dashboard, withdraw and purge
    with dry-run preview. Require explicit project selection and local retention
-   confirmation. JSON stdout; errors on stderr; `--progress` streams heartbeats.
+   confirmation. JSON stdout; errors on stderr; `--progress` reports phase changes.
 6. `research/models.py` and `research/api.py`: source tagging, dossiers with
    passage references and structured sections, manually recorded claims with
    scope and confidence, evidence links with explicit relations, and authorial

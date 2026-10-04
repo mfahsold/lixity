@@ -1,12 +1,4 @@
-let playwrightMod = process.env.PLAYWRIGHT_MODULE || 'playwright';
-const fs = require('node:fs');
-try {
-  require.resolve(playwrightMod);
-} catch {
-  const fallback = '/home/codeai/.npm/_npx/b234c773f454f454/node_modules/playwright';
-  if (fs.existsSync(fallback)) playwrightMod = fallback;
-}
-const {chromium} = require(playwrightMod);
+const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const {spawnSync} = require('node:child_process');
 const path = require('node:path');
 const assert = require('node:assert/strict');
@@ -22,12 +14,7 @@ print(render())
 assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
 
 (async () => {
-  const launchOptions = {headless: true};
-  const execPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
-    (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
-     fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined);
-  if (execPath) launchOptions.executablePath = execPath;
-  const browser = await chromium.launch(launchOptions);
+  const browser = await launchChromium();
   try {
     const page = await browser.newPage({hasTouch: true});
     const errors = [];

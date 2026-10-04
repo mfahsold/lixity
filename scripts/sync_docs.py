@@ -1,26 +1,10 @@
 #!/usr/bin/env python3
-"""Maintain and synchronize version references and links across documentation files.
+"""Synchronize release pins and check current-version claims in documentation.
 
-Ensures Single-Source-of-Truth (SSOT) consistency based on src/lixity/_version.py.
-Usage:
-    python scripts/sync_docs.py          # Synchronize documentation files
-    python scripts/sync_docs.py --check  # Check for version drift without writing (exit 1 on drift)
-
-Two separate things happen here, and they answer different questions.
-
-1. Synchronisation rewrites a known list of pinned strings (install URLs, version
-   badges, "the current release is"). This is convenience, not verification.
-
-2. The drift check is the actual invariant: across every current-documentation
-   file, each version token must either equal the SSOT version or sit in a
-   context that marks it as talking about the past. Anything else is drift.
-
-The distinction matters because the rewrite list is necessarily incomplete: it
-can only cover phrasings somebody thought to enumerate. A check built only on
-"is there anything left for my own list to rewrite" is a tautology that reports
-success after its first run and can never notice a stale claim in wording it
-does not know, which is exactly how the site came to advertise a two-releases-
-old version while every check stayed green.
+The version comes from src/lixity/_version.py. Run with --check to report drift
+without changing files. Rewriting handles known pins; the separate claim scan
+also checks wording outside that list. Historical release notes and third-party
+versions are not treated as current Lixity claims.
 """
 
 import argparse
@@ -43,33 +27,40 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
     """Check or update version references across documentation files."""
     drift_files: list[str] = []
 
+    install_pin = (
+        r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
+        f"git+https://github.com/mfahsold/lixity.git@v{version}",
+    )
     # Rules: (file_path, list of (pattern, replacement))
     rules: list[tuple[Path, list[tuple[str, str]]]] = [
         (
             ROOT / "README.md",
             [
-                (r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
-                 f"git+https://github.com/mfahsold/lixity.git@v{version}"),
+                install_pin,
                 (r"This installs \*\*v\d+\.\d+\.\d+\*\*",
                  f"This installs **v{version}**"),
                 (r"The current release is \*\*v\d+\.\d+\.\d+\*\*",
                  f"The current release is **v{version}**"),
+                (r"\[v\d+\.\d+\.\d+ release notes\]\(docs/releases/v\d+\.\d+\.\d+\.md\)",
+                 f"[v{version} release notes](docs/releases/v{version}.md)"),
+                (r"\[Release notes\]\(docs/releases/v\d+\.\d+\.\d+\.md\)",
+                 f"[Release notes](docs/releases/v{version}.md)"),
             ],
         ),
         (
             ROOT / "docs" / "INSTALLATION.md",
             [
-                (r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
-                 f"git+https://github.com/mfahsold/lixity.git@v{version}"),
+                install_pin,
                 (r"The current release is \*\*v\d+\.\d+\.\d+\*\*",
                  f"The current release is **v{version}**"),
+                (r"\[release notes\]\(releases/v\d+\.\d+\.\d+\.md\)",
+                 f"[release notes](releases/v{version}.md)"),
             ],
         ),
         (
             ROOT / "docs" / "USAGE.md",
             [
-                (r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
-                 f"git+https://github.com/mfahsold/lixity.git@v{version}"),
+                install_pin,
                 (r"`v\d+\.\d+\.\d+` is the release pin",
                  f"`v{version}` is the release pin"),
             ],
@@ -77,8 +68,7 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
         (
             ROOT / "docs" / "llms.txt",
             [
-                (r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
-                 f"git+https://github.com/mfahsold/lixity.git@v{version}"),
+                install_pin,
                 (r"replace `@v\d+\.\d+\.\d+` with `@main`",
                  f"replace `@v{version}` with `@main`"),
                 (r"Current release: \d+\.\d+\.\d+; release tag: v\d+\.\d+\.\d+",
@@ -94,17 +84,20 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
                  f'"softwareVersion": "{version}"'),
                 (r'<span class="brand-badge">v\d+\.\d+\.\d+</span>',
                  f'<span class="brand-badge">v{version}</span>'),
-                (r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
-                 f"git+https://github.com/mfahsold/lixity.git@v{version}"),
+                (r'Current release: <a href="releases/v\d+\.\d+\.\d+\.md">v\d+\.\d+\.\d+</a>',
+                 f'Current release: <a href="releases/v{version}.md">v{version}</a>'),
+                install_pin,
             ],
         ),
     ]
 
     # Static guides share the release-install convention with the main docs.
-    rules.extend((guide, [
-        (r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
-         f"git+https://github.com/mfahsold/lixity.git@v{version}"),
-    ]) for guide in sorted((ROOT / "docs" / "guides").glob("*.html")))
+    for guide in sorted((ROOT / "docs" / "guides").glob("*.html")):
+        pins = [install_pin]
+        if guide.name == "installation.html":
+            pins.append((r'<a href="\.\./releases/v\d+\.\d+\.\d+\.md">release notes</a>',
+                         f'<a href="../releases/v{version}.md">release notes</a>'))
+        rules.append((guide, pins))
 
     for file_path, replacements in rules:
         if not file_path.is_file():
@@ -136,16 +129,9 @@ def current_doc_files() -> list[Path]:
     ]
 
 
-# Phrases that assert, by construction, which version is current. Each must
-# name the SSOT version; a mismatch means the documentation is describing a
-# release that is no longer current.
-#
-# The list is deliberately narrow. A wider sweep over every version-shaped token
-# is not usable here: it matches 127.0.0 inside 127.0.0.1, and it flags every
-# third-party version (pdfjs, tesseract, pypdf) as if it were a stale Lixity
-# pin. Retrospective prose such as "Release v1.20.0 adds ..." is legitimate and
-# is intentionally not matched. What is matched is the class of wording that is
-# wrong whenever it drifts.
+# Match claims about the current Lixity release, not every version-shaped token.
+# Broad matching would also catch 127.0.0.1 and third-party package versions.
+# Historical wording such as "since v1.20.0" remains valid.
 CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
     ("current release statement",
      re.compile(r"current release(?:\s+is)?[\s:*>]*\**v?(\d+\.\d+\.\d+)", re.I)),
@@ -171,21 +157,46 @@ CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
      re.compile(r'content="[^"]*?\bv(\d+\.\d+\.\d+)', re.I)),
 )
 
+# These entrypoint links describe the current release. Other release-note links
+# may be historical, so do not scan them throughout the documentation tree.
+CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
+    Path("README.md"): (
+        ("current release-note label",
+         re.compile(r"\[v(\d+\.\d+\.\d+) release notes\]\(docs/releases/v\d+\.\d+\.\d+\.md\)")),
+        ("current release-note target",
+         re.compile(r"\[(?:v\d+\.\d+\.\d+ release notes|Release notes)\]\(docs/releases/v(\d+\.\d+\.\d+)\.md\)")),
+    ),
+    Path("docs/index.html"): (
+        ("current release-note label",
+         re.compile(r'Current release:\s*<a href="releases/v\d+\.\d+\.\d+\.md">v(\d+\.\d+\.\d+)</a>')),
+        ("current release-note target",
+         re.compile(r'Current release:\s*<a href="releases/v(\d+\.\d+\.\d+)\.md">')),
+    ),
+    Path("docs/INSTALLATION.md"): (
+        ("current release-note target",
+         re.compile(r"\[release notes\]\(releases/v(\d+\.\d+\.\d+)\.md\)")),
+    ),
+    Path("docs/guides/installation.html"): (
+        ("current release-note target",
+         re.compile(r'<a href="\.\./releases/v(\d+\.\d+\.\d+)\.md">release notes</a>')),
+    ),
+}
+
 
 def find_version_drift(version: str) -> list[str]:
     """Report current-version claims that do not match the SSOT version."""
     findings: list[str] = []
     for file_path in current_doc_files():
         text = file_path.read_text(encoding="utf-8", errors="replace")
+        rel = file_path.relative_to(ROOT)
+        patterns = CURRENT_CLAIMS + CURRENT_NOTE_CLAIMS.get(rel, ())
         for lineno, line in enumerate(text.splitlines(), 1):
-            for label, pattern in CURRENT_CLAIMS:
-                for match in pattern.finditer(line):
-                    if match.group(1) != version:
-                        rel = file_path.relative_to(ROOT)
-                        findings.append(
-                            f"{rel}:{lineno}: {label} names v{match.group(1)}, "
-                            f"but the current release is v{version}"
-                        )
+            for label, pattern in patterns:
+                findings.extend(
+                    f"{rel}:{lineno}: {label} names v{match.group(1)}, "
+                    f"but the current release is v{version}"
+                    for match in pattern.finditer(line) if match.group(1) != version
+                )
     return findings
 
 

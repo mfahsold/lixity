@@ -1,7 +1,8 @@
 # Install, verify and update Lixity
 
-Lixity runs locally on Linux, macOS and Windows. It is **source-available under
-LNCL-1.0, for non-commercial use**, and is installed from GitHub, not PyPI.
+Lixity runs on your computer on Linux, macOS and Windows. It is
+**source-available under LNCL-1.0, for non-commercial use**. Install it from
+GitHub using the commands below; it is not distributed on PyPI.
 Books intended for sale, including self-publishing, require a separate written
 commercial license. See [licensing examples](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
@@ -15,9 +16,8 @@ network access. No manuscript upload, account or API key is required.
 | Import `lixity` from your own Python project | Project virtual environment |
 | Edit the engine or develop an adapter | Editable checkout |
 
-Python **3.12 is a practical default**. The engine and project TOML settings support 3.10+; Python 3.10 uses a small
-conditional `tomli` dependency, while 3.11+ uses `tomllib`. Git is required for
-the GitHub source commands. Install [Git](https://git-scm.com/downloads) and
+Use **Python 3.12** for these examples; Python 3.10 or newer is supported.
+Install [Git](https://git-scm.com/downloads) and
 [uv](https://docs.astral.sh/uv/getting-started/installation/) first if needed.
 Do not run multiple installation routes into the same environment, use `sudo
 pip`, or bypass an externally managed Python environment.
@@ -32,10 +32,9 @@ lixity --version
 lixity about
 ```
 
-The current release is **v1.23.0**. The tag includes the local project/research workspace,
-Zotero capture and paired backup tools, search across current authored records,
-seven-language workflows and numerical corrections. For reproducible automation, pin this tag or
-its reviewed full commit hash. Read the [release notes](releases/v1.20.0.md).
+The current release is **v1.23.0**. This command selects a fixed release so that
+reinstalling it uses the same source. Read the [release notes](releases/v1.23.0.md)
+for changes and compatibility information.
 
 If `lixity` is not found, run `uv tool update-shell`, open a new terminal and
 retry. `uv tool list` shows the installed source. A tool installation does not
@@ -43,20 +42,18 @@ make `import lixity` available to a different Python environment.
 
 ### Optional research prerequisites
 
-The experimental research workspace is included in the release; it does not
-require a development installation. Research search requires SQLite with FTS5.
-For text PDFs, install Poppler separately; scanned PDFs require a configured OCR
-worker. Neither Zotero nor an OCR model is installed with the Python package.
+The experimental research workspace is included. Text and Markdown sources need
+no OCR setup. Search needs SQLite with FTS5 support. Text PDFs need Poppler;
+image-only scans need a separately configured OCR worker. See
+[PDF and OCR setup](#server-environment-and-project-access).
 
-Zotero is a separate optional application. Install a native build for your operating
-system and enable its local API in Settings → Advanced. Use Zotero 10 or later for
-stable local instance identity and safe capture refresh. Lixity connects only to
-`127.0.0.1:23119`; it does not install Zotero, launch it, modify its database or
-configure synchronization. A cloud account is unnecessary for this local workflow.
+For Zotero capture, install Zotero 10 or later on the same computer and enable
+its local API in Settings → Advanced. Lixity reads `127.0.0.1:23119`; it does
+not install or launch Zotero, modify its database or configure synchronization.
+No cloud account is needed.
 See the [Zotero setup and migration reference](research/USAGE.md#zotero-desktop-bridge-since-v1190).
-Back up the existing archive before creating v3 captures; all readers and writers
-must support that format. Installing a newer package does not migrate sources
-or change a running server.
+Back up existing archives before creating v3 captures and use compatible versions
+for all readers and writers. Installing Lixity does not download an OCR model.
 
 ### Development builds instead
 
@@ -66,7 +63,7 @@ To follow unreleased changes, use this **instead**:
 uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"
 ```
 
-`main` can change and is not a release pin. Review
+`main` changes over time. Review
 [release notes](https://github.com/mfahsold/lixity/releases) before switching.
 To deliberately replace an existing installation, repeat the chosen command
 with `--force`. This does not alter manuscript files.
@@ -78,18 +75,11 @@ uv tool upgrade lixity
 lixity --version
 ```
 
-To remove the CLI later, run `uv tool uninstall lixity`. Upgrades respect the
-selected source/ref: a pinned tag or commit does not move to a newer release or
-`main`. To adopt a different release, repeat the installation command with its
-explicit tag and `--force`.
-Restart any running adapter/server after an engine update.
-
-Use one active server for ordinary interactive use. Stop the previous server
-(Ctrl+C in its terminal) before starting the updated one on the same port,
-normally `8765`. Starting another port leaves the old process running with its
-previously loaded Python code and dashboard. A browser reload or a fresh CLI
-version check does not update that running process, including with an editable
-installation. All browser tabs connected to one server share its active project.
+To select a newer release, repeat the installation command with its new tag and
+`--force`. `uv tool upgrade lixity` stays within the chosen source: it does not
+move a fixed tag or commit to another release. Remove the CLI with
+`uv tool uninstall lixity`. After updating, restart any running server or adapter;
+see [Running the server](#running-the-server).
 
 If you already use pipx, the equivalent alternative is
 `pipx install "git+https://github.com/mfahsold/lixity.git@v1.23.0"`, followed by
@@ -105,9 +95,9 @@ lixity analyze manuscript.md --language en
 lixity build manuscript.md --language en
 ```
 
-Open `exports/manuscript_dashboard.html` in your browser. The first build also
-creates JSON metrics, a report and a style passport. Very short texts cannot
-support a meaningful style reference; unavailable results are expected.
+Open `exports/manuscript_dashboard.html` in your browser. The build also saves
+metrics and written reports. Very short texts cannot support a meaningful style
+reference; unavailable results are expected.
 
 Use `--language de` for German, or explicit `--language auto` for detection.
 English is the default. A local `lixity.toml` can hold:
@@ -121,15 +111,15 @@ For interactive project and research workflows, run `lixity serve manuscript.md`
 or start the project wizard with `lixity serve --no-project`. The standalone HTML
 export remains read-only. The server's persistent workspace bar offers
 **Open Project** for an existing folder and its research archive, and
-**New Project → Import Manuscript** for a new project from browser file bytes.
-See [Onboarding](ONBOARDING.md) for the chooser and research flow. NDA management
-and publication-specific exports require a project adapter.
+**New Project → Import Manuscript** to create a separate project from uploaded text.
+See [Onboarding](ONBOARDING.md) for this workflow. Native encrypted NDA tracking
+is built in for configured projects; publication-specific exports use project adapters.
 
 ## Running the server
 
-`lixity serve` starts a loopback-only HTTP server on `127.0.0.1:8765` (default port).
-Open `http://127.0.0.1:8765/` in your browser. The server is strictly local:
-no manuscript bytes leave your machine. All browser tabs share one running instance.
+`lixity serve` starts the local workspace at `http://127.0.0.1:8765/` by default.
+The built-in analysis runs on your computer; optional integrations have their own
+setup and data handling. All tabs connected to one server share its active project.
 
 ```sh
 # Simplest: foreground, Ctrl+C to stop
@@ -143,13 +133,13 @@ lixity serve --no-project
 ```
 
 If port 8765 is already occupied, Lixity prints a clear error with the kill command.
-Use `--port <PORT>` to start on a different port instead.
+Identify the existing server before stopping it, or choose another port.
+After an update or a change to OCR settings, stop the old server with Ctrl+C and
+restart it on the same port. Reloading the browser does not update running code.
 
 ### Managed background start (Linux and macOS)
 
-`scripts/lixity-start.sh` in the source checkout manages a PID-file-backed
-background instance, so you can start, stop and check status without keeping a
-terminal open:
+The source checkout includes an optional launcher for use without an open terminal:
 
 ```sh
 scripts/lixity-start.sh start            # start in background
@@ -162,10 +152,9 @@ LIXITY_PORT=9000 LIXITY_DIR=/path/to/project scripts/lixity-start.sh start
 scripts/lixity-start.sh start --port 9000 --open /path/to/project
 ```
 
-State lives in `${XDG_RUNTIME_DIR:-~/.local/share/lixity}/`: `lixity-<PORT>.pid`
-(fallback: `lixity.pid` for port 8765) and `lixity-<PORT>.log` (rotated to `.log.1` on start).
-`status` verifies that the recorded PID is a live Lixity process responding on that port,
-and automatically cleans up stale or recycled PID files.
+The launcher keeps port-specific process records and logs in `$XDG_RUNTIME_DIR`,
+or `~/.local/share/lixity` when unavailable. `status` checks the running process
+and port; `start` prints the log path.
 
 From an editable checkout you can also use `make`:
 
@@ -177,8 +166,7 @@ make stop                      # stop the managed instance
 
 ### Managed background start (Windows)
 
-`scripts/lixity-start.ps1` provides the same lifecycle on Windows. It runs on
-Windows PowerShell 5.1 and PowerShell 7+:
+Use the Windows launcher with Windows PowerShell 5.1 or PowerShell 7+:
 
 ```powershell
 # Allow user-scope script execution (once per machine):
@@ -192,14 +180,13 @@ Set-ExecutionPolicy -Scope CurrentUser RemoteSigned
 .\scripts\lixity-start.ps1 start -Open         # also open the browser
 ```
 
-State lives in `%LOCALAPPDATA%\lixity\`. Windows offers no console-signal
-delivery for a detached process, so `stop` terminates the process rather than
-performing the interrupt-based shutdown that `lixity serve` does on Ctrl+C.
+Process records and logs are in `%LOCALAPPDATA%\lixity\`. Its `stop` command
+terminates the background process; a foreground server is stopped with Ctrl+C.
 
 ### Auto-start on login — Linux (systemd user service)
 
-`scripts/lixity.service` starts Lixity automatically at login. Install it once
-per user account:
+Optional: use the [systemd template](https://github.com/mfahsold/lixity/blob/main/scripts/lixity.service)
+to start at login. Edit its executable path and project directory before enabling it:
 
 ```sh
 mkdir -p ~/.config/systemd/user
@@ -215,29 +202,16 @@ systemctl --user enable --now lixity    # enable + start immediately
 systemctl --user status  lixity
 systemctl --user restart lixity
 journalctl --user -u lixity -f          # live log
-
-# To start even without an open login session:
-loginctl enable-linger $USER
 ```
 
-The port comes from the unit's `Environment=LIXITY_PORT=` line and is referenced
-as `${LIXITY_PORT}`. systemd performs plain variable substitution only, so a
-shell-style `${LIXITY_PORT:-8765}` default is **not** expanded and would pass a
-non-numeric value to `--port`. To change the port, override both lines:
-
-```sh
-systemctl --user edit lixity
-# → add under [Service]:
-#   Environment=LIXITY_PORT=9000
-#   ExecStart=%h/.local/bin/lixity serve --host 127.0.0.1 --port ${LIXITY_PORT}
-```
-
-The unit deliberately omits `ProtectSystem=`/`ProtectHome=`. The server writes
-`exports/` and the research archive inside the manuscript project directory, so
-a read-only filesystem would break it for any project outside your home
-directory.
+The template explains port changes and service options. If you deliberately
+need it running without a login session, use `loginctl enable-linger $USER`.
+The service must be able to write to its project folder.
 
 ### Auto-start on login — macOS (launchd agent)
+
+Optional: edit the [launchd template](https://github.com/mfahsold/lixity/blob/main/scripts/lixity.plist)
+to point to your executable and project folder, then register it:
 
 ```sh
 # Edit the plist: set the correct path to your lixity binary (check: which lixity)
@@ -258,8 +232,7 @@ launchctl bootout gui/$(id -u)/com.lixity.serve
 
 ### Auto-start on login — Windows (Task Scheduler)
 
-For a fully automated start on Windows login without a visible PowerShell window,
-register the script as a Task Scheduler task:
+Optional: register the launcher in Task Scheduler to start at login:
 
 ```powershell
 $script    = Join-Path $PWD "scripts\lixity-start.ps1"
@@ -287,10 +260,9 @@ If you do not use one of the auto-start methods above, reopen a terminal and run
 lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765
 ```
 
-Open `http://127.0.0.1:8765`. No reinstall or reimport is needed for an existing
-project. If you use OCR environment variables, supply the same values again;
-shell variables are not saved in project settings. Retained evidence is readable
-while Zotero is closed, but capturing new attachments requires Zotero running.
+Open `http://127.0.0.1:8765/`. No reinstall or reimport is needed. Reapply any OCR
+environment settings; they are not saved in project settings. Start Zotero for
+new captures; retained evidence stays readable while it is closed.
 
 ## Python API: project environment
 
@@ -344,7 +316,7 @@ package rather than copying engine code into every book project.
 | Project settings ignored | Check `lixity.toml` syntax and the selected project path; explicit CLI flags take precedence. |
 | Wrong version or old controls after update | Check `uv tool list` and `command -v lixity` (PowerShell: `Get-Command lixity`), then stop the old server and restart on the same port. Check that the browser uses that address. |
 | Dependency build error | Try a supported CPython version with binary wheels, e.g. 3.12; retain the full installer error. |
-| HTML lacks interactive settings | Expected for a standalone export; use `lixity serve` for the local workspace controls. NDA management requires a project adapter. |
+| HTML lacks project or research actions | A standalone export is read-only. Use `lixity serve` for the local workspace; native NDA tracking also needs a configured project. |
 
 ## Optional shell completion
 
@@ -364,33 +336,20 @@ See the [usage reference](USAGE.md), [architecture](ARCHITECTURE.md) and
 
 ## Server environment and project access
 
-Start the server with the intended project explicitly:
-
-```sh
-lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765
-```
-
-The folder browser sees the server process's filesystem. If an existing project
-is unavailable after a restart, check the process user, sandbox/container mounts,
-directory permissions and the explicit project argument. A path that works in
-your terminal is not necessarily visible to a service running in isolation.
-Use **Open Project** to reconnect the original archive; manuscript upload creates
-a separate project and is not a repair for missing filesystem access.
-
-Updating the package or exporting an environment variable does not change an
-already running server. Restart the intended service, then verify the displayed
-project path. Keep private archives outside the engine checkout.
+The folder browser sees files available to the server process. A service account,
+container or sandbox may have different access from your terminal. If a project
+cannot be opened, check the process user, folder permissions and mounted paths.
+Use **Open Project** to reconnect the original archive rather than importing
+another copy. Keep private project data outside the engine checkout.
 
 For PDF import, make `pdftotext` and `pdftoppm` available in that same environment.
 Debian/Ubuntu package: `poppler-utils`; Homebrew package: `poppler`.
-Run `lixity research ocr-status` (available since v1.18.0). Scans require a separately
-configured `LIXITY_OCR_WORKER`; native extraction cannot read an image-only page.
+Run `lixity research ocr-status` to check configuration. Image-only scans need a
+separately configured `LIXITY_OCR_WORKER`; native extraction cannot read them.
 See [the extraction contract](research/USAGE.md#self-hosted-pdf-and-ocr-extraction).
-The [Unlimited-OCR integration guide](research/OCR_INTEGRATION.md) compares the
-official inference routes and this custom boundary. Upstream `infer.py` is not
-a drop-in `LIXITY_OCR_WORKER` executable. The Python package installs neither a
-model runtime nor a worker executable. The source checkout includes an experimental
-CPU adapter; its separately prepared runtime is described in that guide.
+The [Unlimited-OCR integration guide](research/OCR_INTEGRATION.md) describes the
+optional experimental CPU adapter and its separate runtime setup. Upstream
+`infer.py` cannot be used directly as a `LIXITY_OCR_WORKER` executable.
 
 The [browser installation guide](https://mfahsold.github.io/lixity/guides/installation.html)
 provides a synthetic first-dashboard example and links to interpretation and

@@ -1,27 +1,12 @@
+const {launchChromium} = require('./browser_tools.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const assert = require('node:assert/strict');
 
-let playwrightMod = process.env.PLAYWRIGHT_MODULE || 'playwright';
-try {
-  require.resolve(playwrightMod);
-} catch {
-  const fallback = '/home/codeai/.npm/_npx/b234c773f454f454/node_modules/playwright';
-  if (fs.existsSync(fallback)) playwrightMod = fallback;
-}
-const { chromium } = require(playwrightMod);
-
 async function main() {
   const captures = JSON.parse(fs.readFileSync(process.argv[2], 'utf8'));
-  const launchOptions = {headless: true};
-  const execPath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
-    (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
-     fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined);
-  if (execPath) {
-    launchOptions.executablePath = execPath;
-  }
-  const browser = await chromium.launch(launchOptions);
+  const browser = await launchChromium();
   const results = [];
   try {
     const page = await browser.newPage({deviceScaleFactor: 1, reducedMotion: 'reduce'});
@@ -110,12 +95,13 @@ async function main() {
     for (const capture of captures) {
       const name = path.basename(capture.target);
       await open(capture.source, capture.width, capture.height, name.includes('dark') ? 'dark' : 'light');
-      if (name === 'dashboard-light.png' || name === 'dashboard-dark.png') await selectView('analysis');
+      if (['dashboard-light.png', 'dashboard-dark.png', 'dashboard-dimensions.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
       if (name === 'dashboard-dimensions.png') {
         await save(capture.target, '#dimensions');
       } else if (name === 'dashboard-markers.png') {
         await save(capture.target, '#markers');
       } else if (name === 'dashboard-heatmap.png') {
+        await page.addStyleTag({content: '.page { max-width: 1720px; }'});
         await page.evaluate(() => {
           const rows = document.querySelectorAll('table.heatmap tbody tr');
           for (let i = 20; i < rows.length; i++) rows[i].remove();
@@ -211,13 +197,13 @@ async function main() {
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await save(path.join(output, 'dashboard-mobile.png'));
     await save(path.join(output, 'dashboard-dimensions-mobile.png'), '#dimensions');
-    await open(path.join(base, 'dashboard-dark.html'), 1600, 1050, 'dark');
+    await open(path.join(base, 'dashboard.html'), 1600, 1050, 'dark');
     await selectView('analysis');
     await save(path.join(output, 'dashboard-dimensions-dark.png'), '#dimensions');
     await open(path.join(base, 'dashboard.html'), 1600, 1050);
     await selectView('analysis');
     await save(path.join(output, 'dashboard-reference.png'), '#bands');
-    await open(path.join(base, 'dashboard-settings.html'), 1600, 1050);
+    await open(path.join(base, 'dashboard.html'), 1600, 1050);
     await selectView('project');
     await page.locator('.settings-advanced summary').click();
     await save(path.join(output, 'dashboard-settings.png'), '#settings-form');

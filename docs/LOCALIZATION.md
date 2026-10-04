@@ -1,89 +1,76 @@
 # Language and localization contract
 
-Since v1.18.0, the browser OCR badge and setup instructions resolve stable
-diagnostic codes through the same seven-language workspace pack as other research
-controls. `ready` means an executable is configured, not verified recognition.
-Unknown codes receive a localized fallback. English backend guidance remains in
-CLI/API JSON and is not copied into the localized badge. The origin-URL field,
-validation hint and metadata label use the same pack; source URLs and quotations
-are never translated. Other research operational errors may still be English.
-
-The experimental research CLI has English help/errors and language-neutral JSON.
-It preserves source text and Unicode quotation offsets without translation or
-normalization. FTS5 word search is not a language-specific linguistic model.
-The local server has an experimental research panel; its interface follows
-the seven dashboard languages. Research content, quotations, claim titles and
-author decisions remain in their entered language. See
-[research limits](research/USAGE.md).
-
-Release v1.19.0 adds Zotero collection browsing, capture/refresh,
-retention prompts and original-item links to the same seven-language workspace
-pack. Collection names, attachment titles and external metadata remain in their
-original language. CLI/API diagnostics remain English. Localization does not
-imply that media contents are transcribed, translated or verified.
-
 ## Defaults and developer language
 
-Documentation, comments and docstrings are English. Localized resource values,
-quoted material and linguistic fixtures retain their intended language.
-Machine-readable keys and tense identifiers remain language-neutral.
+Documentation, comments and docstrings are English. Localized resources,
+quoted material and linguistic examples retain their intended language.
+Machine-readable keys and mathematical identifiers remain language-neutral.
 
-From `1.15.0`, CLI/API analysis and `CorpusConfig` default to English.
-CLI `--language` overrides the project's `language` setting; without either,
-English applies. API callers select their language through the argument.
-`auto` is explicit and resolves to `generic` for weak or ambiguous evidence.
+Analysis language and report language are separate settings:
 
-`LIXITY_LANG` controls CLI/report presentation independently of manuscript
-analysis. Its current message packs are English and German. It does not
-select the manuscript's linguistic model. Dashboard resources cover all seven
-supported languages, including the experimental research panel; full
-CLI-message parity remains separate work.
+| Setting | Purpose |
+| --- | --- |
+| `--language de`, `--language en`, or another supported code | Selects the manuscript's linguistic profile. An explicit CLI flag overrides project settings; English is the default. API callers use the `language` argument. |
+| `--language auto` | Requests detection explicitly. Weak or ambiguous evidence resolves to `generic`. |
+| `LIXITY_LANG` | Selects CLI/report presentation independently of analysis. Message packs currently cover German and English. |
+| Dashboard language | Uses resources for all seven supported languages, including workspace and research controls. |
+
+Research CLI help and errors are English; JSON keys are language-neutral.
+Sources, quotations, filenames, external metadata, claim titles and author
+decisions are preserved as entered. Localization does not translate or verify
+research content. Some backend errors may still appear in English in the browser.
 
 ## Localization below the interface
 
-| Concern | Language-dependent behavior |
-| --- | --- |
-| Tokenization and sentence segmentation | Word patterns and abbreviation/segmentation rules |
-| Tense and style signals | Present/past markers, function words, pronouns, modality, passive and nominal patterns |
-| Readability | Syllable estimator and named language-specific coefficient set |
-| Presentation | Labels, scientific help text, decimal/grouping separators and percentage units |
-| Generic profile | Reduced heuristics; not a validated model for an unknown language |
+Supported profiles are German (`de`), English (`en`), French (`fr`), Spanish
+(`es`), Italian (`it`), Portuguese (`pt`) and Dutch (`nl`). German and English
+currently have the most extensive linguistic heuristics and language-specific
+fixtures. The other five profiles have localized presentation and linguistic
+resources with more limited coverage and validation. Equal interface coverage
+does not establish equal accuracy across languages or genres.
 
-Supported profiles: English (`en`), German (`de`), French (`fr`), Spanish
-(`es`), Italian (`it`), Portuguese (`pt`) and Dutch (`nl`). Do not infer equal
-accuracy from equal resource-key coverage. English and German currently have
-the deepest linguistic heuristics and the most extensive language-specific
-fixtures. The other five profiles provide localized presentation and
-language-specific resources, but their heuristic coverage and validation are
-more limited.
+| Concern | What changes with the language |
+| --- | --- |
+| Words and sentences | Word patterns, abbreviations and sentence-boundary rules |
+| Tense and style signals | Present/past markers, function words, pronouns, modality, passive and nominal patterns |
+| Readability | Syllable estimation and the named language-specific coefficient set |
+| Presentation | Labels, scientific explanations, decimal/grouping separators and percentage units |
+| Generic profile | Reduced fallback heuristics, not a validated model for an unknown language |
+
+OCR badges resolve stable diagnostic codes through the same workspace label
+packs. `ready` describes configuration, not recognition quality. Source URLs
+and quotations are never translated. See [research limits](research/USAGE.md).
 
 ## Mathematics and scientific interpretation
 
 Median/MAD normalization, measurement-error adjustment, multiple-testing
-correction and eigendecomposition are shared mathematics. Translating a UI
-must not change their numerical results. Linguistic inputs to those methods
-can differ by language; cross-language scores are not automatically comparable.
+correction and eigendecomposition use the same mathematics in every language.
+Translation must not change these numerical results. Their linguistic inputs
+can differ; cross-language scores are not automatically comparable. JSON
+numbers stay numeric; locale formatting applies only to displayed reports.
 
-Readability formulas use language-specific coefficients already listed in
-`METHODS.md`. Results are not clipped to 0–100. A high or low score is a
-model output, not a diagnosis of literary quality. The generic profile uses
-fallback coefficients, not an empirically calibrated model for every language.
+Readability coefficients are documented in [Methods](METHODS.md). Results are
+not clipped to 0–100 and do not diagnose literary quality. The generic profile
+uses fallback coefficients, not a model calibrated for every language.
 
 Syllable counts, tense classification and stylistic patterns are deterministic
-heuristics, not a full morphological parser. Accuracy for dialect, historical
-spelling, code-switching or unusual vocabulary needs separate evaluation.
+heuristics, not a full grammatical parser. Dialect, historical spelling,
+code-switching and unusual vocabulary need separate evaluation.
 
 ## Acceptance criteria for language work
 
-1. Supply and test the linguistic resources; do not substitute English patterns.
-2. Provide complete nonempty label/help keys and review translation quality.
-3. Document formula provenance and unsupported analyses without inventing
-   coefficients merely to produce a number.
-4. Test known numeric examples and language-specific positive/negative fixtures.
-5. Keep locale formatting at the presentation boundary; JSON numbers stay numeric.
-6. Distinguish resource-coverage and dispatch tests from empirical validation.
+Prioritize German linguistic resources and scientific explanations, then English,
+then the other supported languages. Documentation remains English; this priority
+does not change the default analysis language or imply equal validation.
 
-`tests/test_localization.py` checks defaults, explicit auto detection, label-key
-coverage, coefficient dispatch and number formatting. Existing linguistic and
-mathematical suites provide additional fixtures. These tests alone do not
-establish a language-wide accuracy percentage.
+1. Supply and test linguistic resources; do not substitute English patterns.
+2. Provide complete, nonempty label/help keys and review translation quality.
+3. Document formula sources and unavailable analyses; do not invent coefficients.
+4. Test known numeric examples and language-specific positive/negative fixtures.
+5. Apply locale formatting only when displaying results; keep JSON numbers numeric.
+6. Distinguish coverage and dispatch tests from empirical validation.
+
+`tests/test_localization.py` checks defaults, explicit detection, resource keys,
+coefficient selection and number formatting. Linguistic and mathematical suites
+add specific examples. Together, they do not establish a language-wide accuracy
+percentage.

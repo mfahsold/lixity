@@ -7,6 +7,7 @@
 <meta name="description" content="Interpret Lixity's consistency, readability, lexical diversity and chapter deviations. Learn why empty manuscripts show a dash and why metrics are not quality scores."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/guides/interpretation.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
 <meta property="og:title" content="Understand Manuscript Metrics and Style Consistency"/>
 <meta property="og:description" content="Read chapter-level signals with their data requirements, uncertainty and heuristic limits."/>
@@ -18,7 +19,7 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Understand manuscript metrics and style consistency</h1>
 <p>Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-03">3 October 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-04">4 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html" aria-current="page">Interpret results</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="consistency">What does consistency measure?</h2>
@@ -31,7 +32,8 @@
 <p>For API compatibility, style JSON schema version 4 retains the historical numeric <code>consistency</code> value. The new <code>measured_cells</code> field identifies the supporting count. When it is zero, the retained value <code>1.0</code> is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.</p>
 
 <h2 id="minimums">How much text is enough?</h2>
-<table>
+<div class="feature-table-wrapper" role="region" aria-label="Minimum text requirements" tabindex="0">
+<table class="editorial-table">
 <thead><tr><th>Signal</th><th>Implementation guard</th><th>Interpretation</th></tr></thead>
 <tbody>
 <tr><td>Style reference</td><td>At least the configured measurable chapter count; default 2</td><td>A technical floor, not proof of statistical reliability. Several substantive chapters are more informative.</td></tr>
@@ -40,6 +42,7 @@
 <tr><td>Showing/telling ranking</td><td>At least three chapters with distinguishable balance scores</td><td>Otherwise the ranking lists are empty; numeric zero fallback scores do not establish artistic equivalence.</td></tr>
 <tr><td>Readability</td><td>Language-specific formula and count heuristics</td><td>Formula estimates describe surface structure; they do not determine an individual reader's understanding.</td></tr>
 </tbody></table>
+</div>
 <p>A token floor is an implementation policy, not a quality threshold. Maas remains defined for repetition: 100 repetitions of one token give <code>maas_a2 = 0.5</code>. Guiraud <code>V/√N</code> still depends on length and corpus composition. Flesch-family values can fall outside 0–100; they estimate surface structure, not reader understanding.</p>
 <p>The showing/telling panel displays “–” with an explanation when there are fewer than three chapters or no comparative signals. Numeric fallback zeros remain in JSON for compatibility; they do not justify a ranking.</p>
 
@@ -56,7 +59,7 @@
 
 <h2 id="editorial-matrix">Signals and questions for review</h2>
 <p>Use this reference to connect a measurement with a question to investigate. None of these signals establishes a writing defect.</p>
-<div class="feature-table-wrapper">
+<div class="feature-table-wrapper" role="region" aria-label="Language signals and review questions" tabindex="0">
       <table class="editorial-table">
         <thead>
           <tr>
@@ -141,7 +144,7 @@
 <h2 id="languages">Are the seven languages equally accurate?</h2>
 <p>The interface and language profiles cover English, German, French, Spanish, Italian, Portuguese and Dutch. English and German have the deepest linguistic heuristics. Complete translations of interface text do not establish equal linguistic accuracy. Mathematical identifiers stay language-neutral; quotations retain their original language.</p>
 <p>Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">estimator definitions and scientific references</a>, <a href="https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md">stability and limitations</a>, and <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">JSON contracts</a>. For a first run, follow the <a href="installation.html#first-dashboard">synthetic dashboard example</a>.</p>
-<footer><a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a> · <a href="../#impressum" lang="de">Impressum</a></footer>
+<footer><a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a> · <a href="../#impressum">Legal notice</a></footer>
 </main>
 </body>
 </html>

@@ -1,15 +1,10 @@
+const {launchChromium} = require('../../scripts/browser_tools.cjs');
 // Shared visual roles and interaction states; synthetic data only.
 const fs = require('node:fs');
 const path = require('node:path');
 const os = require('node:os');
 const assert = require('node:assert/strict');
 const {spawnSync} = require('node:child_process');
-let playwrightMod = process.env.PLAYWRIGHT_MODULE || 'playwright';
-try { require.resolve(playwrightMod); } catch {
-  const fallback = '/home/codeai/.npm/_npx/b234c773f454f454/node_modules/playwright';
-  if (fs.existsSync(fallback)) playwrightMod = fallback;
-}
-const {chromium} = require(playwrightMod);
 const root = path.resolve(__dirname, '../..');
 const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c',
   "import runpy; print(runpy.run_path('tests/test_ui_contract.py')['_full_dashboard']())"],
@@ -24,9 +19,7 @@ const contrast = (first, second) => {
   return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
 };
 (async () => {
-  const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
-    (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' : undefined);
-  const browser = await chromium.launch({headless: true, ...(executablePath ? {executablePath} : {})});
+  const browser = await launchChromium();
   try {
     for (const theme of ['light', 'dark']) for (const hasTouch of [false, true]) {
       const context = await browser.newContext({colorScheme: theme, reducedMotion: 'reduce', hasTouch});
@@ -38,7 +31,7 @@ const contrast = (first, second) => {
         const relative = url.pathname.replace(/^\/site\//, '') || 'index.html';
         const file = path.resolve(root, 'docs', relative);
         assert.ok(file.startsWith(path.join(root, 'docs') + path.sep));
-        return route.fulfill({contentType: file.endsWith('.css') ? 'text/css' : file.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(file)});
+        return route.fulfill({contentType: file.endsWith('.css') ? 'text/css' : file.endsWith('.js') ? 'text/javascript' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(file)});
       });
       const app = await context.newPage(), site = await context.newPage();
       for (const page of [app, site]) page.on('pageerror', e => errors.push(e.message));
@@ -49,9 +42,12 @@ const contrast = (first, second) => {
           assert.ok((await page.locator('body').innerText()).length > 1000);
         }
         const roles = page => page.evaluate(() => {
-          const css = getComputedStyle(document.documentElement);
-          return ['--bg', '--surface', '--fg', '--accent', '--action-bg', '--action-hover', '--on-action']
-            .map(name => css.getPropertyValue(name).trim());
+          const probe = document.createElement('span');
+          document.body.appendChild(probe);
+          const colors = ['--bg', '--surface', '--fg', '--accent', '--action-bg', '--action-hover', '--on-action']
+            .map(name => { probe.style.color = `var(${name})`; return getComputedStyle(probe).color; });
+          probe.remove();
+          return colors;
         });
         assert.deepEqual(await roles(app), await roles(site), `palette mismatch: ${theme}`);
         assert.equal(await app.locator('.chip').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');

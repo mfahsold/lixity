@@ -16,7 +16,6 @@ import argparse
 import html
 import io
 import json
-import re
 import shutil
 import subprocess
 import sys
@@ -85,34 +84,6 @@ def _terminal_shot(title: str, content_html: str, target: Path, width: int, heig
         content=content_html,
     )
     _queue_capture(_write_html(target.stem + ".html", document), target, width, height)
-
-
-def _extract_section(dashboard: str, marker: str) -> str:
-    style_match = re.search(r"<style>(.*?)</style>", dashboard, re.DOTALL)
-    script_match = re.search(r"<script>(.*?)</script>", dashboard, re.DOTALL)
-    lang_match = re.search(r'<html lang="([^"]*)"', dashboard)
-    if style_match is None or lang_match is None:
-        raise SystemExit("Dashboard markup incomplete – cannot extract section.")
-    style = style_match.group(1)
-    script = script_match.group(1) if script_match else ""
-    lang = lang_match.group(1)
-    extra_style = "\n.page { max-width: 1720px !important; }\n" if marker == "heatmap" else ""
-    for match in re.finditer(r'<section class="panel"[^>]*>.*?</section>', dashboard, re.DOTALL):
-        if f'id="{marker}"' in match.group(0).split(">", 1)[0]:
-            return (
-                "<!DOCTYPE html>"
-                f'<html lang="{lang}"><head><meta charset="utf-8"/><style>{style}{extra_style}</style></head>'
-                f'<body><div class="page">{match.group(0)}</div><script>{script}</script></body></html>'
-            )
-    raise SystemExit(f"Section not found: {marker}")
-
-
-def _force_dark(dashboard: str) -> str:
-    return dashboard.replace("@media (prefers-color-scheme: dark) {", "@media all {")
-
-
-def _force_light(dashboard: str) -> str:
-    return dashboard.replace("@media (prefers-color-scheme: dark) {", "@media not all {")
 
 
 def main() -> int:
@@ -198,18 +169,12 @@ def main() -> int:
         controls=True,
         enabled_actions=native_actions,
     )
-    dashboard_path = _write_html("dashboard.html", _force_light(dashboard))
-    settings_dashboard = _write_html("dashboard-settings.html", _force_light(render_dashboard(
-        chapters, paragraphs, metrics=metrics, fingerprint=fingerprint,
-        title=title, labels=resolved.labels, language_name=resolved.name,
-        language_key=resolved.key, current_language=resolved.key, controls=True,
-        manuscript_name=manuscript.name, enabled_actions=native_actions,
-    )))
+    dashboard_path = _write_html("dashboard.html", dashboard)
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
     for view in ("project-settings", "project-import", "nda"):
         for suffix, width in (("", 1480), ("-mobile", 390)):
             _queue_capture(
-                settings_dashboard,
+                dashboard_path,
                 OUT_DIR / f"dashboard-{view}{suffix}.png",
                 width,
                 1050,
@@ -217,7 +182,7 @@ def main() -> int:
 
     # 4. Dashboard (dark) --------------------------------------------------
     _queue_capture(
-        _write_html("dashboard-dark.html", _force_dark(dashboard)),
+        dashboard_path,
         OUT_DIR / "dashboard-dark.png",
         1480,
         945,
@@ -225,17 +190,13 @@ def main() -> int:
 
     # 5. Dashboard sections ------------------------------------------------
     _queue_capture(
-        _write_html(
-            "section-heatmap.html", _extract_section(_force_light(dashboard), "heatmap")
-        ),
+        dashboard_path,
         OUT_DIR / "dashboard-heatmap.png",
         1750,
         1000,
     )
     _queue_capture(
-        _write_html(
-            "section-dimensions.html", _extract_section(_force_light(dashboard), "dimensions")
-        ),
+        dashboard_path,
         OUT_DIR / "dashboard-dimensions.png",
         1600,
         580,
@@ -279,27 +240,15 @@ def main() -> int:
         markers=list_markers(marked),
     )
     _queue_capture(
-        _write_html(
-            "section-markers.html", _extract_section(_force_light(marked_dashboard), "markers")
-        ),
+        _write_html("dashboard-markers.html", marked_dashboard),
         OUT_DIR / "dashboard-markers.png",
         1440,
         380,
     )
 
     # 7. Style layer (draft chapter with the dialogue layer active) --------
-    layer_dashboard = render_dashboard(
-        chapters,
-        paragraphs,
-        metrics=metrics,
-        fingerprint=fingerprint,
-        title=title,
-        labels=resolved.labels,
-        language_name=resolved.name,
-        language_key=resolved.key,
-    ).replace('<option value="dialogue"', '<option value="dialogue" selected', 1)
     _queue_capture(
-        _write_html("dashboard-layer.html", _force_light(layer_dashboard)),
+        dashboard_path,
         OUT_DIR / "dashboard-layer.png",
         1600,
         900,
@@ -311,21 +260,21 @@ def main() -> int:
         language_key=resolved.key, current_language=resolved.key,
         labels=resolved.labels, enabled_actions=native_actions,
     )
+    welcome_path = _write_html("dashboard-welcome.html", welcome_dashboard)
     _queue_capture(
-        _write_html("dashboard-welcome.html", _force_light(welcome_dashboard)),
+        welcome_path,
         OUT_DIR / "dashboard-welcome.png",
         1440,
         930,
     )
     _queue_capture(
-        _write_html("dashboard-project-modal.html", _force_light(welcome_dashboard)),
+        welcome_path,
         OUT_DIR / "dashboard-project-modal.png",
         1440,
         720,
     )
-    open_project_dashboard = _write_html("dashboard-project-open.html", _force_light(welcome_dashboard))
     for suffix, width in (("", 1440), ("-mobile", 390)):
-        _queue_capture(open_project_dashboard, OUT_DIR / f"dashboard-project-open{suffix}.png", width, 1000)
+        _queue_capture(welcome_path, OUT_DIR / f"dashboard-project-open{suffix}.png", width, 1000)
 
     # 9. Research Source Dashboard & CLI Citation (Research Pilot) ---------
     research_proj = WORK_DIR / "research-demo"
@@ -392,7 +341,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     research_api.reindex(research_proj)
     research_html = research_api.source_dashboard(research_proj, ingest_res["source_id"])
     _queue_capture(
-        _write_html("dashboard-research.html", _force_light(research_html)),
+        _write_html("dashboard-research.html", research_html),
         OUT_DIR / "dashboard-research.png",
         1480,
         960,
@@ -514,11 +463,11 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",
-        _force_light(render_dashboard(
+        render_dashboard(
             [], [], title="Synthetic archival research", controls=True,
             labels=resolved.labels, language_name=resolved.name, language_key=resolved.key,
             current_language=resolved.key, enabled_actions=native_actions,
-        )),
+        ),
     )
     for view in ("sources", "dossiers", "search", "claims", "decisions"):
         for suffix, width, height in (("", 1480, 1000), ("-mobile", 390, 1000)):
@@ -554,7 +503,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     )
 
     print(
-        f"Done – {len(list(OUT_DIR.glob('*.png')))} screenshots in {OUT_DIR.relative_to(BASE_DIR)}"
+        f"Done – {len(list(OUT_DIR.glob('*.png')))} screenshots in {OUT_DIR}"
     )
     return 0
 

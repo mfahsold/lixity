@@ -1,3 +1,4 @@
+const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 // Exercise project selection and research controls against a disposable local server.
 const fs = require('node:fs');
 const os = require('node:os');
@@ -6,13 +7,7 @@ const {spawn, execFileSync} = require('node:child_process');
 const {once} = require('node:events');
 const {createInterface} = require('node:readline');
 const assert = require('node:assert/strict');
-let playwrightMod = process.env.PLAYWRIGHT_MODULE || 'playwright';
-try { require.resolve(playwrightMod); } catch {
-  const fallback = '/home/codeai/.npm/_npx/b234c773f454f454/node_modules/playwright';
-  if (fs.existsSync(fallback)) playwrightMod = fallback;
-}
-const {chromium} = require(playwrightMod);
-const {expect} = require(path.join(playwrightMod, 'test'));
+const {expect} = require(path.join(playwrightModule, 'test'));
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-research-ui-'));
 
@@ -57,10 +52,7 @@ server.serve_forever()
       server.once('error', error => { clearTimeout(timeout); reject(error); });
       server.once('exit', code => { clearTimeout(timeout); reject(new Error(`Fixture exited ${code}: ${stderr}`)); });
     });
-    const executablePath = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH ||
-      (fs.existsSync('/usr/bin/chromium-browser') ? '/usr/bin/chromium-browser' :
-       fs.existsSync('/usr/bin/chromium') ? '/usr/bin/chromium' : undefined);
-    browser = await chromium.launch({headless: true, ...(executablePath ? {executablePath} : {})});
+    browser = await launchChromium();
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}, hasTouch: true});
     page.setDefaultTimeout(10000);
     const errors = [];

@@ -7,6 +7,26 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- README and the project page introduce six features with contextual screenshots
+  and links to related views, replacing the large image galleries. The page uses
+  a simpler responsive layout, native full-size image links and a shared theme
+  preference across the HTML guides.
+- Installation, onboarding, localization and contributor guidance use shorter
+  English explanations. German remains the first focus for linguistic resources;
+  the default analysis language remains English.
+- Screenshot generation reuses the original dashboard and shared browser startup
+  helper. `make serve` and `make stop` delegate to the existing port-scoped
+  launcher. Dated internal review reports are removed from maintained product
+  documentation and the Pages publication boundary.
+
+### Fixed
+- CI uses `actions/setup-node@v7`, whose Node 24 runtime and updated cache code
+  remove the Node 20 action-runtime and built-in `punycode` deprecation warnings.
+  The browser job continues to test with Node 22.
+- Guides correctly describe phase-based import progress, native NDA support and
+  the research archive's introduction in v1.16.0.
+
 ## [1.23.0] - 2026-10-03
 
 ### Added

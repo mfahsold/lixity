@@ -3,767 +3,223 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Lixity – Offline Stylometry &amp; Manuscript Analysis for Authors</title>
-<meta name="description" content="Deterministic offline manuscript analysis, stylometry, sentence rhythm and within-manuscript style references for authors and editors. Privacy-first local text linguistics without cloud calls or AI prose rewriting. Version 1.23.0."/>
-<meta name="keywords" content="stylometry, manuscript analysis, creative writing, text linguistics, novel editing, offline manuscript tool, showing vs telling, sentence rhythm, literary analytics, python stylometry"/>
-<meta name="robots" content="index, follow"/>
-<meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0" />
-<meta name="author" content="Matthias Fahsold"/>
+<title>Lixity | Understand your manuscript</title>
+<meta name="description" content="Explore sentence rhythm, vocabulary and tense in your manuscript. Compare chapters, keep research traceable and read the passages behind each result. Local analysis for authors, editors and researchers."/>
+<meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
-<link rel="alternate" type="text/plain" href="llms.txt" title="LLM-friendly summary"/>
+<link rel="alternate" type="text/plain" href="llms.txt" title="Automation summary"/>
 <link rel="sitemap" type="application/xml" href="sitemap.xml"/>
-
-<!-- Open Graph / Facebook -->
 <meta property="og:type" content="website"/>
-<meta property="og:site_name" content="Lixity"/>
-<meta property="og:title" content="Lixity – Offline Stylometry &amp; Manuscript Analysis for Authors"/>
-<meta property="og:description" content="Deterministic offline manuscript analysis, stylometry, tense dynamics and local research archive. Privacy-first local linguistics for authors and editors in v1.23.0."/>
+<meta property="og:title" content="Lixity | Understand your manuscript"/>
+<meta property="og:description" content="Read the patterns in your writing. Keep the evidence behind your decisions."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="1480"/>
 <meta property="og:image:height" content="945"/>
-<meta property="og:image:type" content="image/png"/>
-<meta property="og:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
-<meta property="og:locale" content="en_US"/>
-
-<!-- Twitter Card -->
+<meta property="og:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Lixity – Offline Stylometry &amp; Manuscript Analysis for Authors"/>
-<meta name="twitter:description" content="Deterministic offline manuscript analysis with stylometry, sentence rhythm and local research archive. 100% private, no cloud calls or AI rewriting."/>
+<meta name="twitter:title" content="Lixity | Understand your manuscript"/>
+<meta name="twitter:description" content="Local manuscript analysis and a traceable research workspace."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<meta name="twitter:image:alt" content="Lixity interactive stylometry and macro-editing dashboard"/>
-
-<!-- Structured Data (Schema.org) -->
+<link rel="icon" href="assets/mark.svg" type="image/svg+xml"/>
+<link rel="stylesheet" href="assets/site.css"/>
+<script src="assets/site.js" defer></script>
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
-  "@graph": [
-    {
-      "@type": [
-        "SoftwareApplication",
-        "SoftwareSourceCode"
-      ],
-      "@id": "https://mfahsold.github.io/lixity/#software",
-      "name": "Lixity",
-      "alternateName": "Lixity – Quantitative Text Linguistics & Stylometry",
-      "description": "Local, dependency-light manuscript analysis with multilingual linguistic heuristics and an experimental research workspace for sources, citations and author decisions.",
-      "applicationCategory": "UtilitiesApplication",
-      "applicationSubCategory": "Linguistic & Stylometric Analysis",
-      "operatingSystem": "Linux, macOS, Windows",
-      "softwareVersion": "1.23.0",
-      "isAccessibleForFree": true,
-      "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
-      "codeRepository": "https://github.com/mfahsold/lixity",
-      "author": {
-        "@type": "Person",
-        "@id": "https://mfahsold.github.io/lixity/#author",
-        "name": "Matthias Fahsold",
-        "email": "mfahsold@googlemail.com",
-        "url": "https://github.com/mfahsold"
-      },
-      "offers": [
-        {
-          "@type": "Offer",
-          "name": "Non-Commercial Edition (LNCL-1.0)",
-          "description": "Free only for projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license.",
-          "price": "0",
-          "priceCurrency": "EUR"
-        }
-      ],
-      "url": "https://mfahsold.github.io/lixity/",
-      "programmingLanguage": "Python"
-    },
-    {
-      "@type": "WebSite",
-      "@id": "https://mfahsold.github.io/lixity/#website",
-      "url": "https://mfahsold.github.io/lixity/",
-      "name": "Lixity",
-      "description": "Quantitative Text Linguistics & Stylometry for Literary Manuscripts",
-      "inLanguage": "en"
-    },
-    {
-      "@type": "FAQPage",
-      "@id": "https://mfahsold.github.io/lixity/#faq",
-      "mainEntity": [
-        {
-          "@type": "Question",
-          "name": "How does Lixity analyze manuscripts without sending data to the cloud?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Lixity is a local Python engine and development server that runs entirely on your own computer. All text linguistics, stylometry algorithms, and heuristic metrics execute offline without network requests, telemetry, or external cloud processing."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Does Lixity rewrite manuscript text using generative AI?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "No. Lixity computes deterministic, reproducible metrics (sentence length rhythm, lexical diversity, dialogue ratio, perception filters, and tense distribution). It provides quantitative diagnostics and interactive visualizations, leaving all artistic and editorial decisions entirely to the author."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What manuscript languages are supported?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Lixity supports German, English, French, Spanish, Italian, Portuguese, and Dutch with tailored linguistic tokenization, syllabification, stop words, and filter verb heuristics. An automatic language detection mode and language-neutral mathematical metrics are also included."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "What is a within-manuscript style reference?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Instead of judging a manuscript against arbitrary external corpora, Lixity self-calibrates against the author's own baseline across chapters. It identifies statistically significant outliers in sentence rhythm, pacing, or register using False Discovery Rate (FDR) bounds."
-          }
-        },
-        {
-          "@type": "Question",
-          "name": "Is Lixity free for authors?",
-          "acceptedAnswer": {
-            "@type": "Answer",
-            "text": "Lixity is free for private writing, teaching, and academic research under the LNCL-1.0 license. Works intended for commercial sale, including self-publishing and print-on-demand, require a separate commercial license."
-          }
-        }
-      ]
-    }
-  ]
+  "@type": ["SoftwareApplication", "SoftwareSourceCode"],
+  "name": "Lixity",
+  "applicationCategory": "WritingApplication",
+  "operatingSystem": "Windows, macOS, Linux",
+  "softwareVersion": "1.23.0",
+  "description": "Local manuscript analysis and a traceable research workspace for authors, editors and researchers.",
+  "url": "https://mfahsold.github.io/lixity/",
+  "codeRepository": "https://github.com/mfahsold/lixity",
+  "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
+  "inLanguage": ["de", "en", "fr", "es", "it", "pt", "nl"],
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "EUR",
+    "description": "Free for projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license."
+  }
 }
 </script>
-
-<link rel="stylesheet" href="assets/site.css"/>
 </head>
-
 <body>
+<a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header">
   <div class="header-inner">
-    <a href="#" class="brand">
-      <div class="brand-logo">L</div>
-      <span class="brand-name">Lixity</span>
-      <span class="brand-badge">v1.23.0</span>
-    </a>
-    <nav class="site-nav">
-      <a href="guides/installation.html">Onboarding Guide</a>
+    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v1.23.0</span></a>
+    <nav class="site-nav" aria-label="Main navigation">
+      <a href="#visual-suite">Features</a>
       <a href="#guides">Guides</a>
-      <a href="#core-pillars">What you can do</a>
-      <a href="#research-workspace">Research &amp; Citations</a>
-      <a href="#visual-suite">Screenshots</a>
-      <a href="#cli-api">CLI &amp; API</a>
-      <a href="#faq">FAQ</a>
-      <a href="#installation">Installation</a>
-      <a href="#licensing">Licensing</a>
+      <a href="#methods">Methods</a>
+      <a href="https://github.com/mfahsold/lixity">GitHub</a>
     </nav>
-    <button class="theme-btn" id="themeToggle" title="Toggle dark/light theme">
-      <span id="themeIcon">🌓</span> Theme
-    </button>
+    <button class="theme-btn" id="themeToggle" type="button">Theme: system</button>
   </div>
 </header>
-
-<main>
-  <!-- Hero Section -->
+<main id="content">
   <section class="hero">
-    <div class="eyebrow-pill">
-      <span class="dot"></span>
-      <span>v1.23.0 &middot; Clearer Workflows, Contextual Diagnostics, Import Warnings</span>
-    </div>
-    <h1 class="hero-title">
-      Offline Stylometry &amp; <span class="gradient">Manuscript Analysis</span>
-    </h1>
-    <p class="hero-sub">
-      Quantitative text linguistics, sentence rhythm and within-manuscript style references for authors and editors. Inspect diagnostics alongside your Markdown text, keep your research organized, and preserve 100% creative privacy without cloud calls or AI prose rewriting.
-    </p>
+    <h1 class="hero-title">Understand your manuscript.</h1>
+    <p class="hero-sub">Read the patterns in your writing. Keep the evidence behind your decisions.</p>
+    <p>Lixity helps authors, editors and researchers explore sentence rhythm, vocabulary, dialogue and tense. Compare chapters and read the passages behind each result.</p>
     <div class="hero-cta">
-      <a class="btn primary" href="guides/installation.html">
-        Onboarding Guide
-      </a>
-      <a class="btn secondary" href="#installation">
-        Installation &amp; Quickstart
-      </a>
-      <a class="btn secondary" href="#visual-suite">Explore Dashboard</a>
-      <a class="btn" href="https://github.com/mfahsold/lixity" target="_blank" rel="noopener">GitHub</a>
+      <a class="btn primary" href="guides/installation.html">Get started</a>
+      <a class="btn" href="#visual-suite">See what you can do</a>
     </div>
-    <div class="feature-badge-row">
-      <span class="badge-pill">Local Manuscript Analysis</span>
-      <span class="badge-pill">No Cloud Calls in Core Analysis</span>
-      <span class="badge-pill">Deterministic Metrics &middot; No Automated Rewriting</span>
-      <span class="badge-pill">Native AES-256 NDA Isolation</span>
-    </div>
+    <p class="release-note">Current release: <a href="releases/v1.23.0.md">v1.23.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
+    <p class="license-note">Free for projects with no commercial purpose. Books intended for sale, including self-publishing, need a separate written commercial license. <a href="#licensing">License details</a>.</p>
   </section>
 
-  <!-- Notice -->
-  <div class="notice-box">
-    <strong>Licensing Notice:</strong> Lixity is source-available under LNCL-1.0 and free for projects with no commercial purpose. Research and education are not blanket exemptions for commercial projects. Manuscripts or books intended <strong>for sale</strong> (including commercial publishing, self-publishing, and print-on-demand) require a separate written commercial license. <a href="#licensing">Details &amp; Inquiries</a>.
-  </div>
+  <section id="core-pillars" class="intro">
+    <h2>Explore the text. Follow the evidence.</h2>
+    <p>Begin with a Markdown manuscript, or open a project with its existing research archive. The dashboard keeps manuscript analysis, research and project settings in three clear views.</p>
+  </section>
 
-  <!-- Task overview; retain the existing anchor for incoming links. -->
-  <section id="core-pillars">
-    <div class="section-header">
-      <span class="section-tag">Writing and research</span>
-      <h2 class="section-title">Explore your manuscript. Keep your research traceable.</h2>
-      <p class="section-desc">Examine the language of your text, compare chapters and connect research with the decisions behind your book.</p>
-    </div>
-    <div class="pillars-grid">
-      <article class="pillar-card">
-        <h3 class="pillar-title">Understand your writing</h3>
-        <p class="pillar-body">Explore sentence rhythm, vocabulary, dialogue and tense in your manuscript. Read the passages behind the results to judge what matters for your text.</p>
-        <a href="guides/interpretation.html#editorial-matrix">Explore the language signals</a>
-      </article>
-      <article class="pillar-card">
-        <h3 class="pillar-title">Compare your chapters</h3>
-        <p class="pillar-body">See how chapters differ from the rest of your manuscript. Compare their language patterns and examine where those patterns change as the book progresses.</p>
+  <section id="visual-suite" aria-label="Features and examples">
+    <article class="feature" id="writing">
+      <div class="feature-copy">
+        <h2>Understand your writing</h2>
+        <p>See how sentence lengths, vocabulary, dialogue and tense vary throughout your manuscript. Open the passages behind a result before deciding whether to revise.</p>
+        <p>Short or empty texts cannot support every comparison. Unavailable results are shown explicitly.</p>
+        <a href="guides/interpretation.html">Learn how to read the results</a>
+      </div>
+      <figure class="shot">
+        <a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="1480" height="945" alt="Manuscript overview with sentence rhythm, vocabulary and dialogue measures" loading="lazy" decoding="async"/></a>
+        <figcaption>Language signals beside your manuscript. <a href="screenshots/dashboard-mobile.png">Mobile view</a> · <a href="screenshots/dashboard-dark.png">Dark theme</a>.</figcaption>
+      </figure>
+    </article>
+
+    <article class="feature" id="chapters">
+      <div class="feature-copy">
+        <h2>Compare chapters in context</h2>
+        <p>The chapter map compares each chapter with the manuscript's own baseline. Colours and dots point to differences worth reading; they do not identify bad prose.</p>
+        <p>The style view shows how measured patterns change across the book and which features contribute to those changes.</p>
         <a href="guides/interpretation.html#consistency">Understand chapter comparisons</a>
-      </article>
-      <article class="pillar-card">
-        <h3 class="pillar-title">Connect research and decisions</h3>
-        <p class="pillar-body">Bring selected sources from Zotero or local files into your research workspace. Link passages to claims, build dossiers and record the reasoning behind your authorial decisions.</p>
-        <p class="research-status">Experimental research workspace</p>
-        <a href="guides/research-pdf.html">Follow the source-to-decision workflow</a>
-      </article>
-    </div>
-    <p>Lixity runs locally. Analysis highlights patterns for human review; it does not grade literary quality or establish whether a claim is true.</p>
+      </div>
+      <figure class="shot">
+        <a href="screenshots/dashboard-heatmap.png"><img src="screenshots/dashboard-heatmap.png" width="1702" height="899" alt="Chapter map showing language differences from the manuscript's own style" loading="lazy" decoding="async"/></a>
+        <figcaption>A chapter comparison excerpt. <a href="screenshots/dashboard-dimensions.png">Style dimensions</a> · <a href="screenshots/dashboard-reference.png">Reference bands</a>.</figcaption>
+      </figure>
+    </article>
+
+    <article class="feature" id="editorial-matrix">
+      <div class="feature-copy">
+        <h2>Keep review notes beside the text</h2>
+        <p>Inspect paragraphs with their source lines, dialogue and tense labels. Work markers keep notes next to the passage you want to revisit.</p>
+        <p>Markers remain editable in Markdown. Their visibility in a book export depends on the editor or converter you use.</p>
+        <a href="USAGE.md#work-markers-editor-visible">Use work markers</a>
+      </div>
+      <figure class="shot">
+        <a href="screenshots/dashboard-markers.png"><img src="screenshots/dashboard-markers.png" width="1152" height="305" alt="Review markers linked to passages, with statuses and an editable note" loading="lazy" decoding="async"/></a>
+        <figcaption>Illustrative review notes. <a href="screenshots/dashboard-layer.png">Open the paragraph view</a>.</figcaption>
+      </figure>
+    </article>
+
+    <article class="feature" id="research-workspace">
+      <div class="feature-copy">
+        <h2>Connect sources, claims and decisions</h2>
+        <p>The experimental research workspace keeps selected sources, quotations and notes in a separate local archive. Group findings into dossiers, connect passages to claims, and record why you made a writing decision.</p>
+        <p>Bring sources from local files or Zotero Desktop. PDF scans need a separately configured OCR worker. Saving a source does not establish that it is true.</p>
+        <a href="guides/research-pdf.html">Follow the research workflow</a>
+      </div>
+      <figure class="shot">
+        <a href="screenshots/dashboard-research-search.png"><img src="screenshots/dashboard-research-search.png" width="1152" height="458" alt="Archive search results with source passages and citation links" loading="lazy" decoding="async"/></a>
+        <figcaption>Find a passage and reuse its citation. <a href="screenshots/dashboard-research-dossiers.png">Dossiers</a> · <a href="screenshots/dashboard-research-claims.png">Claims</a> · <a href="screenshots/dashboard-research-decisions.png">Decisions</a>.</figcaption>
+      </figure>
+    </article>
+
+    <article class="feature" id="projects">
+      <div class="feature-copy">
+        <h2>Choose a project and its settings</h2>
+        <p>Project actions remain available in each workspace view. <strong>Open Project</strong> reconnects an existing folder and its research. <strong>Import Manuscript</strong> previews a file and creates a new project when you confirm.</p>
+        <p>Choose the analysis language and which differences to examine. Optional encrypted NDA records sit in a collapsible panel.</p>
+        <a href="guides/installation.html#first-dashboard">Open your first project</a>
+      </div>
+      <figure class="shot">
+        <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="748" alt="Project settings with manuscript selection, analysis preferences and a collapsed NDA panel" loading="lazy" decoding="async"/></a>
+        <figcaption>Project settings in one place. <a href="screenshots/dashboard-project-import.png">Import preview</a> · <a href="screenshots/dashboard-project-settings-mobile.png">Mobile view</a>.</figcaption>
+      </figure>
+    </article>
+
+    <article class="feature" id="cli-api">
+      <div class="feature-copy">
+        <h2>Read a report in the terminal</h2>
+        <p>Run <code>lixity analyze manuscript.md --language de</code> for a readable report. Other commands examine paragraphs, dialogue, pacing, style and research records.</p>
+        <p>For software integration, use JSON output or the Python API. Both share the dashboard's analysis pipeline.</p>
+        <a href="USAGE.md">Browse the command reference</a>
+      </div>
+      <figure class="shot">
+        <a href="screenshots/cli-analyze.png"><img src="screenshots/cli-analyze.png" width="1320" height="840" alt="Terminal report with sentence lengths, readability and vocabulary measures" loading="lazy" decoding="async"/></a>
+        <figcaption>A terminal report excerpt. <a href="screenshots/cli-style.png">Style report</a> · <a href="screenshots/cli-research.png">Research output</a>.</figcaption>
+      </figure>
+    </article>
+    <p class="capture-note">Open an image to see it at full size. Examples use public-domain literature or synthetic project records. <a href="screenshots/README.md">More views and capture details</a>.</p>
   </section>
 
-  <section id="editorial-matrix">
-    <div class="section-header">
-      <h2 class="section-title">Read a change in context</h2>
-      <p class="section-desc">A chapter of short dialogue may look very different from a descriptive passage. The comparison helps you locate that change; reading the text tells you whether it serves the story.</p>
-    </div>
-    <p>Open the relevant paragraphs and add a work marker if you want to revisit them. Review notes stay near their passages in the manuscript.</p>
-    <p><a href="guides/interpretation.html#review">Follow a practical review loop</a> · <a href="guides/interpretation.html#editorial-matrix">Look up a metric and its limits</a></p>
-  </section>
-
-  <section id="research-workspace">
-    <div class="section-header">
-      <h2 class="section-title">Keep the evidence behind a decision</h2>
-      <p class="section-desc">A source dates an event to 1923, but your story moves it to 1924. Keep the source passage, link it to the historical claim and record why you chose a different date. The evidence and the fictional decision remain distinct.</p>
-    </div>
-    <p>The experimental workspace retains selected PDF/text sources and revision history. Zotero can manage your source catalogue; Lixity connects retained passages with your dossiers, claims and decisions.</p>
-    <p><a href="guides/research-pdf.html#zotero">Connect Zotero</a> · <a href="guides/research-pdf.html#cli-workflow">Work through the CLI example</a> · <a href="guides/research-pdf.html#backup">Back up your research</a></p>
-  </section>
-
-  <section id="guides">
+  <section id="guides" class="reading-section">
     <h2>Start with a practical guide</h2>
-    <p>Install locally, interpret a result, or preserve a source and its evidence trail.</p>
     <div class="guide-cards">
-      <article><h3><a href="guides/installation.html">Install Lixity and open a manuscript</a></h3><p>Choose a release or current-main build, create your first dashboard, and reconnect an existing project.</p></article>
-      <article><h3><a href="guides/interpretation.html">Understand manuscript metrics</a></h3><p>Read consistency, lexical diversity and style deviations with their data requirements and limits.</p></article>
-      <article><h3><a href="guides/research-pdf.html">Archive sources, PDFs and citations</a></h3><p>Record an origin URL, distinguish native PDFs from scans, configure OCR and test a backup.</p></article>
-    </div>
-    <p><strong>New in v1.23.0:</strong> clearer workspace navigation and local research filters, consistent dialogue token counts, unavailable Show/Tell comparisons shown as dashes, chapter-based scene estimates with explicit units, and PDF extraction warnings preserved through imports. Localized help explains descriptive signals and intentional register differences. See the <a href="releases/v1.23.0.md">release notes</a> for scope and compatibility.</p>
-    <p>Switch between Research &amp; Dossiers, Manuscript &amp; Analysis, and Project &amp; Settings. New/Open and optional guidance remain available in every view. Choosing or dropping a manuscript shows its filename without submitting it; <strong>Continue to import…</strong> opens the import dialog, and confirmation creates a separate project. Use Open Project to return to an existing archive. <a href="guides/installation.html#existing-project">Follow the project workflow</a>.</p>
-    <p>Current-main source and dossier lists filter loaded titles, tags and IDs locally; dossiers also match excerpts and section names. Use Research → Search for full-text archive search. Association choices remain complete, and the capability-gated NDA manager starts collapsed.</p>
-  </section>
-
-  <!-- SECTION 4: VISUAL ANALYTICAL SUITE (SCREENSHOTS) -->
-  <section id="visual-suite">
-    <div class="section-header">
-      <span class="section-tag">Visual Suite &amp; UI</span>
-      <h2 class="section-title">Visual Analytical Suite</h2>
-      <p class="section-desc">Captured on 3 October 2026 from the v1.23.0 UI. Click an image to inspect it, or follow its full-size link. Analysis uses the public-domain <em>Pride and Prejudice</em> sample; project and research workflows use synthetic files, paths and customs-case records.</p>
-    </div>
-    <p>Dialog images show complete forms, including confirmation controls. Long dialogs scroll in the application; these captures include the full content.</p>
-
-    <span class="section-tag">1. Project navigation, settings &amp; import</span>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1440" height="930" src="screenshots/dashboard-welcome.png" alt="Empty workspace with New Project, Open Project, three view tabs and optional guidance" loading="lazy" decoding="async"/>
-        <figcaption><strong>Welcome &amp; project navigation:</strong> New/Open actions and optional guidance remain reachable across the three views. <a href="screenshots/dashboard-welcome.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="608" height="690" src="screenshots/dashboard-project-modal.png" alt="Start new manuscript dialog with narrative structure template choices" loading="lazy" decoding="async"/>
-        <figcaption><strong>Create from a template:</strong> Choose a title, language and starting structure before confirming a new project. <a href="screenshots/dashboard-project-modal.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="608" height="670" src="screenshots/dashboard-project-open.png" alt="Open Project dialog with a synthetic server-local file and folder chooser" loading="lazy" decoding="async"/>
-        <figcaption><strong>Open an existing project:</strong> Choose a folder or manuscript, then confirm Open to reconnect its existing research archive. <a href="screenshots/dashboard-project-open.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="368" height="802" src="screenshots/dashboard-project-open-mobile.png" alt="Mobile Open Project dialog with synthetic folder navigation and a typed project path" loading="lazy" decoding="async"/>
-        <figcaption><strong>Open Project on mobile:</strong> Browse server-local paths or enter a path; selection alone does not open a project. <a href="screenshots/dashboard-project-open-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="748" src="screenshots/dashboard-project-settings.png" alt="Project and Settings view with a native manuscript picker, saved settings and collapsed NDA manager" loading="lazy" decoding="async"/>
-        <figcaption><strong>Project &amp; Settings:</strong> Choose or drop a manuscript before Continue to import. Settings change after Apply; the optional NDA manager starts collapsed. <a href="screenshots/dashboard-project-settings.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="366" height="953" src="screenshots/dashboard-project-settings-mobile.png" alt="Mobile Project and Settings view with manuscript selection and analysis preferences" loading="lazy" decoding="async"/>
-        <figcaption><strong>Project &amp; Settings on mobile:</strong> The same manuscript, language and threshold controls in a narrow layout. File selection alone sends no request. <a href="screenshots/dashboard-project-settings-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="608" height="808" src="screenshots/dashboard-project-import.png" alt="Import Manuscript dialog with a synthetic filename, local preview and project settings" loading="lazy" decoding="async"/>
-        <figcaption><strong>Review an import:</strong> Preview the selected file, title and language locally. Confirmation creates a separate project; use Open Project for an existing archive. <a href="screenshots/dashboard-project-import.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="368" height="964" src="screenshots/dashboard-project-import-mobile.png" alt="Mobile import dialog showing a synthetic manuscript preview and explicit confirmation" loading="lazy" decoding="async"/>
-        <figcaption><strong>Review an import on mobile:</strong> The file remains a local selection until confirmation; cancelling leaves the current project unchanged. <a href="screenshots/dashboard-project-import-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="157" src="screenshots/dashboard-nda.png" alt="Expanded native NDA details panel showing a locked demo store with no agreements" loading="lazy" decoding="async"/>
-        <figcaption><strong>Locked NDA preview:</strong> The native details panel starts collapsed. This expanded locked-state preview contains no agreements, passphrase or private records. <a href="screenshots/dashboard-nda.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="366" height="148" src="screenshots/dashboard-nda-mobile.png" alt="Mobile expanded NDA details panel showing the locked demo store without agreement records" loading="lazy" decoding="async"/>
-        <figcaption><strong>Locked NDA preview on mobile:</strong> The optional confidentiality controls use the same collapsible panel at mobile width; no agreement is created. <a href="screenshots/dashboard-nda-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <span class="section-tag">2. Manuscript overview &amp; departure heatmap</span>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1480" height="945" src="screenshots/dashboard-light.png" alt="Manuscript and Analysis view with global project navigation and corpus metric cards" loading="lazy" decoding="async"/>
-        <figcaption><strong>Analysis overview:</strong> Sentence rhythm, readability and lexical signals for the public-domain sample. Statistical signals support a human review. <a href="screenshots/dashboard-light.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="390" height="1028" src="screenshots/dashboard-mobile.png" alt="Mobile analysis overview with project actions, view tabs and corpus metrics" loading="lazy" decoding="async"/>
-        <figcaption><strong>Analysis overview on mobile:</strong> Project navigation and grouped corpus metrics remain available at mobile width. <a href="screenshots/dashboard-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-      <figure class="shot">
-        <img width="1702" height="899" src="screenshots/dashboard-heatmap.png" alt="First 20 chapter rows of the 16-feature manuscript departure heatmap" loading="lazy" decoding="async"/>
-        <figcaption><strong>Chapter departure heatmap:</strong> Noise-adjusted z* values compare chapters with this manuscript’s baseline. Dots mark cells selected by the configured FDR procedure. These are review signals under model assumptions, not confirmed defects; only the first 20 rows are shown. <a href="screenshots/dashboard-heatmap.png">Full-size image</a>.</figcaption>
-      </figure>
-
-    <span class="section-tag">3. Paragraph inspection &amp; work markers</span>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="541" src="screenshots/dashboard-layer.png" alt="Chapter I with dialogue coloring and three opened paragraphs with source line anchors" loading="lazy" decoding="async"/>
-        <figcaption><strong>Paragraph style layer:</strong> Verbatim sample prose with source line anchors, tense classification and local sentence rhythm. <a href="screenshots/dashboard-layer.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="1152" height="305" src="screenshots/dashboard-markers.png" alt="Five illustrative work markers with source line links, statuses and inline notes" loading="lazy" decoding="async"/>
-        <figcaption><strong>Editorial work markers:</strong> Synthetic notes are added only to an in-memory sample copy. The public-domain source file is unchanged. <a href="screenshots/dashboard-markers.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <span class="section-tag">4. Style dimensions &amp; manuscript reference bands</span>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="616" src="screenshots/dashboard-dimensions.png" alt="Complete three-dimensional chapter trajectory and three latent style dimension cards" loading="lazy" decoding="async"/>
-        <figcaption><strong>Chapter style space:</strong> Chapter positions and feature loadings describe variation within the manuscript, with links back to each chapter. <a href="screenshots/dashboard-dimensions.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="1152" height="897" src="screenshots/dashboard-reference.png" alt="Complete manuscript reference bands with medians, dispersion and chapter sample counts" loading="lazy" decoding="async"/>
-        <figcaption><strong>Reference bands:</strong> Robust median/MAD corridors with visible sample counts and deviation thresholds. <a href="screenshots/dashboard-reference.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="366" height="1300" src="screenshots/dashboard-dimensions-mobile.png" alt="Mobile style dimension panel with stacked controls and all three feature cards" loading="lazy" decoding="async"/>
-        <figcaption><strong>Style dimensions on mobile:</strong> The complete dimension panel with stacked controls and readable feature loadings. <a href="screenshots/dashboard-dimensions-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="1152" height="617" src="screenshots/dashboard-dimensions-dark.png" alt="Dark theme chapter style trajectory and all three dimension cards" loading="lazy" decoding="async"/>
-        <figcaption><strong>Style dimensions in dark mode:</strong> The same chapter analysis and feature loadings in the dark palette. <a href="screenshots/dashboard-dimensions-dark.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <span class="section-tag">5. Terminal reports &amp; display settings</span>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1320" height="840" src="screenshots/cli-analyze.png" alt="Terminal excerpt of lixity analyze with corpus metrics, readability and sentence rhythm" loading="lazy" decoding="async"/>
-        <figcaption><strong>Corpus diagnostics:</strong> Actual lixity analyze output for the public-domain manuscript sample. <a href="screenshots/cli-analyze.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="1320" height="860" src="screenshots/cli-style.png" alt="Terminal excerpt of lixity style with reference bands, changepoints and drift diagnostics" loading="lazy" decoding="async"/>
-        <figcaption><strong>Style reference:</strong> Actual lixity style output with within-manuscript bounds and structural diagnostics. <a href="screenshots/cli-style.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1110" height="539" src="screenshots/dashboard-settings.png" alt="Shared settings form with language, title and expanded detection thresholds" loading="lazy" decoding="async"/>
-        <figcaption><strong>Expanded analysis settings:</strong> Threshold changes take effect after Apply. Restoring defaults fills the form without saving until Apply. <a href="screenshots/dashboard-settings.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="1480" height="945" src="screenshots/dashboard-dark.png" alt="Dark Manuscript and Analysis overview with project actions and corpus metric cards" loading="lazy" decoding="async"/>
-        <figcaption><strong>Analysis in dark mode:</strong> An alternative palette for the same public-domain manuscript analysis. <a href="screenshots/dashboard-dark.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <span class="section-tag">6. Research lists, archive search &amp; review records</span>
-
-    <p>Local list filters inspect loaded metadata without sending requests while typing. They preserve opened details and complete association choices. Full-text archive search is a separate action in the Search tab.</p>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="2073" src="screenshots/dashboard-research-sources.png" alt="Synthetic customs-case source list with a local metadata filter and an opened source detail" loading="lazy" decoding="async"/>
-        <figcaption><strong>Retained sources:</strong> Filter loaded titles, tags and IDs in the synthetic customs case. The filter does not search retained source text. <a href="screenshots/dashboard-research-sources.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="366" height="2991" src="screenshots/dashboard-research-sources-mobile.png" alt="Mobile synthetic customs-case source list with a metadata filter and opened details" loading="lazy" decoding="async"/>
-        <figcaption><strong>Sources on mobile:</strong> The same local source filter, archive metadata and detail controls at mobile width. <a href="screenshots/dashboard-research-sources-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="1311" src="screenshots/dashboard-research-dossiers.png" alt="Synthetic customs-case dossier list with a local metadata filter, excerpts and section labels" loading="lazy" decoding="async"/>
-        <figcaption><strong>Dossiers:</strong> Local dossier filters also match excerpts and section names; they do not search full dossier bodies. <a href="screenshots/dashboard-research-dossiers.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="366" height="1945" src="screenshots/dashboard-research-dossiers-mobile.png" alt="Mobile filtered synthetic customs-case dossier list with sections and record actions" loading="lazy" decoding="async"/>
-        <figcaption><strong>Dossiers on mobile:</strong> Inspect dossier excerpts, sections and record details in a narrow layout. <a href="screenshots/dashboard-research-dossiers-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="458" src="screenshots/dashboard-research-search.png" alt="Synthetic customs-case archive Search results with passage IDs and reuse actions" loading="lazy" decoding="async"/>
-        <figcaption><strong>Full-text archive search:</strong> Submit an explicit query, then inspect retained passages or use them for a claim or dossier. <a href="screenshots/dashboard-research-search.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="366" height="839" src="screenshots/dashboard-research-search-mobile.png" alt="Mobile synthetic archive Search results with passage excerpts, IDs and reuse actions" loading="lazy" decoding="async"/>
-        <figcaption><strong>Archive search on mobile:</strong> Search uses retained text and remains separate from the local list filters. <a href="screenshots/dashboard-research-search-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="1095" src="screenshots/dashboard-research-claims.png" alt="Synthetic dossier-linked customs claim with an expanded evidence quote and archive citation" loading="lazy" decoding="async"/>
-        <figcaption><strong>Claims &amp; evidence:</strong> Evidence links retain the quoted passage and citation provenance. Archive integrity does not establish historical accuracy. <a href="screenshots/dashboard-research-claims.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="366" height="1821" src="screenshots/dashboard-research-claims-mobile.png" alt="Mobile synthetic customs claim with expanded evidence quote and citation provenance" loading="lazy" decoding="async"/>
-        <figcaption><strong>Claims on mobile:</strong> Review the same claim, original passage and evidence link in a narrow layout. <a href="screenshots/dashboard-research-claims-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1152" height="949" src="screenshots/dashboard-research-decisions.png" alt="Contrasting synthetic editorial decisions linked to a customs-case research claim" loading="lazy" decoding="async"/>
-        <figcaption><strong>Editorial decisions:</strong> Author-recorded choices can preserve or deliberately depart from source evidence; the records are not automatic factual verdicts. <a href="screenshots/dashboard-research-decisions.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="366" height="1395" src="screenshots/dashboard-research-decisions-mobile.png" alt="Mobile synthetic editorial decision records with rationale and linked claims" loading="lazy" decoding="async"/>
-        <figcaption><strong>Decisions on mobile:</strong> The same decision records, rationale and claim links at mobile width. <a href="screenshots/dashboard-research-decisions-mobile.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <div class="shot-pair">
-      <figure class="shot">
-        <img width="1480" height="960" src="screenshots/dashboard-research.png" alt="Archived synthetic source analysis with user-supplied cultural context and linguistic metrics" loading="lazy" decoding="async"/>
-        <figcaption><strong>Archived source analysis:</strong> Genre, period, place and provenance metadata are supplied by the user and remain unverified context. <a href="screenshots/dashboard-research.png">Full-size image</a>.</figcaption>
-      </figure>
-      <figure class="shot">
-        <img width="1240" height="1768" src="screenshots/cli-research.png" alt="Complete terminal research search and citation output with passage IDs and Unicode codepoint offsets" loading="lazy" decoding="async"/>
-        <figcaption><strong>CLI search &amp; citation:</strong> Complete search/cite output from the disposable synthetic archive, including passage IDs and exact character offsets. <a href="screenshots/cli-research.png">Full-size image</a>.</figcaption>
-      </figure>
-    </div>
-
-    <p>These captures contain public-domain or synthetic content, illustrative marker notes and a locked demo NDA store. No private manuscript or agreement is used. <a href="screenshots/README.md">Screenshot provenance and regeneration</a>.</p>
-  </section>
-
-  <!-- SECTION 5: CLI & API -->
-  <section id="cli-api">
-    <div class="section-header">
-      <span class="section-tag">Developers &amp; Autonomous Agents</span>
-      <h2 class="section-title">CLI Commands &amp; Python API for AI Agents</h2>
-      <p class="section-desc">Lixity offers deterministic, versioned JSON contracts (analyze/profile <code>v2</code>, style <code>v4</code>) and stable POSIX exit codes for autonomous coding and editing agents.</p>
-    </div>
-    <p>Integrate the shared analysis pipeline and dashboard into an explicit project through the Python API and versioned JSON. Reuse the same analysis across command-line and browser workflows.</p>
-    <p>Typesetting, PDF/EPUB publication and external delivery adapters remain outside Lixity, while native encrypted NDA tracking and isolated keying are built into Lixity. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md">integration architecture</a>.</p>
-
-    <div class="card">
-      <h3 style="margin-top: 0; color: var(--fg-heading);">Command-Line Interface (CLI)</h3>
-      <pre class="cmd-block"># Analyze manuscript (rich terminal report or JSON)
-lixity analyze manuscript.md              # Visual terminal report
-lixity analyze manuscript.md --json       # Machine-readable JSON (schema v2)
-
-# Tense profiling &amp; narrative dynamics
-lixity profile manuscript.md              # Paragraph-level tense heuristics &amp; style profile
-lixity dialogue manuscript.md             # Speech ratios &amp; dialogue turns
-lixity characters manuscript.md --names "Anna,Ralf" # Character presence
-lixity pacing manuscript.md               # Pacing indicators &amp; chapter-ending patterns
-lixity showing manuscript.md              # Perception, passive and exposition heuristics
-
-# Self-calibrating style reference &amp; structural diagnostics
-lixity style manuscript.md                # Median/MAD bounds, z*, FDR matrix
-lixity style manuscript.md --json --fdr-method by --min-chapters 4
-
-# Interactive dashboard &amp; idempotent workspace build with NDA tracking
-lixity dashboard manuscript.md -o exports/dashboard.html # Standalone single-file HTML
-lixity build manuscript.md --language en  # Idempotent workspace build with archive rotation &amp; NDA check
-lixity serve --port 8765                 # Local development server &amp; interactive workspace
-
-# Evidence-based research workspace (since v1.20.0 with batch &amp; sections)
-lixity research init --project ./research --title "Archival Study"
-lixity research batch-ingest --project ./research --allow-retention --progress ./sources/*.txt
-lixity research search --project ./research --query "warehouse gate" # Auto-fresh cache
-lixity research dossier --project ./research --title "Smuggling Dossier" --file "Summary..."
-lixity research read --project ./research --dossier-id &lt;dossier_id&gt; --section "Customs Ledger"</pre>
-    </div>
-
-    <div class="card">
-      <h3 style="margin-top: 0; color: var(--fg-heading);">Python API for AI Agents</h3>
-      <pre class="cmd-block">from lixity import api
-from lixity.research import api as research_api
-
-# 1. Compute corpus KPIs &amp; readability
-metrics = api.analyze(text, language="auto")
-
-# 2. Self-calibrating style reference with FDR &amp; structural diagnostics (schema v4)
-reference = api.fingerprint(text, language="en")
-
-# 3. Add persistent editorial work markers
-updated_text, marker = api.add_marker(text, kind="pruefen", note="Verify tense shift", line=42)
-
-# 4. Generate standalone interactive dashboard
-dashboard_html = api.dashboard(text, language="en", title="My Novel")
-
-# 5. Research workspace: archival ingestion, FTS5 search &amp; dossiers
-research_api.init(proj_path, title="1920s Investigation", language="en")
-ingest_res = research_api.ingest(proj_path, "customs_1923.txt", allow_retention=True)
-search_res = research_api.search(proj_path, "warehouse customs", limit=5)
-dos_res = research_api.create_dossier(proj_path, title="Evidence Brief", body="...", evidence_ids=[...])</pre>
-      <p style="font-size: 0.88rem; color: var(--muted); margin: 0.8rem 0 0;">
-        Full interface contracts in <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">docs/AGENTS.md</a> &middot; Mathematical derivations in <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">docs/METHODS.md</a>.
-      </p>
+      <article><h3><a href="guides/installation.html">Install and open a manuscript</a></h3><p>Set up Lixity, create a report and return to an existing project.</p></article>
+      <article><h3><a href="guides/interpretation.html">Understand the results</a></h3><p>Read language signals with their text requirements and limitations.</p></article>
+      <article><h3><a href="guides/research-pdf.html">Keep sources and citations</a></h3><p>Retain selected evidence, work with PDF scans and test a backup.</p></article>
     </div>
   </section>
 
-  <!-- SECTION 6: INSTALLATION -->
-  <section id="installation">
-    <div class="card">
-      <div class="section-tag">Setup &amp; Get Started</div>
-      <h2 style="font-family: var(--serif); font-size: 2rem; margin: 0 0 0.8rem; color: var(--fg-heading);">
-        Installation &amp; Quickstart
-      </h2>
-      <p style="color: var(--muted); margin: 0 0 1.2rem;">
-        Install Lixity in an isolated CLI environment on Linux, macOS, or Windows using <a href="https://docs.astral.sh/uv/">uv</a> (or pipx). No account, no API key, and no cloud manuscript uploads required.
-      </p>
-      <pre class="cmd-block"># Install via uv (recommended; requires Git &amp; uv)
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"
-
-# Verify installation
+  <section id="installation" class="reading-section">
+    <h2>Install the current release</h2>
+    <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> and Git. The <a href="guides/installation.html">installation guide</a> explains how to get them on Windows, macOS and Linux.</p>
+    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"
 lixity --version
-lixity about
-
-# Build your first manuscript dashboard
-lixity build manuscript.md --language en</pre>
-      <p style="font-size: 0.88rem; color: var(--muted); margin: 0.8rem 0 0;">
-        Open <code>exports/manuscript_dashboard.html</code> in any modern browser. Full setup guide for Windows/macOS, shell completions, and troubleshooting: <a href="https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md">docs/INSTALLATION.md</a>.
-      </p>
-    </div>
+lixity build manuscript.md --language de</pre>
+    <p>Open <code>exports/manuscript_dashboard.html</code> in your browser. Use <code>--language en</code> for English. English is the default when no language is selected; detection requires <code>--language auto</code>.</p>
+    <p>For the live workspace, run <code>lixity serve --no-project --port 8765</code> and open <code>http://127.0.0.1:8765/</code>.</p>
   </section>
 
-  <!-- SECTION 6.5: FREQUENTLY ASKED QUESTIONS -->
-  <section id="faq">
-    <div class="section-header">
-      <span class="section-tag">Frequently Asked Questions</span>
-      <h2 class="section-title">Common Questions &amp; Architectural Answers</h2>
-      <p class="section-desc">Essential information about offline privacy, linguistic heuristics, and licensing for authors.</p>
-    </div>
-    <div class="pillars-grid">
-      <article class="pillar-card">
-        <h3 class="pillar-title">How does Lixity analyze manuscripts without the cloud?</h3>
-        <p class="pillar-body">Lixity is a local Python engine and development server that runs entirely on your own machine. All linguistic parsing, syllabification, statistical computations, and dashboard generation happen in local memory without outbound network traffic or cloud dependencies.</p>
-      </article>
-      <article class="pillar-card">
-        <h3 class="pillar-title">Does Lixity rewrite prose using generative AI?</h3>
-        <p class="pillar-body">No. Lixity computes deterministic, transparent metrics (sentence length rhythm, lexical diversity, dialogue ratio, perception filter verbs, and tense distribution). It provides diagnostics, leaving all stylistic and editorial decisions entirely to the author.</p>
-      </article>
-      <article class="pillar-card">
-        <h3 class="pillar-title">What languages are supported?</h3>
-        <p class="pillar-body">Full heuristic support is available for German, English, French, Spanish, Italian, Portuguese, and Dutch. An automatic language detection mode and language-neutral mathematical metrics are also built in.</p>
-      </article>
-      <article class="pillar-card">
-        <h3 class="pillar-title">What is a within-manuscript style reference?</h3>
-        <p class="pillar-body">Instead of measuring your prose against arbitrary external books, Lixity uses your own manuscript's chapters as a self-calibrating baseline. It flags statistically significant outliers in sentence rhythm, pacing, or register using False Discovery Rate (FDR) bounds.</p>
-      </article>
-      <article class="pillar-card">
-        <h3 class="pillar-title">Is Lixity free for authors?</h3>
-        <p class="pillar-body">Lixity is source-available and free for private writing, educational use, and academic research under the LNCL-1.0 license. Works intended for commercial sale (including self-publishing and print-on-demand) require a separate commercial license.</p>
-      </article>
-      <article class="pillar-card">
-        <h3 class="pillar-title">Can I connect my historical research and sources?</h3>
-        <p class="pillar-body">Yes. The built-in research workspace lets you archive source passages, link evidence to specific chapters, record authorial decisions, and compare source vocabulary against manuscript grounding with full provenance tracking.</p>
-      </article>
-    </div>
+  <section id="methods" class="reading-section">
+    <h2>A scientific foundation, with stated limits</h2>
+    <p>Lixity measures language patterns; it does not grade literary quality or prescribe a style. A deliberate change in voice, register or subject can explain a signal.</p>
+    <p>Chapter comparisons use the manuscript's median and median absolute deviation (MAD). Adjusted deviation scores account for estimated sampling noise; optional multiple-testing procedures and effect sizes add context under their stated assumptions.</p>
+    <p>German and English have the most extensive linguistic resources and language-specific fixtures. French, Spanish, Italian, Portuguese and Dutch also have localized interfaces and analysis resources, with narrower heuristic coverage and validation. Mathematical identifiers stay language-neutral.</p>
+    <p><a href="METHODS.md">Formulas and sources</a> · <a href="LOCALIZATION.md">Language support</a> · <a href="STABILITY.md">Validation and limitations</a></p>
+    <details><summary>Python API and automation contracts</summary>
+      <pre class="cmd-block">from lixity import api
+
+metrics = api.analyze(text, language="de")
+reference = api.fingerprint(text, language="de", project_config={})
+html = api.dashboard(text, language="de", project_config={})</pre>
+      <p>Analysis/profile JSON uses schema v2; style JSON uses v4. Integrations should pass explicit project settings when working with several projects. <a href="AGENTS.md">Interface contracts</a> · <a href="ARCHITECTURE.md">Architecture</a>.</p>
+    </details>
   </section>
 
-  <!-- SECTION 7: LICENSING & INQUIRIES -->
-  <section id="licensing">
-    <div class="card">
-      <div class="section-tag">Legal Terms</div>
-      <h2 style="font-family: var(--serif); font-size: 2rem; margin: 0 0 0.8rem; color: var(--fg-heading);">
-        Licensing Model &amp; Commercial Inquiries
-      </h2>
-      <p style="color: var(--muted); margin: 0 0 1.5rem;">
-        <strong>Source-available, not Open Source.</strong> LNCL-1.0 permits free use strictly for non-commercial projects. The project's purpose matters &ndash; not whether you are an individual author or an organization.
-      </p>
-
-      <div class="license-grid">
-        <div class="license-card">
-          <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--emerald); margin-bottom: 0.3rem;">Free of Charge &middot; LNCL-1.0</div>
-          <h3 style="margin: 0 0 0.5rem; color: var(--fg-heading);">Non-Commercial Edition</h3>
-          <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 0.8rem;">
-            Free for private writing, research and education only when the project has no commercial purpose. These categories are not blanket exemptions.
-          </p>
-          <ul style="font-size: 0.84rem; color: var(--subtle); padding-left: 1.2rem; margin: 0;">
-            <li>Full stylometric engine &amp; all 7 language profiles</li>
-            <li>Interactive single-file HTML dashboard &amp; CLI suite</li>
-            <li>Core analysis runs locally without cloud calls</li>
-          </ul>
-        </div>
-
-        <div class="license-card commercial">
-          <div style="font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: var(--accent); margin-bottom: 0.3rem;">Commercial License &middot; Written Agreement</div>
-          <h3 style="margin: 0 0 0.5rem; color: var(--fg-heading);">Commercial Edition</h3>
-          <p style="font-size: 0.88rem; color: var(--muted); margin: 0 0 0.8rem;">
-            Required for <strong>novels, books, and manuscripts intended for sale</strong> (including self-publishing), paid editing, and publishing houses.
-          </p>
-          <ul style="font-size: 0.84rem; color: var(--subtle); padding-left: 1.2rem; margin: 0;">
-            <li>Applies to print books, ebooks, audiobooks, and print-on-demand</li>
-            <li>Applies equally to traditional authors and independent self-publishers</li>
-            <li>Obtain written permission before using Lixity for a commercial project</li>
-          </ul>
-        </div>
-      </div>
-
-      <h3 style="margin: 1.8rem 0 0.6rem; color: var(--fg-heading);">Contact &amp; Commercial Inquiries</h3>
-      <p style="font-size: 0.92rem; color: var(--muted); margin: 0 0 1rem;">
-        Briefly describe your book project, planned publication scope, and timeline:
-      </p>
-
-      <div class="contact-meta-grid">
-        <div class="contact-meta-item">
-          <div class="meta-label">Maintainer &amp; Lead Architect</div>
-          <div class="meta-val">Matthias Fahsold</div>
-        </div>
-        <div class="contact-meta-item">
-          <div class="meta-label">Maintainer Location</div>
-          <div class="meta-val">Hamburg, Germany</div>
-          <div style="font-size: 0.78rem; color: var(--subtle);">CET / CEST (UTC+1 / UTC+2)</div>
-        </div>
-        <div class="contact-meta-item">
-          <div class="meta-label">Direct Contact Email</div>
-          <div class="meta-val">
-            <a href="mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry" style="color: var(--accent);">mfahsold@googlemail.com</a>
-          </div>
-        </div>
-        <div class="contact-meta-item">
-          <div class="meta-label">Project Operator</div>
-          <div class="meta-val">ROST Services GmbH</div>
-          <div style="font-size: 0.78rem; color: var(--subtle);"><a href="#impressum">Legal notice and company contact</a></div>
-        </div>
-      </div>
-    </div>
+  <section id="faq" class="reading-section">
+    <h2>Common questions</h2>
+    <details><summary>Does my manuscript leave my computer?</summary><p>Built-in analysis and dashboard generation run on your computer without cloud calls. Optional integrations and separately configured workers have their own setup and data handling.</p></details>
+    <details><summary>Will Lixity change my prose?</summary><p>Analysis describes patterns and links to passages. It does not rewrite prose. Review notes and research decisions are actions you choose yourself.</p></details>
+    <details><summary>Can a high score prove that a book is good?</summary><p>No. A number describes one measured aspect of this text under particular assumptions. Read the affected passages and consider their purpose. Short texts, dialect, historical spelling and mixed languages need particular care.</p></details>
   </section>
 
-  <section id="impressum" lang="de" style="scroll-margin-top: 8rem;">
-    <div class="card">
-      <h2>Impressum</h2>
-      <p>Das Projekt wird betrieben von:</p>
-      <p><strong>ROST Services GmbH</strong><br/>
-        Dorfstraße 36<br/>
-        23843 Rümpel<br/>
-        Deutschland</p>
-      <p>Telefon: <a href="tel:+4945316677725">04531 6677725</a><br/>
-        Mail: <a href="mailto:info@rost-services.de">info@rost-services.de</a></p>
-      <p>Geschäftsführer: René Fromhagen, Timo Helmsing</p>
-      <p>Handelsregister: Amtsgericht Lübeck, HRB 23529 HL</p>
-      <p>Umsatzsteuer-Identifikationsnummer: DE360042691</p>
-      <p>Zur Teilnahme an einem Streitbeilegungsverfahren vor einer Verbraucherschlichtungsstelle sind wir nicht verpflichtet und nicht bereit.</p>
-    </div>
+  <section id="licensing" class="reading-section">
+    <h2>License and contact</h2>
+    <p><strong>Source-available, not Open Source.</strong> LNCL-1.0 permits use only for projects with no commercial purpose. Private writing, research and education are not blanket exemptions for commercial projects.</p>
+    <p>Books intended for sale, including self-publishing, ebooks and print-on-demand, paid editing, client work and commercial integrations require a separate written <strong>commercial license before use for that project</strong>. If publication plans change, contact the maintainer before commercial use or sale.</p>
+    <p><a href="LICENSING.md">Licensing guide</a> · <a href="https://github.com/mfahsold/lixity/blob/main/LICENSE">Full terms</a> · <a href="mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry">Commercial enquiries</a></p>
+    <p>Maintainer: Matthias Fahsold, Hamburg, Germany. Project operator: ROST Services GmbH, Rümpel, Germany.</p>
   </section>
 
-  <!-- Footer -->
+  <section id="impressum" class="reading-section">
+    <h2>Legal notice</h2>
+    <address><strong>ROST Services GmbH</strong><br/>Dorfstraße 36<br/>23843 Rümpel, Germany<br/>Phone: <a href="tel:+4945316677725">04531 6677725</a><br/>Email: <a href="mailto:info@rost-services.de">info@rost-services.de</a></address>
+    <p>Managing directors: René Fromhagen, Timo Helmsing.<br/>Commercial register: Local Court of Lübeck, HRB 23529 HL.<br/>VAT identification number: DE360042691.</p>
+    <p>We are neither required nor willing to participate in dispute resolution proceedings before a consumer arbitration board.</p>
+  </section>
+
   <footer>
-    <div>&copy; 2026 Matthias Fahsold &middot; Hamburg, Germany &middot; <a href="https://github.com/mfahsold/lixity">github.com/mfahsold/lixity</a></div>
-    <div>
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md">User Guide</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md">Agent Contracts</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">Methods</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">Research Pilot</a> &middot;
-      <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">Licensing Terms</a> &middot;
-      <a href="llms.txt">llms.txt</a> &middot;
-      <a href="sitemap.xml">Sitemap</a> &middot;
-      <a href="#impressum" lang="de">Impressum</a>
-    </div>
+    <p>© 2026 Matthias Fahsold</p>
+    <nav aria-label="Project resources"><a href="https://github.com/mfahsold/lixity">GitHub</a><a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a><a href="llms.txt">Automation summary</a><a href="#impressum">Legal notice</a></nav>
   </footer>
 </main>
-
-<!-- Lightbox Modal -->
-<div class="lightbox" id="lightboxModal" role="dialog" aria-modal="true" aria-label="Image lightbox">
-  <button class="lightbox-close" id="lightboxClose" aria-label="Close">&times; Close</button>
-  <img id="lightboxImg" src="" alt="Full resolution view"/>
-</div>
-
-<script>
-// Theme Toggle Logic
-const themeBtn = document.getElementById('themeToggle');
-const themeIcon = document.getElementById('themeIcon');
-const htmlEl = document.documentElement;
-
-function getStoredTheme() {
-  return localStorage.getItem('lixity-theme') || 'auto';
-}
-
-function applyTheme(theme) {
-  htmlEl.setAttribute('data-theme', theme);
-  localStorage.setItem('lixity-theme', theme);
-  if (theme === 'dark') {
-    themeIcon.textContent = '🌙';
-  } else if (theme === 'light') {
-    themeIcon.textContent = '☀️';
-  } else {
-    themeIcon.textContent = '🌓';
-  }
-}
-
-applyTheme(getStoredTheme());
-
-themeBtn.addEventListener('click', () => {
-  const current = htmlEl.getAttribute('data-theme') || 'auto';
-  let next = 'light';
-  if (current === 'light') next = 'dark';
-  else if (current === 'dark') next = 'auto';
-  applyTheme(next);
-});
-
-// Lightbox Modal Logic
-const modal = document.getElementById('lightboxModal');
-const modalImg = document.getElementById('lightboxImg');
-const modalClose = document.getElementById('lightboxClose');
-
-document.querySelectorAll('figure.shot img').forEach(img => {
-  img.addEventListener('click', () => {
-    modalImg.width = img.naturalWidth;
-    modalImg.height = img.naturalHeight;
-    modalImg.src = img.src;
-    modalImg.alt = img.alt;
-    modal.classList.add('active');
-  });
-});
-
-modalClose.addEventListener('click', () => modal.classList.remove('active'));
-modal.addEventListener('click', (e) => {
-  if (e.target === modal) modal.classList.remove('active');
-});
-document.addEventListener('keydown', (e) => {
-  if (e.key === 'Escape' && modal.classList.contains('active')) {
-    modal.classList.remove('active');
-  }
-});
-</script>
 </body>
 </html>

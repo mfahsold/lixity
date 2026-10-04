@@ -3,56 +3,57 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Archive Sources and Import PDFs with Local OCR | Lixity</title>
-<meta name="description" content="Keep local research sources, origin URLs and exact citations in Lixity. Understand PDF text extraction, scan OCR prerequisites, and verified backup restoration."/>
+<title>Keep Research Sources and Work with PDFs | Lixity</title>
+<meta name="description" content="Keep permitted research sources, cite exact passages and connect writing decisions with evidence. Learn what PDF import needs and how to test a backup."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/guides/research-pdf.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
-<meta property="og:title" content="Archive Sources and Import PDFs with Local OCR"/>
-<meta property="og:description" content="Preserve source provenance, configure PDF extraction, and verify a restored research archive."/>
+<meta property="og:title" content="Keep Research Sources and Work with PDFs"/>
+<meta property="og:description" content="Keep source copies and exact citations, check PDF import requirements, and test a restored research backup."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/guides/research-pdf.html"/>
 </head>
 <body>
 <a class="skip-link" href="#content">Skip to guide</a>
 <main class="guide" id="content">
 <a href="../">Lixity · Documentation</a>
-<h1>Archive sources and import PDFs with local OCR</h1>
-<p>Lixity's experimental research workspace retains local sources and connects exact passages with dossiers, claims and author decisions. Every operation names a project. Sources remain evidence for human review; an import, citation or integrity audit does not certify their factual accuracy.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-09-29">29 September 2026</time></p>
+<h1>Keep sources and work with PDFs</h1>
+<p>Keep permitted source copies, cite exact passages and connect them with research notes, claims and writing decisions. Lixity's research workspace is experimental. An import or citation helps you review evidence; it does not establish that a claim is true.</p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-04">4 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html" aria-current="page">Sources and PDF/OCR</a></nav>
-<div class="notice-box"><strong>Version scope:</strong> Local research and OCR boundaries were included in v1.18.0; Zotero integration and scoped search in v1.19.0. Release v1.20.0 adds multi-file batch ingestion with live progress, auto-fresh search index caching, section-bounded reading, and decision review tracking. See <a href="installation.html#install">installation choices</a>.</div>
+<div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need a separately configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
 <h2 id="import">Import a local source</h2>
 <p>Start with a source you are allowed to retain. This synthetic example assumes you saved a short note as <code>source.txt</code>. Initialize only a new research archive:</p>
 <pre><code>lixity research init --project ./sample-project --title "Sample research" --language en
 lixity research ingest --project ./sample-project --file ./source.txt --allow-retention --origin-url https://example.org/archive/source
-# Or ingest multiple files in batch with live progress heartbeats (since v1.20.0):
+# Or import several files with phase-change messages:
 lixity research batch-ingest --project ./sample-project --allow-retention --progress ./sources/*.txt
 lixity research search --project ./sample-project --query "reading room"</code></pre>
 <p><code>--allow-retention</code> confirms your permission to keep source bytes locally. It neither grants redistribution rights nor makes a claim true. Avoid importing sensitive sources into public repositories.</p>
-<p>In the dashboard, open <strong>Research → Sources</strong>, choose a text or PDF file (or paste text), enter an optional title, tags and origin URL, then explicitly confirm retention. Import locks the button while processing. Successful import clears the form; rejected submissions retain it for correction. In a project whose active sources are all linked to Zotero, this direct-import form is hidden in favor of Zotero capture; the standalone import API remains available.</p>
+<p>In <strong>Research → Sources</strong>, choose a text or PDF file, or paste text. Add an optional title, tags and original URL, then confirm retention. Import is disabled while processing; a failed submission keeps the form for correction. If all active sources are linked to Zotero, the dashboard shows Zotero capture instead; direct import remains available through the API.</p>
 
 <h2 id="origin-url">What does the origin URL do?</h2>
-<p>The optional field records the source's original HTTP(S) address alongside the retained capture. It is metadata only: Lixity does not fetch the URL, monitor changes there, or verify the site's identity. Credentials and whitespace are rejected. Do not paste a private access token or signed download URL into provenance; use a stable public source address where appropriate.</p>
-<p>The URL appears in source details and citation context. It remains separate from the title, source-critical notes and tags. Identical URLs do not merge sources. If you refresh a named source with a new URL, Lixity creates a new capture; earlier citations keep their original text and provenance.</p>
-<p>URL-bearing captures use <code>research-local/2</code> and a v2 manifest. Existing archives remain unchanged until a write needs the new format. Older installations cannot read these source records; make a full backup before upgrading and keep all writers on a compatible build.</p>
+<p>This field records the original HTTP(S) address in source details and citations. Lixity does not fetch the page or monitor it. Use a stable public address where appropriate; credentials and whitespace are rejected. Do not include private access tokens or signed download links.</p>
+<p>Matching URLs do not merge sources. Refreshing a named source with a new URL creates a new capture; earlier citations keep their original text and URL. These captures use the v2 archive format. Back up before upgrading and use compatible readers and writers; see <a href="../research/USAGE.md">archive compatibility</a>.</p>
 
 <h2 id="zotero">Use Zotero as the source and media catalogue</h2>
-<p><strong>Included in v1.19.0:</strong> the optional Zotero Desktop bridge browses an explicit local library and its collections from Research → Sources. Inspect an item, choose a PDF/text attachment and confirm retention to capture evidence. Open originals in Zotero or explicitly refresh linked sources. Images, audio and video remain in Zotero; no transcription or visual analysis is provided. Run Zotero on the same computer as the Lixity server and download cloud-only attachments locally first. Lixity reads the local API and does not write to the Zotero library. Retained evidence stays accessible when Zotero is closed.</p>
-<p>Structured attachment identities prevent duplicate captures and require <code>research-local/3</code> with a v3 manifest. Older readers reject this format. Changed captures require explicit refresh; old quotations remain intact. Metadata-only PDF refresh reuses extraction when original bytes are identical. There is no background synchronization.</p>
-<p>For existing sources, <code>research zotero-export</code> produces an additive RIS bundle with retained files, identity tags and provenance. Import and review it in Zotero, verify the exact original bytes, then bind the existing Lixity sources. Export does not delete or replace the archive. See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#zotero-desktop-bridge-since-v1190">setup, migration and compatibility reference</a> for the complete procedure.</p>
+<p>Run Zotero on the same computer as Lixity and download the attachments you need. In Research → Sources → Zotero, choose a library and collection, inspect an item, select a PDF/text attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Images, audio and video remain in Zotero; they are not transcribed or analyzed.</p>
+<p>Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.</p>
+<p>To bring existing Lixity sources into Zotero, <code>research zotero-export</code> creates a RIS import bundle with retained files and their identifiers. Export preserves the Lixity archive. Follow the <a href="../research/USAGE.md#zotero-desktop-bridge-since-v1190">setup, migration and compatibility reference</a>, and verify imported files before relying on the new workflow.</p>
 
-<h2 id="search">Find the current authored position</h2>
-<p><strong>Included in v1.19.0 &amp; v1.20.0:</strong> the dashboard Search tab includes sources, current dossiers, claims and decisions, with a selector to narrow the search. Search compares the snapshot digest recorded in the index against the current one and rebuilds the projection when they differ, removing manual <code>reindex</code> requirements in standard workflows. Pass <code>--strict</code> to fail instead of rebuilding. Authored hits show their type and revision; <strong>View details</strong> opens the existing revision viewer. Only source passages can be cited as evidence.</p>
+<h2 id="search">Search sources and current notes</h2>
+<p>The dashboard Search tab includes sources and current dossiers, claims and decisions. Choose a narrower scope when needed, then use <strong>View details</strong> to read a result. Search refreshes an outdated index automatically; <code>--strict</code> reports an error instead. Only source passages can be cited as evidence.</p>
 <pre><code>lixity research search --project ./sample-project --query "inspector" --scope all
 lixity research search --project ./sample-project --query "inspector" --scope decisions</code></pre>
-<p>The CLI defaults to source passages when <code>--scope</code> is omitted. Search matches words in current records, not their history. It does not resolve ambiguous names, reconcile contradictory statements or decide whether a proposal is final. Keep a concise character dossier with separate decisions, proposals and open questions, linked to supporting research.</p>
+<p>The CLI defaults to source passages. Search matches words in current records, not their history; it does not reconcile conflicting claims or decide whether a proposal is final. Keep decisions and open questions explicit in your notes.</p>
 
-<h2 id="ocr">Does PDF import include scan OCR?</h2>
-<p>A PDF with selectable text can use local Poppler tools. An image-only scan needs a separately configured self-hosted OCR worker. Installing Lixity does not download a model or launch an inference service. The configured worker controls its own resource use and network behavior.</p>
+<h2 id="ocr">Can Lixity read scanned PDFs?</h2>
+<p>A PDF with selectable text can use local Poppler tools. An image-only scan needs a separately configured OCR worker to recognize text. Installing Lixity does not download a model or start that worker. Its resource use and network behavior depend on your chosen setup.</p>
 <pre><code>lixity research ocr-status
 lixity research ingest --project ./sample-project --file ./document.pdf --allow-retention</code></pre>
-<table>
+<div class="feature-table-wrapper" role="region" aria-label="OCR diagnostic statuses" tabindex="0">
+<table class="editorial-table">
 <thead><tr><th>Diagnostic status</th><th>Meaning and next action</th></tr></thead>
 <tbody>
 <tr><td><code>native_only</code></td><td>Poppler tools are available. Text-layer PDFs can be extracted; scans need an OCR worker.</td></tr>
@@ -61,30 +62,33 @@ lixity research ingest --project ./sample-project --file ./document.pdf --allow-
 <tr><td><code>misconfigured_worker</code></td><td>The configured executable was not found or is not executable, or its timeout setting is invalid. Check its path, permissions and <code>LIXITY_OCR_TIMEOUT</code> in the server environment.</td></tr>
 <tr><td><code>missing_dependencies</code></td><td>Install Poppler for local PDF text extraction; configure a worker separately for scans.</td></tr>
 </tbody></table>
-<p>On Debian/Ubuntu, the package is <code>poppler-utils</code>; on macOS with Homebrew, it is <code>poppler</code>. Verify that <code>pdftotext</code> and <code>pdftoppm</code> are on the server's PATH. The browser diagnostic follows the selected interface language; CLI JSON uses stable status codes and English guidance.</p>
+</div>
+<p>Install <code>poppler-utils</code> on Debian/Ubuntu or <code>poppler</code> with Homebrew on macOS. The server must be able to find <code>pdftotext</code> and <code>pdftoppm</code>. Check extracted quotations against the original PDF; configuration checks do not measure recognition accuracy.</p>
 
 <h2 id="worker">Connect an existing self-hosted worker</h2>
-<p>Baidu's official inference tools do not implement Lixity's worker JSON protocol. A separate adapter is required. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/OCR_INTEGRATION.md">Unlimited-OCR integration guide</a> compares the official runtimes, verified source pins and remaining limitations; no model server or runtime is installed with Lixity. A source checkout includes an optional experimental CPU adapter; its runtime and weights require separate preparation as described in that guide.</p>
-<p>Set <code>LIXITY_OCR_WORKER</code> to a single executable path, not a shell command with arguments. The worker receives one argument: a temporary JSON request-file path. It returns JSON on stdout with text blocks and physical page numbers. The default total worker timeout is 120 seconds; <code>LIXITY_OCR_TIMEOUT</code> accepts an integer from 1 to 3600. A configured worker failure, malformed response or missing page coverage rejects the import instead of silently falling back to native text. Without a worker, native extraction can omit scanned pages in a mixed PDF; inspect the result for completeness. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md#self-hosted-pdf-and-ocr-extraction">worker interface and limitations</a> before building an adapter.</p>
+<p>This is optional technical setup. The <a href="../research/OCR_INTEGRATION.md">Unlimited-OCR integration guide</a> describes the experimental CPU adapter and its separately prepared runtime and model. Baidu's tools cannot be used directly as a Lixity worker.</p>
+<p>Set <code>LIXITY_OCR_WORKER</code> to one executable path, not a shell command. The default timeout is 120 seconds; <code>LIXITY_OCR_TIMEOUT</code> accepts 1–3600 seconds. A configured worker failure or incomplete result rejects the import. Without a worker, native extraction can omit scanned pages in mixed PDFs. See the <a href="../research/USAGE.md#self-hosted-pdf-and-ocr-extraction">worker interface and limits</a> for the JSON contract.</p>
 <pre><code>export LIXITY_OCR_WORKER=/absolute/path/to/ocr-worker
 lixity research ocr-status
 lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765</code></pre>
-<p>These are POSIX-shell examples. Set the equivalent process environment for your service or Windows shell. Restart the server after changing its environment. Test an authorized synthetic scan and inspect the extracted quotation against the page; an executable check alone is not an OCR acceptance test.</p>
-<p>Original PDF bytes and extracted UTF-8 text are stored separately by checksum. The current archive cites character spans in extracted text; worker page boxes, model attestations and recognition confidence are not a persisted, audited page-citation contract. Always consult the original PDF when exact visual evidence matters.</p>
+<p>These commands use a POSIX shell. Use equivalent environment settings on Windows or in a service, then restart the server. Test a synthetic scan and compare its extracted quotation with the page.</p>
+<p>Lixity retains the original PDF and extracted text separately. Citations identify spans in that text; they do not provide audited page coordinates or recognition confidence. Consult the original when visual evidence matters.</p>
 
 <h2 id="backup">Back up and test restoration</h2>
-<p>The authoritative data lives in the project's <code>research/</code> directory. The SQLite search catalogue is disposable and is not a backup. Keep archives outside public Git repositories, ideally while no writer is running.</p>
+<p>The project's <code>research/</code> folder contains the evidence archive. The search index can be rebuilt and is not a backup. Keep backups outside public repositories and avoid writes while exporting.</p>
 <pre><code>lixity research export --project ./sample-project --output ./sample-backup.tar.gz
 lixity research restore --from ./sample-backup.tar.gz --to ./restored-sample
 lixity research audit --project ./restored-sample
 lixity research reindex --project ./restored-sample
 lixity research search --project ./restored-sample --query "reading room"</code></pre>
-<p>Restore into a clean target. Restoration checks archive member paths, checksums and record relationships before placing the store. Resolve a known passage ID afterward to confirm that the expected quotation and origin URL survived. Audit success concerns stored integrity, not historical truth or permissions.</p>
+<p>Restore into a new, empty target. Restoration checks paths, checksums and record links. Resolve a known passage afterward to check its quotation and original URL. A successful audit checks archive integrity, not historical truth or permissions.</p>
 
-<p><strong>Included in v1.19.0:</strong> <code>research zotero-backup</code> pairs the research archive with an explicitly selected, closed Zotero data directory. <code>research zotero-restore</code> verifies the file inventory and checksums before restoring both into a new directory. It never overwrites a working library. The closure confirmation is your responsibility; the command does not stop Zotero or guarantee that it is closed. Manuscripts, application profiles and external linked attachments require separate backup. Open the restored library separately and resolve a known citation before relying on the backup. Consult the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">command reference</a> before relying on the pair as your recovery plan.</p>
+<p><code>research zotero-backup</code> pairs the archive with a selected Zotero data folder; you must close Zotero first. <code>research zotero-restore</code> verifies and restores both into a new directory without replacing a working library. Manuscripts, application profiles and external linked attachments need separate backups. Test a restored citation and follow the <a href="../research/USAGE.md">backup reference</a> before relying on the pair.</p>
 
-<h2 id="cli-workflow">From a source to an authorial decision: CLI workflow</h2>
-      <p>This illustrative workflow assumes locally saved, authorized source files. Replace example paths and UUID placeholders with your files and the identifiers returned by preceding commands. Initialize an archive only once. The dossier command reads a UTF-8 Markdown file; prepare <code>./sources/harbor-dossier.md</code> before that step.</p>
+<h2 id="cli-workflow">Command-line example: sources to decisions</h2>
+<p>This optional example uses authorized local source files. Replace paths and UUID placeholders with the files and identifiers returned by earlier commands. Initialize the archive only once, and prepare <code>./sources/harbor-dossier.md</code> before importing that dossier.</p>
+<details>
+<summary>Show the complete command-line example</summary>
       <pre><code># 1. Initialize a dedicated research workspace
 lixity research init --project ./novel-research --title "1920s Archive" --language en
 
@@ -93,7 +97,7 @@ lixity research ingest --project ./novel-research --file ./sources/police_log_19
   --context '{"genre": "Police Log", "created_period": "1923", "place": "Hamburg", "provenance_note": "State Archives"}' \
   --allow-retention
 
-# 3. Build SQLite FTS5 lexical index
+# 3. Rebuild search explicitly (ordinary search refreshes it automatically)
 lixity research reindex --project ./novel-research
 
 # 4. Search source passages; add --scope all for current authored records
@@ -120,11 +124,12 @@ lixity serve --research-project ./novel-research --no-project
 
 # 10. Audit repository integrity and snapshot checksums
 lixity research audit --project ./novel-research</code></pre>
+</details>
 
 <h2 id="limits">Input and research limits</h2>
-<p>Text inputs must be nonempty UTF-8 without NUL bytes, at most 2 MiB; PDFs are at most 50 MiB. Both imports are limited to 5,000 nonempty extracted passages. Search is lexical SQLite FTS5/BM25, not semantic retrieval or translation. A source refresh does not update authored claims or decisions automatically.</p>
+<p>Text inputs must be nonempty UTF-8 without NUL bytes, up to 2 MiB; PDFs can be up to 50 MiB. Imports allow at most 5,000 nonempty passages. Search matches words using SQLite FTS5/BM25; it does not translate text or search by meaning. Refreshing a source does not automatically update your claims or decisions.</p>
 <p>See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research reference</a> for CLI/API details. The broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a> includes unimplemented interfaces. Read <a href="interpretation.html">metric interpretation</a> before comparing a source with a manuscript.</p>
-<footer><a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a> · <a href="../#impressum" lang="de">Impressum</a></footer>
+<footer><a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a> · <a href="../#impressum">Legal notice</a></footer>
 </main>
 </body>
 </html>

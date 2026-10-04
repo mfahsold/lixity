@@ -38,6 +38,7 @@ class TestPagesStaging(unittest.TestCase):
                       "research/USAGE.md", "research/examples/synthetic-source.txt",
                       "screenshots/public.png", "sitemap.xml", ".nojekyll")
             private = ("superpowers/plans/task.md", "archive/wave2-plan.md", "notes.md",
+                       "GROWTH_REVIEW.md", "SECURITY_REVIEW.md",
                        ".planning/secret.md", "research/.scratch/session.md",
                        "screenshots/local.log", "private/source.txt")
             for name in public + private:
