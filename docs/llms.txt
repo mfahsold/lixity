@@ -9,6 +9,9 @@
 
 Current release: 1.23.0; release tag: v1.23.0.
 
+Current main (unreleased): scene/register targets, guided conflict preparation,
+atomic revision groups, decision impact/review and optional local Tesseract OCR.
+
 License: Lixity Non-Commercial License 1.0 (LNCL-1.0), source-available,
 not open source. Free use requires a project with no commercial purpose.
 A book intended for sale, including self-publishing, requires a separate
@@ -104,7 +107,13 @@ style = api.fingerprint(text, language="de", project_config={})
 html = api.dashboard(text, language="de", project_config={})
 ```
 
-`project_config={}` isolates thresholds from the current directory.
+`project_config={}` isolates thresholds from the current directory. Current main
+uses known corpus settings consistently across CLI/API/dashboard. Explicit
+language and pattern arguments win. `api.scenes(..., project_config=settings)`
+has its own v1 envelope and explicit `scene_analysis` assignments/groups/targets;
+it reports 16 per-scene features, sample counts, approximate SE and register
+medians/MAD. HD-D is 0–1, unavailable below 100 tokens, without a population SE;
+CV needs two sentences. Sources never enter the register baselines.
 The facade also exposes `passport`, the other analyses, marker functions and
 `about`. `api.dashboard` returns HTML; optional narration panels/server
 controls require the lower-level renderer or an adapter.
@@ -172,7 +181,23 @@ Authored edits (v1.17.0+) and URL-bearing captures (v1.18.0+) use
 (v1.19.0+) require `research-local/3` and manifest v3. Old readers reject
 newer records; there is no automatic migration.
 
+Current main adds readonly `prepare_record_revision` (three-way preview) and
+`prepare_record_revisions` (batch); `apply_record_revisions` validates all
+operations before a single commit. Existing strict single-record saves remain.
+`decision_impact`/`editorial_review` use explicit links, dates and pinned/current
+revisions. They report structural maintenance candidates, not semantic proof.
+CLI `sources`/`audit` retain default JSON and offer `--format text|md`; `review`
+and `decision-impact` default to bounded text. Section updates preserve unrelated
+bytes and reject ambiguous headings. See the implemented research reference.
+
 Native PDFs use Poppler; scans require an explicitly configured worker.
+On current main, `LIXITY_OCR_BACKEND=tesseract` selects locally installed
+Tesseract instead; `LIXITY_OCR_LANGUAGES` defaults to `eng`. Diagnostics report
+missing language data. Every new native Poppler capture, including explicitly
+allowed fallback, identifies `poppler-native/1`; local Tesseract identifies
+`tesseract-cli/1`. Both use `research-local/4` and manifest v4; old readers reject
+these archives. Existing v1–v3 records and cached provenance stay unchanged.
+No automatic installation.
 Upstream `infer.py` does not implement Lixity's worker protocol. See
 [OCR runtime boundaries](https://mfahsold.github.io/lixity/research/OCR_INTEGRATION.md).
 Worker failure rejects import unless native fallback is explicitly enabled.

@@ -8,6 +8,7 @@ indices, idempotent atomic file I/O and formatters.
 
 import io
 import json
+import math
 import os
 import sys
 import tempfile
@@ -175,6 +176,68 @@ class TestCorpusAnalyzer(unittest.TestCase):
             [title for _n, title, _b in shared],
         )
         self.assertEqual([c.num for c in metrics.chapters], list(range(1, len(shared) + 1)))
+
+    def test_global_prose_excludes_configured_chapter_heading_lines(self):
+        from lixity.scenes import scene_report
+
+        text = "CHAPTER First\n\nDoor closes.\n\nCHAPTER Second\n\nWindow opens."
+        for pattern in (
+            r"(?m)^CHAPTER\s+",
+            r"(?m)^CHAPTER [^\r\n]+$",
+            r"(?m)^CHAPTER [^\r\n]+\r?\n",
+        ):
+            with self.subTest(pattern=pattern):
+                config = CorpusConfig(
+                    language="en", chapter_regex=pattern, word_regex=r"\b[A-Z][a-z]+\b"
+                )
+                metrics = CorpusAnalyzer(config).analyze_text(text)
+                self.assertEqual(metrics.tokens, 2)
+                self.assertEqual(metrics.clean_words, 4)
+                self.assertEqual(metrics.total_sentences, 2)
+                self.assertEqual(metrics.asl, 1)
+                self.assertEqual(sum(chapter.words for chapter in metrics.chapters), 2)
+                self.assertEqual(
+                    sum(item["words"] for item in scene_report(text, config)["items"]), 2
+                )
+
+    def test_default_markdown_heading_cleanup_preserves_counts_and_separators(self):
+        text = "# Title\n\n## First\n\nDoor closes.\n\n### Detail\n\nWindow opens."
+        metrics = CorpusAnalyzer(CorpusConfig(language="en")).analyze_text(text)
+        self.assertEqual(metrics.clean_chars, len("\n\n\n\nDoor closes.\n\n\n\nWindow opens."))
+        self.assertEqual(metrics.tokens, 4)
+        self.assertEqual(metrics.clean_words, 4)
+        self.assertEqual(metrics.total_sentences, 2)
+        self.assertEqual(metrics.asl, 2)
+
+    def test_custom_heading_cleanup_preserves_other_prose_boundaries(self):
+        config = CorpusConfig(
+            language="en", chapter_regex=r"(?m)^CHAPTER\s+", appendix_marker="CHAPTER Notes"
+        )
+        body = 'Door closes.\n\n> "Window opens."\n\n[^note]: River flows.\n\n<!-- Hidden wall. -->'
+        analyzer = CorpusAnalyzer(config)
+        plain = analyzer.analyze_text(body)
+        headed = analyzer.analyze_text(
+            "CHAPTER Intro\n\n" + body + "\n\nCHAPTER Notes\n\nExcluded appendix."
+        )
+        for field in (
+            "tokens", "clean_words", "total_sentences", "asl", "dialog_words", "dialog_ratio"
+        ):
+            with self.subTest(field=field):
+                self.assertEqual(getattr(headed, field), getattr(plain, field))
+        self.assertGreater(headed.raw_words, plain.raw_words)
+
+    def test_single_starter_entropy_is_positive_zero_and_binary_entropy_is_one(self):
+        analyzer = CorpusAnalyzer(CorpusConfig(language="en"))
+        single = analyzer.analyze_text("## One\n\nDoor opens. Door closes.")
+        self.assertEqual(single.start_entropy, 0)
+        self.assertEqual(math.copysign(1, single.start_entropy), 1)
+        self.assertEqual(math.copysign(1, single.chapters[0].start_entropy), 1)
+        binary = analyzer.analyze_text(
+            "## Two\n\nDoor opens. Window opens. Door closes. Window closes."
+        )
+        self.assertEqual(binary.start_entropy, 1)
+        self.assertEqual(binary.chapters[0].start_entropy, 1)
+        self.assertEqual(binary.chapters[0].style_se["start_entropy"], 0)
 
     def test_lexical_metrics(self):
         sample = (

@@ -42,6 +42,8 @@ class LixityServerHandler(
         "/api/research/decisions": "_handle_research_decisions",
         "/api/research/matrix": "_handle_research_matrix",
         "/api/research/record": "_handle_research_record",
+        "/api/research/decision-impact": "_handle_research_decision_impact",
+        "/api/research/review": "_handle_research_review",
     }
 
     #: POST actions under /api/ : exact action -> handler method name.
@@ -59,6 +61,9 @@ class LixityServerHandler(
         "research-evidence-link": "_handle_research_evidence_link",
         "research-decision-add": "_handle_research_decision_add",
         "research-record-revise": "_handle_research_record_revise",
+        "research-record-prepare": "_handle_research_record_prepare",
+        "research-revision-batch-prepare": "_handle_research_revision_batch_prepare",
+        "research-revision-batch-apply": "_handle_research_revision_batch_apply",
     }
 
     #: Actions deliberately not implemented by the standalone server.
@@ -215,4 +220,3 @@ class LixityServerHandler(
         now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
         sys.stderr.write(f"[{now}] [server:debug] {self.address_string()} - {format % args}\n")
         sys.stderr.flush()
-

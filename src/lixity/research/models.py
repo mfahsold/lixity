@@ -186,11 +186,21 @@ class SourceVersion(Record):
 
 
 class Activity(Record):
+    schema_version: Literal["research-local/1", "research-local/4"] = "research-local/1"  # type: ignore[assignment]
     kind: Literal["activity"] = "activity"
     source_version_ref: Reference
     operation: Literal["extract_utf8", "extract_ocr"] = "extract_utf8"
-    implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1"] = "utf8-paragraphs/1"
+    implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"] = "utf8-paragraphs/1"
     status: Literal["succeeded", "failed"] = "succeeded"
+
+    @model_validator(mode="after")
+    def compatible_implementation(self) -> "Activity":
+        local_ocr = self.implementation in {"tesseract-cli/1", "poppler-native/1"}
+        if local_ocr and (self.schema_version != "research-local/4" or self.operation != "extract_ocr"):
+            raise ValueError("Local OCR implementations require a research-local/4 extract_ocr activity")
+        if not local_ocr and self.schema_version != "research-local/1":
+            raise ValueError("Legacy implementations use research-local/1 activities")
+        return self
 
 
 class Extraction(Record):
@@ -308,7 +318,7 @@ class Entry(StrictModel):
 
 
 class Manifest(StrictModel):
-    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3"] = "research-manifest-local/1"
+    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4"] = "research-manifest-local/1"
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None

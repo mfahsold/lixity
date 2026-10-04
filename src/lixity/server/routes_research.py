@@ -150,6 +150,28 @@ class ResearchRoutesMixin(ResponseMixin):
         except (ResearchError, KeyError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 
+    def _handle_research_decision_impact(self) -> None:
+        self._handle_research_editorial_read(decision=True)
+
+    def _handle_research_review(self) -> None:
+        self._handle_research_editorial_read(decision=False)
+
+    def _handle_research_editorial_read(self, *, decision: bool) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        decision_id = parse_qs(urlparse(self.path).query).get("id", [""])[0]
+        if decision and not decision_id:
+            self._json({"ok": False, "message": "A decision ID is required"}, 400)
+            return
+        try:
+            result = (research_api.decision_impact(root, decision_id) if decision
+                      else research_api.editorial_review(root))
+            self._json({"ok": True, **result})
+        except (ResearchError, OSError, ValueError) as error:
+            self._json({"ok": False, "message": str(error)}, 400)
+
     def _handle_research_record_read(self, *, history: bool) -> None:
         root = self.get_research_root()
         if not root or not (root / "research").is_dir():
@@ -175,6 +197,61 @@ class ResearchRoutesMixin(ResponseMixin):
                 else research_api.get_record(root, kind, record_id, revision=revision)
             )
             self._json({"ok": True, **result})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_record_prepare(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        kind, record_id = payload.get("kind"), payload.get("id")
+        changes, base_revision = payload.get("changes"), payload.get("base_revision")
+        resolutions = payload.get("resolutions", {})
+        if (not isinstance(kind, str) or kind not in RESEARCH_RECORD_KINDS
+                or not isinstance(record_id, str) or not record_id.strip()
+                or not isinstance(changes, dict) or not changes
+                or type(base_revision) is not int or base_revision < 1
+                or not isinstance(resolutions, dict)):
+            self._json({"ok": False, "message": "Invalid research revision preview"}, 400)
+            return
+        try:
+            result = research_api.prepare_record_revision(root, kind, record_id,
+                base_revision=base_revision, changes=changes, resolutions=resolutions)
+            self._json({"ok": True, **result})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_revision_batch_prepare(self, payload: dict[str, Any]) -> None:
+        self._handle_research_revision_batch(payload, apply=False)
+
+    def _handle_research_revision_batch_apply(self, payload: dict[str, Any]) -> None:
+        self._handle_research_revision_batch(payload, apply=True)
+
+    def _handle_research_revision_batch(self, payload: dict[str, Any], *, apply: bool) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        operations = payload.get("operations")
+        actor = payload.get("actor", "local-author")
+        digest = payload.get("expected_snapshot")
+        if (not isinstance(operations, list) or not 1 <= len(operations) <= 100
+                or not all(isinstance(operation, dict) for operation in operations)
+                or not isinstance(actor, str) or not actor.strip()):
+            self._json({"ok": False, "message": "Invalid research revision batch"}, 400)
+            return
+        try:
+            if apply:
+                if not isinstance(digest, str) or not digest.strip():
+                    self._json({"ok": False, "message": "An expected snapshot is required to apply a revision batch"}, 400)
+                    return
+                result = research_api.apply_record_revisions(root, operations, expected_snapshot=digest, actor=actor)
+            else:
+                result = research_api.prepare_record_revisions(root, operations, actor=actor)
+            self._json({"ok": True, **result})
+        except ResearchConflictError as exc:
+            self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 
@@ -545,4 +622,3 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": True, "message": f"Decision '{title}' recorded", **res})
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
-

@@ -47,6 +47,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | `lixity dialogue FILE [--json]` | dialogue turn structure (turns, lengths, per chapter) | text / JSON |
 | `lixity characters FILE --names A,B [--json]` | character presence per chapter | text / JSON |
 | `lixity pacing FILE [--json]` | scenes, pacing signals, chapter hooks | text / JSON |
+| `lixity scenes FILE [--json]` | scene features, explicit register medians and author targets (current main) | text / JSON v1 |
 | `lixity motifs FILE --motif NAME=REGEX [--json]` | motif presence + repetition (words, n-grams) | text / JSON |
 | `lixity showing FILE [--json]` | showing vs. telling balance per chapter | text / JSON |
 | `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR, structural diagnostics; `--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`) | JSON (schema v4) |
@@ -580,6 +581,33 @@ broken adapter would silently disable the project's custom NDA behaviour.
 
 Native-revision endpoints (since v1.17.0) reuse that explicit workspace:
 
+Current main also provides `GET /api/research/decision-impact?id=...` and
+`GET /api/research/review`, returning `research-decision-impact-local/1` and
+`research-editorial-review-local/1`. These use explicit links, dates and pins,
+not semantic inference. Python equivalents are `decision_impact(project, id)`
+and `editorial_review(project)`.
+
+`POST /api/research-record-prepare` accepts `{kind, id, base_revision, changes,
+resolutions?}` and returns `research-revision-preview-local/1` with current
+tokens, merged changes and unresolved conflicts. Resolution values are
+`current|mine`; associations and revision pins form one comparison field.
+It never writes. Save through the existing strict revise route.
+Prepared decision list changes include `dossier_revisions: {ID: revision}` for
+the selected existing dossiers. Preserve these pins when submitting the preview.
+
+Python `prepare_record_revisions(project, operations)` returns a read-only
+`research-revision-batch-local/1` preview. Each operation supplies
+`kind/id/expected_revision/changes/change_kind/reason`.
+`apply_record_revisions(project, operations, expected_snapshot=...)` validates
+all operations before one commit; errors and races accept none. It returns
+record references, without duplicating full dossier bodies/citation graphs.
+Duplicate IDs and references to future revisions inside the same batch are
+rejected. See [current-main research workflows](research/USAGE.md#current-main-workflows-unreleased).
+
+HTTP equivalents are `POST /api/research-revision-batch-prepare` with
+`{operations}` and `POST /api/research-revision-batch-apply` with
+`{operations, expected_snapshot}`. They return the same versioned envelope.
+
 - `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link` and `decision`.
 - `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
 - `POST /api/research-record-revise`: `{kind, id, changes, expected_snapshot, expected_revision, change_kind, reason}`. `change_kind` is `correction` or `supersession`; reason is required. HTTP 409 means the draft's snapshot/revision is stale; reload explicitly before deciding what to save. HTTP 400 means invalid fields; immutable/unknown fields are rejected.
@@ -628,10 +656,17 @@ reference = api.fingerprint(
 )
 ```
 
-`project_config` supplies **thresholds only** to `profile`, `fingerprint`,
-`passport` and `dashboard`. `{}` prevents current-directory threshold lookup;
-`None` retains it for compatibility. Language/title/corpus patterns are explicit
-arguments. `min_chapters` must be an integer of at least 2 and is also exposed
+On current main, `project_config` supplies thresholds and known `CorpusConfig`
+settings to `profile`, `fingerprint`, `passport` and `dashboard`. Explicit
+language/pattern arguments win. `{}` prevents current-directory threshold lookup;
+`None` retains threshold lookup for compatibility. Scene/register settings are
+explicit: `api.scenes(text, language="de", project_config=settings)` does not
+discover a project. It returns `{meta: {schema_version: 1, ...}, scenes}` with
+`items`, `baselines`, `explicit_scene_breaks` and `scenes_are_chapters`.
+Each item contains `id` (chapter:scene), `group`, sample counts, the existing
+16 `features`, approximate `standard_errors`, `targets` and `data_support`.
+See [scene settings and limits](USAGE.md#scene-registers-and-project-targets-current-main-unreleased).
+`min_chapters` must be an integer of at least 2 and is also exposed
 as `--min-chapters` on `style`, `dashboard` and `build`.
 Re-read active settings from passport `meta`; `about` reports defaults.
 Use `lixity.pipeline.analyze_document` when several views need the same

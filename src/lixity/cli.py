@@ -22,6 +22,7 @@ from .pipeline import (
     profile_document,
     resolve_document_config,
 )
+from .scenes import scene_report_for_display
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_dashboard
 from .workspace import discover
@@ -250,7 +251,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters pacing motifs showing dashboard serve style build about completion research"
+    local cmds="analyze profile dialogue characters pacing scenes motifs showing dashboard serve style build about completion research"
     local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
     local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
     if [[ $COMP_CWORD -eq 1 ]]; then
@@ -321,6 +322,7 @@ _lixity() {
     'dialogue:Dialogue turn structure'
     'characters:Character presence across chapters'
     'pacing:Scene structure and pacing'
+    'scenes:Scene features and register targets'
     'motifs:Motif tracking and repetition'
     'showing:Showing vs telling balance'
     'style:Self-calibrated style reference'
@@ -478,7 +480,7 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
 
     from .dialogue import dialogue_report
 
-    config, resolved = resolve_document_config(text, args.language)
+    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
     report = dialogue_report(text, config)
 
     if args.json:
@@ -539,7 +541,7 @@ def _cmd_characters(args: argparse.Namespace) -> int:
 
     from .characters import presence_report
 
-    config, resolved = resolve_document_config(text, args.language)
+    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
     report = presence_report(text, names, config)
 
     if args.json:
@@ -583,7 +585,7 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
 
     from .pacing import pacing_report
 
-    config, resolved = resolve_document_config(text, args.language)
+    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
     report = pacing_report(text, config)
 
     if args.json:
@@ -646,7 +648,7 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
 
     from .motifs import motif_report
 
-    config, resolved = resolve_document_config(text, args.language)
+    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
     report = motif_report(text, motifs, config, phrase_size=max(2, args.phrases))
 
     if args.json:
@@ -698,7 +700,7 @@ def _cmd_showing(args: argparse.Namespace) -> int:
 
     from .showing import showing_report
 
-    config, resolved = resolve_document_config(text, args.language)
+    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
     report = showing_report(text, config)
 
     if args.json:
@@ -748,7 +750,7 @@ def _cmd_build(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     text = workspace.read_manuscript()
-    config, resolved = resolve_document_config(text, args.language)
+    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
 
     fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
     analysis = analyze_document(text, config, fp_thresholds)
@@ -787,6 +789,8 @@ def _cmd_build(args: argparse.Namespace) -> int:
             paragraphs,
             metrics=metrics,
             fingerprint=fingerprint,
+            scenes=scene_report_for_display(text, config, args._project_config.get("scene_analysis"),
+                                            premeasured_chapters=metrics.chapters),
             title=title,
             labels=resolved.labels,
             language_name=resolved.name,
@@ -847,6 +851,7 @@ def main(argv: list[str] | None = None) -> int:
         ("dialogue", "Dialogue turn structure (text/JSON)"),
         ("characters", "Character presence across chapters (text/JSON)"),
         ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
+        ("scenes", "Scene features, register references and author targets (text/JSON)"),
         ("motifs", "Motif tracking and repetition analysis (text/JSON)"),
         ("showing", "Showing vs. telling balance (text/JSON)"),
         ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
@@ -868,6 +873,11 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if name == "about":
             p.add_argument("--json", action="store_true", help="JSON output")
+            continue
+        if name == "scenes":
+            p.add_argument("file", help="Markdown manuscript")
+            p.add_argument("--language", default=None, help="Language profile (default: project setting or en)")
+            p.add_argument("--json", action="store_true", help="JSON output (scene schema v1)")
             continue
         if name in ("style", "dashboard", "build"):
             p.add_argument("--min-chapters", type=int, default=None,
@@ -1148,7 +1158,33 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
 
-    config, resolved = resolve_document_config(text, args.language)
+    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+
+    if args.command == "scenes":
+        from .api import scenes
+        from .research.presentation import safe_text
+
+        try:
+            report = scenes(text, resolved.key, project_config=project_config)
+        except ValueError as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return EXIT_ERROR
+        if args.json:
+            print(_json(report, indent=True))
+        else:
+            from .style_fingerprint import FEATURES
+
+            for item in report["scenes"]["items"]:
+                print(safe_text(f"{item['id']} · {item['chapter_title']} · {item['group'] or '—'}"))
+                print(f"  {item['words']} words · {item['sentences']} sentences")
+                for field, label_key, unit in FEATURES:
+                    value = item["features"][field]
+                    target = item["targets"].get(field)
+                    detail = f" · {target['position']} [{target['lower']}, {target['upper']}]" if target else ""
+                    rendered = "—" if value is None else f"{value:.3g}"
+                    print(f"  {resolved.labels.get(label_key, field)}: {rendered} {unit}{detail}")
+            print("Observed features, not quality scores. Approximate SE and group medians: use --json.")
+        return EXIT_OK
 
     if args.command == "analyze":
         metrics = CorpusAnalyzer(config).analyze_text(text)
@@ -1195,6 +1231,8 @@ def main(argv: list[str] | None = None) -> int:
         paragraphs,
         metrics=metrics,
         fingerprint=fingerprint,
+        scenes=scene_report_for_display(text, config, args._project_config.get("scene_analysis"),
+                                        premeasured_chapters=metrics.chapters),
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, names, config) if names else None,
         title=_document_title(args, args.file),

@@ -2153,3 +2153,20 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
   .view-navigation { display: none !important; }
   .view-pane { display: block !important; }
 }
+.scene-detail { margin: .8rem 0; border-top: 1px solid var(--line); padding-top: .6rem; }
+.scene-detail summary { cursor: pointer; overflow-wrap: anywhere; padding: .5rem 0; }
+.scene-detail .table-wrap { margin-top: .6rem; }
+.scene-detail th small { display: block; font-weight: normal; opacity: .7; }
+.scene-detail table { min-width: 44rem; }
+.scene-detail th:not(:first-child), .scene-detail td { min-width: 6rem; white-space: nowrap; }
+/* Concurrent revision values remain readable within the existing dialog. */
+#research-revision-merge fieldset { min-width: 0; margin: 1rem 0; padding: .8rem; border: 1px solid var(--line-strong); border-radius: 8px; }
+#research-revision-merge label { display: block; margin-top: .6rem; cursor: pointer; }
+#research-revision-merge pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 10rem; overflow: auto; margin: .3rem 0 .8rem; }
+#research-revision-merge dd { margin: .3rem 0 .8rem; white-space: pre-wrap; overflow-wrap: anywhere; }
+#modal-research-revision .modal-footer, #modal-research-revision-batch .modal-footer { flex-wrap: wrap; }
+#modal-research-revision-batch .modal-body, #research-revision-batch-list > li, #research-revision-batch-list dd { min-width: 0; overflow-wrap: anywhere; }
+#research-revision-batch-list { padding-left: 1.2rem; }
+#research-revision-batch-list > li { padding-bottom: 1rem; margin-bottom: 1rem; border-bottom: 1px solid var(--line); }
+#research-revision-batch-list dd { margin: .25rem 0 .75rem; }
+#research-revision-batch-list pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 10rem; overflow: auto; }

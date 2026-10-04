@@ -1683,9 +1683,62 @@ async function refreshResearchDecisions() {
       (d.impact_on_plot ? '<div class="ctl-note" style="margin:.3rem 0;font-size:.78rem;"><strong>' + escapeHtml(uiLabel("research_decision_impact")) + ':</strong> <span class="research-prose markdown-body">' + renderSafeMarkdown(d.impact_on_plot) + '</span></div>' : '') +
       (d.claim_id ? '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(uiLabel("research_decision_claim")) + ' ' + escapeHtml(d.claim_id) +
         (d.claim_revision ? ' · ' + escapeHtml(uiFormat("research_revision_number", { revision: d.claim_revision })) : '') + '</div>' : '') +
+      '<details class="research-details"><summary data-decision-impact="' + escapeHtml(d.id) + '">' + escapeHtml(uiLabel("research_decision_affected")) + '</summary><div class="research-details-body"></div></details>' +
       researchRevisionActions("decision", d.id) +
     '</div>';
   }).join("");
+}
+
+function researchEditorialFlags(flags) {
+  return '<ul>' + (flags || []).map(function(flag) {
+    return '<li>' + escapeHtml(uiLabel("research_editorial_" + flag)) + '</li>';
+  }).join("") + '</ul>';
+}
+
+function researchEditorialTime(timestamp) {
+  return '<time datetime="' + escapeHtml(timestamp) + '">' +
+    escapeHtml(new Date(timestamp).toLocaleString(document.documentElement.lang || "en", {timeZone: "UTC"})) + ' UTC</time>';
+}
+
+function researchAffectedDossier(dossier) {
+  return '<div class="research-card"><strong>' + escapeHtml(dossier.title) + '</strong>' +
+    '<p class="ctl-note">' + escapeHtml(uiFormat("research_decision_dossier_versions", {
+      pinned: dossier.pinned_revisions.join(", "), current: dossier.current_revision
+    })) + '</p><p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_dossier_date")) + ': ' +
+    researchEditorialTime(dossier.created_at) + '</p>' + researchEditorialFlags(dossier.flags) +
+    (dossier.sections.length ? '<p class="ctl-note">' + dossier.sections.map(escapeHtml).join(" · ") + '</p>' : '') +
+    (!dossier.withdrawn ? researchDetailsControl("dossier", dossier.id) : '') + '</div>';
+}
+
+async function refreshResearchEditorialReview() {
+  var host = document.getElementById("research-editorial-review");
+  if (!host) return;
+  host.textContent = uiLabel("research_loading");
+  var report = await researchApiGet("research/review");
+  if (!report.ok) {
+    host.textContent = report.message || uiLabel("research_status_unavailable");
+    return;
+  }
+  if (!report.candidates.length) {
+    host.textContent = uiLabel("research_editorial_empty");
+    return;
+  }
+  host.innerHTML = '<p class="ctl-note">' + escapeHtml(uiFormat("research_editorial_count", {count: report.candidate_count})) + '</p>' +
+    report.candidates.map(function(candidate) {
+      return '<div class="research-card"><strong>' + escapeHtml(candidate.title) + '</strong>' +
+        (candidate.dossier_title ? '<p>' + escapeHtml(candidate.dossier_title) + '</p>' : '') +
+        '<p class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", {revision: candidate.decision_revision})) + ' · ' +
+        escapeHtml(uiLabel("research_editorial_decision_date")) + ': ' + researchEditorialTime(candidate.decision_created_at) + '</p>' +
+        (candidate.dossier_created_at ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_dossier_date")) + ': ' +
+          researchEditorialTime(candidate.dossier_created_at) + '</p>' : '') +
+        researchEditorialFlags(candidate.flags) +
+        (candidate.dossier_id ? '<p class="ctl-note">' + escapeHtml(uiFormat("research_decision_dossier_versions", {
+          pinned: candidate.pinned_revisions.join(", "), current: candidate.current_revision
+        })) + '</p>' : '') +
+        (candidate.sections.length ? '<p class="ctl-note">' + candidate.sections.map(escapeHtml).join(" · ") + '</p>' : '') +
+        (candidate.dossier_id && !candidate.flags.includes("withdrawn_dossier") ? researchDetailsControl("dossier", candidate.dossier_id) : '') +
+        researchRevisionActions("decision", candidate.decision_id) + '</div>';
+    }).join("");
 }
 
 async function refreshResearchProjectInfo() {
@@ -1718,18 +1771,26 @@ async function refreshResearchProjectInfo() {
   var ocrBox = document.getElementById("r-ocr-diagnostic-box");
   if (ocrBox && status && status.ocr) {
     var ocr = status.ocr;
-    var badgeClass = ocr.status === "ready" ? "ok" : (ocr.status === "native_only" ? "note" : "err");
+    var ocrStatus = ocr.status === "ready (probed)" ? "ready" : ocr.status;
+    var badgeClass = ocrStatus === "ready" ? "ok" : (ocrStatus === "native_only" ? "note" : "err");
     var ocrLabels = {
-      ready: ["research_ocr_ready", "research_ocr_ready_help"],
+      ready: ocr.backend === "tesseract" ? ["research_ocr_tesseract_ready", "research_ocr_tesseract_ready_help"] : ["research_ocr_ready", "research_ocr_ready_help"],
       native_only: ["research_ocr_native", "research_ocr_native_help"],
       partial: ["research_ocr_partial", "research_ocr_partial_help"],
       misconfigured_worker: ["research_ocr_worker_error", "research_ocr_worker_error_help"],
+      misconfigured_backend: ["research_ocr_tesseract_error", "research_ocr_tesseract_error_help"],
       missing_dependencies: ["research_ocr_missing", "research_ocr_missing_help"]
     };
-    var ocrKeys = Object.prototype.hasOwnProperty.call(ocrLabels, ocr.status)
-      ? ocrLabels[ocr.status] : ["research_ocr_unknown", "research_ocr_unknown_help"];
+    var ocrKeys = Object.prototype.hasOwnProperty.call(ocrLabels, ocrStatus)
+      ? ocrLabels[ocrStatus] : ["research_ocr_unknown", "research_ocr_unknown_help"];
     var labelText = uiLabel(ocrKeys[0]);
     var guidanceText = uiLabel(ocrKeys[1]);
+    if (ocr.requested_languages && ocr.requested_languages.length) {
+      guidanceText += " " + uiFormat("research_ocr_languages", {languages: ocr.requested_languages.join(" + ")});
+    }
+    if (ocr.missing_languages && ocr.missing_languages.length) {
+      guidanceText += " " + uiFormat("research_ocr_missing_languages", {languages: ocr.missing_languages.join(" + ")});
+    }
     ocrBox.style.display = "flex";
     ocrBox.style.alignItems = "center";
     ocrBox.innerHTML = '<span class="badge ' + badgeClass + '" style="font-size:.75rem;padding:2px 6px;">' +
@@ -1772,9 +1833,26 @@ async function initResearchUI() {
   refreshResearchDossiers();
   refreshResearchClaims();
   refreshResearchDecisions();
+  if (activeTab && activeTab.dataset.rtab === "review") refreshResearchEditorialReview();
 }
 
 document.addEventListener("click", async function (event) {
+  var impactButton = event.target.closest("[data-decision-impact]");
+  if (impactButton) {
+    if (impactButton.parentElement.open) return;
+    var impactHost = impactButton.parentElement.querySelector(".research-details-body");
+    impactHost.textContent = uiLabel("research_loading");
+    var impact = await researchApiGet("research/decision-impact?id=" + encodeURIComponent(impactButton.dataset.decisionImpact));
+    impactHost.innerHTML = impact.ok ?
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_decision_date")) + ': ' + researchEditorialTime(impact.decision.created_at) + '</p>' +
+      (impact.unlinked ? '<p>' + escapeHtml(uiLabel("research_editorial_no_linked_dossier")) + '</p>' : impact.dossiers.map(researchAffectedDossier).join("")) :
+      '<p>' + escapeHtml(impact.message || uiLabel("research_status_unavailable")) + '</p>';
+    return;
+  }
+  if (event.target.closest("#r-review-refresh")) {
+    refreshResearchEditorialReview();
+    return;
+  }
   var passageBtn = event.target.closest("[data-use-passage]");
   if (passageBtn) {
     var forClaim = passageBtn.dataset.usePassage === "claim";
@@ -1936,6 +2014,7 @@ document.addEventListener("click", async function (event) {
     if (tabBtn.dataset.rtab === "dossiers") refreshResearchDossiers();
     if (tabBtn.dataset.rtab === "claims") refreshResearchClaims();
     if (tabBtn.dataset.rtab === "decisions") refreshResearchDecisions();
+    if (tabBtn.dataset.rtab === "review") refreshResearchEditorialReview();
     return;
   }
 
@@ -2384,8 +2463,19 @@ if (researchRevisionDialog) {
   var revisionReason = document.getElementById("research-revision-reason");
   var revisionSave = document.getElementById("research-revision-save");
   var revisionReload = document.getElementById("research-revision-reload");
+  var revisionMerge = document.getElementById("research-revision-merge");
+  var revisionMergeFields = document.getElementById("research-revision-merge-fields");
+  var revisionMergeApply = document.getElementById("research-revision-merge-apply");
+  var revisionBatchAdd = document.getElementById("research-revision-batch-add");
+  var revisionBatchReview = document.getElementById("research-revision-batch-review");
+  var revisionBatchDialog = document.getElementById("modal-research-revision-batch");
+  var revisionBatchList = document.getElementById("research-revision-batch-list");
+  var revisionBatchStatusHost = document.getElementById("research-revision-batch-status");
+  var revisionBatchCheck = document.getElementById("research-revision-batch-check");
+  var revisionBatchApply = document.getElementById("research-revision-batch-apply");
+  var revisionBatch = {projectId: null, entries: [], preview: null, pending: false, request: 0};
   var revisionState = {kind: "", id: "", session: 0, request: 0, historyRequest: 0,
-    current: null, initial: {}, mode: "edit", historyLoaded: false, pending: false};
+    current: null, initial: {}, dossierPins: {}, mode: "edit", historyLoaded: false, pending: false, merge: null};
 
   var revisionSpecs = {
     dossier: [
@@ -2422,7 +2512,8 @@ if (researchRevisionDialog) {
       {name: "claim_id", label: "research_claim_id"},
       {name: "claim_revision", label: "research_revision_claim_revision", type: "number"},
       {name: "deviation_from_fact", label: "research_deviation_checkbox", type: "checkbox"},
-      {name: "impact_on_plot", label: "research_decision_plot", type: "textarea"}
+      {name: "impact_on_plot", label: "research_decision_plot", type: "textarea"},
+      {name: "dossier_ids", label: "research_revision_dossier_ids", type: "list"}
     ]
   };
 
@@ -2433,6 +2524,8 @@ if (researchRevisionDialog) {
 
   function revisionFieldValue(record, name, pinned) {
     if (name === "evidence_ids") return (record.evidence_refs || []).map(function(ref) { return revisionRefText(ref, pinned); });
+    if (name === "dossier_ids") return (record.dossier_refs || []).map(function(ref) { return revisionRefText(ref, pinned); });
+    if (name === "dossier_revisions") return Object.fromEntries((record.dossier_refs || []).map(function(ref) { return [ref.id, ref.revision]; }));
     if (name === "dossier_id") return revisionRefText(record.dossier_ref, pinned);
     if (name === "dossier_revision") return record.dossier_ref ? record.dossier_ref.revision : "";
     if (name === "claim_id") return revisionRefText(record.claim_ref, pinned);
@@ -2494,7 +2587,10 @@ if (researchRevisionDialog) {
 
   function revisionBuildFields(record) {
     revisionFieldsHost.replaceChildren();
+    revisionState.merge = null;
+    revisionMerge.hidden = true;
     revisionState.initial = {};
+    revisionState.dossierPins = revisionFieldValue(record, "dossier_revisions", false);
     revisionSpecs[revisionState.kind].forEach(function(spec) {
       var raw = revisionFieldValue(record, spec.name, false);
       var value = Array.isArray(raw) ? raw.slice() : raw;
@@ -2552,6 +2648,7 @@ if (researchRevisionDialog) {
     revisionReason.value = "";
     revisionForm.querySelectorAll('input[name="research_revision_change_kind"]').forEach(function(input) { input.checked = false; });
     revisionReload.hidden = true;
+    revisionUpdateQueueControls();
   }
 
   function revisionReadOnly(envelope) {
@@ -2687,7 +2784,64 @@ if (researchRevisionDialog) {
         changes[spec.name] = value === "" && !spec.required ? null : value;
       }
     });
+    ["claim", "dossier"].forEach(function(kind) {
+      if (!Object.prototype.hasOwnProperty.call(changes, kind + "_id") || !changes[kind + "_id"]) return;
+      var pin = document.getElementById("research-revision-field-" + kind + "_revision");
+      if (pin && pin.value) changes[kind + "_revision"] = Number(pin.value);
+    });
+    if (revisionState.kind === "decision") {
+      var ids = revisionFieldsHost.querySelector('[name="dossier_ids"]').value.split(",").map(function(id) { return id.trim(); }).filter(Boolean);
+      var pins = {};
+      ids.forEach(function(id) { if (revisionState.dossierPins[id]) pins[id] = revisionState.dossierPins[id]; });
+      var initialPins = revisionFieldValue(revisionState.current.record, "dossier_revisions", false);
+      if (Object.prototype.hasOwnProperty.call(changes, "dossier_ids") || Object.keys(pins).some(function(id) { return pins[id] !== initialPins[id]; })) {
+        changes.dossier_ids = ids;
+        changes.dossier_revisions = pins;
+      }
+    }
     return changes;
+  }
+
+  function revisionDraft() {
+    var choice = revisionForm.querySelector('input[name="research_revision_change_kind"]:checked');
+    if (!choice || !revisionReason.value.trim()) {
+      revisionStatus(uiLabel("research_revision_reason_required"), true);
+      if (!choice) revisionForm.querySelector('input[name="research_revision_change_kind"]').focus();
+      else revisionReason.focus();
+      return null;
+    }
+    if (!revisionForm.reportValidity()) return null;
+    var changes = revisionChanges();
+    if (!Object.keys(changes).length) {
+      revisionStatus(uiLabel("research_revision_no_changes"), true);
+      return null;
+    }
+    return {kind: revisionState.kind, id: revisionState.id, expected_revision: revisionState.current.record.revision,
+      changes: changes, change_kind: choice.value, reason: revisionReason.value.trim()};
+  }
+
+  function revisionFillDraft(envelope, changes, reason, changeKind) {
+    revisionState.current = envelope;
+    revisionBuildFields(envelope.record);
+    Object.keys(changes).forEach(function(name) {
+      if (name === "dossier_revisions") {
+        Object.assign(revisionState.dossierPins, changes[name]);
+        return;
+      }
+      var field = document.getElementById("research-revision-field-" + name);
+      if (!field) return;
+      var value = changes[name];
+      if (field.type === "checkbox") field.checked = Boolean(value);
+      else field.value = Array.isArray(value) ? value.join(", ") : value === null ? "" : String(value);
+    });
+    revisionReason.value = reason;
+    revisionForm.querySelectorAll('input[name="research_revision_change_kind"]').forEach(function(input) { input.checked = input.value === changeKind; });
+    revisionState.historyRequest++;
+    revisionState.historyLoaded = false;
+    revisionNotices(envelope);
+    revisionShowCitations(envelope.citations);
+    revisionMeta.textContent = uiLabel("research_revision_kind_" + revisionState.kind) + " · " +
+      uiFormat("research_revision_number", {revision: envelope.record.revision}) + " · " + revisionState.id;
   }
 
   function revisionPending(pending) {
@@ -2696,12 +2850,328 @@ if (researchRevisionDialog) {
     revisionFieldsHost.querySelectorAll("input, textarea, select").forEach(function(input) { input.disabled = pending; });
     revisionForm.querySelectorAll('input[name="research_revision_change_kind"]').forEach(function(input) { input.disabled = pending; });
     revisionReason.disabled = pending;
-    revisionSave.disabled = pending || !revisionState.current;
+    revisionSave.disabled = pending || !revisionState.current || Boolean(revisionState.merge);
+    revisionBatchAdd.disabled = pending || !revisionState.current || Boolean(revisionState.merge);
     revisionReload.disabled = pending;
     revisionEditTab.disabled = pending;
     revisionHistoryTab.disabled = pending;
     researchRevisionDialog.querySelectorAll("[data-close-modal]").forEach(function(button) { button.disabled = pending; });
+    revisionMerge.querySelectorAll("input").forEach(function(input) { input.disabled = pending; });
+    revisionMergeApply.disabled = pending || !revisionState.merge ||
+      revisionState.merge.preview.conflicts.some(function(item) { return !revisionState.merge.resolutions[item.field]; });
   }
+
+  function revisionMergeValue(value) {
+    return value === null || value === undefined ? "—" : typeof value === "string" ? value : JSON.stringify(value, null, 2);
+  }
+
+  function revisionMergeLabel(name, kind) {
+    if (name === "dossier_revisions") return uiLabel("research_revision_dossier_pins");
+    var spec = (revisionSpecs[kind || revisionState.kind] || []).find(function(item) { return item.name === name; });
+    return spec ? uiLabel(spec.label) : name;
+  }
+
+  function revisionRenderMerge() {
+    var merge = revisionState.merge;
+    revisionMergeFields.replaceChildren();
+    var changed = Object.keys(merge.preview.changes);
+    if (changed.length) {
+      var heading = document.createElement("p");
+      heading.textContent = uiLabel("research_revision_merge_changes");
+      var list = document.createElement("dl");
+      changed.forEach(function(name) {
+        var term = document.createElement("dt"), value = document.createElement("dd");
+        term.textContent = revisionMergeLabel(name);
+        value.textContent = revisionMergeValue(merge.preview.changes[name]);
+        list.append(term, value);
+      });
+      revisionMergeFields.append(heading, list);
+    }
+    merge.preview.conflicts.forEach(function(conflict) {
+      var group = document.createElement("fieldset"), legend = document.createElement("legend");
+      legend.textContent = revisionMergeLabel(conflict.field);
+      group.appendChild(legend);
+      var base = document.createElement("p");
+      base.textContent = uiLabel("research_revision_merge_base") + ": " + revisionMergeValue(conflict.base);
+      group.appendChild(base);
+      ["current", "mine"].forEach(function(choice) {
+        var label = document.createElement("label"), input = document.createElement("input");
+        var title = document.createElement("span"), value = document.createElement("pre");
+        input.type = "radio";
+        input.name = "research-merge-" + conflict.field;
+        input.value = choice;
+        input.checked = merge.resolutions[conflict.field] === choice;
+        title.textContent = " " + uiLabel("research_revision_merge_" + choice);
+        value.textContent = revisionMergeValue(conflict[choice]);
+        input.addEventListener("change", function() {
+          merge.resolutions[conflict.field] = choice;
+          revisionPending(false);
+        });
+        label.append(input, title, value);
+        group.appendChild(label);
+      });
+      revisionMergeFields.appendChild(group);
+    });
+    revisionMerge.hidden = false;
+    revisionPending(revisionState.pending);
+  }
+
+  async function revisionPrepareMerge(changes, resolutions, applying) {
+    var session = revisionState.session;
+    var baseRevision = revisionState.merge ? revisionState.merge.baseRevision : revisionState.current.record.revision;
+    var response = await fetch(API + "/research-record-prepare", {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({kind: revisionState.kind, id: revisionState.id,
+        base_revision: baseRevision, changes: changes, resolutions: resolutions || {}})
+    });
+    var preview = await response.json();
+    if (session !== revisionState.session || !researchRevisionDialog.open) return;
+    if (!response.ok || !preview.ok || !preview.current || preview.current.project_id !== revisionState.current.project_id) {
+      revisionStatus(uiFormat("research_revision_load_failed", {reason: preview.message || uiLabel("wizard_unknown_error")}), true);
+      return;
+    }
+    revisionState.merge = {baseRevision: baseRevision, draft: changes, resolutions: resolutions || {}, preview: preview};
+    if (!applying || !preview.ready) {
+      revisionRenderMerge();
+      revisionMerge.scrollIntoView({block: "nearest"});
+      return;
+    }
+    var reason = revisionReason.value;
+    var choice = revisionForm.querySelector('input[name="research_revision_change_kind"]:checked');
+    var changeKind = choice ? choice.value : "";
+    revisionFillDraft(preview.current, preview.changes, reason, changeKind);
+    revisionStatus(uiLabel(preview.has_changes ? "research_revision_merge_applied" : "research_revision_merge_no_changes"), false);
+  }
+
+  revisionMergeApply.addEventListener("click", async function() {
+    if (!revisionState.merge || revisionState.pending) return;
+    revisionPending(true);
+    try {
+      await revisionPrepareMerge(revisionState.merge.draft, revisionState.merge.resolutions, true);
+    } catch (error) {
+      revisionStatus(uiFormat("research_revision_load_failed", {reason: String(error)}), true);
+    } finally { revisionPending(false); }
+  });
+  revisionFieldsHost.addEventListener("input", function() {
+    revisionState.merge = null;
+    revisionMerge.hidden = true;
+    revisionPending(false);
+  });
+
+  function revisionUpdateQueueControls() {
+    if (revisionBatchReview) {
+      revisionBatchReview.hidden = !revisionBatch.entries.length;
+      revisionBatchReview.textContent = uiFormat("research_revision_batch_review", {count: revisionBatch.entries.length});
+    }
+    var queued = revisionBatch.entries.some(function(entry) {
+      return entry.operation.kind === revisionState.kind && entry.operation.id === revisionState.id;
+    });
+    revisionBatchAdd.textContent = uiLabel(queued ? "research_revision_batch_replace" : "research_revision_batch_add");
+  }
+
+  function revisionBatchStatus(message, error) {
+    revisionBatchStatusHost.textContent = message || "";
+    revisionBatchStatusHost.hidden = !message;
+    revisionBatchStatusHost.className = "ctl-status" + (error ? " err" : "");
+  }
+
+  function revisionBatchPending(pending) {
+    revisionBatch.pending = pending;
+    revisionBatchDialog.setAttribute("aria-busy", String(pending));
+    revisionBatchDialog.querySelectorAll("button").forEach(function(button) { button.disabled = pending; });
+    revisionBatchCheck.disabled = pending || !revisionBatch.entries.length;
+    revisionBatchApply.disabled = pending || !revisionBatch.preview;
+  }
+
+  function revisionBatchRender() {
+    revisionBatchList.replaceChildren();
+    revisionBatch.entries.forEach(function(entry, index) {
+      var operation = entry.operation, record = entry.envelope.record;
+      var item = document.createElement("li"), heading = document.createElement("h4"), meta = document.createElement("p");
+      heading.textContent = record.title || uiLabel("research_revision_kind_" + operation.kind);
+      meta.className = "ctl-note";
+      meta.textContent = uiLabel("research_revision_kind_" + operation.kind) + " · " +
+        uiFormat("research_revision_number", {revision: operation.expected_revision}) + " · " + operation.id;
+      var reason = document.createElement("p"), fields = document.createElement("dl");
+      reason.textContent = uiLabel("research_revision_" + operation.change_kind) + ": " + operation.reason;
+      Object.keys(operation.changes).forEach(function(name) {
+        var term = document.createElement("dt"), value = document.createElement("dd");
+        term.textContent = revisionMergeLabel(name, operation.kind);
+        var before = document.createElement("p"), draft = document.createElement("pre");
+        before.textContent = uiLabel("research_revision_merge_base") + ": " + revisionMergeValue(revisionFieldValue(record, name, true));
+        draft.textContent = uiLabel("research_revision_merge_mine") + ": " + revisionMergeValue(operation.changes[name]);
+        value.append(before, draft);
+        fields.append(term, value);
+      });
+      var actions = document.createElement("div");
+      actions.className = "row";
+      ["edit", "remove"].forEach(function(action) {
+        var button = document.createElement("button");
+        button.type = "button";
+        button.className = "ctl";
+        button.dataset["batch" + (action === "edit" ? "Edit" : "Remove")] = String(index);
+        button.textContent = uiLabel("research_revision_batch_" + action);
+        actions.appendChild(button);
+      });
+      item.append(heading, meta, reason, fields, actions);
+      revisionBatchList.appendChild(item);
+    });
+    revisionUpdateQueueControls();
+    revisionBatchPending(revisionBatch.pending);
+  }
+
+  async function revisionBatchPrepare() {
+    if (revisionBatch.pending || !revisionBatch.entries.length) return;
+    var request = ++revisionBatch.request;
+    revisionBatch.preview = null;
+    revisionBatchPending(true);
+    revisionBatchStatus(uiLabel("research_revision_batch_checking"), false);
+    var preview = await researchApiPost("research-revision-batch-prepare", {
+      operations: revisionBatch.entries.map(function(entry) { return entry.operation; })
+    });
+    if (request !== revisionBatch.request || !revisionBatchDialog.open) return;
+    if (!preview.ok || !preview.ready || preview.project_id !== revisionBatch.projectId) {
+      revisionBatchStatus(uiFormat("research_revision_batch_failed", {
+        reason: preview.message || uiLabel(preview.project_id !== revisionBatch.projectId ? "research_revision_batch_project_changed" : "wizard_unknown_error")
+      }), true);
+    } else {
+      revisionBatch.preview = preview;
+      revisionBatchStatus(uiFormat("research_revision_batch_ready", {count: preview.operations.length}), false);
+    }
+    revisionBatchPending(false);
+  }
+
+  revisionBatchAdd.addEventListener("click", async function() {
+    if (!revisionState.current || revisionState.pending || revisionState.merge) return;
+    if (revisionBatch.entries.length && revisionState.current.project_id !== revisionBatch.projectId) {
+      revisionStatus(uiLabel("research_revision_batch_project_changed"), true);
+      return;
+    }
+    var operation = revisionDraft();
+    if (!operation) return;
+    var index = revisionBatch.entries.findIndex(function(entry) { return entry.operation.kind === operation.kind && entry.operation.id === operation.id; });
+    if (index < 0 && revisionBatch.entries.length >= 100) {
+      revisionStatus(uiLabel("research_revision_batch_limit"), true);
+      return;
+    }
+    var session = revisionState.session;
+    revisionPending(true);
+    var preview = await researchApiPost("research-record-prepare", {kind: operation.kind, id: operation.id,
+      base_revision: operation.expected_revision, changes: operation.changes});
+    if (session !== revisionState.session || !researchRevisionDialog.open) return;
+    if (!preview.ok || !preview.current || preview.current.project_id !== revisionState.current.project_id) {
+      revisionStatus(uiFormat("research_revision_load_failed", {reason: preview.message || uiLabel("wizard_unknown_error")}), true);
+    } else if (!preview.ready || preview.current.record.revision !== operation.expected_revision) {
+      revisionState.merge = {baseRevision: operation.expected_revision, draft: operation.changes, resolutions: {}, preview: preview};
+      revisionRenderMerge();
+      revisionStatus(uiLabel("research_revision_batch_reconcile"), true);
+      revisionMerge.scrollIntoView({block: "nearest"});
+    } else if (!preview.has_changes) {
+      revisionStatus(uiLabel("research_revision_merge_no_changes"), false);
+    } else {
+      operation.changes = preview.changes;
+      revisionBatch.projectId = preview.current.project_id;
+      var entry = {operation: operation, envelope: preview.current};
+      if (index < 0) revisionBatch.entries.push(entry);
+      else revisionBatch.entries[index] = entry;
+      revisionBatch.preview = null;
+      revisionBatch.request++;
+      revisionFillDraft(preview.current, preview.changes, operation.reason, operation.change_kind);
+      revisionUpdateQueueControls();
+      revisionStatus(uiLabel(index < 0 ? "research_revision_batch_added" : "research_revision_batch_replaced"), false);
+    }
+    revisionPending(false);
+  });
+
+  if (revisionBatchReview) revisionBatchReview.addEventListener("click", function() {
+    revisionBatchRender();
+    revisionBatchDialog.showModal();
+    revisionBatchPrepare();
+  });
+  revisionBatchCheck.addEventListener("click", revisionBatchPrepare);
+  revisionBatchDialog.addEventListener("click", async function(event) {
+    if (revisionBatch.pending) return;
+    var edit = event.target.closest("[data-batch-edit]"), remove = event.target.closest("[data-batch-remove]");
+    if (remove) {
+      revisionBatch.entries.splice(Number(remove.dataset.batchRemove), 1);
+      revisionBatch.preview = null;
+      revisionBatch.request++;
+      if (!revisionBatch.entries.length) revisionBatch.projectId = null;
+      revisionBatchRender();
+      revisionBatchStatus(revisionBatch.entries.length ? "" : uiLabel("research_revision_batch_empty"), false);
+    } else if (edit) {
+      var entry = revisionBatch.entries[Number(edit.dataset.batchEdit)];
+      revisionBatchDialog.close();
+      await revisionOpen(entry.operation.kind, entry.operation.id, "edit");
+      if (!researchRevisionDialog.open || !revisionState.current) return;
+      if (revisionState.current.project_id !== revisionBatch.projectId) {
+        revisionStatus(uiLabel("research_revision_batch_project_changed"), true);
+        return;
+      }
+      var latestRevision = revisionState.current.record.revision;
+      revisionFillDraft(entry.envelope, entry.operation.changes, entry.operation.reason, entry.operation.change_kind);
+      revisionStatus(uiLabel("research_revision_batch_restored"), false);
+      if (latestRevision !== entry.operation.expected_revision) {
+        revisionPending(true);
+        try { await revisionPrepareMerge(entry.operation.changes, {}, false); }
+        catch (error) { revisionStatus(uiFormat("research_revision_load_failed", {reason: String(error)}), true); }
+        finally { revisionPending(false); }
+      }
+    }
+  });
+  document.getElementById("research-revision-batch-clear").addEventListener("click", function() {
+    if (revisionBatch.pending) return;
+    revisionBatch.entries = [];
+    revisionBatch.projectId = null;
+    revisionBatch.preview = null;
+    revisionBatch.request++;
+    revisionBatchRender();
+    revisionBatchStatus(uiLabel("research_revision_batch_empty"), false);
+  });
+  revisionBatchDialog.addEventListener("close", function() { revisionBatch.request++; });
+  revisionBatchDialog.addEventListener("cancel", function(event) { if (revisionBatch.pending) event.preventDefault(); });
+  revisionBatchDialog.addEventListener("click", function(event) {
+    if (revisionBatch.pending && (event.target === revisionBatchDialog || event.target.closest("[data-close-modal]"))) {
+      event.preventDefault();
+      event.stopPropagation();
+    }
+  }, true);
+
+  function revisionRefreshLists() {
+    refreshResearchDossiers();
+    refreshResearchClaims();
+    refreshResearchDecisions();
+    if (document.querySelector('[data-rtab="review"].active')) refreshResearchEditorialReview();
+  }
+
+  revisionBatchApply.addEventListener("click", async function() {
+    if (revisionBatch.pending || !revisionBatch.preview) return;
+    var preview = revisionBatch.preview;
+    revisionBatch.preview = null;
+    revisionBatchPending(true);
+    try {
+      var response = await fetch(API + "/research-revision-batch-apply", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({operations: preview.operations, expected_snapshot: preview.snapshot})
+      });
+      var result = await response.json();
+      if (!response.ok || !result.ok || result.project_id !== revisionBatch.projectId) {
+        revisionBatchStatus(uiFormat(response.status === 400 || response.status === 409 ? "research_revision_batch_failed" : "research_revision_batch_uncertain", {
+          reason: result.message || uiLabel("wizard_unknown_error")
+        }), true);
+      } else {
+        revisionBatch.entries = [];
+        revisionBatch.projectId = null;
+        revisionBatchPending(false);
+        revisionBatchDialog.close();
+        revisionUpdateQueueControls();
+        researchStatus(uiFormat("research_revision_batch_saved", {count: result.records.length}), true);
+        revisionRefreshLists();
+      }
+    } catch (error) {
+      revisionBatchStatus(uiFormat("research_revision_batch_uncertain", {reason: String(error)}), true);
+    } finally { revisionBatchPending(false); }
+  });
 
   async function revisionOpen(kind, id, mode) {
     if (!revisionSpecs[kind] || !id) return;
@@ -2714,6 +3184,8 @@ if (researchRevisionDialog) {
     revisionState.current = null;
     revisionState.historyLoaded = false;
     revisionState.initial = {};
+    revisionState.merge = null;
+    revisionMerge.hidden = true;
     revisionPending(false);
     revisionFieldsHost.replaceChildren();
     revisionHistoryList.replaceChildren();
@@ -2769,20 +3241,10 @@ if (researchRevisionDialog) {
 
   revisionForm.addEventListener("submit", async function(event) {
     event.preventDefault();
-    if (!revisionState.current || revisionState.pending) return;
-    var choice = revisionForm.querySelector('input[name="research_revision_change_kind"]:checked');
-    if (!choice || !revisionReason.value.trim()) {
-      revisionStatus(uiLabel("research_revision_reason_required"), true);
-      if (!choice) revisionForm.querySelector('input[name="research_revision_change_kind"]').focus();
-      else revisionReason.focus();
-      return;
-    }
-    if (!revisionForm.reportValidity()) return;
-    var changes = revisionChanges();
-    if (!Object.keys(changes).length) {
-      revisionStatus(uiLabel("research_revision_no_changes"), true);
-      return;
-    }
+    if (!revisionState.current || revisionState.pending || revisionState.merge) return;
+    var operation = revisionDraft();
+    if (!operation) return;
+    var changes = operation.changes;
     revisionPending(true);
     var session = revisionState.session;
     var t0 = performance.now();
@@ -2790,10 +3252,7 @@ if (researchRevisionDialog) {
     try {
       var response = await fetch(reviseUrl, {
         method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({kind: revisionState.kind, id: revisionState.id, changes: changes,
-          expected_snapshot: revisionState.current.snapshot,
-          expected_revision: revisionState.current.record.revision,
-          change_kind: choice.value, reason: revisionReason.value.trim()})
+        body: JSON.stringify(Object.assign({}, operation, {expected_snapshot: revisionState.current.snapshot}))
       });
       var data = await response.json();
       LixityLog.api("POST", reviseUrl, performance.now() - t0, response.status, data);
@@ -2801,6 +3260,7 @@ if (researchRevisionDialog) {
       if (response.status === 409) {
         revisionStatus(uiLabel("research_revision_conflict"), true);
         revisionReload.hidden = false;
+        await revisionPrepareMerge(changes, {}, false);
       } else if (!response.ok || !data.ok) {
         LixityLog.error("research-record-revise failed:", data);
         revisionStatus(uiFormat("research_revision_save_failed", {reason: data.message || uiLabel("wizard_unknown_error")}), true);
@@ -2808,9 +3268,7 @@ if (researchRevisionDialog) {
         revisionPending(false);
         researchRevisionDialog.close();
         researchStatus(uiLabel("research_revision_saved"), true);
-        refreshResearchDossiers();
-        refreshResearchClaims();
-        refreshResearchDecisions();
+        revisionRefreshLists();
       }
     } catch (error) {
       LixityLog.error("research-record-revise error:", error);

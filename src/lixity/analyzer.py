@@ -29,7 +29,7 @@ from .diversity import (
 )
 from .language import compile_pattern, resolve_language
 from .language_data import READABILITY
-from .markdown_parser import split_chapters
+from .markdown_parser import chapter_heading_spans, split_chapters
 from .models import (
     ChapterMetrics,
     CorpusConfig,
@@ -102,7 +102,7 @@ class CorpusAnalyzer:
         total = sum(counts.values())
         if not total:
             return 0.0
-        return -sum((c / total) * math.log2(c / total) for c in counts.values())
+        return math.fsum(-(c / total) * math.log2(c / total) for c in counts.values())
 
     def _starter_stats(self, sentences: list[str]) -> tuple[float, float, float]:
         """(start entropy in bits, first-person-start rate, entropy standard error).
@@ -118,7 +118,7 @@ class CorpusAnalyzer:
                 continue
             # Elision-aware match (fr: "J'aime" -> "je"/"j", en: "I'm" -> "i")
             first = tokens[0].lower()
-            stem = first.split("'")[0].split("'")[0]
+            stem = first.split("'", 1)[0]
             starters[first] += 1
             if first in self._starters or stem in self._starters:
                 first_person += 1
@@ -127,7 +127,9 @@ class CorpusAnalyzer:
         entropy = self._entropy(starters)
         if not total:
             return entropy, rate, 0.0
-        second = sum((c / total) * math.log2(c / total) ** 2 for c in starters.values())
+        second = math.fsum(
+            (c / total) * math.log2(c / total) ** 2 for c in starters.values()
+        )
         variance = (second - entropy**2) / total
         return entropy, rate, math.sqrt(max(0.0, variance))
 
@@ -269,6 +271,14 @@ class CorpusAnalyzer:
             "ellipses": len(re.findall(r"(?:…|\.{3})", text)),
         }
 
+    def measure_unit(self, text: str) -> ChapterMetrics | None:
+        """Measure one prose unit using the chapter feature engine once.
+
+        This omits corpus-level readability, cross-chapter divergence and title
+        parsing. It is useful for scenes already segmented by the shared parser.
+        """
+        return self._chapter_metrics(1, "", text, self.long_word_min())[0]
+
     def _chapter_metrics(
         self, num: int, title: str, body: str, lw_min: int
     ) -> tuple[ChapterMetrics | None, list[str]]:
@@ -393,7 +403,16 @@ class CorpusAnalyzer:
             main_text = full_text
         cleaned_full = _RE_HTML_COMMENT.sub("", full_text)
         cleaned_main = _RE_HTML_COMMENT.sub("", main_text)
-        prose_main = _RE_HEADING_LINE.sub("", cleaned_main)
+        # Configured chapter headings are metadata, just like Markdown headings.
+        # Retain line separators so removing one never joins adjacent prose.
+        prose_parts: list[str] = []
+        cursor = 0
+        for start, end, _line, _title in chapter_heading_spans(cleaned_main, self.config):
+            prose_parts.append(cleaned_main[cursor:start])
+            prose_parts.append("\n" if cleaned_main[end - 1:end] == "\n" else "")
+            cursor = end
+        prose_parts.append(cleaned_main[cursor:])
+        prose_main = _RE_HEADING_LINE.sub("", "".join(prose_parts))
 
         raw_words = len(cleaned_full.split())
         clean_words = len(prose_main.split())

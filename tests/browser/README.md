@@ -10,6 +10,7 @@ node tests/browser/layout.cjs
 node tests/browser/research.cjs
 node tests/browser/list-filters.cjs
 node tests/browser/project-controls.cjs
+node tests/browser/scenes.cjs
 node tests/browser/docs.cjs
 node tests/browser/visual-consistency.cjs
 ```
@@ -19,6 +20,11 @@ its module directory. `PYTHON_BIN` optionally overrides `.venv/bin/python`.
 The test generates a synthetic manuscript, checks canvas interaction, tooltip
 escaping, idle rendering and mobile layout, and prints its temporary screenshot
 directory. It does not read any private manuscript or contact a server.
+
+CI runs every suite above in one Chromium job
+on pull requests, pushes to `main` and manual dispatch. Newer pushes cancel
+superseded runs. Browser binaries are downloaded for each run; screenshots stay
+temporary and are not uploaded as persistent CI artifacts.
 
 The research test starts its own disposable loopback server and archive. It checks
 persistent New/Open/Show guidance actions after dismissal and in a loaded project,
@@ -49,6 +55,11 @@ claims, evidence links and decisions; cancellation; concurrent and failed saves
 that preserve drafts; newer-source notices with original quotations retained;
 and history dialogs across all seven locales at 320 pixels.
 
+Grouped revisions cover explicit draft selection, replacement and removal;
+cancelled review; stale previews and guided conflict resolution; failed saves;
+and one atomic save with preserved reference pins. Drafts remain local to the
+browser tab until submitted.
+
 It also checks localized OCR status/fallback labels and imports a source with an
 origin URL.
 
@@ -75,6 +86,11 @@ synthetic dashboard in light/dark mode at 1440 and 320 pixels. It checks primary
 action contrast and target size, keyboard focus, reduced motion, increased text
 spacing and theme switching. Screenshots stay under `/tmp/lixity-visual-consistency-*`.
 These targeted checks are not a full WCAG conformance audit.
+
+The scenes suite renders seven locales at desktop and mobile widths. It checks
+actual per-scene observations, inert project labels, keyboard-operated
+disclosures, readable scrolling tables and unavailable values. Screenshots stay
+under `/tmp/lixity-scenes-ui-*`.
 
 The settings test intercepts all requests to a synthetic host. It verifies
 locale-safe values, validation before submission, reset without saving, FDR

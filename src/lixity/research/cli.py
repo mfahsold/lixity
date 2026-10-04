@@ -1,4 +1,4 @@
-"""Lazy research command dispatch; machine-readable stdout, diagnostics on stderr."""
+"""Lazy research commands; explicit machine output and errors on stderr."""
 
 import argparse
 import json
@@ -10,12 +10,19 @@ from typing import Any, Literal
 from pydantic import ValidationError
 
 
+def _non_negative(value: str) -> int:
+    number = int(value)
+    if number < 0:
+        raise argparse.ArgumentTypeError("Offset must be zero or greater")
+    return number
+
+
 def configure(parser: argparse.ArgumentParser) -> None:
     commands = parser.add_subparsers(dest="research_command", required=True)
     commands.add_parser("schema", help="Export the experimental entity JSON schema")
     for name, help_text in (
         ("init", "Create an explicit local research project"),
-        ("ingest", "Archive local UTF-8 text or PDF; scans require a configured OCR worker"),
+        ("ingest", "Archive local UTF-8 text or PDF; scans require configured local OCR"),
         ("reindex", "Rebuild the disposable SQLite/FTS5 search index"),
         ("search", "Search the latest source versions with literal words"),
         ("cite", "Resolve an immutable source passage"),
@@ -28,6 +35,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("claim", "Create, list or revise research claims and hypotheses"),
         ("link-evidence", "Create, inspect or revise a passage-to-claim evidence link"),
         ("decision", "Create, list or revise author decisions and fact deviations"),
+        ("decision-impact", "Inspect dossiers explicitly linked to an author decision; read-only"),
+        ("review", "List structural editorial review candidates; read-only, not semantic judgment"),
+        ("revise-batch", "Preview related authored-record revisions, then apply them together explicitly"),
         ("withdraw", "Withdraw an archived source or version, marking citations and excluding from search"),
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
         ("export", "Export research store to verified archive (.tar.gz)"),
@@ -41,6 +51,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("matrix", "Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)"),
     ):
         command = commands.add_parser(name, help=help_text)
+        if name in ("sources", "audit"):
+            command.add_argument("--format", choices=("text", "md", "json"), default="json",
+                                 help="Output format (default: complete JSON)")
+            command.add_argument("--pager", action="store_true",
+                                 help="Page text/Markdown only when input and output are interactive terminals")
+        elif name in ("decision-impact", "review"):
+            command.add_argument("--format", choices=("text", "md", "json"), default="text",
+                                 help="Output format (default: bounded text summary; JSON is complete)")
         if name not in ("restore", "ocr-status", "zotero-restore"):
             command.add_argument("--project", required=True, help="Explicit project directory")
         elif name == "ocr-status":
@@ -80,6 +98,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
         if name in ("dossier", "claim", "link-evidence", "decision"):
             command.add_argument("--update", action="store_true", help="Revise the named record")
+            command.add_argument("--prepare", action="store_true", help="Preview reconciliation with the current record; never writes")
+            command.add_argument("--base-revision", type=int, help="Original revision of the draft being prepared")
+            command.add_argument("--resolve", action="append", metavar="FIELD=current|mine",
+                                 help="Explicit field choice for a --prepare conflict; repeat for each field")
             command.add_argument("--history", action="store_true", help="List immutable revisions")
             command.add_argument("--inspect", action="store_true", help="Inspect the latest record")
             command.add_argument("--revision", type=int, help="Inspect one historical revision")
@@ -126,6 +148,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--output", help="Optional output file destination")
         elif name == "sources":
             command.add_argument("--source-id", help="Optional source UUID to inspect passages")
+            command.add_argument("--limit", type=int, choices=range(1, 101), metavar="1..100",
+                                 help="Sources per human-output page (default: 50; JSON remains complete)")
+            command.add_argument("--offset", type=_non_negative, default=0,
+                                 help="Zero-based human-output page offset (default: 0)")
         elif name == "dossier":
             command.add_argument("--dossier-id", help="Dossier UUID to inspect")
             command.add_argument("--title", help="Title for new dossier")
@@ -163,9 +189,17 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--claim-revision", type=int, help="Explicit claim revision to pin on update")
             command.add_argument("--dossier-id", help="Associated dossier UUID")
             command.add_argument("--dossiers", help="Comma-separated dossier UUIDs impacted by this decision")
+            command.add_argument("--dossier-revisions", help="JSON map of selected dossier UUIDs to explicit revisions on update or preview")
             command.add_argument("--deviation-from-fact", action=argparse.BooleanOptionalAction,
                                  default=None, help="Set or clear intentional deviation from historical evidence")
             command.add_argument("--impact-on-plot", help="Description of plot or worldbuilding impact")
+        elif name == "decision-impact":
+            command.add_argument("--decision-id", required=True, help="Decision UUID")
+        elif name == "revise-batch":
+            command.add_argument("--file", required=True, help="UTF-8 JSON operations list or saved batch preview")
+            command.add_argument("--apply", action="store_true", help="Apply all reviewed revisions in one commit")
+            command.add_argument("--expected-snapshot", help="Snapshot digest from the preview, required with --apply")
+            command.add_argument("--actor", default="local-author")
         elif name in ("withdraw", "purge"):
             command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
@@ -214,6 +248,8 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
             dossier_ids.extend([d.strip() for d in args.dossiers.split(",") if d.strip()])
         if dossier_ids:
             changes["dossier_ids"] = list(dict.fromkeys(dossier_ids))
+        if getattr(args, "dossier_revisions", None) is not None:
+            changes["dossier_revisions"] = json.loads(args.dossier_revisions)
     if kind == "dossier" and args.file is not None:
         body_path = Path(args.file)
         new_content = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
@@ -221,13 +257,17 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
             from . import api
             record_id = getattr(args, "dossier_id", None)
             if record_id:
-                current_dossier = api.get_dossier(args.project, record_id)
-                changes["body"] = api.update_section(current_dossier["body"], args.section, new_content)
+                if getattr(args, "prepare", False):
+                    base = api.get_record(args.project, "dossier", record_id, revision=args.base_revision)
+                    original_body = base["record"]["body"]
+                else:
+                    original_body = api.get_dossier(args.project, record_id)["body"]
+                changes["body"] = api.update_section(original_body, args.section, new_content)
             else:
                 changes["body"] = new_content
         else:
             changes["body"] = new_content
-    elif kind == "dossier" and getattr(args, "section", None) and getattr(args, "update", False):
+    elif kind == "dossier" and getattr(args, "section", None) and (getattr(args, "update", False) or getattr(args, "prepare", False)):
         from .repository import ResearchError
         raise ResearchError("Updating a dossier section requires --file with new section content")
     return changes
@@ -244,18 +284,35 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         "dossier": "dossier_id", "claim": "claim_id",
         "link-evidence": "evidence_link_id", "decision": "decision_id",
     }[command])
+    prepare = getattr(args, "prepare", False)
+    if not prepare and (getattr(args, "base_revision", None) is not None or getattr(args, "resolve", None)):
+        raise ResearchError("--base-revision and --resolve require --prepare")
     association_revision = getattr(args, "dossier_revision", None) if command == "claim" else getattr(args, "claim_revision", None)
-    if association_revision is not None and not args.update:
-        raise ResearchError("An explicit associated revision requires --update")
-    requested = args.update or args.history or args.inspect or args.revision is not None
+    if (association_revision is not None or getattr(args, "dossier_revisions", None) is not None) and not (args.update or prepare):
+        raise ResearchError("An explicit associated revision requires --update or --prepare")
+    requested = args.update or prepare or args.history or args.inspect or args.revision is not None
     if command in ("link-evidence", "decision") and record_id:
         requested = True
     if not requested:
         return None
     if not record_id:
         raise ResearchError(f"{kind} ID is required for revision, history or inspection")
-    if sum(bool(mode) for mode in (args.update, args.history, args.inspect, args.revision is not None)) > 1:
-        raise ResearchError("Choose one of --update, --history, --inspect or --revision")
+    if sum(bool(mode) for mode in (args.update, prepare, args.history, args.inspect, args.revision is not None)) > 1:
+        raise ResearchError("Choose one of --update, --prepare, --history, --inspect or --revision")
+    if prepare:
+        if args.base_revision is None or args.base_revision < 1:
+            raise ResearchError("--prepare requires a positive --base-revision")
+        resolutions: dict[str, Literal["current", "mine"]] = {}
+        for choice in args.resolve or []:
+            field, separator, selection = choice.partition("=")
+            if not field or not separator or selection not in ("current", "mine") or field in resolutions:
+                raise ResearchError("Each --resolve must name one unique FIELD=current|mine choice")
+            resolutions[field] = "current" if selection == "current" else "mine"
+        changes = _revision_changes(args)
+        if not changes:
+            raise ResearchError("At least one changed field is required")
+        return api.prepare_record_revision(args.project, kind, record_id,
+                                           base_revision=args.base_revision, changes=changes, resolutions=resolutions)
     if args.update:
         if not args.expected_snapshot or args.expected_revision is None or not args.change_kind or not args.reason:
             raise ResearchError("Updates require --expected-snapshot, --expected-revision, --change-kind and --reason")
@@ -285,6 +342,18 @@ def run(args: argparse.Namespace) -> int:
 
     try:
         command = args.research_command
+        if command == "revise-batch" and bool(args.apply) != (args.expected_snapshot is not None):
+            print("[error] --apply and --expected-snapshot must be supplied together; omit both for a read-only preview", file=sys.stderr)
+            return 2
+        if command in ("sources", "audit"):
+            human = getattr(args, "format", "json") != "json"
+            paginated = getattr(args, "limit", None) is not None or getattr(args, "offset", 0) != 0
+            if not human and (getattr(args, "pager", False) or paginated):
+                print("[error] --pager, --limit and --offset require --format text or md; JSON output remains complete", file=sys.stderr)
+                return 2
+            if paginated and getattr(args, "source_id", None):
+                print("[error] --limit and --offset apply to source lists, not --source-id details", file=sys.stderr)
+                return 2
         result: dict[str, Any]
         if command == "schema":
             result = api.schema()
@@ -470,6 +539,21 @@ def run(args: argparse.Namespace) -> int:
                 result = api.get_source(args.project, args.source_id)
             else:
                 result = api.list_sources(args.project)
+        elif command == "decision-impact":
+            result = api.decision_impact(args.project, args.decision_id)
+        elif command == "review":
+            result = api.editorial_review(args.project)
+        elif command == "revise-batch":
+            operations = json.loads(Path(args.file).read_text(encoding="utf-8"))
+            if isinstance(operations, dict) and operations.get("schema_version") == "research-revision-batch-local/1":
+                operations = operations.get("operations")
+            if not isinstance(operations, list) or not all(isinstance(item, dict) for item in operations):
+                raise ResearchError("Batch file must contain a JSON operations list or a research-revision-batch-local/1 preview")
+            if args.apply:
+                result = api.apply_record_revisions(args.project, operations,
+                    expected_snapshot=args.expected_snapshot, actor=args.actor)
+            else:
+                result = api.prepare_record_revisions(args.project, operations, actor=args.actor)
         elif command in ("dossier", "claim", "link-evidence", "decision") and (
             revision_result := _revision_action(args)
         ) is not None:
@@ -582,6 +666,21 @@ def run(args: argparse.Namespace) -> int:
                 result = matrix
         else:
             result = api.audit(args.project)
+        if command in ("decision-impact", "review") and args.format != "json":
+            from .presentation import editorial_report, print_report
+
+            print_report(editorial_report(result, markdown=args.format == "md"), pager=False)
+            return 0
+        if command in ("sources", "audit") and getattr(args, "format", "json") != "json":
+            from .presentation import audit_report, print_report, source_report
+
+            markdown = args.format == "md"
+            if command == "sources":
+                report = source_report(result, markdown=markdown, limit=args.limit or 50, offset=args.offset)
+            else:
+                report = audit_report(result, markdown=markdown)
+            print_report(report, pager=args.pager)
+            return 1 if result.get("ok") is False else 0
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 1 if result.get("ok") is False else 0
     except ResearchError as error:

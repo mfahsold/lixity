@@ -149,6 +149,13 @@ def main() -> int:
         {"key": "markers", "state": "ok", "detail": "no open markers" if is_en else "keine offenen"},
     ]
     char_names = ["Elizabeth", "Darcy", "Jane", "Bingley"] if is_en else ["Effi", "Innstetten", "Crampas", "Briest"]
+    from lixity.scenes import scene_report
+
+    scenes = scene_report(text, config)
+    scenes = scene_report(text, config, {
+        "assignments": {item["id"]: "Sample register" for item in scenes["items"]},
+        "groups": {"Sample register": {}},
+    })
     dashboard = render_dashboard(
         chapters,
         paragraphs,
@@ -158,6 +165,7 @@ def main() -> int:
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, char_names, config),
         pacing=pacing_report(text, config).to_dict(),
+        scenes=scenes,
         motifs=motif_report(text, None, config).to_dict(),
         showing=showing_report(text, config, metrics=metrics).to_dict(),
         title=title,
@@ -171,7 +179,7 @@ def main() -> int:
     )
     dashboard_path = _write_html("dashboard.html", dashboard)
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
-    for view in ("project-settings", "project-import", "nda"):
+    for view in ("project-settings", "project-import", "nda", "scenes"):
         for suffix, width in (("", 1480), ("-mobile", 390)):
             _queue_capture(
                 dashboard_path,
@@ -450,6 +458,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             **research_api.list_evidence_links(research_proj, claim_id=claim_res["claim_id"]),
         },
         "/api/research/decisions": {"ok": True, **decisions_data},
+        "/api/research/review": {"ok": True, **research_api.editorial_review(research_proj)},
         "/api/research-search": {"ok": True, **workspace_search},
     }
     for source in sources_data["sources"]:
@@ -460,6 +469,23 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         research_fixture["/api/research/dossiers?id=" + quote(dossier["id"], safe="")] = {
             "ok": True, **research_api.get_dossier(research_proj, dossier["id"]),
         }
+    operations = []
+    revision_previews = {}
+    for dossier in dossiers_data["dossiers"]:
+        record = research_api.get_record(research_proj, "dossier", dossier["id"])
+        research_fixture["/api/research/record?kind=dossier&id=" + quote(dossier["id"], safe="")] = {"ok": True, **record}
+        operation = {
+            "kind": "dossier", "id": dossier["id"], "expected_revision": record["record"]["revision"],
+            "changes": {"title": record["record"]["title"] + " — reviewed notes"},
+            "change_kind": "correction", "reason": "Align these notes with the harbour scene.",
+        }
+        operations.append(operation)
+        revision_previews[dossier["id"]] = {"ok": True, **research_api.prepare_record_revision(
+            research_proj, "dossier", dossier["id"], base_revision=operation["expected_revision"],
+            changes=operation["changes"],
+        )}
+    research_fixture["/api/research-record-prepare"] = revision_previews
+    research_fixture["/api/research-revision-batch-prepare"] = {"ok": True, **research_api.prepare_record_revisions(research_proj, operations)}
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",
@@ -469,7 +495,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             current_language=resolved.key, enabled_actions=native_actions,
         ),
     )
-    for view in ("sources", "dossiers", "search", "claims", "decisions"):
+    for view in ("sources", "dossiers", "search", "claims", "decisions", "review", "change-set"):
         for suffix, width, height in (("", 1480, 1000), ("-mobile", 390, 1000)):
             _queue_capture(
                 research_workspace,

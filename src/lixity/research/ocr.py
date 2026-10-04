@@ -10,6 +10,7 @@ character-span passages; it does not persist audited page/box provenance.
 See docs/research/OCR_INTEGRATION.md for upstream compatibility and limitations.
 """
 
+import base64
 import hashlib
 import json
 import math
@@ -21,7 +22,7 @@ import tempfile
 import time
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Any
+from typing import Any, Literal
 
 from .repository import ResearchError
 
@@ -54,11 +55,12 @@ class OCRExtractionResult:
     blocks: list[OCRBlock]
     spans: list[tuple[int, int]]  # (start, end) offsets into full_text
     warnings: list[str] = field(default_factory=list)
-    model_snapshot: str = MODEL_SNAPSHOT
-    recipe_revision: str = INTEGRATION_RECIPE_REVISION
+    model_snapshot: str | None = MODEL_SNAPSHOT
+    recipe_revision: str | None = INTEGRATION_RECIPE_REVISION
+    implementation_id: Literal["baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"] = "baidu-unlimited-ocr/1"
 
 
-def render_pdf_pages(pdf_path: Path) -> list[PageImage]:
+def render_pdf_pages(pdf_path: Path, *, dpi: int = 150, timeout: int | None = None) -> list[PageImage]:
     """Render physical PDF pages to PNG image streams using system pdftoppm.
 
     Maps physical 1-indexed page numbers to image bytes and SHA-256 digests.
@@ -69,12 +71,12 @@ def render_pdf_pages(pdf_path: Path) -> list[PageImage]:
 
     with tempfile.TemporaryDirectory(prefix="lixity-pdf-pages-") as tmpdir:
         out_prefix = Path(tmpdir) / "page"
-        cmd = [pdftoppm, "-png", "-r", "150", str(pdf_path), str(out_prefix)]
+        cmd = [pdftoppm, "-png", "-r", str(dpi), str(pdf_path), str(out_prefix)]
         try:
-            res = subprocess.run(cmd, capture_output=True, check=False)  # noqa: S603
+            res = subprocess.run(cmd, capture_output=True, check=False, timeout=timeout)  # noqa: S603
             if res.returncode != 0:
                 return []
-        except OSError:
+        except (OSError, subprocess.SubprocessError):
             return []
 
         # Find rendered pages, sorted numerically
@@ -97,7 +99,7 @@ def render_pdf_pages(pdf_path: Path) -> list[PageImage]:
         return pages
 
 
-def get_pdf_page_count(pdf_path: Path) -> int | None:
+def get_pdf_page_count(pdf_path: Path, *, timeout: float | None = None) -> int | None:
     """Determine the physical page count of a PDF, or ``None`` if undeterminable.
 
     Tries Poppler's ``pdfinfo`` first, then a raw scan for the page-tree
@@ -111,14 +113,17 @@ def get_pdf_page_count(pdf_path: Path) -> int | None:
     pdfinfo = shutil.which("pdfinfo")
     if pdfinfo:
         try:
-            res = subprocess.run([pdfinfo, str(pdf_path)], capture_output=True, text=True, check=False)  # noqa: S603
+            res = subprocess.run(  # noqa: S603
+                [pdfinfo, str(pdf_path)], capture_output=True, text=True, check=False,
+                timeout=timeout if timeout is not None else worker_timeout(),
+            )
             if res.returncode == 0:
                 for line in res.stdout.splitlines():
                     if line.startswith("Pages:"):
                         count_str = line.split(":", 1)[1].strip()
                         if count_str.isdigit():
                             return max(1, int(count_str))
-        except OSError:
+        except (OSError, subprocess.SubprocessError):
             pass
 
     try:
@@ -140,6 +145,89 @@ def worker_timeout() -> int:
     if not 1 <= seconds <= 3600:
         raise ResearchError("LIXITY_OCR_TIMEOUT must be an integer from 1 to 3600 seconds")
     return seconds
+
+
+def _ocr_backend(worker_cmd: str | None = None) -> str:
+    """An explicit executable argument preserves the existing worker override."""
+    if worker_cmd:
+        return "worker"
+    backend = os.environ.get("LIXITY_OCR_BACKEND", "").strip().lower()
+    if not backend:
+        return "worker" if os.environ.get("LIXITY_OCR_WORKER") else "native"
+    if backend not in {"native", "worker", "tesseract"}:
+        raise ResearchError("LIXITY_OCR_BACKEND must be native, worker or tesseract")
+    return backend
+
+
+def _tesseract_languages() -> list[str]:
+    """Validate the requested codes independently of local engine readiness."""
+    languages = os.environ.get("LIXITY_OCR_LANGUAGES", "eng").split("+")
+    if not languages or any(not re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(?:/[A-Za-z][A-Za-z0-9_]*)?", value)
+                            for value in languages):
+        raise ResearchError("LIXITY_OCR_LANGUAGES must contain Tesseract language codes, for example deu+eng")
+    return languages
+
+
+def _tesseract_settings() -> tuple[str, list[str], list[str]]:
+    languages = _tesseract_languages()
+    timeout = worker_timeout()
+    executable = shutil.which("tesseract")
+    if not executable:
+        raise ResearchError("Tesseract is not installed or is not on PATH. Install it and the requested language data locally.")
+    try:
+        result = subprocess.run(  # noqa: S603
+            [executable, "--list-langs"], capture_output=True, text=True, encoding="utf-8",
+            check=False, timeout=min(15, timeout),
+        )
+    except (OSError, subprocess.SubprocessError, UnicodeError) as error:
+        raise ResearchError("Cannot inspect Tesseract language data; check the executable and TESSDATA_PREFIX") from error
+    if result.returncode != 0:
+        raise ResearchError("Cannot inspect Tesseract language data; check TESSDATA_PREFIX and local installation")
+    available = [line.strip() for line in result.stdout.splitlines()
+                 if re.fullmatch(r"[A-Za-z][A-Za-z0-9_]*(?:/[A-Za-z][A-Za-z0-9_]*)?", line.strip())]
+    return executable, languages, available
+
+
+def _extract_tesseract(pages: list[PageImage], *, timeout: int | None = None) -> tuple[str, list[OCRBlock], list[str]]:
+    """Run a locally installed CLI on every rendered page, without a daemon."""
+    executable, languages, available = _tesseract_settings()
+    missing = [language for language in languages if language not in available]
+    if missing:
+        raise ResearchError(f"Tesseract language data missing: {', '.join(missing)}. Install these languages or change LIXITY_OCR_LANGUAGES.")
+    if not pages or [page.page_number for page in pages] != list(range(1, len(pages) + 1)):
+        raise ResearchError("Tesseract requires all rendered PDF pages; check Poppler pdftoppm")
+    deadline = time.monotonic() + (timeout or worker_timeout())
+    blocks: list[OCRBlock] = []
+    warnings: list[str] = []
+    for page in pages:
+        remaining = deadline - time.monotonic()
+        if remaining <= 0:
+            raise ResearchError("Tesseract timed out; no partial capture was retained")
+        try:
+            result = subprocess.run(  # noqa: S603
+                [executable, "stdin", "stdout", "-l", "+".join(languages), "--psm", "3", "--dpi", "300"],
+                input=page.image_bytes, capture_output=True, check=False, timeout=remaining,
+            )
+        except subprocess.TimeoutExpired as error:
+            raise ResearchError("Tesseract timed out; no partial capture was retained") from error
+        except OSError as error:
+            raise ResearchError("Tesseract could not run; no partial capture was retained") from error
+        diagnostic = result.stderr.decode("utf-8", errors="replace").strip()[:500]
+        if result.returncode != 0:
+            raise ResearchError(f"Tesseract failed on page {page.page_number}: {diagnostic or result.returncode}; no partial capture was retained")
+        if diagnostic:
+            warnings.append(f"Tesseract page {page.page_number}: {diagnostic}")
+        try:
+            text = result.stdout.decode("utf-8").strip()
+        except UnicodeDecodeError as error:
+            raise ResearchError("Tesseract returned invalid UTF-8; no partial capture was retained") from error
+        if not text:
+            warnings.append(f"No text recognized on page {page.page_number}; check whether it is blank or unreadable.")
+        blocks.extend(OCRBlock(page_number=page.page_number, text=paragraph.strip())
+                      for paragraph in text.split("\n\n") if paragraph.strip())
+        if len(blocks) > 5000:
+            raise ResearchError("Tesseract returned more than 5000 paragraphs; no capture was retained")
+    return "\n\n".join(block.text for block in blocks), blocks, warnings
 
 
 def _worker_blocks(response: Any, pages: list[PageImage]) -> tuple[list[OCRBlock], list[str]]:
@@ -183,12 +271,35 @@ def extract_pdf_with_worker(
     allow_fallback: bool = False,
 ) -> tuple[str, list[OCRBlock], list[str]]:
     """Execute the configured OCR worker or physical page-aware text extractor."""
+    text, blocks, warnings, _ = _extract_pdf_with_backend(pdf_path, pages, worker_cmd, allow_fallback)
+    return text, blocks, warnings
+
+
+def _extract_pdf_with_backend(
+    pdf_path: Path,
+    pages: list[PageImage],
+    worker_cmd: str | None = None,
+    allow_fallback: bool = False,
+) -> tuple[str, list[OCRBlock], list[str], Literal["baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"]]:
+    backend = _ocr_backend(worker_cmd)
     cmd = worker_cmd or os.environ.get("LIXITY_OCR_WORKER")
     fallback = allow_fallback or os.environ.get("LIXITY_OCR_FALLBACK", "").lower() in ("1", "true", "yes")
     warnings: list[str] = []
+    if backend == "tesseract":
+        try:
+            text, blocks, warnings = _extract_tesseract(pages)
+            if not text.strip():
+                raise ResearchError("Tesseract produced no readable text; no capture was retained")
+            return text, blocks, warnings, "tesseract-cli/1"
+        except ResearchError as error:
+            if not fallback:
+                raise
+            warnings.append(f"Tesseract failed ({error}); fallback to native poppler pdftotext extraction.")
+    if backend == "worker" and not cmd:
+        raise ResearchError("LIXITY_OCR_BACKEND=worker requires LIXITY_OCR_WORKER")
 
     # 1. External self-hosted worker invocation if configured
-    if cmd:
+    if backend == "worker" and cmd:
         with tempfile.TemporaryDirectory(prefix="lixity-ocr-worker-") as tmpdir:
             req_file = Path(tmpdir) / "request.json"
             req_data = {
@@ -212,7 +323,7 @@ def extract_pdf_with_worker(
                     resp = json.loads(proc.stdout)
                     blocks, warnings = _worker_blocks(resp, pages)
                     full_text = "\n\n".join(b.text for b in blocks)
-                    return full_text, blocks, warnings
+                    return full_text, blocks, warnings, "baidu-unlimited-ocr/1"
                 worker_error = f"OCR worker exited with code {proc.returncode}"
             except (OSError, subprocess.SubprocessError, json.JSONDecodeError) as exc:
                 worker_error = f"OCR worker failed or timed out: {exc}"
@@ -227,8 +338,10 @@ def extract_pdf_with_worker(
     # 2. Local fallback using system pdftotext with per-page tracking
     pdftotext = shutil.which("pdftotext")
     if pdftotext:
+        timeout = worker_timeout()
+        deadline = time.monotonic() + timeout
         blocks = []
-        page_count = len(pages) if pages else get_pdf_page_count(pdf_path)
+        page_count = len(pages) if pages else get_pdf_page_count(pdf_path, timeout=timeout)
         if page_count is None:
             raise ResearchError(
                 "Cannot determine the page count of this PDF, so the native extractor "
@@ -238,9 +351,12 @@ def extract_pdf_with_worker(
                 "LIXITY_OCR_WORKER with --allow-retention to use an OCR worker instead."
             )
         for p_idx in range(1, page_count + 1):
+            remaining = deadline - time.monotonic()
+            if remaining <= 0:
+                raise ResearchError("Native PDF extraction timed out; no partial capture was retained")
             cmd_args = [pdftotext, "-f", str(p_idx), "-l", str(p_idx), str(pdf_path), "-"]
             try:
-                sub = subprocess.run(cmd_args, capture_output=True, check=False)  # noqa: S603
+                sub = subprocess.run(cmd_args, capture_output=True, check=False, timeout=remaining)  # noqa: S603
                 if sub.returncode == 0:
                     p_text = sub.stdout.decode("utf-8", errors="replace").strip()
                     if p_text:
@@ -249,16 +365,22 @@ def extract_pdf_with_worker(
                             cleaned = para.strip()
                             if cleaned:
                                 blocks.append(OCRBlock(page_number=p_idx, text=cleaned))
+            except subprocess.TimeoutExpired as error:
+                raise ResearchError("Native PDF extraction timed out; no partial capture was retained") from error
             except OSError:
-                break
+                warnings.append(f"Native text extraction failed on page {p_idx}; check the original PDF.")
+        extracted_pages = {block.page_number for block in blocks}
+        for page_number in range(1, page_count + 1):
+            if page_number not in extracted_pages:
+                warnings.append(f"No native text extracted from page {page_number}; it may be blank or require OCR. Check the original PDF.")
 
         if blocks:
             full_text = "\n\n".join(b.text for b in blocks)
-            return full_text, blocks, warnings
+            return full_text, blocks, warnings, "poppler-native/1"
 
     raise ResearchError(
-        "PDF text extraction failed: no text layer found and Baidu Unlimited-OCR worker is not configured. "
-        f"Install recipe {INTEGRATION_RECIPE_REVISION} or configure LIXITY_OCR_WORKER."
+        "PDF text extraction failed: no readable text found. For scans, install local Tesseract and set "
+        "LIXITY_OCR_BACKEND=tesseract, or configure LIXITY_OCR_WORKER."
     )
 
 
@@ -275,10 +397,12 @@ def extract_pdf_document(
         raise ResearchError(f"PDF document does not exist: {pdf_path}")
 
     # Step 1 & 2: Render pages
-    pages = render_pdf_pages(pdf_path)
+    backend = _ocr_backend(worker_cmd)
+    pages = (render_pdf_pages(pdf_path, dpi=300, timeout=worker_timeout())
+             if backend == "tesseract" else render_pdf_pages(pdf_path, timeout=worker_timeout()))
 
     # Step 3 & 4: Execute OCR extraction boundary
-    full_text, blocks, warnings = extract_pdf_with_worker(
+    full_text, blocks, warnings, implementation_id = _extract_pdf_with_backend(
         pdf_path, pages, worker_cmd=worker_cmd, allow_fallback=allow_fallback
     )
 
@@ -303,6 +427,9 @@ def extract_pdf_document(
         blocks=blocks,
         spans=spans,
         warnings=warnings,
+        implementation_id=implementation_id,
+        model_snapshot=MODEL_SNAPSHOT if implementation_id == IMPLEMENTATION_ID else None,
+        recipe_revision=INTEGRATION_RECIPE_REVISION if implementation_id == IMPLEMENTATION_ID else None,
     )
 
 
@@ -328,7 +455,7 @@ def probe_ocr_worker(worker_cmd: str, timeout: int = 15) -> dict[str, Any]:
         pdf_file.write_bytes(synthetic_pdf)
         req_file = tmp_path / "probe_request.json"
 
-        pages = render_pdf_pages(pdf_file)
+        pages = render_pdf_pages(pdf_file, timeout=timeout)
         if not pages:
             fake_bytes = b"synthetic-probe-png"
             pages = [PageImage(page_number=1, image_bytes=fake_bytes, sha256=hashlib.sha256(fake_bytes).hexdigest())]
@@ -378,6 +505,13 @@ def get_ocr_diagnostics(worker_cmd: str | None = None, *, probe: bool = False) -
     pdftoppm_path = shutil.which("pdftoppm")
     pdftotext_path = shutil.which("pdftotext")
     cmd = worker_cmd or os.environ.get("LIXITY_OCR_WORKER")
+    backend_error: str | None = None
+    try:
+        backend = _ocr_backend(worker_cmd)
+    except ResearchError as error:
+        backend, backend_error = "invalid", str(error)
+    if backend != "worker":
+        cmd = None
 
     worker_executable = False
     worker_resolved: str | None = None
@@ -406,7 +540,8 @@ def get_ocr_diagnostics(worker_cmd: str | None = None, *, probe: bool = False) -
     elif pdftotext_path and pdftoppm_path:
         status = "native_only"
         guidance.append(
-            f"Native PDF extraction is available via poppler. To enable OCR for scanned pages, configure self-hosted Baidu Unlimited-OCR worker via LIXITY_OCR_WORKER (recipe {INTEGRATION_RECIPE_REVISION})."
+            "Native PDF extraction is available via Poppler. For scans, install local Tesseract and "
+            "set LIXITY_OCR_BACKEND=tesseract and LIXITY_OCR_LANGUAGES=deu+eng, or configure LIXITY_OCR_WORKER."
         )
     elif pdftotext_path and not pdftoppm_path:
         status = "partial"
@@ -414,20 +549,21 @@ def get_ocr_diagnostics(worker_cmd: str | None = None, *, probe: bool = False) -
     else:
         status = "missing_dependencies"
         guidance.append("Install poppler-utils (apt install poppler-utils / brew install poppler) for PDF text extraction.")
-        guidance.append(f"For scanned documents, configure LIXITY_OCR_WORKER with snapshot {MODEL_SNAPSHOT[:8]}.")
+        guidance.append("For scans, install local Tesseract and select LIXITY_OCR_BACKEND=tesseract, or configure LIXITY_OCR_WORKER.")
 
-    if cmd:
+    if cmd or backend == "native":
         try:
             worker_timeout()
         except ResearchError as error:
-            status = "misconfigured_worker"
+            status = "misconfigured_worker" if cmd else "misconfigured_backend"
             guidance.append(str(error))
 
     probe_info: dict[str, Any] | None = None
-    if probe:
+    if probe and backend not in {"tesseract", "invalid"}:
         if cmd and worker_executable:
             probe_info = probe_ocr_worker(cmd)
             if not probe_info["ok"]:
+                status = "misconfigured_worker"
                 guidance.append(f"Worker probe failed: {probe_info['error']}")
             elif status == "ready":
                 status = "ready (probed)"
@@ -450,8 +586,56 @@ def get_ocr_diagnostics(worker_cmd: str | None = None, *, probe: bool = False) -
         "recipe_revision": INTEGRATION_RECIPE_REVISION,
         "recipe_date": RECIPE_DATE,
         "implementation_id": IMPLEMENTATION_ID,
+        "backend": backend,
         "guidance": guidance,
     }
+    if backend == "native":
+        result.update({"implementation_id": "poppler-native/1", "model_snapshot": None,
+                       "recipe_revision": None, "recipe_date": None})
+    if backend == "worker" and not cmd:
+        result["status"] = "misconfigured_worker"
+        guidance.append("LIXITY_OCR_BACKEND=worker requires LIXITY_OCR_WORKER")
+    if backend in {"tesseract", "invalid"}:
+        guidance = []
+        result.update({"status": "misconfigured_backend", "guidance": guidance,
+                       "model_snapshot": None, "recipe_revision": None, "recipe_date": None,
+                       "implementation_id": "tesseract-cli/1" if backend == "tesseract" else None,
+                       "tesseract_available": bool(shutil.which("tesseract")) if backend == "tesseract" else False,
+                       "tesseract_path": shutil.which("tesseract") if backend == "tesseract" else None,
+                       "requested_languages": [], "available_languages": [], "missing_languages": []})
+        try:
+            if backend_error:
+                raise ResearchError(backend_error)
+            result["requested_languages"] = _tesseract_languages()
+            executable, languages, available = _tesseract_settings()
+            missing = [language for language in languages if language not in available]
+            result.update({"tesseract_path": executable, "requested_languages": languages,
+                           "available_languages": available, "missing_languages": missing})
+            if missing:
+                guidance.append(f"Tesseract language data missing: {', '.join(missing)}. Install it locally or change LIXITY_OCR_LANGUAGES.")
+            elif not pdftoppm_path:
+                result["status"] = "partial"
+                guidance.append("pdftoppm is missing. Install Poppler for PDF page rendering.")
+            else:
+                result["status"] = "ready"
+                guidance.append("Local Tesseract and the requested language data are available. Recognition quality is not verified; review a permitted scan.")
+            if probe and not missing:
+                started = time.perf_counter()
+                # A blank synthetic PNG exercises engine startup, not recognition accuracy.
+                png = base64.b64decode("iVBORw0KGgoAAAANSUhEUgAAAEAAAABACAAAAACPAi4CAAAAKUlEQVR4nO3MQREAAAwCIPuX1hD77SAA6VEEAoFAIBAIBAKBQCAQfA8Gpwvw4pr3blgAAAAASUVORK5CYII=")
+                _, blocks, probe_warnings = _extract_tesseract(
+                    [PageImage(1, png, hashlib.sha256(png).hexdigest())], timeout=min(15, worker_timeout()))
+                probe_info = {"ok": True, "latency_ms": round((time.perf_counter() - started) * 1000, 1),
+                              "blocks_count": len(blocks), "warnings": probe_warnings}
+                if result["status"] == "ready":
+                    result["status"] = "ready (probed)"
+        except ResearchError as error:
+            result["status"] = "misconfigured_backend"
+            guidance.append(str(error))
+            if probe:
+                probe_info = {"ok": False, "error": str(error)}
+        if probe and probe_info is None:
+            probe_info = {"ok": False, "error": "; ".join(guidance)}
     if probe:
         result["probe"] = probe_info
     return result

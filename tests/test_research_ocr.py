@@ -17,6 +17,7 @@ from lixity.research.models import Activity, Extraction, Passage, SourceVersion
 from lixity.research.ocr import (
     INTEGRATION_RECIPE_REVISION,
     MODEL_SNAPSHOT,
+    OCRExtractionResult,
     PageImage,
     extract_pdf_document,
     extract_pdf_with_worker,
@@ -88,8 +89,9 @@ class ResearchOCRTest(unittest.TestCase):
         for start, end in res.spans:
             span_text = res.full_text[start:end]
             self.assertTrue(len(span_text) > 0)
-        self.assertEqual(res.model_snapshot, MODEL_SNAPSHOT)
-        self.assertEqual(res.recipe_revision, INTEGRATION_RECIPE_REVISION)
+        self.assertEqual(res.implementation_id, "poppler-native/1")
+        self.assertIsNone(res.model_snapshot)
+        self.assertIsNone(res.recipe_revision)
 
     def test_extract_pdf_document_with_mock_worker(self) -> None:
         # Create a mock worker script
@@ -169,7 +171,9 @@ print(json.dumps(resp))
 
         activity = next(r for r in snapshot.records.values() if isinstance(r, Activity))
         self.assertEqual(activity.operation, "extract_ocr")
-        self.assertEqual(activity.implementation, "baidu-unlimited-ocr/1")
+        self.assertEqual(activity.implementation, "poppler-native/1")
+        self.assertEqual(activity.schema_version, "research-local/4")
+        self.assertEqual(snapshot.manifest.schema_version, "research-manifest-local/4")
         self.assertEqual(activity.status, "succeeded")
 
         extraction = next(r for r in snapshot.records.values() if isinstance(r, Extraction))
@@ -252,8 +256,9 @@ print(json.dumps(resp))
             code = main(["research", "ocr-status"])
         self.assertEqual(code, 0)
         cli_out = json.loads(buf.getvalue())
-        self.assertEqual(cli_out["model_snapshot"], MODEL_SNAPSHOT)
-        self.assertEqual(cli_out["recipe_revision"], INTEGRATION_RECIPE_REVISION)
+        self.assertEqual(cli_out["implementation_id"], "poppler-native/1")
+        self.assertIsNone(cli_out["model_snapshot"])
+        self.assertIsNone(cli_out["recipe_revision"])
 
         # Test misconfigured worker diagnosis
         bad_diag = get_ocr_diagnostics(worker_cmd="/nonexistent/path/to/worker")
@@ -419,6 +424,13 @@ print(json.dumps(resp))
             self.assertEqual(diag["status"], "partial")
             self.assertTrue(any("pdftoppm is missing" in hint for hint in diag["guidance"]))
 
+    def test_failed_worker_startup_probe_does_not_report_ready(self):
+        with patch("lixity.research.ocr.probe_ocr_worker", return_value={"ok": False, "error": "Synthetic worker startup failure"}):
+            diag = get_ocr_diagnostics(worker_cmd=sys.executable, probe=True)
+        self.assertEqual(diag["status"], "misconfigured_worker")
+        self.assertFalse(diag["probe"]["ok"])
+        self.assertTrue(any("Synthetic worker startup failure" in hint for hint in diag["guidance"]))
+
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_explicit_fallback_mode_when_worker_fails(self) -> None:
         pdf_bytes = make_synthetic_pdf("Archival document with native text layer.")
@@ -455,6 +467,9 @@ sys.exit(1)
             res = extract_pdf_document(pdf_path, worker_cmd=str(failing_worker), allow_fallback=True)
             self.assertIn("Archival document with native text layer.", res.full_text)
             self.assertTrue(any("fallback" in w.lower() for w in res.warnings))
+            self.assertEqual(res.implementation_id, "poppler-native/1")
+            self.assertIsNone(res.model_snapshot)
+            self.assertIsNone(res.recipe_revision)
 
         with (
             patch.dict(os.environ, {"LIXITY_OCR_WORKER": str(failing_worker)}),
@@ -467,6 +482,10 @@ sys.exit(1)
             captured = api.ingest(self.project, pdf_path, allow_retention=True, allow_fallback=True)
             self.assertEqual(captured["schema_version"], "research-ingest-local/1")
             self.assertEqual(captured["warnings"], res.warnings)
+            snapshot = Repository(self.project).snapshot()
+            activity = next(record for record in snapshot.records.values() if isinstance(record, Activity))
+            self.assertEqual(activity.implementation, "poppler-native/1")
+            self.assertEqual(activity.schema_version, "research-local/4")
             reused = api.ingest(self.project, pdf_path, allow_retention=True,
                                 source_id=captured["source_id"])
             self.assertTrue(reused["unchanged"])
@@ -495,6 +514,64 @@ sys.exit(1)
             self.assertFalse(batch["items"][1]["ok"])
             self.assertEqual(batch["items"][2]["warnings"], [])
         self.assertTrue(api.audit(self.project)["ok"])
+
+    def test_cached_legacy_pdf_provenance_is_preserved_without_reextraction(self):
+        pdf = self.root / "legacy.pdf"
+        pdf.write_bytes(b"%PDF synthetic retained legacy fixture")
+        text = "Previously retained synthetic extraction."
+        legacy = OCRExtractionResult(pages=[], full_text=text, blocks=[], spans=[(0, len(text))])
+        with patch("lixity.research.api.extract_pdf_document", return_value=legacy):
+            captured = api.ingest(self.project, pdf, allow_retention=True)
+        original = Repository(self.project).snapshot()
+        activity = next(record for record in original.records.values() if isinstance(record, Activity))
+        self.assertEqual(activity.schema_version, "research-local/1")
+        with patch("lixity.research.api.extract_pdf_document") as extract:
+            unchanged = api.ingest(self.project, pdf, source_id=captured["source_id"], allow_retention=True)
+            self.assertTrue(unchanged["unchanged"])
+            api.ingest(self.project, pdf, source_id=captured["source_id"], allow_retention=True,
+                       origin_url="https://example.org/synthetic-legacy-record")
+            extract.assert_not_called()
+        refreshed = Repository(self.project).snapshot()
+        self.assertEqual(refreshed.records[activity.id], activity)
+        activities = [record for record in refreshed.records.values() if isinstance(record, Activity)]
+        self.assertEqual(len(activities), 2)
+        self.assertTrue(all(record.implementation == "baidu-unlimited-ocr/1" and
+                            record.schema_version == "research-local/1" for record in activities))
+        self.assertEqual(refreshed.manifest.schema_version, "research-manifest-local/2")
+        self.assertTrue(api.audit(self.project)["ok"])
+
+    def test_native_deadline_covers_all_pages_without_retaining_partial_text(self):
+        pdf = self.root / "timeout.pdf"
+        pdf.write_bytes(b"%PDF synthetic native timeout")
+        pages = [PageImage(index, b"image", "hash") for index in (1, 2)]
+        for elapsed, subprocess_timeout in ((106, True), (108, False)):
+            with self.subTest(elapsed=elapsed):
+                before = {path: path.read_bytes() for path in self.project.rglob("*") if path.is_file()}
+                timeouts = []
+                def native(args, *, observed=timeouts, **kwargs):
+                    observed.append(kwargs.get("timeout"))
+                    if args[2] == "2":
+                        raise subprocess.TimeoutExpired(args, kwargs.get("timeout"))
+                    return subprocess.CompletedProcess(args, 0, stdout=b"First page only.", stderr=b"")
+                with (patch.dict(os.environ, {"LIXITY_OCR_BACKEND": "native", "LIXITY_OCR_TIMEOUT": "7"}),
+                      patch("lixity.research.ocr.shutil.which", return_value="synthetic-pdftotext"),
+                      patch("lixity.research.ocr.render_pdf_pages", return_value=pages),
+                      patch("lixity.research.ocr.time.monotonic", side_effect=[100, 101, elapsed]),
+                      patch("lixity.research.ocr.subprocess.run", side_effect=native),
+                      self.assertRaisesRegex(ResearchError, "timed out.*no partial capture")):
+                    api.ingest(self.project, pdf, allow_retention=True)
+                self.assertEqual(timeouts, [6, 1] if subprocess_timeout else [6])
+                self.assertEqual(before, {path: path.read_bytes() for path in self.project.rglob("*") if path.is_file()})
+
+    def test_native_invalid_timeout_is_actionable_without_running_tools(self):
+        with (patch.dict(os.environ, {"LIXITY_OCR_BACKEND": "native", "LIXITY_OCR_TIMEOUT": "0"}),
+              patch("lixity.research.ocr.subprocess.run") as run):
+            diag = get_ocr_diagnostics()
+            self.assertEqual(diag["status"], "misconfigured_backend")
+            self.assertTrue(any("LIXITY_OCR_TIMEOUT" in hint for hint in diag["guidance"]))
+            with self.assertRaisesRegex(ResearchError, "LIXITY_OCR_TIMEOUT"):
+                extract_pdf_with_worker(self.root / "synthetic.pdf", [PageImage(1, b"image", "hash")])
+            run.assert_not_called()
 
 
 if __name__ == "__main__":

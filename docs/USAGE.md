@@ -313,6 +313,53 @@ with `scenes`, `asl`, `dialogue_pct`, `staccato_pct`,
 `closing_sentence_words`, `closing_terminal`, `closing_is_dialogue`,
 `hook_score` and the per-scene `scene_list[]`.
 
+### Scene registers and project targets (current main, unreleased)
+
+Without chapter headings, a draft is measured as one chapter and keeps all its
+prose. A leading `# Title` supplies its title; scene dividers still split the draft.
+
+Use `lixity scenes manuscript.md --language de` to inspect each scene separately;
+add `--json` for the complete scene envelope (schema version 1). The dashboard
+shows the same observations in **Scenes & style registers**. Chapters serve as
+scenes when there are no explicit dividers.
+
+Register assignments and targets belong to your project. For example:
+
+```toml
+[scene_analysis.assignments]
+"1:1" = "close narration"
+"1:2" = "close narration"
+"2:1" = "report"
+
+[scene_analysis.groups."close narration".targets]
+asl = [8, 15]
+filter_density = { upper = 2 }
+
+[scene_analysis.groups.report.targets]
+modal_density = { lower = 3 }
+```
+
+Save this in the project's `lixity.toml` (or under `[tool.lixity.scene_analysis]`
+in `pyproject.toml`). These numbers illustrate settings, not recommended prose.
+Assignments use chapter:scene numbers; review them after inserting or removing
+scenes. Invalid assignments are reported instead of silently moving a register.
+Each group gets its own manuscript-only median and MAD, with at least two
+available observations per feature. Unassigned scenes have no register baseline.
+Research sources never enter these references.
+
+Targets use the fields reported by `lixity about --json`, such as `asl`,
+`filter_density`, `modal_density`, `nominalization_density`, `passive_density`,
+`sentence_cv` and `start_entropy`. `feat_*` names are translated display keys,
+not API functions. HD-D uses **0–1**, not 28–48; staccato is **≤6 words** and
+the long-sentence share is **>25 words**. Rhythm proxies do not measure musical BPM.
+
+The report includes actual word/sentence counts, observations, approximate core
+standard errors and descriptive target positions (below/within/above). HD-D is
+unavailable below 100 tokens; CV needs at least two sentences. Zero plug-in
+standard errors are withheld, and HD-D has no population error estimate.
+These are not validated confidence intervals or a literary-quality score.
+Existing analyze/profile (v2) and style (v4) envelopes remain unchanged.
+
 ### `lixity motifs`
 
 Motif tracking and repetition analysis. Motifs are curated regular
@@ -794,8 +841,10 @@ than evidence of a consistent style.
 
 For API project isolation, pass `project_config={}` to `profile`, `fingerprint`,
 `passport` or `dashboard` to avoid implicit threshold lookup. A supplied mapping
-contains threshold settings only; language, title and corpus options remain
-explicit arguments. See [architecture](ARCHITECTURE.md).
+contains thresholds in v1.23.0. On current main it also supplies known
+`CorpusConfig` settings; explicit options override the mapping. Language and
+title remain explicit API arguments. Project files accept those same corpus
+fields, without a separate list of supported analysis patterns. See [architecture](ARCHITECTURE.md).
 
 CLI commands with an explicit manuscript path load project settings relative to
 that manuscript, not the shell's working directory. Without an explicit path,
@@ -814,8 +863,8 @@ or pass explicit CLI flags to ensure your intended parameters applied.
 
 | Field | Default | Purpose |
 | :--- | :--- | :--- |
-| `language` | `de` | Language profile key (`auto` when set by the CLI). |
-| `chapter_regex` | `(?m)^##\s+` | Chapter boundary detection. |
+| `language` | `en` | Language profile key; automatic detection requires explicit `auto`. |
+| `chapter_regex` | `(?m)^##\s+` | Chapter boundary detection. Current main matches individual heading lines, supporting marker prefixes or complete headings without consuming following prose. |
 | `appendix_marker` | `## Anmerkungen und Literaturverzeichnis` | Start of the non-prose appendix. |
 | `min_paragraph_length_for_oneliner` | `25` | Word threshold for one-liner classification. |
 | `motif_regexes` | `{}` | Project motifs as label → regex, counted per chapter. |

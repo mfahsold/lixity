@@ -6,6 +6,12 @@ A source checkout also contains an experimental CPU adapter; no model server,
 weights or production-tested inference runtime ship with the Python package.
 For import commands and the exact worker JSON, see [Research usage](USAGE.md#worker-interface).
 
+Current main (after v1.23.0, unreleased) also supports locally installed
+Tesseract without this adapter. New native Poppler and Tesseract captures use
+accurate local implementation identifiers and require a v4 archive reader;
+cached legacy provenance is preserved. See [local OCR setup and compatibility](USAGE.md#use-local-ocr-without-a-worker-service).
+The external worker protocol below remains unchanged.
+
 ## Assessment
 
 Separating GPU inference from the analysis engine is compatible with upstream
@@ -79,7 +85,8 @@ never execute generated expressions, and test page-boundary preservation.
 There is no basis here for inventing a calibrated confidence value for each
 recognized block.
 
-Lixity's current behavior has these narrower guarantees:
+The v1.19.0 worker boundary has these narrower guarantees; the current-main
+native provenance changes are described above:
 
 | Area | Implemented behavior | Operational consequence |
 | --- | --- | --- |

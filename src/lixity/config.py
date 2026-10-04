@@ -16,13 +16,14 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
+from .models import CorpusConfig
+
 if TYPE_CHECKING:
     from .style_fingerprint import FingerprintThresholds
 
 # Keys that may appear in [tool.lixity] (documented schema).
 TOOL_KEYS = frozenset(
     {
-        "language",
         "title",
         "z_mild",
         "z_strong",
@@ -34,13 +35,11 @@ TOOL_KEYS = frozenset(
         "names",
         "motifs",
         "phrases",
-        "chapter_regex",
-        "appendix_marker",
-        "min_paragraph_length_for_oneliner",
         "nda",
         "capabilities",
+        "scene_analysis",
     }
-)
+) | frozenset(CorpusConfig.model_fields)
 
 
 def _load_toml(path: Path) -> dict[str, Any]:

@@ -20,12 +20,14 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append(f'<span class="ctl-status loading" id="r-active-root" style="font-weight:500;">{L("research_loading")}</span>')
     parts.append('</div>')
 
+    parts.append(f'<button type="button" class="ctl" id="research-revision-batch-review" hidden>{L("research_revision_batch_review")}</button>')
     parts.append('<div class="row research-tabs" id="research-tabs" role="tablist">')
     parts.append(f'<button type="button" class="ctl active" data-rtab="sources" role="tab" aria-selected="true">{L("research_tab_sources")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="search" role="tab" aria-selected="false">{L("research_tab_search")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="dossiers" role="tab" aria-selected="false">{L("research_tab_dossiers")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="claims" role="tab" aria-selected="false">{L("research_tab_claims")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="decisions" role="tab" aria-selected="false">{L("research_tab_decisions")}</button>')
+    parts.append(f'<button type="button" class="ctl" data-rtab="review" role="tab" aria-selected="false">{L("research_tab_review")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="grounding" role="tab" aria-selected="false">{L("research_tab_grounding")}</button>')
     parts.append('</div>')
 
@@ -188,6 +190,13 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append('    </div>')
     parts.append('  </div>')
     parts.append(f'  <div id="research-decisions-list">{loading_state(label(labels, "research_loading"))}</div>')
+    parts.append('</div>')
+
+    parts.append('<div class="research-tab-pane" id="rtab-review" style="display:none;">')
+    parts.append(f'<h3>{L("research_editorial_heading")}</h3>')
+    parts.append(f'<p class="ctl-note">{L("research_editorial_help")}</p>')
+    parts.append(f'<button type="button" class="ctl" id="r-review-refresh">{L("research_editorial_refresh")}</button>')
+    parts.append('<div id="research-editorial-review" aria-live="polite"></div>')
     parts.append('</div>')
 
     parts.append('<div class="research-tab-pane" id="rtab-grounding" style="display:none;">')

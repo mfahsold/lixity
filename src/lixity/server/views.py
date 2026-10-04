@@ -17,6 +17,7 @@ from ..markers import list_markers
 from ..motifs import motif_report
 from ..pacing import pacing_report
 from ..pipeline import analyze_document, resolve_document_config
+from ..scenes import scene_report_for_display
 from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
 from ..ui import render_dashboard
@@ -99,14 +100,7 @@ def build_server_dashboard(
     )
 
     settings = load_project_config(source_input) if source_input and os.path.isfile(source_input) else {}
-    config_kwargs: dict[str, Any] = {
-        key: settings[key]
-        for key in ("chapter_regex", "appendix_marker", "min_paragraph_length_for_oneliner")
-        if key in settings
-    }
-    config_kwargs["language"] = language
-
-    config, resolved = resolve_document_config(text, **config_kwargs)
+    config, resolved = resolve_document_config(text, language, project_config=settings)
     resolved_thresholds = thresholds or resolve_thresholds(project_config=settings)
 
     analysis = analyze_document(text, config, resolved_thresholds)
@@ -163,6 +157,8 @@ def build_server_dashboard(
         pacing=pacing_report(text, config).to_dict(),
         motifs=motif_report(text, settings.get("motifs", {}), config).to_dict(),
         showing=showing_report(text, config, metrics=metrics).to_dict(),
+        scenes=scene_report_for_display(text, config, settings.get("scene_analysis"),
+                                        premeasured_chapters=metrics.chapters),
         metrics=metrics,
         fingerprint=fingerprint,
         markers=markers,
@@ -193,4 +189,3 @@ def build_server_dashboard(
         "is_missing": is_missing,
     }
     return html_doc, info
-

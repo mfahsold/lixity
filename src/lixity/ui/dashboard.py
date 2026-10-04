@@ -12,6 +12,7 @@ from dataclasses import replace
 from pathlib import Path as _Path
 from typing import Any
 
+from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
 from ..format import pct as format_pct
 from ..status import FLAG_MIN_SEVERITY, NdaStatus
@@ -50,6 +51,7 @@ from .narration import (
     render_dialogue_panel,
     render_motifs_panel,
     render_pacing_panel,
+    render_scenes_panel,
     render_sentence_dist_panel,
     render_showing_panel,
 )
@@ -95,6 +97,7 @@ def render_dashboard(
     document_context: Mapping[str, Any] | None = None,
     enabled_actions: Sequence[str] | None = None,
     debug: bool = False,
+    scenes: Mapping[str, Any] | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -562,6 +565,9 @@ def render_dashboard(
     )
 
     parts.append('<section class="kpis">')
+    if has_chapters and metrics is not None and metrics.tokens < MIN_TOKENS_LD:
+        support = esc(label(labels, "scene_support").replace("{min_tokens}", str(MIN_TOKENS_LD)))
+        parts.append(f'<p class="hint" role="note">{support}</p>')
     for caption_key, tiles in (
         ("group_scope", scope_tiles),
         ("group_rhythm", rhythm_tiles),
@@ -636,6 +642,7 @@ def render_dashboard(
     parts.append(render_dialogue_panel(dialogue, labels, language_key))
     parts.append(render_characters_panel(characters, chapters, labels))
     parts.append(render_pacing_panel(pacing, labels, language_key))
+    parts.append(render_scenes_panel(scenes, labels, language_key))
     parts.append(render_motifs_panel(motifs, labels))
     parts.append(render_showing_panel(showing, labels, language_key))
 

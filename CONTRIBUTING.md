@@ -71,8 +71,18 @@ RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
 .venv/bin/mypy --strict src
 ```
 
-CI (`.github/workflows/tests.yml`) runs the same checks on Python 3.10–3.13,
-research checks on macOS and Windows, browser checks, and wheel packaging.
+CI (`.github/workflows/tests.yml`) runs on pull requests, pushes to `main` and
+manual dispatch. Pytest runs the full suite, including unittest tests, once on
+each Python version from 3.10–3.13. All research suites also run on macOS and
+Windows; browser checks and wheel packaging run separately. New pushes cancel
+superseded test runs. Pip downloads are cached; release tags run their own full
+source checks and verify an isolated package installation.
+
+Build artifacts with `make build` (`python -m build`). It creates the source
+archive first, then builds the wheel from a fresh extraction, avoiding obsolete
+files in an incremental `build/lib`. CI compares the wheel's Python modules,
+typing marker and UI assets with the source filenames and bytes.
+
 Native PDF tests need Poppler (`pdftotext` and `pdftoppm`) and report an explicit
 skip if it is missing. The synthetic worker test needs no model.
 Optional hooks are installed with `pre-commit install`; see

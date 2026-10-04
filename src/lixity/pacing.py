@@ -27,12 +27,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .language import compile_pattern, resolve_language
-from .markdown_parser import split_chapters
+from .markdown_parser import SCENE_BREAK_RE as SCENE_BREAK_RE
+from .markdown_parser import split_chapters, split_scenes
 from .models import CorpusConfig
 from .sentences import split_sentences
-
-# Explicit scene-break markers (Markdown dividers and common typographic forms).
-SCENE_BREAK_RE = re.compile(r"(?m)^\s*(?:-{3,}|\*{3,}|_{3,}|•{3,}|#\s*#\s*#|\*\s+\*\s+\*)\s*$")
 
 # Hook heuristic: a closing sentence counts as punchy up to this length.
 HOOK_SHORT_SENTENCE = 8
@@ -197,8 +195,8 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
         words = len(word_re.findall(clean))
         if not words:
             continue
-        raw_scenes = [part for part in SCENE_BREAK_RE.split(clean) if part.strip()]
-        explicit_breaks += len(SCENE_BREAK_RE.findall(clean))
+        raw_scenes, scene_breaks = split_scenes(clean)
+        explicit_breaks += scene_breaks
         scenes: list[SceneStats] = []
         for index, scene_text in enumerate(raw_scenes, start=1):
             stats = _scene_stats(scene_text, index, word_re, dialogue_re, resolved.key)

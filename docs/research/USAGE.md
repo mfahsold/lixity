@@ -40,6 +40,124 @@ German have the deepest linguistic analysis heuristics; language selection
 does not translate archived quotations or turn lexical search into semantic
 search. The research CLI's help and errors are English.
 
+## Current main workflows (unreleased)
+
+The following additions are implemented on `main`, after v1.23.0. Install a
+development build deliberately to use them; updating a fixed older tag does
+not select them.
+
+### Read reports in the terminal
+
+```sh
+lixity research sources --project ./novel --format text
+lixity research sources --project ./novel --format md --limit 25 --offset 25
+lixity research audit --project ./novel --format text
+```
+
+Sources and audit retain their complete JSON output by default. Human source
+lists show 50 entries unless you set `--limit` (1–100) and `--offset`; full IDs
+remain visible. Audit summaries explain their scope and bound long findings;
+use JSON for the full findings. `--pager` opens a pager only when explicitly
+requested with a human format and both input/output are interactive terminals.
+Piped output does not start one. Imported titles and values remain inert text.
+
+### Resolve conflicting drafts
+
+The revision editor keeps the draft and reason after a conflict and prepares a
+comparison of its base revision, the current record and the draft. Under
+**Review concurrent changes**, inspect the preview and explicitly choose current
+or draft values for overlapping fields. **Use reviewed changes** updates the
+draft; save separately. Preparing or selecting a resolution writes nothing.
+Another change before saving still rejects the save and keeps the draft.
+
+CLI users can prepare a draft with `--prepare --base-revision N` instead of
+`--update`. Resolve
+overlapping fields with repeated `--resolve FIELD=current` or `FIELD=mine`.
+Submit the resulting changes with the returned snapshot/revision tokens through
+the existing strict update command. Association IDs and revision pins are
+compared together; unchanged associations keep their historical pins.
+Prepared decision lists include `dossier_revisions`, a map from selected dossier
+IDs to existing revision numbers. Keep this map when applying the preview so a
+restored draft link retains the revision you inspected.
+
+### Work on one dossier section
+
+Use `dossier --dossier-id ID --section "Heading"` to read a bounded section;
+`--update --file section.md --section "Heading"` replaces only that section's
+content, with the usual snapshot, revision and reason requirements. Both reading
+and replacing a section include its subsections. Headings inside fenced code are
+ignored; repeated heading names reject ambiguous reads/updates. Other text,
+line endings and evidence references are preserved. Prepared section drafts
+start from the selected base revision, never a silently substituted current body.
+
+### Review decisions and save related revisions together
+
+**Review** lists structural maintenance candidates. A decision's **Affected
+dossiers** disclosure shows its explicit direct or claim-based links, section
+outlines and pinned/current revision numbers. CLI equivalents:
+
+```sh
+lixity research decision-impact --project ./novel --decision-id ID
+lixity research review --project ./novel --format md
+```
+
+These reports flag dated decisions, old pins, withdrawn links and unlinked
+decisions for human inspection. They do not detect semantic contradictions,
+establish historical truth, find every affected passage, or rewrite documents.
+Old pins can be intentional. The integrity audit remains a separate check.
+
+In the revision editor, choose **Add to change set**, then close the editor to
+select another record. **Review change set** shows every queued draft, its base
+values and reason. You can edit or remove individual drafts, then check and save
+the whole set. A failed or stale save keeps the drafts for explicit review.
+Drafts live only in that browser tab: reloading removes unsaved changes. If a
+network failure leaves the result uncertain, inspect history before retrying.
+
+CLI users can prepare the same group in a JSON file, then inspect it:
+
+```sh
+lixity research revise-batch --project ./novel --file changes.json
+lixity research revise-batch --project ./novel --file preview.json \
+  --apply --expected-snapshot DIGEST
+```
+
+The file contains an operations list, or the saved preparation envelope
+`research-revision-batch-local/1`. Each operation has `kind`, `id`,
+`expected_revision`, `changes`, `change_kind` and `reason`. Preparation writes
+nothing. Apply validates every operation and publishes one archive commit;
+an invalid operation or stale snapshot accepts none. Duplicate record IDs and
+references to revisions that would be created by that same batch are rejected.
+Existing evidence and explicitly pinned references stay intact.
+
+### Use local OCR without a worker service
+
+Install Poppler, Tesseract and the language data you need on the server computer.
+Select the backend explicitly in that service's environment, then restart it:
+
+```sh
+export LIXITY_OCR_BACKEND=tesseract
+export LIXITY_OCR_LANGUAGES=deu+eng
+lixity research ocr-status --probe
+```
+
+`LIXITY_OCR_BACKEND` accepts `native`, `worker` or `tesseract`. If unset,
+the existing configured worker takes precedence; otherwise native Poppler
+remains the default. Explicit `worker_cmd`/`--worker-cmd` takes precedence over
+the environment. Tesseract's default language is `eng`; extra languages need
+installed language data. Diagnostics report requested, available and missing
+languages. Nothing is downloaded or started automatically.
+
+Local Tesseract uses 300 dpi page images and a bounded invocation deadline;
+the external worker keeps its existing 150 dpi protocol. Failures reject the
+capture unless native fallback is explicitly allowed; inspect all returned
+warnings and compare quotations with the scan. A synthetic probe confirms
+execution, not recognition accuracy. New Tesseract captures identify
+`tesseract-cli/1`. Every new native Poppler capture, including an explicitly
+allowed fallback, identifies `poppler-native/1`. Both require `research-local/4`
+and a v4 manifest. Older readers reject that archive; use compatible readers
+and keep a backup. Existing v1–v3 records and cached extraction provenance stay
+unchanged. The external worker retains its existing implementation identifiers.
+
 ## Zotero Desktop bridge (since v1.19.0)
 
 Zotero can manage the library, bibliographic metadata and media; Lixity retains

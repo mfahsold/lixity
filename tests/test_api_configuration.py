@@ -16,6 +16,27 @@ TEXT = "## One\n\nI walk in the rain.\n\n## Two\n\nThe door was closed.\n"
 
 
 class TestApiConfiguration(unittest.TestCase):
+    def test_project_corpus_patterns_reach_cli_and_api(self):
+        from lixity.config import load_project_config
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            manuscript = project / "manuscript.md"
+            manuscript.write_text("## One\n\nMara opens a door. Mara checks a lamp.\n", encoding="utf-8")
+            (project / "lixity.toml").write_text(
+                "language = 'en'\nword_regex = '\\bMara\\b'\nfilter_verbs_regex = '\\bMara\\b'\n",
+                encoding="utf-8",
+            )
+            settings = load_project_config(manuscript)
+            expected = api.scenes(manuscript.read_text(encoding="utf-8"), project_config=settings)
+            scene = expected["scenes"]["items"][0]
+            self.assertEqual(scene["words"], 2)
+            self.assertEqual(scene["features"]["filter_density"], 1000)
+            output = io.StringIO()
+            with redirect_stdout(output):
+                self.assertEqual(main(["scenes", str(manuscript), "--json"]), 0)
+            self.assertEqual(json.loads(output.getvalue()), expected)
+
     def test_invalid_baseline_sample_size_is_rejected(self):
         for minimum in (0, 1, 2.5, True):
             with self.subTest(minimum=minimum), self.assertRaises(ValueError):

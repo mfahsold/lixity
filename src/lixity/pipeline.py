@@ -1,5 +1,6 @@
 """Shared, deterministic orchestration for API, CLI and workspace analysis."""
 
+from collections.abc import Mapping
 from dataclasses import dataclass
 from typing import Any
 
@@ -24,9 +25,13 @@ class DocumentAnalysis:
 
 
 def resolve_document_config(
-    text: str, language: str = "en", **overrides: Any
+    text: str, language: str = "en", *,
+    project_config: Mapping[str, Any] | None = None, **overrides: Any,
 ) -> tuple[CorpusConfig, ResolvedLanguage]:
-    config = CorpusConfig(language=language, **overrides)
+    """Resolve known corpus settings once; explicit language/overrides win."""
+    settings = {key: value for key, value in (project_config or {}).items()
+                if key in CorpusConfig.model_fields and key != "language"}
+    config = CorpusConfig(language=language, **(settings | overrides))
     resolved = resolve_language(config, sample_text=text)
     return config.model_copy(update={"language": resolved.key}), resolved
 
@@ -36,7 +41,7 @@ def profile_document(
 ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
     profile_thresholds = ProfileThresholds(flag_min_severity=thresholds.flag_min_severity)
     return ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
-        parse_markdown_blocks(text)
+        parse_markdown_blocks(text, config)
     )
 
 

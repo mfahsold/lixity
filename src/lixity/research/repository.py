@@ -385,8 +385,10 @@ class Repository:
             project = next((record for record in records.values() if isinstance(record, Project)), None)
             if project is None:
                 raise ResearchError("Project record required")
-            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3"]
-            schema = ("research-manifest-local/3" if any(record.schema_version == "research-local/3" for record in records.values())
+            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4"]
+            schema = ("research-manifest-local/4" if any(record.schema_version == "research-local/4" for record in records.values())
+                      or (current and current.manifest.schema_version == "research-manifest-local/4")
+                      else "research-manifest-local/3" if any(record.schema_version == "research-local/3" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/3")
                       else "research-manifest-local/2" if any(record.schema_version == "research-local/2" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/2")

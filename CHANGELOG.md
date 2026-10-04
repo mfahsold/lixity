@@ -7,7 +7,31 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Scene/register reports in the API, CLI and dashboard: existing measured
+  features, explicit project targets, separate manuscript-only register
+  medians/MAD, sample counts and approximate standard errors. No genre targets
+  or literary quality judgments are built in.
+- Read-only three-way revision previews, explicit conflict choices and atomic
+  groups of authored revisions. Drafts and reasons survive failed saves.
+- Decision impact and editorial review views based on explicit links, dates and
+  revision pins; these are maintenance candidates, not semantic validation.
+- Optional local Tesseract OCR without a worker service, installed-language
+  diagnostics and honest versioned provenance (research activity/manifest v4).
+- Opt-in text/Markdown research source and audit summaries, bounded human
+  lists and an explicitly requested interactive pager. Default JSON is retained.
+
 ### Changed
+- Shared configuration resolution keeps explicit corpus settings aligned across
+  CLI, API and dashboard. Scene measurement reuses the chapter feature engine
+  without a second corpus analysis per scene; display reports reuse already
+  measured whole chapters when no scene dividers are present.
+- Actions runs the collected Python tests once per environment, cancels
+  superseded runs, caches Pip downloads and discovers all platform research
+  tests. Release tags retain their dedicated checks instead of a second full
+  test matrix; platform and Python coverage are preserved.
+- Wheel verification compares every package filename and byte with the current
+  source, catching removed modules left in incremental build directories.
 - README and the project page introduce six features with contextual screenshots
   and links to related views, replacing the large image galleries. The page uses
   a simpler responsive layout, native full-size image links and a shared theme
@@ -21,6 +45,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   documentation and the Pages publication boundary.
 
 ### Fixed
+- Dossier section handling ignores fenced code, rejects ambiguous repeated
+  headings and preserves unrelated bytes and line endings. Reads and edits use
+  the same subtree boundary, preserving nested notes in a read/edit round trip.
+  Existing decision dossier pins are retained when editing their ID list.
+- Configured chapter boundaries and empty units use shared numbering; fenced
+  scene separators are ignored. Headerless drafts retain every paragraph and
+  original line anchor rather than dropping their first line as a title.
+- Custom chapter headings are excluded from global prose counts as well as
+  chapter measurements. Patterns matching a whole heading retain the following
+  prose. Entropy uses stable summation and renders zero without a negative sign.
+- New native PDF captures identify Poppler rather than an unrelated OCR model.
+  Existing cached provenance is preserved. Native extraction deadlines reject
+  incomplete output, and failed worker or Tesseract probes report failure.
 - CI uses `actions/setup-node@v7`, whose Node 24 runtime and updated cache code
   remove the Node 20 action-runtime and built-in `punycode` deprecation warnings.
   The browser job continues to test with Node 22.

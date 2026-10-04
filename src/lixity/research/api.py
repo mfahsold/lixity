@@ -9,12 +9,12 @@ import warnings
 from collections.abc import Callable, Mapping
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, overload
+from typing import Any, Literal, NamedTuple, overload
 from uuid import uuid4
 
 from pydantic import ValidationError
 
-from . import catalogue
+from . import catalogue, editorial
 from .archive import (
     export_archive as export_archive,
 )
@@ -48,7 +48,16 @@ from .ocr import (
 )
 from .repository import Repository, ResearchConflictError, ResearchError, digest
 from .revisions import (
+    apply_record_revisions as apply_record_revisions,
+)
+from .revisions import (
     get_record as get_record,
+)
+from .revisions import (
+    prepare_record_revision as prepare_record_revision,
+)
+from .revisions import (
+    prepare_record_revisions as prepare_record_revisions,
 )
 from .revisions import (
     record_history as record_history,
@@ -124,6 +133,7 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
 
     blobs_to_commit: dict[str, bytes] = {}
     extraction_warnings: list[str] = []
+    implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"]
     if is_pdf:
         with path.open("rb") as stream:
             content = stream.read(MAX_PDF_BYTES + 1)
@@ -143,16 +153,17 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
             if any(text[passage.start:passage.end] != passage.verbatim for passage in passages):
                 raise ResearchError("Retained PDF extraction does not match its passages")
             spans = [(passage.start, passage.end) for passage in passages]
+            implementation = snapshot.get(prior[0].activity_ref, Activity).implementation
         else:
             effective_fallback = allow_fallback or os.environ.get("LIXITY_OCR_FALLBACK", "").lower() in ("1", "true", "yes")
             ocr_res = extract_pdf_document(path, allow_fallback=effective_fallback)
             text = ocr_res.full_text
             spans = ocr_res.spans
             extraction_warnings = ocr_res.warnings
+            implementation = ocr_res.implementation_id
         if not spans or len(spans) > 5000:
             raise ResearchError("Source must contain between 1 and 5000 nonempty paragraphs")
         operation: Literal["extract_utf8", "extract_ocr"] = "extract_ocr"
-        implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1"] = "baidu-unlimited-ocr/1"
         source_checksum = digest(content)
         text_bytes = text.encode("utf-8")
         text_checksum = digest(text_bytes)
@@ -193,6 +204,8 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
                             sequence=latest.sequence + 1 if latest else 1, blob=source_blob,
                             retention_confirmed=True, context=source_context)
     activity = Activity(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),
+                        schema_version=("research-local/4" if implementation in {"tesseract-cli/1", "poppler-native/1"}
+                                        else "research-local/1"),
                         operation=operation, implementation=implementation, status="succeeded")
     extraction = Extraction(**envelope(snapshot.project.id, actor), source_version_ref=reference(version),
                             activity_ref=reference(activity), text_blob=text_blob)
@@ -710,32 +723,66 @@ def create_dossier(
     }
 
 
-def extract_sections(body: str) -> dict[str, str]:
-    """Extract heading sections from a markdown body (mapping heading title to content)."""
-    sections: dict[str, str] = {}
-    lines = body.splitlines(keepends=True)
-    current_title: str | None = None
-    current_lines: list[str] = []
-    preamble_lines: list[str] = []
-    for line in lines:
-        match = re.match(r"^(#{1,3})\s+(.+?)\s*#*$", line.strip())
-        if match:
-            if current_title is not None:
-                sections[current_title] = "".join(current_lines).strip()
-            elif preamble_lines and "".join(preamble_lines).strip():
-                label = "Introduction" if match.group(2).strip().lower() == "overview" else "Overview"
-                sections[label] = "".join(preamble_lines).strip()
-            current_title = match.group(2).strip()
-            current_lines = []
+class _Section(NamedTuple):
+    title: str
+    level: int
+    start: int
+    content_start: int
+    end: int
+
+
+def _section_spans(body: str) -> list[_Section]:
+    """Find ATX headings outside fenced/indented code, retaining source offsets."""
+    headings: list[tuple[str, int, int, int]] = []
+    fence: tuple[str, int] | None = None
+    offset = 0
+    for line in body.splitlines(keepends=True):
+        text = line.rstrip("\r\n")
+        delimiter = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", text)
+        if fence is not None:
+            if (delimiter and delimiter.group(1)[0] == fence[0]
+                    and len(delimiter.group(1)) >= fence[1] and not delimiter.group(2).strip()):
+                fence = None
+        elif delimiter and (delimiter.group(1)[0] != "`" or "`" not in delimiter.group(2)):
+            fence = (delimiter.group(1)[0], len(delimiter.group(1)))
         else:
-            if current_title is not None:
-                current_lines.append(line)
-            else:
-                preamble_lines.append(line)
-    if current_title is not None:
-        sections[current_title] = "".join(current_lines).strip()
-    elif preamble_lines and "".join(preamble_lines).strip():
-        sections["Overview"] = "".join(preamble_lines).strip()
+            heading = re.match(r"^ {0,3}(#{1,6})[ \t]+(.+?)[ \t]*$", text)
+            if heading:
+                title = re.sub(r"[ \t]+#+[ \t]*$", "", heading.group(2)).strip()
+                if title:
+                    headings.append((title, len(heading.group(1)), offset, offset + len(line)))
+        offset += len(line)
+    return [
+        _Section(title, level, start, content_start,
+                 headings[index + 1][2] if index + 1 < len(headings) else len(body))
+        for index, (title, level, start, content_start) in enumerate(headings)
+    ]
+
+
+def _section_subtree_end(spans: list[_Section], selected: _Section, body_length: int) -> int:
+    """Bound a section and its descendants at the next same/higher heading."""
+    return next((span.start for span in spans
+                 if span.start > selected.start and span.level <= selected.level), body_length)
+
+
+def extract_sections(body: str) -> dict[str, str]:
+    """Map ATX titles to direct content; retain all repeated-title fragments."""
+    spans = _section_spans(body)
+    preamble = body[:spans[0].start].strip() if spans else body.strip()
+    sections: dict[str, str] = {}
+    if preamble:
+        label = "Introduction" if spans and spans[0].title.casefold() == "overview" else "Overview"
+        sections[label] = preamble
+    keys = {title.casefold(): title for title in sections}
+    for span in spans:
+        content = body[span.content_start:span.end].strip()
+        existing = keys.get(span.title.casefold())
+        if existing is None:
+            sections[span.title] = content
+            keys[span.title.casefold()] = span.title
+        else:
+            heading = body[span.start:span.content_start].rstrip("\r\n")
+            sections[existing] += f"\n\n{heading}\n\n{content}"
     return sections
 
 
@@ -757,19 +804,7 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
         and record.target_kind == "passage"
     }
 
-    dossier_reviews: dict[str, bool] = {}
-    for record in snapshot.records.values():
-        if isinstance(record, Decision) and record.id not in withdrawn_or_purged:
-            for ref in record.dossier_refs:
-                dos = snapshot.records.get(ref.id)
-                if isinstance(dos, Dossier) and record.created_at > dos.created_at:
-                    dossier_reviews[dos.id] = True
-            if record.claim_ref:
-                claim = snapshot.records.get(record.claim_ref.id)
-                if isinstance(claim, Claim) and claim.dossier_ref:
-                    dos = snapshot.records.get(claim.dossier_ref.id)
-                    if isinstance(dos, Dossier) and record.created_at > dos.created_at:
-                        dossier_reviews[dos.id] = True
+    dossier_reviews = editorial.dossier_reviews(snapshot)
 
     dossiers_list = [
         {
@@ -784,7 +819,7 @@ def list_dossiers(project: str | Path) -> dict[str, Any]:
             "created_by": record.created_by,
             "excerpt": record.body[:300].strip(),
             "sections": list(extract_sections(record.body).keys()),
-            "review_needed": dossier_reviews.get(record.id, False),
+            "review_needed": any(review["status"] == "review_needed" for review in dossier_reviews.get(record.id, [])),
         }
         for record in snapshot.records.values()
         if isinstance(record, Dossier) and record.id not in withdrawn_or_purged
@@ -802,19 +837,34 @@ def _resolve_evidence_citation(repository: Repository, snapshot: Any, ref: Refer
 
 
 def update_section(body: str, section_title: str, new_content: str) -> str:
-    """Replace an existing section heading in markdown body or append it if not present."""
+    """Replace a unique ATX section subtree; preserve bytes outside its content."""
     clean_title = section_title.strip()
-    pattern = re.compile(r"^(#{1,3})\s+" + re.escape(clean_title) + r"\s*#*$", re.IGNORECASE | re.MULTILINE)
-    match = pattern.search(body)
-    if not match:
-        prefix = "\n\n" if body and not body.endswith("\n\n") else ""
-        return f"{body}{prefix}## {clean_title}\n\n{new_content.strip()}\n"
-    start = match.end()
-    level = len(match.group(1))
-    next_heading = re.compile(r"^#{1," + str(level) + r"}\s+", re.MULTILINE)
-    next_match = next_heading.search(body, start)
-    end = next_match.start() if next_match else len(body)
-    return body[:start] + "\n\n" + new_content.strip() + "\n\n" + body[end:].lstrip()
+    if not clean_title or "\r" in clean_title or "\n" in clean_title:
+        raise ResearchError("Section title must be nonblank and contain only one line")
+    spans = _section_spans(body)
+    matches = [span for span in spans if span.title.casefold() == clean_title.casefold()]
+    if len(matches) > 1:
+        raise ResearchError(f"Section '{clean_title}' is ambiguous: {len(matches)} headings share this title")
+    selected = matches[0] if matches else None
+    nearby = body[selected.start:selected.content_start] if selected else body
+    line_break = re.search(r"\r\n|\r|\n", nearby) or re.search(r"\r\n|\r|\n", body)
+    newline = line_break.group() if line_break else "\n"
+    replacement = new_content.replace("\r\n", "\n").replace("\r", "\n").strip("\n").replace("\n", newline)
+    if selected is None:
+        prefix = "" if not body or body.endswith(newline * 2) else newline if body.endswith(newline) else newline * 2
+        return f"{body}{prefix}## {clean_title}{newline}{newline}{replacement}{newline}"
+    end = _section_subtree_end(spans, selected, len(body))
+    old_content = body[selected.content_start:end]
+    leading_match = re.match(r"(?:[ \t]*(?:\r\n|\r|\n))*", old_content)
+    leading = leading_match.group() if leading_match else ""
+    remaining = old_content[len(leading):]
+    trailing_match = re.search(r"(?:\r\n|\r|\n)(?:[ \t]*(?:\r\n|\r|\n))*$", remaining)
+    trailing = trailing_match.group() if trailing_match else ""
+    if not body[selected.start:selected.content_start].endswith(("\r", "\n")):
+        leading = newline + leading
+    if end < len(body) and not trailing:
+        trailing = newline
+    return body[:selected.content_start] + leading + replacement + trailing + body[end:]
 
 
 def get_dossier(project: str | Path, dossier_id: str, *,
@@ -835,26 +885,7 @@ def get_dossier(project: str | Path, dossier_id: str, *,
     if dossier.id in withdrawn_or_purged:
         raise ResearchError("Dossier has been withdrawn or purged")
 
-    decision_reviews: list[dict[str, Any]] = []
-    for record in snapshot.records.values():
-        if isinstance(record, Decision) and record.id not in withdrawn_or_purged:
-            linked = any(ref.id == dossier.id for ref in record.dossier_refs)
-            if not linked and record.claim_ref:
-                claim = snapshot.records.get(record.claim_ref.id)
-                if isinstance(claim, Claim) and claim.dossier_ref and claim.dossier_ref.id == dossier.id:
-                    linked = True
-            if linked:
-                needs_review = record.created_at > dossier.created_at
-                decision_reviews.append({
-                    "decision_id": record.id,
-                    "title": record.title,
-                    "revision": record.revision,
-                    "status": "review_needed" if needs_review else "current",
-                    "reason": (
-                        f"Decision '{record.title}' was revised (rev {record.revision})" if record.revision > 1
-                        else f"Decision '{record.title}' was created after dossier"
-                    ) if needs_review else None,
-                })
+    decision_reviews = editorial.dossier_reviews(snapshot).get(dossier.id, [])
 
     sections = extract_sections(dossier.body)
     if summary:
@@ -878,7 +909,11 @@ def get_dossier(project: str | Path, dossier_id: str, *,
         }
 
     if section is not None:
-        matched = next((k for k in sections if k.lower() == section.strip().lower()), None)
+        spans = _section_spans(dossier.body)
+        matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
+        if len(matches) > 1:
+            raise ResearchError(f"Section '{section}' is ambiguous: {len(matches)} headings share this title; read the full dossier")
+        matched = next((k for k in sections if k.casefold() == section.strip().casefold()), None)
         if matched is None:
             raise ResearchError(f"Section '{section}' not found in dossier; available: {', '.join(sections.keys()) or 'none'}")
         return {
@@ -887,7 +922,7 @@ def get_dossier(project: str | Path, dossier_id: str, *,
             "revision": dossier.revision,
             "snapshot": snapshot.digest,
             "section": matched,
-            "content": sections[matched],
+            "content": dossier.body[matches[0].content_start:_section_subtree_end(spans, matches[0], len(dossier.body))].strip() if matches else sections[matched],
             "decision_reviews": decision_reviews,
             "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
         }
@@ -1136,6 +1171,16 @@ def record_decision(
         "dossier_ids": [ref.id for ref in decision.dossier_refs],
         "snapshot": new_snapshot.digest,
     }
+
+
+def decision_impact(project: str | Path, decision_id: str) -> dict[str, Any]:
+    """Inspect explicit affected dossiers and revision pins without writing."""
+    return editorial.decision_impact(project, decision_id, outline=lambda body: list(extract_sections(body)))
+
+
+def editorial_review(project: str | Path) -> dict[str, Any]:
+    """List structural review candidates, never semantic or quality verdicts."""
+    return editorial.editorial_review(project, outline=lambda body: list(extract_sections(body)))
 
 
 def list_decisions(project: str | Path) -> dict[str, Any]:

@@ -24,6 +24,95 @@ class TestResearchRevisionCli(unittest.TestCase):
             status = cli.run(self.parse(*args))
         return status, json.loads(output.getvalue())
 
+    def test_prepare_revision_is_read_only_and_passes_explicit_resolutions(self):
+        preview = {"ready": True, "changes": {"title": "Mine"}, "conflicts": []}
+        with patch.object(api, "prepare_record_revision", return_value=preview) as prepare, \
+                patch.object(api, "revise_record") as revise:
+            status, result = self.run_json(
+                "claim", "--project", "/synthetic", "--claim-id", "urn:uuid:claim",
+                "--prepare", "--base-revision", "1", "--title", "Mine", "--resolve", "title=mine",
+            )
+        self.assertEqual(status, 0)
+        self.assertEqual(result, preview)
+        prepare.assert_called_once_with("/synthetic", "claim", "urn:uuid:claim",
+                                        base_revision=1, changes={"title": "Mine"}, resolutions={"title": "mine"})
+        revise.assert_not_called()
+
+    def test_decision_cli_keeps_explicit_dossier_revision_mapping(self):
+        pins = {"urn:uuid:dossier": 1}
+        with patch.object(api, "prepare_record_revision", return_value={"ready": True}) as prepare:
+            self.run_json("decision", "--project", "/synthetic", "--decision-id", "urn:uuid:decision",
+                          "--prepare", "--base-revision", "1", "--dossiers", "urn:uuid:dossier",
+                          "--dossier-revisions", json.dumps(pins))
+        self.assertEqual(prepare.call_args.kwargs["changes"], {"dossier_ids": ["urn:uuid:dossier"], "dossier_revisions": pins})
+
+    def test_explicit_decision_dossier_pins_require_revision_mode(self):
+        with patch.object(api, "record_decision") as create, patch.object(api, "get_record") as inspect:
+            for flags in (("--title", "Choice", "--rationale", "Synthetic reason"),
+                          ("--decision-id", "urn:uuid:decision", "--inspect"),
+                          ("--decision-id", "urn:uuid:decision", "--history")):
+                with self.subTest(flags=flags), contextlib.redirect_stderr(io.StringIO()):
+                    status = cli.run(self.parse("decision", "--project", "/synthetic", "--dossier-revisions", "{}", *flags))
+                    self.assertEqual(status, 1)
+            create.assert_not_called()
+            inspect.assert_not_called()
+
+    def test_prepare_section_uses_pinned_body_not_latest_body(self):
+        with patch.object(api, "get_record", return_value={"record": {"body": "# Target\n\nBase.\n\n# Other\n\nOriginal.\n"}}) as read, \
+                patch.object(api, "get_dossier") as latest, \
+                patch.object(api, "prepare_record_revision", return_value={"ready": True}) as prepare:
+            self.run_json("dossier", "--project", "/synthetic", "--dossier-id", "urn:uuid:dossier",
+                          "--prepare", "--base-revision", "1", "--section", "Target", "--file", "Replacement.")
+        read.assert_called_once_with("/synthetic", "dossier", "urn:uuid:dossier", revision=1)
+        latest.assert_not_called()
+        submitted = prepare.call_args.kwargs["changes"]["body"]
+        self.assertIn("Replacement.", submitted)
+        self.assertIn("Original.", submitted)
+
+    def test_prepare_modes_and_resolution_shape_fail_without_writes(self):
+        with patch.object(api, "prepare_record_revision") as prepare, patch.object(api, "revise_record") as revise:
+            for flags in (("--prepare", "--title", "Mine"),
+                          ("--prepare", "--base-revision", "0", "--title", "Mine"),
+                          ("--prepare", "--base-revision", "1", "--update", "--title", "Mine"),
+                          ("--prepare", "--base-revision", "1", "--title", "Mine", "--resolve", "title=auto"),
+                          ("--prepare", "--base-revision", "1", "--title", "Mine", "--resolve", "title=mine", "--resolve", "title=current"),
+                          ("--base-revision", "1"), ("--resolve", "title=mine")):
+                with self.subTest(flags=flags), contextlib.redirect_stderr(io.StringIO()):
+                    status = cli.run(self.parse("claim", "--project", "/synthetic", "--claim-id", "urn:uuid:claim", *flags))
+                    self.assertEqual(status, 1)
+            prepare.assert_not_called()
+            revise.assert_not_called()
+
+    def test_prepare_then_explicit_save_keeps_the_other_authors_change(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "project"
+            api.init(project, title="Synthetic reconciliation")
+            created = api.create_dossier(project, "Base title", "# Notes\n\nSynthetic notes.")
+            identifier = created["dossier_id"]
+            base = api.get_record(project, "dossier", identifier)
+            api.revise_record(project, "dossier", identifier, changes={"title": "Current title"},
+                              expected_snapshot=base["snapshot"], expected_revision=1,
+                              change_kind="correction", reason="Synthetic other-author change")
+            current = api.get_record(project, "dossier", identifier)
+            status, preview = self.run_json(
+                "dossier", "--project", str(project), "--dossier-id", identifier,
+                "--prepare", "--base-revision", "1", "--tags", "mine",
+            )
+            self.assertEqual(status, 0)
+            self.assertTrue(preview["ready"])
+            self.assertEqual(preview["changes"], {"tags": ["mine"]})
+            self.assertEqual(api.get_record(project, "dossier", identifier), current)
+            status, saved = self.run_json(
+                "dossier", "--project", str(project), "--dossier-id", identifier,
+                "--update", "--tags", "mine", "--expected-snapshot", preview["current"]["snapshot"],
+                "--expected-revision", str(preview["current"]["record"]["revision"]),
+                "--change-kind", "correction", "--reason", "Explicitly apply prepared changes",
+            )
+            self.assertEqual(status, 0)
+            self.assertEqual(saved["record"]["title"], "Current title")
+            self.assertEqual(saved["record"]["tags"], ["mine"])
+            self.assertEqual(saved["record"]["revision"], 3)
+
     def test_dossier_update_only_sends_supplied_fields(self):
         with patch.object(api, "revise_record", create=True, return_value={"revision": 2}) as revise:
             status, result = self.run_json(
@@ -380,4 +469,3 @@ class TestResearchRevisionCli(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

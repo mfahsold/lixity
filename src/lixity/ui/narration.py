@@ -5,10 +5,66 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
 from ..format import pct as format_pct
+from ..style_fingerprint import FEATURE_UNITS, FEATURES
 from ..style_profile import ChapterProfile
 from .components import esc, help_term, kpi, label, panel_start
+
+
+def render_scenes_panel(
+    scenes: Mapping[str, Any] | None, labels: Mapping[str, str] | None,
+    language_key: str = "en",
+) -> str:
+    """Show scene observations, sample support and author-defined comparisons."""
+    if not scenes:
+        return ""
+    if scenes.get("error"):
+        return (panel_start("scenes", labels, "panel_scenes") +
+                f'<p role="status">{esc(scenes["error"])}</p></section>')
+    if not scenes.get("items"):
+        return ""
+
+    def L(key: str) -> str:
+        return esc(label(labels, key).replace("{min_tokens}", str(MIN_TOKENS_LD)))
+
+    def N(value: Any) -> str:
+        return "—" if value is None else format_num(value, language_key, 2)
+
+    parts = [panel_start("scenes", labels, "panel_scenes"),
+             f'<p class="hint">{L("scene_guidance")}</p>',
+             f'<p class="hint">{L("scene_support")}</p>']
+    for item in scenes["items"]:
+        group = esc(item["group"]) if item["group"] else L("scene_unassigned")
+        parts.append(f'<details class="scene-detail" data-scene="{esc(item["id"])}"><summary>'
+                     f'{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]} · {group}'
+                     f' · {L("words")}: {item["words"]} · {L("sentences")}: {item["sentences"]}'
+                     '</summary>')
+        parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_scenes")}">'
+                     '<table><thead><tr>'
+                     f'<th>{L("panel_scenes")}</th><th>{L("scene_value")}</th>'
+                     f'<th>{L("scene_se")}</th><th>{L("scene_range")}</th>'
+                     f'<th>{L("scene_baseline")}</th></tr></thead><tbody>')
+        baseline = scenes["baselines"].get(item["group"], {})
+        for field, label_key, unit in FEATURES:
+            units = FEATURE_UNITS.get(language_key, {}).get(field, unit)
+            target = item["targets"].get(field)
+            comparison = "—"
+            if target:
+                lower = "…" if target["lower"] is None else N(target["lower"])
+                upper = "…" if target["upper"] is None else N(target["upper"])
+                comparison = f'{lower} – {upper} · {L("scene_" + target["position"])}'
+            reference = baseline.get(field, {})
+            median = N(reference.get("median"))
+            count = reference.get("n", 0)
+            parts.append(f'<tr><th>{L(label_key)} <small>{esc(units)}</small></th>'
+                         f'<td>{N(item["features"][field])}</td>'
+                         f'<td>{N(item["standard_errors"].get(field))}</td><td>{comparison}</td>'
+                         f'<td>{median} (n={count})</td></tr>')
+        parts.append('</tbody></table></div></details>')
+    parts.append('</section>')
+    return "".join(parts)
 
 
 def render_sentence_dist_panel(

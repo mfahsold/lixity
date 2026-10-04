@@ -66,7 +66,7 @@ def profile(
 
     Returns a JSON-safe dict: ``{"meta": {...}, "chapters": [...], "paragraphs": [...]}``.
     """
-    config, resolved = resolve_document_config(text, language, **config_overrides)
+    config, resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
     fp_thresholds = resolve_thresholds(flag_min_severity=flag_min_severity, project_config=project_config)
     paragraphs, chapters = profile_document(text, config, fp_thresholds)
     return {
@@ -100,7 +100,7 @@ def fingerprint(
     Thresholds (z_mild=2.5, z_strong=3.5, fdr_q=0.05, fdr_method='bh',
     dim_score_threshold=2.5, min_chapters=2) are injectable. ``None`` resolves
     from project settings, then code defaults. ``project_config={}`` disables
-    implicit threshold discovery; a mapping supplies threshold settings only.
+    implicit threshold discovery; a mapping supplies thresholds and known corpus settings.
     Language and corpus options remain explicit arguments. Returns the style
     reference dict (see docs/AGENTS.md).
 
@@ -108,7 +108,7 @@ def fingerprint(
     token-level ``structural_diagnostics.cooccurrence`` / ``.keyness`` computed
     from ``text`` (Dunning G² early vs late half, Goh–Barabási fitness).
     """
-    config, _resolved = resolve_document_config(text, language, **config_overrides)
+    config, _resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
     thresholds = _thresholds(
         z_mild,
         z_strong,
@@ -228,6 +228,23 @@ def pacing(text: str, language: str = "en", **config_overrides: Any) -> dict[str
     return {"meta": _meta(resolved.key), "pacing": pacing_report(text, config).to_dict()}
 
 
+def scenes(
+    text: str, language: str = "en", *,
+    project_config: Mapping[str, Any] | None = None, **config_overrides: Any,
+) -> dict[str, Any]:
+    """Scene features, author targets and explicit manuscript-only registers.
+
+    Settings are explicit; omitted project_config does not discover a project.
+    This additive scene envelope has schema version 1; existing analyze/profile
+    and style passports retain their contracts.
+    """
+    from .scenes import scene_report
+
+    config, resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
+    return {"meta": {**_meta(resolved.key), "schema_version": 1},
+            "scenes": scene_report(text, config, (project_config or {}).get("scene_analysis"))}
+
+
 def motifs(
     text: str,
     motifs: Mapping[str, str] | None = None,
@@ -286,11 +303,11 @@ def dashboard(
     Renders the complete single-file HTML dashboard (self-contained, no CDN,
     deterministic). Returns the HTML document as a string.
 
-    ``project_config`` supplies threshold settings only; ``{}`` uses code
+    ``project_config`` supplies thresholds, known corpus settings and scene registers; ``{}`` uses code
     defaults without reading the current directory. Optional structure panels
     and server controls require the lower-level renderer and an adapter.
     """
-    config, resolved = resolve_document_config(text, language, **config_overrides)
+    config, resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
     thresholds = _thresholds(
         z_mild,
         z_strong,
@@ -305,11 +322,14 @@ def dashboard(
     from .markers import list_markers
 
     marker_items = list_markers(text)
+    from .scenes import scene_report_for_display
     return render_dashboard(
         analysis.chapters,
         analysis.paragraphs,
         metrics=analysis.metrics,
         fingerprint=analysis.fingerprint,
+        scenes=scene_report_for_display(text, config, (project_config or {}).get("scene_analysis"),
+                                        premeasured_chapters=analysis.metrics.chapters),
         title=title,
         labels=resolved.labels,
         language_name=resolved.name,
@@ -353,6 +373,10 @@ def about() -> dict[str, Any]:
             "hd_d_min_tokens": MIN_TOKENS_LD,
         },
         "commands": [
+            {
+                "name": "scenes", "purpose": "scene features, explicit register references and author targets",
+                "output": "text|json", "schema_version": 1,
+            },
             {
                 "name": "analyze",
                 "purpose": "corpus metrics and per-chapter style features",

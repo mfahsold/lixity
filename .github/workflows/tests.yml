@@ -1,10 +1,18 @@
 name: tests
-on: [push, pull_request]
+on:
+  push:
+    branches: ["main"]
+  pull_request:
+  workflow_dispatch:
 permissions:
   contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 jobs:
   unittest:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     strategy:
       matrix:
         python-version: ["3.10", "3.11", "3.12", "3.13"]
@@ -13,22 +21,26 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python-version }}
-      - run: python -m pip install .
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - run: python -m pip install . pytest
       - name: Install native PDF test dependencies
         run: sudo apt-get update && sudo apt-get install -y poppler-utils
-      - run: python -m unittest discover -s tests -v
+      - name: Run the full suite with warnings treated as errors
+        run: python -m pytest -W error -q -p no:asyncio
         env:
           PYTHONPATH: src
-      - run: pip install pytest
-      - run: PYTHONPATH=src python -m pytest -W error -q -p no:asyncio
 
   browser:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
@@ -45,11 +57,13 @@ jobs:
           node tests/browser/research.cjs
           node tests/browser/list-filters.cjs
           node tests/browser/project-controls.cjs
+          node tests/browser/scenes.cjs
           node tests/browser/docs.cjs
           node tests/browser/visual-consistency.cjs
 
   research-platforms:
     runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
@@ -58,14 +72,19 @@ jobs:
       - uses: actions/setup-python@v7
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
       - run: python -m pip install . pytest
       - name: Install native PDF test dependencies
         if: runner.os == 'macOS'
         run: brew install poppler
-      - run: python -m pytest tests/test_research.py tests/test_research_analysis.py tests/test_research_lifecycle.py tests/test_research_revision_storage.py tests/test_research_revisions.py tests/test_research_revision_cli.py tests/test_research_correctness.py tests/test_research_archive.py tests/test_research_properties.py tests/test_research_ocr.py -W error -q -p no:asyncio
+      - name: Run every research suite on this platform
+        run: >-
+          python -c "from pathlib import Path; import pytest; tests = sorted(Path('tests').glob('test_research*.py')); assert tests, 'No research tests found'; raise SystemExit(pytest.main([str(path) for path in tests] + ['-W', 'error', '-q', '-p', 'no:asyncio']))"
 
   lint:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -77,6 +96,7 @@ jobs:
 
   package:
     runs-on: ubuntu-latest
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -84,7 +104,7 @@ jobs:
           python-version: "3.12"
       - run: pip install build
       - run: python -m build --wheel
-      - name: Verify wheel contains UI assets, typing marker and version metadata
+      - name: Verify wheel matches package source and version metadata
         run: |
           python - <<'PY'
           import glob, re, sys, zipfile
@@ -93,27 +113,19 @@ jobs:
           wheel = glob.glob("dist/*.whl")[0]
           zf = zipfile.ZipFile(wheel)
           names = set(zf.namelist())
-          required = {
-              "lixity/py.typed",
-              "lixity/ui/assets/dashboard.css",
-              "lixity/ui/assets/dashboard.js",
-              "lixity/ui/assets/style-space.js",
-              "lixity/pipeline.py",
-              "lixity/workspace_labels.py",
-              "lixity/research/api.py",
-              "lixity/research/analysis.py",
-              "lixity/research/archive.py",
-              "lixity/research/catalogue.py",
-              "lixity/research/cli.py",
-              "lixity/research/models.py",
-              "lixity/research/ocr.py",
-              "lixity/research/repository.py",
-              "lixity/research/revisions.py",
-              "lixity/_version.py",
-          }
-          missing = sorted(required - names)
-          if missing:
-              sys.exit(f"missing in wheel: {missing}")
+          source = Path("src/lixity")
+          files = set(source.rglob("*.py")) | {source / "py.typed"}
+          files.update(path for path in (source / "ui/assets").iterdir() if path.is_file())
+          expected_files = {"lixity/" + path.relative_to(source).as_posix(): path for path in files}
+          shipped = {name for name in names if name.startswith("lixity/")}
+          missing = sorted(expected_files.keys() - shipped)
+          extra = sorted(shipped - expected_files.keys())
+          if missing or extra:
+              sys.exit(f"wheel package members differ: missing={missing}, extra={extra}")
+          changed = sorted(name for name, path in expected_files.items()
+                           if zf.read(name) != path.read_bytes())
+          if changed:
+              sys.exit(f"wheel contents differ from source: {changed}")
 
           version_py = Path("src/lixity/_version.py").read_text(encoding="utf-8")
           m = re.search(r'__version__\s*=\s*"([^"]+)"', version_py)

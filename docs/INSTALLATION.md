@@ -81,6 +81,14 @@ move a fixed tag or commit to another release. Remove the CLI with
 `uv tool uninstall lixity`. After updating, restart any running server or adapter;
 see [Running the server](#running-the-server).
 
+If a terminal reports an older version than your checkout, compare `lixity
+--version` with `.venv/bin/lixity --version` (`.venv\Scripts\lixity.exe --version`
+on Windows). They may be separate installations. Use `command -v lixity` on
+Linux/macOS or `Get-Command lixity` in PowerShell, then inspect `uv tool list`.
+A non-editable tool installed from a local folder is a copy: changing the
+folder does not update the installed tool. Reinstall the chosen release or
+development source explicitly, verify its version, and restart its service.
+
 If you already use pipx, the equivalent alternative is
 `pipx install "git+https://github.com/mfahsold/lixity.git@v1.23.0"`, followed by
 `pipx ensurepath` if necessary; update with `pipx upgrade lixity`.

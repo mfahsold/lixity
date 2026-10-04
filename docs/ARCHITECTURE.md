@@ -1,6 +1,7 @@
 # Architecture and integration boundaries
 
-This document describes Lixity `1.19.0`. The shared pipeline and explicit API threshold mappings were introduced
+This document describes the shared architecture through v1.23.0 and labels
+subsequent additions on current main. The shared pipeline and explicit API threshold mappings were introduced
 in 1.15.0; integrated local project/research workflows arrived in 1.16.0, followed
 by native editing, the self-hosted OCR boundary, offline diagrams and verified
 export/restoration in 1.17.0.
@@ -10,7 +11,7 @@ Experimental extension: [local research workspace](research/USAGE.md).
 exact citations, BagIt-style export/restoration, and a rebuildable SQLite/FTS5 index. It does not import into
 `lixity.pipeline`. Existing analyze/profile v2 and style v4 remain unchanged.
 The workspace also stores dossiers, claims, evidence links and author decisions with full native revision history.
-The [research RFC](research/README.md) additionally specifies review workflows,
+The [research RFC](research/README.md) additionally specifies broader review workflows,
 manuscript anchors, and hybrid vector search; those are not current dependencies.
 
 ## Layers
@@ -62,7 +63,7 @@ settings = load_project_config(manuscript)
 config, language = resolve_document_config(
     text,
     settings.get("language", "en"),
-    **{key: settings[key] for key in ("chapter_regex", "appendix_marker") if key in settings},
+    project_config=settings,
 )
 thresholds = resolve_thresholds(project_config=settings)
 analysis = analyze_document(text, config, thresholds)
@@ -73,12 +74,22 @@ user settings. A supplied threshold mapping prevents implicit configuration
 discovery inside `resolve_thresholds`; `{}` selects code defaults only.
 Explicit threshold arguments take precedence over the mapping.
 
-This is not a global project-session framework. The convenience API's
-`profile`, `fingerprint`/`passport` and `dashboard` accept `project_config`
-for threshold resolution: `{}` avoids implicit discovery, while `None`
-retains current-directory discovery for compatibility. Language, title and
-corpus overrides remain separate explicit arguments. Adapters should pass the intended configuration and
+On current main, `resolve_document_config` applies known corpus settings from
+an explicit mapping. Explicit arguments take precedence; language remains an
+explicit choice. The convenience API's `profile`, `fingerprint`/`passport` and
+`dashboard` accept this mapping as well as thresholds: `{}` avoids implicit
+discovery, while `None` retains threshold discovery for compatibility. Chapter,
+paragraph and scene numbering use the same configured, nonempty chapter units.
+Scene reports reuse the chapter measurement engine and compare only explicit
+register groups within the manuscript. They do not read research sources or
+provide quality scores. Adapters should pass the intended configuration and
 keep manuscript-specific characters, motifs and artifacts within that project.
+
+Current main also provides read-only three-way revision preparation and atomic
+revision groups. These reuse the strict revision validator and one repository
+commit. Decision impact and editorial review follow recorded links, dates and
+revision pins; they do not infer semantic contradictions or rewrite documents.
+See [implemented workflows and limits](research/USAGE.md#current-main-workflows-unreleased).
 
 ## Presentation and trust boundaries
 

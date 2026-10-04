@@ -19,6 +19,7 @@ from .language_data import (
     LEXICON,
     METRIC_LABELS,
     PROFILE_DATA,
+    SCENE_LABELS,
     STYLE_DATA,
     UI_LABELS,
 )
@@ -105,6 +106,7 @@ def _build_profiles() -> dict[str, LanguageProfile]:
             stopwords=frozenset(data.get("stopwords", ())),
             labels={
                 **GUIDANCE_LABELS.get(key, GUIDANCE_LABELS["en"]),
+                **SCENE_LABELS.get(key, SCENE_LABELS["en"]),
                 **IDENTITY_LABELS.get(key, IDENTITY_LABELS["en"]),
                 **LABELS.get(key, LABELS["generic"]),
                 **METRIC_LABELS.get(key, METRIC_LABELS["en"]),

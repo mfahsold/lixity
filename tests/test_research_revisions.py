@@ -3,10 +3,11 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from lixity.research import api
 from lixity.research.models import Claim, Decision, Reference
-from lixity.research.repository import Repository, ResearchError
+from lixity.research.repository import Repository, ResearchConflictError, ResearchError
 
 
 class TestResearchRevisions(unittest.TestCase):
@@ -31,6 +32,207 @@ class TestResearchRevisions(unittest.TestCase):
             expected_snapshot=loaded["snapshot"], expected_revision=loaded["record"]["revision"],
             change_kind=change_kind, reason="Author reviewed this change.", actor="test-author",
         )
+
+    def test_prepare_revision_reconciles_unrelated_changes_without_writing(self):
+        self.revise("claim", self.claim, {"place": "Reading room"})
+        before = {p: p.read_bytes() for p in self.project.rglob("*") if p.is_file()}
+        preview = api.prepare_record_revision(self.project, "dossier", self.dossier,
+                                              base_revision=1, changes={"body": "My draft."})
+        self.assertEqual(preview["schema_version"], "research-revision-preview-local/1")
+        self.assertTrue(preview["ready"])
+        self.assertEqual(preview["conflicts"], [])
+        self.assertEqual(preview["changes"], {"body": "My draft."})
+        self.assertEqual(before, {p: p.read_bytes() for p in self.project.rglob("*") if p.is_file()})
+        self.assertEqual(api.get_record(self.project, "dossier", self.dossier)["record"]["revision"], 1)
+
+    def test_prepare_revision_preserves_nonoverlapping_changes_for_all_authored_types(self):
+        for kind, identifier, concurrent, draft in (
+            ("dossier", self.dossier, {"title": "Current title"}, {"body": "My note."}),
+            ("claim", self.claim, {"place": "Library"}, {"statement": "A reviewed statement."}),
+            ("evidence_link", self.link, {"relation": "qualifies"}, {"rationale": "My rationale."}),
+            ("decision", self.decision, {"title": "Current decision"}, {"rationale": "My reason."}),
+        ):
+            with self.subTest(kind=kind):
+                self.revise(kind, identifier, concurrent)
+                preview = api.prepare_record_revision(self.project, kind, identifier,
+                                                      base_revision=1, changes=draft)
+                self.assertTrue(preview["ready"])
+                current = preview["current"]
+                saved = api.revise_record(self.project, kind, identifier, changes=preview["changes"],
+                    expected_snapshot=current["snapshot"], expected_revision=current["record"]["revision"],
+                    change_kind="correction", reason="Reviewed reconciliation", actor="second-author")
+                self.assertEqual(saved["record"]["revision"], 3)
+                self.assertEqual(saved["record"]["created_by"], "second-author")
+                self.assertEqual(saved["record"]["change"]["previous_revision"], 2)
+                for key, value in {**concurrent, **draft}.items():
+                    self.assertEqual(saved["record"]["scope"].get(key) if key == "place" else saved["record"][key], value)
+                self.assertEqual(api.get_record(self.project, kind, identifier, revision=1)["record"]["revision"], 1)
+
+    def test_prepare_revision_requires_explicit_same_field_choice(self):
+        self.revise("dossier", self.dossier, {"title": "Current title"})
+        draft = {"title": "My title", "body": "My note."}
+        preview = api.prepare_record_revision(self.project, "dossier", self.dossier,
+                                              base_revision=1, changes=draft)
+        self.assertFalse(preview["ready"])
+        self.assertEqual(preview["conflicts"], [{"field": "title", "base": "Reading room",
+                                              "current": "Current title", "mine": "My title"}])
+        self.assertEqual(preview["changes"], {"body": "My note."})
+        for choice in ("current", "mine"):
+            resolved = api.prepare_record_revision(self.project, "dossier", self.dossier,
+                base_revision=1, changes=draft, resolutions={"title": choice})
+            self.assertTrue(resolved["ready"])
+            self.assertEqual(resolved["changes"], {"body": "My note.", **({"title": "My title"} if choice == "mine" else {})})
+
+    def test_decision_dossier_list_edits_and_batches_preserve_retained_pins(self):
+        other = api.create_dossier(self.project, "Other note", "Other evidence.")["dossier_id"]
+        decision = api.record_decision(self.project, title="Linked decision", rationale="Review the note.",
+                                       dossier_ids=[self.dossier])["decision_id"]
+        self.revise("dossier", self.dossier, {"body": "Current evidence."})
+        self.revise("decision", decision, {"title": "Current decision title"})
+        preview = api.prepare_record_revision(self.project, "decision", decision, base_revision=1,
+                                              changes={"dossier_ids": [self.dossier, other]})
+        self.assertTrue(preview["ready"])
+        self.assertEqual(preview["current"]["record"]["dossier_refs"], [{"id": self.dossier, "revision": 1}])
+        current = preview["current"]
+        saved = api.revise_record(self.project, "decision", decision, changes=preview["changes"],
+                                  expected_snapshot=current["snapshot"], expected_revision=2,
+                                  change_kind="correction", reason="Reviewed the association list.")
+        expected = [{"id": self.dossier, "revision": 1}, {"id": other, "revision": 1}]
+        self.assertEqual(saved["record"]["dossier_refs"], expected)
+        self.assertEqual(saved["record"]["title"], "Current decision title")
+        operations = [{"kind": "decision", "id": decision, "expected_revision": 3,
+                       "changes": {"dossier_ids": [self.dossier, other], "rationale": "Revisited the linked notes."},
+                       "change_kind": "correction", "reason": "Reviewed together."}]
+        group = api.prepare_record_revisions(self.project, operations)
+        api.apply_record_revisions(self.project, group["operations"], expected_snapshot=group["snapshot"])
+        self.assertEqual(api.get_record(self.project, "decision", decision)["record"]["dossier_refs"], expected)
+
+    def test_decision_reconciliation_restores_reviewed_historical_list_pins(self):
+        other = api.create_dossier(self.project, "Other note", "Other evidence.")["dossier_id"]
+        decision = api.record_decision(self.project, title="Linked decision", rationale="Review the note.",
+                                       dossier_ids=[self.dossier])["decision_id"]
+        self.revise("dossier", self.dossier, {"body": "Current evidence."})
+        self.revise("decision", decision, {"dossier_ids": []})
+        changes = {"dossier_ids": [self.dossier, other]}
+        before = {p: p.read_bytes() for p in self.project.rglob("*") if p.is_file()}
+        preview = api.prepare_record_revision(self.project, "decision", decision, base_revision=1, changes=changes)
+        self.assertEqual(preview["conflicts"][0]["base"], [{"id": self.dossier, "revision": 1}])
+        self.assertEqual(preview["conflicts"][0]["mine"], [{"id": self.dossier, "revision": 1}, {"id": other, "revision": 1}])
+        resolved = api.prepare_record_revision(self.project, "decision", decision, base_revision=1,
+            changes=changes, resolutions={"dossier_ids": "mine"})
+        self.assertEqual(resolved["changes"]["dossier_revisions"], {self.dossier: 1, other: 1})
+        self.assertEqual(before, {p: p.read_bytes() for p in self.project.rglob("*") if p.is_file()})
+        saved = api.revise_record(self.project, "decision", decision, changes=resolved["changes"],
+            expected_snapshot=resolved["current"]["snapshot"], expected_revision=2,
+            change_kind="correction", reason="Restore the explicitly reviewed links.")
+        self.assertEqual(saved["record"]["dossier_refs"], [{"id": self.dossier, "revision": 1}, {"id": other, "revision": 1}])
+        self.assertEqual(api.get_record(self.project, "decision", decision, revision=1)["record"]["dossier_refs"], [{"id": self.dossier, "revision": 1}])
+        for pins in ({other: 99}, {"unknown": 1}, {other: True}, [], {other: 0}):
+            with self.subTest(pins=pins), self.assertRaises(ResearchError):
+                api.prepare_record_revision(self.project, "decision", decision, base_revision=3,
+                    changes={"dossier_ids": [other], "dossier_revisions": pins})
+
+    def test_prepare_revision_treats_association_and_pin_as_one_choice(self):
+        other = api.create_claim(self.project, title="Other date", statement="Possibly 1925.")["claim_id"]
+        self.revise("claim", self.claim, {"statement": "Reviewed original claim."})
+        self.revise("evidence_link", self.link, {"claim_revision": 2})
+        preview = api.prepare_record_revision(self.project, "evidence_link", self.link,
+            base_revision=1, changes={"claim_id": other})
+        self.assertFalse(preview["ready"])
+        self.assertEqual(preview["conflicts"][0]["field"], "claim_id")
+        self.assertEqual(preview["conflicts"][0]["current"], {"id": self.claim, "revision": 2})
+        resolved = api.prepare_record_revision(self.project, "evidence_link", self.link,
+            base_revision=1, changes={"claim_id": other}, resolutions={"claim_id": "mine"})
+        self.assertEqual(resolved["changes"], {"claim_id": other, "claim_revision": 1})
+
+    def test_prepared_revision_still_rejects_a_second_race(self):
+        preview = api.prepare_record_revision(self.project, "dossier", self.dossier,
+            base_revision=1, changes={"body": "My draft."})
+        self.revise("claim", self.claim, {"place": "Changed after preview"})
+        with self.assertRaises(ResearchConflictError):
+            api.revise_record(self.project, "dossier", self.dossier, changes=preview["changes"],
+                expected_snapshot=preview["current"]["snapshot"], expected_revision=1,
+                change_kind="correction", reason="Reviewed preview")
+        self.assertEqual(api.get_record(self.project, "dossier", self.dossier)["record"]["body"], "Original note.")
+
+    def test_prepare_revision_rejects_immutable_invalid_and_missing_evidence(self):
+        for changes, resolutions in (({"revision": 100}, {}), ({"title": 42}, {}),
+            ({"evidence_ids": ["urn:uuid:00000000-0000-0000-0000-000000000001"]}, {}),
+            ({"body": "Draft"}, {"body": "overwrite"}), ({"body": "Draft"}, {"created_by": "mine"})):
+            with self.subTest(changes=changes), self.assertRaises(ResearchError):
+                api.prepare_record_revision(self.project, "dossier", self.dossier,
+                    base_revision=1, changes=changes, resolutions=resolutions)
+
+    def batch(self):
+        dossiers = [self.dossier] + [api.create_dossier(self.project, f"Note {i}", "Original.")["dossier_id"] for i in range(4)]
+        return [{"kind": "dossier", "id": identifier, "expected_revision": 1,
+                 "changes": {"body": f"Reviewed note {i}."}, "change_kind": "correction", "reason": "Reviewed together."}
+                for i, identifier in enumerate(dossiers)] + [{"kind": "decision", "id": self.decision,
+                 "expected_revision": 1, "changes": {"rationale": "Reflect the five reviewed dossiers."},
+                 "change_kind": "supersession", "reason": "Reviewed together."}]
+
+    def test_batch_preview_and_apply_use_one_snapshot_without_partial_writes(self):
+        operations = self.batch()
+        before = {p: p.read_bytes() for p in self.project.rglob("*") if p.is_file()}
+        preview = api.prepare_record_revisions(self.project, operations)
+        self.assertEqual(preview["schema_version"], "research-revision-batch-local/1")
+        self.assertEqual(len(preview["operations"]), 6)
+        self.assertEqual(before, {p: p.read_bytes() for p in self.project.rglob("*") if p.is_file()})
+        generation = Repository(self.project).snapshot().manifest.generation
+        result = api.apply_record_revisions(self.project, preview["operations"], expected_snapshot=preview["snapshot"], actor="reviewing-author")
+        self.assertEqual(Repository(self.project).snapshot().manifest.generation, generation + 1)
+        self.assertEqual(len(result["records"]), 6)
+        for operation in operations:
+            record = api.get_record(self.project, operation["kind"], operation["id"])["record"]
+            self.assertEqual(record["revision"], 2)
+            self.assertEqual(record["created_by"], "reviewing-author")
+            self.assertEqual(record["change"]["reason"], "Reviewed together.")
+            self.assertEqual(record["change"]["previous_revision"], 1)
+            for name, value in operation["changes"].items():
+                self.assertEqual(record[name], value)
+            self.assertEqual(api.get_record(self.project, operation["kind"], operation["id"], revision=1)["record"]["revision"], 1)
+
+    def test_batch_invalid_later_operation_and_second_race_leave_all_records_unchanged(self):
+        operations = self.batch()
+        snapshot = api.audit(self.project)["snapshot"]
+        invalid = [*operations[:-1], {**operations[-1], "changes": {"claim_id": "urn:uuid:00000000-0000-0000-0000-000000000001"}}]
+        with self.assertRaises(ResearchError):
+            api.apply_record_revisions(self.project, invalid, expected_snapshot=snapshot)
+        self.assertEqual(api.audit(self.project)["snapshot"], snapshot)
+        preview = api.prepare_record_revisions(self.project, operations)
+        self.revise("claim", self.claim, {"place": "Concurrent edit"})
+        with self.assertRaises(ResearchConflictError):
+            api.apply_record_revisions(self.project, operations, expected_snapshot=preview["snapshot"])
+        for operation in operations:
+            self.assertEqual(api.get_record(self.project, operation["kind"], operation["id"])["record"]["revision"], 1)
+
+    def test_batch_rejects_duplicates_stale_revisions_and_future_pins(self):
+        operation = {"kind": "decision", "id": self.decision, "expected_revision": 1,
+                     "changes": {"title": "Draft"}, "change_kind": "correction", "reason": "Reviewed"}
+        for operations in ([operation, operation], [{**operation, "expected_revision": 99}],
+                           [{**operation, "changes": {"claim_revision": 2}}],
+                           [{**operation, "created_by": "overwritten"}]):
+            with self.subTest(operations=operations), self.assertRaises(ResearchError):
+                api.prepare_record_revisions(self.project, operations)
+
+    def test_batch_reads_snapshot_once_for_preview_and_only_rechecks_under_commit_lock(self):
+        operations = self.batch()
+        read = Repository.snapshot
+        with patch.object(Repository, "snapshot", autospec=True, side_effect=read) as snapshots:
+            preview = api.prepare_record_revisions(self.project, operations)
+            self.assertEqual(snapshots.call_count, 1)
+            snapshots.reset_mock()
+            api.apply_record_revisions(self.project, operations, expected_snapshot=preview["snapshot"])
+            self.assertEqual(snapshots.call_count, 2)
+
+    def test_batch_head_failure_never_accepts_a_partial_group(self):
+        operations = self.batch()
+        preview = api.prepare_record_revisions(self.project, operations)
+        with patch("lixity.research.repository.replace_head", side_effect=OSError("Synthetic publication failure")), self.assertRaises(OSError):
+            api.apply_record_revisions(self.project, operations, expected_snapshot=preview["snapshot"])
+        self.assertEqual(api.audit(self.project)["snapshot"], preview["snapshot"])
+        for operation in operations:
+            self.assertEqual(api.get_record(self.project, operation["kind"], operation["id"])["record"]["revision"], 1)
 
     def test_search_finds_latest_authored_records_without_turning_them_into_citations(self):
         self.revise("dossier", self.dossier, {"body": "Retiredword"})

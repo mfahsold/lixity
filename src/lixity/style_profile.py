@@ -202,7 +202,7 @@ class ParagraphProfiler:
         in_appendix = False
 
         def close_chapter() -> None:
-            if not chapter_title or not chapter_paragraphs:
+            if chapter_num == 0 or not chapter_paragraphs:
                 return  # do not list empty chapters (e.g. an acknowledgements section still open)
             present = sum(p.present_hits for p in chapter_paragraphs)
             past = sum(p.past_hits for p in chapter_paragraphs)
@@ -240,13 +240,19 @@ class ParagraphProfiler:
                     in_appendix = True
                     break
                 close_chapter()
-                chapter_num += 1
+                chapter_num = block.get("chapter_num", chapter_num + 1)
                 chapter_title = block.get("text", "").strip()
                 chapter_start = block.get("start_line", 0)
                 chapter_end = block.get("end_line", 0)
                 chapter_paragraphs = []
                 prev_dominant = None
                 continue
+
+            if chapter_num == 0 and block.get("chapter_num"):
+                chapter_num = block["chapter_num"]
+                chapter_title = block.get("chapter_title", "")
+                chapter_start = block.get("start_line", 0)
+                chapter_end = block.get("end_line", 0)
 
             if in_appendix or chapter_num == 0:
                 continue

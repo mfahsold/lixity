@@ -473,6 +473,85 @@ class TestLixityServer(unittest.TestCase):
                 self.assertTrue(json.loads(body)["ok"])
                 history.assert_called_once_with(root, "dossier", "urn:uuid:dossier")
 
+    def test_research_revision_prepare_is_read_only_and_validates_input(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "research").mkdir()
+            valid = {"kind": "dossier", "id": "urn:uuid:dossier", "base_revision": 1,
+                     "changes": {"body": "My draft"}, "resolutions": {"title": "mine"}}
+            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
+                 patch("lixity.server.routes_research.research_api.prepare_record_revision", return_value={"ready": True}) as prepare, \
+                 patch("lixity.server.routes_research.research_api.revise_record") as revise:
+                status, body, _ = self.make_request("/api/research-record-prepare", method="POST",
+                    body=json.dumps(valid), headers={"Content-Type": "application/json"})
+                self.assertEqual(status, 200, body)
+                self.assertTrue(json.loads(body)["ready"])
+                prepare.assert_called_once_with(root, "dossier", "urn:uuid:dossier",
+                    base_revision=1, changes={"body": "My draft"}, resolutions={"title": "mine"})
+                prepare.reset_mock()
+                for payload in ({**valid, "base_revision": True}, {**valid, "changes": {}},
+                                {**valid, "kind": "source"}, {**valid, "resolutions": []}):
+                    status, body, _ = self.make_request("/api/research-record-prepare", method="POST",
+                        body=json.dumps(payload), headers={"Content-Type": "application/json"})
+                    self.assertEqual(status, 400, body)
+                prepare.assert_not_called()
+                revise.assert_not_called()
+
+    def test_research_revision_batch_routes_require_valid_explicit_actions(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "research").mkdir()
+            operations = [{"kind": "dossier", "id": "urn:uuid:dossier", "expected_revision": 1,
+                           "changes": {"body": "Reviewed draft"}, "change_kind": "correction", "reason": "Reviewed together"}]
+            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
+                 patch("lixity.server.routes_research.research_api.prepare_record_revisions", return_value={"ready": True}) as prepare, \
+                 patch("lixity.server.routes_research.research_api.apply_record_revisions", return_value={"records": []}) as apply:
+                status, body, _ = self.make_request("/api/research-revision-batch-prepare", method="POST",
+                    body=json.dumps({"operations": operations}), headers={"Content-Type": "application/json"})
+                self.assertEqual(status, 200, body)
+                prepare.assert_called_once_with(root, operations, actor="local-author")
+                apply.assert_not_called()
+                status, body, _ = self.make_request("/api/research-revision-batch-apply", method="POST",
+                    body=json.dumps({"operations": operations, "expected_snapshot": "a" * 64}),
+                    headers={"Content-Type": "application/json"})
+                self.assertEqual(status, 200, body)
+                apply.assert_called_once_with(root, operations, expected_snapshot="a" * 64, actor="local-author")
+                prepare.reset_mock()
+                apply.reset_mock()
+                for action in ("prepare", "apply"):
+                    for payload in ({"operations": []}, {"operations": "instructions"},
+                                    {"operations": [None]}, {"operations": operations, "actor": False}):
+                        status, body, _ = self.make_request(f"/api/research-revision-batch-{action}", method="POST",
+                            body=json.dumps(payload), headers={"Content-Type": "application/json"})
+                        self.assertEqual(status, 400, body)
+                status, body, _ = self.make_request("/api/research-revision-batch-apply", method="POST",
+                    body=json.dumps({"operations": operations}), headers={"Content-Type": "application/json"})
+                self.assertEqual(status, 400, body)
+                for digest in (None, False, {}, ""):
+                    status, body, _ = self.make_request("/api/research-revision-batch-apply", method="POST",
+                        body=json.dumps({"operations": operations, "expected_snapshot": digest}),
+                        headers={"Content-Type": "application/json"})
+                    self.assertEqual(status, 400, body)
+                prepare.assert_not_called()
+                apply.assert_not_called()
+
+    def test_research_revision_batch_routes_report_conflicts_without_retrying(self):
+        from lixity.research.repository import ResearchConflictError
+
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            (root / "research").mkdir()
+            with patch.object(LixityServerHandler, "get_research_root", return_value=root):
+                for action, method in (("prepare", "prepare_record_revisions"), ("apply", "apply_record_revisions")):
+                    with patch(f"lixity.server.routes_research.research_api.{method}",
+                               side_effect=ResearchConflictError("Synthetic concurrent change")) as operation:
+                        status, body, _ = self.make_request(f"/api/research-revision-batch-{action}", method="POST",
+                            body=json.dumps({"operations": [{}], "expected_snapshot": "a" * 64}),
+                            headers={"Content-Type": "application/json"})
+                        self.assertEqual(status, 409, body)
+                        self.assertIn("Synthetic concurrent change", json.loads(body)["message"])
+                        operation.assert_called_once()
+
     def test_research_revision_route_rejects_invalid_inputs_without_api_call(self):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)

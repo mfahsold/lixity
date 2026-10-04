@@ -30,11 +30,12 @@ FIELDS = {
     "dossier": {"title", "body", "language", "tags", "evidence_ids"},
     "claim": {"title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"},
     "evidence_link": {"claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"},
-    "decision": {"title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot", "dossier_ids"},
+    "decision": {"title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot", "dossier_ids", "dossier_revisions"},
 }
 
 
-def _record(snapshot: Snapshot, kind: str, identifier: str, revision: int | None = None) -> Authored:
+def _record(snapshot: Snapshot, kind: str, identifier: str, revision: int | None = None, *,
+            unavailable: set[str] | None = None) -> Authored:
     if not isinstance(kind, str) or kind not in KINDS:
         raise ResearchError("Only dossiers, claims, evidence links and decisions can be revised")
     if revision is not None and (type(revision) is not int or revision < 1):
@@ -45,7 +46,9 @@ def _record(snapshot: Snapshot, kind: str, identifier: str, revision: int | None
                   snapshot.get(Reference(id=identifier, revision=revision), KINDS[kind]))
     except ValidationError:
         raise ResearchError("Invalid record identifier") from None
-    if any(isinstance(r, Tombstone) and r.target_ref.id == identifier for r in snapshot.records.values()):
+    if unavailable is None:
+        unavailable = {r.target_ref.id for r in snapshot.records.values() if isinstance(r, Tombstone)}
+    if identifier in unavailable:
         raise ResearchError("Record has been withdrawn or purged")
     return record
 
@@ -195,9 +198,22 @@ def revise_record(
         raise ResearchConflictError("Record revision changed; reload the current record before saving")
     if set(changes) - FIELDS[kind]:
         raise ResearchError("The change contains unknown or immutable fields")
+    revised = _apply_changes(snapshot, previous, changes, change_kind=change_kind, reason=reason, actor=actor)
+    accepted = repository.commit([revised], {}, snapshot)
+    return _view(repository, accepted, revised)
+
+
+def _apply_changes(
+    snapshot: Snapshot, previous: Authored, changes: Mapping[str, Any], *,
+    change_kind: str, reason: str, actor: str,
+) -> Authored:
+    """Build a validated record without publishing it."""
+    kind = previous.kind
+    if set(changes) - FIELDS[kind]:
+        raise ResearchError("The change contains unknown or immutable fields")
     values = previous.model_dump(mode="json")
     direct = {k: v for k, v in changes.items() if k not in
-              {"evidence_ids", "dossier_id", "claim_id", "claim_revision", "dossier_revision", "passage_id", "time_period", "place", "actors", "dossier_ids"}}
+              {"evidence_ids", "dossier_id", "claim_id", "claim_revision", "dossier_revision", "passage_id", "time_period", "place", "actors", "dossier_ids", "dossier_revisions"}}
     for name in ("title", "statement", "rationale", "reviewer", "impact_on_plot"):
         if isinstance(direct.get(name), str):
             direct[name] = direct[name].strip()
@@ -224,11 +240,16 @@ def revise_record(
         if isinstance(previous, (EvidenceLink, Decision)) and ("claim_id" in changes or "claim_revision" in changes):
             identifier = changes.get("claim_id", previous.claim_ref.id if previous.claim_ref else None)
             values["claim_ref"] = _association(snapshot, identifier, Claim, previous.claim_ref, changes.get("claim_revision"))
-        if isinstance(previous, Decision) and "dossier_ids" in changes:
-            ids = changes["dossier_ids"]
+        if isinstance(previous, Decision) and ("dossier_ids" in changes or "dossier_revisions" in changes):
+            ids = changes.get("dossier_ids", [ref.id for ref in previous.dossier_refs])
             if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids):
                 raise ResearchError("Dossier IDs must be a list of dossier identifiers")
-            values["dossier_refs"] = [_association(snapshot, i, Dossier, None, None) for i in dict.fromkeys(ids) if i]
+            pins = changes.get("dossier_revisions", {})
+            if (not isinstance(pins, Mapping) or set(pins) - set(ids)
+                    or any(type(pin) is not int or pin < 1 for pin in pins.values())):
+                raise ResearchError("Dossier revisions must map selected dossier IDs to positive existing revisions")
+            retained = {ref.id: ref for ref in previous.dossier_refs}
+            values["dossier_refs"] = [_association(snapshot, i, Dossier, retained.get(i), pins.get(i)) for i in dict.fromkeys(ids) if i]
         if isinstance(previous, EvidenceLink) and "passage_id" in changes:
             values["passage_ref"] = Reference(id=changes["passage_id"]).model_dump()
         values.update(schema_version="research-local/2", revision=previous.revision + 1,
@@ -238,5 +259,180 @@ def revise_record(
         revised = KINDS[kind].model_validate(values)
     except ValidationError:
         raise ResearchError("Invalid revision fields; check required text, types and size limits") from None
-    accepted = repository.commit([revised], {}, snapshot)
-    return _view(repository, accepted, revised)
+    return revised
+
+
+def _editable_values(record: Authored) -> dict[str, Any]:
+    """Flatten editable fields, keeping an association and its revision together."""
+    values: dict[str, Any] = {}
+    for name in sorted(FIELDS[record.kind]):
+        if name in ("claim_revision", "dossier_revision", "dossier_revisions"):
+            continue
+        if name in ("claim_id", "dossier_id"):
+            ref = getattr(record, name.replace("_id", "_ref"))
+            values[name] = ref.model_dump() if ref else None
+        elif name == "evidence_ids" and isinstance(record, Dossier):
+            values[name] = [ref.id for ref in record.evidence_refs]
+        elif name == "dossier_ids" and isinstance(record, Decision):
+            values[name] = [ref.model_dump() for ref in record.dossier_refs]
+        elif name == "passage_id" and isinstance(record, EvidenceLink):
+            values[name] = record.passage_ref.id
+        elif name in ("time_period", "place", "actors") and isinstance(record, Claim):
+            values[name] = getattr(record.scope, name)
+        else:
+            values[name] = getattr(record, name)
+    return values
+
+
+def _field_change(name: str, value: Any) -> dict[str, Any]:
+    if name == "dossier_ids":
+        return {name: [ref["id"] for ref in value], "dossier_revisions": {ref["id"]: ref["revision"] for ref in value}}
+    if name in ("claim_id", "dossier_id"):
+        if value is None:
+            return {name: None}
+        return {name: value["id"], name.replace("_id", "_revision"): value["revision"]}
+    return {name: value}
+
+
+def _validate_revision_links(snapshot: Snapshot, previous: Authored, revised: Authored) -> None:
+    """Check new links using the same constraints as the append-only commit."""
+    if isinstance(revised, Dossier):
+        retained = previous.evidence_refs if isinstance(previous, Dossier) else []
+        for ref in revised.evidence_refs:
+            if ref not in retained:
+                snapshot.get(ref, Passage)
+    elif isinstance(revised, Claim) and revised.dossier_ref:
+        snapshot.get(revised.dossier_ref, Dossier)
+    elif isinstance(revised, (EvidenceLink, Decision)):
+        if revised.claim_ref:
+            snapshot.get(revised.claim_ref, Claim)
+        if isinstance(revised, EvidenceLink) and (
+            not isinstance(previous, EvidenceLink) or revised.passage_ref != previous.passage_ref
+        ):
+            snapshot.get(revised.passage_ref, Passage)
+
+
+def prepare_record_revision(
+    project: str | Path, kind: str, record_id: str, *, base_revision: int,
+    changes: Mapping[str, Any], resolutions: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Prepare a read-only three-way reconciliation; never save or choose a conflict.
+
+    The archive supplies both the base and current values. ``resolutions`` must
+    explicitly choose ``current`` or ``mine`` for a conflicting editable field.
+    Associations and their pinned revisions are one field. Save the returned
+    changes through ``revise_record`` with the returned current tokens; it will
+    still reject another concurrent change.
+    """
+    if not isinstance(changes, Mapping) or not changes:
+        raise ResearchError("Provide at least one editable field")
+    if resolutions is None:
+        resolutions = {}
+    if not isinstance(resolutions, Mapping) or any(value not in ("current", "mine") for value in resolutions.values()):
+        raise ResearchError("Choose current or mine for each conflicting field")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    current = _record(snapshot, kind, record_id)
+    base = _record(snapshot, kind, record_id, base_revision)
+    draft = _apply_changes(snapshot, base, changes, change_kind="correction", reason="Preview only", actor="local-author")
+    _validate_revision_links(snapshot, base, draft)
+    before, now, mine = (_editable_values(record) for record in (base, current, draft))
+    conflicts = []
+    merged: dict[str, Any] = {}
+    conflicting_fields = set()
+    for name in before:
+        if mine[name] == before[name]:
+            continue
+        desired = mine[name]
+        if now[name] != before[name] and now[name] != mine[name]:
+            conflicting_fields.add(name)
+            if name not in resolutions:
+                conflicts.append({"field": name, "base": before[name], "current": now[name], "mine": mine[name]})
+                continue
+            desired = now[name] if resolutions[name] == "current" else mine[name]
+        if desired != now[name]:
+            merged.update(_field_change(name, desired))
+    if set(resolutions) - conflicting_fields:
+        raise ResearchError("Resolution names must identify fields with conflicting changes")
+    candidate = _apply_changes(snapshot, current, merged, change_kind="correction", reason="Preview only", actor="local-author")
+    _validate_revision_links(snapshot, current, candidate)
+    return {
+        "schema_version": "research-revision-preview-local/1", "base_revision": base_revision,
+        "current": _view(repository, snapshot, current), "changes": merged,
+        "conflicts": conflicts, "ready": not conflicts, "has_changes": bool(merged),
+    }
+
+
+def _revision_batch(
+    snapshot: Snapshot, operations: list[Mapping[str, Any]], actor: str,
+) -> tuple[list[Authored], list[dict[str, Any]]]:
+    if not isinstance(operations, list) or not 1 <= len(operations) <= 100:
+        raise ResearchError("Provide between 1 and 100 revision operations")
+    if not isinstance(actor, str) or not actor.strip():
+        raise ResearchError("A revision actor is required")
+    revised: list[Authored] = []
+    prepared: list[dict[str, Any]] = []
+    identifiers: set[str] = set()
+    unavailable = {record.target_ref.id for record in snapshot.records.values() if isinstance(record, Tombstone)}
+    for operation in operations:
+        if not isinstance(operation, Mapping) or set(operation) != {
+            "kind", "id", "expected_revision", "changes", "change_kind", "reason"
+        }:
+            raise ResearchError("Each revision operation requires kind, id, expected_revision, changes, change_kind and reason")
+        kind, identifier = operation["kind"], operation["id"]
+        previous = _record(snapshot, kind, identifier, unavailable=unavailable)
+        if identifier in identifiers:
+            raise ResearchError("A record may appear only once in a revision batch")
+        identifiers.add(identifier)
+        expected_revision = operation["expected_revision"]
+        if type(expected_revision) is not int or expected_revision < 1:
+            raise ResearchError("Expected revision must be a positive integer")
+        if previous.revision != expected_revision:
+            raise ResearchConflictError("Record revision changed; prepare the batch against current records")
+        changes, change_kind, reason = operation["changes"], operation["change_kind"], operation["reason"]
+        if not isinstance(changes, Mapping) or not changes:
+            raise ResearchError("Provide at least one editable field for each revision")
+        if change_kind not in ("correction", "supersession") or not isinstance(reason, str) or not reason.strip():
+            raise ResearchError("Choose correction or supersession and provide a revision reason")
+        candidate = _apply_changes(snapshot, previous, changes, change_kind=change_kind, reason=reason, actor=actor.strip())
+        _validate_revision_links(snapshot, previous, candidate)
+        revised.append(candidate)
+        prepared.append({"kind": kind, "id": identifier, "expected_revision": expected_revision,
+                         "changes": dict(changes), "change_kind": change_kind, "reason": reason.strip()})
+    return revised, prepared
+
+
+def prepare_record_revisions(
+    project: str | Path, operations: list[Mapping[str, Any]], *, actor: str = "local-author",
+) -> dict[str, Any]:
+    """Validate a read-only batch of existing records against one current snapshot.
+
+    Every operation supplies kind/id, expected_revision, changes, change_kind
+    and reason. References must already exist; future revisions from other
+    operations are not implicitly pinned. Review the returned operations and
+    snapshot before explicitly calling ``apply_record_revisions``.
+    """
+    snapshot = Repository(project).snapshot()
+    _records, prepared = _revision_batch(snapshot, operations, actor)
+    return {"schema_version": "research-revision-batch-local/1", "project_id": snapshot.project.id,
+            "snapshot": snapshot.digest, "operations": prepared, "ready": True}
+
+
+def apply_record_revisions(
+    project: str | Path, operations: list[Mapping[str, Any]], *, expected_snapshot: str,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    """Append all reviewed revisions with one atomic HEAD publication, or none."""
+    if not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
+        raise ResearchError("Expected snapshot must be a SHA-256 digest")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if snapshot.digest != expected_snapshot:
+        raise ResearchConflictError("Research snapshot changed; prepare the batch again before applying")
+    records, _prepared = _revision_batch(snapshot, operations, actor)
+    accepted = repository.commit(list(records), {}, snapshot)
+    return {"schema_version": "research-revision-batch-local/1", "project_id": accepted.project.id,
+            "snapshot": accepted.digest, "records": [
+                {"kind": record.kind, "id": record.id, "revision": record.revision}
+                for record in records
+            ]}

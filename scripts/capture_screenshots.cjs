@@ -21,7 +21,7 @@ async function main() {
         if (!Object.prototype.hasOwnProperty.call(fixture, url)) {
           throw new Error('Missing screenshot API fixture: ' + url);
         }
-        if (method !== 'GET' && !['/api/nda-list', '/api/research-search'].includes(url)) {
+        if (method !== 'GET' && !['/api/nda-list', '/api/research-search', '/api/research-record-prepare', '/api/research-revision-batch-prepare'].includes(url)) {
           throw new Error('Screenshot capture cannot mutate a project: ' + method + ' ' + url);
         }
         if (url === '/api/research-search') {
@@ -30,7 +30,20 @@ async function main() {
             throw new Error('Screenshot search must match the generated API result');
           }
         }
-        return Promise.resolve(new Response(JSON.stringify(fixture[url]), {
+        let result = fixture[url];
+        if (url === '/api/research-record-prepare') {
+          const draft = JSON.parse(options.body);
+          result = fixture[url][draft.id];
+          if (draft.kind !== 'dossier' || !result || JSON.stringify(draft.changes) !== JSON.stringify(result.changes)) {
+            throw new Error('Revision capture must match the generated draft');
+          }
+        } else if (url === '/api/research-revision-batch-prepare') {
+          const draft = JSON.parse(options.body);
+          if (JSON.stringify(draft.operations) !== JSON.stringify(result.operations)) {
+            throw new Error('Grouped revision capture must match the generated operations');
+          }
+        }
+        return Promise.resolve(new Response(JSON.stringify(result), {
           status: 200,
           headers: {'Content-Type': 'application/json'},
         }));
@@ -144,6 +157,38 @@ async function main() {
         await page.locator('#open-project-chooser-list button').first().waitFor();
         assert.ok(await page.locator('#modal-project-open').evaluate(element => element.scrollWidth <= element.clientWidth));
         await saveDialog(capture.target, '#modal-project-open');
+      } else if (name.startsWith('dashboard-scenes')) {
+        await selectView('analysis');
+        await page.locator('#scenes summary').first().click();
+        // Show a readable excerpt; the full sample contains many chapters.
+        await page.evaluate(() => {
+          document.querySelectorAll('#scenes .scene-detail').forEach((detail, index) => {
+            if (index >= 3) detail.remove();
+          });
+        });
+        await save(capture.target, '#scenes');
+      } else if (name.startsWith('dashboard-research-review')) {
+        await selectView('research');
+        await page.locator('[data-rtab="review"]').click();
+        await page.locator('#research-editorial-review .research-card').first().waitFor();
+        await save(capture.target, '#research-manager');
+      } else if (name.startsWith('dashboard-research-change-set')) {
+        await selectView('research');
+        await page.locator('[data-rtab="dossiers"]').click();
+        await page.locator('#research-dossiers-list .research-card').first().waitFor();
+        const operations = researchFixture['/api/research-revision-batch-prepare'].operations;
+        for (const operation of operations) {
+          await page.locator(`[data-research-revise="dossier"][data-record-id="${operation.id}"]`).click();
+          await page.locator('#research-revision-field-title').fill(operation.changes.title);
+          await page.locator('[name="research_revision_change_kind"][value="correction"]').check();
+          await page.locator('#research-revision-reason').fill(operation.reason);
+          await page.locator('#research-revision-batch-add').click();
+          await page.locator('#research-revision-status').filter({hasText: 'nothing saved'}).waitFor();
+          await page.keyboard.press('Escape');
+        }
+        await page.locator('#research-revision-batch-review').click();
+        await page.locator('#research-revision-batch-apply:enabled').waitFor();
+        await saveDialog(capture.target, '#modal-research-revision-batch');
       } else if (name.startsWith('dashboard-research-claims')) {
         await selectView('research');
         await page.locator('[data-rtab="claims"]').click();
