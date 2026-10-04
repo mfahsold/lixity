@@ -28,9 +28,11 @@
 <p>Retained research sources do not enter this manuscript baseline. An archived source is analyzed against its own chapters (<code>source_internal</code>); source–manuscript comparison is a separate, explicit lexical and register report. Travel accounts, monographs and their period or genre labels are evidence and user-supplied context, not an automatic writing standard. Archive integrity checks retained bytes and citations, not historical truth.</p>
 
 <h2 id="empty">Why does an empty manuscript show “–”?</h2>
-<p><strong>Current main, unreleased:</strong> the new Scenes &amp; style registers view measures scenes separately. You can assign registers and target ranges in project settings; each register has its own manuscript-only median. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. <a href="../USAGE.md#scene-registers-and-project-targets-current-main-unreleased">Set up scene comparisons</a>.</p>
 <p>Since v1.18.0, the dashboard and text style report show a dash when no chapter–feature cells can be measured. This includes empty or heading-only manuscripts and material below the configured chapter minimum. A dash means unavailable, not zero quality or perfect consistency.</p>
 <p>For API compatibility, style JSON schema version 4 retains the historical numeric <code>consistency</code> value. The new <code>measured_cells</code> field identifies the supporting count. When it is zero, the retained value <code>1.0</code> is a compatibility sentinel and must not be displayed as 100%. Older JSON without the field cannot establish availability from that number alone.</p>
+
+<h2 id="scenes">Compare scenes within a register</h2>
+<p>The Scenes &amp; style registers view measures scenes separately. Assign registers and target ranges in project settings; each register has its own manuscript-only median. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. <a href="../USAGE.md#scene-registers-and-project-targets">Set up scene comparisons</a>.</p>
 
 <h2 id="minimums">How much text is enough?</h2>
 <div class="feature-table-wrapper" role="region" aria-label="Minimum text requirements" tabindex="0">

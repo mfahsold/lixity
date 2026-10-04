@@ -8,6 +8,8 @@ import unittest
 from pathlib import Path
 from unittest.mock import patch
 
+import orjson
+
 from lixity import api
 from lixity.analyzer import CorpusAnalyzer
 from lixity.cli import main
@@ -29,6 +31,63 @@ SETTINGS = {"scene_analysis": {
 
 
 class SceneContracts(unittest.TestCase):
+    def test_human_cli_uses_analysis_language_for_counts_units_and_targets(self):
+        text = "## Sample\n\nI see rain. Doors close."
+        cases = (
+            ("en", "5 words · 2 sentences", "2.50 words per sentence · within range [2.00 – 6.00]",
+             "0.00 per 1,000 words · within range [… – 2.00]", "not quality judgments"),
+            ("de", "5 Wörter · 2 Sätze", "2,50 Wörter je Satz · im Bereich [2,00 – 6,00]",
+             "0,00 je 1.000 Wörter · im Bereich [… – 2,00]", "keine Qualitätsurteile"),
+        )
+        with tempfile.TemporaryDirectory() as root:
+            manuscript = Path(root, "sample.md")
+            manuscript.write_text(text, encoding="utf-8")
+            Path(root, "lixity.toml").write_text(
+                '[scene_analysis.assignments]\n"1:1" = "voice"\n'
+                '[scene_analysis.groups.voice.targets]\nasl = [2, 6]\nfilter_density = { upper = 2 }\n',
+                encoding="utf-8",
+            )
+            for language, counts, asl, density, guidance in cases:
+                with self.subTest(language=language):
+                    output = io.StringIO()
+                    with contextlib.redirect_stdout(output):
+                        self.assertEqual(main(["scenes", str(manuscript), "--language", language]), 0)
+                    rendered = output.getvalue()
+                    for value in (counts, asl, density, guidance):
+                        self.assertIn(value, rendered)
+                    self.assertNotIn("None", rendered)
+                    self.assertNotIn("{min_tokens}", rendered)
+                    self.assertNotIn("scene_", rendered)
+
+    def test_cli_titles_and_registers_are_literal_and_json_remains_exact(self):
+        title = '[red]Sample[/red] <script>\x1b]52;c;payload\x07\u202e'
+        group = '[bold]voice[/bold]\u202e'
+        text = "## " + title + "\n\nA door closes."
+        settings = {"scene_analysis": {"assignments": {"1:1": group}, "groups": {group: {}}}}
+        with tempfile.TemporaryDirectory() as root:
+            manuscript = Path(root, "sample.md")
+            manuscript.write_text(text, encoding="utf-8")
+            Path(root, "lixity.toml").write_text(
+                "[scene_analysis.assignments]\n\"1:1\" = " + json.dumps(group) + "\n"
+                "[scene_analysis.groups." + json.dumps(group) + "]\n",
+                encoding="utf-8",
+            )
+            plain = io.StringIO()
+            with contextlib.redirect_stdout(plain):
+                self.assertEqual(main(["scenes", str(manuscript)]), 0)
+            self.assertIn('[red]Sample[/red] <script>', plain.getvalue())
+            self.assertIn('[bold]voice[/bold]', plain.getvalue())
+            for escaped, control in ((r"\x1b]52", "\x1b"), (r"\x07", "\x07"), (r"\u202e", "\u202e")):
+                self.assertIn(escaped, plain.getvalue())
+                self.assertNotIn(control, plain.getvalue())
+            output = io.StringIO()
+            with contextlib.redirect_stdout(output):
+                self.assertEqual(main(["scenes", str(manuscript), "--json"]), 0)
+            expected = api.scenes(text, project_config=settings)
+            self.assertEqual(output.getvalue().encode(), orjson.dumps(expected, option=orjson.OPT_INDENT_2) + b"\n")
+            self.assertEqual(json.loads(output.getvalue())["scenes"]["items"][0]["chapter_title"], title)
+            self.assertEqual(json.loads(output.getvalue())["scenes"]["items"][0]["group"], group)
+
     def test_display_reuses_whole_chapter_metrics_without_resampling(self):
         text = "## First\n\nI see rain. I might leave.\n\n## Second\n\n" + (
             "A report was written and the decision was recorded. " * 14

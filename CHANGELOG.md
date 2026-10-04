@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.24.0] - 2026-10-04
+
 ### Added
 - Scene/register reports in the API, CLI and dashboard: existing measured
   features, explicit project targets, separate manuscript-only register
@@ -26,6 +28,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   CLI, API and dashboard. Scene measurement reuses the chapter feature engine
   without a second corpus analysis per scene; display reports reuse already
   measured whole chapters when no scene dividers are present.
+- Scene terminal reports reuse the shared translated labels, units and number
+  formatting. Safe terminal text lives in the common formatter rather than the
+  experimental research package; JSON output is unchanged.
 - Actions runs the collected Python tests once per environment, cancels
   superseded runs, caches Pip downloads and discovers all platform research
   tests. Release tags retain their dedicated checks instead of a second full
@@ -61,6 +66,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - CI uses `actions/setup-node@v7`, whose Node 24 runtime and updated cache code
   remove the Node 20 action-runtime and built-in `punycode` deprecation warnings.
   The browser job continues to test with Node 22.
+- Deprecated HD-D sampling arguments and the legacy matrix wrapper remain
+  available. Their earlier removal dates are deferred; replacement guidance
+  reflects the exact estimator and separate matrix data/rendering interfaces.
 - Guides correctly describe phase-based import progress, native NDA support and
   the research archive's introduction in v1.16.0.
 
@@ -1323,7 +1331,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.23.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.24.0...HEAD
+[1.24.0]: https://github.com/mfahsold/lixity/compare/v1.23.0...v1.24.0
 [1.23.0]: https://github.com/mfahsold/lixity/compare/v1.22.0...v1.23.0
 [1.22.0]: https://github.com/mfahsold/lixity/compare/v1.21.0...v1.22.0
 [1.21.0]: https://github.com/mfahsold/lixity/compare/v1.20.0...v1.21.0

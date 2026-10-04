@@ -40,11 +40,10 @@ German have the deepest linguistic analysis heuristics; language selection
 does not translate archived quotations or turn lexical search into semantic
 search. The research CLI's help and errors are English.
 
-## Current main workflows (unreleased)
+## Research workflows
 
-The following additions are implemented on `main`, after v1.23.0. Install a
-development build deliberately to use them; updating a fixed older tag does
-not select them.
+These workflows are available in v1.24.0. Install that release or a later
+compatible version; upgrading a fixed older tag does not select a newer release.
 
 ### Read reports in the terminal
 
@@ -195,7 +194,8 @@ server identity, library, parent/attachment keys and versions. This is not a
 lossless bibliography export. Invalid URLs or overlong metadata fail without
 publishing a capture. Language comes from the flag or project, not Zotero metadata.
 Images, audio and video remain in Zotero; Lixity does not transcribe or index them.
-Scanned PDFs require the separately configured OCR worker.
+Scanned PDFs require locally installed Tesseract or a configured OCR worker.
+See [local OCR setup](#use-local-ocr-without-a-worker-service).
 
 A repeated capture of the same instance/library/attachment finds its existing
 active source. Identical bytes and context are a no-op, rather than a duplicate.

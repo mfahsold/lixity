@@ -3,23 +3,15 @@
 import html
 import re
 import sys
-import unicodedata
 from typing import Any
 
 from rich.console import Console
 
-
-def safe_text(value: Any) -> str:
-    """Show data literally, with terminal and Unicode formatting controls escaped."""
-    return _safe(value, markdown=False)
+from ..format import safe_text as safe_text
 
 
 def _safe(value: Any, *, markdown: bool) -> str:
-    text = "".join(
-        char.encode("unicode_escape").decode("ascii")
-        if unicodedata.category(char) in ("Cc", "Cf") else char
-        for char in str(value)
-    )
+    text = safe_text(value)
     if markdown:
         text = re.sub(r"([\\`*_{}\[\]()#+!|~])", r"\\\1", html.escape(text, quote=False))
     return text

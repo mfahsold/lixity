@@ -12,7 +12,7 @@ behind it. You decide what matters for your manuscript.
 
 [Get started](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v1.23.0 release notes](docs/releases/v1.23.0.md)
+[v1.24.0 release notes](docs/releases/v1.24.0.md)
 
 Free for projects with no commercial purpose. A book intended for sale,
 including self-publishing, requires a separate written commercial license.
@@ -26,18 +26,18 @@ For help installing these tools, or to use pipx instead, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.0"
 lixity --version
 ```
 
 This installs the released version. For later upgrades, choose the next release
-tag explicitly. [Release notes](docs/releases/v1.23.0.md) describe compatibility
+tag explicitly. [Release notes](docs/releases/v1.24.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
-Current `main` also includes scene registers and project targets, guided conflict
+Version 1.24 adds scene registers and project targets, guided conflict
 resolution, grouped revisions, a decision review view and optional local Tesseract
-OCR. These additions are unreleased; see the [command reference](docs/USAGE.md#scene-registers-and-project-targets-current-main-unreleased)
-and [research guide](docs/research/USAGE.md#current-main-workflows-unreleased).
+OCR. See the [command reference](docs/USAGE.md#scene-registers-and-project-targets)
+and [research guide](docs/research/USAGE.md#research-workflows) for setup and limits.
 
 ## Quick Start
 
@@ -92,11 +92,11 @@ contribute to them.
 [Style dimensions](docs/screenshots/dashboard-dimensions.png) ·
 [Reference bands](docs/screenshots/dashboard-reference.png)
 
-Current `main` also measures individual scenes. Assign scenes to your own
-registers and compare their features with that group's median or targets you
-choose. These are descriptive comparisons, with unavailable values shown for
+Assign individual scenes to your own registers, then compare their features
+with that group's median or targets you choose. These are descriptive
+comparisons, with unavailable values shown for
 small samples. [Scene example](docs/screenshots/dashboard-scenes.png) ·
-[Setup and limits](docs/USAGE.md#scene-registers-and-project-targets-current-main-unreleased).
+[Setup and limits](docs/USAGE.md#scene-registers-and-project-targets).
 
 ### Keep review notes beside the text
 
@@ -119,19 +119,19 @@ or search the retained text. Saving a source does not establish that it is true.
 <a href="docs/screenshots/dashboard-research-search.png"><img src="docs/screenshots/dashboard-research-search.png" alt="Archive search with source passages and citation links" width="900" /></a>
 
 Bring sources from local files or the optional Zotero Desktop bridge. PDF scans
-need a separately configured OCR worker. Import warnings explain when extraction
-is incomplete or a requested fallback was used.
+can use locally installed Tesseract or a configured OCR worker. Import warnings
+explain when extraction is incomplete or a requested fallback was used.
 
-On current `main`, **Review** lists explicit decision links and outdated pins
+**Review** lists explicit decision links and outdated pins
 for you to inspect. Dossier edits can be reviewed and saved together, with
-conflict previews preserving your draft. Scans can use locally installed
-Tesseract without a separate worker service.
+conflict previews preserving your draft. Historical pins can be intentional;
+review candidates do not establish contradictions or a need to rewrite.
 
 [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html) ·
 [Sources](docs/screenshots/dashboard-research-sources.png) ·
 [Claims](docs/screenshots/dashboard-research-claims.png) ·
 [Decisions](docs/screenshots/dashboard-research-decisions.png) ·
-[Review on current main](docs/screenshots/dashboard-research-review.png) ·
+[Decision review](docs/screenshots/dashboard-research-review.png) ·
 [Related revision preview](docs/screenshots/dashboard-research-change-set.png)
 
 ### Choose a project and its settings

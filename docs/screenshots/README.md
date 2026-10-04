@@ -1,7 +1,6 @@
 # Product screenshots
 
-Browser captures of **current main, after v1.23.0**, taken on **4 October 2026**.
-Scene registers and the research review view are unreleased additions. The
+Browser captures of **v1.24.0**, taken on **4 October 2026**. The
 [project page](https://mfahsold.github.io/lixity/) introduces each feature with
 a selected image. Use the links below for related views and full-size images.
 
@@ -11,7 +10,7 @@ a selected image. Use the links below for related views and full-size images.
 | --- | --- |
 | Manuscript overview | [Light](dashboard-light.png), [dark](dashboard-dark.png), [mobile](dashboard-mobile.png), [empty workspace](dashboard-welcome.png) |
 | Chapter comparisons | [Heatmap excerpt](dashboard-heatmap.png), [reference bands](dashboard-reference.png), [settings](dashboard-settings.png) |
-| Scene registers (current main) | [Scene excerpt](dashboard-scenes.png), [mobile](dashboard-scenes-mobile.png) |
+| Scene registers | [Scene excerpt](dashboard-scenes.png), [mobile](dashboard-scenes-mobile.png) |
 | Style and annotations | [Dimensions](dashboard-dimensions.png), [dark](dashboard-dimensions-dark.png), [mobile](dashboard-dimensions-mobile.png), [paragraph layers](dashboard-layer.png), [work markers](dashboard-markers.png) |
 | Project setup | [New project](dashboard-project-modal.png), [open project](dashboard-project-open.png), [mobile](dashboard-project-open-mobile.png) |
 | Manuscript import | [Preview and confirmation](dashboard-project-import.png), [mobile](dashboard-project-import-mobile.png) |
@@ -20,8 +19,8 @@ a selected image. Use the links below for related views and full-size images.
 | Research dossiers | [Filtered list](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
 | Research search | [Passage results](dashboard-research-search.png), [mobile](dashboard-research-search-mobile.png) |
 | Claims and decisions | [Claims](dashboard-research-claims.png), [mobile](dashboard-research-claims-mobile.png), [decisions](dashboard-research-decisions.png), [mobile](dashboard-research-decisions-mobile.png) |
-| Research review (current main) | [Decision links and revision pins](dashboard-research-review.png), [mobile](dashboard-research-review-mobile.png) |
-| Related revisions (current main) | [Change set preview](dashboard-research-change-set.png), [mobile](dashboard-research-change-set-mobile.png) |
+| Research review | [Decision links and revision pins](dashboard-research-review.png), [mobile](dashboard-research-review-mobile.png) |
+| Related revisions | [Change set preview](dashboard-research-change-set.png), [mobile](dashboard-research-change-set-mobile.png) |
 | Terminal reports | [Analysis](cli-analyze.png), [style](cli-style.png), [research](cli-research.png) |
 
 ## Data and capture scope

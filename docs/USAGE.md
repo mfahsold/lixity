@@ -37,12 +37,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.23.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.0"
 lixity --version
 lixity about
 ```
 
-`v1.23.0` is the release pin. Choose `@main` only to follow development,
+`v1.24.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
@@ -313,7 +313,7 @@ with `scenes`, `asl`, `dialogue_pct`, `staccato_pct`,
 `closing_sentence_words`, `closing_terminal`, `closing_is_dialogue`,
 `hook_score` and the per-scene `scene_list[]`.
 
-### Scene registers and project targets (current main, unreleased)
+### Scene registers and project targets
 
 Without chapter headings, a draft is measured as one chapter and keeps all its
 prose. A leading `# Title` supplies its title; scene dividers still split the draft.
@@ -841,9 +841,8 @@ than evidence of a consistent style.
 
 For API project isolation, pass `project_config={}` to `profile`, `fingerprint`,
 `passport` or `dashboard` to avoid implicit threshold lookup. A supplied mapping
-contains thresholds in v1.23.0. On current main it also supplies known
-`CorpusConfig` settings; explicit options override the mapping. Language and
-title remain explicit API arguments. Project files accept those same corpus
+supplies thresholds and known `CorpusConfig` settings; explicit options override
+the mapping. Language and title remain explicit API arguments. Project files accept those same corpus
 fields, without a separate list of supported analysis patterns. See [architecture](ARCHITECTURE.md).
 
 CLI commands with an explicit manuscript path load project settings relative to
@@ -864,7 +863,7 @@ or pass explicit CLI flags to ensure your intended parameters applied.
 | Field | Default | Purpose |
 | :--- | :--- | :--- |
 | `language` | `en` | Language profile key; automatic detection requires explicit `auto`. |
-| `chapter_regex` | `(?m)^##\s+` | Chapter boundary detection. Current main matches individual heading lines, supporting marker prefixes or complete headings without consuming following prose. |
+| `chapter_regex` | `(?m)^##\s+` | Chapter boundary detection. Matches individual heading lines, supporting marker prefixes or complete headings without consuming following prose. |
 | `appendix_marker` | `## Anmerkungen und Literaturverzeichnis` | Start of the non-prose appendix. |
 | `min_paragraph_length_for_oneliner` | `25` | Word threshold for one-liner classification. |
 | `motif_regexes` | `{}` | Project motifs as label → regex, counted per chapter. |

@@ -29,7 +29,9 @@ class HypergeometricHDDTests(unittest.TestCase):
         # but they now announce that they do nothing.
         with self.assertWarns(DeprecationWarning) as caught:
             self.assertEqual(hd_d(grouped), hd_d(grouped, seed=123, min_samples=99))
-        self.assertIn("v1.24.0", str(caught.warning))
+        self.assertIn("seed/min_samples", str(caught.warning))
+        self.assertIn("performs no sampling", str(caught.warning))
+        self.assertIn("without sampling arguments", str(caught.warning))
 
     def test_hd_d_is_silent_without_legacy_arguments(self) -> None:
         """The whole suite runs under -W error, so the normal call must not warn."""

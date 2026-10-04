@@ -21,7 +21,7 @@
 <p>Keep permitted source copies, cite exact passages and connect them with research notes, claims and writing decisions. Lixity's research workspace is experimental. An import or citation helps you review evidence; it does not establish that a claim is true.</p>
 <p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-04">4 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html" aria-current="page">Sources and PDF/OCR</a></nav>
-<div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need a separately configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
+<div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
 <h2 id="import">Import a local source</h2>
 <p>Start with a source you are allowed to retain. This synthetic example assumes you saved a short note as <code>source.txt</code>. Initialize only a new research archive:</p>
@@ -49,26 +49,28 @@ lixity research search --project ./sample-project --query "inspector" --scope de
 <p>The CLI defaults to source passages. Search matches words in current records, not their history; it does not reconcile conflicting claims or decide whether a proposal is final. Keep decisions and open questions explicit in your notes.</p>
 
 <h2 id="ocr">Can Lixity read scanned PDFs?</h2>
-<p>A PDF with selectable text can use local Poppler tools. An image-only scan needs a separately configured OCR worker to recognize text. Installing Lixity does not download a model or start that worker. Its resource use and network behavior depend on your chosen setup.</p>
+<p>A PDF with selectable text can use local Poppler tools. An image-only scan needs locally installed Tesseract or a configured OCR worker to recognize text. Installing Lixity does not install either engine, download a model or start a worker service.</p>
 <pre><code>lixity research ocr-status
 lixity research ingest --project ./sample-project --file ./document.pdf --allow-retention</code></pre>
 <div class="feature-table-wrapper" role="region" aria-label="OCR diagnostic statuses" tabindex="0">
 <table class="editorial-table">
 <thead><tr><th>Diagnostic status</th><th>Meaning and next action</th></tr></thead>
 <tbody>
-<tr><td><code>native_only</code></td><td>Poppler tools are available. Text-layer PDFs can be extracted; scans need an OCR worker.</td></tr>
-<tr><td><code>ready</code></td><td>An executable worker and pdftoppm were found. This is a configuration check, not a model-integrity or recognition-quality test.</td></tr>
-<tr><td><code>partial</code></td><td>Page rasterization is unavailable. Install pdftoppm before relying on multi-page extraction.</td></tr>
+<tr><td><code>native_only</code></td><td>Poppler tools are available. Text-layer PDFs can be extracted; select Tesseract or a configured worker for scans.</td></tr>
+<tr><td><code>ready</code></td><td>The selected engine and required page rendering are available. This is a configuration check, not a recognition-quality test.</td></tr>
+<tr><td><code>partial</code></td><td>Page rendering is unavailable. Native text extraction may still work; install pdftoppm to use OCR on scans.</td></tr>
 <tr><td><code>misconfigured_worker</code></td><td>The configured executable was not found or is not executable, or its timeout setting is invalid. Check its path, permissions and <code>LIXITY_OCR_TIMEOUT</code> in the server environment.</td></tr>
-<tr><td><code>missing_dependencies</code></td><td>Install Poppler for local PDF text extraction; configure a worker separately for scans.</td></tr>
+<tr><td><code>misconfigured_backend</code></td><td>Check the selected backend, local Tesseract, installed language data and timeout. Run <code>lixity research ocr-status</code> for details.</td></tr>
+<tr><td><code>missing_dependencies</code></td><td>Install Poppler for local PDF extraction; select Tesseract or a configured worker for scans.</td></tr>
 </tbody></table>
 </div>
 <p>Install <code>poppler-utils</code> on Debian/Ubuntu or <code>poppler</code> with Homebrew on macOS. The server must be able to find <code>pdftotext</code> and <code>pdftoppm</code>. Check extracted quotations against the original PDF; configuration checks do not measure recognition accuracy.</p>
 
+<p>Scans can use locally installed Tesseract without a separate worker service. Set <code>LIXITY_OCR_BACKEND=tesseract</code> and choose installed language data with <code>LIXITY_OCR_LANGUAGES</code> (default <code>eng</code>), then restart the server. Diagnostics list missing languages. New native Poppler and local Tesseract captures require a v4 archive reader; existing cached provenance stays unchanged. <a href="../research/USAGE.md#use-local-ocr-without-a-worker-service">Local OCR setup and compatibility</a>.</p>
+
 <h2 id="worker">Connect an existing self-hosted worker</h2>
-<p><strong>Current main, unreleased:</strong> scans can also use locally installed Tesseract without a separate worker service. Set <code>LIXITY_OCR_BACKEND=tesseract</code> and choose installed language data with <code>LIXITY_OCR_LANGUAGES</code> (default <code>eng</code>), then restart the server. Diagnostics list missing languages. New native Poppler and local Tesseract captures require a v4 archive reader; existing cached provenance stays unchanged. <a href="../research/USAGE.md#use-local-ocr-without-a-worker-service">Local OCR setup and compatibility</a>.</p>
 <p>This is optional technical setup. The <a href="../research/OCR_INTEGRATION.md">Unlimited-OCR integration guide</a> describes the experimental CPU adapter and its separately prepared runtime and model. Baidu's tools cannot be used directly as a Lixity worker.</p>
-<p>Set <code>LIXITY_OCR_WORKER</code> to one executable path, not a shell command. The default timeout is 120 seconds; <code>LIXITY_OCR_TIMEOUT</code> accepts 1–3600 seconds. A configured worker failure or incomplete result rejects the import. Without a worker, native extraction can omit scanned pages in mixed PDFs. See the <a href="../research/USAGE.md#self-hosted-pdf-and-ocr-extraction">worker interface and limits</a> for the JSON contract.</p>
+<p>Set <code>LIXITY_OCR_WORKER</code> to one executable path, not a shell command. The default timeout is 120 seconds; <code>LIXITY_OCR_TIMEOUT</code> accepts 1–3600 seconds. A configured worker failure or incomplete result rejects the import unless native fallback is explicitly allowed. Native extraction can omit scanned pages in mixed PDFs; inspect its page warnings. See the <a href="../research/USAGE.md#self-hosted-pdf-and-ocr-extraction">worker interface and limits</a> for the JSON contract.</p>
 <pre><code>export LIXITY_OCR_WORKER=/absolute/path/to/ocr-worker
 lixity research ocr-status
 lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765</code></pre>

@@ -138,7 +138,7 @@ commands, backups and archive limits.
 Zotero can remain your catalogue for books, PDFs and other media. Lixity captures
 selected PDF/text attachments so that a later change in Zotero does not silently
 change an earlier quotation. Images, audio and video stay in Zotero; Lixity does
-not transcribe them. Scanned PDFs need a separately configured OCR worker.
+not transcribe them. Scanned PDFs need local Tesseract or a configured OCR worker.
 
 ### First Zotero capture
 

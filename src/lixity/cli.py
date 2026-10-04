@@ -1162,7 +1162,6 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "scenes":
         from .api import scenes
-        from .research.presentation import safe_text
 
         try:
             report = scenes(text, resolved.key, project_config=project_config)
@@ -1172,18 +1171,30 @@ def main(argv: list[str] | None = None) -> int:
         if args.json:
             print(_json(report, indent=True))
         else:
-            from .style_fingerprint import FEATURES
+            from .diversity import MIN_TOKENS_LD
+            from .format import num, safe_text
+            from .style_fingerprint import FEATURE_UNITS, FEATURES
+
+            labels = resolved.labels
+            units = FEATURE_UNITS.get(resolved.key, {})
 
             for item in report["scenes"]["items"]:
-                print(safe_text(f"{item['id']} · {item['chapter_title']} · {item['group'] or '—'}"))
-                print(f"  {item['words']} words · {item['sentences']} sentences")
+                group = item["group"] or labels["scene_unassigned"]
+                print(safe_text(f"{item['id']} · {item['chapter_title']} · {group}"))
+                print(f"  {num(item['words'], resolved.key, 0)} {labels['words']} · "
+                      f"{num(item['sentences'], resolved.key, 0)} {labels['sentences']}")
                 for field, label_key, unit in FEATURES:
                     value = item["features"][field]
                     target = item["targets"].get(field)
-                    detail = f" · {target['position']} [{target['lower']}, {target['upper']}]" if target else ""
-                    rendered = "—" if value is None else f"{value:.3g}"
-                    print(f"  {resolved.labels.get(label_key, field)}: {rendered} {unit}{detail}")
-            print("Observed features, not quality scores. Approximate SE and group medians: use --json.")
+                    detail = ""
+                    if target:
+                        lower = "…" if target["lower"] is None else num(target["lower"], resolved.key, 2)
+                        upper = "…" if target["upper"] is None else num(target["upper"], resolved.key, 2)
+                        detail = f" · {labels['scene_' + target['position']]} [{lower} – {upper}]"
+                    rendered = "—" if value is None else num(value, resolved.key, 2)
+                    print(f"  {labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}")
+            print(labels["scene_guidance"])
+            print(labels["scene_support"].replace("{min_tokens}", str(MIN_TOKENS_LD)))
         return EXIT_OK
 
     if args.command == "analyze":

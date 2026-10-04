@@ -1,7 +1,7 @@
 # Architecture and integration boundaries
 
-This document describes the shared architecture through v1.23.0 and labels
-subsequent additions on current main. The shared pipeline and explicit API threshold mappings were introduced
+This document describes the shared architecture through v1.24.0.
+The shared pipeline and explicit API threshold mappings were introduced
 in 1.15.0; integrated local project/research workflows arrived in 1.16.0, followed
 by native editing, the self-hosted OCR boundary, offline diagrams and verified
 export/restoration in 1.17.0.
@@ -74,7 +74,7 @@ user settings. A supplied threshold mapping prevents implicit configuration
 discovery inside `resolve_thresholds`; `{}` selects code defaults only.
 Explicit threshold arguments take precedence over the mapping.
 
-On current main, `resolve_document_config` applies known corpus settings from
+`resolve_document_config` applies known corpus settings from
 an explicit mapping. Explicit arguments take precedence; language remains an
 explicit choice. The convenience API's `profile`, `fingerprint`/`passport` and
 `dashboard` accept this mapping as well as thresholds: `{}` avoids implicit
@@ -85,11 +85,11 @@ register groups within the manuscript. They do not read research sources or
 provide quality scores. Adapters should pass the intended configuration and
 keep manuscript-specific characters, motifs and artifacts within that project.
 
-Current main also provides read-only three-way revision preparation and atomic
+Lixity provides read-only three-way revision preparation and atomic
 revision groups. These reuse the strict revision validator and one repository
 commit. Decision impact and editorial review follow recorded links, dates and
 revision pins; they do not infer semantic contradictions or rewrite documents.
-See [implemented workflows and limits](research/USAGE.md#current-main-workflows-unreleased).
+See [implemented workflows and limits](research/USAGE.md#research-workflows).
 
 ## Presentation and trust boundaries
 
@@ -101,7 +101,7 @@ is scheduled only while rotation is enabled and the page is visible.
 
 ### Visual consistency and evidence
 
-Current main (after v1.19.0) aligns the local dashboard and Pages around the same
+The local dashboard and Pages use the same
 neutral surfaces and blue action palette. The existing stylesheets remain separate
 so exported dashboards stay self-contained; browser checks compare the common
 color roles. Filled actions use `#245b85` with white text in both themes, while

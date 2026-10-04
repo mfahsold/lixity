@@ -19,7 +19,7 @@ existing analysis schemas.
 It uses Python 3.10+, existing Pydantic and the standard library. Python 3.10
 loads TOML project settings through the conditional `tomli` dependency.
 Research I/O stays out of `lixity.pipeline`. Native PDF extraction uses optional
-Poppler tools; scans require a separately configured OCR worker. The optional
+Poppler tools; scans require local Tesseract or a configured OCR worker. The optional
 Zotero bridge calls a local HTTP API. Installing Lixity does not download models
 or contact a cloud library.
 

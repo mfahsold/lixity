@@ -408,6 +408,15 @@ class TestFileUtils(unittest.TestCase):
 class TestReportFormatter(unittest.TestCase):
     """Checks Markdown and JSON serialization."""
 
+    def test_shared_literal_text_formatter_escapes_controls_without_changing_visible_text(self):
+        from lixity.format import safe_text
+        from lixity.research.presentation import safe_text as research_safe_text
+
+        value = '[red]Café[/red] <script> 😀\x1b[31m\n\t\u202e'
+        expected = '[red]Café[/red] <script> 😀\\x1b[31m\\n\\t\\u202e'
+        self.assertEqual(safe_text(value), expected)
+        self.assertEqual(research_safe_text(value), expected)
+
     def setUp(self):
         analyzer = CorpusAnalyzer()
         self.metrics = analyzer.analyze_text(

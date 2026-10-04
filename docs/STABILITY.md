@@ -185,13 +185,13 @@ they are not current product features and must not be cited as such.
   prints the numeric z* values, the band chart encodes band/median/outliers
   by position and shape, every chip reveals tense + value as text on click.
 - Contrast targets are 3:1 for relevant non-text UI and 4.5:1 for normal text.
-  Current main after v1.19.0 chooses heatmap text from each cell’s luminance and
+  Lixity chooses heatmap text from each cell’s luminance and
   tests the full blue/orange scale. This does not certify every canvas mark or
   every color-vision condition; numeric labels remain essential.
 - WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. Dense
   18-pixel paragraph chips need further target-size assessment; keyboard access
-  alone does not establish an exception. Primary controls are larger on current
-  main, but the entire interface is not claimed to conform to WCAG.
+  alone does not establish an exception. Primary controls are larger, but the
+  entire interface is not claimed to conform to WCAG.
 - Diverging scales have a meaningful midpoint: zero deviation from the
   within-manuscript reference (median in the robust style calculation).
 - See [visual design rationale](ARCHITECTURE.md#visual-consistency-and-evidence)

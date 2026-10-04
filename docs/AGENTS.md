@@ -47,7 +47,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | `lixity dialogue FILE [--json]` | dialogue turn structure (turns, lengths, per chapter) | text / JSON |
 | `lixity characters FILE --names A,B [--json]` | character presence per chapter | text / JSON |
 | `lixity pacing FILE [--json]` | scenes, pacing signals, chapter hooks | text / JSON |
-| `lixity scenes FILE [--json]` | scene features, explicit register medians and author targets (current main) | text / JSON v1 |
+| `lixity scenes FILE [--json]` | scene features, explicit register medians and author targets | text / JSON v1 |
 | `lixity motifs FILE --motif NAME=REGEX [--json]` | motif presence + repetition (words, n-grams) | text / JSON |
 | `lixity showing FILE [--json]` | showing vs. telling balance per chapter | text / JSON |
 | `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR, structural diagnostics; `--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`) | JSON (schema v4) |
@@ -125,8 +125,8 @@ names and schema versions remain unchanged. `about().heuristics` reports
 `hd_d_samples=0` key (no Monte Carlo samples).
 The `seed` and `min_samples` parameters of `lixity.diversity.hd_d()` and
 `hd_d_stats()` are accepted but ignored and now emit a `DeprecationWarning`;
-they are removed in v1.24.0. They belonged to the superseded Monte Carlo
-estimator and have had no effect since v1.16.0.
+removal is deferred to a future release. They belonged to the superseded
+Monte Carlo estimator and have had no effect since v1.16.0.
 
 Corpus-level notes:
 
@@ -504,7 +504,7 @@ with `format="md"`. The implementation helper
 `lixity.research.analysis.compare_source_to_manuscript()` is data-only and
 always returns a dictionary.
 `claim_matrix(project, format=...)` is **deprecated** since v1.22.0, warns on
-use, and remains available in v1.23.0. Removal is deferred to a future release;
+use, and remains available in v1.24.0. Removal is deferred to a future release;
 call `claim_matrix_data()` and `render_claim_matrix()` instead. The JSON payload and the
 `lixity research matrix` CLI output are unchanged.
 
@@ -581,7 +581,7 @@ broken adapter would silently disable the project's custom NDA behaviour.
 
 Native-revision endpoints (since v1.17.0) reuse that explicit workspace:
 
-Current main also provides `GET /api/research/decision-impact?id=...` and
+The server also provides `GET /api/research/decision-impact?id=...` and
 `GET /api/research/review`, returning `research-decision-impact-local/1` and
 `research-editorial-review-local/1`. These use explicit links, dates and pins,
 not semantic inference. Python equivalents are `decision_impact(project, id)`
@@ -602,7 +602,7 @@ Python `prepare_record_revisions(project, operations)` returns a read-only
 all operations before one commit; errors and races accept none. It returns
 record references, without duplicating full dossier bodies/citation graphs.
 Duplicate IDs and references to future revisions inside the same batch are
-rejected. See [current-main research workflows](research/USAGE.md#current-main-workflows-unreleased).
+rejected. See [research workflows](research/USAGE.md#research-workflows).
 
 HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 `{operations}` and `POST /api/research-revision-batch-apply` with
@@ -656,7 +656,7 @@ reference = api.fingerprint(
 )
 ```
 
-On current main, `project_config` supplies thresholds and known `CorpusConfig`
+`project_config` supplies thresholds and known `CorpusConfig`
 settings to `profile`, `fingerprint`, `passport` and `dashboard`. Explicit
 language/pattern arguments win. `{}` prevents current-directory threshold lookup;
 `None` retains threshold lookup for compatibility. Scene/register settings are
@@ -665,7 +665,7 @@ discover a project. It returns `{meta: {schema_version: 1, ...}, scenes}` with
 `items`, `baselines`, `explicit_scene_breaks` and `scenes_are_chapters`.
 Each item contains `id` (chapter:scene), `group`, sample counts, the existing
 16 `features`, approximate `standard_errors`, `targets` and `data_support`.
-See [scene settings and limits](USAGE.md#scene-registers-and-project-targets-current-main-unreleased).
+See [scene settings and limits](USAGE.md#scene-registers-and-project-targets).
 `min_chapters` must be an integer of at least 2 and is also exposed
 as `--min-chapters` on `style`, `dashboard` and `build`.
 Re-read active settings from passport `meta`; `about` reports defaults.

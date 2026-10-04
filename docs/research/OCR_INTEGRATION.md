@@ -1,13 +1,13 @@
 # Unlimited-OCR integration and deployment boundaries
 
 Reviewed against upstream on 2026-09-27. This document describes the implemented
-v1.19.0 Lixity boundary and the requirements of an independently deployed adapter.
+worker boundary introduced in v1.19.0 and the requirements of an independently deployed adapter.
 A source checkout also contains an experimental CPU adapter; no model server,
 weights or production-tested inference runtime ship with the Python package.
 For import commands and the exact worker JSON, see [Research usage](USAGE.md#worker-interface).
 
-Current main (after v1.23.0, unreleased) also supports locally installed
-Tesseract without this adapter. New native Poppler and Tesseract captures use
+Lixity v1.24.0 also supports locally installed Tesseract without this adapter.
+New native Poppler and Tesseract captures use
 accurate local implementation identifiers and require a v4 archive reader;
 cached legacy provenance is preserved. See [local OCR setup and compatibility](USAGE.md#use-local-ocr-without-a-worker-service).
 The external worker protocol below remains unchanged.
@@ -85,8 +85,8 @@ never execute generated expressions, and test page-boundary preservation.
 There is no basis here for inventing a calibrated confidence value for each
 recognized block.
 
-The v1.19.0 worker boundary has these narrower guarantees; the current-main
-native provenance changes are described above:
+The external worker boundary has these narrower guarantees; local provenance
+and fallback behavior in v1.24.0 are described above and below:
 
 | Area | Implemented behavior | Operational consequence |
 | --- | --- | --- |
@@ -94,7 +94,7 @@ native provenance changes are described above:
 | Input images | Poppler renders at 150 dpi; JSON includes only PDF path and page checksums | A worker must render its own input; 300-dpi images will not match those PNG checksums |
 | Timeout | `LIXITY_OCR_TIMEOUT`: integer 1–3600 seconds, default 120, for the whole subprocess | Size the deadline for cold start and every page; this is not a per-page budget |
 | Failure | Configured worker failure, timeout, invalid response or incomplete page coverage rejects capture | No silent fallback to native extraction after worker failure |
-| Native fallback | Only readable text-layer pages contribute text; without rasterization, only page one is attempted | Mixed scanned/native documents need explicit completeness inspection |
+| Native fallback | Extracts readable text-layer pages using the physical page count; an undetermined count or extraction timeout rejects capture | Mixed scanned/native documents report unreadable pages and need explicit completeness inspection |
 | Worker response | Validates block types, finite boxes/confidence, warnings and coverage of requested pages; stable sorting by page | Coverage relies on worker declarations and cannot establish recognition accuracy |
 | Missing confidence | Missing or null confidence remains unknown | Worker-supplied numbers are not independently calibrated certainty |
 | Archive | Original PDF, extracted UTF-8 text and exact text spans are retained | Page images, boxes, warnings and verified runtime/model identities are not persisted |

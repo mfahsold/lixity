@@ -1,4 +1,4 @@
-"""lixity.format – Locale-aware number rendering for reports and dashboards.
+"""lixity.format – Locale-aware numbers and literal text for reports and dashboards.
 
 One source of truth for decimal and thousands separators: German-style
 comma decimals for de/es/it/pt/nl, narrow-space grouping for French,
@@ -6,6 +6,8 @@ Anglo-American defaults for English/generic.
 """
 
 from __future__ import annotations
+
+import unicodedata
 
 # (thousands separator, decimal separator) per language profile.
 NUMBER_STYLES: dict[str, tuple[str, str]] = {
@@ -18,6 +20,15 @@ NUMBER_STYLES: dict[str, tuple[str, str]] = {
     "en": (",", "."),
     "generic": (",", "."),
 }
+
+
+def safe_text(value: object) -> str:
+    """Show data literally, with terminal and Unicode formatting controls escaped."""
+    return "".join(
+        char.encode("unicode_escape").decode("ascii")
+        if unicodedata.category(char) in ("Cc", "Cf") else char
+        for char in str(value)
+    )
 
 
 def num(value: float, language_key: str = "en", decimals: int = 1, signed: bool = False) -> str:

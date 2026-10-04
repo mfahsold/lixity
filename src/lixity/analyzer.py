@@ -1,6 +1,6 @@
 """lixity.analyzer – High-performance text analysis and corpus linguistics engine.
 
-Computes sentence-length architecture (ASL, CV, staccato/hypotaxis), lexical diversity
+Computes sentence-length architecture (ASL, CV, short/long sentence shares), lexical diversity
 (TTR, Guiraud R, HD-D, MTLD, MATTR, Maas, Yule's K), language-calibrated readability
 (Flesch family, LIX), dialogue ratios, register signals, and per-chapter metrics
 with standard errors.
@@ -107,8 +107,8 @@ class CorpusAnalyzer:
     def _starter_stats(self, sentences: list[str]) -> tuple[float, float, float]:
         """(start entropy in bits, first-person-start rate, entropy standard error).
 
-        The entropy uncertainty follows the Miller-Madow first-order variance
-        of the maximum-likelihood estimator: Var(H) = [sum(p*log2^2(p)) - H^2] / n.
+        Entropy uncertainty uses a first-order plug-in variance approximation:
+        Var(H) = [sum(p*log2^2(p)) - H^2] / n. It is not a calibrated interval.
         """
         starters: Counter[str] = Counter()
         first_person = 0

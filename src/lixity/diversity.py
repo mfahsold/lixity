@@ -33,9 +33,9 @@ _UNSET: Any = object()
 def _warn_legacy_sampling_args(seed: Any, min_samples: Any) -> None:
     """Warn about the no-op sampling arguments left over from Monte Carlo HD-D.
 
-    They are silently ignored, so a caller who passes them has no reason to
-    believe the value had any effect. Deprecated in v1.22.0, removed in
-    v1.24.0; HD-D has been an exact expectation since v1.16.0 and needs neither.
+    They are accepted for compatibility but have no effect. Deprecated in
+    v1.22.0; removal is deferred to a future release. HD-D has been an exact
+    expectation since v1.16.0 and needs neither.
     """
     if seed is _UNSET and min_samples is _UNSET:
         return
@@ -43,8 +43,8 @@ def _warn_legacy_sampling_args(seed: Any, min_samples: Any) -> None:
               if value is not _UNSET]
     warnings.warn(
         f"hd_d({'/'.join(passed)}) is accepted but ignored: HD-D has been an exact "
-        f"hypergeometric expectation since v1.16.0 and performs no sampling. These "
-        f"parameters are removed in v1.24.0.",
+        "hypergeometric expectation since v1.16.0 and performs no sampling. "
+        "Call HD-D without sampling arguments; their removal is deferred to a future release.",
         DeprecationWarning,
         stacklevel=3,
     )
@@ -60,7 +60,7 @@ def hd_d(
     without replacement, divided by 42. Return None below MIN_TOKENS_LD.
 
     ``seed`` and ``min_samples`` are accepted but ignored, and warn. Deprecated
-    in v1.22.0, removed in v1.24.0.
+    in v1.22.0; removal is deferred to a future release.
     """
     _warn_legacy_sampling_args(seed, min_samples)
     value, _ = hd_d_stats(tokens)
@@ -77,7 +77,7 @@ def hd_d_stats(
     is zero. It does not estimate uncertainty about a larger population.
 
     ``seed`` and ``min_samples`` are accepted but ignored, and warn. Deprecated
-    in v1.22.0, removed in v1.24.0.
+    in v1.22.0; removal is deferred to a future release.
     """
     _warn_legacy_sampling_args(seed, min_samples)
     n = len(tokens)
