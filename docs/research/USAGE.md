@@ -1,6 +1,6 @@
 # Local research archive
 
-**Experimental local research archive system, extended in `v1.21.0`.**
+**Experimental local research archive system.**
 This component archives local UTF-8 text and PDF documents, attaches versioned source criticism context and tags,
 resolves exact citations, manages dossiers with cited evidence, provides an interactive web
 management UI in `lixity serve`, connects to the analysis pipeline, and performs cross-corpus
@@ -8,7 +8,7 @@ grounding comparisons against manuscripts. Authors can record claims,
 passage-to-claim evidence relations and authorial decisions, with full native revision history.
 It does not implement the entire [RFC](README.md).
 
-| Available in `v1.21.0` | Not implemented |
+| Implemented locally | Outside the current scope |
 | --- | --- |
 | Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
 | SQLite/FTS5 lexical search over passages and current authored records; auto-fresh transparent cache refresh | Remote web imports |
@@ -16,21 +16,18 @@ It does not implement the entire [RFC](README.md).
 | Multi-file batch ingestion with `--progress` phase notifications | External web scrapers |
 | Section-bounded dossier reads (`--section`) | Audio/video transcription or image understanding |
 | Decision-dossier review tracking (`review_needed`) | Automatic bidirectional Zotero synchronization |
-| PDF ingestion with self-hosted Baidu Unlimited-OCR boundary | Automated factual proof or rewriting prose |
+| Native PDF extraction with Poppler; scan OCR with local Tesseract or a configured worker | Automated factual proof or rewriting prose |
 | Safe Markdown & offline SVG diagram rendering (flowcharts, sequence) | Ambient configuration discovery |
 | BagIt-style archive export and restore with cryptographic verification | Ambient manuscript detection |
-| Native revisions for dossiers, claims, evidence links & decisions | |
+| Native revisions, conflict reconciliation and atomic related-record change sets | |
 | Versioned source criticism context & core analysis adapter | |
 | Optional local Zotero catalogue browsing and selected PDF/text captures | |
 | Additive Zotero migration export and paired research/Zotero backup | |
 | Controlled withdrawal & physical purge with dry-run preview | |
 | Read-only HTML source dashboard with localized context | |
 | Integrity audit and snapshot conflict detection | |
-| Source listing & tagging (`lixity research sources`) | |
-| Dossier creation, editing & history (`lixity research dossier`) | |
-| User-recorded claims & scope (`lixity research claim`) | |
-| Evidence linking with relations (`lixity research link-evidence`) | |
-| Authorial decisions & fact deviations (`lixity research decision`) | |
+| Source listing/tagging, dossiers, scoped claims, evidence relations and authorial decisions | |
+| Structural decision-impact and editorial-review reports | |
 | Claim-evidence matrix export (`lixity research matrix`) | |
 | Cross-corpus linguistic grounding (`lixity research compare`) | |
 | Interactive web research panel in `lixity serve`: source/dossier details, search-to-evidence actions, dossier-linked claims, decisions | |
@@ -329,7 +326,8 @@ application-level usability or that an external attachment was included.
 
 ## Try it
 
-Install `v1.19.0` or use a development checkout (`make install-dev`), then
+Follow [installation](../INSTALLATION.md#cli-current-release) or use a
+development checkout (`make install-dev`), then
 activate `.venv` if applicable.
 Requires SQLite with FTS5; no additional Python dependencies or models.
 PDF extraction has separate prerequisites described below.
@@ -688,11 +686,12 @@ lixity research compare --project ./novel --source-id <UUID> --manuscript ./nove
 lixity research compare --project ./novel --source-id <UUID> --manuscript ./novel.md --format md --output ./grounding-report.md
 ```
 
-Comparison counts and register contrasts use chapter body prose when chapters
-exist, excluding headings, front matter and the configured appendix. If no
-chapter is detected, the remaining text is used after excluding headings and
-the configured appendix. A cross-language comparison still returns numeric
-overlap but sets `meta.lexical_comparable: false` and includes
+Comparison counts, register contrasts and chapter grounding share the core prose
+scope: body paragraphs, list items and blockquotes; code, comments and footnote
+definitions are excluded. When chapters exist, only their bodies contribute,
+excluding headings, front matter and the configured appendix. Otherwise the
+remaining document prose is used with the same exclusions. A cross-language
+comparison still returns numeric overlap but sets `meta.lexical_comparable: false` and includes
 `"cross_language_lexical_comparison"` in `comparison_limits`; its lexical
 scores should not be interpreted as directly comparable vocabulary coverage.
 Comparison uses the source's language and the explicit manuscript language
@@ -822,23 +821,26 @@ status. Read those messages; a successful capture is not proof of OCR accuracy.
 
 Install local Poppler tools: `poppler-utils` on Debian/Ubuntu, or `poppler` with
 Homebrew. Both `pdftotext` and `pdftoppm` must be visible on the server's PATH.
-`pdftoppm` rasterizes physical pages at 150 dpi; `pdftotext` extracts text layers.
+`pdftoppm` rasterizes physical pages at 150 dpi for native/worker extraction
+and 300 dpi for Tesseract; `pdftotext` extracts text layers.
 Without page rasterization, the configured scan worker cannot receive normal
 page inputs. Native text extraction may still work when the page count can be
 determined; `partial` does not indicate a complete OCR setup.
 
-An image-only scan has no usable text layer and requires an external self-hosted
-worker. Lixity does not install or start that worker. Run the diagnostics included in v1.18.0
-in the same environment as the server:
+An image-only scan has no usable text layer. Select
+[local Tesseract](#use-local-ocr-without-a-worker-service) or a configured
+self-hosted worker; Lixity does not install their engines, language data or
+models. Run diagnostics in the same environment as the server:
 
 ```sh
 lixity research ocr-status [--worker-cmd PATH] [--probe]
 ```
 
 Pass `--probe` (or query `GET /api/research/ocr-status?probe=1`) to execute a
-synthetic worker request and report protocol handling and latency. A successful
+synthetic request to the selected worker or Tesseract backend and report
+execution and latency. Native mode has no OCR worker to probe. A successful
 probe upgrades only `ready` to `ready (probed)`; it cannot override an invalid
-timeout (`misconfigured_worker`) or missing rasterizer (`partial`). Inspect
+timeout/backend configuration or missing rasterizer (`partial`). Inspect
 `probe.ok` and configuration/dependency fields together. The diagnostic CLI
 still exits `0` when the probe fails, so exit status alone is not a health gate.
 
@@ -847,16 +849,17 @@ The same information is available at `GET /api/research/ocr-status` and in
 
 | Code | Configuration detected | Action |
 | --- | --- | --- |
-| `ready` | Executable worker and pdftoppm found | Test an authorized scan and inspect extracted text |
-| `native_only` | Both Poppler tools, no worker | Native PDFs work; configure a worker for scans |
-| `partial` | Worker or pdftotext available, pdftoppm missing | Install the rasterizer before multi-page use |
-| `misconfigured_worker` | Configured worker missing/not executable, or invalid worker timeout | Check path, permissions, service environment and `LIXITY_OCR_TIMEOUT` |
-| `missing_dependencies` | No complete usable setup | Install Poppler and optionally a scan worker |
+| `ready` / `ready (probed)` | Selected worker or Tesseract with requested language data, plus pdftoppm | Test an authorized scan and inspect extracted text |
+| `native_only` | Native extraction with both Poppler tools | Native PDFs work; select Tesseract or a worker for scans |
+| `partial` | Extraction/OCR engine available, pdftoppm missing | Install the rasterizer before multi-page use |
+| `misconfigured_worker` | Worker absent/not executable, invalid timeout, or failed probe | Check worker path, permissions, service environment and `LIXITY_OCR_TIMEOUT` |
+| `misconfigured_backend` | Invalid backend/native timeout, or unavailable Tesseract/language data | Check `LIXITY_OCR_BACKEND`, `LIXITY_OCR_LANGUAGES`, timeout and local installation |
+| `missing_dependencies` | No complete usable setup | Install Poppler and select a scan backend when needed |
 
 Configuration diagnostics inspect executable availability, not model weights,
 snapshot integrity, GPU resources or recognition accuracy. A synthetic probe
 checks only that request, not real-model or GPU validation. The
-returned model/recipe identifiers are configuration constants, not attestations.
+worker model/recipe identifiers are configuration constants, not attestations.
 `ready` therefore means configured, not an end-to-end health check; use `--probe` to verify live execution.
 
 Native extraction refuses an undeterminable page count. If Poppler's `pdfinfo` is
@@ -865,7 +868,10 @@ modern producer stored it in a compressed object stream -- the capture is
 refused with an explicit error rather than silently retaining only the first
 page. Install Poppler or configure `LIXITY_OCR_WORKER` to ingest such a file.
 
-When ingesting PDFs with a configured OCR worker, authors can pass `--fallback` (or set `LIXITY_OCR_FALLBACK=1`) to allow automatic fallback to Poppler's native `pdftotext` extraction if the OCR worker times out or fails (e.g. GPU out of memory), recording a structured warning in the extraction result. By default (`--fallback` omitted), worker failures strictly reject the capture to prevent silent degradation.
+Pass `--fallback` (or set `LIXITY_OCR_FALLBACK=1`) to permit native `pdftotext`
+extraction if worker execution fails/times out or Tesseract extraction fails.
+The result records a warning; review mixed/scanned pages for missing text.
+Without explicit fallback, these failures reject the capture.
 
 ### Worker interface
 
@@ -929,7 +935,7 @@ be ingested as a searchable source.
 A configured worker's nonzero exit or timeout fails the import by default;
 explicit `--fallback` / `LIXITY_OCR_FALLBACK` can permit native text extraction
 with a warning. Invalid block structure or missing reported page coverage still
-fails closed. There is no silent native-text fallback. With no worker configured, native
+fails closed. There is no silent native-text fallback. With no backend or worker configured, native
 text-layer extraction remains available and can omit scanned pages; inspect mixed
 PDFs for completeness. A successful native import is not an OCR-success claim.
 

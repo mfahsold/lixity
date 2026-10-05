@@ -7,6 +7,52 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [1.25.0] - 2026-10-06
+
+### Changed
+- Style dimensions use standardized tied midranks on one complete chapter set.
+  Scores and explained variance share that space; missing chapters are omitted
+  from the plot and its coverage is shown. Passport schema 4 adds
+  `meta.dimension_space` and `meta.dimension_chapters` without renaming fields.
+- Shared supported-prose handling excludes metadata, headings, comments, code
+  and footnote definitions from analytical measurements. Quoted prose remains
+  measured; paragraph profiles retain their narrower body/list scope. Legacy
+  whitespace counts remain separate. Rebuild exports and comparisons after
+  these input-scope and numerical corrections; previous scores can change.
+- Seven-language UI help uses plain-language definitions and reading examples;
+  existing methods, stability, command, research and interpretation guides
+  distinguish exploratory signals from calibrated inference. Nominal selections
+  and empty diagnostics do not certify prose.
+- Syllable calculations reuse word frequencies within each request, without a
+  global cache. Empirical distribution comparisons use one sorted linear merge;
+  segmentation accumulates centred moments instead of rescanning segments.
+- Actions runs native Poppler cases on the primary Linux Python version and
+  macOS; other compatibility versions retain all non-native tests. Separate
+  browser/platform workflows use built-in path filters, cancellation and caches;
+  core checks remain unconditional and release checks install Poppler explicitly.
+
+### Fixed
+- Guarded changepoint segmentation now considers every predecessor: the old
+  pruning rule could discard the best partition. The legacy `pelt_changepoints`
+  name remains, with quadratic time and linear memory. Per-endpoint anchors
+  preserve small variances after distant observations or large translations.
+- Wasserstein distance integrates empirical CDFs correctly for unequal sample
+  sizes. KS returns probability 1 for identical distributions and uses a stable
+  limiting-tail calculation for small distances; probabilities remain approximate.
+- Sn uses the original low outer/high inner order statistics. Qn uses the modern
+  asymptotic factor 2.21914. Neither adds finite-sample correction. The unchanged
+  Kendall statistic is labelled tau-a, and the legacy degree-fit helper correctly
+  attributes its approximate exponent and discloses its uncalibrated probability.
+- MTLD averages the two directional lengths rather than pooling their factors.
+  Threshold, partial-factor and short-text policies remain documented.
+- Explicit tokenizer flags survive every analytical surface. German/English
+  default patterns retain accented words and emphasis; LF/CRLF paragraph boundaries
+  agree, and the configured inclusive threshold includes exactly eight words.
+- Chapter headings inside code or comments no longer split prose; scene dividers
+  around chapter prose are not mistaken for document metadata. Source anchors
+  remain unchanged. Structural jump links follow measured chapters when a feature
+  is unavailable in an intervening chapter.
+
 ## [1.24.1] - 2026-10-04
 
 ### Fixed
@@ -1339,7 +1385,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.24.1...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.25.0...HEAD
+[1.25.0]: https://github.com/mfahsold/lixity/compare/v1.24.1...v1.25.0
 [1.24.1]: https://github.com/mfahsold/lixity/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/mfahsold/lixity/compare/v1.23.0...v1.24.0
 [1.23.0]: https://github.com/mfahsold/lixity/compare/v1.22.0...v1.23.0

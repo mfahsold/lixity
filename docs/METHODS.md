@@ -1,12 +1,18 @@
 # Mathematical methods
 
-Formal description of every estimator Lixity uses — definitions, defaults
-and injectability. Research context and known limitations live in
+Definitions, defaults and implementation limits of Lixity's measurements.
+Research context and known limitations live in
 [`STABILITY.md`](STABILITY.md); command flags live in [`USAGE.md`](USAGE.md).
 
-Severity of thresholds: defaults are documented heuristics, not universal
-laws. They are injectable (CLI / API / UI settings) and reported back in
-every `meta` block.
+Review thresholds are configurable heuristics, not universal laws. Read their
+active values from passport `meta`; formula constants and estimator conventions
+are separate from author preferences.
+
+The 1.25 corrections below retain the JSON field names and passport
+schema 4, but change measurements and derived results. Regenerate chapter
+metrics, style passports and reports before comparing outputs from before the
+prose-scope, MTLD, robust-scale, segmentation, distribution and dimension
+corrections. A source update alone does not refresh stored outputs.
 
 ## 1. Robust house-style baseline
 
@@ -24,9 +30,25 @@ median/MAD, FDR correction or eigendecomposition. JSON numbers remain numeric;
 locale-specific decimal separators are applied only when rendering reports.
 See [LOCALIZATION.md](LOCALIZATION.md) for supported profiles and limitations.
 
-Token, syllable, dialogue and sentence measures use prose with Markdown headings
-removed. Chapter labels remain available for navigation; changing a title does
-not change its prose readability. For even sentence counts, `median_sl_exact`
+Token, syllable, dialogue and sentence measures share the supported prose scope:
+body paragraphs, list items and blockquote paragraphs with `>` delimiters
+removed. YAML front matter, code, headings, comments and footnote definitions
+are omitted; inline emphasis and footnote anchors are stripped. This bounded
+Markdown policy is not a complete CommonMark parser. Visible prose beneath a
+leading document title (`# …`) before the first chapter contributes to global
+metrics but not chapter-only reports.
+Paragraph profiles intentionally cover body paragraphs and list items only,
+retaining their source line anchors; they omit blockquotes.
+
+Configured `word_regex` flags are respected across analysis surfaces; cue
+patterns retain their separate case-insensitive contract. English and German
+default word patterns include Unicode accented letters. LF and CRLF share
+semantic paragraph boundaries. Short-paragraph counting uses paragraph
+whitespace words and the inclusive configured threshold, including eight-word
+paragraphs. Legacy whitespace counts remain distinct from regex token counts.
+
+Chapter labels remain available for navigation; changing a title does not
+change its prose readability. For even sentence counts, `median_sl_exact`
 averages the two middle lengths. The older integer `median_sl` retains its upper
 middle value for JSON compatibility; reports use the exact median.
 
@@ -50,7 +72,7 @@ Per feature $f$ over $n$ measurable chapters with values $x_1,\dots,x_n$:
 | :--- | :--- | :--- |
 | Centre | $\tilde{x} = \mathrm{median}(x_i)$ | robust to single outliers |
 | Spread | $\mathrm{MAD} = \mathrm{median}(\lvert x_i - \tilde{x}\rvert)$ | 0 for $n < 2$ |
-| Sigma | $\sigma = 1.4826 \cdot \mathrm{MAD}$ | 1.4826 = $1/\Phi^{-1}(0.75)$ (DescTools/R default) |
+| Sigma | $\sigma = 1.4826 \cdot \mathrm{MAD}$ | rounded normal-consistency factor $1/\Phi^{-1}(0.75)$; not a finite-sample correction |
 
 A chapter–feature cell is **measurable** when the feature has at least
 `FingerprintThresholds.min_chapters` observations (default 2). Below this floor,
@@ -59,16 +81,17 @@ produce measured zero deviations; derived dimensions and spread-based
 diagnostics require positive $\sigma$. Availability and informative variation
 are different conditions.
 
-## 2. Significance-adjusted deviation (z*)
+## 2. Noise-adjusted deviation (z*)
 
 Plain robust z:
 
 $$
 z_{\text{raw}} = 0.6745 \cdot \frac{x - \tilde{x}}{\mathrm{MAD}}
-\quad (0.6745 = 1/1.4826)
+\quad (0.6745 \approx 1/1.4826)
 $$
 
-Lixity scores the style reference with the **noise-aware** form:
+Lixity combines the descriptive manuscript spread with an estimated measurement
+error:
 
 $$
 z^* = \frac{x - \tilde{x}}{\sqrt{\sigma_{\mathrm{MAD}}^2 + \mathrm{SE}^2}}
@@ -79,15 +102,17 @@ Standard errors per feature (plug-in estimators, fixed constants, see
 
 | Feature family | Estimator |
 | :--- | :--- |
-| Count densities (per 1 000 words) | Poisson: $\mathrm{SE} = \sqrt{\hat{\lambda}/W \cdot 1000^2}$ |
-| Shares (%) | binomial: $\mathrm{SE} = \sqrt{p(1-p)/N}$ |
+| Count densities (per 1 000 words) | Poisson plug-in: $\mathrm{SE} = 1000\sqrt{k}/W$, for observed count $k$ and $W$ tokens |
+| Shares (%) | binomial plug-in: $\mathrm{SE} = 100\sqrt{p(1-p)/N}$ percentage points, with $p$ on 0–1 |
 | ASL, CV, entropy, … | sample-based (variance / delta method) |
 
 Larger standard errors reduce the magnitude of $z^*$, limiting noise-driven
 flags. Exact HD-D has no independent window-sampling SE: its `style_se` entry
 is omitted. The fingerprint's missing-SE fallback of zero denotes no estimated
 measurement SE for this feature, **not** certainty about a larger population.
-False positives remain possible.
+These plug-ins do not establish independence of words/sentences or calibrated
+null probabilities for chapter features. Zero observed events can give zero
+plug-in error without establishing population certainty.
 
 ## 3. Thresholds (`FingerprintThresholds`)
 
@@ -95,8 +120,8 @@ False positives remain possible.
 | :--- | :--- | :--- |
 | `z_mild` | 2.5 | notable deviation: enters `deviations`, drives expected FP count |
 | `z_strong` | 3.5 | strong deviation (reported, not a second cut on `deviations`) |
-| `fdr_q` | 0.05 | target FDR for `fdr_flagged` |
-| `fdr_method` | `bh` | `bh` = Benjamini–Hochberg; `by` = Benjamini–Yekutieli (arbitrary dependence) |
+| `fdr_q` | 0.05 | nominal selection level; prose FDR is not established |
+| `fdr_method` | `bh` | BH or BY step-up rule; both require valid input null probabilities |
 | `min_chapters` | 2 | below this, no baseline for a feature |
 | `dim_score_threshold` | 2.5 | \|dimension score\| from here: chapter flagged on that axis |
 | `flag_min_severity` | 2 | paragraph severity floor for the flags panel (1–3) |
@@ -104,7 +129,8 @@ False positives remain possible.
 - A cell counts **in band** iff |z\*| < `z_mild`.
 - `expected_false_positives` = m · P(|Z| ≥ z_mild) with
   m = measured cells and P the two-sided normal tail (`erfc`). At the
-  default 2.5 this is ≈ 1.24 % of $m$.
+  default 2.5 this is ≈ 1.24 % of $m$ under a standard-normal null. It is
+  a model reference, not a measured count of false findings in the manuscript.
 - Injectability: CLI `--z-mild/--z-strong/--fdr-q/--fdr-method/--dim-threshold/--flag-min-severity`
   on `style`, `dashboard`, `build`; API kwargs of the same names; the
   control-server settings form applies `z_mild`, `z_strong`, `fdr_q`,
@@ -122,19 +148,24 @@ Input: one $p$-value per measured cell, $p = P(\lvert Z \rvert \ge \lvert z^* \r
 (two-sided normal tail). Sort ascending, find the largest $k$ with
 $p_{(k)} \le (k/m) \cdot q / c$, reject $p_{(1)},\dots,p_{(k)}$.
 Deterministic tie-break by $(\text{chapter}, \text{feature})$. The rejected
-set is `fdr_flagged` — prefer it over raw `deviations` for strong claims.
+set is `fdr_flagged`. This records selection under the implemented model,
+not confirmed errors or validated statistical significance in prose.
 
-- **BH** ($c = 1$): controls FDR under independence / PRDS.
-- **BY** ($c = \sum_{i=1}^{m} 1/i$, the harmonic factor): valid under
-  arbitrary dependence; more conservative — use when feature dependence is
-  unknown or adversarial (`fdr_method = "by"`).
+- **BH** ($c = 1$): controls FDR for valid null probabilities under
+  independence or the specified positive-dependence conditions.
+- **BY** ($c = \sum_{i=1}^{m} 1/i$): accommodates arbitrary dependence
+  between valid null probabilities. It does not repair invalid probabilities.
+
+Lixity estimates its median/MAD from the same chapters it scores and then
+applies a normal tail to the custom $z^*$. That calibration has not been
+established. Runs/lag diagnostics and switching to BY do not establish it.
 
 ## 4a. Effect sizes (magnitude, not just significance)
 
-For every FDR-confirmed cell the passport carries Cliff's $\delta$, labelled
-with Romano et al.'s bands. The implied Vargha–Delaney $\hat{A}_{12} =
-(\delta + 1)/2$ is a deterministic restatement of $\delta$ and is **not**
-emitted separately:
+For every FDR-selected cell, passport `effect_magnitudes` carries a band label
+derived from Cliff's $\delta$, using Romano et al.'s bands. The implied
+Vargha–Delaney $\hat{A}_{12} = (\delta + 1)/2$ restates the same contrast;
+neither numerical value is emitted in that field:
 
 | $\lvert\delta\rvert$ | Label |
 | :--- | :--- |
@@ -143,8 +174,8 @@ emitted separately:
 | < 0.474 | medium |
 | ≥ 0.474 | large |
 
-Sign: positive = chapter above house-style median. Effect sizes answer
-"how different", not only "different at q".
+Sign: positive = the chapter exceeds more other chapters than it falls below;
+ties contribute zero. The bands describe ordinal contrast, not literary merit.
 
 ## 4b. Exchangeability diagnostics (baseline quality)
 
@@ -155,30 +186,54 @@ On the ordered per-feature series $x_1,\dots,x_n$ (chapters in order):
   structure the i.i.d. FDR model ignores).
 - **Lag-1 autocorrelation** $\rho_1$; critical band $\approx 1/\sqrt{n}$.
   `mean_lag1_rho` and `acf_critical` are reported; `exchangeable` is
-  false when runs flag or mean $\rho_1$ exceeds the critical value.
-- `low_power` is true for $n < 8$ chapters — treat every downstream
-  significance claim as provisional.
+  false when runs flag or $|\mathrm{mean}(\rho_1)|$ reaches or exceeds the
+  critical value.
+- `low_power` is true for $n < 8$ chapters. Neither this flag nor an
+  `exchangeable` result establishes calibrated probabilities.
 
 ## 4c. Structural diagnostics (`structural_diagnostics`)
 
 Pure-stdlib structural and distributional diagnostics over the ordered
 per-feature series (chapters in order) plus token-level lexical diagnostics
 when the passport is built from source text (`api.fingerprint`, `lixity style`,
-`lixity build`, `lixity dashboard`). They answer *where* and *how*
-the house style shifts — orthogonal to the per-cell z\*/FDR layer.
+`lixity build`, `lixity dashboard`). They add exploratory ordered-series and
+lexical contrasts alongside the per-cell z\*/FDR layer; calculation and model
+limits are listed below.
 
 | Key | Estimator | Guard / notes |
 | :--- | :--- | :--- |
-| `changepoints` | **PELT** (pruned exact linear time) with Gaussian cost $n\ln\sigma^2$ and BIC penalty $2\ln n$ | $n < 3$ or constant series → `[]`; values are 0-based indices of the first element after each break |
-| `trends` | **Mann–Kendall** monotonic trend: $\tau$, $S$, two-sided normal $p$ (tie-corrected variance, continuity correction) | $n < 3$ → `None`; constant → $(0,0,1)$ |
-| `robust_scales` | **Sn** (Rousseeuw & Croux 1993, consistency $c_n = 1.1926$) and **Qn** (same paper, $d_n = 2.2219$), alongside $1.4826\cdot\mathrm{MAD}$ | $n < 2$ → $0$; Sn/Qn have 50 % breakdown (vs. MAD's 50 % with lower Gaussian efficiency) |
+| `changepoints` | exact unpruned dynamic programming for guarded cost $n\ln\sigma^2$ and penalty $2\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; $n<3$ or constant → `[]`; 0-based indices of the first observation after a break |
+| `trends` | Mann–Kendall $S$ with tie-corrected normal $p$ and continuity correction; $\tau=S/\binom n2$ is tau-a | $n<3$ → `None`; constant → $(0,0,1)$; not tie-normalized tau-b |
+| `robust_scales` | Sn: low outer median of high inner medians, including self-distances, ×1.1926; Qn: sorted pairwise distance at rank $\binom{\lfloor n/2\rfloor+1}{2}$, ×2.21914 | Gaussian asymptotic factors; no finite-sample correction; $n<2$ → 0 |
 | `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None` |
-| `distribution_shift` | **Wasserstein-1D** $W_1$ (L¹ integral of quantile functions) and **two-sample KS** ($D$, asymptotic $p$) of the first half of chapters vs the second half, per feature | both halves $\ge 2$ (so $n \ge 4$); empty half → omitted |
+| `distribution_shift` | exact empirical-CDF Wasserstein $W_1$ and two-sample KS $D$; stable asymptotic KS $p$ | sort plus linear CDF merge, including ties and unequal sizes; $D=0$ → $p=1$; both halves need $\ge2$ observations; $p$ is not calibrated for tied/fitted distributions |
 | `trending_features` | feature names with Mann–Kendall $p < 0.05$ | summary list |
-| `segmented_features` | feature names with at least one PELT changepoint | summary list |
+| `segmented_features` | feature names with at least one guarded-objective changepoint | summary list |
 | `shifted_features` | feature names with early/late KS $p < 0.05$ | summary list |
-| `cooccurrence` *(token-level)* | undirected content-word graph (sliding window, default 2) with mean degree and **Goh–Barabási** degree-sequence fitness $\hat\alpha = 1 + n/\sum\ln(k_i/(k_{\min}-0.5))$ + KS fit | needs ≥ 50 content tokens; fit omitted when degenerate / $n<5$ / constant |
+| `cooccurrence` *(token-level)* | content-word graph (window 2); approximate discrete exponent $\hat\alpha=1+n/\sum\ln(k_i/(k_{\min}-0.5))$ and fitted-CDF comparison | estimator follows Clauset–Shalizi–Newman Eq. 3.7; current truncated continuous CDF and ordinary KS $p$ do not establish discrete power-law goodness of fit; ≥50 content tokens, ≥5 positive nonconstant degrees |
 | `keyness` *(token-level)* | **Dunning $G^2$** (log-likelihood ratio) of first-half chapters vs second half, content words only; signed so positive = over in the early half | both halves ≥ 20 content tokens; single-chapter texts omit `keyness` |
+
+The legacy Python name `pelt_changepoints` is retained, but the implementation
+does not prune or claim linear time. Its guarded singleton/constant cost does
+not satisfy the PELT pruning premise in
+[Killick et al., Theorem 3.1](https://arxiv.org/abs/1101.1438v3). Considering
+every predecessor corrects optimization of this declared objective; the guard
+is still a modelling choice, not a nondegenerate Gaussian likelihood. Anchoring
+before centred variance updates limits cancellation from large offsets without
+recovering precision already lost in input floats.
+
+Sn's low/high medians follow the
+[original definition](https://wis.kuleuven.be/stat/robust/papers/publications-1993/rousseeuwcroux-alternativestomedianad-jasa-1993.pdf).
+Qn uses the modern rounded Gaussian factor 2.21914 instead of historical
+2.2219, preserving its order-statistic rank. These normalizations remain
+separate from finite-sample bias correction; neither estimator applies it.
+
+Wasserstein distance integrates $|F_{\mathrm{early}}-F_{\mathrm{late}}|$ over
+the distinct empirical-CDF knots. KS $D$ is the maximum CDF difference on the
+same merged support. Stable evaluation of the asymptotic survival function
+corrects the identical-distribution boundary and small-argument cancellation;
+it does not turn the approximate $p$ into an exact, fitted-null or tied-data
+calibration. Short samples and serially dependent chapters need care.
 
 Token-level blocks (`cooccurrence`, `keyness`) are computed by
 `lexical_structural_diagnostics(text, config)` and merged into
@@ -195,10 +250,10 @@ Version 1.16.0 includes the non-term cells previously omitted from this calculat
 recompute older keyness values before comparison. A signed ranking is not a
 multiple-testing-adjusted significance claim.
 
-The passport `meta` block reports `schema_version: 4`, `min_chapters` and
-`flag_min_severity` alongside the z\*/FDR thresholds; `passport_text` adds a
-“Structural diagnostics” line when any feature has a changepoint, significant
-trend or early/late distribution shift.
+The passport retains schema 4 and these field names. The structural summary
+uses the implemented thresholds; it does not certify a narrative boundary,
+trend or fitted distribution. See [STABILITY.md](STABILITY.md#structural-diagnostics)
+for the model assumptions and current calculation limits.
 
 ### Track B / research extensions (not implemented)
 
@@ -233,15 +288,37 @@ Documented research directions, **not** current product features:
 - Exportable “method card” (estimator + citation + guard) per metric for
   peer review / replication packages.
 
-## 5. Latent style dimensions
+## 5. Exploratory style dimensions
 
-1. Spearman rank correlation $\rho$ over chapter values of usable features
-   (ties → average ranks; zero-variance pairs → 0).
-2. Cyclic Jacobi eigendecomposition on the symmetric matrix
-   (standard library only; eigenvalues sorted descending; sign fixed by
-   the largest-absolute loading).
-3. Dimension score threshold: |score| ≥ `dim_score_threshold` (default 2.5) marks `flagged` chapters on that axis.
-4. Redundancy: pairs with |ρ| ≥ `REDUNDANCY_RHO` (0.8).
+The dimensions are PCA of standardized tied midranks on one common complete
+chapter set. Covariance, loadings, explained variance and scores use that same
+rank space:
+
+1. Start with baseline-usable features and select chapters measured on every
+   candidate feature. At least three complete chapters are required.
+2. Give tied values their average rank within this set. Centre each rank column
+   and divide by its sample standard deviation ($n-1$ denominator). Drop
+   columns constant on this set; at least three varying features must remain.
+3. Form $C=X^\mathsf{T}X/(n-1)$ and use cyclic Jacobi eigendecomposition
+   (standard library only). Eigenvalues are sorted descending; the
+   largest-absolute loading fixes each axis sign.
+4. Project the same standardized ranks: $s_k=Xv_k$. Only the common complete
+   chapters receive `scores`; missing measurements are not imputed. The
+   reported `variance` is $\lambda_k/p$ for $p$ unit-variance columns, the
+   explained fraction in this rank space.
+5. A completed, unrounded score with |score| ≥ `dim_score_threshold` (default
+   2.5) puts a chapter in `flagged` on that axis. Scores are stored rounded to
+   two decimals; the cutoff remains descriptive, not a calibrated probability.
+
+Fewer than three complete chapters or varying features yields no dimensions.
+Incomplete chapters remain available in the other measured-feature views but
+do not receive dimension scores. The complete-case subset can be small or
+unrepresentative, and ranks depend on the supplied manuscript. Explained
+variance does not mean literary importance or a simultaneous confidence region.
+
+The separate redundancy list still compares each pair's available chapters:
+|Spearman $\rho$| ≥ `REDUNDANCY_RHO` (0.8). Pairwise availability in that list
+does not define the PCA matrix or its scoring population.
 
 ## 6. Lexical diversity indices
 
@@ -249,13 +326,21 @@ Documented research directions, **not** current product features:
 | :--- | :--- | :--- |
 | Guiraud $R$ | $\mathrm{TTR} \sqrt{N}$ | length-dependent; prefer with HD-D |
 | HD-D | hypergeometric expected TTR of one 42-token draw without replacement from whole-text type frequencies | $\ge 100$ tokens else `null` |
-| MTLD | mean factor length until TTR hits 0.72 | $\ge 100$ tokens else `null` |
+| MTLD | arithmetic mean $\tfrac12(N/F_{\mathrm{forward}}+N/F_{\mathrm{reverse}})$; factor completes at TTR ≤0.72; trailing weight $(1-\mathrm{TTR})/(1-0.72)$ | $\ge100$ tokens; zero factors/all-unique input → `null`; no minimum run length |
 | MATTR | mean TTR over sliding 50-token windows | window length |
 | Maas $a^2$ | $a^2 = (\log_{10} N - \log_{10} V)/(\log_{10} N)^2$ | $\ge 100$ tokens; base 10 as in the implementation |
 | Yule $K$ | $10^4 \cdot (\sum m^2 V_m - N)/N^2$ | length-dependent by design |
 
-McCarthy & Jarvis (2010): report MTLD + HD-D + Maas **together**, not a
-single index. See [`STABILITY.md`](STABILITY.md) §1 for length caveats.
+MTLD now averages directional $N/F$ scores arithmetically, following the
+original-style `mtldo` aggregation in the
+[author-lab TAALED reference](https://github.com/LCR-ADS-Lab/TAALED/blob/f3c39692b01efa84e39e4de69f8ac109ac1c4bcd/taaled/ld.py).
+The previous combination averaged factors first, yielding the harmonic mean
+of directional scores. Lixity retains its inclusive threshold, fractional
+remainder, no minimum run length and local availability policies. TAALED's
+segmentation conventions differ, so complete tool equivalence is not claimed.
+The original McCarthy–Jarvis full paper was unavailable for this review; the
+author-lab source supports the narrower aggregation claim. See
+[STABILITY.md](STABILITY.md#lexical-diversity) for comparison limits.
 
 The 100-token floor is a local short-text policy, not a universal reliability
 threshold. Maas is defined for a one-type text: $N=100$, $V=1$ gives $a^2=0.5$.
@@ -273,10 +358,11 @@ $$
 
 where $\binom{N-f_t}{d}=0$ if fewer than $d$ non-$t$ tokens remain. The
 frequency histogram makes the result independent of token order. The public
-`seed` and `min_samples` arguments remain accepted legacy no-ops. The second
-value of `hd_d_stats` is `0.0` because this exact expectation has no Monte
-Carlo sampling error; it does not estimate uncertainty about a population of
-possible texts.
+`seed` and `min_samples` arguments remain accepted legacy no-ops that emit a
+`DeprecationWarning` when explicitly supplied. Ordinary calls omit them and
+remain warning-free. The second value of `hd_d_stats` is `0.0` because this
+exact expectation has no Monte Carlo sampling error; it does not estimate
+uncertainty about a population of possible texts.
 
 Before version 1.16.0, the `hd_d` key held mean Gini–Simpson diversity over
 sampled, contiguous 35-token windows, with a window-based plug-in SE. Those
@@ -286,10 +372,10 @@ style baselines, reports, and passports before comparing or publishing results
 across that boundary. The new 100-token floor also makes values available for
 100–174-token inputs that previously returned `null` by default.
 
-## 7. Readability (language-calibrated)
+## 7. Language-specific readability
 
-Seven published formulas, selected by profile; constants are fixed and
-covered by hand-computed tests:
+Seven named formula variants, selected by profile; the implemented coefficients
+are fixed and covered by hand-computed tests:
 
 | Lang | Formula (name) | Implemented formula |
 | :---: | :--- | :--- |

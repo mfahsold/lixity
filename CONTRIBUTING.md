@@ -71,12 +71,22 @@ RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
 .venv/bin/mypy --strict src
 ```
 
-CI (`.github/workflows/tests.yml`) runs on pull requests, pushes to `main` and
-manual dispatch. Pytest runs the full suite, including unittest tests, once on
-each Python version from 3.10–3.13. All research suites also run on macOS and
-Windows; browser checks and wheel packaging run separately. New pushes cancel
-superseded test runs. Pip downloads are cached; release tags run their own full
-source checks and verify an isolated package installation.
+Core CI (`.github/workflows/tests.yml`) runs on every pull request, push to
+`main` and manual dispatch. Python 3.12 runs the
+full suite, including real Poppler PDF tests. Python 3.10, 3.11 and 3.13 run all
+nonnative tests with `-m "not native_pdf"`; synthetic PDF, worker, timeout and
+provenance coverage remains on every Python version. The selection regression
+test checks that `native_pdf` contains exactly the real Poppler prerequisites.
+Lint and exact wheel/source verification remain unconditional core jobs.
+
+The separate browser and research-platform workflows use GitHub's built-in
+push/PR path filters. Both run for source, scripts, dependency metadata or
+workflow changes. Browser checks also run for documentation and browser-test
+changes; all research suites run on macOS and Windows for research-test changes.
+Each workflow supports manual dispatch and cancels superseded runs. Pip downloads
+are cached. Configure required status checks from the unconditional core workflow.
+Release tags run their own full source checks with Poppler and verify an isolated
+package installation.
 
 Build artifacts with `make build` (`python -m build`). It creates the source
 archive first, then builds the wheel from a fresh extraction, avoiding obsolete
@@ -84,7 +94,8 @@ files in an incremental `build/lib`. CI compares the wheel's Python modules,
 typing marker and UI assets with the source filenames and bytes.
 
 Native PDF tests need Poppler (`pdftotext` and `pdftoppm`) and report an explicit
-skip if it is missing. The synthetic worker test needs no model.
+skip if it is missing. Select them locally with `pytest -m native_pdf`.
+Synthetic worker and Tesseract protocol tests need no model or installed OCR engine.
 Optional hooks are installed with `pre-commit install`; see
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Tags matching `v*` build
 release packages; authorized documentation pushes to `main` deploy Pages.

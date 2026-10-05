@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -12,8 +11,8 @@ from typing import Any
 from .._version import __version__
 from ..analyzer import CorpusAnalyzer
 from ..config import resolve_thresholds
-from ..language import resolve_language
-from ..markdown_parser import split_chapters, strip_inline_markup
+from ..language import compile_word_pattern, resolve_language
+from ..markdown_parser import chapter_heading_spans, prose_text, split_chapters
 from ..models import SCHEMA_VERSION, CorpusConfig
 from ..pipeline import analyze_document
 from ..style_fingerprint import FEATURES, FingerprintThresholds, dunning_g2
@@ -295,14 +294,14 @@ def compare_source_to_manuscript(
     # body segmentation used for the chapter trace, so titles, front matter,
     # and the configured scholarly appendix cannot inflate lexical overlap.
     def comparison_prose(text: str, config: CorpusConfig) -> tuple[list[tuple[int, str, str]], str]:
-        first_chapter = re.search(config.chapter_regex, text)
-        chapters = split_chapters(text[first_chapter.start():], config) if first_chapter else []
+        headings = chapter_heading_spans(text, config)
+        chapters = split_chapters(text[headings[0][0]:], config) if headings else []
         if chapters:
             bodies = [body for _, _, body in chapters]
         else:
             main_text = text.split(config.appendix_marker, 1)[0] if config.appendix_marker else text
             bodies = [main_text]
-        prose = "\n\n".join(re.sub(r"(?m)^\s{0,3}#{1,6}\s+.*$", "", body) for body in bodies)
+        prose = "\n\n".join(prose_text(body, _front_matter=not chapters) for body in bodies)
         return chapters, prose
 
     _, source_prose = comparison_prose(source_text, source_config)
@@ -316,15 +315,15 @@ def compare_source_to_manuscript(
     ms_metrics = ms_analyzer.analyze_text(ms_prose)
 
     # Word extraction & blacklist filtering
-    source_word_re = re.compile(source_resolved.word_regex)
+    source_word_re = compile_word_pattern(source_resolved.word_regex)
     source_blacklist = source_resolved.function_words | source_resolved.stopwords
-    source_tokens = [w.lower() for w in source_word_re.findall(strip_inline_markup(source_prose))]
+    source_tokens = [w.lower() for w in source_word_re.findall(source_prose)]
     source_content = [w for w in source_tokens if len(w) > 1 and w not in source_blacklist]
     source_counter = Counter(source_content)
 
-    ms_word_re = re.compile(ms_resolved.word_regex)
+    ms_word_re = compile_word_pattern(ms_resolved.word_regex)
     ms_blacklist = ms_resolved.function_words | ms_resolved.stopwords
-    ms_tokens = [w.lower() for w in ms_word_re.findall(strip_inline_markup(ms_prose))]
+    ms_tokens = [w.lower() for w in ms_word_re.findall(ms_prose)]
     ms_content = [w for w in ms_tokens if len(w) > 1 and w not in ms_blacklist]
     ms_counter = Counter(ms_content)
 
@@ -425,7 +424,7 @@ def compare_source_to_manuscript(
     chapter_grounding: list[dict[str, Any]] = []
 
     for ch_num, ch_title, ch_body in ms_chapters:
-        clean_body = strip_inline_markup(re.sub(r"(?m)^\s{0,3}#{1,6}\s+.*$", "", ch_body))
+        clean_body = prose_text(ch_body, _front_matter=False)
         ch_tokens = [w.lower() for w in ms_word_re.findall(clean_body)]
         ch_content = [w for w in ch_tokens if len(w) > 1 and w not in ms_blacklist]
         ch_counter = Counter(ch_content)

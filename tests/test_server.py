@@ -15,6 +15,8 @@ from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import quote
 
+import pytest
+
 from lixity.server import (
     LixityServerHandler,
     build_server_dashboard,
@@ -1482,6 +1484,7 @@ class TestLixityServer(unittest.TestCase):
             LixityServerHandler.source_input = original_source
             LixityServerHandler.refresh()
 
+    @pytest.mark.native_pdf
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_research_ingest_content_base64_pdf(self):
         import base64

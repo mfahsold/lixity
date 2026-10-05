@@ -29,6 +29,46 @@ def _without_comments(content: str) -> str:
     )
 
 
+def _trim_blank_lines(content: str) -> str:
+    """Trim boundary blank lines without changing indentation of retained text."""
+    lines = content.splitlines(keepends=True)
+    start, end = 0, len(lines)
+    while start < end and not lines[start].strip():
+        start += 1
+    while end > start and not lines[end - 1].strip():
+        end -= 1
+    return "".join(lines[start:end]).rstrip("\r\n")
+
+
+def _is_indented_code(line: str) -> bool:
+    """Use the same supported indentation boundary for blocks and dividers."""
+    return line.startswith(("    ", "\t"))
+
+
+def _front_matter_end(lines: list[str]) -> int:
+    """Exclusive end of a closed leading YAML mapping, or zero when absent."""
+    if not lines or lines[0].lstrip("\ufeff").strip() != "---":
+        return 0
+    first = next((line.strip() for line in lines[1:] if line.strip()), "")
+    # A pair of scene dividers around prose is not metadata. Support the common
+    # key/value front-matter form without interpreting arbitrary YAML values.
+    if not re.match(r"[\w-]+\s*:", first):
+        return 0
+    for index, line in enumerate(lines[1:], 1):
+        if line.strip() in ("---", "..."):
+            return index + 1
+    return 0
+
+
+def _fence_closer(line: str) -> re.Pattern[str] | None:
+    """Recognize a backtick/tilde opener using the shared scene-fence rules."""
+    opening = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
+    if not opening or (opening[1][0] == "`" and "`" in opening[2]):
+        return None
+    marker = opening[1]
+    return re.compile(r" {0,3}" + re.escape(marker[0]) + "{" + str(len(marker)) + r",}[ \t]*")
+
+
 def chapter_heading_spans(text: str, config: CorpusConfig) -> list[tuple[int, int, int, str]]:
     """Matched heading offsets, original line numbers and actual titles.
 
@@ -37,10 +77,24 @@ def chapter_heading_spans(text: str, config: CorpusConfig) -> list[tuple[int, in
     """
     pattern = re.compile(config.chapter_regex)
     clean_lines = _without_comments(text).splitlines(keepends=True)
+    front_matter_end = _front_matter_end(clean_lines)
     headings: list[tuple[int, int, int, str]] = []
     offset = 0
+    closing: re.Pattern[str] | None = None
     for index, original in enumerate(text.splitlines(keepends=True)):
         line = clean_lines[index] if index < len(clean_lines) else ""
+        if index < front_matter_end:
+            offset += len(original)
+            continue
+        if closing is not None:
+            if closing.fullmatch(line.rstrip("\r\n")):
+                closing = None
+            offset += len(original)
+            continue
+        closing = _fence_closer(line)
+        if closing is not None or _is_indented_code(line):
+            offset += len(original)
+            continue
         match = pattern.match(line)
         if match is None:
             match = pattern.match(line.rstrip("\r\n"))
@@ -55,40 +109,50 @@ def chapter_heading_spans(text: str, config: CorpusConfig) -> list[tuple[int, in
 
 def _chapter_spans(text: str, config: CorpusConfig) -> list[tuple[int, str, str, int]]:
     """Accepted chapters with original heading lines for profile alignment."""
-    from .language import resolve_language
+    from .language import compile_word_pattern, resolve_language
 
     if config.appendix_marker:
         text = text.split(config.appendix_marker, 1)[0]
-    word_re = re.compile(resolve_language(config, sample_text=text).word_regex)
+    word_re = compile_word_pattern(resolve_language(config, sample_text=text).word_regex)
     headings = chapter_heading_spans(text, config)
     first_end = headings[0][0] if headings else len(text)
-    first = _without_comments(text[:first_end]).strip()
+    first_lines = _without_comments(text[:first_end]).splitlines(keepends=True)
+    front_matter_end = _front_matter_end(first_lines)
+    first = "".join(first_lines[front_matter_end:]).strip()
     if not headings:
         # Without a configured chapter marker, every prose line belongs to the
         # same implicit chapter. Its first sentence is not a chapter title.
         title = first.split("\n", 1)[0][2:].strip() if first.startswith("# ") else ""
-        body = text.strip()
-        prose = re.sub(r"(?m)^#+.*$", "", re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL))
+        original_lines = text.splitlines(keepends=True)
+        body = _trim_blank_lines("".join(original_lines[front_matter_end:]))
+        prose = prose_text(body, _front_matter=False)
         return [(1, title, body, 1)] if word_re.search(prose) else []
     spans: list[tuple[int, int, int, str | None]] = []
     if first and not first.startswith("# "):
-        spans.append((0, first_end, 1, None))
+        original_lines = text.splitlines(keepends=True)
+        start = sum(len(line) for line in original_lines[:front_matter_end])
+        spans.append((start, first_end, front_matter_end + 1, None))
     for index, (_start, end, line, heading_title) in enumerate(headings):
         next_start = headings[index + 1][0] if index + 1 < len(headings) else len(text)
         spans.append((end, next_start, line, heading_title))
     chapters: list[tuple[int, str, str, int]] = []
     for start, end, line, saved_title in spans:
-        block = text[start:end].strip()
+        block = _trim_blank_lines(text[start:end])
         if not block:
             continue
         body = block
         if saved_title is None:
-            lines = block.split("\n")
-            title = lines[0].strip().replace("# ", "")
-            body = "\n".join(lines[1:]).strip()
+            prefix_blocks = parse_markdown_blocks(block, _front_matter=False)
+            if prefix_blocks and prefix_blocks[0]["type"] not in ("p", "list_item", "quote_block"):
+                # Nonprose prefixes must keep their fences and indentation intact.
+                title = ""
+            else:
+                lines = block.split("\n")
+                title = lines[0].strip().replace("# ", "")
+                body = _trim_blank_lines("\n".join(lines[1:]))
         else:
             title = saved_title
-        prose = re.sub(r"(?m)^#+.*$", "", re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL))
+        prose = prose_text(body, _front_matter=False)
         if not word_re.search(prose):
             continue
         chapters.append((len(chapters) + 1, title, body, line))
@@ -102,9 +166,9 @@ def split_chapters(text: str, config: CorpusConfig) -> list[tuple[int, str, str]
     A leading ``# `` title and its front matter before explicit chapters are
     excluded. Without configured chapter markers, all prose forms one implicit
     chapter.
-    Bodies without tokens after comment/heading removal are skipped, using the
-    configured word tokenizer. Quote-only chapters retain their numbers even
-    when the paragraph profiler intentionally omits their content.
+    Bodies without supported prose tokens are skipped, using the configured
+    word tokenizer. Quote-only chapters retain their numbers even when the
+    paragraph profiler intentionally omits their content.
     """
     return [(number, title, body) for number, title, body, _line in _chapter_spans(text, config)]
 
@@ -115,17 +179,17 @@ def split_scenes(body: str) -> tuple[list[str], int]:
     current: list[str] = []
     closing: re.Pattern[str] | None = None
     breaks = 0
-    for line in body.splitlines(keepends=True):
-        stripped = line.rstrip("\r\n")
+    clean_lines = _without_comments(body).splitlines(keepends=True)
+    for index, line in enumerate(body.splitlines(keepends=True)):
+        clean_line = clean_lines[index] if index < len(clean_lines) else ""
+        stripped = clean_line.rstrip("\r\n")
         if closing is not None:
             if closing.fullmatch(stripped):
                 closing = None
         else:
-            opening = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", stripped)
-            if opening and (opening[1][0] == "~" or "`" not in opening[2]):
-                marker = opening[1]
-                closing = re.compile(r" {0,3}" + re.escape(marker[0]) + "{" + str(len(marker)) + r",}[ \t]*")
-            elif SCENE_BREAK_RE.fullmatch(line):
+            closing = _fence_closer(stripped)
+            if (closing is None and not _is_indented_code(clean_line)
+                    and SCENE_BREAK_RE.fullmatch(clean_line)):
                 part = "".join(current)
                 if part.strip():
                     parts.append(part)
@@ -150,13 +214,17 @@ def strip_inline_markup(text: str) -> str:
     text = re.sub(r"\*\*\*(.*?)\*\*\*", r"\1", text)
     text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
     text = re.sub(r"(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)", r"\1", text)
+    # Underscore emphasis cannot start/end inside a word (snake_case is data).
+    text = re.sub(r"(?<!\w)_{1,3}(?=\S)(.*?\S)_{1,3}(?!\w)", r"\1", text)
     return text.strip()
 
 
 _LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
 
 
-def parse_markdown_blocks(content: str, config: CorpusConfig | None = None) -> list[dict[str, Any]]:
+def parse_markdown_blocks(
+    content: str, config: CorpusConfig | None = None, *, _front_matter: bool = True
+) -> list[dict[str, Any]]:
     """Parses Markdown content into semantic blocks and filters editorial HTML comments."""
     if config and config.appendix_marker:
         content = content.split(config.appendix_marker, 1)[0]
@@ -166,7 +234,7 @@ def parse_markdown_blocks(content: str, config: CorpusConfig | None = None) -> l
     lines = clean_content.splitlines()
 
     blocks: list[dict[str, Any]] = []
-    i = 0
+    i = _front_matter_end(lines) if _front_matter else 0
 
     while i < len(lines):
         line = lines[i].rstrip("\r\n")
@@ -176,13 +244,37 @@ def parse_markdown_blocks(content: str, config: CorpusConfig | None = None) -> l
             i += 1
             continue
 
+        closing = _fence_closer(line)
+        if closing is not None:
+            start_line = i + 1
+            code_lines = [line]
+            i += 1
+            while i < len(lines):
+                code_lines.append(lines[i])
+                i += 1
+                if closing.fullmatch(code_lines[-1]):
+                    break
+            blocks.append({"type": "code", "text": "\n".join(code_lines),
+                           "start_line": start_line, "end_line": i})
+            continue
+
+        if _is_indented_code(line):
+            start_line = i + 1
+            code_lines = []
+            while i < len(lines) and _is_indented_code(lines[i]):
+                code_lines.append(lines[i])
+                i += 1
+            blocks.append({"type": "code", "text": "\n".join(code_lines),
+                           "start_line": start_line, "end_line": i})
+            continue
+
         if i + 1 in heading_titles:
             blocks.append({"type": "h2", "text": heading_titles[i + 1],
                            "start_line": i + 1, "end_line": i + 1})
             i += 1
             continue
 
-        if stripped == "---":
+        if SCENE_BREAK_RE.fullmatch(line):
             blocks.append({"type": "divider", "start_line": i + 1, "end_line": i + 1})
             i += 1
             continue
@@ -201,9 +293,9 @@ def parse_markdown_blocks(content: str, config: CorpusConfig | None = None) -> l
             i += 1
             continue
 
-        if stripped.startswith("### "):
+        if re.match(r"^#{3,6}\s", stripped):
             blocks.append(
-                {"type": "h3", "text": stripped[4:].strip(), "start_line": i + 1, "end_line": i + 1}
+                {"type": "h3", "text": stripped.lstrip("#").strip(), "start_line": i + 1, "end_line": i + 1}
             )
             i += 1
             continue
@@ -270,7 +362,9 @@ def parse_markdown_blocks(content: str, config: CorpusConfig | None = None) -> l
             i += 1
             while i < len(lines):
                 n_line = lines[i].rstrip("\r\n")
-                if (n_line.strip() and not n_line.strip().startswith(("- ", "* ", "#"))
+                if (n_line.strip() and not n_line.strip().startswith(("- ", "* ", "#", ">", "---", "[^"))
+                        and _fence_closer(n_line) is None
+                        and (_is_indented_code(n_line) or not SCENE_BREAK_RE.fullmatch(n_line))
                         and i + 1 not in heading_titles):
                     item_text.append(n_line.strip())
                     i += 1
@@ -294,6 +388,8 @@ def parse_markdown_blocks(content: str, config: CorpusConfig | None = None) -> l
         while i < len(lines):
             raw_l = lines[i].rstrip("\r\n")
             if (not raw_l.strip() or raw_l.strip().startswith(("#", ">", "---", "- ", "* ", "[^"))
+                    or _fence_closer(raw_l) is not None
+                    or (not _is_indented_code(raw_l) and SCENE_BREAK_RE.fullmatch(raw_l))
                     or i + 1 in heading_titles):
                 break
             has_break.append(raw_l.endswith("  "))
@@ -322,3 +418,33 @@ def parse_markdown_blocks(content: str, config: CorpusConfig | None = None) -> l
             blocks[0]["chapter_num"] = chapters[0][0]
             blocks[0]["chapter_title"] = chapters[0][1]
     return blocks
+
+
+def prose_paragraphs(
+    content: str, config: CorpusConfig | None = None, *, _front_matter: bool = True
+) -> list[str]:
+    """Supported analysis prose, reusing blocks rather than splitting newlines.
+
+    Body paragraphs, list items and quoted-block paragraphs contribute text.
+    YAML front matter, headings, comments, code and footnote definitions do not.
+    Inline emphasis and footnote anchors are removed. This is a bounded Markdown
+    policy, not a general CommonMark implementation. Paragraph profiles retain
+    their documented narrower body/list scope and original block line anchors.
+    Chapter/scene callers disable document-only front matter handling.
+    """
+    paragraphs: list[str] = []
+    for block in parse_markdown_blocks(content, config, _front_matter=_front_matter):
+        values = (block["paras"] if block["type"] == "quote_block" else
+                  [block["text"]] if block["type"] in ("p", "list_item") else [])
+        for value in values:
+            clean = strip_inline_markup(value)
+            if clean:
+                paragraphs.append(clean)
+    return paragraphs
+
+
+def prose_text(
+    content: str, config: CorpusConfig | None = None, *, _front_matter: bool = True
+) -> str:
+    """Supported prose with a blank line between original semantic paragraphs."""
+    return "\n\n".join(prose_paragraphs(content, config, _front_matter=_front_matter))

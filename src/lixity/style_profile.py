@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from .language import compile_pattern, resolve_language
+from .language import compile_pattern, compile_word_pattern, resolve_language
 from .markdown_parser import strip_inline_markup
 from .models import CorpusConfig
 from .sentences import split_sentences
@@ -175,7 +175,7 @@ class ParagraphProfiler:
         self._praet = compile_pattern(self.lang.praeteritum_regex)
         self._markers = re.compile(r"<!--\s*(PRÜFEN|SACHCHECK)\b")
         self._dialogue = re.compile(self.lang.dialogue_regex)
-        self._word = re.compile(self.lang.word_regex)
+        self._word = compile_word_pattern(self.lang.word_regex)
         self._appendix_title = self.config.appendix_marker.replace("##", "").strip()
         # Style densities per paragraph (house-style overlay, per 1,000 words)
         self._filter = compile_pattern(self.lang.filter_verbs_regex)

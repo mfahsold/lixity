@@ -56,6 +56,11 @@ uses fallback coefficients, not a model calibrated for every language.
 Syllable counts, tense classification and stylistic patterns are deterministic
 heuristics, not a full grammatical parser. Dialect, historical spelling,
 code-switching and unusual vocabulary need separate evaluation.
+German and English default word patterns include precomposed accented words;
+they do not normalize Unicode or cover every combining-mark spelling. Explicit
+word patterns retain their own flags. Syllable calculation reuses word
+frequencies within a request, preserving the same heuristic values without a
+global cache.
 
 ## Acceptance criteria for language work
 

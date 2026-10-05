@@ -91,6 +91,18 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
         ),
     ]
 
+    citation_pins = [(r'(?m)^version: "[^"\n]+"$', f'version: "{version}"')]
+    changelog = ROOT / "CHANGELOG.md"
+    if changelog.is_file():
+        released = re.search(
+            rf"(?m)^## \[{re.escape(version)}\] - (\d{{4}}-\d{{2}}-\d{{2}})$",
+            changelog.read_text(encoding="utf-8"),
+        )
+        if released:
+            citation_pins.append((r'(?m)^date-released: "[^"\n]+"$',
+                                  f'date-released: "{released[1]}"'))
+    rules.append((ROOT / "CITATION.cff", citation_pins))
+
     # Static guides share the release-install convention with the main docs.
     for guide in sorted((ROOT / "docs" / "guides").glob("*.html")):
         pins = [install_pin]
@@ -119,7 +131,7 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
 # Files that describe the present release. docs/releases/ is excluded: past
 # release notes exist precisely to name old versions.
 def current_doc_files() -> list[Path]:
-    files = [ROOT / "README.md"]
+    files = [ROOT / "README.md", ROOT / "CITATION.cff"]
     files += sorted((ROOT / "docs").rglob("*.md"))
     files += sorted((ROOT / "docs").rglob("*.html"))
     files += sorted((ROOT / "docs").rglob("*.txt"))
@@ -160,6 +172,9 @@ CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
 # These entrypoint links describe the current release. Other release-note links
 # may be historical, so do not scan them throughout the documentation tree.
 CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
+    Path("CITATION.cff"): (
+        ("citation version", re.compile(r'^version: "(\d+\.\d+\.\d+)"$')),
+    ),
     Path("README.md"): (
         ("current release-note label",
          re.compile(r"\[v(\d+\.\d+\.\d+) release notes\]\(docs/releases/v\d+\.\d+\.\d+\.md\)")),

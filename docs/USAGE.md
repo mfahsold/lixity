@@ -37,12 +37,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.1"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.25.0"
 lixity --version
 lixity about
 ```
 
-`v1.24.1` is the release pin. Choose `@main` only to follow development,
+`v1.25.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
@@ -415,36 +415,34 @@ JSON fields: `chapters`, `tell_z_mean`, `show_z_mean`, `balance_mean`,
 
 ### `lixity style`
 
-Prints the **style reference** – the self-calibrated house style of the
-manuscript. Defaults: \|z\*\| ≥ 2.5 notable, ≥ 3.5 strong, FDR q = 0.05 (BH);
+Prints the **style reference** – descriptive comparisons against the
+manuscript's own baseline. Defaults: \|z\*\| ≥ 2.5 notable, ≥ 3.5 strong,
+nominal FDR q = 0.05 (BH);
 override with `--z-mild`, `--z-strong`, `--fdr-q`, `--fdr-method`,
 `--dim-threshold`, `--flag-min-severity` (same flags on `dashboard`
 and `build`). Active values are always reported in the passport `meta`
 (`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`) and in
 the dashboard legend / settings – re-read them, never assume the defaults.
-Lixity measures 16 descriptive, register-neutral features per
-chapter (ASL, staccato, hypotaxis, sentence CV, dialogue, function words,
-perception filters, modals, passive, nominalisations, adjectives, long words,
-starter entropy, first-person starts, Guiraud R, HD-D) and derives their
-robust centre (median) and spread (MAD) from the corpus itself. Deviations
-are **significance-adjusted** against each chapter's estimation noise
-(`z* = (x − median) / √(σ² + SE²)`, documented standard errors per feature),
-reported with the statistically expected number of false positives and an
-**FDR set** (BH or BY, q = 0.05). Confirmed cells carry Cliff's δ effect
-sizes; the passport also reports baseline exchangeability diagnostics
-(runs test, lag-1 ACF). Additionally, the style reference derives
-the manuscript's own abstract **style dimensions** (Spearman correlation of
-the features, Jacobi eigendecomposition) with loadings and per-chapter
-scores, plus redundant feature pairs (|ρ| ≥ 0.8). Structural
-diagnostics ride along in `structural_diagnostics`: PELT changepoints, Mann–Kendall
-trends, Sn/Qn scales, Hill tail index, early/late Wasserstein–KS
-`distribution_shift` / `shifted_features`, and — because `style` builds from
-source text — token-level `cooccurrence` (mean degree + Goh–Barabási
-fitness) and `keyness` (Dunning G² for the first half of chapters vs the
-second; omitted for single-chapter texts). Whether a deviation is
-intended (register scene) or drift is for the author to decide, never the
-engine. The style reference doubles as a constraint block for authoring and editing
-(human or assisting LLM).
+The 16 chapter features cover sentence length and variation, short sentences
+(≤6 words), long sentences (>25 words), quotation share, lexical patterns,
+sentence starts and vocabulary diversity. Marker counts for passive, modality
+and nominal style are heuristics, not a grammatical parse. Chapter medians
+and MAD define the baseline; approximate standard errors reduce some noise in
+`z* = (x − median) / √(σ² + SE²)`.
+
+Raw deviations and the **FDR-selected set** (BH or BY) are separate outputs.
+Their normal-tail probabilities are not calibrated for the same-sample
+baseline: nominal q does not guarantee manuscript false-discovery control.
+Cliff's δ adds an ordinal contrast; runs tests and lag-1 correlation expose
+some baseline dependence. Exploratory dimensions, redundant feature pairs
+and `structural_diagnostics` provide further pointers for review. Dimension
+scores and variance share standardized ranks on complete measured chapters;
+the plot shows its coverage. Segmentation, estimator conventions and remaining
+inference limits are documented in [Methods](METHODS.md) and [Stability](STABILITY.md).
+
+Compare scenes within their intended register and read the passages. A
+deliberate change of voice can explain a deviation; the style reference does
+not prescribe a writing target or decide whether to edit.
 
 ```bash
 lixity style manuscript.md          # text block
@@ -491,7 +489,7 @@ The dashboard contains:
   CLI): motif presence and the most repeated phrases with their chapters,
 - a **narrative distance** panel (when data is supplied or computed by the
   CLI): tell/show mean z and the per-chapter balance bars (positive = showing),
-- the **style heatmap**: chapter × feature matrix of significance-adjusted
+- the **style heatmap**: chapter × feature matrix of noise-adjusted
   z* values with a diverging colour scale (blue = below, orange = above the
   manuscript median), plus the expected-false-positive/FDR footnote; cells jump to
   the chapter and activate the matching style layer,
@@ -500,8 +498,8 @@ The dashboard contains:
   column in the style heatmap (`#feat-<field>`), activating the matching
   style layer and preselecting “deviations only” when outliers exist; the
   red **outlier count** opens the strongest outlier chapter directly,
-- the **style dimensions** panel (self-calibrated principal axes with
-  loadings and flagged chapters),
+- the **style dimensions** panel (exploratory rank-space axes with
+  loadings, flagged chapters and complete-measurement coverage),
 - a chapter map with a colour-coded paragraph strip (present / past / mixed /
   neutral) and severity markers, plus a **style layer** overlay: choosing a
   dimension (ASL, dialogue, function words, perception filters, modals,

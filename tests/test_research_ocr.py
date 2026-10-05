@@ -12,6 +12,8 @@ from pathlib import Path
 from tempfile import TemporaryDirectory
 from unittest.mock import patch
 
+import pytest
+
 from lixity.research import api
 from lixity.research.models import Activity, Extraction, Passage, SourceVersion
 from lixity.research.ocr import (
@@ -63,6 +65,7 @@ class ResearchOCRTest(unittest.TestCase):
     def tearDown(self) -> None:
         self.tmp.cleanup()
 
+    @pytest.mark.native_pdf
     @unittest.skipUnless(shutil.which("pdftoppm"), "requires Poppler pdftoppm")
     def test_render_pdf_pages(self) -> None:
         pdf_bytes = make_synthetic_pdf("Historical record of the 1924 expedition.")
@@ -76,6 +79,7 @@ class ResearchOCRTest(unittest.TestCase):
         self.assertGreater(len(pages[0].image_bytes), 0)
         self.assertEqual(len(pages[0].sha256), 64)
 
+    @pytest.mark.native_pdf
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_extract_pdf_document_local_text_layer(self) -> None:
         content = "Archival field note paragraph one.\n\nArchival field note paragraph two."
@@ -141,6 +145,7 @@ print(json.dumps(resp))
         self.assertEqual(res.blocks[0].confidence, 0.99)
         self.assertEqual(len(res.spans), 2)
 
+    @pytest.mark.native_pdf
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_pdf_ingest_lifecycle_audit_cite_and_search(self) -> None:
         pdf_bytes = make_synthetic_pdf("Botanical observations in the alpine meadow.")
@@ -201,6 +206,7 @@ print(json.dumps(resp))
         reingest = api.ingest(self.project, pdf_path, allow_retention=True, source_id=ingested["source_id"])
         self.assertTrue(reingest["unchanged"])
 
+    @pytest.mark.native_pdf
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_pdf_archive_export_and_restore_roundtrip(self) -> None:
         pdf_bytes = make_synthetic_pdf("Geological survey data 1926.")
@@ -265,6 +271,7 @@ print(json.dumps(resp))
         self.assertEqual(bad_diag["status"], "misconfigured_worker")
         self.assertTrue(any("not found or is not executable" in g for g in bad_diag["guidance"]))
 
+    @pytest.mark.native_pdf
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_ingest_progress_callback(self) -> None:
         pdf_bytes = make_synthetic_pdf("Progress callback test document text.")
@@ -431,6 +438,7 @@ print(json.dumps(resp))
         self.assertFalse(diag["probe"]["ok"])
         self.assertTrue(any("Synthetic worker startup failure" in hint for hint in diag["guidance"]))
 
+    @pytest.mark.native_pdf
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_explicit_fallback_mode_when_worker_fails(self) -> None:
         pdf_bytes = make_synthetic_pdf("Archival document with native text layer.")

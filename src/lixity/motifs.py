@@ -15,15 +15,14 @@ device. The report provides counts and locations so the editor can decide.
 
 from __future__ import annotations
 
-import re
 from collections import Counter
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Any
 
-from .language import compile_pattern, resolve_language
-from .markdown_parser import split_chapters
+from .language import compile_pattern, compile_word_pattern, resolve_language
+from .markdown_parser import prose_text, split_chapters
 from .models import CorpusConfig
 
 MIN_PHRASE_COUNT = 3  # a repeated n-gram must occur at least this often
@@ -105,12 +104,12 @@ def motif_report(
     """Motif presence and repetition signals (deterministic, offline)."""
     config = config or CorpusConfig(language="auto")
     resolved = resolve_language(config, sample_text=text)
-    word_re = compile_pattern(resolved.word_regex)
+    word_re = compile_word_pattern(resolved.word_regex)
     content_blacklist = resolved.function_words | resolved.stopwords
 
     chapters = split_chapters(text, config)
     chapter_bodies = {
-        number: re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
+        number: prose_text(body, _front_matter=False)
         for number, _title, body in chapters
     }
     total_words = sum(len(word_re.findall(body)) for body in chapter_bodies.values())

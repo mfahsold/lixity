@@ -125,6 +125,28 @@ class TestDocumentation(unittest.TestCase):
                 self.assertEqual(len(findings), 4)
                 self.assertTrue(all("current release-note target" in finding for finding in findings))
 
+    def test_citation_release_metadata_syncs_without_changing_authorship(self):
+        import tempfile
+        from unittest.mock import patch
+
+        from sync_docs import check_or_sync_files, find_version_drift
+
+        citation = 'cff-version: 1.2.0\nversion: "0.1.0"\ndate-released: "2000-01-01"\nauthors: []\n'
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            path = root / "CITATION.cff"
+            path.write_text(citation, encoding="utf-8")
+            (root / "CHANGELOG.md").write_text("## [2.3.4] - 2026-10-05\n", encoding="utf-8")
+            with patch("sync_docs.ROOT", root):
+                self.assertEqual(check_or_sync_files("2.3.4", check_only=True), ["CITATION.cff"])
+                self.assertEqual(path.read_text(encoding="utf-8"), citation)
+                self.assertTrue(any("CITATION.cff" in finding for finding in find_version_drift("2.3.4")))
+                check_or_sync_files("2.3.4")
+                self.assertEqual(path.read_text(encoding="utf-8"), citation.replace(
+                    'version: "0.1.0"', 'version: "2.3.4"').replace("2000-01-01", "2026-10-05"))
+                self.assertEqual(check_or_sync_files("2.3.4", check_only=True), [])
+                self.assertEqual(find_version_drift("2.3.4"), [])
+
     def test_changelog_matches_current_version(self):
         from lixity import __version__
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

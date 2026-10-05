@@ -26,9 +26,9 @@ import re
 from dataclasses import dataclass, field
 from typing import Any
 
-from .language import compile_pattern, resolve_language
+from .language import compile_pattern, compile_word_pattern, resolve_language
 from .markdown_parser import SCENE_BREAK_RE as SCENE_BREAK_RE
-from .markdown_parser import split_chapters, split_scenes
+from .markdown_parser import prose_text, split_chapters, split_scenes
 from .models import CorpusConfig
 from .sentences import split_sentences
 
@@ -137,6 +137,7 @@ def _scene_stats(
     dialogue_re: re.Pattern[str],
     language_key: str,
 ) -> SceneStats | None:
+    scene_text = prose_text(scene_text, _front_matter=False)
     words = len(word_re.findall(scene_text))
     if not words:
         return None
@@ -180,7 +181,7 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
     """Scene structure, pacing signals and chapter hooks (deterministic)."""
     config = config or CorpusConfig(language="auto")
     resolved = resolve_language(config, sample_text=text)
-    word_re = compile_pattern(resolved.word_regex)
+    word_re = compile_word_pattern(resolved.word_regex)
     dialogue_re = compile_pattern(resolved.dialogue_regex)
 
     chapter_list: list[ChapterPacing] = []
@@ -191,11 +192,11 @@ def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport
     pace: dict[int, float] = {}
 
     for number, title, body in split_chapters(text, config):
-        clean = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
+        clean = prose_text(body, _front_matter=False)
         words = len(word_re.findall(clean))
         if not words:
             continue
-        raw_scenes, scene_breaks = split_scenes(clean)
+        raw_scenes, scene_breaks = split_scenes(body)
         explicit_breaks += scene_breaks
         scenes: list[SceneStats] = []
         for index, scene_text in enumerate(raw_scenes, start=1):

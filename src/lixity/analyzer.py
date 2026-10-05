@@ -27,9 +27,9 @@ from .diversity import (
 from .diversity import (
     yules_k as yules_k_value,
 )
-from .language import compile_pattern, resolve_language
+from .language import compile_pattern, compile_word_pattern, resolve_language
 from .language_data import READABILITY
-from .markdown_parser import chapter_heading_spans, split_chapters
+from .markdown_parser import chapter_heading_spans, prose_paragraphs, prose_text, split_chapters
 from .models import (
     ChapterMetrics,
     CorpusConfig,
@@ -86,7 +86,7 @@ class CorpusAnalyzer:
         self._praes_re = compile_pattern(self.lang.praesens_regex)
         self._praet_re = compile_pattern(self.lang.praeteritum_regex)
         self._filter_re = compile_pattern(self.lang.filter_verbs_regex)
-        self._word_re = re.compile(self.lang.word_regex)
+        self._word_re = compile_word_pattern(self.lang.word_regex)
         self._dialogue_re = re.compile(self.lang.dialogue_regex)
         # Style heuristics (self-calibrating house-style fingerprint)
         self._passive_re = compile_pattern(self.lang.passive_regex)
@@ -244,17 +244,15 @@ class CorpusAnalyzer:
             kaskade_pct=_pct(complex_),
         )
 
-    def _paragraph_stats(self, text: str) -> tuple[int, float, int]:
+    def _paragraph_stats(self, paragraphs: list[str]) -> tuple[int, float, int]:
         """(prose paragraphs, average words per paragraph, one-liner count)."""
-        raw = [p.strip() for p in text.split("\n\n") if p.strip()]
-        prose = [p for p in raw if not p.startswith(("#", "|", "-", "*"))]
-        lengths = [len(p.split()) for p in prose]
+        lengths = [len(p.split()) for p in paragraphs]
         total = len(lengths)
         average = sum(lengths) / total if total else 0.0
         one_liners = sum(
             1
             for length in lengths
-            if length <= self.config.min_paragraph_length_for_oneliner and length != 8
+            if length <= self.config.min_paragraph_length_for_oneliner
         )
         return total, average, one_liners
 
@@ -283,7 +281,7 @@ class CorpusAnalyzer:
         self, num: int, title: str, body: str, lw_min: int
     ) -> tuple[ChapterMetrics | None, list[str]]:
         """Per-chapter metrics (style features, uncertainty, tense, JSD input)."""
-        cl_b = _RE_HEADING_LINE.sub("", _RE_HTML_COMMENT.sub("", body))
+        cl_b = prose_text(body, _front_matter=False)
         c_words = self._word_re.findall(cl_b)
         if not c_words:
             return None, []
@@ -412,12 +410,16 @@ class CorpusAnalyzer:
             prose_parts.append("\n" if cleaned_main[end - 1:end] == "\n" else "")
             cursor = end
         prose_parts.append(cleaned_main[cursor:])
-        prose_main = _RE_HEADING_LINE.sub("", "".join(prose_parts))
+        legacy_clean_main = _RE_HEADING_LINE.sub("", "".join(prose_parts))
 
         raw_words = len(cleaned_full.split())
-        clean_words = len(prose_main.split())
+        clean_words = len(legacy_clean_main.split())
         raw_chars = len(cleaned_full)
-        clean_chars = len(prose_main)
+        clean_chars = len(legacy_clean_main)
+        # Token-based measurements share the supported semantic-block scope.
+        # Legacy whitespace words/chars intentionally retain their own contract.
+        prose_units = prose_paragraphs(main_text, self.config)
+        prose_main = "\n\n".join(prose_units)
 
         # 2. Tokenisation
         tokens = self._word_re.findall(prose_main)
@@ -436,7 +438,7 @@ class CorpusAnalyzer:
         start_entropy, first_person_start_rate, _entropy_se = self._starter_stats(sentences)
 
         # 5. Readability & complexity (language-calibrated Flesch family + LIX)
-        total_syllables = sum(self.count_syllables(t) for t in tokens)
+        total_syllables = sum(self.count_syllables(t) * count for t, count in freqs.items())
         asw = total_syllables / n_tokens if n_tokens else 0.0
         if n_tokens == 0 or stats.total == 0:
             flesch_de = 0.0
@@ -455,7 +457,7 @@ class CorpusAnalyzer:
         dialog_ratio = (dialog_words / n_tokens) * 100.0 if n_tokens else 0.0
 
         # 7. Paragraph economy, punctuation, signals
-        total_paras, avg_para_len, single_line_paras = self._paragraph_stats(prose_main)
+        total_paras, avg_para_len, single_line_paras = self._paragraph_stats(prose_units)
         punctuation = self._punctuation_profile(prose_main)
         signal_counts = {
             name: len(re.findall(pat, prose_main, re.IGNORECASE))

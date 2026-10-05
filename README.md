@@ -6,13 +6,15 @@
 
 **Read the patterns in your writing. Keep the evidence behind your decisions.**
 
-Lixity helps authors, editors and researchers explore sentence rhythm, vocabulary,
-dialogue and tense. Its local dashboard connects each result with the passages
-behind it. You decide what matters for your manuscript.
+Lixity helps authors, editors and researchers see how a manuscript changes from
+chapter to chapter. It measures sentence lengths, word use, dialogue and tense,
+then lets you read the passages behind each result. Its research workspace keeps
+source quotations and writing decisions connected. Your literary judgment guides
+what you keep or revise.
 
 [Get started](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v1.24.1 release notes](docs/releases/v1.24.1.md)
+[v1.25.0 release notes](docs/releases/v1.25.0.md)
 
 Free for projects with no commercial purpose. A book intended for sale,
 including self-publishing, requires a separate written commercial license.
@@ -26,12 +28,13 @@ For help installing these tools, or to use pipx instead, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.1"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.25.0"
 lixity --version
 ```
 
-This installs the released version. For later upgrades, choose the next release
-tag explicitly. [Release notes](docs/releases/v1.24.1.md) describe compatibility
+This installs the released version. For later upgrades, select the new tag using
+the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
+the local workspace. [Release notes](docs/releases/v1.25.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 Version 1.24 adds scene registers and project targets, guided conflict
@@ -52,8 +55,8 @@ offline. Use `--language en` for English, or select another
 [supported language](#supported-languages). English applies when no language is
 selected; automatic detection requires `--language auto`.
 
-For project management, research editing and live settings, start the local
-workspace instead:
+GitHub Pages contains the documentation. For project management, research
+editing and live settings on your computer, start the local workspace:
 
 ```bash
 lixity serve --no-project --port 8765
@@ -63,6 +66,10 @@ Open `http://127.0.0.1:8765/`. **Open Project** reconnects an existing folder an
 its research archive. **Import Manuscript** previews a selected file and creates
 a new project when you confirm. The [first-project guide](docs/ONBOARDING.md)
 walks through both choices.
+
+Begin with the manuscript overview, then open a chapter that interests you.
+Hover over, focus or tap a dotted-underlined measurement label for its explanation.
+Read the passage before changing prose or adjusting comparison settings.
 
 ## What you can do
 
@@ -81,10 +88,11 @@ shown explicitly.
 
 ### Compare chapters in context
 
-The chapter map compares each chapter with the manuscript's own baseline. Colours
-and dots point to differences worth reading; they do not identify bad prose.
-The style view also shows changes across the book and which measured features
-contribute to them.
+The chapter map uses your manuscript's chapters as its reference. For example,
+a chapter with longer sentences than usual may reflect a new voice or a formal
+report. Select a coloured cell to inspect that chapter. The style axes bring
+together related measurements, helping you see which chapters share patterns
+and which features distinguish them.
 
 <a href="docs/screenshots/dashboard-heatmap.png"><img src="docs/screenshots/dashboard-heatmap.png" alt="Chapter comparison map showing differences from the manuscript's own style" width="900" /></a>
 
@@ -92,10 +100,10 @@ contribute to them.
 [Style dimensions](docs/screenshots/dashboard-dimensions.png) ·
 [Reference bands](docs/screenshots/dashboard-reference.png)
 
-Assign individual scenes to your own registers, then compare their features
-with that group's median or targets you choose. These are descriptive
-comparisons, with unavailable values shown for
-small samples. [Scene example](docs/screenshots/dashboard-scenes.png) ·
+Assign scenes to registers—such as dialogue, action or a formal report—so you can
+compare scenes with a similar purpose. Each group has its own middle values
+(medians); you can also set optional targets. Small samples may leave measurements
+unavailable. [Scene example](docs/screenshots/dashboard-scenes.png) ·
 [Setup and limits](docs/USAGE.md#scene-registers-and-project-targets).
 
 ### Keep review notes beside the text
@@ -112,9 +120,10 @@ visibility in a book export depends on the editor or converter you use.
 ### Connect sources, claims and decisions
 
 The experimental research workspace keeps selected sources, quotations and notes
-in a separate local archive. Group findings into dossiers, link passages to
-claims, and record why you made a writing decision. Filter lists by title or tag,
-or search the retained text. Saving a source does not establish that it is true.
+in a separate local archive. A dossier gathers notes on a topic; a claim records
+an assertion you can link to source passages; a decision explains what you chose
+for the book. Filter by title or tag, or search the saved text. A saved quotation
+records what a source says; its accuracy still needs review.
 
 <a href="docs/screenshots/dashboard-research-search.png"><img src="docs/screenshots/dashboard-research-search.png" alt="Archive search with source passages and citation links" width="900" /></a>
 
@@ -122,10 +131,11 @@ Bring sources from local files or the optional Zotero Desktop bridge. PDF scans
 can use locally installed Tesseract or a configured OCR worker. Import warnings
 explain when extraction is incomplete or a requested fallback was used.
 
-**Review** lists explicit decision links and outdated pins
-for you to inspect. Dossier edits can be reviewed and saved together, with
-conflict previews preserving your draft. Historical pins can be intentional;
-review candidates do not establish contradictions or a need to rewrite.
+**Review** shows the records explicitly linked to a decision and whether those
+links refer to an older version. You can inspect the earlier and current versions
+before deciding to update a link. Related dossier edits can be previewed and saved
+together; if another edit conflicts, the preview helps you resolve it while
+preserving your draft.
 
 [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html) ·
 [Sources](docs/screenshots/dashboard-research-sources.png) ·
@@ -157,22 +167,29 @@ research commands are covered in the [command reference](docs/USAGE.md).
 These screenshots use public-domain literature or synthetic project records.
 [More views and capture details](docs/screenshots/README.md).
 
-## Mathematical Core
+## How to read the results
 
-Lixity measures language patterns; it does not grade literary quality or prescribe
-a style. A deliberate change in voice, register or subject can explain a signal.
+Each measurement answers a specific question about the text:
 
-Chapter comparisons use the manuscript's median and median absolute deviation
-(MAD). The adjusted score `z* = (x − median) / √(σ² + SE²)` accounts for estimated
-sampling noise. Optional BH/BY false-discovery-rate procedures, effect sizes and
-structural diagnostics add context under their stated assumptions.
+| Measurement | What it helps you notice |
+| :--- | :--- |
+| Sentence length and variation | Whether sentences stay similar in length or alternate between short and long. Suspense also depends on what happens in them. |
+| Vocabulary diversity | How much words repeat. Compare passages of similar length, language and purpose. |
+| Dialogue share | How much text falls inside recognized quotation marks. A high value may be expected in a conversation scene. |
+| Chapter differences and consistency | How closely measurable chapters follow the book's observed patterns. A deliberate change in voice can lower consistency. |
 
-Vocabulary measures include HD-D, MTLD, MATTR, Guiraud R, Maas a² and Yule's K.
-Their text-length requirements differ. Readability formulas and word-pattern
-heuristics have language-specific limits; no minimum sample size guarantees a
-reliable literary conclusion.
+Chapter comparisons use the manuscript's middle values and typical spread
+(median and MAD), with an adjustment for estimated sampling noise. Colours mark
+the direction of a difference, not its literary value. Optional statistical
+checks mark a selection for review; they cannot certify that a passage needs editing.
+An unavailable value can mean there is too little text or too few comparable
+chapters to calculate it.
 
-Formulas, citations and worked examples live in [Methods](docs/METHODS.md).
+The mathematical core includes several vocabulary measures (HD-D, MTLD, MATTR,
+Guiraud R, Maas a² and Yule's K). They answer related questions using different
+models and sample sizes. Readability and grammatical-pattern indicators have
+language-specific limits. Formulas, citations and worked examples live in
+[Methods](docs/METHODS.md).
 The [interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
 explains how to read results; [stability and validation limits](docs/STABILITY.md)
 describe what has and has not been established.

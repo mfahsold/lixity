@@ -1,25 +1,26 @@
 """lixity.style_fingerprint – Self-calibrating style passport and latent style dimensions.
 
 Derives the manuscript's reference house style using robust statistics (median/MAD),
-computes significance-adjusted deviations (z* with standard errors), controls false
-discoveries (Benjamini-Hochberg FDR), extracts latent style dimensions via cyclic
-Jacobi eigendecomposition, and provides structural diagnostics: changepoint segmentation
-(PELT), monotonic trend tests (Mann-Kendall), distribution distances (Wasserstein/KS),
+computes noise-adjusted deviations (z* with approximate standard errors), selects
+nominal BH/BY signals, and derives exploratory rank-space dimensions via cyclic
+Jacobi eigendecomposition. Structural diagnostics include guarded changepoint
+segmentation, monotonic trends (Mann-Kendall), distribution distances (Wasserstein/KS),
 keyness (Dunning G²), tail behaviour (Hill estimator), robust scale estimators (Sn/Qn),
-and degree-distribution fitness (Goh-Barabási).
+and an approximate degree-tail fit. Signals are descriptive, not quality scores
+or calibrated inference for ordered literary chapters.
 """
 
 import math
 import statistics
 from collections import Counter
-from collections.abc import Mapping, Sequence
+from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
 from itertools import pairwise
 from typing import Any
 
 from .format import num as format_num
-from .language import resolve_language
-from .markdown_parser import split_chapters, strip_inline_markup
+from .language import compile_word_pattern, resolve_language
+from .markdown_parser import prose_text, split_chapters
 from .models import CorpusConfig
 from .status import (
     PASSPORT_LABEL_SEGMENTED,
@@ -211,6 +212,8 @@ LAYER_PARAGRAPH_ATTR: dict[str, str] = {
 
 # Dimensions to extract from the feature correlation matrix.
 N_DIMENSIONS = 3
+MIN_DIMENSION_CHAPTERS = 3
+MIN_DIMENSION_FEATURES = 3
 DIM_SCORE_THRESHOLD = 2.5  # |chapter score| from here: strong position on a dimension
 REDUNDANCY_RHO = 0.8  # |Spearman rho| from here: features measure (almost) the same
 
@@ -378,28 +381,30 @@ def runs_above_median_z(values: list[float]) -> float | None:
     return (runs - mu) / math.sqrt(var)
 
 
+def _midranks(values: list[float]) -> list[float]:
+    """Return one-based average ranks, preserving observation order."""
+    n = len(values)
+    order = sorted(range(n), key=lambda i: (values[i], i))
+    result = [0.0] * n
+    i = 0
+    while i < n:
+        j = i
+        while j + 1 < n and values[order[j + 1]] == values[order[i]]:
+            j += 1
+        avg = (i + j) / 2.0 + 1.0
+        for k in range(i, j + 1):
+            result[order[k]] = avg
+        i = j + 1
+    return result
+
+
 def spearman_rho(x: list[float], y: list[float]) -> float:
     """Spearman rank correlation of two paired samples (average ranks on ties)."""
     n = len(x)
     if n < 3:
         return 0.0
-
-    def ranks(values: list[float]) -> list[float]:
-        order = sorted(range(n), key=lambda i: (values[i], i))
-        result = [0.0] * n
-        i = 0
-        while i < n:
-            j = i
-            while j + 1 < n and values[order[j + 1]] == values[order[i]]:
-                j += 1
-            avg = (i + j) / 2.0 + 1.0
-            for k in range(i, j + 1):
-                result[order[k]] = avg
-            i = j + 1
-        return result
-
-    rx = ranks(x)
-    ry = ranks(y)
+    rx = _midranks(x)
+    ry = _midranks(y)
     mx = sum(rx) / n
     my = sum(ry) / n
     cov = sum((a - mx) * (b - my) for a, b in zip(rx, ry, strict=True))
@@ -424,19 +429,25 @@ def _segment_cost(values: list[float], start: int, end: int) -> float:
     n = end - start
     if n <= 1:
         return 0.0
-    seg = values[start:end]
-    mean = sum(seg) / n
-    var = sum((x - mean) ** 2 for x in seg) / n
+    # Subtract an observed anchor before centring: large offsets otherwise
+    # erase the small variance that this diagnostic is intended to measure.
+    seg = [x - values[start] for x in values[start:end]]
+    mean = math.fsum(seg) / n
+    var = math.fsum((x - mean) ** 2 for x in seg) / n
     if var <= 0.0:
         return 0.0
     return n * math.log(var)
 
 
 def pelt_changepoints(values: list[float], penalty: float | None = None) -> list[int]:
-    """PELT (Pruned Exact Linear Time) changepoint segmentation.
+    """Exact dynamic-programming segmentation (legacy PELT entrypoint).
 
     Detects structural breaks (phase shifts) in a chapter-level metric series
-    using a Gaussian cost model with BIC penalty.  Returns the 0-based indices
+    using the guarded Gaussian cost with default penalty ``2·ln(n)``.
+    The zero-variance guard does not meet PELT's pruning condition; therefore
+    every predecessor is considered. Incremental centred moments give O(n²)
+    time and O(n) memory without unstable raw-moment subtraction.
+    Returns the 0-based indices
     of the *first element after* each changepoint, sorted ascending.
 
     Edge cases:
@@ -455,22 +466,27 @@ def pelt_changepoints(values: list[float], penalty: float | None = None) -> list
     opt = [0.0] * (n + 1)
     # last_cp[j] = the last changepoint index for opt[j]
     last_cp = [0] * (n + 1)
-    # Candidate set (PELT pruning)
-    candidates: list[int] = [0]
-
     for j in range(1, n + 1):
         best_cost = math.inf
         best_t = 0
-        for t in candidates:
-            cost = opt[t] + _segment_cost(values, t, j) + penalty
-            if cost < best_cost:
+        # Anchor separately at each end. One distant global anchor can erase
+        # representable differences within a later, tightly clustered segment.
+        anchor = values[j - 1]
+        mean = m2 = 0.0
+        for t in range(j - 1, -1, -1):
+            count = j - t
+            shifted = values[t] - anchor
+            delta = shifted - mean
+            mean += delta / count
+            m2 += delta * (shifted - mean)
+            segment_cost = count * math.log(m2 / count) if m2 > 0.0 else 0.0
+            cost = opt[t] + segment_cost + penalty
+            # Prefer the earliest predecessor for exactly equal objectives.
+            if cost < best_cost or (cost == best_cost and t < best_t):
                 best_cost = cost
                 best_t = t
         opt[j] = best_cost
         last_cp[j] = best_t
-        # Prune: keep only candidates whose opt + cost ≤ opt[j]
-        candidates = [t for t in candidates if opt[t] + _segment_cost(values, t, j) <= opt[j]]
-        candidates.append(j)
 
     # Back-trace
     cps: list[int] = []
@@ -491,7 +507,7 @@ def mann_kendall(
 
     Returns ``(tau, S, p_value)`` or ``None`` when ``n < 3``.
 
-    - ``tau``: Kendall's tau-b (concordance – discordance, normalised)
+    - ``tau``: Kendall's tau-a (S divided by all n·(n−1)/2 pairs)
     - ``S``:   the raw Mann-Kendall statistic
     - ``p_value``: two-sided normal approximation (tie-corrected variance)
 
@@ -542,27 +558,44 @@ def mann_kendall(
 def wasserstein_1d(x: list[float], y: list[float]) -> float:
     """1-D Wasserstein (earth mover's) distance between two empirical distributions.
 
-    Computed as the L¹ integral of the quantile functions: sort both samples,
-    linearly interpolate to the same size, then sum absolute differences.
+    Computed as the exact L¹ integral between empirical CDFs, including ties
+    and unequal sample sizes. Sorting is followed by one linear merge.
     Returns 0.0 when either sample is empty.
     """
     if not x or not y:
         return 0.0
-    sx = sorted(x)
-    sy = sorted(y)
-    na, nb = len(sx), len(sy)
-    # Merge-based exact computation (equivalent to the integral form)
+    steps = _empirical_cdf_steps(x, y)
+    previous, cdf_x, cdf_y = next(steps)
+    difference = abs(cdf_x - cdf_y)
     total = 0.0
-    all_cdf_points = sorted(
-        set([(i / na) for i in range(1, na + 1)] + [(j / nb) for j in range(1, nb + 1)])
-    )
-    prev_q = 0.0
-    for q in all_cdf_points:
-        ia = min(int(q * na), na - 1)
-        ib = min(int(q * nb), nb - 1)
-        total += abs(sx[ia] - sy[ib]) * (q - prev_q)
-        prev_q = q
+    for value, cdf_x, cdf_y in steps:
+        if difference:
+            width = value - previous
+            # Weight endpoints separately if an unweighted finite width
+            # overflows. Skip zero mass entirely, avoiding 0 * infinity.
+            total += (difference * width if math.isfinite(width)
+                      else difference * value - difference * previous)
+        difference = abs(cdf_x - cdf_y)
+        previous = value
     return total
+
+
+def _empirical_cdf_steps(
+    x: list[float], y: list[float]
+) -> Iterator[tuple[float, float, float]]:
+    """Yield each distinct knot and both right-continuous empirical CDFs."""
+    if any(not math.isfinite(value) for sample in (x, y) for value in sample):
+        raise ValueError("empirical samples must contain only finite values")
+    sx, sy = sorted(x), sorted(y)
+    na, nb = len(sx), len(sy)
+    i = j = 0
+    while i < na or j < nb:
+        value = min(sx[i] if i < na else math.inf, sy[j] if j < nb else math.inf)
+        while i < na and sx[i] <= value:
+            i += 1
+        while j < nb and sy[j] <= value:
+            j += 1
+        yield value, i / na, j / nb
 
 
 def ks_2sample(x: list[float], y: list[float]) -> tuple[float, float]:
@@ -574,28 +607,34 @@ def ks_2sample(x: list[float], y: list[float]) -> tuple[float, float]:
     if not x or not y:
         return (0.0, 1.0)
     na, nb = len(x), len(y)
-    combined = sorted(set(x) | set(y))
-    sx = sorted(x)
-    sy = sorted(y)
-
-    d_max = 0.0
-    for val in combined:
-        # CDF of x at val
-        cdf_x = sum(1 for v in sx if v <= val) / na
-        cdf_y = sum(1 for v in sy if v <= val) / nb
-        d_max = max(d_max, abs(cdf_x - cdf_y))
+    d_max = max(abs(a - b) for _value, a, b in _empirical_cdf_steps(x, y))
+    if d_max == 0.0:
+        return (0.0, 1.0)
 
     # Asymptotic p-value (Kolmogorov distribution approximation)
     en = math.sqrt(na * nb / (na + nb))
     lam = (en + 0.12 + 0.11 / en) * d_max
-    # Kolmogorov survival function (truncated series)
-    p = 0.0
-    if lam > 0.0:
+    return (d_max, _kolmogorov_survival(lam))
+
+
+def _kolmogorov_survival(lam: float) -> float:
+    """Stable limiting Kolmogorov survival function, not finite-sample calibration."""
+    if lam <= 0.0:
+        return 1.0
+    # The transformed CDF series converges rapidly for small lambda; the
+    # alternating survival series is stable for larger lambda.
+    if lam < 1.0:
+        cdf = math.sqrt(2.0 * math.pi) / lam * sum(
+            math.exp(-((2 * k - 1) * math.pi) ** 2 / (8.0 * lam * lam))
+            for k in range(1, 11)
+        )
+        p = 1.0 - cdf
+    else:
         p = 2.0 * sum(
-            ((-1.0) ** (k - 1)) * math.exp(-2.0 * k * k * lam * lam) for k in range(1, 101)
+            ((-1.0) ** (k - 1)) * math.exp(-2.0 * k * k * lam * lam) for k in range(1, 21)
         )
     p = max(0.0, min(1.0, p))
-    return (d_max, p)
+    return p
 
 
 def dunning_g2(obs_a: int, obs_b: int, total_a: int, total_b: int) -> float:
@@ -669,12 +708,15 @@ def hill_estimator(values: list[float], k: int | None = None) -> float | None:
 
 
 def goh_barabasi_fitness(degrees: list[int]) -> dict[str, float] | None:
-    """Goh–Barabási degree-sequence fitness (discrete power-law / scale-free fit).
+    """Approximate degree-tail diagnostic (legacy compatibility name).
 
-    Estimates the power-law exponent with the Goh–Barabási maximum-likelihood
-    form ``alpha = 1 + n / sum ln(k_i / (k_min - 0.5))`` over positive degrees, then
+    Uses the approximate discrete exponent from Clauset, Shalizi & Newman
+    (2009, Eq. 3.7), ``alpha = 1 + n / sum ln(k_i / (k_min - 0.5))``, then
     reports the Kolmogorov–Smirnov distance between the empirical and fitted
-    CDFs (continuous approximation) with an asymptotic p-value.
+    CDFs (truncated continuous approximation). The retained ``p_value`` is an
+    uncalibrated limiting-tail statistic: parameters were fitted to the same
+    dependent graph degrees, without discrete goodness-of-fit refitting. It
+    does not establish a power law, scale-free network or literary structure.
 
     Returns ``{"exponent", "ks_distance", "p_value"}`` or ``None`` when the
     sequence is empty, shorter than 5, all-zero, or constant (no fit).
@@ -717,12 +759,7 @@ def goh_barabasi_fitness(degrees: list[int]) -> dict[str, float] | None:
 
     en = math.sqrt(n)
     lam = (en + 0.12 + 0.11 / en) * d_max
-    p = 0.0
-    if lam > 0.0:
-        p = 2.0 * sum(
-            ((-1.0) ** (t - 1)) * math.exp(-2.0 * t * t * lam * lam) for t in range(1, 101)
-        )
-    p = max(0.0, min(1.0, p))
+    p = _kolmogorov_survival(lam)
     return {
         "exponent": round(alpha, 4),
         "ks_distance": round(d_max, 4),
@@ -757,8 +794,9 @@ def cooccurrence_degrees(tokens: Sequence[str], window: int = 2) -> list[int]:
 def sn_estimator(values: list[float]) -> float:
     """Sn robust scale estimator (Rousseeuw & Croux 1993).
 
-    Sn = cn · median_i { median_j |xi − xj| } where cn is a finite-sample
-    correction factor.  Returns 0.0 for fewer than 2 observations.
+    Sn = 1.1926 · low-median_i { high-median_j |xi − xj| }, including self
+    distances. Uses Gaussian asymptotic scaling, without a finite-n correction.
+    Returns 0.0 for fewer than 2 observations.
     """
     n = len(values)
     if n < 2:
@@ -767,9 +805,9 @@ def sn_estimator(values: list[float]) -> float:
     inner_medians: list[float] = []
     for i in range(n):
         diffs = sorted(abs(values[i] - values[j]) for j in range(n))
-        inner_medians.append(statistics.median(diffs))
+        inner_medians.append(diffs[n // 2])
 
-    raw = statistics.median(inner_medians)
+    raw = sorted(inner_medians)[(n - 1) // 2]
     # Asymptotic consistency factor for Gaussian: 1.1926
     cn = 1.1926
     return cn * raw
@@ -794,8 +832,8 @@ def qn_estimator(values: list[float]) -> float:
     h = max(1, min(h, len(diffs)))
 
     raw = diffs[h - 1]  # 1-based → 0-based
-    # Asymptotic consistency factor for Gaussian: 2.2219
-    dn = 2.2219
+    # Modern Gaussian asymptotic scaling, without a finite-n correction.
+    dn = 2.21914
     return dn * raw
 
 
@@ -882,8 +920,8 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "consistency": "Consistency",
         "cells_in_band": "of cells within the band",
         "multiplicity": "Multiplicity",
-        "expected_hits": "statistically expected hits",
-        "fdr_confirmed": "FDR-confirmed",
+        "expected_hits": "normal-model reference hits",
+        "fdr_confirmed": "nominal FDR selection",
         "cells": "cells",
         "exchangeability": "Exchangeability",
         "mean_acf": "mean lag-1",
@@ -908,8 +946,8 @@ PASSPORT_TEXTS: dict[str, dict[str, str]] = {
         "consistency": "Konsistenz",
         "cells_in_band": "der Zellen im Korridor",
         "multiplicity": "Multiplizität",
-        "expected_hits": "statistisch erwartete Zufallstreffer",
-        "fdr_confirmed": "FDR-bestätigt",
+        "expected_hits": "Treffer als Referenz des Normalmodells",
+        "fdr_confirmed": "nominale FDR-Auswahl",
         "cells": "Zellen",
         "exchangeability": "Austauschbarkeit",
         "mean_acf": "mittlere Verzögerung-1",
@@ -1098,7 +1136,7 @@ class StyleFingerprint:
     def _derive_structural_diagnostics(self) -> dict[str, Any]:
         """Structural diagnostics per usable feature: changepoints, trends, robust scales.
 
-        - **changepoints**: PELT changepoint indices (0-based) per feature
+        - **changepoints**: guarded-cost segmentation indices (0-based) per feature
         - **trends**: Mann-Kendall (tau, S, p) per feature
         - **robust_scales**: Sn and Qn estimators per feature, compared to 1.4826·MAD
         - **tail_index**: Hill tail exponent (alpha-hat) per feature (n >= 5)
@@ -1186,37 +1224,43 @@ class StyleFingerprint:
             and float(self.baseline.get(field, {}).get("sigma", 0.0)) > 0.0
         ]
 
-    def _correlation_matrix(self, fields: list[str]) -> list[list[float]]:
-        """Spearman correlation matrix over the chapter values of the features."""
-        n = len(fields)
-        matrix = [[1.0 if i == j else 0.0 for j in range(n)] for i in range(n)]
-        for i in range(n):
-            for j in range(i + 1, n):
-                common = [
-                    ch
-                    for ch in self.values[fields[i]]
-                    if ch in self.values[fields[j]]
-                    and self.values[fields[i]].get(ch) is not None
-                    and self.values[fields[j]].get(ch) is not None
-                ]
-                rho = 0.0
-                if len(common) >= 3:
-                    xs = [v for ch in common if (v := self.values[fields[i]][ch]) is not None]
-                    ys = [v for ch in common if (v := self.values[fields[j]][ch]) is not None]
-                    rho = spearman_rho(xs, ys)
-                matrix[i][j] = matrix[j][i] = rho
-        return matrix
-
     def _derive_dimensions(self) -> list[dict[str, Any]]:
         """
-        Principal style dimensions of the author's own text: eigendecomposition
-        of the Spearman correlation matrix of the usable features (cyclic
-        Jacobi rotations, deterministic sign convention).
+        PCA of standardized midranks on one complete observation set.
+
+        Covariance, explained variance and chapter scores all use this same
+        rank space. No unavailable measurement is imputed. Three complete
+        chapters and three varying features are required, but do not establish
+        statistical reliability. Jacobi rotations and signs are deterministic.
         """
         fields = self._usable_features()
-        if len(fields) < 3:
+        if len(fields) < MIN_DIMENSION_FEATURES:
             return []
-        matrix = self._correlation_matrix(fields)
+        common = sorted(
+            ch for ch in self.values[fields[0]]
+            if all(self.values[field_name].get(ch) is not None for field_name in fields)
+        )
+        if len(common) < MIN_DIMENSION_CHAPTERS:
+            return []
+        columns: dict[str, list[float]] = {}
+        for field_name in fields:
+            ranks = _midranks([
+                value for ch in common if (value := self.values[field_name][ch]) is not None
+            ])
+            centre = math.fsum(ranks) / len(ranks)
+            squared = math.fsum((value - centre) ** 2 for value in ranks)
+            if squared == 0.0:
+                continue
+            scale = math.sqrt(squared / (len(common) - 1))
+            columns[field_name] = [(value - centre) / scale for value in ranks]
+        fields = list(columns)
+        if len(fields) < MIN_DIMENSION_FEATURES:
+            return []
+        matrix = [
+            [math.fsum(a * b for a, b in zip(columns[x], columns[y], strict=True))
+             / (len(common) - 1) for y in fields]
+            for x in fields
+        ]
         eigenvalues, eigenvectors = jacobi_eigh(matrix)
         dims: list[dict[str, Any]] = []
         for dim_index in range(min(N_DIMENSIONS, len(fields))):
@@ -1228,16 +1272,11 @@ class StyleFingerprint:
             loadings = {fields[k]: round(loading_vector[k], 3) for k in range(len(fields))}
             scores: dict[int, float] = {}
             flagged: list[int] = []
-            for chapter_num in sorted(self.z_scores):
-                score = 0.0
-                for k, field_name in enumerate(fields):
-                    value = self.values[field_name].get(chapter_num)
-                    if value is None:
-                        continue  # mean imputation: z = 0 contribution
-                    centre = float(self.baseline[field_name]["median"])
-                    sigma = float(self.baseline[field_name]["sigma"])
-                    z = (value - centre) / sigma
-                    score += loading_vector[k] * z
+            for row, chapter_num in enumerate(common):
+                score = math.fsum(
+                    loading_vector[k] * columns[field_name][row]
+                    for k, field_name in enumerate(fields)
+                )
                 scores[chapter_num] = round(score, 2)
                 if abs(score) >= self.thresholds.dim_score_threshold:
                     flagged.append(chapter_num)
@@ -1303,7 +1342,7 @@ class StyleFingerprint:
                     "chapters_measured": int(base.get("n", 0)),
                 }
             )
-        # Cliff's δ / Vargha-Delaney A for FDR-confirmed cells (magnitude).
+        # Cliff's δ / Vargha-Delaney A bands for nominally selected cells.
         effect_magnitudes: dict[str, dict[str, str]] = {}
         for chapter_num, fields in self.fdr_flagged.items():
             row: dict[str, str] = {}
@@ -1323,6 +1362,10 @@ class StyleFingerprint:
                 "fdr_q": self.thresholds.fdr_q,
                 "fdr_method": self.thresholds.fdr_method,
                 "dim_score_threshold": self.thresholds.dim_score_threshold,
+                "dimension_space": "standardized_midranks",
+                "dimension_min_chapters": MIN_DIMENSION_CHAPTERS,
+                "dimension_min_features": MIN_DIMENSION_FEATURES,
+                "dimension_chapters": sorted(self.dimensions[0]["scores"]) if self.dimensions else [],
                 "min_chapters": self.thresholds.min_chapters,
                 "flag_min_severity": self.thresholds.flag_min_severity,
                 "expected_false_positives": round(self.expected_false_positives, 2),
@@ -1347,7 +1390,7 @@ class StyleFingerprint:
     def passport_text(
         self, labels: Mapping[str, str] | None = None, language_key: str = "en"
     ) -> str:
-        """Human-readable style reference (constraint block for author or LLM)."""
+        """Human-readable descriptive style reference for author review."""
         labels = labels or {}
         pack = PASSPORT_TEXTS.get(language_key, PASSPORT_TEXTS["en"])
 
@@ -1477,7 +1520,7 @@ def lexical_structural_diagnostics(
     Returns a JSON-safe fragment for ``structural_diagnostics``:
 
     - ``cooccurrence``: undirected content-word graph (sliding ``window``) with
-      mean degree and Goh–Barabási degree-sequence fitness when estimable.
+      mean degree and approximate degree-tail diagnostics when estimable.
     - ``keyness``: Dunning $G^2$ of the first half of chapters vs the second
       half (content words only); ``early_over`` / ``late_over`` list the
       strongest over-represented words per half (deterministic order).
@@ -1485,11 +1528,9 @@ def lexical_structural_diagnostics(
     Empty or too-short input yields ``{}``. Guards: co-occurrence needs at
     least 50 content tokens; keyness needs both halves with ≥ 20 tokens each.
     """
-    import re
-
     config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
-    word_re = re.compile(resolved.word_regex)
+    word_re = compile_word_pattern(resolved.word_regex)
     blacklist = resolved.function_words | resolved.stopwords
     chapters = split_chapters(text, config)
     if not chapters:
@@ -1497,7 +1538,7 @@ def lexical_structural_diagnostics(
 
     chapter_tokens: list[list[str]] = []
     for _num, _title, body in chapters:
-        clean = strip_inline_markup(body)
+        clean = prose_text(body, _front_matter=False)
         chapter_tokens.append([w.lower() for w in word_re.findall(clean)])
 
     n = len(chapter_tokens)

@@ -44,7 +44,7 @@ SCHEMA_VERSION_STYLE = 4
 """style passport contract.
 
 v4 exposes the structural diagnostics block under ``structural_diagnostics``
-(PELT changepoints, Mann–Kendall trends, robust scales, tail index,
+(guarded-cost changepoints, Mann–Kendall trends, robust scales, tail index,
 distribution shift, co-occurrence, keyness) with passport text label
 ``structural``.
 """

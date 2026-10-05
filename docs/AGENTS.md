@@ -338,9 +338,8 @@ Heuristics (hook score, filter/signal counts, n-gram repetition) measure
 observable patterns — they are **not** ground truth. `signal_counts` is
 `{}` unless the caller supplies `CorpusConfig.signal_keywords` (language
 profiles default empty); `filter_count` uses the language filter-verb lemma
-list and intentionally differs from broader editorial definitions (German
-perception verbs: engine ≈ 94 vs a 120-verb dossier list — restate the
-definition before comparing). There is **no external Delta stylometry** and
+list and can differ from broader editorial definitions; restate the active
+definition before comparing. There is **no external Delta stylometry** and
 no speaker attribution: chapter divergence is in-corpus JSD, dialogue turns
 are quotation segments.
 
@@ -360,48 +359,50 @@ are quotation segments.
 
 ## 4. Interpretation heuristics (documented, not black-box)
 
-- **z*** = significance-adjusted deviation: `z* = (x − median) / √(σ² + SE²)`
-  with σ = 1.4826·MAD. Small chapters have large SE – their deviations are
-  shrunk when an SE estimate is available. This reduces one source of noise;
+- **z*** = noise-adjusted deviation: `z* = (x − median) / √(σ² + SE²)`
+  with σ = 1.4826·MAD. Short chapters can have noisy estimates; a larger
+  available SE shrinks the deviation. This reduces one source of noise;
   false alarms and model misspecification remain possible.
 - **Thresholds**: |z*| ≥ 2.5 noticeable, ≥ 3.5 strong (injectable via
   `--z-mild` / `--z-strong` / `--fdr-q` / `--fdr-method` /
   `--dim-threshold` / `--flag-min-severity`, API kwargs, the control-server
   settings, or `[tool.lixity]`; always re-read them from `passport.meta`,
-  never assume the defaults). At 2.5, ~1.2 % of all chapter×feature cells
-  exceed the threshold by chance; the style reference reports the expected
-  count (`expected_false_positives`) – never report a deviation as
-  "significant" without comparing it to this number.
+  never assume the defaults). `expected_false_positives` is a reference count
+  under a standard-normal null, not a measured false-alarm rate for this
+  manuscript. Same-sample median/MAD residuals need not have that distribution.
 - **FDR**: `fdr_flagged` is the Benjamini–Hochberg set by default
   (q = 0.05), or Benjamini–Yekutieli when `meta.fdr_method` is `by` –
-  the cells that remain significant under multiplicity control. Prefer it
-  over the raw `deviations` when making strong claims. Confirmed cells
-  also carry effect sizes (`effect_magnitudes`, Cliff’s δ labels) and the
-  passport reports baseline exchangeability (`baseline_diagnostics`).
+  a selection computed from normal-tail probabilities. These probabilities
+  are not calibrated for the same-sample baseline; neither method establishes
+  prose-level false-discovery control. Selected cells also carry ordinal
+  contrasts (`effect_magnitudes`, Cliff’s δ labels). Baseline diagnostics
+  (`baseline_diagnostics`) expose some dependence, not inferential validity.
   Formal methods: [`METHODS.md`](METHODS.md).
-- **Dimensions**: principal components of the Spearman correlation matrix
-  (Jacobi eigendecomposition, deterministic sign). They are the manuscript's
-  own abstract style axes, not pre-defined registers. `flagged` chapters sit
-  at |score| ≥ 2.5 on that axis. Loadings name the features that shape the
-  axis; do not invent register names beyond the loadings.
-- **Redundant features**: pairs with |Spearman ρ| ≥ 0.8 measure (almost) the
-  same thing – do not double-count them when summarising deviations.
+- **Dimensions**: exploratory PCA of standardized tied midranks on one complete
+  chapter set (Jacobi eigendecomposition, deterministic sign). Scores and
+  `dimensions[].variance` use this same rank space. At least three complete
+  chapters and three varying features are required; missing chapters are omitted,
+  not assigned zero. `meta.dimension_space` declares `standardized_midranks` and
+  `meta.dimension_chapters` lists the covered chapters. Read the active flag
+  threshold and `dimension_min_chapters` / `dimension_min_features` from `meta`;
+  axes are not established registers or quality scores.
+- **Redundant features**: pairs with |Spearman ρ| ≥ 0.8 have related chapter
+  patterns, not necessarily the same linguistic meaning. Account for that
+  relationship when summarising deviations.
 - **JSD driver words**: the words that most contribute to a chapter's
   divergence from the rest of the corpus – use them for concrete,
   quotable editing feedback.
-- **Structural diagnostics** (`structural_diagnostics`): `changepoints` (PELT,
-  0-based index of the first element after each break) answer *where* the
-  house style shifts over chapter order; `trends` (Mann–Kendall, p < 0.05
-  → `trending_features`) answer *whether* a feature drifts monotonically;
-  `robust_scales` (Sn/Qn next to 1.4826·MAD) show whether a band is
-  outlier-sensitive; `tail_index` (Hill tail index) flags heavy-tailed features;
-  `distribution_shift` / `shifted_features` (Wasserstein + KS, first half
-  of chapters vs second) flag an early/late distributional break. When the
-  passport is built from source text, `cooccurrence` adds Goh–Barabási
-  fitness on the content-word graph and `keyness` adds Dunning G² for
-  early vs late halves. All are diagnostic signals, not verdicts — read
-  them together with `fdr_flagged` and the JSD driver words. Formal
-  definitions: [`METHODS.md`](METHODS.md) §4c.
+- **Structural diagnostics** (`structural_diagnostics`): change-point indices
+  are 0-based starts after a break; trends, scales and early/late distribution
+  comparisons are exploratory. Source-text passports also include a
+  co-occurrence graph with an approximate discrete power-law exponent and
+  early/late Dunning G² keyness. Segmentation exactly minimizes the guarded
+  objective with quadratic dynamic programming; the legacy Python entrypoint
+  remains `pelt_changepoints`. Sn/Qn use asymptotic scaling without finite-sample
+  correction, and the trend statistic is tau-a. KS probabilities and fitted
+  graph-tail statistics are exploratory, not calibrated for dependent literary
+  observations. See [`METHODS.md`](METHODS.md) §4c and
+  [`STABILITY.md`](STABILITY.md#structural-diagnostics).
 - **Tense severity (paragraphs)**: `classify_severity` scores a paragraph
   0–3 (0 = consistent, 1 = mixed without switch, 2 = single switch,
   3 = multiple switches / long mixed); only severity ≥
@@ -504,7 +505,7 @@ with `format="md"`. The implementation helper
 `lixity.research.analysis.compare_source_to_manuscript()` is data-only and
 always returns a dictionary.
 `claim_matrix(project, format=...)` is **deprecated** since v1.22.0, warns on
-use, and remains available in v1.24.1. Removal is deferred to a future release;
+use, and remains available. Removal is deferred to a future release;
 call `claim_matrix_data()` and `render_claim_matrix()` instead. The JSON payload and the
 `lixity research matrix` CLI output are unchanged.
 
@@ -695,8 +696,9 @@ When building autonomous coding, editing, or research agents that consume Lixity
    not errors or flaws. An author may intentionally use short staccato sentences in an action climax.
    Frame observations as diagnostic prompts for human macro-editing (see Macro-Editing Matrix in `README.md`).
 3. **Reason with uncertainty (`style_se`):**
-   Chapters with fewer than 200 words have high standard error in sentence starter entropy, ASL, and density metrics.
-   Check `style_se` in `metrics.chapters[]` before asserting that a short scene departs significantly from the baseline.
+   Short chapters can have noisy estimates; inspect the counts and `style_se`
+   in `metrics.chapters[]`. Missing or zero plug-in SE does not establish
+   certainty, and an SE field does not calibrate statistical significance.
 4. **Idempotent automation:**
    Use `lixity build` to generate `exports/` artifacts. The build is content-hashed and skips writing when inputs
    are identical, preventing unnecessary disk I/O and CI/CD churn.

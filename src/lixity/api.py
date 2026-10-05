@@ -91,10 +91,10 @@ def fingerprint(
 ) -> dict[str, Any]:
     """
     Self-calibrated style fingerprint (style reference): house-style bands
-    (median ± 2 sigma) per feature, significance-adjusted deviations (z*),
-    Benjamini-Hochberg/Yekutieli FDR set, expected false positives, effect
-    sizes (Cliff's δ), baseline exchangeability diagnostics, self-calibrated
-    style dimensions (Spearman correlation + Jacobi eigendecomposition) and
+    (median ± 2 sigma) per feature, noise-adjusted deviations (z*), nominal
+    Benjamini-Hochberg/Yekutieli selections, normal-reference expected hits,
+    effect bands (Cliff's δ), baseline dependence diagnostics, exploratory
+    style dimensions (standardized midrank PCA on complete chapters) and
     redundant feature pairs.
 
     Thresholds (z_mild=2.5, z_strong=3.5, fdr_q=0.05, fdr_method='bh',
@@ -106,7 +106,7 @@ def fingerprint(
 
     In addition to the metrics-derived structural block, the passport carries
     token-level ``structural_diagnostics.cooccurrence`` / ``.keyness`` computed
-    from ``text`` (Dunning G² early vs late half, Goh–Barabási fitness).
+    from ``text`` (Dunning G² early vs late half, approximate degree-tail fit).
     """
     config, _resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
     thresholds = _thresholds(

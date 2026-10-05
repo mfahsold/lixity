@@ -1,4 +1,4 @@
-"""Reusable structural diagnostics panel (PELT changepoints, Mann-Kendall drift, distribution shift)."""
+"""Reusable exploratory segmentation, trend and distribution-shift panel."""
 
 from __future__ import annotations
 
@@ -20,7 +20,7 @@ def style_structural(
 ) -> str:
     """Renders the structural diagnostics & stylistic drift panel.
 
-    Displays PELT changepoints (structural phase shifts between chapters),
+    Displays guarded-cost changepoints (candidate shifts between chapters),
     Mann-Kendall monotonic trend tests (gradual drift over the book), and
     half-split distribution shifts (first half vs. second half).
     """
@@ -48,7 +48,7 @@ def style_structural(
 
     parts.append('<div class="structural-grid">')
 
-    # --- Card 1: PELT changepoints (Stylistic Phase Shifts) ---
+    # --- Card 1: Guarded-cost changepoints ---
     changepoints = diag.get(ContractKeys.CHANGEPOINTS) or {}
     parts.append('<div class="structural-card">')
     parts.append(
@@ -64,7 +64,10 @@ def style_structural(
             help_k = _FEATURE_HELP.get(field_name, field_name)
             layer = feature_layers.get(field_name)
 
-            sorted_chs = sorted(fingerprint.values.get(field_name, {}).keys())
+            sorted_chs = sorted(
+                ch for ch, value in fingerprint.values.get(field_name, {}).items()
+                if value is not None
+            )
 
             shift_links: list[str] = []
             for cp in cps:

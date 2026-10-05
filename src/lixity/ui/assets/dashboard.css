@@ -750,6 +750,10 @@ td.flag-excerpt {
   font-size: .72rem;
 }
 .dim-3d-footer {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: .25rem .75rem;
   padding: .45rem .85rem;
   border-top: 1px solid var(--line);
   font-size: .74rem;

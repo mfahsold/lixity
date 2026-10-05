@@ -18,7 +18,7 @@ manuscript anchors, and hybrid vector search; those are not current dependencies
 
 | Layer | Responsibility | Must not own |
 | --- | --- | --- |
-| Language resources | Lexicons, patterns, labels, calibrated coefficients | Project-specific character lists or file paths |
+| Language resources | Lexicons, patterns, labels, formula coefficients | Project-specific character lists or file paths |
 | Analysis core | Metrics, paragraph profiles, uncertainty and statistical diagnostics | HTTP sessions, exports or UI state |
 | `lixity.pipeline` | Resolve document language; assemble one analysis result | Implicit file reads or mutable global project state |
 | CLI / `lixity.api` | Input/output contracts and threshold resolution | Duplicate analysis algorithms |
@@ -80,6 +80,12 @@ explicit choice. The convenience API's `profile`, `fingerprint`/`passport` and
 `dashboard` accept this mapping as well as thresholds: `{}` avoids implicit
 discovery, while `None` retains threshold discovery for compatibility. Chapter,
 paragraph and scene numbering use the same configured, nonempty chapter units.
+The existing Markdown parser defines supported measurement prose: paragraphs,
+list items and quoted prose, omitting metadata, headings, comments, code and
+footnote definitions. Paragraph profiles intentionally cover body/list blocks
+only; legacy whitespace counts remain separate. Token regex flags are preserved,
+while linguistic cue patterns have their own case-insensitive compiler. See
+[Methods](METHODS.md) for exact scopes and numerical conventions.
 Scene reports reuse the chapter measurement engine and compare only explicit
 register groups within the manuscript. They do not read research sources or
 provide quality scores. Adapters should pass the intended configuration and

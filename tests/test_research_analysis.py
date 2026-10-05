@@ -241,6 +241,33 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertIn("cross_language_lexical_comparison", result["comparison_limits"])
         self.assertIsInstance(result["summary"]["jaccard_similarity"], float)
 
+    def test_comparison_uses_shared_prose_scope_for_all_measurements(self):
+        decorations = (
+            ("", "\n\n```text\nHidden code.\n```"),
+            ("```text\n## Fake chapter\nHidden code.\n```\n\n", ""),
+            ("", "\n\n    Indented code."),
+            ("---\ntitle: Hidden metadata\n---\n\n", ""),
+            ("", "\n\n<!-- Hidden comment. -->\n\n[^note]: Hidden footnote."),
+        )
+        for prefix, suffix in decorations:
+            with self.subTest(prefix=prefix, suffix=suffix):
+                self.file.write_text(prefix + "## Source\n\nAurora." + suffix,
+                                     encoding="utf-8")
+                source = self.ingest()
+                manuscript = prefix + "## Main\n\nAurora." + suffix
+                result = api.compare_source(self.project, source["source_id"], manuscript)
+                self.assertEqual(result["summary"]["source_tokens"], 1)
+                self.assertEqual(result["summary"]["manuscript_tokens"], 1)
+                self.assertEqual(result["summary"]["jaccard_similarity"], 1.0)
+                self.assertEqual(result["register_contrast"]["asl"]["source"], 1.0)
+                self.assertEqual(result["register_contrast"]["asl"]["manuscript"], 1.0)
+                self.assertEqual(len(result["chapter_grounding"]), 1)
+                chapter = result["chapter_grounding"][0]
+                self.assertEqual(chapter["chapter"], 1)
+                self.assertEqual(chapter["title"], "Main")
+                self.assertEqual(chapter["words"], 1)
+                self.assertEqual(chapter["grounding_density"], 1000.0)
+
     def test_compare_keeps_first_line_of_unheaded_source(self):
         self.file.write_text("Aurora.\nBorealis.\n", encoding="utf-8")
         source = self.ingest()

@@ -7,7 +7,7 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 1.24.1; release tag: v1.24.1.
+Current release: 1.25.0; release tag: v1.25.0.
 
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
@@ -40,7 +40,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from GitHub, not PyPI:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.24.1"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.25.0"
 lixity --version
 lixity about
 ```
@@ -122,7 +122,7 @@ controls require the lower-level renderer or an adapter.
 For research, import `from lixity.research import api as research_api`.
 Use `claim_matrix_data(project)`, then `render_claim_matrix(data, format="md")`
 or `format="csv"`. The deprecated `claim_matrix(project, format=...)` wrapper
-remains accepted in v1.24.1; removal is deferred. CLI matrix output is unchanged.
+remains accepted; removal is deferred. CLI matrix output is unchanged.
 
 HTTP routes are dashboard actions: `POST /api/analyze` acknowledges a refresh
 with `reload: true`, not analysis data. `GET /api/project-paths` only browses;
@@ -148,7 +148,17 @@ Standalone export/sync/audit/prune/gdrive actions return HTTP 501 with
   `min_chapters=2`, `flag_min_severity=2`; BY is optional.
   CLI/API/project settings override thresholds: inspect `passport.meta`.
   FDR cells, raw deviations and tense flags are different results.
+  Normal-tail inputs are uncalibrated for the same-sample baseline; nominal
+  q and `expected_false_positives` do not establish manuscript error rates.
   Effect sizes use Cliff's δ; no separate Vargha–Delaney value is emitted.
+- Style axes use standardized tied midranks on one complete chapter set;
+  scores and variance share that space. At least three complete chapters and
+  three varying features are required. Unavailable chapters are omitted, not
+  scored as zero; inspect `meta.dimension_space` and `dimension_chapters`.
+- Rebuild comparisons after the numerical/prose-scope corrections: MTLD now
+  averages directional lengths; Sn uses low/high medians, Qn uses 2.21914;
+  guarded segmentation is exact quadratic DP and empirical W1/KS-D use CDFs.
+  Legacy function/JSON names remain. Model probabilities are still exploratory.
 - HD-D/MTLD/Maas require 100 tokens; MATTR needs a full 50-token window.
   These guards do not guarantee reliability. HD-D is exact expected TTR of
   a 42-token draw since v1.16.0; recompute older comparisons.
@@ -157,7 +167,8 @@ Standalone export/sync/audit/prune/gdrive actions return HTTP 501 with
 - Guiraud remains length-sensitive; Flesch is not bounded to 0–100.
   Dialogue shares use the configured tokenizer. Uninformative Show/Tell
   comparisons display dashes, not rankings. Without explicit breaks,
-  pacing units are chapters. Structural tests/3D projections are exploratory.
+  pacing units are chapters. Structural diagnostics/3D projections are
+  exploratory; estimator conventions and limits are in METHODS.md and STABILITY.md.
 
 ## Research, PDF/OCR and Zotero
 

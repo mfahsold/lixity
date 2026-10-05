@@ -4,10 +4,10 @@ Pure, deterministic implementations of the established indices:
 
 - **HD-D** (McCarthy & Jarvis 2010): hypergeometric expected type-token ratio
   of a 42-token draw without replacement from the whole text.
-- **MTLD** (McCarthy & Jarvis 2010): mean segment length until TTR drops below
-  0.72, forward and backward averaged.
+- **MTLD** (McCarthy & Jarvis 2010): arithmetic mean of forward and backward
+  length/factor scores, with factors completed at TTR <= 0.72.
 - **MATTR** (Covington & McFall 2010): moving-average TTR over a 50-token window.
-- **Maas a²** (Maas 1972): (log N − log V) / (log N)².
+- **Maas a²** (Maas 1972): (log10 N − log10 V) / (log10 N)².
 - **Yule's K** (Yule 1944): 10^4 · (Σ m² V_m − N) / N².
 
 HD-D, MTLD and Maas use a local short-text policy of at least
@@ -100,12 +100,17 @@ def hd_d_stats(
     return math.fsum(presence) / HD_D_DRAW_SIZE, 0.0
 def mtld(tokens: list[str], threshold: float = 0.72) -> float | None:
     """
-    MTLD: length-invariant lexical diversity (McCarthy & Jarvis 2010).
+    Original-style MTLD: arithmetic mean of forward and reverse N/F scores.
 
-    Mean length of sequential token runs that maintain TTR >= threshold;
-    computed forward and backward then averaged. Returns None below
-    ``MIN_TOKENS_LD`` (100) tokens under the local short-text policy and
-    when no factor completes (all-unique token sequences).
+    Each local pass completes a factor at TTR <= ``threshold``, resets the
+    token/type inventory without a minimum run length, and counts a trailing
+    run as (1 - TTR) / (1 - threshold) factors. Returns None below the local
+    ``MIN_TOKENS_LD`` (100) token floor or for zero factors (all-unique tokens).
+
+    The author-lab TAALED ``mtldo`` supports averaging directional N/F scores,
+    but its minimum-run, strict-threshold and trailing-factor rules differ.
+    The full McCarthy & Jarvis (2010) paper was not available for this
+    implementation review; complete equivalence to TAALED is not claimed.
     """
     n = len(tokens)
     if n < MIN_TOKENS_LD:
@@ -130,10 +135,9 @@ def mtld(tokens: list[str], threshold: float = 0.72) -> float | None:
 
     fwd = _factors(tokens)
     bwd = _factors(tokens[::-1])
-    total_factors = (fwd + bwd) / 2.0
-    if total_factors <= 0.0:
+    if fwd <= 0.0 or bwd <= 0.0:
         return None
-    return n / total_factors
+    return (n / fwd + n / bwd) / 2.0
 def mattr(tokens: list[str], window: int = 50) -> float | None:
     """
     MATTR: moving-average type-token ratio (Covington & McFall 2010).
@@ -173,9 +177,10 @@ def yules_k(tokens: list[str]) -> float:
     m2 = sum(c * c for c in counts.values())
     return 10000.0 * (m2 - n) / (n * n)
 def maas_a2(n_tokens: int, v_types: int) -> float | None:
-    """Maas a² = (log N − log V) / (log N)² – lower = more diverse (Maas 1972).
+    """Maas a² = (log10 N − log10 V) / (log10 N)² (Maas 1972).
 
-    Requires ``MIN_TOKENS_LD`` tokens; shorter texts return None.
+    Lower values mean greater diversity. This local base-10 convention requires
+    ``MIN_TOKENS_LD`` tokens; shorter texts return None.
     """
     if n_tokens < MIN_TOKENS_LD or v_types <= 0:
         return None

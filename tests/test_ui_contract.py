@@ -55,7 +55,13 @@ SAMPLE = (
 
 
 def _full_dashboard() -> str:
-    text, _marker = add_marker(SAMPLE, kind="todo", note="Prüfen", target_line=3)
+    # Three complete, varying chapters exercise the optional rank-space panel.
+    complete = SAMPLE.replace(
+        "## Kap 2", "Ich schaue hinaus. Vor dem Fenster ziehen dunkle Wolken vorbei. " * 3 + "\n\n## Kap 2"
+    )
+    complete += "\n" + "Im Zimmer wartet eine Frau neben dem Fenster. " * 8
+    complete += "\n\n## Kap 3\n\n" + "Der Morgen beginnt. Regen fällt auf die Straße. " * 15
+    text, _marker = add_marker(complete, kind="todo", note="Prüfen", target_line=3)
     config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
     paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text))
     metrics = CorpusAnalyzer(config).analyze_text(text)

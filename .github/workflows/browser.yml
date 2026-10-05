@@ -1,0 +1,57 @@
+name: browser
+on:
+  push:
+    branches: ["main"]
+    paths:
+      - "src/**"
+      - "tests/browser/**"
+      - "tests/test_ui_contract.py"
+      - "docs/**"
+      - "scripts/**"
+      - "pyproject.toml"
+      - ".github/workflows/**"
+  pull_request:
+    paths:
+      - "src/**"
+      - "tests/browser/**"
+      - "tests/test_ui_contract.py"
+      - "docs/**"
+      - "scripts/**"
+      - "pyproject.toml"
+      - ".github/workflows/**"
+  workflow_dispatch:
+permissions:
+  contents: read
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+jobs:
+  browser:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+          cache: pip
+          cache-dependency-path: pyproject.toml
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - run: python -m pip install .
+      - run: npm install --no-save playwright@1.59.1
+      - run: npx playwright install --with-deps chromium
+      - name: Check rendered desktop and mobile workflows
+        env:
+          PYTHON_BIN: python
+        run: |
+          node tests/browser/style-space.cjs
+          node tests/browser/settings.cjs
+          node tests/browser/layout.cjs
+          node tests/browser/research.cjs
+          node tests/browser/list-filters.cjs
+          node tests/browser/project-controls.cjs
+          node tests/browser/scenes.cjs
+          node tests/browser/docs.cjs
+          node tests/browser/visual-consistency.cjs

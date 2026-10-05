@@ -21,8 +21,10 @@ The test generates a synthetic manuscript, checks canvas interaction, tooltip
 escaping, idle rendering and mobile layout, and prints its temporary screenshot
 directory. It does not read any private manuscript or contact a server.
 
-CI runs every suite above in one Chromium job
-on pull requests, pushes to `main` and manual dispatch. Newer pushes cancel
+The separate browser workflow runs every suite above in one Chromium job
+on pull requests and pushes to `main` that change `src/`, `tests/browser/`,
+`tests/test_ui_contract.py` (shared Python fixtures), `docs/`, `scripts/`,
+`pyproject.toml` or `.github/workflows/`, and on manual dispatch. Newer pushes cancel
 superseded runs. Browser binaries are downloaded for each run; screenshots stay
 temporary and are not uploaded as persistent CI artifacts.
 

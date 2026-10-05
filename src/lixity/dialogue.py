@@ -16,8 +16,8 @@ from dataclasses import dataclass, field
 from statistics import median
 from typing import Any
 
-from .language import compile_pattern, resolve_language
-from .markdown_parser import split_chapters  # shared chapter segmentation (re-export)
+from .language import compile_pattern, compile_word_pattern, resolve_language
+from .markdown_parser import prose_paragraphs, split_chapters  # shared segmentation (re-export)
 from .models import CorpusConfig
 
 # A paragraph counts as dialogue paragraph when at least this share of its
@@ -95,16 +95,15 @@ def _turn_stats(
     body: str, dialogue_re: re.Pattern[str], word_re: re.Pattern[str]
 ) -> tuple[list[int], int, int, int, int]:
     """(turn word counts, dialogue words, words, dialogue paragraphs, paragraphs)."""
-    clean = re.sub(r"<!--.*?-->", "", body, flags=re.DOTALL)
+    paragraphs = prose_paragraphs(body, _front_matter=False)
+    clean = "\n\n".join(paragraphs)
     matches = dialogue_re.findall(clean)
     turn_word_counts = [len(word_re.findall(m)) for m in matches]
     dialogue_words = sum(turn_word_counts)
     words = len(word_re.findall(clean))
 
-    paragraphs = [p.strip() for p in clean.split("\n\n") if p.strip()]
-    prose_paragraphs = [p for p in paragraphs if not p.startswith(("#", "|", "-", "*"))]
     dialogue_paragraphs = 0
-    for paragraph in prose_paragraphs:
+    for paragraph in paragraphs:
         paragraph_words = len(word_re.findall(paragraph))
         if not paragraph_words:
             continue
@@ -117,7 +116,7 @@ def _turn_stats(
         dialogue_words,
         words,
         dialogue_paragraphs,
-        len(prose_paragraphs),
+        len(paragraphs),
     )
 
 
@@ -125,7 +124,7 @@ def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueRe
     """Dialogue turn structure of a manuscript (deterministic, heuristic)."""
     config = config or CorpusConfig(language="auto")
     resolved = resolve_language(config, sample_text=text)
-    word_re = compile_pattern(resolved.word_regex)
+    word_re = compile_word_pattern(resolved.word_regex)
     dialogue_re = compile_pattern(resolved.dialogue_regex)
 
     chapters: list[DialogueChapter] = []

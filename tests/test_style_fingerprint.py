@@ -8,12 +8,14 @@ heatmap/layer rendering of the dashboard.
 """
 
 import html as html_module
+import itertools
 import json
+import math
 import os
 import re
 import sys
 import unittest
-from unittest.mock import patch
+from fractions import Fraction
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
@@ -53,6 +55,11 @@ SAMPLE = (
     "war ausführlich. Das Haus wurde besichtigt und die Miete war bezahlt worden. "
     "Die Zeitung lag auf dem Boden und die Entscheidung war gefallen. Die "
     "Beschreibung der Wohnung wirkte sachlich und die Miete war hoch.\n"
+)
+
+DIMENSION_SAMPLE = (
+    SAMPLE + "\n## Kap 3\n\nDie Straße glänzt. Regen fällt auf das Pflaster. "
+    "Vor dem Fenster wartet jemand mit einem roten Schirm.\n"
 )
 
 
@@ -193,9 +200,15 @@ class TestStyleFingerprint(unittest.TestCase):
         self.assertIn("STYLE REFERENCE", text)
         self.assertIn("ASL", text)
         self.assertIn("band", text)
+        self.assertIn("nominal FDR selection", text)
+        self.assertIn("normal-model reference", text)
+        self.assertNotIn("FDR-confirmed", text)
         german = self.fp.passport_text(labels={"feat_asl": "ASL"}, language_key="de")
         self.assertIn("STILREFERENZ", german)
         self.assertIn("Korridor", german)
+        self.assertIn("nominale FDR-Auswahl", german)
+        self.assertIn("Referenz des Normalmodells", german)
+        self.assertNotIn("FDR-bestätigt", german)
 
     def test_single_chapter_no_deviations(self):
         one = CorpusAnalyzer(self.config).analyze_text(
@@ -251,9 +264,9 @@ class TestFingerprintDashboard(unittest.TestCase):
     def _build(self):
         config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
-            parse_markdown_blocks(SAMPLE)
+            parse_markdown_blocks(DIMENSION_SAMPLE)
         )
-        metrics = CorpusAnalyzer(config).analyze_text(SAMPLE)
+        metrics = CorpusAnalyzer(config).analyze_text(DIMENSION_SAMPLE)
         fingerprint = StyleFingerprint.from_metrics(metrics)
         return render_dashboard(
             chapters,
@@ -287,7 +300,7 @@ class TestFingerprintDashboard(unittest.TestCase):
 
     def test_dimension_payload_preserves_untrusted_titles_as_data(self):
         title = '<img src=x onerror="window.injected=true"> & heading'
-        rendered = api.dashboard(SAMPLE.replace("Kap 1", title), language="de")
+        rendered = api.dashboard(DIMENSION_SAMPLE.replace("Kap 1", title), language="de")
         match = re.search(r'data-dim3d="([^"]*)"', rendered)
         self.assertIsNotNone(match)
         payload = json.loads(html_module.unescape(match.group(1)))
@@ -306,6 +319,35 @@ class TestFingerprintDashboard(unittest.TestCase):
         for group in groups:
             names = re.findall(r'<b>(.*?)</b>', group)
             self.assertEqual(len(names), len(set(names)))
+
+    def test_dimension_canvas_omits_unmeasured_chapters(self):
+        from lixity.ui.dimensions import style_dimensions
+
+        config = CorpusConfig(language="de")
+        _paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(SAMPLE))
+        fp = StyleFingerprint(dimensions=[{
+            "index": 1, "variance": 1.0, "loadings": {"asl": 1.0},
+            "scores": {1: 0.5}, "flagged": [],
+        }])
+        rendered = style_dimensions(chapters, fp)
+        match = re.search(r'data-dim3d="([^"]*)"', rendered)
+        payload = json.loads(html_module.unescape(match.group(1)))
+        self.assertEqual([point["ch"] for point in payload["points"]], [1])
+        self.assertIn("1 / 2", rendered)
+
+    def test_changepoint_links_follow_measured_chapter_indices(self):
+        from lixity.ui.structural import style_structural
+
+        _paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="de")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE)
+        )
+        fp = StyleFingerprint(
+            values={"asl": {1: 5.0, 2: None, 3: 10.0}},
+            structural_diagnostics={"changepoints": {"asl": [1]}},
+        )
+        rendered = style_structural(chapters, fp)
+        self.assertIn('data-jump="#ch-3"', rendered)
+        self.assertNotIn('data-jump="#ch-2"', rendered)
 
 
 class TestJacobiEigendecomposition(unittest.TestCase):
@@ -403,7 +445,7 @@ class TestStyleDimensions(unittest.TestCase):
 
     def setUp(self):
         self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
-        self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
+        self.metrics = CorpusAnalyzer(self.config).analyze_text(DIMENSION_SAMPLE)
         self.fp = StyleFingerprint.from_metrics(self.metrics)
 
     def test_dimensions_are_derived(self):
@@ -421,21 +463,50 @@ class TestStyleDimensions(unittest.TestCase):
         self.assertEqual(self.fp.redundant_features, again.redundant_features)
 
     def test_dimension_flags_use_complete_scores_and_are_unique(self):
-        fields = ["asl", "staccato_pct", "kaskade_pct"]
+        fields = ["asl", "staccato_pct", "hd_d"]
         self.fp.baseline = {
-            field: {"n": 3, "median": 0.0, "sigma": 1.0} for field in fields
+            field: {"n": 6, "median": 0.0, "sigma": 1.0} for field in fields
         }
         self.fp.values = {
-            fields[0]: {1: 10.0, 2: 10.0, 3: None},
-            fields[1]: {1: -10.0, 2: 10.0, 3: None},
-            fields[2]: {1: 0.0, 2: 0.0, 3: None},
+            fields[0]: dict(enumerate([40.0, 50.0, 60.0, 10.0, 20.0, 30.0], 1)),
+            fields[1]: dict(enumerate([10.0, 20.0, 30.0, 40.0, 50.0, 60.0], 1)),
+            fields[2]: dict(enumerate([None, None, None, 0.6, 0.7, 0.8], 1)),
         }
-        self.fp.z_scores = {1: {}, 2: {}, 3: {}}
-        vectors = [[0.707, 0.707, 0.0], [0.707, -0.707, 0.0], [0.0, 0.0, 1.0]]
-        with patch("lixity.style_fingerprint.jacobi_eigh", return_value=([1.0] * 3, vectors)):
-            dimension = self.fp._derive_dimensions()[0]
-        self.assertEqual(dimension["scores"], {1: 0.0, 2: 14.14, 3: 0.0})
-        self.assertEqual(dimension["flagged"], [2])
+        self.fp.z_scores = {i: {} for i in range(1, 7)}
+        dimensions = self.fp._derive_dimensions()
+        self.assertTrue(dimensions)
+        for dimension in dimensions:
+            self.assertEqual(set(dimension["scores"]), {4, 5, 6})
+            self.assertGreaterEqual(dimension["variance"], 0.0)
+            self.assertLessEqual(dimension["variance"], 1.0)
+            self.assertEqual(len(dimension["flagged"]), len(set(dimension["flagged"])))
+        self.assertAlmostEqual(sum(dim["variance"] for dim in dimensions), 1.0, places=4)
+        self.assertEqual(dimensions[0]["scores"], {4: -1.73, 5: 0.0, 6: 1.73})
+
+    def test_dimension_scores_and_variance_use_same_rank_space(self):
+        fields = ["asl", "staccato_pct", "kaskade_pct"]
+        self.fp.baseline = {
+            field: {"n": 4, "median": 0.0, "sigma": 1.0} for field in fields
+        }
+        self.fp.values = {
+            field: dict(enumerate(values, 1))
+            for field, values in zip(
+                fields, ([1.0, 1.0, 8.0, 1000.0], [4.0, 3.0, 2.0, 1.0], [1.0, 9.0, 2.0, 3.0]),
+                strict=True,
+            )
+        }
+        self.fp.z_scores = {i: {} for i in range(1, 5)}
+        for dimension in self.fp._derive_dimensions():
+            scores = list(dimension["scores"].values())
+            mean = sum(scores) / len(scores)
+            sample_variance = sum((score - mean) ** 2 for score in scores) / (len(scores) - 1)
+            self.assertAlmostEqual(sample_variance / len(fields), dimension["variance"], delta=0.01)
+            self.assertAlmostEqual(mean, 0.0, delta=0.01)
+
+    def test_dimensions_require_three_complete_nonconstant_features(self):
+        for field in self.fp.values:
+            self.fp.values[field][3] = None
+        self.assertEqual(self.fp._derive_dimensions(), [])
 
     def test_passport_meta_v2(self):
         passport = self.fp.passport()
@@ -472,7 +543,7 @@ class TestStyleDimensions(unittest.TestCase):
     def test_passport_text_lists_dimensions(self):
         text = self.fp.passport_text(labels={"feat_asl": "ASL"})
         self.assertIn("STYLE REFERENCE", text)
-        self.assertIn("expected hits", text)
+        self.assertIn("normal-model reference hits", text)
 
 
 # ---------------------------------------------------------------------------
@@ -481,6 +552,49 @@ class TestStyleDimensions(unittest.TestCase):
 
 
 class TestPELT(unittest.TestCase):
+
+    def test_segmentation_minimizes_guarded_cost_over_all_partitions(self):
+        """An exhaustive rational oracle is independent of candidate pruning."""
+        from lixity.style_fingerprint import pelt_changepoints
+
+        def cost(segment):
+            numbers = [Fraction(value) for value in segment]
+            mean = sum(numbers) / len(numbers)
+            variance = sum((value - mean) ** 2 for value in numbers) / len(numbers)
+            return len(numbers) * math.log(float(variance)) if variance else 0.0
+
+        def objective(values, cuts, penalty):
+            edges = (0, *cuts, len(values))
+            return math.fsum(
+                cost(values[a:b]) + penalty for a, b in itertools.pairwise(edges)
+            )
+
+        # Small exhaustive domains expose invalid pruning, including ties.
+        cases = itertools.chain(
+            itertools.product((0.0, 0.5, 2.0), repeat=4),
+            ((-1e16, 1e16, 1e16 + 2.0, 1e16 + 4.0),
+             (0.0, 1e16, 1e16 + 2.0, 1e16 + 4.0)),
+        )
+        for values in cases:
+            for penalty in (0.0, 1.0, 4.0, 2.0 * math.log(len(values))):
+                cuts = pelt_changepoints(list(values), penalty)
+                alternatives = (
+                    candidate for count in range(len(values))
+                    for candidate in itertools.combinations(range(1, len(values)), count)
+                )
+                expected = min(objective(values, candidate, penalty) for candidate in alternatives)
+                with self.subTest(values=values, penalty=penalty):
+                    self.assertAlmostEqual(objective(values, cuts, penalty), expected, places=10)
+
+    def test_segment_cost_is_stable_under_large_translation(self):
+        from lixity.style_fingerprint import _segment_cost
+
+        values = [0.0, 0.125, 0.25, 0.375, 0.125]
+        translated = [value + 2.0**45 for value in values]
+        self.assertAlmostEqual(
+            _segment_cost(values, 0, len(values)),
+            _segment_cost(translated, 0, len(values)), places=12,
+        )
     """Changepoint segmentation via PELT."""
 
     def test_too_short_returns_empty(self):
@@ -571,6 +685,50 @@ class TestMannKendall(unittest.TestCase):
 
 
 class TestWassersteinKS(unittest.TestCase):
+
+    def test_wasserstein_matches_exact_cdf_integral_with_unequal_sizes(self):
+        from lixity.style_fingerprint import wasserstein_1d
+
+        samples = ([0.0], [0.0, 10.0], [-2.0, 0.0, 0.0], [1.0, 2.0, 5.0, 9.0])
+        for x, y in itertools.product(samples, repeat=2):
+            knots = sorted(set(x) | set(y))
+            expected = sum(
+                abs(Fraction(sum(v <= a for v in x), len(x))
+                    - Fraction(sum(v <= a for v in y), len(y))) * Fraction(b - a)
+                for a, b in itertools.pairwise(knots)
+            )
+            with self.subTest(x=x, y=y):
+                self.assertAlmostEqual(wasserstein_1d(x, y), float(expected), places=12)
+
+    def test_identical_distributions_have_ks_probability_one(self):
+        from lixity.style_fingerprint import ks_2sample
+
+        for x in ([1.0], [1.0, 1.0, 2.0], [float(i) for i in range(200)]):
+            self.assertEqual(ks_2sample(x, x * 2), (0.0, 1.0))
+
+    def test_ks_small_distance_tail_is_stable(self):
+        from lixity.style_fingerprint import ks_2sample
+
+        x = [float(i) for i in range(1000)]
+        d, p = ks_2sample(x, [value + 0.5 for value in x])
+        self.assertAlmostEqual(d, 0.001, places=12)
+        self.assertGreater(p, 0.999999)
+
+    def test_wasserstein_handles_extreme_finite_knots(self):
+        from lixity.style_fingerprint import wasserstein_1d
+
+        x = [-1e308, 1e308]
+        self.assertEqual(wasserstein_1d(x, list(reversed(x))), 0.0)
+        self.assertEqual(wasserstein_1d(x, [-1e308, -1e308]), 1e308)
+
+    def test_distribution_comparisons_reject_nonfinite_samples(self):
+        from lixity.style_fingerprint import ks_2sample, wasserstein_1d
+
+        for compare in (ks_2sample, wasserstein_1d):
+            for value in (math.nan, math.inf, -math.inf):
+                for x, y in (([value], [0.0]), ([0.0], [value])):
+                    with self.subTest(compare=compare.__name__, value=value, x=x), self.assertRaisesRegex(ValueError, "finite"):
+                        compare(x, y)
     """Wasserstein distance and KS two-sample test."""
 
     def test_wasserstein_empty(self):
@@ -694,6 +852,25 @@ class TestHillEstimator(unittest.TestCase):
 
 
 class TestSnQn(unittest.TestCase):
+
+    def test_sn_uses_low_outer_and_high_inner_order_statistics(self):
+        from lixity.style_fingerprint import sn_estimator
+
+        for n in (2, 3, 4, 5, 6):
+            for values in itertools.combinations_with_replacement((0.0, 1.0, 4.0), n):
+                inner = [sorted(abs(a - b) for b in values)[n // 2] for a in values]
+                expected = 1.1926 * sorted(inner)[(n - 1) // 2]
+                with self.subTest(values=values):
+                    self.assertEqual(sn_estimator(list(values)), expected)
+
+    def test_qn_uses_modern_asymptotic_factor_and_pair_rank(self):
+        from lixity.style_fingerprint import qn_estimator
+
+        for n in (2, 3, 4, 5, 6):
+            values = [float(i * i) for i in range(n)]
+            distances = sorted(abs(a - b) for a, b in itertools.combinations(values, 2))
+            expected = 2.21914 * distances[math.comb(n // 2 + 1, 2) - 1]
+            self.assertEqual(qn_estimator(values), expected)
     """Sn and Qn robust scale estimators (Rousseeuw & Croux)."""
 
     def test_too_short(self):
@@ -834,6 +1011,14 @@ class TestStructuralIntegration(unittest.TestCase):
 
 
 class TestLexicalStructural(unittest.TestCase):
+
+    def test_nonprose_blocks_do_not_change_lexical_diagnostics(self):
+        text = "## A\n\n" + "bright birds cross quiet fields. " * 20
+        text += "\n\n## B\n\n" + "dark water covers empty streets. " * 20
+        decorated = text.replace("## B", "```python\n" + "invented values " * 80 + "\n```\n\n## B")
+        self.assertEqual(
+            lexical_structural_diagnostics(text), lexical_structural_diagnostics(decorated)
+        )
     """Token-level structural: co-occurrence fitness + Dunning keyness halves."""
 
     def setUp(self):

@@ -50,13 +50,14 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         return panel.querySelector('.dist').getBoundingClientRect().top - tiles.bottom;
       });
       assert.ok(gap >= 12 && gap <= 24, `KPI/chart gap ${gap} at ${width}`);
+      await page.mouse.move(0, 0);
       const headings = page.locator('#matrix th');
       assert.equal(await headings.locator('.help[data-help]').count(), await headings.count());
       const sentenceHelp = headings.locator('.help').nth(3);
       await sentenceHelp.evaluate(element => element.setAttribute('aria-describedby', 'microhint'));
       await sentenceHelp.focus();
       await page.waitForFunction(() => document.querySelector('#lixity-tooltip').classList.contains('visible'));
-      assert.match(await page.locator('#lixity-tooltip').textContent(), /sentence length/i);
+      assert.equal(await page.locator('#lixity-tooltip').textContent(), await sentenceHelp.getAttribute('data-help'));
       assert.equal(await sentenceHelp.getAttribute('aria-describedby'), 'microhint lixity-tooltip');
       await page.keyboard.press('Escape');
       assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');

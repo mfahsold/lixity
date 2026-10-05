@@ -2,15 +2,21 @@
 
 ## Implemented experimental pilot
 
-Implementation status: experimental local workspace in `v1.20.0`. The first UTF-8 pilot shipped in `v1.16.0`.
-Commands and limits are documented in [USAGE.md](USAGE.md).
+The local workspace remains experimental. The first UTF-8 pilot shipped in
+`v1.16.0`; current implemented commands and limits are documented in
+[USAGE.md](USAGE.md). The [RFC](README.md) describes additional proposals.
 
 The source-to-citation path and manual claim, evidence-link and decision records
 are implemented, alongside PDF extraction, authored revision history and verified
-archive export/restoration. The RFC remains a target architecture. Local contracts
+archive export/restoration, explicit reconciliation previews, atomic related-record
+revisions and structural editorial review. Local contracts
 use `research-local/1` and `/2`; v1.19.0 adds `/3` for source versions carrying
 a structured external reference, with a corresponding v3 manifest. New readers
-preserve support for v1/v2; older readers reject v3. Release v1.20.0 adds
+preserve support for v1/v2; older readers reject v3. Native Poppler and Tesseract
+activities use `research-local/4` and a v4 manifest; old v1–v3 records remain
+readable without rewriting their provenance. See
+[OCR compatibility](USAGE.md#use-local-ocr-without-a-worker-service).
+Release v1.20.0 added
 batch ingestion (`research-batch-ingest-local/1`), auto-fresh query index
 caching, section-bounded dossier reading, and decision-dossier review tracking.
 These contracts remain separate from the illustrative `research/1` bundle and
@@ -42,9 +48,11 @@ or contact a cloud library.
    `lixity.pipeline` without ambient configuration, mapping paragraphs to exact
    passage citations and source criticism context, with localized read-only dashboard.
 5. `research/api.py` and `research/cli.py`: init, local text/PDF ingest with context,
-   multi-file batch ingest (`research batch-ingest`), section-bounded dossier reads,
+   multi-file `research ingest --file ...`, section-bounded dossier reads,
    reindex, search, cite, audit, schema, analyze, dashboard, withdraw and purge
-   with dry-run preview. Require explicit project selection and local retention
+   with dry-run preview. `research revise-batch` previews related authored-record
+   updates and applies them in one commit only after explicit selection. Require
+   explicit project selection and local retention
    confirmation. JSON stdout; errors on stderr; `--progress` reports phase changes.
 6. `research/models.py` and `research/api.py`: source tagging, dossiers with
    passage references and structured sections, manually recorded claims with
@@ -53,10 +61,12 @@ or contact a cloud library.
    its review status (`review_needed`), keeping the revision loop transparent.
    A selected `evidenced` confidence value or an unset deviation flag is not
    an automated fact check.
-7. `server.py` & `ui/dashboard.py`: Interactive research management panel in the
+7. `server/routes_research.py` and shared `ui/research_panel.py` within
+   `ui/dashboard.py`: interactive research management panel in the
    `lixity serve` dashboard (source ingest/listing and full source detail,
    FTS5 search with direct evidence selection, dossier creation and detail,
-   dossier-linked claims, evidence/decision controls, and manuscript
+   dossier-linked claims, evidence/decision controls, reconciliation/change-set
+   previews, structural review, and manuscript
    grounding comparison). Opening an existing project path attaches its
    `research/` archive, including research-only roots with no manuscript;
    importing manuscript text creates a new project. Manuscript comparison
@@ -65,6 +75,11 @@ or contact a cloud library.
    PDF/text capture, structured attachment identity, explicit source refresh and
    additive RIS export with original bytes and a mapping manifest. The bridge
    calls the local API; it does not modify Zotero's internal database.
+9. `research/revisions.py` and `research/editorial.py`: immutable authored-record
+   revisions, pinned associations, read-only reconciliation and batch preparation,
+   and atomic batch application against an expected snapshot. Decision-impact
+   and review reports use explicit links, dates and revision pins; they do not
+   infer semantic contradictions or rewrite dossiers/manuscripts.
 
 ## Zotero and evidence ownership (since v1.19.0)
 
@@ -112,20 +127,22 @@ warns that lexical scores are not directly comparable. Source analysis uses
 `historical_language` limitation code, since a supplied original-language
 field does not itself imply historical language variety.
 
-## Acceptance checks
+## Verification scope
 
-- Test-first source ingestion, Unicode/CRLF quotation offsets and schema failures.
-- Refresh a source; old citations still resolve, default search uses new text.
-- Reject cross-project references and tampered blobs/manifests/revisions.
-- Simulate failure before HEAD publication; ignore uncommitted objects.
-- Exercise lock contention, stale expected heads, restore/reindex and FTS input.
-- Exercise CLI success/error/usage codes and no-write dry-runs.
-- Controlled withdrawal marks citations and excludes sources from search.
-- Purge with dry-run preview removes records and unshared original blobs.
-- Dossier creation validates evidence references and integrity invariants.
-- Web server action endpoints (`/api/research-*`) dispatch and handle errors.
-- Claim, evidence-link and decision records round-trip through the API and CLI.
-- Run the existing checks; analysis output schemas and pipeline remain unchanged.
+Synthetic tests cover Unicode/CRLF citation offsets and schema validation;
+source refresh with preserved old citations; cross-project references and
+tampered blobs/manifests/revisions; interrupted HEAD publication, locks and stale
+snapshots; verified restore/reindex and FTS input; CLI exit codes and no-write
+dry-runs; withdrawal and purge; authored-record API/CLI round trips and evidence
+integrity; and HTTP research dispatch/error envelopes. Reconciliation and batch
+tests cover preserved pins and rejection of stale/invalid operations without a
+partial commit. Native PDF tests use synthetic documents; Tesseract and worker
+protocol tests use synthetic engines/responses, not a recognition-quality corpus.
+
+These checks exercise local contracts, not historical accuracy or every external
+OCR/Zotero environment. Research storage and analysis schemas remain separate.
+See [contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
+for execution and platform coverage.
 
 ## Deferred explicitly
 

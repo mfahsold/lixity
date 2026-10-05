@@ -130,8 +130,13 @@ LANGUAGE_PROFILES: dict[str, LanguageProfile] = _build_profiles()
 
 
 def compile_pattern(pattern: str) -> "re.Pattern[str]":
-    """Compiles a language pattern; empty patterns never match (neutral fallback)."""
+    """Compile a case-insensitive cue; empty cues never match (neutral fallback)."""
     return re.compile(pattern or r"(?!x)x", re.IGNORECASE)
+
+
+def compile_word_pattern(pattern: str) -> "re.Pattern[str]":
+    """Compile tokens with only the flags explicitly supplied by the pattern."""
+    return re.compile(pattern)
 
 
 def get_language_profile(key: str) -> LanguageProfile:

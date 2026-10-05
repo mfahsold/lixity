@@ -9,14 +9,17 @@ const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-ui-'));
 const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
 const fixture = spawnSync(python, ['-c', `
 from lixity.api import dashboard
-text = """## First chapter
-
-I see the rain. I walk to the window. I drink my coffee.
-
-## Second chapter
-
-The house was sold and the door had been locked. The decision regarding the description of the property was difficult and the rent was high.
-"""
+# Three varying chapters above the diversity floor expose optional style axes.
+text = "## First chapter\\n\\n" + (
+    "I see the rain. I walk to the window. I drink my coffee. "
+) * 10
+text += "\\n\\n## Second chapter\\n\\n" + (
+    "The house was sold and the door had been locked. The decision regarding "
+    "the description of the property was difficult and the rent was high. "
+) * 6
+text += "\\n\\n## Third chapter\\n\\n" + (
+    'Rain falls. "Come closer!" A bird crosses the garden while the river rises. '
+) * 10
 print(dashboard(text, language="en", title="Browser regression"))
 `], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding:'utf8',maxBuffer:8*1024*1024});
 assert.equal(fixture.status,0,fixture.stderr);

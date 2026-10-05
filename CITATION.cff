@@ -1,20 +1,21 @@
 cff-version: 1.2.0
 message: "If you use Lixity, please cite it as below."
 title: "Lixity — Quantitative text linguistics, stylometry and self-calibrating style references"
-version: "1.19.0"
-date-released: "2026-09-27"
+version: "1.25.0"
+date-released: "2026-10-06"
 license: LicenseRef-Lixity-Non-Commercial-License-1.0
 repository-code: "https://github.com/mfahsold/lixity"
 url: "https://mfahsold.github.io/lixity/"
 abstract: >-
   Offline, deterministic text-linguistics engine for literary manuscripts:
-  sentence rhythm, length-robust lexical diversity (HD-D, MTLD, MATTR,
-  Maas, Yule's K), language-calibrated readability, dialogue share,
+  sentence rhythm, lexical diversity (HD-D, MTLD, MATTR,
+  Maas, Yule's K), language-specific readability, dialogue share,
   paragraph-accurate tense profiles, and a self-calibrating style reference
-  (robust median/MAD bands, significance-adjusted z*, Benjamini-Hochberg /
-  Benjamini-Yekutieli FDR, effect sizes) with structural diagnostics
-  (PELT, Mann-Kendall, Sn/Qn, Hill, Wasserstein-KS, Dunning keyness,
-  Goh-Barabási co-occurrence fitness). Pure Python 3.10+, no cloud calls.
+  (robust median/MAD bands, noise-adjusted z*, nominal Benjamini-Hochberg /
+  Benjamini-Yekutieli selections, effect sizes) with exploratory diagnostics
+  (guarded changepoints, Mann-Kendall, Sn/Qn, Hill, Wasserstein-KS,
+  Dunning keyness and fitted co-occurrence degree tails). Pure Python 3.10+,
+  no cloud calls. Statistical signals support human review, not quality scores.
 authors:
   - family-names: Fahsold
     given-names: Matthias

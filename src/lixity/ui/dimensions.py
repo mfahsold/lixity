@@ -43,9 +43,11 @@ def style_dimensions(
 
     points_data = []
     for ch in chapters:
-        sx = round(float(d1["scores"].get(ch.num, 0.0)), 2)
-        sy = round(float(d2["scores"].get(ch.num, 0.0)), 2) if d2 else 0.0
-        sz = round(float(d3["scores"].get(ch.num, 0.0)), 2) if d3 else 0.0
+        if any(ch.num not in dim["scores"] for dim in dim_list):
+            continue
+        sx = round(float(d1["scores"][ch.num]), 2)
+        sy = round(float(d2["scores"][ch.num]), 2) if d2 else 0.0
+        sz = round(float(d3["scores"][ch.num]), 2) if d3 else 0.0
         points_data.append(
             {
                 "ch": ch.num,
@@ -109,7 +111,10 @@ def style_dimensions(
         f'<div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div>'
         f"</div>"
     )
-    parts.append(f'<div class="dim-3d-footer"><span>{translated("dim_3d_hint")}</span></div>')
+    parts.append(
+        f'<div class="dim-3d-footer"><span>{translated("dim_3d_hint")}</span>'
+        f'<span>{len(points_data)} / {len(chapters)} {translated("chapters")}</span></div>'
+    )
     parts.append("</div>")
 
     parts.append('<div class="dim-cards-col">')

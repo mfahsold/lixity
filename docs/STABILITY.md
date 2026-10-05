@@ -1,7 +1,8 @@
 # Stability & known limitations
 
-Research basis, known limitations and every documented trade-off in one
-place — kept in the present tense, no session logs.
+Use this page to judge what a result can support. Formula details live in
+[METHODS.md](METHODS.md); the register below tracks current calculation and
+interface limits. Statistical signals support a human review, not a prose grade.
 
 Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 🟡 low (cosmetic or documented trade-off).
@@ -16,7 +17,7 @@ contracts, not empirical validation of linguistic accuracy across seven
 languages. No language-wide accuracy percentage is established by this suite.
 
 The 3D chapter view is exploratory: its dimensions are corpus-specific, signs
-can be arbitrary, and per-axis thresholds are not simultaneous confidence
+are fixed by convention, and per-axis thresholds are not simultaneous confidence
 regions. Pointer interaction is tested; complete keyboard navigation within
 the canvas is not yet available. Textual dimension information remains visible.
 
@@ -26,7 +27,6 @@ success is not a security certification for an arbitrary adapter.
 
 ### Research and external-library limits
 
-The optional Zotero integration is included in `v1.19.0`.
 Zotero can lead the source/media catalogue; Lixity retains immutable evidence
 and authored records. These stores have complementary responsibilities and
 separate backup requirements. Lixity's integrity audit checks retained bytes,
@@ -56,129 +56,121 @@ readers also accept v1/v2. Search across current authored records does not resol
 contradictory prose or promote a hypothesis to an accepted author decision.
 See [Research usage](research/USAGE.md) for operational limits.
 
-**Robust statistics & multiplicity control.**
-- MAD with the 1.4826 consistency constant ($1/\Phi^{-1}(3/4)$, R/DescTools
-  default) scales the median absolute deviation to normal-consistent σ;
-  0.6745 is the dual factor used in `robust_z`. Lixity never treats sample
-  SD as the house-style spread when MAD is available.
-- Significance-adjusted $z^* = (x-\tilde x)/\sqrt{\sigma_{\mathrm{MAD}}^2+\mathrm{SE}^2}$
-  shrinks deviations when an SE estimate is available (including Poisson/binomial
-  plug-ins). It does not guarantee that a short chapter cannot outrank a long
-  one, remove false positives, or validate the underlying linguistic model.
-- Benjamini–Hochberg at $q=0.05$ is the default multiplicity control over
-  chapter × feature cells; Benjamini–Yekutieli ($c=\sum 1/i$) is available via
-  `fdr_method="by"` / `--fdr-method by` when dependence among features is
-  unknown. Storey’s $\pi_0$ is optional literature, not required for a
-  400-cell matrix. Expected false positives at $|z^*|\ge 2.5$
-  are reported (`expected_false_positives`) so no deviation is called
-  “significant” in isolation.
-- Surviving FDR cells carry **Cliff’s $\delta$** under Romano bands
-  (negligible / small / medium / large) in `effect_magnitudes`, so magnitude is
-  never confused with significance alone. No separate Vargha–Delaney value is
-  reported; $\hat{A}_{12} = (\delta + 1)/2$ is derivable from $\delta$.
-- Baseline **exchangeability diagnostics** (runs test about the series
-  median, lag-1 autocorrelation vs $1/\sqrt{n}$, `low_power` for $n<8$)
-  flag series where the i.i.d. FDR model is optimistic — the passport’s
-  `baseline_diagnostics` block reports them.
-- Thresholds (`z_mild=2.5`, `z_strong=3.5`, `fdr_q=0.05`, `fdr_method="bh"`,
-  `dim_score_threshold=2.5`, `flag_min_severity=2`) are injectable
-  (CLI / API / control-server settings / `[tool.lixity]` project config) and
-  echoed in every passport `meta` block — see [`METHODS.md`](METHODS.md) §3.
+### Robust comparisons and statistical claims
 
-**Lexical diversity.**
-- McCarthy & Jarvis (2010, *Behavior Research Methods* 42:381–392) recommend
-  using **MTLD + vocd-D/HD-D + Maas together** – not a single index; each
-  captures unique lexical information. The corpus report follows exactly this
-  combination.
-- From version 1.16.0, `hd_d` is the exact expected TTR of a 42-token draw
-  without replacement, with a 100-token minimum input. It depends on type
-  frequencies, not token order or a random seed. Earlier releases stored a
-  sampled-window Gini–Simpson measure under the same key; old and new values
-  must not be compared. Reanalyze the original manuscript and regenerate
-  chapter metrics, style baselines, reports, and passports. Exact computation
-  removes Monte Carlo error, not uncertainty about prose beyond the observed
-  text; no independent HD-D measurement SE is estimated for style scores.
-- Bestgen (2024/2025, *The Twofold Length Problem*): **all** LD indices are
-  sensitive to very short texts; reliable measurement requires minimum text
-  lengths (their analyses use a 60-word floor). Kyle et al. (2024) confirm:
-  Root TTR and D are not length-reliable; **optimized MATTR and MTLD** are.
-- MATTR and MTLD correlate only weakly (≈0.07 in one corpus) – they measure
-  different things (local repetition vs. global variation); the UI shows
-  both, side by side.
-- The implementation's 100-token floor for HD-D, MTLD and Maas is a local
-  policy, not a quality or reliability boundary. Guiraud remains sensitive to
-  length, language and corpus composition. Maas accepts one observed type:
-  100 repetitions give $a^2=0.5$, not an unavailable result.
+Median/MAD and the noise-adjusted $z^*$ describe contrast within the supplied
+manuscript. A normal-consistency multiplier does not make arbitrary chapter
+features normally distributed. Missing SE means no estimated measurement error;
+zero event counts or constant samples do not establish certainty.
 
-**Readability & stylistics.**
-- Amstad (1978) recalibrates Flesch for German; Kandel-Moles, Szigriszt-Pazos,
-  Franchina-Vacca, Martins and Douma supply the fr/es/it/pt/nl constants.
-  Weiss & Meurers (2022) show that raw readability *formulas* miss
-  linguistic dimensions that matter for comprehension — Lixity therefore
-  names the formula variant (`flesch_variant`) and treats the score as a
-  relative, language-local signal, never a cross-language quality ranking.
-  Formula values are not clipped to 0–100 and do not establish an individual
-  reader's comprehension.
-- Dialogue shares use the configured word regex for both quoted tokens and
-  total tokens. `clean_words` retains its legacy whitespace-count meaning.
-  This correction can change prior dialogue ratios and dependent style results
-  without changing JSON field names; regenerate them before comparison.
-- Showing/telling ranks are absent (`most_telling=[]`, `most_showing=[]`) when
-  balances are indistinguishable, including fewer than three chapters. Numeric
-  zero fallback scores remain in the report; they are not evidence of equal
-  artistic effect. Without explicit scene dividers, pacing scenes are chapter
-  placeholders. Short sentences and sparse perception filters do not by
-  themselves establish effective pacing, immersion or prose quality.
-- Foregrounding theory (Mukařovský / standard stylistics): deviation from
-  a text’s *own* norm is the literary signal. The self-calibrating house
-  style is that norm — a cultural-science reading of “what is remarkable
-  *here*” rather than “what is correct” against an external standard.
+BH/BY are established selection procedures **given valid null probabilities**
+and their dependence conditions. Lixity's normal-tail probabilities use a
+baseline estimated from the same chapters; their calibration is not established.
+BY, runs/lag diagnostics and the `low_power` flag do not repair that gap.
+`fdr_flagged` means selected under the implemented model, and
+`expected_false_positives` is a standard-normal reference expectation, not an
+observed error count. Cliff's delta describes ordinal contrast, not quality.
+Definitions and active thresholds: [METHODS §§1–4](METHODS.md#1-robust-house-style-baseline).
 
-**Stylometry.**
-- Burrows’ Delta remains the standard baseline; 2026 work generalises it to
-  **Jensen–Shannon Delta** and Rank-Turbulence Delta and stresses
-  *interpretability*. The chapter divergence is a Jensen–Shannon distance
-  with interpretable driver words – in line with this direction, but not an
-  authorship-attribution instrument (documented).
-- Stylometry is best used as a "complementary, explainable diagnostic"
-  (2026), not as a verdict – the self-calibrating, author-centred design
-  matches this guidance.
+Style axes now use PCA of standardized tied midranks on one common complete
+chapter set. Covariance, explained variance and scores share that rank space;
+missing measurements are not imputed. At least three complete chapters and
+three varying baseline-usable features are required, with constant columns
+dropped on that set. Incomplete chapters have no dimension scores. This
+corrects the previous mixed raw/rank scoring population, but complete-case
+selection and small samples still limit interpretation. Score flags are
+descriptive and do not validate prose quality or simultaneous confidence.
+See [METHODS §5](METHODS.md#5-exploratory-style-dimensions).
 
-**Structural diagnostics.**
-- PELT (Killick et al. 2012) is the standard exact changepoint method;
-  the BIC penalty $2\ln n$ is the default for Gaussian cost and keeps the
-  segment count conservative. Changepoints mark *where* the house style
-  shifts, not *why* — they must be read together with the driver words.
-- Mann–Kendall (Mann 1945, Kendall 1975) is the non-parametric monotonic
-  trend test of choice for ordered environmental / stylistic series; the
-  tie-corrected normal approximation is appropriate for $n \ge 10$ and
-  remains a heuristic below that (documented).
-- Sn and Qn (Rousseeuw & Croux 1993) have 50 % breakdown and higher
-  Gaussian efficiency than MAD; Lixity reports them *next to* MAD so the
-  reader can see whether a band is robust to a single outlier chapter
-  (Sn/Qn stable, MAD not) or genuinely tight.
-- Hill’s $\hat\alpha$ estimates the power-law tail exponent; values
-  $\alpha \lesssim 2$ flag a heavy-tailed feature (occasional extreme
-  chapters) that a median/MAD band will under-represent.
-- Early/late **Wasserstein + two-sample KS** (`distribution_shift`) answer
-  whether the first half of the book differs distributionally from the
-  second half; KS $p$ is asymptotic (fine for $n \ge 10$, heuristic below).
-- **Dunning $G^2$** is the standard keyness measure for sub-corpus
-  contrasts; Lixity’s early/late split is a *documented heuristic* (chapter
-  count midpoint), not a fitted breakpoint — read it with PELT
-  `changepoints` when the halves look arbitrary.
-- **Goh–Barabási** (Goh et al. 2001) fits discrete power laws to the
-  content-word co-occurrence degree sequence; the KS distance and
-  asymptotic $p$ report fit quality, not “scale-free-ness” as a verdict.
-- **Co-occurrence degrees** (window = 2 by default) are a structural signal
-  over *content* words only; function/stop words are excluded so the graph
-  reflects topical co-occurrence, not syntax.
+### Lexical diversity
 
-**Track B / C (research & pedagogy, not shipped).** Textometry / Burrows’
-Delta (and 2026 JS/Rank-Turbulence generalisations), OHCO/TEI interchange,
-a deeper hermeneutic layer on flagged cells, and worked tutorial walks are
-catalogued as future directions in [`METHODS.md`](METHODS.md) Track B/C —
-they are not current product features and must not be cited as such.
+Length, local vocabulary and estimator parameters affect different indices.
+[Bestgen (2024)](https://doi.org/10.1111/lang.12630) studies English learner essays
+and monologues; 60 tokens is one truncation condition, not a universal floor.
+Its main experiment uses a 50-token draw/window parameter, so it does not
+directly calibrate Lixity's 42-token HD-D.
+[Kyle et al. (2024)](https://doi.org/10.1017/S0272263123000402) assesses optimized
+oral-task variants, not Lixity's defaults on German novels. Neither establishes
+genre-wide reliability for the local 100-token policy. Guiraud remains sensitive
+to length; fixed-window MATTR and fixed-draw HD-D still depend on their parameters
+and the supplied vocabulary distribution.
+
+HD-D is exact expected TTR for a 42-token draw on 0–1. Before v1.16.0 the same
+key held a sampled-window Gini–Simpson measure: regenerate older measurements
+before comparison. Exact computation removes Monte Carlo error, not population
+uncertainty. The 1.25 MTLD correction averages forward/reverse $N/F$
+scores arithmetically. It preserves Lixity's inclusive threshold, trailing
+factor and availability rules; different external variants still need explicit
+parameter and segmentation alignment. Formula and guard details:
+[METHODS §6](METHODS.md#6-lexical-diversity-indices).
+
+### Linguistic proxies and literary interpretation
+
+Analysis now shares the supported body/list/blockquote prose scope, stripping
+quote delimiters and inline emphasis while omitting YAML front matter, code,
+headings, comments and footnote definitions. Paragraph profiles intentionally
+retain their narrower body/list scope and source line anchors. Configured word
+regex flags are respected, English/German default tokens include accented
+Unicode letters, LF/CRLF paragraph boundaries agree, and the short-paragraph
+threshold is inclusive. Legacy whitespace counts are a separate unit. This
+bounded Markdown policy and language-rule coverage do not establish complete
+CommonMark support or linguistic token accuracy.
+
+Passive, tense, adjective, nominalization and modality fields count lexical
+markers or suffixes. For example, German `werden` also marks future tense or
+becoming; English `been` also appears in active perfect constructions. These
+counts do not identify syntactic voice or distinguish epistemic uncertainty
+from obligation. Sentence segmentation and syllables are also heuristic.
+
+Readability coefficient tests verify the declared formulas, not their original
+calibration or reader comprehension. Amstad's original coefficient page and
+calibration protocol have not been verified here. Scores may fall outside 0–100
+and are not comparable across language formulas. [German PALME research
+(2026)](https://aclanthology.org/2026.bea-1.6/) separates controlled detector tests
+from graded-reader evaluation; its results do not validate Lixity's regex cues.
+
+Showing/telling is a composite of those visible signals. Empty rankings and
+zero fallback scores do not establish equal artistic effect. Without explicit
+dividers, pacing scenes are chapter placeholders. Short sentences, perception
+verbs and vocabulary contrast do not establish immersion, tension or a reason
+to rewrite. Scene/register targets are explicit author preferences, never
+hardcoded genre norms. [Underwood's expert discussion](https://tedunderwood.com/2024/01/05/can-language-models-predict-the-next-twist-in-a-story/)
+illustrates why surface predictability and narrative experience differ.
+
+### Structural diagnostics
+
+The 1.25 corrections retain structural field names, but require
+regenerating stored metrics/passports before numerical comparisons. Remaining
+model limits are separate from the corrected calculations:
+
+- `pelt_changepoints` now uses exact unpruned dynamic programming: $O(n^2)$
+  time and $O(n)$ storage. The retained singleton/zero-variance guard violates
+  the PELT pruning premise, so no pruning or linear-time claim is made.
+  Anchored variance updates reduce cancellation; exact optimization of this
+  guarded objective does not validate its Gaussian model or a narrative break.
+  [Killick et al., Theorem 3.1](https://arxiv.org/abs/1101.1438v3).
+- Sn uses the original low outer/high inner medians and factor 1.1926. Qn
+  preserves its pairwise-distance rank with modern factor 2.21914; neither
+  applies finite-sample correction. Normal-consistency factors, finite bias
+  corrections and robustness remain distinct. [Original paper](https://wis.kuleuven.be/stat/robust/papers/publications-1993/rousseeuwcroux-alternativestomedianad-jasa-1993.pdf),
+  [maintained reference](https://cran.r-project.org/web/packages/robustbase/robustbase.pdf).
+- Early/late Wasserstein integrates the exact empirical-CDF difference;
+  merged CDFs also give KS $D$, with $D=0$ returning $p=1$ and stable survival
+  evaluation. The same asymptotic probability model remains: ties, short
+  samples, serial dependence and fitted distributions are not calibrated by
+  this numerical correction. Mann–Kendall `tau` remains tau-a, with a
+  tie-corrected approximate normal probability for $S$, not tau-b.
+- The graph exponent follows the approximate discrete estimator in
+  [Clauset–Shalizi–Newman Eq. 3.7](https://arxiv.org/abs/0706.1062v2).
+  The current continuous fitted CDF and ordinary KS probability do not implement
+  its refitted goodness-of-fit procedure. Graph degrees are dependent too;
+  neither a fit distance nor a small sample certifies a scale-free graph.
+
+Early/late splits are chapter-count midpoints, not learned narrative boundaries.
+Signed Dunning keyness ranks token contrast; it has no multiplicity adjustment.
+Chapter-to-rest JSD is raw divergence in nats, not its square-root distance or
+an external Delta authorship test. Inspect driver words in context. Formula
+details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-diagnostics-structural_diagnostics).
 
 **Accessibility / data visualisation (WCAG 2.2).**
 - Colour must never be the only channel (SC 1.4.1, 1.3.3): the heatmap
@@ -204,8 +196,8 @@ they are not current product features and must not be cited as such.
 | :-- | :--- | :--- | :--- | :--- |
 | 1 | Dashboard JS | no automated JS test; DOM hooks (ids/classes) are an implicit contract | renaming a class breaks interactions silently | 🟠 → **fixed**: UI-contract test asserts every hook used by `dashboard.js` exists in the rendered HTML |
 | 2 | Label packs | missing translations fall back to English silently | untranslated UI goes unnoticed | 🟠 → **fixed**: completeness test over the 7 languages for a required key set |
-| 3 | LD indices on short texts | literature shows unreliability below ~60 words | Bestgen 2024; Kyle et al. 2024 | 🔴 → **fixed**: MTLD ≥ 100 tokens, Maas ≥ 100, MATTR ≥ window (50); otherwise `null` + help texts updated |
-| 4 | Style fingerprint with few chapters | median/MAD unstable for n < 5; dimensions need spread | baseline sigma = 0 for single chapters | 🟠 → **fixed** (v1.3.0): panels hidden when no measurable spread; **documented** minimum chapters |
+| 3 | LD indices on short texts | local guards do not establish reliability | length and parameter sensitivity depend on corpus and estimator | 🟡 **mitigated**: HD-D/MTLD/Maas ≥100 tokens; MATTR requires a full window; `null` is availability, not a validated reliability boundary |
+| 4 | Style fingerprint with few chapters | minimum observations do not establish calibration; missingness can shrink the complete-case set | single chapters have no comparative baseline | 🟡 **mitigated**: dimensions require ≥3 complete chapters and ≥3 varying usable features in one rank space; incomplete scores are omitted; availability is not reliability |
 | 5 | Heuristic syllable counting | language-specific rules; no validated aggregate error rate | no gold-standard corpus in-repo | 🟡 **documented**; used only as a relative signal, formula names shown |
 | 6 | Tense patterns | curated alternations + productive `-te`/`-ed` have FP/FN on ambiguous forms | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth |
 | 7 | Packaging | a wheel could miss `ui/assets/*` or `py.typed` | config exists, never verified in CI | 🟠 → **fixed**: CI job builds a wheel and asserts assets + typing marker are inside |
@@ -214,7 +206,7 @@ they are not current product features and must not be cited as such.
 | 10 | Dashboard size | ~2 MB HTML for 95k words, linear growth | per-paragraph payload | 🟡 **documented**; future option: JSON payload + client render |
 | 11 | Cross-machine determinism | float last bits may differ across platforms/Python versions | `math.log` summation order | 🟡 **documented**: byte-identical on the same interpreter; in-process determinism is tested |
 | 12 | NDA store | `nda/` is gitignored; only the off-site backup covers it | data loss if backup fails | 🟡 **documented**; backup includes `nda/`; hook warns when backup is skipped |
-| 13 | Chip target size | 18 px strips below WCAG 2.5.8 (24 px) | deliberate density | 🟡 **documented** exception (keyboard + click-to-read + hover growth) |
+| 13 | Chip target size | dense strips need WCAG 2.5.8 assessment | keyboard access alone does not establish a target-size exception | 🟡 **open**: contextual reading and focus states help usability but do not certify conformance |
 | 14 | UI labels architecture | label packs merged at runtime (base → metric → help → group → layer → ui) | fallback chain is implicit | 🟠 → **fixed**: merge order documented in `docs/AGENTS.md` §3.3 + completeness test |
 | 15 | Status strip | states derive from file presence/mtime – a restored or clock-skewed file can read "stale" although it is current | no content hash in the status path | 🟡 **documented**: state is advisory; undeterminable components render `unknown`, not a fake `ok` |
 | 16 | Marker notes | notes live in an HTML-comment attribute: quotes/newlines must be escaped; very long notes bloat the comment line | `note="…"` in the marker line | 🟠 → **fixed**: escaping on write (round-trip test); **documented** guidance: one short sentence |
@@ -226,7 +218,7 @@ they are not current product features and must not be cited as such.
 | 22 | Corpus vs. chapter metrics | two divergent sentence splitters and duplicated sentence statistics | chapter matrix was still on the naive regex | 🟠 → **fixed**: one splitter and one `SentenceStats` implementation for both levels |
 | 23 | Syllable heuristics | German double vowels and English silent-e/-le were mis-counted | `Kaffee`=3, `table`=3 | 🟡 → **fixed** for these fixtures: double vowels count as one nucleus, syllabic-l rule de-duplicated; language-wide accuracy remains unestablished |
 | 24 | LIX long-word threshold | per-language calibration (7/8 characters) deviated from the standard | Björnsson defines >6 characters | 🟠 → **fixed**: standard >6 characters for every language; LIX values rise accordingly (documented, breaking metric change) |
-| 25 | Readability formulas | constants must match the named literature formulas | hand-computed tests added | 🟢 **verified**: Amstad, Flesch, Kandel-Moles, INFLESZ (62.35), Franchina-Vacca (0.6 per 100 words = 60.0), Martins, Douma |
+| 25 | Readability formulas | coefficient dispatch and empirical validation are different | hand-computed tests cover declared constants | 🟡 **documented**: formula dispatch is tested; original Amstad calibration and language-wide syllable accuracy remain unverified |
 | 26 | UI interaction contract | some click targets were not keyboard reachable; one drill-down was lost | band rows lacked `role`/`tabindex` and the layer mapping | 🟠 → **fixed**: unified `[role="button"]` contract, one JS selector, focus ring for all; band rows jump to `#feat-<field>` (heatmap column) with optional layer + deviations-only |
 | 27 | Dialogue turns | "turn" = quoted segment; no speaker attribution, quotation patterns are curated per language | no reliable offline speaker ID | 🟡 **documented**: turn structure, not who speaks; patterns per language profile |
 | 28 | Character presence | whole-word matching on caller-supplied names/aliases; no NER, no coreference | nickname not in the list is invisible | 🟡 **documented**: alias patterns supported (`Matthias\|Matze`); appendix/front matter excluded so chapter numbers match the metrics |
@@ -236,15 +228,15 @@ they are not current product features and must not be cited as such.
 | 32 | Type safety & warnings | untyped helpers and warning noise could hide defects | strict typing was off; `\w` in a docstring raised a SyntaxWarning | 🟠 → **fixed**: `mypy --strict` clean (0 errors) and enforced in CI; `python -W error` test run is clean |
 | 33 | Marker controls in jumpable rows | a click on “+ kind”/“Resolve” inside a `row-link` also fired the row jump (marker buttons carry `data-line`, which the INTERACTIVE selector matched) | double action: note field opened *and* the page scrolled | 🟠 → **fixed**: `isMarkerControl()` guard in click *and* keydown handlers; contract test asserts the guard |
 | 34 | Flagged list length | severity ≥ 2 rows grow linearly with manuscript size (100+ rows in a novel) | a flat list would push the dashboard top down | 🟡 **documented**: capped scroll area (sticky header, ~26 rem); severity-descending sort keeps the worst cases visible |
-| 35 | Structural changepoints | PELT on short series ($n < 8$) can over-segment; BIC penalty is conservative but not a stationarity proof | $n \ge 3$ required; penalty $2\ln n$ | 🟡 **documented**: `segmented_features` is a signal to inspect, not a proof of regime change; read with `trends` and JSD drivers |
-| 36 | Mann–Kendall $p$ | normal approximation degrades for very short series; ties affect $\tau$ | $n \ge 3$ required | 🟡 **documented**: `trending_features` uses $p < 0.05$ as a heuristic cut; treat $n < 10$ as provisional |
+| 35 | Structural changepoints | guarded singleton/constant cost remains a modelling choice; short series can over-segment | former pruning could miss the declared minimum | 🟡 **documented**: 1.25 correction uses exact unpruned $O(n^2)$ time/$O(n)$ storage; cuts are review signals, not validated narrative boundaries |
+| 36 | Mann–Kendall | tau-a is not tie-normalized tau-b; normal approximation needs assumptions | ties and serial dependence affect interpretation | 🟡 **documented**: tau-a naming is corrected; S and approximate p remain separate outputs; `trending_features` is model-dependent |
 | 37 | Hill tail index | $\hat\alpha$ biased for small $k$; undefined for non-positive values | $n \ge 5$, $k = \lfloor\sqrt n\rfloor$ | 🟡 **documented**: `tail_index` is diagnostic only; low $\alpha$ = occasional extreme chapters, not a quality problem |
-| 38 | Sn / Qn vs. MAD | different consistency constants ($1.1926$, $2.2219$); $O(n^2)$ | both reported side by side in `robust_scales` | 🟡 **documented**: Sn/Qn are cross-checks, not replacements for the MAD band; disagreement flags outlier sensitivity |
-| 39 | Goh–Barabási fit | discrete power-law fit on short degree sequences is unreliable | $n \ge 5$ positive degrees, non-constant | 🟡 **documented**: needs ≥ 50 content tokens for the co-occurrence graph; KS $p$ is asymptotic, not exact for tiny samples |
+| 38 | Sn / Qn | asymptotic scaling does not remove finite-sample bias; pairwise work grows with chapter count | no finite-sample correction is applied | 🟡 **documented**: 1.25 correction uses original Sn low/high medians ×1.1926 and the same Qn rank ×2.21914; descriptive cross-checks alongside MAD |
+| 39 | Degree-sequence fit | approximate discrete exponent is combined with a different continuous CDF and ordinary fitted KS p | estimator attribution and goodness-of-fit assumptions differ | 🟠 **open**: label as exploratory; no calibrated fit probability or scale-free claim |
 | 40 | Parallel split paths | `dialogue` and `analyzer` once had divergent `split_chapters` implementations | chapter numbering could drift | 🟠 → **fixed**: single source in `markdown_parser.split_chapters` (re-export from `dialogue`); regression test asserts shared titles + sequential numbering |
 | 41 | Threshold resolution | three call sites built `FingerprintThresholds` independently (CLI / API / dashboard) | a new key could be wired on one path only | 🟠 → **fixed**: one builder `config.resolve_thresholds` (kwargs > project config > default); unit tests cover each precedence level |
 | 42 | `flag_min_severity` wiring | profile / dashboard / CLI each resolved the flags cut differently | raising the floor could leave stale counts in one surface | 🟠 → **fixed**: end-to-end plumbing (CLI `_thresholds_and_profile` → `ProfileThresholds` → `render_dashboard(flag_min_severity=…)`); contract tests for profile + dashboard select |
-| 43 | Structural early/late split | `distribution_shift` / `keyness` use a chapter-count midpoint, not a fitted breakpoint | PELT may place the break elsewhere | 🟡 **documented**: heuristic halves; cross-read with `changepoints` and `trends` |
+| 43 | Structural early/late split | `distribution_shift` / `keyness` use a chapter-count midpoint, not a fitted breakpoint | changepoint optimization may place a break elsewhere | 🟡 **documented**: heuristic halves; cross-read with `changepoints` and `trends` |
 | 44 | Token-level structural only on text surfaces | `from_metrics` alone has no tokens, so `cooccurrence` / `keyness` appear only when built from source text | a metrics-only passport looks “incomplete” | 🟡 **documented** in METHODS §4c: merge via `lexical_structural_diagnostics`; metric-derived keys always present |
 | 45 | `signal_counts` empty by default | language profiles ship `"signal_keywords": {}`; without `CorpusConfig.signal_keywords` the field is always `{}` | empty looks like “no signal words found” rather than “not configured” | 🟡 **documented** in USAGE/AGENTS: field is opt-in via config; not a measurement failure |
 | 46 | Filter-verb count ≠ editorial lists | engine `de` filter regex is a curated lemma list (perception/filter verbs); broader editorial lists differ (≈94 vs 120 for German) | dossier tables use a different definition | 🟡 **documented**: never swap numbers without restating the definition; within-language only |
