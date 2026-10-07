@@ -20,6 +20,8 @@ text += "\\n\\n## Second chapter\\n\\n" + (
 text += "\\n\\n## Third chapter\\n\\n" + (
     'Rain falls. "Come closer!" A bird crosses the garden while the river rises. '
 ) * 10
+text += "\\n\\nI walk home." * 100
+text = text.replace("First chapter", '<img src=x onerror="window.tooltipInjected=true">', 1)
 print(dashboard(text, language="en", title="Browser regression"))
 `], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding:'utf8',maxBuffer:8*1024*1024});
 assert.equal(fixture.status,0,fixture.stderr);
@@ -27,7 +29,7 @@ assert.equal(fixture.status,0,fixture.stderr);
 (async () => {
   const browser = await launchChromium();
   try {
-  const page = await browser.newPage({viewport: {width: 1280, height: 900}});
+  const page = await browser.newPage({viewport: {width: 1280, height: 900}, hasTouch: true});
   const errors = [];
   const results = [];
   page.on('pageerror', error => errors.push(error.message));
@@ -59,6 +61,51 @@ assert.equal(fixture.status,0,fixture.stderr);
     assert.equal(await page.locator('#dim-ctl-traj').getAttribute('aria-pressed'), 'false');
     await page.locator('#dim-ctl-traj').click();
     assert.equal(await page.locator('#dim-ctl-traj').getAttribute('aria-pressed'), 'true');
+  });
+  await check('chapter scores provide semantic text and safe chapter links', async () => {
+    assert.equal(await page.locator('#dim-scores tbody tr').count(), 3);
+    assert.equal(await page.locator('#dim-scores caption').textContent(), 'Chapter scores');
+    assert.equal(await page.locator('#dim-scores a[href="#ch-1"]').textContent(), '1. ' + payload.points[0].title);
+    assert.equal(await page.locator('#dim-scores img, #dim-scores script').count(), 0);
+    assert.ok(await page.locator('#dim-scores').textContent().then(value => value.includes('Not flagged')));
+    const scores = await page.locator('#dim-scores td.num').allTextContents();
+    assert.equal(scores.length, 9);
+    assert.ok(scores.every(score => /^[+-]?\d+\.\d{2}$/.test(score)), JSON.stringify(scores));
+    const chapter = page.locator('#dim-scores a[href="#ch-1"]');
+    await chapter.focus();
+    await page.keyboard.press('Enter');
+    assert.equal(await page.locator('#ch-1').evaluate(element => element.classList.contains('flash')), true);
+    await page.locator('#dim-scores a[href="#ch-2"]').tap();
+    assert.equal(await page.locator('#ch-2').evaluate(element => element.classList.contains('flash')), true);
+    assert.equal(await page.evaluate(() => Boolean(window.tooltipInjected)), false);
+  });
+  await check('chapter score links work without JavaScript', async () => {
+    const fallback = await browser.newPage({javaScriptEnabled: false, viewport: {width: 320, height: 844}});
+    try {
+      await fallback.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: original}));
+      await fallback.goto('http://lixity.test/');
+      assert.equal(await fallback.locator('#dim-scores tbody tr').count(), 3);
+      await fallback.locator('#dim-scores a[href="#ch-2"]').click();
+      assert.ok(fallback.url().endsWith('#ch-2'));
+    } finally { await fallback.close(); }
+  });
+  await check('keyboard controls rotate and zoom the existing canvas', async () => {
+    assert.equal(await page.locator('.dim-navigation button').count(), 6);
+    await page.locator('#dim-ctl-reset').click();
+    await page.locator('#dim-3d-canvas').scrollIntoViewIfNeeded();
+    const initial = await page.locator('#dim-3d-canvas').screenshot();
+    for (const id of ['dim-ctl-left', 'dim-ctl-right', 'dim-ctl-up', 'dim-ctl-down', 'dim-ctl-zoom-in', 'dim-ctl-zoom-out']) {
+      const control = page.locator('#' + id);
+      assert.ok((await control.textContent()).trim().length > 0);
+      await control.focus();
+      await page.keyboard.press('Enter');
+      assert.notDeepEqual(await page.locator('#dim-3d-canvas').screenshot(), initial, id);
+      await page.locator('#dim-ctl-reset').click();
+      assert.deepEqual(await page.locator('#dim-3d-canvas').screenshot(), initial, id + ' reset');
+    }
+    await page.locator('#dim-ctl-zoom-in').tap();
+    assert.notDeepEqual(await page.locator('#dim-3d-canvas').screenshot(), initial, 'touch zoom');
+    await page.locator('#dim-ctl-reset').click();
   });
   await check('chapter title is text, not executable markup', async () => {
     await page.locator('#dim-3d-canvas').scrollIntoViewIfNeeded();
@@ -94,6 +141,24 @@ assert.equal(fixture.status,0,fixture.stderr);
     const widths = await page.locator('#dimensions .load b').evaluateAll(elements => elements.map(element => element.getBoundingClientRect().width));
     assert.ok(widths.length > 0 && widths.every(width => width >= 40), JSON.stringify(widths));
   });
+  await check('touch targets remain readable in a scrolling paragraph strip', async () => {
+    await page.setViewportSize({width: 320, height: 844});
+    const targets = await page.locator('.chip, .dim-ctl').evaluateAll(elements => elements.map(element => {
+      const box = element.getBoundingClientRect();
+      return {width: box.width, height: box.height};
+    }));
+    assert.ok(targets.every(box => box.width >= 44 && box.height >= 44), JSON.stringify(targets));
+    const strip = page.locator('#ch-3 .strip');
+    assert.ok(await strip.evaluate(element => element.scrollWidth > element.clientWidth));
+    const last = strip.locator('.chip').last();
+    await last.tap();
+    assert.equal(await last.getAttribute('aria-expanded'), 'true');
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.locator('#ch-3').screenshot({path: path.join(artifacts, 'paragraph-touch.png')});
+  });
+  // Final visual evidence uses the unmodified chart and matching score table.
+  await page.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: original}));
+  await page.goto('http://lixity.test/');
   await page.locator('#dimensions').screenshot({path:path.join(artifacts,'mobile.png')});
   await page.setViewportSize({width:1280,height:900});
   await page.locator('#dimensions').screenshot({path:path.join(artifacts,'desktop.png')});

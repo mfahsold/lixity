@@ -24,7 +24,7 @@ project, start with the [README](https://github.com/mfahsold/lixity/blob/main/RE
 13. [Debug logging](#debug-logging-since-v1190)
 14. [Research search scopes](#research-search-scopes-since-v1190)
 15. [Zotero integration](#zotero-integration-since-v1190)
-16. [Native NDA tracking and isolated keying](#native-nda-tracking-and-isolated-keying-since-v1200)
+16. [NDA drafts](#nda-drafts)
 17. [Research batch workflow and index ergonomics](#research-batch-workflow-and-index-ergonomics-since-v1200)
 
 ## Installation
@@ -37,12 +37,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.25.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.0.0"
 lixity --version
 lixity about
 ```
 
-`v1.25.0` is the release pin. Choose `@main` only to follow development,
+`v2.0.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
@@ -96,7 +96,7 @@ which writes a single HTML file.
 | I want to see and click all of it | `lixity dashboard` | single-file HTML, all panels, offline |
 | I want an interactive live server | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
-| I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation, `nda/` |
+| I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
 
 ## Dashboard workflow
@@ -121,9 +121,8 @@ Source and dossier list filters match case-insensitive substrings in loaded
 titles, tags and IDs; dossiers also match excerpts and section names. Typing
 does not request the server or search source text. Use Research → Search for
 full-text archive search. Filters keep loaded details and leave association
-dropdowns complete, including records hidden from the list. The NDA manager is
-a native details panel, initially collapsed and shown only when that capability
-is available; opening it does not change the NDA backend.
+dropdowns complete, including records hidden from the list. The NDA generator is shown only when the live host advertises `nda-draft`;
+its five-field form has explicit preview and download actions.
 
 ```bash
 lixity dashboard manuscript.md --language en -o dashboard.html
@@ -160,13 +159,22 @@ No font files are fetched from a third-party server.
 
 In **Style dimensions**, drag to rotate, use the wheel to zoom, toggle the
 trajectory or threshold box, and reset the camera as needed. Select a chapter
-point to navigate to the underlying chapter. Rotation is opt-in and pauses
-when the tab is hidden. Dimension cards show positive and negative loadings.
+point to navigate to the underlying chapter. Automatic rotation is opt-in and
+pauses when the tab is hidden. Dimension cards show positive and negative loadings.
+
+**Since 2.0.0:** labeled rotation and zoom buttons support
+keyboard and touch input. The **Chapter scores** table shows the same measured
+chapters, their actual dimension scores and flag status. Its native chapter links
+also work with JavaScript disabled. Focus the scrolling table region to reach
+columns that extend beyond a small screen. Paragraph chips and dimension controls
+have at least 24×24 CSS-pixel targets, increasing to 44×44 for coarse pointers;
+long paragraph strips retain their proportional widths and scroll horizontally.
 
 The box represents independent per-axis cutoffs, not a confidence ellipsoid.
 An outlying point means “inspect this chapter,” not “this writing is bad.”
-The canvas is pointer-operated; textual scores/loadings remain available, but
-full keyboard navigation of individual canvas points is not implemented.
+Individual canvas points remain pointer-operated. Use the native controls and
+chapter-score links for equivalent keyboard/touch navigation; these provisions
+do not establish complete accessibility conformance.
 
 Publication, marker-mutation and NDA controls require a compatible project
 server; a standalone HTML export does not provide those services itself.
@@ -525,7 +533,7 @@ lixity dashboard manuscript.md -o ui.html
 Idempotent workspace build. Put a manuscript into a folder and run `lixity
 build` (or `lixity build path/to/manuscript.md`): lixity discovers the
 manuscript, creates the subfolders `exports/` (with `exports/archive/`) and
-`nda/`, and publishes all analysis artifacts:
+publishes all analysis artifacts:
 
 - `exports/<slug>_metrics.json` – full corpus metrics (schema_version 2 meta),
 - `exports/<slug>_profile.json` – paragraph-level heuristic tense profiles with line anchors,
@@ -689,6 +697,13 @@ belong to localized labels, not callable API functions or result fields.
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
 
+For example, to review an ASL difference in a synthetic **Report** chapter,
+read its value and the manuscript reference, follow its chapter link, and open
+a paragraph strip to inspect the source lines. Compare the longer sentences
+with the chapter's purpose. Keep deliberate variation or record a review note;
+after an author makes an edit, rebuild and inspect the passage again. A flagged
+measurement supplies a review location, not a reason to rewrite automatically.
+
 ## Known limitations & stability
 
 What the numbers can and cannot do — the full register (research basis,
@@ -728,9 +743,11 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 - **Dashboard size** grows with paragraph count (~2 MB for 95k words) by
   design — self-contained and offline.
 - **Accessibility:** numeric labels and text details complement analytical colour
-  scales. Dense paragraph strips offer keyboard access and click-to-read; the
-  3D canvas remains pointer-operated. These provisions and automated checks do
-  not establish full accessibility conformance.
+  scales. Since 2.0.0, chapter-score links and native rotation/zoom
+  controls provide keyboard/touch equivalents to point navigation. Paragraph
+  chips and dimension controls use 24×24 targets, or 44×44 on coarse pointers.
+  Individual canvas points remain pointer-operated; automated checks do not
+  establish full accessibility conformance.
 
 ## Library
 
@@ -877,20 +894,24 @@ not a code change.
 
 ### Project NDA configuration (`[nda]`)
 
-Configured under `[nda]` in `lixity.toml`:
+The five-field generator works without configuring a store. Optional project
+settings in **2.0.0** select a document language or text model:
 
 ```toml
 [nda]
-provider = "native"                   # "native" (built-in encrypted storage) or "project"
-key_env = "LIXITY_PROJECT_KEY"        # env var holding the 256-bit AES-GCM encryption key
-required = false                      # if true, lixity build fails when key/status is missing
+# language = "de"                    # optional explicit language override
+# template = "agreements/nda.txt"     # optional project-owned UTF-8 model
 ```
 
-| Field | Default | Purpose |
-| :--- | :--- | :--- |
-| `provider` | `native` | Storage provider (`native` stores AES-GCM encrypted records in `nda/nda.enc.json`). |
-| `key_env` | `None` | Environment variable name providing the symmetric decryption key. |
-| `required` | `false` | When true, enforces valid NDA records during `lixity build`. |
+`language` takes precedence over the resolved server/project language, then
+project configuration and English. Supported codes are `en`, `de`, `fr`, `es`,
+`it`, `pt` and `nl`. `template` must be nonempty UTF-8 text inside the project,
+at most 2 MiB; paths and symlinks escaping the project are rejected.
+
+The five literal placeholders are `{{recipient_name}}`, `{{recipient_address}}`,
+`{{project_title}}`, `{{date}}` and `{{place}}`. Unknown fields are rejected;
+supplied values remain literal data. Generation and downloads are described
+[below](#nda-drafts).
 
 ## Troubleshooting
 
@@ -955,18 +976,19 @@ Start the local server with `lixity serve /absolute/path/to/project --debug`,
 or set `LIXITY_DEBUG=1` in its environment (`true` and `yes` also enable it).
 This enables backend request logging and emits a debug meta tag in the dashboard.
 In the browser console, `setLixityDebug(true)` enables verbose API and runtime
-diagnostics; `setLixityDebug(false)` disables verbose logging for the active page
-and removes the saved local preference. Warnings and errors still log.
+diagnostics. **Since 2.0.0:** it saves an explicit `1`,
+while `setLixityDebug(false)` saves `0`. These browser preferences take priority
+over `window.LIXITY_DEBUG` and the server's debug meta tag, so either choice
+survives reload when local storage is available. Remove `lixity_debug` from local
+storage to return to the window/server default. With blocked storage, the choice
+applies to the active page and reload uses those defaults again.
 
-On reload, a truthy `window.LIXITY_DEBUG` or the server's debug meta tag takes
-precedence over local storage. Disabling logging in the console therefore does
-not survive reload when the server enables debug mode. To keep it off, restart
-the server without `--debug` and without an enabling `LIXITY_DEBUG` value, then
-clear the browser preference with `setLixityDebug(false)`.
-
-Backend request lines include a timestamp; separate error-detail lines currently
-do not. Browser API diagnostics include method, URL, status, elapsed milliseconds
-and response details, but no explicit wall-clock timestamp. Logs may contain
+The browser preference does not change backend logging. Start or restart the
+server with the intended CLI/environment setting. Browser warnings and errors
+continue to log; API diagnostics include method, URL, status, elapsed milliseconds
+and response details. In 2.0.0, backend requests and error details share
+one UTC writer and the prefix `[YYYY-MM-DD HH:MM:SS UTC] [server:debug]`.
+Browser API diagnostics have no explicit wall-clock timestamp. Logs may contain
 source content or paths; review them before sharing.
 
 ## Research search scopes (since v1.19.0)
@@ -1003,51 +1025,49 @@ See the [Zotero bridge reference](research/USAGE.md#zotero-desktop-bridge-since-
 for setup, pagination, dry runs, v3 compatibility, identity matching and recovery.
 There is no automatic migration, bidirectional synchronization or archive deletion.
 
-## Native NDA tracking and isolated keying (since v1.20.0)
+## NDA drafts
 
-Lixity includes native project NDA tracking and isolated keying. A project can
-track disclosure status, recipient agreements, and access permissions locally in
-encrypted form without relying on external cloud vaults.
+Under **Project & Settings**, enter **Name**, optional **Address**, **Project
+name**, **Date** and **Place**. A real loaded project name can be prefilled;
+an empty workspace leaves it blank. The date defaults to the browser's local
+calendar day. Choose **Preview** to read the full friendly agreement, then
+**Download PDF** or **Download text**. The address may span several lines.
 
-When `[nda]` is configured with `provider = "native"`, records are stored under
-`nda/nda.enc.json` encrypted with AES-256-GCM. The encryption key is supplied
-through the environment variable named in `key_env` (e.g. `LIXITY_PROJECT_KEY`).
+The native generator uses the resolved project language or the optional
+`nda.language` override. Seven localized text models are available. Preview
+shows text literally, and the browser downloads a paginated PDF or editable
+UTF-8 text. The request returns the document directly; generation creates no
+server files or recipient registry. Details remain in the current form for a
+retry and are not saved across reloads. JavaScript and a compatible live server
+are required for the form; standalone analysis HTML has no NDA controls.
 
-- **Workspace build enforcement:** `lixity build manuscript.md` checks NDA status.
-  If `required = true` is set in `lixity.toml`, the build verifies that the key
-  is present and decryption succeeds.
-- **Server API:** The local server exposes `GET /api/project/nda` and
-  `POST /api/project/nda`, allowing project managers and authorized authors to
-  review or update NDA records directly from the Project Settings panel.
-- **Key isolation:** The encryption key is never logged, persisted in dashboard
-  HTML, or written to unencrypted project files.
+Native PDF text is limited to Windows-1252 Western Latin characters. If a name
+or other value requires a broader repertoire, download UTF-8 text and render it
+with your local document editor. Keep reviewed and signed copies in your own
+project storage. Language selection does not choose a law or jurisdiction.
 
-## Research batch workflow and index ergonomics (since v1.20.0)
+The models are editable starting points, not a claim of universal enforceability.
+For trade-secret rules and disclosure exceptions, see
+[§5 GeschGehG](https://www.gesetze-im-internet.de/geschgehg/__5.html) and
+[Directive (EU) 2016/943](https://eur-lex.europa.eu/eli/dir/2016/943/oj/eng).
+[WIPO's trade-secret overview](https://www.wipo.int/en/web/trade-secrets) provides
+broader background. These references do not validate a particular agreement.
 
-Release v1.20.0 streamlines research ingestion and index maintenance:
+## Research workflows and index ergonomics
 
-- **Batch ingestion:** `lixity research batch-ingest --project ./novel --allow-retention [--progress] ./sources/*.txt`
-  ingests multiple files in a single invocation, emitting structured per-file outcomes
-  under `research-batch-ingest-local/1`. With `--progress`, phase progress
-  messages go to stderr; they are not periodic heartbeats.
-- **Auto-fresh index caching:** `lixity research search` checks whether the FTS5
-  index records a snapshot digest that differs from the current one. If stale, it automatically
-  rebuilds the index before querying, eliminating manual `reindex` friction in common
-  workflows. Pass `--strict` to fail fast instead of auto-rebuilding.
-- **Section-bounded reads:** `lixity research read --project ./novel --dossier-id <UUID> --section "Historical Notes"`
-  extracts only the requested section from long dossiers, keeping agent context and
-  author reviews focused.
-- **Decision-dossier review tracking:** Recording or revising a decision linked to
-  a dossier flags that dossier with `review_needed: true` in the API and displays an
-  amber review badge in the web dashboard, ensuring authorial choices remain visibly
-  connected to compiled evidence without automated rewriting.
-- **Claim-evidence matrix export:** `lixity research matrix --project ./novel --format md|csv|json`
-  compiles all active claims, linked supporting/contradicting passages, associated dossiers,
-  and creative decisions (highlighting intentional fact deviations) into a unified tabular
-  overview for authors and editors.
-- **Zotero batch capture:** `lixity research zotero-ingest --project ./novel --library users/0 --item-key <KEY> --allow-retention`
-  captures all eligible PDF and text attachments of a parent reference item in a single command,
-  emitting structured per-attachment results under `research-zotero-batch-ingest-local/1`.
-- **Cross-corpus grounding reports:** `lixity research compare --project ./novel --source-id <UUID> --manuscript ./novel.md --format md [--output <FILE>]`
-  exports lexical overlap, Dunning $G^2$ keyness differentials, stylistic/register contrasts,
-  and per-chapter grounding traces directly into readable Markdown reports.
+The [research reference](research/USAGE.md) owns the implemented commands and
+their versioned contracts: selected file capture, resumable imports, dossier
+sections, author revisions, explicit acknowledgements, Zotero capture and backup.
+It also explains lexical source comparisons and their limits. Use the same
+supported application version for all archive writers.
+
+For a terminal report, choose `--format text` or `--format md` where supported.
+For automation, choose `--json` or `--format json`; `lixity about --json` lists
+command-specific formats. HTTP endpoints can be discovered at `GET /api` before
+opening a project. Research search refreshes a stale index by default; `--strict`
+rejects stale indexes instead. Progress describes real phases on stderr.
+
+**Mark as applied** records an author's review of one decision and dossier at
+exact saved versions. Later changes ask for another review. This does not edit
+prose, clear unrelated warnings or verify literary consistency. The first such
+event upgrades the archive manifest to version 5; older writers reject it.

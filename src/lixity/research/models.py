@@ -15,6 +15,8 @@ from pydantic import (
     model_validator,
 )
 
+from .limits import MAX_PDF_BYTES, MAX_SOURCE_BYTES
+
 Identifier = Annotated[str, Field(pattern=r"^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Language = Literal["en", "de", "fr", "es", "it", "pt", "nl", "generic"]
@@ -30,6 +32,7 @@ Kind = Literal[
     "claim",
     "evidence_link",
     "decision",
+    "decision_acknowledgement",
 ]
 
 
@@ -44,7 +47,7 @@ class Reference(StrictModel):
 
 class Blob(StrictModel):
     sha256: Digest
-    byte_length: Annotated[int, Field(ge=0, le=50 * 1024 * 1024)]
+    byte_length: Annotated[int, Field(ge=0, le=MAX_PDF_BYTES)]
     media_type: Literal["text/plain", "application/pdf", "image/png", "image/jpeg"] = "text/plain"
 
 
@@ -218,7 +221,7 @@ class Passage(Record):
     extraction_ref: Reference
     start: Annotated[int, Field(ge=0)]
     end: Annotated[int, Field(gt=0)]
-    verbatim: Annotated[str, Field(min_length=1, max_length=2 * 1024 * 1024)]
+    verbatim: Annotated[str, Field(min_length=1, max_length=MAX_SOURCE_BYTES)]
     language: Language
     verification: Literal["unreviewed"] = "unreviewed"
 
@@ -276,6 +279,18 @@ class Decision(AuthoredRecord):
     dossier_refs: list[Reference] = Field(default_factory=list)
 
 
+class DecisionAcknowledgement(Record):
+    """An author's statement about exact reviewed revisions, never semantic verification."""
+
+    schema_version: Literal["research-local/5"] = "research-local/5"  # type: ignore[assignment]
+    kind: Literal["decision_acknowledgement"] = "decision_acknowledgement"
+    decision_ref: Reference
+    dossier_ref: Reference
+    status: Literal["applied", "review_needed"]
+    note: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+    supersedes_ref: Reference | None = None
+
+
 class Tombstone(Record):
     kind: Literal["tombstone"] = "tombstone"
     target_ref: Reference
@@ -305,7 +320,8 @@ Entity = Annotated[
     | Dossier
     | Claim
     | EvidenceLink
-    | Decision,
+    | Decision
+    | DecisionAcknowledgement,
     Field(discriminator="kind"),
 ]
 ENTITY: TypeAdapter[Entity] = TypeAdapter(Entity)
@@ -318,7 +334,7 @@ class Entry(StrictModel):
 
 
 class Manifest(StrictModel):
-    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4"] = "research-manifest-local/1"
+    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5"] = "research-manifest-local/1"
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None

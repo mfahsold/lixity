@@ -91,7 +91,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "state_written": "written",
         "state_unchanged": "unchanged",
         "build_dry_run": ("Dry run: {changed} to write, {unchanged} unchanged – no files changed."),
-        "build_done": "Done: {changed} written, {unchanged} unchanged · nda/ ready.",
+        "build_done": "Done: {changed} written, {unchanged} unchanged.",
         "dashboard_written": "Dashboard written: {output}",
         "dashboard_unchanged": "Dashboard unchanged: {output}",
         "err_no_names": "No figure names given (use --name or --names).",
@@ -170,7 +170,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "build_dry_run": (
             "Dry-Run: {changed} zu schreiben, {unchanged} unverändert – keine Dateien geändert."
         ),
-        "build_done": "Fertig: {changed} geschrieben, {unchanged} unverändert · nda/ bereit.",
+        "build_done": "Fertig: {changed} geschrieben, {unchanged} unverändert.",
         "dashboard_written": "Dashboard geschrieben: {output}",
         "dashboard_unchanged": "Dashboard unverändert: {output}",
         "err_no_names": "Keine Figurennamen angegeben (--name oder --names).",
@@ -857,7 +857,7 @@ def main(argv: list[str] | None = None) -> int:
         ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
         ("serve", "Run local HTTP development server and interactive dashboard"),
-        ("build", "Idempotent workspace build: exports/ artifacts and nda/ folder"),
+        ("build", "Idempotent workspace build of analysis exports and artifact archive"),
         ("about", "Tool metadata for agents: languages, features, heuristics"),
         ("completion", "Shell completion script (bash or zsh)"),
     ):

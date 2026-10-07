@@ -2,7 +2,7 @@
 tests/test_workspace.py
 =======================
 Workspace discovery, layout creation and idempotent artifact publishing:
-a manuscript in a folder yields ``exports/`` (with ``archive/``) and ``nda/``,
+a manuscript in a folder yields ``exports/`` (with ``archive/``),
 and repeated builds cause zero writes while changed content rotates versions.
 """
 
@@ -83,10 +83,10 @@ class TestPublishIdempotency(unittest.TestCase):
 
     def test_layout_created_once(self):
         created = self.ws.ensure_layout()
-        self.assertEqual(len(created), 3)
+        self.assertEqual(len(created), 2)
         self.assertTrue(os.path.isdir(self.ws.exports_dir))
         self.assertTrue(os.path.isdir(self.ws.archive_dir))
-        self.assertTrue(os.path.isdir(self.ws.nda_dir))
+        self.assertFalse((Path(self.ws.root) / "nda").exists())
         self.assertEqual(self.ws.ensure_layout(), [])
 
     def test_publish_is_idempotent(self):
@@ -141,7 +141,7 @@ class TestBuildCommand(unittest.TestCase):
                 "_dashboard.html",
             ):
                 self.assertTrue((exports / f"roman{suffix}").exists(), suffix)
-            self.assertTrue((Path(tmp) / "nda").is_dir())
+            self.assertFalse((Path(tmp) / "nda").exists())
 
             before = sorted(p.name for p in exports.glob("roman_*"))
             self.assertEqual(_run_cli(["build", str(manuscript)]), 0)

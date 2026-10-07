@@ -13,6 +13,8 @@ from typing import Any, Literal, TypeVar
 
 from pydantic import ValidationError
 
+from .acknowledgements import latest_acknowledgements
+from .limits import MAX_PDF_BYTES, MAX_RESEARCH_OBJECT_BYTES
 from .models import (
     ENTITY,
     Activity,
@@ -20,6 +22,7 @@ from .models import (
     Blob,
     Claim,
     Decision,
+    DecisionAcknowledgement,
     Dossier,
     Entity,
     Entry,
@@ -183,15 +186,15 @@ class Repository:
                 else:
                     fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
 
-    def read(self, path: Path, *, maximum: int = 32 * 1024 * 1024) -> bytes:
+    def read(self, path: Path, *, maximum: int = MAX_RESEARCH_OBJECT_BYTES) -> bytes:
         with self.safe(path).open("rb") as stream:
             content = stream.read(maximum + 1)
         if len(content) > maximum:
             raise ResearchError("Research object exceeds the supported size")
         return content
 
-    def verified(self, path: Path, expected: str) -> bytes:
-        content = self.read(path)
+    def verified(self, path: Path, expected: str, *, maximum: int = MAX_RESEARCH_OBJECT_BYTES) -> bytes:
+        content = self.read(path, maximum=maximum)
         if digest(content) != expected:
             raise ResearchError("Research object checksum mismatch")
         return content
@@ -293,11 +296,23 @@ class Repository:
             elif isinstance(record, Decision):
                 if record.claim_ref:
                     snapshot.get(record.claim_ref, Claim)
+            elif isinstance(record, DecisionAcknowledgement):
+                snapshot.get(record.decision_ref, Decision)
+                snapshot.get(record.dossier_ref, Dossier)
+                if record.supersedes_ref:
+                    snapshot.get(record.supersedes_ref, DecisionAcknowledgement)
             elif isinstance(record, Tombstone):
                 pass
+        try:
+            latest_acknowledgements(snapshot.records.values())
+        except ValueError as error:
+            raise ResearchError(str(error)) from None
 
     def read_blob(self, descriptor: Blob) -> bytes:
-        content = self.verified(self.data / "blobs" / descriptor.sha256, descriptor.sha256)
+        if type(descriptor.byte_length) is not int or not 0 <= descriptor.byte_length <= MAX_PDF_BYTES:
+            raise ResearchError(f"Invalid research blob length; supported blobs are at most {MAX_PDF_BYTES // (1024 * 1024)} MiB")
+        content = self.verified(self.data / "blobs" / descriptor.sha256, descriptor.sha256,
+                                maximum=MAX_PDF_BYTES)
         if len(content) != descriptor.byte_length:
             raise ResearchError("Research blob length mismatch")
         return content
@@ -361,7 +376,7 @@ class Repository:
             entries = list(current.manifest.entries) if current else []
 
             if removals:
-                if any(isinstance(records.get(record_id), AuthoredRecord) for record_id in removals):
+                if any(isinstance(records.get(record_id), (AuthoredRecord, DecisionAcknowledgement)) for record_id in removals):
                     raise ResearchError("Authored revision history cannot be removed")
                 records = {k: v for k, v in records.items() if k not in removals}
                 revisions = {key: record for key, record in revisions.items() if key[0] not in removals}
@@ -385,8 +400,10 @@ class Repository:
             project = next((record for record in records.values() if isinstance(record, Project)), None)
             if project is None:
                 raise ResearchError("Project record required")
-            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4"]
-            schema = ("research-manifest-local/4" if any(record.schema_version == "research-local/4" for record in records.values())
+            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5"]
+            schema = ("research-manifest-local/5" if any(record.schema_version == "research-local/5" for record in records.values())
+                      or (current and current.manifest.schema_version == "research-manifest-local/5")
+                      else "research-manifest-local/4" if any(record.schema_version == "research-local/4" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/4")
                       else "research-manifest-local/3" if any(record.schema_version == "research-local/3" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/3")

@@ -86,8 +86,9 @@ settings also show their explanations beside the fields.
 
 A saved HTML dashboard is a read-only analysis export. The local server adds
 project and research actions using the same analysis engine. It is not a full
-manuscript editor. Native encrypted NDA tracking is available for configured
-projects; see the [NDA reference](USAGE.md#native-nda-tracking-and-isolated-keying-since-v1200).
+manuscript editor. The NDA generator downloads a friendly draft using name,
+optional address, project, date and place; see the
+[NDA reference](USAGE.md#nda-drafts).
 Publication-specific exports and delivery integrations belong to project adapters.
 
 ## Research workflow

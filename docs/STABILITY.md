@@ -18,8 +18,10 @@ languages. No language-wide accuracy percentage is established by this suite.
 
 The 3D chapter view is exploratory: its dimensions are corpus-specific, signs
 are fixed by convention, and per-axis thresholds are not simultaneous confidence
-regions. Pointer interaction is tested; complete keyboard navigation within
-the canvas is not yet available. Textual dimension information remains visible.
+regions. **Since 2.0.0:** native rotation/zoom buttons and
+a chapter-score table provide keyboard and touch access to the displayed scores,
+flag status and chapter navigation. Individual canvas points remain pointer-operated.
+These targeted checks do not establish full assistive-technology coverage.
 
 Engine tests use synthetic/public samples. Project adapters and optional local
 servers have separate trust boundaries and need their own tests; core test
@@ -180,10 +182,11 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
   Lixity chooses heatmap text from each cell’s luminance and
   tests the full blue/orange scale. This does not certify every canvas mark or
   every color-vision condition; numeric labels remain essential.
-- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. Dense
-  18-pixel paragraph chips need further target-size assessment; keyboard access
-  alone does not establish an exception. Primary controls are larger, but the
-  entire interface is not claimed to conform to WCAG.
+- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. On current
+  main for 2.0.0, paragraph chips and dimension controls use at least 24×24,
+  increasing to 44×44 for coarse pointers. Pressed chips retain their target
+  size, and long strips scroll horizontally. These checks do not establish
+  conformance for the entire interface or every canvas mark.
 - Diverging scales have a meaningful midpoint: zero deviation from the
   within-manuscript reference (median in the robust style calculation).
 - See [visual design rationale](ARCHITECTURE.md#visual-consistency-and-evidence)
@@ -201,12 +204,12 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
 | 5 | Heuristic syllable counting | language-specific rules; no validated aggregate error rate | no gold-standard corpus in-repo | 🟡 **documented**; used only as a relative signal, formula names shown |
 | 6 | Tense patterns | curated alternations + productive `-te`/`-ed` have FP/FN on ambiguous forms | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth |
 | 7 | Packaging | a wheel could miss `ui/assets/*` or `py.typed` | config exists, never verified in CI | 🟠 → **fixed**: CI job builds a wheel and asserts assets + typing marker are inside |
-| 8 | Book hook / venv | fallback `python3` without lixity breaks the hook | `pyproject` pin + `.venv` | 🟡 **documented** in book `docs/ARCHITECTURE.md`; hook prefers `.venv/bin/python` |
-| 9 | PDF/EPUB exports | depend on system Cairo/Pango; not unit-tested | tests deliberately renderer-free | 🟡 mitigated by the pre-push hook running `export_all.py` (smoke) |
+| 8 | Project Python environments | an external launcher may select an environment without Lixity | core tests do not verify a project's launcher or installation | 🟡 **documented**: verify the interpreter and package version in the project's environment; project hooks belong to that project |
+| 9 | Publication PDF/EPUB adapters | optional project renderers have their own runtime dependencies | core analysis tests do not verify an adapter's publication output | 🟡 **documented**: run synthetic export checks in the adapter's environment; native NDA PDF tests cover only the built-in NDA renderer |
 | 10 | Dashboard size | ~2 MB HTML for 95k words, linear growth | per-paragraph payload | 🟡 **documented**; future option: JSON payload + client render |
 | 11 | Cross-machine determinism | float last bits may differ across platforms/Python versions | `math.log` summation order | 🟡 **documented**: byte-identical on the same interpreter; in-process determinism is tested |
-| 12 | NDA store | `nda/` is gitignored; only the off-site backup covers it | data loss if backup fails | 🟡 **documented**; backup includes `nda/`; hook warns when backup is skipped |
-| 13 | Chip target size | dense strips need WCAG 2.5.8 assessment | keyboard access alone does not establish a target-size exception | 🟡 **open**: contextual reading and focus states help usability but do not certify conformance |
+| 12 | NDA draft rendering and downloads | the native PDF cannot represent every Unicode script; downloaded agreements need user retention | generation returns bytes without server files or a recipient registry | 🟡 **documented**: download UTF-8 text for broader local rendering; keep reviewed/signed documents in project-owned storage |
+| 13 | Chip target size | targets must remain reachable in dense strips and pressed states | Chromium checks cover target geometry, keyboard/touch activation and horizontal scrolling | 🟡 **mitigated** since 2.0.0: 24×24 minimums, 44×44 for coarse pointers; targeted tests do not certify complete accessibility conformance |
 | 14 | UI labels architecture | label packs merged at runtime (base → metric → help → group → layer → ui) | fallback chain is implicit | 🟠 → **fixed**: merge order documented in `docs/AGENTS.md` §3.3 + completeness test |
 | 15 | Status strip | states derive from file presence/mtime – a restored or clock-skewed file can read "stale" although it is current | no content hash in the status path | 🟡 **documented**: state is advisory; undeterminable components render `unknown`, not a fake `ok` |
 | 16 | Marker notes | notes live in an HTML-comment attribute: quotes/newlines must be escaped; very long notes bloat the comment line | `note="…"` in the marker line | 🟠 → **fixed**: escaping on write (round-trip test); **documented** guidance: one short sentence |
@@ -247,5 +250,5 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
 | 51 | Research retention & citations | Pilot retains original UTF-8/PDF bytes and pins exact unicode codepoint offsets; SQLite/FTS5 provides rebuildable lexical search; withdrawn sources mark citations `withdrawn`; purged sources fail closed | citations do not imply factual truth; retention requires explicit permission | 🟡 **documented**: USAGE/AGENTS; research pilot is opt-in, explicit-project only; no ambient manuscript I/O |
 | 52 | PDF page-count detection | a page tree in a compressed object stream is not greppable, so a raw-scan fallback cannot measure the document | `get_pdf_page_count()` returned `1` when it could measure neither `pdfinfo` nor a raw scan, so a 3-page PDF measured as 1 | 🔴 → **fixed** (v1.22.0): the count is `int \| None`, and the native extractor refuses with an actionable error instead of retaining part of a document; undeterminable is never defaulted |
 | 53 | Project configuration files | a malformed TOML file is indistinguishable from an absent one unless the loader says so | one unclosed quote reverted language and thresholds to defaults and still exited `0`; `analyze --json` reported `"language": "en"` against a configured `de` | 🔴 → **fixed** (v1.22.0): a present-but-unreadable or unparseable file emits a `UserWarning` naming the path and the consequence; absent stays silent, and the suite runs under `-W error` so a valid config must stay quiet |
-| 54 | Project-supplied NDA extension | a plugin boundary is the one place a narrow `except` is wrong, and a fallback that is silent hides the failure entirely | `nda_provider.py` was caught only for four exception types, so an adapter raising at import time disabled the feature; a failing `export_nda.py` fell back silently | 🔴 → **fixed** (v1.22.0): caught as `Exception` (never `BaseException`, so interrupts propagate) and both paths emit a `UserWarning` naming the file |
+| 54 | Project NDA text models | an invalid path or unknown field cannot produce the requested agreement | templates are explicit project-owned UTF-8 input with five literal fields | 🟡 **mitigated** since 2.0.0: outside paths, missing/empty templates and unknown fields are rejected; values remain data |
 | 55 | Native server request layer | one 1655-line module with two dispatch ladders made the route/handler mapping hard to review | `do_GET`/`do_POST` were 73/125-line `if` chains; adding a route meant editing a shared ladder | 🟡 **mitigated** (v1.22.0): split into a package with per-area route tables and focused request-validation helpers; behaviour verified against a live instance across 21 routes and guard conditions |

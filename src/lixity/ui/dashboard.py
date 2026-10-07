@@ -15,7 +15,7 @@ from typing import Any
 from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
 from ..format import pct as format_pct
-from ..status import FLAG_MIN_SEVERITY, NdaStatus
+from ..status import FLAG_MIN_SEVERITY
 from ..style_fingerprint import (
     FEATURES,
     LAYER_FEATURES,
@@ -98,12 +98,15 @@ def render_dashboard(
     enabled_actions: Sequence[str] | None = None,
     debug: bool = False,
     scenes: Mapping[str, Any] | None = None,
+    nda_project_name: str = "",
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
     ``controls=True`` adds the local control panel. ``enabled_actions`` limits
-    optional legacy actions to those implemented by the embedding server;
-    ``None`` preserves the full control set for existing hosts.
+    optional actions to those implemented by the embedding server; ``None``
+    preserves the other existing controls. NDA generation requires explicit
+    ``nda-draft`` capability; ``nda_project_name`` supplies a real project name
+    separately from a placeholder dashboard title.
     ``dialogue``/``characters``/``pacing``/``motifs``/
     ``showing`` add the optional dialogue-structure, character-presence,
     pacing, motif/repetition and showing/telling panels (see the
@@ -285,7 +288,15 @@ def render_dashboard(
             parts.append('    <div class="welcome-actions">')
             parts.append(f'      <button type="button" class="ctl primary welcome-btn" id="hero-btn-new-project">+ {L("new_project")}</button>')
             parts.append(f'      <button type="button" class="ctl welcome-btn" id="hero-btn-open-project">📂 {L("open_project")}</button>')
+            parts.append(f'      <button type="button" class="ctl welcome-btn" id="hero-btn-browse-project">{L("wizard_choose_action")}</button>')
             parts.append('    </div>')
+            parts.append('    <section id="welcome-project-recent" data-recent-projects hidden aria-labelledby="welcome-project-recent-heading">')
+            parts.append(f'      <h3 id="welcome-project-recent-heading">{L("recent_projects_heading")}</h3>')
+            parts.append(f'      <p class="ctl-note">{L("recent_projects_help")}</p>')
+            parts.append('      <ul id="welcome-project-recent-list" class="project-chooser-list" data-recent-project-list></ul>')
+            parts.append(f'      <button type="button" class="ctl" data-clear-recent-projects>{L("clear_recent_projects")}</button>')
+            parts.append('      <p class="ctl-status" data-recent-project-status role="status" hidden></p>')
+            parts.append('    </section>')
         parts.append('    <div class="onboarding-guide">')
         parts.append(f'      <div class="og-header"><h3>{L("welcome_quickstart")}</h3><p>{L("welcome_local")}</p></div>')
         parts.append('      <div class="og-steps">')
@@ -386,30 +397,44 @@ def render_dashboard(
         parts.append(f'<div class="ctl-status" id="ctl-status" role="status" aria-live="polite">{L("server_hint")}</div>')
         parts.append("</section>")
 
-        if action_enabled("nda"):
-            parts.append('<details class="panel controls nda-manager" id="nda-manager">')
-            parts.append(f'<summary>{L("nda_accordion")}</summary>')
-            parts.append(f'<p class="ctl-note" id="nda-hint">{L("locked_hint")}</p>')
-            parts.append('<div class="row" id="nda-unlock-row">')
+        if allowed_actions is not None and "nda-draft" in allowed_actions:
+            parts.append('<section class="panel controls" id="nda-draft">')
+            parts.append(f'<h2>{L("nda_draft_title")}</h2>')
+            parts.append(f'<p class="ctl-note">{L("nda_draft_hint")}</p>')
             parts.append(
-                f'<input class="ctl" type="password" id="nda-passphrase" placeholder="{L("passphrase")}"/>'
+                f'<form id="nda-draft-form" class="ctl-group" autocomplete="off" '
+                f'method="post" action="{esc(api_base.rstrip("/") + "/nda-draft")}">'
+                '<div class="settings-grid">'
             )
-            parts.append(f'<button class="ctl" id="nda-unlock-btn">{L("unlock")}</button>')
-            parts.append("</div>")
-            parts.append('<div id="nda-table"></div>')
-            parts.append('<div class="row" id="nda-add-row" hidden="hidden">')
-            parts.append(f'<input class="ctl" id="nda-new-name" placeholder="{L("name")}"/>')
-            parts.append(f'<input class="ctl" id="nda-new-contact" placeholder="{L("contact")}"/>')
-            parts.append(f'<input class="ctl" id="nda-new-notes" placeholder="{L("notes")}"/>')
+            for field, label_key, input_type in (
+                ("name", "nda_draft_name", "text"),
+                ("address", "nda_draft_address", "textarea"),
+                ("project_name", "nda_draft_project", "text"),
+                ("date", "nda_draft_date", "date"),
+                ("place", "nda_draft_place", "text"),
+            ):
+                field_id = "nda-" + field.replace("_", "-")
+                parts.append(f'<div class="setting-field"><label for="{field_id}">{L(label_key)}</label>')
+                if input_type == "textarea":
+                    parts.append(f'<textarea class="ctl" id="{field_id}" name="{field}" rows="2"></textarea>')
+                else:
+                    value_attr = f' value="{esc(nda_project_name)}"' if field == "project_name" else ""
+                    parts.append(
+                        f'<input class="ctl" type="{input_type}" id="{field_id}" '
+                        f'name="{field}"{value_attr} required/>'
+                    )
+                parts.append("</div>")
+            parts.append('</div><div class="row">')
+            parts.append(f'<button type="submit" class="ctl primary" id="nda-preview-btn" disabled>{L("nda_draft_preview")}</button>')
+            parts.append(f'<button type="button" class="ctl" id="nda-pdf-btn" disabled>{L("nda_draft_pdf")}</button>')
+            parts.append(f'<button type="button" class="ctl" id="nda-text-btn" disabled>{L("nda_draft_text")}</button>')
+            parts.append('</div><div class="ctl-status" id="nda-draft-status" role="status" aria-live="polite"></div></form>')
+            parts.append(f'<noscript><p class="ctl-note">{L("nda_draft_javascript")}</p></noscript>')
             parts.append(
-                f'<button class="ctl primary" id="nda-add-btn">{L("create")} + {L("export_pdf")}</button>'
+                f'<div id="nda-preview-wrap" hidden><h3 id="nda-preview-title">{L("nda_draft_preview")}</h3>'
+                '<div id="nda-draft-preview" class="research-dossier-body-source" '
+                'tabindex="0" role="region" aria-labelledby="nda-preview-title"></div></div></section>'
             )
-            parts.append("</div>")
-            _nda_statuses = json.dumps(NdaStatus.all_values())
-            parts.append(
-                f'<div class="ctl-status" id="nda-status" data-nda-statuses="{_nda_statuses}"></div>'
-            )
-            parts.append("</details>")
 
         if artifacts:
             parts.append('<section class="panel">')

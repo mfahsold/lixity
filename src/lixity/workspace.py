@@ -1,8 +1,8 @@
 """lixity.workspace – Self-contained project workspace with idempotent artifacts.
 
 Convention: a folder containing a manuscript is a workspace. Lixity discovers
-the manuscript, creates ``exports/`` (artifacts plus ``exports/archive/``) and
-``nda/`` (encrypted agreements) on demand, and publishes every artifact
+the manuscript, creates ``exports/`` (artifacts plus ``exports/archive/``)
+on demand, and publishes every artifact
 idempotently:
 
 - identical content causes **zero writes** (content hash comparison),
@@ -25,7 +25,6 @@ from .publishing import archive_timestamped, prune_archive, update_stable_link
 
 EXPORTS_DIRNAME = "exports"
 ARCHIVE_DIRNAME = "archive"
-NDA_DIRNAME = "nda"
 ARCHIVE_KEEP_LAST = 10
 TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M"
 
@@ -47,7 +46,7 @@ def slugify(name: str) -> str:
 
 @dataclass(frozen=True)
 class Workspace:
-    """A manuscript folder with its generated ``exports/`` and ``nda/`` subfolders."""
+    """A manuscript folder with its generated exports and artifact archive."""
 
     root: str
     manuscript: str
@@ -64,17 +63,13 @@ class Workspace:
     def archive_dir(self) -> str:
         return os.path.join(self.exports_dir, ARCHIVE_DIRNAME)
 
-    @property
-    def nda_dir(self) -> str:
-        return os.path.join(self.root, NDA_DIRNAME)
-
     def ensure_layout(self) -> list[str]:
-        """Creates ``exports/``, ``exports/archive/`` and ``nda/`` idempotently.
+        """Create the analysis exports and archive directories idempotently.
 
         Returns: list of directories that did not exist before.
         """
         created = []
-        for path in (self.exports_dir, self.archive_dir, self.nda_dir):
+        for path in (self.exports_dir, self.archive_dir):
             if not os.path.isdir(path):
                 created.append(path)
                 FileUtils.ensure_dir(path)

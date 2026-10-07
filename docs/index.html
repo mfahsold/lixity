@@ -31,7 +31,7 @@
   "name": "Lixity",
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "1.25.0",
+  "softwareVersion": "2.0.0",
   "description": "Local manuscript analysis and a traceable research workspace for authors, editors and researchers.",
   "url": "https://mfahsold.github.io/lixity/",
   "codeRepository": "https://github.com/mfahsold/lixity",
@@ -50,7 +50,7 @@
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v1.25.0</span></a>
+    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v2.0.0</span></a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="#visual-suite">Features</a>
       <a href="#guides">Guides</a>
@@ -69,7 +69,8 @@
       <a class="btn primary" href="guides/installation.html">Get started</a>
       <a class="btn" href="#visual-suite">See what you can do</a>
     </div>
-    <p class="release-note">Current release: <a href="releases/v1.25.0.md">v1.25.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
+    <p class="release-note">Current release: <a href="releases/v2.0.0.md">v2.0.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
+    <p class="release-note">Since 2.0.0: keyboard and touch style-space controls, a chapter-score table, persistent browser debug preferences, and complete editable NDA drafts in seven project languages. <a href="USAGE.md">Read the usage guide</a>.</p>
     <p class="license-note">Free for projects with no commercial purpose. Books intended for sale, including self-publishing, need a separate written commercial license. <a href="#licensing">License details</a>.</p>
   </section>
 
@@ -114,7 +115,7 @@
         <a href="USAGE.md#work-markers-editor-visible">Use work markers</a>
       </div>
       <figure class="shot">
-        <a href="screenshots/dashboard-markers.png"><img src="screenshots/dashboard-markers.png" width="1152" height="305" alt="Review markers linked to passages, with statuses and an editable note" loading="lazy" decoding="async"/></a>
+        <a href="screenshots/dashboard-markers.png"><img src="screenshots/dashboard-markers.png" width="1152" height="306" alt="Review markers linked to passages, with statuses and an editable note" loading="lazy" decoding="async"/></a>
         <figcaption>Illustrative review notes. <a href="screenshots/dashboard-layer.png">Open the paragraph view</a>.</figcaption>
       </figure>
     </article>
@@ -128,7 +129,7 @@
         <a href="guides/research-pdf.html">Follow the research workflow</a>
       </div>
       <figure class="shot">
-        <a href="screenshots/dashboard-research-search.png"><img src="screenshots/dashboard-research-search.png" width="1152" height="458" alt="Archive search results with source passages and citation links" loading="lazy" decoding="async"/></a>
+        <a href="screenshots/dashboard-research-search.png"><img src="screenshots/dashboard-research-search.png" width="1152" height="509" alt="Archive search results with source passages and citation links" loading="lazy" decoding="async"/></a>
         <figcaption>Find a passage and reuse its citation. <a href="screenshots/dashboard-research-dossiers.png">Dossiers</a> · <a href="screenshots/dashboard-research-claims.png">Claims</a> · <a href="screenshots/dashboard-research-decisions.png">Decisions</a> · <a href="screenshots/dashboard-research-review.png">Decision review</a>.</figcaption>
       </figure>
     </article>
@@ -137,11 +138,11 @@
       <div class="feature-copy">
         <h2>Choose a project and its settings</h2>
         <p>Project actions remain available in each workspace view. <strong>Open Project</strong> reconnects an existing folder and its research. <strong>Import Manuscript</strong> previews a file and creates a new project when you confirm.</p>
-        <p>Choose the analysis language and which differences to examine. Optional encrypted NDA records sit in a collapsible panel.</p>
+        <p>Choose the analysis language and which differences to examine. In 2.0.0, fill in five simple NDA fields, preview a friendly agreement in the project language, then download a PDF or editable text.</p>
         <a href="guides/installation.html#first-dashboard">Open your first project</a>
       </div>
       <figure class="shot">
-        <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="749" alt="Project settings with manuscript selection, analysis preferences and a collapsed NDA panel" loading="lazy" decoding="async"/></a>
+        <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="1001" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" loading="lazy" decoding="async"/></a>
         <figcaption>Project settings in one place. <a href="screenshots/dashboard-project-import.png">Import preview</a> · <a href="screenshots/dashboard-project-settings-mobile.png">Mobile view</a>.</figcaption>
       </figure>
     </article>
@@ -173,7 +174,7 @@
   <section id="installation" class="reading-section">
     <h2>Install the current release</h2>
     <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> and Git. The <a href="guides/installation.html">installation guide</a> explains how to get them on Windows, macOS and Linux.</p>
-    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.25.0"
+    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.0.0"
 lixity --version
 lixity build manuscript.md --language de</pre>
     <p>Open <code>exports/manuscript_dashboard.html</code> in your browser. Use <code>--language en</code> for English. English is the default when no language is selected; detection requires <code>--language auto</code>.</p>

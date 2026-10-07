@@ -57,10 +57,11 @@ class TestSettingsUi(unittest.TestCase):
         self.assertIn('<option value="auto" selected>', rendered)
 
     def test_controls_have_one_nda_workflow_and_shared_groups(self):
-        rendered = render_dashboard([], [], controls=True)
-        self.assertNotIn('id="nda-name"', rendered)
+        rendered = render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))
+        self.assertEqual(rendered.count('id="nda-name"'), 1)
         self.assertNotIn('data-action="nda"', rendered)
-        self.assertEqual(rendered.count('id="nda-add-btn"'), 1)
+        self.assertEqual(rendered.count('id="nda-draft-form"'), 1)
+        self.assertNotIn('id="nda-add-btn"', rendered)
         self.assertIn('class="settings-form ctl-group"', rendered)
 
     def test_localized_settings_keep_machine_readable_number_values(self):

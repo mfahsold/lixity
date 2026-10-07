@@ -5,8 +5,10 @@ import csv
 import io
 import os
 import re
+import tempfile
 import warnings
-from collections.abc import Callable, Mapping
+from collections.abc import Callable, Mapping, Sequence
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal, NamedTuple, overload
@@ -15,11 +17,18 @@ from uuid import uuid4
 from pydantic import ValidationError
 
 from . import catalogue, editorial
+from .acknowledgements import latest_acknowledgements
 from .archive import (
     export_archive as export_archive,
 )
 from .archive import (
     restore_archive as restore_archive,
+)
+from .limits import (
+    MAX_PDF_BYTES as MAX_PDF_BYTES,
+)
+from .limits import (
+    MAX_SOURCE_BYTES as MAX_SOURCE_BYTES,
 )
 from .models import (
     ENTITY,
@@ -28,6 +37,7 @@ from .models import (
     Claim,
     ClaimScope,
     Decision,
+    DecisionAcknowledgement,
     Dossier,
     Entity,
     EvidenceLink,
@@ -46,7 +56,7 @@ from .ocr import (
     extract_pdf_document,
     get_ocr_diagnostics,
 )
-from .repository import Repository, ResearchConflictError, ResearchError, digest
+from .repository import Repository, ResearchConflictError, ResearchError, Snapshot, digest
 from .revisions import (
     apply_record_revisions as apply_record_revisions,
 )
@@ -70,9 +80,6 @@ from .revisions import (
     revise_record as revise_record,
 )
 
-MAX_SOURCE_BYTES = 2 * 1024 * 1024
-MAX_PDF_BYTES = 50 * 1024 * 1024
-
 
 def envelope(project_id: str, actor: str) -> dict[str, Any]:
     return {"id": uuid4().urn, "project_id": project_id, "created_by": actor,
@@ -91,19 +98,40 @@ def init(project: str | Path, *, title: str, language: str = "en", actor: str = 
     return {"schema_version": "research-init-local/1", "project_id": identifier, "snapshot": snapshot.digest}
 
 
-def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = False,
-           source_id: str | None = None, title: str | None = None,
-           language: str | None = None, actor: str = "local-author", dry_run: bool = False,
-           context: Mapping[str, Any] | None = None,
-           origin_url: str | None = None, expected_snapshot: str | None = None,
-           allow_fallback: bool = False,
-           progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
-    if allow_retention is not True:
-        raise ResearchError("Explicit local retention permission is required (--allow-retention)")
-    repository = Repository(project)
-    snapshot = repository.snapshot()
-    if expected_snapshot is not None and snapshot.digest != expected_snapshot:
-        raise ResearchConflictError("Research snapshot changed; reload and retry capture")
+@dataclass
+class _PreparedCapture:
+    """Validated capture additions before their single repository publication."""
+
+    records: list[Entity]
+    blobs: dict[str, bytes]
+    result: dict[str, Any]
+    source_id: str
+    base_version_id: str | None
+    title: str
+
+
+def _read_source_bytes(path: Path) -> bytes:
+    is_pdf = path.suffix.lower() == ".pdf"
+    if not path.is_file():
+        raise ResearchError("Source file is missing; supply a local PDF or UTF-8 text file")
+    maximum = MAX_PDF_BYTES if is_pdf else MAX_SOURCE_BYTES
+    with path.open("rb") as stream:
+        content = stream.read(maximum + 1)
+    if is_pdf:
+        if not content or len(content) > maximum:
+            raise ResearchError("PDF source must be nonempty and at most 50 MiB")
+    elif not content or len(content) > maximum or b"\x00" in content:
+        raise ResearchError("Source must be nonempty text of at most 2 MiB, without NUL bytes")
+    return content
+
+
+def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path, *,
+                    source_id: str | None = None, title: str | None = None,
+                    language: str | None = None, actor: str = "local-author", dry_run: bool = False,
+                    context: Mapping[str, Any] | None = None, origin_url: str | None = None,
+                    allow_fallback: bool = False, planned_source_id: str | None = None,
+                    expected_source_digest: str | None = None,
+                    progress_callback: Callable[[str, str], None] | None = None) -> _PreparedCapture:
     path = Path(file).expanduser()
     is_pdf = path.suffix.lower() == ".pdf"
     if not path.is_file():
@@ -117,6 +145,8 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     else:
         values = envelope(snapshot.project.id, actor)
         values.update(title=title or path.name, language=language or snapshot.project.language)
+        if planned_source_id is not None:
+            values["id"] = planned_source_id
         source = Source.model_validate(values)
         records.append(source)
 
@@ -131,14 +161,13 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     if progress_callback:
         progress_callback("read", f"Reading source file {path.name}...")
 
+    content = _read_source_bytes(path)
+    if expected_source_digest is not None and digest(content) != expected_source_digest:
+        raise ResearchError("Source file bytes changed since checkpoint creation")
     blobs_to_commit: dict[str, bytes] = {}
     extraction_warnings: list[str] = []
     implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"]
     if is_pdf:
-        with path.open("rb") as stream:
-            content = stream.read(MAX_PDF_BYTES + 1)
-        if not content or len(content) > MAX_PDF_BYTES:
-            raise ResearchError("PDF source must be nonempty and at most 50 MiB")
         if progress_callback:
             progress_callback("ocr", "Rasterizing PDF pages and extracting text via OCR/poppler...")
         if latest is not None and latest.blob.sha256 == digest(content):
@@ -156,7 +185,11 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
             implementation = snapshot.get(prior[0].activity_ref, Activity).implementation
         else:
             effective_fallback = allow_fallback or os.environ.get("LIXITY_OCR_FALLBACK", "").lower() in ("1", "true", "yes")
-            ocr_res = extract_pdf_document(path, allow_fallback=effective_fallback)
+            # Extract the exact bytes retained below, even if the caller replaces its file.
+            with tempfile.TemporaryDirectory(prefix="lixity-source-") as directory:
+                stable_path = Path(directory) / "source.pdf"
+                stable_path.write_bytes(content)
+                ocr_res = extract_pdf_document(stable_path, allow_fallback=effective_fallback)
             text = ocr_res.full_text
             spans = ocr_res.spans
             extraction_warnings = ocr_res.warnings
@@ -172,10 +205,6 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
         blobs_to_commit[source_checksum] = content
         blobs_to_commit[text_checksum] = text_bytes
     else:
-        with path.open("rb") as stream:
-            content = stream.read(MAX_SOURCE_BYTES + 1)
-        if not content or len(content) > MAX_SOURCE_BYTES or b"\x00" in content:
-            raise ResearchError("Source must be nonempty text of at most 2 MiB, without NUL bytes")
         try:
             text = content.decode("utf-8")
         except UnicodeDecodeError:
@@ -193,10 +222,11 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
 
     if latest is not None and latest.blob.sha256 == source_checksum and latest.context == source_context:
         repository.read_blob(latest.blob)
-        return {"schema_version": "research-ingest-local/1", "source_id": source.id,
+        result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
                 "source_version_id": latest.id, "snapshot": snapshot.digest,
                 "unchanged": True, "dry_run": dry_run, "passages": len(spans),
                 "warnings": extraction_warnings}
+        return _PreparedCapture([], {}, result, source.id, latest.id, source.title)
 
     version = SourceVersion(**envelope(snapshot.project.id, actor), source_ref=reference(source),
                             schema_version=("research-local/3" if source_context.external_reference else
@@ -218,6 +248,29 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     result = {"schema_version": "research-ingest-local/1", "source_id": source.id,
               "source_version_id": version.id, "unchanged": False,
               "passages": len(spans), "dry_run": dry_run, "warnings": extraction_warnings}
+    return _PreparedCapture(records, blobs_to_commit, result, source.id, latest.id if latest else None, source.title)
+
+
+def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = False,
+           source_id: str | None = None, title: str | None = None,
+           language: str | None = None, actor: str = "local-author", dry_run: bool = False,
+           context: Mapping[str, Any] | None = None,
+           origin_url: str | None = None, expected_snapshot: str | None = None,
+           allow_fallback: bool = False,
+           progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
+    if allow_retention is not True:
+        raise ResearchError("Explicit local retention permission is required (--allow-retention)")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if expected_snapshot is not None and snapshot.digest != expected_snapshot:
+        raise ResearchConflictError("Research snapshot changed; reload and retry capture")
+    prepared = _prepare_ingest(repository, snapshot, file, source_id=source_id, title=title,
+                               language=language, actor=actor, dry_run=dry_run, context=context,
+                               origin_url=origin_url, allow_fallback=allow_fallback,
+                               progress_callback=progress_callback)
+    result = prepared.result
+    if result["unchanged"]:
+        return result
     if progress_callback:
         progress_callback("commit", "Publishing records to research store...")
     if dry_run:
@@ -225,21 +278,46 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
     else:
         while True:
             try:
-                result["snapshot"] = repository.commit(records, blobs_to_commit, snapshot).digest
+                result["snapshot"] = repository.commit(prepared.records, prepared.blobs, snapshot).digest
                 break
             except ResearchConflictError as exc:
                 if expected_snapshot is not None:
                     raise
                 fresh = repository.snapshot()
                 if source_id:
-                    fresh_versions = [r for r in fresh.records.values() if isinstance(r, SourceVersion) and r.source_ref.id == source.id]
+                    fresh_versions = [r for r in fresh.records.values() if isinstance(r, SourceVersion) and r.source_ref.id == prepared.source_id]
                     fresh_latest = max(fresh_versions, key=lambda r: r.sequence) if fresh_versions else None
-                    if (latest is None and fresh_latest is not None) or (latest and fresh_latest and latest.id != fresh_latest.id):
+                    if (prepared.base_version_id is None and fresh_latest is not None) or (prepared.base_version_id and fresh_latest and prepared.base_version_id != fresh_latest.id):
                         raise ResearchConflictError("Source was modified concurrently; reload and retry capture") from exc
                 snapshot = fresh
     if progress_callback:
-        progress_callback("complete", f"Source '{source.title}' ingested ({len(spans)} passages).")
+        progress_callback("complete", f"Source '{prepared.title}' ingested ({result['passages']} passages).")
     return result
+
+
+def ingest_checkpoint(project: str | Path, files: Sequence[str | Path] | None = None, *,
+                      checkpoint: str | Path, resume: bool = False,
+                      allow_retention: bool = False, source_id: str | None = None,
+                      title: str | None = None, language: str | None = None,
+                      actor: str | None = None, dry_run: bool = False,
+                      context: Mapping[str, Any] | None = None, origin_url: str | None = None,
+                      expected_snapshot: str | None = None, allow_fallback: bool | None = None,
+                      progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
+    """Sequential opt-in capture with retained preparation and explicit resume checks."""
+    from . import checkpoints
+
+    return checkpoints.ingest(project, files, checkpoint=checkpoint, resume=resume,
+                              allow_retention=allow_retention, source_id=source_id, title=title,
+                              language=language, actor=actor, dry_run=dry_run, context=context,
+                              origin_url=origin_url, expected_snapshot=expected_snapshot,
+                              allow_fallback=allow_fallback, progress_callback=progress_callback)
+
+
+def discard_ingest_checkpoint(project: str | Path, *, checkpoint: str | Path) -> dict[str, Any]:
+    """Discard local checkpoint preparation without changing accepted research records."""
+    from . import checkpoints
+
+    return checkpoints.discard(project, checkpoint)
 
 
 def reindex(project: str | Path) -> dict[str, Any]:
@@ -519,13 +597,17 @@ def purge(
             )
             for passage in passages_to_purge
         ]
-        new_snapshot = repository.commit(
-            [tombstone, *passage_tombstones],
-            {},
-            snapshot,
-            removals=records_to_remove,
-            delete_blobs=deleted_blobs,
-        )
+        from .checkpoints import purge_guard
+
+        with purge_guard(repository, source.id) as discard_preparation:
+            new_snapshot = repository.commit(
+                [tombstone, *passage_tombstones],
+                {},
+                snapshot,
+                removals=records_to_remove,
+                delete_blobs=deleted_blobs,
+            )
+            discard_preparation()
         new_digest = new_snapshot.digest
 
     return {
@@ -546,8 +628,10 @@ def purge(
 
 def list_sources(project: str | Path) -> dict[str, Any]:
     """List all active, non-withdrawn sources in the research project with their versions and metadata."""
-    repository = Repository(project)
-    snapshot = repository.snapshot()
+    return _list_sources(Repository(project).snapshot())
+
+
+def _list_sources(snapshot: Snapshot) -> dict[str, Any]:
 
     withdrawn_or_purged = {
         record.target_ref.id
@@ -562,7 +646,10 @@ def list_sources(project: str | Path) -> dict[str, Any]:
     }
 
     passages_per_version: dict[str, int] = {}
+    versions_per_source: dict[str, list[SourceVersion]] = {}
     for record in snapshot.records.values():
+        if isinstance(record, SourceVersion) and record.id not in withdrawn_or_purged:
+            versions_per_source.setdefault(record.source_ref.id, []).append(record)
         if isinstance(record, Passage):
             ver_id = extraction_to_version.get(record.extraction_ref.id)
             if ver_id:
@@ -572,11 +659,7 @@ def list_sources(project: str | Path) -> dict[str, Any]:
     for record in snapshot.records.values():
         if not isinstance(record, Source) or record.id in withdrawn_or_purged:
             continue
-        versions = [
-            v
-            for v in snapshot.records.values()
-            if isinstance(v, SourceVersion) and v.source_ref.id == record.id and v.id not in withdrawn_or_purged
-        ]
+        versions = versions_per_source.get(record.id, [])
         if not versions:
             continue
         latest = max(versions, key=lambda v: v.sequence)
@@ -788,8 +871,10 @@ def extract_sections(body: str) -> dict[str, str]:
 
 def list_dossiers(project: str | Path) -> dict[str, Any]:
     """List all active dossiers in the project."""
-    repository = Repository(project)
-    snapshot = repository.snapshot()
+    return _list_dossiers(Repository(project).snapshot())
+
+
+def _list_dossiers(snapshot: Snapshot) -> dict[str, Any]:
 
     withdrawn_or_purged = {
         record.target_ref.id
@@ -1000,8 +1085,10 @@ def create_claim(
 
 
 def list_claims(project: str | Path, *, dossier_id: str | None = None) -> dict[str, Any]:
-    repository = Repository(project)
-    snapshot = repository.snapshot()
+    return _list_claims(Repository(project).snapshot(), dossier_id=dossier_id)
+
+
+def _list_claims(snapshot: Snapshot, *, dossier_id: str | None = None) -> dict[str, Any]:
 
     withdrawn_or_purged = {
         record.target_ref.id
@@ -1173,6 +1260,51 @@ def record_decision(
     }
 
 
+def acknowledge_decision(project: str | Path, decision_id: str, dossier_id: str, *,
+                         expected_snapshot: str, expected_decision_revision: int,
+                         expected_dossier_revision: int, status: Literal["applied", "review_needed"],
+                         note: str | None = None, actor: str = "local-author") -> dict[str, Any]:
+    """Append an explicit author's acknowledgement; never edit or verify their prose."""
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if snapshot.digest != expected_snapshot:
+        raise ResearchConflictError("Research snapshot changed; reload before acknowledging")
+    if (type(expected_decision_revision) is not int or expected_decision_revision < 1
+            or type(expected_dossier_revision) is not int or expected_dossier_revision < 1):
+        raise ResearchError("Exact positive decision and dossier revisions are required")
+    try:
+        Reference(id=decision_id)
+        Reference(id=dossier_id)
+        decision = snapshot.latest(decision_id, Decision)
+        dossier = snapshot.latest(dossier_id, Dossier)
+    except ValidationError:
+        raise ResearchError("Invalid decision or dossier identifier") from None
+    if decision.revision != expected_decision_revision or dossier.revision != expected_dossier_revision:
+        raise ResearchConflictError("Decision or dossier revision changed; reload before acknowledging")
+    impact = editorial.decision_graph(snapshot, decision_id=decision_id).get(decision_id)
+    if impact is None or dossier_id not in {entry["id"] for entry in impact["dossiers"]}:
+        raise ResearchError("Acknowledge only a dossier explicitly associated with this decision")
+    if (not isinstance(status, str) or status not in {"applied", "review_needed"}
+            or not isinstance(actor, str) or not actor.strip()
+            or (note is not None and not isinstance(note, str))):
+        raise ResearchError("Acknowledgement requires an explicit valid status, actor and optional text note")
+    previous = latest_acknowledgements(snapshot.records.values()).get((decision_id, dossier_id))
+    try:
+        acknowledgement = DecisionAcknowledgement(**envelope(snapshot.project.id, actor.strip()),
+            decision_ref=reference(decision), dossier_ref=reference(dossier), status=status,
+            note=note.strip() or None if note is not None else None,
+            supersedes_ref=reference(previous) if previous else None)
+    except ValidationError:
+        raise ResearchError("Invalid acknowledgement fields; check actor and note size") from None
+    committed = repository.commit([acknowledgement], {}, snapshot)
+    return {"schema_version": "research-decision-acknowledgement-local/1", "project_id": snapshot.project.id,
+            "acknowledgement_id": acknowledgement.id, "snapshot": committed.digest,
+            "decision_id": decision.id, "decision_revision": decision.revision,
+            "dossier_id": dossier.id, "dossier_revision": dossier.revision, "status": acknowledgement.status,
+            "note": acknowledgement.note, "actor": acknowledgement.created_by,
+            "created_at": acknowledgement.created_at, "supersedes_id": previous.id if previous else None}
+
+
 def decision_impact(project: str | Path, decision_id: str) -> dict[str, Any]:
     """Inspect explicit affected dossiers and revision pins without writing."""
     return editorial.decision_impact(project, decision_id, outline=lambda body: list(extract_sections(body)))
@@ -1184,8 +1316,10 @@ def editorial_review(project: str | Path) -> dict[str, Any]:
 
 
 def list_decisions(project: str | Path) -> dict[str, Any]:
-    repository = Repository(project)
-    snapshot = repository.snapshot()
+    return _list_decisions(Repository(project).snapshot())
+
+
+def _list_decisions(snapshot: Snapshot) -> dict[str, Any]:
 
     withdrawn_or_purged = {
         record.target_ref.id
@@ -1216,6 +1350,21 @@ def list_decisions(project: str | Path) -> dict[str, Any]:
         "schema_version": "research-decisions-local/1",
         "decisions": decisions_list,
     }
+
+
+def project_overview(project: str | Path) -> dict[str, Any]:
+    """Collect dashboard lists from one verified archive view, without caching."""
+    snapshot = Repository(project).snapshot()
+    data: dict[str, Any] = {"project_id": snapshot.project.id,
+                            "project_title": snapshot.project.title,
+                            "project_language": snapshot.project.language}
+    for key, listing in (("sources", _list_sources(snapshot)),
+                         ("dossiers", _list_dossiers(snapshot)),
+                         ("claims", _list_claims(snapshot)),
+                         ("decisions", _list_decisions(snapshot))):
+        data[key] = listing[key]
+        data[key + "_count"] = len(listing[key])
+    return data
 
 
 _FORMAT_SENTINEL = object()

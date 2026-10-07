@@ -333,10 +333,6 @@ class ProjectRoutesMixin(ResponseMixin):
                 },
             )
             exports_dir = str(Path(ws_root) / "exports")
-            from ..nda import get_project_nda_provider
-
-            provider = get_project_nda_provider(ws_root)
-            nda_enabled = bool(provider and provider.is_available())
             html, info = build_server_dashboard(
                 manuscript,
                 language=language,
@@ -345,7 +341,6 @@ class ProjectRoutesMixin(ResponseMixin):
                 controls=True,
                 api_base="/api",
                 exports_dir=exports_dir,
-                nda_enabled=nda_enabled,
             )
         except (
             OSError,
@@ -364,7 +359,6 @@ class ProjectRoutesMixin(ResponseMixin):
         self.__class__.research_dir = (
             str(Path(ws_root)) if (Path(ws_root) / "research").is_dir() else None
         )
-        self.__class__.nda_provider = provider
         self.__class__.language = language
         self.__class__.title = title
         self.__class__.title_custom = "title" in overrides or (same_project and self.title_custom)
@@ -381,4 +375,3 @@ class ProjectRoutesMixin(ResponseMixin):
                 "reload": True,
             }
         )
-

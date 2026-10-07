@@ -546,39 +546,28 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
 
-NDA management (present only when the active project declares the capability):
+NDA generation since 2.0.0:
 
-- Capability is per project and re-resolved on every project switch. When the
-  project has no NDA capability, every `nda-*` action answers HTTP 404 with
-  `{"ok": false, "message": "NDA management is not enabled for this project"}`.
-  Treat that as "capability absent", not as "no records exist", and do not retry
-  against another project.
-- `POST /api/nda-list`: `{}`; returns the project's records. Answered with a
-  lock notice while the encrypted store is still locked.
-- `POST /api/nda-unlock`: `{"passphrase": "..."}`; unlocks the encrypted store
-  for the lifetime of the server process. A wrong passphrase is rejected without
-  revealing whether any record exists.
-- `POST /api/nda-add`: `{"name": "...", "contact": "...", "notes": "..."}`.
-- `POST /api/nda-update`: `{"id": "...", "status": "..."}`; an unknown status is
-  rejected with HTTP 400.
-- `POST /api/nda-export`: `{"id": "..."}`; writes a project-owned PDF receipt and
-  returns its file name. If the project ships `scripts/export_nda.py` that script
-  is used, otherwise a built-in single-page PDF is generated.
-- `POST /api/nda-delete`: `{"id": "..."}`.
-
-Recipient names, contacts and passphrases are project-owned data. Do not copy
-them into logs, issue trackers or any external system. Encrypted stores live
-under `<project>/nda/` and are portable with the project; a project without a
-passphrase keeps its records in the unencrypted structured store.
-
-**Project-supplied extensions degrade loudly, never silently.** A project may
-supply `nda_provider.py` (a `Provider` or `NdaProvider` class) and
-`scripts/export_nda.py`. If either fails to load or run, Lixity falls back to
-the built-in implementation and emits a `UserWarning` naming the file and the
-failure. An adapter that raises *any* exception at import time is contained
-rather than propagated -- `KeyboardInterrupt` and `SystemExit` still propagate.
-Treat a warning here as a real defect in the project extension: without it, a
-broken adapter would silently disable the project's custom NDA behaviour.
+- `POST /api/nda-draft` accepts `{name, address?, project_name, date, place,
+  format: "pdf" | "text"}`. Send `date` as a `YYYY-MM-DD` calendar date.
+- The response is binary `application/pdf` or UTF-8 `text/plain`, with an
+  attachment name `nda.pdf` or `nda.txt`; it is not a JSON record envelope.
+- The native server advertises `nda-draft`, including in an empty workspace.
+  An embedding host must advertise this action explicitly. For HTML rendering,
+  `nda_project_name` supplies a real project name; its default is empty so a
+  placeholder display title cannot become an agreement field.
+- Generation creates no server files, recipient identifiers or registry state.
+  The five personal/document fields and the returned text are not diagnostic
+  log data. Obtain explicit authorization before generating an agreement.
+- Python clients use `lixity.nda.draft_document(...)`, which returns an immutable
+  `NdaDraft` with `title`, `text`, `language` and `pdf()` returning bytes.
+- Document selection is `nda.language`, resolved server/project language,
+  project `language`, then `en`. Only the seven explicit supported codes are
+  accepted. Optional `nda.template` is project-owned UTF-8 text, at most 2 MiB.
+  See [the five literal template fields](USAGE.md#project-nda-configuration-nda).
+- Native PDF encoding is Windows-1252; download the UTF-8 text for local rendering
+  of a broader character repertoire. The friendly localized models in
+  `nda_templates.py` are editable drafts, not a legal certification.
 
 Native-revision endpoints (since v1.17.0) reuse that explicit workspace:
 
@@ -587,6 +576,24 @@ The server also provides `GET /api/research/decision-impact?id=...` and
 `research-editorial-review-local/1`. These use explicit links, dates and pins,
 not semantic inference. Python equivalents are `decision_impact(project, id)`
 and `editorial_review(project)`.
+
+`GET /api` and `/api/` return `lixity-api-index/1`: the actual registered GET/POST
+paths, implemented capability flags, cached project-state booleans/language and
+the interface-reference link. It works without a loaded project and omits paths,
+titles, manuscript text and archive records. A capability describes a registered
+operation; project-state fields indicate whether its data is initialized.
+
+`POST /api/research-decision-acknowledge` accepts `{decision_id, dossier_id,
+expected_snapshot, expected_decision_revision, expected_dossier_revision,
+status, note?}`, with `status: applied|review_needed`. It appends an explicit
+author event and returns `research-decision-acknowledgement-local/1`. Both exact
+versions and the snapshot are mandatory; stale inputs return 409 and write none.
+The pair must be structurally associated. This is an author's assessment, not
+verified manuscript incorporation; old pins/withdrawal warnings remain.
+The first event uses `research-local/5` and `research-manifest-local/5`; older
+readers reject upgraded snapshots. Earlier record bytes remain unchanged.
+CLI equivalents are `research mark-applied` and `research reopen`, with the same
+snapshot/version tokens. Python uses `research.api.acknowledge_decision`.
 
 `POST /api/research-record-prepare` accepts `{kind, id, base_revision, changes,
 resolutions?}` and returns `research-revision-preview-local/1` with current

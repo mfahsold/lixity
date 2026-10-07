@@ -21,7 +21,7 @@ async function main() {
         if (!Object.prototype.hasOwnProperty.call(fixture, url)) {
           throw new Error('Missing screenshot API fixture: ' + url);
         }
-        if (method !== 'GET' && !['/api/nda-list', '/api/research-search', '/api/research-record-prepare', '/api/research-revision-batch-prepare'].includes(url)) {
+        if (method !== 'GET' && !['/api/nda-draft', '/api/research-search', '/api/research-record-prepare', '/api/research-revision-batch-prepare'].includes(url)) {
           throw new Error('Screenshot capture cannot mutate a project: ' + method + ' ' + url);
         }
         if (url === '/api/research-search') {
@@ -31,6 +31,16 @@ async function main() {
           }
         }
         let result = fixture[url];
+        if (url === '/api/nda-draft') {
+          const draft = JSON.parse(options.body);
+          if (draft.format !== 'text' || Object.keys(draft).length !== 6 ||
+              Object.keys(result.fields).some(key => draft[key] !== result.fields[key])) {
+            throw new Error('NDA capture must match the generated synthetic agreement');
+          }
+          return Promise.resolve(new Response(result.text, {
+            status: 200, headers: {'Content-Type': 'text/plain; charset=utf-8'},
+          }));
+        }
         if (url === '/api/research-record-prepare') {
           const draft = JSON.parse(options.body);
           result = fixture[url][draft.id];
@@ -136,7 +146,7 @@ async function main() {
       } else if (name.startsWith('dashboard-project-settings')) {
         await selectView('project');
         await selectManuscript();
-        assert.equal(await page.locator('#nda-manager').getAttribute('open'), null);
+        assert.equal(await page.locator('#nda-draft-form input, #nda-draft-form textarea').count(), 5);
         await save(capture.target, '#view-pane-project');
       } else if (name.startsWith('dashboard-project-import')) {
         await selectView('project');
@@ -147,10 +157,14 @@ async function main() {
         await saveDialog(capture.target, '#modal-project-create');
       } else if (name.startsWith('dashboard-nda')) {
         await selectView('project');
-        await page.locator('#nda-manager > summary').click();
-        await page.locator('#nda-unlock-row').waitFor({state: 'visible'});
-        assert.equal(await page.locator('#nda-add-row').isVisible(), false);
-        await save(capture.target, '#nda-manager');
+        const fields = researchFixture['/api/nda-draft'].fields;
+        for (const [key, value] of Object.entries(fields)) {
+          await page.locator(`#nda-draft-form [name="${key}"]`).fill(value);
+        }
+        await page.locator('#nda-preview-btn').click();
+        await page.locator('#nda-preview-wrap').waitFor({state: 'visible'});
+        assert.equal(await page.locator('#nda-draft-preview').textContent(), researchFixture['/api/nda-draft'].text);
+        await save(capture.target, '#nda-draft');
       } else if (name.startsWith('dashboard-project-open')) {
         await page.locator('#btn-modal-open-project').click();
         await page.locator('#open-proj-choose').click();
@@ -250,7 +264,7 @@ async function main() {
     await save(path.join(output, 'dashboard-reference.png'), '#bands');
     await open(path.join(base, 'dashboard.html'), 1600, 1050);
     await selectView('project');
-    await page.locator('.settings-advanced summary').click();
+      await page.locator('.settings-form .settings-advanced > summary').click();
     await save(path.join(output, 'dashboard-settings.png'), '#settings-form');
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(base, 'capture-results.json'), JSON.stringify(results, null, 2));

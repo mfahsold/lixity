@@ -5,6 +5,11 @@ Chromium. Playwright is optional tooling, not a Lixity runtime dependency.
 
 ```sh
 node tests/browser/style-space.cjs
+node tests/browser/debug.cjs
+node tests/browser/nda-draft.cjs
+node tests/browser/setup-guide.cjs
+node tests/browser/project-history.cjs
+node tests/browser/decision-acknowledgement.cjs
 node tests/browser/settings.cjs
 node tests/browser/layout.cjs
 node tests/browser/research.cjs
@@ -17,9 +22,17 @@ node tests/browser/visual-consistency.cjs
 
 If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
 its module directory. `PYTHON_BIN` optionally overrides `.venv/bin/python`.
-The test generates a synthetic manuscript, checks canvas interaction, tooltip
-escaping, idle rendering and mobile layout, and prints its temporary screenshot
+The style-space test generates a synthetic manuscript, checks canvas interaction,
+keyboard/touch rotation and zoom, semantic chapter-score links with JavaScript
+enabled and disabled, tooltip escaping, idle rendering, touch targets and mobile
+layout, and prints its temporary screenshot
 directory. It does not read any private manuscript or contact a server.
+
+The debug test uses an intercepted synthetic host. It checks explicit enabled
+and disabled preferences across reloads, window/server defaults, unavailable
+local storage, API diagnostic gating and desktop/mobile rendering. Browser
+preferences do not change server logging. Backend request/error UTC timestamps
+are checked separately in `tests/test_server_debug.py`.
 
 The separate browser workflow runs every suite above in one Chromium job
 on pull requests and pushes to `main` that change `src/`, `tests/browser/`,
@@ -48,7 +61,7 @@ screenshots under `/tmp/lixity-list-filters-*`.
 The project-controls suite checks manuscript file/drop selection and inert
 filenames, explicit native import confirmation, the existing embedding load
 payload, persistent New/Open/guidance across the three views, and the initially
-collapsed capability-gated NDA panel. Its synthetic examples and intercepted
+explicit NDA capability gating. Its synthetic examples and intercepted
 requests exercise desktop/mobile layouts and seven languages; screenshots stay
 under `/tmp/lixity-project-controls-*`.
 
@@ -86,7 +99,9 @@ stay under `/tmp/lixity-public-docs-*`.
 The visual-consistency suite compares shared color roles between Pages and a
 synthetic dashboard in light/dark mode at 1440 and 320 pixels. It checks primary
 action contrast and target size, keyboard focus, reduced motion, increased text
-spacing and theme switching. Screenshots stay under `/tmp/lixity-visual-consistency-*`.
+spacing and theme switching. Paragraph chips and dimension controls are measured
+with mouse/coarse pointers, including pressed paragraph targets. Screenshots stay
+under `/tmp/lixity-visual-consistency-*`.
 These targeted checks are not a full WCAG conformance audit.
 
 The scenes suite renders seven locales at desktop and mobile widths. It checks
@@ -101,6 +116,25 @@ row filtering, mobile layout and the serif font being limited to the title.
 The layout test covers every panel at 1440, 768, 390 and 320 pixels, including
 long chapter strips, consistent panel spacing, readable scrolling tables,
 expanded settings/paragraphs and keyboard-accessible chapter matrix tooltips.
-It also exercises NDA records containing hostile HTML/attribute payloads;
-all values must remain inert text and action IDs must remain intact.
 Synthetic screenshots are written to `/tmp/lixity-layout-*.png`.
+
+The NDA draft suite checks the five-field form in seven languages at desktop
+and mobile widths: local-calendar defaults, validation, inert preview, pending
+and failed requests, private logging, reload behavior and exact PDF/TXT download
+bytes. It uses intercepted synthetic responses and writes only under
+`/tmp/lixity-nda-draft-*`. For download assertions, use a Chromium executable whose
+temporary files are visible to Playwright; Snap's private `/tmp` can cause
+`download.saveAs` to fail with `ENOENT`. The existing
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` override can select a bundled Chromium.
+
+The setup-guide suite checks explicit OCR/Zotero metadata requests without an
+archive, no automatic diagnostic calls, connection/readiness distinctions,
+inert advanced messages and seven-language desktop/mobile rendering. It performs
+no installation, configuration write or library/attachment browse.
+
+The project-history suite checks recent-project links and clear history at
+desktop/mobile sizes in seven languages, including blocked storage, malformed
+entries, cancellation and unsuccessful opens. The decision-acknowledgement suite
+checks exact displayed-version tokens, explicit applied/reopen actions, failed
+requests preserving the view and stale/withdrawn warnings. Both use synthetic
+fixtures and never connect to a running user's project.

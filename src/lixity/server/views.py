@@ -72,7 +72,6 @@ def build_server_dashboard(
     api_base: str = "/api",
     exports_dir: str | None = None,
     debug: bool = False,
-    nda_enabled: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Generates the interactive dashboard HTML and returns (html, info_dict)."""
     text = ""
@@ -173,7 +172,10 @@ def build_server_dashboard(
         manuscript_name=manuscript_name,
         current_language=language,
         flag_min_severity=resolved_thresholds.flag_min_severity,
-        enabled_actions=("analyze", "rebuild", "nda") if nda_enabled else ("analyze", "rebuild"),
+        enabled_actions=("analyze", "rebuild", "nda-draft"),
+        nda_project_name=title or (
+            os.path.splitext(manuscript_name)[0] if manuscript_name and not is_missing else ""
+        ),
         debug=debug,
     )
 

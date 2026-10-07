@@ -180,26 +180,10 @@ async function restoreFileReads(page) {
       assert.deepEqual(submissions.at(-1), {name: hostileFilename, content: syntheticContent});
       assert.equal(await loadButton.isDisabled(), false);
 
-      const nda = page.locator('#nda-manager');
-      assert.equal(await nda.evaluate(element => element.tagName), 'DETAILS');
-      assert.equal(await nda.evaluate(element => element.open), false, 'The NDA manager starts collapsed');
-      const summary = nda.locator('summary');
-      assert.ok((await summary.textContent()).includes(fixtures.en.labels.nda_accordion));
-      await summary.focus();
-      await page.keyboard.press('Enter');
-      assert.equal(await nda.evaluate(element => element.open), true);
-      assert.ok(await page.locator('#nda-unlock-btn').isVisible());
-      await summary.focus();
-      await page.keyboard.press('Space');
-      assert.equal(await nda.evaluate(element => element.open), false);
-      await summary.click();
-      await page.evaluate(() => ndaRender([{id: '" data-injected="yes', name: '<img src=x onerror="window.ndaInjected=1">', contact: '<script>bad()</script>', pdf: '<svg onload="window.ndaInjected=1">', status: 'entwurf'}]));
-      assert.equal(await page.locator('#nda-table img, #nda-table script, #nda-table svg, #nda-table [data-injected]').count(), 0);
-      assert.equal(await page.locator('#nda-table [data-nda-export]').getAttribute('data-nda-export'), '" data-injected="yes');
-      assert.ok((await page.locator('#nda-table').textContent()).includes('<img src=x'));
+      assert.equal(await page.locator('#nda-manager, #nda-table, #nda-passphrase').count(), 0);
+      assert.equal(await page.locator('#nda-draft-form').count(), 0, 'Embedding hosts explicitly advertise nda-draft');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `No page overflow at ${width}px`);
       await page.locator('#controls').screenshot({path: path.join(screenshotDir, `controls-${width}.png`)});
-      await nda.screenshot({path: path.join(screenshotDir, `nda-${width}.png`)});
     }
 
     if (!readStateOnly) {
@@ -239,8 +223,7 @@ async function restoreFileReads(page) {
     for (language of readStateOnly ? [] : Object.keys(fixtures)) {
       await page.goto('http://lixity.test/');
       await page.locator('#tab-view-project').click();
-      assert.equal(await page.locator('#nda-manager').evaluate(element => element.open), false);
-      assert.ok((await page.locator('#nda-manager summary').textContent()).includes(fixtures[language].labels.nda_accordion), `Localized NDA summary: ${language}`);
+      assert.equal(await page.locator('#nda-manager, #nda-draft-form').count(), 0);
       await dropFiles(page, [{name: 'scan.pdf', type: 'application/pdf', content: '%PDF-synthetic'}]);
       assert.ok((await page.locator('#ctl-status').textContent()).includes(fixtures[language].labels.manuscript_file_invalid), `Localized rejected-file explanation: ${language}`);
       assert.equal(await page.locator('[data-action="load"]').isDisabled(), true);
@@ -353,6 +336,6 @@ async function restoreFileReads(page) {
     assert.deepEqual(errors, []);
     console.log(readStateOnly
       ? 'Project controls: pending reads/imports, latest-selection protection, read-error recovery and modal file-picker keyboard access passed'
-      : `Project controls: explicit selection/drop/load, keyboard access, pending reads/imports, retry, inert NDA records and seven mobile locales passed; screenshots: ${screenshotDir}`);
+      : `Project controls: explicit selection/drop/load, keyboard access, pending reads/imports, retry, NDA capability gating and seven mobile locales passed; screenshots: ${screenshotDir}`);
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

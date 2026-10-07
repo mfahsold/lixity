@@ -7,6 +7,55 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.0.0] - 2026-10-07
+
+### Added
+- Opt-in sequential research checkpoints retain completed extraction across
+  interruptions and publication conflicts. Resume verifies files, configuration,
+  project and source identity; changed HEAD needs explicit acknowledgement.
+  New checkpoint envelopes preserve ordinary ingest and archive contracts.
+- Concise editable NDA drafts in all seven interface languages, with name,
+  optional address, project name, date and place. Protected disclosure and
+  signature sections remain. Native PDF/text downloads do not register people
+  or persist agreements, and long text is paginated without truncation.
+- A semantic chapter-score table and native rotation/zoom controls accompany
+  the 3D plot, including chapter navigation without JavaScript.
+- A live `GET /api` index describes registered routes, and research commands
+  expose consistent JSON aliases without changing their human-facing defaults.
+- Recently opened projects appear on the welcome screen and Open dialog;
+  browsing reuses the native chooser, with explicit local history clearing.
+- Plain-language revision acknowledgement controls are localized in seven
+  languages and pin exact decision/dossier versions in v5 research events.
+- The guided OCR/Zotero setup check reads connection metadata without importing
+  records, installing software or writing configuration.
+
+### Fixed
+- PDF capture extracts a stable copy of the exact retained bytes, preventing
+  mismatched evidence if a source file changes during extraction.
+- Native NDA export uses the effective project language or an explicit document
+  language. Invalid templates are rejected; document responses go directly to
+  preview/download without a recipient registry or server file publication.
+- Browser debug preferences explicitly save both enabled and disabled values,
+  surviving reload with server debug enabled. Request and error-detail logs use
+  one UTC timestamp writer.
+- Expected client disconnects during cancelled browser requests no longer
+  cause false HTTP 500 responses or tracebacks; NDA responses use the shared sender.
+- Paragraph chips and style controls have at least 24px targets, or 44px with
+  coarse pointers, including the pressed state.
+
+### Changed
+- Maintained docs remove private-adapter export/backup claims and explain
+  five-field NDA downloads, editable text models and heuristic limits.
+- Research overview requests validate one archive snapshot and reuse the
+  listing helpers. Source versions are grouped once rather than rescanning
+  the archive for every source; there is no persistent cache or output change.
+
+### Removed
+- NDA recipient databases, numbering, encryption/unlock/status administration
+  and project Python export adapters. `/api/nda-draft` replaces the old NDA
+  management actions. Back up prior project NDA data before replacing generated
+  drafts; software regeneration does not amend a signed agreement.
+
 ## [1.25.0] - 2026-10-06
 
 ### Changed
@@ -1385,7 +1434,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v1.25.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v2.0.0...HEAD
+[2.0.0]: https://github.com/mfahsold/lixity/compare/v1.25.0...v2.0.0
 [1.25.0]: https://github.com/mfahsold/lixity/compare/v1.24.1...v1.25.0
 [1.24.1]: https://github.com/mfahsold/lixity/compare/v1.24.0...v1.24.1
 [1.24.0]: https://github.com/mfahsold/lixity/compare/v1.23.0...v1.24.0

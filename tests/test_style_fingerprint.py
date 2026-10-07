@@ -335,6 +335,49 @@ class TestFingerprintDashboard(unittest.TestCase):
         self.assertEqual([point["ch"] for point in payload["points"]], [1])
         self.assertIn("1 / 2", rendered)
 
+    def test_dimension_score_table_preserves_measured_scores_and_safe_titles(self):
+        from lixity.language import get_language_profile
+        from lixity.ui.dimensions import style_dimensions
+
+        title = '<img src=x onerror="window.injected=true"> & heading'
+        config = CorpusConfig(language="de")
+        _paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
+            parse_markdown_blocks(SAMPLE.replace("Kap 1", title))
+        )
+        fp = StyleFingerprint(dimensions=[
+            {"index": 1, "variance": 0.6, "loadings": {"asl": 1.0},
+             "scores": {1: 0.5, 2: 2.0}, "flagged": []},
+            {"index": 2, "variance": 0.4, "loadings": {"ttr": -1.0},
+             "scores": {1: -1.25}, "flagged": [1]},
+        ])
+        rendered = style_dimensions(chapters, fp, get_language_profile("de").labels, "de")
+        table = re.search(r'<table id="dim-scores".*?</table>', rendered)
+        self.assertIsNotNone(table, "chapter scores must be available without JavaScript")
+        markup = table.group()
+        self.assertIn('scope="col">D1</th>', markup)
+        self.assertIn('scope="col">D2</th>', markup)
+        self.assertNotIn('scope="col">D3</th>', markup)
+        self.assertIn('href="#ch-1"', markup)
+        self.assertNotIn('href="#ch-2"', markup)
+        self.assertIn("+0,50", markup)
+        self.assertIn("-1,25", markup)
+        self.assertIn("Auffällig", markup)
+        self.assertIn(html_module.escape(title, quote=True), markup)
+        self.assertNotIn("<img", markup)
+
+    def test_dimension_accessibility_labels_are_localized(self):
+        from lixity.language import get_language_profile
+
+        required = (
+            "dim_scores", "dim_not_flagged", "dim_ctl_navigation",
+            "dim_ctl_left", "dim_ctl_right", "dim_ctl_up", "dim_ctl_down",
+            "dim_ctl_zoom_in", "dim_ctl_zoom_out",
+        )
+        for language in ("de", "en", "fr", "es", "it", "pt", "nl"):
+            with self.subTest(language=language):
+                labels = get_language_profile(language).labels
+                self.assertFalse([key for key in required if not labels.get(key)])
+
     def test_changepoint_links_follow_measured_chapter_indices(self):
         from lixity.ui.structural import style_structural
 

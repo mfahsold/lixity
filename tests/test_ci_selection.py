@@ -14,20 +14,25 @@ class TestNativePdfSelection(unittest.TestCase):
         expected = set()
         for path in (root / "tests").glob("test_*.py"):
             module = ast.parse(path.read_text(encoding="utf-8"))
-            for cls in (node for node in module.body if isinstance(node, ast.ClassDef)):
-                for method in (node for node in cls.body if isinstance(node, ast.FunctionDef)):
-                    needs_poppler = any(
-                        isinstance(node, ast.Call)
-                        and isinstance(node.func, ast.Attribute)
-                        and node.func.attr == "which"
-                        and node.args
-                        and isinstance(node.args[0], ast.Constant)
-                        and node.args[0].value in {"pdftotext", "pdftoppm", "pdfinfo"}
-                        for decorator in method.decorator_list
-                        for node in ast.walk(decorator)
-                    )
-                    if needs_poppler:
-                        expected.add(f"tests/{path.name}::{cls.name}::{method.name}")
+            functions = [(node.name, node) for node in module.body if isinstance(node, ast.FunctionDef)]
+            functions.extend(
+                (f"{cls.name}::{node.name}", node)
+                for cls in module.body if isinstance(cls, ast.ClassDef)
+                for node in cls.body if isinstance(node, ast.FunctionDef)
+            )
+            for name, method in functions:
+                needs_poppler = any(
+                    isinstance(node, ast.Call)
+                    and isinstance(node.func, ast.Attribute)
+                    and node.func.attr == "which"
+                    and node.args
+                    and isinstance(node.args[0], ast.Constant)
+                    and node.args[0].value in {"pdftotext", "pdftoppm", "pdfinfo"}
+                    for decorator in method.decorator_list
+                    for node in ast.walk(decorator)
+                )
+                if needs_poppler:
+                    expected.add(f"tests/{path.name}::{name}")
         self.assertTrue(expected, "No real Poppler prerequisites found")
         with tempfile.TemporaryDirectory() as cache:
             result = subprocess.run(  # noqa: S603 - fixed interpreter and pytest arguments

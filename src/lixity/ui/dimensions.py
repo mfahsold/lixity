@@ -2,7 +2,9 @@
 
 import json
 from collections.abc import Mapping, Sequence
+from typing import cast
 
+from ..format import num as format_num
 from ..format import pct as format_pct
 from ..style_fingerprint import FEATURES, LAYER_FEATURES, StyleFingerprint
 from ..style_profile import ChapterProfile
@@ -51,7 +53,7 @@ def style_dimensions(
         points_data.append(
             {
                 "ch": ch.num,
-                "title": ch.title or f"{translated('chapter')} {ch.num}",
+                "title": ch.title or f"{label(labels, 'chapter')} {ch.num}",
                 "x": sx,
                 "y": sy,
                 "z": sz,
@@ -107,14 +109,54 @@ def style_dimensions(
         f'<div class="dim-canvas-wrap">'
         f'<canvas id="dim-3d-canvas" width="800" height="440" '
         f'role="img" aria-label="{translated("dim_3d_title")}" '
+        f'aria-describedby="dim-scores-caption" '
         f'data-dim3d="{esc(dim_3d_json)}"></canvas>'
         f'<div id="dim-3d-tooltip" class="dim-tooltip" style="display:none;"></div>'
         f"</div>"
     )
     parts.append(
+        f'<div class="dim-3d-actions dim-navigation" role="group" '
+        f'aria-label="{translated("dim_ctl_navigation")}">'
+    )
+    for control_id, key in (
+        ("dim-ctl-left", "dim_ctl_left"),
+        ("dim-ctl-right", "dim_ctl_right"),
+        ("dim-ctl-up", "dim_ctl_up"),
+        ("dim-ctl-down", "dim_ctl_down"),
+        ("dim-ctl-zoom-in", "dim_ctl_zoom_in"),
+        ("dim-ctl-zoom-out", "dim_ctl_zoom_out"),
+    ):
+        parts.append(
+            f'<button type="button" class="dim-ctl" id="{control_id}">'
+            f'{translated(key)}</button>'
+        )
+    parts.append("</div>")
+    parts.append(
         f'<div class="dim-3d-footer"><span>{translated("dim_3d_hint")}</span>'
         f'<span>{len(points_data)} / {len(chapters)} {translated("chapters")}</span></div>'
     )
+    parts.append(
+        '<div class="table-wrap dim-score-wrap" tabindex="0" role="region" '
+        'aria-labelledby="dim-scores-caption"><table id="dim-scores">'
+        f'<caption id="dim-scores-caption">{translated("dim_scores")}</caption>'
+        f'<thead><tr><th scope="col">{translated("chapter")}</th>'
+    )
+    parts.extend(f'<th scope="col">D{axis["idx"]}</th>' for axis in axes_data)
+    parts.append(f'<th scope="col">{translated("dim_flagged")}</th></tr></thead><tbody>')
+    for point in points_data:
+        parts.append(
+            f'<tr><th scope="row"><a class="dim-ctl dim-chapter-jump" '
+            f'href="#ch-{point["ch"]}" data-jump="#ch-{point["ch"]}">'
+            f'{point["ch"]}. {esc(point["title"])}</a></th>'
+        )
+        for coordinate in ("x", "y", "z")[:len(axes_data)]:
+            score = cast(float, point[coordinate]) or 0.0
+            parts.append(
+                f'<td class="num">{format_num(score, language_key, 2, signed=bool(score))}</td>'
+            )
+        status = "flagged" if point["flagged"] else "dim_not_flagged"
+        parts.append(f'<td>{translated(status)}</td></tr>')
+    parts.append("</tbody></table></div>")
     parts.append("</div>")
 
     parts.append('<div class="dim-cards-col">')

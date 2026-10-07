@@ -39,8 +39,58 @@ search. The research CLI's help and errors are English.
 
 ## Research workflows
 
-These workflows are available in v1.24.1. Install that release or a later
-compatible version; upgrading a fixed older tag does not select a newer release.
+The revision and scene workflows began in v1.24.1. New checkpoint imports and
+explicit author acknowledgements are available since 2.0.0; select
+that release explicitly. Upgrading a fixed tag does not choose
+a newer release.
+
+### Continue an interrupted source import
+
+For a larger collection, opt into a checkpoint through the existing ingest
+command. Ordinary single- and multi-file ingestion keep their earlier output.
+
+```sh
+lixity research ingest --project ./novel --file source-a.pdf source-b.txt \
+  --checkpoint library.json --allow-retention --progress
+lixity research ingest --project ./novel --checkpoint library.json \
+  --resume --allow-retention --progress
+```
+
+The checkpoint remembers the ordered files and capture settings. Resume checks
+their bytes, the project, OCR configuration and source identity, then skips
+verified completed captures. Complete prepared extraction is reused after an
+interruption or failed publication; interrupted or unrecorded extraction may
+still run again. Changed files, order or settings require a fresh checkpoint.
+
+If another writer changed the research snapshot, inspect the current archive
+and explicitly acknowledge its current digest with `--expected-snapshot DIGEST`
+when resuming. This permits the reviewed retry; it does not rebase authored
+decisions or accept a changed/purged source version. A lost completion receipt
+is recovered from exact accepted record identities, avoiding duplicate captures.
+
+Relative names resolve inside `<project>/.lixity/research/imports/`; absolute
+paths must remain there and end in `.json`. One checkpoint accepts 1–1,000 files
+and at most 64 MiB of JSON preparation/metadata. One large or heavily escaped
+capture can exceed that budget; smaller batches do not always resolve it.
+Oversized preparation is rejected before publication and preserves the prior
+readable checkpoint. Original source files must remain present and unchanged.
+`--dry-run` is unavailable for checkpoints; ordinary ingest previews write none.
+
+Pending preparation contains private source text and is outside the accepted
+research archive and its export bundles. Remove it explicitly when unnecessary:
+
+```sh
+lixity research ingest --project ./novel --discard-checkpoint library.json
+```
+
+Discard removes checkpoint preparation and receipts, not accepted research
+records. Completed payloads are cleaned up after publication. Purge coordinates
+with matching checkpoints; a busy checkpoint blocks that purge. Checkpoints
+are loaded before source matching, so any unreadable or malformed checkpoint
+can block purge until explicit discard. Deleted captures cannot be restored
+silently through resume. Progress phases go to stderr; final JSON uses
+`research-checkpoint-ingest-local/1`, or `research-checkpoint-discard-local/1`
+for discard. CLI exit status is zero only for a complete checkpoint import.
 
 ### Read reports in the terminal
 
@@ -56,6 +106,13 @@ remain visible. Audit summaries explain their scope and bound long findings;
 use JSON for the full findings. `--pager` opens a pager only when explicitly
 requested with a human format and both input/output are interactive terminals.
 Piped output does not start one. Imported titles and values remain inert text.
+
+For automation, request JSON explicitly with `--format json` or `--json` on
+sources, audit, review, decision-impact, compare and matrix. Human-facing defaults
+remain command-specific; `lixity about --json` reports the parser's supported
+formats and defaults. The local HTTP server exposes its supported route registry
+at `GET /api`, even before a project is loaded. HTTP research responses are JSON;
+the NDA draft endpoint explicitly downloads PDF or UTF-8 text.
 
 ### Resolve conflicting drafts
 
@@ -124,6 +181,36 @@ nothing. Apply validates every operation and publishes one archive commit;
 an invalid operation or stale snapshot accepts none. Duplicate record IDs and
 references to revisions that would be created by that same batch are rejected.
 Existing evidence and explicitly pinned references stay intact.
+
+### Mark a decision as applied to a reviewed dossier
+
+After reviewing the decision and its linked dossier, choose **Mark as applied**
+for that pair. This records your assessment for the exact saved versions; it
+does not inspect a manuscript or establish semantic consistency. Later changes
+to either record make the acknowledgement stale and request review again.
+**Needs another check** explicitly reopens the same pair.
+
+The first acknowledgement adds a `decision_acknowledgement` record under
+`research-local/5` and a `research-manifest-local/5` snapshot. Earlier source,
+claim, dossier, decision and citation bytes remain unchanged. Older applications
+reject that upgraded snapshot; back up the archive and use compatible writers.
+Reading an old archive alone does not upgrade it.
+
+CLI equivalents require the current snapshot and both current version numbers:
+
+```sh
+lixity research mark-applied --project ./novel --decision-id DECISION \
+  --dossier-id DOSSIER --expected-snapshot DIGEST \
+  --expected-decision-revision 2 --expected-dossier-revision 4
+lixity research reopen --project ./novel --decision-id DECISION \
+  --dossier-id DOSSIER --expected-snapshot DIGEST \
+  --expected-decision-revision 2 --expected-dossier-revision 4
+```
+
+Both commands accept an optional short `--note`. A stale snapshot/version or
+foreign target writes nothing. Events form an explicit supersedes chain rather
+than relying on wall-clock ordering. Acknowledgement can clear its matching dated
+review request; outdated pins and withdrawn-source warnings remain visible.
 
 ### Use local OCR without a worker service
 

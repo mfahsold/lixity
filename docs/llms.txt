@@ -7,7 +7,7 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 1.25.0; release tag: v1.25.0.
+Current release: 2.0.0; release tag: v2.0.0.
 
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
@@ -40,7 +40,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from GitHub, not PyPI:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.25.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.0.0"
 lixity --version
 lixity about
 ```
@@ -69,7 +69,13 @@ The dashboard separates Research & Dossiers, Manuscript & Analysis, and
 Project & Settings. New/Open and optional guidance remain available.
 Open Project selects an existing server-local folder, including research-only
 archives. Selecting/dropping a manuscript makes no request; confirming import
-creates a separate project. NDA controls require the active project's capability.
+creates a separate project. NDA preview/download requires an explicitly advertised live nda-draft action.
+
+Since 2.0.0: semantic chapter-score tables expose measured
+scores, flags and native chapter links, including without JavaScript. Labeled
+rotation/zoom controls support keyboard/touch. Paragraph/dimension targets are
+24×24 CSS pixels, 44×44 for coarse pointers; long strips scroll. Individual
+canvas points remain pointer-operated; this is not full accessibility certification.
 
 Source/dossier filters match loaded titles, tags and IDs; dossiers also match
 excerpts/section names. Typing sends no requests and preserves open details.
@@ -96,8 +102,8 @@ credentials and recipient details out of shared logs.
 
 Analysis exits: 0 success, 1 file/processing error, 2 usage error.
 Errors go to stderr; JSON goes to stdout. Research audit failure exits 1.
-`research sources` and `research ocr-status` already output JSON and have no
-`--json` flag; `ocr-status` has no `--language` flag.
+`research sources` defaults to JSON and accepts `--json` as an explicit alias.
+`research ocr-status` outputs JSON and has no `--language` flag.
 
 ```python
 from lixity import api
@@ -232,11 +238,28 @@ linked files.
 
 ## Project
 
-NDA storage/actions require project configuration and authorization;
-cloud publication/sync require adapters. Debug uses `serve --debug`,
-`LIXITY_DEBUG` or `setLixityDebug(true)`. Server-enabled debug returns on
-reload after `setLixityDebug(false)`. Logs may contain content/paths.
-Backend request lines have timestamps; separate error details do not.
+NDA generation in 2.0.0 uses five fields: name, optional address,
+project name, date and place. Preview is inert text; PDF/editable UTF-8 downloads
+come directly from the response. No server files or recipient registry are created.
+Form values are not saved across reloads or logged. Explicitly authorize agreement
+generation. A real loaded project can prefill its name; empty workspaces leave it
+blank. The client supplies its local calendar date by default.
+POST /api/nda-draft accepts {name,address?,project_name,date,place,format:pdf|text}
+and returns application/pdf or text/plain, not a JSON record envelope.
+Document language: nda.language > resolved server/project language > project
+configuration > en. Optional UTF-8 nda.template stays inside the project; its five
+literal fields are recipient_name/recipient_address/project_title/date/place.
+Unknown fields and outside paths are rejected. Seven friendly text models are
+editable drafts, not universal enforceability claims. Native PDF encoding is
+Windows-1252; download text for broader local rendering and retain signed copies.
+See https://mfahsold.github.io/lixity/USAGE.md#project-nda-configuration-nda
+
+Cloud publication/sync remain project-adapter work.
+Debug uses serve --debug, LIXITY_DEBUG or setLixityDebug(true). In 2.0.0,
+explicit saved browser 1/0 preferences take precedence over window/server
+defaults and survive reload when local storage is available. They do not change
+backend logging. Backend requests and error details share a UTC writer with
+[YYYY-MM-DD HH:MM:SS UTC] [server:debug]. Logs may contain content/paths.
 
 Maintainer: Matthias Fahsold. Source: https://github.com/mfahsold/lixity
 Project page: https://mfahsold.github.io/lixity/

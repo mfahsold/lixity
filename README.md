@@ -14,7 +14,7 @@ what you keep or revise.
 
 [Get started](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v1.25.0 release notes](docs/releases/v1.25.0.md)
+[v2.0.0 release notes](docs/releases/v2.0.0.md)
 
 Free for projects with no commercial purpose. A book intended for sale,
 including self-publishing, requires a separate written commercial license.
@@ -28,19 +28,21 @@ For help installing these tools, or to use pipx instead, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v1.25.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.0.0"
 lixity --version
 ```
 
 This installs the released version. For later upgrades, select the new tag using
 the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace. [Release notes](docs/releases/v1.25.0.md) describe compatibility
+the local workspace. [Release notes](docs/releases/v2.0.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
-Version 1.24 adds scene registers and project targets, guided conflict
-resolution, grouped revisions, a decision review view and optional local Tesseract
-OCR. See the [command reference](docs/USAGE.md#scene-registers-and-project-targets)
-and [research guide](docs/research/USAGE.md#research-workflows) for setup and limits.
+**Since 2.0.0:** style dimensions have a chapter-score
+table and keyboard/touch rotation and zoom controls. Browser debug preferences
+persist across reloads, and native NDA exports contain complete editable drafts
+in all seven project languages. See the [dashboard](docs/USAGE.md#style-space-navigation),
+[debug](docs/USAGE.md#debug-logging-since-v1190) and
+[NDA](docs/USAGE.md#nda-drafts) guidance.
 
 ## Quick Start
 
@@ -148,9 +150,11 @@ preserving your draft.
 
 Project actions remain available from each workspace view. Preview a manuscript
 before importing it, select its analysis language, and adjust which differences
-you want to examine. Optional encrypted NDA records sit in a collapsible panel.
+you want to examine. In 2.0.0, the NDA form has just name, optional
+address, project name, date and place. Preview the friendly agreement and
+download a PDF or editable text in the project language. Review it before signing.
 
-<a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project settings with manuscript selection, analysis preferences and a collapsed NDA panel" width="900" /></a>
+<a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" width="900" /></a>
 
 [Project workflow](docs/USAGE.md#dashboard-workflow) ·
 [Import preview](docs/screenshots/dashboard-project-import.png) ·

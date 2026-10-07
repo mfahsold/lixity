@@ -9,6 +9,15 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
+OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
+    "sources": (("text", "md", "json"), "json"),
+    "audit": (("text", "md", "json"), "json"),
+    "decision-impact": (("text", "md", "json"), "text"),
+    "review": (("text", "md", "json"), "text"),
+    "compare": (("json", "md"), "json"),
+    "matrix": (("md", "csv", "json"), "md"),
+}
+
 
 def _non_negative(value: str) -> int:
     number = int(value)
@@ -19,7 +28,9 @@ def _non_negative(value: str) -> int:
 
 def configure(parser: argparse.ArgumentParser) -> None:
     commands = parser.add_subparsers(dest="research_command", required=True)
-    commands.add_parser("schema", help="Export the experimental entity JSON schema")
+    schema_command = commands.add_parser("schema", help="Export the experimental entity JSON schema")
+    schema_command.set_defaults(cli_output_formats=("json",), cli_default_output="json",
+                                cli_purpose="Export the experimental entity JSON schema")
     for name, help_text in (
         ("init", "Create an explicit local research project"),
         ("ingest", "Archive local UTF-8 text or PDF; scans require configured local OCR"),
@@ -37,6 +48,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("decision", "Create, list or revise author decisions and fact deviations"),
         ("decision-impact", "Inspect dossiers explicitly linked to an author decision; read-only"),
         ("review", "List structural editorial review candidates; read-only, not semantic judgment"),
+        ("mark-applied", "Record an author acknowledgement for exact decision and dossier revisions"),
+        ("reopen", "Explicitly reopen review of exact decision and dossier revisions"),
         ("revise-batch", "Preview related authored-record revisions, then apply them together explicitly"),
         ("withdraw", "Withdraw an archived source or version, marking citations and excluding from search"),
         ("purge", "Physically delete archived source records, passages, and unshared blobs"),
@@ -51,14 +64,19 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("matrix", "Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)"),
     ):
         command = commands.add_parser(name, help=help_text)
+        formats, default_format = OUTPUT_FORMATS.get(name, (("html",), "html") if name == "dashboard"
+                                                    else (("json",), "json"))
+        command.set_defaults(cli_output_formats=formats, cli_default_output=default_format,
+                             cli_purpose=help_text)
+        if name in OUTPUT_FORMATS:
+            output_group = command.add_mutually_exclusive_group()
+            output_group.add_argument("--format", choices=formats, default=default_format,
+                                      help=f"Output format (default: {default_format})")
+            output_group.add_argument("--json", dest="format", action="store_const", const="json",
+                                      help="Complete JSON output (alias for --format json)")
         if name in ("sources", "audit"):
-            command.add_argument("--format", choices=("text", "md", "json"), default="json",
-                                 help="Output format (default: complete JSON)")
             command.add_argument("--pager", action="store_true",
                                  help="Page text/Markdown only when input and output are interactive terminals")
-        elif name in ("decision-impact", "review"):
-            command.add_argument("--format", choices=("text", "md", "json"), default="text",
-                                 help="Output format (default: bounded text summary; JSON is complete)")
         if name not in ("restore", "ocr-status", "zotero-restore"):
             command.add_argument("--project", required=True, help="Explicit project directory")
         elif name == "ocr-status":
@@ -115,17 +133,22 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
             command.add_argument("--actor", default="local-author")
         elif name == "ingest":
-            command.add_argument("--file", nargs="+", required=True, help="Path(s) to local UTF-8 text or PDF file(s)")
+            command.add_argument("--file", nargs="+", help="Path(s) to local UTF-8 text or PDF file(s); required unless resuming or discarding")
             command.add_argument("--title")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
             command.add_argument("--source-id", help="Refresh this source without invalidating old citations")
-            command.add_argument("--actor", default="local-author")
+            command.add_argument("--actor", help="Capture actor (default: local-author; resume retains the checkpoint actor)")
             command.add_argument("--allow-retention", action="store_true", help="Confirm permission to retain a local copy, not to redistribute it")
             command.add_argument("--dry-run", action="store_true", help="Validate and preview; do not write")
             command.add_argument("--context", help="Path to JSON file containing source criticism context")
             command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
             command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
             command.add_argument("--fallback", "--allow-fallback", dest="fallback", action="store_true", help="Allow fallback to native PDF text layer if OCR worker fails or times out")
+            checkpoint_group = command.add_mutually_exclusive_group()
+            checkpoint_group.add_argument("--checkpoint", metavar="PATH", help="Opt-in .json checkpoint under the project's .lixity/research/imports directory")
+            checkpoint_group.add_argument("--discard-checkpoint", metavar="PATH", help="Remove checkpoint preparation without changing accepted research records")
+            command.add_argument("--resume", action="store_true", help="Resume the named checkpoint; files and omitted settings come from it")
+            command.add_argument("--expected-snapshot", help="Explicit current snapshot acknowledgement for a resumed checkpoint")
         elif name == "search":
             command.add_argument("--query", required=True)
             command.add_argument("--scope", choices=("sources", "dossiers", "claims", "decisions", "all"),
@@ -144,7 +167,6 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--version-id", help="Explicit source version UUID")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), help="Manuscript language override")
             command.add_argument("--top-n", type=int, default=20, help="Number of top terms to return (default: 20)")
-            command.add_argument("--format", choices=("json", "md"), default="json", help="Output format: json or md (markdown) (default: json)")
             command.add_argument("--output", help="Optional output file destination")
         elif name == "sources":
             command.add_argument("--source-id", help="Optional source UUID to inspect passages")
@@ -195,6 +217,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--impact-on-plot", help="Description of plot or worldbuilding impact")
         elif name == "decision-impact":
             command.add_argument("--decision-id", required=True, help="Decision UUID")
+        elif name in ("mark-applied", "reopen"):
+            command.add_argument("--decision-id", required=True)
+            command.add_argument("--dossier-id", required=True)
+            command.add_argument("--expected-snapshot", required=True)
+            command.add_argument("--expected-decision-revision", type=int, required=True)
+            command.add_argument("--expected-dossier-revision", type=int, required=True)
+            command.add_argument("--note", help="Optional author note; not independent verification")
+            command.add_argument("--actor", default="local-author")
         elif name == "revise-batch":
             command.add_argument("--file", required=True, help="UTF-8 JSON operations list or saved batch preview")
             command.add_argument("--apply", action="store_true", help="Apply all reviewed revisions in one commit")
@@ -213,9 +243,19 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--from", dest="archive_source", required=True, help="Source .tar.gz archive path")
             command.add_argument("--to", dest="target_dir", required=True, help="Target project directory")
         elif name == "matrix":
-            command.add_argument("--format", choices=("md", "csv", "json"), default="md",
-                                 help="Output format: md (markdown), csv, or json (default: md)")
             command.add_argument("--output", help="Optional output file destination")
+
+
+def command_metadata() -> list[dict[str, Any]]:
+    """Describe stdout formats and switches from the configured command parsers."""
+    parser = argparse.ArgumentParser(add_help=False)
+    configure(parser)
+    commands = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
+    return [{"name": name, "purpose": command.get_default("cli_purpose"),
+             "output_formats": list(command.get_default("cli_output_formats")),
+             "default_output": command.get_default("cli_default_output"),
+             "json_flag": "--json" if "--json" in command._option_string_actions else None}
+            for name, command in commands.choices.items()]
 
 
 def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
@@ -342,6 +382,17 @@ def run(args: argparse.Namespace) -> int:
 
     try:
         command = args.research_command
+        if command == "ingest":
+            if (args.resume and not args.checkpoint) or (not args.file and not args.resume and not args.discard_checkpoint):
+                print("[error] Supply --file, or --checkpoint PATH --resume, or --discard-checkpoint PATH", file=sys.stderr)
+                return 2
+            if args.expected_snapshot and not args.checkpoint:
+                print("[error] --expected-snapshot requires --checkpoint", file=sys.stderr)
+                return 2
+            if args.discard_checkpoint and any((args.file, args.resume, args.dry_run, args.source_id, args.title,
+                                                 args.language, args.context, args.origin_url, args.actor, args.fallback)):
+                print("[error] --discard-checkpoint cannot be combined with capture or dry-run options", file=sys.stderr)
+                return 2
         if command == "revise-batch" and bool(args.apply) != (args.expected_snapshot is not None):
             print("[error] --apply and --expected-snapshot must be supplied together; omit both for a read-only preview", file=sys.stderr)
             return 2
@@ -359,6 +410,11 @@ def run(args: argparse.Namespace) -> int:
             result = api.schema()
         elif command == "init":
             result = api.init(args.project, title=args.title, language=args.language, actor=args.actor)
+        elif command in ("mark-applied", "reopen"):
+            result = api.acknowledge_decision(args.project, args.decision_id, args.dossier_id,
+                expected_snapshot=args.expected_snapshot, expected_decision_revision=args.expected_decision_revision,
+                expected_dossier_revision=args.expected_dossier_revision,
+                status="applied" if command == "mark-applied" else "review_needed", note=args.note, actor=args.actor)
         elif command == "ingest":
             context: dict[str, Any] | None = None
             if getattr(args, "context", None):
@@ -374,8 +430,20 @@ def run(args: argparse.Namespace) -> int:
                     elapsed = time.monotonic() - start_time
                     print(f"[{stage}] ({elapsed:.1f}s) {message}", file=sys.stderr, flush=True)
 
-            files = args.file if isinstance(args.file, list) else [args.file]
-            if len(files) > 1:
+            files = args.file if isinstance(args.file, list) else [args.file] if args.file else None
+            if args.discard_checkpoint:
+                result = api.discard_ingest_checkpoint(args.project, checkpoint=args.discard_checkpoint)
+            elif args.checkpoint:
+                result = api.ingest_checkpoint(args.project, files, checkpoint=args.checkpoint, resume=args.resume,
+                                               allow_retention=args.allow_retention, source_id=args.source_id,
+                                               title=args.title, language=args.language, actor=args.actor,
+                                               dry_run=args.dry_run, context=context, origin_url=args.origin_url,
+                                               expected_snapshot=args.expected_snapshot,
+                                               allow_fallback=True if args.fallback else None,
+                                               progress_callback=_cli_progress)
+                print(json.dumps(result, ensure_ascii=False, indent=2))
+                return 0 if result["complete"] else 1
+            elif files is not None and len(files) > 1:
                 if args.source_id:
                     raise ResearchError("Cannot specify --source-id when ingesting multiple files")
                 items: list[dict[str, Any]] = []
@@ -384,7 +452,7 @@ def run(args: argparse.Namespace) -> int:
                 def _ingest_one(file_item: Any) -> tuple[dict[str, Any], bool]:
                     try:
                         res = api.ingest(args.project, file_item, allow_retention=args.allow_retention,
-                                         language=args.language, actor=args.actor, dry_run=args.dry_run,
+                                         language=args.language, actor=args.actor or "local-author", dry_run=args.dry_run,
                                          context=context, origin_url=args.origin_url,
                                          allow_fallback=getattr(args, "fallback", False),
                                          progress_callback=_cli_progress)
@@ -411,9 +479,11 @@ def run(args: argparse.Namespace) -> int:
                 sys.stdout.write(json.dumps(result, indent=2) + "\n")
                 return 1 if failed > 0 else 0
             else:
+                if files is None:
+                    raise ResearchError("Source files are required")
                 result = api.ingest(args.project, files[0], allow_retention=args.allow_retention,
                                     source_id=args.source_id, title=args.title, language=args.language,
-                                    actor=args.actor, dry_run=args.dry_run, context=context, origin_url=args.origin_url,
+                                    actor=args.actor or "local-author", dry_run=args.dry_run, context=context, origin_url=args.origin_url,
                                     allow_fallback=getattr(args, "fallback", False),
                                     progress_callback=_cli_progress)
         elif command in ("zotero-backup", "zotero-restore"):

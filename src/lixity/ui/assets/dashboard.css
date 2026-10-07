@@ -306,8 +306,8 @@ h2 {
 .chip {
   border: 0;
   padding: 0;
-  height: 18px;
-  min-width: 7px;
+  height: 24px;
+  min-width: 24px;
   border-radius: 3px;
   background: var(--neutral);
   cursor: pointer;
@@ -322,7 +322,7 @@ h2 {
 }
 .chip { transition: transform .14s var(--ease), opacity .14s var(--ease), background .25s var(--ease); }
 .chip:hover { transform: scaleY(1.18); }
-.chip:active { transform: scaleY(.9); }
+.chip:active { transform: none; opacity: 1; }
 .chip.tense-present { background: var(--present); }
 .chip.tense-past { background: var(--past); }
 .chip.tense-mixed { background: var(--mixed); }
@@ -519,11 +519,9 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 }
 
 /* --- Tables ----------------------------------------------------------- */
-.table-wrap, #nda-table { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table-wrap table { width: 100%; }
-.flags-wrap table, #nda-table table { min-width: 36rem; }
-.nda-actions { white-space: nowrap; }
-.nda-actions button + button { margin-left: var(--space-2); }
+.flags-wrap table { min-width: 36rem; }
 #matrix table { min-width: 52rem; }
 #matrix td.num { white-space: nowrap; }
 .table-wrap::-webkit-scrollbar { height: .45rem; }
@@ -671,6 +669,10 @@ td.flag-excerpt {
   align-items: center;
 }
 .dim-ctl {
+  display: inline-flex;
+  align-items: center;
+  min-width: 24px;
+  min-height: 24px;
   background: var(--bg);
   border: 1px solid var(--line);
   border-radius: 4px;
@@ -681,6 +683,13 @@ td.flag-excerpt {
   transition: all .15s ease;
   user-select: none;
 }
+.dim-navigation { padding: .5rem .85rem; border-top: 1px solid var(--line); }
+.dim-navigation .dim-ctl { flex: 1 0 auto; justify-content: center; }
+.dim-score-wrap { max-height: 20rem; border-top: 1px solid var(--line); }
+.dim-score-wrap table { min-width: 32rem; }
+.dim-score-wrap caption { padding: .6rem; text-align: left; font-weight: 650; color: var(--fg); }
+.dim-score-wrap td.num { white-space: nowrap; }
+.dim-chapter-jump { max-width: 100%; text-decoration: none; }
 .dim-ctl:hover {
   border-color: var(--accent);
   color: var(--fg);
@@ -1060,7 +1069,7 @@ details.nda .row { margin-top: .5rem; }
   animation: ctl-spin .7s linear infinite;
   flex-shrink: 0;
 }
-.ctl-status:empty, #nda-table:empty { display: none; }
+.ctl-status:empty { display: none; }
 
 .loading-state {
   display: inline-flex;
@@ -1634,12 +1643,6 @@ dialog.lixity-modal::backdrop {
 .manuscript-file-name:empty {
   display: none;
 }
-.nda-manager > summary {
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 1rem;
-  padding: .35rem 0;
-}
 .dropzone-icon {
   color: var(--accent);
   opacity: .9;
@@ -1982,8 +1985,10 @@ body.only-flags .chip:not(.sev-2):not(.sev-3) { display: none; }
   padding: 0 0.5rem;
 }
 
-/* Primary controls have a larger touch target without expanding data plots. */
+/* Interactive controls and paragraph chips have a larger touch target. */
 @media (pointer: coarse) {
+  .chip { min-width: 44px; height: 44px; }
+  .dim-ctl { min-width: 44px; min-height: 44px; }
   button.ctl, select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
   .badge-jump, .band-row, .row-link { min-height: 2.5rem; }
 }

@@ -26,7 +26,6 @@ __all__ = [
     "TENSE_PAST",
     "TENSE_PRESENT",
     "ContractKeys",
-    "NdaStatus",
     "Severity",
     "Status",
     "Tense",
@@ -138,17 +137,3 @@ FLAG_MIN_SEVERITY = Severity.NOTABLE
 # ---------------------------------------------------------------------------
 # NDA workflow statuses (canonical wire values)
 # ---------------------------------------------------------------------------
-
-
-class NdaStatus(str, Enum):
-    """Canonical NDA workflow status (stored value; labels in language_data)."""
-
-    DRAFT = "entwurf"
-    SENT = "versendet"
-    CONFIRMED = "bestaetigt"
-    SIGNED = "unterschrieben"
-
-    @classmethod
-    def all_values(cls) -> list[str]:
-        """Ordered list of wire values for <select> population."""
-        return [member.value for member in cls]

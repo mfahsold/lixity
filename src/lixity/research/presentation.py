@@ -100,6 +100,8 @@ def editorial_report(result: dict[str, Any], *, markdown: bool) -> str:
         "withdrawn_dossier": "Linked dossier has been withdrawn",
         "withdrawn_claim": "Linked claim has been withdrawn",
         "no_linked_dossier": "No explicitly linked dossier",
+        "stale_author_acknowledgement": "Author acknowledgement refers to an earlier decision or dossier revision",
+        "author_review_needed": "Author explicitly reopened review",
     }
     lines: list[str] = []
 
@@ -159,6 +161,15 @@ def editorial_report(result: dict[str, Any], *, markdown: bool) -> str:
             field("Sections to inspect", "; ".join(entry["sections"][:20]))
             if len(entry["sections"]) > 20:
                 field("Further sections", f"{len(entry['sections']) - 20}; use --format json for all headings")
+        acknowledgement = entry.get("acknowledgement")
+        if acknowledgement:
+            status = ("Author acknowledgement concerns earlier revisions" if not acknowledgement["current"]
+                      else "Author marked applied to these revisions" if acknowledgement["status"] == "applied"
+                      else "Author explicitly reopened review")
+            field("Author acknowledgement", status)
+            field("Acknowledged by", acknowledgement["actor"])
+            if acknowledgement.get("note"):
+                field("Author note", acknowledgement["note"])
         for flag in entry["flags"]:
             field("Review prompt", reasons.get(flag, flag))
         if not entry["flags"]:

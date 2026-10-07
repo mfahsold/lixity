@@ -160,9 +160,9 @@ class TestLocalization(unittest.TestCase):
             self.assertIn(visible_action, html)
 
         legacy = render_dashboard([], [], controls=True)
-        for legacy_action in ('data-action="load"', 'data-action="export"',
-                              'id="nda-manager"'):
+        for legacy_action in ('data-action="load"', 'data-action="export"'):
             self.assertIn(legacy_action, legacy)
+        self.assertNotIn('id="nda-draft-form"', legacy)
 
     def test_readability_dispatch_uses_language_specific_coefficients(self):
         expected = {"en": 27.485, "de": 53.0, "fr": 49.65, "es": 72.135,

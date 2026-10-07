@@ -28,6 +28,36 @@ class TestResearch(unittest.TestCase):
     def ingest(self, **kwargs):
         return api.ingest(self.project, self.source, allow_retention=True, **kwargs)
 
+    def test_project_overview_uses_one_snapshot_and_preserves_listings(self):
+        self.ingest()
+        dossier = api.create_dossier(self.project, "Notes", "# Scene\nA synthetic note.")
+        api.create_claim(self.project, title="A claim", statement="A synthetic statement", dossier_id=dossier["dossier_id"])
+        api.record_decision(self.project, title="A choice", rationale="An author's choice", dossier_ids=[dossier["dossier_id"]])
+        expected = {
+            "sources": api.list_sources(self.project)["sources"],
+            "dossiers": api.list_dossiers(self.project)["dossiers"],
+            "claims": api.list_claims(self.project)["claims"],
+            "decisions": api.list_decisions(self.project)["decisions"],
+        }
+        original = Repository.snapshot
+        with patch.object(Repository, "snapshot", autospec=True, side_effect=original) as reads:
+            overview = api.project_overview(self.project)
+        self.assertEqual(reads.call_count, 1)
+        self.assertEqual(overview["project_title"], "Research")
+        self.assertEqual(overview["project_language"], "en")
+        for key, records in expected.items():
+            self.assertEqual(overview[key], records)
+            self.assertEqual(overview[key + "_count"], len(records))
+
+    def test_project_overview_does_not_cache_a_previous_archive(self):
+        self.assertEqual(api.project_overview(self.project)["sources"], [])
+        captured = self.ingest()
+        self.assertEqual(api.project_overview(self.project)["sources"][0]["id"], captured["source_id"])
+        head = self.project / "research" / "HEAD.json"
+        head.write_text("corrupt\n", encoding="utf-8")
+        with self.assertRaises(ResearchError):
+            api.project_overview(self.project)
+
     def test_ingest_cite_and_search(self):
         result = self.ingest()
         self.assertEqual(result["passages"], 2)

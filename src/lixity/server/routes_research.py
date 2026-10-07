@@ -26,6 +26,11 @@ RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decisio
 class ResearchRoutesMixin(ResponseMixin):
     """Handlers for the explicit-project research workspace."""
 
+    def _handle_zotero_status(self) -> None:
+        from ..research.zotero import connection_status
+
+        self._json({"ok": True, **connection_status()})
+
     def _handle_research_status(self) -> None:
         root = self.get_research_root()
         ocr_diag = research_api.ocr_status()
@@ -40,26 +45,12 @@ class ResearchRoutesMixin(ResponseMixin):
             )
             return
         try:
-            src_data = research_api.list_sources(root)
-            dos_data = research_api.list_dossiers(root)
-            claims_data = research_api.list_claims(root)
-            decisions_data = research_api.list_decisions(root)
             self._json(
                 {
                     "ok": True,
                     "initialized": True,
                     "project_root": str(root),
-                    "project_id": src_data.get("project_id", ""),
-                    "project_title": src_data.get("project_title", ""),
-                    "project_language": src_data.get("project_language", ""),
-                    "sources": src_data.get("sources", []),
-                    "dossiers": dos_data.get("dossiers", []),
-                    "claims": claims_data.get("claims", []),
-                    "decisions": decisions_data.get("decisions", []),
-                    "sources_count": len(src_data.get("sources", [])),
-                    "dossiers_count": len(dos_data.get("dossiers", [])),
-                    "claims_count": len(claims_data.get("claims", [])),
-                    "decisions_count": len(decisions_data.get("decisions", [])),
+                    **research_api.project_overview(root),
                     "ocr": ocr_diag,
                 }
             )
@@ -155,6 +146,28 @@ class ResearchRoutesMixin(ResponseMixin):
 
     def _handle_research_review(self) -> None:
         self._handle_research_editorial_read(decision=False)
+
+    def _handle_research_decision_acknowledge(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        required_text = ("decision_id", "dossier_id", "expected_snapshot", "status")
+        required_revisions = ("expected_decision_revision", "expected_dossier_revision")
+        if (any(not isinstance(payload.get(key), str) or not payload[key] for key in required_text)
+                or any(type(payload.get(key)) is not int or payload[key] < 1 for key in required_revisions)):
+            self._json({"ok": False, "message": "Explicit decision/dossier IDs, status, snapshot and both revision tokens are required"}, 400)
+            return
+        try:
+            result = research_api.acknowledge_decision(root, payload["decision_id"], payload["dossier_id"],
+                expected_snapshot=payload["expected_snapshot"], expected_decision_revision=payload["expected_decision_revision"],
+                expected_dossier_revision=payload["expected_dossier_revision"], status=payload["status"],
+                note=payload.get("note"), actor=payload.get("actor", "local-author"))
+            self._json({"ok": True, **result})
+        except ResearchConflictError as error:
+            self._json({"ok": False, "message": str(error)}, 409)
+        except (ResearchError, OSError, ValueError) as error:
+            self._json({"ok": False, "message": str(error)}, 400)
 
     def _handle_research_editorial_read(self, *, decision: bool) -> None:
         root = self.get_research_root()

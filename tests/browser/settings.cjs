@@ -13,7 +13,8 @@ config, language = resolve_document_config(text, "de")
 result = analyze_document(text, config, FingerprintThresholds())
 result.fingerprint.fdr_flagged = {1: ["asl"]}
 print(render_dashboard(result.chapters, result.paragraphs, metrics=result.metrics,
-    fingerprint=result.fingerprint, labels=language.labels, language_key="de", controls=True))
+    fingerprint=result.fingerprint, labels=language.labels, language_key="de", controls=True,
+    enabled_actions=("analyze", "rebuild", "nda-draft"), nda_project_name="Synthetic project"))
 `], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 8*1024*1024});
 assert.equal(fixture.status, 0, fixture.stderr);
 
@@ -33,8 +34,8 @@ assert.equal(fixture.status, 0, fixture.stderr);
     await page.goto('http://lixity.test/');
     await page.locator('#tab-view-project').click();
     assert.equal(await page.locator('#tab-view-project').getAttribute('aria-selected'), 'true');
-    assert.equal(await page.locator('#nda-name, [data-action="nda"]').count(), 0);
-    assert.equal(await page.locator('#nda-add-btn').count(), 1);
+    assert.equal(await page.locator('[data-action="nda"], #nda-add-btn').count(), 0);
+    assert.equal(await page.locator('#nda-draft-form').count(), 1);
     const groups = await page.locator('#controls > .ctl-group').evaluateAll(elements => elements.map(element => {
       const style = getComputedStyle(element);
       return {top: style.borderTopWidth, bottom: style.borderBottomWidth, margin: style.marginTop, padding: style.paddingTop};
@@ -44,7 +45,7 @@ assert.equal(fixture.status, 0, fixture.stderr);
     assert.ok(groups.every(group => group.bottom === '0px' && group.margin === '0px'));
     assert.deepEqual(groups.map(group => group.padding), ['0px', '16px', '16px']);
     await page.locator('#controls').screenshot({path: '/tmp/lixity-controls-fixed.png'});
-    await page.locator('.settings-advanced summary').click();
+    await page.locator('.settings-form .settings-advanced > summary').click();
     assert.equal(await page.locator('#set-z-mild').inputValue(), '2.5');
     assert.equal(await page.locator('#set-fdr-q').inputValue(), '0.05');
     await page.locator('#set-z-strong').fill('1.5');

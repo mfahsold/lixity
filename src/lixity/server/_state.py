@@ -57,24 +57,17 @@ class WorkspaceState:
     dashboard_html: ClassVar[str] = ""
     dashboard_info: ClassVar[dict[str, Any]] = {}
     debug: ClassVar[bool] = False
-    nda_provider: ClassVar[Any] = None
 
     @classmethod
     def get_research_root(cls) -> Path | None:
         if cls.research_dir:
             return Path(cls.research_dir)
         candidate = Path(cls.workspace_root) / "research"
-        return candidate if candidate.is_dir() else None
+        return Path(cls.workspace_root) if candidate.is_dir() else None
 
     @classmethod
     def refresh(cls) -> None:
         """Re-analyzes the active manuscript and updates cached dashboard HTML."""
-        if cls.workspace_root:
-            from ..nda import get_project_nda_provider
-            cls.nda_provider = get_project_nda_provider(cls.workspace_root)
-        else:
-            cls.nda_provider = None
-        nda_enabled = bool(cls.nda_provider and cls.nda_provider.is_available())
         cls.dashboard_html, cls.dashboard_info = build_server_dashboard(
             cls.source_input,
             language=cls.language,
@@ -84,5 +77,4 @@ class WorkspaceState:
             api_base="/api",
             exports_dir=cls.exports_dir,
             debug=cls.debug,
-            nda_enabled=nda_enabled,
         )

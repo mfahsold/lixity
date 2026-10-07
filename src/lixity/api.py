@@ -342,6 +342,8 @@ def dashboard(
 def about() -> dict[str, Any]:
     """Tool metadata for agents: version, languages, features, thresholds."""
     from .diversity import HD_D_DRAW_SIZE, MIN_TOKENS_LD
+    from .research.cli import command_metadata
+    from .research.models import ENTITY, Manifest
     from .style_fingerprint import (
         DIM_SCORE_THRESHOLD,
         FEATURES,
@@ -351,6 +353,12 @@ def about() -> dict[str, Any]:
     )
 
     defaults = FingerprintThresholds()
+    record_versions: set[str] = set()
+    for definition in ENTITY.json_schema().get("$defs", {}).values():
+        version = definition.get("properties", {}).get("schema_version", {})
+        record_versions.update(version.get("enum", []))
+        if "const" in version:
+            record_versions.add(version["const"])
     return {
         "meta": _meta("generic"),
         "languages": PROFILE_KEYS,
@@ -437,10 +445,11 @@ def about() -> dict[str, Any]:
                 "name": "serve",
                 "purpose": "local HTTP development server and interactive dashboard (127.0.0.1)",
                 "output": "server",
+                "discovery": "/api",
             },
             {
                 "name": "build",
-                "purpose": "idempotent workspace build (exports/, archive, nda/)",
+                "purpose": "idempotent workspace build (exports/ and archive)",
                 "output": "files",
             },
             {
@@ -456,9 +465,12 @@ def about() -> dict[str, Any]:
             {
                 "name": "research",
                 "purpose": "experimental local UTF-8 source archive, exact citations and SQLite lexical search; explicit project required",
-                "output": "json",
+                "output": "command-dependent",
+                "subcommands": command_metadata(),
                 "status": "experimental",
                 "schema_version": "research-local/1",
+                "record_schema_versions": sorted(record_versions),
+                "manifest_schema_versions": Manifest.model_json_schema()["properties"]["schema_version"]["enum"],
             },
         ],
         "license": "Lixity Non-Commercial License 1.0 (LNCL-1.0)",

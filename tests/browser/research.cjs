@@ -81,7 +81,10 @@ server.serve_forever()
     await page.setViewportSize({width: 1440, height: 1000});
     await page.locator('#welcome-show').click();
     await expect(page.locator('#welcome-hero')).toBeVisible();
-    assert.equal(await page.locator('#ms-file, #nda-manager, [data-action=export], [data-action=sync], [data-action=gdrive]').count(), 0, 'Standalone UI must expose supported workflows only');
+    assert.equal(await page.locator('#ms-file, [data-action=export], [data-action=sync], [data-action=gdrive]').count(), 0, 'Native UI must expose supported workflows only');
+    assert.equal(await page.locator('#nda-draft-form').count(), 1, 'The empty native workspace advertises stateless NDA generation');
+    assert.equal(await page.locator('#nda-draft-form input, #nda-draft-form textarea').count(), 5);
+    assert.equal(await page.locator('#nda-project-name').inputValue(), '', 'An unloaded project has no inferred NDA name');
     const noStoragePage = await browser.newPage();
     noStoragePage.on('pageerror', error => errors.push('Blocked storage: ' + error.message));
     await noStoragePage.addInitScript(() => {
@@ -307,7 +310,7 @@ server.serve_forever()
     await page.locator('#r-search-query').fill('Opening');
     await page.locator('#r-search-btn').click();
     await expect(page.locator('#research-search-results')).toContainText('Synthetic dossier');
-    await expect(page.locator('#research-search-results')).toContainText('Revision 1');
+    await expect(page.locator('#research-search-results')).toContainText('Saved version 1');
     assert.equal(await page.locator('#research-search-results [data-use-passage]').count(), 0);
     await page.locator('#research-search-results [data-research-history]').click();
     await expect(page.locator('#modal-research-revision')).toBeVisible();
@@ -394,7 +397,7 @@ server.serve_forever()
     await page.locator(`[data-decision-impact="${impactChoiceId}"]`).click();
     const affectedHost = page.locator(`[data-decision-impact="${impactChoiceId}"]`).locator('..');
     await expect(affectedHost).toContainText('Synthetic dossier');
-    await expect(affectedHost).toContainText('Pinned: 1; current: 1');
+    await expect(affectedHost).toContainText('Linked versions: 1; latest saved: 1');
     await affectedHost.locator('[data-research-detail="dossier"]').click();
     await expect(affectedHost).toContainText('End of synthetic dossier.');
     await page.locator('[data-rtab=review]').click();
@@ -587,7 +590,7 @@ server.serve_forever()
     assert.equal(originalLink.record.claim_ref.revision, 1);
     await page.locator(`#research-claims-list [data-research-history=claim][data-record-id="${claimId}"]`).click();
     await expect(page.locator('#research-revision-history-detail')).toContainText(evidenceId);
-    await expect(page.locator('#research-revision-history-detail')).toContainText('Claim · Revision 2');
+    await expect(page.locator('#research-revision-history-detail')).toContainText('Claim · Saved version 2');
     await page.keyboard.press('Escape');
     await page.locator('[data-rtab=decisions]').click();
     const decisionId = decisions.decisions[0].id;

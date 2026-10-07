@@ -16,6 +16,19 @@ from .repository import Repository, ResearchError, digest
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
 
 
+def connection_status() -> dict[str, Any]:
+    """Check only the fixed local API root, not libraries or private records."""
+    try:
+        _metadata, server_id = _request("")
+    except ResearchError as error:
+        return {"schema_version": "research-zotero-status-local/1", "status": "unavailable",
+                "local_api_enabled": None, "safe_refresh_available": False,
+                "library_checked": False, "message": str(error)}
+    return {"schema_version": "research-zotero-status-local/1",
+            "status": "ready" if server_id else "connected", "local_api_enabled": True,
+            "safe_refresh_available": bool(server_id), "library_checked": False}
+
+
 def _request(path: str) -> tuple[bytes, str | None]:
     """Use only the fixed loopback service, without proxies or redirect following."""
     connection = http.client.HTTPConnection("127.0.0.1", 23119, timeout=10)

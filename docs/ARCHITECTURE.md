@@ -38,6 +38,11 @@ reimplement domain rules, and the research routes call `lixity.research.api`
 rather than touching the repository. Because each group is a plain class, a
 route module can be read and type-checked on its own.
 
+Research overview requests use `research.api.project_overview` to collect the
+existing lists from one fully validated archive snapshot. Source versions are
+grouped once for that view rather than rescanning the archive for each source.
+The response contract is unchanged; there is no persistent cache.
+
 The development server keeps one selected workspace per process. Opening a
 project selects its existing directory and research archive; importing browser
 file bytes creates a project at an explicit destination. A browser filename does
@@ -105,6 +110,13 @@ is required. Chapter-title tooltips are created as text nodes, not executable
 markup. Rendering and point picking share projected coordinates. Animation
 is scheduled only while rotation is enabled and the page is visible.
 
+**Since 2.0.0:** `ui/dimensions.py` renders a semantic score
+table from the same measured points as the canvas payload. It exposes chapter
+titles, actual dimension scores and descriptive flag text with native chapter
+links, including when JavaScript is disabled. Native rotation/zoom buttons call
+the existing projection renderer. No second renderer or frontend dependency is
+introduced. The table omits unmeasured chapters and columns for absent axes.
+
 ### Visual consistency and evidence
 
 The local dashboard and Pages use the same
@@ -121,8 +133,10 @@ The presentation follows these evidence-informed constraints:
   guides text contrast; visible focus outlines supplement color changes.
 - [WCAG target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
   specifies a 24 CSS-pixel minimum with exceptions. Primary workspace controls
-  use at least 40 pixels and 44 on coarse pointers as a product choice; this is
-  not a claim that every compact data mark meets the enhanced 44-pixel criterion.
+  use at least 40 pixels and 44 on coarse pointers as a product choice. Since
+  2.0.0, paragraph chips and dimension controls use 24×24 pixels, or
+  44×44 on coarse pointers, with no pressed-state shrinking. This does not
+  establish target-size conformance for every compact data mark.
 - [NN/g's controlled eye-tracking experiment](https://www.nngroup.com/articles/flat-ui-less-attention-cause-uncertainty/)
   supports retaining visible button boundaries and link cues. Its findability
   tasks do not establish a Lixity-specific productivity improvement.
@@ -148,9 +162,22 @@ template, not the effective host-root crawler policy. Keep sitemap entries in
 step with the HTML publication boundary and use real modification dates.
 
 Optional mutation controls need a separate project server. The engine alone
-does not start an HTTP service, store an NDA passphrase or send documents.
+does not start an HTTP service or send documents.
 Server adapters must validate origins, hosts, request sizes and payloads,
 restrict file/action access, and handle their own session lifecycle.
+
+Since 2.0.0, `nda.py` is a pure five-field document generator.
+`nda_templates.py` contains friendly text models in seven languages. The server
+resolves the project language or an explicit document override, substitutes
+literal values in the model or a confined UTF-8 template, and returns PDF/text
+bytes. The browser previews inert text and downloads a Blob. The generator
+has no recipient registry and creates no server files. Reviewed/signed documents
+remain under the user's own storage policy.
+
+Browser debug selection uses an explicit saved `1`/`0` before
+window/server defaults. The server's response mixin supplies the shared UTC
+writer for both request lines and error details. This separates a browser's
+diagnostic preference from the server process's logging setting.
 
 Project and research interface labels use the same language-profile resources
 as the analysis dashboard. Python escapes the localized label dictionary into

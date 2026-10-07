@@ -1,13 +1,13 @@
 (function () {
   var isDebug = (function() {
+    try {
+      var saved = localStorage.getItem("lixity_debug");
+      if (saved === "1") return true;
+      if (saved === "0") return false;
+    } catch (_) {}
     if (window.LIXITY_DEBUG) return true;
     var meta = document.querySelector('meta[name="lixity-debug"]');
-    if (meta && meta.content === "true") return true;
-    try {
-      return localStorage.getItem("lixity_debug") === "1";
-    } catch (_) {
-      return false;
-    }
+    return !!(meta && meta.content === "true");
   })();
 
   var LixityLog = {
@@ -15,8 +15,7 @@
     setDebug: function(enable) {
       isDebug = !!enable;
       try {
-        if (isDebug) localStorage.setItem("lixity_debug", "1");
-        else localStorage.removeItem("lixity_debug");
+        localStorage.setItem("lixity_debug", isDebug ? "1" : "0");
       } catch (_) {}
       console.info("[Lixity] Debug logging " + (isDebug ? "enabled" : "disabled"));
     },
@@ -552,144 +551,95 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     try { localStorage.removeItem(welcomeStorageKey); } catch (_) { /* Keep this page usable without storage. */ }
   });
 }
-// NDA statuses come from the server-rendered data attribute (single source: lixity.status.NdaStatus).
-function ndaStatuses() {
-  var el = document.getElementById("nda-status");
-  try {
-    var raw = el && el.getAttribute("data-nda-statuses");
-    if (raw) return JSON.parse(raw);
-  } catch (e) { /* fall through */ }
-  return ["entwurf", "versendet", "bestaetigt", "unterschrieben"];
-}
-function ndaStatus(message, ok) {
-  var el = document.getElementById("nda-status");
-  if (!el) return;
-  el.className = "ctl-status " + (ok ? "ok" : "err");
-  el.textContent = (ok ? "✓ " : "✗ ") + (message || "");
-}
-async function ndaApi(path, payload) {
-  var t0 = performance.now();
-  var url = API + "/" + path;
-  try {
-    var res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload || {})
-    });
-    var data = await res.json();
-    LixityLog.api("POST", url, performance.now() - t0, res.status, data);
-    return data;
-  } catch (err) {
-    LixityLog.error("ndaApi error:", err);
-    return { ok: false, message: String(err) };
+(function initNdaDraft() {
+  var form = document.getElementById("nda-draft-form");
+  if (!form) return;
+  var preview = document.getElementById("nda-draft-preview");
+  var previewWrap = document.getElementById("nda-preview-wrap");
+  var status = document.getElementById("nda-draft-status");
+  var pdfButton = document.getElementById("nda-pdf-btn");
+  var textButton = document.getElementById("nda-text-btn");
+  var busy = false;
+  var fields = ["name", "address", "project_name", "date", "place"];
+  var dateInput = form.elements.namedItem("date");
+  if (dateInput && !dateInput.value) {
+    var today = new Date();
+    dateInput.value = today.getFullYear() + "-" + String(today.getMonth() + 1).padStart(2, "0")
+      + "-" + String(today.getDate()).padStart(2, "0");
   }
-}
-function ndaRender(records) {
-  var host = document.getElementById("nda-table");
-  var hint = document.getElementById("nda-hint");
-  var unlockRow = document.getElementById("nda-unlock-row");
-  var addRow = document.getElementById("nda-add-row");
-  if (!host) return;
-  if (unlockRow) unlockRow.hidden = true;
-  if (addRow) addRow.hidden = false;
-  if (hint) hint.textContent = records.length + (records.length === 1 ? " entry" : " entries");
-  host.replaceChildren();
-  if (!records.length) return;
-  var table = document.createElement("table");
-  var header = table.createTHead().insertRow();
-  ["ID", document.getElementById("nda-new-name").placeholder,
-    document.getElementById("nda-new-contact").placeholder, "Status", "PDF", ""].forEach(function(text) {
-    var cell = document.createElement("th");
-    cell.scope = "col";
-    cell.textContent = text;
-    header.appendChild(cell);
+
+  function message(key, failed) {
+    status.className = "ctl-status " + (failed ? "err" : "ok");
+    status.textContent = uiLabel(key);
+  }
+  function pending(value) {
+    busy = value;
+    form.setAttribute("aria-busy", String(value));
+    form.querySelectorAll("input, textarea, button").forEach(function(control) { control.disabled = value; });
+  }
+  async function generate(format, showPreview) {
+    if (busy || !form.reportValidity()) return;
+    var payload = {format: format};
+    fields.forEach(function(key) { payload[key] = form.elements.namedItem(key).value.trim(); });
+    var missing = fields.find(function(key) { return key !== "address" && !payload[key]; });
+    if (missing) {
+      message("nda_draft_required", true);
+      form.elements.namedItem(missing).focus();
+      return;
+    }
+    pending(true);
+    message("nda_draft_working", false);
+    var reason = "";
+    try {
+      var response = await fetch(API + "/nda-draft", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify(payload)
+      });
+      if (!response.ok) {
+        try {
+          var errorBody = await response.json();
+          if (typeof errorBody.message === "string") reason = errorBody.message;
+        } catch (_) { /* Keep the localized failure message. */ }
+        throw new Error("NDA draft unavailable");
+      }
+      var contentType = response.headers.get("Content-Type") || "";
+      if (!contentType.startsWith(format === "pdf" ? "application/pdf" : "text/plain")) {
+        throw new Error("NDA draft unavailable");
+      }
+      if (showPreview) {
+        preview.textContent = await response.text();
+        previewWrap.hidden = false;
+        message("nda_draft_ready", false);
+      } else {
+        var url = URL.createObjectURL(await response.blob());
+        var download = document.createElement("a");
+        download.href = url;
+        download.download = format === "pdf" ? "nda.pdf" : "nda.txt";
+        document.body.appendChild(download);
+        download.click();
+        download.remove();
+        setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+        message("nda_draft_downloaded", false);
+      }
+    } catch (_) {
+      // Neither submitted personal details nor returned agreement text are logged.
+      message("nda_draft_failed", true);
+      if (reason) status.textContent += " " + reason;
+    } finally { pending(false); }
+  }
+  form.addEventListener("submit", function(event) {
+    event.preventDefault();
+    generate("text", true);
   });
-  var body = table.createTBody();
-  records.forEach(function(record) {
-    var row = body.insertRow();
-    [record.id, record.name, record.contact || "–"].forEach(function(value) {
-      row.insertCell().textContent = String(value == null ? "" : value);
-    });
-    var select = document.createElement("select");
-    select.className = "ctl";
-    select.dataset.ndaStatus = String(record.id);
-    ndaStatuses().forEach(function(status) {
-      var option = document.createElement("option");
-      option.value = status;
-      option.textContent = status;
-      option.selected = status === record.status;
-      select.appendChild(option);
-    });
-    row.insertCell().appendChild(select);
-    row.insertCell().textContent = String(record.pdf || "–");
-    var actions = row.insertCell();
-    actions.className = "nda-actions";
-    [["ndaExport", "PDF"], ["ndaDelete", "✕"]].forEach(function(action) {
-      var button = document.createElement("button");
-      button.type = "button";
-      button.className = "ctl";
-      button.dataset[action[0]] = String(record.id);
-      button.textContent = action[1];
-      actions.appendChild(button);
-    });
+  form.addEventListener("input", function() {
+    preview.textContent = "";
+    previewWrap.hidden = true;
+    status.textContent = "";
   });
-  host.appendChild(table);
-}
-async function ndaRefresh() {
-  var data = await ndaApi("nda-list", {});
-  if (!data.ok) {
-    var hint = document.getElementById("nda-hint");
-    if (hint) hint.textContent = data.message || "";
-    var unlockRow = document.getElementById("nda-unlock-row");
-    if (unlockRow) unlockRow.hidden = false;
-    return;
-  }
-  ndaRender(data.records || []);
-}
-document.addEventListener("click", async function (event) {
-  var unlock = event.target.closest("#nda-unlock-btn");
-  if (unlock) {
-    var pass = document.getElementById("nda-passphrase");
-    var data = await ndaApi("nda-unlock", { passphrase: pass ? pass.value : "" });
-    ndaStatus(data.message, data.ok);
-    if (data.ok) { if (pass) pass.value = ""; ndaRender(data.records || []); }
-    return;
-  }
-  var add = event.target.closest("#nda-add-btn");
-  if (add) {
-    var payload = {
-      name: document.getElementById("nda-new-name").value,
-      contact: document.getElementById("nda-new-contact").value,
-      notes: document.getElementById("nda-new-notes").value
-    };
-    var res = await ndaApi("nda-add", payload);
-    ndaStatus(res.message, res.ok);
-    if (res.ok) ndaRefresh();
-    return;
-  }
-  var exp = event.target.closest("[data-nda-export]");
-  if (exp) {
-    var res2 = await ndaApi("nda-export", { id: exp.dataset.ndaExport });
-    ndaStatus(res2.message, res2.ok);
-    if (res2.ok) ndaRefresh();
-    return;
-  }
-  var del = event.target.closest("[data-nda-delete]");
-  if (del) {
-    var res3 = await ndaApi("nda-delete", { id: del.dataset.ndaDelete });
-    ndaStatus(res3.message, res3.ok);
-    if (res3.ok) ndaRefresh();
-    return;
-  }
-});
-document.addEventListener("change", async function (event) {
-  var sel = event.target.closest("[data-nda-status]");
-  if (sel) {
-    var res = await ndaApi("nda-update", { id: sel.dataset.ndaStatus, status: sel.value });
-    ndaStatus(res.message, res.ok);
-  }
-});
-if (document.getElementById("nda-manager")) { ndaRefresh(); }
+  pdfButton.addEventListener("click", function() { generate("pdf", false); });
+  textButton.addEventListener("click", function() { generate("text", false); });
+  pending(false);
+})();
 var settingsForm = document.getElementById("settings-form");
 if (settingsForm) {
   settingsForm.addEventListener("submit", function(event) {
@@ -731,6 +681,7 @@ async function runAction(action, payload, button) {
       body: JSON.stringify(payload || {})
     });
     var data = await res.json();
+    if (!res.ok) data.ok = false;
     LixityLog.api("POST", url, performance.now() - t0, res.status, data);
     if (status) {
       status.className = "ctl-status " + (data.ok ? "ok" : "err");
@@ -833,6 +784,7 @@ async function researchApiPost(action, payload) {
       body: JSON.stringify(payload || {})
     });
     var data = await res.json();
+    if (!res.ok) data.ok = false;
     LixityLog.api("POST", url, performance.now() - t0, res.status, data);
     if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action)) {
       await refreshResearchProjectInfo();
@@ -1700,14 +1652,38 @@ function researchEditorialTime(timestamp) {
     escapeHtml(new Date(timestamp).toLocaleString(document.documentElement.lang || "en", {timeZone: "UTC"})) + ' UTC</time>';
 }
 
-function researchAffectedDossier(dossier) {
+function researchDecisionAcknowledgement(context) {
+  if (!context.dossierId || !context.snapshot || !Number.isInteger(context.decisionRevision) ||
+      !Number.isInteger(context.dossierRevision)) return "";
+  var ack = context.acknowledgement;
+  var applied = Boolean(ack && ack.current === true && ack.status === "applied");
+  var status = ack ? uiLabel(ack.current === true ?
+    (applied ? "research_decision_applied" : "research_decision_review_needed") :
+    "research_decision_earlier_assessment") : "";
+  var blocked = (context.flags || []).includes("withdrawn_dossier");
+  return '<div class="research-decision-acknowledgement" data-decision-ack-dossier="' + escapeHtml(context.dossierId) +
+    '" data-decision-ack-decision="' + escapeHtml(context.decisionId) +
+    '" data-decision-ack-decision-revision="' + context.decisionRevision +
+    '" data-decision-ack-dossier-revision="' + context.dossierRevision +
+    '" data-decision-ack-snapshot="' + escapeHtml(context.snapshot) + '">' +
+    (status ? '<p class="ctl-note">' + escapeHtml(status) + '</p>' : '') +
+    '<p class="ctl-note">' + escapeHtml(uiLabel("research_decision_ack_help")) + '</p>' +
+    '<button type="button" class="ctl" data-decision-ack-status="' + (applied ? 'review_needed' : 'applied') + '"' +
+    (blocked ? ' disabled' : '') + '>' + escapeHtml(uiLabel(applied ? "research_decision_reopen_review" : "research_decision_mark_applied")) + '</button>' +
+    '<p class="ctl-status" data-decision-ack-feedback role="alert" aria-live="assertive" hidden></p></div>';
+}
+
+function researchAffectedDossier(dossier, impact) {
   return '<div class="research-card"><strong>' + escapeHtml(dossier.title) + '</strong>' +
     '<p class="ctl-note">' + escapeHtml(uiFormat("research_decision_dossier_versions", {
       pinned: dossier.pinned_revisions.join(", "), current: dossier.current_revision
     })) + '</p><p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_dossier_date")) + ': ' +
     researchEditorialTime(dossier.created_at) + '</p>' + researchEditorialFlags(dossier.flags) +
     (dossier.sections.length ? '<p class="ctl-note">' + dossier.sections.map(escapeHtml).join(" · ") + '</p>' : '') +
-    (!dossier.withdrawn ? researchDetailsControl("dossier", dossier.id) : '') + '</div>';
+    (!dossier.withdrawn ? researchDetailsControl("dossier", dossier.id) : '') +
+    researchDecisionAcknowledgement({decisionId: impact.decision.id, decisionRevision: impact.decision.revision,
+      dossierId: dossier.id, dossierRevision: dossier.current_revision, snapshot: impact.snapshot,
+      acknowledgement: dossier.acknowledgement, flags: dossier.flags}) + '</div>';
 }
 
 async function refreshResearchEditorialReview() {
@@ -1737,8 +1713,36 @@ async function refreshResearchEditorialReview() {
         })) + '</p>' : '') +
         (candidate.sections.length ? '<p class="ctl-note">' + candidate.sections.map(escapeHtml).join(" · ") + '</p>' : '') +
         (candidate.dossier_id && !candidate.flags.includes("withdrawn_dossier") ? researchDetailsControl("dossier", candidate.dossier_id) : '') +
-        researchRevisionActions("decision", candidate.decision_id) + '</div>';
+        researchRevisionActions("decision", candidate.decision_id) +
+        researchDecisionAcknowledgement({decisionId: candidate.decision_id, decisionRevision: candidate.decision_revision,
+          dossierId: candidate.dossier_id, dossierRevision: candidate.current_revision, snapshot: report.snapshot,
+          acknowledgement: candidate.acknowledgement, flags: candidate.flags}) + '</div>';
     }).join("");
+}
+
+function ocrReading(ocr) {
+  ocr = ocr || {};
+    var ocrStatus = ocr.status === "ready (probed)" ? "ready" : ocr.status;
+    var badgeClass = ocrStatus === "ready" ? "ok" : (ocrStatus === "native_only" ? "note" : "err");
+    var ocrLabels = {
+      ready: ocr.backend === "tesseract" ? ["research_ocr_tesseract_ready", "research_ocr_tesseract_ready_help"] : ["research_ocr_ready", "research_ocr_ready_help"],
+      native_only: ["research_ocr_native", "research_ocr_native_help"],
+      partial: ["research_ocr_partial", "research_ocr_partial_help"],
+      misconfigured_worker: ["research_ocr_worker_error", "research_ocr_worker_error_help"],
+      misconfigured_backend: ["research_ocr_tesseract_error", "research_ocr_tesseract_error_help"],
+      missing_dependencies: ["research_ocr_missing", "research_ocr_missing_help"]
+    };
+    var ocrKeys = Object.prototype.hasOwnProperty.call(ocrLabels, ocrStatus)
+      ? ocrLabels[ocrStatus] : ["research_ocr_unknown", "research_ocr_unknown_help"];
+    var labelText = uiLabel(ocrKeys[0]);
+    var guidanceText = uiLabel(ocrKeys[1]);
+    if (ocr.requested_languages && ocr.requested_languages.length) {
+      guidanceText += " " + uiFormat("research_ocr_languages", {languages: ocr.requested_languages.join(" + ")});
+    }
+    if (ocr.missing_languages && ocr.missing_languages.length) {
+      guidanceText += " " + uiFormat("research_ocr_missing_languages", {languages: ocr.missing_languages.join(" + ")});
+    }
+  return {label: labelText, guidance: guidanceText, badge: badgeClass};
 }
 
 async function refreshResearchProjectInfo() {
@@ -1770,27 +1774,10 @@ async function refreshResearchProjectInfo() {
   }
   var ocrBox = document.getElementById("r-ocr-diagnostic-box");
   if (ocrBox && status && status.ocr) {
-    var ocr = status.ocr;
-    var ocrStatus = ocr.status === "ready (probed)" ? "ready" : ocr.status;
-    var badgeClass = ocrStatus === "ready" ? "ok" : (ocrStatus === "native_only" ? "note" : "err");
-    var ocrLabels = {
-      ready: ocr.backend === "tesseract" ? ["research_ocr_tesseract_ready", "research_ocr_tesseract_ready_help"] : ["research_ocr_ready", "research_ocr_ready_help"],
-      native_only: ["research_ocr_native", "research_ocr_native_help"],
-      partial: ["research_ocr_partial", "research_ocr_partial_help"],
-      misconfigured_worker: ["research_ocr_worker_error", "research_ocr_worker_error_help"],
-      misconfigured_backend: ["research_ocr_tesseract_error", "research_ocr_tesseract_error_help"],
-      missing_dependencies: ["research_ocr_missing", "research_ocr_missing_help"]
-    };
-    var ocrKeys = Object.prototype.hasOwnProperty.call(ocrLabels, ocrStatus)
-      ? ocrLabels[ocrStatus] : ["research_ocr_unknown", "research_ocr_unknown_help"];
-    var labelText = uiLabel(ocrKeys[0]);
-    var guidanceText = uiLabel(ocrKeys[1]);
-    if (ocr.requested_languages && ocr.requested_languages.length) {
-      guidanceText += " " + uiFormat("research_ocr_languages", {languages: ocr.requested_languages.join(" + ")});
-    }
-    if (ocr.missing_languages && ocr.missing_languages.length) {
-      guidanceText += " " + uiFormat("research_ocr_missing_languages", {languages: ocr.missing_languages.join(" + ")});
-    }
+    var reading = ocrReading(status.ocr);
+    var badgeClass = reading.badge;
+    var labelText = reading.label;
+    var guidanceText = reading.guidance;
     ocrBox.style.display = "flex";
     ocrBox.style.alignItems = "center";
     ocrBox.innerHTML = '<span class="badge ' + badgeClass + '" style="font-size:.75rem;padding:2px 6px;">' +
@@ -1799,6 +1786,47 @@ async function refreshResearchProjectInfo() {
   }
   return status;
 }
+
+(function initResearchSetup() {
+  var button = document.getElementById("research-setup-check");
+  if (!button) return;
+  var ocrText = document.getElementById("setup-ocr-reading");
+  var zoteroText = document.getElementById("setup-zotero-reading");
+  var diagnostics = document.getElementById("setup-diagnostics");
+  async function metadata(path) {
+    try {
+      var response = await fetch(API + "/research/" + path);
+      if (!response.ok) return {ok: false};
+      return await response.json();
+    } catch (_) { return {ok: false}; }
+  }
+  button.addEventListener("click", async function() {
+    if (button.disabled) return;
+    button.disabled = true;
+    button.setAttribute("aria-busy", "true");
+    ocrText.textContent = "OCR: " + uiLabel("research_loading");
+    zoteroText.textContent = "Zotero: " + uiLabel("research_loading");
+    try {
+      var results = await Promise.all([metadata("ocr-status"), metadata("zotero-status")]);
+      var ocr = results[0];
+      var zotero = results[1];
+      var reading = ocrReading(ocr.ok ? ocr : null);
+      ocrText.textContent = "OCR: " + reading.label + " " + reading.guidance;
+      var key = zotero.ok && zotero.status === "ready" ? "setup_zotero_ready"
+        : zotero.ok && zotero.status === "connected" ? "setup_zotero_connected" : "setup_zotero_unavailable";
+      zoteroText.textContent = uiLabel(key) + " " + uiLabel("setup_library_unchecked");
+      var safeOcr = {};
+      ["status", "backend", "pdftotext_available", "pdftoppm_available", "tesseract_available",
+       "requested_languages", "available_languages", "missing_languages"].forEach(function(field) {
+        if (Object.prototype.hasOwnProperty.call(ocr, field)) safeOcr[field] = ocr[field];
+      });
+      diagnostics.textContent = JSON.stringify({ocr: safeOcr, zotero: zotero}, null, 2);
+    } finally {
+      button.disabled = false;
+      button.setAttribute("aria-busy", "false");
+    }
+  });
+})();
 
 async function initResearchUI() {
   researchStatus(uiLabel("research_loading"), "loading");
@@ -1837,6 +1865,42 @@ async function initResearchUI() {
 }
 
 document.addEventListener("click", async function (event) {
+  var ackButton = event.target.closest("[data-decision-ack-status]");
+  if (ackButton) {
+    var pair = ackButton.closest(".research-decision-acknowledgement");
+    if (!pair || ackButton.disabled || pair.dataset.decisionAckPending === "1") return;
+    var payload = {decision_id: pair.dataset.decisionAckDecision, dossier_id: pair.dataset.decisionAckDossier,
+      expected_snapshot: pair.dataset.decisionAckSnapshot,
+      expected_decision_revision: Number(pair.dataset.decisionAckDecisionRevision),
+      expected_dossier_revision: Number(pair.dataset.decisionAckDossierRevision), status: ackButton.dataset.decisionAckStatus};
+    var feedback = pair.querySelector("[data-decision-ack-feedback]");
+    var restoreFocus = document.activeElement === ackButton;
+    pair.dataset.decisionAckPending = "1";
+    ackButton.disabled = true;
+    ackButton.setAttribute("aria-busy", "true");
+    feedback.hidden = true;
+    var acknowledged = await researchApiPost("research-decision-acknowledge", payload);
+    if (!pair.isConnected) return;
+    delete pair.dataset.decisionAckPending;
+    if (!acknowledged.ok) {
+      ackButton.disabled = false;
+      ackButton.removeAttribute("aria-busy");
+      feedback.className = "ctl-status err";
+      feedback.textContent = acknowledged.conflict ? uiLabel("research_decision_ack_conflict") :
+        uiFormat("research_decision_ack_failed", {reason: acknowledged.message || uiLabel("wizard_unknown_error")});
+      feedback.hidden = false;
+      return;
+    }
+    var replacement = document.createElement("div");
+    replacement.innerHTML = researchDecisionAcknowledgement({decisionId: payload.decision_id,
+      decisionRevision: payload.expected_decision_revision, dossierId: payload.dossier_id,
+      dossierRevision: payload.expected_dossier_revision, snapshot: acknowledged.snapshot,
+      acknowledgement: {current: true, status: acknowledged.status}});
+    var updatedPair = replacement.firstElementChild;
+    pair.replaceWith(updatedPair);
+    if (restoreFocus) updatedPair.querySelector("button").focus();
+    return;
+  }
   var impactButton = event.target.closest("[data-decision-impact]");
   if (impactButton) {
     if (impactButton.parentElement.open) return;
@@ -1845,7 +1909,9 @@ document.addEventListener("click", async function (event) {
     var impact = await researchApiGet("research/decision-impact?id=" + encodeURIComponent(impactButton.dataset.decisionImpact));
     impactHost.innerHTML = impact.ok ?
       '<p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_decision_date")) + ': ' + researchEditorialTime(impact.decision.created_at) + '</p>' +
-      (impact.unlinked ? '<p>' + escapeHtml(uiLabel("research_editorial_no_linked_dossier")) + '</p>' : impact.dossiers.map(researchAffectedDossier).join("")) :
+      (impact.unlinked ? '<p>' + escapeHtml(uiLabel("research_editorial_no_linked_dossier")) + '</p>' : impact.dossiers.map(function(dossier) {
+        return researchAffectedDossier(dossier, impact);
+      }).join("")) :
       '<p>' + escapeHtml(impact.message || uiLabel("research_status_unavailable")) + '</p>';
     return;
   }
@@ -2457,6 +2523,8 @@ if (researchRevisionDialog) {
   var revisionHistoryDetail = document.getElementById("research-revision-history-detail");
   var revisionStatusHost = document.getElementById("research-revision-status");
   var revisionMeta = document.getElementById("research-revision-kind");
+  var revisionIdentifier = document.getElementById("research-revision-identifier");
+  var revisionSnapshot = document.getElementById("research-revision-snapshot");
   var revisionUpdates = document.getElementById("research-revision-source-updates");
   var revisionCitationsWrap = document.getElementById("research-revision-citations-wrap");
   var revisionCitations = document.getElementById("research-revision-citations");
@@ -2476,6 +2544,14 @@ if (researchRevisionDialog) {
   var revisionBatch = {projectId: null, entries: [], preview: null, pending: false, request: 0};
   var revisionState = {kind: "", id: "", session: 0, request: 0, historyRequest: 0,
     current: null, initial: {}, dossierPins: {}, mode: "edit", historyLoaded: false, pending: false, merge: null};
+
+  function revisionShowMeta(envelope) {
+    var record = envelope && envelope.record;
+    revisionMeta.textContent = uiLabel("research_revision_kind_" + revisionState.kind) +
+      (record ? " · " + uiFormat("research_revision_number", {revision: record.revision}) : "");
+    revisionIdentifier.textContent = revisionState.id;
+    revisionSnapshot.textContent = envelope ? envelope.snapshot || "" : "";
+  }
 
   var revisionSpecs = {
     dossier: [
@@ -2754,8 +2830,7 @@ if (researchRevisionDialog) {
       return;
     }
     revisionState.current = data;
-    revisionMeta.textContent = uiLabel("research_revision_kind_" + revisionState.kind) + " · " +
-      uiFormat("research_revision_number", {revision: data.record.revision}) + " · " + revisionState.id;
+    revisionShowMeta(data);
     if (replaceDraft) {
       revisionBuildFields(data.record);
       revisionState.historyRequest++;
@@ -2840,8 +2915,7 @@ if (researchRevisionDialog) {
     revisionState.historyLoaded = false;
     revisionNotices(envelope);
     revisionShowCitations(envelope.citations);
-    revisionMeta.textContent = uiLabel("research_revision_kind_" + revisionState.kind) + " · " +
-      uiFormat("research_revision_number", {revision: envelope.record.revision}) + " · " + revisionState.id;
+    revisionShowMeta(envelope);
   }
 
   function revisionPending(pending) {
@@ -3190,7 +3264,8 @@ if (researchRevisionDialog) {
     revisionFieldsHost.replaceChildren();
     revisionHistoryList.replaceChildren();
     revisionHistoryDetail.replaceChildren();
-    revisionMeta.textContent = uiLabel("research_revision_kind_" + kind) + " · " + id;
+    revisionShowMeta(null);
+    document.getElementById("research-revision-technical").open = false;
     revisionReload.hidden = true;
     revisionSave.disabled = true;
     revisionNotices(null);
@@ -3437,15 +3512,26 @@ document.addEventListener("click", function (event) {
     return;
   }
 
-  var openBtn = event.target.closest("#btn-modal-open-project, #hero-btn-open-project");
-  if (openBtn) {
-    renderRecentProjects();
-    var modalOpen = document.getElementById("modal-project-open");
-    if (modalOpen && typeof modalOpen.showModal === "function") {
-      modalOpen.showModal();
-      var inputOpen = document.getElementById("open-proj-path");
-      if (inputOpen) inputOpen.focus();
+  var recentBtn = event.target.closest("[data-recent-project-path]");
+  if (recentBtn) {
+    openExistingProject(recentBtn.dataset.recentProjectPath, false);
+    return;
+  }
+  var clearRecent = event.target.closest("[data-clear-recent-projects]");
+  if (clearRecent) {
+    try {
+      localStorage.removeItem(RECENT_PROJECTS_KEY);
+      renderRecentProjects();
+    } catch (_) {
+      var recentStatus = clearRecent.closest("[data-recent-projects]").querySelector("[data-recent-project-status]");
+      recentStatus.textContent = uiLabel("recent_projects_clear_failed");
+      recentStatus.hidden = false;
     }
+    return;
+  }
+  var openBtn = event.target.closest("#btn-modal-open-project, #hero-btn-open-project, #hero-btn-browse-project");
+  if (openBtn) {
+    openExistingProject(null, openBtn.id === "hero-btn-browse-project");
     return;
   }
 
@@ -3546,6 +3632,7 @@ document.addEventListener("change", function (event) {
 });
 
 var RECENT_PROJECTS_KEY = "lixity:recent-projects";
+var RECENT_PROJECTS_LIMIT = 8;
 
 function getRecentProjects() {
   try {
@@ -3553,7 +3640,14 @@ function getRecentProjects() {
     if (!raw) return [];
     var parsed = JSON.parse(raw);
     if (Array.isArray(parsed)) {
-      return parsed.filter(function(p) { return typeof p === "string" && p.trim().length > 0; });
+      var paths = [];
+      for (var item of parsed) {
+        if (typeof item !== "string" || !item.trim() || item.length > 8192) continue;
+        var path = item.trim();
+        if (!paths.includes(path)) paths.push(path);
+        if (paths.length === RECENT_PROJECTS_LIMIT) break;
+      }
+      return paths;
     }
   } catch (_) {}
   return [];
@@ -3565,7 +3659,7 @@ function addRecentProject(path) {
   if (!norm) return;
   var recents = getRecentProjects().filter(function(p) { return p !== norm; });
   recents.unshift(norm);
-  if (recents.length > 8) recents = recents.slice(0, 8);
+  if (recents.length > RECENT_PROJECTS_LIMIT) recents = recents.slice(0, RECENT_PROJECTS_LIMIT);
   try {
     localStorage.setItem(RECENT_PROJECTS_KEY, JSON.stringify(recents));
   } catch (_) {}
@@ -3579,56 +3673,51 @@ function removeRecentProject(path) {
 }
 
 function renderRecentProjects() {
-  var wrap = document.getElementById("open-project-recent");
-  var list = document.getElementById("open-project-recent-list");
-  if (!wrap || !list) return;
   var recents = getRecentProjects();
-  if (!recents.length) {
-    wrap.style.display = "none";
+  document.querySelectorAll("[data-recent-projects]").forEach(function(wrap) {
+    var list = wrap.querySelector("[data-recent-project-list]");
+    var status = wrap.querySelector("[data-recent-project-status]");
+    wrap.hidden = !recents.length;
     list.replaceChildren();
-    return;
-  }
-  wrap.style.display = "block";
-  list.replaceChildren();
-  recents.forEach(function(path) {
-    var chip = document.createElement("span");
-    chip.className = "recent-project-chip";
-    chip.style.cssText = "display:inline-flex;align-items:center;background:var(--card-bg, #222);border:1px solid var(--border-color, #444);border-radius:4px;padding:2px 8px;font-size:.78rem;";
-
-    var btn = document.createElement("button");
-    btn.type = "button";
-    btn.className = "ctl-inline-btn";
-    btn.style.cssText = "background:none;border:none;color:inherit;cursor:pointer;padding:0;font-family:inherit;font-size:inherit;text-decoration:underline;";
-    var parts = path.replace(/[/\\]+$/, "").split(/[/\\]/);
-    var label = parts[parts.length - 1] || path;
-    btn.textContent = label;
-    btn.title = path;
-    btn.addEventListener("click", function() {
-      var input = document.getElementById("open-proj-path");
-      if (input) {
-        input.value = path;
-        input.focus();
-      }
+    if (status) status.hidden = true;
+    recents.forEach(function(path) {
+      var item = document.createElement("li");
+      item.className = "project-chooser-toolbar";
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "ctl project-chooser-entry";
+      btn.style.cssText = "flex:1;width:auto;min-width:0;";
+      btn.dataset.recentProjectPath = path;
+      btn.textContent = path;
+      var del = document.createElement("button");
+      del.type = "button";
+      del.className = "ctl";
+      del.textContent = "×";
+      del.setAttribute("aria-label", uiLabel("remove_recent_project") + " " + path);
+      del.title = uiLabel("remove_recent_project");
+      del.addEventListener("click", function() {
+        removeRecentProject(path);
+        renderRecentProjects();
+      });
+      item.append(btn, del);
+      list.appendChild(item);
     });
-
-    var del = document.createElement("button");
-    del.type = "button";
-    del.className = "ctl-inline-del";
-    del.style.cssText = "background:none;border:none;color:var(--text-muted, #888);cursor:pointer;margin-left:6px;padding:0 2px;font-size:.8rem;line-height:1;";
-    del.textContent = "✕";
-    del.setAttribute("aria-label", (uiLabel("remove_recent_project") || "Remove") + " " + path);
-    del.title = uiLabel("remove_recent_project") || "Remove";
-    del.addEventListener("click", function(e) {
-      e.stopPropagation();
-      removeRecentProject(path);
-      renderRecentProjects();
-    });
-
-    chip.appendChild(btn);
-    chip.appendChild(del);
-    list.appendChild(chip);
   });
 }
+
+function openExistingProject(path, browse) {
+  renderRecentProjects();
+  var modal = document.getElementById("modal-project-open");
+  var input = document.getElementById("open-proj-path");
+  if (!modal || typeof modal.showModal !== "function") return;
+  if (typeof path === "string" && input) input.value = path;
+  modal.showModal();
+  if (browse) document.getElementById("open-proj-choose").click();
+  else if (typeof path === "string" && input) input.focus();
+  else document.getElementById("open-proj-choose").focus();
+}
+
+renderRecentProjects();
 
 async function submitProjectForm(form, action, payload, button) {
   if (button && button.disabled) return;
@@ -3640,7 +3729,9 @@ async function submitProjectForm(form, action, payload, button) {
   var result = await runAction(action, payload, button);
   if (result && result.ok) {
     if (action === "project-open" && payload && payload.path) {
-      addRecentProject(payload.path);
+      addRecentProject(typeof result.manuscript === "string" && result.manuscript ? result.manuscript :
+        typeof result.workspace_root === "string" && result.workspace_root ? result.workspace_root : payload.path);
+      renderRecentProjects();
     }
     var modal = form.closest("dialog");
     if (modal && typeof modal.close === "function") modal.close();

@@ -333,6 +333,36 @@
     };
   }
 
+  function rotate(deltaYaw, deltaPitch) {
+    yaw += deltaYaw;
+    pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch + deltaPitch));
+    clearHover();
+    draw();
+  }
+
+  function changeZoom(factor) {
+    zoom = Math.max(0.6, Math.min(2.4, zoom * factor));
+    clearHover();
+    draw();
+  }
+
+  [
+    ["dim-ctl-left", -0.15, 0],
+    ["dim-ctl-right", 0.15, 0],
+    ["dim-ctl-up", 0, -0.15],
+    ["dim-ctl-down", 0, 0.15]
+  ].forEach(function(control) {
+    var button = document.getElementById(control[0]);
+    if (button) button.addEventListener("click", function() { rotate(control[1], control[2]); });
+  });
+  [
+    ["dim-ctl-zoom-in", 1.08],
+    ["dim-ctl-zoom-out", 0.92]
+  ].forEach(function(control) {
+    var button = document.getElementById(control[0]);
+    if (button) button.addEventListener("click", function() { changeZoom(control[1]); });
+  });
+
   canvas.addEventListener("pointerdown", function(e) {
     if (e.button !== 0) return;
     isDragging = true;
@@ -356,12 +386,7 @@
       lastX = e.clientX;
       lastY = e.clientY;
       dragDistance += Math.hypot(dx, dy);
-      clearHover();
-
-      yaw += dx * 0.009;
-      pitch += dy * 0.009;
-      pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch));
-      draw();
+      rotate(dx * 0.009, dy * 0.009);
       return;
     }
 
@@ -450,10 +475,7 @@
 
   canvas.addEventListener("wheel", function(e) {
     e.preventDefault();
-    var delta = e.deltaY < 0 ? 1.08 : 0.92;
-    zoom = Math.max(0.6, Math.min(2.4, zoom * delta));
-    clearHover();
-    draw();
+    changeZoom(e.deltaY < 0 ? 1.08 : 0.92);
   }, { passive: false });
 
   canvas.addEventListener("click", function(e) {

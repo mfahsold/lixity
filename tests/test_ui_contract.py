@@ -105,6 +105,7 @@ class TestJsDomContract(unittest.TestCase):
             _full_dashboard()
             + render_dashboard([], [], controls=True)
             + render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
+            + render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))
         )
         missing = sorted(dom_id for dom_id in ids if f'id="{dom_id}"' not in html)
         self.assertEqual(missing, [], f"dashboard.js looks up missing ids: {missing}")
@@ -242,6 +243,37 @@ class TestJsDomContract(unittest.TestCase):
         self.assertIn("payload.flag_min_severity = parseInt(fs.value, 10)", script)
         self.assertIn("payload.dim_score_threshold = parseFloat(dt.value)", script)
 
+    def test_nda_draft_has_only_the_five_authorized_fields(self):
+        title = '<img src=x onerror="window.ndaInjected=true">'
+        rendered = render_dashboard([], [], title=title, controls=True,
+                                    nda_project_name=title,
+                                    enabled_actions=("nda-draft",))
+        form = re.search(r'<form[^>]*id="nda-draft-form".*?</form>', rendered, re.DOTALL)
+        self.assertIsNotNone(form)
+        fields = re.findall(r'<(?:input|textarea)[^>]*name="([a-z_]+)"', form.group())
+        self.assertEqual(fields, ["name", "address", "project_name", "date", "place"])
+        self.assertIn('type="date"', form.group())
+        self.assertIn('value="&lt;img src=x onerror=&quot;window.ndaInjected=true&quot;&gt;"', form.group())
+        for legacy in ("nda-manager", "nda-table", "nda-passphrase"):
+            self.assertNotIn(f'id="{legacy}"', rendered)
+        self.assertNotIn("data-nda-statuses=", rendered)
+
+    def test_nda_project_name_does_not_copy_a_placeholder_title(self):
+        rendered = render_dashboard([], [], title="No Project Loaded", controls=True,
+                                    enabled_actions=("nda-draft",))
+        field = re.search(r'<input[^>]*id="nda-project-name"[^>]*>', rendered).group()
+        self.assertNotIn('value="No Project Loaded"', field)
+        self.assertIn('value=""', field)
+
+    def test_nda_draft_requires_an_explicit_live_capability(self):
+        for options in ({}, {"controls": True}, {"controls": True, "enabled_actions": ("nda",)},
+                        {"controls": False, "enabled_actions": ("nda-draft",)}):
+            with self.subTest(options=options):
+                rendered = render_dashboard([], [], **options)
+                self.assertNotIn('id="nda-draft-form"', rendered)
+        self.assertTrue('id="nda-draft-form"' in render_dashboard(
+            [], [], controls=True, enabled_actions=("nda-draft",)), "Explicit NDA capability renders the form")
+
 
 class TestLabelCompleteness(unittest.TestCase):
     """The renderer's label and help keys must exist in every language."""
@@ -366,6 +398,16 @@ class TestLabelCompleteness(unittest.TestCase):
             labels = get_language_profile(language).labels
             missing = sorted(key for key in required if key not in labels)
             self.assertEqual(missing, [], f"{language}: missing labels {missing}")
+
+    def test_minimal_nda_labels_are_translated(self):
+        keys = ("nda_draft_title", "nda_draft_hint", "nda_draft_name", "nda_draft_address",
+                "nda_draft_project", "nda_draft_date", "nda_draft_place", "nda_draft_preview",
+                "nda_draft_pdf", "nda_draft_text", "nda_draft_working", "nda_draft_ready",
+                "nda_draft_downloaded", "nda_draft_failed", "nda_draft_required",
+                "nda_draft_javascript")
+        for language in LANGUAGES:
+            with self.subTest(language=language):
+                self.assertFalse([key for key in keys if not WORKSPACE_LABELS[language].get(key)])
 
 
 class TestShowDontTellComponents(unittest.TestCase):

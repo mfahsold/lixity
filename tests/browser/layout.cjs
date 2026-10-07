@@ -32,11 +32,8 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.equal(await page.locator('.license-links a').count(), 2);
       await page.locator('.project-header').screenshot({path: `/tmp/lixity-license-${width}.png`});
       await page.locator('#tab-view-project').click();
-      await page.locator('#nda-manager > summary').click();
-      await page.evaluate(() => ndaRender([{id: '" data-injected="yes', name: '<img src=x onerror="window.ndaInjected=1">', contact: '<script>bad()</script>', pdf: '<svg onload="window.ndaInjected=1">', status: 'draft'}]));
-      assert.equal(await page.locator('#nda-table img, #nda-table script, #nda-table svg, #nda-table [data-injected]').count(), 0);
-      assert.equal(await page.locator('#nda-table [data-nda-export]').getAttribute('data-nda-export'), '" data-injected="yes');
-      assert.ok(await page.locator('#nda-table').textContent().then(text => text.includes('<img src=x')));
+      assert.equal(await page.locator('#nda-manager, #nda-table, #nda-passphrase').count(), 0);
+      assert.equal(await page.locator('#nda-draft-form').count(), 0, 'No implicit NDA capability in an embedding fixture');
       await page.locator('#tab-view-analysis').click();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `page overflow at ${width}`);
       assert.equal(await page.locator('.panel > table').count(), 0);
@@ -84,7 +81,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         assert.ok(await page.locator('.band').first().evaluate(band => band.getBoundingClientRect().width >= 150));
       }
       await page.locator('#tab-view-project').click();
-      await page.locator('.settings-advanced summary').click();
+      await page.locator('.settings-form .settings-advanced > summary').click();
       await page.locator('#tab-view-analysis').click();
       await page.locator('#ch-1 .chip').first().click();
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1);

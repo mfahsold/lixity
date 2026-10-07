@@ -106,7 +106,7 @@ def main() -> int:
     WORK_DIR.mkdir(exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Screenshots from {manuscript.relative_to(BASE_DIR)} ({resolved.key})")
-    native_actions = ("analyze", "rebuild", "nda")
+    native_actions = ("analyze", "rebuild", "nda-draft")
 
     # 1. CLI: rich corpus report -----------------------------------------
     console = Console(
@@ -176,6 +176,7 @@ def main() -> int:
         manuscript_name=manuscript.name,
         controls=True,
         enabled_actions=native_actions,
+        nda_project_name=title,
     )
     dashboard_path = _write_html("dashboard.html", dashboard)
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
@@ -420,10 +421,16 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     workspace_search = research_api.search(
         research_proj, "warehouse customs", scope="sources", ensure_fresh=True,
     )
+    from lixity.nda import draft_document
+
+    nda_fields = {
+        "name": "Example Reader", "address": "Example street 1",
+        "project_name": title, "date": "2026-10-06", "place": "Example City",
+    }
     research_fixture = {
-        "/api/nda-list": {
-            "ok": False, "locked": True, "records": [],
-            "message": "NDA manager is locked in this synthetic demonstration.",
+        "/api/nda-draft": {
+            "fields": nda_fields,
+            "text": draft_document(**nda_fields, language=resolved.key).text,
         },
         # Synthetic server-local paths demonstrate the chooser without exposing a user's home.
         "/api/project-paths": {

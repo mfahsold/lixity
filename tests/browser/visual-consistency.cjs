@@ -51,6 +51,22 @@ const contrast = (first, second) => {
         });
         assert.deepEqual(await roles(app), await roles(site), `palette mismatch: ${theme}`);
         assert.equal(await app.locator('.chip').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
+        await app.locator('#tab-view-analysis').click();
+        const minimum = hasTouch ? 44 : 24;
+        const denseTargets = await app.locator('.chip, .dim-ctl').evaluateAll(elements => elements.map(element => {
+          const box = element.getBoundingClientRect();
+          return {width: box.width, height: box.height};
+        }));
+        assert.ok(denseTargets.length > 0 && denseTargets.every(box => box.width >= minimum && box.height >= minimum),
+          `${theme} paragraph and dimension targets: ${JSON.stringify(denseTargets)}`);
+        const paragraph = app.locator('.chip').first();
+        await paragraph.focus();
+        await app.keyboard.down('Space');
+        try {
+          const pressed = await paragraph.boundingBox();
+          assert.ok(pressed.width >= minimum && pressed.height >= minimum,
+            `${theme} pressed paragraph target: ${JSON.stringify(pressed)}`);
+        } finally { await app.keyboard.up('Space'); }
         assert.equal(await site.locator('html').evaluate(el => getComputedStyle(el).scrollBehavior), 'auto');
         assert.equal(await site.locator('.btn').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
         const heatmapColors = await app.locator('td.z[style]').evaluateAll(nodes => nodes.map(node => {
