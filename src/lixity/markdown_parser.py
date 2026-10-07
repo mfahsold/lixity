@@ -8,6 +8,7 @@ modules so chapter numbering stays identical everywhere.
 
 from __future__ import annotations
 
+import html as html_mod
 import re
 from typing import TYPE_CHECKING, Any
 
@@ -448,3 +449,62 @@ def prose_text(
 ) -> str:
     """Supported prose with a blank line between original semantic paragraphs."""
     return "\n\n".join(prose_paragraphs(content, config, _front_matter=_front_matter))
+
+
+def parse_markdown_file(filepath: str) -> list[dict[str, Any]]:
+    """Reads a Markdown file in a UTF-8-safe way and parses it into semantic blocks."""
+    with open(filepath, encoding="utf-8") as f:
+        return parse_markdown_blocks(f.read())
+
+
+def inline_markdown_to_html(
+    text: str,
+    fn_counter: dict[str, int] | None = None,
+    document_id: str = "doc",
+) -> str:
+    """Converts inline Markdown into a safe XHTML5 fragment for EPUB 3.3.
+
+    - ``**bold**`` → ``<strong>``, ``*italic*`` → ``<em>``, ``***x***`` → both.
+    - ``[^id]`` → EPUB footnote anchor (``epub:type="noteref"``) with a unique id.
+    - ``[Text](url)`` → ``<a href="url">``.
+    - Line breaks (double space in the source) → ``<br/>``.
+    - ``fn_counter`` ensures document-wide unique reference IDs.
+    """
+    if not text:
+        return ""
+
+    if fn_counter is None:
+        fn_counter = {}
+
+    # 1. Protect literal asterisks
+    text = text.replace(r"\*", "\x01ASTERISK\x02")
+
+    # 2. HTML-escape
+    text = html_mod.escape(text, quote=False)
+
+    # 3. Footnote references [^id] with unique anchor ID
+    def fn_ref(m: re.Match[str]) -> str:
+        fn_id = m.group(1)
+        n = fn_counter.get(fn_id, 0) + 1
+        fn_counter[fn_id] = n
+        return (
+            f'<a epub:type="noteref" id="fnref{fn_id}-{document_id}-{n}" '
+            f'href="#fn{fn_id}" role="doc-noteref" class="fnref">{fn_id}</a>'
+        )
+
+    text = _FN_REF_PATTERN.sub(fn_ref, text)
+
+    # 4. Bold-italic, bold, italic
+    text = re.sub(r"\*\*\*(.+?)\*\*\*", r"<strong><em>\1</em></strong>", text)
+    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
+    text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", text)
+
+    # 5. Links [text](url)
+    text = _LINK_PATTERN.sub(r'<a href="\2">\1</a>', text)
+
+    # 6. Hard line breaks
+    text = text.replace("\n", "<br/>\n")
+
+    # 7. Restore literal asterisks
+    return text.replace("\x01ASTERISK\x02", "*")
+
