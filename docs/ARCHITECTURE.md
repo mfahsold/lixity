@@ -100,7 +100,20 @@ Lixity provides read-only three-way revision preparation and atomic
 revision groups. These reuse the strict revision validator and one repository
 commit. Decision impact and editorial review follow recorded links, dates and
 revision pins; they do not infer semantic contradictions or rewrite documents.
+Section preparation uses the same code-aware ATX heading parser as dossier reads
+and image placement. It reconciles the selected subtree while preserving unrelated
+current text. The UI receives canonical unambiguous heading choices from the API.
 See [implemented workflows and limits](research/USAGE.md#research-workflows).
+
+Local images reuse `Source`, immutable `SourceVersion` and content-addressed
+`Blob` records. They have no fabricated extraction or passages and are rejected
+by textual analysis. A shared image-reference resolver feeds dossier reads,
+history, validation and audit. An attachment publishes its capture and dossier
+revision in one repository commit with exact concurrency tokens. Purge retains
+the source/version identity needed for honest unavailable placeholders, not the
+removed image bytes. Limits live in `research/limits.py`; the UI receives them
+from those constants. Rendering and local preview belong to `ui/assets/dossier-images.js`,
+while thin server routes perform project-bound input and binary-response handling.
 
 ## Presentation and trust boundaries
 
@@ -163,6 +176,11 @@ step with the HTML publication boundary and use real modification dates.
 
 Optional mutation controls need a separate project server. The engine alone
 does not start an HTTP service or send documents.
+Shared `BookLayoutConfig` geometry and `inline_markdown_to_html` fragments remain
+available to existing book adapters; they do not publish a book. Project author
+and contact fields are explicit, with no personal contact default. The fragment
+helper escapes attribute values and accepts HTTP(S), mailto, relative and fragment
+links; executable schemes stay inert.
 Server adapters must validate origins, hosts, request sizes and payloads,
 restrict file/action access, and handle their own session lifecycle.
 

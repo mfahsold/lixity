@@ -250,8 +250,7 @@ in loaded projects and can be reopened without changing the active project.
 
 **Since v1.23.0:** Research & Dossiers, Manuscript & Analysis, and
 Project & Settings are separate views; the workspace bar is available in all
-three. Choosing or dropping a manuscript changes the displayed filename only.
-In the native server, **Continue to import…** opens the existing import dialog,
+three. Choosing or dropping a manuscript opens the existing native import preview,
 whose confirmation creates a separate project through the existing project-create
 action. Returning to an existing archive uses Open Project. Embedding hosts with
 the load capability retain **Analyze manuscript now →** and the existing
@@ -429,14 +428,14 @@ are quotation segments.
 from lixity import api
 
 metrics = api.analyze(text, language="auto")          # -> {"meta", "metrics"}
-profiles = api.profile(text, language="de")           # -> {"meta", "chapters", "paragraphs"}
-reference = api.fingerprint(text, language="de")      # -> style reference (schema v4)
+profiles = api.profile(text, language="de", project_config={})  # -> {"meta", "chapters", "paragraphs"}
+reference = api.fingerprint(text, language="de", project_config={})  # -> style reference (schema v4)
 turns = api.dialogue(text, language="de")             # -> {"meta", "dialogue"}
 cast = api.characters(text, ["Anna", "Ralf"], language="de")  # -> {"meta", "chapters", "figures"}
 pace = api.pacing(text, language="de")                # -> {"meta", "pacing"}
 motifs = api.motifs(text, {"Wut": r"\b(Wut|wütend\w*)\b"}, language="de")  # -> {"meta", "motifs", …}
 distance = api.showing(text, language="de")           # -> {"meta", "showing"}
-html = api.dashboard(text, language="de", title="…")  # -> self-contained HTML string
+html = api.dashboard(text, language="de", title="…", project_config={})  # -> HTML string
 marker_list = api.markers(text)                       # -> list of active work markers
 new_text, m = api.add_marker(text, kind="pruefen", note="Verify tense", line=42)
 updated_text, ok = api.resolve_marker(new_text, m["id"])
@@ -530,7 +529,7 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `POST /api/project-create`: `{"title": "...", "language": "de", "template": "three_act", "init_research": true}`
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
-- `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`
+- `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`. Unposted threshold fields retain their active values. Numeric fields use JSON numbers, not strings; integers reject fractional values and booleans. The shared `FingerprintThresholds` policy requires finite nonnegative z values with strong ≥ mild, q strictly between 0 and 1, positive dimension threshold, `bh|by`, integer minimum chapters ≥ 2 and severity 1–3. No extra UI ceilings or decimal step rounding apply.
 - `POST /api/marker-add`: `{"kind": "todo", "line": 42, "note": "Check dialogue continuity"}`
 - `POST /api/marker-resolve`: `{"id": "m-abcd1234"}`
 - `POST /api/research-ingest`: `{"file": "...", "allow_retention": true, "title": "..."}`
@@ -540,11 +539,40 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `POST /api/research-init`: `{"title": "...", "language": "en"}`
 - `POST /api/research-claim-add`: `{"title": "...", "statement": "...", "confidence": "hypothetical", "dossier_id": "..."}`
 - `POST /api/research-evidence-link`: `{"claim_id": "...", "passage_id": "...", "relation": "supports", "rationale": "..."}`
-- `POST /api/research-decision-add`: `{"title": "...", "rationale": "...", "claim_id": "...", "deviation_from_fact": false}`
+- `POST /api/research-decision-add`: `{"title": "...", "rationale": "...", "claim_id": "...", "dossier_ids": ["..."], "deviation_from_fact": false}`. Dossier IDs are optional strings in a list; new links pin their current revisions.
 - `GET /api/research/status`: initialization state, selected project root and record counts.
 - `GET /api/research/sources` and `GET /api/research/dossiers`: lists; add `?id=...` for details.
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
+
+Dossier detail GET additionally accepts `section=Heading` and positive `revision=N`
+for a bounded exact-version read. Full/section/summary reads include `project_id`,
+`images` and canonical `editable_sections`. Image resolver entries identify exact
+source/version pins with `available|withdrawn|purged|missing` status; unavailable
+entries have no image URL. Historical reads resolve the pinned image version,
+not the latest source. Record/history dossier envelopes also include `images`.
+
+Local image endpoints (2.1.0):
+
+- `POST /api/research-image-ingest`: `{project_id, filename, content_base64,
+  allow_retention: true, expected_snapshot?, source_id?, title?, context?, origin_url?}`.
+- `POST /api/research-dossier-image`: additionally requires `dossier_id`,
+  `expected_snapshot`, `expected_revision`; optional `alt`, `caption`, `section`,
+  `reason`, `change_kind`. Capture and dossier revision are one commit. It returns
+  the existing record envelope plus `capture` metadata, never the uploaded bytes.
+- `GET /api/research/image?project_id=...&source_id=...&version_id=...`: exact retained
+  PNG/JPEG bytes after identity, media, hash and size checks. No arbitrary path or
+  remote URL is accepted. Host/Origin/fetch-site checks and no-store, nosniff and
+  same-origin resource headers apply.
+
+Only these image POST bodies use 32 MiB; other JSON bodies remain limited to 5 MiB.
+Raw images are limited to 16 MiB / 64 million pixels. Permission must be the JSON
+boolean `true`; source notes/URLs have 2,000-character bounds, alternative text
+1,000 and captions 10,000. Structural/header checks are not full pixel decoding.
+Images contain no passages and cannot enter textual analysis/compare. No raster
+ingest path automatically retries an external conflict. Version-purge identity
+metadata uses `research-local/2` Tombstones; 2.0.0 readers reject those records.
+Existing v1 bytes stay unchanged. See [image workflow and limits](research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
 NDA generation since 2.0.0:
 
@@ -567,7 +595,9 @@ NDA generation since 2.0.0:
   See [the five literal template fields](USAGE.md#project-nda-configuration-nda).
 - Native PDF encoding is Windows-1252; download the UTF-8 text for local rendering
   of a broader character repertoire. The friendly localized models in
-  `nda_templates.py` are editable drafts, not a legal certification.
+  `nda_templates.py` are editable agreements, not a legal certification. User-facing
+  titles use “Confidentiality agreement”; the technical route and `NdaDraft` type
+  keep their existing names. Generating a file does not record consent or signatures.
 
 Native-revision endpoints (since v1.17.0) reuse that explicit workspace:
 
@@ -600,6 +630,11 @@ resolutions?}` and returns `research-revision-preview-local/1` with current
 tokens, merged changes and unresolved conflicts. Resolution values are
 `current|mine`; associations and revision pins form one comparison field.
 It never writes. Save through the existing strict revise route.
+For a dossier section, additionally send `section` and only `changes: {body:
+"selected section content"}`. This uses `prepare_dossier_section`; conflicts
+contain bounded section values and the prepared changes contain the full merged
+current body. Unrelated current sections survive. Save through the same strict
+revision route with its returned tokens; another intervening write still fails.
 Prepared decision list changes include `dossier_revisions: {ID: revision}` for
 the selected existing dossiers. Preserve these pins when submitting the preview.
 
@@ -640,8 +675,9 @@ revisions use storage schema `research-local/2`; snapshots containing them use
 remain intact. Lixity 1.16.0 cannot read the resulting archive. See
 [native editing and compatibility](research/USAGE.md#native-editing-and-history).
 
-The standalone server renders only its implemented optional controls: Run analyses
-and Rebuild refresh the dashboard. Its `POST /api/export`, `/api/sync`,
+The standalone server renders one **Update analysis** action. Both
+`POST /api/analyze` and `POST /api/rebuild` aliases remain available; embedding
+hosts may advertise distinct supported actions. Its `POST /api/export`, `/api/sync`,
 `/api/audit`, `/api/prune` and `/api/gdrive` return HTTP 501 with `ok: false`;
 they do not create artifacts or report success. `render_dashboard` accepts
 `enabled_actions` for embedding adapters to list the optional actions they

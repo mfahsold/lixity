@@ -2,8 +2,9 @@
 
 Reviewed against upstream on 2026-09-27. This document describes the implemented
 worker boundary introduced in v1.19.0 and the requirements of an independently deployed adapter.
-A source checkout also contains an experimental CPU adapter; no model server,
-weights or production-tested inference runtime ship with the Python package.
+No model server, weights or production-tested inference runtime ship with the
+Python package. The former experimental CPU bridge was removed in 2.1.0;
+custom model adapters belong to their own deployment projects.
 For import commands and the exact worker JSON, see [Research usage](USAGE.md#worker-interface).
 
 Since v1.24, Lixity also supports locally installed Tesseract without this adapter.
@@ -108,47 +109,17 @@ Archive integrity verifies retained bytes and text-span citations. It does not
 verify recognition against the page image. A successful restore or citation
 audit must not be presented as an OCR-accuracy result.
 
-## Experimental CPU adapter
+## Historical CPU experiment
 
-Version 1.19.0's source checkout includes
-`scripts/ocr_unlimited_cpu_worker.py`.
-It is optional experimental tooling, not an installed package entrypoint or a
-managed model service. It downloads nothing and requires a separately prepared
-Python environment, Poppler and a local model directory. The public package's
-lightweight dependencies do not install PyTorch or Transformers.
-
-The tested preparation used Python 3.12, CPU PyTorch 2.10.0 and Transformers
-4.57.1, with the model snapshot above and the local-device port from
-[upstream PR #56](https://github.com/baidu/Unlimited-OCR/pull/56), pinned at
-`a5e743e3225c51515e8b7c0dbdfd561ae1070eb8`. Its
-`infer_transformers.py` and `patch_model_for_local.py` are external reviewed
-runtime inputs, not automatically fetched by Lixity. Prepare the patched model
-and dependencies explicitly; the upstream CUDA-only model is not a drop-in CPU
-installation. `LIXITY_UNLIMITED_OCR_HOME` identifies a directory containing
-`infer_transformers.py` and `model/` (configuration, tokenizer, patched code and
-weights). Run the adapter with that environment's Python, for example through
-an executable wrapper selected by `LIXITY_OCR_WORKER`.
-
-The adapter checks the requested snapshot/recipe and the weights SHA-256
-`2bc48a7a110061ea58fff65d3169367eebe3aee371ca6968dc2219c1b2855fc6`, configures
-offline Hugging Face/Transformers use, and runs with four CPU threads. It renders
-at 150 dpi and checks each PNG against the request. Pages are processed in numeric
-order, separately, with base/image size 1024, n-gram size 35/window 128 and a
-4,096-token maximum. End-of-sequence is required: truncated generation fails.
-Known detection delimiters are removed as data; unhandled model control tokens
-or empty recognized pages fail rather than entering the evidence archive. The
-adapter reports no recognition confidence and cannot currently accept blank
-pages through `completed_pages`, although the core protocol supports that field.
-The renderer has its own 120-second limit; the overall subprocess deadline still
-applies. Runtime imports and patched model code require independent review:
-a weight checksum does not attest to every executable input.
-
-A local ARM64 CPU smoke test processed a synthetic two-page image-only PDF in
-95.128 seconds. This establishes feasibility for that small input and environment,
-not a general speed estimate, OCR accuracy result or acceptance of complex layouts,
-handwriting, blank pages, mixed documents or arbitrary document lengths. Inspect
-recognized text before relying on it. The default 120-second deadline leaves
-limited headroom; provision and test an explicit deadline for the intended workload.
+The retired bridge was a source-only prototype, never an installed CLI entrypoint.
+An ARM64 smoke test processed one synthetic two-page image-only PDF in 95.128
+seconds using Python 3.12, CPU PyTorch 2.10.0, Transformers 4.57.1 and
+[upstream PR #56](https://github.com/baidu/Unlimited-OCR/pull/56) at
+`a5e743e3225c51515e8b7c0dbdfd561ae1070eb8`. This demonstrated feasibility for
+that input, not recognition accuracy or general performance. It did not establish
+support for complex layouts, handwriting, blank pages or longer documents.
+Use local Tesseract for the maintained built-in workflow; an independently deployed
+model still needs its own adapter, runtime records and acceptance tests.
 
 ## Deployment and acceptance criteria
 
@@ -190,7 +161,7 @@ it never authorizes a cloud upload or supplies a download URL to a service.
 
 Lixity's automated suite tests native Poppler extraction, a synthetic worker
 subprocess, response validation, incomplete-page rejection, configurable timeout,
-unknown confidence, CPU-output delimiter handling, ingestion, citations and archive
+unknown confidence, ingestion, citations and archive
 restoration. It does not download
 or run Unlimited-OCR weights. Dependency-dependent native tests explicitly skip
 when Poppler is unavailable; Linux and macOS CI install it. An environment

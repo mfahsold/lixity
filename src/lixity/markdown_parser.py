@@ -11,6 +11,7 @@ from __future__ import annotations
 import html as html_mod
 import re
 from typing import TYPE_CHECKING, Any
+from urllib.parse import urlsplit
 
 if TYPE_CHECKING:
     from .models import CorpusConfig
@@ -482,15 +483,22 @@ def inline_markdown_to_html(
     # 2. HTML-escape
     text = html_mod.escape(text, quote=False)
 
-    # 3. Footnote references [^id] with unique anchor ID
+    # 3. Footnote references [^id] with unique anchor ID. Protect generated
+    # attributes from later Markdown substitutions in untrusted identifiers.
+    footnotes: list[str] = []
+    placeholder_prefix = "\x01FOOTNOTE\x02"
+    while placeholder_prefix in text or placeholder_prefix in document_id:
+        placeholder_prefix += "\x01"
+
     def fn_ref(m: re.Match[str]) -> str:
-        fn_id = m.group(1)
+        fn_id = html_mod.unescape(m.group(1))
         n = fn_counter.get(fn_id, 0) + 1
         fn_counter[fn_id] = n
-        return (
-            f'<a epub:type="noteref" id="fnref{fn_id}-{document_id}-{n}" '
-            f'href="#fn{fn_id}" role="doc-noteref" class="fnref">{fn_id}</a>'
-        )
+        anchor_id = html_mod.escape(f"fnref{fn_id}-{document_id}-{n}", quote=True)
+        destination = html_mod.escape("#fn" + fn_id, quote=True)
+        footnotes.append(f'<a epub:type="noteref" id="{anchor_id}" href="{destination}" '
+                         f'role="doc-noteref" class="fnref">{m.group(1)}</a>')
+        return f"{placeholder_prefix}{len(footnotes) - 1}\x03"
 
     text = _FN_REF_PATTERN.sub(fn_ref, text)
 
@@ -500,11 +508,23 @@ def inline_markdown_to_html(
     text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", text)
 
     # 5. Links [text](url)
-    text = _LINK_PATTERN.sub(r'<a href="\2">\1</a>', text)
+    def link(m: re.Match[str]) -> str:
+        destination = html_mod.unescape(m.group(2))
+        try:
+            scheme = urlsplit(destination.strip()).scheme.lower()
+        except ValueError:
+            return m.group(1)
+        if (scheme not in ("", "http", "https", "mailto")
+                or any(ord(character) < 32 or ord(character) == 127 for character in destination)):
+            return m.group(1)
+        return f'<a href="{html_mod.escape(destination, quote=True)}">{m.group(1)}</a>'
+
+    text = _LINK_PATTERN.sub(link, text)
 
     # 6. Hard line breaks
     text = text.replace("\n", "<br/>\n")
+    for index, anchor in enumerate(footnotes):
+        text = text.replace(f"{placeholder_prefix}{index}\x03", anchor)
 
     # 7. Restore literal asterisks
     return text.replace("\x01ASTERISK\x02", "*")
-

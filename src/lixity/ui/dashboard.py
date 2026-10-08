@@ -43,6 +43,7 @@ from .components import (
     tense_label,
 )
 from .dimensions import style_dimensions
+from .dossier_images import image_limits_attribute
 from .heatmap import render_heatmap_panel, render_style_passport_panel
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
@@ -60,10 +61,13 @@ from .settings import settings_form
 from .structural import style_structural
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
-_CSS = (_ASSET_DIR / "dashboard.css").read_text(encoding="utf-8")
+_CSS = "\n".join(
+    (_ASSET_DIR / name).read_text(encoding="utf-8")
+    for name in ("dashboard.css", "dossier-images.css")
+)
 _JS = "\n".join(
     (_ASSET_DIR / name).read_text(encoding="utf-8")
-    for name in ("dashboard.js", "style-space.js")
+    for name in ("dashboard.js", "dossier-images.js", "style-space.js")
 )
 
 
@@ -206,7 +210,9 @@ def render_dashboard(
         f"<title>{esc(title)} – {L('app_suffix')}</title>",
         f"<style>{_CSS}</style>",
         "</head>",
-        f'<body id="top" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}">',
+        f'<body id="top" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
+        f'data-image-limits="{image_limits_attribute()}" '
+        f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         '<div class="page">',
         project_header(title, labels, language_name, engine_name),
     ]
@@ -686,6 +692,7 @@ def render_dashboard(
     parts.append('<div class="toolbar">')
     parts.append(f'<label><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
     if paragraphs:
+        parts.append(f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>')
         parts.append("<label>")
         parts.append(f"{help_term(labels, 'layer', L('style_layer'))} ")
         parts.append('<select class="ctl" id="style-layer">')

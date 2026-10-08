@@ -17,6 +17,7 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from ..research import api as research_api
+from ..research.limits import MAX_IMAGE_BYTES
 from ..research.repository import ResearchConflictError, ResearchError
 from ._base import ResponseMixin
 
@@ -25,6 +26,80 @@ RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decisio
 
 class ResearchRoutesMixin(ResponseMixin):
     """Handlers for the explicit-project research workspace."""
+
+    def _handle_research_image(self) -> None:
+        if not self._same_origin() or self.headers.get("Sec-Fetch-Site") not in (None, "same-origin", "none"):
+            self._json({"ok": False, "message": "Cross-origin image request forbidden"}, 403)
+            return
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        if any(len(query.get(name, [])) != 1 for name in ("project_id", "source_id", "version_id")):
+            self._json({"ok": False, "message": "An explicit project, source and version are required"}, 400)
+            return
+        try:
+            result = research_api.read_image(root, project_id=query["project_id"][0],
+                                              source_id=query["source_id"][0], version_id=query["version_id"][0])
+            self._send(200, result["content"], result["media_type"],
+                       headers={"Cross-Origin-Resource-Policy": "same-origin"})
+        except (ResearchError, OSError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_image_ingest(self, payload: dict[str, Any]) -> None:
+        self._handle_research_image_write(payload, attach=False)
+
+    def _handle_research_dossier_image(self, payload: dict[str, Any]) -> None:
+        self._handle_research_image_write(payload, attach=True)
+
+    def _handle_research_image_write(self, payload: dict[str, Any], *, attach: bool) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        try:
+            from ..research.repository import Repository
+            snapshot = Repository(root).snapshot()
+            if payload.get("project_id") != snapshot.project.id:
+                raise ResearchError("Image project does not match the selected research project")
+            if payload.get("allow_retention") is not True:
+                raise ResearchError("Explicit retention permission is required (allow_retention: true)")
+            encoded = payload.get("content_base64")
+            filename = payload.get("filename")
+            if (not isinstance(filename, str) or not 1 <= len(filename) <= 255
+                    or "/" in filename or "\\" in filename or any(ord(char) < 32 for char in filename)):
+                raise ResearchError("Image filename must be a local PNG/JPEG name without a path")
+            if not isinstance(encoded, str) or len(encoded) > 4 * ((MAX_IMAGE_BYTES + 2) // 3):
+                raise ResearchError("Image base64 content must encode at most 16 MiB")
+            try:
+                content = base64.b64decode(encoded, validate=True)
+            except (ValueError, binascii.Error):
+                raise ResearchError("Invalid image base64 payload") from None
+            common = {"filename": filename, "allow_retention": True, "title": payload.get("title"),
+                      "context": payload.get("context"), "origin_url": payload.get("origin_url"),
+                      "actor": payload.get("actor", "local-author")}
+            if attach:
+                dossier_id = payload.get("dossier_id")
+                expected_snapshot = payload.get("expected_snapshot")
+                expected_revision = payload.get("expected_revision")
+                if (not isinstance(dossier_id, str) or not dossier_id.strip()
+                        or not isinstance(expected_snapshot, str) or not expected_snapshot.strip()
+                        or type(expected_revision) is not int or expected_revision < 1):
+                    raise ResearchError("Image attachment requires a dossier ID, expected snapshot and positive revision")
+                result = research_api.attach_dossier_image(
+                    root, dossier_id, content,
+                    expected_snapshot=expected_snapshot, expected_revision=expected_revision,
+                    alt=payload.get("alt", ""), caption=payload.get("caption"), section=payload.get("section"),
+                    reason=payload.get("reason"), change_kind=payload.get("change_kind", "supersession"), **common)
+            else:
+                result = research_api.ingest_image(root, content, source_id=payload.get("source_id"),
+                                                   expected_snapshot=payload.get("expected_snapshot"), **common)
+            self._json({"ok": True, **result})
+        except ResearchConflictError as exc:
+            self._json({"ok": False, "message": str(exc)}, 409)
+        except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_zotero_status(self) -> None:
         from ..research.zotero import connection_status
@@ -77,10 +152,18 @@ class ResearchRoutesMixin(ResponseMixin):
         if not root or not (root / "research").is_dir():
             self._json({"ok": False, "message": "Research project not initialized"}, 404)
             return
-        dossier_id = parse_qs(urlparse(self.path).query).get("id", [None])[0]
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        dossier_id = query.get("id", [None])[0]
         try:
             if dossier_id:
-                data = research_api.get_dossier(root, dossier_id)
+                revision = None
+                if "revision" in query:
+                    raw_revision = query["revision"][0]
+                    if len(raw_revision) > 9 or not raw_revision.isdecimal() or int(raw_revision) < 1:
+                        raise ResearchError("Revision must be a positive integer")
+                    revision = int(raw_revision)
+                data = research_api.get_dossier(root, dossier_id,
+                    section=query.get("section", [None])[0], revision=revision)
             else:
                 data = research_api.list_dossiers(root)
             self._json({"ok": True, **data})
@@ -229,8 +312,15 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": "Invalid research revision preview"}, 400)
             return
         try:
-            result = research_api.prepare_record_revision(root, kind, record_id,
-                base_revision=base_revision, changes=changes, resolutions=resolutions)
+            if "section" in payload:
+                section = payload["section"]
+                if kind != "dossier" or not isinstance(section, str) or set(changes) != {"body"}:
+                    raise ResearchError("A section preview requires one dossier body change and a heading")
+                result = research_api.prepare_dossier_section(root, record_id,
+                    base_revision=base_revision, section=section, content=changes["body"], resolutions=resolutions)
+            else:
+                result = research_api.prepare_record_revision(root, kind, record_id,
+                    base_revision=base_revision, changes=changes, resolutions=resolutions)
             self._json({"ok": True, **result})
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
@@ -623,6 +713,11 @@ class ResearchRoutesMixin(ResponseMixin):
         claim_id = str(payload.get("claim_id") or "").strip() or None
         deviation_from_fact = bool(payload.get("deviation_from_fact", False))
         impact_on_plot = str(payload.get("impact_on_plot") or "").strip() or None
+        dossier_ids = payload.get("dossier_ids")
+        if dossier_ids is not None and (not isinstance(dossier_ids, list)
+                or any(not isinstance(identifier, str) for identifier in dossier_ids)):
+            self._json({"ok": False, "message": "Dossier IDs must be a list of strings"}, 400)
+            return
         try:
             res = research_api.record_decision(
                 root,
@@ -631,6 +726,7 @@ class ResearchRoutesMixin(ResponseMixin):
                 claim_id=claim_id,
                 deviation_from_fact=deviation_from_fact,
                 impact_on_plot=impact_on_plot,
+                dossier_ids=dossier_ids,
             )
             self._json({"ok": True, "message": f"Decision '{title}' recorded", **res})
         except (ResearchError, OSError, ValueError) as exc:

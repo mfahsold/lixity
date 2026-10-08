@@ -13,12 +13,15 @@ Usage:
 """
 
 import argparse
+import base64
 import html
 import io
 import json
 import shutil
+import struct
 import subprocess
 import sys
+import zlib
 from pathlib import Path
 from urllib.parse import quote
 
@@ -35,6 +38,7 @@ from lixity.markers import add_marker  # noqa: E402
 from lixity.motifs import motif_report  # noqa: E402
 from lixity.pacing import pacing_report  # noqa: E402
 from lixity.pipeline import analyze_document, resolve_document_config  # noqa: E402
+from lixity.server.constants import NATIVE_UI_ACTIONS  # noqa: E402
 from lixity.showing import showing_report  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 
@@ -86,6 +90,27 @@ def _terminal_shot(title: str, content_html: str, target: Path, width: int, heig
     _queue_capture(_write_html(target.stem + ".html", document), target, width, height)
 
 
+def _synthetic_harbour_image() -> bytes:
+    """Create a small invented setting diagram; no external image is needed."""
+    width, height = 640, 240
+    rows = bytearray()
+    for y in range(height):
+        rows.append(0)
+        for x in range(width):
+            colour = (219, 232, 231) if y < 155 else (70, 120, 139)
+            if 36 <= y < 126 and any(start <= x < start + 100 for start in (45, 190, 335, 480)):
+                colour = (74, 95, 106)
+            elif 144 <= y < 155 or (x % 145 < 12 and 155 <= y < 206):
+                colour = (162, 180, 183)
+            rows.extend(colour)
+
+    def chunk(kind: bytes, data: bytes) -> bytes:
+        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+
+    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
+            + chunk(b"IDAT", zlib.compress(bytes(rows))) + chunk(b"IEND", b""))
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Regenerate README screenshots.")
     parser.add_argument("--manuscript", default="samples/pride-and-prejudice.md")
@@ -106,7 +131,6 @@ def main() -> int:
     WORK_DIR.mkdir(exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Screenshots from {manuscript.relative_to(BASE_DIR)} ({resolved.key})")
-    native_actions = ("analyze", "rebuild", "nda-draft")
 
     # 1. CLI: rich corpus report -----------------------------------------
     console = Console(
@@ -175,7 +199,7 @@ def main() -> int:
         current_language=resolved.key,
         manuscript_name=manuscript.name,
         controls=True,
-        enabled_actions=native_actions,
+        enabled_actions=NATIVE_UI_ACTIONS,
         nda_project_name=title,
     )
     dashboard_path = _write_html("dashboard.html", dashboard)
@@ -267,7 +291,7 @@ def main() -> int:
     welcome_dashboard = render_dashboard(
         [], [], title="Lixity", controls=True, language_name=resolved.name,
         language_key=resolved.key, current_language=resolved.key,
-        labels=resolved.labels, enabled_actions=native_actions,
+        labels=resolved.labels, enabled_actions=NATIVE_UI_ACTIONS,
     )
     welcome_path = _write_html("dashboard-welcome.html", welcome_dashboard)
     _queue_capture(
@@ -382,6 +406,17 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         tags=["Weather", "Setting"],
         evidence_ids=[weather_passage],
     )
+    visual_bytes = _synthetic_harbour_image()
+    dossier_current = research_api.get_dossier(research_proj, dossier_res["dossier_id"])
+    attached = research_api.attach_dossier_image(
+        research_proj, dossier_res["dossier_id"], visual_bytes, filename="invented-harbour.png",
+        expected_snapshot=dossier_current["snapshot"], expected_revision=dossier_current["revision"],
+        allow_retention=True, alt="Four invented warehouses beside a quay and water",
+        title="Synthetic harbour layout", section="Open Questions",
+        caption="Invented setting sketch; not a map or historical evidence.",
+        context={"provenance_note": "Generated from simple geometry for this UI example."},
+    )
+    visual_url = attached["images"][0]["url"]
     claim_res = research_api.create_claim(
         research_proj,
         title="Attempted warehouse entry",
@@ -428,6 +463,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         "project_name": title, "date": "2026-10-06", "place": "Example City",
     }
     research_fixture = {
+        visual_url: {"media_type": "image/png", "content_base64": base64.b64encode(visual_bytes).decode("ascii")},
         "/api/nda-draft": {
             "fields": nda_fields,
             "text": draft_document(**nda_fields, language=resolved.key).text,
@@ -499,7 +535,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         render_dashboard(
             [], [], title="Synthetic archival research", controls=True,
             labels=resolved.labels, language_name=resolved.name, language_key=resolved.key,
-            current_language=resolved.key, enabled_actions=native_actions,
+            current_language=resolved.key, enabled_actions=NATIVE_UI_ACTIONS,
         ),
     )
     for view in ("sources", "dossiers", "search", "claims", "decisions", "review", "change-set"):
@@ -510,6 +546,8 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
                 width,
                 height,
             )
+    for suffix, width in (("", 1480), ("-mobile", 390)):
+        _queue_capture(research_workspace, OUT_DIR / f"dashboard-dossier-image{suffix}.png", width, 1000)
 
     cli_research_text = (
         f"$ lixity research search --project ./novel-research --query \"warehouse customs\" --limit 1\n"

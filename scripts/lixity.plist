@@ -6,19 +6,19 @@
 
   Installation:
     cp scripts/lixity.plist ~/Library/LaunchAgents/com.lixity.serve.plist
-    launchctl load ~/Library/LaunchAgents/com.lixity.serve.plist
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/com.lixity.serve.plist
 
   Management:
-    launchctl start  com.lixity.serve
-    launchctl stop   com.lixity.serve
-    launchctl unload ~/Library/LaunchAgents/com.lixity.serve.plist   # disable autostart
+    launchctl kickstart -k gui/$(id -u)/com.lixity.serve
+    launchctl kill SIGTERM gui/$(id -u)/com.lixity.serve
+    launchctl bootout gui/$(id -u)/com.lixity.serve   # disable autostart
 
   Logs:
     tail -f /tmp/lixity-stdout.log
     tail -f /tmp/lixity-stderr.log
 
   Edit the ProgramArguments array to change port or add a project path:
-    <string>- -port</string><string>9000</string>
+    <string>--port</string><string>9000</string>
     <string>/Users/you/manuscripts/my-novel</string>
 -->
 <plist version="1.0">

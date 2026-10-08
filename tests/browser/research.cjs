@@ -157,6 +157,7 @@ server.serve_forever()
     await expect(page.locator('#import-proj-lang')).toHaveValue('fr');
     assert.deepEqual(mutations, []);
     await page.locator('#import-proj-title').fill('Synthetic import');
+    await page.locator('#import-project-options').evaluate(element => {element.open = true;});
     await page.locator('#import-proj-path').fill(fixture.project);
     await page.locator('#btn-submit-import-project').click();
     await expect(page.locator('#import-project-status')).toBeVisible();
@@ -291,6 +292,7 @@ server.serve_forever()
     const claimTitle = 'Archive <img src=x onerror=alert(1)> "opening"';
     await page.locator('#r-claim-title').fill(claimTitle);
     await page.locator('#r-claim-statement').fill('The synthetic archive opened in 1924.');
+    await page.locator('#r-claim-options > summary').click();
     await page.locator('#r-claim-time').fill('1924');
     await page.locator('#r-claim-place').fill('Synthetic town');
     await page.locator('#r-claim-actors').fill('Archivist, Reader');
@@ -353,6 +355,7 @@ server.serve_forever()
     await expect(page.locator('#research-decisions-list')).toContainText('No decisions yet');
     await page.locator('#r-decision-title').fill('Move the date');
     await page.locator('#r-decision-rationale').fill('Bring the opening into the first chapter.');
+    await page.locator('#r-decision-options > summary').click();
     await page.locator('#r-decision-plot').fill('Earlier meeting.');
     await page.locator('#r-decision-claim-select').selectOption(claimId);
     // Inspect evidence while drafting; the selected claim must survive a tab refresh.
@@ -579,7 +582,9 @@ server.serve_forever()
     assert.equal(evidenceData.evidence_links[0].claim_latest_revision, 2);
     await page.locator(`[data-research-revise=evidence_link][data-record-id="${evidenceId}"]`).click();
     await field('relation').selectOption('qualifies');
+    await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('claim_revision').fill('2');
+    await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('rationale').fill('The revised statement needs a qualification.');
     await chooseChange();
     await page.locator('#research-revision-save').click();
@@ -595,7 +600,9 @@ server.serve_forever()
     await page.locator('[data-rtab=decisions]').click();
     const decisionId = decisions.decisions[0].id;
     await page.locator(`#research-decisions-list [data-research-revise=decision][data-record-id="${decisionId}"]`).click();
+    await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('rationale').fill('Supersede the earlier narrative choice.');
+    await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('deviation_from_fact').uncheck();
     await chooseChange('supersession');
     await page.locator('#research-revision-save').click();
@@ -629,7 +636,9 @@ server.serve_forever()
     await page.keyboard.press('Escape');
     await page.locator('[data-rtab=decisions]').click();
     await page.locator(`#research-decisions-list [data-research-revise=decision][data-record-id="${decisionId}"]`).click();
+    await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('rationale').fill('Reflect both reviewed dossiers.');
+    await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('dossier_ids').fill(dossierId);
     await chooseChange('supersession');
     await page.locator('#research-revision-batch-add').click();
@@ -710,6 +719,7 @@ server.serve_forever()
     await expect(field('claim_revision')).toHaveValue('2');
     await field('claim_id').fill(otherClaimId);
     await expect(field('claim_revision')).toHaveValue('');
+    await page.locator('#research-revision-options').evaluate(element => {element.open = true;});
     await field('claim_revision').fill('2');
     await chooseChange();
     await page.locator('#research-revision-batch-add').click();
@@ -931,6 +941,7 @@ server.serve_forever()
     await page.locator('#r-init-title').fill('Scratch research');
     await page.locator('#r-init-btn').click();
     await expect(page.locator('#research-tabs')).toBeVisible();
+    await page.locator('#r-ingest-options > summary').click();
     await page.locator('#r-ingest-title').fill('Scratch source');
     await page.locator('#r-ingest-origin-url').fill('javascript:alert(1)');
     await page.locator('#r-ingest-text').fill('A synthetic source for a new local project.');
@@ -1000,6 +1011,7 @@ api.ingest(project, text, source_id=source['id'], allow_retention=True, context=
     await page.locator('#tab-btn-import').click();
     await page.locator('#import-file-input').setInputFiles({name: 'synthetic.md', mimeType: 'text/markdown', buffer: Buffer.from(importedText)});
     await page.locator('#import-proj-title').fill('Explicit byte import');
+    await page.locator('#import-project-options').evaluate(element => {element.open = true;});
     await page.locator('#import-proj-path').fill(importedProject);
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-import-project').click()]);
     assert.equal(fs.readFileSync(path.join(importedProject, 'manuscript.md'), 'utf8'), importedText);

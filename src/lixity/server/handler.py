@@ -13,7 +13,7 @@ from typing import Any, ClassVar
 from urllib.parse import parse_qs, urlparse
 
 from ..research import api as research_api
-from .constants import MAX_PAYLOAD_BYTES, MIME_TYPES
+from .constants import MAX_IMAGE_PAYLOAD_BYTES, MAX_PAYLOAD_BYTES, MIME_TYPES
 from .discovery import api_index
 from .routes_markers import MarkerRoutesMixin
 from .routes_nda import NdaRoutesMixin
@@ -38,6 +38,7 @@ class LixityServerHandler(
         "/api/project-paths": "_handle_project_paths",
         "/api/research/status": "_handle_research_status",
         "/api/research/sources": "_handle_research_sources",
+        "/api/research/image": "_handle_research_image",
         "/api/research/dossiers": "_handle_research_dossiers",
         "/api/research/claims": "_handle_research_claims",
         "/api/research/decisions": "_handle_research_decisions",
@@ -65,6 +66,8 @@ class LixityServerHandler(
         "project-open": "_handle_project_open",
         "research-init": "_handle_research_init",
         "research-ingest": "_handle_research_ingest",
+        "research-image-ingest": "_handle_research_image_ingest",
+        "research-dossier-image": "_handle_research_dossier_image",
         "research-search": "_handle_research_search",
         "research-dossier": "_handle_research_dossier",
         "research-compare": "_handle_research_compare",
@@ -177,11 +180,11 @@ class LixityServerHandler(
             self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)
             return
 
-        payload = self._read_json_body()
+        action = path[len("/api/"):].strip("/")
+        maximum = MAX_IMAGE_PAYLOAD_BYTES if action in {"research-image-ingest", "research-dossier-image"} else MAX_PAYLOAD_BYTES
+        payload = self._read_json_body(maximum=maximum)
         if payload is None:
             return
-
-        action = path[len("/api/"):].strip("/")
 
         handler_name = self.POST_ROUTES.get(action)
         if handler_name is not None:
@@ -203,7 +206,7 @@ class LixityServerHandler(
 
         self._json({"ok": False, "message": f"Unknown action: {action}"}, 400)
 
-    def _read_json_body(self) -> dict[str, Any] | None:
+    def _read_json_body(self, *, maximum: int = MAX_PAYLOAD_BYTES) -> dict[str, Any] | None:
         """Validate the request envelope and return the decoded JSON object.
 
         Responds with the appropriate 4xx status and returns ``None`` when the
@@ -221,7 +224,7 @@ class LixityServerHandler(
         except ValueError:
             self._json({"ok": False, "message": "Invalid Content-Length"}, 400)
             return None
-        if not 0 <= length <= MAX_PAYLOAD_BYTES:
+        if not 0 <= length <= maximum:
             self._json({"ok": False, "message": "Payload too large or invalid"}, 413)
             return None
 

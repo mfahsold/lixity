@@ -244,7 +244,6 @@ async function restoreFileReads(page) {
       assert.equal(await page.locator('#manuscript-import-btn').isDisabled(), false);
       await dropFiles(page, [{name: 'standalone-dropped.txt', content: syntheticContent}]);
       assert.equal(posts.length, beforeImport, 'Standalone selection stays local until explicit dialog submission');
-      await page.locator('#manuscript-import-btn').click();
       await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'standalone-dropped.txt');
       assert.ok(await page.locator('#modal-project-create').isVisible());
       assert.equal(await page.locator('#tab-btn-import').getAttribute('aria-selected'), 'true');
@@ -252,6 +251,7 @@ async function restoreFileReads(page) {
       assert.equal(await page.locator('#import-proj-lang').inputValue(), 'en', 'Import starts with the current analysis language');
       await page.locator('#import-proj-title').fill('Synthetic import review');
       await page.locator('#import-proj-lang').selectOption('fr');
+      await page.locator('#import-project-options > summary').click();
       await page.locator('#import-proj-path').fill('/tmp/synthetic-review-project');
       await page.locator('#import-proj-research').check();
       assert.equal(await page.locator('#btn-submit-import-project').isDisabled(), false);
@@ -267,13 +267,11 @@ async function restoreFileReads(page) {
     await page.goto('http://lixity.test/');
     await page.locator('#tab-view-project').click();
     await page.locator('#manuscript-import-file').setInputFiles({name: 'preview-a.md', mimeType: 'text/markdown', buffer: Buffer.from(syntheticContent)});
-    await page.locator('#manuscript-import-btn').click();
     await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'preview-a.md');
     await page.locator('#form-project-import [data-close-modal]').click();
     const beforePendingImport = posts.length;
-    await page.locator('#manuscript-import-file').setInputFiles({name: 'preview-b.md', mimeType: 'text/markdown', buffer: Buffer.from('## Pending B\n\nB content.\n')});
     await holdFileReadCompletions(page);
-    await page.locator('#manuscript-import-btn').click();
+    await page.locator('#manuscript-import-file').setInputFiles({name: 'preview-b.md', mimeType: 'text/markdown', buffer: Buffer.from('## Pending B\n\nB content.\n')});
     assert.equal(await page.locator('#btn-submit-import-project').isDisabled(), true, 'Previous import content cannot be confirmed during a new read');
     assert.equal(await page.locator('#import-preview-box').isVisible(), false);
     assert.equal(await page.evaluate(() => importedFileContent), '');

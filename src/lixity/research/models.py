@@ -15,7 +15,7 @@ from pydantic import (
     model_validator,
 )
 
-from .limits import MAX_PDF_BYTES, MAX_SOURCE_BYTES
+from .limits import MAX_PDF_BYTES, MAX_SOURCE_BYTES, MAX_SOURCE_CONTEXT_CHARS
 
 Identifier = Annotated[str, Field(pattern=r"^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
@@ -135,8 +135,8 @@ class SourceContext(StrictModel):
     perspective: ContextLabel | None = None
     original_language: ContextLabel | None = None
     is_translation: bool | None = None
-    provenance_note: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
-    origin_url: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+    provenance_note: Annotated[str, Field(min_length=1, max_length=MAX_SOURCE_CONTEXT_CHARS)] | None = None
+    origin_url: Annotated[str, Field(min_length=1, max_length=MAX_SOURCE_CONTEXT_CHARS)] | None = None
     tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
     external_reference: ExternalReference | None = None
 
@@ -292,8 +292,10 @@ class DecisionAcknowledgement(Record):
 
 
 class Tombstone(Record):
+    schema_version: Literal["research-local/1", "research-local/2"] = "research-local/1"  # type: ignore[assignment]
     kind: Literal["tombstone"] = "tombstone"
     target_ref: Reference
+    source_ref: Reference | None = None
     target_kind: Literal[
         "source",
         "source_version",
@@ -307,6 +309,22 @@ class Tombstone(Record):
     ]
     operation: Literal["withdraw", "purge"]
     reason: Annotated[str, Field(min_length=1, max_length=500)]
+
+    @model_validator(mode="after")
+    def valid_source_ownership(self) -> "Tombstone":
+        if self.source_ref is not None:
+            if self.operation != "purge" or self.target_kind != "source_version" or self.schema_version != "research-local/2":
+                raise ValueError("Source ownership requires a version-2 source-version purge tombstone")
+        elif self.schema_version != "research-local/1":
+            raise ValueError("Version-2 purge tombstones require explicit source ownership")
+        return self
+
+    @model_serializer(mode="wrap")
+    def serialize_tombstone(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        fields: dict[str, Any] = handler(self)
+        if self.source_ref is None:
+            fields.pop("source_ref", None)
+        return fields
 
 
 Entity = Annotated[

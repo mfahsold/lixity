@@ -52,17 +52,33 @@ assert.equal(fixture.status, 0, fixture.stderr);
     await page.locator('[data-action="settings"]').click();
     assert.equal(submissions.length, 0);
     assert.ok(await page.locator('#set-z-strong').evaluate(input => input.validationMessage.length > 0));
+    await page.locator('#set-z-strong').fill('3.7');
+    await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/settings')),
+      page.locator('#set-z-strong').press('Enter'),
+    ]);
+    assert.equal(submissions.length, 1, 'Correcting the order error clears validity for keyboard submission');
+    await page.locator('#set-fdr-q').fill('0');
+    await page.locator('[data-action="settings"]').click();
+    assert.equal(submissions.length, 1, 'The exclusive FDR lower bound is rejected');
+    await page.locator('#set-fdr-q').fill('0.013');
+    await Promise.all([
+      page.waitForResponse(response => response.url().endsWith('/api/settings')),
+      page.locator('#set-fdr-q').press('Enter'),
+    ]);
+    assert.equal(submissions.length, 2, 'Correcting an exclusive-bound error supports keyboard submission');
+    assert.equal(submissions[1].fdr_q, 0.013);
     await page.locator('#settings-reset').click();
     assert.equal(await page.locator('#set-z-strong').inputValue(), '3.5');
-    assert.equal(submissions.length, 0);
+    assert.equal(submissions.length, 2);
     await page.locator('#set-z-mild').fill('2.1');
     await Promise.all([
       page.waitForResponse(response => response.url().endsWith('/api/settings')),
       page.locator('[data-action="settings"]').click(),
     ]);
-    assert.equal(submissions.length, 1);
-    assert.equal(submissions[0].z_mild, 2.1);
-    assert.equal(submissions[0].fdr_q, 0.05);
+    assert.equal(submissions.length, 3);
+    assert.equal(submissions[2].z_mild, 2.1);
+    assert.equal(submissions[2].fdr_q, 0.05);
     await page.locator('#tab-view-analysis').click();
     await page.locator('#heatmap-fdr-only').check();
     assert.equal(await page.locator('#heatmap tbody tr:visible').count(), 1);

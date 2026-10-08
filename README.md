@@ -14,7 +14,7 @@ what you keep or revise.
 
 [Get started](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v2.0.0 release notes](docs/releases/v2.0.0.md)
+[v2.1.0 release notes](docs/releases/v2.1.0.md)
 
 Free for projects with no commercial purpose. A book intended for sale,
 including self-publishing, requires a separate written commercial license.
@@ -28,21 +28,20 @@ For help installing these tools, or to use pipx instead, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.0.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
 lixity --version
 ```
 
 This installs the released version. For later upgrades, select the new tag using
 the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace. [Release notes](docs/releases/v2.0.0.md) describe compatibility
+the local workspace. [Release notes](docs/releases/v2.1.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
-**Since 2.0.0:** style dimensions have a chapter-score
-table and keyboard/touch rotation and zoom controls. Browser debug preferences
-persist across reloads, and native NDA exports contain complete editable drafts
-in all seven project languages. See the [dashboard](docs/USAGE.md#style-space-navigation),
-[debug](docs/USAGE.md#debug-logging-since-v1190) and
-[NDA](docs/USAGE.md#nda-drafts) guidance.
+**In 2.1.0:** keep local image references inside dossiers, edit one section at a
+time and continue through decision reviews with fewer manual steps. Settings use
+the same validation in the UI and analysis engine. See the
+[research workflows](docs/research/USAGE.md#research-workflows) and
+[dashboard guide](docs/USAGE.md#dashboard-workflow).
 
 ## Quick Start
 
@@ -127,7 +126,7 @@ an assertion you can link to source passages; a decision explains what you chose
 for the book. Filter by title or tag, or search the saved text. A saved quotation
 records what a source says; its accuracy still needs review.
 
-<a href="docs/screenshots/dashboard-research-search.png"><img src="docs/screenshots/dashboard-research-search.png" alt="Archive search with source passages and citation links" width="900" /></a>
+<a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Local visual reference inside a dossier section, with a description and an explicit synthetic-source caption" width="900" /></a>
 
 Bring sources from local files or the optional Zotero Desktop bridge. PDF scans
 can use locally installed Tesseract or a configured OCR worker. Import warnings
@@ -139,7 +138,13 @@ before deciding to update a link. Related dossier edits can be previewed and sav
 together; if another edit conflicts, the preview helps you resolve it while
 preserving your draft.
 
+Add a local PNG/JPEG to a dossier with a description and optional source note.
+Earlier dossier versions keep their original image; no remote picture is fetched
+and images receive no text scores. **Edit section**, **Add claim** and **Add
+decision** keep a large topic manageable without copying whole documents or IDs.
+
 [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html) ·
+[Search and citations](docs/screenshots/dashboard-research-search.png) ·
 [Sources](docs/screenshots/dashboard-research-sources.png) ·
 [Claims](docs/screenshots/dashboard-research-claims.png) ·
 [Decisions](docs/screenshots/dashboard-research-decisions.png) ·
@@ -150,7 +155,7 @@ preserving your draft.
 
 Project actions remain available from each workspace view. Preview a manuscript
 before importing it, select its analysis language, and adjust which differences
-you want to examine. In 2.0.0, the NDA form has just name, optional
+you want to examine. The NDA form has just name, optional
 address, project name, date and place. Preview the friendly agreement and
 download a PDF or editable text in the project language. Review it before signing.
 
@@ -217,14 +222,16 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 ```python
 from lixity import api
 
-metrics = api.analyze(text, language="de")
-reference = api.fingerprint(text, language="de", project_config={})
 html = api.dashboard(text, language="de", project_config={})
 ```
 
 CLI, Python and dashboard analysis share one pipeline. Analysis/profile JSON uses
 schema **v2**; style JSON uses **v4**. Integrations should pass explicit project
 settings when working with several projects.
+
+Choose `api.analyze` for numeric results or `api.fingerprint` for a style
+reference. Each convenience call performs its own analysis; integrations needing
+several outputs can [reuse the shared analysis result](docs/ARCHITECTURE.md#configuration-and-multiple-projects).
 
 [Interface contracts](docs/AGENTS.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Research commands](docs/research/USAGE.md) · [Automation summary](docs/llms.txt)

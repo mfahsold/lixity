@@ -127,6 +127,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
 `, fixture.project], {cwd: root, env: pythonEnv});
     for (const [kind, selectId, selectedId] of [['sources', 'r-ground-source-select', fixture.sourceIds[0]], ['dossiers', 'r-claim-dossier-select', fixture.dossierIds[0]]]) {
       await page.locator(`[data-rtab=${kind === 'sources' ? 'grounding' : 'claims'}]`).click();
+      await page.locator('#' + selectId).evaluate(element => {const details = element.closest('details'); if (details) details.open = true;});
       await page.locator('#' + selectId).selectOption(selectedId);
       let release, started;
       const gate = new Promise(resolve => { release = resolve; });

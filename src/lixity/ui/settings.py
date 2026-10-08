@@ -38,14 +38,22 @@ def settings_form(
         '<div class="settings-grid">',
     ])
     fields = (
-        ("z_mild", "set-z-mild", 0.5, 6, 0.1),
-        ("z_strong", "set-z-strong", 1, 8, 0.1),
-        ("fdr_q", "set-fdr-q", 0.01, 0.5, 0.01),
-        ("dim_score_threshold", "set-dim-threshold", 1, 4, 0.1),
+        ("z_mild", "set-z-mild"),
+        ("z_strong", "set-z-strong"),
+        ("fdr_q", "set-fdr-q"),
+        ("dim_score_threshold", "set-dim-threshold"),
     )
-    for key, control_id, minimum, maximum, step in fields:
-        value = float(getattr(thresholds, key))
-        default = float(getattr(defaults, key))
+    for key, control_id in fields:
+        value = getattr(thresholds, key)
+        default = getattr(defaults, key)
+        policy = FingerprintThresholds.numeric_inputs[key]
+        constraints = [f'min="{policy.minimum}"', 'step="any"']
+        if policy.maximum is not None:
+            constraints.append(f'max="{policy.maximum}"')
+        if policy.minimum_exclusive:
+            constraints.append('data-min-exclusive="true"')
+        if policy.maximum_exclusive:
+            constraints.append('data-max-exclusive="true"')
         help_text = label(labels, "help_" + key)
         if key == "fdr_q" and thresholds.fdr_method.lower() == "by":
             help_text = help_text.replace("Benjamini–Hochberg", "Benjamini–Yekutieli").replace(
@@ -53,9 +61,9 @@ def settings_form(
             )
         parts.append(
             f'<div class="setting-field"><label for="{control_id}">{translated(key)}</label>'
-            f'<input class="ctl" type="number" id="{control_id}" value="{value:g}" '
-            f'min="{minimum}" max="{maximum}" step="{step}" required '
-            f'data-default="{default:g}" aria-describedby="{control_id}-help"/>'
+            f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" '
+            f'{" ".join(constraints)} required '
+            f'data-default="{default!r}" aria-describedby="{control_id}-help"/>'
             f'<p id="{control_id}-help">{esc(help_text)}</p></div>'
         )
     parts.extend([
@@ -70,7 +78,7 @@ def settings_form(
         '</select>',
         f'<p id="flag-severity-help">{translated("help_flag_min_severity")}</p></div>',
         '</div></details><div class="settings-actions">',
-        f'<button type="button" class="ctl primary" data-action="settings" data-payload="settings">{translated("apply")}</button>',
+        f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings">{translated("apply")}</button>',
         f'<button type="button" class="ctl" id="settings-reset">{translated("reset_thresholds")}</button>',
         f'<span class="ctl-note">{translated("settings_apply_hint")}</span>',
         f'<span hidden id="settings-order-error">{translated("threshold_order")}</span>',

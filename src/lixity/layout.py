@@ -48,7 +48,7 @@ class BookLayoutConfig:
     font_size_footnote: float = 7.8
 
     # Front matter (page 1)
-    title_sub_size: float = 12.0  # "Novel by Matthias Fahsold"
+    title_sub_size: float = 12.0  # author/subtitle line
     title_status_size: float = 9.8  # status line (lectorate version etc.)
     title_contact_size: float = 8.0  # contact footer line
     pitch_heading_size: float = 11.5  # "About this novel"
@@ -73,7 +73,7 @@ class BookLayoutConfig:
     color_divider: tuple[float, float, float] = (0.88, 0.88, 0.88)
 
     # Imprint
-    contact_info: str = "Kontakt: mfahsold@googlemail.com · Hamburg, 2026"
+    contact_info: str = ""
     creator_engine: str = "Modern Markdown Book Publishing Engine (PDF 1.7)"
 
     @property

@@ -33,7 +33,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                 cli_purpose="Export the experimental entity JSON schema")
     for name, help_text in (
         ("init", "Create an explicit local research project"),
-        ("ingest", "Archive local UTF-8 text or PDF; scans require configured local OCR"),
+        ("ingest", "Archive local UTF-8 text, PDF, PNG or JPEG; PDF scans require configured local OCR"),
         ("reindex", "Rebuild the disposable SQLite/FTS5 search index"),
         ("search", "Search the latest source versions with literal words"),
         ("cite", "Resolve an immutable source passage"),

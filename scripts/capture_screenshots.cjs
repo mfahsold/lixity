@@ -1,7 +1,6 @@
 const {launchChromium} = require('./browser_tools.cjs');
 const fs = require('node:fs');
 const path = require('node:path');
-const { pathToFileURL } = require('node:url');
 const assert = require('node:assert/strict');
 
 async function main() {
@@ -12,6 +11,21 @@ async function main() {
     const page = await browser.newPage({deviceScaleFactor: 1, reducedMotion: 'reduce'});
     const fixturePath = path.join(path.dirname(captures[0].source), 'research-workspace-fixture.json');
     const researchFixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
+    // Intercept a synthetic origin so embedded exact-version images use the same
+    // resource URLs as the native app without contacting a running server.
+    await page.route('http://lixity-screenshots.test/**', async route => {
+      const url = new URL(route.request().url());
+      const resource = researchFixture[url.pathname + url.search];
+      if (url.pathname === '/api/research/image' && resource && resource.content_base64) {
+        await route.fulfill({status: 200, contentType: resource.media_type,
+          body: Buffer.from(resource.content_base64, 'base64')});
+        return;
+      }
+      const capture = captures.find(item => '/' + path.basename(item.source) === url.pathname);
+      assert.ok(capture, 'Unknown screenshot resource: ' + url.pathname);
+      await route.fulfill({status: 200, contentType: 'text/html; charset=utf-8',
+        body: fs.readFileSync(capture.source)});
+    });
     await page.addInitScript(({fixture}) => {
       window.captureRequests = [];
       window.fetch = (input, options) => {
@@ -70,7 +84,7 @@ async function main() {
     async function open(source, width, height, colorScheme = 'light') {
       await page.setViewportSize({width, height});
       await page.emulateMedia({colorScheme});
-      await page.goto(pathToFileURL(source).href);
+      await page.goto('http://lixity-screenshots.test/' + path.basename(source));
       await settle();
       assert.ok((await page.title()).length || await page.locator('body').innerText(), 'Capture document is not blank');
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), 'Capture page must not overflow horizontally');
@@ -86,7 +100,8 @@ async function main() {
         buffer: Buffer.from('# Harbour story\n\n## Arrival\n\nMara reached the harbour before dawn. The customs log lay open on the desk.\n\n## The ledger\n\nShe compared the entry with the night watchman\'s account.\n'),
       });
       assert.equal((await page.locator('#manuscript-file-name').textContent()).trim(), 'harbour-story.md');
-      assert.equal(await page.locator('#manuscript-import-btn').isEnabled(), true);
+      await page.locator('#import-preview-box').waitFor({state: 'visible'});
+      assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
     }
     async function save(target, selector) {
       await settle();
@@ -146,12 +161,12 @@ async function main() {
       } else if (name.startsWith('dashboard-project-settings')) {
         await selectView('project');
         await selectManuscript();
+        await page.keyboard.press('Escape');
         assert.equal(await page.locator('#nda-draft-form input, #nda-draft-form textarea').count(), 5);
         await save(capture.target, '#view-pane-project');
       } else if (name.startsWith('dashboard-project-import')) {
         await selectView('project');
         await selectManuscript();
-        await page.locator('#manuscript-import-btn').click();
         await page.locator('#import-preview-box').waitFor({state: 'visible'});
         assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
         await saveDialog(capture.target, '#modal-project-create');
@@ -221,7 +236,7 @@ async function main() {
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         }
         await save(capture.target, '#research-manager');
-      } else if (name.startsWith('dashboard-research-sources') || name.startsWith('dashboard-research-dossiers')) {
+      } else if (name.startsWith('dashboard-research-sources') || name.startsWith('dashboard-research-dossiers') || name.startsWith('dashboard-dossier-image')) {
         await selectView('research');
         const sources = name.startsWith('dashboard-research-sources');
         const kind = sources ? 'sources' : 'dossiers';
@@ -234,7 +249,13 @@ async function main() {
         const card = page.locator(`#research-${kind}-list .research-card:visible`).first();
         await card.locator('[data-research-detail]').click();
         await card.locator('.research-details-body .research-prose').first().waitFor();
-        await save(capture.target, '#research-manager');
+        if (!sources) {
+          const image = card.locator('.dossier-image img');
+          await image.scrollIntoViewIfNeeded();
+          await image.evaluate(element => element.decode());
+        }
+        await save(capture.target, name.startsWith('dashboard-dossier-image') ?
+          '.research-dossier-section-block:has(.dossier-image)' : '#research-manager');
       } else if (name.startsWith('dashboard-research-search')) {
         await selectView('research');
         await page.locator('[data-rtab="search"]').click();

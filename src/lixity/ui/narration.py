@@ -41,6 +41,8 @@ def render_scenes_panel(
                      f'{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]} · {group}'
                      f' · {L("words")}: {item["words"]} · {L("sentences")}: {item["sentences"]}'
                      '</summary>')
+        parts.append(f'<p><a class="ctl-link" href="#ch-{item["chapter"]}" data-jump="#ch-{item["chapter"]}">'
+                     f'{L("scene_containing_chapter")}: {esc(item["chapter_title"])}→</a></p>')
         parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_scenes")}">'
                      '<table><thead><tr>'
                      f'<th>{L("panel_scenes")}</th><th>{L("scene_value")}</th>'

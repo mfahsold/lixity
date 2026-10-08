@@ -1,6 +1,6 @@
 # Product screenshots
 
-Browser captures of **v1.24.1**, taken on **4 October 2026**. The
+Browser captures of **v2.1.0**, taken on **8 October 2026**. The
 [project page](https://mfahsold.github.io/lixity/) introduces each feature with
 a selected image. Use the links below for related views and full-size images.
 
@@ -16,7 +16,8 @@ a selected image. Use the links below for related views and full-size images.
 | Manuscript import | [Preview and confirmation](dashboard-project-import.png), [mobile](dashboard-project-import-mobile.png) |
 | Project settings | [Settings and file picker](dashboard-project-settings.png), [mobile](dashboard-project-settings-mobile.png), [expanded NDA panel](dashboard-nda.png), [mobile](dashboard-nda-mobile.png) |
 | Research sources | [Source report](dashboard-research.png), [source list](dashboard-research-sources.png), [mobile](dashboard-research-sources-mobile.png) |
-| Research dossiers | [Filtered list](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
+| Research dossiers | [Filtered notes with an exact-version image](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
+| Visual references | [Dossier section](dashboard-dossier-image.png), [mobile](dashboard-dossier-image-mobile.png) |
 | Research search | [Passage results](dashboard-research-search.png), [mobile](dashboard-research-search-mobile.png) |
 | Claims and decisions | [Claims](dashboard-research-claims.png), [mobile](dashboard-research-claims-mobile.png), [decisions](dashboard-research-decisions.png), [mobile](dashboard-research-decisions-mobile.png) |
 | Research review | [Decision links and revision pins](dashboard-research-review.png), [mobile](dashboard-research-review-mobile.png) |
@@ -28,8 +29,9 @@ a selected image. Use the links below for related views and full-size images.
 Analysis views use the public-domain Austen sample documented in
 [samples/README.md](https://github.com/mfahsold/lixity/blob/main/samples/README.md).
 Project paths, research sources, dossiers, claims and decisions are synthetic.
-Marker notes exist only in an in-memory copy. The NDA view shows a locked demo
-store without agreements or a passphrase. These examples contain no private
+Marker notes exist only in an in-memory copy. The NDA view previews a synthetic
+five-field draft without storing agreements or recipient records. The dossier
+image is an invented geometric harbour sketch, not a historical map. These examples contain no private
 manuscripts, archives, credentials or running user projects.
 
 Desktop/mobile overviews show a viewport; the heatmap shows its upper section.
@@ -43,7 +45,8 @@ the complete synthetic research search/citation response.
 Local source/dossier filters search loaded metadata. Research Search searches
 retained text separately. Selecting a manuscript does not submit it; confirming
 import creates a separate project. Source integrity and citations do not certify
-facts, and style measurements do not establish literary quality.
+facts, and style measurements do not establish literary quality. Image sources
+contain no text passages or linguistic scores.
 
 ## Regenerate
 
@@ -61,7 +64,7 @@ set `PLAYWRIGHT_MODULE=/absolute/path/to/playwright`. To choose a browser, set
 The generator reuses the analysis pipeline and research API with explicit default
 thresholds. Temporary HTML, synthetic responses and the capture manifest stay in
 ignored `.screenshots/`; browser actions use those fixtures. It creates no user
-projects or agreements. Captures use fixed widths and reduced motion and fail
+projects or stored agreements. Captures use fixed widths and reduced motion and fail
 on runtime errors, missing panels or mobile page overflow.
 
 Review the images before publishing. `.screenshots/capture-results.json` records

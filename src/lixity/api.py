@@ -21,7 +21,7 @@ from .pipeline import (
     resolve_document_config,
 )
 from .status import SCHEMA_VERSION_STYLE
-from .style_fingerprint import FingerprintThresholds
+from .style_fingerprint import FingerprintThresholds as FingerprintThresholds
 from .ui import render_dashboard
 
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
@@ -109,7 +109,7 @@ def fingerprint(
     from ``text`` (Dunning G² early vs late half, approximate degree-tail fit).
     """
     config, _resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
-    thresholds = _thresholds(
+    thresholds = resolve_thresholds(
         z_mild,
         z_strong,
         fdr_q,
@@ -120,30 +120,6 @@ def fingerprint(
         project_config=project_config,
     )
     return fingerprint_document(text, config, thresholds).passport()
-
-
-def _thresholds(
-    z_mild: float | None,
-    z_strong: float | None,
-    fdr_q: float | None,
-    *,
-    fdr_method: str | None = None,
-    dim_score_threshold: float | None = None,
-    flag_min_severity: int | None = None,
-    min_chapters: int | None = None,
-    project_config: Mapping[str, Any] | None = None,
-) -> FingerprintThresholds:
-    """Shared builder: explicit kwargs > project config > code default."""
-    return resolve_thresholds(
-        z_mild=z_mild,
-        z_strong=z_strong,
-        fdr_q=fdr_q,
-        fdr_method=fdr_method,
-        dim_score_threshold=dim_score_threshold,
-        flag_min_severity=flag_min_severity,
-        min_chapters=min_chapters,
-        project_config=project_config,
-    )
 
 
 def passport(
@@ -308,7 +284,7 @@ def dashboard(
     and server controls require the lower-level renderer and an adapter.
     """
     config, resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
-    thresholds = _thresholds(
+    thresholds = resolve_thresholds(
         z_mild,
         z_strong,
         fdr_q,
@@ -349,7 +325,6 @@ def about() -> dict[str, Any]:
         FEATURES,
         N_DIMENSIONS,
         REDUNDANCY_RHO,
-        FingerprintThresholds,
     )
 
     defaults = FingerprintThresholds()

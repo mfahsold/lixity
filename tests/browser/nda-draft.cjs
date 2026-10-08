@@ -12,11 +12,12 @@ import base64, json
 from lixity.language import get_language_profile
 from lixity.ui import render_dashboard
 from lixity.nda import _minimal_pdf
+from lixity.nda_templates import NDA_DOCUMENT_LABELS
 from lixity.workspace_labels import WORKSPACE_LABELS
 fixtures = {}
 for language in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     labels = {**get_language_profile(language).labels, **WORKSPACE_LABELS[language]}
-    fixtures[language] = {'labels': labels, 'html': render_dashboard(
+    fixtures[language] = {'labels': labels, 'documentTitle': NDA_DOCUMENT_LABELS[language]['title'], 'html': render_dashboard(
         [], [], title='Synthetic Project', nda_project_name='Synthetic Project', labels=labels, language_key=language,
         controls=True, enabled_actions=['nda-draft', 'analyze', 'rebuild'], debug=True)}
 print(json.dumps({'fixtures': fixtures, 'pdf': base64.b64encode(
@@ -63,6 +64,8 @@ const agreement = values => `Synthetic agreement\nName: ${values.name}\nAddress:
       assert.equal(await page.locator('#nda-project-name').inputValue(), 'Synthetic Project');
       assert.equal(await page.locator('#nda-date').inputValue(), '2026-10-07', 'Calendar date uses the client locale, not UTC');
       assert.equal(await page.locator('#nda-draft h2').textContent(), fixtures[language].labels.nda_draft_title);
+      assert.equal(await page.locator('#nda-draft h2').textContent(), fixtures[language].documentTitle, 'The app names the agreement without a draft qualifier');
+      assert.equal(await page.locator('label[for=nda-name]').textContent(), fixtures[language].labels.nda_draft_name);
       if (width === 320) await page.locator('#nda-preview-btn').tap();
       else {
         await page.locator('#nda-preview-btn').focus();

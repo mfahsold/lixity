@@ -93,7 +93,8 @@ class TestLixityServer(unittest.TestCase):
         self.assertIn('id="settings-form"', html)
         self.assertIn('id="research-manager"', html)
         self.assertIn('data-action="analyze"', html)
-        self.assertIn('data-action="rebuild"', html)
+        self.assertNotIn('data-action="rebuild"', html)
+        self.assertIn("Update analysis", html)
         for absent in ('id="ms-file"', 'id="nda-manager"', 'data-action="export"',
                        'data-action="sync"', 'data-action="audit"', 'data-action="prune"',
                        'data-action="gdrive"'):

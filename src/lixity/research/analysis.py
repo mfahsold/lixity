@@ -96,6 +96,8 @@ def analyze(
     if version.id in withdrawn_or_purged:
         raise ResearchError("Source version has been withdrawn or purged; refusing analysis")
 
+    if version.blob.media_type not in ("text/plain", "application/pdf"):
+        raise ResearchError("Image sources are unavailable to textual analysis or comparison")
     raw_bytes = repository.read_blob(version.blob)
     text = raw_bytes.decode("utf-8")
 
@@ -266,6 +268,8 @@ def compare_source_to_manuscript(
     if version.id in withdrawn_or_purged:
         raise ResearchError("Source version has been withdrawn or purged; refusing analysis")
 
+    if version.blob.media_type not in ("text/plain", "application/pdf"):
+        raise ResearchError("Image sources are unavailable to textual analysis or comparison")
     raw_bytes = repository.read_blob(version.blob)
     source_text = raw_bytes.decode("utf-8")
 

@@ -1,11 +1,10 @@
 # Local research archive
 
 **Experimental local research archive system.**
-This component archives local UTF-8 text and PDF documents, attaches versioned source criticism context and tags,
-resolves exact citations, manages dossiers with cited evidence, provides an interactive web
-management UI in `lixity serve`, connects to the analysis pipeline, and performs cross-corpus
-grounding comparisons against manuscripts. Authors can record claims,
-passage-to-claim evidence relations and authorial decisions, with full native revision history.
+Keep selected text, PDF and PNG/JPEG sources in an explicit local project. Dossiers
+bring notes and evidence together; claims record assertions; decisions explain
+the author's choices. The workspace preserves saved versions and exact quotations.
+Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
 | Implemented locally | Outside the current scope |
@@ -15,6 +14,7 @@ It does not implement the entire [RFC](README.md).
 | Local text / Markdown input, original bytes retained | Multi-tenant team services, cloud hosting |
 | Multi-file batch ingestion with `--progress` phase notifications | External web scrapers |
 | Section-bounded dossier reads (`--section`) | Audio/video transcription or image understanding |
+| Local PNG/JPEG captures and exact-version images in dossiers | Remote image downloads, image OCR or visual AI |
 | Decision-dossier review tracking (`review_needed`) | Automatic bidirectional Zotero synchronization |
 | Native PDF extraction with Poppler; scan OCR with local Tesseract or a configured worker | Automated factual proof or rewriting prose |
 | Safe Markdown & offline SVG diagram rendering (flowcharts, sequence) | Ambient configuration discovery |
@@ -135,6 +135,11 @@ restored draft link retains the revision you inspected.
 
 ### Work on one dossier section
 
+In a dossier, choose **Edit section** beside an unambiguous heading. The existing
+revision editor opens that section's content, including its subsections. It keeps
+your draft after a failed save. Concurrent changes in other sections remain intact;
+overlapping edits need an explicit choice in the preview before saving.
+
 Use `dossier --dossier-id ID --section "Heading"` to read a bounded section;
 `--update --file section.md --section "Heading"` replaces only that section's
 content, with the usual snapshot, revision and reason requirements. Both reading
@@ -142,6 +147,53 @@ and replacing a section include its subsections. Headings inside fenced code are
 ignored; repeated heading names reject ambiguous reads/updates. Other text,
 line endings and evidence references are preserved. Prepared section drafts
 start from the selected base revision, never a silently substituted current body.
+
+The Python equivalent `prepare_dossier_section(project, id, base_revision=N,
+section="Heading", content="Draft")` prepares a read-only, section-bounded
+three-way comparison. Save its full merged `changes` with the returned current
+snapshot and revision through `revise_record`. `get_dossier(..., revision=N)`
+reads the exact saved version; `editable_sections` lists real, unique headings,
+excluding code and the generated preamble label.
+
+### Keep a visual reference in a dossier
+
+Choose **Add image**, select a local PNG or JPEG and describe what the image
+shows. Previewing stays in the browser. Optional details include a caption, source
+title, original source-page link, provenance note and an existing section. Confirm
+that you may retain the file, then save. The image and dossier revision are saved
+together; a rejected or stale save accepts neither. Cancel discards the preview.
+
+Click an embedded image to enlarge it; Escape closes the view. Earlier dossier
+versions keep their exact image version even after a source is replaced. Withdrawn,
+purged or missing images show an unavailable placeholder instead of changing to a
+different image. Source-page links remain links: Lixity never fetches them as images.
+
+Images have no extracted text, passages or linguistic scores. Retain an authorized
+local file yourself; a Wikimedia category or file-description page is not an image
+file. Text/PDF imports and OCR remain separate workflows.
+
+Limits are 16 MiB per image and 64 million pixels; image-specific HTTP JSON is
+limited to 32 MiB. Static PNG and supported 8-bit Huffman JPEG containers are
+checked for signatures, structure and dimensions. These checks are not a complete
+pixel decode or evidence of factual authenticity. Animated PNG, SVG and raw HTML
+images are outside this feature. The browser's decoder can still reject damaged
+pixel data. Original bytes, rather than a recompressed copy, enter the existing
+archive and its backup/audit lifecycle.
+
+CLI capture uses the ordinary import command:
+
+```sh
+lixity research ingest --project ./novel --file ./reference.png --allow-retention
+```
+
+Programmatic capture is `ingest_image(project, bytes, filename="reference.png",
+allow_retention=True)`. `attach_dossier_image` additionally requires the dossier
+ID and exact `expected_snapshot` / `expected_revision`; it performs the joint
+save. Its Markdown image destination is `lixity:image/SOURCE_ID/VERSION_ID`,
+with canonical UUID URNs. Image version purge records retain the exact source identity
+under `research-local/2`; older 2.0.0 writers reject that record. Existing v1 records
+stay unchanged. Back up before writing with a newer release, and keep compatible
+writers for that archive. Unprovable old associations remain missing.
 
 ### Review decisions and save related revisions together
 
@@ -189,6 +241,10 @@ for that pair. This records your assessment for the exact saved versions; it
 does not inspect a manuscript or establish semantic consistency. Later changes
 to either record make the acknowledgement stale and request review again.
 **Needs another check** explicitly reopens the same pair.
+
+After your own successful acknowledgement, the UI updates matching review controls
+and counts so you can continue with the next pair. An intervening external change
+still requires an explicit refresh; it is never silently accepted on your behalf.
 
 The first acknowledgement adds a `decision_acknowledgement` record under
 `research-local/5` and a `research-manifest-local/5` snapshot. Earlier source,
@@ -429,11 +485,11 @@ lixity research search --project ./novel --query "reading room" --limit 5
 lixity research audit --project ./novel
 ```
 
-`research sources` and `research ocr-status` already return JSON; neither accepts
-`--json`. The listing command is `sources`, not `list-sources`. `ocr-status`
-does not accept `--language`: its CLI guidance is English, while the browser
-localizes guidance in de/en/fr/es/it/pt/nl. Use named `--project` and `--file`
-arguments for initialization and ingestion, as shown above.
+The listing command is `sources`. Output choices are described in
+[Read reports in the terminal](#read-reports-in-the-terminal).
+`ocr-status` always returns JSON and does not accept `--json` or `--language`;
+its CLI guidance is English, while the browser localizes it in seven languages.
+Use named `--project` and `--file` arguments as shown above.
 
 Use a `passage_id` from search and a `source_id` from ingestion:
 
@@ -637,7 +693,10 @@ archive. Source ingestion in the research panel has its own explicit local
 retention confirmation.
 Select a source or dossier for full details and verified citations. Search
 results can feed a selected passage into **Use for claim** or **Use for dossier**;
-the claim form can also associate an existing dossier. These actions record
+the claim form can also associate an existing dossier. A dossier's **Add claim**
+and **Add decision** actions select that dossier by title in the existing forms;
+other unsaved text stays intact. Optional scope and technical fields are collapsed
+until needed. These actions record
 the author's links and notes, not a factual verdict.
 
 **Since v1.23.0:** Research & Dossiers is a separate dashboard view;
@@ -1026,12 +1085,10 @@ fails closed. There is no silent native-text fallback. With no backend or worker
 text-layer extraction remains available and can omit scanned pages; inspect mixed
 PDFs for completeness. A successful native import is not an OCR-success claim.
 
-An optional experimental CPU adapter is available in a source checkout as
-`scripts/ocr_unlimited_cpu_worker.py`.
-It is not installed as a Lixity CLI command and does not download its runtime or
-weights. See [its preparation and limits](OCR_INTEGRATION.md#experimental-cpu-adapter)
-before selecting it as the worker. Validate output against known scans, including
-page ordering, blank pages and failed/truncated generation.
+For local scans, use the built-in Tesseract backend described above. Custom model
+deployment belongs to a separately maintained adapter implementing this worker
+protocol. The former experimental CPU bridge was removed in 2.1.0; its limited
+experiment is recorded in [deployment boundaries](OCR_INTEGRATION.md#historical-cpu-experiment).
 
 ### What is actually retained
 

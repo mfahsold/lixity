@@ -14,7 +14,7 @@ from typing import Any, Literal, TypeVar
 from pydantic import ValidationError
 
 from .acknowledgements import latest_acknowledgements
-from .limits import MAX_PDF_BYTES, MAX_RESEARCH_OBJECT_BYTES
+from .limits import MAX_IMAGE_BYTES, MAX_PDF_BYTES, MAX_RESEARCH_OBJECT_BYTES
 from .models import (
     ENTITY,
     Activity,
@@ -115,8 +115,13 @@ class Snapshot:
     records: dict[str, Entity]
     texts: dict[str, str] = field(default_factory=dict, repr=False, compare=False)
     revisions: dict[tuple[str, int], Entity] = field(default_factory=dict)
+    lifecycle: dict[tuple[str, str, str], Tombstone] = field(init=False, repr=False, compare=False)
 
     def __post_init__(self) -> None:
+        object.__setattr__(self, "lifecycle", {
+            (record.operation, record.target_kind, record.target_ref.id): record
+            for record in self.records.values() if isinstance(record, Tombstone)
+        })
         if not self.revisions:
             object.__setattr__(self, "revisions", {
                 (record.id, record.revision): record for record in self.records.values()
@@ -262,6 +267,9 @@ class Repository:
             if isinstance(record, Project) and record.id != project.id:
                 raise ResearchError("Multiple project records rejected")
             if isinstance(record, SourceVersion):
+                from .images import IMAGE_TYPES
+                if record.blob.media_type in IMAGE_TYPES and record.blob.byte_length > MAX_IMAGE_BYTES:
+                    raise ResearchError("Image blobs must be at most 16 MiB")
                 snapshot.get(record.source_ref, Source)
                 if descriptors.setdefault(record.blob.sha256, record.blob) != record.blob:
                     raise ResearchError("Inconsistent descriptors for the same blob")
@@ -283,6 +291,8 @@ class Repository:
             elif isinstance(record, Passage):
                 snapshot.get(record.extraction_ref, Extraction)
             elif isinstance(record, Dossier):
+                from .images import resolve_dossier_images
+                resolve_dossier_images(snapshot, record.body)
                 for ref in record.evidence_refs:
                     if ref not in purged_passages or ref.id in snapshot.records:
                         snapshot.get(ref, Passage)
@@ -416,8 +426,10 @@ class Repository:
             candidate = Snapshot(digest(manifest_bytes), manifest, records, revisions=revisions)
             for record in additions:
                 if isinstance(record, Dossier):
+                    from .images import validate_image_changes
                     predecessor = current.records.get(record.id) if current else None
                     retained = predecessor.evidence_refs if isinstance(predecessor, Dossier) else []
+                    validate_image_changes(candidate, record.body, predecessor.body if isinstance(predecessor, Dossier) else "")
                     for ref in record.evidence_refs:
                         if ref not in retained:
                             candidate.get(ref, Passage)
@@ -429,6 +441,12 @@ class Repository:
                     if current is None or not removals or record.target_ref.id not in removals:
                         raise ResearchError("Passage purge tombstone requires an accepted passage removal")
                     current.get(record.target_ref, Passage)
+                elif isinstance(record, Tombstone) and record.operation == "purge" and record.target_kind == "source_version":
+                    if current is None or not removals or record.target_ref.id not in removals:
+                        raise ResearchError("Source version purge tombstone requires an accepted version removal")
+                    removed_version = current.get(record.target_ref, SourceVersion)
+                    if record.source_ref is not None and record.source_ref != removed_version.source_ref:
+                        raise ResearchError("Purge tombstone source ownership does not match the removed source version")
             self.validate(candidate)
             for checksum, content in blobs.items():
                 if digest(content) != checksum:
@@ -436,7 +454,12 @@ class Repository:
                 publish(self.safe(self.data / "blobs" / checksum), content)
             for record in additions:
                 if isinstance(record, SourceVersion):
-                    self.read_blob(record.blob)
+                    content = self.read_blob(record.blob)
+                    from .images import IMAGE_TYPES, validate_image
+                    if record.blob.media_type in IMAGE_TYPES:
+                        image = validate_image(content)
+                        if image["media_type"] != record.blob.media_type:
+                            raise ResearchError("Image bytes do not match their blob media type")
                 elif isinstance(record, Passage):
                     self.quote(candidate, record)
             created_paths: list[Path] = []

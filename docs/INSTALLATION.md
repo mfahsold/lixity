@@ -27,13 +27,13 @@ pip`, or bypass an externally managed Python environment.
 These commands work in a terminal, including Windows PowerShell:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.0.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
 lixity --version
 lixity about
 ```
 
-The current release is **v2.0.0**. This command selects a fixed release so that
-reinstalling it uses the same source. Read the [release notes](releases/v2.0.0.md)
+The current release is **v2.1.0**. This command selects a fixed release so that
+reinstalling it uses the same source. Read the [release notes](releases/v2.1.0.md)
 for changes and compatibility information.
 
 If `lixity` is not found, run `uv tool update-shell`, open a new terminal and
@@ -90,7 +90,7 @@ folder does not update the installed tool. Reinstall the chosen release or
 development source explicitly, verify its version, and restart its service.
 
 If you already use pipx, the equivalent alternative is
-`pipx install "git+https://github.com/mfahsold/lixity.git@v2.0.0"`, followed by
+`pipx install "git+https://github.com/mfahsold/lixity.git@v2.1.0"`, followed by
 `pipx ensurepath` if necessary; update with `pipx upgrade lixity`.
 
 ## First useful result
@@ -121,7 +121,7 @@ export remains read-only. The server's persistent workspace bar offers
 **Open Project** for an existing folder and its research archive, and
 **New Project → Import Manuscript** to create a separate project from uploaded text.
 See [Onboarding](ONBOARDING.md) for this workflow. Since 2.0.0, the workspace includes a five-field NDA generator with preview and PDF/editable-text
-downloads in the project language; see [NDA guidance](USAGE.md#nda-drafts).
+downloads in the project language; see [NDA guidance](USAGE.md#nda-agreements).
 It creates no server files or recipient registry. For characters outside the
 native Windows-1252 PDF repertoire, download UTF-8 text for your local editor.
 
@@ -131,22 +131,27 @@ native Windows-1252 PDF repertoire, download UTF-8 text for your local editor.
 GitHub Pages hosts the documentation, not the interactive application.
 The built-in analysis runs on your computer; optional integrations have their own
 setup and data handling. All tabs connected to one server share its active project.
+For normal use, keep the terminal open while working in the browser.
 
 ```sh
-# Simplest: foreground, Ctrl+C to stop
-lixity serve /path/to/project --open        # --open launches the browser automatically
-
-# Open a project on a custom port
-lixity serve /path/to/project --port 9000
+# Open your project and launch the browser
+lixity serve /path/to/project --open
 
 # Start without preloading a project (open one from the dashboard wizard)
-lixity serve --no-project
+lixity serve --no-project --open
 ```
 
+Stop with Ctrl+C. Add `--port 9000` if you need a different port.
 If port 8765 is already occupied, Lixity prints a clear error with the kill command.
 Identify the existing server before stopping it, or choose another port.
 After an update or a change to OCR settings, stop the old server with Ctrl+C and
 restart it on the same port. Reloading the browser does not update running code.
+
+<details>
+<summary>Optional background servers and startup at login</summary>
+
+Use these options when you want Lixity to run without an open terminal. They are
+alternatives to the foreground command above; choose the method for your platform.
 
 ### Managed background start (Linux and macOS)
 
@@ -263,17 +268,15 @@ Stop-ScheduledTask   -TaskName "Lixity Dashboard"
 Unregister-ScheduledTask -TaskName "Lixity Dashboard" -Confirm:$false  # remove
 ```
 
+</details>
+
 ### After a computer restart (quick reference)
 
-If you do not use one of the auto-start methods above, reopen a terminal and run:
-
-```sh
-lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765
-```
-
-Open `http://127.0.0.1:8765/`. No reinstall or reimport is needed. Reapply any OCR
-environment settings; they are not saved in project settings. Start Zotero for
-new captures; retained evidence stays readable while it is closed.
+Start the project again using the [foreground command](#running-the-server),
+or your configured background service. Your project remains in its folder;
+reinstallation or reimport is unnecessary. Reapply any OCR environment settings,
+which are not saved in project settings. Start Zotero for new captures;
+retained evidence stays readable while it is closed.
 
 ## Python API: project environment
 
@@ -281,7 +284,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v2.0.0"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v2.1.0"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -290,7 +293,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v2.0.0"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v2.1.0"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```
@@ -367,7 +370,7 @@ no configuration. A reachable Zotero API does not establish library, collection
 or attachment access; those remain separate explicit browse actions.
 See [the extraction contract](research/USAGE.md#self-hosted-pdf-and-ocr-extraction).
 The [Unlimited-OCR integration guide](research/OCR_INTEGRATION.md) describes the
-optional experimental CPU adapter and its separate runtime setup. Upstream
+external-worker boundary and the limited historical CPU experiment. Upstream
 `infer.py` cannot be used directly as a `LIXITY_OCR_WORKER` executable.
 
 The [browser installation guide](https://mfahsold.github.io/lixity/guides/installation.html)

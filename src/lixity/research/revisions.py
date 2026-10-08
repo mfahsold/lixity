@@ -122,12 +122,14 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
             reference_updates.append({"kind": association_kind, "id": association.id,
                                       "pinned_revision": association.revision, "latest_revision": target.revision})
     latest = snapshot.latest(record.id, KINDS[record.kind])
+    from .images import resolve_dossier_images
     return {
         "schema_version": "research-record-local/1", "project_id": snapshot.project.id,
         "snapshot": snapshot.digest, "record": record.model_dump(mode="json"),
         "latest_revision": latest.revision, "is_latest": latest.revision == record.revision,
         "citations": citations, "citation_scope": citation_scope,
         "source_updates": source_updates(citations), "reference_updates": reference_updates,
+        **({"images": resolve_dossier_images(snapshot, record.body)} if isinstance(record, Dossier) else {}),
     }
 
 
@@ -145,12 +147,14 @@ def record_history(project: str | Path, kind: str, record_id: str) -> dict[str, 
     latest = _record(snapshot, kind, record_id)
     records = sorted((r for r in snapshot.revisions.values() if r.id == record_id),
                      key=lambda r: r.revision, reverse=True)
+    from .images import resolve_dossier_images
     return {
         "schema_version": "research-history-local/1", "project_id": snapshot.project.id,
         "snapshot": snapshot.digest, "record_id": record_id, "kind": kind,
         "latest_revision": latest.revision,
         "revisions": [{"revision": r.revision, "created_at": r.created_at,
-                       "created_by": r.created_by, "change": r.model_dump(mode="json").get("change")}
+                       "created_by": r.created_by, "change": r.model_dump(mode="json").get("change"),
+                       **({"images": resolve_dossier_images(snapshot, r.body)} if isinstance(r, Dossier) else {})}
                       for r in records],
     }
 
@@ -297,6 +301,8 @@ def _field_change(name: str, value: Any) -> dict[str, Any]:
 def _validate_revision_links(snapshot: Snapshot, previous: Authored, revised: Authored) -> None:
     """Check new links using the same constraints as the append-only commit."""
     if isinstance(revised, Dossier):
+        from .images import validate_image_changes
+        validate_image_changes(snapshot, revised.body, previous.body if isinstance(previous, Dossier) else "")
         retained = previous.evidence_refs if isinstance(previous, Dossier) else []
         for ref in revised.evidence_refs:
             if ref not in retained:
@@ -324,6 +330,8 @@ def prepare_record_revision(
     changes through ``revise_record`` with the returned current tokens; it will
     still reject another concurrent change.
     """
+    if type(base_revision) is not int or base_revision < 1:
+        raise ResearchError("Base revision must be a positive integer")
     if not isinstance(changes, Mapping) or not changes:
         raise ResearchError("Provide at least one editable field")
     if resolutions is None:
@@ -361,6 +369,62 @@ def prepare_record_revision(
         "current": _view(repository, snapshot, current), "changes": merged,
         "conflicts": conflicts, "ready": not conflicts, "has_changes": bool(merged),
     }
+
+
+def prepare_dossier_section(
+    project: str | Path, record_id: str, *, base_revision: int,
+    section: str, content: str, resolutions: Mapping[str, str] | None = None,
+) -> dict[str, Any]:
+    """Reconcile a selected section without replacing unrelated current prose."""
+    from .api import _section_spans, _section_subtree_end, update_section
+
+    if type(base_revision) is not int or base_revision < 1:
+        raise ResearchError("Base revision must be a positive integer")
+    if not isinstance(section, str) or not section.strip() or not isinstance(content, str):
+        raise ResearchError("Provide a section heading and text content")
+    if resolutions is None:
+        resolutions = {}
+    if not isinstance(resolutions, Mapping) or any(
+        key != "body" or value not in ("current", "mine") for key, value in resolutions.items()
+    ):
+        raise ResearchError("Choose current or mine for the conflicting section body")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    base = _record(snapshot, "dossier", record_id, base_revision)
+    current = _record(snapshot, "dossier", record_id)
+    if not isinstance(base, Dossier) or not isinstance(current, Dossier):
+        raise ResearchError("Section editing requires a dossier")
+
+    def selected_text(body: str) -> str:
+        spans = _section_spans(body)
+        matches = [span for span in spans if span.title.casefold() == section.strip().casefold()]
+        if not matches:
+            raise ResearchError(f"Section '{section}' not found")
+        if len(matches) != 1:
+            raise ResearchError(f"Section '{section}' is ambiguous")
+        selected = matches[0]
+        content = body[selected.content_start:_section_subtree_end(spans, selected, len(body))]
+        return content.replace("\r\n", "\n").replace("\r", "\n").strip("\n")
+
+    before, now = selected_text(base.body), selected_text(current.body)
+    mine = content.replace("\r\n", "\n").replace("\r", "\n").strip("\n")
+    conflicted = mine != before and now != before and now != mine
+    if resolutions and not conflicted:
+        raise ResearchError("A resolution requires a conflicting section body")
+    conflicts = []
+    changes: dict[str, Any] = {}
+    if conflicted and "body" not in resolutions:
+        conflicts.append({"field": "body", "base": before, "current": now, "mine": mine})
+    elif mine != before:
+        desired = now if resolutions.get("body") == "current" else mine
+        if desired != now:
+            changes["body"] = update_section(current.body, section, desired)
+    candidate = _apply_changes(snapshot, current, changes, change_kind="correction",
+                               reason="Preview only", actor="local-author")
+    _validate_revision_links(snapshot, current, candidate)
+    return {"schema_version": "research-revision-preview-local/1", "base_revision": base_revision,
+            "section": section, "current": _view(repository, snapshot, current), "changes": changes,
+            "conflicts": conflicts, "ready": not conflicts, "has_changes": bool(changes)}
 
 
 def _revision_batch(

@@ -333,6 +333,12 @@ if (filter) {
     document.body.classList.toggle("only-flags", filter.checked);
   });
 }
+var paragraphReset = document.getElementById("paragraph-filter-reset");
+if (paragraphReset) paragraphReset.addEventListener("click", function() {
+  setFilter(filter, "only-flags", false);
+  setFilter(layerOnly, "layer-only", false);
+  if (layer) { layer.value = ""; applyLayer(); }
+});
 var microhint = document.getElementById("microhint");
 if (microhint) {
   var dismissHint = function () {
@@ -447,76 +453,123 @@ if (layer) {
   layer.addEventListener("change", applyLayer);
   applyLayer();
 }
-async function markerApi(payload) {
+async function jsonApi(url, options) {
   var t0 = performance.now();
-  var url = API + "/marker-" + payload._action;
   try {
-    var res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload)
-    });
-    var data = await res.json();
-    LixityLog.api("POST", url, performance.now() - t0, res.status, data);
-    if (data.ok) { setTimeout(function () { location.reload(); }, 800); }
+    var response = await fetch(url, options);
+    var data = await response.json();
+    if (!data || typeof data !== "object" || Array.isArray(data)) data = {ok: false};
+    if (!response.ok) data.ok = false;
+    data.http_status = response.status;
+    LixityLog.api(options && options.method || "GET", url, performance.now() - t0, response.status, data);
     return data;
-  } catch (err) {
-    LixityLog.error("markerApi error:", err);
-    return { ok: false, message: String(err) };
+  } catch (error) {
+    return {ok: false, message: String(error), http_status: 0};
   }
 }
+
+function markerApi(payload) {
+  return jsonApi(API + "/marker-" + payload._action, {method: "POST",
+    headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+}
 function closeNoteField() {
-  var field = document.querySelector(".marker-note");
-  if (field) {
-    field.classList.add("gone");
-    setTimeout(function () { field.remove(); }, 160);
-  }
+  var editor = document.querySelector("[data-marker-editor]");
+  if (!editor || editor.dataset.pending === "1") return;
+  var trigger = editor._markerTrigger;
+  editor.remove();
+  if (trigger && trigger.isConnected) trigger.focus();
 }
 
 function openNoteField(button) {
-  closeNoteField();
+  var previous = document.querySelector("[data-marker-editor]");
+  if (previous) {
+    var draft = previous.querySelector(".marker-note");
+    if (previous.dataset.pending === "1" || draft.value || previous._markerTrigger === button) {
+      if (!draft.disabled) draft.focus();
+      return;
+    }
+    closeNoteField();
+  }
   var row = button.closest(".marker-row");
   var slot = row && row.querySelector(".marker-note-slot");
   if (!slot) return;
+  var editor = document.createElement("span");
+  editor.dataset.markerEditor = "1";
+  editor._markerTrigger = button;
   var input = document.createElement("input");
-  input.className = "ctl marker-note";
+  input.className = "ctl marker-note visible";
   input.type = "text";
   input.placeholder = slot.dataset.placeholder || "";
-  input.setAttribute("aria-label", slot.dataset.placeholder || "");
-  slot.appendChild(input);
-  requestAnimationFrame(function () { input.classList.add("visible"); });
+  input.setAttribute("aria-label", input.placeholder);
+  var save = document.createElement("button");
+  save.type = "button";
+  save.className = "ctl";
+  save.dataset.markerSave = "1";
+  save.textContent = uiLabel("marker_save");
+  var cancel = document.createElement("button");
+  cancel.type = "button";
+  cancel.className = "ctl";
+  cancel.dataset.markerCancel = "1";
+  cancel.textContent = uiLabel("modal_cancel");
+  var feedback = document.createElement("span");
+  feedback.className = "ctl-status";
+  feedback.dataset.markerFeedback = "1";
+  feedback.setAttribute("role", "status");
+  feedback.setAttribute("aria-live", "polite");
+  feedback.hidden = true;
+  editor.append(input, save, cancel, feedback);
+  slot.appendChild(editor);
   input.focus();
-  input.addEventListener("keydown", function (event) {
-    if (event.key === "Escape") { closeNoteField(); return; }
-    if (event.key !== "Enter") return;
-    var kind = button.dataset.markerKind;
-    var line = parseInt(button.dataset.line, 10);
-    var note = input.value.trim();
-    button.disabled = true;
-    input.disabled = true;
-    markerApi({ _action: "add", kind: kind, line: line, note: note }).then(function (data) {
-      button.disabled = false;
-      input.disabled = false;
-      if (data.ok) {
-        input.value = "";
-        input.classList.add("saved");
-        input.placeholder = "✓";
-      } else {
-        input.classList.add("failed");
-        input.placeholder = "✗ " + (data.message || "");
-      }
-    });
+  async function submit() {
+    if (editor.dataset.pending === "1") return;
+    editor.dataset.pending = "1";
+    save.disabled = input.disabled = cancel.disabled = true;
+    save.setAttribute("aria-busy", "true");
+    feedback.hidden = false;
+    feedback.className = "ctl-status";
+    feedback.textContent = uiLabel("marker_saving");
+    var data = await markerApi({_action: "add", kind: button.dataset.markerKind,
+      line: parseInt(button.dataset.line, 10), note: input.value.trim()});
+    if (!editor.isConnected) return;
+    delete editor.dataset.pending;
+    save.disabled = input.disabled = cancel.disabled = false;
+    save.removeAttribute("aria-busy");
+    feedback.className = "ctl-status " + (data.ok ? "ok" : "err");
+    feedback.textContent = data.ok ? uiLabel("marker_saved") :
+      uiFormat("marker_save_failed", {reason: data.message || uiLabel("wizard_unknown_error")});
+    if (data.ok) { save.disabled = true; input.disabled = true; }
+    else input.focus();
+  }
+  save.addEventListener("click", submit);
+  cancel.addEventListener("click", closeNoteField);
+  input.addEventListener("keydown", function(event) {
+    if (event.key === "Escape") { event.preventDefault(); closeNoteField(); }
+    if (event.key === "Enter") { event.preventDefault(); submit(); }
   });
 }
 
-document.addEventListener("click", async function (event) {
+document.addEventListener("click", async function(event) {
   var add = event.target.closest("[data-marker-kind]");
   if (add) { openNoteField(add); return; }
   var resolve = event.target.closest("[data-marker-resolve]");
-  if (resolve) {
-    markerApi({ _action: "resolve", id: resolve.dataset.markerResolve });
-    return;
+  if (!resolve || resolve.disabled) return;
+  resolve.disabled = true;
+  resolve.setAttribute("aria-busy", "true");
+  var feedback = resolve.parentElement.querySelector("[data-marker-resolve-feedback]");
+  if (!feedback) {
+    feedback = document.createElement("span");
+    feedback.dataset.markerResolveFeedback = "1";
+    feedback.setAttribute("role", "status");
+    feedback.setAttribute("aria-live", "polite");
+    resolve.after(feedback);
   }
+  feedback.textContent = uiLabel("marker_saving");
+  var data = await markerApi({_action: "resolve", id: resolve.dataset.markerResolve});
+  resolve.removeAttribute("aria-busy");
+  resolve.disabled = Boolean(data.ok);
+  feedback.className = "ctl-status " + (data.ok ? "ok" : "err");
+  feedback.textContent = data.ok ? uiLabel("marker_saved") :
+    uiFormat("marker_save_failed", {reason: data.message || uiLabel("wizard_unknown_error")});
 });
 var API = document.body.dataset.api || "";
 var UI_LABELS = {};
@@ -642,9 +695,12 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
 })();
 var settingsForm = document.getElementById("settings-form");
 if (settingsForm) {
+  settingsForm.addEventListener("input", function() {
+    settingsForm.querySelectorAll("input").forEach(function(input) { input.setCustomValidity(""); });
+  });
   settingsForm.addEventListener("submit", function(event) {
     event.preventDefault();
-    settingsForm.querySelector('[data-action="settings"]').click();
+    submitSettings();
   });
   document.getElementById("settings-reset").addEventListener("click", function() {
     settingsForm.querySelectorAll("[data-default]").forEach(function(input) {
@@ -700,35 +756,47 @@ async function runAction(action, payload, button) {
     if (button) { button.disabled = false; button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
   }
 }
+function submitSettings() {
+  var settings = document.getElementById("settings-form");
+  if (!settings) return;
+  var button = settings.querySelector('[data-action="settings"]');
+  if (button.disabled) return;
+  var payload = {};
+  var mild = document.getElementById("set-z-mild");
+  var strong = document.getElementById("set-z-strong");
+  settings.querySelectorAll("input[type=number]").forEach(function(input) {
+    var value = input.valueAsNumber;
+    var excluded = (input.dataset.minExclusive === "true" && value <= Number(input.min)) ||
+      (input.dataset.maxExclusive === "true" && value >= Number(input.max));
+    input.setCustomValidity(excluded ? input.dataset.boundError || input.title || uiLabel("settings_bound_error") : "");
+  });
+  strong.setCustomValidity(strong.valueAsNumber < mild.valueAsNumber
+    ? document.getElementById("settings-order-error").textContent : "");
+  if (!settings.checkValidity()) {
+    settings.querySelector("details").open = true;
+    settings.reportValidity();
+    return;
+  }
+  payload.language = document.getElementById("set-language").value;
+  payload.title = document.getElementById("set-title").value;
+  var zm = document.getElementById("set-z-mild");
+  var zs = document.getElementById("set-z-strong");
+  var fq = document.getElementById("set-fdr-q");
+  var fs = document.getElementById("set-flag-min-sev");
+  var dt = document.getElementById("set-dim-threshold");
+  if (zm) payload.z_mild = parseFloat(zm.value);
+  if (zs) payload.z_strong = parseFloat(zs.value);
+  if (fq) payload.fdr_q = parseFloat(fq.value);
+  if (fs) payload.flag_min_severity = parseInt(fs.value, 10);
+  if (dt) payload.dim_score_threshold = parseFloat(dt.value);
+  return runAction("settings", payload, button);
+}
 document.querySelectorAll("[data-action]").forEach(function (btn) {
   btn.addEventListener("click", function () {
+    if (btn.dataset.payload === "settings") return;
     var payload = {};
     if (btn.dataset.payload === "format") {
       payload.format = document.getElementById("fmt").value;
-    }
-    if (btn.dataset.payload === "settings") {
-      var settings = document.getElementById("settings-form");
-      var mild = document.getElementById("set-z-mild");
-      var strong = document.getElementById("set-z-strong");
-      strong.setCustomValidity(strong.valueAsNumber < mild.valueAsNumber
-        ? document.getElementById("settings-order-error").textContent : "");
-      if (!settings.checkValidity()) {
-        settings.querySelector("details").open = true;
-        settings.reportValidity();
-        return;
-      }
-      payload.language = document.getElementById("set-language").value;
-      payload.title = document.getElementById("set-title").value;
-      var zm = document.getElementById("set-z-mild");
-      var zs = document.getElementById("set-z-strong");
-      var fq = document.getElementById("set-fdr-q");
-      var fs = document.getElementById("set-flag-min-sev");
-      var dt = document.getElementById("set-dim-threshold");
-      if (zm) payload.z_mild = parseFloat(zm.value);
-      if (zs) payload.z_strong = parseFloat(zs.value);
-      if (fq) payload.fdr_q = parseFloat(fq.value);
-      if (fs) payload.flag_min_severity = parseInt(fs.value, 10);
-      if (dt) payload.dim_score_threshold = parseFloat(dt.value);
     }
     if (btn.dataset.payload === "load") {
       var input = document.getElementById("ms-file");
@@ -775,39 +843,16 @@ function researchStatus(message, ok) {
 }
 
 async function researchApiPost(action, payload) {
-  var t0 = performance.now();
-  var url = API + "/" + action;
-  try {
-    var res = await fetch(url, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload || {})
-    });
-    var data = await res.json();
-    if (!res.ok) data.ok = false;
-    LixityLog.api("POST", url, performance.now() - t0, res.status, data);
-    if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action)) {
-      await refreshResearchProjectInfo();
-    }
-    return data;
-  } catch (err) {
-    LixityLog.error("researchApiPost (" + action + ") error:", err);
-    return { ok: false, message: String(err) };
+  var data = await jsonApi(API + "/" + action, {method: "POST",
+    headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload || {})});
+  if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action)) {
+    await refreshResearchProjectInfo();
   }
+  return data;
 }
 
-async function researchApiGet(endpoint) {
-  var t0 = performance.now();
-  var url = API + "/" + endpoint;
-  try {
-    var res = await fetch(url);
-    var data = await res.json();
-    LixityLog.api("GET", url, performance.now() - t0, res.status, data);
-    return data;
-  } catch (err) {
-    LixityLog.error("researchApiGet (" + endpoint + ") error:", err);
-    return { ok: false, message: String(err) };
-  }
+function researchApiGet(endpoint) {
+  return jsonApi(API + "/" + endpoint);
 }
 
 function escapeHtml(str) {
@@ -1075,9 +1120,10 @@ function renderMermaidSvg(escapedCode) {
   return '<div class="research-diagram-wrap"><div class="research-diagram-note">' + escapeHtml(uiLabel("research_diagram_source")) + '</div><pre class="language-mermaid"><code>' + escapedCode.trim() + '</code></pre></div>';
 }
 
-function renderSafeMarkdown(rawText) {
+function renderSafeMarkdown(rawText, dossierContext) {
   if (!rawText) return "";
-  var text = escapeHtml(rawText);
+  var imageRender = window.LixityDossierImages && dossierContext ? window.LixityDossierImages.prepareMarkdown(rawText, dossierContext) : null;
+  var text = escapeHtml(imageRender ? imageRender.text : rawText);
 
   var codeBlocks = [];
   text = text.replace(/```([a-zA-Z0-9_\-]*)\n([\s\S]*?)```/g, function(match, lang, code) {
@@ -1108,13 +1154,13 @@ function renderSafeMarkdown(rawText) {
     str = str.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(m, label, url) {
       var cleanUrl = url.trim();
       if (/^lixity:/i.test(cleanUrl)) {
-        return '<code class="lixity-ref" title="Internal reference: ' + cleanUrl + '">' + label + ' (' + cleanUrl.replace(/^lixity:/i, "") + ')</code>';
+        return '<code class="lixity-ref" title="Internal reference: ' + cleanUrl.replace(/"/g, "&quot;") + '">' + label + ' (' + cleanUrl.replace(/^lixity:/i, "") + ')</code>';
       }
       if (/^(javascript|data|vbscript):/i.test(cleanUrl)) {
         return label + ' (' + cleanUrl + ')';
       }
       if (/^(https?:\/\/|\/|#)/i.test(cleanUrl)) {
-        return '<a href="' + cleanUrl + '" target="_blank" rel="noopener noreferrer nofollow">' + label + '</a>';
+        return '<a href="' + cleanUrl.replace(/"/g, "&quot;") + '" target="_blank" rel="noopener noreferrer nofollow">' + label + '</a>';
       }
       return label + ' (' + cleanUrl + ')';
     });
@@ -1236,12 +1282,12 @@ function renderSafeMarkdown(rawText) {
     resultHtml = resultHtml.replace("@@@CODE_BLOCK_" + i + "@@@", cbHtml);
   });
 
-  return resultHtml;
+  return imageRender ? window.LixityDossierImages.restoreMarkdown(resultHtml, imageRender) : resultHtml;
 }
 
-function researchDossierBodyHtml(bodyText) {
+function researchDossierBodyHtml(bodyText, dossierContext) {
   var escapedRaw = escapeHtml(bodyText || "");
-  var rendered = renderSafeMarkdown(bodyText || "");
+  var rendered = renderSafeMarkdown(bodyText || "", dossierContext);
   return '<div class="research-dossier-body-wrap">' +
     '<div class="research-prose-bar">' +
       '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
@@ -1250,6 +1296,104 @@ function researchDossierBodyHtml(bodyText) {
     '<pre class="research-dossier-body-source" hidden>' + escapedRaw + '</pre>' +
   '</div>';
 }
+
+function researchDossierDetailHtml(detail) {
+  var reviewAlert = "";
+  if (detail.review_needed && detail.decision_reviews && detail.decision_reviews.length) {
+    var needed = detail.decision_reviews.filter(function(r) { return r.status === "review_needed"; });
+    if (needed.length) {
+      reviewAlert = '<div class="banner banner-warning" style="margin:.5rem 0 .8rem;padding:.4rem .7rem;font-size:.82rem;background:rgba(217,119,6,0.1);border-left:3px solid var(--warn, #d97706);border-radius:3px;">' +
+        '<strong>⚠️ ' + escapeHtml(uiLabel("research_review_needed")) + ':</strong> ' +
+        needed.map(function(n) { return escapeHtml(n.reason || n.title); }).join(" · ") +
+        '</div>';
+    }
+  }
+  var sections = detail.sections || [];
+  if (!sections.length && detail.body) {
+    var secMatches = detail.body.match(/^#{1,3}\s+(.+)$/gm);
+    if (secMatches) {
+      sections = secMatches.map(function(s) { return s.replace(/^#{1,3}\s+/, "").trim(); });
+    }
+  }
+  var sectionsHtml = "";
+  if (sections.length) {
+    sectionsHtml = '<div class="research-dossier-outline" style="margin:.4rem 0 .8rem;padding:.3rem .6rem;background:var(--bg-subtle, rgba(0,0,0,0.03));border-radius:4px;font-size:.78rem;">' +
+      '<strong>' + escapeHtml(uiLabel("research_sections")) + ':</strong> ' +
+      sections.map(function(sec) { return '<span class="research-tag research-tag-section" style="margin-left:.3rem;">' + escapeHtml(sec) + '</span>'; }).join("") +
+      '</div>';
+  }
+  var bodyHtml = "";
+  if (detail.section_map && Object.keys(detail.section_map).length > 1) {
+    var secKeys = Object.keys(detail.section_map);
+    var secBlocks = secKeys.map(function(k) {
+      return '<details class="research-dossier-section-block" open>' +
+        '<summary><span>' + escapeHtml(k) + '</span></summary>' +
+        researchDossierSectionAction(detail, k) +
+        '<div class="research-prose markdown-body">' + renderSafeMarkdown(detail.section_map[k], detail) + '</div>' +
+      '</details>';
+    }).join("");
+    bodyHtml = '<div class="research-dossier-body-wrap">' +
+      '<div class="research-prose-bar">' +
+        '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
+      '</div>' +
+      '<div class="research-dossier-body-rendered">' + secBlocks + '</div>' +
+      '<pre class="research-dossier-body-source" hidden>' + escapeHtml(detail.body || "") + '</pre>' +
+    '</div>';
+  } else {
+    bodyHtml = (detail.editable_sections || []).map(function(section) { return researchDossierSectionAction(detail, section); }).join("") +
+      researchDossierBodyHtml(detail.body, detail);
+  }
+  return reviewAlert + sectionsHtml +
+    '<div class="row"><button type="button" class="ctl" data-dossier-claim="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_claim_heading")) + '</button>' +
+    '<button type="button" class="ctl" data-dossier-decision="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_decision_heading")) + '</button></div>' +
+    (window.LixityDossierImages ? window.LixityDossierImages.actionsHtml(detail) : "") + bodyHtml +
+    '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(researchCitationHtml).join("");
+}
+
+function researchDossierSectionAction(detail, section) {
+  if (!(detail.editable_sections || []).includes(section)) return "";
+  return '<div class="row"><button type="button" class="ctl ctl-sm" data-research-revise="dossier" data-record-id="' +
+    escapeHtml(detail.id) + '" data-dossier-section="' + escapeHtml(section).replace(/"/g, "&quot;") +
+    '" data-base-revision="' + Number(detail.revision) + '">' + escapeHtml(uiLabel("research_section_edit")) + '</button></div>';
+}
+
+document.addEventListener("lixity:dossier-image-saved", async function(event) {
+  var accepted = event.detail;
+  if (!accepted || !accepted.record) return;
+  var previousFocus = document.activeElement;
+  var restoreFocus = previousFocus === document.body ||
+    previousFocus && previousFocus.dataset.dossierAddImage === accepted.record.id;
+  function movedFocus(event) {
+    if (event.target !== previousFocus && event.target !== document.body) restoreFocus = false;
+  }
+  function movedPointer(event) {
+    if (previousFocus === document.body || !previousFocus.contains(event.target)) restoreFocus = false;
+  }
+  document.addEventListener("focusin", movedFocus);
+  document.addEventListener("pointerdown", movedPointer);
+  try {
+  // These list refreshes preserve form values, filter input and selected IDs.
+  // The shared revision editor keeps its independent unsaved drafts.
+  await Promise.all([refreshResearchSources(null, accepted.capture && accepted.capture.source_id),
+    refreshResearchDossiers(null, accepted.record.id), refreshResearchProjectInfo()]);
+  var detail = await researchApiGet("research/dossiers?id=" + encodeURIComponent(accepted.record.id));
+  if (!detail.ok || detail.project_id !== accepted.project_id) return;
+  var summary = Array.from(document.querySelectorAll('[data-research-detail="dossier"]')).find(function(button) {
+    return button.dataset.recordId === accepted.record.id;
+  });
+  if (!summary) return;
+  summary.parentElement.open = true;
+  var host = summary.parentElement.querySelector(".research-details-body");
+  host.innerHTML = researchDossierDetailHtml(detail);
+  var add = host.querySelector("[data-dossier-add-image]");
+  if (add && restoreFocus && (document.activeElement === previousFocus || document.activeElement === document.body)) add.focus();
+  researchStatus(uiLabel("image_saved"), true);
+  } finally {
+    document.removeEventListener("focusin", movedFocus);
+    document.removeEventListener("pointerdown", movedPointer);
+  }
+});
+
 
 function researchPassageActions(passageId) {
   return '<div class="row research-passage-actions">' +
@@ -1428,7 +1572,20 @@ document.addEventListener("input", function(event) {
   if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
 });
 
-async function refreshResearchSources() {
+function replaceResearchCard(listHost, html, recordId) {
+  var previous = Array.from(listHost.querySelectorAll("[data-research-detail]")).find(function(summary) {
+    return summary.dataset.recordId === recordId;
+  });
+  var fresh = document.createElement("div");
+  fresh.innerHTML = html;
+  if (previous && fresh.firstElementChild) previous.closest(".research-card").replaceWith(fresh.firstElementChild);
+  else if (fresh.firstElementChild) {
+    if (!listHost.querySelector(".research-card")) listHost.replaceChildren();
+    listHost.prepend(fresh.firstElementChild);
+  }
+}
+
+async function refreshResearchSources(overview, changedId) {
   var listHost = document.getElementById("research-sources-list");
   var selectHost = document.getElementById("r-ground-source-select");
   if (!listHost) return;
@@ -1436,7 +1593,7 @@ async function refreshResearchSources() {
     listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
       escapeHtml(uiLabel("research_loading")) + '</span></div>';
   }
-  var data = await researchApiGet("research/sources");
+  var data = overview && Array.isArray(overview.sources) ? overview : await researchApiGet("research/sources");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_sources_failed")) + '</p>';
     filterResearchList("sources");
@@ -1450,18 +1607,19 @@ async function refreshResearchSources() {
   if (external && libraryInput && !zoteroSelection) libraryInput.value = external.context.external_reference.library;
   if (selectHost) {
     var selectedSource = selectHost.value;
+    var textSources = sources.filter(function(source) { return !["image/png", "image/jpeg"].includes(source.media_type); });
     selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_source")) + '</option>' +
-      sources.map(function(s) {
+      textSources.map(function(s) {
         return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title) + ' (' + escapeHtml(uiFormat("research_passages_count", { count: s.passages })) + ')</option>';
       }).join("");
-    if (sources.some(function(s) { return s.id === selectedSource; })) selectHost.value = selectedSource;
+    if (textSources.some(function(s) { return s.id === selectedSource; })) selectHost.value = selectedSource;
   }
   if (!sources.length) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_sources")) + '</p>';
     filterResearchList("sources");
     return;
   }
-  listHost.innerHTML = sources.map(function(s) {
+  var rendered = sources.filter(function(s) { return !changedId || s.id === changedId; }).map(function(s) {
     var tagsHtml = (s.tags || []).map(function(t) {
       return '<span class="research-tag">' + escapeHtml(t) + '</span>';
     }).join(" ");
@@ -1469,7 +1627,7 @@ async function refreshResearchSources() {
     return '<div class="research-card" data-filter-text="' + escapeHtml(filterText).replace(/"/g, "&quot;") + '">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(s.title) + '</span>' +
-        '<span class="ctl-note">' + escapeHtml(uiFormat("research_passages_count", { count: s.passages })) + ' · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
+        '<span class="ctl-note">' + escapeHtml(["image/png", "image/jpeg"].includes(s.media_type) ? s.media_type : uiFormat("research_passages_count", { count: s.passages })) + ' · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
       '</div>' +
       '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(s.id) + '</div>' +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
@@ -1477,37 +1635,40 @@ async function refreshResearchSources() {
       researchDetailsControl("source", s.id) +
     '</div>';
   }).join("");
+  if (changedId) replaceResearchCard(listHost, rendered, changedId);
+  else listHost.innerHTML = rendered;
   filterResearchList("sources");
 }
 
-async function refreshResearchDossiers() {
+async function refreshResearchDossiers(overview, changedId) {
   var listHost = document.getElementById("research-dossiers-list");
   if (!listHost) return;
   if (!listHost.children.length) {
     listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
       escapeHtml(uiLabel("research_loading")) + '</span></div>';
   }
-  var data = await researchApiGet("research/dossiers");
+  var data = overview && Array.isArray(overview.dossiers) ? overview : await researchApiGet("research/dossiers");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_dossiers_failed")) + '</p>';
     filterResearchList("dossiers");
     return;
   }
   var dossiers = data.dossiers || [];
-  var dossierSelect = document.getElementById("r-claim-dossier-select");
-  if (dossierSelect) {
+  ["r-claim-dossier-select", "r-decision-dossier-select"].forEach(function(selectId) {
+    var dossierSelect = document.getElementById(selectId);
+    if (!dossierSelect) return;
     var selectedDossier = dossierSelect.value;
     dossierSelect.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_no_dossier")) + '</option>' + dossiers.map(function(d) {
       return '<option value="' + escapeHtml(d.id) + '">' + escapeHtml(d.title) + '</option>';
     }).join("");
     if (dossiers.some(function(d) { return d.id === selectedDossier; })) dossierSelect.value = selectedDossier;
-  }
+  });
   if (!dossiers.length) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_dossiers")) + '</p>';
     filterResearchList("dossiers");
     return;
   }
-  listHost.innerHTML = dossiers.map(function(d) {
+  var rendered = dossiers.filter(function(d) { return !changedId || d.id === changedId; }).map(function(d) {
     var tagsHtml = (d.tags || []).map(function(t) {
       return '<span class="research-tag">' + escapeHtml(t) + '</span>';
     }).join(" ");
@@ -1533,10 +1694,12 @@ async function refreshResearchDossiers() {
       researchRevisionActions("dossier", d.id) +
     '</div>';
   }).join("");
+  if (changedId) replaceResearchCard(listHost, rendered, changedId);
+  else listHost.innerHTML = rendered;
   filterResearchList("dossiers");
 }
 
-async function refreshResearchClaims() {
+async function refreshResearchClaims(overview) {
   var listHost = document.getElementById("research-claims-list");
   var selectHost = document.getElementById("r-decision-claim-select");
   var linkClaimSelect = document.getElementById("r-link-claim-select");
@@ -1545,7 +1708,7 @@ async function refreshResearchClaims() {
     listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
       escapeHtml(uiLabel("research_loading")) + '</span></div>';
   }
-  var data = await researchApiGet("research/claims");
+  var data = overview && Array.isArray(overview.claims) ? overview : await researchApiGet("research/claims");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_claims_failed")) + '</p>';
     return;
@@ -1604,14 +1767,14 @@ async function refreshResearchClaims() {
   }).join("");
 }
 
-async function refreshResearchDecisions() {
+async function refreshResearchDecisions(overview) {
   var listHost = document.getElementById("research-decisions-list");
   if (!listHost) return;
   if (!listHost.children.length) {
     listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
       escapeHtml(uiLabel("research_loading")) + '</span></div>';
   }
-  var data = await researchApiGet("research/decisions");
+  var data = overview && Array.isArray(overview.decisions) ? overview : await researchApiGet("research/decisions");
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_decisions_failed")) + '</p>';
     return;
@@ -1641,10 +1804,30 @@ async function refreshResearchDecisions() {
   }).join("");
 }
 
-function researchEditorialFlags(flags) {
-  return '<ul>' + (flags || []).map(function(flag) {
-    return '<li>' + escapeHtml(uiLabel("research_editorial_" + flag)) + '</li>';
+function researchEditorialFlags(flags, decisionAfterDossier) {
+  var after = decisionAfterDossier === undefined ? (flags || []).includes("decision_after_dossier") : decisionAfterDossier;
+  return '<ul class="research-editorial-flags" data-decision-after-dossier="' + (after ? '1' : '0') + '">' + (flags || []).map(function(flag) {
+    return '<li data-editorial-flag="' + escapeHtml(flag) + '">' + escapeHtml(uiLabel("research_editorial_" + flag)) + '</li>';
   }).join("") + '</ul>';
+}
+
+function acknowledgeEditorialFlags(pair, status) {
+  var card = pair.closest(".research-card");
+  var flags = card && card.querySelector(".research-editorial-flags");
+  if (!flags) return;
+  var names = Array.from(flags.querySelectorAll("[data-editorial-flag]")).map(function(item) {
+    return item.dataset.editorialFlag;
+  }).filter(function(name) {
+    return !["decision_after_dossier", "author_review_needed", "stale_author_acknowledgement"].includes(name);
+  });
+  var after = flags.dataset.decisionAfterDossier === "1";
+  if (status === "review_needed") {
+    if (after) names.push("decision_after_dossier");
+    names.push("author_review_needed");
+  }
+  var replacement = document.createElement("div");
+  replacement.innerHTML = researchEditorialFlags(names, after);
+  flags.replaceWith(replacement.firstElementChild);
 }
 
 function researchEditorialTime(timestamp) {
@@ -1678,7 +1861,7 @@ function researchAffectedDossier(dossier, impact) {
     '<p class="ctl-note">' + escapeHtml(uiFormat("research_decision_dossier_versions", {
       pinned: dossier.pinned_revisions.join(", "), current: dossier.current_revision
     })) + '</p><p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_dossier_date")) + ': ' +
-    researchEditorialTime(dossier.created_at) + '</p>' + researchEditorialFlags(dossier.flags) +
+    researchEditorialTime(dossier.created_at) + '</p>' + researchEditorialFlags(dossier.flags, dossier.decision_after_dossier) +
     (dossier.sections.length ? '<p class="ctl-note">' + dossier.sections.map(escapeHtml).join(" · ") + '</p>' : '') +
     (!dossier.withdrawn ? researchDetailsControl("dossier", dossier.id) : '') +
     researchDecisionAcknowledgement({decisionId: impact.decision.id, decisionRevision: impact.decision.revision,
@@ -1686,11 +1869,23 @@ function researchAffectedDossier(dossier, impact) {
       acknowledgement: dossier.acknowledgement, flags: dossier.flags}) + '</div>';
 }
 
-async function refreshResearchEditorialReview() {
+var researchReviewRequest = 0;
+var researchAcknowledgementPending = false;
+async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
   var host = document.getElementById("research-editorial-review");
   if (!host) return;
-  host.textContent = uiLabel("research_loading");
+  var request = ++researchReviewRequest;
+  if (!preserve) host.textContent = uiLabel("research_loading");
   var report = await researchApiGet("research/review");
+  if (request !== researchReviewRequest) return;
+  if (preserve && report.ok && report.snapshot !== expectedSnapshot) {
+    researchStatus(uiLabel("research_decision_ack_conflict"), false);
+    return;
+  }
+  if (preserve && !report.ok) {
+    researchStatus(report.message || uiLabel("research_status_unavailable"), false);
+    return;
+  }
   if (!report.ok) {
     host.textContent = report.message || uiLabel("research_status_unavailable");
     return;
@@ -1699,7 +1894,7 @@ async function refreshResearchEditorialReview() {
     host.textContent = uiLabel("research_editorial_empty");
     return;
   }
-  host.innerHTML = '<p class="ctl-note">' + escapeHtml(uiFormat("research_editorial_count", {count: report.candidate_count})) + '</p>' +
+  var rendered = '<p class="ctl-note">' + escapeHtml(uiFormat("research_editorial_count", {count: report.candidate_count})) + '</p>' +
     report.candidates.map(function(candidate) {
       return '<div class="research-card"><strong>' + escapeHtml(candidate.title) + '</strong>' +
         (candidate.dossier_title ? '<p>' + escapeHtml(candidate.dossier_title) + '</p>' : '') +
@@ -1707,7 +1902,7 @@ async function refreshResearchEditorialReview() {
         escapeHtml(uiLabel("research_editorial_decision_date")) + ': ' + researchEditorialTime(candidate.decision_created_at) + '</p>' +
         (candidate.dossier_created_at ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_editorial_dossier_date")) + ': ' +
           researchEditorialTime(candidate.dossier_created_at) + '</p>' : '') +
-        researchEditorialFlags(candidate.flags) +
+        researchEditorialFlags(candidate.flags, candidate.decision_created_at > candidate.dossier_created_at) +
         (candidate.dossier_id ? '<p class="ctl-note">' + escapeHtml(uiFormat("research_decision_dossier_versions", {
           pinned: candidate.pinned_revisions.join(", "), current: candidate.current_revision
         })) + '</p>' : '') +
@@ -1718,6 +1913,27 @@ async function refreshResearchEditorialReview() {
           dossierId: candidate.dossier_id, dossierRevision: candidate.current_revision, snapshot: report.snapshot,
           acknowledgement: candidate.acknowledgement, flags: candidate.flags}) + '</div>';
     }).join("");
+  if (!preserve) { host.innerHTML = rendered; return; }
+  var focused = document.activeElement;
+  var fresh = document.createElement("div");
+  fresh.innerHTML = rendered;
+  var retained = new Map();
+  host.querySelectorAll(".research-card").forEach(function(card) {
+    var pair = card.querySelector(".research-decision-acknowledgement");
+    if (pair) retained.set(pair.dataset.decisionAckDecision + ":" + pair.dataset.decisionAckDossier, card);
+  });
+  fresh.querySelectorAll(".research-card").forEach(function(card) {
+    var pair = card.querySelector(".research-decision-acknowledgement");
+    var previous = pair && retained.get(pair.dataset.decisionAckDecision + ":" + pair.dataset.decisionAckDossier);
+    if (!previous) return;
+    previous.querySelector(".research-editorial-flags").replaceWith(card.querySelector(".research-editorial-flags"));
+    var previousPair = previous.querySelector(".research-decision-acknowledgement");
+    if (previousPair.contains(focused)) focused = pair.querySelector("[data-decision-ack-status]");
+    previousPair.replaceWith(pair);
+    card.replaceWith(previous);
+  });
+  host.replaceChildren.apply(host, Array.from(fresh.childNodes));
+  if (focused && focused.isConnected && document.activeElement !== focused) focused.focus({preventScroll: true});
 }
 
 function ocrReading(ocr) {
@@ -1857,10 +2073,10 @@ async function initResearchUI() {
     p.style.display = p.id === targetPane ? "block" : "none";
   });
   researchStatus("", true);
-  refreshResearchSources();
-  refreshResearchDossiers();
-  refreshResearchClaims();
-  refreshResearchDecisions();
+  refreshResearchSources(status);
+  refreshResearchDossiers(status);
+  refreshResearchClaims(status);
+  refreshResearchDecisions(status);
   if (activeTab && activeTab.dataset.rtab === "review") refreshResearchEditorialReview();
 }
 
@@ -1868,27 +2084,44 @@ document.addEventListener("click", async function (event) {
   var ackButton = event.target.closest("[data-decision-ack-status]");
   if (ackButton) {
     var pair = ackButton.closest(".research-decision-acknowledgement");
-    if (!pair || ackButton.disabled || pair.dataset.decisionAckPending === "1") return;
+    if (!pair || ackButton.disabled || researchAcknowledgementPending || pair.dataset.decisionAckPending === "1") return;
     var payload = {decision_id: pair.dataset.decisionAckDecision, dossier_id: pair.dataset.decisionAckDossier,
       expected_snapshot: pair.dataset.decisionAckSnapshot,
       expected_decision_revision: Number(pair.dataset.decisionAckDecisionRevision),
       expected_dossier_revision: Number(pair.dataset.decisionAckDossierRevision), status: ackButton.dataset.decisionAckStatus};
     var feedback = pair.querySelector("[data-decision-ack-feedback]");
     var restoreFocus = document.activeElement === ackButton;
+    var updatedPair;
+    function movedFocus(event) {
+      if (event.target !== ackButton && (!updatedPair || !updatedPair.contains(event.target))) restoreFocus = false;
+    }
+    function movedPointer(event) {
+      if (!pair.contains(event.target) && (!updatedPair || !updatedPair.contains(event.target))) restoreFocus = false;
+    }
+    function stopTrackingFocus() {
+      document.removeEventListener("focusin", movedFocus);
+      document.removeEventListener("pointerdown", movedPointer);
+    }
+    document.addEventListener("focusin", movedFocus);
+    document.addEventListener("pointerdown", movedPointer);
+    researchAcknowledgementPending = true;
     pair.dataset.decisionAckPending = "1";
     ackButton.disabled = true;
     ackButton.setAttribute("aria-busy", "true");
     feedback.hidden = true;
     var acknowledged = await researchApiPost("research-decision-acknowledge", payload);
-    if (!pair.isConnected) return;
+    if (!pair.isConnected) { researchAcknowledgementPending = false; stopTrackingFocus(); return; }
     delete pair.dataset.decisionAckPending;
     if (!acknowledged.ok) {
       ackButton.disabled = false;
       ackButton.removeAttribute("aria-busy");
       feedback.className = "ctl-status err";
-      feedback.textContent = acknowledged.conflict ? uiLabel("research_decision_ack_conflict") :
+      feedback.textContent = acknowledged.http_status === 409 ? uiLabel("research_decision_ack_conflict") :
         uiFormat("research_decision_ack_failed", {reason: acknowledged.message || uiLabel("wizard_unknown_error")});
       feedback.hidden = false;
+      researchAcknowledgementPending = false;
+      if (restoreFocus && (document.activeElement === ackButton || document.activeElement === document.body)) ackButton.focus();
+      stopTrackingFocus();
       return;
     }
     var replacement = document.createElement("div");
@@ -1896,9 +2129,26 @@ document.addEventListener("click", async function (event) {
       decisionRevision: payload.expected_decision_revision, dossierId: payload.dossier_id,
       dossierRevision: payload.expected_dossier_revision, snapshot: acknowledged.snapshot,
       acknowledgement: {current: true, status: acknowledged.status}});
-    var updatedPair = replacement.firstElementChild;
-    pair.replaceWith(updatedPair);
-    if (restoreFocus) updatedPair.querySelector("button").focus();
+    document.querySelectorAll(".research-decision-acknowledgement").forEach(function(displayed) {
+      if (displayed.dataset.decisionAckSnapshot !== payload.expected_snapshot) return;
+      displayed.dataset.decisionAckSnapshot = acknowledged.snapshot;
+      if (displayed.dataset.decisionAckDecision === payload.decision_id && displayed.dataset.decisionAckDossier === payload.dossier_id &&
+          Number(displayed.dataset.decisionAckDecisionRevision) === payload.expected_decision_revision &&
+          Number(displayed.dataset.decisionAckDossierRevision) === payload.expected_dossier_revision) {
+        acknowledgeEditorialFlags(displayed, acknowledged.status);
+        var next = replacement.firstElementChild.cloneNode(true);
+        displayed.replaceWith(next);
+        if (displayed === pair) updatedPair = next;
+      }
+    });
+    if (restoreFocus && updatedPair && document.activeElement === document.body) updatedPair.querySelector("button").focus();
+    await refreshResearchEditorialReview(true, acknowledged.snapshot);
+    researchAcknowledgementPending = false;
+    if (restoreFocus && updatedPair && !updatedPair.isConnected && document.activeElement === document.body) {
+      var nextButton = document.querySelector("#research-editorial-review [data-decision-ack-status]");
+      (nextButton || document.getElementById("r-review-refresh")).focus();
+    }
+    stopTrackingFocus();
     return;
   }
   var impactButton = event.target.closest("[data-decision-impact]");
@@ -1917,6 +2167,17 @@ document.addEventListener("click", async function (event) {
   }
   if (event.target.closest("#r-review-refresh")) {
     refreshResearchEditorialReview();
+    return;
+  }
+  var contextualClaim = event.target.closest("[data-dossier-claim]");
+  var contextualDecision = event.target.closest("[data-dossier-decision]");
+  if (contextualClaim || contextualDecision) {
+    var forContextClaim = Boolean(contextualClaim);
+    var contextSelect = document.getElementById(forContextClaim ? "r-claim-dossier-select" : "r-decision-dossier-select");
+    contextSelect.value = forContextClaim ? contextualClaim.dataset.dossierClaim : contextualDecision.dataset.dossierDecision;
+    document.querySelector('[data-rtab="' + (forContextClaim ? "claims" : "decisions") + '"]').click();
+    document.getElementById(forContextClaim ? "r-claim-options" : "r-decision-options").open = true;
+    document.getElementById(forContextClaim ? "r-claim-title" : "r-decision-title").focus();
     return;
   }
   var passageBtn = event.target.closest("[data-use-passage]");
@@ -1955,6 +2216,12 @@ document.addEventListener("click", async function (event) {
         var value = typeof context[key] === "boolean" ? uiLabel(context[key] ? "ctx_yes" : "ctx_no") : context[key];
         return '<dt>' + escapeHtml(uiLabel("ctx_" + key)) + '</dt><dd>' + escapeHtml(value) + '</dd>';
       }).join("");
+      if (["image/png", "image/jpeg"].includes(detail.media_type)) {
+        detailHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
+          '<p><strong>' + escapeHtml(detail.media_type) + '</strong> · ' + escapeHtml(uiLabel("image_text_unavailable")) + '</p>' +
+          (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '');
+        return;
+      }
       var fullDocText = detail.text || (detail.passages || []).map(function(p) { return p.verbatim; }).join("\n\n");
       var docRendered = fullDocText ? renderSafeMarkdown(fullDocText) : '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_records")) + '</p>';
       var passagesCount = detail.passages ? detail.passages.length : 0;
@@ -1980,51 +2247,7 @@ document.addEventListener("click", async function (event) {
           passagesHtml +
         '</div>';
     } else {
-      var reviewAlert = "";
-      if (detail.review_needed && detail.decision_reviews && detail.decision_reviews.length) {
-        var needed = detail.decision_reviews.filter(function(r) { return r.status === "review_needed"; });
-        if (needed.length) {
-          reviewAlert = '<div class="banner banner-warning" style="margin:.5rem 0 .8rem;padding:.4rem .7rem;font-size:.82rem;background:rgba(217,119,6,0.1);border-left:3px solid var(--warn, #d97706);border-radius:3px;">' +
-            '<strong>⚠️ ' + escapeHtml(uiLabel("research_review_needed")) + ':</strong> ' +
-            needed.map(function(n) { return escapeHtml(n.reason || n.title); }).join(" · ") +
-            '</div>';
-        }
-      }
-      var sections = detail.sections || [];
-      if (!sections.length && detail.body) {
-        var secMatches = detail.body.match(/^#{1,3}\s+(.+)$/gm);
-        if (secMatches) {
-          sections = secMatches.map(function(s) { return s.replace(/^#{1,3}\s+/, "").trim(); });
-        }
-      }
-      var sectionsHtml = "";
-      if (sections.length) {
-        sectionsHtml = '<div class="research-dossier-outline" style="margin:.4rem 0 .8rem;padding:.3rem .6rem;background:var(--bg-subtle, rgba(0,0,0,0.03));border-radius:4px;font-size:.78rem;">' +
-          '<strong>' + escapeHtml(uiLabel("research_sections")) + ':</strong> ' +
-          sections.map(function(sec) { return '<span class="research-tag research-tag-section" style="margin-left:.3rem;">' + escapeHtml(sec) + '</span>'; }).join("") +
-          '</div>';
-      }
-      var bodyHtml = "";
-      if (detail.section_map && Object.keys(detail.section_map).length > 1) {
-        var secKeys = Object.keys(detail.section_map);
-        var secBlocks = secKeys.map(function(k) {
-          return '<details class="research-dossier-section-block" open>' +
-            '<summary><span>' + escapeHtml(k) + '</span></summary>' +
-            '<div class="research-prose markdown-body">' + renderSafeMarkdown(detail.section_map[k]) + '</div>' +
-          '</details>';
-        }).join("");
-        bodyHtml = '<div class="research-dossier-body-wrap">' +
-          '<div class="research-prose-bar">' +
-            '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
-          '</div>' +
-          '<div class="research-dossier-body-rendered">' + secBlocks + '</div>' +
-          '<pre class="research-dossier-body-source" hidden>' + escapeHtml(detail.body || "") + '</pre>' +
-        '</div>';
-      } else {
-        bodyHtml = researchDossierBodyHtml(detail.body);
-      }
-      detailHost.innerHTML = reviewAlert + sectionsHtml + bodyHtml +
-        '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(researchCitationHtml).join("");
+      detailHost.innerHTML = researchDossierDetailHtml(detail);
     }
     return;
   }
@@ -2442,6 +2665,7 @@ function highlightSearchTerms(text, query) {
     var decRat = document.getElementById("r-decision-rationale");
     var decPlot = document.getElementById("r-decision-plot");
     var decDev = document.getElementById("r-decision-deviation");
+    var decDossier = document.getElementById("r-decision-dossier-select");
 
     var dTitleVal = decTitle ? decTitle.value.trim() : "";
     var dRatVal = decRat ? decRat.value.trim() : "";
@@ -2454,6 +2678,7 @@ function highlightSearchTerms(text, query) {
       title: dTitleVal,
       rationale: dRatVal,
       claim_id: decClaim ? decClaim.value.trim() : "",
+      dossier_ids: decDossier && decDossier.value ? [decDossier.value] : [],
       impact_on_plot: decPlot ? decPlot.value.trim() : "",
       deviation_from_fact: decDev ? decDev.checked : false
     });
@@ -2543,12 +2768,23 @@ if (researchRevisionDialog) {
   var revisionBatchApply = document.getElementById("research-revision-batch-apply");
   var revisionBatch = {projectId: null, entries: [], preview: null, pending: false, request: 0};
   var revisionState = {kind: "", id: "", session: 0, request: 0, historyRequest: 0,
-    current: null, initial: {}, dossierPins: {}, mode: "edit", historyLoaded: false, pending: false, merge: null};
+    current: null, initial: {}, dossierPins: {}, mode: "edit", historyLoaded: false, pending: false, merge: null,
+    section: null, sectionBase: null, sectionContent: null};
+
+  function revisionEditableSpecs() {
+    return (revisionSpecs[revisionState.kind] || []).filter(function(spec) { return !revisionState.section || spec.name === "body"; });
+  }
+
+  function revisionSectionEndpoint(number) {
+    return "research/dossiers?id=" + encodeURIComponent(revisionState.id) + "&revision=" + encodeURIComponent(number) +
+      "&section=" + encodeURIComponent(revisionState.section);
+  }
 
   function revisionShowMeta(envelope) {
     var record = envelope && envelope.record;
     revisionMeta.textContent = uiLabel("research_revision_kind_" + revisionState.kind) +
-      (record ? " · " + uiFormat("research_revision_number", {revision: record.revision}) : "");
+      (record ? " · " + uiFormat("research_revision_number", {revision: record.revision}) : "") +
+      (revisionState.section ? " · " + uiFormat("research_section_editing", {section: revisionState.section}) : "");
     revisionIdentifier.textContent = revisionState.id;
     revisionSnapshot.textContent = envelope ? envelope.snapshot || "" : "";
   }
@@ -2667,8 +2903,14 @@ if (researchRevisionDialog) {
     revisionMerge.hidden = true;
     revisionState.initial = {};
     revisionState.dossierPins = revisionFieldValue(record, "dossier_revisions", false);
-    revisionSpecs[revisionState.kind].forEach(function(spec) {
-      var raw = revisionFieldValue(record, spec.name, false);
+    var options = document.createElement("details");
+    options.className = "research-details";
+    options.id = "research-revision-options";
+    var summary = document.createElement("summary");
+    summary.textContent = uiLabel("optional_details");
+    options.appendChild(summary);
+    revisionEditableSpecs().forEach(function(spec) {
+      var raw = revisionState.section && spec.name === "body" ? revisionState.sectionContent : revisionFieldValue(record, spec.name, false);
       var value = Array.isArray(raw) ? raw.slice() : raw;
       revisionState.initial[spec.name] = value;
       var id = "research-revision-field-" + spec.name;
@@ -2712,8 +2954,11 @@ if (researchRevisionDialog) {
       }
       field.id = id;
       field.name = spec.name;
-      revisionFieldsHost.appendChild(group);
+      var optional = !spec.required && !["confidence", "relation"].includes(spec.name);
+      if (optional) options.appendChild(group);
+      else revisionFieldsHost.appendChild(group);
     });
+    if (options.children.length > 1) revisionFieldsHost.appendChild(options);
     ["claim", "dossier"].forEach(function(kind) {
       var idField = document.getElementById("research-revision-field-" + kind + "_id");
       var revisionField = document.getElementById("research-revision-field-" + kind + "_revision");
@@ -2734,7 +2979,7 @@ if (researchRevisionDialog) {
       var value = revisionFieldValue(record, spec.name, true);
       if (Array.isArray(value)) value = value.join(", ");
       var valHtml = spec.name === "body" && value ?
-        researchDossierBodyHtml(value) :
+        researchDossierBodyHtml(value, envelope) :
         escapeHtml(value || "—");
       return '<dt>' + escapeHtml(uiLabel(spec.label)) + '</dt><dd>' + valHtml + '</dd>';
     }).join("");
@@ -2823,11 +3068,22 @@ if (researchRevisionDialog) {
     var request = ++revisionState.request;
     var session = revisionState.session;
     var data = await researchApiGet("research/record?kind=" + encodeURIComponent(revisionState.kind) +
-      "&id=" + encodeURIComponent(revisionState.id));
+      "&id=" + encodeURIComponent(revisionState.id) +
+      (revisionState.section && revisionState.sectionBase ? "&revision=" + encodeURIComponent(revisionState.sectionBase) : ""));
     if (session !== revisionState.session || request !== revisionState.request || !researchRevisionDialog.open) return;
     if (!data.ok || !data.record || !data.snapshot || !data.project_id) {
       revisionStatus(uiFormat("research_revision_load_failed", {reason: data.message || uiLabel("wizard_unknown_error")}), true);
       return;
+    }
+    if (revisionState.section) {
+      var sectionData = await researchApiGet(revisionSectionEndpoint(data.record.revision));
+      if (session !== revisionState.session || request !== revisionState.request || !researchRevisionDialog.open) return;
+      if (!sectionData.ok || sectionData.project_id !== data.project_id) {
+        revisionStatus(uiFormat("research_revision_load_failed", {reason: sectionData.message || uiLabel("wizard_unknown_error")}), true);
+        return;
+      }
+      revisionState.sectionBase = data.record.revision;
+      revisionState.sectionContent = sectionData.content;
     }
     revisionState.current = data;
     revisionShowMeta(data);
@@ -2847,7 +3103,7 @@ if (researchRevisionDialog) {
 
   function revisionChanges() {
     var changes = {};
-    (revisionSpecs[revisionState.kind] || []).forEach(function(spec) {
+    revisionEditableSpecs().forEach(function(spec) {
       var input = document.getElementById("research-revision-field-" + spec.name);
       var value = spec.type === "checkbox" ? input.checked : spec.type === "list" ?
         input.value.split(",").map(function(item) { return item.trim(); }).filter(Boolean) :
@@ -2856,7 +3112,7 @@ if (researchRevisionDialog) {
       var before = revisionState.initial[spec.name];
       if (spec.type === "number" && value === "") return;
       if (JSON.stringify(value) !== JSON.stringify(before)) {
-        changes[spec.name] = value === "" && !spec.required ? null : value;
+        changes[spec.name] = value === "" && !spec.required && !revisionState.section ? null : value;
       }
     });
     ["claim", "dossier"].forEach(function(kind) {
@@ -2926,6 +3182,7 @@ if (researchRevisionDialog) {
     revisionReason.disabled = pending;
     revisionSave.disabled = pending || !revisionState.current || Boolean(revisionState.merge);
     revisionBatchAdd.disabled = pending || !revisionState.current || Boolean(revisionState.merge);
+    revisionBatchAdd.hidden = Boolean(revisionState.section);
     revisionReload.disabled = pending;
     revisionEditTab.disabled = pending;
     revisionHistoryTab.disabled = pending;
@@ -2956,10 +3213,16 @@ if (researchRevisionDialog) {
       changed.forEach(function(name) {
         var term = document.createElement("dt"), value = document.createElement("dd");
         term.textContent = revisionMergeLabel(name);
-        value.textContent = revisionMergeValue(merge.preview.changes[name]);
+        value.textContent = revisionMergeValue(revisionState.section && name === "body" ? merge.draft.body : merge.preview.changes[name]);
         list.append(term, value);
       });
       revisionMergeFields.append(heading, list);
+    }
+    if (revisionState.section) {
+      var sectionNote = document.createElement("p");
+      sectionNote.className = "ctl-note";
+      sectionNote.textContent = uiLabel("research_section_preserved");
+      revisionMergeFields.appendChild(sectionNote);
     }
     merge.preview.conflicts.forEach(function(conflict) {
       var group = document.createElement("fieldset"), legend = document.createElement("legend");
@@ -2992,14 +3255,27 @@ if (researchRevisionDialog) {
 
   async function revisionPrepareMerge(changes, resolutions, applying) {
     var session = revisionState.session;
+    var reviewedCurrent = applying && revisionState.merge ? revisionState.merge.preview.current : null;
     var baseRevision = revisionState.merge ? revisionState.merge.baseRevision : revisionState.current.record.revision;
     var response = await fetch(API + "/research-record-prepare", {
       method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify({kind: revisionState.kind, id: revisionState.id,
-        base_revision: baseRevision, changes: changes, resolutions: resolutions || {}})
+      body: JSON.stringify(Object.assign({kind: revisionState.kind, id: revisionState.id,
+        base_revision: baseRevision, changes: changes, resolutions: resolutions || {}},
+        revisionState.section ? {section: revisionState.section} : {}))
     });
     var preview = await response.json();
     if (session !== revisionState.session || !researchRevisionDialog.open) return;
+    // Choices belong to the exact preview shown to the author. A fresh HEAD
+    // needs a new unresolved review, including when old conflicts disappeared.
+    if (applying && (response.status === 400 || (response.ok && preview.ok && preview.current &&
+        (!reviewedCurrent || preview.current.snapshot !== reviewedCurrent.snapshot ||
+         preview.current.record.revision !== reviewedCurrent.record.revision)))) {
+      await revisionPrepareMerge(changes, {}, false);
+      if (session === revisionState.session && researchRevisionDialog.open) {
+        revisionStatus(uiLabel("research_revision_conflict"), true);
+      }
+      return;
+    }
     if (!response.ok || !preview.ok || !preview.current || preview.current.project_id !== revisionState.current.project_id) {
       revisionStatus(uiFormat("research_revision_load_failed", {reason: preview.message || uiLabel("wizard_unknown_error")}), true);
       return;
@@ -3013,7 +3289,17 @@ if (researchRevisionDialog) {
     var reason = revisionReason.value;
     var choice = revisionForm.querySelector('input[name="research_revision_change_kind"]:checked');
     var changeKind = choice ? choice.value : "";
-    revisionFillDraft(preview.current, preview.changes, reason, changeKind);
+    if (revisionState.section) {
+      var selected = await researchApiGet(revisionSectionEndpoint(preview.current.record.revision));
+      if (session !== revisionState.session || !researchRevisionDialog.open) return;
+      if (!selected.ok || selected.project_id !== revisionState.current.project_id) {
+        revisionStatus(uiFormat("research_revision_load_failed", {reason: selected.message || uiLabel("wizard_unknown_error")}), true);
+        return;
+      }
+      revisionState.sectionBase = preview.current.record.revision;
+      revisionState.sectionContent = selected.content;
+      revisionFillDraft(preview.current, {body: resolutions.body === "current" ? selected.content : changes.body}, reason, changeKind);
+    } else revisionFillDraft(preview.current, preview.changes, reason, changeKind);
     revisionStatus(uiLabel(preview.has_changes ? "research_revision_merge_applied" : "research_revision_merge_no_changes"), false);
   }
 
@@ -3034,7 +3320,7 @@ if (researchRevisionDialog) {
 
   function revisionUpdateQueueControls() {
     if (revisionBatchReview) {
-      revisionBatchReview.hidden = !revisionBatch.entries.length;
+      revisionBatchReview.hidden = Boolean(revisionState.section) || !revisionBatch.entries.length;
       revisionBatchReview.textContent = uiFormat("research_revision_batch_review", {count: revisionBatch.entries.length});
     }
     var queued = revisionBatch.entries.some(function(entry) {
@@ -3116,7 +3402,7 @@ if (researchRevisionDialog) {
   }
 
   revisionBatchAdd.addEventListener("click", async function() {
-    if (!revisionState.current || revisionState.pending || revisionState.merge) return;
+    if (!revisionState.current || revisionState.pending || revisionState.merge || revisionState.section) return;
     if (revisionBatch.entries.length && revisionState.current.project_id !== revisionBatch.projectId) {
       revisionStatus(uiLabel("research_revision_batch_project_changed"), true);
       return;
@@ -3247,7 +3533,7 @@ if (researchRevisionDialog) {
     } finally { revisionBatchPending(false); }
   });
 
-  async function revisionOpen(kind, id, mode) {
+  async function revisionOpen(kind, id, mode, section, baseRevision) {
     if (!revisionSpecs[kind] || !id) return;
     revisionState.session++;
     var session = revisionState.session;
@@ -3255,6 +3541,9 @@ if (researchRevisionDialog) {
     revisionState.historyRequest++;
     revisionState.kind = kind;
     revisionState.id = id;
+    revisionState.section = kind === "dossier" && mode === "edit" ? section || null : null;
+    revisionState.sectionBase = revisionState.section ? Number(baseRevision) || null : null;
+    revisionState.sectionContent = null;
     revisionState.current = null;
     revisionState.historyLoaded = false;
     revisionState.initial = {};
@@ -3303,7 +3592,7 @@ if (researchRevisionDialog) {
     if (edit || history) {
       var button = edit || history;
       revisionOpen(edit ? edit.dataset.researchRevise : history.dataset.researchHistory,
-        button.dataset.recordId, edit ? "edit" : "history");
+        button.dataset.recordId, edit ? "edit" : "history", button.dataset.dossierSection, button.dataset.baseRevision);
       return;
     }
     if (!researchRevisionDialog.open) return;
@@ -3311,7 +3600,10 @@ if (researchRevisionDialog) {
     else if (event.target.closest("#research-revision-history-tab")) revisionSetTab("history");
     else if (event.target.closest("[data-research-revision]"))
       revisionLoadHistorical(event.target.closest("[data-research-revision]").dataset.researchRevision);
-    else if (event.target.closest("#research-revision-reload")) revisionLoadCurrent(true);
+    else if (event.target.closest("#research-revision-reload")) {
+      revisionState.sectionBase = null;
+      revisionLoadCurrent(true);
+    }
   });
 
   revisionForm.addEventListener("submit", async function(event) {
@@ -3325,9 +3617,32 @@ if (researchRevisionDialog) {
     var t0 = performance.now();
     var reviseUrl = API + "/research-record-revise";
     try {
+      var expectedSnapshot = revisionState.current.snapshot;
+      if (revisionState.section) {
+        var sectionPreview = await researchApiPost("research-record-prepare", {
+          kind: "dossier", id: revisionState.id, base_revision: revisionState.sectionBase,
+          section: revisionState.section, changes: changes
+        });
+        if (session !== revisionState.session || !researchRevisionDialog.open) return;
+        if (!sectionPreview.ok || !sectionPreview.current || sectionPreview.current.project_id !== revisionState.current.project_id) {
+          revisionStatus(uiFormat("research_revision_save_failed", {reason: sectionPreview.message || uiLabel("wizard_unknown_error")}), true);
+          return;
+        }
+        if (!sectionPreview.ready || sectionPreview.current.record.revision !== operation.expected_revision ||
+            sectionPreview.current.snapshot !== revisionState.current.snapshot) {
+          revisionState.merge = {baseRevision: revisionState.sectionBase, draft: changes, resolutions: {}, preview: sectionPreview};
+          revisionRenderMerge();
+          revisionStatus(uiLabel("research_revision_conflict"), true);
+          return;
+        }
+        if (!sectionPreview.has_changes) { revisionStatus(uiLabel("research_revision_no_changes"), true); return; }
+        operation.changes = sectionPreview.changes;
+        operation.expected_revision = sectionPreview.current.record.revision;
+        expectedSnapshot = sectionPreview.current.snapshot;
+      }
       var response = await fetch(reviseUrl, {
         method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(Object.assign({}, operation, {expected_snapshot: revisionState.current.snapshot}))
+        body: JSON.stringify(Object.assign({}, operation, {expected_snapshot: expectedSnapshot}))
       });
       var data = await response.json();
       LixityLog.api("POST", reviseUrl, performance.now() - t0, response.status, data);
@@ -3360,6 +3675,7 @@ if (document.getElementById("research-manager")) { initResearchUI(); }
 // --- Workspace & Project Modals -------------------------------------------
 var importedFileContent = "";
 var importedFileRead = 0;
+var researchTemplateChoice = null;
 var manuscriptFile = null;
 var manuscriptInput = document.getElementById("ms-file") || document.getElementById("manuscript-import-file");
 var manuscriptButton = document.querySelector('[data-action="load"]') || document.getElementById("manuscript-import-btn");
@@ -3388,6 +3704,15 @@ function selectManuscriptFiles(files) {
   if (manuscriptButton && !manuscriptButton.hasAttribute("aria-busy")) manuscriptButton.disabled = false;
   var status = document.getElementById("ctl-status");
   if (status) { status.className = "ctl-status"; status.textContent = ""; }
+  if (manuscriptInput.id === "manuscript-import-file") openManuscriptImport(manuscriptFile);
+}
+
+function openManuscriptImport(file) {
+  var modal = document.getElementById("modal-project-create");
+  if (!modal || typeof modal.showModal !== "function") return;
+  switchModalTab("tab-pane-import");
+  if (!modal.open) modal.showModal();
+  processImportedFile(file);
 }
 
 function switchModalTab(targetPaneId) {
@@ -3486,12 +3811,7 @@ document.addEventListener("click", function (event) {
     return;
   }
   if (event.target.closest("#manuscript-import-btn") && manuscriptFile) {
-    var importModal = document.getElementById("modal-project-create");
-    if (importModal && typeof importModal.showModal === "function") {
-      switchModalTab("tab-pane-import");
-      importModal.showModal();
-      processImportedFile(manuscriptFile);
-    }
+    openManuscriptImport(manuscriptFile);
     return;
   }
   var tabBtn = event.target.closest(".modal-tab-btn");
@@ -3625,8 +3945,17 @@ document.addEventListener("change", function (event) {
       card.classList.toggle("active", card.contains(event.target));
     });
     var rBox = document.getElementById("new-proj-research");
-    if (rBox && event.target.value === "research") {
-      rBox.checked = true;
+    if (rBox) {
+      if (event.target.value === "research") {
+        if (researchTemplateChoice === null) researchTemplateChoice = rBox.checked;
+        rBox.checked = true;
+        rBox.disabled = true;
+      } else {
+        rBox.disabled = false;
+        if (researchTemplateChoice !== null) rBox.checked = researchTemplateChoice;
+        researchTemplateChoice = null;
+      }
+      document.getElementById("new-proj-research-required").hidden = !rBox.disabled;
     }
   }
 });

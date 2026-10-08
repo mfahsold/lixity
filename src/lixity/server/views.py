@@ -21,6 +21,7 @@ from ..scenes import scene_report_for_display
 from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
 from ..ui import render_dashboard
+from .constants import NATIVE_UI_ACTIONS
 
 MAX_ARTIFACT_BYTES = 200 * 1024 * 1024  # 200 MB
 
@@ -172,7 +173,7 @@ def build_server_dashboard(
         manuscript_name=manuscript_name,
         current_language=language,
         flag_min_severity=resolved_thresholds.flag_min_severity,
-        enabled_actions=("analyze", "rebuild", "nda-draft"),
+        enabled_actions=NATIVE_UI_ACTIONS,
         nda_project_name=title or (
             os.path.splitext(manuscript_name)[0] if manuscript_name and not is_missing else ""
         ),

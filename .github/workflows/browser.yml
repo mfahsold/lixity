@@ -60,3 +60,6 @@ jobs:
           node tests/browser/setup-guide.cjs
           node tests/browser/project-history.cjs
           node tests/browser/decision-acknowledgement.cjs
+          node tests/browser/minimal-workflows.cjs
+          node tests/browser/dossier-images.cjs
+          node tests/browser/dossier-workflows.cjs

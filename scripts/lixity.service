@@ -16,9 +16,8 @@
 #
 # Change the port without editing this file:
 #   systemctl --user edit lixity
-#   → override BOTH lines under [Service]:
+#   → override the environment setting under [Service]:
 #       Environment=LIXITY_PORT=9000
-#       ExecStart=%h/.local/bin/lixity serve --host 127.0.0.1 --port ${LIXITY_PORT}
 #
 #   ${LIXITY_PORT} is plain systemd variable substitution.  The shell-style
 #   ${LIXITY_PORT:-8765} form is NOT supported: systemd passes it through
@@ -64,7 +63,7 @@ SyslogIdentifier=lixity
 # Hardening is deliberately minimal.  The server writes exports/ and the
 # research archive inside the manuscript project directory, so ProtectSystem=
 # and ProtectHome= would break it for any project outside the home directory.
-# NoNewPrivileges is safe and keeps.
+# NoNewPrivileges prevents the process from gaining additional privileges.
 NoNewPrivileges=true
 
 [Install]

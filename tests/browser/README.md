@@ -10,6 +10,9 @@ node tests/browser/nda-draft.cjs
 node tests/browser/setup-guide.cjs
 node tests/browser/project-history.cjs
 node tests/browser/decision-acknowledgement.cjs
+node tests/browser/minimal-workflows.cjs
+node tests/browser/dossier-images.cjs
+node tests/browser/dossier-workflows.cjs
 node tests/browser/settings.cjs
 node tests/browser/layout.cjs
 node tests/browser/research.cjs
@@ -138,3 +141,19 @@ entries, cancellation and unsuccessful opens. The decision-acknowledgement suite
 checks exact displayed-version tokens, explicit applied/reopen actions, failed
 requests preserving the view and stale/withdrawn warnings. Both use synthetic
 fixtures and never connect to a running user's project.
+
+The minimal-workflows suite checks explicit marker Save/Cancel, failed requests
+with retained notes, duplicate-submit prevention, paragraph filter reset and
+the one native analysis action at desktop/mobile widths in seven languages.
+
+The dossier-images suite uses a disposable research archive and synthetic PNG/JPEG
+files. It checks local preview and cancellation, byte/pixel limits before decoding,
+atomic attachment, exact saved-version conflicts, full/section/history rendering,
+withdrawal/purge placeholders, keyboard enlargement and inert hostile metadata.
+No external image is fetched and no running user project is selected. Screenshots
+remain temporary; these cases run in the existing single Chromium job.
+
+The dossier-workflows suite exercises titled contextual claim/decision forms and
+the shared section editor against a disposable server: preserved drafts and pins,
+body-only preparation, unrelated concurrent-section preservation, explicit
+overlapping conflict choices and desktop/mobile rendering in seven languages.

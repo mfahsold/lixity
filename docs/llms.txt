@@ -7,7 +7,7 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 2.0.0; release tag: v2.0.0.
+Current release: 2.1.0; release tag: v2.1.0.
 
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
@@ -40,7 +40,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from GitHub, not PyPI:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.0.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
 lixity --version
 lixity about
 ```
@@ -179,7 +179,7 @@ Standalone export/sync/audit/prune/gdrive actions return HTTP 501 with
 ## Research, PDF/OCR and Zotero
 
 Research requires an explicit project and permission to retain source bytes.
-It supports local UTF-8/PDF capture, extracted-text citations, dossiers,
+It supports local UTF-8/PDF/PNG/JPEG capture, extracted-text citations, dossiers,
 claims, evidence links, decisions, immutable revisions, SQLite/FTS5 lexical
 search, audit and archive export/restore. It does not certify facts or provide
 remote imports or hybrid retrieval. Source URLs are metadata, never fetched:
@@ -188,6 +188,14 @@ remote imports or hybrid retrieval. Source URLs are metadata, never fetched:
 Search defaults to `sources` (CLI/API) and `all` (dashboard).
 Scopes `all|dossiers|claims|decisions` use `research-search-local/2` typed hits;
 source-only uses `research-search-local/1`. Only passage hits are citations.
+PNG/JPEG sources have no extraction/passages, textual scores or image OCR/AI.
+The dossier Add image flow previews locally and saves bytes plus its revision
+atomically with explicit retention and exact CAS. Full/section/history reads
+resolve canonical lixity:image/SOURCE_ID/VERSION_ID pins, never latest. Unavailable
+pins have no URL; unprovable associations remain missing. No remote images are
+fetched. Limits:16MiB/64million pixels,32MiB image POST,5MiB other JSON POST.
+Version-purge Tombstones retain exact owner identity under research-local/2;
+2.0.0 cannot read those new records. Header checks are not complete pixel decoding.
 Authored results search current revisions, not history. Indexes refresh
 automatically unless `--strict` is selected. `batch-ingest` returns
 `research-batch-ingest-local/1`; `--progress` writes phase messages to stderr,
@@ -207,11 +215,18 @@ revisions. They report structural maintenance candidates, not semantic proof.
 CLI `sources`/`audit` retain default JSON and offer `--format text|md`; `review`
 and `decision-impact` default to bounded text. Section updates preserve unrelated
 bytes and reject ambiguous headings. See the implemented research reference.
+prepare_dossier_section reconciles one unique ATX subtree against its base while
+preserving unrelated current sections; save its returned full changes/current
+tokens through revise_record. Dossier GET accepts revision/section and supplies
+canonical editable_sections for UI choices. Contextual claim/decision forms reuse
+current dossier links; optional fields do not change revision semantics.
 
 Native PDFs use Poppler; scans require explicitly configured local OCR.
 `LIXITY_OCR_BACKEND=tesseract` selects locally installed Tesseract without a
 worker service; `LIXITY_OCR_LANGUAGES` defaults to `eng`. Diagnostics report
-missing language data. Every new native Poppler capture, including explicitly
+missing engines or language data. The source-only experimental CPU bridge was
+retired in 2.1.0; maintain custom model workers in their own deployment projects.
+Every new native Poppler capture, including explicitly
 allowed fallback, identifies `poppler-native/1`; local Tesseract identifies
 `tesseract-cli/1`. Both use `research-local/4` and manifest v4; old readers reject
 these archives. Existing v1–v3 records and cached provenance stay unchanged.
@@ -250,7 +265,8 @@ Document language: nda.language > resolved server/project language > project
 configuration > en. Optional UTF-8 nda.template stays inside the project; its five
 literal fields are recipient_name/recipient_address/project_title/date/place.
 Unknown fields and outside paths are rejected. Seven friendly text models are
-editable drafts, not universal enforceability claims. Native PDF encoding is
+editable agreements, not universal enforceability claims; generation records no
+consent or signatures. Technical route/type names remain unchanged. Native PDF encoding is
 Windows-1252; download text for broader local rendering and retain signed copies.
 See https://mfahsold.github.io/lixity/USAGE.md#project-nda-configuration-nda
 

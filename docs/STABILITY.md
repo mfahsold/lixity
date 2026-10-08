@@ -11,6 +11,12 @@ Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
 
 ### Release verification and limits
 
+The 2.1.0 regression comparison used the checked-in public-domain *Effi Briest*
+(36 chapters) and *Pride and Prejudice* (61 chapters). Metrics, paragraph profiles
+and style-passport values matched 2.0.0 under explicit default settings after
+excluding the software-version label. This verifies preservation on these inputs,
+not empirical calibration, literary quality or agreement with an external study.
+
 The maintained suite checks English defaults, language resource-key coverage,
 readability-coefficient dispatch and locale formatting. These are software
 contracts, not empirical validation of linguistic accuracy across seven
@@ -49,6 +55,13 @@ not a general platform certification or a test of a user's complete collection.
 Automatic background/cloud synchronization and audio/video transcription are
 not implemented. PDF extraction and a configured OCR worker do not establish
 recognition accuracy; review text against scans when exact quotations matter.
+
+Local PNG/JPEG dossier images retain exact original versions and share archive
+backup/audit and withdrawal/purge handling. They are excluded from text analysis.
+Container/header validation and a successful browser preview do not establish
+complete codec validity or historical authenticity. Remote downloads, image OCR
+and visual AI are not implemented. An unavailable or unprovable reference stays
+unavailable rather than resolving to a newer or unrelated image.
 
 RIS migration is additive. Preserve the original evidence archive and verify
 attachment identities, bytes, retained citations and restoration before retiring

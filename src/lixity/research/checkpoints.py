@@ -59,7 +59,7 @@ class _Receipt(StrictModel):
     source_version_id: Identifier
     unchanged: bool
     dry_run: Literal[False] = False
-    passages: int = Field(ge=1, le=5000)
+    passages: int = Field(ge=0, le=5000)
     warnings: list[str]
     snapshot: Digest | None = None
 
@@ -206,6 +206,21 @@ def _read_prepared(store: _Store, state: _State, index: int) -> tuple[list[Entit
     activities = [record for record in records if isinstance(record, Activity)]
     sources = [record for record in records if isinstance(record, Source)]
     passages = [record for record in records if isinstance(record, Passage)]
+    from .images import IMAGE_TYPES, validate_image
+    if len(versions) == 1 and versions[0].blob.media_type in IMAGE_TYPES:
+        version = versions[0]
+        if (extractions or activities or passages or len(sources) != (0 if state.options.source_id else 1)
+                or version.id != prepared.result.source_version_id or version.source_ref.id != item.source_id
+                or prepared.result.source_id != item.source_id or version.blob.sha256 != item.sha256
+                or version.blob.byte_length != item.byte_length or prepared.result.passages != 0
+                or (sources and sources[0].id != item.source_id) or prepared.blobs != [version.blob]):
+            raise ResearchError("Invalid retained image capture structure or identity")
+        content = store.repository.read(store.blob_path(index, version.blob.sha256), maximum=api.MAX_IMAGE_BYTES)
+        if digest(content) != version.blob.sha256 or len(content) != version.blob.byte_length:
+            raise ResearchError("Retained image blob checksum or length mismatch")
+        if validate_image(content)["media_type"] != version.blob.media_type:
+            raise ResearchError("Retained image bytes do not match their media type")
+        return records, {version.blob.sha256: content}
     if (len(versions) != 1 or len(extractions) != 1 or len(activities) != 1 or not passages
             or len(sources) != (0 if state.options.source_id else 1)):
         raise ResearchError("Invalid retained capture structure")
@@ -392,7 +407,7 @@ def ingest(project: str | Path, files: Sequence[str | Path] | None = None, *, ch
                                                   expected_source_digest=item.sha256,
                                                   progress_callback=progress_callback)
                     if capture.result["unchanged"]:
-                        receipt = _Receipt.model_validate(capture.result)
+                        receipt = _Receipt.model_validate({key: value for key, value in capture.result.items() if key != "media_type"})
                         item = item.model_copy(update={"status": "succeeded", "result": receipt, "error": None})
                         state = _replace_item(state, index, item)
                         store.save(state)
@@ -407,7 +422,7 @@ def ingest(project: str | Path, files: Sequence[str | Path] | None = None, *, ch
                         publish(store.blob_path(index, sha256), content)
                     prepared = _Prepared(expected_snapshot=current.digest,
                                          records=[record.model_dump(mode="json") for record in capture.records],
-                                         blobs=list(descriptors.values()), result=_Receipt.model_validate(capture.result),
+                                         blobs=list(descriptors.values()), result=_Receipt.model_validate({key: value for key, value in capture.result.items() if key != "media_type"}),
                                          title=capture.title)
                     item = item.model_copy(update={"status": "prepared", "prepared": prepared, "error": None})
                     state = _replace_item(state, index, item)

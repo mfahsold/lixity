@@ -7,14 +7,14 @@ import json
 import os
 import re
 from bisect import insort
+from dataclasses import replace
 from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from ..config import load_project_config, resolve_thresholds
+from ..config import apply_config_to_thresholds, load_project_config, resolve_thresholds
 from ..research import api as research_api
 from ..research.repository import ResearchError
-from ..style_fingerprint import FingerprintThresholds
 from ..workspace import discover
 from ..workspace_labels import WORKSPACE_LABELS
 from ._base import ResponseMixin
@@ -102,48 +102,19 @@ class ProjectRoutesMixin(ResponseMixin):
             title_custom = self.title_custom
 
         try:
-            z_mild = float(payload.get("z_mild", self.thresholds.z_mild))
-            z_strong = float(payload.get("z_strong", self.thresholds.z_strong))
-            fdr_q = float(payload.get("fdr_q", self.thresholds.fdr_q))
-            flag_min = int(payload.get("flag_min_severity", self.thresholds.flag_min_severity))
-            dim_thr = float(payload.get("dim_score_threshold", self.thresholds.dim_score_threshold))
-        except (TypeError, ValueError):
-            self._json({"ok": False, "message": "Invalid threshold parameter format"}, 400)
-            return
-
-        if (
-            z_strong < z_mild
-            or not (0.5 <= z_mild <= 6.0)
-            or not (1.0 <= z_strong <= 8.0)
-            or not (0.01 <= fdr_q <= 0.5)
-            or flag_min not in (1, 2, 3)
-            or not (1.0 <= dim_thr <= 4.0)
-        ):
-            self._json(
-                {
-                    "ok": False,
-                    "message": "Thresholds out of bounds (z* 0.5–6.0, strong 1.0–8.0, q 0.01–0.5, flags 1–3, dim 1.0–4.0)",
-                },
-                400,
-            )
+            thresholds = replace(self.thresholds, **apply_config_to_thresholds(payload))
+        except (TypeError, ValueError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
             return
 
         self.__class__.language = lang
         self.__class__.title = title
         self.__class__.title_custom = title_custom
-        self.__class__.thresholds = FingerprintThresholds(
-            z_mild=z_mild,
-            z_strong=z_strong,
-            fdr_q=fdr_q,
-            fdr_method=self.thresholds.fdr_method,
-            min_chapters=self.thresholds.min_chapters,
-            flag_min_severity=flag_min,
-            dim_score_threshold=dim_thr,
-        )
+        self.__class__.thresholds = thresholds
         self.refresh()
         self._json({
             "ok": True,
-            "message": f"Settings applied · Language: {lang} · z* ≥ {z_mild:.1f} / {z_strong:.1f}",
+            "message": f"Settings applied · Language: {lang} · z* ≥ {thresholds.z_mild:.1f} / {thresholds.z_strong:.1f}",
             "reload": True,
         })
 

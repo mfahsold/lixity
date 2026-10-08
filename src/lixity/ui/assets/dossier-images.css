@@ -1,0 +1,25 @@
+/* Image presentation shares the dashboard controls and native modal shell. */
+.dossier-image { margin: 1rem 0; padding: .75rem; border: 1px solid var(--line); border-radius: var(--radius); max-width: 100%; min-width: 0; overflow-wrap: anywhere; }
+.dossier-image-enlarge { display: block; width: 100%; border: 0; background: transparent; padding: 0; cursor: zoom-in; border-radius: var(--radius-sm); }
+.dossier-image-enlarge:focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+.dossier-image img { display: block; max-width: 100%; max-height: 32rem; width: auto; height: auto; margin: auto; }
+.dossier-image figcaption { margin-top: .6rem; font-size: .82rem; line-height: 1.5; }
+.dossier-image-unavailable { border-style: dashed; color: var(--muted); }
+.dossier-image-unavailable figcaption { margin-top: 0; }
+.dossier-image-actions { margin: .5rem 0; }
+#modal-dossier-image .modal-body, #modal-dossier-image-enlarge .modal-body { overflow-y: auto; min-width: 0; overflow-wrap: anywhere; }
+#modal-dossier-image .ctl:not(button), #modal-dossier-image .research-form-options { width: 100%; box-sizing: border-box; }
+#modal-dossier-image .form-label { margin-top: .8rem; }
+#modal-dossier-image .research-check { display: flex; align-items: flex-start; gap: .5rem; margin: 1rem 0; line-height: 1.5; }
+#modal-dossier-image .research-check input { margin-top: .3rem; flex-shrink: 0; }
+#dossier-image-preview img { display: block; max-width: 100%; max-height: 15rem; margin: .5rem auto; }
+#dossier-image-preview p, #dossier-image-target { overflow-wrap: anywhere; }
+#dossier-image-conflict { border-top: 1px solid var(--line); padding-top: .75rem; }
+#dossier-image-current { max-height: 17rem; overflow: auto; margin: .5rem 0; }
+#modal-dossier-image-enlarge { max-width: 70rem; width: min(94vw, 70rem); }
+#modal-dossier-image-enlarge img { display: block; max-width: 100%; max-height: 70vh; width: auto; height: auto; margin: auto; }
+@media (max-width: 480px) {
+  #modal-dossier-image .modal-actions { flex-wrap: wrap; }
+  #modal-dossier-image .modal-actions button { flex: 1; white-space: normal; }
+  .dossier-image { padding: .5rem; }
+}

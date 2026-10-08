@@ -38,7 +38,8 @@ def test_simple_draft_uses_each_project_language_without_creating_a_store(langua
     with tempfile.TemporaryDirectory() as directory:
         project = project_at(Path(directory), language)
         document = draft(project)
-        assert title in document.text
+        assert document.text.splitlines()[0] == title
+        assert document.title == title
         assert "Example Reader" in document.text and "Example City" in document.text
         assert "2026-10-06" in document.text and "{{" not in document.text
         assert document.language == language

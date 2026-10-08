@@ -990,9 +990,12 @@ body:not(.has-js-tooltips) .help:focus::after {
 
 /* --- Controls (local server mode) ------------------------------------- */
 .controls .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
-.marker-note-slot { display: inline-flex; }
+.marker-note-slot { display: inline-flex; min-width: 0; max-width: 100%; }
+[data-marker-editor] { display: flex; flex-wrap: wrap; gap: .3rem; min-width: 0; max-width: 100%; }
+[data-marker-feedback] { flex-basis: 100%; overflow-wrap: anywhere; }
 .marker-note {
   width: 15rem;
+  max-width: 100%;
   opacity: 0;
   transform: translateX(-4px);
   transition: opacity .16s var(--ease), transform .16s var(--ease), border-color .16s var(--ease);

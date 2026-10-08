@@ -24,7 +24,7 @@ project, start with the [README](https://github.com/mfahsold/lixity/blob/main/RE
 13. [Debug logging](#debug-logging-since-v1190)
 14. [Research search scopes](#research-search-scopes-since-v1190)
 15. [Zotero integration](#zotero-integration-since-v1190)
-16. [NDA drafts](#nda-drafts)
+16. [NDA agreements](#nda-agreements)
 17. [Research batch workflow and index ergonomics](#research-batch-workflow-and-index-ergonomics-since-v1200)
 
 ## Installation
@@ -37,12 +37,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.0.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
 lixity --version
 lixity about
 ```
 
-`v2.0.0` is the release pin. Choose `@main` only to follow development,
+`v2.1.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
@@ -111,7 +111,7 @@ New Project, Open Project and optional guidance remain accessible in every view.
 
 Under Project & Settings, choose or drop a Markdown/plain-text manuscript to see
 its filename. Selection alone sends no request. In the native server,
-**Continue to import…** opens the existing **Import Manuscript** dialog with that
+Selecting or dropping a file opens the existing **Import Manuscript** preview with that
 selection. Confirming the dialog creates a separate project; use **Open Project**
 to reconnect an existing folder and its research archive. Embedding hosts that
 advertise the load capability instead show **Analyze manuscript now →**, retaining
@@ -522,7 +522,7 @@ The dashboard contains:
 - the chapter comparison matrix with a deviation column; matrix rows and
   marker rows navigate to their passage,
 - the **work markers** panel: setting a marker opens an inline note field
-  (`Enter` saves, `Esc` cancels) so the reason travels with the marker.
+  with Save/Cancel (`Enter` saves, `Esc` cancels) so the reason travels with the marker.
 
 ```bash
 lixity dashboard manuscript.md -o ui.html
@@ -608,8 +608,10 @@ the manuscript: invisible HTML comment lines with stable IDs
 paragraph. They appear in the text editor, never render in any export, move
 with the paragraph when editing, and are idempotent (deterministic
 content-hash IDs). Kinds: `pruefen`, `sachcheck`, `todo`, `achtung`. In the
-dashboard, clicking a kind opens an inline note field: type the reason,
-`Enter` commits (the marker is written with `note="…"`), `Esc` cancels.
+dashboard, clicking a kind opens an inline note field. Type the reason and
+choose **Save** or press Enter to commit (the marker is written with `note="…"`);
+**Cancel** or Escape discards the note. Failed saves show an error and retain
+your text; pending requests disable repeated submission.
 Markers can be set from the flagged-passages list (quick `+ To-do` per row)
 or from an opened paragraph in the chapter map — both target the exact
 source line. Programmatic access: `api.markers(text)`,
@@ -753,6 +755,11 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
 
 ### High-Level API Facade (`lixity.api`)
 
+Choose the outputs your integration needs. Each convenience call performs its
+own analysis; [the shared pipeline](ARCHITECTURE.md#configuration-and-multiple-projects)
+can reuse one result for several outputs. Pass explicit project settings when
+working with multiple projects; `{}` selects code defaults for thresholds.
+
 For automation, AI agents, and straightforward scripting, use the deterministic facade:
 
 ```python
@@ -768,7 +775,7 @@ kpis = res["metrics"]
 print(f"ASL: {kpis['asl']:.2f}, LIX: {kpis['lix']:.1f}")
 
 # 2. Self-calibrated style reference (bands, z*, FDR, dimensions)
-reference = api.fingerprint(text, language="de")
+reference = api.fingerprint(text, language="de", project_config={})
 
 # 2b. Structure modules (dialogue, characters, pacing, motifs, showing)
 turns = api.dialogue(text, language="de")
@@ -778,10 +785,10 @@ motifs = api.motifs(text, {"Wut": r"\b(Wut|wütend\w*)\b"}, language="de")
 distance = api.showing(text, language="de")
 
 # 3. Paragraph-level tense & style profiling
-profiles = api.profile(text, language="de")
+profiles = api.profile(text, language="de", project_config={})
 
 # 4. Generate standalone HTML dashboard
-html = api.dashboard(text, language="de", title="My Manuscript")
+html = api.dashboard(text, language="de", title="My Manuscript", project_config={})
 
 # 5. Work markers (editor-visible HTML comments)
 markers = api.markers(text)
@@ -911,7 +918,7 @@ at most 2 MiB; paths and symlinks escaping the project are rejected.
 The five literal placeholders are `{{recipient_name}}`, `{{recipient_address}}`,
 `{{project_title}}`, `{{date}}` and `{{place}}`. Unknown fields are rejected;
 supplied values remain literal data. Generation and downloads are described
-[below](#nda-drafts).
+[below](#nda-agreements).
 
 ## Troubleshooting
 
@@ -1025,13 +1032,16 @@ See the [Zotero bridge reference](research/USAGE.md#zotero-desktop-bridge-since-
 for setup, pagination, dry runs, v3 compatibility, identity matching and recovery.
 There is no automatic migration, bidirectional synchronization or archive deletion.
 
-## NDA drafts
+## NDA agreements
 
-Under **Project & Settings**, enter **Name**, optional **Address**, **Project
+Under **Project & Settings**, enter the recipient's name, optional **Address**, **Project
 name**, **Date** and **Place**. A real loaded project name can be prefilled;
 an empty workspace leaves it blank. The date defaults to the browser's local
 calendar day. Choose **Preview** to read the full friendly agreement, then
 **Download PDF** or **Download text**. The address may span several lines.
+The output is titled **Confidentiality agreement**, with signature lines for the
+recipient and the project representative. Review the details together before
+signing; generating or downloading a file does not record either person's consent.
 
 The native generator uses the resolved project language or the optional
 `nda.language` override. Seven localized text models are available. Preview
@@ -1046,7 +1056,8 @@ or other value requires a broader repertoire, download UTF-8 text and render it
 with your local document editor. Keep reviewed and signed copies in your own
 project storage. Language selection does not choose a law or jurisdiction.
 
-The models are editable starting points, not a claim of universal enforceability.
+The wording is editable to fit the project. Language selection and filled fields
+do not establish universal enforceability.
 For trade-secret rules and disclosure exceptions, see
 [§5 GeschGehG](https://www.gesetze-im-internet.de/geschgehg/__5.html) and
 [Directive (EU) 2016/943](https://eur-lex.europa.eu/eli/dir/2016/943/oj/eng).

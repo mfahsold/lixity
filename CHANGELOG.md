@@ -7,6 +7,54 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.1.0] - 2026-10-08
+
+### Added
+- Local PNG/JPEG references in dossier full, section and history views, with
+  browser-only preview, explicit retention, exact saved-image versions and
+  keyboard enlargement. Capture and dossier revision publish in one commit;
+  rejected saves accept neither. Existing archive export/restore and audit apply.
+- Section editing reuses the revision editor and canonical heading parser,
+  preserving concurrent changes outside the selected subtree. Contextual claim
+  and decision actions select the current dossier by title in existing forms.
+
+### Fixed
+- Sequential decision acknowledgements advance only tokens from their own
+  accepted operation. External changes still require explicit review; current
+  flags and counts stay aligned without stealing unrelated draft focus.
+- Marker notes have explicit Save/Cancel, visible errors, retained failed drafts
+  and a pending guard; real HTTP failure statuses cannot appear successful.
+- NDA agreements use shorter, direct wording in all seven languages. The recipient
+  field is clearer, output titles omit the software “draft” label, and signing
+  guidance stays in the app. The five-field, stateless interface is unchanged.
+- Settings share the core numeric policy, preserve exact floats and unposted
+  fields, and remove artificial UI ceilings/decimal step rounding. Invalid
+  JSON types, nonfinite values and inconsistent bounds fail visibly.
+- Image references validate exact project/source/version ownership, including
+  purge placeholders. Raster imports never retry external publication conflicts;
+  textual analysis rejects image sources before decoding.
+- Restored shared layout configuration and inline Markdown helpers keep existing
+  book adapters importable; attribute values and links remain treated as data.
+
+### Changed
+- The native workspace has one Update analysis action; both HTTP aliases and
+  distinct embedding capabilities remain supported. Manuscript selection opens
+  its import preview directly; confirmation still creates a separate project.
+- Initial research lists reuse the overview response. Optional form details are
+  collapsed, paragraph filters have a reset and scene links use actual containing
+  chapters. No persistent cache or invented scene positions are introduced.
+- Version-purge Tombstones with explicit source ownership use `research-local/2`.
+  Existing v1 bytes remain unchanged; 2.0.0 rejects the new owner-bearing records.
+  PNG/JPEG source bytes have no fabricated text extraction or passages.
+- English documentation and reviewed synthetic screenshots follow current feature
+  workflows. Service setup uses one port setting; API examples avoid duplicate
+  analysis passes. New browser cases join the existing single Chromium job.
+
+### Removed
+- The source-only experimental Unlimited-OCR CPU bridge and its adapter-specific
+  parser test. Built-in local Tesseract and the generic external-worker protocol
+  remain supported; custom model runtimes belong to their deployment projects.
+
 ## [2.0.0] - 2026-10-07
 
 ### Added
@@ -1434,7 +1482,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v2.0.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v2.1.0...HEAD
+[2.1.0]: https://github.com/mfahsold/lixity/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/mfahsold/lixity/compare/v1.25.0...v2.0.0
 [1.25.0]: https://github.com/mfahsold/lixity/compare/v1.24.1...v1.25.0
 [1.24.1]: https://github.com/mfahsold/lixity/compare/v1.24.0...v1.24.1

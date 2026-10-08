@@ -68,7 +68,7 @@ Browsing or cancelling does not switch projects.
 
 **New Project → Import Manuscript** creates a separate project from a selected
 or dropped `.md`, `.markdown` or `.txt` file. It does not reopen the original
-folder or its research. Selecting a file shows its name; you confirm the new
+folder or its research. Selecting a file opens its preview directly; you confirm the new
 project in the import dialog. **Start New Manuscript** creates a project from a
 template. The Research Novel template also initializes a research archive.
 
@@ -86,9 +86,10 @@ settings also show their explanations beside the fields.
 
 A saved HTML dashboard is a read-only analysis export. The local server adds
 project and research actions using the same analysis engine. It is not a full
-manuscript editor. The NDA generator downloads a friendly draft using name,
+manuscript editor. The NDA generator downloads a friendly confidentiality agreement
+using the recipient's name,
 optional address, project, date and place; see the
-[NDA reference](USAGE.md#nda-drafts).
+[NDA reference](USAGE.md#nda-agreements).
 Publication-specific exports and delivery integrations belong to project adapters.
 
 ## Research workflow
@@ -117,6 +118,16 @@ In the dashboard, select a source or dossier to read its details and citations.
 Source and dossier filters narrow the loaded lists; **Search** looks through
 retained text. A source-passage search result offers **Use for claim** and
 **Use for dossier** actions.
+
+For a visual reference, open a dossier and choose **Add image**. Select an
+authorized local PNG/JPEG, add a short description, preview it and confirm
+retention before saving. Original bytes and the dossier version are saved together.
+Image sources have no searchable text or linguistic scores. Optional captions and
+source notes help you remember what the picture can—and cannot—support.
+
+Use **Add claim** or **Add decision** from that dossier to keep the topic selected
+in the existing form. **Edit section** limits a revision to one unique heading;
+you still review conflicts and explain the change before saving.
 
 The records have different purposes:
 

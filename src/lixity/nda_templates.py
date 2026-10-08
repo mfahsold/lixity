@@ -1,12 +1,12 @@
-"""Short confidentiality drafts for project review and collaboration.
+"""Plain-language confidentiality agreements for project review and collaboration.
 
-These original templates are starting points for review, not a claim of universal
-enforceability. Mandatory disclosure rights are preserved. Interface language does
-not select a country's law. Only the requested document fields are substituted.
+These original templates preserve mandatory disclosure rights and do not claim
+universal enforceability. Interface language does not select a country's law.
+Only the requested document fields are substituted.
 """
 
 NDA_TEMPLATES: dict[str, str] = {
-    "en": """Confidentiality agreement — draft for review
+    "en": """Confidentiality agreement
 
 Project: {{project_title}}
 Recipient: {{recipient_name}}
@@ -14,115 +14,121 @@ Address: {{recipient_address}}
 Date: {{date}}
 Place: {{place}}
 
-Please read this draft together and adapt it before signing. Generating it does
-not mean either side has accepted it.
+What we share
+For project review or collaboration, we may share non-public drafts, research,
+notes, ideas and other materials, including copies. Information is confidential
+if marked or reasonably recognizable as such, whether shared in writing,
+orally, visually or electronically.
 
-Working together
-To review or collaborate on this project, we may share non-public drafts,
-research, notes, ideas and other materials, including copies. Information is
-confidential when marked or reasonably recognizable as such, whether shared in
-writing, orally, visually or electronically.
+How we use it
+Use this information only to review or collaborate on the project. Take
+reasonable care and make only necessary copies. Give access only to people
+who need it and have equivalent confidentiality duties or professional secrecy.
 
-Careful use
-The recipient uses it only for project review or collaboration, with reasonable
-care and necessary copies. Access is limited to people who need it and have
-equivalent confidentiality duties or professional secrecy. Sharing, publishing
-or uploading to external services needs the project representative's permission,
-subject to the exceptions below. Approved tools remain allowed.
+Sharing, publishing or uploading it to external services needs the project
+representative's permission, subject to the exceptions below. Approved tools
+remain allowed.
 
-Exceptions and protected disclosures
-Duties exclude information made public without breach, lawfully known without
-confidentiality duties, developed independently without using confidential
-information, lawfully received from an unrestricted third party or expressly
-released. Required or legally protected disclosure, protected reports of
-wrongdoing and access to authorities remain allowed. Protected reports need no
-permission or prior notice. Mandatory rights, including lawful employee-representative
-rights, are unaffected. Confidential legal or professional advice is allowed.
+Exceptions and protected rights
+These duties do not cover information that becomes public without a breach,
+was lawfully known without confidentiality duties, was developed independently
+without using confidential information, was lawfully received from an
+unrestricted third party or was expressly released.
+
+Legally required or protected disclosures, protected reports of wrongdoing
+and access to authorities remain allowed. Protected reporting needs no
+permission or prior notice. Mandatory rights, including lawful employee and
+employee-representative rights, remain unaffected. You may seek confidential
+legal or professional advice.
 
 Rights stay with their owners
-Ownership, copyright and other rights remain with their holders. Only use needed
-for project review or collaboration is permitted; no publication rights, ownership
-transfer, exclusive license or rights in third-party materials are granted.
+Ownership, copyright and other rights stay with their holders. This agreement
+permits only the use needed for project review or collaboration. It grants no
+publication rights, ownership transfer, exclusive license or rights in
+third-party materials.
 
-Return and deletion
-On request or when review or collaboration ends, return or delete confidential
-copies within a reasonable period. Legally required copies and copies kept solely
-as legal evidence may remain restricted. Routine backups may remain until normal
-deletion without use for another purpose. Lawful retention does not end
-confidentiality duties.
+Return or deletion
+On request or when the review or collaboration ends, return or delete
+confidential copies within a reasonable time. Keep legally required copies
+and copies held solely as legal evidence restricted. Routine backups may
+remain until normal deletion, without use for another purpose.
+Confidentiality duties continue for copies lawfully retained.
 
-Fair terms
-Applicable legal rules determine law, courts, remedies and liability; mandatory
-protections prevail. This draft adds no contractual penalty or blanket liability
-regardless of fault. Changes need both sides' agreement. Software or template
-updates do not change a signed agreement.
+What else applies
+Applicable legal rules govern liability and remedies. Mandatory protections
+remain in place. This agreement adds no contractual penalty or blanket liability
+without fault. We agree any changes together.
 
 Recipient: {{recipient_name}}
 Signature ______________________________________________________________
-For the project: name and signature _____________________________________
+Project representative: name ___________________________________________
+Signature ______________________________________________________________
 """,
-    "de": """Vertraulichkeitsvereinbarung — Entwurf zur Prüfung
+    "de": """Vertraulichkeitsvereinbarung
 
 Projekt: {{project_title}}
-Empfängerin / Empfänger: {{recipient_name}}
+Empfangende Person: {{recipient_name}}
 Anschrift: {{recipient_address}}
 Datum: {{date}}
 Ort: {{place}}
 
-Bitte lesen Sie diesen Entwurf gemeinsam und passen Sie ihn vor der Unterschrift
-an. Seine Erstellung bedeutet noch keine Zustimmung.
-
-Zusammenarbeiten
+Was wir miteinander teilen
 Für die Prüfung oder Zusammenarbeit am Projekt können wir nicht öffentliche
 Entwürfe, Recherchen, Notizen, Ideen und andere Unterlagen einschließlich Kopien
-teilen. Informationen sind vertraulich, wenn sie so gekennzeichnet oder nach
-Inhalt und Umständen vernünftigerweise als vertraulich erkennbar sind, ob
-schriftlich, mündlich, bildlich oder elektronisch übermittelt.
+teilen. Vertraulich sind Informationen, die so gekennzeichnet oder nach Inhalt
+und Umständen vernünftigerweise als vertraulich erkennbar sind. Das gilt für
+schriftliche, mündliche, bildliche und elektronische Mitteilungen.
 
-Sorgfältig damit umgehen
-Die empfangende Person nutzt sie nur für Prüfung oder Zusammenarbeit am Projekt,
-mit angemessener Sorgfalt und notwendigen Kopien. Zugriff erhalten nur Personen,
-die ihn benötigen und gleichwertig zur Geheimhaltung oder beruflich zur
-Verschwiegenheit verpflichtet sind. Weitergabe, Veröffentlichung oder Hochladen
-in externe Dienste benötigen die Erlaubnis der projektverantwortlichen Person;
-die folgenden Ausnahmen bleiben unberührt. Freigegebene Werkzeuge bleiben erlaubt.
+Wie wir damit umgehen
+Nutzen Sie diese Informationen nur für die Prüfung oder Zusammenarbeit am
+Projekt. Gehen Sie sorgfältig damit um und fertigen Sie nur notwendige Kopien
+an. Zugriff erhalten nur Personen, die ihn benötigen und gleichwertig zur
+Geheimhaltung oder beruflich zur Verschwiegenheit verpflichtet sind.
 
-Ausnahmen und geschützte Offenlegungen
-Ausgenommen sind Informationen, die ohne Verletzung öffentlich werden, rechtmäßig
-ohne Geheimhaltungspflicht bekannt waren, unabhängig ohne Nutzung vertraulicher
-Informationen entwickelt wurden, rechtmäßig von einem ungebundenen Dritten stammen
-oder ausdrücklich freigegeben wurden. Gesetzlich gebotene oder geschützte
-Offenlegungen, geschützte Meldungen von Fehlverhalten und der Zugang zu Behörden
-bleiben erlaubt. Geschützte Meldungen brauchen keine Erlaubnis oder Vorabinformation.
-Zwingende Rechte einschließlich zulässiger Rechte von Arbeitnehmervertretungen
-bleiben unberührt. Vertrauliche rechtliche oder fachliche Beratung bleibt erlaubt.
+Für Weitergabe, Veröffentlichung oder Hochladen in externe Dienste brauchen
+Sie die Erlaubnis der projektverantwortlichen Person. Die folgenden Ausnahmen
+bleiben unberührt. Freigegebene Werkzeuge dürfen Sie weiter nutzen.
 
-Rechte bleiben bei ihren Inhabern
-Eigentum, Urheberrechte und andere Rechte bleiben bei ihren Inhabern. Erlaubt ist
-nur die für Prüfung oder Zusammenarbeit am Projekt notwendige Nutzung; es werden
-keine Veröffentlichungsrechte, Eigentumsübertragungen, ausschließlichen
-Nutzungsrechte oder Rechte an fremden Inhalten eingeräumt.
+Ausnahmen und geschützte Rechte
+Die Pflichten gelten nicht für Informationen, die ohne Verstoß gegen diese
+Vereinbarung öffentlich sind oder werden, Ihnen bereits rechtmäßig ohne
+Geheimhaltungspflicht bekannt waren, unabhängig ohne vertrauliche Informationen
+entwickelt wurden, von einer anderen Person rechtmäßig ohne Geheimhaltungspflicht
+weitergegeben oder ausdrücklich freigegeben wurden.
 
-Zurückgeben und löschen
-Auf Verlangen oder nach Ende der Prüfung oder Zusammenarbeit sind vertrauliche
-Kopien innerhalb angemessener Frist zurückzugeben oder zu löschen. Gesetzlich
-erforderliche oder ausschließlich zu Beweiszwecken aufbewahrte Kopien dürfen
-zugriffsbeschränkt verbleiben. Sicherungskopien dürfen bis zur üblichen Löschung
-bestehen, ohne Nutzung für andere Zwecke. Erlaubte Aufbewahrung beendet die
-Geheimhaltungspflichten nicht.
+Gesetzlich gebotene oder geschützte Offenlegungen, geschützte Meldungen von
+Fehlverhalten und der Zugang zu Behörden bleiben erlaubt. Geschützte Meldungen
+brauchen weder Erlaubnis noch Vorabinformation. Zwingende Rechte, auch die von
+Beschäftigten und Arbeitnehmervertretungen, bleiben unberührt. Vertrauliche
+rechtliche oder fachliche Beratung dürfen Sie in Anspruch nehmen.
 
-Faire Bedingungen
-Anwendbare gesetzliche Regeln bestimmen Recht, Gerichte, Rechtsfolgen und Haftung;
-zwingende Schutzvorschriften gehen vor. Dieser Entwurf enthält keine Vertragsstrafe
-oder pauschale verschuldensunabhängige Haftung. Änderungen benötigen die Zustimmung
-beider Seiten. Software- oder Vorlagenänderungen ändern keine unterschriebene
-Vereinbarung.
+Die Rechte bleiben bei ihren Inhabern
+Eigentum, Urheberrechte und andere Rechte bleiben bei ihren Inhabern. Diese
+Vereinbarung erlaubt nur die für Prüfung oder Zusammenarbeit am Projekt
+notwendige Nutzung. Sie räumt keine Veröffentlichungsrechte,
+Eigentumsübertragungen, ausschließlichen Nutzungsrechte oder Rechte an
+fremden Inhalten ein.
 
-Empfängerin / Empfänger: {{recipient_name}}
+Zurückgeben oder löschen
+Geben Sie vertrauliche Kopien auf Verlangen oder nach Ende der Prüfung oder
+Zusammenarbeit innerhalb angemessener Frist zurück oder löschen Sie sie.
+Gesetzlich erforderliche oder ausschließlich zu Beweiszwecken aufbewahrte
+Kopien bleiben zugriffsbeschränkt. Sicherungskopien dürfen bis zur üblichen
+Löschung bestehen, ohne Nutzung für andere Zwecke. Für erlaubterweise
+aufbewahrte Kopien gelten die Geheimhaltungspflichten weiter.
+
+Was außerdem gilt
+Für Haftung und Rechtsfolgen gelten die anwendbaren gesetzlichen Regeln.
+Diese Vereinbarung enthält keine Vertragsstrafe und keine pauschale Haftung ohne
+Verschulden.
+Gesetzliche Schutzrechte bleiben erhalten. Änderungen vereinbaren wir gemeinsam.
+
+Empfangende Person: {{recipient_name}}
 Unterschrift ___________________________________________________________
-Für das Projekt: Name und Unterschrift __________________________________
+Projektverantwortliche Person: Name ____________________________________
+Unterschrift ___________________________________________________________
 """,
-    "fr": """Accord de confidentialité — projet à examiner
+    "fr": """Accord de confidentialité
 
 Projet : {{project_title}}
 Destinataire : {{recipient_name}}
@@ -130,120 +136,123 @@ Adresse : {{recipient_address}}
 Date : {{date}}
 Lieu : {{place}}
 
-Veuillez lire ce projet ensemble et l'adapter avant de signer. Sa génération
-ne signifie pas qu'une partie l'a accepté.
-
-Travailler ensemble
+Ce que nous partageons
 Pour examiner le projet ou y collaborer, nous pouvons partager des brouillons,
 recherches, notes, idées et autres éléments non publics, ainsi que leurs copies.
 Les informations sont confidentielles si elles sont signalées ou raisonnablement
-reconnaissables comme telles, qu'elles soient écrites, orales, visuelles ou
-électroniques.
+reconnaissables comme telles, à l'écrit, à l'oral, sous forme visuelle ou
+électronique.
 
-Utiliser avec soin
-Le destinataire les utilise uniquement pour examiner le projet ou y collaborer,
-avec une diligence raisonnable et les copies nécessaires. L'accès est limité aux
-personnes qui en ont besoin et ont des obligations équivalentes ou un secret
-professionnel. Partager, publier ou charger dans des services externes nécessite
-l'autorisation du responsable du projet, sous réserve des exceptions ci-dessous.
-Les outils approuvés restent permis.
+Comment les utiliser
+Utilisez ces informations uniquement pour examiner le projet ou y collaborer.
+Prenez-en raisonnablement soin et ne faites que les copies nécessaires.
+Réservez l'accès aux personnes qui en ont besoin et sont tenues à une
+confidentialité équivalente ou au secret professionnel.
 
-Exceptions et divulgations protégées
-Sont exclues les informations devenues publiques sans violation, légalement
-connues sans obligation de confidentialité, développées indépendamment sans
-utiliser les informations confidentielles, légalement obtenues d'un tiers libre
-de restrictions ou expressément libérées. Les divulgations obligatoires ou
-légalement protégées, les signalements protégés de comportements répréhensibles
-et l'accès aux autorités restent permis. Les signalements protégés ne nécessitent
-ni autorisation ni notification préalable. Les droits impératifs, dont ceux des
-représentants des travailleurs, restent préservés. Le conseil juridique ou
-professionnel confidentiel reste permis.
+Pour les partager, les publier ou les charger dans des services externes,
+demandez l'autorisation du responsable du projet, sous réserve des exceptions
+ci-dessous. Les outils approuvés restent permis.
+
+Exceptions et droits protégés
+Ces obligations ne couvrent pas les informations devenues publiques sans
+violation, légalement connues sans obligation de confidentialité, développées
+indépendamment sans utiliser d'informations confidentielles, légalement reçues
+d'un tiers libre de restrictions ou expressément libérées.
+
+Les divulgations imposées ou protégées par la loi, les signalements protégés
+de comportements répréhensibles et l'accès aux autorités restent permis.
+Les signalements protégés ne nécessitent ni autorisation ni notification
+préalable. Les droits impératifs, y compris ceux des salariés et de leurs
+représentants, restent préservés. Vous pouvez demander un conseil juridique
+ou professionnel confidentiel.
 
 Les droits restent à leurs titulaires
-La propriété, les droits d'auteur et autres droits restent à leurs titulaires.
-Seule l'utilisation nécessaire à l'examen du projet ou à la collaboration est
-permise ; aucun droit de publication, transfert de propriété, licence exclusive
-ou droit sur les éléments de tiers n'est accordé.
+La propriété, les droits d'auteur et les autres droits restent à leurs
+titulaires. Cet accord permet uniquement l'utilisation nécessaire à l'examen
+du projet ou à la collaboration. Il n'accorde aucun droit de publication,
+transfert de propriété, licence exclusive ou droit sur les éléments de tiers.
 
-Restituer et supprimer
-Sur demande ou à la fin de l'examen ou de la collaboration, restituer ou supprimer
-les copies confidentielles dans un délai raisonnable. Les copies imposées par la
-loi ou conservées uniquement comme preuve juridique peuvent rester à accès limité.
-Les sauvegardes peuvent subsister jusqu'à leur suppression normale, sans autre
-utilisation. Une conservation licite ne met pas fin aux obligations de confidentialité.
+Restituer ou supprimer
+Sur demande ou à la fin de l'examen ou de la collaboration, restituez ou
+supprimez les copies confidentielles dans un délai raisonnable. Gardez un
+accès limité aux copies imposées par la loi ou conservées uniquement comme
+preuve juridique. Les sauvegardes peuvent subsister jusqu'à leur suppression
+normale, sans autre utilisation. Les obligations de confidentialité continuent
+pour les copies légalement conservées.
 
-Des conditions équitables
-Les règles légales applicables déterminent le droit, les tribunaux, les recours
-et la responsabilité ; les protections impératives prévalent. Ce projet n'ajoute
-ni pénalité contractuelle ni responsabilité générale indépendante de toute faute.
-Les modifications nécessitent l'accord des deux parties. Les mises à jour du
-logiciel ou du modèle ne modifient pas un accord signé.
+Ce qui s'applique aussi
+Les règles légales applicables régissent la responsabilité et les recours.
+Les protections obligatoires restent en vigueur. Cet accord n'ajoute aucune
+pénalité contractuelle ni responsabilité générale sans faute. Nous convenons
+ensemble de toute modification.
 
 Destinataire : {{recipient_name}}
 Signature ______________________________________________________________
-Pour le projet : nom et signature _______________________________________
+Responsable du projet : nom _____________________________________________
+Signature ______________________________________________________________
 """,
-    "es": """Acuerdo de confidencialidad — borrador para revisión
+    "es": """Acuerdo de confidencialidad
 
 Proyecto: {{project_title}}
-Destinatario/a: {{recipient_name}}
+Persona destinataria: {{recipient_name}}
 Dirección: {{recipient_address}}
 Fecha: {{date}}
 Lugar: {{place}}
 
-Lean este borrador juntos y adáptenlo antes de firmar. Su generación no significa
-que alguna de las partes lo haya aceptado.
-
-Trabajar juntos
+Lo que compartimos
 Para revisar el proyecto o colaborar en él, podemos compartir borradores,
-investigaciones, notas, ideas y otros materiales no públicos, incluidas las copias.
-La información es confidencial si está identificada o es razonablemente reconocible
-como tal, ya sea escrita, oral, visual o electrónica.
+investigaciones, notas, ideas y otros materiales no públicos, incluidas las
+copias. La información es confidencial si está identificada o es razonablemente
+reconocible como tal, por escrito, de forma oral, visual o electrónica.
 
-Utilizar con cuidado
-La persona destinataria la utiliza solo para revisar el proyecto o colaborar en
-él, con cuidado razonable y las copias necesarias. El acceso se limita a quienes
-lo necesitan y tienen obligaciones equivalentes o secreto profesional. Compartir,
-publicar o cargar en servicios externos requiere el permiso del responsable del
-proyecto, sin perjuicio de las excepciones siguientes. Las herramientas aprobadas
-siguen permitidas.
+Cómo utilizarlo
+Utilice esta información solo para revisar el proyecto o colaborar en él.
+Trátela con cuidado razonable y haga solo las copias necesarias. Dé acceso
+únicamente a quienes lo necesitan y tienen deberes equivalentes de
+confidencialidad o secreto profesional.
 
-Excepciones y divulgaciones protegidas
-Se excluye información hecha pública sin incumplimiento, conocida lícitamente
-sin deberes de confidencialidad, desarrollada independientemente sin utilizar
-información confidencial, recibida lícitamente de un tercero sin restricciones
-o expresamente liberada. Las divulgaciones exigidas o protegidas por ley, las
-comunicaciones protegidas de irregularidades y el acceso a las autoridades siguen
-permitidos. Las comunicaciones protegidas no requieren permiso ni aviso previo.
-No se restringen los derechos imperativos, incluidos los derechos legítimos de
-los representantes de los trabajadores. Se permite el asesoramiento jurídico
-o profesional confidencial.
+Compartirla, publicarla o cargarla en servicios externos requiere el permiso
+del responsable del proyecto, con las excepciones siguientes. Las herramientas
+aprobadas siguen permitidas.
+
+Excepciones y derechos protegidos
+Estos deberes no cubren información que se haga pública sin incumplimiento,
+se conozca lícitamente sin deberes de confidencialidad, se desarrolle de forma
+independiente sin utilizar información confidencial, se reciba lícitamente de
+un tercero sin restricciones o se libere expresamente.
+
+Las divulgaciones exigidas o protegidas por ley, las comunicaciones protegidas
+de irregularidades y el acceso a las autoridades siguen permitidos. Las
+comunicaciones protegidas no requieren permiso ni aviso previo. Los derechos
+imperativos, incluidos los de los trabajadores y sus representantes, no se
+restringen. Puede solicitar asesoramiento jurídico o profesional confidencial.
 
 Los derechos siguen con sus titulares
-La propiedad, los derechos de autor y otros derechos permanecen con sus titulares.
-Solo se permite el uso necesario para revisar el proyecto o colaborar en él;
-no se conceden derechos de publicación, transmisiones de propiedad, licencias
-exclusivas ni derechos sobre materiales de terceros.
+La propiedad, los derechos de autor y los demás derechos permanecen con sus
+titulares. Este acuerdo solo permite el uso necesario para revisar el proyecto
+o colaborar en él. No concede derechos de publicación, transmisiones de
+propiedad, licencias exclusivas ni derechos sobre materiales de terceros.
 
-Devolver y eliminar
-A petición o al terminar la revisión o colaboración, devolver o eliminar las
-copias confidenciales dentro de un plazo razonable. Las copias exigidas por ley
-o conservadas únicamente como prueba jurídica pueden mantenerse con acceso
-restringido. Las copias de seguridad pueden permanecer hasta su eliminación
-normal, sin otros usos. La conservación lícita no extingue la confidencialidad.
+Devolver o eliminar
+A petición o al terminar la revisión o colaboración, devuelva o elimine las
+copias confidenciales dentro de un plazo razonable. Mantenga un acceso restringido
+a las copias exigidas por ley o conservadas únicamente como prueba jurídica.
+Las copias de seguridad pueden permanecer hasta su eliminación normal, sin
+otros usos. Los deberes de confidencialidad continúan para las copias
+conservadas lícitamente.
 
-Condiciones justas
-Las normas legales aplicables determinan la ley, los tribunales, las medidas de
-reparación y la responsabilidad; prevalecen las protecciones imperativas.
-Este borrador no añade penalizaciones contractuales ni responsabilidad general
-independiente de la culpa. Los cambios requieren el acuerdo de ambas partes.
-Las actualizaciones del software o la plantilla no modifican un acuerdo firmado.
+Qué más se aplica
+Las normas legales aplicables rigen la responsabilidad y las medidas de
+reparación. Este acuerdo no añade penalizaciones contractuales ni responsabilidad
+general sin culpa. Las protecciones legales obligatorias se mantienen. Acordamos
+los cambios entre ambas partes.
 
-Destinatario/a: {{recipient_name}}
+Persona destinataria: {{recipient_name}}
 Firma __________________________________________________________________
-Por el proyecto: nombre y firma _________________________________________
+Responsable del proyecto: nombre ________________________________________
+Firma __________________________________________________________________
 """,
-    "it": """Accordo di riservatezza — bozza da esaminare
+    "it": """Accordo di riservatezza
 
 Progetto: {{project_title}}
 Destinatario/a: {{recipient_name}}
@@ -251,117 +260,122 @@ Indirizzo: {{recipient_address}}
 Data: {{date}}
 Luogo: {{place}}
 
-Leggete questa bozza insieme e adattatela prima di firmare. La sua generazione
-non significa che una delle parti l'abbia accettata.
-
-Lavorare insieme
+Cosa condividiamo
 Per esaminare il progetto o collaborarvi, possiamo condividere bozze, ricerche,
 appunti, idee e altri materiali non pubblici, incluse le copie. Le informazioni
-sono riservate se indicate o ragionevolmente riconoscibili come tali, siano esse
-scritte, orali, visive o elettroniche.
+sono riservate se indicate o ragionevolmente riconoscibili come tali, per
+iscritto, a voce, in forma visiva o elettronica.
 
-Usare con cura
-La persona destinataria le utilizza solo per esaminare il progetto o collaborarvi,
-con ragionevole diligenza e le copie necessarie. L'accesso è limitato a chi ne ha
-bisogno e ha obblighi equivalenti o un segreto professionale. Condividere, pubblicare
-o caricare su servizi esterni richiede il permesso del responsabile del progetto,
-fatte salve le eccezioni seguenti. Gli strumenti approvati restano consentiti.
+Come usarle
+Usa queste informazioni solo per esaminare il progetto o collaborarvi.
+Trattale con ragionevole diligenza e fai solo le copie necessarie. Consenti
+l'accesso soltanto a chi ne ha bisogno ed è tenuto a una riservatezza equivalente
+o al segreto professionale.
 
-Eccezioni e divulgazioni protette
-Sono escluse informazioni rese pubbliche senza violazioni, lecitamente note senza
-obblighi di riservatezza, sviluppate indipendentemente senza utilizzare informazioni
-riservate, ricevute lecitamente da un terzo senza restrizioni o espressamente
-liberate. Restano consentite le divulgazioni richieste o protette dalla legge,
-le segnalazioni protette di illeciti e l'accesso alle autorità. Le segnalazioni
-protette non richiedono permesso né preavviso. I diritti inderogabili, compresi
-quelli legittimi dei rappresentanti dei lavoratori, non sono limitati.
-È consentita la consulenza legale o professionale riservata.
+Condividerle, pubblicarle o caricarle su servizi esterni richiede il permesso
+del responsabile del progetto, con le eccezioni seguenti. Gli strumenti
+approvati restano consentiti.
+
+Eccezioni e diritti protetti
+Questi obblighi non riguardano informazioni rese pubbliche senza violazioni,
+lecitamente note senza obblighi di riservatezza, sviluppate indipendentemente
+senza usare informazioni riservate, ricevute lecitamente da un terzo senza
+restrizioni o espressamente liberate.
+
+Restano consentite le divulgazioni richieste o protette dalla legge, le
+segnalazioni protette di illeciti e l'accesso alle autorità. Le segnalazioni
+protette non richiedono permesso né preavviso. I diritti inderogabili, inclusi
+quelli dei lavoratori e dei loro rappresentanti, non sono limitati. Puoi
+richiedere una consulenza legale o professionale riservata.
 
 I diritti rimangono ai titolari
-La proprietà, i diritti d'autore e gli altri diritti rimangono ai rispettivi titolari.
-È consentito solo l'uso necessario per esaminare il progetto o collaborarvi;
-non sono concessi diritti di pubblicazione, trasferimenti di proprietà, licenze
-esclusive o diritti sui materiali di terzi.
+La proprietà, i diritti d'autore e gli altri diritti rimangono ai loro titolari.
+Questo accordo permette solo l'uso necessario per esaminare il progetto o
+collaborarvi. Non concede diritti di pubblicazione, trasferimenti di proprietà,
+licenze esclusive o diritti sui materiali di terzi.
 
-Restituire e cancellare
-Su richiesta o al termine dell'esame o della collaborazione, restituire o cancellare
-le copie riservate entro un periodo ragionevole. Le copie richieste dalla legge
-o conservate esclusivamente come prova giuridica possono rimanere con accesso
-limitato. Le copie di sicurezza possono rimanere fino alla cancellazione ordinaria,
-senza altri usi. La conservazione lecita non pone fine alla riservatezza.
+Restituire o cancellare
+Su richiesta o al termine dell'esame o della collaborazione, restituisci o
+cancella le copie riservate entro un periodo ragionevole. Mantieni un accesso
+limitato alle copie richieste dalla legge o conservate solo come prova giuridica.
+Le copie di sicurezza possono rimanere fino alla cancellazione ordinaria, senza
+altri usi. Gli obblighi di riservatezza continuano per le copie conservate
+lecitamente.
 
-Condizioni eque
-Le regole legali applicabili determinano la legge, i giudici, i rimedi e la
-responsabilità; le tutele inderogabili prevalgono. Questa bozza non aggiunge penali
-contrattuali o una responsabilità generale indipendente dalla colpa. Le modifiche
-richiedono l'accordo di entrambe le parti. Gli aggiornamenti del software o del
-modello non modificano un accordo firmato.
+Cos'altro si applica
+Le regole legali applicabili disciplinano la responsabilità e i rimedi.
+Le tutele obbligatorie restano valide. Questo accordo non aggiunge penali
+contrattuali né responsabilità generale senza colpa. Concordiamo insieme
+eventuali modifiche.
 
 Destinatario/a: {{recipient_name}}
 Firma __________________________________________________________________
-Per il progetto: nome e firma ___________________________________________
+Responsabile del progetto: nome _________________________________________
+Firma __________________________________________________________________
 """,
-    "pt": """Acordo de confidencialidade — minuta para revisão
+    "pt": """Acordo de confidencialidade
 
 Projeto: {{project_title}}
-Destinatário/a: {{recipient_name}}
+Pessoa destinatária: {{recipient_name}}
 Endereço: {{recipient_address}}
 Data: {{date}}
 Local: {{place}}
 
-Leiam esta minuta em conjunto e adaptem-na antes de assinar. A sua geração
-não significa que alguma das partes a tenha aceitado.
+O que partilhamos
+Para analisar o projeto ou colaborar nele, podemos partilhar versões
+preliminares, pesquisas, notas, ideias e outros materiais não públicos,
+incluindo cópias. As informações são confidenciais se identificadas ou
+razoavelmente reconhecíveis como tal, por escrito, oralmente, visualmente
+ou por meios eletrónicos.
 
-Trabalhar em conjunto
-Para analisar o projeto ou colaborar nele, podemos partilhar versões preliminares,
-pesquisas, notas, ideias e outros materiais não públicos, incluindo cópias.
-As informações são confidenciais se identificadas ou razoavelmente reconhecíveis
-como tal, sejam escritas, orais, visuais ou eletrónicas.
+Como utilizar
+Utilize estas informações apenas para analisar o projeto ou colaborar nele.
+Trate-as com cuidado razoável e faça apenas as cópias necessárias. Dê acesso
+só a quem dele necessita e tem deveres equivalentes de confidencialidade ou
+segredo profissional.
 
-Utilizar com cuidado
-A pessoa destinatária utiliza-as apenas para analisar o projeto ou colaborar nele,
-com cuidado razoável e as cópias necessárias. O acesso limita-se a quem dele
-necessita e tem deveres equivalentes ou segredo profissional. Partilhar, publicar
-ou enviar para serviços externos exige autorização do responsável pelo projeto,
-ressalvadas as exceções seguintes. As ferramentas aprovadas continuam permitidas.
+Partilhar, publicar ou enviar para serviços externos exige autorização do
+responsável pelo projeto, com as exceções seguintes. As ferramentas aprovadas
+continuam permitidas.
 
-Exceções e divulgações protegidas
-Excluem-se informações tornadas públicas sem violação, conhecidas licitamente
-sem deveres de confidencialidade, desenvolvidas independentemente sem utilizar
-informações confidenciais, recebidas licitamente de um terceiro sem restrições
-ou expressamente liberadas. As divulgações exigidas ou protegidas por lei,
-as comunicações protegidas de irregularidades e o acesso às autoridades continuam
-permitidos. As comunicações protegidas não exigem autorização nem aviso prévio.
-Os direitos imperativos, incluindo os direitos legítimos dos representantes dos
-trabalhadores, não são limitados. O aconselhamento jurídico ou profissional
-confidencial é permitido.
+Exceções e direitos protegidos
+Estes deveres não abrangem informações tornadas públicas sem violação,
+conhecidas licitamente sem deveres de confidencialidade, desenvolvidas de
+forma independente sem utilizar informações confidenciais, recebidas
+licitamente de um terceiro sem restrições ou expressamente liberadas.
+
+As divulgações exigidas ou protegidas por lei, as comunicações protegidas de
+irregularidades e o acesso às autoridades continuam permitidos. As comunicações
+protegidas não exigem autorização nem aviso prévio. Os direitos imperativos,
+incluindo os dos trabalhadores e dos seus representantes, não são limitados.
+Pode procurar aconselhamento jurídico ou profissional confidencial.
 
 Os direitos permanecem com os titulares
 A propriedade, os direitos de autor e os demais direitos permanecem com os
-respetivos titulares. Apenas é permitida a utilização necessária para analisar
-o projeto ou colaborar nele; não são concedidos direitos de publicação,
+respetivos titulares. Este acordo permite apenas a utilização necessária para
+analisar o projeto ou colaborar nele. Não concede direitos de publicação,
 transferências de propriedade, licenças exclusivas ou direitos sobre materiais
 de terceiros.
 
-Devolver e eliminar
-A pedido ou no fim da análise ou colaboração, devolver ou eliminar as cópias
-confidenciais num prazo razoável. As cópias exigidas por lei ou conservadas
-exclusivamente como prova jurídica podem permanecer com acesso restrito.
-As cópias de segurança podem permanecer até à eliminação normal, sem outras
-utilizações. A conservação lícita não extingue a confidencialidade.
+Devolver ou eliminar
+A pedido ou no fim da análise ou colaboração, devolva ou elimine as cópias
+confidenciais num prazo razoável. Mantenha acesso restrito às cópias exigidas
+por lei ou conservadas apenas como prova jurídica. As cópias de segurança podem
+permanecer até à eliminação normal, sem outros usos. Os deveres de
+confidencialidade continuam para as cópias conservadas licitamente.
 
-Condições justas
-As regras legais aplicáveis determinam a lei, os tribunais, as medidas de reparação
-e a responsabilidade; prevalecem as proteções imperativas. Esta minuta não acrescenta
-penalizações contratuais nem responsabilidade geral independente da culpa.
-As alterações exigem o acordo de ambas as partes. Atualizações do software ou
-do modelo não alteram um acordo assinado.
+O que mais se aplica
+As regras legais aplicáveis regem a responsabilidade e as medidas de reparação.
+As proteções legais obrigatórias mantêm-se. Este acordo não acrescenta
+penalizações contratuais nem responsabilidade geral sem culpa. Acordamos
+as alterações entre ambas as partes.
 
-Destinatário/a: {{recipient_name}}
+Pessoa destinatária: {{recipient_name}}
 Assinatura _____________________________________________________________
-Pelo projeto: nome e assinatura _________________________________________
+Responsável pelo projeto: nome __________________________________________
+Assinatura _____________________________________________________________
 """,
-    "nl": """Geheimhoudingsovereenkomst — concept ter beoordeling
+    "nl": """Geheimhoudingsovereenkomst
 
 Project: {{project_title}}
 Ontvanger: {{recipient_name}}
@@ -369,57 +383,58 @@ Adres: {{recipient_address}}
 Datum: {{date}}
 Plaats: {{place}}
 
-Lees dit concept samen en pas het vóór ondertekening aan. Het aanmaken ervan
-betekent niet dat een van de partijen ermee heeft ingestemd.
+Wat we delen
+Voor projectbeoordeling of samenwerking kunnen we niet-openbare concepten,
+onderzoek, notities, ideeën en ander materiaal delen, inclusief kopieën.
+Informatie is vertrouwelijk als dit is aangegeven of redelijkerwijs herkenbaar
+is, schriftelijk, mondeling, visueel of elektronisch.
 
-Samenwerken
-Om het project te beoordelen of eraan samen te werken, kunnen we niet-openbare
-concepten, onderzoek, notities, ideeën en ander materiaal delen, inclusief kopieën.
-Informatie is vertrouwelijk als dit is aangegeven of redelijkerwijs herkenbaar is,
-of zij nu schriftelijk, mondeling, visueel of elektronisch wordt gedeeld.
+Hoe we het gebruiken
+Gebruik deze informatie alleen om het project te beoordelen of eraan samen
+te werken. Ga er redelijk zorgvuldig mee om en maak alleen noodzakelijke
+kopieën. Geef alleen toegang aan mensen die deze nodig hebben en gelijkwaardige
+geheimhoudingsplichten hebben of aan een beroepsgeheim gebonden zijn.
 
-Zorgvuldig gebruiken
-De ontvanger gebruikt haar alleen voor projectbeoordeling of samenwerking,
-met redelijke zorg en noodzakelijke kopieën. Toegang is beperkt tot mensen die
-deze nodig hebben en gelijkwaardige geheimhoudingsplichten of een beroepsgeheim
-hebben. Delen, publiceren of uploaden naar externe diensten vereist toestemming
-van de projectverantwoordelijke, met de uitzonderingen hieronder. Goedgekeurde
+Delen, publiceren of uploaden naar externe diensten vereist toestemming van de
+projectverantwoordelijke, met de uitzonderingen hieronder. Goedgekeurde
 hulpmiddelen blijven toegestaan.
 
-Uitzonderingen en beschermde openbaarmaking
-Uitgezonderd is informatie die zonder schending openbaar wordt, rechtmatig bekend
-was zonder geheimhoudingsplicht, onafhankelijk zonder vertrouwelijke informatie
-is ontwikkeld, rechtmatig van een derde zonder beperkingen is ontvangen of
-uitdrukkelijk is vrijgegeven. Wettelijk verplichte of beschermde openbaarmaking,
-beschermde meldingen van misstanden en toegang tot autoriteiten blijven toegestaan.
-Beschermde meldingen vereisen geen toestemming of voorafgaande kennisgeving.
-Dwingende rechten, waaronder rechtmatige rechten van werknemersvertegenwoordigers,
-worden niet beperkt. Vertrouwelijk juridisch of professioneel advies is toegestaan.
+Uitzonderingen en beschermde rechten
+Deze plichten gelden niet voor informatie die zonder schending openbaar wordt,
+rechtmatig bekend was zonder geheimhoudingsplicht, onafhankelijk zonder
+vertrouwelijke informatie is ontwikkeld, rechtmatig van een derde zonder
+beperkingen is ontvangen of uitdrukkelijk is vrijgegeven.
 
-Rechten blijven bij hun houders
+Wettelijk verplichte of beschermde openbaarmaking, beschermde meldingen van
+misstanden en toegang tot autoriteiten blijven toegestaan. Beschermde meldingen
+vereisen geen toestemming of voorafgaande kennisgeving. Dwingende rechten,
+ook die van werknemers en hun vertegenwoordigers, blijven behouden.
+Je mag vertrouwelijk juridisch of professioneel advies vragen.
+
+De rechten blijven bij hun houders
 Eigendom, auteursrechten en andere rechten blijven bij hun rechthebbenden.
-Alleen het gebruik dat nodig is voor projectbeoordeling of samenwerking is
-toegestaan; er worden geen publicatierechten, eigendomsoverdracht, exclusieve
-licentie of rechten op materiaal van derden verleend.
+Deze overeenkomst staat alleen het gebruik toe dat nodig is voor beoordeling
+of samenwerking aan het project. Zij verleent geen publicatierechten,
+eigendomsoverdracht, exclusieve licentie of rechten op materiaal van derden.
 
-Teruggeven en verwijderen
+Teruggeven of verwijderen
 Geef op verzoek of na afloop van de beoordeling of samenwerking vertrouwelijke
-kopieën binnen een redelijke termijn terug of verwijder ze. Wettelijk vereiste
-kopieën of kopieën die uitsluitend als juridisch bewijs worden bewaard, mogen
-met beperkte toegang behouden blijven. Reservekopieën mogen tot de gebruikelijke
-verwijdering blijven bestaan, zonder ander gebruik. Rechtmatige bewaring beëindigt
-de geheimhoudingsplichten niet.
+kopieën binnen een redelijke termijn terug of verwijder ze. Houd wettelijk
+vereiste kopieën en kopieën die uitsluitend als juridisch bewijs worden bewaard
+beperkt toegankelijk. Reservekopieën mogen tot de gebruikelijke verwijdering
+blijven bestaan, zonder ander gebruik. De geheimhoudingsplichten blijven gelden
+voor rechtmatig bewaarde kopieën.
 
-Eerlijke voorwaarden
-De toepasselijke wettelijke regels bepalen het recht, de bevoegde rechter,
-rechtsmiddelen en aansprakelijkheid; dwingende bescherming gaat voor.
-Dit concept voegt geen contractuele boete of algemene aansprakelijkheid ongeacht
-schuld toe. Wijzigingen vereisen instemming van beide partijen. Software- of
-sjabloonupdates wijzigen geen ondertekende overeenkomst.
+Wat verder geldt
+De toepasselijke wettelijke regels bepalen aansprakelijkheid en rechtsmiddelen.
+Verplichte wettelijke bescherming blijft gelden. Deze overeenkomst voegt geen
+contractuele boete of algemene aansprakelijkheid zonder schuld toe. Wij spreken
+wijzigingen samen af.
 
 Ontvanger: {{recipient_name}}
 Handtekening ___________________________________________________________
-Voor het project: naam en handtekening __________________________________
+Projectverantwoordelijke: naam __________________________________________
+Handtekening ___________________________________________________________
 """,
 }
 

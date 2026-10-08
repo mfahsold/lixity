@@ -93,6 +93,47 @@ def _full_dashboard() -> str:
 class TestJsDomContract(unittest.TestCase):
     """Every id the script touches must exist in the markup (no silent breakage)."""
 
+    def test_native_refresh_and_filter_reset(self):
+        """Native controls expose one refresh and an explicit filter escape."""
+        from lixity.server import build_server_dashboard
+
+        html, _ = build_server_dashboard(None)
+        self.assertEqual(html.count('data-action="analyze"'), 1)
+        self.assertNotIn('data-action="rebuild"', html)
+        self.assertIn('id="paragraph-filter-reset"', _full_dashboard())
+        embedding = render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
+        self.assertIn('data-action="analyze"', embedding)
+        self.assertIn('data-action="rebuild"', embedding)
+
+    def test_optional_research_metadata_disclosures(self):
+        """Optional metadata does not compete with authored content fields."""
+        html = _full_dashboard()
+        for identifier in ("r-ingest-options", "r-dos-options", "r-claim-options",
+                           "r-decision-options", "import-project-options"):
+            self.assertRegex(html, rf'<details[^>]*id="{identifier}"')
+
+    def test_minimal_workflow_labels_cover_every_locale(self):
+        """New native controls have translated labels in every label pack."""
+        from lixity.workspace_labels import WORKSPACE_LABELS
+
+        for language, labels in WORKSPACE_LABELS.items():
+            for key in ("optional_details", "marker_save", "marker_saving", "marker_saved",
+                        "marker_save_failed", "paragraph_filter_reset", "scene_containing_chapter",
+                        "settings_bound_error", "wizard_research_required"):
+                with self.subTest(language=language, key=key):
+                    self.assertTrue(labels.get(key), f"Missing {language} label: {key}")
+                    self.assertNotEqual(labels[key], key)
+
+    def test_scene_links_use_containing_chapters(self):
+        """Scene reports know their containing chapter, not source offsets."""
+        from lixity.scenes import scene_report
+        from lixity.ui.narration import render_scenes_panel
+        report = scene_report("## Synthetic chapter\n\nA door shuts.\n\n---\n\nA window opens.",
+                              CorpusConfig(language="en"))
+        html = render_scenes_panel(report, None, "en")
+        self.assertIn('href="#ch-1"', html)
+        self.assertNotIn('data-line=', html)
+
     def test_script_ids_are_rendered(self):
         script = "\n".join(
             asset.read_text(encoding="utf-8") for asset in sorted((UI_DIR / "assets").glob("*.js"))
