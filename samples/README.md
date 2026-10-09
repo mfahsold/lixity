@@ -2,7 +2,8 @@
 
 The two historical source works are **public domain** and are **not** covered
 by the Lixity Non-Commercial License. The original sequel draft and the invented
-first-look example are not public domain; their license status is listed below.
+first-look example are listed separately below with their provenance and
+distribution terms.
 The unmodified Project Gutenberg source files keep their original
 header and license notice and must not be redistributed without it.
 

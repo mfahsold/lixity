@@ -131,7 +131,9 @@ native Windows-1252 PDF repertoire, download UTF-8 text for your local editor.
 GitHub Pages hosts the documentation, not the interactive application.
 The built-in analysis runs on your computer; optional integrations have their own
 setup and data handling. All tabs connected to one server share its active project.
-For normal use, keep the terminal open while working in the browser.
+Check the project name in the workspace bar. Use **Open Project** to switch the
+browser workspace; CLI analysis, research and build commands do not switch an
+already running server. For normal use, keep its terminal open while working.
 
 ```sh
 # Open your project and launch the browser

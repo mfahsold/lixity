@@ -1146,7 +1146,7 @@ details.nda .row { margin-top: .5rem; }
   margin-block: .4rem;
 }
 .research-card-header { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: .4rem; }
-.research-card-title { font-weight: 600; font-size: .88rem; }
+.research-card-title { min-width: 0; max-width: 100%; overflow-wrap: anywhere; font-weight: 600; font-size: .88rem; }
 .research-tags { display: inline-flex; flex-wrap: wrap; gap: .3rem; margin-top: .3rem; }
 .research-tag {
   font-size: .7rem;

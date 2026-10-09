@@ -52,7 +52,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | `lixity showing FILE [--json]` | showing vs. telling balance per chapter | text / JSON |
 | `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR, structural diagnostics; `--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`) | JSON (schema v4) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard (Settings: z\*, FDR, flags cut, dim threshold) | file path |
-| `lixity serve [--port N] [--host IP] [--no-project]` | native development server & interactive dashboard with project switcher | loopback HTTP server |
+| `lixity serve [PATH] [--port N] [--host IP] [--no-project]` | native development server & interactive dashboard with project switcher | loopback HTTP server |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` (same threshold flags as `style`) | artifact list |
 | `lixity research SUBCOMMAND --project DIR` | evidence-based research archive (init, ingest, search, cite, sources, dossier, compare) | JSON |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
@@ -524,6 +524,11 @@ certification. See [OCR usage and limits](research/USAGE.md#native-pdfs-versus-s
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
+
+CLI analysis, research and build commands do not select a project in an existing
+server. Use `POST /api/project-open`, or **Open Project** in the app, to switch
+that server's workspace. The native `serve` command accepts a positional project
+or manuscript path, not `--project` / `--manuscript` flags.
 
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, entries: [{name, path, kind}], truncated}`, where `kind` is `directory` or `manuscript`. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
 - `POST /api/project-create`: `{"title": "...", "language": "de", "template": "three_act", "init_research": true}`

@@ -11,6 +11,9 @@ const root = path.resolve(__dirname, '../..');
 const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-list-filters-'));
 const pythonEnv = {...process.env, PYTHONPATH: path.join(root, 'src')};
+const longTitleSegment = 'SyntheticUnbrokenResearchTitle'.repeat(3);
+const sourceTitle = 'Alpha "quoted" <img src=x onerror=alert(1)> ' + longTitleSegment;
+const dossierTitle = 'Alpha dossier ' + longTitleSegment;
 
 (async () => {
   const server = spawn(python, ['-u', '-c', `
@@ -24,12 +27,12 @@ base = Path(sys.argv[1])
 project = base / 'synthetic-project'
 api.init(project, title='Synthetic filter archive')
 source_ids = []
-for name, title, tags in [('alpha', 'Alpha "quoted" <img src=x onerror=alert(1)>', ['Ledger']), ('beta', 'Beta source', ['Forest'])]:
+for name, title, tags in [('alpha', 'Alpha "quoted" <img src=x onerror=alert(1)> ${longTitleSegment}', ['Ledger']), ('beta', 'Beta source', ['Forest'])]:
     source = base / (name + '.txt')
     source.write_text('Original ' + name + ' detail.', encoding='utf-8')
     source_ids.append(api.ingest(project, source, title=title, context={'tags': tags}, allow_retention=True)['source_id'])
 dossier_ids = []
-for title, body, tags in [('Alpha dossier', 'Shipping excerpt.\\n\\n## Timeline\\nOriginal alpha dossier detail.', ['Harbor']), ('Beta dossier', 'Woodland excerpt.\\n\\n## Travel\\nOriginal beta dossier detail.', ['Forest'])]:
+for title, body, tags in [('Alpha dossier ${longTitleSegment}', 'Shipping excerpt.\\n\\n## Timeline\\nOriginal alpha dossier detail.', ['Harbor']), ('Beta dossier', 'Woodland excerpt.\\n\\n## Travel\\nOriginal beta dossier detail.', ['Forest'])]:
     dossier_ids.append(api.create_dossier(project, title=title, body=body, tags=tags)['dossier_id'])
 LixityServerHandler.workspace_root = str(project)
 LixityServerHandler.research_dir = str(project)
@@ -94,6 +97,7 @@ server.serve_forever()
 
     await page.locator('[data-rtab=dossiers]').click();
     await expect(page.locator('#research-dossiers-list .research-card')).toHaveCount(2);
+    await page.waitForLoadState('networkidle');
     const dossierCard = page.locator('.research-card').filter({has: page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossierIds[0]}"]`)});
     await dossierCard.locator('summary').click();
     await expect(dossierCard.locator('.research-details-body')).toContainText('Original alpha dossier detail.');
@@ -173,6 +177,19 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
         for (const [kind, name] of [['sources', sourcesName], ['dossiers', dossiersName]]) {
           await page.locator(`[data-rtab=${kind}]`).click();
           await expect(page.locator('#research-' + kind + '-list .research-card')).toHaveCount(3);
+          const title = page.locator('#research-' + kind + '-list .research-card-title').filter({hasText: longTitleSegment});
+          await expect(title).toHaveText(kind === 'sources' ? sourceTitle : dossierTitle);
+          assert.ok(await title.evaluate(element => {
+            const box = element.getBoundingClientRect();
+            const card = element.closest('.research-card').getBoundingClientRect();
+            return box.left >= card.left && box.right <= card.right && box.left >= 0 && box.right <= innerWidth
+              && element.scrollWidth <= element.clientWidth + 1 && element.scrollHeight <= element.clientHeight + 1;
+          }), `${language} ${kind} must display the complete long title within its card at ${width}px`);
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+            `${language} ${kind} long title overflows the viewport at ${width}px`);
+          if (language === 'en') {
+            await page.locator('#research-manager').screenshot({path: path.join(artifacts, `${kind}-long-title-${width}.png`)});
+          }
           const input = page.getByRole('searchbox', {name, exact: true});
           await input.fill('gamma');
           await expect(page.locator('#research-' + kind + '-list .research-card:visible')).toHaveCount(1);
@@ -186,7 +203,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       }
     }
     assert.deepEqual(errors, [], 'Research filters must not cause browser runtime errors');
-    console.log(`Research list filters: matching, inert text, preserved details, no typing requests, async refresh, associations and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
+    console.log(`Research list filters: matching, inert text, preserved details, no typing requests, async refresh, associations, complete long titles and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
   } finally {
     if (browser) await browser.close();
     lines.close();

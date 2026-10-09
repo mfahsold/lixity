@@ -7,7 +7,7 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [2.3.0] - 2026-10-09
+## [2.3.0] - 2026-10-10
 
 ### Added
 - A public, read-only synthetic example and a three-minute first-look guide.
@@ -24,6 +24,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   is reported through the CLI error channel without accepting a capture.
 - The security policy links to the current release instead of retaining an old
   version claim. Image guidance distinguishes generated references from evidence.
+- Long research titles wrap within their cards on mobile. Project-opening
+  guidance explains that CLI work does not switch an already running web server.
 
 ## [2.2.0] - 2026-10-09
 
