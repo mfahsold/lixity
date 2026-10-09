@@ -90,6 +90,10 @@ manuscript editor. The NDA generator downloads a friendly confidentiality agreem
 using the recipient's name,
 optional address, project, date and place; see the
 [NDA reference](USAGE.md#nda-agreements).
+Set **Author name** in the loaded project's Settings to prefill the project
+representative in the agreement. Apply stores that name in the project. The
+read-only manuscript identity check shows matching, missing or different metadata;
+it does not edit prose or establish who wrote the text.
 Publication-specific exports and delivery integrations belong to project adapters.
 
 ## Research workflow

@@ -61,7 +61,7 @@ without fault. We agree any changes together.
 
 Recipient: {{recipient_name}}
 Signature ______________________________________________________________
-Project representative: name ___________________________________________
+Project representative: {{project_author}}
 Signature ______________________________________________________________
 """,
     "de": """Vertraulichkeitsvereinbarung
@@ -125,7 +125,7 @@ Gesetzliche Schutzrechte bleiben erhalten. Änderungen vereinbaren wir gemeinsam
 
 Empfangende Person: {{recipient_name}}
 Unterschrift ___________________________________________________________
-Projektverantwortliche Person: Name ____________________________________
+Projektverantwortliche Person: {{project_author}}
 Unterschrift ___________________________________________________________
 """,
     "fr": """Accord de confidentialité
@@ -188,7 +188,7 @@ ensemble de toute modification.
 
 Destinataire : {{recipient_name}}
 Signature ______________________________________________________________
-Responsable du projet : nom _____________________________________________
+Responsable du projet : {{project_author}}
 Signature ______________________________________________________________
 """,
     "es": """Acuerdo de confidencialidad
@@ -249,7 +249,7 @@ los cambios entre ambas partes.
 
 Persona destinataria: {{recipient_name}}
 Firma __________________________________________________________________
-Responsable del proyecto: nombre ________________________________________
+Responsable del proyecto: {{project_author}}
 Firma __________________________________________________________________
 """,
     "it": """Accordo di riservatezza
@@ -310,7 +310,7 @@ eventuali modifiche.
 
 Destinatario/a: {{recipient_name}}
 Firma __________________________________________________________________
-Responsabile del progetto: nome _________________________________________
+Responsabile del progetto: {{project_author}}
 Firma __________________________________________________________________
 """,
     "pt": """Acordo de confidencialidade
@@ -372,7 +372,7 @@ as alterações entre ambas as partes.
 
 Pessoa destinatária: {{recipient_name}}
 Assinatura _____________________________________________________________
-Responsável pelo projeto: nome __________________________________________
+Responsável pelo projeto: {{project_author}}
 Assinatura _____________________________________________________________
 """,
     "nl": """Geheimhoudingsovereenkomst
@@ -433,7 +433,7 @@ wijzigingen samen af.
 
 Ontvanger: {{recipient_name}}
 Handtekening ___________________________________________________________
-Projectverantwoordelijke: naam __________________________________________
+Projectverantwoordelijke: {{project_author}}
 Handtekening ___________________________________________________________
 """,
 }

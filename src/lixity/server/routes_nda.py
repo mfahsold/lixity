@@ -18,7 +18,7 @@ class NdaRoutesMixin(ResponseMixin):
             return
         try:
             document = draft_document(
-                self.workspace_root,
+                self.get_author_project_root(),
                 name=payload.get("name", ""),
                 address=payload.get("address", ""),
                 project_name=payload.get("project_name"),

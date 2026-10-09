@@ -27,13 +27,13 @@ pip`, or bypass an externally managed Python environment.
 These commands work in a terminal, including Windows PowerShell:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.2.0"
 lixity --version
 lixity about
 ```
 
-The current release is **v2.1.0**. This command selects a fixed release so that
-reinstalling it uses the same source. Read the [release notes](releases/v2.1.0.md)
+The current release is **v2.2.0**. This command selects a fixed release so that
+reinstalling it uses the same source. Read the [release notes](releases/v2.2.0.md)
 for changes and compatibility information.
 
 If `lixity` is not found, run `uv tool update-shell`, open a new terminal and
@@ -90,7 +90,7 @@ folder does not update the installed tool. Reinstall the chosen release or
 development source explicitly, verify its version, and restart its service.
 
 If you already use pipx, the equivalent alternative is
-`pipx install "git+https://github.com/mfahsold/lixity.git@v2.1.0"`, followed by
+`pipx install "git+https://github.com/mfahsold/lixity.git@v2.2.0"`, followed by
 `pipx ensurepath` if necessary; update with `pipx upgrade lixity`.
 
 ## First useful result
@@ -284,7 +284,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v2.1.0"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v2.2.0"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -293,7 +293,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v2.1.0"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v2.2.0"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```

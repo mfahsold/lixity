@@ -529,7 +529,7 @@ When running `lixity serve --port 8765`, local agents can trigger deterministic 
 - `POST /api/project-create`: `{"title": "...", "language": "de", "template": "three_act", "init_research": true}`
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
-- `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`. Unposted threshold fields retain their active values. Numeric fields use JSON numbers, not strings; integers reject fractional values and booleans. The shared `FingerprintThresholds` policy requires finite nonnegative z values with strong ≥ mild, q strictly between 0 and 1, positive dimension threshold, `bh|by`, integer minimum chapters ≥ 2 and severity 1–3. No extra UI ceilings or decimal step rounding apply.
+- `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`. Optional `author_name` persists only that field in the selected project's `lixity.toml`; it needs an active manuscript/archive project and a single-line string of at most 500 characters (empty clears). A failed config write leaves session values unchanged. Unposted threshold fields retain their active values. Numeric fields use JSON numbers, not strings; integers reject fractional values and booleans. The shared `FingerprintThresholds` policy requires finite nonnegative z values with strong ≥ mild, q strictly between 0 and 1, positive dimension threshold, `bh|by`, integer minimum chapters ≥ 2 and severity 1–3. No extra UI ceilings or decimal step rounding apply.
 - `POST /api/marker-add`: `{"kind": "todo", "line": 42, "note": "Check dialogue continuity"}`
 - `POST /api/marker-resolve`: `{"id": "m-abcd1234"}`
 - `POST /api/research-ingest`: `{"file": "...", "allow_retention": true, "title": "..."}`
@@ -592,7 +592,9 @@ NDA generation since 2.0.0:
 - Document selection is `nda.language`, resolved server/project language,
   project `language`, then `en`. Only the seven explicit supported codes are
   accepted. Optional `nda.template` is project-owned UTF-8 text, at most 2 MiB.
-  See [the five literal template fields](USAGE.md#project-nda-configuration-nda).
+  See [the literal template fields](USAGE.md#project-nda-configuration-nda), including
+  optional `project_author` from project-wide `author_name`. Recipient/document
+  transport stays five fields; no author default is hardcoded.
 - Native PDF encoding is Windows-1252; download the UTF-8 text for local rendering
   of a broader character repertoire. The friendly localized models in
   `nda_templates.py` are editable agreements, not a legal certification. User-facing

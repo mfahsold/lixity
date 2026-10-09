@@ -209,9 +209,9 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
     extraction_warnings: list[str] = []
     implementation: Literal["utf8-paragraphs/1", "baidu-unlimited-ocr/1", "tesseract-cli/1", "poppler-native/1"]
     if is_pdf:
-        if progress_callback:
-            progress_callback("ocr", "Rasterizing PDF pages and extracting text via OCR/poppler...")
         if latest is not None and latest.blob.sha256 == digest(content):
+            if progress_callback:
+                progress_callback("read", "Verifying retained PDF extraction...")
             repository.read_blob(latest.blob)
             prior = [record for record in snapshot.records.values() if isinstance(record, Extraction)
                      and record.source_version_ref.id == latest.id]
@@ -225,6 +225,8 @@ def _prepare_ingest(repository: Repository, snapshot: Snapshot, file: str | Path
             spans = [(passage.start, passage.end) for passage in passages]
             implementation = snapshot.get(prior[0].activity_ref, Activity).implementation
         else:
+            if progress_callback:
+                progress_callback("ocr", "Rasterizing PDF pages and extracting text via OCR/poppler...")
             effective_fallback = allow_fallback or os.environ.get("LIXITY_OCR_FALLBACK", "").lower() in ("1", "true", "yes")
             # Extract the exact bytes retained below, even if the caller replaces its file.
             with tempfile.TemporaryDirectory(prefix="lixity-source-") as directory:

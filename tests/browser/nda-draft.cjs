@@ -86,6 +86,12 @@ const agreement = values => `Synthetic agreement\nName: ${values.name}\nAddress:
       const expected = {name, address, project_name: 'Synthetic Project', date: '2026-10-07', place: 'Synthetic place', format: 'text'};
       assert.deepEqual(requests.at(-1), expected);
       assert.equal(await page.locator('#nda-draft-preview').textContent(), agreement(expected));
+      const headingStyle = selector => page.locator(selector).evaluate(element => {
+        const style = getComputedStyle(element);
+        return {font: style.fontFamily, size: style.fontSize, weight: style.fontWeight};
+      });
+      assert.deepEqual(await headingStyle('#nda-preview-title'), await headingStyle('#settings-form h3'),
+        'NDA preview and Settings use the shared section-heading role');
       assert.equal(await page.locator('#nda-draft-preview img, #nda-draft-preview script').count(), 0);
       assert.equal(await page.evaluate(() => Boolean(window.ndaInjected)), false);
       for (const [selector, format, bytes] of [['#nda-pdf-btn', 'pdf', pdfBytes], ['#nda-text-btn', 'text', Buffer.from(agreement(expected))]]) {

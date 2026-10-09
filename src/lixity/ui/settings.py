@@ -3,6 +3,7 @@
 from collections.abc import Mapping, Sequence
 from typing import Any
 
+from ..config import MAX_AUTHOR_NAME_CHARS
 from ..style_fingerprint import FingerprintThresholds
 from .components import esc, help_term, label
 
@@ -13,6 +14,10 @@ def settings_form(
     current_language: str,
     language_options: Sequence[Any],
     thresholds: FingerprintThresholds,
+    *,
+    project_author: str = "",
+    identity_check: Mapping[str, Any] | None = None,
+    author_setting_enabled: bool = False,
 ) -> str:
     def translated(key: str) -> str:
         return esc(label(labels, key))
@@ -31,7 +36,44 @@ def settings_form(
     parts.extend([
         '</select></div>',
         f'<div class="setting-field"><label for="set-title">{translated("title")}</label>',
-        f'<input class="ctl" id="set-title" value="{esc(title)}"/></div></div>',
+        f'<input class="ctl" id="set-title" value="{esc(title)}"/></div>',
+        f'<div class="setting-field"><label for="set-author-name">{translated("project_author_name")}</label>',
+        f'<input class="ctl" id="set-author-name" value="{esc(project_author)}" '
+        f'maxlength="{MAX_AUTHOR_NAME_CHARS}" aria-describedby="set-author-name-help" '
+        f'data-author-setting-enabled="{str(author_setting_enabled).lower()}"'
+        f'{" disabled" if not author_setting_enabled else ""}/>',
+        f'<p id="set-author-name-help">{translated("project_author_hint" if author_setting_enabled else "project_author_unavailable")}</p></div></div>',
+    ])
+    if identity_check is not None:
+        parts.extend([
+            '<section id="project-identity-check" aria-labelledby="project-identity-title">',
+            f'<h4 id="project-identity-title">{translated("project_identity_title")}</h4>',
+            f'<p class="ctl-note">{translated("project_identity_hint")}</p>',
+            '<dl class="research-revision-readonly">',
+        ])
+        statuses = {"matched", "mismatch", "missing", "unsupported", "unavailable"}
+        for key, title_key, project_value in (("title", "title", title),
+                                              ("author_name", "project_author_name", project_author)):
+            check = identity_check.get(key, {})
+            if not isinstance(check, Mapping):
+                check = {}
+            status = check.get("status")
+            if not isinstance(status, str) or status not in statuses:
+                status = "unavailable"
+            parts.extend([
+                f'<dt>{translated(title_key)}</dt><dd>',
+                f'<strong data-identity-status="{status}">{translated("project_identity_" + str(status))}</strong>',
+                f'<div>{translated("project_identity_saved")}: {esc(project_value) if project_value else translated("project_identity_not_set")}</div>',
+            ])
+            if check.get("value") is not None:
+                parts.append(f'<div>{translated("project_identity_manuscript")}: {esc(str(check["value"]))}</div>')
+            source_key = {"front_matter": "project_identity_source_metadata",
+                          "title_page": "project_identity_source_title_page"}.get(str(check.get("source")))
+            if source_key:
+                parts.append(f'<div class="ctl-note">{translated("project_identity_source")}: {translated(source_key)}</div>')
+            parts.append('</dd>')
+        parts.append('</dl></section>')
+    parts.extend([
         '<details class="settings-advanced">',
         f'<summary>{translated("settings_advanced")}</summary>',
         f'<p class="panel-guide">{translated("settings_guidance")}</p>',

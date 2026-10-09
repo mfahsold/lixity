@@ -7,9 +7,16 @@ const assert = require('node:assert/strict');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '../..');
 const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c',
-  "import runpy; print(runpy.run_path('tests/test_ui_contract.py')['_full_dashboard']())"],
+  `import json, runpy
+from lixity.ui import render_dashboard
+print(json.dumps({"analysis": runpy.run_path('tests/test_ui_contract.py')['_full_dashboard'](),
+    "identity": render_dashboard([], [], controls=True, title="Synthetic project",
+        project_author="Synthetic Writer", author_setting_enabled=True,
+        identity_check={"title":{"status":"matched","value":"Synthetic project","source":"metadata:title"},
+            "author_name":{"status":"mismatch","value":"Another Writer","source":"metadata:author"}})}))`],
   {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8'});
 assert.equal(fixture.status, 0, fixture.stderr);
+const fixtures = JSON.parse(fixture.stdout);
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-visual-consistency-'));
 const contrast = (first, second) => {
   const luminance = value => value.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255)
@@ -18,6 +25,33 @@ const contrast = (first, second) => {
   const a = luminance(first), b = luminance(second);
   return (Math.max(a, b) + .05) / (Math.min(a, b) + .05);
 };
+const textRole = locator => locator.evaluate(element => {
+  const css = getComputedStyle(element);
+  return {family: css.fontFamily, size: css.fontSize, weight: css.fontWeight,
+    lineHeight: css.lineHeight, color: css.color};
+});
+async function checkTypography(page, label) {
+  const body = await textRole(page.locator('body'));
+  const controlFamilies = await page.locator('button, select, textarea, input.ctl:not(.ctl-code)').evaluateAll(elements =>
+    elements.map(element => ({id: element.id || element.className, family: getComputedStyle(element).fontFamily})));
+  assert.ok(controlFamilies.length > 0 && controlFamilies.every(control => control.family === body.family),
+    `${label} UI control fonts: ${JSON.stringify(controlFamilies.filter(control => control.family !== body.family))}`);
+  const settingLabel = await textRole(page.locator('.setting-field label').first());
+  const formLabel = await textRole(page.locator('.form-label').first());
+  assert.deepEqual(settingLabel, formLabel, `${label} Settings and modal field labels`);
+  const settingsTitle = await textRole(page.locator('.settings-form h3'));
+  const sectionTitle = await textRole(page.locator('#research-manager .section-heading').first());
+  assert.deepEqual(settingsTitle, sectionTitle, `${label} section headings`);
+  const fieldHelp = await textRole(page.locator('#set-author-name-help'));
+  const sharedHelp = await textRole(page.locator('#research-hint'));
+  assert.deepEqual(fieldHelp, sharedHelp, `${label} field and panel helper text`);
+  const code = await textRole(page.locator('code').first());
+  const passageId = await textRole(page.locator('#r-link-passage-id'));
+  assert.equal(passageId.family, code.family, `${label} technical input and code font`);
+  assert.notEqual(code.family, body.family, `${label} code keeps its reading role`);
+  assert.notEqual((await textRole(page.locator('.project-header h1'))).family, body.family,
+    `${label} project title keeps its literary font`);
+}
 (async () => {
   const browser = await launchChromium();
   try {
@@ -26,15 +60,15 @@ const contrast = (first, second) => {
       const errors = [];
       await context.route('http://lixity.test/**', route => {
         const url = new URL(route.request().url());
-        if (url.pathname === '/app') return route.fulfill({contentType: 'text/html', body: fixture.stdout});
+        if (url.pathname === '/app' || url.pathname === '/identity') return route.fulfill({contentType: 'text/html', body: fixtures[url.pathname === '/app' ? 'analysis' : 'identity']});
         if (url.pathname.startsWith('/api/')) return route.fulfill({json: {ok: true, locked: true, records: []}});
         const relative = url.pathname.replace(/^\/site\//, '') || 'index.html';
         const file = path.resolve(root, 'docs', relative);
         assert.ok(file.startsWith(path.join(root, 'docs') + path.sep));
         return route.fulfill({contentType: file.endsWith('.css') ? 'text/css' : file.endsWith('.js') ? 'text/javascript' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(file)});
       });
-      const app = await context.newPage(), site = await context.newPage();
-      for (const page of [app, site]) page.on('pageerror', e => errors.push(e.message));
+      const app = await context.newPage(), site = await context.newPage(), identity = await context.newPage();
+      for (const page of [app, site, identity]) page.on('pageerror', e => errors.push(e.message));
       for (const width of [1440, 320]) {
         for (const [page, route] of [[app, 'app'], [site, 'site/']]) {
           await page.setViewportSize({width, height: 1000});
@@ -50,6 +84,27 @@ const contrast = (first, second) => {
           return colors;
         });
         assert.deepEqual(await roles(app), await roles(site), `palette mismatch: ${theme}`);
+        await checkTypography(app, `${theme} ${width}px`);
+        await identity.setViewportSize({width, height: 1000});
+        await identity.goto('http://lixity.test/identity');
+        await identity.locator('#tab-view-project').click();
+        assert.deepEqual(await textRole(identity.locator('#project-identity-check dt').first()),
+          await textRole(identity.locator('.setting-field label').first()), `${theme} ${width}px identity labels`);
+        assert.ok(await identity.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          `${theme} ${width}px identity overflow`);
+        await identity.locator('#project-identity-check').screenshot({path: path.join(artifacts, `identity-${theme}-${width}-${hasTouch ? 'touch' : 'mouse'}.png`)});
+        await app.locator('#btn-modal-new-project').click();
+        const createDialog = app.locator('#modal-project-create');
+        assert.ok(await createDialog.isVisible());
+        await app.locator('#tab-btn-scratch').click();
+        assert.ok(await app.locator('#tab-pane-scratch').isVisible());
+        assert.equal((await textRole(app.locator('#tab-btn-scratch'))).family,
+          (await textRole(app.locator('body'))).family, `${theme} ${width}px modal tab font`);
+        assert.ok(await createDialog.evaluate(element => element.scrollWidth <= element.clientWidth),
+          `${theme} ${width}px modal content overflow`);
+        await app.screenshot({path: path.join(artifacts, `modal-${theme}-${width}-${hasTouch ? 'touch' : 'mouse'}.png`)});
+        await createDialog.locator('.modal-close').click();
+        assert.ok(!(await createDialog.isVisible()));
         assert.equal(await app.locator('.chip').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
         await app.locator('#tab-view-analysis').click();
         const minimum = hasTouch ? 44 : 24;
@@ -102,6 +157,6 @@ const contrast = (first, second) => {
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log(`Shared palette, action contrast, touch targets, focus, text-spacing, reduced motion and theme interaction passed. Screenshots: ${artifacts}`);
+    console.log(`Shared typography, identity labels, palette, action contrast, touch targets, focus, text-spacing, reduced motion and theme interaction passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

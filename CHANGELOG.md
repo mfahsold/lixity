@@ -7,6 +7,34 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.2.0] - 2026-10-09
+
+### Added
+- A project-scoped Author name setting persists in `lixity.toml` and fills the
+  project representative in NDA exports. The five recipient/document fields
+  and stateless download interface remain unchanged; no personal default is built in.
+- A read-only title/author comparison recognizes explicit flat manuscript
+  metadata and leading title-page bylines. Missing, unsupported and mismatching
+  values are distinct; it neither infers authorship from prose nor edits text.
+- Optional `project_author` in project-owned NDA text models, retaining all
+  existing placeholders. Unknown fields and invalid configured names fail visibly.
+
+### Fixed
+- Saving an author updates only that project field, preserves unrelated TOML,
+  comments and line endings, and refuses malformed or concurrently changed files.
+  Unavailable projects cannot accidentally store personal data in the server cwd.
+- Invalid author metadata does not abort unrelated mathematical analysis;
+  identity/NDA consumers report it explicitly. Existing threshold and title
+  session behavior remains unchanged.
+- Author identity excludes global and ancestor defaults and stays with the
+  selected project even for a nested imported manuscript. Unreadable manuscripts
+  report an unavailable comparison rather than claiming metadata is missing.
+- Workspace tabs and dialog controls inherit the shared UI font. Settings,
+  dialogs and research headings reuse text, weight and line-height tokens;
+  technical identifiers use the shared monospace role.
+- Metadata-only PDF refresh reports retained-extraction verification instead of
+  announcing skipped OCR work. Extraction reuse and revision contracts are unchanged.
+
 ## [2.1.0] - 2026-10-08
 
 ### Added
@@ -1482,7 +1510,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v2.1.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v2.2.0...HEAD
+[2.2.0]: https://github.com/mfahsold/lixity/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/mfahsold/lixity/compare/v2.0.0...v2.1.0
 [2.0.0]: https://github.com/mfahsold/lixity/compare/v1.25.0...v2.0.0
 [1.25.0]: https://github.com/mfahsold/lixity/compare/v1.24.1...v1.25.0

@@ -1,6 +1,6 @@
 # Product screenshots
 
-Browser captures of **v2.1.0**, taken on **8 October 2026**. The
+Browser captures of **v2.2.0**, taken on **9 October 2026**. The
 [project page](https://mfahsold.github.io/lixity/) introduces each feature with
 a selected image. Use the links below for related views and full-size images.
 
@@ -28,7 +28,7 @@ a selected image. Use the links below for related views and full-size images.
 
 Analysis views use the public-domain Austen sample documented in
 [samples/README.md](https://github.com/mfahsold/lixity/blob/main/samples/README.md).
-Project paths, research sources, dossiers, claims and decisions are synthetic.
+Project paths, author settings, research sources, dossiers, claims and decisions are synthetic.
 Marker notes exist only in an in-memory copy. The NDA view previews a synthetic
 five-field draft without storing agreements or recipient records. The dossier
 image is an invented geometric harbour sketch, not a historical map. These examples contain no private

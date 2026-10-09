@@ -31,7 +31,7 @@
   "name": "Lixity",
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "2.1.0",
+  "softwareVersion": "2.2.0",
   "description": "Local manuscript analysis and a traceable research workspace for authors, editors and researchers.",
   "url": "https://mfahsold.github.io/lixity/",
   "codeRepository": "https://github.com/mfahsold/lixity",
@@ -50,7 +50,7 @@
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v2.1.0</span></a>
+    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v2.2.0</span></a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="#visual-suite">Features</a>
       <a href="#guides">Guides</a>
@@ -69,8 +69,8 @@
       <a class="btn primary" href="guides/installation.html">Get started</a>
       <a class="btn" href="#visual-suite">See what you can do</a>
     </div>
-    <p class="release-note">Current release: <a href="releases/v2.1.0.md">v2.1.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
-    <p class="release-note">In 2.1.0: local dossier images, section editing and simpler decision reviews. Shared settings validation keeps the interface and analysis engine aligned. <a href="research/USAGE.md#research-workflows">Read the workflows</a>.</p>
+    <p class="release-note">Current release: <a href="releases/v2.2.0.md">v2.2.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
+    <p class="release-note">In 2.2.0: save the project author once for NDA exports, and compare title/author metadata without changing the manuscript. <a href="USAGE.md#nda-agreements">Read the settings and NDA guide</a>.</p>
     <p class="license-note">Free for projects with no commercial purpose. Books intended for sale, including self-publishing, need a separate written commercial license. <a href="#licensing">License details</a>.</p>
   </section>
 
@@ -115,7 +115,7 @@
         <a href="USAGE.md#work-markers-editor-visible">Use work markers</a>
       </div>
       <figure class="shot">
-        <a href="screenshots/dashboard-markers.png"><img src="screenshots/dashboard-markers.png" width="1152" height="306" alt="Review markers linked to passages, with statuses and an editable note" loading="lazy" decoding="async"/></a>
+        <a href="screenshots/dashboard-markers.png"><img src="screenshots/dashboard-markers.png" width="1152" height="305" alt="Review markers linked to passages, with statuses and an editable note" loading="lazy" decoding="async"/></a>
         <figcaption>Illustrative review notes. <a href="screenshots/dashboard-layer.png">Open the paragraph view</a>.</figcaption>
       </figure>
     </article>
@@ -130,7 +130,7 @@
         <a href="guides/research-pdf.html">Follow the research workflow</a>
       </div>
       <figure class="shot">
-        <a href="screenshots/dashboard-dossier-image.png"><img src="screenshots/dashboard-dossier-image.png" width="1082" height="488" alt="A local visual reference in a dossier section, with a description and an explicit synthetic-source caption" loading="lazy" decoding="async"/></a>
+        <a href="screenshots/dashboard-dossier-image.png"><img src="screenshots/dashboard-dossier-image.png" width="1082" height="489" alt="A local visual reference in a dossier section, with a description and an explicit synthetic-source caption" loading="lazy" decoding="async"/></a>
         <figcaption>Keep a visual reference beside your notes. <a href="screenshots/dashboard-research-search.png">Search and citations</a> · <a href="screenshots/dashboard-research-dossiers.png">Dossiers</a> · <a href="screenshots/dashboard-research-review.png">Decision review</a>.</figcaption>
       </figure>
     </article>
@@ -139,11 +139,11 @@
       <div class="feature-copy">
         <h2>Choose a project and its settings</h2>
         <p>Project actions remain available in each workspace view. <strong>Open Project</strong> reconnects an existing folder and its research. <strong>Import Manuscript</strong> previews a file and creates a new project when you confirm.</p>
-        <p>Choose the analysis language and which differences to examine. Fill in five simple NDA fields, preview a friendly agreement in the project language, then download a PDF or editable text.</p>
+        <p>Choose the analysis language and which differences to examine. Set Author name under Project → Settings. Fill in five simple NDA fields, preview a friendly agreement with the project representative's name, then download a PDF or editable text.</p>
         <a href="guides/installation.html#first-dashboard">Open your first project</a>
       </div>
       <figure class="shot">
-        <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="1001" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" loading="lazy" decoding="async"/></a>
+        <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="1257" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" loading="lazy" decoding="async"/></a>
         <figcaption>Project settings in one place. <a href="screenshots/dashboard-project-import.png">Import preview</a> · <a href="screenshots/dashboard-project-settings-mobile.png">Mobile view</a>.</figcaption>
       </figure>
     </article>
@@ -175,7 +175,7 @@
   <section id="installation" class="reading-section">
     <h2>Install the current release</h2>
     <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> and Git. The <a href="guides/installation.html">installation guide</a> explains how to get them on Windows, macOS and Linux.</p>
-    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
+    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.2.0"
 lixity --version
 lixity build manuscript.md --language de</pre>
     <p>Open <code>exports/manuscript_dashboard.html</code> in your browser. Use <code>--language en</code> for English. English is the default when no language is selected; detection requires <code>--language auto</code>.</p>

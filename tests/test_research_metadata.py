@@ -114,6 +114,31 @@ class TestResearchMetadataRefresh(unittest.TestCase):
         self.assertEqual(repeated["snapshot"], refreshed["snapshot"])
         self.assertEqual(self.retained_files(), before)
 
+    def test_metadata_refresh_progress_reports_retained_verification_not_skipped_ocr(self):
+        events = []
+        with patch("lixity.research.api.extract_pdf_document", side_effect=AssertionError("Identical PDF must reuse extraction")):
+            refreshed = self.refresh(progress_callback=lambda phase, message: events.append((phase, message)))
+        self.assertFalse(refreshed["unchanged"])
+        self.assertNotIn("ocr", [phase for phase, _ in events])
+        self.assertFalse(any("rasteriz" in message.lower() for _, message in events))
+        self.assertTrue(any(phase == "read" and "retained" in message.lower() for phase, message in events))
+        self.assertEqual(events[-1][0], "complete")
+
+    def test_changed_pdf_progress_reports_actual_extraction(self):
+        self.pdf.write_bytes(b"%PDF-1.4 changed synthetic metadata fixture")
+        events = []
+
+        def extract(path, **kwargs):
+            self.assertIn("ocr", [phase for phase, _ in events])
+            self.assertFalse(any("retained" in message.lower() for _, message in events))
+            return self.extraction(self.text)
+
+        with patch("lixity.research.api.extract_pdf_document", side_effect=extract):
+            refreshed = self.refresh(progress_callback=lambda phase, message: events.append((phase, message)))
+        self.assertFalse(refreshed["unchanged"])
+        self.assertEqual([phase for phase, _ in events].count("ocr"), 1)
+        self.assertEqual(events[-1][0], "complete")
+
     def test_context_refresh_dry_run_does_not_publish(self):
         before = self.retained_files()
         with patch("lixity.research.api.extract_pdf_document", side_effect=AssertionError("Identical PDF must reuse extraction")):

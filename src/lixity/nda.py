@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .config import load_project_config
+from .config import load_project_config, validate_author_name
 from .nda_templates import NDA_DOCUMENT_LABELS, NDA_TEMPLATES
 
 
@@ -70,6 +70,7 @@ def draft_document(
         "recipient_name": recipient,
         "recipient_address": _field("address", address, maximum=2000, multiline=True),
         "project_title": project,
+        "project_author": validate_author_name(config.get("author_name", "")) or "________________________",
         "date": date_text,
         "place": location,
     }

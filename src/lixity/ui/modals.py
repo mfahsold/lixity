@@ -188,7 +188,7 @@ def render_project_modals(
     parts.append('        <ul class="project-chooser-list" id="open-project-chooser-list" aria-label="' + L("wizard_choose_entries") + '"></ul>')
     parts.append('      </div>')
     parts.append('      <div class="project-structure-hint" style="margin-top:.6rem;">')
-    parts.append(f'        <span>{L("wizard_switch_prompt")} <button type="button" class="ctl-link" id="link-switch-to-import" style="background:none;border:none;color:var(--accent);text-decoration:underline;cursor:pointer;font-size:inherit;padding:0;">{L("wizard_switch_action")}</button></span>')
+    parts.append(f'        <span>{L("wizard_switch_prompt")} <button type="button" class="ctl-link" id="link-switch-to-import">{L("wizard_switch_action")}</button></span>')
     parts.append('      </div>')
     parts.append('      <p class="ctl-status project-form-status" id="open-project-status" role="alert" aria-live="assertive" hidden></p>')
     parts.append('      <div class="modal-footer">')

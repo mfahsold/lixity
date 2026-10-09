@@ -1,5 +1,6 @@
 """Settings and scientific UI contracts independent of browser presentation."""
 
+import html
 import re
 import unittest
 from html.parser import HTMLParser
@@ -8,16 +9,20 @@ from lixity.language import get_language_profile
 from lixity.pipeline import analyze_document, resolve_document_config
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
+from lixity.workspace_labels import WORKSPACE_LABELS
 
 
 class Controls(HTMLParser):
     def __init__(self):
         super().__init__()
         self.numbers = []
+        self.inputs = {}
         self.labels = set()
 
     def handle_starttag(self, tag, attrs):
         attributes = dict(attrs)
+        if tag == "input" and attributes.get("id"):
+            self.inputs[attributes["id"]] = attributes
         if tag == "input" and attributes.get("type") == "number":
             self.numbers.append(attributes)
         if tag == "label" and "for" in attributes:
@@ -25,6 +30,38 @@ class Controls(HTMLParser):
 
 
 class TestSettingsUi(unittest.TestCase):
+    def test_author_setting_requires_an_explicit_active_project_capability(self):
+        author = 'Synthetic Writer "<img src=x onerror=alert(1)>"'
+        for enabled in (False, True):
+            with self.subTest(enabled=enabled):
+                rendered = render_dashboard([], [], controls=True, project_author=author,
+                                            author_setting_enabled=enabled)
+                controls = Controls()
+                controls.feed(rendered)
+                field = controls.inputs["set-author-name"]
+                self.assertEqual(field["value"], author)
+                self.assertEqual(field["maxlength"], "500")
+                self.assertEqual("disabled" in field, not enabled)
+                self.assertIn("set-author-name", controls.labels)
+                self.assertIn("aria-describedby", field)
+                self.assertNotIn('<img src=x onerror=alert(1)>', rendered)
+
+    def test_identity_check_statuses_are_localized_and_values_are_inert(self):
+        for language, labels in WORKSPACE_LABELS.items():
+            for status in ("matched", "mismatch", "missing", "unsupported", "unavailable"):
+                with self.subTest(language=language, status=status):
+                    checks = {key: {"status": status, "value": '<script>synthetic()</script>',
+                                    "source": 'metadata "<img src=x>"'}
+                              for key in ("title", "author_name")}
+                    rendered = render_dashboard([], [], controls=True, labels=labels,
+                                                project_author="Synthetic Writer",
+                                                identity_check=checks, author_setting_enabled=True)
+                    self.assertIn(f'data-identity-status="{status}"', rendered)
+                    self.assertIn(html.escape(labels["project_identity_" + status]), rendered)
+                    self.assertNotIn('<script>synthetic()</script>', rendered)
+                    self.assertIn('&lt;script&gt;synthetic()&lt;/script&gt;', rendered)
+                    self.assertIn(html.escape(labels["project_identity_hint"]), rendered)
+
     def test_artifact_links_reject_executable_url_schemes(self):
         for href in ("javascript:alert(1)", "java\nscript:alert(1)", "data:text/html,bad"):
             with self.subTest(href=href):

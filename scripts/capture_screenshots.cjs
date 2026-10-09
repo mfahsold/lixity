@@ -161,7 +161,10 @@ async function main() {
       } else if (name.startsWith('dashboard-project-settings')) {
         await selectView('project');
         await selectManuscript();
-        await page.keyboard.press('Escape');
+        await page.locator('#modal-project-create').waitFor({state: 'visible'});
+        await page.locator('#modal-project-create .modal-close').click();
+        await page.locator('#modal-project-create').waitFor({state: 'hidden'});
+        assert.equal(await page.locator('#set-author-name').isVisible(), true);
         assert.equal(await page.locator('#nda-draft-form input, #nda-draft-form textarea').count(), 5);
         await save(capture.target, '#view-pane-project');
       } else if (name.startsWith('dashboard-project-import')) {

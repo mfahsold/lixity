@@ -756,7 +756,7 @@ async function runAction(action, payload, button) {
     if (button) { button.disabled = false; button.classList.remove("busy"); button.removeAttribute("aria-busy"); }
   }
 }
-function submitSettings() {
+async function submitSettings() {
   var settings = document.getElementById("settings-form");
   if (!settings) return;
   var button = settings.querySelector('[data-action="settings"]');
@@ -789,7 +789,14 @@ function submitSettings() {
   if (fq) payload.fdr_q = parseFloat(fq.value);
   if (fs) payload.flag_min_severity = parseInt(fs.value, 10);
   if (dt) payload.dim_score_threshold = parseFloat(dt.value);
-  return runAction("settings", payload, button);
+  var author = document.getElementById("set-author-name");
+  var authorEnabled = author && author.dataset.authorSettingEnabled === "true";
+  if (authorEnabled) {
+    payload.author_name = author.value.trim();
+    author.disabled = true;
+  }
+  try { return await runAction("settings", payload, button); }
+  finally { if (authorEnabled) author.disabled = false; }
 }
 document.querySelectorAll("[data-action]").forEach(function (btn) {
   btn.addEventListener("click", function () {
@@ -1629,7 +1636,7 @@ async function refreshResearchSources(overview, changedId) {
         '<span class="research-card-title">' + escapeHtml(s.title) + '</span>' +
         '<span class="ctl-note">' + escapeHtml(["image/png", "image/jpeg"].includes(s.media_type) ? s.media_type : uiFormat("research_passages_count", { count: s.passages })) + ' · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
       '</div>' +
-      '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(s.id) + '</div>' +
+      '<div class="ctl-note research-record-id">' + escapeHtml(s.id) + '</div>' +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
       (s.context && s.context.external_reference ? zoteroOpenLink(s.context.external_reference.library, s.context.external_reference.item_key) : "") +
       researchDetailsControl("source", s.id) +
@@ -1755,7 +1762,7 @@ async function refreshResearchClaims(overview) {
       '</div>' +
       '<div class="research-claim-statement research-prose markdown-body" style="margin:.4rem 0;">' + renderSafeMarkdown(c.statement) + '</div>' +
       (scopeParts.length ? '<div class="ctl-note" style="margin-bottom:.3rem;font-size:.76rem;">' + scopeParts.join(" · ") + '</div>' : '') +
-      '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(uiLabel("research_claim_id")) + ' ' + escapeHtml(c.id) + '</div>' +
+      '<div class="ctl-note research-record-id">' + escapeHtml(uiLabel("research_claim_id")) + ' ' + escapeHtml(c.id) + '</div>' +
       (c.dossier_id ? '<div class="ctl-note">' + escapeHtml(uiLabel("research_dossier")) + ': ' + escapeHtml(c.dossier_id) +
         (c.dossier_revision ? ' · ' + escapeHtml(uiFormat("research_revision_number", { revision: c.dossier_revision })) : '') + '</div>' : '') +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
@@ -1796,7 +1803,7 @@ async function refreshResearchDecisions(overview) {
       '</div>' +
       '<div class="research-decision-rationale research-prose markdown-body" style="margin:.4rem 0;">' + renderSafeMarkdown(d.rationale) + '</div>' +
       (d.impact_on_plot ? '<div class="ctl-note" style="margin:.3rem 0;font-size:.78rem;"><strong>' + escapeHtml(uiLabel("research_decision_impact")) + ':</strong> <span class="research-prose markdown-body">' + renderSafeMarkdown(d.impact_on_plot) + '</span></div>' : '') +
-      (d.claim_id ? '<div class="ctl-note" style="font-family:monospace;font-size:.7rem;margin-top:.2rem;">' + escapeHtml(uiLabel("research_decision_claim")) + ' ' + escapeHtml(d.claim_id) +
+      (d.claim_id ? '<div class="ctl-note research-record-id">' + escapeHtml(uiLabel("research_decision_claim")) + ' ' + escapeHtml(d.claim_id) +
         (d.claim_revision ? ' · ' + escapeHtml(uiFormat("research_revision_number", { revision: d.claim_revision })) : '') + '</div>' : '') +
       '<details class="research-details"><summary data-decision-impact="' + escapeHtml(d.id) + '">' + escapeHtml(uiLabel("research_decision_affected")) + '</summary><div class="research-details-body"></div></details>' +
       researchRevisionActions("decision", d.id) +

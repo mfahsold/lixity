@@ -14,7 +14,7 @@ what you keep or revise.
 
 [Get started](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v2.1.0 release notes](docs/releases/v2.1.0.md)
+[v2.2.0 release notes](docs/releases/v2.2.0.md)
 
 Free for projects with no commercial purpose. A book intended for sale,
 including self-publishing, requires a separate written commercial license.
@@ -28,20 +28,18 @@ For help installing these tools, or to use pipx instead, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.2.0"
 lixity --version
 ```
 
 This installs the released version. For later upgrades, select the new tag using
 the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace. [Release notes](docs/releases/v2.1.0.md) describe compatibility
+the local workspace. [Release notes](docs/releases/v2.2.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
-**In 2.1.0:** keep local image references inside dossiers, edit one section at a
-time and continue through decision reviews with fewer manual steps. Settings use
-the same validation in the UI and analysis engine. See the
-[research workflows](docs/research/USAGE.md#research-workflows) and
-[dashboard guide](docs/USAGE.md#dashboard-workflow).
+**In 2.2.0:** save the project author's name under **Project → Settings → Author name** and use it in NDA
+exports. A read-only check compares the project title and author with explicit
+manuscript metadata. See the [settings and NDA guide](docs/USAGE.md#nda-agreements).
 
 ## Quick Start
 
@@ -158,6 +156,7 @@ before importing it, select its analysis language, and adjust which differences
 you want to examine. The NDA form has just name, optional
 address, project name, date and place. Preview the friendly agreement and
 download a PDF or editable text in the project language. Review it before signing.
+Set **Author name** under **Project → Settings** to fill the project representative's name.
 
 <a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" width="900" /></a>
 

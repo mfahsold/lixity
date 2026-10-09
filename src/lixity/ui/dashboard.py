@@ -103,6 +103,9 @@ def render_dashboard(
     debug: bool = False,
     scenes: Mapping[str, Any] | None = None,
     nda_project_name: str = "",
+    project_author: str = "",
+    identity_check: Mapping[str, Any] | None = None,
+    author_setting_enabled: bool = False,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -111,6 +114,9 @@ def render_dashboard(
     preserves the other existing controls. NDA generation requires explicit
     ``nda-draft`` capability; ``nda_project_name`` supplies a real project name
     separately from a placeholder dashboard title.
+    ``project_author`` and ``identity_check`` describe saved project identity and
+    a read-only manuscript comparison. Author editing requires the explicit
+    ``author_setting_enabled`` capability; its default supplies no personal name.
     ``dialogue``/``characters``/``pacing``/``motifs``/
     ``showing`` add the optional dialogue-structure, character-presence,
     pacing, motif/repetition and showing/telling panels (see the
@@ -360,6 +366,8 @@ def render_dashboard(
             labels, title, current_language, language_options,
             replace(fingerprint.thresholds if fingerprint is not None else FingerprintThresholds(),
                     flag_min_severity=flag_min_severity),
+            project_author=project_author, identity_check=identity_check,
+            author_setting_enabled=author_setting_enabled,
         ))
 
         # Actions advertised by the embedding server.
@@ -437,7 +445,7 @@ def render_dashboard(
             parts.append('</div><div class="ctl-status" id="nda-draft-status" role="status" aria-live="polite"></div></form>')
             parts.append(f'<noscript><p class="ctl-note">{L("nda_draft_javascript")}</p></noscript>')
             parts.append(
-                f'<div id="nda-preview-wrap" hidden><h3 id="nda-preview-title">{L("nda_draft_preview")}</h3>'
+                f'<div id="nda-preview-wrap" hidden><h3 class="section-heading" id="nda-preview-title">{L("nda_draft_preview")}</h3>'
                 '<div id="nda-draft-preview" class="research-dossier-body-source" '
                 'tabindex="0" role="region" aria-labelledby="nda-preview-title"></div></div></section>'
             )

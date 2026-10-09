@@ -37,12 +37,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.2.0"
 lixity --version
 lixity about
 ```
 
-`v2.1.0` is the release pin. Choose `@main` only to follow development,
+`v2.2.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
@@ -873,6 +873,22 @@ workspace discovery starts in the current directory. The configured `title`
 is used by both `dashboard` and `build`; artifact filenames still follow the
 manuscript filename. An explicit `--language` overrides the project language.
 
+Open **Project → Settings → Author name** in the live workspace. Apply saves
+only `author_name` in that project's `lixity.toml`, so it survives a restart.
+Language, title overrides and analysis thresholds keep their existing session
+behavior. An empty author name clears it; no personal name is built into Lixity.
+The field is unavailable until a manuscript or research project is open. Author
+identity comes only from that project's root configuration, never user defaults
+or a parent folder.
+
+The nearby identity check compares the displayed project title and configured
+author with explicit manuscript metadata. Supported forms are flat leading YAML
+strings (`title` and `author`) or a leading Markdown title page with a `by`, `von`,
+`Author:` or `Autor:` line. Missing or unsupported metadata is reported separately
+from a mismatch; a missing or unreadable manuscript makes the check unavailable.
+Formatting comparisons normalize Unicode and whitespace; they
+do not guess authorship from prose or change the manuscript.
+
 A `lixity.toml`, `pyproject.toml` or `~/.config/lixity.toml` that exists but
 cannot be read or parsed emits a `UserWarning` naming the file, and its settings
 are ignored in favour of code defaults. No config file at all is silent. The
@@ -915,8 +931,10 @@ project configuration and English. Supported codes are `en`, `de`, `fr`, `es`,
 `it`, `pt` and `nl`. `template` must be nonempty UTF-8 text inside the project,
 at most 2 MiB; paths and symlinks escaping the project are rejected.
 
-The five literal placeholders are `{{recipient_name}}`, `{{recipient_address}}`,
-`{{project_title}}`, `{{date}}` and `{{place}}`. Unknown fields are rejected;
+The literal placeholders are `{{recipient_name}}`, `{{recipient_address}}`,
+`{{project_title}}`, `{{date}}`, `{{place}}` and optional `{{project_author}}`.
+The project author comes from the project-wide `author_name` setting. Existing
+five-field models remain supported. Unknown fields are rejected;
 supplied values remain literal data. Generation and downloads are described
 [below](#nda-agreements).
 
@@ -1042,6 +1060,9 @@ calendar day. Choose **Preview** to read the full friendly agreement, then
 The output is titled **Confidentiality agreement**, with signature lines for the
 recipient and the project representative. Review the details together before
 signing; generating or downloading a file does not record either person's consent.
+The representative's name is filled from **Author name** in project Settings.
+The five NDA input fields remain unchanged. Without a configured author, the
+download keeps a blank name line for manual completion.
 
 The native generator uses the resolved project language or the optional
 `nda.language` override. Seven localized text models are available. Preview

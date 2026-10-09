@@ -66,6 +66,14 @@ class WorkspaceState:
         return Path(cls.workspace_root) if candidate.is_dir() else None
 
     @classmethod
+    def get_author_project_root(cls) -> Path | None:
+        """Use the selected manuscript/archive project, never the idle cwd."""
+        if cls.source_input:
+            return Path(cls.workspace_root).resolve()
+        root = Path(cls.research_dir) if cls.research_dir else None
+        return root.resolve() if root and (root / "research").is_dir() else None
+
+    @classmethod
     def refresh(cls) -> None:
         """Re-analyzes the active manuscript and updates cached dashboard HTML."""
         cls.dashboard_html, cls.dashboard_info = build_server_dashboard(
@@ -77,4 +85,5 @@ class WorkspaceState:
             api_base="/api",
             exports_dir=cls.exports_dir,
             debug=cls.debug,
+            project_root=cls.get_author_project_root(),
         )

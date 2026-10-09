@@ -7,7 +7,7 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 2.1.0; release tag: v2.1.0.
+Current release: 2.2.0; release tag: v2.2.0.
 
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
@@ -40,7 +40,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from GitHub, not PyPI:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.1.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.2.0"
 lixity --version
 lixity about
 ```
@@ -263,7 +263,11 @@ POST /api/nda-draft accepts {name,address?,project_name,date,place,format:pdf|te
 and returns application/pdf or text/plain, not a JSON record envelope.
 Document language: nda.language > resolved server/project language > project
 configuration > en. Optional UTF-8 nda.template stays inside the project; its five
-literal fields are recipient_name/recipient_address/project_title/date/place.
+literal fields are recipient_name/recipient_address/project_title/date/place,
+plus optional project_author from configured author_name. Settings persists that
+single author field only in the active project's lixity.toml. Read-only title/author
+checks recognize explicit flat YAML or leading title-page bylines; missing or
+unsupported metadata is not a mismatch or authorship proof. Manuscripts are not edited.
 Unknown fields and outside paths are rejected. Seven friendly text models are
 editable agreements, not universal enforceability claims; generation records no
 consent or signatures. Technical route/type names remain unchanged. Native PDF encoding is

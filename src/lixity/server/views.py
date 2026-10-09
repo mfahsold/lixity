@@ -8,15 +8,17 @@ from __future__ import annotations
 
 import os
 import re
+from pathlib import Path
 from typing import Any
 
 from ..characters import presence_report
-from ..config import load_project_config, resolve_thresholds
+from ..config import load_project_config, resolve_thresholds, validate_author_name
 from ..dialogue import dialogue_report
 from ..markers import list_markers
 from ..motifs import motif_report
 from ..pacing import pacing_report
 from ..pipeline import analyze_document, resolve_document_config
+from ..project_identity import manuscript_identity_check
 from ..scenes import scene_report_for_display
 from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
@@ -73,18 +75,21 @@ def build_server_dashboard(
     api_base: str = "/api",
     exports_dir: str | None = None,
     debug: bool = False,
+    project_root: str | Path | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Generates the interactive dashboard HTML and returns (html, info_dict)."""
     text = ""
     is_empty = True
     manuscript_name = ""
     is_missing = False
+    manuscript_readable = False
 
     if source_input:
         if os.path.isfile(source_input):
             try:
                 with open(source_input, encoding="utf-8") as f:
                     text = f.read()
+                manuscript_readable = True
                 is_empty = not text.strip()
                 manuscript_name = os.path.basename(source_input)
             except OSError:
@@ -100,6 +105,21 @@ def build_server_dashboard(
     )
 
     settings = load_project_config(source_input) if source_input and os.path.isfile(source_input) else {}
+    if not source_input and project_root is not None:
+        settings = load_project_config(project_root)
+    identity_settings = settings
+    if project_root is not None:
+        identity_settings = load_project_config(project_root)
+    elif source_input and not os.path.isfile(source_input):
+        identity_settings = load_project_config(Path(source_input).parent)
+    raw_author = identity_settings.get("author_name", "")
+    try:
+        project_author = validate_author_name(raw_author)
+    except ValueError:
+        project_author = ""
+    identity_check = manuscript_identity_check(
+        text if manuscript_readable else None, doc_title, raw_author,
+    )
     config, resolved = resolve_document_config(text, language, project_config=settings)
     resolved_thresholds = thresholds or resolve_thresholds(project_config=settings)
 
@@ -178,9 +198,13 @@ def build_server_dashboard(
             os.path.splitext(manuscript_name)[0] if manuscript_name and not is_missing else ""
         ),
         debug=debug,
+        project_author=project_author,
+        identity_check=identity_check,
+        author_setting_enabled=bool(source_input or project_root is not None),
     )
 
     info = {
+        "identity_check": identity_check,
         "chapters": len(chapters),
         "paragraphs": len(paragraphs),
         "flagged": sum(1 for p in paragraphs if p.severity >= resolved_thresholds.flag_min_severity),

@@ -57,6 +57,15 @@ The metrics are calculated once and reused during fingerprint construction.
 
 ## Configuration and multiple projects
 
+Project author identity reuses `author_name` in the existing configuration loader,
+but only from an explicit project's root config; user/ancestor defaults are excluded.
+`save_project_author` updates only the explicit project's `lixity.toml` after
+validating the scalar and verifying that other parsed settings remain intact.
+An optimistic file-identity/content check precedes atomic replacement; it is not
+an external editor lock. The UI, NDA renderer and pure `project_identity` checker
+consume that same value. Identity comparisons read a bounded syntax subset and
+never rewrite manuscripts or affect linguistic measurements.
+
 ```python
 from pathlib import Path
 from lixity.config import load_project_config, resolve_thresholds
@@ -156,6 +165,8 @@ The presentation follows these evidence-informed constraints:
 - [Reading research reviewed by Kevin Larson](https://learn.microsoft.com/en-us/typography/develop/word-recognition)
   informs the use of mixed-case labels rather than forced uppercase. System sans
   fonts serve controls and reading text; local serif fonts distinguish titles.
+  Native controls inherit the UI font; shared size, weight and line-height
+  tokens keep equivalent settings, dialog and research roles consistent.
   No single typeface, blue hue or line width is asserted to be universally optimal.
 - Reading paragraphs use relative font sizes, generous leading and a 72-character
   maximum measure where appropriate. This is a design choice, not an empirical

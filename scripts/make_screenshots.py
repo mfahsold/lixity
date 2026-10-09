@@ -38,6 +38,7 @@ from lixity.markers import add_marker  # noqa: E402
 from lixity.motifs import motif_report  # noqa: E402
 from lixity.pacing import pacing_report  # noqa: E402
 from lixity.pipeline import analyze_document, resolve_document_config  # noqa: E402
+from lixity.project_identity import manuscript_identity_check  # noqa: E402
 from lixity.server.constants import NATIVE_UI_ACTIONS  # noqa: E402
 from lixity.showing import showing_report  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
@@ -201,6 +202,9 @@ def main() -> int:
         controls=True,
         enabled_actions=NATIVE_UI_ACTIONS,
         nda_project_name=title,
+        project_author="Example Author",
+        author_setting_enabled=True,
+        identity_check=manuscript_identity_check(text, title, "Example Author"),
     )
     dashboard_path = _write_html("dashboard.html", dashboard)
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
@@ -316,6 +320,7 @@ def main() -> int:
     from lixity.research import api as research_api
 
     research_api.init(research_proj, title="Synthetic archival research example", language="en")
+    (research_proj / "lixity.toml").write_text('author_name = "Example Author"\n', encoding="utf-8")
     source_text = """## Section 1: Port Authority Log – October 1923
 
 On the cold evening of October 14, 1923, customs officers on the night shift observed suspicious movements near Warehouse 4 in the Free Port zone.
@@ -466,7 +471,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         visual_url: {"media_type": "image/png", "content_base64": base64.b64encode(visual_bytes).decode("ascii")},
         "/api/nda-draft": {
             "fields": nda_fields,
-            "text": draft_document(**nda_fields, language=resolved.key).text,
+            "text": draft_document(research_proj, **nda_fields, language=resolved.key).text,
         },
         # Synthetic server-local paths demonstrate the chooser without exposing a user's home.
         "/api/project-paths": {
@@ -536,6 +541,8 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             [], [], title="Synthetic archival research", controls=True,
             labels=resolved.labels, language_name=resolved.name, language_key=resolved.key,
             current_language=resolved.key, enabled_actions=NATIVE_UI_ACTIONS,
+            project_author="Example Author", author_setting_enabled=True,
+            identity_check=manuscript_identity_check(None, "Synthetic archival research", "Example Author"),
         ),
     )
     for view in ("sources", "dossiers", "search", "claims", "decisions", "review", "change-set"):

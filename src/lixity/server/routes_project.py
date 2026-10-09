@@ -12,7 +12,12 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import parse_qs, urlparse
 
-from ..config import apply_config_to_thresholds, load_project_config, resolve_thresholds
+from ..config import (
+    apply_config_to_thresholds,
+    load_project_config,
+    resolve_thresholds,
+    save_project_author,
+)
 from ..research import api as research_api
 from ..research.repository import ResearchError
 from ..workspace import discover
@@ -103,7 +108,9 @@ class ProjectRoutesMixin(ResponseMixin):
 
         try:
             thresholds = replace(self.thresholds, **apply_config_to_thresholds(payload))
-        except (TypeError, ValueError) as exc:
+            if "author_name" in payload:
+                save_project_author(self.get_author_project_root(), payload["author_name"])
+        except (OSError, TypeError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
             return
 
@@ -312,6 +319,7 @@ class ProjectRoutesMixin(ResponseMixin):
                 controls=True,
                 api_base="/api",
                 exports_dir=exports_dir,
+                project_root=ws_root,
             )
         except (
             OSError,
