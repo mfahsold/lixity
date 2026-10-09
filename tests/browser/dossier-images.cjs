@@ -243,8 +243,12 @@ server.serve_forever()
     await page.locator(`[data-research-detail=source][data-record-id="${pin.source_id}"]`).click();
     await expect(page.locator('#research-sources-list')).toContainText('no text passages or textual comparison');
     assert.equal(await page.locator('#research-sources-list [data-source-view]').count(), 0, 'An image source has no fabricated text view');
+    const dossierSummary = page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`);
     await Promise.all([page.waitForResponse(response => response.url() === fixture.url + '/api/research/dossiers'), page.locator('[data-rtab=dossiers]').click()]);
-    await page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`).click();
+    // A refresh preserves an unchanged open detail, so close it first;
+    // clicking blindly would toggle the preserved detail shut.
+    if (await dossierSummary.evaluate(node => node.parentElement.open)) await dossierSummary.click();
+    await dossierSummary.click();
     await expect(page.locator('[data-dossier-add-image]')).toBeVisible();
     const markdownChecks = await page.evaluate(({detail, pin}) => {
       const source = detail.body.match(/!\[[\s\S]+?\]\(lixity:image[^\n]+?\)/)[0];

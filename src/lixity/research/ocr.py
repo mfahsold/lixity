@@ -196,11 +196,12 @@ def _extract_tesseract(pages: list[PageImage], *, timeout: int | None = None) ->
         raise ResearchError(f"Tesseract language data missing: {', '.join(missing)}. Install these languages or change LIXITY_OCR_LANGUAGES.")
     if not pages or [page.page_number for page in pages] != list(range(1, len(pages) + 1)):
         raise ResearchError("Tesseract requires all rendered PDF pages; check Poppler pdftoppm")
-    deadline = time.monotonic() + (timeout or worker_timeout())
+    budget = timeout or worker_timeout()
+    deadline = time.monotonic() + budget
     blocks: list[OCRBlock] = []
     warnings: list[str] = []
     for page in pages:
-        remaining = deadline - time.monotonic()
+        remaining = min(budget, deadline - time.monotonic())
         if remaining <= 0:
             raise ResearchError("Tesseract timed out; no partial capture was retained")
         try:

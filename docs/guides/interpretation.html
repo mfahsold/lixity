@@ -19,7 +19,7 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Understand manuscript metrics and style consistency</h1>
 <p>Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-05">5 October 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-10">10 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html" aria-current="page">Interpret results</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="consistency">What does consistency measure?</h2>
@@ -103,7 +103,7 @@
             <td class="editorial-callout">
               <strong>Register:</strong> Word-pattern counts highlight possible changes in viewpoint or exposition.
             </td>
-            <td>Read passages in context; these constructions can be deliberate and their counts do not measure immersion.</td>
+            <td>Read passages in context; these constructions can be deliberate and their counts do not measure immersion. Densities count matches per 1,000 words, not percentages; a few hits in a very short paragraph can produce a large value. Default nominal-suffix counts exclude known function words.</td>
           </tr>
           <tr>
             <td><strong>FDR Heatmap</strong></td>
@@ -119,7 +119,7 @@
             <td class="editorial-callout">
               <strong>Structure Review:</strong> These exploratory outputs suggest passages to inspect. They do not establish narrative boundaries or statistically confirmed shifts; see the <a href="https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#structural-diagnostics">stability notes</a>.
             </td>
-            <td>A change point can prompt review of scene, character or chapter context; it does not identify an author handover or its cause.</td>
+            <td>A change point can prompt review of scene, character or chapter context; it does not identify an author handover or its cause. Structural trends need at least three chapters. Show/tell comparison also needs three chapters with differing signals; an unavailable comparison does not mean the app has failed.</td>
           </tr>
           <tr>
             <td><strong>Persistent Work Markers</strong></td>

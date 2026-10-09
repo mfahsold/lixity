@@ -39,13 +39,13 @@
         console.error.apply(console, ["[Lixity:error]"].concat(Array.prototype.slice.call(arguments)));
       }
     },
-    api: function(method, url, durationMs, status, details) {
+    api: function(method, url, durationMs, status) {
       if (!isDebug) return;
       var label = "[Lixity:api] " + method + " " + url + " -> " + status + " (" + durationMs.toFixed(1) + "ms)";
       if (status >= 400) {
-        console.error(label, details !== undefined ? details : "");
+        console.error(label);
       } else {
-        console.debug(label, details !== undefined ? details : "");
+        console.debug(label);
       }
     }
   };
@@ -1381,8 +1381,8 @@ document.addEventListener("lixity:dossier-image-saved", async function(event) {
   try {
   // These list refreshes preserve form values, filter input and selected IDs.
   // The shared revision editor keeps its independent unsaved drafts.
-  await Promise.all([refreshResearchSources(null, accepted.capture && accepted.capture.source_id),
-    refreshResearchDossiers(null, accepted.record.id), refreshResearchProjectInfo()]);
+  await Promise.all([refreshResearchSources(null, accepted.capture && accepted.capture.source_id, true),
+    refreshResearchDossiers(null, accepted.record.id, true), refreshResearchProjectInfo()]);
   var detail = await researchApiGet("research/dossiers?id=" + encodeURIComponent(accepted.record.id));
   if (!detail.ok || detail.project_id !== accepted.project_id) return;
   var summary = Array.from(document.querySelectorAll('[data-research-detail="dossier"]')).find(function(button) {
@@ -1549,7 +1549,7 @@ document.addEventListener("click", async function(event) {
         researchStatus(captureMessage, response.ok);
         if (response.ok) {
           document.getElementById("r-zotero-retention").checked = false;
-          await refreshResearchSources();
+          await refreshResearchSources(null, null, true);
           await browseZotero(selection.request);
         }
       }
@@ -1579,20 +1579,69 @@ document.addEventListener("input", function(event) {
   if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
 });
 
-function replaceResearchCard(listHost, html, recordId) {
-  var previous = Array.from(listHost.querySelectorAll("[data-research-detail]")).find(function(summary) {
-    return summary.dataset.recordId === recordId;
-  });
+function replaceResearchCard(listHost, html, identity, preserve, previousCard) {
+  if (preserve && previousCard && previousCard._researchIdentity === identity) return previousCard;
   var fresh = document.createElement("div");
   fresh.innerHTML = html;
-  if (previous && fresh.firstElementChild) previous.closest(".research-card").replaceWith(fresh.firstElementChild);
-  else if (fresh.firstElementChild) {
+  var card = fresh.firstElementChild;
+  if (card) card._researchIdentity = identity;
+  if (previousCard && card) previousCard.replaceWith(card);
+  else if (card && !preserve) {
     if (!listHost.querySelector(".research-card")) listHost.replaceChildren();
-    listHost.prepend(fresh.firstElementChild);
+    listHost.prepend(card);
   }
+  return card;
 }
 
-async function refreshResearchSources(overview, changedId) {
+function renderResearchCards(listHost, records, rendered, changedId) {
+  var previousCards = new Map();
+  listHost.querySelectorAll("[data-research-detail]").forEach(function(summary) {
+    previousCards.set(summary.dataset.recordId, summary.closest(".research-card"));
+  });
+  var cards = records.map(function(record, index) {
+    return replaceResearchCard(listHost, rendered[index], JSON.stringify(record), !changedId, previousCards.get(record.id));
+  });
+  if (changedId) {
+    if (!cards.length && previousCards.has(changedId)) previousCards.get(changedId).remove();
+    return;
+  }
+  var retained = new Set(cards);
+  Array.from(listHost.children).forEach(function(child) {
+    if (!retained.has(child)) child.remove();
+  });
+  var cursor = listHost.firstElementChild;
+  cards.forEach(function(card) {
+    if (card !== cursor) listHost.insertBefore(card, cursor);
+    cursor = card.nextElementSibling;
+  });
+}
+
+// Coalesce ordinary in-flight reads only; post-write refreshes supersede older reads.
+var researchListRefreshes = {};
+function researchListRead(kind, overview, changedId, freshRead) {
+  var state = researchListRefreshes[kind] || (researchListRefreshes[kind] = {sequence: 0, pending: null});
+  if (overview && Array.isArray(overview[kind])) {
+    // Startup's shared overview must not replace a newer tab/post-write request.
+    return Promise.resolve(state.sequence && !freshRead ? null : {state: state, sequence: ++state.sequence, data: overview});
+  }
+  if (state.pending && !changedId && !freshRead) return state.pending;
+  var sequence = ++state.sequence;
+  var pending = researchApiGet("research/" + kind).then(function(data) {
+    return {state: state, sequence: sequence, data: data};
+  });
+  state.pending = pending;
+  pending.then(function() {
+    if (state.pending === pending) state.pending = null;
+  });
+  return pending;
+}
+
+function acceptResearchList(kind, reading) {
+  var state = researchListRefreshes[kind];
+  return Boolean(state && reading && reading.state === state && reading.sequence === state.sequence);
+}
+
+async function refreshResearchSources(overview, changedId, freshRead) {
   var listHost = document.getElementById("research-sources-list");
   var selectHost = document.getElementById("r-ground-source-select");
   if (!listHost) return;
@@ -1600,7 +1649,9 @@ async function refreshResearchSources(overview, changedId) {
     listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
       escapeHtml(uiLabel("research_loading")) + '</span></div>';
   }
-  var data = overview && Array.isArray(overview.sources) ? overview : await researchApiGet("research/sources");
+  var reading = await researchListRead("sources", overview, changedId, freshRead);
+  if (!acceptResearchList("sources", reading)) return;
+  var data = reading.data;
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_sources_failed")) + '</p>';
     filterResearchList("sources");
@@ -1626,7 +1677,8 @@ async function refreshResearchSources(overview, changedId) {
     filterResearchList("sources");
     return;
   }
-  var rendered = sources.filter(function(s) { return !changedId || s.id === changedId; }).map(function(s) {
+  var selected = sources.filter(function(s) { return !changedId || s.id === changedId; });
+  var rendered = selected.map(function(s) {
     var tagsHtml = (s.tags || []).map(function(t) {
       return '<span class="research-tag">' + escapeHtml(t) + '</span>';
     }).join(" ");
@@ -1641,20 +1693,21 @@ async function refreshResearchSources(overview, changedId) {
       (s.context && s.context.external_reference ? zoteroOpenLink(s.context.external_reference.library, s.context.external_reference.item_key) : "") +
       researchDetailsControl("source", s.id) +
     '</div>';
-  }).join("");
-  if (changedId) replaceResearchCard(listHost, rendered, changedId);
-  else listHost.innerHTML = rendered;
+  });
+  renderResearchCards(listHost, selected, rendered, changedId);
   filterResearchList("sources");
 }
 
-async function refreshResearchDossiers(overview, changedId) {
+async function refreshResearchDossiers(overview, changedId, freshRead) {
   var listHost = document.getElementById("research-dossiers-list");
   if (!listHost) return;
   if (!listHost.children.length) {
     listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
       escapeHtml(uiLabel("research_loading")) + '</span></div>';
   }
-  var data = overview && Array.isArray(overview.dossiers) ? overview : await researchApiGet("research/dossiers");
+  var reading = await researchListRead("dossiers", overview, changedId, freshRead);
+  if (!acceptResearchList("dossiers", reading)) return;
+  var data = reading.data;
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_dossiers_failed")) + '</p>';
     filterResearchList("dossiers");
@@ -1675,7 +1728,8 @@ async function refreshResearchDossiers(overview, changedId) {
     filterResearchList("dossiers");
     return;
   }
-  var rendered = dossiers.filter(function(d) { return !changedId || d.id === changedId; }).map(function(d) {
+  var selected = dossiers.filter(function(d) { return !changedId || d.id === changedId; });
+  var rendered = selected.map(function(d) {
     var tagsHtml = (d.tags || []).map(function(t) {
       return '<span class="research-tag">' + escapeHtml(t) + '</span>';
     }).join(" ");
@@ -1700,9 +1754,8 @@ async function refreshResearchDossiers(overview, changedId) {
       researchDetailsControl("dossier", d.id) +
       researchRevisionActions("dossier", d.id) +
     '</div>';
-  }).join("");
-  if (changedId) replaceResearchCard(listHost, rendered, changedId);
-  else listHost.innerHTML = rendered;
+  });
+  renderResearchCards(listHost, selected, rendered, changedId);
   filterResearchList("dossiers");
 }
 
@@ -2051,7 +2104,7 @@ async function refreshResearchProjectInfo() {
   });
 })();
 
-async function initResearchUI() {
+async function initResearchUI(freshRead) {
   researchStatus(uiLabel("research_loading"), "loading");
   var status = await refreshResearchProjectInfo();
   var initBox = document.getElementById("research-init-box");
@@ -2080,8 +2133,8 @@ async function initResearchUI() {
     p.style.display = p.id === targetPane ? "block" : "none";
   });
   researchStatus("", true);
-  refreshResearchSources(status);
-  refreshResearchDossiers(status);
+  refreshResearchSources(status, null, freshRead);
+  refreshResearchDossiers(status, null, freshRead);
   refreshResearchClaims(status);
   refreshResearchDecisions(status);
   if (activeTab && activeTab.dataset.rtab === "review") refreshResearchEditorialReview();
@@ -2319,7 +2372,7 @@ document.addEventListener("click", async function (event) {
     var titleInput = document.getElementById("r-init-title");
     var res = await researchApiPost("research-init", { title: titleInput ? titleInput.value : "" });
     researchStatus(res.ok ? uiLabel("research_init_complete") : res.message, res.ok);
-    if (res.ok) initResearchUI();
+    if (res.ok) initResearchUI(true);
     return;
   }
 
@@ -2379,7 +2432,7 @@ document.addEventListener("click", async function (event) {
           if (textEl) textEl.value = "";
           if (fileEl) fileEl.value = "";
           retCheck.checked = false;
-          refreshResearchSources();
+          refreshResearchSources(null, null, true);
         }
       }).catch(function(err) {
         if (ingestBtn) ingestBtn.disabled = false;
@@ -2510,7 +2563,7 @@ function highlightSearchTerms(text, query) {
       if (dTags) dTags.value = "";
       if (dEids) dEids.value = "";
       if (dBody) dBody.value = "";
-      refreshResearchDossiers();
+      refreshResearchDossiers(null, null, true);
     }
     return;
   }
@@ -3505,7 +3558,7 @@ if (researchRevisionDialog) {
   }, true);
 
   function revisionRefreshLists() {
-    refreshResearchDossiers();
+    refreshResearchDossiers(null, null, true);
     refreshResearchClaims();
     refreshResearchDecisions();
     if (document.querySelector('[data-rtab="review"].active')) refreshResearchEditorialReview();

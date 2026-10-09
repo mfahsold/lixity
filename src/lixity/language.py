@@ -139,6 +139,18 @@ def compile_word_pattern(pattern: str) -> "re.Pattern[str]":
     return re.compile(pattern)
 
 
+def count_nominal_matches(
+    text: str, pattern: "re.Pattern[str]", excluded_words: frozenset[str]
+) -> int:
+    """Count nominal cues without classifying known function words as nominals.
+
+    Default suffix heuristics exclude whole matches from the curated function
+    words. Explicit custom regexes pass an empty set to preserve their match
+    counts, including capturing groups, phrases and zero-width matches.
+    """
+    return sum(match.group(0).lower() not in excluded_words for match in pattern.finditer(text))
+
+
 def get_language_profile(key: str) -> LanguageProfile:
     """Returns the language profile; unknown keys fall back to ``generic``."""
     return LANGUAGE_PROFILES.get((key or "").strip().lower(), LANGUAGE_PROFILES["generic"])

@@ -20,6 +20,13 @@ It reuses the Python/Web attachment API, shared limits and complete JSON receipt
 Context literals/files must be JSON objects; source bytes and dossier edits are
 not accepted on stale CAS. Generated pictures are references, not factual proof.
 
+2.3.0 source/dossier reads coalesce while pending, reject superseded responses
+and preserve unchanged opened details. Default nominal-suffix counts exclude
+curated function words; explicit regexes retain their semantics. JSON schemas
+are unchanged; regenerate earlier nominal-style reports before comparison.
+Unavailable chapter comparisons are explained without fabricated scores, and
+API console diagnostics omit response contents.
+
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
 

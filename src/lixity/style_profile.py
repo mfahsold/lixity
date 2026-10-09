@@ -8,7 +8,7 @@ import re
 from dataclasses import dataclass
 from typing import Any
 
-from .language import compile_pattern, compile_word_pattern, resolve_language
+from .language import compile_pattern, compile_word_pattern, count_nominal_matches, resolve_language
 from .markdown_parser import strip_inline_markup
 from .models import CorpusConfig
 from .sentences import split_sentences
@@ -181,6 +181,9 @@ class ParagraphProfiler:
         self._filter = compile_pattern(self.lang.filter_verbs_regex)
         self._passive = compile_pattern(self.lang.passive_regex)
         self._nominal = compile_pattern(self.lang.nominal_regex)
+        self._nominal_exclusions = (
+            self.lang.function_words if self.config.nominal_regex is None else frozenset()
+        )
         self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
 
     def _dominant(self, present: int, past: int) -> str:
@@ -301,7 +304,9 @@ class ParagraphProfiler:
 
             filter_density = per_mille(len(self._filter.findall(clean)))
             modal_density = per_mille(sum(1 for t in tokens if t in self._modals))
-            nominal_density = per_mille(len(self._nominal.findall(clean)))
+            nominal_density = per_mille(
+                count_nominal_matches(clean, self._nominal, self._nominal_exclusions)
+            )
             passive_density = per_mille(len(self._passive.findall(clean)))
 
             profile = ParagraphProfile(

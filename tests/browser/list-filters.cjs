@@ -70,9 +70,66 @@ server.serve_forever()
     await expect(page.locator('#r-filter-sources')).toBeVisible();
     await expect(page.locator('#r-filter-sources')).toHaveAccessibleName('Filter sources…');
 
+    // Hold actual list/detail responses to exercise both orders without timing sleeps.
+    for (const [kind, id, detailText] of [['sources', fixture.sourceIds[0], 'Original alpha detail.'],
+      ['dossiers', fixture.dossierIds[0], 'Original alpha dossier detail.']]) {
+      const url = fixture.url + '/api/research/' + kind;
+      let releaseList, listStarted, releaseDetail, detailStarted;
+      const listGate = new Promise(resolve => { releaseList = resolve; });
+      const listReady = new Promise(resolve => { listStarted = resolve; });
+      const detailGate = new Promise(resolve => { releaseDetail = resolve; });
+      const detailReady = new Promise(resolve => { detailStarted = resolve; });
+      let listReads = 0;
+      await page.route(url, async route => {
+        listReads++;
+        const response = await route.fetch();
+        listStarted();
+        await listGate;
+        await route.fulfill({response});
+      });
+      await page.route(url + '?id=*', async route => {
+        const response = await route.fetch();
+        detailStarted();
+        await detailGate;
+        await route.fulfill({response});
+      });
+      try {
+        await page.locator(`[data-rtab=${kind}]`).click();
+        await listReady;
+        await page.evaluate(kind => {
+          window.pendingListRefresh = kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers();
+        }, kind);
+        const card = page.locator('#research-' + kind + '-list .research-card').filter({
+          has: page.locator(`[data-research-detail][data-record-id="${id}"]`),
+        });
+        await card.locator('.research-details-body').evaluate(node => { node.dataset.refreshPreserved = 'yes'; });
+        await card.locator('[data-research-detail]').click();
+        await detailReady;
+        if (kind === 'dossiers') {
+          releaseDetail();
+          await expect(card.locator('.research-details-body')).toContainText(detailText);
+        }
+        releaseList();
+        await page.evaluate(() => window.pendingListRefresh);
+        await expect(card.locator('.research-details')).toHaveAttribute('open', '');
+        await expect(card.locator('.research-details-body')).toHaveAttribute('data-refresh-preserved', 'yes');
+        releaseDetail();
+        await expect(card.locator('.research-details-body')).toContainText(detailText);
+        assert.equal(listReads, 1, 'Concurrent ordinary refreshes share one list request');
+        await card.screenshot({path: path.join(artifacts, `pending-refresh-${kind}.png`)});
+        await card.locator('[data-research-detail]').click();
+      } finally {
+        releaseList();
+        releaseDetail();
+        await page.unroute(url);
+        await page.unroute(url + '?id=*');
+      }
+    }
+    await page.locator('[data-rtab=sources]').click();
+
     const sourceCard = page.locator('.research-card').filter({has: page.locator(`[data-research-detail=source][data-record-id="${fixture.sourceIds[0]}"]`)});
     assert.equal(await sourceCard.getAttribute('onerror'), null, 'A source title must not create card attributes');
-    await sourceCard.locator('summary').click();
+    await sourceCard.locator('[data-research-detail]').click();
     await expect(sourceCard.locator('.research-details-body')).toContainText('Original alpha detail.');
     await sourceCard.locator('.research-details-body').evaluate(node => { node.dataset.preserved = 'yes'; });
     const sourceFilter = page.locator('#r-filter-sources');
@@ -97,9 +154,8 @@ server.serve_forever()
 
     await page.locator('[data-rtab=dossiers]').click();
     await expect(page.locator('#research-dossiers-list .research-card')).toHaveCount(2);
-    await page.waitForLoadState('networkidle');
     const dossierCard = page.locator('.research-card').filter({has: page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossierIds[0]}"]`)});
-    await dossierCard.locator('summary').click();
+    await dossierCard.locator('[data-research-detail]').click();
     await expect(dossierCard.locator('.research-details-body')).toContainText('Original alpha dossier detail.');
     await dossierCard.locator('.research-details-body').evaluate(node => { node.dataset.preserved = 'yes'; });
     const dossierFilter = page.locator('#r-filter-dossiers');
@@ -116,6 +172,66 @@ server.serve_forever()
     await expect(dossierCard.locator('.research-details')).toHaveAttribute('open', '');
     await expect(dossierCard.locator('.research-details-body')).toHaveAttribute('data-preserved', 'yes');
     assert.equal(apiRequests.length, stableDossierRequests, 'Filtering dossiers must not request the API');
+
+    // A committed update must win over an older list response that arrives last.
+    for (const [kind, id] of [['sources', fixture.sourceIds[0]], ['dossiers', fixture.dossierIds[0]]]) {
+      const url = fixture.url + '/api/research/' + kind;
+      let releaseOld, oldStarted;
+      const oldGate = new Promise(resolve => { releaseOld = resolve; });
+      const oldReady = new Promise(resolve => { oldStarted = resolve; });
+      let reads = 0;
+      await page.route(url, async route => {
+        const first = ++reads === 1;
+        const response = await route.fetch();
+        if (first) { oldStarted(); await oldGate; }
+        await route.fulfill({response});
+      });
+      try {
+        await page.locator(`[data-rtab=${kind}]`).click();
+        await oldReady;
+        await page.evaluate(kind => {
+          window.oldListRefresh = kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers();
+        }, kind);
+        const latestText = 'Latest synthetic ' + kind + ' detail.';
+        execFileSync(python, ['-c', `
+import sys
+from pathlib import Path
+from lixity.research import api
+project, kind, record_id, addition = sys.argv[1:]
+if kind == 'sources':
+    source = Path(project).parent / 'alpha.txt'
+    source.write_text(source.read_text() + chr(10) * 2 + addition, encoding='utf-8')
+    api.ingest(project, source, source_id=record_id, allow_retention=True)
+else:
+    current = api.get_record(project, 'dossier', record_id)
+    api.revise_record(project, 'dossier', record_id,
+        changes={'body': current['record']['body'] + chr(10) * 2 + addition},
+        expected_snapshot=current['snapshot'], expected_revision=current['record']['revision'],
+        change_kind='correction', reason='Synthetic concurrent update.')
+`, fixture.project, kind, id, latestText], {cwd: root, env: pythonEnv});
+        await page.evaluate(({kind, id}) => {
+          window.latestListRefresh = kind === 'sources' ? refreshResearchSources(null, id) : refreshResearchDossiers(null, id);
+        }, {kind, id});
+        await page.evaluate(() => window.latestListRefresh);
+        const card = page.locator('#research-' + kind + '-list .research-card').filter({
+          has: page.locator(`[data-research-detail][data-record-id="${id}"]`),
+        });
+        await expect(card.locator('.research-details')).not.toHaveAttribute('open', '');
+        await card.locator('[data-research-detail]').click();
+        await expect(card.locator('.research-details-body')).toContainText(latestText);
+        await card.locator('.research-details-body').evaluate(node => { node.dataset.latestDetail = 'yes'; });
+        releaseOld();
+        await page.evaluate(() => window.oldListRefresh);
+        await expect(card.locator('.research-details')).toHaveAttribute('open', '');
+        await expect(card.locator('.research-details-body')).toHaveAttribute('data-latest-detail', 'yes');
+        await expect(card.locator('.research-details-body')).toContainText(latestText);
+        assert.equal(reads, 2, 'A post-write refresh supersedes the coalesced older request');
+        await card.locator('[data-research-detail]').click();
+      } finally {
+        releaseOld();
+        await page.unroute(url);
+      }
+    }
 
     // Delay real list responses while the query changes.
     // The refreshed list must use the latest filter, and all association options remain available.
@@ -202,8 +318,79 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
         }
       }
     }
+    assert.equal((await (await page.request.post(fixture.url + '/api/settings', {data: {language: 'en'}})).json()).ok, true);
+    await page.setViewportSize({width: 1440, height: 1000});
+    await page.reload();
+    await expect(page.locator('#research-sources-list .research-card')).toHaveCount(3);
+    for (const [action, kind, title, recordId] of [
+      ['import', 'sources', 'Imported synthetic source', null],
+      ['create', 'dossiers', 'Created synthetic dossier', null],
+      ['revise', 'dossiers', 'Revised synthetic dossier', fixture.dossierIds[0]],
+      ['batch', 'dossiers', 'Batch revised synthetic dossier', fixture.dossierIds[1]],
+    ]) {
+      await page.locator(`[data-rtab=${kind}]`).click();
+      await page.evaluate(kind => kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers(), kind);
+      const url = fixture.url + '/api/research/' + kind;
+      let releaseOld, oldStarted;
+      const oldGate = new Promise(resolve => { releaseOld = resolve; });
+      const oldReady = new Promise(resolve => { oldStarted = resolve; });
+      let reads = 0;
+      await page.route(url, async route => {
+        const first = ++reads === 1;
+        const response = await route.fetch();
+        if (first) { oldStarted(); await oldGate; }
+        await route.fulfill({response});
+      });
+      try {
+        await page.evaluate(kind => {
+          window.preWriteListRefresh = kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers();
+        }, kind);
+        await oldReady;
+        if (action === 'import') {
+          await page.locator('#r-ingest-title').evaluate(element => { element.closest('details').open = true; });
+          await page.locator('#r-ingest-title').fill(title);
+          await page.locator('#r-ingest-text').fill('A permitted synthetic source for the post-write refresh regression.');
+          await page.locator('#r-ingest-retention').check();
+          await page.locator('#r-ingest-btn').click();
+          await expect(page.locator('#r-ingest-text')).toHaveValue('');
+        } else if (action === 'create') {
+          await page.locator('#r-dos-title').fill(title);
+          await page.locator('#r-dos-body').fill('A synthetic dossier created while an older list read is pending.');
+          await page.locator('#r-dos-create-btn').click();
+          await expect(page.locator('#r-dos-title')).toHaveValue('');
+        } else {
+          await page.locator(`#research-dossiers-list [data-research-revise=dossier][data-record-id="${recordId}"]`).click();
+          await expect(page.locator('#research-revision-field-title')).toBeVisible();
+          await page.locator('#research-revision-field-title').fill(title);
+          await page.locator('input[name=research_revision_change_kind][value=correction]').check();
+          await page.locator('#research-revision-reason').fill('Synthetic post-write refresh check.');
+          if (action === 'batch') {
+            await page.locator('#research-revision-batch-add').click();
+            await expect(page.locator('#research-revision-batch-review')).toBeEnabled();
+            await page.locator('#modal-research-revision [data-close-modal]').first().click();
+            await page.locator('#research-revision-batch-review').click();
+            await expect(page.locator('#research-revision-batch-apply')).toBeEnabled();
+            await page.locator('#research-revision-batch-apply').click();
+            await expect(page.locator('#modal-research-revision-batch')).not.toBeVisible();
+          } else {
+            await page.locator('#research-revision-save').click();
+            await expect(page.locator('#modal-research-revision')).not.toBeVisible();
+          }
+        }
+        const updated = page.locator('#research-' + kind + '-list .research-card-title').filter({hasText: title});
+        await expect(updated).toHaveText(title);
+        assert.equal(reads, 2, action + ' must read a fresh list after its accepted write');
+        releaseOld();
+        await page.evaluate(() => window.preWriteListRefresh);
+        await expect(updated).toHaveText(title);
+      } finally {
+        releaseOld();
+        await page.evaluate(() => window.preWriteListRefresh);
+        await page.unroute(url);
+      }
+    }
     assert.deepEqual(errors, [], 'Research filters must not cause browser runtime errors');
-    console.log(`Research list filters: matching, inert text, preserved details, no typing requests, async refresh, associations, complete long titles and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
+    console.log(`Research list filters: controlled list/detail races, coalesced reads, fresh import/create/revision/batch reads, stale responses, matching, inert text, preserved details, no typing requests, associations, complete long titles and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
   } finally {
     if (browser) await browser.close();
     lines.close();

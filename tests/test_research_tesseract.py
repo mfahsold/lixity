@@ -98,8 +98,26 @@ class TesseractOCRTest(unittest.TestCase):
             raise subprocess.TimeoutExpired(args, kwargs["timeout"])
         with (patch.dict(os.environ, {"LIXITY_OCR_TIMEOUT": "7"}),
               patch("lixity.research.ocr.subprocess.run", side_effect=timed_out),
+              patch("lixity.research.ocr.time.monotonic", side_effect=[511.99999999999994, 511.99999999999994]),
               self.assertRaisesRegex(ResearchError, "timed out")):
             extract_pdf_with_worker(self.pdf, [PageImage(1, b"first", "hash")])
+
+    def test_timeout_budget_decreases_across_pages_and_stops_at_expiration(self):
+        timeouts = []
+
+        def completed(args, **kwargs):
+            if "--list-langs" in args:
+                return subprocess.CompletedProcess(args, 0, stdout="eng\ndeu\n", stderr="")
+            timeouts.append(kwargs["timeout"])
+            return subprocess.CompletedProcess(args, 0, stdout=b"Synthetic page text.", stderr=b"")
+
+        pages = [PageImage(number, b"synthetic", str(number)) for number in (1, 2, 3)]
+        with (patch.dict(os.environ, {"LIXITY_OCR_TIMEOUT": "7"}),
+              patch("lixity.research.ocr.subprocess.run", side_effect=completed),
+              patch("lixity.research.ocr.time.monotonic", side_effect=[100.0, 100.5, 103.5, 107.0]),
+              self.assertRaisesRegex(ResearchError, "timed out; no partial capture")):
+            extract_pdf_with_worker(self.pdf, pages)
+        self.assertEqual(timeouts, [6.5, 3.5])
 
     def test_invalid_settings_are_actionable(self):
         for setting, value in (("LIXITY_OCR_BACKEND", "unknown"),

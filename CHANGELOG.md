@@ -26,6 +26,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   version claim. Image guidance distinguishes generated references from evidence.
 - Long research titles wrap within their cards on mobile. Project-opening
   guidance explains that CLI work does not switch an already running web server.
+- Source/dossier refreshes coalesce pending reads, ignore superseded responses
+  and preserve unchanged open details. Full-list reconciliation is linear.
+- OCR page timeouts stay within their original budget even when floating-point
+  deadline subtraction rounds upward; the shared deadline still expires.
+- Default nominal-suffix counts exclude curated function words across corpus,
+  chapter and paragraph measurements. Custom regex semantics are preserved.
+  Regenerate older nominal-style reports before comparison.
+- Unavailable show/tell comparisons use a clear status instead of empty score
+  tiles. Paragraph guidance explains density units and small-sample effects;
+  an empty marker list is no longer described as a clean manuscript.
+- API browser diagnostics report request metadata without retaining response
+  contents in the console.
 
 ## [2.2.0] - 2026-10-09
 

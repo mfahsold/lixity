@@ -34,7 +34,8 @@ directory. It does not read any private manuscript or contact a server.
 The debug test uses an intercepted synthetic host. It checks explicit enabled
 and disabled preferences across reloads, window/server defaults, unavailable
 local storage, API diagnostic gating and desktop/mobile rendering. Browser
-preferences do not change server logging. Backend request/error UTC timestamps
+API logs retain request metadata without response contents. Preferences do not
+change server logging. Backend request/error UTC timestamps
 are checked separately in `tests/test_server_debug.py`.
 
 The separate browser workflow runs every suite above in one Chromium job

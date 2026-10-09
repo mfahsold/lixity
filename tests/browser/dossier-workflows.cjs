@@ -52,6 +52,9 @@ server.serve_forever()
     const details = page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`);
     async function openDetails() {
       await Promise.all([page.waitForResponse(response => response.url() === fixture.url + '/api/research/dossiers'), page.locator('[data-rtab=dossiers]').click()]);
+      // A refresh preserves an unchanged open detail, so close it first;
+      // clicking blindly would toggle the preserved detail shut.
+      if (await details.evaluate(node => node.parentElement.open)) await details.click();
       await details.click();
       await expect(page.locator(`[data-dossier-claim="${fixture.dossier}"]`)).toBeVisible();
     }

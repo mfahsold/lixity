@@ -28,6 +28,7 @@ from .style_fingerprint import mad, median, robust_z
 
 TELL_FEATURES = ("filter_density", "modal_density", "passive_density", "nominalization_density")
 SHOW_FEATURES = ("dialog_pct", "staccato_pct")
+MIN_COMPARISON_CHAPTERS = 3
 
 
 @dataclass(frozen=True)
@@ -95,7 +96,7 @@ def _z_map(values: dict[int, float]) -> dict[int, float]:
     chapters share the median — common for share features such as dialogue),
     the standard deviation is used instead so the signal is not lost.
     """
-    if len(values) < 3:
+    if len(values) < MIN_COMPARISON_CHAPTERS:
         return dict.fromkeys(values, 0.0)
     data = list(values.values())
     centre = median(data)

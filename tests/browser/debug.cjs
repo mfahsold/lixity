@@ -88,6 +88,13 @@ const rendered = JSON.parse(fixture.stdout);
     await page.evaluate(() => window.setLixityDebug(true));
     await page.reload();
     assert.equal(await page.evaluate(() => window.LixityLog.isDebug()), true, 'saved true survives reload without server debug');
+    const responseLogs = [];
+    page.on('console', message => responseLogs.push(message));
+    await page.evaluate(() => window.LixityLog.api('GET', '/api/synthetic-source', 12.5, 200,
+      {ok: true, text: 'SYNTHETIC_PRIVATE_RESPONSE', nested: {body: 'SYNTHETIC_PRIVATE_RESPONSE'}}));
+    const loggedArguments = await Promise.all(responseLogs.flatMap(message => message.args().map(argument => argument.jsonValue())));
+    assert.ok(responseLogs.some(message => message.text().includes('/api/synthetic-source -> 200 (12.5ms)')));
+    assert.ok(!JSON.stringify(loggedArguments).includes('SYNTHETIC_PRIVATE_RESPONSE'), 'API diagnostics must not retain response content');
     await context.close();
     const blocked = await open({serverDebug: true, blockedStorage: true});
     await blocked.page.evaluate(() => window.setLixityDebug(false));

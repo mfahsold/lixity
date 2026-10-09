@@ -250,6 +250,13 @@ Emits paragraph-level tense and style profiles as JSON:
   `present`, `past`, `mixed` or `neutral`; the dashboard and reports map these
   values to the display labels of the active language (Präsens, Present, …).
 
+A density is a count scaled to 1,000 words, not a percentage. A few matches in
+a very short paragraph can therefore produce a large value. The default
+nominalization heuristic excludes the language's curated function words;
+explicit project regex overrides retain their match-count semantics. These
+suffix cues are not a full grammatical analysis. Rebuild older reports before
+comparing their nominal-style results with 2.3.0.
+
 Tense classification is a transparent heuristic, not a black box: curated
 high-frequency verb forms are counted per paragraph. A minority tense share of
 ≥ 25 % marks a paragraph as `mixed`; a change of the dominant tense between
@@ -395,6 +402,11 @@ constructions, nominalisations. Showing signals (shares in %): dialogue,
 staccato sentences. For each chapter the report computes robust z-scores
 (median/MAD, scaled) for the mean of each group against the manuscript's own
 chapter medians, and the balance `show_z − tell_z`.
+
+The comparison needs at least three chapters with differing signals. With too
+few chapters or no measurable contrast, the app explains the missing support
+instead of drawing empty score tiles. Individual measurements remain in the
+chapter matrix; this restriction is not a software failure.
 
 - **Positive balance:** the chapter shows more than this manuscript usually
   does. **Negative balance:** it tells more.
@@ -1010,8 +1022,9 @@ applies to the active page and reload uses those defaults again.
 
 The browser preference does not change backend logging. Start or restart the
 server with the intended CLI/environment setting. Browser warnings and errors
-continue to log; API diagnostics include method, URL, status, elapsed milliseconds
-and response details. In 2.0.0, backend requests and error details share
+continue to log; API diagnostics include method, URL, status and elapsed milliseconds.
+Since 2.3.0, they do not copy response contents into the console. In 2.0.0,
+backend requests and error details share
 one UTC writer and the prefix `[YYYY-MM-DD HH:MM:SS UTC] [server:debug]`.
 Browser API diagnostics have no explicit wall-clock timestamp. Logs may contain
 source content or paths; review them before sharing.

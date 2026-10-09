@@ -117,6 +117,11 @@ these:
   rest of the corpus, in natural-log units `[0, ln(2)]`) and `jsd_top_words` (the most contributing content
   words – interpretable drivers of divergence).
 
+In 2.3.0, default nominal-suffix counts exclude curated function words at corpus,
+chapter and paragraph scope. Explicit `nominal_regex` overrides retain their
+match semantics; result schemas stay unchanged. Regenerate older reports before
+comparing these values.
+
 Since 1.16.0, `hd_d` is the exact expected TTR of a 42-token draw without
 replacement, with a 100-token floor. Earlier values used a different estimator;
 recompute both reference and target analyses before comparing them. The field
@@ -524,6 +529,9 @@ certification. See [OCR usage and limits](research/USAGE.md#native-pdfs-versus-s
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
+
+Browser API diagnostics report request metadata without copying response bodies
+to the console (2.3.0).
 
 CLI analysis, research and build commands do not select a project in an existing
 server. Use `POST /api/project-open`, or **Open Project** in the app, to switch

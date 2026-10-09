@@ -141,6 +141,66 @@ class TestParagraphProfiler(unittest.TestCase):
                 self.assertEqual(analysis.metrics.tokens, tokens)
                 self.assertEqual(round(analysis.metrics.dialog_ratio, 1), share)
 
+    def test_default_nominal_suffixes_exclude_curated_function_words_at_all_scopes(self):
+        # Each five-word sentence contains one nominal cue. Function words
+        # that happen to share a suffix must not count as additional cues.
+        for language, text, function_words in (
+            ("de", "Sie nutzt nur eine Statistik.", ("nur",)),
+            ("en", "Growth comes with fresh plans.", ("with",)),
+            ("fr", "Leur gouvernement fonctionne vraiment simplement.", ("leur", "vraiment", "simplement")),
+            ("it", "La speranza vive senza limiti.", ("senza",)),
+        ):
+            config = CorpusConfig(language=language)
+            self.assertTrue(set(function_words) <= resolve_language(config).function_words)
+            markdown = "## Example\n\n" + text
+            metrics = CorpusAnalyzer(config).analyze_text(markdown)
+            paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(markdown))
+            self.assertEqual(metrics.tokens, 5)
+            self.assertEqual(paragraphs[0].words, 5)
+            for scope, density in (
+                ("corpus", metrics.nominalization_density),
+                ("chapter", metrics.chapters[0].nominalization_density),
+                ("paragraph", paragraphs[0].nominal_density),
+                ("chapter standard error", metrics.chapters[0].style_se["nominalization_density"]),
+            ):
+                with self.subTest(language=language, scope=scope):
+                    self.assertEqual(density, 200.0)
+
+    def test_explicit_nominal_regex_preserves_function_words_and_match_counts(self):
+        # Explicit patterns remain authoritative, including captures, phrases,
+        # zero-width matches and an explicitly selected default pattern.
+        markdown = "## Example\n\nSie nutzt nur eine Statistik."
+        for pattern, expected in (
+            (r"\b(nur|Statistik)\b", 400.0),
+            (r"(nur)|(Statistik)", 400.0),
+            (r"\bnur eine\b", 200.0),
+            (r"(?=(nur|Statistik)\b)", 400.0),
+            (get_language_profile("de").nominal_regex, 400.0),
+            ("", 0.0),
+        ):
+            with self.subTest(pattern=pattern):
+                config = CorpusConfig(language="de", nominal_regex=pattern)
+                metrics = CorpusAnalyzer(config).analyze_text(markdown)
+                paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(markdown))
+                self.assertEqual(metrics.nominalization_density, expected)
+                self.assertEqual(metrics.chapters[0].nominalization_density, expected)
+                self.assertEqual(paragraphs[0].nominal_density, expected)
+
+    def test_default_nominal_exclusions_preserve_counts_and_ignore_case(self):
+        config = CorpusConfig(language="de")
+        for text, expected in (
+            ("NUR, nur. Kultur, Entscheidung.", 500.0),
+            ("nur NUR.", 0.0),
+            ("Kultur Entscheidung.", 1000.0),
+        ):
+            with self.subTest(text=text):
+                markdown = "## Example\n\n" + text
+                metrics = CorpusAnalyzer(config).analyze_text(markdown)
+                paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(markdown))
+                self.assertEqual(metrics.nominalization_density, expected)
+                self.assertEqual(metrics.chapters[0].nominalization_density, expected)
+                self.assertEqual(paragraphs[0].nominal_density, expected)
+
     def test_present_and_past_paragraphs(self):
         md = (
             "## Kapitel 1\n\n"

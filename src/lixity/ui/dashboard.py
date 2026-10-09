@@ -755,6 +755,8 @@ def render_dashboard(
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
 
+    parts.append(f'<p class="ctl-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>')
+
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}
     for idx, p in enumerate(paragraphs):

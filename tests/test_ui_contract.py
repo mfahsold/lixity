@@ -491,11 +491,8 @@ class TestShowDontTellComponents(unittest.TestCase):
             with self.subTest(text=text):
                 report = showing_report(text, config).to_dict()
                 rendered = render_showing_panel(report, labels, "en")
-                self.assertEqual(re.findall(r'class="kpi"><b>([^<]+)</b>', rendered), ["–"] * 3)
-                self.assertEqual(
-                    re.findall(r'class="val">([^<]+)</span>', rendered),
-                    ["–"] * len(report["chapter_list"]),
-                )
+                self.assertNotIn('class="kpi-row"', rendered)
+                self.assertNotIn('class="dist scrollable"', rendered)
                 self.assertNotIn('<i style="width:', rendered)
                 for note in labels.values():
                     self.assertIn(f'<p class="ctl-note">{note}</p>', rendered)

@@ -27,7 +27,7 @@ from .diversity import (
 from .diversity import (
     yules_k as yules_k_value,
 )
-from .language import compile_pattern, compile_word_pattern, resolve_language
+from .language import compile_pattern, compile_word_pattern, count_nominal_matches, resolve_language
 from .language_data import READABILITY
 from .markdown_parser import chapter_heading_spans, prose_paragraphs, prose_text, split_chapters
 from .models import (
@@ -91,6 +91,9 @@ class CorpusAnalyzer:
         # Style heuristics (self-calibrating house-style fingerprint)
         self._passive_re = compile_pattern(self.lang.passive_regex)
         self._nominal_re = compile_pattern(self.lang.nominal_regex)
+        self._nominal_exclusions = (
+            self.lang.function_words if self.config.nominal_regex is None else frozenset()
+        )
         self._adjective_re = compile_pattern(self.lang.adjective_regex)
         self._modals = frozenset(w.lower() for w in self.lang.lexicon.get("modals", ()))
         self._starters = frozenset(w.lower() for w in self.lang.first_person_starters)
@@ -310,7 +313,7 @@ class CorpusAnalyzer:
 
         c_start_entropy, c_first_rate, c_entropy_se = self._starter_stats(c_sentences)
         c_passive_cnt = len(self._passive_re.findall(cl_b))
-        c_nominal_cnt = len(self._nominal_re.findall(cl_b))
+        c_nominal_cnt = count_nominal_matches(cl_b, self._nominal_re, self._nominal_exclusions)
         c_adjective_cnt = len(self._adjective_re.findall(cl_b))
         c_modal_cnt = sum(1 for t in c_lower if t in self._modals)
         c_long_words = sum(1 for t in c_words if len(t) > lw_min)
@@ -468,7 +471,7 @@ class CorpusAnalyzer:
         # 8. Style densities (per 1,000 tokens, length-comparable)
         passive_density = self._density(len(self._passive_re.findall(prose_main)), n_tokens)
         nominalization_density = self._density(
-            len(self._nominal_re.findall(prose_main)), n_tokens
+            count_nominal_matches(prose_main, self._nominal_re, self._nominal_exclusions), n_tokens
         )
         adjective_density = self._density(len(self._adjective_re.findall(prose_main)), n_tokens)
         modal_density = self._density(sum(1 for t in lower_tokens if t in self._modals), n_tokens)
