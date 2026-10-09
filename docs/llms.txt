@@ -7,7 +7,18 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 2.2.0; release tag: v2.2.0.
+Current release: 2.3.0; release tag: v2.3.0.
+
+First look: https://mfahsold.github.io/lixity/guides/first-look.html
+Read-only synthetic report: https://mfahsold.github.io/lixity/demo/report.html
+The example uses the shared engine with explicit defaults. It requires no upload
+or account, offers no editing actions, and does not validate literary quality.
+
+research dossier-image atomically captures local PNG/JPEG and attaches it to an
+explicit dossier, with required expected-snapshot/revision and allow-retention.
+It reuses the Python/Web attachment API, shared limits and complete JSON receipt.
+Context literals/files must be JSON objects; source bytes and dossier edits are
+not accepted on stale CAS. Generated pictures are references, not factual proof.
 
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
@@ -40,7 +51,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from GitHub, not PyPI:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.2.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.3.0"
 lixity --version
 lixity about
 ```

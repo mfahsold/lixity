@@ -260,7 +260,7 @@ _lixity_complete() {
     fi
     case "$prev" in
         research)
-            COMPREPLY=( $(compgen -W "init ingest reindex search cite audit schema analyze dashboard compare sources dossier withdraw purge" -- "$cur") )
+            COMPREPLY=( $(compgen -W "__LIXITY_RESEARCH_COMMANDS__" -- "$cur") )
             return 0
             ;;
         --project|--research-project|--research-dir)
@@ -345,7 +345,7 @@ _lixity() {
       case $words[1] in
         research)
           _arguments \
-            '1:action:(init ingest reindex search cite audit schema analyze dashboard compare sources dossier withdraw purge)' \
+            '1:action:(__LIXITY_RESEARCH_COMMANDS__)' \
             '--project[Explicit project root]:directory:_files -/' \
             '--file[UTF-8 source]:file:_files' \
             '--manuscript[Path to manuscript file]:file:_files' \
@@ -1082,12 +1082,14 @@ def main(argv: list[str] | None = None) -> int:
         args.language = project_config.get("language", "en")
 
     if args.command == "completion":
+        from .research.cli import command_metadata
+        research_commands = " ".join(command["name"] for command in command_metadata())
         shell = (args.shell or "bash").strip().lower()
         if shell in ("bash", "sh"):
-            sys.stdout.write(_BASH_COMPLETION)
+            sys.stdout.write(_BASH_COMPLETION.replace("__LIXITY_RESEARCH_COMMANDS__", research_commands))
             return EXIT_OK
         if shell == "zsh":
-            sys.stdout.write(_ZSH_COMPLETION)
+            sys.stdout.write(_ZSH_COMPLETION.replace("__LIXITY_RESEARCH_COMMANDS__", research_commands))
             return EXIT_OK
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)

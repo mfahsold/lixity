@@ -12,9 +12,17 @@ then lets you read the passages behind each result. Its research workspace keeps
 source quotations and writing decisions connected. Your literary judgment guides
 what you keep or revise.
 
-[Get started](#installation) · [What you can do](#what-you-can-do) ·
+Matthias Fahsold developed Lixity as an architect and developer at ROST Services
+GmbH and used it while writing his own debut novel.
+
+[Try the example](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
+[Installation](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v2.2.0 release notes](docs/releases/v2.2.0.md)
+[v2.3.0 release notes](docs/releases/v2.3.0.md)
+
+The example is a read-only report made from invented text. It needs no
+installation or manuscript upload.
 
 Free for projects with no commercial purpose. A book intended for sale,
 including self-publishing, requires a separate written commercial license.
@@ -28,18 +36,18 @@ For help installing these tools, or to use pipx instead, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.2.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.3.0"
 lixity --version
 ```
 
 This installs the released version. For later upgrades, select the new tag using
 the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace. [Release notes](docs/releases/v2.2.0.md) describe compatibility
+the local workspace. [Release notes](docs/releases/v2.3.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
-**In 2.2.0:** save the project author's name under **Project → Settings → Author name** and use it in NDA
-exports. A read-only check compares the project title and author with explicit
-manuscript metadata. See the [settings and NDA guide](docs/USAGE.md#nda-agreements).
+**In 2.3.0:** explore the public example before installing. Attach local image
+references to dossiers from the CLI through the same guarded workflow as the app.
+See the [image workflow](docs/research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
 ## Quick Start
 

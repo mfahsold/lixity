@@ -31,7 +31,7 @@
   "name": "Lixity",
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "2.2.0",
+  "softwareVersion": "2.3.0",
   "description": "Local manuscript analysis and a traceable research workspace for authors, editors and researchers.",
   "url": "https://mfahsold.github.io/lixity/",
   "codeRepository": "https://github.com/mfahsold/lixity",
@@ -50,8 +50,9 @@
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v2.2.0</span></a>
+    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v2.3.0</span></a>
     <nav class="site-nav" aria-label="Main navigation">
+      <a href="guides/first-look.html">First look</a>
       <a href="#visual-suite">Features</a>
       <a href="#guides">Guides</a>
       <a href="#methods">Methods</a>
@@ -66,17 +67,24 @@
     <p class="hero-sub">Read the patterns in your writing. Keep the evidence behind your decisions.</p>
     <p>Lixity helps authors, editors and researchers see how a manuscript changes from chapter to chapter. Explore sentence lengths, word use, dialogue and tense, then read the passages behind each result.</p>
     <div class="hero-cta">
-      <a class="btn primary" href="guides/installation.html">Get started</a>
-      <a class="btn" href="#visual-suite">See what you can do</a>
+      <a class="btn primary" href="demo/report.html">Try the example</a>
+      <a class="btn" href="guides/first-look.html">Three-minute first look</a>
     </div>
-    <p class="release-note">Current release: <a href="releases/v2.2.0.md">v2.2.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
-    <p class="release-note">In 2.2.0: save the project author once for NDA exports, and compare title/author metadata without changing the manuscript. <a href="USAGE.md#nda-agreements">Read the settings and NDA guide</a>.</p>
+    <p>Explore an invented manuscript in a read-only report. No installation, account or manuscript upload. <a href="guides/installation.html">Install Lixity for your own writing</a>.</p>
+    <p class="release-note">Current release: <a href="releases/v2.3.0.md">v2.3.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
+    <p class="release-note">In 2.3.0: explore the public example before installing, and attach image references to dossiers from the CLI through the same guarded workflow as the app. <a href="research/USAGE.md#keep-a-visual-reference-in-a-dossier">Read the image workflow</a>.</p>
     <p class="license-note">Free for projects with no commercial purpose. Books intended for sale, including self-publishing, need a separate written commercial license. <a href="#licensing">License details</a>.</p>
   </section>
 
   <section id="core-pillars" class="intro">
     <h2>Explore the text. Follow the evidence.</h2>
     <p>Begin with a Markdown manuscript, or open a project with its existing research archive. The dashboard keeps manuscript analysis, research and project settings in three clear views.</p>
+  </section>
+
+  <section id="origin" class="intro">
+    <h2>Used while writing a debut novel.</h2>
+    <p>Matthias Fahsold developed Lixity at ROST Services GmbH and used it while writing his own debut novel. He is the software architect and developer behind the product.</p>
+    <p>Lixity brings manuscript patterns and the evidence behind writing decisions into the same workspace. The public example uses invented text to show how to explore a result and return to its passage. <a href="guides/first-look.html">Follow the three-minute walkthrough</a>.</p>
   </section>
 
   <section id="visual-suite" aria-label="Features and examples">
@@ -175,7 +183,7 @@
   <section id="installation" class="reading-section">
     <h2>Install the current release</h2>
     <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> and Git. The <a href="guides/installation.html">installation guide</a> explains how to get them on Windows, macOS and Linux.</p>
-    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.2.0"
+    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.3.0"
 lixity --version
 lixity build manuscript.md --language de</pre>
     <p>Open <code>exports/manuscript_dashboard.html</code> in your browser. Use <code>--language en</code> for English. English is the default when no language is selected; detection requires <code>--language auto</code>.</p>

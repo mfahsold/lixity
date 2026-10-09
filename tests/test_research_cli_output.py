@@ -4,6 +4,7 @@ import argparse
 import contextlib
 import io
 import json
+import re
 import tempfile
 import unittest
 from pathlib import Path
@@ -13,6 +14,23 @@ from lixity.research import api, cli
 
 
 class TestResearchCliOutput(unittest.TestCase):
+    def test_shell_completions_follow_the_registered_research_commands(self):
+        from lixity.cli import main
+
+        expected = {command["name"] for command in cli.command_metadata()}
+        for shell, pattern in (
+            ("bash", r'research\)\s+COMPREPLY=\( \$\(compgen -W "([^"]+)"'),
+            ("zsh", r"'1:action:\(([^)]*)\)'"),
+        ):
+            with self.subTest(shell=shell), patch("lixity.cli.load_project_config", return_value={}):
+                output = io.StringIO()
+                with contextlib.redirect_stdout(output):
+                    self.assertEqual(main(["completion", shell]), 0)
+                match = re.search(pattern, output.getvalue())
+                self.assertIsNotNone(match)
+                self.assertEqual(set(match[1].split()), expected)
+                self.assertNotIn("__LIXITY_RESEARCH_COMMANDS__", output.getvalue())
+
     def parse(self, *arguments: str) -> argparse.Namespace:
         parser = argparse.ArgumentParser()
         cli.configure(parser)

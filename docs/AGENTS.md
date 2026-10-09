@@ -565,6 +565,17 @@ Local image endpoints (2.1.0):
   remote URL is accepted. Host/Origin/fetch-site checks and no-store, nosniff and
   same-origin resource headers apply.
 
+CLI attachment (2.3.0): `research dossier-image --project DIR --dossier-id ID
+--file PATH --expected-snapshot DIGEST --expected-revision N --allow-retention`.
+It reads a bounded local PNG/JPEG and calls the same atomic attachment API.
+Optional `--alt`, `--caption`, `--section`, `--title`, `--origin-url`, `--reason`,
+`--change-kind`, `--actor` and `--context` match the shared data model.
+Context is a JSON object literal or local JSON-object file; other supplied JSON
+types are rejected through stderr/nonzero exit, also for ordinary `ingest`.
+Stdout is the complete API JSON receipt. There is no implicit snapshot retry,
+remote download, OCR or factual verification; generated visual references should
+be identified in the caption and `context.provenance_note`.
+
 Only these image POST bodies use 32 MiB; other JSON bodies remain limited to 5 MiB.
 Raw images are limited to 16 MiB / 64 million pixels. Permission must be the JSON
 boolean `true`; source notes/URLs have 2,000-character bounds, alternative text

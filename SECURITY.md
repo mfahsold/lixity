@@ -7,8 +7,8 @@ publishing exploit details before maintainers can assess the report.
 
 ## Versions and scope
 
-The current release is **v1.19.0**, including the local project/research server
-and dashboard rendering safeguards. Reports should identify the exact tag or commit. Fixes are developed
+Reports should identify the exact tag or commit; see the
+[current release](https://github.com/mfahsold/lixity/releases/latest). Fixes are developed
 on `main`; backports are evaluated case by case. A development version is not
 a production-support guarantee.
 

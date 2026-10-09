@@ -172,6 +172,13 @@ Images have no extracted text, passages or linguistic scores. Retain an authoriz
 local file yourself; a Wikimedia category or file-description page is not an image
 file. Text/PDF imports and OCR remain separate workflows.
 
+Generated images are imaginative visual references, not documentary evidence of
+how a real place looked. Identify generation or reconstruction in the caption
+and `provenance_note`, and retain the actual source of documentary photographs.
+A saved image, evidence link or author-selected claim status does not verify a
+historical, legal or biographical assertion. Character choices and stylistic
+intentions remain author decisions; external factual claims need suitable evidence.
+
 Limits are 16 MiB per image and 64 million pixels; image-specific HTTP JSON is
 limited to 32 MiB. Static PNG and supported 8-bit Huffman JPEG containers are
 checked for signatures, structure and dimensions. These checks are not a complete
@@ -190,7 +197,27 @@ Programmatic capture is `ingest_image(project, bytes, filename="reference.png",
 allow_retention=True)`. `attach_dossier_image` additionally requires the dossier
 ID and exact `expected_snapshot` / `expected_revision`; it performs the joint
 save. Its Markdown image destination is `lixity:image/SOURCE_ID/VERSION_ID`,
-with canonical UUID URNs. Image version purge records retain the exact source identity
+with canonical UUID URNs.
+
+For a joint capture and attachment, inspect the current dossier first and use
+its returned snapshot and revision:
+
+```sh
+lixity research dossier --project ./novel --dossier-id ID --summary
+lixity research dossier-image --project ./novel --dossier-id ID \
+  --file ./reference.jpg --expected-snapshot DIGEST --expected-revision N \
+  --allow-retention --alt "Describe the reference" --section "Location" \
+  --context '{"provenance_note":"Generated visual reference; not a documentary photograph."}'
+```
+
+Omit `--section` to append at the end. Optional caption, source title, original
+source-page URL, change reason/kind and actor match the Python API. `--context`
+accepts a JSON object or a local JSON-object file, using the ordinary import
+convention. It creates no text passages and invokes no OCR. Success is the API's
+JSON receipt; errors go to stderr with a nonzero exit status. Stale edits fail
+without an accepted image or dossier revision; refresh and review before retrying.
+
+Image version purge records retain the exact source identity
 under `research-local/2`; older 2.0.0 writers reject that record. Existing v1 records
 stay unchanged. Back up before writing with a newer release, and keep compatible
 writers for that archive. Unprovable old associations remain missing.

@@ -93,10 +93,12 @@ Zotero controls at desktop and mobile widths. These
 fixtures do not establish compatibility with a running Zotero installation or
 validate a real library migration.
 
-The docs suite loads public static files through intercepted
-local routes: all four HTML pages at 1440, 390 and 320 pixels, with JavaScript
-enabled and disabled. It checks canonical URLs, assets, console errors, overflow
-and navigation, heading order and explicit content-image dimensions; screenshots
+The docs suite stages the Pages publication set and loads six HTML pages through
+intercepted local routes at 1440, 390 and 320 pixels, in light and dark themes,
+with JavaScript enabled and disabled. It checks canonical URLs, assets, console
+errors, overflow, navigation, heading order and explicit content-image dimensions.
+The read-only example also exercises keyboard paragraph expansion, filters,
+chapter links and chart controls, with no API or external requests. Screenshots
 stay under `/tmp/lixity-public-docs-*`.
 
 The visual-consistency suite compares shared color roles between Pages and a

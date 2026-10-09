@@ -1,8 +1,9 @@
 # Sample corpus – provenance and licensing
 
 The two historical source works are **public domain** and are **not** covered
-by the Lixity Non-Commercial License. The separate original sequel draft is
-not public domain; its existing license status is listed below. The unmodified Project Gutenberg source files keep their original
+by the Lixity Non-Commercial License. The original sequel draft and the invented
+first-look example are not public domain; their license status is listed below.
+The unmodified Project Gutenberg source files keep their original
 header and license notice and must not be redistributed without it.
 
 | File | Work | Source | Legal status |
@@ -12,6 +13,7 @@ header and license notice and must not be redistributed without it.
 | `pride-and-prejudice-pg1342.txt` | *Pride and Prejudice*, Jane Austen (1813) | [Project Gutenberg #1342](https://www.gutenberg.org/ebooks/1342) | public domain (author died 1817); unmodified PG file with header |
 | `pride-and-prejudice.md` | same work, Markdown conversion | derived from the PG file | public domain; 61 chapters, ~122k words |
 | `effi-briest-folge/` | *Annie* – original sequel draft (first chapter) | written by the repository author | © the author; covered by the LNCL-1.0 (`../LICENSE`) |
+| `first-look.md` | *An invented night shift* – six short English chapters | synthetic text created for the Lixity first-look demonstration; no real manuscript or incident | original repository example content under the existing LNCL-1.0 (`../LICENSE`); no new permissions granted |
 
 **Reproducible conversion** (Effi Briest): front matter, `## Erstes Kapitel` …
 headings, text otherwise unchanged from the PG file.
@@ -25,9 +27,14 @@ added.
 
 ## Generated artifacts
 
-Generated analysis artifacts (dashboards, metrics JSON) are not committed —
-they are reproducible and would only bloat the repository. Regenerate them
-any time:
+Generated analysis artifacts (dashboards, metrics JSON) are normally not
+committed. The small, synthetic [`first-look.md`](first-look.md) report is an
+explicit exception: [`docs/demo/report.html`](../docs/demo/report.html) is the
+read-only public demonstration. Its [regeneration recipe](../docs/demo/README.md)
+uses English and shared code defaults, without discovering local project
+settings. The example is not a benchmark or calibration corpus.
+
+Regenerate the historical examples locally:
 
 ```bash
 lixity dashboard samples/effi-briest.md -o /tmp/effi-briest-dashboard.html

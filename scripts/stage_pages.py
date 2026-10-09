@@ -37,6 +37,8 @@ DOCS_ROOT_FILES = {
     "ONBOARDING.md",
     "STABILITY.md",
     "USAGE.md",
+    # One reviewed, generated example; sibling inputs/build files stay private to the repo.
+    "demo/report.html",
 }
 
 #: Approved subtrees, keyed by their first path segment.

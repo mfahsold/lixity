@@ -3,6 +3,7 @@
 import re
 import sys
 import unittest
+from html.parser import HTMLParser
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -15,6 +16,82 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 
 class TestDocumentation(unittest.TestCase):
+    def test_public_demo_boundary_excludes_unapproved_helper_files(self):
+        """Publishing the demo must not publish its entire working directory."""
+        import tempfile
+
+        from stage_pages import DOCS_ROOT_FILES, PUBLIC_TREES, stage
+
+        self.assertEqual({name for name in DOCS_ROOT_FILES if name.startswith("demo/")}, {"demo/report.html"})
+        self.assertNotIn("demo", PUBLIC_TREES)
+
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "docs"
+            (source / "demo").mkdir(parents=True)
+            (source / "guides").mkdir()
+            report = "<html><body>Synthetic read-only report.</body></html>"
+            (source / "demo" / "report.html").write_text(report, encoding="utf-8")
+            (source / "guides" / "first-look.html").write_text("Synthetic guide.", encoding="utf-8")
+            for name in ("unapproved.html", "source.md", "output.json", "archive.zip"):
+                (source / "demo" / name).write_text("Synthetic unapproved helper.", encoding="utf-8")
+            (source / "demo" / "helpers").mkdir()
+            (source / "demo" / "helpers" / "input.html").write_text("Unapproved nested helper.", encoding="utf-8")
+            output = Path(directory) / "site"
+            stage(source, output)
+            self.assertEqual((output / "demo" / "report.html").read_text(encoding="utf-8"), report)
+            self.assertTrue((output / "guides" / "first-look.html").is_file())
+            self.assertEqual({path.name for path in (output / "demo").iterdir()}, {"report.html"})
+
+    def test_first_look_journey_and_relative_assets_exist_in_published_output(self):
+        """The guide/report journey must survive Pages' explicit staging boundary."""
+        import tempfile
+        from urllib.parse import urlsplit
+
+        from stage_pages import stage
+
+        class Links(HTMLParser):
+            def __init__(self):
+                super().__init__()
+                self.targets = []
+
+            def handle_starttag(self, tag, attrs):
+                attributes = dict(attrs)
+                for key in ("href", "src"):
+                    if attributes.get(key):
+                        self.targets.append(attributes[key])
+
+        with tempfile.TemporaryDirectory() as directory:
+            output = Path(directory) / "site"
+            stage(ROOT / "docs", output)
+            pages = (output / "index.html", output / "guides" / "first-look.html", output / "demo" / "report.html")
+            resolved = {}
+            for page in pages:
+                self.assertTrue(page.is_file(), f"Missing staged journey page: {page.relative_to(output)}")
+                parser = Links()
+                parser.feed(page.read_text(encoding="utf-8"))
+                local = set()
+                for target in parser.targets:
+                    url = urlsplit(target)
+                    if url.scheme or url.netloc or not url.path:
+                        continue
+                    path = (page.parent / url.path).resolve()
+                    self.assertTrue(path.is_relative_to(output), f"Public link escapes staged output: {target}")
+                    self.assertTrue(path.exists(), f"Broken staged journey link: {page.relative_to(output)} -> {target}")
+                    local.add(path)
+                resolved[page] = local
+            self.assertIn(pages[1], resolved[pages[0]])
+            self.assertIn(pages[2], resolved[pages[1]])
+
+    def test_synthetic_demo_distributes_complete_license_as_an_appendix(self):
+        """A standalone generated report retains the unchanged distribution terms."""
+        from html import unescape
+
+        report = (ROOT / "docs" / "demo" / "report.html").read_text(encoding="utf-8")
+        appendix = re.search(r'<pre\b[^>]*\bid="demo-license-text"[^>]*>(.*?)</pre>', report, re.DOTALL)
+        self.assertIsNotNone(appendix)
+        self.assertEqual(unescape(appendix[1]), (ROOT / "LICENSE").read_text(encoding="utf-8"))
+        self.assertNotIn("Lixity Non-Commercial License", report.split('<main id="chapters">')[1].split("</main>")[0])
+
     def test_math_avoids_macros_rejected_by_github(self):
         for path in (ROOT / "docs").glob("*.md"):
             with self.subTest(path=path.name):

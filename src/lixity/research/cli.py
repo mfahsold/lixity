@@ -9,6 +9,8 @@ from typing import Any, Literal
 
 from pydantic import ValidationError
 
+from .limits import MAX_IMAGE_BYTES
+
 OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "sources": (("text", "md", "json"), "json"),
     "audit": (("text", "md", "json"), "json"),
@@ -43,6 +45,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("compare", "Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)"),
         ("sources", "List active sources, versions, tags, and passage counts"),
         ("dossier", "Create, list or inspect research dossiers"),
+        ("dossier-image", "Capture a local PNG/JPEG and attach it to a dossier atomically"),
         ("claim", "Create, list or revise research claims and hypotheses"),
         ("link-evidence", "Create, inspect or revise a passage-to-claim evidence link"),
         ("decision", "Create, list or revise author decisions and fact deviations"),
@@ -140,7 +143,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--actor", help="Capture actor (default: local-author; resume retains the checkpoint actor)")
             command.add_argument("--allow-retention", action="store_true", help="Confirm permission to retain a local copy, not to redistribute it")
             command.add_argument("--dry-run", action="store_true", help="Validate and preview; do not write")
-            command.add_argument("--context", help="Path to JSON file containing source criticism context")
+            command.add_argument("--context", help="Source criticism JSON object or path to its JSON file")
             command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
             command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
             command.add_argument("--fallback", "--allow-fallback", dest="fallback", action="store_true", help="Allow fallback to native PDF text layer if OCR worker fails or times out")
@@ -184,6 +187,22 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--summary", action="store_true", help="Return metadata, section outline, and body excerpt without full text")
             command.add_argument("--section", help="Inspect or update only the named heading section")
             command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
+        elif name == "dossier-image":
+            command.add_argument("--dossier-id", required=True, help="Dossier UUID to revise")
+            command.add_argument("--file", required=True, help="Path to a local PNG or JPEG image")
+            command.add_argument("--expected-snapshot", required=True, help="Snapshot digest from the reviewed dossier")
+            command.add_argument("--expected-revision", required=True, type=int, help="Reviewed dossier revision")
+            command.add_argument("--allow-retention", action="store_true",
+                                 help="Confirm permission to retain a local copy, not to redistribute it")
+            command.add_argument("--alt", default="", help="One-line image alternative text")
+            command.add_argument("--caption", help="Optional image caption")
+            command.add_argument("--section", help="Append inside an existing unique dossier heading")
+            command.add_argument("--title", help="Title for the retained image source")
+            command.add_argument("--context", help="Source criticism JSON object or path to its JSON file")
+            command.add_argument("--origin-url", help="Original HTTP(S) source URL (metadata only; never fetched)")
+            command.add_argument("--reason", help="Why the image is being attached (default: name the image)")
+            command.add_argument("--change-kind", choices=("correction", "supersession"), default="supersession")
+            command.add_argument("--actor", default="local-author")
         elif name == "claim":
             command.add_argument("--claim-id", help="Claim UUID to inspect")
             command.add_argument("--title", help="Title for new claim")
@@ -256,6 +275,19 @@ def command_metadata() -> list[dict[str, Any]]:
              "default_output": command.get_default("cli_default_output"),
              "json_flag": "--json" if "--json" in command._option_string_actions else None}
             for name, command in commands.choices.items()]
+
+
+def _source_context(value: str | None) -> dict[str, Any] | None:
+    """Read a source criticism JSON object from an inline value or local file."""
+    from .repository import ResearchError
+
+    if value is None:
+        return None
+    path = Path(value)
+    context = json.loads(path.read_text(encoding="utf-8") if path.is_file() else value)
+    if not isinstance(context, dict):
+        raise ResearchError("Source context must be a JSON object")
+    return context
 
 
 def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
@@ -415,14 +447,22 @@ def run(args: argparse.Namespace) -> int:
                 expected_snapshot=args.expected_snapshot, expected_decision_revision=args.expected_decision_revision,
                 expected_dossier_revision=args.expected_dossier_revision,
                 status="applied" if command == "mark-applied" else "review_needed", note=args.note, actor=args.actor)
+        elif command == "dossier-image":
+            if not args.allow_retention:
+                raise ResearchError("Explicit local retention permission is required (--allow-retention)")
+            context = _source_context(args.context)
+            image_path = Path(args.file)
+            with image_path.open("rb") as image_file:
+                content = image_file.read(MAX_IMAGE_BYTES + 1)
+            result = api.attach_dossier_image(
+                args.project, args.dossier_id, content, filename=image_path.name,
+                expected_snapshot=args.expected_snapshot, expected_revision=args.expected_revision,
+                allow_retention=args.allow_retention, alt=args.alt, caption=args.caption,
+                section=args.section, title=args.title, context=context, origin_url=args.origin_url,
+                reason=args.reason, change_kind=args.change_kind, actor=args.actor,
+            )
         elif command == "ingest":
-            context: dict[str, Any] | None = None
-            if getattr(args, "context", None):
-                context_path = Path(args.context)
-                if context_path.is_file():
-                    context = json.loads(context_path.read_text(encoding="utf-8"))
-                else:
-                    context = json.loads(args.context)
+            context = _source_context(getattr(args, "context", None))
             start_time = time.monotonic()
 
             def _cli_progress(stage: str, message: str) -> None:
