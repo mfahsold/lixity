@@ -211,6 +211,7 @@ def render_dashboard(
         f'<html lang="{html_lang}">',
         "<head>",
         '<meta charset="utf-8"/>',
+        '<link rel="icon" href="data:,"/>',
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
         *(('<meta name="lixity-debug" content="true"/>',) if debug else ()),
         f"<title>{esc(title)} – {L('app_suffix')}</title>",

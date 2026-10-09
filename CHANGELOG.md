@@ -34,6 +34,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   technical identifiers use the shared monospace role.
 - Metadata-only PDF refresh reports retained-extraction verification instead of
   announcing skipped OCR work. Extraction reuse and revision contracts are unchanged.
+- Opening a live workspace no longer requests a missing server favicon or emits
+  its unrelated console error; the offline dashboard declares an empty inline icon.
 
 ## [2.1.0] - 2026-10-08
 
