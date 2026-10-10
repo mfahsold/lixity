@@ -214,7 +214,7 @@ cmd_stop() {
     if ! recorded_pid_is_live || ! port_accepts_connections; then
         clean_pid_file
         info "Lixity is not running."
-        exit 0
+        return 0
     fi
     PID="$(recorded_pid)"
     kill "$PID" 2>/dev/null || true

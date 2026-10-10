@@ -53,6 +53,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   keyboard navigation and readable panels without JavaScript are preserved.
 
 ### Fixed
+- Restarting a stopped local service attempts startup instead of returning
+  success after the no-op stop; startup failures retain a nonzero exit status.
 - PDF command discovery in `about` and Bash/Zsh completion matches the implemented CLI.
 - Active manuscript search takes priority over the flagged-only filter, so
   unflagged matches remain visible. Clearing search restores the selected filter.

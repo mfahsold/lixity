@@ -39,6 +39,32 @@ class TestLauncher(unittest.TestCase):
         self.assertEqual(res.returncode, 1)
         self.assertIn("Lixity is not running", res.stdout)
 
+    def test_restart_of_stopped_service_attempts_start_and_reports_launch_failure(self) -> None:
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            runtime = root / "runtime"
+            runtime.mkdir()
+            executable = root / ".venv" / "bin" / "lixity"
+            executable.parent.mkdir(parents=True)
+            executable.write_text(
+                '#!/bin/sh\nprintf "%s\\n" "$@" > "$LIXITY_LAUNCHER_TEST_MARKER"\nexit 17\n',
+                encoding="utf-8",
+            )
+            executable.chmod(0o755)
+            marker = root / "attempt.txt"
+            res = subprocess.run(  # noqa: S603 - repository launcher and synthetic executable
+                [self.bash, str(self.script), "restart", "--port", "59997"],
+                cwd=root,
+                env={**os.environ, "XDG_RUNTIME_DIR": str(runtime),
+                     "LIXITY_LAUNCHER_TEST_MARKER": str(marker)},
+                capture_output=True, text=True, check=False, timeout=10,
+            )
+            self.assertTrue(marker.exists(), "Restart must attempt a start even without a live PID")
+            self.assertEqual(marker.read_text().splitlines(),
+                             ["serve", "--host", "127.0.0.1", "--port", "59997"])
+            self.assertNotEqual(res.returncode, 0, "A failed launch cannot be reported as success")
+            self.assertIn("exited during startup", res.stderr)
+
     def test_stale_pid_cleanup_by_status(self) -> None:
         xdg = os.environ.get("XDG_RUNTIME_DIR", "")
         if xdg and os.path.isdir(xdg) and os.access(xdg, os.W_OK):
