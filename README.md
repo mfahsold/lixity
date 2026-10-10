@@ -113,6 +113,16 @@ compare scenes with a similar purpose. Each group has its own middle values
 unavailable. [Scene example](docs/screenshots/dashboard-scenes.png) ·
 [Setup and limits](docs/USAGE.md#scene-registers-and-project-targets).
 
+### Print what the analysis found
+
+`lixity pdf` composes a PDF from the manuscript and its measurements: an A4
+analysis report, an A5 reading layout, or a submission sheet of 30 lines of 60
+characters. Fonts are embedded as subsets, so any script a chosen font covers
+renders, and the text stays searchable. No converter, no upload, no added
+runtime dependency.
+
+[Command reference](docs/USAGE.md#lixity-pdf)
+
 ### Keep review notes beside the text
 
 Inspect paragraphs with their source lines, dialogue and tense labels. Work

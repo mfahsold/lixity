@@ -52,6 +52,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | `lixity showing FILE [--json]` | showing vs. telling balance per chapter | text / JSON |
 | `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR, structural diagnostics; `--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`) | JSON (schema v4) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard (Settings: z\*, FDR, flags cut, dim threshold) | file path |
+| `lixity pdf FILE [--layout report\|book\|sheet] [-o OUT]` | composed PDF (A4 report, A5 reading layout, 30×60 sheet); `--author`, `--serif-font`, `--bold-font`, `--mono-font` | file path |
 | `lixity serve [PATH] [--port N] [--host IP] [--no-project]` | native development server & interactive dashboard with project switcher | loopback HTTP server |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` (same threshold flags as `style`) | artifact list |
 | `lixity research SUBCOMMAND --project DIR` | evidence-based research archive (init, ingest, search, cite, sources, dossier, compare) | JSON |
@@ -360,6 +361,7 @@ are quotation segments.
 | Repetition cleanup | `lixity motifs FILE --json` → `repeated_phrases`, `top_words` |
 | Style drift in a new draft | `lixity build` (reference) → `lixity analyze draft.md --json` → compare against the corridor |
 | Human-readable hand-off | `lixity dashboard FILE -o review.html --names "A,B"` |
+| Printable document | `lixity pdf FILE --layout book --author "Name"` |
 
 ## 4. Interpretation heuristics (documented, not black-box)
 

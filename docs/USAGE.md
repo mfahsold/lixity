@@ -96,6 +96,7 @@ which writes a single HTML file.
 | I want to see and click all of it | `lixity dashboard` | single-file HTML, all panels, offline |
 | I want an interactive live server | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
+| I want a printable report or reading copy | `lixity pdf` | A4 report, A5 book layout, 30×60 sheet |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
 
@@ -539,6 +540,44 @@ The dashboard contains:
 ```bash
 lixity dashboard manuscript.md -o ui.html
 ```
+
+### `lixity pdf`
+
+Composes a PDF document directly, without a browser, converter or runtime font
+package. No new dependency is involved, and nothing is uploaded.
+
+```sh
+lixity pdf manuscript.md --layout report            # A4 analysis report
+lixity pdf manuscript.md --layout book --author "Name"   # A5 reading layout
+lixity pdf manuscript.md --layout sheet             # 30 lines x 60 characters
+lixity pdf manuscript.md --layout book -o reading.pdf
+```
+
+| Layout | Page | Purpose |
+| :--- | :--- | :--- |
+| `report` | A4 | The measured analysis report, with the report language applied |
+| `book` | A5 | Continuous reading: serif measure, indented paragraphs, chapter openings, running head |
+| `sheet` | A4 | Submission grid: at most 30 lines per page, at most 60 characters per line |
+
+Output is written beside the manuscript unless `-o` names another path, and is
+deterministic: an unchanged manuscript produces an identical file.
+
+**Characters and fonts.** Text is addressed by glyph id, so any script the
+chosen font covers renders — including marks outside Basic Latin. Fonts are
+looked up on the host (DejaVu, Noto, Liberation, FreeFont and others) and can
+be pinned per role with `--serif-font`, `--bold-font`, `--mono-font` or
+`LIXITY_PDF_FONT_TEXT` / `_HEADING` / `_MONO`. Only glyphs actually used are
+embedded, so a German manuscript stays a small file. A font whose licence
+forbids embedding is refused rather than producing blank pages; an unavailable
+font is reported with the file names searched. Exported text carries a
+`ToUnicode` map, so it can be searched, selected and copied in a reader.
+
+**Limits.** This is a text and layout renderer. It does not hyphenate, justify
+with a Knuth–Plass optimiser, place images, build tables of contents with page
+numbers, or typeset mathematics. Justification distributes slack across word
+spaces. Text that a font cannot draw is reported, not replaced by a substitute
+character. These documents are generated from a Markdown manuscript; the
+manuscript itself is never modified.
 
 ### `lixity build`
 

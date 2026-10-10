@@ -68,6 +68,57 @@ class FileUtils:
                 return True
 
     @staticmethod
+    def atomic_write_bytes_if_changed(filepath: str, content: bytes) -> bool:
+        """
+        Writes binary content to disk only if it differs from the current file.
+
+        Composed PDFs are byte streams, not text, so the string path cannot be
+        used without corrupting them through a decoding step.
+
+        Parameters:
+            filepath: Target path to write to.
+            content: New file content as bytes.
+
+        Returns:
+            True: File was created or changed.
+            False: File already exists with identical content; no write access.
+        """
+        filepath = os.path.abspath(filepath)
+        try:
+            with open(filepath, "rb") as existing:
+                unchanged = existing.read() == content
+        except OSError:
+            unchanged = False  # Missing or unreadable target -> rewrite
+        if unchanged:
+            return False
+
+        out_dir = os.path.dirname(filepath)
+        if out_dir:
+            os.makedirs(out_dir, exist_ok=True)
+
+        try:
+            temp_fd, temp_path = tempfile.mkstemp(dir=out_dir, prefix="sync_tmp_", suffix=".tmp")
+            with os.fdopen(temp_fd, "wb") as f:
+                f.write(content)
+                f.flush()
+                os.fsync(f.fileno())  # durability: data on disk before the rename
+            os.replace(temp_path, filepath)
+            return True
+        except OSError:
+            try:
+                temp_fd, temp_path = tempfile.mkstemp(
+                    dir=tempfile.gettempdir(), prefix="sync_tmp_", suffix=".tmp"
+                )
+                with os.fdopen(temp_fd, "wb") as f:
+                    f.write(content)
+                shutil.move(temp_path, filepath)
+                return True
+            except OSError:
+                with open(filepath, "wb") as f:
+                    f.write(content)
+                return True
+
+    @staticmethod
     def read_file(filepath: str, encoding: str = "utf-8") -> str:
         """
         Reads a text file in a standards-compliant way.

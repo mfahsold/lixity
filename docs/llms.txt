@@ -111,6 +111,8 @@ credentials and recipient details out of shared logs.
 - `lixity style FILE --json`: manuscript style reference, schema 4.
 - `lixity scenes FILE --json`: scene/register measurements, schema 1.
 - `lixity dashboard FILE -o ui.html`: standalone HTML report.
+- `lixity pdf FILE --layout report|book|sheet`: composed PDF; TrueType subsets
+  embedded on the host, no converter or runtime font package, ToUnicode output.
 - `lixity serve [FILE|FOLDER] [--research-project DIR] [--no-project]`: local server.
 - `lixity build [FILE] [--dry-run]`: exports; unchanged input causes no writes.
 - `lixity research SUBCOMMAND --project DIR`: experimental explicit-project archive.

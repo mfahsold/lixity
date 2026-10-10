@@ -16,6 +16,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - `research dossier-image` captures a local PNG/JPEG and revises its dossier in
   one atomic API operation. Explicit retention permission, archive snapshot and
   dossier revision are required; existing validation and image limits apply.
+- `lixity pdf --layout report|book|sheet` composes a PDF document without any
+  external converter. Fonts are embedded as TrueType subsets, so any script a
+  chosen font covers renders instead of a fixed character repertoire. Output
+  text stays searchable and copyable. The sheet layout is a fixed grid of 30
+  lines of at most 60 characters; the book layout is A5 with a serif measure
+  and chapter openings.
 
 ### Fixed
 - Research shell-completion command names come from the same parser metadata as

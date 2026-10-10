@@ -15,7 +15,7 @@ from .analyzer import CorpusAnalyzer
 from .config import load_project_config, resolve_thresholds
 from .formatters import ReportFormatter
 from .io import FileUtils
-from .models import SCHEMA_VERSION
+from .models import SCHEMA_VERSION, CorpusConfig
 from .pipeline import (
     analyze_document,
     fingerprint_document,
@@ -94,6 +94,8 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "build_done": "Done: {changed} written, {unchanged} unchanged.",
         "dashboard_written": "Dashboard written: {output}",
         "dashboard_unchanged": "Dashboard unchanged: {output}",
+        "pdf_written": "PDF written: {output}",
+        "pdf_unchanged": "PDF unchanged: {output}",
         "err_no_names": "No figure names given (use --name or --names).",
         "dlg_metric": "Dialogue metric",
         "dlg_value": "Value",
@@ -173,6 +175,8 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "build_done": "Fertig: {changed} geschrieben, {unchanged} unverändert.",
         "dashboard_written": "Dashboard geschrieben: {output}",
         "dashboard_unchanged": "Dashboard unverändert: {output}",
+        "pdf_written": "PDF geschrieben: {output}",
+        "pdf_unchanged": "PDF unverändert: {output}",
         "err_no_names": "Keine Figurennamen angegeben (--name oder --names).",
         "dlg_metric": "Dialogmetrik",
         "dlg_value": "Wert",
@@ -480,7 +484,9 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
 
     from .dialogue import dialogue_report
 
-    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+    config, resolved = resolve_document_config(
+        text, args.language, project_config=args._project_config
+    )
     report = dialogue_report(text, config)
 
     if args.json:
@@ -541,7 +547,9 @@ def _cmd_characters(args: argparse.Namespace) -> int:
 
     from .characters import presence_report
 
-    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+    config, resolved = resolve_document_config(
+        text, args.language, project_config=args._project_config
+    )
     report = presence_report(text, names, config)
 
     if args.json:
@@ -585,7 +593,9 @@ def _cmd_pacing(args: argparse.Namespace) -> int:
 
     from .pacing import pacing_report
 
-    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+    config, resolved = resolve_document_config(
+        text, args.language, project_config=args._project_config
+    )
     report = pacing_report(text, config)
 
     if args.json:
@@ -648,7 +658,9 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
 
     from .motifs import motif_report
 
-    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+    config, resolved = resolve_document_config(
+        text, args.language, project_config=args._project_config
+    )
     report = motif_report(text, motifs, config, phrase_size=max(2, args.phrases))
 
     if args.json:
@@ -700,7 +712,9 @@ def _cmd_showing(args: argparse.Namespace) -> int:
 
     from .showing import showing_report
 
-    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+    config, resolved = resolve_document_config(
+        text, args.language, project_config=args._project_config
+    )
     report = showing_report(text, config)
 
     if args.json:
@@ -741,6 +755,62 @@ def _cmd_showing(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _cmd_pdf(args: argparse.Namespace) -> int:
+    """Compose one of the PDF layouts from the manuscript or the analysis."""
+    from .pdf_document import PdfError
+    from .pdf_layouts import FontChoice, book_pdf, manuscript_pdf, report_pdf
+
+    try:
+        workspace = discover(explicit=args.file)
+    except (FileNotFoundError, ValueError) as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
+
+    text = workspace.read_manuscript()
+    config, resolved = resolve_document_config(
+        text, args.language, project_config=args._project_config
+    )
+    title = _document_title(args, workspace.manuscript)
+    choice = FontChoice(serif=args.serif_font, serif_bold=args.bold_font, mono=args.mono_font)
+    try:
+        if args.layout == "report":
+            fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
+            metrics = analyze_document(text, config, fp_thresholds).metrics
+            payload = report_pdf(
+                title=title,
+                markdown=ReportFormatter.format_markdown_report(
+                    metrics, labels=resolved.labels, language_key=resolved.key
+                ),
+                choice=choice,
+            )
+        else:
+            sections = _manuscript_sections(text, config)
+            payload = (
+                book_pdf(title=title, author=args.author or "", chapters=sections, choice=choice)
+                if args.layout == "book"
+                else manuscript_pdf(title=title, chapters=sections, choice=choice)
+            )
+    except (PdfError, ValueError, RuntimeError) as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
+    # The composed document belongs beside the manuscript, not in whatever
+    # directory the command happened to be started from.
+    output = args.output or os.path.join(workspace.root, f"{workspace.slug}-{args.layout}.pdf")
+    changed = FileUtils.atomic_write_bytes_if_changed(output, payload)
+    print(_m("pdf_written" if changed else "pdf_unchanged", output=output))
+    return EXIT_OK
+
+
+def _manuscript_sections(text: str, config: CorpusConfig) -> list[tuple[str, list[str]]]:
+    """Split the manuscript into chapter headings and their prose paragraphs."""
+    from .markdown_parser import prose_paragraphs, split_chapters
+
+    sections = []
+    for number, heading, body in split_chapters(text, config):
+        sections.append((heading or f"Chapter {number}", prose_paragraphs(body, config)))
+    return sections
+
+
 def _cmd_build(args: argparse.Namespace) -> int:
     """Idempotent workspace build: analyzes the manuscript and publishes artifacts."""
     try:
@@ -750,7 +820,9 @@ def _cmd_build(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     text = workspace.read_manuscript()
-    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+    config, resolved = resolve_document_config(
+        text, args.language, project_config=args._project_config
+    )
 
     fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
     analysis = analyze_document(text, config, fp_thresholds)
@@ -789,8 +861,12 @@ def _cmd_build(args: argparse.Namespace) -> int:
             paragraphs,
             metrics=metrics,
             fingerprint=fingerprint,
-            scenes=scene_report_for_display(text, config, args._project_config.get("scene_analysis"),
-                                            premeasured_chapters=metrics.chapters),
+            scenes=scene_report_for_display(
+                text,
+                config,
+                args._project_config.get("scene_analysis"),
+                premeasured_chapters=metrics.chapters,
+            ),
             title=title,
             labels=resolved.labels,
             language_name=resolved.name,
@@ -844,7 +920,11 @@ def main(argv: list[str] | None = None) -> int:
     sub = parser.add_subparsers(dest="command", required=True, metavar="command")
     from .research.cli import configure as configure_research
 
-    configure_research(sub.add_parser("research", help="Experimental local sources, citations and lexical search (JSON)"))
+    configure_research(
+        sub.add_parser(
+            "research", help="Experimental local sources, citations and lexical search (JSON)"
+        )
+    )
     for name, help_text in (
         ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
         ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
@@ -856,6 +936,7 @@ def main(argv: list[str] | None = None) -> int:
         ("showing", "Showing vs. telling balance (text/JSON)"),
         ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
         ("dashboard", "Generate a single-file HTML dashboard"),
+        ("pdf", "Compose a PDF document (analysis report, book layout or 30x60 sheet)"),
         ("serve", "Run local HTTP development server and interactive dashboard"),
         ("build", "Idempotent workspace build of analysis exports and artifact archive"),
         ("about", "Tool metadata for agents: languages, features, heuristics"),
@@ -876,15 +957,23 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if name == "scenes":
             p.add_argument("file", help="Markdown manuscript")
-            p.add_argument("--language", default=None, help="Language profile (default: project setting or en)")
+            p.add_argument(
+                "--language", default=None, help="Language profile (default: project setting or en)"
+            )
             p.add_argument("--json", action="store_true", help="JSON output (scene schema v1)")
             continue
         if name in ("style", "dashboard", "build"):
-            p.add_argument("--min-chapters", type=int, default=None,
-                           help="Minimum chapters required for a style baseline (default: 2)")
+            p.add_argument(
+                "--min-chapters",
+                type=int,
+                default=None,
+                help="Minimum chapters required for a style baseline (default: 2)",
+            )
         if name == "build":
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
-            p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
+            p.add_argument(
+                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+            )
             p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
             p.add_argument(
                 "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
@@ -924,7 +1013,9 @@ def main(argv: list[str] | None = None) -> int:
                 help="Motif as NAME=REGEX (repeatable)",
             )
             p.add_argument("--phrases", type=int, default=3, help="Phrase size (default 3)")
-            p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
+            p.add_argument(
+                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+            )
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "characters":
@@ -936,14 +1027,18 @@ def main(argv: list[str] | None = None) -> int:
                 help="Figure name or alias pattern (repeatable)",
             )
             p.add_argument("--names", help="Comma-separated figure names")
-            p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
+            p.add_argument(
+                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+            )
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "dashboard":
             p.add_argument("file", help="Markdown manuscript")
-            p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
+            p.add_argument(
+                "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+            )
             p.add_argument("--names", help="Comma-separated figure names (character panel)")
-            p.add_argument("-o", "--output", help="Target file (dashboard)")
+            p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
             p.add_argument(
                 "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
             )
@@ -982,7 +1077,11 @@ def main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
             p.add_argument("--port", type=int, default=8765, help="Port (default: 8765)")
-            p.add_argument("--language", default=None, help="Language profile (default: project setting or en; auto is explicit)")
+            p.add_argument(
+                "--language",
+                default=None,
+                help="Language profile (default: project setting or en; auto is explicit)",
+            )
             p.add_argument("--title", default=None, help="Dashboard title (default: filename)")
             p.add_argument("--open", action="store_true", help="Open dashboard in browser")
             p.add_argument(
@@ -1032,11 +1131,13 @@ def main(argv: list[str] | None = None) -> int:
             )
             continue
         p.add_argument("file", help="Markdown manuscript")
-        p.add_argument("--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)")
+        p.add_argument(
+            "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
+        )
         p.add_argument(
             "--json", action="store_true", help="JSON output (analyze/profile/style/dialogue)"
         )
-        p.add_argument("-o", "--output", help="Target file (dashboard)")
+        p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
         p.add_argument(
             "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
         )
@@ -1065,6 +1166,18 @@ def main(argv: list[str] | None = None) -> int:
             default=None,
             help="Minimum paragraph severity for flags panel (default 2)",
         )
+        if name == "pdf":
+            p.add_argument(
+                "--layout",
+                choices=("report", "book", "sheet"),
+                default="report",
+                help="report: analysis report (A4) · book: reading layout (A5) · "
+                "sheet: 30 lines of 60 characters",
+            )
+            p.add_argument("--author", default=None, help="Author line for the book layout")
+            p.add_argument("--serif-font", default=None, help="TrueType file for running text")
+            p.add_argument("--bold-font", default=None, help="TrueType file for headings")
+            p.add_argument("--mono-font", default=None, help="TrueType file for the sheet grid")
     args = parser.parse_args(argv)
     if args.command == "research":
         from .research.cli import run as run_research
@@ -1083,13 +1196,18 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "completion":
         from .research.cli import command_metadata
+
         research_commands = " ".join(command["name"] for command in command_metadata())
         shell = (args.shell or "bash").strip().lower()
         if shell in ("bash", "sh"):
-            sys.stdout.write(_BASH_COMPLETION.replace("__LIXITY_RESEARCH_COMMANDS__", research_commands))
+            sys.stdout.write(
+                _BASH_COMPLETION.replace("__LIXITY_RESEARCH_COMMANDS__", research_commands)
+            )
             return EXIT_OK
         if shell == "zsh":
-            sys.stdout.write(_ZSH_COMPLETION.replace("__LIXITY_RESEARCH_COMMANDS__", research_commands))
+            sys.stdout.write(
+                _ZSH_COMPLETION.replace("__LIXITY_RESEARCH_COMMANDS__", research_commands)
+            )
             return EXIT_OK
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
@@ -1104,7 +1222,8 @@ def main(argv: list[str] | None = None) -> int:
 
         fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
         project_open_overrides = {
-            key: value for key, value in (
+            key: value
+            for key, value in (
                 ("language", explicit_language),
                 ("title", args.title),
                 ("z_mild", args.z_mild),
@@ -1114,7 +1233,8 @@ def main(argv: list[str] | None = None) -> int:
                 ("min_chapters", getattr(args, "min_chapters", None)),
                 ("dim_score_threshold", args.dim_threshold),
                 ("flag_min_severity", args.flag_min_severity),
-            ) if value is not None
+            )
+            if value is not None
         }
         try:
             run_server(
@@ -1134,6 +1254,9 @@ def main(argv: list[str] | None = None) -> int:
         except (OSError, ValueError, RuntimeError) as exc:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
             return EXIT_ERROR
+
+    if args.command == "pdf":
+        return _cmd_pdf(args)
 
     if args.command == "build":
         return _cmd_build(args)
@@ -1160,7 +1283,9 @@ def main(argv: list[str] | None = None) -> int:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
 
-    config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+    config, resolved = resolve_document_config(
+        text, args.language, project_config=args._project_config
+    )
 
     if args.command == "scenes":
         from .api import scenes
@@ -1183,18 +1308,30 @@ def main(argv: list[str] | None = None) -> int:
             for item in report["scenes"]["items"]:
                 group = item["group"] or labels["scene_unassigned"]
                 print(safe_text(f"{item['id']} · {item['chapter_title']} · {group}"))
-                print(f"  {num(item['words'], resolved.key, 0)} {labels['words']} · "
-                      f"{num(item['sentences'], resolved.key, 0)} {labels['sentences']}")
+                print(
+                    f"  {num(item['words'], resolved.key, 0)} {labels['words']} · "
+                    f"{num(item['sentences'], resolved.key, 0)} {labels['sentences']}"
+                )
                 for field, label_key, unit in FEATURES:
                     value = item["features"][field]
                     target = item["targets"].get(field)
                     detail = ""
                     if target:
-                        lower = "…" if target["lower"] is None else num(target["lower"], resolved.key, 2)
-                        upper = "…" if target["upper"] is None else num(target["upper"], resolved.key, 2)
+                        lower = (
+                            "…"
+                            if target["lower"] is None
+                            else num(target["lower"], resolved.key, 2)
+                        )
+                        upper = (
+                            "…"
+                            if target["upper"] is None
+                            else num(target["upper"], resolved.key, 2)
+                        )
                         detail = f" · {labels['scene_' + target['position']]} [{lower} – {upper}]"
                     rendered = "—" if value is None else num(value, resolved.key, 2)
-                    print(f"  {labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}")
+                    print(
+                        f"  {labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}"
+                    )
             print(labels["scene_guidance"])
             print(labels["scene_support"].replace("{min_tokens}", str(MIN_TOKENS_LD)))
         return EXIT_OK
@@ -1244,8 +1381,12 @@ def main(argv: list[str] | None = None) -> int:
         paragraphs,
         metrics=metrics,
         fingerprint=fingerprint,
-        scenes=scene_report_for_display(text, config, args._project_config.get("scene_analysis"),
-                                        premeasured_chapters=metrics.chapters),
+        scenes=scene_report_for_display(
+            text,
+            config,
+            args._project_config.get("scene_analysis"),
+            premeasured_chapters=metrics.chapters,
+        ),
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, names, config) if names else None,
         title=_document_title(args, args.file),
