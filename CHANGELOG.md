@@ -22,6 +22,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   text stays searchable and copyable. The sheet layout is a fixed grid of 30
   lines of at most 60 characters; the book layout is A5 with a serif measure
   and chapter openings.
+- PDF layouts follow measured typographic practice: type size is fitted to the
+  real text so lines land in the 45-75 character band, paragraphs are broken by
+  a shortest-cost search instead of greedily, justification tightens as well as
+  stretches and never stretches a line's last one, book margins mirror for
+  double-sided printing, baselines sit on a leading grid, and Markdown emphasis,
+  code and table syntax no longer leak into the exported text.
 
 ### Fixed
 - Research shell-completion command names come from the same parser metadata as

@@ -770,8 +770,14 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
     config, resolved = resolve_document_config(
         text, args.language, project_config=args._project_config
     )
-    title = _document_title(args, workspace.manuscript)
-    choice = FontChoice(serif=args.serif_font, serif_bold=args.bold_font, mono=args.mono_font)
+    title = _pdf_title(args, workspace.manuscript, text)
+    choice = FontChoice(
+        serif=args.serif_font,
+        serif_bold=args.bold_font,
+        mono=args.mono_font,
+        sans=args.sans_font,
+        sans_bold=args.sans_bold_font,
+    )
     try:
         if args.layout == "report":
             fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
@@ -799,6 +805,24 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
     changed = FileUtils.atomic_write_bytes_if_changed(output, payload)
     print(_m("pdf_written" if changed else "pdf_unchanged", output=output))
     return EXIT_OK
+
+
+def _pdf_title(args: argparse.Namespace, manuscript: str, text: str) -> str:
+    """Prefer the project's own title, then the manuscript's heading.
+
+    A book or a submission sheet is read by other people, so a file name such
+    as ``manuscript`` is not an acceptable title when the text names itself.
+    """
+    configured = args._project_config.get("title")
+    if isinstance(configured, str) and configured.strip():
+        return configured.strip()
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.startswith("# "):
+            heading = stripped[2:].strip()
+            if heading:
+                return heading
+    return os.path.splitext(os.path.basename(manuscript))[0]
 
 
 def _manuscript_sections(text: str, config: CorpusConfig) -> list[tuple[str, list[str]]]:
@@ -1178,6 +1202,10 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--serif-font", default=None, help="TrueType file for running text")
             p.add_argument("--bold-font", default=None, help="TrueType file for headings")
             p.add_argument("--mono-font", default=None, help="TrueType file for the sheet grid")
+            p.add_argument("--sans-font", default=None, help="TrueType file for the report text")
+            p.add_argument(
+                "--sans-bold-font", default=None, help="TrueType file for report headings"
+            )
     args = parser.parse_args(argv)
     if args.command == "research":
         from .research.cli import run as run_research

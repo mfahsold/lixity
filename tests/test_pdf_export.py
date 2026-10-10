@@ -278,6 +278,66 @@ def _character_count(hexed: str) -> int:
     return len(hexed) // 4
 
 
+@needs_fonts
+class TypesettingTest(unittest.TestCase):
+    def _lines(self, text, size=10.0, measure=300.0):
+        from lixity.pdf_document import FontSet, fit_paragraph
+
+        fonts = FontSet({"text": str(SERIF)})
+        fonts.collect("text", text)
+        return fit_paragraph(text, fonts.face("text"), size, measure)
+
+    def test_no_line_falls_below_half_the_measure(self):
+        text = ("Die Nachtigall übt und übt und übe lauthals im Wald. Die Mühe lohnt sich "
+                "findet die Nachtigall. Sie findet ihren Gesang ganz wunderbar und singt "
+                "bis tief in die Nacht hinein, während der Nebel über die Wiesen zieht. "
+                "Am Ende sitzt sie still auf einem Ast und wartet darauf, dass jemand "
+                "zuhört, was sie die ganze Zeit hindurch gesucht hat.")
+        for line in self._lines(text):
+            if line.text:
+                self.assertGreaterEqual(line.slack + 300.0, 150.0)
+
+    def test_last_line_is_free_of_any_length_penalty(self):
+        # A heading must not be split: every word would be a line of its own.
+        lines = self._lines("Kapitel 1", size=13.5, measure=300.0)
+        self.assertEqual([line.text for line in lines], ["Kapitel 1"])
+
+    def test_every_word_survives_the_break(self):
+        text = ("Ich habe es noch nie geschafft ohne Druck ein Geschenk zu besorgen "
+                "und laufe grundsätzlich am Vorabend los durch die volle Stadt.")
+        expected = text.split(" ")
+        joined = " ".join(line.text for line in self._lines(text))
+        self.assertEqual(joined.split(" "), expected)
+
+    def test_short_line_is_never_chosen_mid_paragraph(self):
+        text = ("Die Pfändungsmitteilung landet nicht diskret in der Post sondern schlägt "
+                "direkt in der Gehaltsabteilung der Questura auf und ich schiebe das "
+                "Kuvert unter den Stapel alter Zeitungen.")
+        lines = [line for line in self._lines(text) if line.text]
+        self.assertTrue(all(len(line.text.split(" ")) > 1 for line in lines[:-1]))
+
+    def test_markdown_tables_are_rendered_as_readable_text(self):
+        from lixity.pdf_layouts import _markdown_line
+
+        self.assertIsNone(_markdown_line("|---|:---:|---:|"))
+        self.assertEqual(
+            _markdown_line("| **ASL** | **19,15** | Wert |"),
+            "ASL  ·  19,15  ·  Wert",
+        )
+        self.assertEqual(_markdown_line("- ein Punkt"), "– ein Punkt")
+        self.assertEqual(_markdown_line("**Wert** mit `code`"), "Wert mit code")
+
+    def test_grid_layout_never_exceeds_the_column_count(self):
+        data = manuscript_pdf(
+            title="weglaufen",
+            chapters=[("Kapitel", ["Ein kurzer Absatz fuer den Normbogen." * 4])],
+            choice=CHOSEN,
+        )
+        for page in _composed_pages(data):
+            for drawn in page:
+                self.assertLessEqual(_character_count(drawn), NORM_COLUMNS)
+
+
 class ToolchainAvailableTest(unittest.TestCase):
     def test_poppler_can_validate_generated_pdfs(self):
         pdfinfo = shutil.which("pdfinfo")

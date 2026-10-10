@@ -2088,9 +2088,20 @@ async function refreshResearchProjectInfo() {
       var zotero = results[1];
       var reading = ocrReading(ocr.ok ? ocr : null);
       ocrText.textContent = "OCR: " + reading.label + " " + reading.guidance;
+      var zoteroReady = zotero.ok && (zotero.status === "ready" || zotero.status === "connected");
       var key = zotero.ok && zotero.status === "ready" ? "setup_zotero_ready"
         : zotero.ok && zotero.status === "connected" ? "setup_zotero_connected" : "setup_zotero_unavailable";
       zoteroText.textContent = uiLabel(key) + " " + uiLabel("setup_library_unchecked");
+      // Hide the instructions for whatever this check just found working;
+      // showing them beside a success message reads as a contradiction.
+      var steps = document.getElementById("setup-zotero-steps");
+      if (steps) steps.hidden = zoteroReady;
+      var ocrSteps = document.getElementById("setup-ocr-steps");
+      if (ocrSteps) {
+        var ocrReady = ocr.ok && (ocr.status === "ready" || ocr.tesseract_available === true
+          || ocr.worker_configured === true);
+        ocrSteps.hidden = ocrReady;
+      }
       var safeOcr = {};
       ["status", "backend", "pdftotext_available", "pdftoppm_available", "tesseract_available",
        "requested_languages", "available_languages", "missing_languages"].forEach(function(field) {

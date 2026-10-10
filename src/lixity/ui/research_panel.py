@@ -26,11 +26,18 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append(f'<button type="button" class="ctl" id="research-setup-check">{L("setup_check")}</button>')
     parts.append(f'<p id="setup-ocr-reading" class="ctl-note" aria-live="polite">OCR: {L("setup_not_checked")}</p>')
     parts.append(f'<p id="setup-zotero-reading" class="ctl-note" aria-live="polite">Zotero: {L("setup_not_checked")}</p>')
+    # The steps are grouped so a successful check can hide the guidance for the
+    # component it just found working. Leaving it visible next to "reachable"
+    # read as if the check had failed.
+    parts.append('<div id="setup-zotero-steps">')
     parts.append(f'<h3 class="section-heading">Zotero</h3><p class="ctl-note">{L("setup_zotero_steps")}</p>')
     parts.append('<p><a class="ctl-link" href="https://www.zotero.org/support/" target="_blank" rel="noopener">Zotero</a></p>')
+    parts.append("</div>")
+    parts.append('<div id="setup-ocr-steps">')
     parts.append(f'<h3 class="section-heading">OCR</h3><p class="ctl-note">{L("setup_ocr_steps")}</p>')
     parts.append('<p><a class="ctl-link" href="https://tesseract-ocr.github.io/tessdoc/Installation.html" target="_blank" rel="noopener">Tesseract</a> · '
                  '<a class="ctl-link" href="https://mfahsold.github.io/lixity/INSTALLATION.md#server-environment-and-project-access" target="_blank" rel="noopener">Poppler</a></p>')
+    parts.append("</div>")
     parts.append(f'<p class="ctl-note">{L("setup_language_example")}</p>')
     parts.append('<pre class="research-dossier-body-source">LIXITY_OCR_BACKEND=tesseract\nLIXITY_OCR_LANGUAGES=deu+eng</pre>')
     parts.append(f'<p class="ctl-note">{L("setup_restart")}</p>')

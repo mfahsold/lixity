@@ -555,28 +555,57 @@ lixity pdf manuscript.md --layout book -o reading.pdf
 
 | Layout | Page | Purpose |
 | :--- | :--- | :--- |
-| `report` | A4 | The measured analysis report, with the report language applied |
-| `book` | A5 | Continuous reading: serif measure, indented paragraphs, chapter openings, running head |
+| `report` | A4 | The measured analysis report, set in a sans face for screen reading |
+| `book` | A5 | Continuous reading: serif measure, mirrored margins, chapter openings, folios |
 | `sheet` | A4 | Submission grid: at most 30 lines per page, at most 60 characters per line |
+
+**Typography.** The layouts follow what print research and practice actually
+agree on, and where they disagree the guide says so:
+
+- **Measure.** Lines are fitted to roughly 64 characters (`book`) and 78
+  (`report`) by choosing the type size from the real text, not the font alone.
+  Readable print measures are usually quoted as 45–75 characters; the often
+  cited "66 is ideal" is a craftsman's convention rather than a measured
+  result, so the size is fitted per document instead of assumed.
+- **Line breaking.** Paragraphs are broken by a shortest-cost search over all
+  break points, not greedily line by line. Greedy breaking is what produces
+  rivers and one-word lines in justified text. There is no hyphenation, so the
+  last resort is a ragged edge instead of an unbreakable line.
+- **Justification.** Slack is spread over the word gaps, tightening as well as
+  stretching, and a line falls back to ragged rather than opening a gap beyond
+  a third of an em. The last line of a paragraph is never justified.
+- **Margins.** The foot is larger than the head, so the block does not read as
+  sinking off the page. The book mirrors its margins for double-sided printing;
+  the report uses symmetric margins for single-sided reading.
+- **Vertical grid.** Book and report baselines sit on a grid set by the body
+  leading, so headings and paragraph spacing land on the same rhythm.
+- **Grid sheet.** The submission sheet is a fixed character grid: it is broken
+  at the column count and never spaced out, because the count is the contract.
+- **Markdown.** Markdown emphasis, code and table syntax are rendered away, so
+  a report reads as a document rather than as its source.
 
 Output is written beside the manuscript unless `-o` names another path, and is
 deterministic: an unchanged manuscript produces an identical file.
 
 **Characters and fonts.** Text is addressed by glyph id, so any script the
 chosen font covers renders — including marks outside Basic Latin. Fonts are
-looked up on the host (DejaVu, Noto, Liberation, FreeFont and others) and can
-be pinned per role with `--serif-font`, `--bold-font`, `--mono-font` or
-`LIXITY_PDF_FONT_TEXT` / `_HEADING` / `_MONO`. Only glyphs actually used are
+looked up on the host and can be pinned per role with `--serif-font`,
+`--bold-font`, `--mono-font`, `--sans-font`, `--sans-bold-font` or
+`LIXITY_PDF_FONT_TEXT` / `_HEADING` / `_MONO` / `_SANS` / `_SANS_BOLD`. The
+book prefers a face set for reading — EB Garamond, Linux Libertine, Charis SIL,
+Gentium — and falls back through Times-metric faces to DejaVu Serif; the report
+uses a sans face. Only glyphs actually used are
 embedded, so a German manuscript stays a small file. A font whose licence
 forbids embedding is refused rather than producing blank pages; an unavailable
 font is reported with the file names searched. Exported text carries a
 `ToUnicode` map, so it can be searched, selected and copied in a reader.
 
-**Limits.** This is a text and layout renderer. It does not hyphenate, justify
-with a Knuth–Plass optimiser, place images, build tables of contents with page
-numbers, or typeset mathematics. Justification distributes slack across word
-spaces. Text that a font cannot draw is reported, not replaced by a substitute
-character. These documents are generated from a Markdown manuscript; the
+**Limits.** This is a text and layout renderer. It does not hyphenate, place
+images, build tables of contents with page numbers, mirror a running head
+between recto and verso, or typeset mathematics. Line breaking minimises badness
+without Knuth–Plass hyphenation, so a narrow measure occasionally leaves a
+loose line. Text a font cannot draw is reported rather than replaced by a
+substitute character. These documents are generated from a Markdown manuscript; the
 manuscript itself is never modified.
 
 ### `lixity build`

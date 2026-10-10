@@ -55,6 +55,9 @@ const fixtures = JSON.parse(fixture.stdout);
       assert.ok((await page.locator('#setup-zotero-reading').textContent()).includes(fixtures[language].labels.setup_zotero_unavailable));
       assert.ok(!(await page.locator('#setup-zotero-reading').textContent()).includes('<img'));
       assert.equal(await page.locator('#research-setup-guide img, #research-setup-guide script').count(), 0);
+      // Nothing was found working yet, so both instruction blocks are shown.
+      assert.equal(await page.locator('#setup-zotero-steps').isVisible(), true);
+      assert.equal(await page.locator('#setup-ocr-steps').isVisible(), true);
       assert.equal(await page.evaluate(() => Boolean(window.setupInjected)), false);
       assert.ok((await page.locator('#research-setup-guide').textContent()).includes(fixtures[language].labels.setup_language_example));
       zotero = {...zotero, status: 'ready', local_api_enabled: true, safe_refresh_available: true};
@@ -64,6 +67,10 @@ const fixtures = JSON.parse(fixture.stdout);
       assert.ok((await page.locator('#setup-zotero-reading').textContent()).includes(fixtures[language].labels.setup_zotero_ready));
       assert.ok((await page.locator('#setup-zotero-reading').textContent()).includes(fixtures[language].labels.setup_library_unchecked));
       assert.ok((await page.locator('#setup-ocr-reading').textContent()).includes(fixtures[language].labels.research_ocr_tesseract_ready));
+      // Both components now report ready, so their instructions must be gone:
+      // showing them beside a success message reads as a failed check.
+      assert.equal(await page.locator('#setup-zotero-steps').isVisible(), false);
+      assert.equal(await page.locator('#setup-ocr-steps').isVisible(), false);
       zotero = {...zotero, status: 'connected', safe_refresh_available: false};
       await page.locator('#research-setup-check').click();
       await page.waitForFunction(() => !document.querySelector('#research-setup-check').disabled);

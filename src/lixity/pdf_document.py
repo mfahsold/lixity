@@ -23,6 +23,7 @@ A5 = (419.528, 595.276)
 LEFT = "left"
 CENTRE = "centre"
 JUSTIFIED = "justified"
+GRID = "grid"
 
 
 class PdfError(Exception):
@@ -82,6 +83,110 @@ def _subset_or_fail(path: str, codepoints: set[int]) -> EmbeddedFont:
         return subset_font(path, codepoints)
     except FontError as error:
         raise PdfError(str(error)) from error
+
+
+@dataclass(frozen=True)
+class FittedLine:
+    """One composed line: its text and the slack the margin has to absorb."""
+
+    text: str
+    slack: float
+
+
+def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) -> list[FittedLine]:
+    """Break a paragraph into lines, minimising the total badness of the page.
+
+    A greedy first-fit break fills each line to the brim and is the reason a
+    justified page without hyphenation develops rivers and loose lines: it
+    optimises the present line at the expense of the next one. This is Knuth's
+    approach reduced to its essentials - for every pair of break points the
+    adjustment ratio is scored, and the cheapest chain through them wins.
+    """
+    lines: list[FittedLine] = []
+    for paragraph in text.split("\n"):
+        words = paragraph.split(" ")
+        if not any(words):
+            lines.append(FittedLine("", 0.0))
+            continue
+        widths = [text_width(word, face, size) for word in words]
+        space = text_width(" ", face, size)
+        count = len(words)
+        best = [float("inf")] * (count + 1)
+        best[0] = 0.0
+        choice: list[int] = [0] * (count + 1)
+        for start in range(count):
+            if best[start] == float("inf"):
+                continue
+            natural = 0.0
+            spaces = 0
+            for stop in range(start, count):
+                natural += widths[stop] + (space if stop > start else 0.0)
+                spaces = stop - start
+                slack = measure - natural
+                final = stop + 1 == count
+                # The last line of a paragraph may end anywhere, so it is scored
+                # on nothing. Charging it for leftover space is what made a
+                # two-word heading break into two lines.
+                if final:
+                    cost = 0.0
+                elif natural < measure * 0.5:
+                    # A line less than half full reads as a break, not as text.
+                    # Adding the next word is the only way to improve it, and
+                    # the paragraph's last line is exempt above.
+                    continue
+                else:
+                    ratio = slack / (space * spaces) if spaces and space else 0.0
+                    # A line may tighten by at most a third of an em per word
+                    # gap. Past that it only gets worse, so the search stops.
+                    if ratio < -0.34:
+                        if stop > start:
+                            break
+                        continue
+                    # A line that is merely too loose is expensive, not
+                    # forbidden: adding the next word may close it up. Ending
+                    # the search here is what left one word on every line.
+                    if ratio > 1.0:
+                        cost = (abs(ratio) ** 3) * 100.0 + 5000.0
+                    else:
+                        cost = (abs(ratio) ** 3) * 100.0 + (slack ** 2) / 40.0 + 8.0
+                if best[start] + cost < best[stop + 1]:
+                    best[stop + 1] = best[start] + cost
+                    choice[stop + 1] = start
+        if best[count] == float("inf"):
+            # No acceptable chain: fall back to the greedy break rather than
+            # emitting nothing, so the text is never silently dropped.
+            lines.extend(_greedy(words, widths, space, size, measure))
+            continue
+        breaks: list[tuple[int, int]] = []
+        position = count
+        while position > 0:
+            start = choice[position]
+            breaks.append((start, position))
+            position = start
+        breaks.reverse()
+        for start, stop in breaks:
+            natural = sum(widths[start:stop]) + space * max(0, stop - start - 1)
+            lines.append(FittedLine(" ".join(words[start:stop]), measure - natural))
+    return lines
+
+
+def _greedy(
+    words: list[str], widths: list[float], space: float, size: float, measure: float
+) -> list[FittedLine]:
+    lines: list[FittedLine] = []
+    current: list[int] = []
+    natural = 0.0
+    for index, width in enumerate(widths):
+        candidate = natural + width + (space if current else 0.0)
+        if current and candidate > measure:
+            lines.append(FittedLine(" ".join(words[i] for i in current), measure - natural))
+            current, natural = [index], width
+        else:
+            current.append(index)
+            natural = candidate
+    if current:
+        lines.append(FittedLine(" ".join(words[i] for i in current), measure - natural))
+    return lines
 
 
 class FontSet:
@@ -153,29 +258,49 @@ class Document:
         *,
         page_size: tuple[float, float] = A4,
         margins: tuple[float, float, float, float] = (56.0, 56.0, 56.0, 64.0),
+        mirror: bool = False,
+        baseline: float | None = None,
     ) -> None:
         self.fonts = fonts
         self.width, self.height = page_size
         self.left, self.right, self.top, self.bottom = margins
+        # Mirrored margins are what a bound spread needs: the inside edge sits
+        # on opposite sides of facing pages, so without this every second page
+        # sits visibly off centre when the file is printed double-sided.
+        self.mirror = mirror
+        self.baseline = baseline
         self.blocks: list[Block] = []
         self.furniture: dict[str, list[Line]] = {}
-        self._measure = self.width - self.left - self.right
+        self.omit_first: set[str] = set()
 
     @property
     def measure(self) -> float:
-        return self._measure
+        return self.width - self.left - self.right
+
+    def _snap(self, cursor: float) -> float:
+        """Round a baseline onto the baseline grid, when one is set."""
+        if not self.baseline:
+            return cursor
+        return round(cursor / self.baseline) * self.baseline
 
     def add(self, block: Block) -> None:
         self.fonts.collect(block.role, block.text)
         self.blocks.append(block)
 
-    def page_furniture(self, text: str, *, role: str, size: float, position: str) -> None:
-        """Register running heads or folios drawn on every rendered page."""
+    def page_furniture(self, text: str, *, role: str, size: float, position: str,
+                       omit_first: bool = False) -> None:
+        """Register running heads or folios drawn on the rendered pages.
+
+        ``{folio}`` in the text becomes the page number. A title page carries no
+        folio in a printed book, so ``omit_first`` leaves the first page bare.
+        """
         self.fonts.collect(role, text)
         self.furniture[position] = [
             *self.furniture.get(position, []),
             Line(text, 0.0, 0.0, size, role),
         ]
+        if omit_first:
+            self.omit_first.add(position)
 
     def _compose(self) -> list[Page]:
         faces = self.fonts.build()
@@ -193,54 +318,94 @@ class Document:
             if block.new_page and page.lines:
                 new_page()
             if block.space_before and cursor < self.height - self.top:
-                cursor -= block.space_before
+                cursor -= self._snap(block.space_before)
             face = faces[block.role]
             step = block.size * block.leading
-            for piece in break_lines(block.text, face, block.size, self._measure - block.indent):
+            # A submission sheet is a fixed character grid, not prose: it is
+            # broken at the measure and never spaced out, because the column
+            # count is the contract rather than a typographic preference.
+            if block.align == GRID:
+                pieces = [FittedLine(piece, 0.0) for piece in break_lines(
+                    block.text, face, block.size, self.measure - block.indent)]
+            else:
+                pieces = fit_paragraph(
+                    block.text, face, block.size, self.measure - block.indent
+                )
+            origin = self._origin(len(pages))
+            for index, piece in enumerate(pieces):
                 if cursor - step < self.bottom - 1e-6:
                     new_page()
-                baseline = cursor - block.size
-                line = Line(piece, self.left + block.indent, baseline, block.size, block.role)
-                if block.align == JUSTIFIED and piece:
-                    line = self._justify(line, face, block.size)
-                elif block.align == CENTRE and piece:
+                    origin = self._origin(len(pages))
+                # Baselines sit on the grid, and the left edge follows the page
+                # number once mirrored margins are on.
+                baseline = self._snap(cursor - block.size)
+                line = Line(piece.text, origin + block.indent, baseline, block.size,
+                            block.role)
+                # The last line of a paragraph is not justified: stretching it
+                # to the margin is the classic give-away of amateur typesetting.
+                if block.align == JUSTIFIED and piece.text and index < len(pieces) - 1:
+                    line = self._justify(line, face, block.size, piece.slack)
+                elif block.align == CENTRE and piece.text:
                     line = Line(
-                        piece,
-                        self.left + (self._measure - text_width(piece, face, block.size)) / 2,
+                        piece.text,
+                        origin
+                        + (self.measure - text_width(piece.text, face, block.size)) / 2,
                         baseline,
                         block.size,
                         block.role,
                     )
                 page.lines.append(line)
                 cursor -= step
-            cursor -= block.space_after
+            cursor -= self._snap(block.space_after)
         pages.append(page)
         return [self._decorate(page, index, len(pages)) for index, page in enumerate(pages)]
 
-    def _justify(self, line: Line, face: EmbeddedFont, size: float) -> Line:
-        """Spread the slack over the spaces so the line reaches the right margin."""
+    def _origin(self, page_number: int) -> float:
+        """Return the left text edge, mirroring the margin on verso pages."""
+        if self.mirror and page_number % 2:
+            return self.right
+        return self.left
+
+    def _justify(
+        self, line: Line, face: EmbeddedFont, size: float, slack: float
+    ) -> Line:
+        """Spread the line's slack over its word gaps.
+
+        The breaker has already chosen the breaks, so the slack is known and
+        only the gaps have to absorb it. A negative spacing tightens the line,
+        which is why lines no longer all fall short.
+        """
         spaces = line.text.count(" ")
         if not spaces:
             return line
-        slack = self.left + self._measure - (line.x + text_width(line.text, face, size))
-        if slack <= 0:
+        space = text_width(" ", face, size)
+        if space <= 0:
             return line
-        return Line(line.text, line.x, line.y, line.size, line.role, word_spacing=slack / spaces)
+        extra = slack / (spaces * space)
+        if abs(extra) > 0.34:
+            # Beyond a third of an em in either direction the word spaces stop
+            # reading as spaces. The line stays ragged rather than opening a
+            # gap or crushing the words together.
+            return line
+        return Line(line.text, line.x, line.y, line.size, line.role, word_spacing=extra * space)
 
     def _decorate(self, page: Page, index: int, total: int) -> Page:
         for position, entries in self.furniture.items():
+            if index == 0 and position in self.omit_first:
+                continue
             for entry in entries:
+                text = entry.text.replace("{folio}", str(index + 1))
                 face = self.fonts.face(entry.role)
                 if position == "footer-centre":
                     y = self.bottom / 2
-                    x = self.left + (self._measure - text_width(entry.text, face, entry.size)) / 2
+                    x = self._origin(index) + (self.measure - text_width(text, face, entry.size)) / 2
                 elif position == "footer-right":
                     y = self.bottom / 2
-                    x = self.left + self._measure - text_width(entry.text, face, entry.size)
+                    x = self._origin(index) + self.measure - text_width(text, face, entry.size)
                 else:
                     y = self.height - self.top / 2
                     x = self.left
-                page.lines.append(Line(entry.text, x, y, entry.size, entry.role))
+                page.lines.append(Line(text, x, y, entry.size, entry.role))
         return page
 
     def render(self) -> bytes:
@@ -284,6 +449,34 @@ def _escape_name(text: str) -> str:
         character if 33 <= ord(character) <= 126 and character not in "()<>[]{}/%" else "#"
         for character in text
     )
+
+
+def _show(line: Line, face: EmbeddedFont) -> str:
+    """Return the text-showing operator for one line.
+
+    Justified lines use a TJ array with an explicit adjustment at every word
+    gap. The Tw operator is not usable here: PDF 32000 9.3.3 applies word
+    spacing only to byte code 32 in simple fonts, so with Identity-H
+    encoding it would silently do nothing and leave a ragged right edge.
+    TJ adjustments are in thousandths of a text-space unit and a positive
+    number moves left, so extra word space is a negative adjustment.
+    """
+    if not line.word_spacing:
+        return f"<{_hex_glyphs(line.text, face)}> Tj"
+    adjustment = round(-line.word_spacing * 1000 / line.size)
+    if adjustment >= 0:
+        return f"<{_hex_glyphs(line.text, face)}> Tj"
+    tokens = line.text.split(" ")
+    array: list[str] = []
+    for index, word in enumerate(tokens):
+        # Each chunk keeps the space that follows it. Dropping the space glyph
+        # and replacing it with the adjustment alone shortens the line by the
+        # whole natural word spacing, which is roughly the error being fixed.
+        chunk = word if index == len(tokens) - 1 else f"{word} "
+        array.append(f"<{_hex_glyphs(chunk, face)}>")
+        if index < len(tokens) - 1:
+            array.append(str(adjustment))
+    return "[" + " ".join(array) + "] TJ"
 
 
 def _hex_glyphs(text: str, face: EmbeddedFont) -> str:
@@ -367,11 +560,9 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont]) -> bytes:
                 "BT",
                 f"/F{roles.index(line.role) + 1} {line.size:.2f} Tf",
                 f"1 0 0 1 {line.x:.2f} {line.y:.2f} Tm",
+                _show(line, faces[line.role]),
+                "ET",
             ]
-            if line.word_spacing:
-                parts.append(f"{line.word_spacing:.4f} Tw")
-            parts.append(f"<{_hex_glyphs(line.text, faces[line.role])}> Tj")
-            parts.append("ET")
         content_object = add(stream("\n".join(parts).encode("ascii")))
         fonts = " ".join(f"/F{index + 1} {resources[role]} 0 R" for index, role in enumerate(roles))
         page_objects.append(
@@ -410,6 +601,7 @@ __all__ = [
     "A4",
     "A5",
     "CENTRE",
+    "GRID",
     "JUSTIFIED",
     "LEFT",
     "Block",
