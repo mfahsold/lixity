@@ -20,6 +20,12 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('form, input[type=file], textarea, [contenteditable=true], #controls, #nda-draft, #view-pane-project, #view-pane-research, [data-marker-kind]').count(), 0, 'The example has no upload, writer, settings, NDA or editing controls');
   assert.equal(await page.locator('.chapter').count(), 6);
   assert.ok(await page.locator('.chip').count() > 6, 'The report exposes actual paragraph blocks');
+  if (javaScriptEnabled) await page.locator('#style-tab-dimensions').click();
+  else {
+    assert.equal(await page.locator('#style-panels > .panel:visible').count(), 4);
+    assert.equal(await page.locator('#chapters .ptext p:visible').count(), await page.locator('#chapters .ptext').count(),
+      'The offline fallback keeps the complete manuscript readable without JavaScript');
+  }
   const chapterLink = page.locator('#dim-scores a[href="#ch-2"]');
   assert.equal(await chapterLink.count(), 1, 'The style view has a semantic chapter link');
   await chapterLink.focus();
@@ -39,6 +45,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await expect(passage).toBeVisible();
   await expect(passage).toHaveCSS('opacity', '1');
   assert.ok((await passage.locator('p').innerText()).length > 50, 'Opening a block exposes the synthetic source paragraph');
+  await passage.locator('.paragraph-values > summary').click();
   assert.ok((await passage.locator('.anchor').innerText()).length > 5, 'The passage includes source lines');
   await passage.locator('p').click();
   await page.screenshot({path: path.join(artifacts, `report-passage-${width}-${colorScheme}.png`)});
@@ -62,13 +69,23 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('#style-layer').inputValue(), '');
   assert.equal(await page.locator('#layer-legend').isVisible(), false);
   const canvas = page.locator('#dim-3d-canvas');
+  await page.locator('#style-tab-dimensions').click();
   await canvas.scrollIntoViewIfNeeded();
-  const initial = await canvas.screenshot();
+  await page.mouse.move(0, 0);
+  // Compare the rendered canvas bitmap. A locator screenshot at a fractional
+  // scroll position can include one extra row of the surrounding background.
+  const initial = await canvas.evaluate(element => element.toDataURL());
   await page.locator('#dim-ctl-left').focus();
   await page.keyboard.press('Enter');
-  assert.notDeepEqual(await canvas.screenshot(), initial, 'A keyboard control rotates the real chapter chart');
+  assert.notEqual(await canvas.evaluate(element => element.toDataURL()), initial, 'A keyboard control rotates the real chapter chart');
   await page.locator('#dim-ctl-reset').click();
-  assert.deepEqual(await canvas.screenshot(), initial, 'Reset restores the chapter chart');
+  const reset = await canvas.evaluate(element => element.toDataURL());
+  if (reset !== initial) {
+    fs.writeFileSync(path.join(artifacts, `canvas-initial-${width}-${colorScheme}.png`), Buffer.from(initial.split(',')[1], 'base64'));
+    fs.writeFileSync(path.join(artifacts, `canvas-reset-${width}-${colorScheme}.png`), Buffer.from(reset.split(',')[1], 'base64'));
+    console.error(`Canvas reset mismatch: ${artifacts}, ${width}px, ${colorScheme}`);
+  }
+  assert.equal(reset, initial, 'Reset restores the chapter chart');
   await page.mouse.move(0, 0);
   await page.keyboard.press('Escape');
   await page.locator('#dimensions').screenshot({path: path.join(artifacts, `report-style-${width}-${colorScheme}.png`)});

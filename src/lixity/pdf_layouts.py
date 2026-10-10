@@ -72,15 +72,16 @@ _SERIF_BOLD = (
     "Tinos-Bold.ttf",
 )
 _SANS = (
-    "NotoSans-Regular.ttf",
+    # DejaVu Sans includes the mathematical symbols emitted by analysis reports.
     "DejaVuSans.ttf",
+    "NotoSans-Regular.ttf",
     "LiberationSans-Regular.ttf",
     "Arimo-Regular.ttf",
     "FreeSans.ttf",
 )
 _SANS_BOLD = (
-    "NotoSans-Bold.ttf",
     "DejaVuSans-Bold.ttf",
+    "NotoSans-Bold.ttf",
     "LiberationSans-Bold.ttf",
     "Arimo-Bold.ttf",
     "FreeSansBold.ttf",

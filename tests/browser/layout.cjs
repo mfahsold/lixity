@@ -76,6 +76,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         assert.equal(await page.locator('#lixity-tooltip').getAttribute('aria-hidden'), 'true');
       }
       if (width <= 390) {
+        await page.locator('#style-tab-bands').click();
         assert.ok(await page.locator('#matrix table').evaluate(table => table.getBoundingClientRect().width >= 700));
         assert.ok(await page.locator('#dialogue .dist .label').first().evaluate(label => label.getBoundingClientRect().width >= 200));
         assert.ok(await page.locator('.band').first().evaluate(band => band.getBoundingClientRect().width >= 150));
@@ -90,6 +91,9 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1, 'Dismissing help must not close an unrelated paragraph');
       for (const selector of ['#flags', '#dist', '#dialogue', '#characters', '#pacing', '#motifs', '#showing', '#heatmap', '#bands', '#dimensions', '#markers', '#matrix', '#controls', '#ch-1']) {
         await page.locator(selector === '#controls' ? '#tab-view-project' : '#tab-view-analysis').click();
+        if (['#heatmap', '#bands', '#dimensions'].includes(selector)) {
+          await page.locator('#style-tab-' + selector.slice(1)).click();
+        }
         await page.mouse.move(0, 0);
         await page.evaluate(() => document.activeElement.blur());
         await page.locator(selector).screenshot({path: `/tmp/lixity-layout-${width}-${selector.slice(1)}.png`});

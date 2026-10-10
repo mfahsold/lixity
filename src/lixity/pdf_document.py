@@ -109,6 +109,14 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) ->
             lines.append(FittedLine("", 0.0))
             continue
         widths = [text_width(word, face, size) for word in words]
+        if any(width > measure for width in widths):
+            # A word wider than the page has no word-gap solution. Reuse the
+            # character breaker so URLs and compound words stay on the page.
+            lines.extend(
+                FittedLine(piece, measure - text_width(piece, face, size))
+                for piece in break_lines(paragraph, face, size, measure)
+            )
+            continue
         space = text_width(" ", face, size)
         count = len(words)
         best = [float("inf")] * (count + 1)
@@ -128,6 +136,8 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) ->
                 # on nothing. Charging it for leftover space is what made a
                 # two-word heading break into two lines.
                 if final:
+                    if slack < 0:
+                        break
                     cost = 0.0
                 elif natural < measure * 0.5:
                     # A line less than half full reads as a break, not as text.
@@ -294,7 +304,7 @@ class Document:
         ``{folio}`` in the text becomes the page number. A title page carries no
         folio in a printed book, so ``omit_first`` leaves the first page bare.
         """
-        self.fonts.collect(role, text)
+        self.fonts.collect(role, text + ("0123456789" if "{folio}" in text else ""))
         self.furniture[position] = [
             *self.furniture.get(position, []),
             Line(text, 0.0, 0.0, size, role),
@@ -409,7 +419,16 @@ class Document:
         return page
 
     def render(self) -> bytes:
-        return _write_pdf(self._compose(), self.fonts.build())
+        pages = self._compose()
+        for page in pages:
+            for line in page.lines:
+                missing = self.fonts.unmapped(line.role, line.text)
+                if missing:
+                    characters = ", ".join(
+                        f"U+{ord(character):04X}" for character in sorted(missing)
+                    )
+                    raise PdfError(f"Font for {line.role} cannot draw: {characters}")
+        return _write_pdf(pages, self.fonts.build())
 
 
 def _to_unicode_cmap(face: EmbeddedFont) -> str:
@@ -464,7 +483,7 @@ def _show(line: Line, face: EmbeddedFont) -> str:
     if not line.word_spacing:
         return f"<{_hex_glyphs(line.text, face)}> Tj"
     adjustment = round(-line.word_spacing * 1000 / line.size)
-    if adjustment >= 0:
+    if adjustment == 0:
         return f"<{_hex_glyphs(line.text, face)}> Tj"
     tokens = line.text.split(" ")
     array: list[str] = []

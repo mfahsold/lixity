@@ -49,6 +49,12 @@ and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main
 references to dossiers from the CLI through the same guarded workflow as the app.
 See the [image workflow](docs/research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
+**In 2.3.0:** opened paragraphs put the manuscript text first,
+with measurements in a compact **Values** disclosure (**Werte** in German).
+Chapter comparisons, reference bands, dimensions and structural diagnostics share
+one tabbed style area. Closed paragraph contents are created when opened;
+manuscript search still covers the complete text and exported reports work offline.
+
 ## Quick Start
 
 Prepare a UTF-8 Markdown file with `## Chapter title` headings, then run:
@@ -75,6 +81,10 @@ a new project when you confirm. The [first-project guide](docs/ONBOARDING.md)
 walks through both choices.
 
 Begin with the manuscript overview, then open a chapter that interests you.
+The welcome guidance takes you from selecting a manuscript to confirming its
+language and reading a passage. **Start your review** offers direct routes to
+source text, chapter comparison and sentence rhythm; its selected passage is a
+starting point for reading, not a quality ranking.
 Hover over, focus or tap a dotted-underlined measurement label for its explanation.
 Read the passage before changing prose or adjusting comparison settings.
 
@@ -117,9 +127,10 @@ unavailable. [Scene example](docs/screenshots/dashboard-scenes.png) ·
 
 `lixity pdf` composes a PDF from the manuscript and its measurements: an A4
 analysis report, an A5 reading layout, or a submission sheet of 30 lines of 60
-characters. Fonts are embedded as subsets, so any script a chosen font covers
-renders, and the text stays searchable. No converter, no upload, no added
-runtime dependency.
+characters. Fonts are embedded as subsets, with searchable text for Unicode
+characters covered by the selected fonts. No converter, no upload, no added
+runtime dependency. These are reading and review layouts; PDF/X production
+preflight and automatic fallback between fonts are not provided.
 
 [Command reference](docs/USAGE.md#lixity-pdf)
 

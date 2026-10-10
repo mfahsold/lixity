@@ -384,6 +384,8 @@ def subset_font(path: str | Path, codepoints: set[int]) -> EmbeddedFont:
         if glyph is None:
             continue
         roots.add(glyph)
+    if roots == {0}:
+        raise FontError("The font cannot draw any of the requested characters")
     needed = _composite_closure(glyf, loca, roots)
     order = sorted(needed)
     remap = {gid: index for index, gid in enumerate(order)}

@@ -139,6 +139,15 @@ archive, no automatic diagnostic calls, connection/readiness distinctions,
 inert advanced messages and seven-language desktop/mobile rendering. It performs
 no installation, configuration write or library/attachment browse.
 
+The manuscript-search suite checks unopened paragraph contents stay outside the
+live document, text precedes the collapsed Values disclosure, closing releases
+rendered text, and the complete embedded manuscript remains searchable. It also
+checks style-tab selection, keyboard navigation and existing metric jumps at
+1440 and 320 pixels, including inert manuscript text containing a script terminator.
+The loaded review entry opens a real passage with keyboard focus and links to
+existing chapter/rhythm views. The setup suite also checks the empty-analysis
+import shortcut without submitting or retaining a file.
+
 The project-history suite checks recent-project links and clear history at
 desktop/mobile sizes in seven languages, including blocked storage, malformed
 entries, cancellation and unsuccessful opens. The decision-acknowledgement suite

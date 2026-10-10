@@ -3,14 +3,14 @@
 <head>
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
-<title>Keep Research Sources and Work with PDFs | Lixity</title>
-<meta name="description" content="Keep permitted research sources, cite exact passages and connect writing decisions with evidence. Learn what PDF import needs and how to test a backup."/>
+<title>Research Sources, PDF Import and Manuscript Export | Lixity</title>
+<meta name="description" content="Keep research sources and exact citations, read scanned PDFs with local OCR, and export manuscript reports or reading copies as PDFs. Learn the setup and limits."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/guides/research-pdf.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
-<meta property="og:title" content="Keep Research Sources and Work with PDFs"/>
-<meta property="og:description" content="Keep source copies and exact citations, check PDF import requirements, and test a restored research backup."/>
+<meta property="og:title" content="Research Sources, PDF Import and Manuscript Export"/>
+<meta property="og:description" content="Import permitted PDF sources with local extraction or OCR, keep exact citations, export manuscript PDFs and test a restored research backup."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/guides/research-pdf.html"/>
 </head>
 <body>
@@ -19,9 +19,16 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Keep sources and work with PDFs</h1>
 <p>Keep permitted source copies, cite exact passages and connect them with research notes, claims and writing decisions. Lixity's research workspace is experimental. An import or citation helps you review evidence; it does not establish that a claim is true.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-04">4 October 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-10">10 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html" aria-current="page">Sources and PDF/OCR</a></nav>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
+
+<h2 id="manuscript-export">Export a manuscript as PDF</h2>
+<p>Use <code>lixity pdf</code> to create an A4 analysis report, an A5 reading copy or an A4 submission sheet with at most 30 lines per page and 60 characters per line. This command reads a Markdown manuscript and composes its output locally; it does not import a research source, run OCR or modify the manuscript.</p>
+<pre><code>lixity pdf manuscript.md --layout report -o analysis.pdf
+lixity pdf manuscript.md --layout book --author "Name" -o reading.pdf
+lixity pdf manuscript.md --layout sheet -o submission.pdf</code></pre>
+<p>The renderer embeds host TrueType fonts and keeps supported text searchable and copyable. It needs no browser or external converter. Missing glyphs report their font role and Unicode codepoint; there is no automatic mixed-script fallback, contextual shaping or bidirectional layout. The layouts do not provide PDF/X production preflight. See <a href="../USAGE.md#lixity-pdf">PDF options, font selection and limits</a>.</p>
 
 <h2 id="import">Import a local source</h2>
 <p>Start with a source you are allowed to retain. This synthetic example assumes you saved a short note as <code>source.txt</code>. Initialize only a new research archive:</p>

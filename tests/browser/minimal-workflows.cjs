@@ -73,12 +73,13 @@ const data = JSON.parse(fixture.stdout);
       await page.locator('#tab-view-analysis').click();
       for(const width of [1440,320]) {
         await page.setViewportSize({width,height:1000});
-        const add=page.locator('#chapters [data-marker-kind=todo]').first();
-        const paragraph=add.locator('xpath=ancestor::div[@id][contains(@class,"ptext")]');
+        const chip=page.locator('#chapters .chip').first();
+        const paragraph=page.locator('#'+await chip.getAttribute('data-target'));
         if (!await paragraph.evaluate(element=>element.classList.contains('open'))) {
           const id=await paragraph.getAttribute('id');
           await page.locator(`.chip[data-target="${id}"]`).click();
         }
+        const add=paragraph.locator('[data-marker-kind=todo]');
         await add.click();
         const slot=add.locator('..').locator('.marker-note-slot');
         const input=slot.locator('.marker-note');

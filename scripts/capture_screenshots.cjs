@@ -133,9 +133,17 @@ async function main() {
     for (const capture of captures) {
       const name = path.basename(capture.target);
       await open(capture.source, capture.width, capture.height, name.includes('dark') ? 'dark' : 'light');
-      if (['dashboard-light.png', 'dashboard-dark.png', 'dashboard-dimensions.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
-      if (name === 'dashboard-dimensions.png') {
+      if (name.startsWith('dashboard-dimensions') || ['dashboard-light.png', 'dashboard-dark.png', 'dashboard-mobile.png', 'dashboard-reference.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
+      if (name.startsWith('dashboard-dimensions')) {
+        await page.locator('#style-tab-dimensions').click();
         await save(capture.target, '#dimensions');
+      } else if (name === 'dashboard-reference.png') {
+        await page.locator('#style-tab-bands').click();
+        await save(capture.target, '#bands');
+      } else if (name === 'dashboard-settings.png') {
+        await selectView('project');
+        await page.locator('.settings-form .settings-advanced > summary').click();
+        await save(capture.target, '#settings-form');
       } else if (name === 'dashboard-markers.png') {
         await save(capture.target, '#markers');
       } else if (name === 'dashboard-heatmap.png') {
@@ -274,22 +282,6 @@ async function main() {
       }
     }
     const base = path.dirname(captures[0].source);
-    const output = path.dirname(captures[0].target);
-    await open(path.join(base, 'dashboard.html'), 390, 1028);
-    await selectView('analysis');
-    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
-    await save(path.join(output, 'dashboard-mobile.png'));
-    await save(path.join(output, 'dashboard-dimensions-mobile.png'), '#dimensions');
-    await open(path.join(base, 'dashboard.html'), 1600, 1050, 'dark');
-    await selectView('analysis');
-    await save(path.join(output, 'dashboard-dimensions-dark.png'), '#dimensions');
-    await open(path.join(base, 'dashboard.html'), 1600, 1050);
-    await selectView('analysis');
-    await save(path.join(output, 'dashboard-reference.png'), '#bands');
-    await open(path.join(base, 'dashboard.html'), 1600, 1050);
-    await selectView('project');
-      await page.locator('.settings-form .settings-advanced > summary').click();
-    await save(path.join(output, 'dashboard-settings.png'), '#settings-form');
     assert.deepEqual(errors, []);
     fs.writeFileSync(path.join(base, 'capture-results.json'), JSON.stringify(results, null, 2));
     console.log(JSON.stringify(results, null, 2));

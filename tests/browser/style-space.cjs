@@ -44,6 +44,7 @@ assert.equal(fixture.status,0,fixture.stderr);
   });
   await page.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: html}));
   await page.goto('http://lixity.test/');
+  await page.locator('#style-tab-dimensions').click();
   await page.locator('#dimensions').scrollIntoViewIfNeeded();
   page.setDefaultTimeout(5000);
   async function check(name, run) {
@@ -61,6 +62,18 @@ assert.equal(fixture.status,0,fixture.stderr);
     assert.equal(await page.locator('#dim-ctl-traj').getAttribute('aria-pressed'), 'false');
     await page.locator('#dim-ctl-traj').click();
     assert.equal(await page.locator('#dim-ctl-traj').getAttribute('aria-pressed'), 'true');
+  });
+  await check('a hidden style tab pauses a spinning canvas', async () => {
+    await page.locator('#dim-ctl-spin').click();
+    await page.locator('#style-tab-bands').click();
+    await page.waitForTimeout(100);
+    const before = await page.evaluate(() => window.frameCount);
+    await page.waitForTimeout(200);
+    assert.ok(await page.evaluate(() => window.frameCount) - before <= 1);
+    await page.locator('#style-tab-dimensions').click();
+    await page.waitForTimeout(100);
+    assert.ok(await page.evaluate(() => window.frameCount) - before > 1, 'The visible canvas resumes');
+    await page.locator('#dim-ctl-reset').click();
   });
   await check('chapter scores provide semantic text and safe chapter links', async () => {
     assert.equal(await page.locator('#dim-scores tbody tr').count(), 3);
@@ -159,6 +172,7 @@ assert.equal(fixture.status,0,fixture.stderr);
   // Final visual evidence uses the unmodified chart and matching score table.
   await page.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: original}));
   await page.goto('http://lixity.test/');
+  await page.locator('#style-tab-dimensions').click();
   await page.locator('#dimensions').screenshot({path:path.join(artifacts,'mobile.png')});
   await page.setViewportSize({width:1280,height:900});
   await page.locator('#dimensions').screenshot({path:path.join(artifacts,'desktop.png')});

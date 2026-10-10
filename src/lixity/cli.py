@@ -255,7 +255,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters pacing scenes motifs showing dashboard serve style build about completion research"
+    local cmds="analyze profile dialogue characters pacing scenes motifs showing dashboard pdf serve style build about completion research"
     local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
     local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
     if [[ $COMP_CWORD -eq 1 ]]; then
@@ -331,6 +331,7 @@ _lixity() {
     'showing:Showing vs telling balance'
     'style:Self-calibrated style reference'
     'dashboard:Single-file HTML dashboard'
+    'pdf:Compose a PDF analysis report, book layout or submission sheet'
     'serve:Run local HTTP development server and interactive dashboard'
     'build:Idempotent workspace build'
     'about:Tool metadata for agents'

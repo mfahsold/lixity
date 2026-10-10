@@ -417,6 +417,11 @@ def about() -> dict[str, Any]:
                 "output": "html",
             },
             {
+                "name": "pdf",
+                "purpose": "composed PDF analysis report, A5 book layout or 30x60 submission sheet",
+                "output": "pdf",
+            },
+            {
                 "name": "serve",
                 "purpose": "local HTTP development server and interactive dashboard (127.0.0.1)",
                 "output": "server",

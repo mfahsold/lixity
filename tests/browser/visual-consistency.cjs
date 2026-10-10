@@ -107,6 +107,7 @@ async function checkTypography(page, label) {
         assert.ok(!(await createDialog.isVisible()));
         assert.equal(await app.locator('.chip').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
         await app.locator('#tab-view-analysis').click();
+        await app.locator('#style-tab-dimensions').click();
         const minimum = hasTouch ? 44 : 24;
         const denseTargets = await app.locator('.chip, .dim-ctl').evaluateAll(elements => elements.map(element => {
           const box = element.getBoundingClientRect();

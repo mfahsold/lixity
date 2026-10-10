@@ -44,7 +44,7 @@ from lixity.showing import showing_report  # noqa: E402
 from lixity.ui import render_dashboard  # noqa: E402
 
 CAPTURES: list[dict[str, str | int]] = []
-WORK_DIR = BASE_DIR / ".screenshots"
+WORK_DIR = BASE_DIR / ".artifacts" / "screenshots"
 OUT_DIR = BASE_DIR / "docs" / "screenshots"
 
 WINDOW_CHROME = """<!DOCTYPE html>
@@ -115,6 +115,7 @@ def _synthetic_harbour_image() -> bytes:
 def main() -> int:
     parser = argparse.ArgumentParser(description="Regenerate README screenshots.")
     parser.add_argument("--manuscript", default="samples/pride-and-prejudice.md")
+    parser.add_argument("--only", nargs="+", help="Capture only these screenshot filenames.")
     args = parser.parse_args()
     CAPTURES.clear()
 
@@ -129,7 +130,7 @@ def main() -> int:
     metrics, fingerprint = analysis.metrics, analysis.fingerprint
     paragraphs, chapters = analysis.paragraphs, analysis.chapters
 
-    WORK_DIR.mkdir(exist_ok=True)
+    WORK_DIR.mkdir(parents=True, exist_ok=True)
     OUT_DIR.mkdir(parents=True, exist_ok=True)
     print(f"Screenshots from {manuscript.relative_to(BASE_DIR)} ({resolved.key})")
 
@@ -208,6 +209,14 @@ def main() -> int:
     )
     dashboard_path = _write_html("dashboard.html", dashboard)
     _queue_capture(dashboard_path, OUT_DIR / "dashboard-light.png", 1480, 945)
+    for name, width, height in (
+        ("dashboard-mobile.png", 390, 1028),
+        ("dashboard-dimensions-mobile.png", 390, 1028),
+        ("dashboard-dimensions-dark.png", 1600, 1050),
+        ("dashboard-reference.png", 1600, 1050),
+        ("dashboard-settings.png", 1600, 1050),
+    ):
+        _queue_capture(dashboard_path, OUT_DIR / name, width, height)
     for view in ("project-settings", "project-import", "nda", "scenes"):
         for suffix, width in (("", 1480), ("-mobile", 390)):
             _queue_capture(
@@ -569,6 +578,15 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         1320,
         780,
     )
+
+    if args.only:
+        requested = set(args.only)
+        available = {Path(str(capture["target"])).name for capture in CAPTURES}
+        missing = requested - available
+        if missing:
+            parser.error("Unknown screenshot filenames: " + ", ".join(sorted(missing)))
+        CAPTURES[:] = [capture for capture in CAPTURES
+                       if Path(str(capture["target"])).name in requested]
 
     manifest = WORK_DIR / "captures.json"
     manifest.write_text(json.dumps(CAPTURES), encoding="utf-8")

@@ -93,6 +93,27 @@ def _full_dashboard() -> str:
 class TestJsDomContract(unittest.TestCase):
     """Every id the script touches must exist in the markup (no silent breakage)."""
 
+    def test_review_routes_only_offer_existing_analysis_targets(self):
+        config = CorpusConfig(language="en")
+        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
+            parse_markdown_blocks("## Opening\n\nA bird crosses the garden. Rain falls.\n")
+        )
+        html = render_dashboard(chapters, paragraphs)
+        review = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
+        for target in re.findall(r'href="#([^"]+)"', review):
+            self.assertTrue(f'id="{target}"' in html, f"Review route has no target: {target}")
+
+    def test_review_passage_follows_source_order_among_flagged_candidates(self):
+        paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks("## Opening\n\nA bird crosses the garden.\n\nRain falls.\n")
+        )
+        paragraphs[0].severity = 2
+        paragraphs[1].severity = 3
+        chapters[0].flagged = 2
+        html = render_dashboard(chapters, paragraphs)
+        review = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
+        self.assertIn('data-target="p-0"', review)
+
     def test_native_refresh_and_filter_reset(self):
         """Native controls expose one refresh and an explicit filter escape."""
         from lixity.server import build_server_dashboard

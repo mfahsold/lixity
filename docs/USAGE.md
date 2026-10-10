@@ -133,6 +133,39 @@ lixity dashboard unknown-language.md --language auto -o detected.html
 
 Open the generated file in a browser; no server is needed for analysis views.
 
+### Start a review (since v2.3.0)
+
+The local workspace's welcome guidance starts with choosing a manuscript,
+confirming its language in the import preview, and reading a passage. **Analyze a
+manuscript** opens the existing import dialog; the empty analysis view offers the
+same action. Opening the dialog does not submit a manuscript. Optional research
+and further-analysis guidance starts collapsed in a native disclosure.
+
+In a loaded manuscript, **Start your review** appears before the KPIs.
+**Open passage** opens the first paragraph in source order meeting the selected
+tense-flag threshold, or the opening paragraph when none does. It clears
+manuscript search and paragraph filters to reveal the passage and moves keyboard
+focus to it. **Explore chapters** opens the style heatmap when comparison is
+available, or the chapter map with a limitation hint when it is not.
+**Open sentence rhythm** is available when measurements are supplied. These
+routes reuse existing signals and panels; they do not compute a quality score
+or prescribe a revision.
+
+### Reading paragraphs (since v2.3.0)
+
+Open a paragraph to read its manuscript text first. Expand the native **Values**
+disclosure (**Werte** in German) for source lines, tense, dialogue and style
+measurements. In a compatible local server, marker actions follow the passage
+and its values.
+
+With JavaScript enabled, initially closed paragraphs contain no rendered passage
+or metric controls; their contents are created when opened. The complete paragraph
+text and measurements remain embedded in the file, so this reduces initial DOM work but
+does not eliminate growth in the self-contained HTML's size. Search checks the
+complete paragraph text, including paragraphs that have never been opened.
+With JavaScript disabled, the complete paragraph text remains readable through
+the static fallback.
+
 ### Searching the manuscript
 
 The analysis toolbar carries a search field for the manuscript itself. Typing
@@ -142,11 +175,23 @@ through the matches and open each one. `Enter` moves to the next match,
 `Shift+Enter` to the previous, `Escape` or **Clear search** restores the whole
 manuscript. The count reports how many paragraphs matched out of how many were
 searched.
+Since v2.3.0, active search takes priority over **Flagged only**;
+clearing search restores the selected flag filter.
 
 Matching is a case-insensitive substring test on the paragraph text, not a
 linguistic query: it does not stem, ignore diacritics, or search across
 paragraph boundaries. Manuscript text is inserted as text nodes only, so a
 phrase that looks like markup stays a phrase.
+
+### Style area (since v2.3.0)
+
+The style heatmap, style reference, style dimensions and structural
+diagnostics share one area with tabs. Choosing a tab reveals its existing panel;
+links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
+select the appropriate tab before navigating. Use `ArrowLeft`/`ArrowRight` to
+move between tabs, or `Home`/`End` to select the first/last tab.
+With JavaScript disabled, all available style panels remain readable and their
+native links remain usable.
 
 ### Settings and interpretation
 
@@ -490,10 +535,13 @@ lixity style manuscript.md --json --z-mild 1.5 --fdr-q 0.1 --fdr-method by
 
 Writes one self-contained HTML file — no CDN, no framework, no external
 requests. The output is deterministic: regenerating an unchanged manuscript
-produces an identical file, which makes it safe for version control.
+produces an identical file. The file includes the manuscript text and its
+measurements.
 
 The dashboard contains:
 
+- a **Start your review** panel before the KPIs, with direct routes to a passage,
+  available chapter comparison and sentence rhythm,
 - a **status strip** at the top (when the embedding tool provides one, e.g.
   the manuscript workspace UI): one dot per component (manuscript, analysis,
   dossiers, exports, NDA, markers) with a one-word state, so the reader sees
@@ -545,7 +593,8 @@ The dashboard contains:
   colour encodes the absolute value span (min–max per dimension), while a
   ring marks paragraphs that are *unusual for this chapter* (|z| ≥ 1.5) —
   so the layer never hides low values in a narrow band,
-- clickable paragraphs revealing text, line anchor and per-paragraph stats
+- clickable paragraphs revealing manuscript text and line anchors; since
+  v2.3.0, per-paragraph stats follow in a compact **Values** disclosure
   (highlighted in the active layer colour),
 - the chapter comparison matrix with a deviation column; matrix rows and
   marker rows navigate to their passage,
@@ -586,6 +635,8 @@ agree on, and where they disagree the guide says so:
   break points, not greedily line by line. Greedy breaking is what produces
   rivers and one-word lines in justified text. There is no hyphenation, so the
   last resort is a ragged edge instead of an unbreakable line.
+  Since v2.3.0, an overlong word is split at character boundaries
+  to keep it within the page measure without dropping characters.
 - **Justification.** Slack is spread over the word gaps, tightening as well as
   stretching, and a line falls back to ragged rather than opening a gap beyond
   a third of an em. The last line of a paragraph is never justified.
@@ -602,9 +653,9 @@ agree on, and where they disagree the guide says so:
 Output is written beside the manuscript unless `-o` names another path, and is
 deterministic: an unchanged manuscript produces an identical file.
 
-**Characters and fonts.** Text is addressed by glyph id, so any script the
-chosen font covers renders — including marks outside Basic Latin. Fonts are
-looked up on the host and can be pinned per role with `--serif-font`,
+**Characters and fonts.** Text is addressed by glyph id, supporting Unicode
+characters covered by the chosen font, including marks outside Basic Latin.
+Fonts are looked up on the host and can be pinned per role with `--serif-font`,
 `--bold-font`, `--mono-font`, `--sans-font`, `--sans-bold-font` or
 `LIXITY_PDF_FONT_TEXT` / `_HEADING` / `_MONO` / `_SANS` / `_SANS_BOLD`. The
 book prefers a face set for reading — EB Garamond, Linux Libertine, Charis SIL,
@@ -614,14 +665,25 @@ embedded, so a German manuscript stays a small file. A font whose licence
 forbids embedding is refused rather than producing blank pages; an unavailable
 font is reported with the file names searched. Exported text carries a
 `ToUnicode` map, so it can be searched, selected and copied in a reader.
+Each role uses one single-face TrueType outline font; TrueType collections and
+CFF outlines are unsupported. There is no automatic fallback between fonts for
+mixed-script text, contextual glyph shaping or bidirectional layout.
+Since v2.3.0, every drawn visible character is checked before
+the PDF is written; a missing glyph reports its font role and Unicode codepoint.
+Default report fonts prefer DejaVu Sans regular/bold for generated analysis
+symbols. Explicit font choices are retained.
 
 **Limits.** This is a text and layout renderer. It does not hyphenate, place
 images, build tables of contents with page numbers, mirror a running head
 between recto and verso, or typeset mathematics. Line breaking minimises badness
 without Knuth–Plass hyphenation, so a narrow measure occasionally leaves a
-loose line. Text a font cannot draw is reported rather than replaced by a
-substitute character. These documents are generated from a Markdown manuscript; the
+loose line. These documents are generated from a Markdown manuscript; the
 manuscript itself is never modified.
+
+The three layouts produce PDFs for analysis, continuous reading and submission.
+They do not add bleed or crop marks, manage print color profiles, generate PDF/X
+or perform printer preflight. Font coverage alone does not establish correct
+typesetting for every script.
 
 ### `lixity build`
 
@@ -788,8 +850,9 @@ belong to localized labels, not callable API functions or result fields.
 3. Use the style layer (toolbar) to see *where* a dimension deviates: blue =
    below, orange = above the chapter mean; the legend explains what to look
    for, the tooltip gives the exact value.
-4. Click a paragraph strip to read the passage with line anchor, tense and
-   stats; with the control server, markers can be set right there.
+4. Click a paragraph strip to read the passage. Since v2.3.0,
+   expand **Values** for source lines, tense and style measurements;
+   with the control server, markers can be set right there.
 
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
@@ -837,8 +900,10 @@ evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
   single chapter hides the heatmap instead of showing noise.
 - **Determinism** is byte-identical on the same interpreter; across Python
   versions the last floating-point bits may differ.
-- **Dashboard size** grows with paragraph count (~2 MB for 95k words) by
-  design — self-contained and offline.
+- **Dashboard size** grows with the embedded manuscript text and paragraph
+  measurements by design: the file is self-contained and offline. Since
+  v2.3.0, paragraph contents are rendered when opened to reduce
+  initial DOM work; the complete data still occupies space in the file.
 - **Accessibility:** numeric labels and text details complement analytical colour
   scales. Since 2.0.0, chapter-score links and native rotation/zoom
   controls provide keyboard/touch equivalents to point navigation. Paragraph

@@ -9,6 +9,16 @@
 
 Current release: 2.3.0; release tag: v2.3.0.
 
+Since v2.3.0: paragraph opening shows manuscript text before a
+native Values disclosure (Werte in German) and marker actions. Closed paragraph
+contents are created when opened with JavaScript enabled; the no-JavaScript
+fallback retains complete readable text. Full-text manuscript substring search
+still covers all paragraphs and treats markup-like text as plain text. The
+standalone HTML stays self-contained and offline; lazy rendering reduces initial
+DOM work, not growth in the embedded manuscript/measurement payload. Existing
+heatmap, reference, dimensions and structural panels share a tabbed style area
+with preserved anchors, keyboard navigation and readable no-JavaScript panels.
+
 First look: https://mfahsold.github.io/lixity/guides/first-look.html
 Read-only synthetic report: https://mfahsold.github.io/lixity/demo/report.html
 The example uses the shared engine with explicit defaults. It requires no upload
@@ -42,10 +52,11 @@ Contact: mfahsold@googlemail.com.
 
 - [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html)
 - [Read the results](https://mfahsold.github.io/lixity/guides/interpretation.html)
-- [Archive sources and use PDF/OCR](https://mfahsold.github.io/lixity/guides/research-pdf.html)
-- [Commands](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md)
-- [JSON, Python and HTTP contracts](https://github.com/mfahsold/lixity/blob/main/docs/AGENTS.md)
-- [Implemented research commands](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md)
+- [Archive sources, use PDF/OCR and export manuscript PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html)
+- [Commands](https://mfahsold.github.io/lixity/USAGE.md)
+- [PDF export options and limits](https://mfahsold.github.io/lixity/USAGE.md#lixity-pdf)
+- [JSON, Python and HTTP contracts](https://mfahsold.github.io/lixity/AGENTS.md)
+- [Implemented research commands](https://mfahsold.github.io/lixity/research/USAGE.md)
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md)
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md)
 - [Contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md), [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md)
@@ -89,6 +100,15 @@ Open Project selects an existing server-local folder, including research-only
 archives. Selecting/dropping a manuscript makes no request; confirming import
 creates a separate project. NDA preview/download requires an explicitly advertised live nda-draft action.
 
+Since v2.3.0, welcome guidance follows choose manuscript → confirm preview
+language → read passage. Analyze a manuscript and the empty-analysis action open
+the existing import dialog without submitting it; advanced guidance is collapsed.
+The loaded Start your review panel links the first source-order paragraph meeting
+the selected tense-flag threshold, or the opening when none does. It clears
+search/paragraph filters and focuses the opened paragraph. Chapter comparison
+falls back to the chapter map when unavailable; sentence rhythm requires metrics.
+These routes reuse existing signals and do not rank literary quality.
+
 Since 2.0.0: semantic chapter-score tables expose measured
 scores, flags and native chapter links, including without JavaScript. Labeled
 rotation/zoom controls support keyboard/touch. Paragraph/dimension targets are
@@ -106,6 +126,12 @@ credentials and recipient details out of shared logs.
 
 ## Interfaces
 
+Start with `lixity about --json` or `api.about()` for installed-tool metadata:
+version, commands, analysis languages, feature identifiers and thresholds.
+For a running local server, `GET /api` returns the registered HTTP operations
+in `lixity-api-index/1`. These discovery surfaces complement the public
+[interface reference](https://mfahsold.github.io/lixity/AGENTS.md).
+
 - `lixity analyze FILE --json`: corpus/chapter metrics, schema 2.
 - `lixity profile FILE`: paragraph tense/style estimates and line anchors, schema 2.
 - `lixity style FILE --json`: manuscript style reference, schema 4.
@@ -113,6 +139,10 @@ credentials and recipient details out of shared logs.
 - `lixity dashboard FILE -o ui.html`: standalone HTML report.
 - `lixity pdf FILE --layout report|book|sheet`: composed PDF; TrueType subsets
   embedded on the host, no converter or runtime font package, ToUnicode output.
+  A4 report, A5 reader and A4 30×60 sheet; one font per role, no automatic
+  mixed-script fallback, contextual shaping, bidirectional layout or PDF/X preflight.
+  v2.3.0 rejects unsupported drawn glyphs with role/codepoint errors and
+  fixes folios, final-line width, long-word wrapping and negative word spacing.
 - `lixity serve [FILE|FOLDER] [--research-project DIR] [--no-project]`: local server.
 - `lixity build [FILE] [--dry-run]`: exports; unchanged input causes no writes.
 - `lixity research SUBCOMMAND --project DIR`: experimental explicit-project archive.

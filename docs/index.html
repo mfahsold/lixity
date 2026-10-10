@@ -4,14 +4,15 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Lixity | Understand your manuscript</title>
-<meta name="description" content="Explore sentence rhythm, vocabulary and tense in your manuscript. Compare chapters, keep research traceable and read the passages behind each result. Local analysis for authors, editors and researchers."/>
+<meta name="description" content="Analyze manuscripts locally, compare chapters, search passages and export PDF reports or reading copies. Keep research sources and writing decisions traceable with Lixity."/>
 <meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
 <link rel="alternate" type="text/plain" href="llms.txt" title="Automation summary"/>
+<link rel="help" href="AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
 <link rel="sitemap" type="application/xml" href="sitemap.xml"/>
 <meta property="og:type" content="website"/>
 <meta property="og:title" content="Lixity | Understand your manuscript"/>
-<meta property="og:description" content="Read the patterns in your writing. Keep the evidence behind your decisions."/>
+<meta property="og:description" content="Local manuscript analysis, passage search, PDF reports and reading copies, with traceable research sources and writing decisions."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta property="og:image:width" content="1480"/>
@@ -19,7 +20,7 @@
 <meta property="og:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity | Understand your manuscript"/>
-<meta name="twitter:description" content="Local manuscript analysis and a traceable research workspace."/>
+<meta name="twitter:description" content="Local manuscript analysis, passage search, PDF export and a traceable research workspace."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <link rel="icon" href="assets/mark.svg" type="image/svg+xml"/>
 <link rel="stylesheet" href="assets/site.css"/>
@@ -32,7 +33,7 @@
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
   "softwareVersion": "2.3.0",
-  "description": "Local manuscript analysis and a traceable research workspace for authors, editors and researchers.",
+  "description": "Local manuscript analysis, passage search, PDF reports and reading copies, and a traceable research workspace for authors, editors and researchers.",
   "url": "https://mfahsold.github.io/lixity/",
   "codeRepository": "https://github.com/mfahsold/lixity",
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
@@ -110,7 +111,7 @@
         <a href="guides/interpretation.html#consistency">Understand chapter comparisons</a>
       </div>
       <figure class="shot">
-        <a href="screenshots/dashboard-heatmap.png"><img src="screenshots/dashboard-heatmap.png" width="1702" height="896" alt="Chapter map showing language differences from the manuscript's own style" loading="lazy" decoding="async"/></a>
+        <a href="screenshots/dashboard-heatmap.png"><img src="screenshots/dashboard-heatmap.png" width="1660" height="854" alt="Chapter map showing language differences from the manuscript's own style" loading="lazy" decoding="async"/></a>
         <figcaption>A chapter comparison excerpt. <a href="screenshots/dashboard-dimensions.png">Style dimensions</a> · <a href="screenshots/dashboard-reference.png">Reference bands</a> · <a href="screenshots/dashboard-scenes.png">Scene example</a>.</figcaption>
       </figure>
     </article>
@@ -160,6 +161,7 @@
       <div class="feature-copy">
         <h2>Read a report in the terminal</h2>
         <p>Run <code>lixity analyze manuscript.md --language de</code> for a readable report. Other commands examine paragraphs, dialogue, pacing, style and research records.</p>
+        <p>Export an A4 analysis report, an A5 reading copy or an A4 submission sheet with <code>lixity pdf</code>. Fonts are embedded and the text stays searchable; the renderer provides reading layouts without PDF/X production preflight. <a href="USAGE.md#lixity-pdf">Choose a PDF layout</a>.</p>
         <p>For software integration, use JSON output or the Python API. Both share the dashboard's analysis pipeline.</p>
         <a href="USAGE.md">Browse the command reference</a>
       </div>
@@ -228,7 +230,7 @@ html = api.dashboard(text, language="de", project_config={})</pre>
 
   <footer>
     <p>© 2026 Matthias Fahsold</p>
-    <nav aria-label="Project resources"><a href="https://github.com/mfahsold/lixity">GitHub</a><a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a><a href="llms.txt">Automation summary</a><a href="#impressum">Legal notice</a></nav>
+    <nav aria-label="Project resources"><a href="https://github.com/mfahsold/lixity">GitHub</a><a href="https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md">Contributing</a><a href="https://github.com/mfahsold/lixity/blob/main/SECURITY.md">Security</a><a href="USAGE.md">Command reference</a><a href="AGENTS.md">Interface contracts</a><a href="llms.txt">Automation summary</a><a href="#impressum">Legal notice</a></nav>
   </footer>
 </main>
 </body>

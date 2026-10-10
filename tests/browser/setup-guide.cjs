@@ -42,6 +42,19 @@ const fixtures = JSON.parse(fixture.stdout);
         return route.fulfill({contentType: 'text/html', body: fixtures[language].html});
       });
       await page.goto('http://lixity.test/');
+      await page.locator('#welcome-hero').screenshot({path: path.join(artifacts, `welcome-${language}-${width}.png`)});
+      assert.equal(await page.locator('#analysis-review').count(), 0, 'An empty workspace shows no invented analysis');
+      assert.equal(await page.locator('.welcome-more').getAttribute('open'), null,
+        'Further research tools do not crowd the initial steps');
+      await page.locator('#tab-view-analysis').click();
+      await page.locator('#analysis-empty-import').click();
+      assert.equal(await page.locator('#modal-project-create').isVisible(), true);
+      assert.equal(await page.locator('#tab-pane-import').isVisible(), true,
+        'The empty analysis starts the existing import directly');
+      await page.locator('#modal-project-create .modal-close').click();
+      assert.equal(requests.some(request => request.method === 'POST'), false,
+        'Opening the first-step dialog does not import or retain a file');
+      await page.locator('#tab-view-research').click();
       assert.equal(await page.locator('#research-setup-guide').count(), 1);
       assert.equal(await page.locator('#research-setup-guide').isVisible(), true, 'Guide works without an archive');
       assert.equal(requests.filter(request => request.path.endsWith('/ocr-status') || request.path.endsWith('/zotero-status')).length, 0);

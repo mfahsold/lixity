@@ -8,6 +8,8 @@ self-describing JSON meta blocks and the CLI helper surfaces
 
 import json
 import os
+import shutil
+import subprocess
 import sys
 import tempfile
 import unittest
@@ -142,6 +144,13 @@ class TestApiFacade(unittest.TestCase):
         self.assertEqual(info["heuristics"]["hd_d_samples"], 0)
         self.assertEqual(info["heuristics"]["hd_d_min_tokens"], 100)
 
+    def test_about_discovers_the_pdf_artifact_command(self):
+        commands = {command["name"]: command for command in api.about()["commands"]}
+        self.assertIn("pdf", commands)
+        self.assertEqual(commands["pdf"]["output"], "pdf")
+        for layout in ("report", "book", "sheet"):
+            self.assertIn(layout, commands["pdf"]["purpose"])
+
     def test_exact_hd_d_matches_chapter_and_corpus_without_invented_se(self):
         text = "## Chapter\n\n" + "echo " * 100
         result = api.analyze(text, chapter_regex=r"(?m)^##\s+", project_config={})
@@ -194,14 +203,41 @@ class TestCliAgentSurface(unittest.TestCase):
     def test_completion_bash_and_zsh(self):
         for script in (_BASH_COMPLETION, _ZSH_COMPLETION):
             self.assertIn("lixity", script)
-        self.assertIn(
-            "analyze profile dialogue characters pacing scenes motifs showing dashboard serve style build about completion",
-            _BASH_COMPLETION,
-        )
         self.assertIn("--fdr-method", _BASH_COMPLETION)
         self.assertIn("--flag-min-severity", _BASH_COMPLETION)
         self.assertIn("_lixity_style_flags", _ZSH_COMPLETION)
         self.assertIn("characters", _ZSH_COMPLETION)
+
+    @unittest.skipUnless(shutil.which("bash"), "requires Bash")
+    def test_bash_completion_offers_the_pdf_command(self):
+        import io
+        from contextlib import redirect_stdout
+
+        script = io.StringIO()
+        with redirect_stdout(script):
+            self.assertEqual(main(["completion", "bash"]), 0)
+        bash = shutil.which("bash")
+        result = subprocess.run(  # noqa: S603 - resolved Bash, emitted local script and fixed input
+            [bash, "--noprofile", "--norc"],
+            input=script.getvalue() + '\nCOMP_WORDS=(lixity pd)\nCOMP_CWORD=1\n'
+            '_lixity_complete\nprintf "%s\\n" "${COMPREPLY[@]}"\n',
+            text=True, capture_output=True, check=True,
+        )
+        self.assertFalse(result.stderr)
+        self.assertEqual(result.stdout.split(), ["pdf"])
+
+    def test_zsh_completion_emits_the_pdf_command_descriptor(self):
+        import io
+        import re
+        from contextlib import redirect_stdout
+
+        script = io.StringIO()
+        with redirect_stdout(script):
+            self.assertEqual(main(["completion", "zsh"]), 0)
+        # These descriptors are the command candidates passed to Zsh's _describe.
+        commands = dict(re.findall(r"^\s+'([a-z]+):([^']+)'$", script.getvalue(), re.M))
+        self.assertIn("pdf", commands)
+        self.assertIn("PDF", commands["pdf"])
 
     def test_about_json_flag(self):
         import io

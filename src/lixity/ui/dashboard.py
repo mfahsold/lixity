@@ -145,6 +145,11 @@ def render_dashboard(
                 key: label(labels, key)
                 for key in (
                     *WORKSPACE_LABELS["en"],
+                    "marker_pruefen",
+                    "marker_sachcheck",
+                    "marker_todo",
+                    "marker_achtung",
+                    "marker_note",
                     "ctx_genre",
                     "ctx_created_period",
                     "ctx_depicted_period",
@@ -320,12 +325,12 @@ def render_dashboard(
             )
         parts.append('  <div class="welcome-inner">')
         parts.append(f'    <div class="welcome-badge">Lixity {L("workspace")}</div>')
-        parts.append(f'    <h1 class="welcome-title">{L("welcome_title")}</h1>')
+        parts.append(f'    <h2 class="welcome-title">{L("welcome_title")}</h2>')
         parts.append(f'    <p class="welcome-desc">{L("welcome_desc")}</p>')
         if controls:
             parts.append('    <div class="welcome-actions">')
             parts.append(
-                f'      <button type="button" class="ctl primary welcome-btn" id="hero-btn-new-project">+ {L("new_project")}</button>'
+                f'      <button type="button" class="ctl primary welcome-btn" id="hero-btn-new-project">{L("welcome_import_action")}</button>'
             )
             parts.append(
                 f'      <button type="button" class="ctl welcome-btn" id="hero-btn-open-project">📂 {L("open_project")}</button>'
@@ -368,7 +373,7 @@ def render_dashboard(
             )
         parts.append("      </div>")
         parts.append("    </div>")
-        parts.append('    <div class="welcome-features">')
+        parts.append(f'    <details class="welcome-more"><summary>{L("welcome_more")}</summary><div class="welcome-features">')
         for title_key, desc_key in (
             ("welcome_fdr", "welcome_fdr_desc"),
             ("welcome_style", "welcome_style_desc"),
@@ -377,7 +382,7 @@ def render_dashboard(
             parts.append(
                 f'      <div class="wf-item"><strong>{L(title_key)}</strong><span>{L(desc_key)}</span></div>'
             )
-        parts.append("    </div>")
+        parts.append("    </div></details>")
         parts.append("  </div>")
         parts.append("</section>")
 
@@ -586,12 +591,41 @@ def render_dashboard(
             f"<h2>{L('analysis_empty_title')}</h2>"
             f'<p class="ctl-note" style="max-width:60ch;margin:0 auto 1.2rem;line-height:1.5;">{L("analysis_empty_desc")}</p>'
             '<div class="row" style="justify-content:center;gap:.6rem;">'
-            f'<button type="button" class="ctl primary" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
+            f'<button type="button" class="ctl primary" id="analysis-empty-import">{L("welcome_import_action")}</button>'
+            f'<button type="button" class="ctl" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
             f'<button type="button" class="ctl" data-switch-view="research">{L("analysis_empty_to_research")}</button>'
             "</div>"
             "</div>"
         )
         parts.append('<div class="analysis-empty-metrics" hidden>')
+
+    if has_chapters:
+        parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
+        parts.append(f'<p class="panel-guide">{L("review_intro")}</p><div class="review-routes">')
+        if paragraphs:
+            candidates = flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
+            first = min(candidates, key=lambda paragraph: paragraph.start_line) if candidates else paragraphs[0]
+            first_index = next(i for i, paragraph in enumerate(paragraphs) if paragraph is first)
+            passage_hint = "review_passage_flagged" if candidates else "review_passage_unflagged"
+            parts.append(
+                f'<article class="review-route"><h3>{L("review_passage")}</h3>'
+                f'<p>{L(passage_hint)}</p><a class="ctl primary" href="#p-{first_index}" '
+                f'data-review-passage="1" data-line="{first.start_line}" data-target="p-{first_index}">'
+                f'{L("review_passage_action")}</a></article>'
+            )
+        compare_target = "heatmap" if has_house_style and metrics is not None and metrics.chapters else "chapters"
+        compare_hint = "review_compare_hint" if compare_target == "heatmap" else "review_compare_limited"
+        review_routes = [
+            ("review_compare", compare_hint, "review_compare_action", compare_target),
+        ]
+        if metrics is not None:
+            review_routes.append(("review_rhythm", "review_rhythm_hint", "review_rhythm_action", "dist"))
+        for title_key, hint_key, action_key, target in review_routes:
+            parts.append(
+                f'<article class="review-route"><h3>{L(title_key)}</h3><p>{L(hint_key)}</p>'
+                f'<a class="ctl" href="#{target}" data-jump="#{target}">{L(action_key)}</a></article>'
+            )
+        parts.append('</div></section>')
 
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [
@@ -830,10 +864,23 @@ def render_dashboard(
 
     # --- Style heatmap & passport (self-calibrated house style) -----------
     if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
-        parts.append(render_heatmap_panel(fingerprint, metrics, labels, language_key))
-        parts.append(render_style_passport_panel(fingerprint, labels, language_key))
-        parts.append(style_dimensions(chapters, fingerprint, labels, language_key))
-        parts.append(style_structural(chapters, fingerprint, labels, language_key))
+        style_views = [
+            ("heatmap", "style_fingerprint", render_heatmap_panel(fingerprint, metrics, labels, language_key)),
+            ("bands", "style_passport", render_style_passport_panel(fingerprint, labels, language_key)),
+            ("dimensions", "style_dimensions", style_dimensions(chapters, fingerprint, labels, language_key)),
+            ("structural", "panel_structural", style_structural(chapters, fingerprint, labels, language_key)),
+        ]
+        parts.append(f'<section class="panel style-panel" id="style"><h2>{L("group_style")}</h2>')
+        parts.append(f'<div class="style-tabs" id="style-tabs" role="tablist" aria-label="{L("group_style")}" hidden>')
+        for view_id, label_key, content in style_views:
+            if content:
+                parts.append(
+                    f'<button type="button" class="ctl" id="style-tab-{view_id}" role="tab" '
+                    f'aria-controls="{view_id}" data-style-view="{view_id}">{L(label_key)}</button>'
+                )
+        parts.append('</div><div id="style-panels">')
+        parts.extend(content for _, _, content in style_views if content)
+        parts.append('</div></section>')
 
     # --- Work markers (editor-visible, set from the dashboard) -------
     parts.append(render_markers_panel(markers, chapters, labels, controls))
@@ -926,6 +973,7 @@ def render_dashboard(
 
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}
+    paragraph_content: dict[str, list[str]] = {}
     for idx, p in enumerate(paragraphs):
         by_chapter.setdefault(p.chapter_num, []).append((idx, p))
 
@@ -987,19 +1035,24 @@ def render_dashboard(
                 sev_label = label(labels, f"severity_{p.severity}")
                 parts.append(
                     f'<div class="ptext" id="p-{idx}" data-start="{p.start_line}" '
-                    f'data-end="{p.end_line}"><div class="ptext-inner">'
+                    f'data-end="{p.end_line}" data-markers="{int(controls)}"><div class="ptext-inner">'
                 )
-                parts.append(
-                    f'<div class="anchor">{line_label(labels, p)} · '
-                    f"{esc(dom_label)} · {esc(sev_label)}</div>"
+                anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
+                stats = (
+                    f'{label(labels, "present")} {p.present_hits} · {label(labels, "past")} {p.past_hits} · '
+                    f"ASL {N(p.asl, 1)} · {label(labels, 'dialogue')} {P(p.dialogue_pct)} · "
+                    f"{label(labels, 'function_words')} {P(p.function_word_pct)} · "
+                    f"{label(labels, 'feat_filter')} {N(p.filter_density, 1)} · {label(labels, 'feat_modal')} {N(p.modal_density, 1)} · "
+                    f"{label(labels, 'feat_nominal')} {N(p.nominal_density, 1)} · {label(labels, 'feat_passive')} {N(p.passive_density, 1)} · "
+                    f"{p.words} {label(labels, 'words')}"
                 )
+                paragraph_content[f"p-{idx}"] = [p.text, anchor, stats]
+                # The fallback preserves the full offline report without JavaScript.
+                # JavaScript removes the inert fallback before lazy rendering.
                 parts.append(
-                    f'<div class="stats">{L("present")} {p.present_hits} · {L("past")} {p.past_hits} · '
-                    f"ASL {N(p.asl, 1)} · {L('dialogue')} {P(p.dialogue_pct)} · "
-                    f"{L('function_words')} {P(p.function_word_pct)} · "
-                    f"{L('feat_filter')} {N(p.filter_density, 1)} · {L('feat_modal')} {N(p.modal_density, 1)} · "
-                    f"{L('feat_nominal')} {N(p.nominal_density, 1)} · {L('feat_passive')} {N(p.passive_density, 1)} · "
-                    f"{p.words} {L('words')}</div>"
+                    f'<noscript><p>{esc(p.text)}</p><details class="paragraph-values">'
+                    f'<summary>{L("paragraph_values")}</summary>'
+                    f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div></details>'
                 )
                 if controls:
                     buttons = " ".join(
@@ -1013,10 +1066,15 @@ def render_dashboard(
                         f'data-placeholder="{esc(label(labels, "marker_note"), quote=True)}"></span>'
                         f"</div>"
                     )
-                parts.append(f"<p>{esc(p.text)}</p>")
+                parts.append("</noscript>")
                 parts.append("</div></div>")
         parts.append("</section>")
     parts.append("</main>")
+    content_json = json.dumps(paragraph_content, ensure_ascii=False, separators=(",", ":"))
+    # Script raw text does not decode HTML entities. Escape angle brackets so
+    # manuscript strings, including </script>, cannot end this inert JSON block.
+    content_json = content_json.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+    parts.append(f'<script type="application/json" id="paragraph-content">{content_json}</script>')
 
     # --- Chapter matrix ---------------------------------------------------
     if chapters:

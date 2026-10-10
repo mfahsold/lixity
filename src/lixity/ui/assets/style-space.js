@@ -526,7 +526,7 @@
 
   function animate() {
     animationFrame = null;
-    if (spin && !document.hidden) {
+    if (spin && !document.hidden && canvas.getClientRects().length) {
       yaw += spinSpeed;
       draw();
     }
@@ -535,7 +535,8 @@
 
   function scheduleAnimation() {
     if (animationFrame !== null) cancelAnimationFrame(animationFrame);
-    animationFrame = spin && !document.hidden ? requestAnimationFrame(animate) : null;
+    animationFrame = spin && !document.hidden && canvas.getClientRects().length
+      ? requestAnimationFrame(animate) : null;
   }
 
   document.addEventListener("visibilitychange", scheduleAnimation);
@@ -543,6 +544,7 @@
   window.addEventListener("resize", function() {
     clearHover();
     draw();
+    scheduleAnimation();
   });
   draw();
 })();

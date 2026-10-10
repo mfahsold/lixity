@@ -3,9 +3,13 @@
 from __future__ import annotations
 
 import shutil
+import subprocess
+import tempfile
 import unittest
 import unittest.mock
 from pathlib import Path
+
+import pytest
 
 from lixity.pdf_document import Block, Document, FontSet, PdfError, break_lines
 from lixity.pdf_font import FontError, subset_font
@@ -76,6 +80,11 @@ class SubsetFontTest(unittest.TestCase):
     def test_empty_character_set_is_refused(self):
         with self.assertRaises(FontError):
             subset_font(SERIF, set())
+
+    @needs_fonts
+    def test_entirely_unsupported_character_set_is_reported(self):
+        with self.assertRaises(FontError):
+            subset_font(SERIF, {0x4E2D})
 
     @needs_fonts
     def test_subset_reopens_as_a_font(self):
@@ -158,6 +167,28 @@ class LineBreakingTest(unittest.TestCase):
 
 
 class ComposedDocumentTest(unittest.TestCase):
+    @needs_fonts
+    def test_unsupported_visible_characters_fail_instead_of_drawing_missing_glyphs(self):
+        fonts = FontSet({"text": str(SERIF)})
+        document = Document(fonts)
+        document.add(Block("Hallo 中"))
+        with self.assertRaises(PdfError) as caught:
+            document.render()
+        self.assertIn("U+4E2D", str(caught.exception))
+        self.assertIn("text", str(caught.exception))
+
+    @needs_fonts
+    def test_folios_embed_digits_absent_from_the_document_text(self):
+        fonts = FontSet({"text": str(SERIF)})
+        document = Document(fonts, page_size=(300, 180), margins=(20, 20, 20, 30))
+        document.add(Block("Nur Buchstaben. " * 90))
+        document.page_furniture("{folio}", role="text", size=9, position="footer-centre")
+        pages = document._compose()
+        self.assertGreater(len(pages), 1)
+        for number, page in enumerate(pages, 1):
+            self.assertEqual(page.lines[-1].text, str(number))
+            self.assertFalse(fonts.unmapped("text", page.lines[-1].text))
+
     @needs_fonts
     def test_pdf_is_structurally_complete(self):
         fonts = FontSet({"text": str(SERIF)})
@@ -302,6 +333,31 @@ class TypesettingTest(unittest.TestCase):
         lines = self._lines("Kapitel 1", size=13.5, measure=300.0)
         self.assertEqual([line.text for line in lines], ["Kapitel 1"])
 
+    def test_last_line_still_obeys_the_measure(self):
+        lines = self._lines("Wiesen Wiesen", size=11.0, measure=70.0)
+        self.assertEqual([line.text for line in lines], ["Wiesen", "Wiesen"])
+        self.assertTrue(all(line.slack >= 0 for line in lines))
+
+    def test_overlong_word_wraps_without_losing_characters(self):
+        text = "Donaudampfschifffahrtsgesellschaftskapitän" * 4
+        lines = self._lines(text, size=11.0, measure=200.0)
+        self.assertGreater(len(lines), 1)
+        self.assertEqual("".join(line.text for line in lines), text)
+        self.assertTrue(all(line.slack >= 0 for line in lines))
+
+    def test_pdf_writer_applies_negative_word_spacing(self):
+        from lixity.pdf_document import Line, _show
+
+        fonts = FontSet({"text": str(SERIF)})
+        fonts.collect("text", "Wiesen Wiesen")
+        operator = _show(
+            Line("Wiesen Wiesen", 0, 0, 10, "text", word_spacing=-0.5),
+            fonts.face("text"),
+        )
+        # PDF TJ adjustments use thousandths of the font size: +50 removes 0.5 pt.
+        self.assertIn(" 50 ", operator)
+        self.assertTrue(operator.endswith("] TJ"))
+
     def test_every_word_survives_the_break(self):
         text = ("Ich habe es noch nie geschafft ohne Druck ein Geschenk zu besorgen "
                 "und laufe grundsätzlich am Vorabend los durch die volle Stadt.")
@@ -338,12 +394,67 @@ class TypesettingTest(unittest.TestCase):
                 self.assertLessEqual(_character_count(drawn), NORM_COLUMNS)
 
 
-class ToolchainAvailableTest(unittest.TestCase):
-    def test_poppler_can_validate_generated_pdfs(self):
+@pytest.mark.native_pdf
+@needs_fonts
+class NativePdfTest(unittest.TestCase):
+    @unittest.skipUnless(
+        shutil.which("pdfinfo") and shutil.which("pdftotext") and shutil.which("pdffonts"),
+        "requires Poppler pdfinfo, pdftotext and pdffonts",
+    )
+    def test_book_round_trips_unicode_long_words_and_page_numbers(self):
         pdfinfo = shutil.which("pdfinfo")
         pdftotext = shutil.which("pdftotext")
-        if not (pdfinfo and pdftotext):
+        pdffonts = shutil.which("pdffonts")
+        if not (pdfinfo and pdftotext and pdffonts):
             self.skipTest("Poppler is optional tooling, not a Lixity dependency")
+        paragraph = "ÄÖÜ äöü ß – „Grüße“ begleiten die Erzählung. " * 100
+        compound = "Donaudampfschifffahrtsgesellschaftskapitän" * 4
+        data = book_pdf(
+            title="Erfundene Geschichten",
+            chapters=[("Über den Fluss", [paragraph, compound])],
+            choice=CHOSEN,
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "reader.pdf"
+            path.write_bytes(data)
+            info = subprocess.run(  # noqa: S603 - resolved Poppler executable, synthetic local input
+                [pdfinfo, str(path)], check=True, capture_output=True, text=True,
+            )
+            text = subprocess.run(  # noqa: S603 - resolved Poppler executable, synthetic local input
+                [pdftotext, "-layout", str(path), "-"],
+                check=True, capture_output=True, text=True,
+            )
+            fonts = subprocess.run(  # noqa: S603 - resolved Poppler executable, synthetic local input
+                [pdffonts, str(path)], check=True, capture_output=True, text=True,
+            )
+        self.assertFalse(info.stderr or text.stderr or fonts.stderr)
+        self.assertRegex(info.stdout, r"Page size:\s+419\.528 x 595\.276 pts")
+        self.assertEqual(text.stdout.count("Grüße"), 100)
+        self.assertRegex(fonts.stdout, r"CID TrueType\s+Identity-H\s+yes\s+\w+\s+yes")
+        pages = text.stdout.split("\f")[:-1]
+        self.assertGreater(len(pages), 1)
+        body_pages = [pages[0]]
+        for number, page in enumerate(pages[1:], 2):
+            lines = page.strip().splitlines()
+            self.assertEqual(lines[-1].strip(), str(number))
+            body_pages.append("\n".join(lines[:-1]))
+        self.assertIn(compound, "".join("\n".join(body_pages).split()))
+
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
+    def test_default_report_fonts_preserve_generated_math_symbols(self):
+        pdftotext = shutil.which("pdftotext")
+        if not pdftotext:
+            self.skipTest("requires Poppler pdftotext")
+        data = report_pdf(title="Synthetic report", markdown="Standardized signal: √n ≤ 2.")
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "report.pdf"
+            path.write_bytes(data)
+            result = subprocess.run(  # noqa: S603 - resolved Poppler, synthetic local input
+                [pdftotext, "-layout", str(path), "-"],
+                check=True, capture_output=True, text=True,
+            )
+        self.assertFalse(result.stderr)
+        self.assertIn("√n ≤ 2.", result.stdout)
 
 
 if __name__ == "__main__":

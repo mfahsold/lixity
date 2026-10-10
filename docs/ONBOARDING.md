@@ -54,6 +54,11 @@ lixity serve ./my-novel --port 8765
 
 Open `http://127.0.0.1:8765/`. The workspace has three views:
 **Research & Dossiers**, **Manuscript & Analysis**, and **Project & Settings**.
+Since v2.3.0, the welcome guidance follows three steps: choose or open a
+manuscript, confirm its language in the import preview, then read a passage behind
+a signal. **Analyze a manuscript** opens the existing import dialog; analysis
+starts after you confirm the preview. **Research and further analysis** expands
+optional guidance. An empty manuscript view offers the same import action.
 **New Project**, **Open Project** and optional welcome guidance remain available
 in every view. Hide the guidance when you no longer need it; **Show guidance**
 reopens it. The browser remembers this preference when local storage is available.
@@ -78,6 +83,18 @@ loaded manuscript. All browser tabs connected to one server share its active
 project, so check the displayed path when switching.
 
 ### Read and explore
+
+The **Start your review** panel appears before the measurements. **Open passage**
+opens the first paragraph in source order that meets the selected tense-flag
+threshold, or the opening paragraph when none does. It clears manuscript search
+and paragraph filters so the text is visible, and moves keyboard focus to the
+opened paragraph. This is a place to begin reading, not a quality ranking.
+
+**Explore chapters** opens the style comparison when it is available; otherwise
+it opens the chapter map with an explanation of the comparison's limits.
+**Open sentence rhythm** is offered when measurements are available. Read the
+passage before drawing conclusions from either view. Paragraph text appears
+first; expand **Values** for source lines and measurements.
 
 The manuscript view provides chapter and paragraph navigation, style signals
 and analysis controls. Dotted-underlined terms have explanations: hover, use

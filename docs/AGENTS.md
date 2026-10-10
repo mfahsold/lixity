@@ -4,6 +4,12 @@ Guidance for AI agents (and other programs) that use Lixity as a tool:
 which commands to call, how to interpret the JSON, and which heuristics
 govern the numbers.
 
+Start with `lixity about --json` or `api.about()` to inspect the installed version,
+commands, languages, feature identifiers and thresholds. A running local server
+provides registered HTTP operations through `GET /api` (`lixity-api-index/1`).
+The [command reference](USAGE.md) explains options and output limits; the public
+[automation summary](llms.txt) links to the maintained entrypoints.
+
 ## Operating boundaries
 
 Use this guide as interface documentation, not as an instruction to take
@@ -52,7 +58,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | `lixity showing FILE [--json]` | showing vs. telling balance per chapter | text / JSON |
 | `lixity style FILE --json` | style reference (bands, deviations, dimensions, FDR, structural diagnostics; `--z-mild`/`--z-strong`/`--fdr-q`/`--fdr-method`/`--dim-threshold`/`--flag-min-severity`) | JSON (schema v4) |
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard (Settings: z\*, FDR, flags cut, dim threshold) | file path |
-| `lixity pdf FILE [--layout report\|book\|sheet] [-o OUT]` | composed PDF (A4 report, A5 reading layout, 30×60 sheet); `--author`, `--serif-font`, `--bold-font`, `--mono-font` | file path |
+| `lixity pdf FILE [--layout report\|book\|sheet] [-o OUT]` | composed PDF (A4 report, A5 reading layout, 30×60 sheet); `--author`, `--serif-font`, `--bold-font`, `--mono-font`, `--sans-font`, `--sans-bold-font` | file path |
 | `lixity serve [PATH] [--port N] [--host IP] [--no-project]` | native development server & interactive dashboard with project switcher | loopback HTTP server |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` (same threshold flags as `style`) | artifact list |
 | `lixity research SUBCOMMAND --project DIR` | evidence-based research archive (init, ingest, search, cite, sources, dossier, compare) | JSON |
@@ -77,6 +83,12 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
   Errors go to stderr as `[error] …` lines (`LIXITY_LANG=de` switches the
   user-facing messages to German); stdout carries only the payload.
 - Report language: English by default, German via `LIXITY_LANG=de`.
+
+PDF layouts use host TrueType fonts, one per role, without automatic mixed-script
+fallback, contextual shaping, bidirectional layout or PDF/X preflight. Since
+v2.3.0, unsupported drawn glyphs fail through the existing processing
+error channel with the font role and Unicode codepoint. See [PDF usage and
+limits](USAGE.md#lixity-pdf).
 
 Release `1.15.0` defaults the analysis language to
 English. Pass the intended manuscript language or explicit `auto`; do not
@@ -248,8 +260,8 @@ in all seven languages.
 ### 3.4 Dashboard interaction contract (for embedding and UI automation)
 
 The dashboard follows **one interaction model**: every content drill-down is a
-keyboard-reachable `[role="button"]` element carrying a small, uniform data
-vocabulary; every server control is a native `<button>`/`<select>`.
+keyboard-reachable native link or `[role="button"]` element carrying a small,
+uniform data vocabulary; server controls use native form elements.
 The workspace bar stays directly below the header: New Project, Open Project and
 Show guidance remain reachable in loaded projects. Guidance starts collapsed
 in loaded projects and can be reopened without changing the active project.
@@ -269,6 +281,40 @@ full-text archive search. Capability-gated NDA controls are inside a native
 details element that starts collapsed; backend routes and authorization are
 unchanged.
 
+**Since v2.3.0:** opened paragraphs show manuscript text before a
+native `details` disclosure containing source lines and measurements, labeled
+**Values** (**Werte** in German), and then marker actions. With JavaScript enabled,
+closed paragraph contents are created when opened from the complete embedded
+paragraph payload. Do not infer missing manuscript text from an unpopulated
+paragraph panel or search only rendered nodes: manuscript search checks every
+paragraph's plain text, including
+unopened paragraphs. Text that resembles markup remains text data. This reduces
+initial DOM work without removing growth in the standalone offline HTML payload.
+Without JavaScript, the complete paragraph text remains readable in the static
+fallback.
+
+Since v2.3.0, welcome guidance has three steps: choose a manuscript, confirm its
+preview language, and read a passage. The primary welcome and empty-analysis
+actions open the existing import dialog without submitting it. Optional research
+and feature guidance starts collapsed in native `details`.
+
+The loaded `#analysis-review` panel precedes the KPIs. Its passage link selects
+the first paragraph in source order meeting the chosen tense-flag threshold,
+or the opening paragraph if none meets it. Activation clears manuscript search
+and paragraph filters, opens the paragraph and gives its panel keyboard focus.
+Chapter comparison uses `#heatmap` when the existing style comparison and chapter
+measurements are available; otherwise it links to `#chapters` with a limitation
+hint. Sentence rhythm uses `#dist` only when metrics are supplied. This reuses
+existing analysis results without a new quality score or ranking.
+
+The existing style panels share a tabbed area since v2.3.0. Navigation to
+`#heatmap`, `#bands`, `#dimensions`, `#structural` or `#feat-<field>` reveals the
+owning panel before scrolling; those anchors remain stable. `ArrowLeft` and
+`ArrowRight` move between tabs; `Home` and `End` select the first and last.
+Without JavaScript, all available panels remain readable and native
+chapter-score links continue to work. Existing analysis JSON contracts and
+server action payloads are unchanged.
+
 | Hook | Meaning |
 |---|---|
 | `data-jump="<anchor>"` | scroll to a panel/row/column and flash it (`#feat-<field>` = heatmap column) |
@@ -279,6 +325,10 @@ unchanged.
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
 | `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
+| `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
+| `.paragraph-values > summary` | native disclosure for source lines and measurements in an opened paragraph |
+| `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
+| `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
 | `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field); **never scrolls** – marker controls are excluded from jump activation |
 | `role="button" tabindex="0"` | every clickable non-native target (KPI tile, band row, loading bar, table row, heatmap cell) |
