@@ -22,6 +22,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   text stays searchable and copyable. The sheet layout is a fixed grid of 30
   lines of at most 60 characters; the book layout is A5 with a serif measure
   and chapter openings.
+- The analysis toolbar searches the manuscript itself and filters the chapter
+  list to the matching paragraphs, with a match count and step-through. Until
+  now only the research archive could be searched. Manuscript text is inserted
+  as text nodes, so a phrase that looks like markup stays inert.
 - PDF layouts follow measured typographic practice: type size is fitted to the
   real text so lines land in the 45-75 character band, paragraphs are broken by
   a shortest-cost search instead of greedily, justification tightens as well as

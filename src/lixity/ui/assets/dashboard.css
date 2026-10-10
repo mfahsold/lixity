@@ -289,6 +289,16 @@ h2, .section-heading, .settings-form h3 {
   font-size: .83rem;
 }
 .toolbar label { display: inline-flex; gap: .45rem; align-items: center; cursor: pointer; min-width: 0; }
+.text-search-group {
+  display: inline-flex; align-items: center; gap: .35rem; flex: 1 1 22rem; min-width: 0;
+}
+.text-search-group input[type="search"] { flex: 1 1 12rem; min-width: 0; }
+.text-search-group .ctl-note { white-space: nowrap; }
+/* A paragraph that does not match the query leaves the page entirely, so the
+   result list is the manuscript filtered down to what was searched for. */
+.ptext.text-miss, .chapter.text-miss { display: none; }
+mark.text-hit { background: var(--accent-light); color: inherit; padding: 0 .05em; border-radius: .15rem; }
+body.text-search-active .chapter .strip { display: none; }
 .toolbar select { max-width: 15rem; }
 .legend { display: inline-flex; flex-wrap: wrap; gap: 1rem; color: var(--muted); font-size: .78rem; }
 .swatch { display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-right: .3rem; vertical-align: -1px; }

@@ -333,6 +333,122 @@ if (filter) {
     document.body.classList.toggle("only-flags", filter.checked);
   });
 }
+// --- Manuscript search -------------------------------------------------
+// The author could not search the manuscript itself, only the research
+// archive. This filters the paragraph blocks in place: chapters without a
+// match collapse away, matches are marked, and the arrows step through them.
+(function () {
+  var input = document.getElementById("text-search");
+  if (!input) return;
+  var status = document.getElementById("text-search-status");
+  var prev = document.getElementById("text-search-prev");
+  var next = document.getElementById("text-search-next");
+  var clear = document.getElementById("text-search-clear");
+  var hits = [];
+  var cursor = -1;
+
+  function unmark(paragraph) {
+    paragraph.querySelectorAll("mark.text-hit").forEach(function (mark) {
+      var parent = mark.parentNode;
+      parent.replaceChild(document.createTextNode(mark.textContent), mark);
+      parent.normalize();
+    });
+  }
+
+  // Marking is built from text nodes and created elements only. Assigning the
+  // query through innerHTML would let a manuscript phrase such as "<img
+  // onerror=...>" become markup in the interface.
+  function mark(paragraph, query) {
+    var walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT, null);
+    var nodes = [];
+    while (walker.nextNode()) nodes.push(walker.currentNode);
+    nodes.forEach(function (node) {
+      var text = node.nodeValue;
+      var lower = text.toLowerCase();
+      var needle = query.toLowerCase();
+      var at = lower.indexOf(needle);
+      if (at < 0) return;
+      var fragment = document.createDocumentFragment();
+      var start = 0;
+      while (at >= 0) {
+        if (at > start) fragment.appendChild(document.createTextNode(text.slice(start, at)));
+        var hit = document.createElement("mark");
+        hit.className = "text-hit";
+        hit.textContent = text.slice(at, at + query.length);
+        fragment.appendChild(hit);
+        start = at + query.length;
+        at = lower.indexOf(needle, start);
+      }
+      if (start < text.length) fragment.appendChild(document.createTextNode(text.slice(start)));
+      node.parentNode.replaceChild(fragment, node);
+    });
+  }
+
+  function apply() {
+    var query = input.value.trim();
+    hits.forEach(function (hit) { unmark(hit); });
+    hits = [];
+    cursor = -1;
+    var blocks = Array.prototype.slice.call(
+      document.querySelectorAll("#chapters .ptext")
+    );
+    blocks.forEach(function (block) {
+      var paragraph = block.querySelector("p");
+      if (paragraph) unmark(paragraph);
+      var match = Boolean(paragraph) && Boolean(query)
+        && paragraph.textContent.toLowerCase().indexOf(query.toLowerCase()) >= 0;
+      block.classList.toggle("text-miss", Boolean(query) && !match);
+      if (match) {
+        mark(paragraph, query);
+        hits.push(block);
+      }
+    });
+    document.querySelectorAll("#chapters .chapter").forEach(function (chapter) {
+      var any = chapter.querySelectorAll(".ptext:not(.text-miss)").length > 0;
+      chapter.classList.toggle("text-miss", Boolean(query) && !any);
+    });
+    document.body.classList.toggle("text-search-active", Boolean(query));
+    if (prev) prev.hidden = !query;
+    if (next) next.hidden = !query;
+    if (clear) clear.hidden = !query;
+    if (status) {
+      if (!query) status.textContent = "";
+      else if (!hits.length) status.textContent = uiLabel("text_search_none");
+      else status.textContent = uiFormat("text_search_count", {
+        matches: hits.length,
+        paragraphs: blocks.length
+      });
+    }
+    if (hits.length) step(1);
+  }
+
+  function step(direction) {
+    if (!hits.length) return;
+    cursor = (cursor + direction + hits.length) % hits.length;
+    var block = hits[cursor];
+    block.classList.add("open");
+    var heading = block.querySelector(".anchor");
+    if (heading) heading.hidden = false;
+    block.scrollIntoView({block: "center", behavior: "smooth"});
+    block.classList.remove("flash");
+    void block.offsetWidth;
+    block.classList.add("flash");
+  }
+
+  var pending = null;
+  input.addEventListener("input", function () {
+    if (pending) clearTimeout(pending);
+    pending = setTimeout(apply, 120);
+  });
+  input.addEventListener("keydown", function (event) {
+    if (event.key === "Enter") { event.preventDefault(); step(event.shiftKey ? -1 : 1); }
+    if (event.key === "Escape") { input.value = ""; apply(); }
+  });
+  if (next) next.addEventListener("click", function () { step(1); });
+  if (prev) prev.addEventListener("click", function () { step(-1); });
+  if (clear) clear.addEventListener("click", function () { input.value = ""; apply(); input.focus(); });
+})();
+
 var paragraphReset = document.getElementById("paragraph-filter-reset");
 if (paragraphReset) paragraphReset.addEventListener("click", function() {
   setFilter(filter, "only-flags", false);

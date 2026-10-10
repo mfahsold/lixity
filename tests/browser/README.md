@@ -17,6 +17,7 @@ node tests/browser/settings.cjs
 node tests/browser/layout.cjs
 node tests/browser/research.cjs
 node tests/browser/list-filters.cjs
+node tests/browser/manuscript-search.cjs
 node tests/browser/project-controls.cjs
 node tests/browser/scenes.cjs
 node tests/browser/docs.cjs

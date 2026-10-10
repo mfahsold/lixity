@@ -71,8 +71,6 @@ _JS = "\n".join(
 )
 
 
-
-
 def render_dashboard(
     chapters: Sequence[ChapterProfile],
     paragraphs: Sequence[ParagraphProfile],
@@ -141,13 +139,28 @@ def render_dashboard(
         return format_pct(value, language_key, decimals)
 
     html_lang = language_key if language_key not in ("auto", "generic") else "en"
-    workspace_labels_json = esc(json.dumps(
-        {key: label(labels, key) for key in (*WORKSPACE_LABELS["en"],
-         "ctx_genre", "ctx_created_period", "ctx_depicted_period", "ctx_place",
-         "ctx_perspective", "ctx_original_language", "ctx_is_translation",
-         "ctx_provenance_note", "ctx_yes", "ctx_no")},
-        ensure_ascii=False,
-    ), quote=True)
+    workspace_labels_json = esc(
+        json.dumps(
+            {
+                key: label(labels, key)
+                for key in (
+                    *WORKSPACE_LABELS["en"],
+                    "ctx_genre",
+                    "ctx_created_period",
+                    "ctx_depicted_period",
+                    "ctx_place",
+                    "ctx_perspective",
+                    "ctx_original_language",
+                    "ctx_is_translation",
+                    "ctx_provenance_note",
+                    "ctx_yes",
+                    "ctx_no",
+                )
+            },
+            ensure_ascii=False,
+        ),
+        quote=True,
+    )
     if current_language is None:
         current_language = language_key
     if not language_options:
@@ -231,29 +244,37 @@ def render_dashboard(
         parts.append(f'<nav class="workspace-bar" aria-label="{L("workspace")}">')
         parts.append(f'<span class="ctl-label">{L("workspace")}</span>')
         parts.append('<div class="row">')
-        parts.append(f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>')
-        parts.append(f'<button type="button" class="ctl" id="btn-modal-open-project">📂 {L("open_project")}</button>')
+        parts.append(
+            f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>'
+        )
+        parts.append(
+            f'<button type="button" class="ctl" id="btn-modal-open-project">📂 {L("open_project")}</button>'
+        )
         show_guidance_hidden = "" if chapters else " hidden"
-        parts.append(f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden}>{L("welcome_show")}</button>')
+        parts.append(
+            f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden}>{L("welcome_show")}</button>'
+        )
         if manuscript_name:
-            parts.append(f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>')
-        parts.append('</div>')
-        parts.append('</nav>')
+            parts.append(
+                f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>'
+            )
+        parts.append("</div>")
+        parts.append("</nav>")
         parts.append(
             '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
             f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
             f'<span class="view-nav-icon" aria-hidden="true">📚</span> '
             f'<span class="view-nav-label">{L("workspace_research")}</span>'
-            '</button>'
+            "</button>"
             f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
             f'<span class="view-nav-icon" aria-hidden="true">📊</span> '
             f'<span class="view-nav-label">{L("workspace_analysis")}</span>'
-            '</button>'
+            "</button>"
             f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" aria-controls="view-pane-project" aria-selected="false">'
             f'<span class="view-nav-icon" aria-hidden="true">⚙️</span> '
             f'<span class="view-nav-label">{L("workspace_project")}</span>'
-            '</button>'
-            '</nav>'
+            "</button>"
+            "</nav>"
         )
 
     if status:
@@ -265,7 +286,7 @@ def render_dashboard(
         if "source_version_id" in document_context:
             parts.append(
                 f'<tr><th scope="row">{L("ctx_source_version")}</th>'
-                f'<td><code>{esc(document_context["source_version_id"])}</code></td></tr>'
+                f"<td><code>{esc(document_context['source_version_id'])}</code></td></tr>"
             )
         ctx_fields = (
             ("genre", "ctx_genre"),
@@ -284,34 +305,56 @@ def render_dashboard(
                     val_str = L("ctx_yes") if val else L("ctx_no")
                 else:
                     val_str = str(val)
-                parts.append(
-                    f'<tr><th scope="row">{L(label_key)}</th><td>{esc(val_str)}</td></tr>'
-                )
+                parts.append(f'<tr><th scope="row">{L(label_key)}</th><td>{esc(val_str)}</td></tr>')
         parts.append("</tbody></table></div></section>")
 
     if controls or not chapters:
-        parts.append('<section class="welcome-hero" id="welcome-hero"' + (' hidden' if chapters else '') + '>')
+        parts.append(
+            '<section class="welcome-hero" id="welcome-hero"'
+            + (" hidden" if chapters else "")
+            + ">"
+        )
         if controls:
-            parts.append(f'  <button type="button" class="ctl welcome-dismiss" id="welcome-dismiss" aria-controls="welcome-hero">{L("welcome_dismiss")}</button>')
+            parts.append(
+                f'  <button type="button" class="ctl welcome-dismiss" id="welcome-dismiss" aria-controls="welcome-hero">{L("welcome_dismiss")}</button>'
+            )
         parts.append('  <div class="welcome-inner">')
         parts.append(f'    <div class="welcome-badge">Lixity {L("workspace")}</div>')
         parts.append(f'    <h1 class="welcome-title">{L("welcome_title")}</h1>')
         parts.append(f'    <p class="welcome-desc">{L("welcome_desc")}</p>')
         if controls:
             parts.append('    <div class="welcome-actions">')
-            parts.append(f'      <button type="button" class="ctl primary welcome-btn" id="hero-btn-new-project">+ {L("new_project")}</button>')
-            parts.append(f'      <button type="button" class="ctl welcome-btn" id="hero-btn-open-project">📂 {L("open_project")}</button>')
-            parts.append(f'      <button type="button" class="ctl welcome-btn" id="hero-btn-browse-project">{L("wizard_choose_action")}</button>')
-            parts.append('    </div>')
-            parts.append('    <section id="welcome-project-recent" data-recent-projects hidden aria-labelledby="welcome-project-recent-heading">')
-            parts.append(f'      <h3 id="welcome-project-recent-heading">{L("recent_projects_heading")}</h3>')
+            parts.append(
+                f'      <button type="button" class="ctl primary welcome-btn" id="hero-btn-new-project">+ {L("new_project")}</button>'
+            )
+            parts.append(
+                f'      <button type="button" class="ctl welcome-btn" id="hero-btn-open-project">📂 {L("open_project")}</button>'
+            )
+            parts.append(
+                f'      <button type="button" class="ctl welcome-btn" id="hero-btn-browse-project">{L("wizard_choose_action")}</button>'
+            )
+            parts.append("    </div>")
+            parts.append(
+                '    <section id="welcome-project-recent" data-recent-projects hidden aria-labelledby="welcome-project-recent-heading">'
+            )
+            parts.append(
+                f'      <h3 id="welcome-project-recent-heading">{L("recent_projects_heading")}</h3>'
+            )
             parts.append(f'      <p class="ctl-note">{L("recent_projects_help")}</p>')
-            parts.append('      <ul id="welcome-project-recent-list" class="project-chooser-list" data-recent-project-list></ul>')
-            parts.append(f'      <button type="button" class="ctl" data-clear-recent-projects>{L("clear_recent_projects")}</button>')
-            parts.append('      <p class="ctl-status" data-recent-project-status role="status" hidden></p>')
-            parts.append('    </section>')
+            parts.append(
+                '      <ul id="welcome-project-recent-list" class="project-chooser-list" data-recent-project-list></ul>'
+            )
+            parts.append(
+                f'      <button type="button" class="ctl" data-clear-recent-projects>{L("clear_recent_projects")}</button>'
+            )
+            parts.append(
+                '      <p class="ctl-status" data-recent-project-status role="status" hidden></p>'
+            )
+            parts.append("    </section>")
         parts.append('    <div class="onboarding-guide">')
-        parts.append(f'      <div class="og-header"><h3>{L("welcome_quickstart")}</h3><p>{L("welcome_local")}</p></div>')
+        parts.append(
+            f'      <div class="og-header"><h3>{L("welcome_quickstart")}</h3><p>{L("welcome_local")}</p></div>'
+        )
         parts.append('      <div class="og-steps">')
         for step, title_key, desc_key in (
             (1, "welcome_manuscript", "welcome_manuscript_desc"),
@@ -321,66 +364,100 @@ def render_dashboard(
             parts.append(
                 f'<div class="og-step"><div class="og-step-num">{step}</div>'
                 f'<div class="og-step-body"><strong>{L(title_key)}</strong>'
-                f'<p>{L(desc_key)}</p></div></div>'
+                f"<p>{L(desc_key)}</p></div></div>"
             )
-        parts.append('      </div>')
-        parts.append('    </div>')
+        parts.append("      </div>")
+        parts.append("    </div>")
         parts.append('    <div class="welcome-features">')
         for title_key, desc_key in (
             ("welcome_fdr", "welcome_fdr_desc"),
             ("welcome_style", "welcome_style_desc"),
             ("welcome_research_feature", "welcome_research_feature_desc"),
         ):
-            parts.append(f'      <div class="wf-item"><strong>{L(title_key)}</strong><span>{L(desc_key)}</span></div>')
-        parts.append('    </div>')
-        parts.append('  </div>')
-        parts.append('</section>')
+            parts.append(
+                f'      <div class="wf-item"><strong>{L(title_key)}</strong><span>{L(desc_key)}</span></div>'
+            )
+        parts.append("    </div>")
+        parts.append("  </div>")
+        parts.append("</section>")
 
     if controls:
         # Project actions and optional guidance stay available in every view.
-        parts.append(f'<div class="view-pane{" active" if default_view == "research" else ""}" id="view-pane-research" data-view-pane="research" role="tabpanel" aria-labelledby="tab-view-research">')
+        parts.append(
+            f'<div class="view-pane{" active" if default_view == "research" else ""}" id="view-pane-research" data-view-pane="research" role="tabpanel" aria-labelledby="tab-view-research">'
+        )
         parts.append(render_research_panel(labels))
-        parts.append('</div>')
-        parts.append('<div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">')
+        parts.append("</div>")
+        parts.append(
+            '<div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">'
+        )
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('controls')}</h2>")
 
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
         file_input_id = "ms-file" if action_enabled("load") else "manuscript-import-file"
-        parts.append(f'<input type="file" id="{file_input_id}" accept=".md,.markdown,.txt" hidden/>')
-        parts.append(f'<button type="button" class="file-dropzone dropzone-compact" id="manuscript-dropzone" aria-label="{L("wizard_drop_aria")}" aria-describedby="manuscript-drop-hint manuscript-file-name">')
-        parts.append(f'<strong>{L("dropzone_drop_here")} <span class="ctl-link">{L("dropzone_browse")}</span></strong>')
-        parts.append(f'<span class="ctl-note" id="manuscript-drop-hint">{L("dropzone_hint")}</span>')
-        parts.append('</button>')
-        parts.append('<p class="ctl-note manuscript-file-name" id="manuscript-file-name" role="status" aria-live="polite"></p>')
+        parts.append(
+            f'<input type="file" id="{file_input_id}" accept=".md,.markdown,.txt" hidden/>'
+        )
+        parts.append(
+            f'<button type="button" class="file-dropzone dropzone-compact" id="manuscript-dropzone" aria-label="{L("wizard_drop_aria")}" aria-describedby="manuscript-drop-hint manuscript-file-name">'
+        )
+        parts.append(
+            f'<strong>{L("dropzone_drop_here")} <span class="ctl-link">{L("dropzone_browse")}</span></strong>'
+        )
+        parts.append(
+            f'<span class="ctl-note" id="manuscript-drop-hint">{L("dropzone_hint")}</span>'
+        )
+        parts.append("</button>")
+        parts.append(
+            '<p class="ctl-note manuscript-file-name" id="manuscript-file-name" role="status" aria-live="polite"></p>'
+        )
         parts.append('<div class="row">')
         if action_enabled("load"):
-            parts.append(f'<button type="button" class="ctl primary" data-action="load" data-payload="load" disabled>{L("dropzone_action")}</button>')
+            parts.append(
+                f'<button type="button" class="ctl primary" data-action="load" data-payload="load" disabled>{L("dropzone_action")}</button>'
+            )
         else:
-            parts.append(f'<button type="button" class="ctl primary" id="manuscript-import-btn" disabled>{L("manuscript_import_action")}</button>')
-        parts.append('</div>')
-        parts.append(f'<p class="ctl-note">{L("manuscript_load_hint") if action_enabled("load") else L("manuscript_import_hint")}</p>')
-        parts.append('</div>')
+            parts.append(
+                f'<button type="button" class="ctl primary" id="manuscript-import-btn" disabled>{L("manuscript_import_action")}</button>'
+            )
+        parts.append("</div>")
+        parts.append(
+            f'<p class="ctl-note">{L("manuscript_load_hint") if action_enabled("load") else L("manuscript_import_hint")}</p>'
+        )
+        parts.append("</div>")
 
-        parts.append(settings_form(
-            labels, title, current_language, language_options,
-            replace(fingerprint.thresholds if fingerprint is not None else FingerprintThresholds(),
-                    flag_min_severity=flag_min_severity),
-            project_author=project_author, identity_check=identity_check,
-            author_setting_enabled=author_setting_enabled,
-        ))
+        parts.append(
+            settings_form(
+                labels,
+                title,
+                current_language,
+                language_options,
+                replace(
+                    fingerprint.thresholds if fingerprint is not None else FingerprintThresholds(),
+                    flag_min_severity=flag_min_severity,
+                ),
+                project_author=project_author,
+                identity_check=identity_check,
+                author_setting_enabled=author_setting_enabled,
+            )
+        )
 
         # Actions advertised by the embedding server.
-        visible_actions = [action for action in
-                           ("analyze", "sync", "audit", "prune", "gdrive", "rebuild")
-                           if action_enabled(action)]
+        visible_actions = [
+            action
+            for action in ("analyze", "sync", "audit", "prune", "gdrive", "rebuild")
+            if action_enabled(action)
+        ]
         if action_enabled("export") or visible_actions:
             parts.append('<div class="ctl-group">')
             action_heading = (
-                f'{L("export")} · {L("run_analysis")}'
+                f"{L('export')} · {L('run_analysis')}"
                 if action_enabled("export") and visible_actions
-                else L("export") if action_enabled("export") else L("run_analysis")
+                else L("export")
+                if action_enabled("export")
+                else L("run_analysis")
             )
             parts.append(f'<span class="ctl-label">{action_heading}</span>')
             parts.append('<div class="row">')
@@ -405,16 +482,19 @@ def render_dashboard(
                 )
             parts.extend(
                 f'<button class="ctl" data-action="{action}">{help_term(labels, action, L(action))}</button>'
-                for action in visible_actions if action != "analyze"
+                for action in visible_actions
+                if action != "analyze"
             )
             parts.append("</div></div>")
 
-        parts.append(f'<div class="ctl-status" id="ctl-status" role="status" aria-live="polite">{L("server_hint")}</div>')
+        parts.append(
+            f'<div class="ctl-status" id="ctl-status" role="status" aria-live="polite">{L("server_hint")}</div>'
+        )
         parts.append("</section>")
 
         if allowed_actions is not None and "nda-draft" in allowed_actions:
             parts.append('<section class="panel controls" id="nda-draft">')
-            parts.append(f'<h2>{L("nda_draft_title")}</h2>')
+            parts.append(f"<h2>{L('nda_draft_title')}</h2>")
             parts.append(f'<p class="ctl-note">{L("nda_draft_hint")}</p>')
             parts.append(
                 f'<form id="nda-draft-form" class="ctl-group" autocomplete="off" '
@@ -429,22 +509,38 @@ def render_dashboard(
                 ("place", "nda_draft_place", "text"),
             ):
                 field_id = "nda-" + field.replace("_", "-")
-                parts.append(f'<div class="setting-field"><label for="{field_id}">{L(label_key)}</label>')
+                parts.append(
+                    f'<div class="setting-field"><label for="{field_id}">{L(label_key)}</label>'
+                )
                 if input_type == "textarea":
-                    parts.append(f'<textarea class="ctl" id="{field_id}" name="{field}" rows="2"></textarea>')
+                    parts.append(
+                        f'<textarea class="ctl" id="{field_id}" name="{field}" rows="2"></textarea>'
+                    )
                 else:
-                    value_attr = f' value="{esc(nda_project_name)}"' if field == "project_name" else ""
+                    value_attr = (
+                        f' value="{esc(nda_project_name)}"' if field == "project_name" else ""
+                    )
                     parts.append(
                         f'<input class="ctl" type="{input_type}" id="{field_id}" '
                         f'name="{field}"{value_attr} required/>'
                     )
                 parts.append("</div>")
             parts.append('</div><div class="row">')
-            parts.append(f'<button type="submit" class="ctl primary" id="nda-preview-btn" disabled>{L("nda_draft_preview")}</button>')
-            parts.append(f'<button type="button" class="ctl" id="nda-pdf-btn" disabled>{L("nda_draft_pdf")}</button>')
-            parts.append(f'<button type="button" class="ctl" id="nda-text-btn" disabled>{L("nda_draft_text")}</button>')
-            parts.append('</div><div class="ctl-status" id="nda-draft-status" role="status" aria-live="polite"></div></form>')
-            parts.append(f'<noscript><p class="ctl-note">{L("nda_draft_javascript")}</p></noscript>')
+            parts.append(
+                f'<button type="submit" class="ctl primary" id="nda-preview-btn" disabled>{L("nda_draft_preview")}</button>'
+            )
+            parts.append(
+                f'<button type="button" class="ctl" id="nda-pdf-btn" disabled>{L("nda_draft_pdf")}</button>'
+            )
+            parts.append(
+                f'<button type="button" class="ctl" id="nda-text-btn" disabled>{L("nda_draft_text")}</button>'
+            )
+            parts.append(
+                '</div><div class="ctl-status" id="nda-draft-status" role="status" aria-live="polite"></div></form>'
+            )
+            parts.append(
+                f'<noscript><p class="ctl-note">{L("nda_draft_javascript")}</p></noscript>'
+            )
             parts.append(
                 f'<div id="nda-preview-wrap" hidden><h3 class="section-heading" id="nda-preview-title">{L("nda_draft_preview")}</h3>'
                 '<div id="nda-draft-preview" class="research-dossier-body-source" '
@@ -475,23 +571,25 @@ def render_dashboard(
                 )
             parts.append("</div></section>")
 
-        parts.append('</div>')
+        parts.append("</div>")
         parts.append(render_project_modals(labels, language_key, language_options))
 
         # --- PANE 3: MANUSCRIPT & ANALYSIS ---
-        parts.append(f'<div class="view-pane{" active" if default_view == "analysis" else ""}" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">')
+        parts.append(
+            f'<div class="view-pane{" active" if default_view == "analysis" else ""}" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">'
+        )
 
     if not has_chapters:
         parts.append(
             '<div class="panel empty-analysis-state">'
             '<div class="empty-state-icon" aria-hidden="true">📖</div>'
-            f'<h2>{L("analysis_empty_title")}</h2>'
+            f"<h2>{L('analysis_empty_title')}</h2>"
             f'<p class="ctl-note" style="max-width:60ch;margin:0 auto 1.2rem;line-height:1.5;">{L("analysis_empty_desc")}</p>'
             '<div class="row" style="justify-content:center;gap:.6rem;">'
             f'<button type="button" class="ctl primary" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
             f'<button type="button" class="ctl" data-switch-view="research">{L("analysis_empty_to_research")}</button>'
-            '</div>'
-            '</div>'
+            "</div>"
+            "</div>"
         )
         parts.append('<div class="analysis-empty-metrics" hidden>')
 
@@ -508,7 +606,13 @@ def render_dashboard(
     if metrics is not None:
         has_tokens = bool(metrics.tokens)
         scope_tiles.append(kpi(N(metrics.total_sentences, 0), L("sentences"), jump="#matrix"))
-        rhythm_tiles.append(kpi(N(metrics.asl, 2) if has_tokens else "–", help_term(labels, "asl", "ASL"), jump="#dist"))
+        rhythm_tiles.append(
+            kpi(
+                N(metrics.asl, 2) if has_tokens else "–",
+                help_term(labels, "asl", "ASL"),
+                jump="#dist",
+            )
+        )
         rhythm_tiles.append(
             kpi(
                 P(metrics.staccato_pct) if has_tokens else "–",
@@ -527,25 +631,63 @@ def render_dashboard(
             )
         )
         language_tiles.append(
-            kpi(N(metrics.flesch_de, 1) if has_tokens else "–", help_term(labels, "flesch", "Flesch"), jump="#bands")
+            kpi(
+                N(metrics.flesch_de, 1) if has_tokens else "–",
+                help_term(labels, "flesch", "Flesch"),
+                jump="#bands",
+            )
         )
         language_tiles.append(
-            kpi(N(metrics.lix, 1) if has_tokens else "–", help_term(labels, "lix", "LIX"), jump="#bands")
+            kpi(
+                N(metrics.lix, 1) if has_tokens else "–",
+                help_term(labels, "lix", "LIX"),
+                jump="#bands",
+            )
         )
-        lexis_tiles.append(kpi(N(metrics.ttr, 4) if has_tokens else "–", help_term(labels, "ttr", "TTR"), jump="#bands"))
         lexis_tiles.append(
-            kpi(N(metrics.guiraud_r, 2) if has_tokens else "–", help_term(labels, "guiraud", "Guiraud R"), jump="#bands")
+            kpi(
+                N(metrics.ttr, 4) if has_tokens else "–",
+                help_term(labels, "ttr", "TTR"),
+                jump="#bands",
+            )
         )
         lexis_tiles.append(
-            kpi(N(metrics.yules_k, 1) if has_tokens else "–", help_term(labels, "yules", "Yule&#8217;s K"), jump="#bands")
+            kpi(
+                N(metrics.guiraud_r, 2) if has_tokens else "–",
+                help_term(labels, "guiraud", "Guiraud R"),
+                jump="#bands",
+            )
         )
-        hd_d_value = N(metrics.hd_d, 3) if (has_tokens and getattr(metrics, "hd_d", None) is not None) else "–"
+        lexis_tiles.append(
+            kpi(
+                N(metrics.yules_k, 1) if has_tokens else "–",
+                help_term(labels, "yules", "Yule&#8217;s K"),
+                jump="#bands",
+            )
+        )
+        hd_d_value = (
+            N(metrics.hd_d, 3)
+            if (has_tokens and getattr(metrics, "hd_d", None) is not None)
+            else "–"
+        )
         lexis_tiles.append(kpi(hd_d_value, help_term(labels, "hd_d", "HD-D"), jump="#bands"))
-        mtld_value = N(metrics.mtld, 1) if (has_tokens and getattr(metrics, "mtld", None) is not None) else "–"
+        mtld_value = (
+            N(metrics.mtld, 1)
+            if (has_tokens and getattr(metrics, "mtld", None) is not None)
+            else "–"
+        )
         lexis_tiles.append(kpi(mtld_value, help_term(labels, "mtld", "MTLD"), jump="#bands"))
-        mattr_value = N(metrics.mattr, 3) if (has_tokens and getattr(metrics, "mattr", None) is not None) else "–"
+        mattr_value = (
+            N(metrics.mattr, 3)
+            if (has_tokens and getattr(metrics, "mattr", None) is not None)
+            else "–"
+        )
         lexis_tiles.append(kpi(mattr_value, help_term(labels, "mattr", "MATTR"), jump="#bands"))
-        maas_value = N(metrics.maas_a2, 3) if (has_tokens and getattr(metrics, "maas_a2", None) is not None) else "–"
+        maas_value = (
+            N(metrics.maas_a2, 3)
+            if (has_tokens and getattr(metrics, "maas_a2", None) is not None)
+            else "–"
+        )
         lexis_tiles.append(kpi(maas_value, help_term(labels, "maas", "Maas a²"), jump="#bands"))
         language_tiles.append(
             kpi(
@@ -686,7 +828,6 @@ def render_dashboard(
     parts.append(render_motifs_panel(motifs, labels))
     parts.append(render_showing_panel(showing, labels, language_key))
 
-
     # --- Style heatmap & passport (self-calibrated house style) -----------
     if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
         parts.append(render_heatmap_panel(fingerprint, metrics, labels, language_key))
@@ -697,11 +838,35 @@ def render_dashboard(
     # --- Work markers (editor-visible, set from the dashboard) -------
     parts.append(render_markers_panel(markers, chapters, labels, controls))
 
-        # --- Toolbar ----------------------------------------------------------
+    # --- Toolbar ----------------------------------------------------------
     parts.append('<div class="toolbar">')
+    parts.append('<span class="text-search-group">')
+    parts.append(
+        f'<input class="ctl" type="search" id="text-search" autocomplete="off" '
+        f'placeholder="{L("text_search")}" aria-label="{L("text_search")}" '
+        f'aria-controls="chapters"/>'
+    )
+    parts.append(
+        f'<button type="button" class="ctl" id="text-search-prev" hidden '
+        f'aria-label="{L("text_search_prev")}" title="{L("text_search_prev")}">↑</button>'
+    )
+    parts.append(
+        f'<button type="button" class="ctl" id="text-search-next" hidden '
+        f'aria-label="{L("text_search_next")}" title="{L("text_search_next")}">↓</button>'
+    )
+    parts.append(
+        f'<button type="button" class="ctl" id="text-search-clear" hidden>'
+        f"{L('text_search_clear')}</button>"
+    )
+    parts.append(
+        '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'
+    )
+    parts.append("</span>")
     parts.append(f'<label><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
     if paragraphs:
-        parts.append(f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>')
+        parts.append(
+            f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
+        )
         parts.append("<label>")
         parts.append(f"{help_term(labels, 'layer', L('style_layer'))} ")
         parts.append('<select class="ctl" id="style-layer">')
@@ -755,7 +920,9 @@ def render_dashboard(
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
 
-    parts.append(f'<p class="ctl-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>')
+    parts.append(
+        f'<p class="ctl-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>'
+    )
 
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}
@@ -867,7 +1034,9 @@ def render_dashboard(
             f'<th scope="col" class="num">{help_term(labels, "chapter_flags", L("flagged"))}</th>'
         )
         if fingerprint is not None:
-            parts.append(f'<th scope="col" class="num">{help_term(labels, "chapter_deviation", L("deviation"))}</th>')
+            parts.append(
+                f'<th scope="col" class="num">{help_term(labels, "chapter_deviation", L("deviation"))}</th>'
+            )
         parts.append("</tr></thead><tbody>")
         max_asl = max((c.asl for c in chapters), default=1.0) or 1.0
         max_dialog = max((c.dialog_pct for c in chapters), default=1.0) or 1.0

@@ -133,6 +133,21 @@ lixity dashboard unknown-language.md --language auto -o detected.html
 
 Open the generated file in a browser; no server is needed for analysis views.
 
+### Searching the manuscript
+
+The analysis toolbar carries a search field for the manuscript itself. Typing
+filters the chapter list down to the paragraphs that contain the phrase:
+chapters without a match collapse away, every hit is marked, and the arrows step
+through the matches and open each one. `Enter` moves to the next match,
+`Shift+Enter` to the previous, `Escape` or **Clear search** restores the whole
+manuscript. The count reports how many paragraphs matched out of how many were
+searched.
+
+Matching is a case-insensitive substring test on the paragraph text, not a
+linguistic query: it does not stem, ignore diacritics, or search across
+paragraph boundaries. Manuscript text is inserted as text nodes only, so a
+phrase that looks like markup stays a phrase.
+
 ### Settings and interpretation
 
 In a compatible local project server, settings show language and project title
