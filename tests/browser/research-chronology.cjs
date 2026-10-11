@@ -66,10 +66,11 @@ server.serve_forever()
       await page.goto(fixture.url);
       await page.locator('[data-rtab=claims]').click();
       await page.locator('#r-claims-timeline').click();
-      assert.equal(await page.locator('#research-claims-timeline').isVisible(), true, 'Timeline control changes the rendered view');
+      assert.equal(await page.locator('#research-claims-timeline').evaluate(element => element.hidden), false, 'Timeline control selects the view before its asynchronous data arrives');
       await page.locator('#r-claims-timeline').hover();
       assert.equal(await page.locator('#r-claims-timeline').evaluate(element => getComputedStyle(element).color), 'rgb(255, 255, 255)', 'Pressed view control remains readable on hover');
       await page.waitForFunction(() => document.querySelectorAll('#research-claims-timeline ol li').length === 6);
+      assert.equal(await page.locator('#research-claims-timeline').isVisible(), true, 'Loaded timeline entries are visible');
       const dated = await page.locator('#research-claims-timeline .research-timeline-dated > li').first().getAttribute('data-claim-id');
       assert.equal(dated, fixture.claims[1], '1880 precedes 1900 rather than creation order');
       assert.equal(await page.locator('#research-claims-timeline .research-timeline-unplaced > li').count(), 3);
