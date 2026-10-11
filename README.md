@@ -19,7 +19,7 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Installation](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v3.0.0 release notes](docs/releases/v3.0.0.md)
+[v3.0.1 release notes](docs/releases/v3.0.1.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload.
@@ -36,7 +36,7 @@ For help installing uv or advanced installation options, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.0/lixity-3.0.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.1/lixity-3.0.1-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -51,7 +51,7 @@ The service starts an empty local workspace; choose **Open Project** or
 **Analyze a manuscript**.
 For later upgrades, select the new release wheel using
 the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace. [Release notes](docs/releases/v3.0.0.md) describe compatibility
+the local workspace. [Release notes](docs/releases/v3.0.1.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 **Since v3.0.0:** organize claim periods in a read-only timeline,

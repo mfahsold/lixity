@@ -52,7 +52,7 @@ def startup_diagnostics(app, result):
     return json.dumps({"result": result, "fixture_files": files}, ensure_ascii=False, indent=2)
 
 
-def test_native_start_status_restart_and_stop_preserve_explicit_project(tmp_path, monkeypatch):
+def test_native_start_status_restart_and_stop_preserve_explicit_project_and_thresholds(tmp_path, monkeypatch):
     for key in ("LIXITY_DIR", "LIXITY_HOST", "LIXITY_PORT"):
         monkeypatch.delenv(key, raising=False)
     project = tmp_path / "A book – Grüße"
@@ -64,13 +64,14 @@ def test_native_start_status_restart_and_stop_preserve_explicit_project(tmp_path
     opened = []
     monkeypatch.setattr("lixity.service.webbrowser.open", opened.append)
     try:
-        started = app.control("start", {"project": str(project), "language": "de"})
+        started = app.control("start", {"project": str(project), "language": "de", "min_chapters": 5})
         assert started["ok"] and started["state"] == "running", startup_diagnostics(app, started)
         first = started["pid"]
         with urllib.request.urlopen(f"http://127.0.0.1:{app.port}/api", timeout=10) as response:
             data = json.load(response)
         assert data["version"] == __version__ and data["project"]["manuscript_loaded"]
         assert data["project"]["language"] == "de"
+        assert json.loads(app.settings_file.read_text())["settings"]["min_chapters"] == 5
         status = app.control("status", {})
         assert status["ok"] and status["pid"] == first
         existing = app.control("start", {"open_browser": True})
@@ -82,6 +83,7 @@ def test_native_start_status_restart_and_stop_preserve_explicit_project(tmp_path
         with urllib.request.urlopen(f"http://127.0.0.1:{app.port}/api", timeout=10) as response:
             data = json.load(response)
         assert data["project"]["manuscript_loaded"] and data["project"]["language"] == "de"
+        assert json.loads(app.settings_file.read_text())["settings"]["min_chapters"] == 5
         assert source.read_bytes() == before
         stopped = app.control("stop", {})
         assert stopped["ok"] and stopped["state"] == "stopped", stopped

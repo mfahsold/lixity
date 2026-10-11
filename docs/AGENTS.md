@@ -956,7 +956,9 @@ Each item contains `id` (chapter:scene), `group`, sample counts, the existing
 16 `features`, approximate `standard_errors`, `targets` and `data_support`.
 See [scene settings and limits](USAGE.md#scene-registers-and-project-targets).
 `min_chapters` must be an integer of at least 2 and is also exposed
-as `--min-chapters` on `style`, `dashboard` and `build`.
+as `--min-chapters` on `style`, `dashboard` and `build`. Since v3.0.1, foreground
+`serve` and managed `service start`/`restart` also accept it, including saved
+restart values.
 Re-read active settings from passport `meta`; `about` reports defaults.
 Use `lixity.pipeline.analyze_document` when several views need the same
 analysis result, rather than recalculating the corpus through multiple calls.

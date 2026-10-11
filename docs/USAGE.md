@@ -37,7 +37,7 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.0/lixity-3.0.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.1/lixity-3.0.1-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -48,7 +48,7 @@ lixity --version
 lixity service start --open
 ```
 
-`v3.0.0` is the release pin for this wheel installation; it needs no Git or separate Python
+`v3.0.1` is the release pin for this wheel installation; it needs no Git or separate Python
 installation. To update, stop the service and reinstall the desired release
 wheel as described in the [update reference](INSTALLATION.md#updates-and-removal).
 `uv tool upgrade lixity` retains the chosen source. `uv tool update-shell`
@@ -760,6 +760,7 @@ use stop/start or restart to change its launch settings.
 | `--no-project` | Clear the startup project, including on restart. |
 | `--open` | Open the browser for a ready owned instance. |
 | `--language`, `--title`, `--research-project`, `--debug` | Explicit startup choices, alongside the existing analysis threshold flags. |
+| `--min-chapters N` | Minimum usable chapters for a style baseline; integer at least 2 (default 2). Foreground and managed startup accept it since v3.0.1. |
 | `--backend auto\|process\|systemd` | Auto prefers an available Linux user systemd manager; process selects detached handling; explicit systemd fails when unavailable. |
 | `--json` | Return the `lixity-service-local/1` lifecycle result. |
 
@@ -1113,7 +1114,9 @@ FileUtils.atomic_write_if_changed("ui.html", html)  # False if unchanged
 
 The style core's minimum calibration size is exposed through
 `lixity style manuscript.md --min-chapters 4 --json` (also `dashboard` and
-`build`) and `api.fingerprint(..., min_chapters=4)`. Values must be integers
+`build`) and `api.fingerprint(..., min_chapters=4)`. Since v3.0.1, foreground
+`serve` and managed `service start`/`restart` also accept `--min-chapters`;
+restart retains the saved threshold unless overridden. Values must be integers
 of at least 2. Fewer usable chapters produce unavailable baselines rather
 than evidence of a consistent style.
 

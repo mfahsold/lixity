@@ -976,7 +976,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("--json", action="store_true", help="JSON output (scene schema v1)")
             continue
-        if name in ("style", "dashboard", "build"):
+        if name in ("style", "dashboard", "serve", "build"):
             p.add_argument(
                 "--min-chapters",
                 type=int,

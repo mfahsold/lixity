@@ -7,7 +7,11 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 3.0.0; release tag: v3.0.0.
+Current release: 3.0.1; release tag: v3.0.1.
+
+Since v3.0.1, foreground serve and managed service start/restart accept
+--min-chapters, including saved restart thresholds. Values are integers>=2;
+fewer usable chapters leave style baselines unavailable. No JSON/archive change.
 
 Since v3.0.0: read-only claim timeline, authored cause/effect
 links and keyword citation selection. Claims lists intentionally use one
@@ -122,7 +126,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from the GitHub release wheel, not PyPI:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.0/lixity-3.0.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.1/lixity-3.0.1-py3-none-any.whl"
 uv tool update-shell
 ```
 

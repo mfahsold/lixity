@@ -7,6 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.0.1] - 2026-10-11
+
+### Fixed
+- Foreground `serve` and managed `service start`/`restart` accept
+  `--min-chapters`, including saved restart values. Previously, the controller
+  accepted this option but its worker rejected it before server startup.
+
 ## [3.0.0] - 2026-10-11
 
 ### Added
@@ -1661,7 +1668,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v3.0.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v3.0.1...HEAD
+[3.0.1]: https://github.com/mfahsold/lixity/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/mfahsold/lixity/compare/v2.4.0...v3.0.0
 [2.4.0]: https://github.com/mfahsold/lixity/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/mfahsold/lixity/compare/v2.2.0...v2.3.0
