@@ -10,6 +10,7 @@ from pydantic import ValidationError
 
 from .models import (
     Claim,
+    ClaimRelation,
     ClaimScope,
     Decision,
     Dossier,
@@ -18,17 +19,20 @@ from .models import (
     Reference,
     SourceVersion,
     Tombstone,
+    normalize_claim_relation,
     reference,
 )
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot
 
-Authored = Dossier | Claim | EvidenceLink | Decision
+Authored = Dossier | Claim | ClaimRelation | EvidenceLink | Decision
 KINDS: dict[str, type[Authored]] = {
     "dossier": Dossier, "claim": Claim, "evidence_link": EvidenceLink, "decision": Decision,
+    "claim_relation": ClaimRelation,
 }
 FIELDS = {
     "dossier": {"title", "body", "language", "tags", "evidence_ids"},
     "claim": {"title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"},
+    "claim_relation": {"from_claim_id", "from_claim_revision", "to_claim_id", "to_claim_revision", "relation", "state", "rationale"},
     "evidence_link": {"claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"},
     "decision": {"title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot", "dossier_ids", "dossier_revisions"},
 }
@@ -37,7 +41,7 @@ FIELDS = {
 def _record(snapshot: Snapshot, kind: str, identifier: str, revision: int | None = None, *,
             unavailable: set[str] | None = None) -> Authored:
     if not isinstance(kind, str) or kind not in KINDS:
-        raise ResearchError("Only dossiers, claims, evidence links and decisions can be revised")
+        raise ResearchError("Only dossiers, claims, claim relations, evidence links and decisions can be revised")
     if revision is not None and (type(revision) is not int or revision < 1):
         raise ResearchError("Revision must be a positive integer")
     try:
@@ -88,6 +92,20 @@ def source_updates(citations: list[dict[str, Any]]) -> list[dict[str, Any]]:
     return list(updates.values())
 
 
+def claim_relation_view(snapshot: Snapshot, record: ClaimRelation) -> dict[str, Any]:
+    """Resolve recorded endpoint revisions without applying them to newer claims."""
+    def endpoint(ref: Reference) -> dict[str, Any]:
+        claim = snapshot.get(ref, Claim)
+        current = snapshot.latest(ref.id, Claim)
+        return {"claim_id": claim.id, "revision": claim.revision, "current_revision": current.revision,
+                "title": claim.title, "time_period": claim.scope.time_period, "confidence": claim.confidence}
+
+    first, second = endpoint(record.from_claim_ref), endpoint(record.to_claim_ref)
+    return {"relation_id": record.id, "revision": record.revision, "relation": record.relation,
+            "state": record.state, "rationale": record.rationale, "from_claim": first, "to_claim": second,
+            "review_needed": any(claim["revision"] != claim["current_revision"] for claim in (first, second))}
+
+
 def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[str, Any]:
     refs: list[Reference] = []
     links: list[EvidenceLink] = []
@@ -99,6 +117,8 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
     elif isinstance(record, EvidenceLink):
         links = [record]
         association = record.claim_ref
+    elif isinstance(record, ClaimRelation):
+        citation_scope = "pinned_claim_revisions"
     else:
         claim_ref = reference(record) if isinstance(record, Claim) else record.claim_ref
         association = record.dossier_ref if isinstance(record, Claim) else record.claim_ref
@@ -121,6 +141,14 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
         if target.revision > association.revision:
             reference_updates.append({"kind": association_kind, "id": association.id,
                                       "pinned_revision": association.revision, "latest_revision": target.revision})
+    relation_view = claim_relation_view(snapshot, record) if isinstance(record, ClaimRelation) else None
+    if relation_view:
+        for role in ("from", "to"):
+            endpoint = relation_view[role + "_claim"]
+            if endpoint["current_revision"] > endpoint["revision"]:
+                reference_updates.append({"kind": "claim", "id": endpoint["claim_id"],
+                                          "pinned_revision": endpoint["revision"],
+                                          "latest_revision": endpoint["current_revision"], "role": role})
     latest = snapshot.latest(record.id, KINDS[record.kind])
     from .images import resolve_dossier_images
     return {
@@ -130,6 +158,7 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
         "citations": citations, "citation_scope": citation_scope,
         "source_updates": source_updates(citations), "reference_updates": reference_updates,
         **({"images": resolve_dossier_images(snapshot, record.body)} if isinstance(record, Dossier) else {}),
+        **({key: relation_view[key] for key in ("from_claim", "to_claim", "review_needed")} if relation_view else {}),
     }
 
 
@@ -217,13 +246,18 @@ def _apply_changes(
         raise ResearchError("The change contains unknown or immutable fields")
     values = previous.model_dump(mode="json")
     direct = {k: v for k, v in changes.items() if k not in
-              {"evidence_ids", "dossier_id", "claim_id", "claim_revision", "dossier_revision", "passage_id", "time_period", "place", "actors", "dossier_ids", "dossier_revisions"}}
+              {"evidence_ids", "dossier_id", "claim_id", "claim_revision", "dossier_revision", "passage_id", "time_period", "place", "actors", "dossier_ids", "dossier_revisions", "from_claim_id", "from_claim_revision", "to_claim_id", "to_claim_revision"}}
     for name in ("title", "statement", "rationale", "reviewer", "impact_on_plot"):
         if isinstance(direct.get(name), str):
             direct[name] = direct[name].strip()
             if not direct[name] and (name == "impact_on_plot" or
-                                     (name == "rationale" and isinstance(previous, EvidenceLink))):
+                                     (name == "rationale" and isinstance(previous, (EvidenceLink, ClaimRelation)))):
                 direct[name] = None
+    if isinstance(previous, ClaimRelation) and "relation" in direct:
+        try:
+            direct["relation"] = normalize_claim_relation(direct["relation"])
+        except ValueError as exc:
+            raise ResearchError(str(exc)) from None
     values.update(direct)
     try:
         if isinstance(previous, Dossier) and "evidence_ids" in changes:
@@ -244,6 +278,13 @@ def _apply_changes(
         if isinstance(previous, (EvidenceLink, Decision)) and ("claim_id" in changes or "claim_revision" in changes):
             identifier = changes.get("claim_id", previous.claim_ref.id if previous.claim_ref else None)
             values["claim_ref"] = _association(snapshot, identifier, Claim, previous.claim_ref, changes.get("claim_revision"))
+        if isinstance(previous, ClaimRelation):
+            for role in ("from", "to"):
+                name = role + "_claim"
+                if name + "_id" in changes or name + "_revision" in changes:
+                    existing = getattr(previous, name + "_ref")
+                    identifier = changes.get(name + "_id", existing.id)
+                    values[name + "_ref"] = _association(snapshot, identifier, Claim, existing, changes.get(name + "_revision"))
         if isinstance(previous, Decision) and ("dossier_ids" in changes or "dossier_revisions" in changes):
             ids = changes.get("dossier_ids", [ref.id for ref in previous.dossier_refs])
             if not isinstance(ids, list) or any(not isinstance(i, str) for i in ids):
@@ -256,7 +297,7 @@ def _apply_changes(
             values["dossier_refs"] = [_association(snapshot, i, Dossier, retained.get(i), pins.get(i)) for i in dict.fromkeys(ids) if i]
         if isinstance(previous, EvidenceLink) and "passage_id" in changes:
             values["passage_ref"] = Reference(id=changes["passage_id"]).model_dump()
-        values.update(schema_version="research-local/2", revision=previous.revision + 1,
+        values.update(schema_version=previous.revision_schema_version, revision=previous.revision + 1,
                       created_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                       created_by=actor,
                       change={"change_kind": change_kind, "reason": reason.strip(), "previous_revision": previous.revision})
@@ -270,9 +311,9 @@ def _editable_values(record: Authored) -> dict[str, Any]:
     """Flatten editable fields, keeping an association and its revision together."""
     values: dict[str, Any] = {}
     for name in sorted(FIELDS[record.kind]):
-        if name in ("claim_revision", "dossier_revision", "dossier_revisions"):
+        if name in ("claim_revision", "dossier_revision", "dossier_revisions", "from_claim_revision", "to_claim_revision"):
             continue
-        if name in ("claim_id", "dossier_id"):
+        if name in ("claim_id", "dossier_id", "from_claim_id", "to_claim_id"):
             ref = getattr(record, name.replace("_id", "_ref"))
             values[name] = ref.model_dump() if ref else None
         elif name == "evidence_ids" and isinstance(record, Dossier):
@@ -291,7 +332,7 @@ def _editable_values(record: Authored) -> dict[str, Any]:
 def _field_change(name: str, value: Any) -> dict[str, Any]:
     if name == "dossier_ids":
         return {name: [ref["id"] for ref in value], "dossier_revisions": {ref["id"]: ref["revision"] for ref in value}}
-    if name in ("claim_id", "dossier_id"):
+    if name in ("claim_id", "dossier_id", "from_claim_id", "to_claim_id"):
         if value is None:
             return {name: None}
         return {name: value["id"], name.replace("_id", "_revision"): value["revision"]}
@@ -309,6 +350,9 @@ def _validate_revision_links(snapshot: Snapshot, previous: Authored, revised: Au
                 snapshot.get(ref, Passage)
     elif isinstance(revised, Claim) and revised.dossier_ref:
         snapshot.get(revised.dossier_ref, Dossier)
+    elif isinstance(revised, ClaimRelation):
+        snapshot.get(revised.from_claim_ref, Claim)
+        snapshot.get(revised.to_claim_ref, Claim)
     elif isinstance(revised, (EvidenceLink, Decision)):
         if revised.claim_ref:
             snapshot.get(revised.claim_ref, Claim)
@@ -362,8 +406,11 @@ def prepare_record_revision(
             merged.update(_field_change(name, desired))
     if set(resolutions) - conflicting_fields:
         raise ResearchError("Resolution names must identify fields with conflicting changes")
-    candidate = _apply_changes(snapshot, current, merged, change_kind="correction", reason="Preview only", actor="local-author")
-    _validate_revision_links(snapshot, current, candidate)
+    # Unresolved choices do not yet form a complete candidate. Individually
+    # valid endpoint edits can otherwise make a temporary causal self-link.
+    if not conflicts:
+        candidate = _apply_changes(snapshot, current, merged, change_kind="correction", reason="Preview only", actor="local-author")
+        _validate_revision_links(snapshot, current, candidate)
     return {
         "schema_version": "research-revision-preview-local/1", "base_revision": base_revision,
         "current": _view(repository, snapshot, current), "changes": merged,

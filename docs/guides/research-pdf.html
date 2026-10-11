@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Research Sources, PDF Import and Manuscript Export | Lixity</title>
-<meta name="description" content="Keep research sources and exact citations, read scanned PDFs with local OCR, and export manuscript reports or reading copies as PDFs. Learn the setup and limits."/>
+<meta name="description" content="Keep research sources and exact citations, organize claim periods and causal interpretations, read scanned PDFs with local OCR, and export manuscript PDFs. Learn the setup and limits."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/guides/research-pdf.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
@@ -57,6 +57,23 @@ lixity research search --project ./sample-project --query "reading room"</code><
 <pre><code>lixity research search --project ./sample-project --query "inspector" --scope all
 lixity research search --project ./sample-project --query "inspector" --scope decisions</code></pre>
 <p>The CLI defaults to source passages. Search matches words in current records, not their history; it does not reconcile conflicting claims or decide whether a proposal is final. Keep decisions and open questions explicit in your notes.</p>
+
+<h2 id="keyword-citation">Choose a citation by keywords</h2>
+<p><strong>Since v3.0.0:</strong> select a claim in the evidence form and choose <strong>Find source passage</strong>. Search opens with <strong>Sources</strong> selected and keeps your claim choice. Read a match, choose <strong>Use for claim</strong>, then review the full paragraph, select the evidence relation and save explicitly. A search match or draft does not verify a claim or create a saved link.</p>
+<pre><code>lixity research cite --project ./sample-project --query "reading room"
+# For multiple matches, repeat the same query and displayed snapshot:
+lixity research cite --project ./sample-project --query "reading room" \
+  --pick 2 --expected-snapshot SNAPSHOT_SHA256</code></pre>
+<p>One match resolves the existing full-paragraph citation. Zero or multiple matches return search JSON and exit <code>1</code>; multiple matches print numbered choices on stderr. A numbered choice requires the same query and displayed snapshot. Changed snapshots or unavailable sources require another search. Exact <code>--passage</code> retrieval remains available for historical captures. See the <a href="../research/USAGE.md#choose-citations-by-keywords-since-v300">selection and API reference</a>.</p>
+
+<h2 id="claim-chronology">Organize claim periods and causal interpretations</h2>
+<p><strong>Since v3.0.0:</strong> inside <strong>Claims</strong>, choose <strong>Timeline</strong>. It places valid four-digit CE years, ISO dates and supported ranges while preserving your original period labels. Missing, unclear or invalid periods remain visible under <strong>Unplaced periods</strong>. Reading makes no archive changes, and creation dates never stand in for historical periods.</p>
+<p>Under <strong>Cause and effect claims</strong>, choose a proposed cause and effect, review their saved versions and save your interpretation explicitly. A later claim edit leaves the link pinned to its earlier versions and marks it for review. Edit or retract through the shared revision editor; earlier interpretations remain in history. Self-links are rejected, cycles are allowed, and no causal truth or additional links are inferred.</p>
+<div class="notice-box"><strong>Before the first causal save:</strong> back up the complete archive. A saved causal link opts storage into v6, requiring v3.0.0 or newer readers. Existing v1–v5 archives remain readable without conversion; read-only views do not upgrade them. Export/restore preserves all accepted history. These additions are not in v2.4.0.</div>
+<pre><code>lixity research timeline --project ./sample-project --format text
+lixity research relate --project ./sample-project FROM_CLAIM TO_CLAIM \
+  --relation causes --rationale "Author interpretation for review"</code></pre>
+<p>Replace the claim placeholders with complete IDs from the claim list. <code>results_in</code> is an alias for <code>causes</code> in the same cause-to-effect direction. Software consuming claim lists must update to the uniform <code>research-claims-local/2</code> envelope; stored claims remain unchanged. Read the <a href="../releases/v3.0.0.md">3.0.0 release notes</a> and <a href="../research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300">implemented chronology and compatibility reference</a>.</p>
 
 <h2 id="evidence-draft">Prepare evidence from selected source text</h2>
 <p><strong>Since v2.4.0:</strong> open a retained source and select text within one uniquely resolved paragraph. The selection action prepares the existing claim evidence-link form. Its preview shows both your selected quote and the full retained paragraph; choose a claim and relation, add your own rationale if needed, then save separately.</p>

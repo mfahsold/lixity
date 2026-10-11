@@ -199,6 +199,24 @@ The records have different purposes:
 These links support review, not automated proof. An unmarked deviation from fact
 does not certify accuracy. If a source is purged, affected citations in retained
 authored records show as unavailable rather than revealing deleted text.
+**Since v3.0.0:** in **Claims**, switch from **List** to **Timeline**
+to organize the period labels you entered. Clear years, dates and supported
+ranges can be placed; unclear or invalid periods stay visible separately.
+Placement is an organizational aid, not a historical verification.
+
+Under **Cause and effect claims**, choose two reviewed claim versions and save
+your proposed cause/effect link explicitly. Later claim edits leave that link
+pinned to its earlier versions and mark it for review. Edit or retract it through
+the shared revision editor; history keeps the earlier interpretation. Before the
+first save, back up the archive and read the v6 compatibility notice: afterward
+every reader must support v3.0.0 or newer.
+
+To add evidence without copying an identifier, choose your claim in the evidence
+form and select **Find source passage**. Search, read a result, choose **Use for
+claim**, then review its full retained paragraph and save the evidence relation.
+A keyword match or causal interpretation does not verify a claim. A changed
+reviewed context requires another review before saving.
+
 See [Research usage](research/USAGE.md) for batch import, claim and decision
 commands, backups and archive limits.
 

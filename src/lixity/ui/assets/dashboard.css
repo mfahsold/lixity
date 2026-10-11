@@ -1219,6 +1219,23 @@ mark.search-hit {
 .research-details-body dt { font-weight: 600; }
 .research-details-body dd { margin: 0 0 .4rem; }
 .research-passage-actions { margin-top: .5rem; }
+.research-claim-views { margin-top: .8rem; }
+.research-claim-views button.ctl[aria-pressed="true"] { background: var(--action-bg); color: var(--on-action); }
+.research-timeline { list-style: none; margin: .8rem 0; padding-left: 1.2rem; border-left: 2px solid var(--line); }
+.research-timeline > li { position: relative; margin: 0 0 .8rem; }
+.research-timeline > li::before { content: ""; position: absolute; width: .55rem; height: .55rem; border-radius: 50%; background: var(--action-bg); left: -1.54rem; top: 1.1rem; }
+.research-timeline h4 { margin: 0; overflow-wrap: anywhere; }
+.research-timeline-statement { white-space: pre-wrap; overflow-wrap: anywhere; }
+.research-relation-section { margin-top: 1rem; }
+.research-relation-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
+.research-relation-fields > div { min-width: 0; display: grid; gap: .35rem; }
+.research-relation-fields .ctl, #r-relation-rationale { width: 100%; min-width: 0; }
+.research-relation-endpoints { display: flex; align-items: start; flex-wrap: wrap; gap: .5rem; overflow-wrap: anywhere; }
+.research-relation-endpoints span { flex: 1; min-width: 0; }
+@media (max-width: 600px) {
+  .research-relation-fields { grid-template-columns: minmax(0, 1fr); }
+  .research-relation-endpoints { flex-direction: column; }
+}
 .research-compare-metric { display: flex; justify-content: space-between; border-bottom: 1px dashed var(--line); padding: .3rem 0; font-size: .84rem; }
 .research-badge {
   font-size: .68rem;

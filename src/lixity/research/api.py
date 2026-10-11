@@ -49,6 +49,7 @@ from .models import (
     Activity,
     Blob,
     Claim,
+    ClaimRelation,
     ClaimScope,
     Decision,
     DecisionAcknowledgement,
@@ -64,6 +65,7 @@ from .models import (
     SourceContext,
     SourceVersion,
     Tombstone,
+    normalize_claim_relation,
     reference,
 )
 from .ocr import (
@@ -73,6 +75,11 @@ from .ocr import (
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot, digest
 from .revisions import (
     apply_record_revisions as apply_record_revisions,
+)
+from .revisions import (
+    claim_relation_view,
+    resolve_evidence_citation,
+    source_updates,
 )
 from .revisions import (
     get_record as get_record,
@@ -90,12 +97,9 @@ from .revisions import (
     record_history as record_history,
 )
 from .revisions import (
-    resolve_evidence_citation,
-    source_updates,
-)
-from .revisions import (
     revise_record as revise_record,
 )
+from .timeline import timeline_data
 
 
 def envelope(project_id: str, actor: str) -> dict[str, Any]:
@@ -1249,6 +1253,7 @@ def create_claim(
 
 
 def list_claims(project: str | Path, *, dossier_id: str | None = None) -> dict[str, Any]:
+    """Return claims and their selection context from one accepted snapshot."""
     return _list_claims(Repository(project).snapshot(), dossier_id=dossier_id)
 
 
@@ -1286,9 +1291,90 @@ def _list_claims(snapshot: Snapshot, *, dossier_id: str | None = None) -> dict[s
 
     claims_list.sort(key=lambda c: str(c["created_at"]), reverse=True)
     return {
-        "schema_version": "research-claims-local/1",
+        "schema_version": "research-claims-local/2",
         "claims": claims_list,
+        "project_id": snapshot.project.id,
+        "snapshot": snapshot.digest,
     }
+
+
+def timeline(project: str | Path, dossier_id: str | None = None) -> dict[str, Any]:
+    """Read conservative chronology without modifying any authored period label."""
+    return timeline_data(Repository(project).snapshot(), dossier_id=dossier_id)
+
+
+def _reviewed_snapshot(snapshot: Snapshot, expected_snapshot: str | None,
+                       expected_project_id: str | None = None) -> None:
+    if expected_project_id is not None:
+        try:
+            Reference(id=expected_project_id)
+        except ValidationError:
+            raise ResearchError("Expected project ID must be a complete UUID URN") from None
+        if snapshot.project.id != expected_project_id:
+            raise ResearchConflictError("Research project changed; review the selected project before saving")
+    if expected_snapshot is not None:
+        if not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
+            raise ResearchError("Expected snapshot must be a SHA-256 digest")
+        if snapshot.digest != expected_snapshot:
+            raise ResearchConflictError("Research snapshot changed; review the current context before saving")
+
+
+def create_claim_relation(
+    project: str | Path, from_claim_id: str, to_claim_id: str, *, relation: str = "causes",
+    rationale: str | None = None, from_claim_revision: int | None = None,
+    to_claim_revision: int | None = None, expected_snapshot: str | None = None,
+    expected_project_id: str | None = None,
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    """Explicitly record an author's cause/effect assertion between pinned claims."""
+    if rationale is not None and not isinstance(rationale, str):
+        raise ResearchError("Relation rationale must be a string or null")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    _reviewed_snapshot(snapshot, expected_snapshot, expected_project_id)
+    unavailable = {record.target_ref.id for record in snapshot.records.values() if isinstance(record, Tombstone)}
+
+    def endpoint(identifier: str, revision: int | None) -> Claim:
+        if not isinstance(identifier, str):
+            raise ResearchError("Claim identifier must be a string")
+        if revision is not None and (type(revision) is not int or revision < 1):
+            raise ResearchError("Claim revision must be a positive integer")
+        if identifier in unavailable:
+            raise ResearchError("Claim has been withdrawn or purged")
+        try:
+            return (snapshot.latest(identifier, Claim) if revision is None else
+                    snapshot.get(Reference(id=identifier, revision=revision), Claim))
+        except ValidationError:
+            raise ResearchError("Invalid claim reference") from None
+
+    first, second = endpoint(from_claim_id, from_claim_revision), endpoint(to_claim_id, to_claim_revision)
+    try:
+        recorded = ClaimRelation(**envelope(snapshot.project.id, actor),
+                                 from_claim_ref=reference(first), to_claim_ref=reference(second),
+                                 relation=normalize_claim_relation(relation), rationale=rationale.strip() or None if rationale else None)
+    except (ValidationError, ValueError):
+        raise ResearchError("Invalid causal relation; choose causes/results_in, distinct claims and bounded rationale") from None
+    accepted = repository.commit([recorded], {}, snapshot)
+    return {"schema_version": "research-claim-relation-local/1", "relation_id": recorded.id,
+            "relation": recorded.relation, "from_claim_id": first.id, "from_claim_revision": first.revision,
+            "to_claim_id": second.id, "to_claim_revision": second.revision, "snapshot": accepted.digest}
+
+
+def list_claim_relations(
+    project: str | Path, claim_id: str | None = None, include_retracted: bool = False,
+) -> dict[str, Any]:
+    """Read recorded pins and flag newer endpoint revisions without retargeting."""
+    if type(include_retracted) is not bool:
+        raise ResearchError("include_retracted must be a boolean")
+    snapshot = Repository(project).snapshot()
+    unavailable = {record.target_ref.id for record in snapshot.records.values() if isinstance(record, Tombstone)}
+    selected = [record for record in snapshot.records.values() if isinstance(record, ClaimRelation)
+                and record.id not in unavailable and (include_retracted or record.state == "active")
+                and (claim_id is None or claim_id in (record.from_claim_ref.id, record.to_claim_ref.id))]
+    selected.sort(key=lambda record: (record.created_at, record.id), reverse=True)
+    return {"schema_version": "research-claim-relations-local/1", "project_id": snapshot.project.id,
+            "snapshot": snapshot.digest, "archive_schema_version": snapshot.manifest.schema_version,
+            "relations": [claim_relation_view(snapshot, record) for record in selected]}
 
 
 def link_evidence(
@@ -1300,12 +1386,24 @@ def link_evidence(
     rationale: str | None = None,
     reviewer: str = "author",
     actor: str = "local-author",
+    expected_snapshot: str | None = None,
+    expected_claim_revision: int | None = None,
+    expected_project_id: str | None = None,
 ) -> dict[str, Any]:
     repository = Repository(project)
     snapshot = repository.snapshot()
 
+    _reviewed_snapshot(snapshot, expected_snapshot, expected_project_id)
     claim = snapshot.latest(claim_id, Claim)
+    if expected_claim_revision is not None:
+        if type(expected_claim_revision) is not int or expected_claim_revision < 1:
+            raise ResearchError("Expected claim revision must be a positive integer")
+        if claim.revision != expected_claim_revision:
+            raise ResearchConflictError("Claim revision changed; review the current claim before saving")
     passage = snapshot.get(Reference(id=passage_id), Passage)
+    if ((expected_snapshot is not None or expected_claim_revision is not None or expected_project_id is not None)
+            and repository.citation(snapshot, passage)["availability"] != "available"):
+        raise ResearchError("Selected evidence source has been withdrawn or purged")
 
     values = envelope(snapshot.project.id, actor)
     link = EvidenceLink(

@@ -1,7 +1,7 @@
 """Strict contracts for the local source-to-citation pilot, not the entire RFC."""
 
 from datetime import datetime
-from typing import Annotated, Any, Literal
+from typing import Annotated, Any, ClassVar, Literal
 from urllib.parse import urlsplit
 
 from pydantic import (
@@ -30,6 +30,7 @@ Kind = Literal[
     "tombstone",
     "dossier",
     "claim",
+    "claim_relation",
     "evidence_link",
     "decision",
     "decision_acknowledgement",
@@ -86,15 +87,18 @@ class AuthoredRecord(Record):
     schema_version: Literal["research-local/1", "research-local/2"] = "research-local/1"  # type: ignore[assignment]
     revision: Annotated[int, Field(ge=1)] = 1
     change: RevisionChange | None = None
+    initial_schema_version: ClassVar[str] = "research-local/1"
+    revision_schema_version: ClassVar[str] = "research-local/2"
 
     @model_validator(mode="after")
     def valid_revision(self) -> "AuthoredRecord":
         if self.revision == 1:
-            if self.schema_version != "research-local/1" or self.change is not None:
+            if self.schema_version != self.initial_schema_version or self.change is not None:
                 raise ValueError("Initial authored records retain the revision-1 contract")
-        elif (self.schema_version != "research-local/2" or self.change is None
+        elif (self.schema_version != self.revision_schema_version or self.change is None
               or self.change.previous_revision != self.revision - 1):
-            raise ValueError("Authored revisions require version 2 and their immediate predecessor")
+            version = self.revision_schema_version.rsplit("/", 1)[1]
+            raise ValueError(f"Authored revisions require version {version} and their immediate predecessor")
         return self
 
 
@@ -257,6 +261,33 @@ class Claim(AuthoredRecord):
     tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
 
 
+class ClaimRelation(AuthoredRecord):
+    """An author's causal assertion between exact claim revisions, never proof."""
+
+    schema_version: Literal["research-local/6"] = "research-local/6"  # type: ignore[assignment]
+    initial_schema_version: ClassVar[str] = "research-local/6"
+    revision_schema_version: ClassVar[str] = "research-local/6"
+    kind: Literal["claim_relation"] = "claim_relation"
+    from_claim_ref: Reference
+    to_claim_ref: Reference
+    relation: Literal["causes"] = "causes"
+    state: Literal["active", "retracted"] = "active"
+    rationale: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+
+    @model_validator(mode="after")
+    def distinct_claims(self) -> "ClaimRelation":
+        if self.from_claim_ref.id == self.to_claim_ref.id:
+            raise ValueError("A causal relation must connect two distinct claims")
+        return self
+
+
+def normalize_claim_relation(value: str) -> Literal["causes"]:
+    """Accept the results_in input alias without introducing another stored type."""
+    if isinstance(value, str) and value.strip().lower() in ("causes", "results_in"):
+        return "causes"
+    raise ValueError("Claim relation must be causes or results_in")
+
+
 EvidenceRelation = Literal["supports", "contradicts", "qualifies", "contextualizes"]
 
 
@@ -337,6 +368,7 @@ Entity = Annotated[
     | Tombstone
     | Dossier
     | Claim
+    | ClaimRelation
     | EvidenceLink
     | Decision
     | DecisionAcknowledgement,
@@ -352,7 +384,7 @@ class Entry(StrictModel):
 
 
 class Manifest(StrictModel):
-    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5"] = "research-manifest-local/1"
+    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6"] = "research-manifest-local/1"
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None

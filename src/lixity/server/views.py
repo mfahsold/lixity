@@ -24,7 +24,7 @@ from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
 from ..ui import render_dashboard
 from .constants import NATIVE_UI_ACTIONS
-from .pdf_context import manuscript_pdf_token
+from .pdf_context import manuscript_pdf_token, research_context_token
 
 MAX_ARTIFACT_BYTES = 200 * 1024 * 1024  # 200 MB
 
@@ -77,6 +77,7 @@ def build_server_dashboard(
     exports_dir: str | None = None,
     debug: bool = False,
     project_root: str | Path | None = None,
+    research_root: str | Path | None = None,
 ) -> tuple[str, dict[str, Any]]:
     """Generates the interactive dashboard HTML and returns (html, info_dict)."""
     text = ""
@@ -206,6 +207,7 @@ def build_server_dashboard(
             source_input, project_root=project_root, language=language,
             title=title, thresholds=resolved_thresholds,
         ) if manuscript_readable and not is_empty else "",
+        research_context_token=research_context_token(research_root or project_root),
     )
 
     info = {

@@ -1153,6 +1153,7 @@ function researchStatus(message, ok) {
 }
 
 async function researchApiPost(action, payload) {
+  payload = researchBoundPayload(payload);
   var data = await jsonApi(API + "/" + action, {method: "POST",
     headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload || {})});
   if (data.ok && ["research-ingest", "research-dossier", "research-claim-add", "research-decision-add"].includes(action)) {
@@ -1162,7 +1163,19 @@ async function researchApiPost(action, payload) {
 }
 
 function researchApiGet(endpoint) {
+  var token = researchContextToken();
+  if (token) endpoint += (endpoint.includes("?") ? "&" : "?") + "research_token=" + encodeURIComponent(token);
   return jsonApi(API + "/" + endpoint);
+}
+
+function researchContextToken() {
+  var panel = document.getElementById("research-manager");
+  return panel ? panel.dataset.researchToken || "" : "";
+}
+
+function researchBoundPayload(payload) {
+  var token = researchContextToken();
+  return token ? Object.assign({research_token: token}, payload || {}) : payload || {};
 }
 
 function escapeHtml(str) {
@@ -1711,6 +1724,33 @@ var researchPassageContexts = Object.create(null);
 var researchSelectionProjectId = null;
 var researchProjectStatusRead = 0;
 var researchEvidenceDraft = null;
+var researchEvidenceReview = null;
+var researchClaimChoices = Object.create(null);
+var researchClaimsSnapshot = null;
+var researchClaimsRead = 0;
+var researchProjectionRead = 0;
+var researchSearchRead = 0;
+var researchRelationPending = false;
+
+function researchReadContext() {
+  return {projectId: researchSelectionProjectId, token: researchContextToken()};
+}
+
+function acceptResearchContext(context, data) {
+  return context.projectId === researchSelectionProjectId && context.token === researchContextToken() &&
+    (!data.project_id || data.project_id === researchSelectionProjectId);
+}
+
+function reviewedEvidenceClaim() {
+  var field = document.getElementById("r-link-claim-select");
+  var claim = field && researchClaimChoices[field.value];
+  return claim && researchClaimsSnapshot ? {claimId: claim.id, revision: claim.revision,
+    snapshot: researchClaimsSnapshot, projectId: researchSelectionProjectId, token: researchContextToken()} : null;
+}
+
+document.addEventListener("change", function(event) {
+  if (event.target.id === "r-link-claim-select") researchEvidenceReview = reviewedEvidenceClaim();
+});
 
 function selectionPlainText(text) {
   var container = document.createElement("div");
@@ -1792,6 +1832,7 @@ function researchEvidenceDraftHost() {
 
 function discardResearchEvidenceDraft() {
   researchEvidenceDraft = null;
+  researchEvidenceReview = null;
   var passage = document.getElementById("r-link-passage-id");
   if (passage) passage.value = "";
   var host = document.getElementById("research-evidence-draft");
@@ -1809,7 +1850,10 @@ function prepareResearchEvidenceDraft(passageId, quote, context) {
   var passage = document.getElementById("r-link-passage-id");
   var host = researchEvidenceDraftHost();
   if (!passage || !host || !context || context.availability === "withdrawn" || context.error) return;
-  researchEvidenceDraft = {passageId: passageId, projectId: researchSelectionProjectId};
+  if (context.project_id && context.project_id !== researchSelectionProjectId) return;
+  researchEvidenceDraft = {passageId: passageId, projectId: researchSelectionProjectId, token: researchContextToken(),
+    sourceSnapshot: context.snapshot || null};
+  if (!researchEvidenceReview) researchEvidenceReview = reviewedEvidenceClaim();
   passage.value = passageId;
   host.replaceChildren(); host.hidden = false;
   function field(tag, className, value) {
@@ -2212,7 +2256,145 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
   filterResearchList("dossiers");
 }
 
+function researchClaimChoiceLabel(claim) {
+  function label(item) {
+    return item.title + (item.scope && item.scope.time_period ? " · " + item.scope.time_period : "") +
+      " · " + uiFormat("research_revision_number", {revision: item.revision});
+  }
+  var text = label(claim);
+  // Names, dates and versions can all match. Keep the remaining choices
+  // explicitly distinguishable without requiring anyone to type an ID.
+  var duplicate = Object.values(researchClaimChoices).some(function(other) {
+    return other.id !== claim.id && label(other) === text;
+  });
+  return text + (duplicate ? " · " + claim.id : "");
+}
+
+function updateResearchRelationControls() {
+  var save = document.getElementById("r-relation-save");
+  if (!save) return;
+  var from = document.getElementById("r-relation-from").value;
+  var to = document.getElementById("r-relation-to").value;
+  save.disabled = researchRelationPending || !researchContextToken() || !researchClaimsSnapshot ||
+    !researchClaimChoices[from] || !researchClaimChoices[to] || from === to;
+}
+
+function researchTimelineEntry(entry) {
+  var scope = [entry.time_period, entry.place, (entry.actors || []).join(", ")].filter(Boolean).join(" · ");
+  return '<li data-claim-id="' + escapeHtml(entry.claim_id) + '"><article class="research-card">' +
+    '<h4>' + escapeHtml(entry.title) + '</h4><p class="ctl-note">' + escapeHtml(scope) + '</p>' +
+    '<p class="research-timeline-statement">' + escapeHtml(entry.statement) + '</p>' +
+    '<p class="ctl-note">' + escapeHtml(uiLabel("research_confidence_" + entry.confidence)) + ' · ' +
+      escapeHtml(uiFormat("research_revision_number", {revision: entry.revision})) + '</p>' +
+    (entry.reason ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_" + entry.reason)) + '</p>' : '') +
+    researchRevisionActions("claim", entry.claim_id) + '</article></li>';
+}
+
+function researchRelationEndpoint(endpoint) {
+  return escapeHtml(endpoint.title || "") + (endpoint.time_period ? " · " + escapeHtml(endpoint.time_period) : "") +
+    ' · ' + escapeHtml(uiFormat("research_revision_number", {revision: endpoint.revision})) +
+    ' · ' + escapeHtml(uiLabel("research_confidence_" + endpoint.confidence));
+}
+
+async function refreshResearchClaimProjections() {
+  var request = ++researchProjectionRead;
+  var context = researchReadContext();
+  var timelineHost = document.getElementById("research-claims-timeline");
+  var relationsHost = document.getElementById("research-claim-relations");
+  if (!timelineHost || !relationsHost) return;
+  ["from", "to"].forEach(function(role) {
+    var select = document.getElementById("r-relation-" + role), previous = select.value;
+    select.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_claim")) + '</option>' +
+      Object.values(researchClaimChoices).map(function(claim) {
+        return '<option value="' + escapeHtml(claim.id) + '">' + escapeHtml(researchClaimChoiceLabel(claim)) + '</option>';
+      }).join("");
+    if (researchClaimChoices[previous]) select.value = previous;
+  });
+  updateResearchRelationControls();
+  var include = document.getElementById("r-relation-retracted").checked;
+  var responses = await Promise.all([researchApiGet("research/timeline"),
+    researchApiGet("research/claim-relations?include_retracted=" + include)]);
+  if (request !== researchProjectionRead || !responses.every(function(data) {return acceptResearchContext(context, data);})) return;
+  var timeline = responses[0], relations = responses[1];
+  timelineHost.innerHTML = timeline.ok ?
+    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_hint")) + '</p>' +
+    '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + '</h3><ol class="research-timeline research-timeline-dated">' +
+      (timeline.dated || []).map(researchTimelineEntry).join("") + '</ol>' +
+    '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + '</h3><ol class="research-timeline research-timeline-unplaced">' +
+      (timeline.unplaced || []).map(researchTimelineEntry).join("") + '</ol>' :
+    '<p class="ctl-note">' + escapeHtml(timeline.message || uiLabel("research_load_claims_failed")) + '</p>';
+  if (!relations.ok) {
+    relationsHost.textContent = relations.message || uiLabel("research_load_claims_failed");
+    return;
+  }
+  var schema = Number(String(relations.archive_schema_version || "").split("/").pop());
+  document.getElementById("r-relation-compatibility").hidden = schema >= 6;
+  if (!researchContextToken()) document.getElementById("r-relation-status").textContent = uiLabel("research_relation_unavailable");
+  relationsHost.innerHTML = (relations.relations || []).map(function(relation) {
+    return '<article class="research-card research-relation-card" data-relation-id="' + escapeHtml(relation.relation_id) + '">' +
+      '<p class="research-relation-endpoints"><span>' + researchRelationEndpoint(relation.from_claim) + '</span><strong>' +
+      escapeHtml(uiLabel("research_relation_causes")) + '</strong><span>' + researchRelationEndpoint(relation.to_claim) + '</span></p>' +
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_relation_" + relation.state)) + '</p>' +
+      (relation.rationale ? '<p class="research-timeline-statement">' + escapeHtml(relation.rationale) + '</p>' : '') +
+      (relation.review_needed ? '<p class="ctl-status err">' + escapeHtml(uiLabel("research_relation_review")) + '</p>' : '') +
+      researchRevisionActions("claim_relation", relation.relation_id) + '</article>';
+  }).join("") || '<p class="ctl-note">' + escapeHtml(uiLabel("research_relation_empty")) + '</p>';
+}
+
+document.addEventListener("change", function(event) {
+  if (["r-relation-from", "r-relation-to"].includes(event.target.id)) updateResearchRelationControls();
+  if (event.target.id === "r-relation-retracted") refreshResearchClaimProjections();
+});
+document.addEventListener("click", function(event) {
+  if (["r-claims-list", "r-claims-timeline"].includes(event.target.id)) {
+    var timeline = event.target.id === "r-claims-timeline";
+    document.getElementById("research-claims-list").hidden = timeline;
+    document.getElementById("research-claims-timeline").hidden = !timeline;
+    document.getElementById("r-claims-list").setAttribute("aria-pressed", String(!timeline));
+    document.getElementById("r-claims-timeline").setAttribute("aria-pressed", String(timeline));
+  }
+  if (event.target.id === "r-find-passage") {
+    researchEvidenceReview = reviewedEvidenceClaim();
+    document.getElementById("r-search-scope").value = "sources";
+    document.querySelector('[data-rtab="search"]').click();
+    document.getElementById("r-search-query").focus();
+  }
+});
+var researchRelationForm = document.getElementById("r-relation-form");
+if (researchRelationForm) researchRelationForm.addEventListener("submit", async function(event) {
+  event.preventDefault();
+  if (researchRelationPending) return;
+  var from = document.getElementById("r-relation-from"), to = document.getElementById("r-relation-to");
+  var rationale = document.getElementById("r-relation-rationale"), reading = document.getElementById("r-relation-status");
+  var fromClaim = researchClaimChoices[from.value], toClaim = researchClaimChoices[to.value];
+  if (!fromClaim || !toClaim || from.value === to.value || !researchContextToken() || !researchClaimsSnapshot) {
+    reading.textContent = uiLabel("research_relation_required"); return;
+  }
+  var context = researchReadContext(), submitted = {from: from.value, to: to.value, rationale: rationale.value};
+  researchRelationPending = true; updateResearchRelationControls();
+  document.getElementById("r-relation-save").setAttribute("aria-busy", "true");
+  try {
+    var result = await researchApiPost("research-claim-relation", {project_id: context.projectId,
+      expected_snapshot: researchClaimsSnapshot, from_claim_id: from.value, to_claim_id: to.value,
+      from_claim_revision: fromClaim.revision, to_claim_revision: toClaim.revision,
+      relation: "causes", rationale: rationale.value.trim() || null});
+    if (!acceptResearchContext(context, result)) return;
+    reading.textContent = result.ok ? uiLabel("research_relation_saved") : result.message || uiLabel("research_relation_unavailable");
+    if (result.ok) {
+      if (from.value === submitted.from && to.value === submitted.to && rationale.value === submitted.rationale) {
+        from.value = ""; to.value = ""; rationale.value = "";
+      }
+      await refreshResearchClaims();
+    }
+  } finally {
+    researchRelationPending = false; updateResearchRelationControls();
+    document.getElementById("r-relation-save").removeAttribute("aria-busy");
+  }
+});
+
 async function refreshResearchClaims(overview) {
+  var request = ++researchClaimsRead;
+  var context = researchReadContext();
   var listHost = document.getElementById("research-claims-list");
   var selectHost = document.getElementById("r-decision-claim-select");
   var linkClaimSelect = document.getElementById("r-link-claim-select");
@@ -2222,11 +2404,15 @@ async function refreshResearchClaims(overview) {
       escapeHtml(uiLabel("research_loading")) + '</span></div>';
   }
   var data = overview && Array.isArray(overview.claims) ? overview : await researchApiGet("research/claims");
+  if (request !== researchClaimsRead || !acceptResearchContext(context, data)) return;
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_claims_failed")) + '</p>';
     return;
   }
   var claims = data.claims || [];
+  researchClaimsSnapshot = data.snapshot || null;
+  researchClaimChoices = Object.fromEntries(claims.map(function(claim) {return [claim.id, claim];}));
+  refreshResearchClaimProjections();
   if (selectHost) {
     var selectedDecisionClaim = selectHost.value;
     selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_no_claim_linked")) + '</option>' +
@@ -2239,7 +2425,7 @@ async function refreshResearchClaims(overview) {
     var selectedEvidenceClaim = linkClaimSelect.value;
     linkClaimSelect.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_claim")) + '</option>' +
       claims.map(function(c) {
-        return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(c.title) + '</option>';
+        return '<option value="' + escapeHtml(c.id) + '">' + escapeHtml(researchClaimChoiceLabel(c)) + '</option>';
       }).join("");
     if (claims.some(function(c) { return c.id === selectedEvidenceClaim; })) linkClaimSelect.value = selectedEvidenceClaim;
   }
@@ -2484,6 +2670,8 @@ async function refreshResearchProjectInfo() {
   var status = await researchApiGet("research/status");
   if (statusRead !== researchProjectStatusRead) return {ok: false, superseded: true};
   if (status.ok === true && researchSelectionProjectId !== (status.project_id || null)) {
+    ++researchSearchRead; ++researchClaimsRead; ++researchProjectionRead;
+    researchClaimsSnapshot = null; researchClaimChoices = Object.create(null);
     clearResearchSourceSelections(); discardResearchEvidenceDraft();
     researchPassageContexts = Object.create(null);
     researchSelectionProjectId = status.project_id || null;
@@ -2972,6 +3160,8 @@ function highlightSearchTerms(text, query) {
 
   var searchBtn = event.target.closest("#r-search-btn");
   if (searchBtn) {
+    var searchRead = ++researchSearchRead;
+    var searchContext = researchReadContext();
     var qEl = document.getElementById("r-search-query");
     var query = qEl ? qEl.value.trim() : "";
     if (!query) { researchStatus(uiLabel("research_query_required"), false); return; }
@@ -2979,6 +3169,7 @@ function highlightSearchTerms(text, query) {
     if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_searching")) + '</p>';
     var scopeEl = document.getElementById("r-search-scope");
     var sres = await researchApiPost("research-search", { query: query, scope: scopeEl ? scopeEl.value : "sources" });
+    if (searchRead !== researchSearchRead || !acceptResearchContext(searchContext, sres)) return;
     if (!sres.ok) {
       if (resultsHost) resultsHost.innerHTML = '<p class="ctl-note">' + escapeHtml(sres.message || uiLabel("research_search_failed")) + '</p>';
       researchStatus(sres.message || uiLabel("research_search_failed"), false);
@@ -3196,6 +3387,7 @@ function highlightSearchTerms(text, query) {
     var claimVal = lClaim ? lClaim.value.trim() : "";
     var passageVal = lPassage ? lPassage.value.trim() : "";
     if (researchEvidenceDraft && (researchEvidenceDraft.projectId !== researchSelectionProjectId ||
+        researchEvidenceDraft.token !== researchContextToken() ||
         researchEvidenceDraft.passageId !== passageVal)) {
       discardResearchEvidenceDraft();
       researchStatus(uiLabel("selection_invalid"), false);
@@ -3207,17 +3399,29 @@ function highlightSearchTerms(text, query) {
     }
 
     var submittedDraft = researchEvidenceDraft;
+    var evidenceContext = researchReadContext();
+    var reviewed = researchEvidenceReview;
+    if (researchContextToken() && (!reviewed || reviewed.claimId !== claimVal ||
+        reviewed.projectId !== researchSelectionProjectId || reviewed.token !== researchContextToken())) {
+      researchStatus(uiLabel("selection_invalid"), false); return;
+    }
     var submittedRelation = lRel ? lRel.value : "supports";
     var submittedRationale = lRat ? lRat.value.trim() : "";
     linkEvBtn.disabled = true;
     linkEvBtn.setAttribute("aria-busy", "true");
     var lres;
-    try {lres = await researchApiPost("research-evidence-link", {
+    var linkPayload = {
       claim_id: claimVal,
       passage_id: passageVal,
       relation: submittedRelation,
       rationale: submittedRationale
-    });} finally {linkEvBtn.disabled = false; linkEvBtn.removeAttribute("aria-busy");}
+    };
+    if (researchContextToken()) Object.assign(linkPayload, {project_id: reviewed.projectId,
+      expected_snapshot: submittedDraft && submittedDraft.sourceSnapshot || reviewed.snapshot,
+      expected_claim_revision: reviewed.revision});
+    try {lres = await researchApiPost("research-evidence-link", linkPayload);
+    } finally {linkEvBtn.disabled = false; linkEvBtn.removeAttribute("aria-busy");}
+    if (!acceptResearchContext(evidenceContext, lres)) return;
     researchStatus(lres.ok ? uiLabel("research_evidence_link_complete") : lres.message, lres.ok);
     if (lres.ok) {
       if (researchEvidenceDraft === submittedDraft && lPassage.value.trim() === passageVal &&
@@ -3391,6 +3595,16 @@ if (researchRevisionDialog) {
       {name: "rationale", label: "research_link_rationale", type: "textarea"},
       {name: "reviewer", label: "research_revision_reviewer", required: true}
     ],
+    claim_relation: [
+      {name: "from_claim_id", label: "research_relation_from", type: "claim", required: true},
+      {name: "from_claim_revision", label: "research_revision_from_claim_revision", type: "number"},
+      {name: "to_claim_id", label: "research_relation_to", type: "claim", required: true},
+      {name: "to_claim_revision", label: "research_revision_to_claim_revision", type: "number"},
+      {name: "relation", label: "research_relation_field", type: "select", options: [["causes", "research_relation_causes"]]},
+      {name: "state", label: "research_relation_state", required: true, type: "select", options: [
+        ["active", "research_relation_active"], ["retracted", "research_relation_retracted"]]},
+      {name: "rationale", label: "research_link_rationale", type: "textarea"}
+    ],
     decision: [
       {name: "title", label: "research_decision_title", required: true},
       {name: "rationale", label: "research_decision_rationale", type: "textarea", required: true},
@@ -3416,6 +3630,11 @@ if (researchRevisionDialog) {
     if (name === "claim_id") return revisionRefText(record.claim_ref, pinned);
     if (name === "claim_revision") return record.claim_ref ? record.claim_ref.revision : "";
     if (name === "passage_id") return revisionRefText(record.passage_ref, pinned);
+    for (var role of ["from", "to"]) {
+      var ref = record[role + "_claim_ref"];
+      if (name === role + "_claim_id") return revisionRefText(ref, pinned);
+      if (name === role + "_claim_revision") return ref ? ref.revision : "";
+    }
     if (["time_period", "place", "actors"].includes(name)) return (record.scope || {})[name] || (name === "actors" ? [] : "");
     return record[name] === null || record[name] === undefined ? "" : record[name];
   }
@@ -3432,7 +3651,8 @@ if (researchRevisionDialog) {
     var references = (envelope && envelope.reference_updates) || [];
     var scopedCitations = envelope && envelope.citation_scope === "current_links_to_pinned_claim_revision" &&
       envelope.citations && envelope.citations.length;
-    revisionUpdates.hidden = !updates.length && !references.length && !scopedCitations;
+    var relationEndpoints = envelope && revisionState.kind === "claim_relation" && envelope.from_claim && envelope.to_claim;
+    revisionUpdates.hidden = !updates.length && !references.length && !scopedCitations && !relationEndpoints;
     if (revisionUpdates.hidden) return;
     if (updates.length) {
       var note = document.createElement("p");
@@ -3447,6 +3667,14 @@ if (researchRevisionDialog) {
         list.appendChild(item);
       });
       revisionUpdates.append(note, list);
+    }
+    if (relationEndpoints) {
+      ["from", "to"].forEach(function(role) {
+        var endpoint = envelope[role + "_claim"], note = document.createElement("p");
+        note.textContent = uiLabel("research_relation_" + role) + ": " + endpoint.title + " · " +
+          uiFormat("research_revision_number", {revision: endpoint.revision});
+        revisionUpdates.appendChild(note);
+      });
     }
     references.forEach(function(ref) {
       var note = document.createElement("p");
@@ -3507,10 +3735,20 @@ if (researchRevisionDialog) {
         label.textContent = uiLabel(spec.label);
         group.appendChild(label);
         field = spec.type === "textarea" ? document.createElement("textarea") :
-          spec.type === "select" ? document.createElement("select") : document.createElement("input");
+          ["select", "claim"].includes(spec.type) ? document.createElement("select") : document.createElement("input");
         field.className = "ctl";
         if (spec.type === "textarea") field.rows = spec.name === "body" ? 8 : 3;
-        if (spec.type === "select") {
+        if (spec.type === "claim") {
+          Object.values(researchClaimChoices).forEach(function(claim) {
+            var option = document.createElement("option"); option.value = claim.id;
+            option.textContent = researchClaimChoiceLabel(claim); field.appendChild(option);
+          });
+          if (!researchClaimChoices[value]) {
+            var pinnedEndpoint = revisionState.current[spec.name.startsWith("from") ? "from_claim" : "to_claim"];
+            var pinnedOption = document.createElement("option"); pinnedOption.value = value;
+            pinnedOption.textContent = pinnedEndpoint ? pinnedEndpoint.title : value; field.appendChild(pinnedOption);
+          }
+        } else if (spec.type === "select") {
           (spec.options || []).forEach(function(option) {
             var item = document.createElement("option");
             item.value = option[0];
@@ -3532,7 +3770,7 @@ if (researchRevisionDialog) {
       else revisionFieldsHost.appendChild(group);
     });
     if (options.children.length > 1) revisionFieldsHost.appendChild(options);
-    ["claim", "dossier"].forEach(function(kind) {
+    ["claim", "dossier", "from_claim", "to_claim"].forEach(function(kind) {
       var idField = document.getElementById("research-revision-field-" + kind + "_id");
       var revisionField = document.getElementById("research-revision-field-" + kind + "_revision");
       if (idField && revisionField) idField.addEventListener("input", function() {
@@ -3551,6 +3789,15 @@ if (researchRevisionDialog) {
     var rows = fields.map(function(spec) {
       var value = revisionFieldValue(record, spec.name, true);
       if (Array.isArray(value)) value = value.join(", ");
+      if (revisionState.kind === "claim_relation" && spec.type === "select") {
+        var option = spec.options.find(function(item) {return item[0] === value;});
+        if (option) value = uiLabel(option[1]);
+      }
+      if (revisionState.kind === "claim_relation" && spec.type === "claim") {
+        var endpoint = envelope[spec.name.startsWith("from") ? "from_claim" : "to_claim"];
+        if (endpoint) value = endpoint.title + (endpoint.time_period ? " · " + endpoint.time_period : "") +
+          " · " + uiFormat("research_revision_number", {revision: endpoint.revision});
+      }
       var valHtml = spec.name === "body" && value ?
         researchDossierBodyHtml(value, envelope) :
         escapeHtml(value || "—");
@@ -3688,7 +3935,7 @@ if (researchRevisionDialog) {
         changes[spec.name] = value === "" && !spec.required && !revisionState.section ? null : value;
       }
     });
-    ["claim", "dossier"].forEach(function(kind) {
+    ["claim", "dossier", "from_claim", "to_claim"].forEach(function(kind) {
       if (!Object.prototype.hasOwnProperty.call(changes, kind + "_id") || !changes[kind + "_id"]) return;
       var pin = document.getElementById("research-revision-field-" + kind + "_revision");
       if (pin && pin.value) changes[kind + "_revision"] = Number(pin.value);
@@ -3832,9 +4079,9 @@ if (researchRevisionDialog) {
     var baseRevision = revisionState.merge ? revisionState.merge.baseRevision : revisionState.current.record.revision;
     var response = await fetch(API + "/research-record-prepare", {
       method: "POST", headers: {"Content-Type": "application/json"},
-      body: JSON.stringify(Object.assign({kind: revisionState.kind, id: revisionState.id,
+      body: JSON.stringify(researchBoundPayload(Object.assign({kind: revisionState.kind, id: revisionState.id,
         base_revision: baseRevision, changes: changes, resolutions: resolutions || {}},
-        revisionState.section ? {section: revisionState.section} : {}))
+        revisionState.section ? {section: revisionState.section} : {})))
     });
     var preview = await response.json();
     if (session !== revisionState.session || !researchRevisionDialog.open) return;
@@ -4085,7 +4332,7 @@ if (researchRevisionDialog) {
     try {
       var response = await fetch(API + "/research-revision-batch-apply", {
         method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({operations: preview.operations, expected_snapshot: preview.snapshot})
+        body: JSON.stringify(researchBoundPayload({operations: preview.operations, expected_snapshot: preview.snapshot}))
       });
       var result = await response.json();
       if (!response.ok || !result.ok || result.project_id !== revisionBatch.projectId) {
@@ -4215,7 +4462,7 @@ if (researchRevisionDialog) {
       }
       var response = await fetch(reviseUrl, {
         method: "POST", headers: {"Content-Type": "application/json"},
-        body: JSON.stringify(Object.assign({}, operation, {expected_snapshot: expectedSnapshot}))
+        body: JSON.stringify(researchBoundPayload(Object.assign({}, operation, {expected_snapshot: expectedSnapshot})))
       });
       var data = await response.json();
       LixityLog.api("POST", reviseUrl, performance.now() - t0, response.status, data);

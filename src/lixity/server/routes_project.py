@@ -320,6 +320,7 @@ class ProjectRoutesMixin(ResponseMixin):
                 api_base="/api",
                 exports_dir=exports_dir,
                 project_root=ws_root,
+                research_root=ws_root,
             )
         except (
             OSError,

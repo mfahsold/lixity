@@ -21,6 +21,7 @@ from .models import (
     AuthoredRecord,
     Blob,
     Claim,
+    ClaimRelation,
     Decision,
     DecisionAcknowledgement,
     Dossier,
@@ -299,6 +300,9 @@ class Repository:
             elif isinstance(record, Claim):
                 if record.dossier_ref:
                     snapshot.get(record.dossier_ref, Dossier)
+            elif isinstance(record, ClaimRelation):
+                snapshot.get(record.from_claim_ref, Claim)
+                snapshot.get(record.to_claim_ref, Claim)
             elif isinstance(record, EvidenceLink):
                 snapshot.get(record.claim_ref, Claim)
                 if record.passage_ref not in purged_passages or record.passage_ref.id in snapshot.records:
@@ -410,8 +414,10 @@ class Repository:
             project = next((record for record in records.values() if isinstance(record, Project)), None)
             if project is None:
                 raise ResearchError("Project record required")
-            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5"]
-            schema = ("research-manifest-local/5" if any(record.schema_version == "research-local/5" for record in records.values())
+            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6"]
+            schema = ("research-manifest-local/6" if any(record.schema_version == "research-local/6" for record in records.values())
+                      or (current and current.manifest.schema_version == "research-manifest-local/6")
+                      else "research-manifest-local/5" if any(record.schema_version == "research-local/5" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/5")
                       else "research-manifest-local/4" if any(record.schema_version == "research-local/4" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/4")

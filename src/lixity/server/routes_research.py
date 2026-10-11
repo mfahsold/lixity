@@ -21,13 +21,90 @@ from ..research import api as research_api
 from ..research.limits import MAX_IMAGE_BYTES
 from ..research.repository import ResearchConflictError, ResearchError
 from ._base import ResponseMixin
-from .pdf_context import manuscript_pdf_token
+from .pdf_context import manuscript_pdf_token, research_context_token
 
-RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decision"))
+RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decision", "claim_relation"))
 
 
 class ResearchRoutesMixin(ResponseMixin):
     """Handlers for the explicit-project research workspace."""
+
+    def _research_context_matches(self, token: Any) -> bool:
+        """Keep token-bound requests in the selected root, including restored copies."""
+        if not isinstance(token, str) or not re.fullmatch(r"[0-9a-f]{64}", token):
+            self._json({"ok": False, "message": "A selected research context token is required"}, 400)
+            return False
+        root = self.get_research_root()
+        if root is None and self.source_input:
+            root = Path(self.workspace_root)
+        if token != research_context_token(root):
+            self._json({"ok": False, "message": "Selected research project changed; refresh before continuing"}, 409)
+            return False
+        return True
+
+    def _handle_research_timeline(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        if len(query.get("dossier_id", [])) > 1:
+            self._json({"ok": False, "message": "Choose one dossier"}, 400)
+            return
+        try:
+            self._json({"ok": True, **research_api.timeline(root, dossier_id=query.get("dossier_id", [None])[0])})
+        except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_claim_relations(self) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        retracted = query.get("include_retracted", ["false"])
+        if len(query.get("claim_id", [])) > 1 or len(retracted) != 1 or retracted[0] not in ("true", "false"):
+            self._json({"ok": False, "message": "Choose one claim and include_retracted=true|false"}, 400)
+            return
+        try:
+            data = research_api.list_claim_relations(root, claim_id=query.get("claim_id", [None])[0],
+                                                     include_retracted=retracted[0] == "true")
+            self._json({"ok": True, **data})
+        except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
+
+    def _handle_research_claim_relation_add(self, payload: dict[str, Any]) -> None:
+        root = self.get_research_root()
+        if not root or not (root / "research").is_dir():
+            self._json({"ok": False, "message": "Research project not initialized"}, 404)
+            return
+        allowed = {"project_id", "research_token", "expected_snapshot", "from_claim_id", "to_claim_id",
+                   "from_claim_revision", "to_claim_revision", "relation", "rationale", "actor"}
+        if (set(payload) - allowed or any(not isinstance(payload.get(key), str) or not payload[key].strip()
+                                         for key in ("project_id", "from_claim_id", "to_claim_id"))
+                or not isinstance(payload.get("expected_snapshot"), str)
+                or not re.fullmatch(r"[0-9a-f]{64}", payload["expected_snapshot"])
+                or any(type(payload.get(key)) is not int or payload[key] < 1
+                       for key in ("from_claim_revision", "to_claim_revision"))
+                or payload.get("relation", "causes") not in ("causes", "results_in")
+                or (payload.get("rationale") is not None and not isinstance(payload["rationale"], str))
+                or not isinstance(payload.get("actor", "local-author"), str)
+                or not payload.get("actor", "local-author").strip()):
+            self._json({"ok": False, "message": "Review two claims, their versions and the archive snapshot before saving"}, 400)
+            return
+        try:
+            data = research_api.create_claim_relation(
+                root, payload["from_claim_id"], payload["to_claim_id"],
+                from_claim_revision=payload["from_claim_revision"], to_claim_revision=payload["to_claim_revision"],
+                expected_snapshot=payload["expected_snapshot"], expected_project_id=payload["project_id"],
+                relation=payload.get("relation", "causes"), rationale=payload.get("rationale"),
+                actor=payload.get("actor", "local-author"),
+            )
+            self._json({"ok": True, **data})
+        except ResearchConflictError as exc:
+            self._json({"ok": False, "message": str(exc)}, 409)
+        except (ResearchError, OSError, ValueError, TypeError) as exc:
+            self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_image(self) -> None:
         if not self._same_origin() or self.headers.get("Sec-Fetch-Site") not in (None, "same-origin", "none"):
@@ -717,8 +794,13 @@ class ResearchRoutesMixin(ResponseMixin):
                 relation=relation,  # type: ignore[arg-type]
                 rationale=rationale,
                 reviewer=reviewer,
+                expected_snapshot=payload.get("expected_snapshot"),
+                expected_claim_revision=payload.get("expected_claim_revision"),
+                expected_project_id=payload.get("project_id"),
             )
             self._json({"ok": True, "message": "Evidence linked", **res})
+        except ResearchConflictError as exc:
+            self._json({"ok": False, "message": str(exc)}, 409)
         except (ResearchError, OSError, ValueError) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
 

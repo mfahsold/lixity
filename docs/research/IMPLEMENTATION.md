@@ -22,6 +22,19 @@ caching, section-bounded dossier reading, and decision-dossier review tracking.
 These contracts remain separate from the illustrative `research/1` bundle and
 existing analysis schemas.
 
+Since v3.0.0, the research interfaces include conservative chronology,
+authored causal claim relations and guarded keyword citation choices. Claims lists
+now use the single `research-claims-local/2` envelope with coherent project and
+snapshot metadata; this intentionally replaces v1 output, without changing stored
+claim records. These additions are not present in the v2.4.0 release.
+
+`ClaimRelation` is an authored record with two exact claim references, canonical
+`causes`, active/retracted state and optional rationale. `results_in` is an input
+alias in the same direction. Records and revisions use `research-local/6`; the
+first accepted explicit relation write promotes the manifest to v6. Existing
+v1–v5 record bytes remain readable and unchanged; older readers reject v6.
+Reads do not promote archives. Export/restore retains the existing bundle format.
+
 It uses Python 3.10+, existing Pydantic and the standard library. Python 3.10
 loads TOML project settings through the conditional `tomli` dependency.
 Research I/O stays out of `lixity.pipeline`. Native PDF extraction uses optional
@@ -80,6 +93,22 @@ or contact a cloud library.
    and atomic batch application against an expected snapshot. Decision-impact
    and review reports use explicit links, dates and revision pins; they do not
    infer semantic contradictions or rewrite dossiers/manuscripts.
+10. `research/timeline.py`: read-only projection of current claim periods. Place
+    only valid four-digit CE years, ISO dates and same-precision ranges; retain
+    labels and missing/unrecognized/invalid periods without date inference.
+11. `research/citation_selection.py`: source-only lexical choice resolved through
+    the existing citation API. Ambiguity returns unchanged search results;
+    numbered selection requires the displayed snapshot. Index refresh occurs
+    before a short final repository read lock, which rejects intervening writes.
+    Full paragraph/source/version/hash/offset identity remains authoritative.
+
+The native claims/evidence views reuse the shared forms, label packs and revision
+editor. An opaque token derived from the selected research root binds guarded
+reads/writes under the server state lock, including research-only roots and
+restored archive copies. Causal writes require reviewed project/snapshot/endpoint
+versions; optional evidence guards reject a changed reviewed choice or withdrawn
+source. Delayed/superseded search responses are discarded. Relations are not
+added to existing search scopes or interpreted as factual/transitive evidence.
 
 ## Zotero and evidence ownership (since v1.19.0)
 

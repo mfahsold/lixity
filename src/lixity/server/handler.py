@@ -43,6 +43,8 @@ class LixityServerHandler(
         "/api/research/image": "_handle_research_image",
         "/api/research/dossiers": "_handle_research_dossiers",
         "/api/research/claims": "_handle_research_claims",
+        "/api/research/timeline": "_handle_research_timeline",
+        "/api/research/claim-relations": "_handle_research_claim_relations",
         "/api/research/decisions": "_handle_research_decisions",
         "/api/research/matrix": "_handle_research_matrix",
         "/api/research/record": "_handle_research_record",
@@ -75,6 +77,7 @@ class LixityServerHandler(
         "research-dossier": "_handle_research_dossier",
         "research-compare": "_handle_research_compare",
         "research-claim-add": "_handle_research_claim_add",
+        "research-claim-relation": "_handle_research_claim_relation_add",
         "research-evidence-link": "_handle_research_evidence_link",
         "research-decision-add": "_handle_research_decision_add",
         "research-decision-acknowledge": "_handle_research_decision_acknowledge",
@@ -115,7 +118,16 @@ class LixityServerHandler(
             return
         handler_name = self.GET_ROUTES.get(path)
         if handler_name is not None:
-            getattr(self, handler_name)()
+            query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+            if path.startswith("/api/research/") and "research_token" in query:
+                tokens = query["research_token"]
+                with self._workspace_lock:
+                    if len(tokens) != 1:
+                        self._json({"ok": False, "message": "Choose one selected research context token"}, 400)
+                    elif self._research_context_matches(tokens[0]):
+                        getattr(self, handler_name)()
+            else:
+                getattr(self, handler_name)()
             return
 
         self._json({"ok": False, "message": "Not found"}, 404)
@@ -198,8 +210,19 @@ class LixityServerHandler(
 
         handler_name = self.POST_ROUTES.get(action)
         if handler_name is not None:
-            if action in self.WORKSPACE_MUTATING_ACTIONS:
+            guarded_actions = {"research-search", "research-evidence-link", "research-claim-relation",
+                               "research-record-revise", "research-record-prepare",
+                               "research-revision-batch-prepare", "research-revision-batch-apply"}
+            relation_write = (action == "research-claim-relation"
+                              or (action == "research-record-revise" and payload.get("kind") == "claim_relation")
+                              or (action == "research-revision-batch-apply" and isinstance(payload.get("operations"), list)
+                                  and any(isinstance(op, dict) and op.get("kind") == "claim_relation"
+                                          for op in payload["operations"])))
+            bound_research = action in guarded_actions and ("research_token" in payload or relation_write)
+            if action in self.WORKSPACE_MUTATING_ACTIONS or bound_research:
                 with self._workspace_lock:
+                    if bound_research and not self._research_context_matches(payload.get("research_token")):
+                        return
                     getattr(self, handler_name)(payload)
             else:
                 getattr(self, handler_name)(payload)

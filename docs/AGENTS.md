@@ -360,7 +360,17 @@ rejected, and existing whole-passage actions remain available. Preparation is
 local UI state, not a research write or a new citation/schema contract.
 The selected quote is a draft preview, not a new serialized citation selector.
 Saving uses the existing `POST /api/research-evidence-link` body with `claim_id`,
-`passage_id`, relation and optional rationale.
+`passage_id`, relation and optional rationale. Since v3.0.0, the native draft
+also submits reviewed project/snapshot/claim-revision guards and its opaque
+research-root token. **Find source passage** opens the existing source search;
+no identifier lookup, draft preparation or timeline reading saves a record.
+
+Since v3.0.0, Claims contains **List/Timeline** controls and a
+**Cause and effect claims** form. The chronology preserves authored period labels
+and keeps unplaced periods visible. Causal creation requires two distinct exact
+claim revisions, coherent selection metadata and an explicit save; retraction
+uses the shared revision editor. User text remains inert and interface labels
+come from the existing seven language packs.
 
 The optional manuscript/dossier reader reuses existing manuscript and dossier
 reading surfaces. Opening it makes no implicit dossier selection; chosen records
@@ -641,6 +651,41 @@ and dependencies. A successful probe upgrades only `ready` to `ready (probed)`;
 it does not override `partial` or `misconfigured_worker`. It is not model/GPU
 certification. See [OCR usage and limits](research/USAGE.md#native-pdfs-versus-scans).
 
+**Research API change in v3.0.0:** `list_claims(project,
+dossier_id=None)` always returns `research-claims-local/2` with `claims`,
+`project_id` and `snapshot` read from one accepted snapshot. CLI claim lists and
+HTTP claim lists use the same envelope. Consumers must update from v1; there is
+no optional alternate selection/list contract. Stored claims and archive history
+are unchanged.
+
+- `timeline(project, dossier_id=None)` returns `research-timeline-local/1`,
+  with project/snapshot metadata, `dated` and `unplaced`. Valid four-digit CE
+  years, ISO dates and same-precision ranges are placed; original `time_period`
+  labels remain, and missing/unrecognized/invalid periods carry a reason. It
+  performs no writes and infers no date from record creation timestamps.
+- `create_claim_relation(project, from_claim_id, to_claim_id, relation="causes",
+  rationale=None, from_claim_revision=None, to_claim_revision=None,
+  expected_snapshot=None, expected_project_id=None, actor="local-author")`
+  creates one authored relation with exact endpoint pins. `results_in` is an
+  input alias for `causes` in the same direction. Self-links fail; authored
+  cycles remain and do not imply transitive edges or factual proof.
+- `list_claim_relations(project, claim_id=None, include_retracted=False)` returns
+  `research-claim-relations-local/1` with project/snapshot/archive-schema metadata
+  and pinned/current endpoint revisions plus `review_needed`. Creation returns
+  `research-claim-relation-local/1`. Generic inspect/history/prepare/revise/batch
+  methods accept `kind="claim_relation"`; earlier pins and retractions remain in
+  append-only history.
+- `link_evidence` additionally accepts `expected_project_id`, `expected_snapshot`
+  and `expected_claim_revision`. Supplied guards reject changed reviewed context
+  and withdrawn evidence; these controls do not change the full citation or
+  evidence-link output schemas.
+
+Only a successful explicit causal-relation write opts storage into
+`research-local/6` and `research-manifest-local/6`; v3.0.0 or newer readers are
+then required. Existing v1–v5 archives remain readable without rewriting
+records. Export/restore keeps the same bundle format and all accepted revisions.
+See [period grammar and citation choices](research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300).
+
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 
 When running `lixity serve --port 8765`, local agents can trigger deterministic workspace actions over HTTP:
@@ -690,6 +735,37 @@ selection metadata; file edits alone do not create a content-version lock.
 - `GET /api/research/sources` and `GET /api/research/dossiers`: lists; add `?id=...` for details.
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
+
+**Since v3.0.0:**
+
+- `GET /api/research/timeline?dossier_id=...`: current claim chronology;
+  `dossier_id` is optional.
+- `GET /api/research/claim-relations?claim_id=...&include_retracted=true`:
+  recorded causal relations; both filters are optional, with retracted entries
+  omitted by default. `include_retracted` accepts `true|false`.
+- `GET /api/research/claims`: the uniform `research-claims-local/2` list above,
+  including coherent `project_id` and `snapshot` regardless of token use.
+- `POST /api/research-claim-relation`: requires `project_id`, `research_token`,
+  `expected_snapshot`, `from_claim_id`, `to_claim_id`, `from_claim_revision` and
+  `to_claim_revision`; optional `relation` (`causes|results_in`), `rationale` and
+  `actor`. It writes one explicitly reviewed causal assertion. Invalid inputs
+  return HTTP 400; changed selected context/project/snapshot returns HTTP 409.
+
+The native `#research-manager` supplies `data-research-token`, an opaque token
+derived from the selected resolved research root. It also works for research-only
+projects and distinguishes restored copies sharing an archive project ID.
+Pass it unchanged. `render_dashboard(..., research_context_token="")` accepts
+this optional renderer metadata; standalone renderers have no native selection
+token. Research GETs can include `research_token`; touched search/evidence POSTs
+can include it in their bodies to bind the selected root under the server state
+lock. New causal writes, causal record revisions and causal revision-batch
+application require that token.
+
+Evidence POST additionally accepts `project_id`, `expected_snapshot` and
+`expected_claim_revision` as explicit guards. A stale guarded choice returns
+409 without creating a link; invalid/unavailable evidence returns 400. Search
+and read operations retain their own versioned envelopes. Tokens bind the root
+selection; snapshot and revision guards bind the accepted archive context.
 
 **Since v2.4.0:** `GET /api/research/dossiers` also accepts optional
 `project_token`, using the opaque selected-manuscript metadata token described
@@ -816,7 +892,7 @@ HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 `{operations}` and `POST /api/research-revision-batch-apply` with
 `{operations, expected_snapshot}`. They return the same versioned envelope.
 
-- `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link` and `decision`.
+- `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link`, `decision` and, since v3.0.0, `claim_relation`.
 - `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
 - `POST /api/research-record-revise`: `{kind, id, changes, expected_snapshot, expected_revision, change_kind, reason}`. `change_kind` is `correction` or `supersession`; reason is required. HTTP 409 means the draft's snapshot/revision is stale; reload explicitly before deciding what to save. HTTP 400 means invalid fields; immutable/unknown fields are rejected.
 
@@ -829,14 +905,18 @@ claims and decisions. The latter citations include `evidence_link_id`,
 `evidence_link_revision` and `claim_revision`; they do not reconstruct a historical
 archive snapshot. `reference_updates` reports newer revisions of an associated
 claim or dossier without changing its pin.
+For `claim_relation`, `citation_scope` is `pinned_claim_revisions` and the view
+adds `from_claim`, `to_claim` and `review_needed`; it does not fabricate a source
+citation. Use `from_claim_revision`/`to_claim_revision` for explicit repinning.
 
 To repin explicitly, include `claim_revision` in evidence-link/decision changes
 or `dossier_revision` in claim changes. An unchanged associated ID without an
 explicit revision preserves its pin; a different ID without a revision selects
 that target's latest revision. History returns `research-history-local/1`.
-Authored record
-revisions use storage schema `research-local/2`; snapshots containing them use
-`research-manifest-local/2`. Existing revision-1 files and pinned references
+Revisions of dossiers, claims, evidence links and decisions use storage schema
+`research-local/2`; snapshots containing them require
+`research-manifest-local/2` or later. Causal relation revisions instead retain
+their `research-local/6` contract and require a v6 manifest. Existing revision-1 files and pinned references
 remain intact. Lixity 1.16.0 cannot read the resulting archive. See
 [native editing and compatibility](research/USAGE.md#native-editing-and-history).
 

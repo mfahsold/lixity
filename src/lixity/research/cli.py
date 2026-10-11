@@ -18,6 +18,7 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "review": (("text", "md", "json"), "text"),
     "compare": (("json", "md"), "json"),
     "matrix": (("md", "csv", "json"), "md"),
+    "timeline": (("text", "md", "json"), "json"),
 }
 
 
@@ -47,6 +48,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("dossier", "Create, list or inspect research dossiers"),
         ("dossier-image", "Capture a local PNG/JPEG and attach it to a dossier atomically"),
         ("claim", "Create, list or revise research claims and hypotheses"),
+        ("timeline", "Read a conservative chronology from recorded claim periods"),
+        ("relate", "Record, inspect or revise an authored cause/effect assertion between claims"),
         ("link-evidence", "Create, inspect or revise a passage-to-claim evidence link"),
         ("link", "Create an evidence link with positional PASSAGE_ID CLAIM_ID"),
         ("decision", "Create, list or revise author decisions and fact deviations"),
@@ -122,7 +125,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 command.add_argument("--allow-retention", action="store_true")
                 command.add_argument("--dry-run", action="store_true")
                 command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
-        if name in ("dossier", "claim", "link-evidence", "decision"):
+        if name in ("dossier", "claim", "link-evidence", "decision", "relate"):
             command.add_argument("--update", action="store_true", help="Revise the named record")
             command.add_argument("--prepare", action="store_true", help="Preview reconciliation with the current record; never writes")
             command.add_argument("--base-revision", type=int, help="Original revision of the draft being prepared")
@@ -164,7 +167,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--limit", type=int, choices=range(1, 101), default=20, metavar="1..100")
             command.add_argument("--strict", action="store_true", help="Fail if search index is stale instead of refreshing automatically")
         elif name == "cite":
-            command.add_argument("--passage", required=True)
+            selection = command.add_mutually_exclusive_group(required=True)
+            selection.add_argument("--passage", help="Exact retained passage UUID (historical citations supported)")
+            selection.add_argument("--query", help="Find a full source paragraph by literal keywords")
+            command.add_argument("--pick", type=int, help="Choose numbered query match; requires --expected-snapshot")
+            command.add_argument("--expected-snapshot", help="Snapshot displayed by citation search")
         elif name in ("analyze", "dashboard"):
             command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
@@ -219,6 +226,19 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--dossier-id", help="Optional associated dossier UUID")
             command.add_argument("--dossier-revision", type=int, help="Explicit dossier revision to pin on update")
             command.add_argument("--tags", help="Comma-separated tags")
+        elif name == "timeline":
+            command.add_argument("--dossier-id", help="Limit chronology to claims associated with this dossier")
+        elif name == "relate":
+            command.add_argument("from_claim_id", nargs="?", metavar="FROM_CLAIM", help="Cause claim UUID; omit both endpoints to list")
+            command.add_argument("to_claim_id", nargs="?", metavar="TO_CLAIM", help="Outcome claim UUID")
+            command.add_argument("--relation-id", help="Authored relationship UUID to inspect or revise")
+            command.add_argument("--claim-id", help="List relationships touching this claim")
+            command.add_argument("--include-retracted", action="store_true", help="Include withdrawn author interpretations in the list")
+            command.add_argument("--from-claim-revision", type=int, help="Exact cause claim revision to pin")
+            command.add_argument("--to-claim-revision", type=int, help="Exact outcome claim revision to pin")
+            command.add_argument("--relation", choices=("causes", "results_in"), help="Author assertion; results_in is an alias for causes")
+            command.add_argument("--rationale", help="Why the author proposes this connection")
+            command.add_argument("--state", choices=("active", "retracted"), help="Explicit state change on an authored revision")
         elif name == "link-evidence":
             command.add_argument("--evidence-link-id", help="Evidence-link UUID to inspect or revise")
             command.add_argument("--claim-id", help="Claim UUID")
@@ -311,6 +331,7 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
         "claim": ("title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"),
         "link-evidence": ("claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"),
         "decision": ("title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot"),
+        "relate": ("from_claim_id", "to_claim_id", "from_claim_revision", "to_claim_revision", "relation", "state", "rationale"),
     }[kind]
     changes: dict[str, Any] = {}
     for field in fields:
@@ -321,7 +342,7 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
         if field in ("tags", "evidence", "actors"):
             value = [item.strip() for item in value.split(",") if item.strip()]
         elif field in ("time_period", "place", "dossier_id", "claim_id", "impact_on_plot") or (
-            field == "rationale" and kind == "link-evidence"
+            field == "rationale" and kind in ("link-evidence", "relate")
         ):
             value = value or None
         changes[key] = value
@@ -364,10 +385,11 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     from .repository import ResearchError
 
     command = args.research_command
-    kind = "evidence_link" if command == "link-evidence" else command
+    kind = {"link-evidence": "evidence_link", "relate": "claim_relation"}.get(command, command)
     record_id = getattr(args, {
         "dossier": "dossier_id", "claim": "claim_id",
         "link-evidence": "evidence_link_id", "decision": "decision_id",
+        "relate": "relation_id",
     }[command])
     prepare = getattr(args, "prepare", False)
     if not prepare and (getattr(args, "base_revision", None) is not None or getattr(args, "resolve", None)):
@@ -376,7 +398,7 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     if (association_revision is not None or getattr(args, "dossier_revisions", None) is not None) and not (args.update or prepare):
         raise ResearchError("An explicit associated revision requires --update or --prepare")
     requested = args.update or prepare or args.history or args.inspect or args.revision is not None
-    if command in ("link-evidence", "decision") and record_id:
+    if command in ("link-evidence", "decision", "relate") and record_id:
         requested = True
     if not requested:
         return None
@@ -630,7 +652,18 @@ def run(args: argparse.Namespace) -> int:
             if not args.strict and any("refreshed" in w for w in result.get("warnings", [])):
                 print("[search] Search index was refreshed to current snapshot (use --strict to require manual reindexing)", file=sys.stderr)
         elif command == "cite":
-            result = api.cite(args.project, args.passage)
+            if args.passage:
+                if args.pick is not None or args.expected_snapshot is not None:
+                    raise ResearchError("--pick and --expected-snapshot apply only to --query")
+                result = api.cite(args.project, args.passage)
+            else:
+                from .citation_selection import resolve_query
+
+                result, selected = resolve_query(args.project, args.query, pick=args.pick,
+                                                  expected_snapshot=args.expected_snapshot)
+                if not selected:
+                    print(json.dumps(result, ensure_ascii=False, indent=2))
+                    return 1
         elif command == "analyze":
             thresholds: dict[str, Any] | None = None
             if getattr(args, "thresholds", None):
@@ -695,7 +728,7 @@ def run(args: argparse.Namespace) -> int:
                     expected_snapshot=args.expected_snapshot, actor=args.actor)
             else:
                 result = api.prepare_record_revisions(args.project, operations, actor=args.actor)
-        elif command in ("dossier", "claim", "link-evidence", "decision") and (
+        elif command in ("dossier", "claim", "link-evidence", "decision", "relate") and (
             revision_result := _revision_action(args)
         ) is not None:
             result = revision_result
@@ -748,6 +781,26 @@ def run(args: argparse.Namespace) -> int:
                 )
             else:
                 result = api.list_claims(args.project, dossier_id=getattr(args, "dossier_id", None))
+        elif command == "timeline":
+            result = api.timeline(args.project, dossier_id=args.dossier_id)
+        elif command == "relate":
+            if bool(args.from_claim_id) != bool(args.to_claim_id):
+                raise ResearchError("Supply both FROM_CLAIM and TO_CLAIM, or omit both to list relationships")
+            if args.state is not None:
+                raise ResearchError("--state requires a reviewed --update or --prepare")
+            if args.from_claim_id:
+                if args.claim_id or args.include_retracted:
+                    raise ResearchError("--claim-id and --include-retracted select lists, not new relationships")
+                result = api.create_claim_relation(args.project, args.from_claim_id, args.to_claim_id,
+                    relation=args.relation or "causes", rationale=args.rationale,
+                    from_claim_revision=args.from_claim_revision, to_claim_revision=args.to_claim_revision,
+                    expected_snapshot=args.expected_snapshot, actor=args.actor)
+            else:
+                if any(value is not None for value in (args.relation, args.rationale, args.from_claim_revision,
+                                                       args.to_claim_revision, args.expected_snapshot)):
+                    raise ResearchError("Relationship creation options require both claim endpoints")
+                result = api.list_claim_relations(args.project, claim_id=args.claim_id,
+                                                  include_retracted=args.include_retracted)
         elif command in ("link-evidence", "link"):
             if not args.claim_id or not args.passage_id:
                 names = "PASSAGE_ID and CLAIM_ID" if command == "link" else "--claim-id and --passage-id"
@@ -812,6 +865,11 @@ def run(args: argparse.Namespace) -> int:
             from .presentation import editorial_report, print_report
 
             print_report(editorial_report(result, markdown=args.format == "md"), pager=False)
+            return 0
+        if command == "timeline" and args.format != "json":
+            from .presentation import print_report, timeline_report
+
+            print_report(timeline_report(result, markdown=args.format == "md"), pager=False)
             return 0
         if command in ("sources", "audit") and getattr(args, "format", "json") != "json":
             from .presentation import audit_report, print_report, source_report

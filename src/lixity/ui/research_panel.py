@@ -7,13 +7,13 @@ from collections.abc import Mapping
 from .components import esc, help_term, label, loading_state
 
 
-def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
+def render_research_panel(labels: Mapping[str, str] | None = None, *, research_context_token: str = "") -> str:
     """Renders the local research archive panel and its tab panes."""
 
     def L(key: str) -> str:
         return esc(label(labels, key))
 
-    parts: list[str] = ['<section class="panel controls" id="research-manager">']
+    parts: list[str] = [f'<section class="panel controls" id="research-manager" data-research-token="{esc(research_context_token)}">']
     parts.append(f"<h2>{L('research_panel')}</h2>")
     parts.append('<div class="row" style="align-items:center;justify-content:space-between;margin:0;">')
     parts.append(f'<p class="ctl-note" id="research-hint" style="margin:0;">{L("research_hint")}</p>')
@@ -185,6 +185,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append('  </div>')
     parts.append('  <div class="ctl-group" style="margin-top:.8rem;">')
     parts.append(f'    <span class="ctl-label">{help_term(labels, "research_evidence", L("research_link_heading"))}</span>')
+    parts.append(f'<button type="button" class="ctl" id="r-find-passage">{L("research_find_passage")}</button>')
     parts.append('    <div class="row" style="margin-bottom:.5rem;">')
     parts.append(f'      <select class="ctl" id="r-link-claim-select" aria-label="{L("research_select_claim")}" style="min-width:220px;flex:1;"><option value="">{L("research_select_claim")}</option></select>')
     parts.append(f'      <input class="ctl ctl-code" id="r-link-passage-id" aria-label="{L("research_passage_id")}" data-help="{L("help_research_passage")}" placeholder="{L("research_passage_id")}" style="min-width:220px;flex:1;"/>')
@@ -200,7 +201,27 @@ def render_research_panel(labels: Mapping[str, str] | None = None) -> str:
     parts.append(f'      <button class="ctl primary" id="r-link-evidence-btn">{L("research_link_action")}</button>')
     parts.append('    </div>')
     parts.append('  </div>')
+    parts.append(f'<div class="row research-claim-views" role="group" aria-label="{L("research_claim_views")}">')
+    parts.append(f'<button type="button" class="ctl" id="r-claims-list" aria-pressed="true">{L("research_claim_list")}</button>')
+    parts.append(f'<button type="button" class="ctl" id="r-claims-timeline" aria-pressed="false">{L("research_claim_timeline")}</button>')
+    parts.append('</div>')
     parts.append(f'  <div id="research-claims-list">{loading_state(label(labels, "research_loading"))}</div>')
+    parts.append('<div id="research-claims-timeline" hidden aria-live="polite"></div>')
+    parts.append('<div class="ctl-group research-relation-section">')
+    parts.append(f'<h3>{L("research_relation_heading")}</h3><p class="ctl-note">{L("research_relation_hint")}</p>')
+    parts.append('<form id="r-relation-form">')
+    parts.append('<div class="research-relation-fields">')
+    for role in ("from", "to"):
+        parts.append(f'<div><label for="r-relation-{role}">{L("research_relation_" + role)}</label>')
+        parts.append(f'<select class="ctl" id="r-relation-{role}" required><option value="">{L("research_select_claim")}</option></select></div>')
+    parts.append('</div>')
+    parts.append(f'<label for="r-relation-rationale">{L("research_link_rationale")}</label>')
+    parts.append('<textarea class="ctl" id="r-relation-rationale" rows="2"></textarea>')
+    parts.append(f'<p class="ctl-note" id="r-relation-compatibility">{L("research_relation_compatibility")}</p>')
+    parts.append(f'<button type="submit" class="ctl primary" id="r-relation-save" disabled>{L("research_relation_save")}</button>')
+    parts.append('<p class="ctl-note" id="r-relation-status" role="status"></p></form>')
+    parts.append(f'<label class="form-checkbox"><input type="checkbox" id="r-relation-retracted"/> {L("research_relation_show_retracted")}</label>')
+    parts.append('<div id="research-claim-relations" aria-live="polite"></div></div>')
     parts.append('</div>')
 
     # Tab Pane: Decisions

@@ -88,4 +88,5 @@ class WorkspaceState:
             exports_dir=cls.exports_dir,
             debug=cls.debug,
             project_root=cls.get_author_project_root(),
+            research_root=cls.get_research_root(),
         )

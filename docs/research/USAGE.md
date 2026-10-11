@@ -29,6 +29,7 @@ It does not implement the entire [RFC](README.md).
 | Source listing/tagging, dossiers, scoped claims, evidence relations and authorial decisions | |
 | Structural decision-impact and editorial-review reports | |
 | Claim-evidence matrix export (`lixity research matrix`) | |
+| Claim timelines, authored causal links and keyword citation selection (since v3.0.0) | |
 | Cross-corpus linguistic grounding (`lixity research compare`) | |
 | Interactive web research panel in `lixity serve`: source/dossier details, search-to-evidence actions, dossier-linked claims, decisions | |
 
@@ -106,6 +107,142 @@ The revision and scene workflows began in v1.24.1. New checkpoint imports and
 explicit author acknowledgements are available since 2.0.0; select
 that release explicitly. Upgrading a fixed tag does not choose
 a newer release.
+
+### Claim chronology and cause/effect links (since v3.0.0)
+
+These additions are available since v3.0.0; they are not part of v2.4.0.
+
+In **Claims**, choose **Timeline** to organize the current claim revisions by
+their recorded `time_period`. **List** returns to the ordinary claim cards.
+The view preserves each period label and never substitutes the record's creation
+date. Opening or filtering the timeline changes no archive records or index.
+
+The chronology places valid four-digit CE years (`0001`–`9999`), ISO calendar
+dates (`YYYY-MM-DD`) and ranges whose endpoints have the same precision. Year
+ranges accept `-`, `–`, `—`, `/` or `..`; date ranges accept `-`, `–`, `—`, `/` or `..`.
+For example, `1912`, `1912–1914`, `1912-05-01` and
+`1912-05-01 / 1912-05-03` can be placed. Missing periods, invalid dates/reversed
+ranges and labels such as `autumn 1912`, `1912-05` or `44 BCE` remain visible
+under **Unplaced periods** with a reason. Temporal placement does not verify
+chronology or establish a historical fact.
+
+```sh
+lixity research timeline --project ./sample-project
+lixity research timeline --project ./sample-project --format text
+lixity research timeline --project ./sample-project --format md --dossier-id DOSSIER_ID
+```
+
+JSON uses `research-timeline-local/1` with `project_id`, `snapshot`, `dated` and
+`unplaced`. Entries retain claim ID/revision, title, statement, confidence,
+original period, place, actors and any dossier association. Placed entries add
+`period: {start, end, precision}`; unplaced entries add
+`reason: missing|unrecognized|invalid`. This is a projection of current claims,
+not a reconstruction of earlier timelines or a factual score.
+
+Under **Cause and effect claims**, choose the proposed cause and effect by their
+displayed claim labels, review the saved versions and optionally explain your
+interpretation, then select **Save cause/effect link**. The link is a separate
+authored `ClaimRelation`, distinct from passage-to-claim evidence links.
+`causes` is the stored relation; `results_in` is an input alias in the same
+cause-to-effect direction. Self-links are rejected. Cycles are allowed as
+explicit author assertions; no transitive or reverse links are inferred.
+
+```sh
+# Replace placeholders with complete claim IDs from research claim.
+lixity research relate --project ./sample-project FROM_CLAIM TO_CLAIM \
+  --relation causes --rationale "Author interpretation for review"
+lixity research relate --project ./sample-project
+lixity research relate --project ./sample-project --claim-id CLAIM_ID --include-retracted
+lixity research relate --project ./sample-project --relation-id RELATION_ID --inspect
+lixity research relate --project ./sample-project --relation-id RELATION_ID --history
+```
+
+New links pin the chosen claim revisions. The CLI/Python API use current
+revisions when no explicit pins are supplied; `--from-claim-revision N`,
+`--to-claim-revision N` and `--expected-snapshot DIGEST` let automation bind a
+reviewed choice. A later claim edit does not retarget a link: its earlier
+endpoint labels remain visible and `review_needed` marks newer endpoint revisions.
+Creation returns `research-claim-relation-local/1`; listing returns
+`research-claim-relations-local/1` with the project, snapshot, archive schema and
+exact endpoint/current revision information. Retracted links are omitted unless
+`--include-retracted` is supplied.
+
+Use the existing **Edit**/**Saved versions** controls or generic revision commands to
+correct endpoints, change rationale or retract an interpretation. For example:
+
+```sh
+lixity research relate --project ./sample-project --relation-id RELATION_ID --update \
+  --expected-snapshot SNAPSHOT_SHA256 --expected-revision 1 \
+  --change-kind supersession --reason "Author withdrew this interpretation" \
+  --state retracted
+```
+
+Read `snapshot` and `record.revision` from `--inspect` immediately before preparing
+an update. Retraction appends a revision; earlier active links remain in history.
+An unchanged endpoint keeps its existing pin; repinning requires an explicit
+endpoint revision. Three-way previews and atomic revision batches accept
+`kind: "claim_relation"` through the same revision machinery as other authored
+records. Archive integrity and linked evidence do not verify causality.
+
+**Archive compatibility:** the first successful explicit causal-link write uses
+`research-local/6` and promotes the manifest to `research-manifest-local/6`.
+It preserves existing source, claim, citation and revision bytes. Merely reading
+the timeline or relations does not upgrade an archive. Readers before v3.0.0
+reject a v6 manifest; back up the complete archive before opting in and use
+v3.0.0 or newer for every reader/writer afterward. Existing v1–v5 archives remain
+readable without conversion. `research export`/`restore` retain their existing
+bundle format and preserve the complete causal-link history. Do not edit HEAD
+or manifest files to downgrade.
+
+### Choose citations by keywords (since v3.0.0)
+
+In the evidence-link form, select a claim and choose **Find source passage**.
+This opens the existing Search view with **Sources** selected and keeps your
+claim choice. Search keywords, read the matches and choose **Use for claim** to
+return to the draft. Review the full retained paragraph, choose an evidence
+relation and save explicitly. Search and draft preparation accept no claim and
+write no authored record. Duplicate titles are not treated as identity.
+
+The terminal can also resolve a paragraph without typing its UUID:
+
+```sh
+lixity research cite --project ./sample-project --query "reading room"
+# For multiple matches, repeat the same query and displayed snapshot:
+lixity research cite --project ./sample-project --query "reading room" \
+  --pick 2 --expected-snapshot SNAPSHOT_SHA256
+```
+
+Exactly one match returns the existing full `research-citation-local/1`
+citation. Zero or multiple matches return the unchanged source-search
+`research-search-local/1` JSON with exit code `1`; multiple matches also print
+safe numbered choices on stderr. No best-ranked hit is accepted silently.
+`--pick` selects one of at most 20 displayed matches (`1`–`20`) and requires the
+same query plus its displayed snapshot. Changed snapshots, unavailable sources
+and out-of-range choices fail; search again before choosing. Ordinary search
+may refresh its disposable index, but citation selection creates no claim/link
+or source capture. `--passage PASSAGE_ID` remains precise retrieval of an exact
+retained citation, including historical captures. It is mutually exclusive with
+`--query`; `--pick` and `--expected-snapshot` apply only to query selection.
+
+Both routes identify the complete retained paragraph with its source version,
+hash and character offsets. They do not create sentence-level citations,
+translate quotations or change lexical search into semantic search.
+
+The native evidence draft binds its selected project, reviewed snapshot and
+claim revision. If these change before saving, review the current context rather
+than silently linking a newer claim. Python `link_evidence` accepts optional
+`expected_project_id`, `expected_snapshot` and `expected_claim_revision` guards;
+HTTP evidence creation accepts `project_id`, `research_token`, `expected_snapshot`
+and `expected_claim_revision`. Supplied guards reject changed reviewed context;
+guarded links also reject withdrawn evidence. Source withdrawal does not erase
+historical citations.
+
+**API change in v3.0.0:** `list_claims`, CLI `research claim` lists and HTTP
+`GET /api/research/claims` consistently return `research-claims-local/2` with
+`claims`, `project_id` and `snapshot` from one snapshot. Consumers of the earlier
+`research-claims-local/1` envelope must update; there is no alternate list shape.
+The stored claim records and their revision history are unchanged. Source-only
+and unified search retain their existing v1/v2 envelopes.
 
 ### Continue an interrupted source import
 
@@ -1217,6 +1354,11 @@ operation-specific envelopes, not the RFC's illustrative `research/1` bundle.
 Do not assume every command or stored record has the same schema version.
 Structured Zotero captures require `research-local/3` and v3 manifests; unified
 search uses `research-search-local/2`, while source-only search retains v1.
+
+Since v3.0.0, causal claim relations add `research-local/6` and an opt-in v6
+manifest; older readers reject it. See [chronology and causal-link compatibility](#claim-chronology-and-causeeffect-links-since-v300).
+Timeline reads, citation selection and the claims-list API change do not rewrite
+existing v1–v5 archives.
 
 Native editing in version 1.17.0 adds `research-local/2` for authored revisions and
 `research-manifest-local/2` for snapshots containing them. The first accepted edit

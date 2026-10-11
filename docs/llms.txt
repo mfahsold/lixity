@@ -7,7 +7,33 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 2.4.0; release tag: v2.4.0.
+Current release: 3.0.0; release tag: v3.0.0.
+
+Since v3.0.0: read-only claim timeline, authored cause/effect
+links and keyword citation selection. Claims lists intentionally use one
+research-claims-local/2 envelope with claims/project_id/snapshot from one read;
+update old v1 consumers. Stored claim/source/history bytes are unchanged.
+timeline returns research-timeline-local/1 with dated/unplaced current claims.
+Place only valid four-digit CE years, ISO dates and same-precision ranges;
+retain period labels and missing/unrecognized/invalid reasons. Never infer
+historical dates from creation timestamps or interpret placement as verification.
+relate creates claim_relation with exact from/to claim revision pins, canonical
+causes; results_in aliases the same direction. Reject self-links, allow authored
+cycles, infer no reverse/transitive edges or truth. Edit/retract via existing
+append-only revision/history/prepare/batch APIs. First successful explicit
+relation write uses research-local/6 and manifest/6, requiring reader>=3.0.0;
+reads leave v1–v5 archives unchanged. Existing export/restore preserves history.
+cite --query searches source paragraphs; a single hit returns research-citation-local/1.
+Zero/multiple hits return unchanged research-search-local/1 JSON, exit1;
+ambiguity prints safe numbered stderr choices. --pick N (1–20) requires the same
+query and displayed --expected-snapshot. Changed context/unavailable source
+fails; no record is created. --passage stays exact historical retrieval.
+Native Find source passage reuses Search/Sources/Use for claim and explicit save;
+full paragraph/source-version/hash/offsets remain. Optional evidence guards bind
+project/snapshot/claim revision and reject withdrawn evidence. Native root token
+binds guarded reads/writes, including research-only/restored roots; new causal
+writes/revisions require it. See the implemented research reference and
+releases/v3.0.0.md; these features are not in v2.4.0.
 
 Since v2.4.0: a compatible native server adds manuscript PDF
 downloads at the top of Manuscript & Analysis before Start your review. A5 book
@@ -96,7 +122,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from the GitHub release wheel, not PyPI:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v2.4.0/lixity-2.4.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.0/lixity-3.0.0-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -195,6 +221,11 @@ in `lixity-api-index/1`. These discovery surfaces complement the public
 - `lixity service start|stop|restart|status [--port N]`: packaged managed-app lifecycle.
 - `lixity build [FILE] [--dry-run]`: exports; unchanged input causes no writes.
 - `lixity research SUBCOMMAND --project DIR`: experimental explicit-project archive.
+- `lixity research timeline [--format json|text|md]`: conservative read-only chronology.
+- `lixity research relate [FROM_CLAIM TO_CLAIM]`: explicit causal assertion or list;
+  --relation-id with generic inspection/history/revision controls corrects/retracts.
+- `lixity research cite --query WORDS [--pick N --expected-snapshot DIGEST]`:
+  reviewed full-paragraph citation selection; --passage ID remains precise retrieval.
 - Other analyses: `dialogue`, `characters --names A,B`, `pacing`,
   `motifs --motif NAME=REGEX`, `showing` (each accepts FILE and `--json`).
 - `lixity about --json`: metadata; `lixity completion bash|zsh`: shell completion.

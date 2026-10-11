@@ -105,6 +105,7 @@ def render_dashboard(
     identity_check: Mapping[str, Any] | None = None,
     author_setting_enabled: bool = False,
     manuscript_pdf_token: str = "",
+    research_context_token: str = "",
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -115,6 +116,8 @@ def render_dashboard(
     separately from a placeholder dashboard title.
     Manuscript PDF generation requires explicit ``manuscript-pdf`` capability
     and an opaque ``manuscript_pdf_token`` for the selected server context.
+    ``research_context_token`` binds native research controls to their selected
+    research root; standalone renderers supply no guessed context.
     ``project_author`` and ``identity_check`` describe saved project identity and
     a read-only manuscript comparison. Author editing requires the explicit
     ``author_setting_enabled`` capability; its default supplies no personal name.
@@ -396,7 +399,7 @@ def render_dashboard(
         parts.append(
             f'<div class="view-pane{" active" if default_view == "research" else ""}" id="view-pane-research" data-view-pane="research" role="tabpanel" aria-labelledby="tab-view-research">'
         )
-        parts.append(render_research_panel(labels))
+        parts.append(render_research_panel(labels, research_context_token=research_context_token))
         parts.append("</div>")
         parts.append(
             '<div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">'

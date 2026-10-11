@@ -91,6 +91,27 @@ def audit_report(result: dict[str, Any], *, markdown: bool) -> str:
     return "\n".join(lines) + "\n"
 
 
+def timeline_report(result: dict[str, Any], *, markdown: bool) -> str:
+    """Render recorded periods and unplaced claims without inventing chronology."""
+    states = {"hypothetical": "Author assumption", "evidenced": "With evidence", "disputed": "Disputed"}
+    lines = ["## Claim chronology" if markdown else "Claim chronology", "",
+             "Placement follows recorded periods. Causal validity needs author review.", ""]
+    for label, entries in (("Recorded periods", result["dated"]), ("Periods to clarify", result["unplaced"])):
+        lines.extend([f"### {label}" if markdown else label, ""])
+        if not entries:
+            lines.extend(["No claims in this group.", ""])
+        for entry in entries:
+            period = _safe(entry.get("time_period") or "No period recorded", markdown=markdown)
+            title = _safe(entry["title"], markdown=markdown)
+            state = states.get(entry["confidence"], entry["confidence"])
+            lines.append(f"- {period}: {title} ({state})")
+            lines.append(f"  Claim: {_safe(entry['claim_id'], markdown=markdown)} · revision {entry['revision']}")
+            if entry.get("reason"):
+                lines.append("  Placement: " + _safe(entry["reason"], markdown=markdown))
+        lines.append("")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def editorial_report(result: dict[str, Any], *, markdown: bool) -> str:
     """Summarize structural links without presenting candidates as contradictions."""
     reasons = {

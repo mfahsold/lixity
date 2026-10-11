@@ -37,7 +37,7 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v2.4.0/lixity-2.4.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.0/lixity-3.0.0-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -48,7 +48,7 @@ lixity --version
 lixity service start --open
 ```
 
-`v2.4.0` is the release pin for this wheel installation; it needs no Git or separate Python
+`v3.0.0` is the release pin for this wheel installation; it needs no Git or separate Python
 installation. To update, stop the service and reinstall the desired release
 wheel as described in the [update reference](INSTALLATION.md#updates-and-removal).
 `uv tool upgrade lixity` retains the chosen source. `uv tool update-shell`
@@ -1282,6 +1282,52 @@ scope retains the source-only CLI contract. Run `research reindex --project
 ./novel` after changes. The dashboard's Search tab defaults to all record types.
 See the [research reference](research/USAGE.md#search-current-authored-records-since-v1190)
 for response versions and the distinction between authored records and citations.
+
+## Claim chronology, causal interpretations and keyword citations (since v3.0.0)
+
+These commands are available since v3.0.0 and are not in v2.4.0:
+
+```sh
+lixity research timeline --project ./sample-project --format text
+lixity research relate --project ./sample-project
+lixity research relate --project ./sample-project FROM_CLAIM TO_CLAIM \
+  --relation causes --rationale "Author interpretation for review"
+lixity research cite --project ./sample-project --query "reading room"
+```
+
+`timeline` is read-only, with JSON (default), text and Markdown formats and an
+optional `--dossier-id`. It places valid four-digit CE years, ISO dates and
+same-precision ranges; original labels and unplaced/invalid periods remain
+visible. Record creation dates never stand in for historical periods.
+
+`relate FROM_CLAIM TO_CLAIM` records a proposed cause-to-effect connection.
+`results_in` is an alias for stored `causes` in the same direction. Both complete
+claim IDs are required for creation; omitting them lists relations. Exact
+endpoint revision and snapshot options bind a reviewed choice. Use
+`--relation-id` with inspection/history or the existing prepare/update flags
+for correction or `--state retracted`. Pins and earlier revisions remain;
+self-links fail, cycles are allowed, and no causal truth or additional links
+are inferred. The first explicit relation write opts the archive into v6,
+which readers before v3.0.0 reject; read-only views preserve v1–v5 archives.
+
+`cite --query` searches retained source paragraphs. One match resolves a full
+citation; zero/multiple matches return source-search JSON and exit `1` without
+creating records. Multiple matches print numbered choices on stderr. Repeat the
+same query with `--pick N --expected-snapshot DIGEST` to choose one of at most
+20 matches. Changed snapshots and unavailable sources fail. `--passage` remains
+exact historical citation retrieval; it is mutually exclusive with `--query`.
+
+In the app, **Claims → Timeline** opens chronology and **Cause and effect claims**
+provides explicit relationship saving. **Find source passage** in the evidence
+form reuses Search → Sources → **Use for claim**, keeping the reviewed claim
+choice and full-paragraph draft. Changed reviewed project/snapshot/claim versions
+are rejected on guarded save. These actions do not edit manuscript text.
+
+The claims-list JSON intentionally changes to `research-claims-local/2` with
+`claims`, `project_id` and `snapshot` from one snapshot. Update consumers of the
+old v1 envelope; stored claim bytes and source-search envelopes remain unchanged.
+See the [research reference](research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300)
+for exact period grammar, archive compatibility, API guards and citation choices.
 
 ## Zotero integration (since v1.19.0)
 

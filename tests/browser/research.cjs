@@ -570,7 +570,7 @@ server.serve_forever()
     await page.unroute('**/api/research/record?*');
 
     await page.locator('[data-rtab=claims]').click();
-    await page.locator(`[data-research-revise=claim][data-record-id="${claimId}"]`).click();
+    await page.locator(`#research-claims-list [data-research-revise=claim][data-record-id="${claimId}"]`).click();
     await field('statement').fill('The archive possibly opened in 1924.');
     await chooseChange();
     await page.locator('#research-revision-save').click();
@@ -751,11 +751,11 @@ server.serve_forever()
     await page.keyboard.press('Escape');
     await page.setViewportSize({width: 1440, height: 1000});
 
-    await page.route('**/api/research/decisions', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic decision load failure'}}));
+    await page.route('**/api/research/decisions*', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic decision load failure'}}));
     await page.locator('[data-rtab=decisions]').click();
     await expect(page.locator('#research-decisions-list')).toContainText('Synthetic decision load failure');
     assert.equal(await page.locator('#research-decisions-list .research-card').count(), 0);
-    await page.unroute('**/api/research/decisions');
+    await page.unroute('**/api/research/decisions*');
 
     await page.route('**/api/research-search', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic search failure'}}));
     await page.locator('[data-rtab=search]').click();
@@ -772,13 +772,13 @@ server.serve_forever()
     await page.unroute('**/api/research-compare');
 
     // An unavailable status must not expose ingest controls or imply an empty archive.
-    await page.route('**/api/research/status', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic archive unavailable'}}));
+    await page.route('**/api/research/status*', route => route.fulfill({status: 500, json: {ok: false, message: 'Synthetic archive unavailable'}}));
     await page.reload();
     await expect(page.locator('#research-status-bar')).toContainText('Synthetic archive unavailable');
     await expect(page.locator('#research-init-box')).not.toBeVisible();
     await expect(page.locator('#research-tabs')).not.toBeVisible();
     assert.equal(await page.locator('.research-tab-pane:visible').count(), 0, 'Unavailable research must hide all tab panes');
-    await page.unroute('**/api/research/status');
+    await page.unroute('**/api/research/status*');
     await page.reload();
     await expect(page.locator('#research-tabs')).toBeVisible();
 
@@ -811,7 +811,7 @@ server.serve_forever()
           future_state: 'OCR-Status unbekannt'
         };
         for (const [status, label] of Object.entries(ocrStates)) {
-          await page.route('**/api/research/status', async route => {
+          await page.route('**/api/research/status*', async route => {
             const response = await route.fetch();
             const body = await response.json();
             body.ocr = {status, guidance: ['English backend guidance must not leak']};
@@ -825,13 +825,13 @@ server.serve_forever()
             await page.locator('[data-rtab="sources"]').click();
             await page.locator('#research-manager').screenshot({path: path.join(artifacts, 'ocr-origin-de-320.png')});
           }
-          await page.unroute('**/api/research/status');
+          await page.unroute('**/api/research/status*');
         }
         for (const [status, expectedLabel, missing] of [
           ['ready', 'Lokale Texterkennung konfiguriert', []],
           ['misconfigured_backend', 'Lokale OCR-Einrichtung unvollständig', ['deu']]
         ]) {
-          await page.route('**/api/research/status', async route => {
+          await page.route('**/api/research/status*', async route => {
             const response = await route.fetch();
             const body = await response.json();
             body.ocr = {status, backend: 'tesseract', requested_languages: ['deu', 'eng'],
@@ -849,7 +849,7 @@ server.serve_forever()
             assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `Tesseract status overflows at ${width}px`);
             await page.locator('#r-ocr-diagnostic-box').screenshot({path: path.join(artifacts, `ocr-tesseract-${status}-${width}.png`)});
           }
-          await page.unroute('**/api/research/status');
+          await page.unroute('**/api/research/status*');
         }
         await page.reload();
         await page.locator('[data-rtab=grounding]').click();

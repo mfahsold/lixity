@@ -1,4 +1,4 @@
-"""Opaque selection tokens shared by native PDF downloads and dashboard rendering."""
+"""Opaque metadata tokens for selected manuscript and research contexts."""
 
 from __future__ import annotations
 
@@ -8,6 +8,19 @@ from dataclasses import asdict
 from pathlib import Path
 
 from ..style_fingerprint import FingerprintThresholds
+
+
+def research_context_token(project_root: str | Path | None) -> str:
+    """Identify the selected archive root, including research-only workspaces.
+
+    This is a context guard, not an authentication credential or content digest.
+    Restored copies can share a project ID and snapshot while having different
+    selected roots; a stale tab must not write to a different selected copy.
+    """
+    if project_root is None:
+        return ""
+    context = {"research_root": str(Path(project_root).resolve())}
+    return hashlib.sha256(json.dumps(context, sort_keys=True).encode("utf-8")).hexdigest()
 
 
 def manuscript_pdf_token(

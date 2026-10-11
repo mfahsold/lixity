@@ -7,6 +7,33 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [3.0.0] - 2026-10-11
+
+### Added
+- Read-only claim timelines in the CLI, Python API, HTTP API and native Claims
+  view. Conservative CE year/ISO date/range placement preserves period labels,
+  keeps unplaced periods visible and infers no date from record creation time.
+- Authored cause/effect relations between exact claim revisions, with optional
+  rationale, active/retracted state and shared correction/history/batch support.
+  `results_in` aliases stored `causes` in the same direction; self-links fail,
+  authored cycles remain, and no causal truth or additional edges are inferred.
+- `research cite --query` resolves one source paragraph or returns ambiguous
+  search candidates. Numbered selection requires the displayed snapshot and
+  same query; exact `--passage` retrieval remains available.
+- **Find source passage** reuses the existing Search/evidence draft flow.
+  Optional evidence project/snapshot/claim-revision guards and native root
+  tokens reject changed reviewed context; delayed search results are discarded.
+
+### Changed
+- **Breaking API change:** claims lists now consistently use
+  `research-claims-local/2` with `claims`, `project_id` and `snapshot` from one
+  read. The previous v1 list envelope has no alternate compatibility mode.
+- Explicit causal relation writes opt storage into `research-local/6` and a
+  v6 manifest, which earlier readers reject. Existing v1–v5 archives and their
+  source/claim/citation/history bytes remain readable without conversion;
+  timeline reads do not upgrade them. Export/restore preserves the existing
+  bundle format and complete relation history.
+
 ## [2.4.0] - 2026-10-11
 
 ### Added
@@ -1634,7 +1661,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v2.4.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v3.0.0...HEAD
+[3.0.0]: https://github.com/mfahsold/lixity/compare/v2.4.0...v3.0.0
 [2.4.0]: https://github.com/mfahsold/lixity/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/mfahsold/lixity/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/mfahsold/lixity/compare/v2.1.0...v2.2.0
