@@ -45,6 +45,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Optional `project_token` on dossier reads binds the companion reader to the
   displayed manuscript selection. Calls without it retain their existing JSON.
 
+### Fixed
+- Local HTTP startup no longer performs reverse DNS after binding. This removes
+  a confirmed macOS startup stall while preserving the actual bound port and
+  readiness checks for foreground and managed servers.
+
 ## [2.3.0] - 2026-10-10
 
 ### Added

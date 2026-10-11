@@ -1342,7 +1342,7 @@ class TestLixityServer(unittest.TestCase):
                     (project / "manuscript.md").write_text("## Chapter\n\nSynthetic text.\n", encoding="utf-8")
                     (project / "lixity.toml").write_text(f'title = "{title}"\n', encoding="utf-8")
                 with (
-                    patch("lixity.server.runtime.ThreadingHTTPServer", side_effect=RuntimeError("stop before bind")),
+                    patch("lixity.server.runtime._LoopbackHTTPServer", side_effect=RuntimeError("stop before bind")),
                     self.assertRaisesRegex(RuntimeError, "stop before bind"),
                 ):
                     # An explicit free port: run_server now probes the port before

@@ -8,12 +8,23 @@ import sys
 import webbrowser
 from collections.abc import Callable, Mapping
 from http.server import ThreadingHTTPServer
+from socketserver import TCPServer
 from typing import Any
 
 from ..style_fingerprint import FingerprintThresholds
 from ..workspace import discover
 from .constants import DEFAULT_HOST, DEFAULT_PORT
 from .handler import LixityServerHandler
+
+
+class _LoopbackHTTPServer(ThreadingHTTPServer):
+    """Bind the validated local address without an unnecessary reverse-DNS lookup."""
+
+    def server_bind(self) -> None:
+        host = self.server_address[0]
+        TCPServer.server_bind(self)
+        self.server_name = str(host)
+        self.server_port = self.server_address[1]
 
 
 def run_server(
@@ -99,7 +110,7 @@ def run_server(
     LixityServerHandler.thresholds = thresholds or FingerprintThresholds()
     LixityServerHandler.refresh()
 
-    server = ThreadingHTTPServer((host, port), LixityServerHandler)
+    server = _LoopbackHTTPServer((host, port), LixityServerHandler)
     url = f"http://{host}:{port}/"
     info = LixityServerHandler.dashboard_info
     debug_tag = " (debug mode active)" if is_debug else ""
