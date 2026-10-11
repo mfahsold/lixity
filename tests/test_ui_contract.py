@@ -87,7 +87,7 @@ def _full_dashboard(enabled_actions: tuple[str, ...] | None = None) -> str:
         showing=showing_report(text, config, metrics=metrics).to_dict(),
         title="Testroman",
         controls=True,
-        enabled_actions=enabled_actions,
+        **({"enabled_actions": enabled_actions} if enabled_actions is not None else {}),
     )
 
 
