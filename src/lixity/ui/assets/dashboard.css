@@ -151,6 +151,11 @@ h2, .section-heading, .settings-form h3 {
 .review-route h3 { margin: 0; font-size: var(--text-body); }
 .review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
 .review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: auto; text-decoration: none; }
+.manuscript-pdf-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: .8rem 1rem; }
+.manuscript-pdf-actions .setting-field { flex: 1 1 18rem; max-width: 28rem; min-width: 0; }
+.manuscript-pdf-actions .ctl { max-width: 100%; white-space: normal; }
+.manuscript-pdf .ctl-status { overflow-wrap: anywhere; }
+.manuscript-pdf .ctl:disabled { cursor: default; }
 .welcome-more > summary { cursor: pointer; font-size: var(--text-small); min-height: 2.75rem; align-content: center; }
 
 /* --- Component status strip (one glance, deterministic) --------------- */
@@ -1191,6 +1196,15 @@ details.nda .row { margin-top: .5rem; }
   font-size: .84rem;
 }
 .research-passage-quote { font-style: italic; margin-bottom: .25rem; white-space: pre-wrap; }
+.selection-toolbar { position: sticky; top: .75rem; z-index: 8; display: flex; flex-wrap: wrap; gap: .6rem; padding: .65rem; margin: .75rem 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.selection-toolbar .ctl { max-width: 100%; white-space: normal; }
+.selection-toolbar .selection-reading { flex: 1 1 18rem; min-width: 0; margin: 0; }
+.selection-draft { display: grid; gap: .6rem; margin: .6rem 0; padding: .8rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.selection-draft > * { min-width: 0; margin: 0; }
+.selection-quote, .selection-context { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 12rem; overflow: auto; padding: .5rem .7rem; border-left: 3px solid var(--accent); }
+.selection-technical { min-width: 0; max-width: 100%; }
+.selection-technical summary { cursor: pointer; }
+.selection-technical input { max-width: 100%; }
 mark.search-hit {
   background: rgba(255, 214, 0, 0.35);
   color: inherit;

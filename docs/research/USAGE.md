@@ -39,6 +39,69 @@ search. The research CLI's help and errors are English.
 
 ## Research workflows
 
+### Reading and CLI workflows (since v2.4.0)
+
+The v2.3.0 research CLI uses explicit `--project` arguments. Since v2.4.0,
+commands using an existing archive have a bounded shortcut: omit
+`--project` only when the current working directory is itself a validated,
+initialized research project. It does not search parent directories or use
+environment, global configuration or the last project opened in the browser.
+An explicit `--project` remains authoritative. `research init` still requires
+`--project`; restore commands keep their explicit `--to` destination. `schema`
+and `ocr-status` keep their existing behavior. Python and HTTP research APIs
+remain explicitly project-scoped.
+
+```sh
+cd ./novel
+lixity research sources --format text
+lixity research search --query "reading room"
+lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID \
+  --relation contextualizes --rationale "Background context for review"
+```
+
+`research link PASSAGE_ID CLAIM_ID` creates an evidence link through the existing
+writer. Pass the full IDs returned by source search and claim listing, in that
+order; abbreviations and reversed arguments are not inferred. The default
+relation is `supports`; alternatives are `contradicts`, `qualifies` and
+`contextualizes`. Optional `--rationale`, `--reviewer` and `--actor` record your
+interpretation and authorship. `link-evidence` remains available for creation,
+inspection and revisions, with its existing output and validation contracts.
+
+In an opened source reader, select text within one uniquely resolved retained
+paragraph to prepare the existing claim evidence-link form. Review the selected
+quote and complete paragraph context, choose a claim and relation, and save
+separately. The reference still identifies the complete retained source paragraph;
+it does not create a sentence-level passage ID or narrower citation selector.
+Cross-paragraph or ambiguous selections are rejected. The Passages view retains
+whole-passage actions for claims and dossiers, including as a touch fallback.
+Selecting text or preparing the draft writes no record and establishes no claim.
+
+In **Manuscript & Analysis**, open **Dossier alongside**, then choose a dossier.
+The view starts closed and does not select a dossier automatically. A dossier
+card can also open that chosen dossier beside the manuscript. The companion
+reader is read-only and does not edit either text, link evidence automatically
+or change the manuscript's statistical baseline. While open, it focuses the
+manuscript chapters, search and filters; other analysis panels are temporarily
+hidden. Closing it restores those panels and preserves the
+manuscript's search and open paragraphs. Its state lasts for the current page;
+refresh explicitly to read the latest saved dossier revision. Desktop reading
+areas sit beside one another with independent scrolling; screens at or below
+900 pixels stack the dossier above the manuscript.
+
+The **Author review state** field describes your assessment of a claim's support:
+
+| English interface label | Stored value |
+| --- | --- |
+| Author assumption | `hypothetical` |
+| With evidence | `evidenced` |
+| Disputed | `disputed` |
+
+Stored values remain unchanged; neither the labels nor an evidence link establish
+historical certainty or a calculated probability. A chosen **With evidence** state
+does not require an evidence link or verify the source. Archive formats,
+immutable paragraph citations and existing JSON
+contracts remain unchanged by these workflow additions.
+
 The revision and scene workflows began in v1.24.1. New checkpoint imports and
 explicit author acknowledgements are available since 2.0.0; select
 that release explicitly. Upgrading a fixed tag does not choose
@@ -112,7 +175,9 @@ sources, audit, review, decision-impact, compare and matrix. Human-facing defaul
 remain command-specific; `lixity about --json` reports the parser's supported
 formats and defaults. The local HTTP server exposes its supported route registry
 at `GET /api`, even before a project is loaded. HTTP research responses are JSON;
-the NDA draft endpoint explicitly downloads PDF or UTF-8 text.
+the NDA draft endpoint explicitly downloads PDF or UTF-8 text. Since v2.4.0, the
+manuscript PDF endpoint is also a binary attachment workflow, separate from
+research source import and OCR; see [manuscript PDF downloads](../USAGE.md#download-a-manuscript-pdf-since-v240).
 
 ### Resolve conflicting drafts
 

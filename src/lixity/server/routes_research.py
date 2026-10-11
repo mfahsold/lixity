@@ -11,6 +11,7 @@ import base64
 import binascii
 import contextlib
 import os
+import re
 import tempfile
 from pathlib import Path
 from typing import Any
@@ -20,6 +21,7 @@ from ..research import api as research_api
 from ..research.limits import MAX_IMAGE_BYTES
 from ..research.repository import ResearchConflictError, ResearchError
 from ._base import ResponseMixin
+from .pdf_context import manuscript_pdf_token
 
 RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decision"))
 
@@ -148,11 +150,31 @@ class ResearchRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": str(exc)}, 400)
 
     def _handle_research_dossiers(self) -> None:
+        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
+        if "project_token" in query:
+            tokens = query["project_token"]
+            if len(tokens) != 1 or not re.fullmatch(r"[0-9a-f]{64}", tokens[0]):
+                self._json({"ok": False, "message": "A valid selected project token is required"}, 400)
+                return
+            # Bind companion reads to the displayed manuscript while selection
+            # commits use the same lock. Legacy reads retain their old contract.
+            with self._workspace_lock:
+                current_token = manuscript_pdf_token(
+                    self.source_input, project_root=self.workspace_root,
+                    language=self.language, title=self.title, thresholds=self.thresholds,
+                )
+                if tokens[0] != current_token:
+                    self._json({"ok": False, "message": "The selected project changed; reload before reading"}, 409)
+                    return
+                self._read_research_dossiers(query)
+            return
+        self._read_research_dossiers(query)
+
+    def _read_research_dossiers(self, query: dict[str, list[str]]) -> None:
         root = self.get_research_root()
         if not root or not (root / "research").is_dir():
             self._json({"ok": False, "message": "Research project not initialized"}, 404)
             return
-        query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         dossier_id = query.get("id", [None])[0]
         try:
             if dossier_id:

@@ -18,6 +18,9 @@ node tests/browser/layout.cjs
 node tests/browser/research.cjs
 node tests/browser/list-filters.cjs
 node tests/browser/manuscript-search.cjs
+node tests/browser/manuscript-pdf.cjs
+node tests/browser/workspace-reader.cjs
+node tests/browser/research-selection.cjs
 node tests/browser/project-controls.cjs
 node tests/browser/scenes.cjs
 node tests/browser/docs.cjs
@@ -69,6 +72,26 @@ payload, persistent New/Open/guidance across the three views, and the initially
 explicit NDA capability gating. Its synthetic examples and intercepted
 requests exercise desktop/mobile layouts and seven languages; screenshots stay
 under `/tmp/lixity-project-controls-*`.
+
+The manuscript-pdf suite checks the native manuscript download controls in all
+seven locales at 1440 and 320 pixels. It verifies explicit project-bound requests,
+exact downloaded bytes for book, sheet and report layouts, pending controls,
+inert error messages, refused non-PDF responses and retry without losing the
+chosen layout. Empty projects keep a disabled action; standalone and embedding
+reports without the capability expose none, and disabled JavaScript prevents
+incomplete form submission. HTTP responses and PDF bytes are
+synthetic; real PDF composition is covered by the backend export tests. Screenshots
+and downloaded fixtures stay under `/tmp/lixity-manuscript-pdf-*`.
+
+The workspace-reader suite checks the optional manuscript/dossier companion
+view in seven locales at desktop and mobile widths. It verifies context-bound
+reads, a read-only dossier, safe rendering, retry, restored analysis panels and
+retained manuscript state. Screenshots stay under `/tmp/lixity-workspace-reader-*`.
+
+The research-selection suite uses a disposable synthetic archive to select
+source text and prepare an evidence draft. It checks selection boundaries,
+Unicode offsets, unavailable sources, project changes, explicit save and the
+full retained passage's immutable citation. Screenshots and fixtures stay in `/tmp`.
 
 The research suite also exercises native record revisions: edit and history for dossiers,
 claims, evidence links and decisions; cancellation; concurrent and failed saves

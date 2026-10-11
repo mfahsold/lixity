@@ -220,7 +220,7 @@ class TestDossierImageCLI(unittest.TestCase):
                     self.assertIsNone(api.get_source(self.project, capture["source_id"])["context"]["provenance_note"])
 
     def test_missing_required_cas_or_identity_arguments_fail_before_writing(self):
-        for option in ("--project", "--dossier-id", "--file", "--expected-snapshot", "--expected-revision"):
+        for option in ("--dossier-id", "--file", "--expected-snapshot", "--expected-revision"):
             with self.subTest(option=option):
                 arguments = [*self.arguments(), "--allow-retention"]
                 offset = arguments.index(option)
@@ -231,6 +231,27 @@ class TestDossierImageCLI(unittest.TestCase):
                 self.assertEqual(output, "")
                 self.assertIn(option, error)
                 self.assert_unchanged(snapshot)
+
+    def test_omitted_project_rejects_uninitialized_cwd_without_writing(self):
+        arguments = [*self.arguments(), "--allow-retention"]
+        offset = arguments.index("--project")
+        del arguments[offset:offset + 2]
+        snapshot = Repository(self.project).snapshot().digest
+        before = {str(path.relative_to(self.directory)): None if path.is_dir() else path.read_bytes()
+                  for path in self.directory.rglob("*")}
+        # The archive is in a child folder; current-directory resolution must
+        # not choose that archive or create one beside the input image.
+        with patch("lixity.research.cli.Path.cwd", return_value=self.directory):
+            status, output, error = self.invoke(arguments)
+        self.assertEqual(status, 1)
+        self.assertEqual(output, "")
+        self.assertIn("current directory", error)
+        self.assertIn("--project", error)
+        self.assertEqual(before, {
+            str(path.relative_to(self.directory)): None if path.is_dir() else path.read_bytes()
+            for path in self.directory.rglob("*")
+        })
+        self.assert_unchanged(snapshot)
 
     def test_about_advertises_the_native_json_command(self):
         research = next(command for command in about()["commands"] if command["name"] == "research")

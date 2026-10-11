@@ -7,6 +7,36 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [2.4.0] - 2026-10-11
+
+### Added
+- Native manuscript PDF downloads at the top of Manuscript & Analysis, with
+  A5 reading layout as the default, A4 submission sheet and analysis report.
+  Generation is explicit and reuses the CLI composer; standalone HTML has no
+  download action. PDF attachments create no server export files and change no
+  manuscript or research archive.
+- `POST /api/manuscript-pdf` accepts a layout and opaque selected-context token,
+  rejecting stale contexts instead of exporting a different project's manuscript.
+  The response is a PDF attachment, separate from NDA generation.
+- Source text selection prepares a claim evidence-link draft with the selected
+  text and full retained passage shown before an explicit save. Ambiguous or
+  cross-passage selections are refused; citations retain their existing scope.
+- An optional Dossier alongside view keeps the manuscript and a chosen saved
+  dossier together, with stacked panes on narrow screens. Reading creates no
+  archive changes; closing restores analysis panels and retained manuscript state.
+- `lixity research link PASSAGE_ID CLAIM_ID` creates an evidence link using the
+  existing validation, defaults and version pins. `link-evidence` remains available.
+
+### Changed
+- Existing-archive research CLI commands can omit `--project` when the current
+  directory itself contains a verified initialized archive. Explicit paths win;
+  no parent, environment or previous-project lookup is performed. Initialization
+  and restore destinations remain explicit.
+- Research status labels use author-facing language while preserving stored
+  values and their interpretation limits; a linked source is not factual proof.
+- Optional `project_token` on dossier reads binds the companion reader to the
+  displayed manuscript selection. Calls without it retain their existing JSON.
+
 ## [2.3.0] - 2026-10-10
 
 ### Added
@@ -1591,7 +1621,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v2.3.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v2.4.0...HEAD
+[2.4.0]: https://github.com/mfahsold/lixity/compare/v2.3.0...v2.4.0
 [2.3.0]: https://github.com/mfahsold/lixity/compare/v2.2.0...v2.3.0
 [2.2.0]: https://github.com/mfahsold/lixity/compare/v2.1.0...v2.2.0
 [2.1.0]: https://github.com/mfahsold/lixity/compare/v2.0.0...v2.1.0

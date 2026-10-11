@@ -32,7 +32,7 @@
   "name": "Lixity",
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "2.3.0",
+  "softwareVersion": "2.4.0",
   "description": "Local manuscript analysis, passage search, PDF reports and reading copies, and a traceable research workspace for authors, editors and researchers.",
   "url": "https://mfahsold.github.io/lixity/",
   "codeRepository": "https://github.com/mfahsold/lixity",
@@ -51,7 +51,7 @@
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v2.3.0</span></a>
+    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v2.4.0</span></a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="guides/first-look.html">First look</a>
       <a href="#visual-suite">Features</a>
@@ -72,7 +72,7 @@
       <a class="btn" href="guides/first-look.html">Three-minute first look</a>
     </div>
     <p>Explore an invented manuscript in a read-only report. No installation, account or manuscript upload. <a href="guides/installation.html">Install Lixity for your own writing</a>.</p>
-    <p class="release-note">Current release: <a href="releases/v2.3.0.md">v2.3.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
+    <p class="release-note">Current release: <a href="releases/v2.4.0.md">v2.4.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
     <p class="release-note">In 2.3.0: explore the public example before installing, and attach image references to dossiers from the CLI through the same guarded workflow as the app. <a href="research/USAGE.md#keep-a-visual-reference-in-a-dossier">Read the image workflow</a>.</p>
     <p class="license-note">Free for projects with no commercial purpose. Books intended for sale, including self-publishing, need a separate written commercial license. <a href="#licensing">License details</a>.</p>
   </section>
@@ -136,6 +136,7 @@
         <p>Bring sources from local files or Zotero Desktop. PDF scans can use locally installed Tesseract or a configured OCR worker. Saving a source does not establish that it is true.</p>
         <p>Review conflicting edits with guided previews, inspect <a href="screenshots/dashboard-research-change-set.png">grouped revisions</a> before saving, and follow decision links in the review view. <a href="research/USAGE.md#research-workflows">Read the workflows</a>.</p>
         <p>Add a local PNG/JPEG with a description, edit one dossier section, or start a linked claim or decision from the current topic. Saved images keep their exact version; they have no text scores and are never fetched from remote pages.</p>
+        <p><strong>Since v2.4.0:</strong> selected source text can prepare an evidence-link draft with the whole-paragraph citation context shown before saving. Read a chosen dossier beside the manuscript with the optional read-only <strong>Dossier alongside</strong> view. <a href="guides/research-pdf.html#evidence-draft">Follow the reading and evidence workflow</a>.</p>
         <a href="guides/research-pdf.html">Follow the research workflow</a>
       </div>
       <figure class="shot">
@@ -162,6 +163,7 @@
         <h2>Read a report in the terminal</h2>
         <p>Run <code>lixity analyze manuscript.md --language de</code> for a readable report. Other commands examine paragraphs, dialogue, pacing, style and research records.</p>
         <p>Export an A4 analysis report, an A5 reading copy or an A4 submission sheet with <code>lixity pdf</code>. Fonts are embedded and the text stays searchable; the renderer provides reading layouts without PDF/X production preflight. <a href="USAGE.md#lixity-pdf">Choose a PDF layout</a>.</p>
+        <p><strong>Since v2.4.0:</strong> the native workspace also offers manuscript PDF downloads at the top of Manuscript &amp; Analysis. Choose a layout in <strong>PDF export</strong> and select <strong>Download PDF</strong>. <a href="guides/research-pdf.html#manuscript-export">Find the manuscript PDF workflow</a>.</p>
         <p>For software integration, use JSON output or the Python API. Both share the dashboard's analysis pipeline.</p>
         <a href="USAGE.md">Browse the command reference</a>
       </div>
@@ -185,7 +187,7 @@
   <section id="installation" class="reading-section">
     <h2>Install the current release</h2>
     <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> and Git. The <a href="guides/installation.html">installation guide</a> explains how to get them on Windows, macOS and Linux.</p>
-    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.3.0"
+    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
 lixity --version
 lixity build manuscript.md --language de</pre>
     <p>Open <code>exports/manuscript_dashboard.html</code> in your browser. Use <code>--language en</code> for English. English is the default when no language is selected; detection requires <code>--language auto</code>.</p>

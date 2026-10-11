@@ -9,7 +9,9 @@ DEFAULT_HOST = "127.0.0.1"
 LANGUAGE_CHOICES = ("auto", "de", "en", "fr", "es", "it", "pt", "nl", "generic")
 
 # Native UI capabilities, also used by synthetic documentation captures.
-NATIVE_UI_ACTIONS = ("analyze", "nda-draft", "research-image-ingest", "research-dossier-image")
+NATIVE_UI_ACTIONS = (
+    "analyze", "nda-draft", "manuscript-pdf", "research-reader", "research-image-ingest", "research-dossier-image",
+)
 
 MIME_TYPES = {
     ".html": "text/html; charset=utf-8",

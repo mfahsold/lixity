@@ -24,6 +24,7 @@ from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
 from ..ui import render_dashboard
 from .constants import NATIVE_UI_ACTIONS
+from .pdf_context import manuscript_pdf_token
 
 MAX_ARTIFACT_BYTES = 200 * 1024 * 1024  # 200 MB
 
@@ -201,6 +202,10 @@ def build_server_dashboard(
         project_author=project_author,
         identity_check=identity_check,
         author_setting_enabled=bool(source_input or project_root is not None),
+        manuscript_pdf_token=manuscript_pdf_token(
+            source_input, project_root=project_root, language=language,
+            title=title, thresholds=resolved_thresholds,
+        ) if manuscript_readable and not is_empty else "",
     )
 
     info = {

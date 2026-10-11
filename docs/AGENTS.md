@@ -38,8 +38,19 @@ Since v1.16.0, `lixity research` provides a separate experimental
 source archive and lexical search API, extended in v1.17.0 with native revision
 editing, self-hosted OCR extraction, offline diagrams, and archive export/restore.
 See [research usage](research/USAGE.md) for implemented commands and `*-local/1` / `*-local/2` schemas.
-Every project is explicit; ingestion requires retention permission. Results remain
+Every operation targets a selected project; ingestion requires retention permission. Results remain
 unreviewed, not accepted claims or author decisions. The RFC also describes future interfaces.
+
+**Since v2.4.0:** existing-archive research CLI commands may omit
+`--project` only when the current working directory itself validates as an
+initialized archive. Explicit arguments take precedence; no ancestor,
+environment, global-config or last-opened-project fallback is used. `init` keeps
+its required project argument, restore keeps `--to`, and `schema`/`ocr-status`
+retain their behavior. Python/HTTP project selection remains explicit.
+`research link PASSAGE_ID CLAIM_ID` is a create-only shortcut to `link-evidence`,
+using full IDs in that order and defaulting to `supports`. Other relations,
+rationale, reviewer and actor reuse existing evidence-link validation and output.
+It emits JSON; `link-evidence` retains inspection and revision operations.
 
 For installation, version verification, updates and Python environment isolation,
 use [INSTALLATION.md](INSTALLATION.md). Do not assume a CLI tool environment
@@ -315,6 +326,38 @@ Without JavaScript, all available panels remain readable and native
 chapter-score links continue to work. Existing analysis JSON contracts and
 server action payloads are unchanged.
 
+**Since v2.4.0:** a compatible native server exposes a manuscript PDF
+form before `#analysis-review`. It defaults to `book` (A5 reading layout), with
+`sheet` (A4 submission sheet) and `report` (A4 analysis report) alternatives.
+Generation is explicit, returns a PDF attachment and writes no server export,
+manuscript or research archive files. Standalone HTML has no manuscript PDF
+download action. Rendering requires `controls` plus the explicit
+`manuscript-pdf` capability; download controls are disabled without paragraphs
+and a nonempty `manuscript_pdf_token`. The native browser action requires
+JavaScript. This is separate from the existing `nda-draft` form.
+
+**Since v2.4.0:** source-text selection prepares an evidence-link
+draft only when it resolves to one retained paragraph. The draft exposes the
+selected quote and full citation context; the saved reference still pins that
+paragraph and its source version. Cross-paragraph/ambiguous selections are
+rejected, and existing whole-passage actions remain available. Preparation is
+local UI state, not a research write or a new citation/schema contract.
+The selected quote is a draft preview, not a new serialized citation selector.
+Saving uses the existing `POST /api/research-evidence-link` body with `claim_id`,
+`passage_id`, relation and optional rationale.
+
+The optional manuscript/dossier reader reuses existing manuscript and dossier
+reading surfaces. Opening it makes no implicit dossier selection; chosen records
+are read through existing research endpoints, with no write controls or automatic
+evidence links. It requires a loaded manuscript, explicit `research-reader`
+capability and a nonempty opaque selected-context token. Without them, controls
+are disabled and no unguarded legacy GET is used. While open it hides other
+analysis panels through presentation state and focuses the existing chapters,
+search and filters. Its state lasts for the current page; closing it restores
+the panels and preserves manuscript search and expansion. Display evidence-status
+labels do not rename stored `hypothetical|evidenced|disputed` values or establish
+historical certainty.
+
 | Hook | Meaning |
 |---|---|
 | `data-jump="<anchor>"` | scroll to a panel/row/column and flash it (`#feat-<field>` = heatmap column) |
@@ -329,6 +372,10 @@ server action payloads are unchanged.
 | `.paragraph-values > summary` | native disclosure for source lines and measurements in an opened paragraph |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
+| `#manuscript-pdf-form` / `data-project-token` | native PDF form (since v2.4.0) and opaque selected-context token; the client submits `layout` and this token explicitly |
+| `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region (since v2.4.0) |
+| `#workspace-reader-toggle` / `#workspace-reader-panel` | opt-in **Dossier alongside** view (since v2.4.0); closing it preserves the existing manuscript DOM/state |
+| `#workspace-reader-dossier` / `#workspace-reader-refresh` / `#workspace-reader-status` / `#workspace-reader-body` | selected dossier, explicit refresh, live status and read-only rendered body (since v2.4.0) |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
 | `data-marker-kind="<kind>"` / `data-marker-resolve="<id>"` | set/resolve a work marker (inline note field); **never scrolls** – marker controls are excluded from jump activation |
 | `role="button" tabindex="0"` | every clickable non-native target (KPI tile, band row, loading bar, table row, heatmap cell) |
@@ -590,6 +637,24 @@ server. Use `POST /api/project-open`, or **Open Project** in the app, to switch
 that server's workspace. The native `serve` command accepts a positional project
 or manuscript path, not `--project` / `--manuscript` flags.
 
+**Since v2.4.0:** `POST /api/manuscript-pdf` accepts
+`{"layout": "book", "project_token": "<opaque current-context token>"}`.
+Layouts are `book`, `sheet` and `report`. The token belongs to the selected
+manuscript context and must be passed unchanged; stale context is rejected
+instead of exporting another project's manuscript. The response is binary
+`application/pdf` with an attachment filename, not a JSON record envelope.
+The rendered `#manuscript-pdf-form` supplies the token in `data-project-token`.
+It identifies selected server metadata, not manuscript contents; generation
+reads the selected file when requested rather than retaining the rendered text.
+Generation uses the shared CLI composer,
+creates no server export files and mutates no manuscript or research archive.
+This endpoint was added in v2.4.0; v2.3.0 provides the `lixity pdf` terminal
+interface only.
+Invalid inputs or an unavailable/unrenderable manuscript return HTTP 400;
+changed selected context returns HTTP 409. Successful downloads use
+`<manuscript-slug>-<layout>.pdf` as the attachment filename. The token binds
+selection metadata; file edits alone do not create a content-version lock.
+
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, entries: [{name, path, kind}], truncated}`, where `kind` is `directory` or `manuscript`. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
 - `POST /api/project-create`: `{"title": "...", "language": "de", "template": "three_act", "init_research": true}`
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
@@ -609,6 +674,12 @@ or manuscript path, not `--project` / `--manuscript` flags.
 - `GET /api/research/sources` and `GET /api/research/dossiers`: lists; add `?id=...` for details.
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
+
+**Since v2.4.0:** `GET /api/research/dossiers` also accepts optional
+`project_token`, using the opaque selected-manuscript metadata token described
+above. The companion reader supplies it to bind reads to the shown manuscript.
+Invalid tokens return HTTP 400 and changed selected context returns HTTP 409.
+Calls without the parameter retain their existing behavior and JSON envelope.
 
 Dossier detail GET additionally accepts `section=Heading` and positive `revision=N`
 for a bounded exact-version read. Full/section/summary reads include `project_id`,

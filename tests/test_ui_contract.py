@@ -54,7 +54,7 @@ SAMPLE = (
 )
 
 
-def _full_dashboard() -> str:
+def _full_dashboard(enabled_actions: tuple[str, ...] | None = None) -> str:
     # Three complete, varying chapters exercise the optional rank-space panel.
     complete = SAMPLE.replace(
         "## Kap 2", "Ich schaue hinaus. Vor dem Fenster ziehen dunkle Wolken vorbei. " * 3 + "\n\n## Kap 2"
@@ -87,6 +87,7 @@ def _full_dashboard() -> str:
         showing=showing_report(text, config, metrics=metrics).to_dict(),
         title="Testroman",
         controls=True,
+        enabled_actions=enabled_actions,
     )
 
 
@@ -161,10 +162,12 @@ class TestJsDomContract(unittest.TestCase):
         )
         ids = set(re.findall(r'getElementById\("([^"]+)"\)', script))
         ids.discard("lixity-tooltip")  # created by the script itself
+        ids.discard("research-evidence-draft")  # created beside the existing evidence form
         self.assertTrue(ids)
         # Onboarding controls exist only in the empty/research-only state.
         html = (
             _full_dashboard()
+            + _full_dashboard(("manuscript-pdf", "research-reader"))
             + render_dashboard([], [], controls=True)
             + render_dashboard([], [], controls=True, enabled_actions=("analyze", "rebuild"))
             + render_dashboard([], [], controls=True, enabled_actions=("nda-draft",))

@@ -48,6 +48,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("dossier-image", "Capture a local PNG/JPEG and attach it to a dossier atomically"),
         ("claim", "Create, list or revise research claims and hypotheses"),
         ("link-evidence", "Create, inspect or revise a passage-to-claim evidence link"),
+        ("link", "Create an evidence link with positional PASSAGE_ID CLAIM_ID"),
         ("decision", "Create, list or revise author decisions and fact deviations"),
         ("decision-impact", "Inspect dossiers explicitly linked to an author decision; read-only"),
         ("review", "List structural editorial review candidates; read-only, not semantic judgment"),
@@ -81,7 +82,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--pager", action="store_true",
                                  help="Page text/Markdown only when input and output are interactive terminals")
         if name not in ("restore", "ocr-status", "zotero-restore"):
-            command.add_argument("--project", required=True, help="Explicit project directory")
+            command.add_argument(
+                "--project", required=name == "init",
+                help="Explicit project directory" if name == "init" else
+                "Project directory (default: current directory, only with a valid initialized research archive)",
+            )
         elif name == "ocr-status":
             command.add_argument("--project", help="Optional project directory")
             command.add_argument("--worker-cmd", help="Explicit OCR worker binary or command to inspect")
@@ -222,6 +227,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--relation", choices=("supports", "contradicts", "qualifies", "contextualizes"))
             command.add_argument("--rationale", help="Reviewer rationale for link")
             command.add_argument("--reviewer", help="Reviewer identifier")
+        elif name == "link":
+            command.add_argument("passage_id", metavar="PASSAGE_ID", help="Complete passage UUID URN from search or cite")
+            command.add_argument("claim_id", metavar="CLAIM_ID", help="Complete claim UUID URN from the claim list")
+            command.add_argument("--relation", choices=("supports", "contradicts", "qualifies", "contextualizes"),
+                                 help="Evidence relation (default: supports)")
+            command.add_argument("--rationale", help="Reviewer rationale for link")
+            command.add_argument("--reviewer", help="Reviewer identifier (default: author)")
+            command.add_argument("--actor", default="local-author")
         elif name == "decision":
             command.add_argument("--decision-id", help="Decision UUID to inspect or revise")
             command.add_argument("--title", help="Title for new author decision")
@@ -406,6 +419,21 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     return api.get_record(args.project, kind, record_id, revision=args.revision)
 
 
+def _current_project() -> str:
+    """Use only a verified initialized archive rooted in the current directory."""
+    from .repository import Repository, ResearchError
+
+    try:
+        root = Path.cwd()
+        Repository(root).snapshot()
+    except (OSError, ResearchError) as error:
+        raise ResearchError(
+            f"No valid initialized research project in the current directory: {error}. "
+            "Use --project PATH or run from the project root"
+        ) from error
+    return str(root)
+
+
 def run(args: argparse.Namespace) -> int:
     import sqlite3
 
@@ -414,6 +442,9 @@ def run(args: argparse.Namespace) -> int:
 
     try:
         command = args.research_command
+        if (command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
+                and args.project is None):
+            args.project = _current_project()
         if command == "ingest":
             if (args.resume and not args.checkpoint) or (not args.file and not args.resume and not args.discard_checkpoint):
                 print("[error] Supply --file, or --checkpoint PATH --resume, or --discard-checkpoint PATH", file=sys.stderr)
@@ -717,9 +748,10 @@ def run(args: argparse.Namespace) -> int:
                 )
             else:
                 result = api.list_claims(args.project, dossier_id=getattr(args, "dossier_id", None))
-        elif command == "link-evidence":
+        elif command in ("link-evidence", "link"):
             if not args.claim_id or not args.passage_id:
-                raise ResearchError("--claim-id and --passage-id are required to create an evidence link")
+                names = "PASSAGE_ID and CLAIM_ID" if command == "link" else "--claim-id and --passage-id"
+                raise ResearchError(f"{names} are required to create an evidence link")
             result = api.link_evidence(
                 args.project,
                 claim_id=args.claim_id,

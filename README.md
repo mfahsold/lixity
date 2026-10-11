@@ -19,7 +19,7 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Installation](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v2.3.0 release notes](docs/releases/v2.3.0.md)
+[v2.4.0 release notes](docs/releases/v2.4.0.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload.
@@ -36,13 +36,13 @@ For help installing these tools, or to use pipx instead, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.3.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
 lixity --version
 ```
 
 This installs the released version. For later upgrades, select the new tag using
 the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace. [Release notes](docs/releases/v2.3.0.md) describe compatibility
+the local workspace. [Release notes](docs/releases/v2.4.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 **In 2.3.0:** explore the public example before installing. Attach local image
@@ -134,6 +134,13 @@ preflight and automatic fallback between fonts are not provided.
 
 [Command reference](docs/USAGE.md#lixity-pdf)
 
+**Since v2.4.0:** a compatible native workspace adds manuscript PDF
+downloads at the top of **Manuscript & Analysis**, before **Start your review**.
+Choose **A5 reading copy** (default), **A4 manuscript sheets** or
+**A4 analysis report**, then select **Download PDF**. Generation returns a PDF through the
+browser without writing server export files or changing the manuscript
+or research archive. The terminal command remains available.
+
 ### Keep review notes beside the text
 
 Inspect paragraphs with their source lines, dialogue and tense labels. Work
@@ -158,6 +165,14 @@ records what a source says; its accuracy still needs review.
 Bring sources from local files or the optional Zotero Desktop bridge. PDF scans
 can use locally installed Tesseract or a configured OCR worker. Import warnings
 explain when extraction is incomplete or a requested fallback was used.
+
+**Since v2.4.0:** select text within an opened source paragraph to
+prepare an evidence-link draft, with the selected quote and full citation context
+shown before saving. Citations still retain the whole paragraph. An optional
+read-only dossier view lets you read chosen notes beside the manuscript. Existing
+archive CLI commands can use a validated initialized current directory, and
+`research link PASSAGE_ID CLAIM_ID` provides a shorter explicit link command.
+See the [workflow scope and limits](docs/research/USAGE.md#reading-and-cli-workflows-since-v240).
 
 **Review** shows the records explicitly linked to a decision and whether those
 links refer to an older version. You can inspect the earlier and current versions

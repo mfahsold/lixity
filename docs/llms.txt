@@ -7,7 +7,34 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 2.3.0; release tag: v2.3.0.
+Current release: 2.4.0; release tag: v2.4.0.
+
+Since v2.4.0: a compatible native server adds manuscript PDF
+downloads at the top of Manuscript & Analysis before Start your review. A5 book
+is the default; A4 submission sheet and analysis report are alternatives.
+POST /api/manuscript-pdf accepts {layout:book|sheet|report, project_token}, where
+the token is opaque and tied to the selected manuscript context. It returns an
+application/pdf attachment without server export, manuscript or archive writes;
+stale contexts are rejected. Standalone HTML has no PDF download action.
+v2.3.0 ships the lixity pdf terminal command; NDA PDFs are a separate workflow.
+
+Since v2.4.0, research workflows: omitted --project resolves only a
+validated initialized current working directory for existing-archive commands;
+explicit overrides win, with no ancestor/global/environment/last-opened fallback.
+Init still names its project; restore/schema/ocr-status retain existing behavior.
+Python/HTTP APIs remain explicitly scoped. research link PASSAGE_ID CLAIM_ID is
+a create-only full-ID shortcut to link-evidence, default relation supports.
+Opened-source selection prepares a claim evidence-link draft with the selected
+quote and whole-paragraph citation context; no new sentence citation or automatic
+save. Ambiguous/cross-paragraph selections are rejected. Dossier alongside is an
+opt-in read-only focused view with explicit dossier choice, page-only state,
+refresh and preserved manuscript state. Other analysis panels hide while open
+and return on close. Capability, manuscript and selected-context token are required;
+there is no unguarded GET fallback. Existing GET research/dossiers accepts
+an optional metadata project_token to guard these reads; legacy calls/JSON stay
+unchanged. Author
+evidence labels keep stored hypothetical/evidenced/disputed values and do not
+establish historical certainty. Existing archive/JSON contracts remain unchanged.
 
 Since v2.3.0: paragraph opening shows manuscript text before a
 native Values disclosure (Werte in German) and marker actions. Closed paragraph
@@ -69,7 +96,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from GitHub, not PyPI:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.3.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
 lixity --version
 lixity about
 ```

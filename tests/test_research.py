@@ -277,9 +277,11 @@ class TestResearch(unittest.TestCase):
             code = main(["research", "audit", "--project", str(self.project)])
         self.assertEqual(code, 0)
         self.assertTrue(json.loads(stdout.getvalue())["ok"])
-        with contextlib.redirect_stderr(io.StringIO()), self.assertRaises(SystemExit) as error:
-            main(["research", "audit"])
-        self.assertEqual(error.exception.code, 2)
+        errors = io.StringIO()
+        with contextlib.redirect_stderr(errors), patch("lixity.research.cli.Path.cwd", return_value=self.root):
+            self.assertEqual(main(["research", "audit"]), 1)
+        self.assertIn("current directory", errors.getvalue())
+        self.assertIn("--project", errors.getvalue())
 
     def test_lock_contention_and_stale_expected_head(self):
         repository = Repository(self.project)

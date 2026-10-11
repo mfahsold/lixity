@@ -19,11 +19,13 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Keep sources and work with PDFs</h1>
 <p>Keep permitted source copies, cite exact passages and connect them with research notes, claims and writing decisions. Lixity's research workspace is experimental. An import or citation helps you review evidence; it does not establish that a claim is true.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-10">10 October 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-11">11 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html" aria-current="page">Sources and PDF/OCR</a></nav>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
 <h2 id="manuscript-export">Export a manuscript as PDF</h2>
+<p><strong>Since v2.4.0:</strong> the native workspace has a <strong>PDF export</strong> form at the top of <strong>Manuscript &amp; Analysis</strong>, before <strong>Start your review</strong>. Choose <strong>A5 reading copy</strong> (default), <strong>A4 manuscript sheets</strong> or <strong>A4 analysis report</strong>, then select <strong>Download PDF</strong>. The PDF goes directly to your browser without creating server export files or changing the manuscript or research archive. Standalone HTML has no download action. The NDA PDF in Project &amp; Settings generates an agreement and is separate from manuscript export.</p>
+<p>The terminal command introduced in v2.3.0 remains available:</p>
 <p>Use <code>lixity pdf</code> to create an A4 analysis report, an A5 reading copy or an A4 submission sheet with at most 30 lines per page and 60 characters per line. This command reads a Markdown manuscript and composes its output locally; it does not import a research source, run OCR or modify the manuscript.</p>
 <pre><code>lixity pdf manuscript.md --layout report -o analysis.pdf
 lixity pdf manuscript.md --layout book --author "Name" -o reading.pdf
@@ -55,6 +57,18 @@ lixity research search --project ./sample-project --query "reading room"</code><
 <pre><code>lixity research search --project ./sample-project --query "inspector" --scope all
 lixity research search --project ./sample-project --query "inspector" --scope decisions</code></pre>
 <p>The CLI defaults to source passages. Search matches words in current records, not their history; it does not reconcile conflicting claims or decide whether a proposal is final. Keep decisions and open questions explicit in your notes.</p>
+
+<h2 id="evidence-draft">Prepare evidence from selected source text</h2>
+<p><strong>Since v2.4.0:</strong> open a retained source and select text within one uniquely resolved paragraph. The selection action prepares the existing claim evidence-link form. Its preview shows both your selected quote and the full retained paragraph; choose a claim and relation, add your own rationale if needed, then save separately.</p>
+<p>The saved citation still identifies the whole paragraph and its source version. It creates no sentence-level citation. Cross-paragraph or ambiguous selections are unavailable; use the whole-passage actions in the Passages view instead. Selecting text or opening the draft writes no record. Evidence status labels express your own assessment, not historical certainty or a computed probability.</p>
+<p>For reading notes against the manuscript, open <strong>Dossier alongside</strong> in Manuscript &amp; Analysis and choose a dossier, or use the action on that dossier's card. The optional companion reader is read-only. Closing it preserves manuscript search and open paragraphs; refresh explicitly for the latest saved dossier version. Narrow screens place the dossier above the manuscript.</p>
+
+<h2 id="cli-project">Use the intended research project in the terminal</h2>
+<p><strong>Since v2.4.0:</strong> existing-archive commands may omit <code>--project</code> only when your current directory is itself a validated initialized research project. Lixity does not search parent folders or reuse the browser's last project. An explicit <code>--project</code> remains authoritative. Initialization still names its project.</p>
+<pre><code>cd ./sample-project
+lixity research search --query "reading room"
+lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relation contextualizes</code></pre>
+<p>Replace the placeholders with full returned IDs, passage first and claim second. The short command creates an evidence link; <code>link-evidence</code> retains its existing creation, inspection and revision operations. See <a href="../research/USAGE.md#reading-and-cli-workflows-since-v240">scope, defaults and compatibility</a>.</p>
 
 <h2 id="ocr">Can Lixity read scanned PDFs?</h2>
 <p>A PDF with selectable text can use local Poppler tools. An image-only scan needs locally installed Tesseract or a configured OCR worker to recognize text. Installing Lixity does not install either engine, download a model or start a worker service.</p>

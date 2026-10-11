@@ -17,6 +17,7 @@ from .constants import MAX_IMAGE_PAYLOAD_BYTES, MAX_PAYLOAD_BYTES, MIME_TYPES
 from .discovery import api_index
 from .routes_markers import MarkerRoutesMixin
 from .routes_nda import NdaRoutesMixin
+from .routes_pdf import ManuscriptPdfRoutesMixin
 from .routes_project import ProjectRoutesMixin
 from .routes_research import ResearchRoutesMixin
 
@@ -26,6 +27,7 @@ class LixityServerHandler(
     MarkerRoutesMixin,
     ResearchRoutesMixin,
     NdaRoutesMixin,
+    ManuscriptPdfRoutesMixin,
     BaseHTTPRequestHandler,
 ):
     """Serves the dashboard and the workspace action endpoints."""
@@ -54,6 +56,7 @@ class LixityServerHandler(
     #: POST actions under /api/ : exact action -> handler method name.
     POST_ROUTES: ClassVar[dict[str, str]] = {
         "nda-draft": "_handle_nda_draft",
+        "manuscript-pdf": "_handle_manuscript_pdf",
         "analyze": "_handle_refresh",
         "rebuild": "_handle_refresh",
         "marker-add": "_handle_marker_add",
@@ -85,6 +88,13 @@ class LixityServerHandler(
     UNSUPPORTED_ACTIONS: ClassVar[frozenset[str]] = frozenset(
         {"export", "sync", "audit", "prune", "gdrive"}
     )
+
+    # Serialize selection/settings commits and manuscript writes. PDF composition
+    # and unrelated research/OCR work run outside this lock.
+    WORKSPACE_MUTATING_ACTIONS: ClassVar[frozenset[str]] = frozenset({
+        "settings", "load", "project-create", "project-open", "analyze", "rebuild",
+        "marker-add", "marker-resolve", "research-init",
+    })
 
     def do_GET(self) -> None:
         if not self._trusted_host():
@@ -188,7 +198,11 @@ class LixityServerHandler(
 
         handler_name = self.POST_ROUTES.get(action)
         if handler_name is not None:
-            getattr(self, handler_name)(payload)
+            if action in self.WORKSPACE_MUTATING_ACTIONS:
+                with self._workspace_lock:
+                    getattr(self, handler_name)(payload)
+            else:
+                getattr(self, handler_name)(payload)
             return
 
         if action.startswith("marker-"):

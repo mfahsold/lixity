@@ -848,6 +848,65 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     try { localStorage.removeItem(welcomeStorageKey); } catch (_) { /* Keep this page usable without storage. */ }
   });
 }
+(function initManuscriptPdf() {
+  var form = document.getElementById("manuscript-pdf-form");
+  if (!form) return;
+  var layout = document.getElementById("manuscript-pdf-layout");
+  var button = document.getElementById("manuscript-pdf-download");
+  var status = document.getElementById("manuscript-pdf-status");
+  var available = form.dataset.available === "true" && !!form.dataset.projectToken;
+  var busy = false;
+  function message(key, failed) {
+    status.className = "ctl-status " + (failed ? "err" : "ok");
+    status.textContent = uiLabel(key);
+  }
+  function pending(value) {
+    busy = value;
+    form.setAttribute("aria-busy", String(value));
+    button.setAttribute("aria-busy", String(value));
+    layout.disabled = button.disabled = value || !available;
+  }
+  form.addEventListener("submit", async function(event) {
+    event.preventDefault();
+    if (busy || !available) return;
+    var selected = layout.value;
+    if (["book", "sheet", "report"].indexOf(selected) === -1) return;
+    pending(true);
+    message("manuscript_pdf_busy", false);
+    var reason = "";
+    try {
+      var response = await fetch(API + "/manuscript-pdf", {
+        method: "POST", headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({layout: selected, project_token: form.dataset.projectToken})
+      });
+      if (!response.ok) {
+        try {
+          var errorBody = await response.json();
+          if (typeof errorBody.message === "string") reason = errorBody.message;
+        } catch (_) { /* Keep the localized failure message. */ }
+        throw new Error("Manuscript PDF unavailable");
+      }
+      if ((response.headers.get("Content-Type") || "").split(";")[0].trim().toLowerCase() !== "application/pdf") {
+        throw new Error("Manuscript PDF unavailable");
+      }
+      var blob = await response.blob();
+      if ((await blob.slice(0, 5).text()) !== "%PDF-") throw new Error("Manuscript PDF unavailable");
+      var url = URL.createObjectURL(blob);
+      var download = document.createElement("a");
+      download.href = url;
+      download.download = "manuscript-" + selected + ".pdf";
+      document.body.appendChild(download);
+      download.click();
+      download.remove();
+      setTimeout(function() { URL.revokeObjectURL(url); }, 1000);
+      message("manuscript_pdf_success", false);
+    } catch (_) {
+      message("manuscript_pdf_error", true);
+      if (reason) status.textContent += " " + reason;
+    } finally { pending(false); }
+  });
+  pending(false);
+})();
 (function initNdaDraft() {
   var form = document.getElementById("nda-draft-form");
   if (!form) return;
@@ -1548,7 +1607,7 @@ function researchDossierBodyHtml(bodyText, dossierContext) {
   '</div>';
 }
 
-function researchDossierDetailHtml(detail) {
+function researchDossierDetailHtml(detail, readOnly) {
   var reviewAlert = "";
   if (detail.review_needed && detail.decision_reviews && detail.decision_reviews.length) {
     var needed = detail.decision_reviews.filter(function(r) { return r.status === "review_needed"; });
@@ -1579,7 +1638,7 @@ function researchDossierDetailHtml(detail) {
     var secBlocks = secKeys.map(function(k) {
       return '<details class="research-dossier-section-block" open>' +
         '<summary><span>' + escapeHtml(k) + '</span></summary>' +
-        researchDossierSectionAction(detail, k) +
+        (readOnly ? "" : researchDossierSectionAction(detail, k)) +
         '<div class="research-prose markdown-body">' + renderSafeMarkdown(detail.section_map[k], detail) + '</div>' +
       '</details>';
     }).join("");
@@ -1591,14 +1650,16 @@ function researchDossierDetailHtml(detail) {
       '<pre class="research-dossier-body-source" hidden>' + escapeHtml(detail.body || "") + '</pre>' +
     '</div>';
   } else {
-    bodyHtml = (detail.editable_sections || []).map(function(section) { return researchDossierSectionAction(detail, section); }).join("") +
+    bodyHtml = (readOnly ? "" : (detail.editable_sections || []).map(function(section) { return researchDossierSectionAction(detail, section); }).join("")) +
       researchDossierBodyHtml(detail.body, detail);
   }
   return reviewAlert + sectionsHtml +
-    '<div class="row"><button type="button" class="ctl" data-dossier-claim="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_claim_heading")) + '</button>' +
-    '<button type="button" class="ctl" data-dossier-decision="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_decision_heading")) + '</button></div>' +
-    (window.LixityDossierImages ? window.LixityDossierImages.actionsHtml(detail) : "") + bodyHtml +
-    '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(researchCitationHtml).join("");
+    (readOnly ? "" : '<div class="row"><button type="button" class="ctl" data-dossier-claim="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_claim_heading")) + '</button>' +
+    '<button type="button" class="ctl" data-dossier-decision="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_decision_heading")) + '</button></div>') +
+    (!readOnly && window.LixityDossierImages ? window.LixityDossierImages.actionsHtml(detail) : "") + bodyHtml +
+    '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(function(citation) {
+      return researchCitationHtml(citation, !readOnly);
+    }).join("");
 }
 
 function researchDossierSectionAction(detail, section) {
@@ -1646,7 +1707,144 @@ document.addEventListener("lixity:dossier-image-saved", async function(event) {
 });
 
 
-function researchPassageActions(passageId) {
+var researchPassageContexts = Object.create(null);
+var researchSelectionProjectId = null;
+var researchProjectStatusRead = 0;
+var researchEvidenceDraft = null;
+
+function selectionPlainText(text) {
+  var container = document.createElement("div");
+  container.innerHTML = renderSafeMarkdown(text || "");
+  return container.textContent.replace(/\s+/g, " ").trim();
+}
+
+function researchSourceSelection(host) {
+  var detail = host && host._selectionDetail;
+  var selection = window.getSelection();
+  if (!detail || !host.isConnected || !host.getClientRects().length ||
+      detail.projectId !== researchSelectionProjectId || !selection ||
+      selection.rangeCount !== 1 || selection.isCollapsed) return null;
+  var range = selection.getRangeAt(0);
+  function element(node) {return node.nodeType === 1 ? node : node.parentElement;}
+  var start = element(range.startContainer), end = element(range.endContainer);
+  var root = start && start.closest(".research-source-doc-rendered, .research-source-doc-raw");
+  if (!root || !host.contains(root) || root.hidden || !root.getClientRects().length ||
+      !end || end.closest(".research-source-doc-rendered, .research-source-doc-raw") !== root) return null;
+  var quote = range.toString().trim();
+  if (!quote) return null;
+  var candidates;
+  if (root.classList.contains("research-source-doc-raw")) {
+    var prefix = document.createRange();
+    prefix.selectNodeContents(root); prefix.setEnd(range.startContainer, range.startOffset);
+    var first = Array.from(prefix.toString()).length;
+    // API passage offsets count Unicode codepoints, rather than UTF-16 units.
+    var last = first + Array.from(range.toString()).length;
+    candidates = detail.passages.filter(function(passage) {
+      return passage.start <= first && passage.end >= last;
+    });
+  } else {
+    var block = start.closest("p, li, pre, h1, h2, h3, h4, h5, h6");
+    if (!block || !root.contains(block) || end.closest("p, li, pre, h1, h2, h3, h4, h5, h6") !== block) return null;
+    var context = block.textContent.replace(/\s+/g, " ").trim();
+    var selected = quote.replace(/\s+/g, " ");
+    candidates = detail.passages.filter(function(passage) {
+      return passage.plain.indexOf(selected) >= 0 && passage.plain.indexOf(context) >= 0;
+    });
+  }
+  if (candidates.length !== 1) return null;
+  return {passage: candidates[0], quote: quote, detail: detail};
+}
+
+function clearResearchSourceSelections() {
+  document.querySelectorAll(".selection-toolbar").forEach(function(toolbar) {
+    toolbar.querySelector(".selection-use").disabled = true;
+    toolbar.querySelector(".selection-reading").textContent = uiLabel("selection_hint");
+  });
+}
+
+function updateResearchSourceSelection() {
+  document.querySelectorAll(".selection-toolbar").forEach(function(toolbar) {
+    var selected = researchSourceSelection(toolbar.parentElement);
+    toolbar.querySelector(".selection-use").disabled = !selected;
+    toolbar.querySelector(".selection-reading").textContent = uiLabel(selected ? "selection_ready" : "selection_invalid");
+  });
+}
+document.addEventListener("selectionchange", updateResearchSourceSelection);
+document.addEventListener("pointerdown", function(event) {
+  if (event.target.closest(".selection-use")) event.preventDefault();
+});
+
+function researchEvidenceDraftHost() {
+  var passage = document.getElementById("r-link-passage-id");
+  if (!passage) return null;
+  var host = document.getElementById("research-evidence-draft");
+  if (!host) {
+    host = document.createElement("div"); host.id = "research-evidence-draft";
+    host.className = "selection-draft"; host.hidden = true;
+    host.setAttribute("aria-live", "polite");
+    passage.parentElement.before(host);
+    var technical = document.createElement("details"); technical.className = "selection-technical";
+    var summary = document.createElement("summary"); summary.textContent = uiLabel("selection_identifier");
+    technical.appendChild(summary); passage.before(technical); technical.appendChild(passage);
+  }
+  return host;
+}
+
+function discardResearchEvidenceDraft() {
+  researchEvidenceDraft = null;
+  var passage = document.getElementById("r-link-passage-id");
+  if (passage) passage.value = "";
+  var host = document.getElementById("research-evidence-draft");
+  if (host) {host.replaceChildren(); host.hidden = true;}
+}
+document.addEventListener("input", function(event) {
+  if (event.target.id !== "r-link-passage-id" || !researchEvidenceDraft ||
+      event.target.value.trim() === researchEvidenceDraft.passageId) return;
+  researchEvidenceDraft = null;
+  var host = document.getElementById("research-evidence-draft");
+  if (host) {host.replaceChildren(); host.hidden = true;}
+});
+
+function prepareResearchEvidenceDraft(passageId, quote, context) {
+  var passage = document.getElementById("r-link-passage-id");
+  var host = researchEvidenceDraftHost();
+  if (!passage || !host || !context || context.availability === "withdrawn" || context.error) return;
+  researchEvidenceDraft = {passageId: passageId, projectId: researchSelectionProjectId};
+  passage.value = passageId;
+  host.replaceChildren(); host.hidden = false;
+  function field(tag, className, value) {
+    var node = document.createElement(tag); node.className = className;
+    node.textContent = value; host.appendChild(node);
+  }
+  field("p", "ctl-note", context.source_title || "");
+  if (quote) {
+    field("strong", "selection-label", uiLabel("selection_quote"));
+    field("blockquote", "selection-quote", quote);
+  }
+  field("strong", "selection-label", uiLabel("selection_context"));
+  field("blockquote", "selection-context", context.verbatim || "");
+  field("p", "ctl-note", uiLabel("selection_pin_help"));
+  var discard = document.createElement("button"); discard.type = "button"; discard.className = "ctl";
+  discard.textContent = uiLabel("selection_clear");
+  discard.addEventListener("click", discardResearchEvidenceDraft); host.appendChild(discard);
+  switchActiveView("research");
+  document.querySelector('[data-rtab="claims"]').click();
+  document.getElementById("r-link-claim-select").focus();
+}
+
+researchEvidenceDraftHost();
+document.addEventListener("click", function(event) {
+  var button = event.target.closest(".selection-use");
+  if (!button || button.disabled) return;
+  var selected = researchSourceSelection(button.closest(".research-details-body"));
+  if (!selected) {clearResearchSourceSelections(); return;}
+  prepareResearchEvidenceDraft(selected.passage.id, selected.quote, {
+    source_title: selected.detail.title, verbatim: selected.passage.verbatim, availability: "available"});
+  clearResearchSourceSelections();
+});
+
+function researchPassageActions(passageId, context) {
+  if (context) researchPassageContexts[passageId] = context;
   return '<div class="row research-passage-actions">' +
     '<button type="button" class="ctl" data-use-passage="claim" data-passage-id="' + escapeHtml(passageId) + '">' + escapeHtml(uiLabel("research_use_for_claim")) + '</button>' +
     '<button type="button" class="ctl" data-use-passage="dossier" data-passage-id="' + escapeHtml(passageId) + '">' + escapeHtml(uiLabel("research_use_for_dossier")) + '</button></div>';
@@ -1665,7 +1863,7 @@ function researchCitationHtml(cite, interactive) {
       escapeHtml(cite.evidence_link_id) + ' · ' + escapeHtml(uiFormat("research_revision_number", {revision: cite.evidence_link_revision})) +
       ' · ' + escapeHtml(uiLabel("research_revision_kind_claim")) + ' · ' +
       escapeHtml(uiFormat("research_revision_number", {revision: cite.claim_revision})) + '</div>' : '') +
-    (interactive !== false && !unavailable && !withdrawn && cite.passage_id ? researchPassageActions(cite.passage_id) : '') +
+    (interactive !== false && !unavailable && !withdrawn && cite.passage_id ? researchPassageActions(cite.passage_id, cite) : '') +
     '</div>';
 }
 
@@ -1886,6 +2084,8 @@ function acceptResearchList(kind, reading) {
 }
 
 async function refreshResearchSources(overview, changedId, freshRead) {
+  var sourceListProject = researchSelectionProjectId;
+  clearResearchSourceSelections();
   var listHost = document.getElementById("research-sources-list");
   var selectHost = document.getElementById("r-ground-source-select");
   if (!listHost) return;
@@ -1896,6 +2096,14 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   var reading = await researchListRead("sources", overview, changedId, freshRead);
   if (!acceptResearchList("sources", reading)) return;
   var data = reading.data;
+  if (sourceListProject !== researchSelectionProjectId && data.project_id &&
+      data.project_id !== researchSelectionProjectId) return;
+  if (data.ok && data.project_id && data.project_id !== researchSelectionProjectId) {
+    clearResearchSourceSelections(); discardResearchEvidenceDraft();
+    researchPassageContexts = Object.create(null);
+    researchSelectionProjectId = data.project_id;
+    ++researchProjectStatusRead;
+  }
   if (!data.ok) {
     listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_sources_failed")) + '</p>';
     filterResearchList("sources");
@@ -1996,6 +2204,7 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
       sectionsBadges +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
       researchDetailsControl("dossier", d.id) +
+      (document.getElementById("workspace-reader") ? '<button type="button" class="ctl" data-workspace-dossier="' + escapeHtml(d.id) + '">' + escapeHtml(uiLabel("reader_toggle")) + '</button>' : '') +
       researchRevisionActions("dossier", d.id) +
     '</div>';
   });
@@ -2266,12 +2475,19 @@ function ocrReading(ocr) {
 }
 
 async function refreshResearchProjectInfo() {
+  var statusRead = ++researchProjectStatusRead;
   var activeRootEl = document.getElementById("r-active-root");
   if (activeRootEl && (!activeRootEl.textContent || activeRootEl.textContent.trim() === "")) {
     activeRootEl.className = "ctl-status loading";
     activeRootEl.textContent = uiLabel("research_loading");
   }
   var status = await researchApiGet("research/status");
+  if (statusRead !== researchProjectStatusRead) return {ok: false, superseded: true};
+  if (status.ok === true && researchSelectionProjectId !== (status.project_id || null)) {
+    clearResearchSourceSelections(); discardResearchEvidenceDraft();
+    researchPassageContexts = Object.create(null);
+    researchSelectionProjectId = status.project_id || null;
+  }
   if (zoteroProjectId !== (status.project_id || null)) {
     clearZoteroSelection();
     zoteroProjectId = status.project_id || null;
@@ -2362,6 +2578,7 @@ async function refreshResearchProjectInfo() {
 async function initResearchUI(freshRead) {
   researchStatus(uiLabel("research_loading"), "loading");
   var status = await refreshResearchProjectInfo();
+  if (status.superseded) return;
   var initBox = document.getElementById("research-init-box");
   var tabs = document.getElementById("research-tabs");
   document.querySelectorAll(".research-tab-pane").forEach(function(p) { p.style.display = "none"; });
@@ -2501,12 +2718,18 @@ document.addEventListener("click", async function (event) {
     var passageField = document.getElementById(forClaim ? "r-link-passage-id" : "r-dos-eids");
     if (!passageField) return;
     if (forClaim) {
+      var passageContext = researchPassageContexts[passageBtn.dataset.passageId];
+      if (passageContext) {
+        prepareResearchEvidenceDraft(passageBtn.dataset.passageId, "", passageContext);
+        return;
+      }
       passageField.value = passageBtn.dataset.passageId;
     } else {
       var passageIds = passageField.value.split(",").map(function(id) { return id.trim(); }).filter(Boolean);
       if (!passageIds.includes(passageBtn.dataset.passageId)) passageIds.push(passageBtn.dataset.passageId);
       passageField.value = passageIds.join(", ");
     }
+    switchActiveView("research");
     document.querySelector('[data-rtab="' + (forClaim ? 'claims' : 'dossiers') + '"]').click();
     passageField.focus();
     return;
@@ -2518,12 +2741,17 @@ document.addEventListener("click", async function (event) {
     if (detailsBtn.parentElement.open) return;
     detailHost.textContent = uiLabel("research_details_loading");
     var isSource = detailsBtn.dataset.researchDetail === "source";
+    var sourceSelectionProject = researchSelectionProjectId;
+    var sourceSelectionRead = isSource ? (detailHost._selectionRead = (detailHost._selectionRead || 0) + 1) : null;
     var detail = await researchApiGet("research/" + (isSource ? "sources" : "dossiers") + "?id=" + encodeURIComponent(detailsBtn.dataset.recordId));
+    if (isSource && (!detailHost.isConnected || sourceSelectionProject !== researchSelectionProjectId ||
+        sourceSelectionRead !== detailHost._selectionRead || !detailsBtn.parentElement.open)) return;
     if (!detail.ok) {
       detailHost.textContent = detail.message || uiLabel(isSource ? "research_load_sources_failed" : "research_load_dossiers_failed");
       return;
     }
     if (isSource) {
+      clearResearchSourceSelections();
       var context = detail.context || {};
       var contextRows = ["genre", "created_period", "depicted_period", "place", "perspective", "original_language", "is_translation", "provenance_note", "origin_url"].filter(function(key) {
         return context[key] !== null && context[key] !== undefined && context[key] !== "";
@@ -2543,6 +2771,8 @@ document.addEventListener("click", async function (event) {
       var passagesHtml = (detail.passages || []).map(function(p) {
         return researchCitationHtml({availability: "available", passage_id: p.id, verbatim: p.verbatim, source_title: detail.title});
       }).join("");
+      detailHost._selectionDetail = {projectId: sourceSelectionProject, title: detail.title,
+        passages: (detail.passages || []).map(function(p) {return Object.assign({}, p, {plain: selectionPlainText(p.verbatim)});})};
 
       detailHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
         (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '') +
@@ -2553,6 +2783,9 @@ document.addEventListener("click", async function (event) {
           '</div>' +
           '<button type="button" class="ctl ctl-sm research-source-toggle" data-source-toggle>' + escapeHtml(uiLabel("research_show_source")) + '</button>' +
         '</div>' +
+        '<div class="selection-toolbar"><button type="button" class="ctl selection-use" disabled>' +
+          escapeHtml(uiLabel("selection_use")) + '</button><p class="ctl-note selection-reading" role="status">' +
+          escapeHtml(uiLabel("selection_hint")) + '</p></div>' +
         '<div class="research-source-doc-wrap">' +
           '<div class="research-prose markdown-body research-source-doc-rendered">' + docRendered + '</div>' +
           '<pre class="research-source-doc-raw" hidden>' + escapeHtml(fullDocText) + '</pre>' +
@@ -2561,6 +2794,9 @@ document.addEventListener("click", async function (event) {
           '<h4>' + escapeHtml(uiLabel("research_passages")) + '</h4>' +
           passagesHtml +
         '</div>';
+      // HTML parsing normalizes CRLF and an initial pre newline. Preserve the
+      // retained text exactly so raw selections use the API's passage offsets.
+      detailHost.querySelector(".research-source-doc-raw").textContent = fullDocText;
     } else {
       detailHost.innerHTML = researchDossierDetailHtml(detail);
     }
@@ -2569,6 +2805,8 @@ document.addEventListener("click", async function (event) {
 
   var sourceToggleBtn = event.target.closest("[data-source-toggle]");
   if (sourceToggleBtn) {
+    clearResearchSourceSelections();
+    window.getSelection().removeAllRanges();
     var wrap = sourceToggleBtn.closest(".research-dossier-body-wrap");
     if (!wrap) wrap = sourceToggleBtn.parentElement.parentElement.querySelector(".research-source-doc-wrap");
     if (wrap) {
@@ -2586,6 +2824,8 @@ document.addEventListener("click", async function (event) {
 
   var sourceViewBtn = event.target.closest("[data-source-view]");
   if (sourceViewBtn) {
+    clearResearchSourceSelections();
+    window.getSelection().removeAllRanges();
     var bar = sourceViewBtn.closest(".research-source-view-bar");
     if (bar) {
       var host = bar.parentElement;
@@ -2604,6 +2844,7 @@ document.addEventListener("click", async function (event) {
 
   var tabBtn = event.target.closest("[data-rtab]");
   if (tabBtn) {
+    clearResearchSourceSelections();
     document.querySelectorAll(".research-tabs button").forEach(function(b) {
       b.classList.remove("active");
       b.setAttribute("aria-selected", "false");
@@ -2779,7 +3020,7 @@ function highlightSearchTerms(text, query) {
             'Score: ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
             escapeHtml(uiLabel("research_id")) + ' <code style="user-select:all;cursor:pointer;" title="' + escapeHtml(uiLabel("research_select_id")) + '">' + escapeHtml(h.passage_id || "") + '</code>' +
           '</div>' +
-          researchPassageActions(h.passage_id) +
+          researchPassageActions(h.passage_id, h) +
         '</div>';
       }).join("");
     }
@@ -2946,6 +3187,7 @@ function highlightSearchTerms(text, query) {
 
   var linkEvBtn = event.target.closest("#r-link-evidence-btn");
   if (linkEvBtn) {
+    if (linkEvBtn.disabled) return;
     var lClaim = document.getElementById("r-link-claim-select");
     var lPassage = document.getElementById("r-link-passage-id");
     var lRel = document.getElementById("r-link-relation");
@@ -2953,21 +3195,37 @@ function highlightSearchTerms(text, query) {
 
     var claimVal = lClaim ? lClaim.value.trim() : "";
     var passageVal = lPassage ? lPassage.value.trim() : "";
+    if (researchEvidenceDraft && (researchEvidenceDraft.projectId !== researchSelectionProjectId ||
+        researchEvidenceDraft.passageId !== passageVal)) {
+      discardResearchEvidenceDraft();
+      researchStatus(uiLabel("selection_invalid"), false);
+      return;
+    }
     if (!claimVal || !passageVal) {
       researchStatus(uiLabel("research_link_required"), false);
       return;
     }
 
-    var lres = await researchApiPost("research-evidence-link", {
+    var submittedDraft = researchEvidenceDraft;
+    var submittedRelation = lRel ? lRel.value : "supports";
+    var submittedRationale = lRat ? lRat.value.trim() : "";
+    linkEvBtn.disabled = true;
+    linkEvBtn.setAttribute("aria-busy", "true");
+    var lres;
+    try {lres = await researchApiPost("research-evidence-link", {
       claim_id: claimVal,
       passage_id: passageVal,
-      relation: lRel ? lRel.value : "supports",
-      rationale: lRat ? lRat.value.trim() : ""
-    });
+      relation: submittedRelation,
+      rationale: submittedRationale
+    });} finally {linkEvBtn.disabled = false; linkEvBtn.removeAttribute("aria-busy");}
     researchStatus(lres.ok ? uiLabel("research_evidence_link_complete") : lres.message, lres.ok);
     if (lres.ok) {
-      if (lPassage) lPassage.value = "";
-      if (lRat) lRat.value = "";
+      if (researchEvidenceDraft === submittedDraft && lPassage.value.trim() === passageVal &&
+          lClaim.value.trim() === claimVal && (!lRel || lRel.value === submittedRelation) &&
+          (!lRat || lRat.value.trim() === submittedRationale)) {
+        discardResearchEvidenceDraft();
+        if (lRat) lRat.value = "";
+      }
       refreshResearchClaims();
     }
     return;
@@ -4678,3 +4936,7 @@ if (window.location.hash) {
     }
   } catch (e) {}
 }
+window.LixityWorkspaceReader = {
+  label: uiLabel, read: researchApiGet, switchView: switchActiveView,
+  renderDossier: function(detail) { return researchDossierDetailHtml(detail, true); }
+};

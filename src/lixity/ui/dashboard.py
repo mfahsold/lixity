@@ -63,11 +63,11 @@ from .structural import style_structural
 _ASSET_DIR = _Path(__file__).with_name("assets")
 _CSS = "\n".join(
     (_ASSET_DIR / name).read_text(encoding="utf-8")
-    for name in ("dashboard.css", "dossier-images.css")
+    for name in ("dashboard.css", "dossier-images.css", "workspace-reader.css")
 )
 _JS = "\n".join(
     (_ASSET_DIR / name).read_text(encoding="utf-8")
-    for name in ("dashboard.js", "dossier-images.js", "style-space.js")
+    for name in ("dashboard.js", "dossier-images.js", "style-space.js", "workspace-reader.js")
 )
 
 
@@ -104,6 +104,7 @@ def render_dashboard(
     project_author: str = "",
     identity_check: Mapping[str, Any] | None = None,
     author_setting_enabled: bool = False,
+    manuscript_pdf_token: str = "",
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -112,6 +113,8 @@ def render_dashboard(
     preserves the other existing controls. NDA generation requires explicit
     ``nda-draft`` capability; ``nda_project_name`` supplies a real project name
     separately from a placeholder dashboard title.
+    Manuscript PDF generation requires explicit ``manuscript-pdf`` capability
+    and an opaque ``manuscript_pdf_token`` for the selected server context.
     ``project_author`` and ``identity_check`` describe saved project identity and
     a read-only manuscript comparison. Author editing requires the explicit
     ``author_setting_enabled`` capability; its default supplies no personal name.
@@ -128,6 +131,8 @@ def render_dashboard(
 
     def action_enabled(action: str) -> bool:
         return allowed_actions is None or action in allowed_actions
+
+    reader_enabled = controls and allowed_actions is not None and "research-reader" in allowed_actions
 
     def L(key: str) -> str:
         return esc(label(labels, key))
@@ -582,6 +587,51 @@ def render_dashboard(
         # --- PANE 3: MANUSCRIPT & ANALYSIS ---
         parts.append(
             f'<div class="view-pane{" active" if default_view == "analysis" else ""}" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">'
+        )
+
+    if controls and allowed_actions is not None and "manuscript-pdf" in allowed_actions:
+        pdf_available = has_chapters and bool(paragraphs) and bool(manuscript_pdf_token)
+        disabled = "" if pdf_available else " disabled"
+        parts.append(
+            '<section class="panel manuscript-pdf" id="manuscript-pdf">'
+            f'<h2>{L("manuscript_pdf_title")}</h2>'
+            f'<p class="panel-guide" id="manuscript-pdf-hint">{L("manuscript_pdf_hint")}</p>'
+            f'<form id="manuscript-pdf-form" method="post" '
+            f'action="{esc(api_base.rstrip("/") + "/manuscript-pdf")}" '
+            f'data-project-token="{esc(manuscript_pdf_token)}" '
+            f'data-available="{str(pdf_available).lower()}" aria-describedby="manuscript-pdf-hint">'
+            '<div class="manuscript-pdf-actions"><div class="setting-field">'
+            f'<label for="manuscript-pdf-layout">{L("manuscript_pdf_layout")}</label>'
+            f'<select class="ctl" id="manuscript-pdf-layout" name="layout"{disabled}>'
+            f'<option value="book">{L("manuscript_pdf_book")}</option>'
+            f'<option value="sheet">{L("manuscript_pdf_sheet")}</option>'
+            f'<option value="report">{L("manuscript_pdf_report")}</option></select></div>'
+            '<button type="submit" class="ctl primary" id="manuscript-pdf-download" disabled>'
+            f'{L("manuscript_pdf_download")}</button></div>'
+            '<p class="ctl-status" id="manuscript-pdf-status" role="status" aria-live="polite">'
+            f'{"" if pdf_available else L("manuscript_pdf_unavailable")}</p></form>'
+            f'<noscript><p class="ctl-note">{L("manuscript_pdf_javascript")}</p></noscript></section>'
+        )
+
+    if reader_enabled and has_chapters:
+        parts.append(
+            '<section class="workspace-reader" id="workspace-reader" '
+            f'data-project-token="{esc(manuscript_pdf_token)}">'
+            '<div class="workspace-reader-bar">'
+            '<button type="button" class="ctl" id="workspace-reader-toggle" '
+            'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
+            f'{L("reader_toggle")}</button><p class="ctl-note">{L("reader_hint") if manuscript_pdf_token else L("reader_unavailable")}</p></div>'
+            '<div class="workspace-reader-layout" id="workspace-reader-layout">'
+            '<aside class="panel workspace-reader-panel" id="workspace-reader-panel" '
+            'aria-labelledby="workspace-reader-title" hidden>'
+            f'<h2 id="workspace-reader-title">{L("reader_title")}</h2>'
+            '<div class="setting-field">'
+            f'<label for="workspace-reader-dossier">{L("reader_choose")}</label>'
+            f'<select class="ctl" id="workspace-reader-dossier"><option value="">{L("reader_choose")}</option></select></div>'
+            f'<button type="button" class="ctl" id="workspace-reader-refresh">{L("reader_refresh")}</button>'
+            '<p class="ctl-status" id="workspace-reader-status" role="status" aria-live="polite"></p>'
+            '<div id="workspace-reader-body"></div></aside>'
+            '<div id="workspace-analysis-body">'
         )
 
     if not has_chapters:
@@ -1131,6 +1181,8 @@ def render_dashboard(
         parts.append("</div>")
 
     if controls:
+        if reader_enabled and has_chapters:
+            parts.append("</div></div></section>")
         parts.append("</div>")
 
     # --- Publications (for standalone non-interactive reports) ------------

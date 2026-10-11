@@ -84,6 +84,16 @@ project, so check the displayed path when switching.
 
 ### Read and explore
 
+**Since v2.4.0:** the native workspace adds a manuscript PDF form
+at the top of **Manuscript & Analysis**, before **Start your review**. Select
+**A5 reading copy** (the default), **A4 manuscript sheets** or **A4 analysis report**,
+then select **Download PDF**. It generates a PDF from the currently selected
+manuscript and returns it through your browser; it creates no server export files
+and changes neither the manuscript nor the research archive. The form needs
+JavaScript and a compatible live native server; standalone HTML reports do not
+provide the download action.
+The [`lixity pdf`](USAGE.md#lixity-pdf) terminal command remains available.
+
 The **Start your review** panel appears before the measurements. **Open passage**
 opens the first paragraph in source order that meets the selected tense-flag
 threshold, or the opening paragraph when none does. It clears manuscript search
@@ -111,7 +121,8 @@ Set **Author name** in the loaded project's Settings to prefill the project
 representative in the agreement. Apply stores that name in the project. The
 read-only manuscript identity check shows matching, missing or different metadata;
 it does not edit prose or establish who wrote the text.
-Publication-specific exports and delivery integrations belong to project adapters.
+Book-specific publication and delivery integrations belong to project adapters;
+the shared manuscript PDF layouts are described in the [PDF reference](USAGE.md#lixity-pdf).
 
 ## Research workflow
 
@@ -129,7 +140,12 @@ lixity research ingest --project ./my-novel --file ./source.txt \
 lixity research search --project ./my-novel --query "reading room"
 ```
 
-Every research command names its project. Search updates a stale search index
+Research commands stay project-scoped. Since v2.4.0, the CLI also
+accepts the validated initialized current directory for existing-archive commands;
+it searches no parent folders or last-opened projects. Use `--project` when
+working from elsewhere; it remains authoritative. See [CLI selection and the
+link shortcut](research/USAGE.md#reading-and-cli-workflows-since-v240).
+Search updates a stale search index
 automatically unless `--strict` is requested. CLI search defaults to source
 passages; `--scope all` also searches current dossiers, claims and decisions.
 The dashboard searches all these record types by default. Only source passages
@@ -139,6 +155,22 @@ In the dashboard, select a source or dossier to read its details and citations.
 Source and dossier filters narrow the loaded lists; **Search** looks through
 retained text. A source-passage search result offers **Use for claim** and
 **Use for dossier** actions.
+
+**Since v2.4.0:** select text inside one source paragraph to prepare
+a claim evidence-link draft. Read the selected quote and complete paragraph
+context in the preview, choose the claim and evidence relation, then save
+explicitly. The citation retains the whole source paragraph; selecting a
+sentence does not create a sentence-level citation. Cross-paragraph or ambiguous
+selections are unavailable; whole-passage actions remain in the Passages view.
+
+Open **Dossier alongside** in **Manuscript & Analysis** and choose a dossier,
+or use the matching action on a dossier card. Opening the optional view alone
+does not choose a dossier. It is read-only, and closing it preserves manuscript
+search and open paragraphs. Other analysis panels are temporarily hidden in this
+focused reading view and return when you close it. Refresh explicitly for the latest saved dossier
+revision; the selection lasts for the current page. The dossier appears above
+the manuscript on narrow screens. Evidence status labels express your own
+assessment; they do not certify historical facts.
 
 For a visual reference, open a dossier and choose **Add image**. Select an
 authorized local PNG/JPEG, add a short description, preview it and confirm

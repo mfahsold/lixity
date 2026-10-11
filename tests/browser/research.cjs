@@ -434,7 +434,7 @@ server.serve_forever()
     await page.locator('#r-search-query').fill('Archivist');
     await page.locator('#r-search-btn').click();
     await expect(page.locator('#research-search-results')).toContainText(claimTitle);
-    await expect(page.locator('#research-search-results')).toContainText('Hypothetical');
+    await expect(page.locator('#research-search-results')).toContainText('Author assumption');
     assert.equal(await page.locator('#research-search-results img').count(), 0);
     assert.equal(await page.locator('#research-search-results [data-use-passage]').count(), 0);
     await page.locator('#r-search-scope').selectOption('sources');

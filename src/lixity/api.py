@@ -444,7 +444,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "research",
-                "purpose": "experimental local UTF-8 source archive, exact citations and SQLite lexical search; explicit project required",
+                "purpose": "experimental local UTF-8 source archive, exact citations and SQLite lexical search; CLI uses --project or a verified current project directory",
                 "output": "command-dependent",
                 "subcommands": command_metadata(),
                 "status": "experimental",

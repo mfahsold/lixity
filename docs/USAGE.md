@@ -37,12 +37,12 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With Git and uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.3.0"
+uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
 lixity --version
 lixity about
 ```
 
-`v2.3.0` is the release pin. Choose `@main` only to follow development,
+`v2.4.0` is the release pin. Choose `@main` only to follow development,
 or a reviewed full commit hash for reproducibility.
 `uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
 terminal after `uv tool update-shell` if the command is not found.
@@ -133,6 +133,24 @@ lixity dashboard unknown-language.md --language auto -o detected.html
 
 Open the generated file in a browser; no server is needed for analysis views.
 
+### Download a manuscript PDF (since v2.4.0)
+
+The native workspace adds a PDF form at the top of **Manuscript & Analysis**,
+before **Start your review**. Choose **A5 reading copy** (default),
+**A4 manuscript sheets** or **A4 analysis report**, then select **Download PDF**.
+Changing the layout alone does not generate or download a document.
+
+The form uses the same composer as [`lixity pdf`](#lixity-pdf) and the currently
+selected manuscript. The response goes directly to your browser as a PDF
+attachment; generation creates no server export files and does not modify the
+manuscript or research archive. A context token prevents an old tab from silently
+exporting a different project after the server's selected context changes.
+
+This form requires JavaScript and an explicitly compatible live native server.
+Standalone HTML reports do not provide the download action. The NDA PDF under
+**Project & Settings** generates a
+confidentiality agreement and is a separate workflow.
+
 ### Start a review (since v2.3.0)
 
 The local workspace's welcome guidance starts with choosing a manuscript,
@@ -150,6 +168,24 @@ available, or the chapter map with a limitation hint when it is not.
 **Open sentence rhythm** is available when measurements are supplied. These
 routes reuse existing signals and panels; they do not compute a quality score
 or prescribe a revision.
+
+### Read a dossier beside the manuscript (since v2.4.0)
+
+Open **Dossier alongside** in **Manuscript & Analysis**, then choose a dossier.
+A dossier card can open the same view with that dossier selected. The view starts
+closed; opening it does not choose a dossier automatically. The companion reader
+is read-only. While it is open, other analysis panels are temporarily hidden so
+you can focus on manuscript chapters, search and filters beside the dossier.
+Closing it restores those panels and preserves manuscript search and open paragraphs.
+Refresh explicitly to read the latest saved dossier revision. The choice lasts
+for the current page. On screens at or below 900 pixels, the dossier appears
+above the manuscript rather than beside it.
+
+For source evidence, selection in an opened research source prepares the existing
+claim evidence-link form. The preview shows the selected quote and the full
+retained paragraph that will be cited. It creates no sentence-level citation and
+saves nothing until the existing form is submitted. See the [research workflow
+limits](research/USAGE.md#reading-and-cli-workflows-since-v240).
 
 ### Reading paragraphs (since v2.3.0)
 
@@ -609,6 +645,9 @@ lixity dashboard manuscript.md -o ui.html
 
 Composes a PDF document directly, without a browser, converter or runtime font
 package. No new dependency is involved, and nothing is uploaded.
+This is the terminal interface shipped in v2.3.0. The native workspace's
+[download form](#download-a-manuscript-pdf-since-v240) is a
+v2.4.0 addition; its PDF response does not write the CLI's output path.
 
 ```sh
 lixity pdf manuscript.md --layout report            # A4 analysis report

@@ -15,7 +15,7 @@ from .analyzer import CorpusAnalyzer
 from .config import load_project_config, resolve_thresholds
 from .formatters import ReportFormatter
 from .io import FileUtils
-from .models import SCHEMA_VERSION, CorpusConfig
+from .models import SCHEMA_VERSION
 from .pipeline import (
     analyze_document,
     fingerprint_document,
@@ -759,7 +759,8 @@ def _cmd_showing(args: argparse.Namespace) -> int:
 def _cmd_pdf(args: argparse.Namespace) -> int:
     """Compose one of the PDF layouts from the manuscript or the analysis."""
     from .pdf_document import PdfError
-    from .pdf_layouts import FontChoice, book_pdf, manuscript_pdf, report_pdf
+    from .pdf_export import compose_pdf
+    from .pdf_layouts import FontChoice
 
     try:
         workspace = discover(explicit=args.file)
@@ -768,10 +769,6 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
         return EXIT_ERROR
 
     text = workspace.read_manuscript()
-    config, resolved = resolve_document_config(
-        text, args.language, project_config=args._project_config
-    )
-    title = _pdf_title(args, workspace.manuscript, text)
     choice = FontChoice(
         serif=args.serif_font,
         serif_bold=args.bold_font,
@@ -780,23 +777,15 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
         sans_bold=args.sans_bold_font,
     )
     try:
-        if args.layout == "report":
-            fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
-            metrics = analyze_document(text, config, fp_thresholds).metrics
-            payload = report_pdf(
-                title=title,
-                markdown=ReportFormatter.format_markdown_report(
-                    metrics, labels=resolved.labels, language_key=resolved.key
-                ),
-                choice=choice,
-            )
-        else:
-            sections = _manuscript_sections(text, config)
-            payload = (
-                book_pdf(title=title, author=args.author or "", chapters=sections, choice=choice)
-                if args.layout == "book"
-                else manuscript_pdf(title=title, chapters=sections, choice=choice)
-            )
+        thresholds = (
+            _thresholds_from_args(args, getattr(args, "_project_config", None))
+            if args.layout == "report" else None
+        )
+        payload = compose_pdf(
+            text, manuscript=workspace.manuscript, layout=args.layout, language=args.language,
+            project_config=args._project_config, author=args.author or "",
+            thresholds=thresholds, choice=choice,
+        )
     except (PdfError, ValueError, RuntimeError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
@@ -806,34 +795,6 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
     changed = FileUtils.atomic_write_bytes_if_changed(output, payload)
     print(_m("pdf_written" if changed else "pdf_unchanged", output=output))
     return EXIT_OK
-
-
-def _pdf_title(args: argparse.Namespace, manuscript: str, text: str) -> str:
-    """Prefer the project's own title, then the manuscript's heading.
-
-    A book or a submission sheet is read by other people, so a file name such
-    as ``manuscript`` is not an acceptable title when the text names itself.
-    """
-    configured = args._project_config.get("title")
-    if isinstance(configured, str) and configured.strip():
-        return configured.strip()
-    for line in text.splitlines():
-        stripped = line.strip()
-        if stripped.startswith("# "):
-            heading = stripped[2:].strip()
-            if heading:
-                return heading
-    return os.path.splitext(os.path.basename(manuscript))[0]
-
-
-def _manuscript_sections(text: str, config: CorpusConfig) -> list[tuple[str, list[str]]]:
-    """Split the manuscript into chapter headings and their prose paragraphs."""
-    from .markdown_parser import prose_paragraphs, split_chapters
-
-    sections = []
-    for number, heading, body in split_chapters(text, config):
-        sections.append((heading or f"Chapter {number}", prose_paragraphs(body, config)))
-    return sections
 
 
 def _cmd_build(args: argparse.Namespace) -> int:
