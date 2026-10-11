@@ -24,6 +24,16 @@ def manager(tmp_path, port):
                           backend="process", startup_timeout=30, stop_timeout=10)
 
 
+def startup_diagnostics(app, result):
+    """Expose only disposable fixture records/logs when native startup fails."""
+    if isinstance(result, dict) and result.get("ok"):
+        return ""
+    files = {}
+    for path in (app.runtime_file, app.ready_file, app.log_file):
+        files[path.name] = path.read_text(encoding="utf-8", errors="replace")[-12000:] if path.exists() else "missing"
+    return json.dumps({"result": result, "fixture_files": files}, ensure_ascii=False, indent=2)
+
+
 def test_native_start_status_restart_and_stop_preserve_explicit_project(tmp_path, monkeypatch):
     for key in ("LIXITY_DIR", "LIXITY_HOST", "LIXITY_PORT"):
         monkeypatch.delenv(key, raising=False)
@@ -37,7 +47,7 @@ def test_native_start_status_restart_and_stop_preserve_explicit_project(tmp_path
     monkeypatch.setattr("lixity.service.webbrowser.open", opened.append)
     try:
         started = app.control("start", {"project": str(project), "language": "de"})
-        assert started["ok"] and started["state"] == "running", started
+        assert started["ok"] and started["state"] == "running", startup_diagnostics(app, started)
         first = started["pid"]
         with urllib.request.urlopen(f"http://127.0.0.1:{app.port}/api", timeout=10) as response:
             data = json.load(response)
@@ -49,7 +59,7 @@ def test_native_start_status_restart_and_stop_preserve_explicit_project(tmp_path
         assert existing["ok"] and existing["pid"] == first
         assert opened == [started["url"]], "Daily start --open opens the existing instance without a second process"
         restarted = app.control("restart", {})
-        assert restarted["ok"] and restarted["state"] == "running", restarted
+        assert restarted["ok"] and restarted["state"] == "running", startup_diagnostics(app, restarted)
         assert restarted["pid"] != first
         with urllib.request.urlopen(f"http://127.0.0.1:{app.port}/api", timeout=10) as response:
             data = json.load(response)
@@ -116,7 +126,7 @@ def test_simultaneous_starts_share_one_owned_child(tmp_path, monkeypatch):
         with ThreadPoolExecutor(max_workers=2) as pool:
             results = list(pool.map(lambda _: start(), range(2)))
         assert all(result["state"] in ("running", "starting") for result in results), results
-        assert any(result["ok"] for result in results), results
+        assert any(result["ok"] for result in results), startup_diagnostics(app, results)
         status = app.control("status", {})
         assert status["ok"] and status["state"] == "running", status
         assert all(result["pid"] == status["pid"] for result in results), results
