@@ -14,8 +14,8 @@ print(json.dumps({"analysis": runpy.run_path('tests/test_ui_contract.py')['_full
         project_author="Synthetic Writer", author_setting_enabled=True,
         identity_check={"title":{"status":"matched","value":"Synthetic project","source":"metadata:title"},
             "author_name":{"status":"mismatch","value":"Another Writer","source":"metadata:author"}})}))`],
-  {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8'});
-assert.equal(fixture.status, 0, fixture.stderr);
+  {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024});
+assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
 const fixtures = JSON.parse(fixture.stdout);
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-visual-consistency-'));
 const contrast = (first, second) => {

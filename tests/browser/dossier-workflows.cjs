@@ -40,6 +40,8 @@ server.serve_forever()
       server.once('error', reject);
       server.once('exit', code => reject(new Error(`Fixture exited ${code}: ${stderr}`)));
     });
+    const dossierListURL = url => url.origin === fixture.url &&
+      url.pathname === '/api/research/dossiers' && !url.searchParams.has('id');
     browser = await launchChromium();
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
     const errors = [], preparations = [], saves = [];
@@ -51,7 +53,7 @@ server.serve_forever()
     });
     const details = page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`);
     async function openDetails() {
-      await Promise.all([page.waitForResponse(response => response.url() === fixture.url + '/api/research/dossiers'), page.locator('[data-rtab=dossiers]').click()]);
+      await Promise.all([page.waitForResponse(response => dossierListURL(new URL(response.url())), {timeout: 10000}), page.locator('[data-rtab=dossiers]').click()]);
       // A refresh preserves an unchanged open detail, so close it first;
       // clicking blindly would toggle the preserved detail shut.
       if (await details.evaluate(node => node.parentElement.open)) await details.click();

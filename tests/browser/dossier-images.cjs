@@ -12,6 +12,13 @@ const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-images-'));
 const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
 
+function waitForHeldResponse(promise, label) {
+  let timer;
+  return Promise.race([promise, new Promise((_, reject) => {
+    timer = setTimeout(() => reject(new Error(`Timed out waiting for ${label}`)), 10000);
+  })]).finally(() => clearTimeout(timer));
+}
+
 (async () => {
   const server = spawn(python, ['-u', '-c', `
 import json, struct, sys, zlib
@@ -41,6 +48,7 @@ server.serve_forever()
   server.stderr.on('data', data => { stderr += data; });
   const lines = createInterface({input: server.stdout});
   let browser;
+  const releaseHeldResponses = [];
   try {
     const fixture = await new Promise((resolve, reject) => {
       const timeout = setTimeout(() => reject(new Error('Fixture startup timed out: ' + stderr)), 15000);
@@ -48,6 +56,10 @@ server.serve_forever()
       server.once('error', reject);
       server.once('exit', code => reject(new Error(`Fixture exited ${code}: ${stderr}`)));
     });
+    const dossierListURL = url => url.origin === fixture.url &&
+      url.pathname === '/api/research/dossiers' && !url.searchParams.has('id');
+    const dossierDetailURL = url => url.origin === fixture.url &&
+      url.pathname === '/api/research/dossiers' && url.searchParams.has('id');
     browser = await launchChromium();
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
     const errors = [], external = [], writes = [];
@@ -149,38 +161,41 @@ server.serve_forever()
     await page.unroute('**/api/research-dossier-image');
     let finishSave, startedSave, acceptedEnvelope;
     const saveGate = new Promise(resolve => { finishSave = resolve; });
+    releaseHeldResponses.push(finishSave);
     const saveReady = new Promise(resolve => { startedSave = resolve; });
     await page.route('**/api/research-dossier-image', async route => {
       const response = await route.fetch(); acceptedEnvelope = await response.json(); startedSave(); await saveGate; await route.fulfill({response});
     });
     let finishDetail, startedDetail;
     const detailGate = new Promise(resolve => { finishDetail = resolve; });
+    releaseHeldResponses.push(finishDetail);
     const detailReady = new Promise(resolve => { startedDetail = resolve; });
-    await page.route('**/api/research/dossiers?id=*', async route => {
+    await page.route(dossierDetailURL, async route => {
       const response = await route.fetch(); startedDetail(); await detailGate; await route.fulfill({response});
     });
     await page.locator('#dossier-image-save').click();
-    await saveReady;
+    await waitForHeldResponse(saveReady, 'image save response');
     await expect(page.locator('#dossier-image-save')).toBeDisabled();
     await page.evaluate(() => document.getElementById('dossier-image-form').requestSubmit());
     await page.keyboard.press('Escape');
     await expect(dialog).toBeVisible();
     finishSave();
     await expect(dialog).not.toBeVisible();
-    await detailReady;
+    await waitForHeldResponse(detailReady, 'dossier detail response');
     await page.locator('#r-filter-dossiers').fill('Synthetic');
     await page.locator('#r-filter-dossiers').focus();
     finishDetail();
     await page.unroute('**/api/research-dossier-image');
     await expect(page.locator('.research-dossier-body-rendered .dossier-image img')).toBeVisible();
     await expect(page.locator('#r-filter-dossiers')).toBeFocused();
-    await page.unroute('**/api/research/dossiers?id=*');
+    await page.unroute(dossierDetailURL);
     // A deliberate move through another control to nonfocusable content must
     // remain respected when an accepted-save reconciliation completes later.
     let finishMovedDetail, startedMovedDetail;
     const movedDetailGate = new Promise(resolve => { finishMovedDetail = resolve; });
+    releaseHeldResponses.push(finishMovedDetail);
     const movedDetailReady = new Promise(resolve => { startedMovedDetail = resolve; });
-    await page.route('**/api/research/dossiers?id=*', async route => {
+    await page.route(dossierDetailURL, async route => {
       const response = await route.fetch(); startedMovedDetail(); await movedDetailGate; await route.fulfill({response});
     });
     await page.locator('[data-dossier-add-image]').focus();
@@ -188,7 +203,7 @@ server.serve_forever()
       document.getElementById('research-status-bar').textContent = '';
       document.dispatchEvent(new CustomEvent('lixity:dossier-image-saved', {detail: accepted}));
     }, acceptedEnvelope);
-    await movedDetailReady;
+    await waitForHeldResponse(movedDetailReady, 'moved-focus dossier detail response');
     await page.locator('#r-filter-dossiers').fill('Synthetic');
     await page.locator('#r-filter-dossiers').focus();
     await page.locator('#research-dossiers-list .research-card-title').first().click();
@@ -199,13 +214,14 @@ server.serve_forever()
     await expect(page.locator('[data-dossier-add-image]')).not.toBeFocused();
     assert.equal(await page.evaluate(() => document.activeElement === document.body), true, 'Reconciliation respects the deliberate focus move to body');
     await expect(page.locator('#r-filter-dossiers')).toHaveValue('Synthetic');
-    await page.unroute('**/api/research/dossiers?id=*');
+    await page.unroute(dossierDetailURL);
     // An unrelated dossier control selected while a list read is pending must
     // keep its focus even if the list refresh replaces its original DOM node.
     let finishList, startedList;
     const listGate = new Promise(resolve => { finishList = resolve; });
+    releaseHeldResponses.push(finishList);
     const listReady = new Promise(resolve => { startedList = resolve; });
-    await page.route('**/api/research/dossiers', async route => {
+    await page.route(dossierListURL, async route => {
       const response = await route.fetch(); startedList(); await listGate; await route.fulfill({response});
     });
     await page.locator('[data-dossier-add-image]').focus();
@@ -213,7 +229,7 @@ server.serve_forever()
       document.getElementById('research-status-bar').textContent = '';
       document.dispatchEvent(new CustomEvent('lixity:dossier-image-saved', {detail: accepted}));
     }, acceptedEnvelope);
-    await listReady;
+    await waitForHeldResponse(listReady, 'dossier list response');
     const otherSummary = page.locator(`[data-research-detail=dossier][data-record-id="${fixture.other_dossier}"]`);
     await otherSummary.focus();
     await expect(otherSummary).toBeFocused();
@@ -221,7 +237,7 @@ server.serve_forever()
     await expect(page.locator('#research-status-bar')).toContainText('Image and dossier saved.');
     await expect(page.locator('.research-dossier-body-rendered .dossier-image img')).toBeVisible();
     await expect(otherSummary).toBeFocused();
-    await page.unroute('**/api/research/dossiers');
+    await page.unroute(dossierListURL);
     assert.equal(writes.length, 2, 'One rejected save plus one accepted save; busy resubmission sends no request');
     assert.equal(writes[1].allow_retention, true);
     assert.equal(writes[1].section, 'Notes');
@@ -244,7 +260,7 @@ server.serve_forever()
     await expect(page.locator('#research-sources-list')).toContainText('no text passages or textual comparison');
     assert.equal(await page.locator('#research-sources-list [data-source-view]').count(), 0, 'An image source has no fabricated text view');
     const dossierSummary = page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`);
-    await Promise.all([page.waitForResponse(response => response.url() === fixture.url + '/api/research/dossiers'), page.locator('[data-rtab=dossiers]').click()]);
+    await Promise.all([page.waitForResponse(response => dossierListURL(new URL(response.url())), {timeout: 10000}), page.locator('[data-rtab=dossiers]').click()]);
     // A refresh preserves an unchanged open detail, so close it first;
     // clicking blindly would toggle the preserved detail shut.
     if (await dossierSummary.evaluate(node => node.parentElement.open)) await dossierSummary.click();
@@ -365,6 +381,7 @@ server.serve_forever()
     assert.deepEqual(errors, []);
     console.log(`Dossier images: PNG/JPEG decoding; preview cancel/race/limits; atomic save busy/error/CAS recovery; exact old pins, full/section/history and lifecycle states; hostile data with no external requests; seven locales at 1440/390/320 passed. Screenshots: ${artifacts}`);
   } finally {
+    releaseHeldResponses.forEach(release => release());
     if (stderr.includes('Traceback')) console.error(stderr);
     if (browser) await browser.close();
     lines.close();

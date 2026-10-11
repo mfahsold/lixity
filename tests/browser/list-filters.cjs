@@ -14,6 +14,35 @@ const pythonEnv = {...process.env, PYTHONPATH: path.join(root, 'src')};
 const longTitleSegment = 'SyntheticUnbrokenResearchTitle'.repeat(3);
 const sourceTitle = 'Alpha "quoted" <img src=x onerror=alert(1)> ' + longTitleSegment;
 const dossierTitle = 'Alpha dossier ' + longTitleSegment;
+const matchList = researchReadMatcher('http://127.0.0.1:9000/api/research/sources');
+const matchDetail = researchReadMatcher('http://127.0.0.1:9000/api/research/sources', true);
+for (const query of ['', '?research_token=synthetic&summary=true']) {
+  assert.ok(matchList(new URL('http://127.0.0.1:9000/api/research/sources' + query)));
+  assert.equal(matchDetail(new URL('http://127.0.0.1:9000/api/research/sources' + query)), false);
+}
+for (const query of ['?id=synthetic', '?research_token=synthetic&id=synthetic', '?id=synthetic&research_token=synthetic']) {
+  assert.ok(matchDetail(new URL('http://127.0.0.1:9000/api/research/sources' + query)));
+  assert.equal(matchList(new URL('http://127.0.0.1:9000/api/research/sources' + query)), false);
+}
+assert.equal(matchList(new URL('http://127.0.0.1:9001/api/research/sources')), false);
+assert.equal(matchList(new URL('http://127.0.0.1:9000/api/research/dossiers')), false);
+
+async function bounded(promise, label, timeout = 10000) {
+  let timer;
+  try {
+    return await Promise.race([promise, new Promise((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`Timed out waiting for ${label}`)), timeout);
+    })]);
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+function researchReadMatcher(endpoint, detail = false) {
+  const expected = new URL(endpoint);
+  return url => url.origin === expected.origin && url.pathname === expected.pathname
+    && url.searchParams.has('id') === detail;
+}
 
 (async () => {
   const server = spawn(python, ['-u', '-c', `
@@ -74,20 +103,22 @@ server.serve_forever()
     for (const [kind, id, detailText] of [['sources', fixture.sourceIds[0], 'Original alpha detail.'],
       ['dossiers', fixture.dossierIds[0], 'Original alpha dossier detail.']]) {
       const url = fixture.url + '/api/research/' + kind;
+      const listMatch = researchReadMatcher(url);
+      const detailMatch = researchReadMatcher(url, true);
       let releaseList, listStarted, releaseDetail, detailStarted;
       const listGate = new Promise(resolve => { releaseList = resolve; });
       const listReady = new Promise(resolve => { listStarted = resolve; });
       const detailGate = new Promise(resolve => { releaseDetail = resolve; });
       const detailReady = new Promise(resolve => { detailStarted = resolve; });
       let listReads = 0;
-      await page.route(url, async route => {
+      await page.route(listMatch, async route => {
         listReads++;
         const response = await route.fetch();
         listStarted();
         await listGate;
         await route.fulfill({response});
       });
-      await page.route(url + '?id=*', async route => {
+      await page.route(detailMatch, async route => {
         const response = await route.fetch();
         detailStarted();
         await detailGate;
@@ -95,7 +126,7 @@ server.serve_forever()
       });
       try {
         await page.locator(`[data-rtab=${kind}]`).click();
-        await listReady;
+        await bounded(listReady, `${kind} list interception; observed requests: ${apiRequests.slice(-8).join(', ')}`);
         await page.evaluate(kind => {
           window.pendingListRefresh = kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers();
         }, kind);
@@ -104,13 +135,13 @@ server.serve_forever()
         });
         await card.locator('.research-details-body').evaluate(node => { node.dataset.refreshPreserved = 'yes'; });
         await card.locator('[data-research-detail]').click();
-        await detailReady;
+        await bounded(detailReady, `${kind} detail interception`);
         if (kind === 'dossiers') {
           releaseDetail();
           await expect(card.locator('.research-details-body')).toContainText(detailText);
         }
         releaseList();
-        await page.evaluate(() => window.pendingListRefresh);
+        await bounded(page.evaluate(() => window.pendingListRefresh), `${kind} coalesced list refresh`);
         await expect(card.locator('.research-details')).toHaveAttribute('open', '');
         await expect(card.locator('.research-details-body')).toHaveAttribute('data-refresh-preserved', 'yes');
         releaseDetail();
@@ -121,8 +152,8 @@ server.serve_forever()
       } finally {
         releaseList();
         releaseDetail();
-        await page.unroute(url);
-        await page.unroute(url + '?id=*');
+        await page.unroute(listMatch);
+        await page.unroute(detailMatch);
       }
     }
     await page.locator('[data-rtab=sources]').click();
@@ -176,11 +207,12 @@ server.serve_forever()
     // A committed update must win over an older list response that arrives last.
     for (const [kind, id] of [['sources', fixture.sourceIds[0]], ['dossiers', fixture.dossierIds[0]]]) {
       const url = fixture.url + '/api/research/' + kind;
+      const listMatch = researchReadMatcher(url);
       let releaseOld, oldStarted;
       const oldGate = new Promise(resolve => { releaseOld = resolve; });
       const oldReady = new Promise(resolve => { oldStarted = resolve; });
       let reads = 0;
-      await page.route(url, async route => {
+      await page.route(listMatch, async route => {
         const first = ++reads === 1;
         const response = await route.fetch();
         if (first) { oldStarted(); await oldGate; }
@@ -188,7 +220,7 @@ server.serve_forever()
       });
       try {
         await page.locator(`[data-rtab=${kind}]`).click();
-        await oldReady;
+        await bounded(oldReady, `${kind} old list interception`);
         await page.evaluate(kind => {
           window.oldListRefresh = kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers();
         }, kind);
@@ -212,7 +244,7 @@ else:
         await page.evaluate(({kind, id}) => {
           window.latestListRefresh = kind === 'sources' ? refreshResearchSources(null, id) : refreshResearchDossiers(null, id);
         }, {kind, id});
-        await page.evaluate(() => window.latestListRefresh);
+        await bounded(page.evaluate(() => window.latestListRefresh), `${kind} latest list refresh`);
         const card = page.locator('#research-' + kind + '-list .research-card').filter({
           has: page.locator(`[data-research-detail][data-record-id="${id}"]`),
         });
@@ -221,7 +253,7 @@ else:
         await expect(card.locator('.research-details-body')).toContainText(latestText);
         await card.locator('.research-details-body').evaluate(node => { node.dataset.latestDetail = 'yes'; });
         releaseOld();
-        await page.evaluate(() => window.oldListRefresh);
+        await bounded(page.evaluate(() => window.oldListRefresh), `${kind} superseded list refresh`);
         await expect(card.locator('.research-details')).toHaveAttribute('open', '');
         await expect(card.locator('.research-details-body')).toHaveAttribute('data-latest-detail', 'yes');
         await expect(card.locator('.research-details-body')).toContainText(latestText);
@@ -229,7 +261,7 @@ else:
         await card.locator('[data-research-detail]').click();
       } finally {
         releaseOld();
-        await page.unroute(url);
+        await page.unroute(listMatch);
       }
     }
 
@@ -253,7 +285,8 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       const gate = new Promise(resolve => { release = resolve; });
       const ready = new Promise(resolve => { started = resolve; });
       const url = fixture.url + '/api/research/' + kind;
-      await page.route(url, async route => {
+      const listMatch = researchReadMatcher(url);
+      await page.route(listMatch, async route => {
         const response = await route.fetch();
         started();
         await gate;
@@ -261,7 +294,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       });
       try {
         await page.locator(`[data-rtab=${kind}]`).click();
-        await ready;
+        await bounded(ready, `${kind} filtered list interception`);
         await page.locator('#r-filter-' + kind).fill('gamma');
         release();
         await expect(page.locator('#research-' + kind + '-list .research-card:visible')).toHaveCount(1);
@@ -270,7 +303,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
         await expect(page.locator('#' + selectId + ' option')).toHaveCount(4);
       } finally {
         release();
-        await page.unroute(url);
+        await page.unroute(listMatch);
       }
     }
 
@@ -329,13 +362,14 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       ['batch', 'dossiers', 'Batch revised synthetic dossier', fixture.dossierIds[1]],
     ]) {
       await page.locator(`[data-rtab=${kind}]`).click();
-      await page.evaluate(kind => kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers(), kind);
+      await bounded(page.evaluate(kind => kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers(), kind), `${kind} initial write-case refresh`);
       const url = fixture.url + '/api/research/' + kind;
+      const listMatch = researchReadMatcher(url);
       let releaseOld, oldStarted;
       const oldGate = new Promise(resolve => { releaseOld = resolve; });
       const oldReady = new Promise(resolve => { oldStarted = resolve; });
       let reads = 0;
-      await page.route(url, async route => {
+      await page.route(listMatch, async route => {
         const first = ++reads === 1;
         const response = await route.fetch();
         if (first) { oldStarted(); await oldGate; }
@@ -345,7 +379,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
         await page.evaluate(kind => {
           window.preWriteListRefresh = kind === 'sources' ? refreshResearchSources() : refreshResearchDossiers();
         }, kind);
-        await oldReady;
+        await bounded(oldReady, `${action} pre-write list interception`);
         if (action === 'import') {
           await page.locator('#r-ingest-title').evaluate(element => { element.closest('details').open = true; });
           await page.locator('#r-ingest-title').fill(title);
@@ -381,19 +415,25 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
         await expect(updated).toHaveText(title);
         assert.equal(reads, 2, action + ' must read a fresh list after its accepted write');
         releaseOld();
-        await page.evaluate(() => window.preWriteListRefresh);
+        await bounded(page.evaluate(() => window.preWriteListRefresh), `${action} pre-write list refresh`);
         await expect(updated).toHaveText(title);
       } finally {
         releaseOld();
-        await page.evaluate(() => window.preWriteListRefresh);
-        await page.unroute(url);
+        try {
+          await bounded(page.evaluate(() => window.preWriteListRefresh), `${action} pending list cleanup`);
+        } finally {
+          await page.unroute(listMatch);
+        }
       }
     }
     assert.deepEqual(errors, [], 'Research filters must not cause browser runtime errors');
     console.log(`Research list filters: controlled list/detail races, coalesced reads, fresh import/create/revision/batch reads, stale responses, matching, inert text, preserved details, no typing requests, associations, complete long titles and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
   } finally {
-    if (browser) await browser.close();
-    lines.close();
-    server.kill('SIGTERM');
+    try {
+      if (browser) await browser.close();
+    } finally {
+      lines.close();
+      server.kill('SIGTERM');
+    }
   }
 })().catch(error => { console.error(error); process.exitCode = 1; });

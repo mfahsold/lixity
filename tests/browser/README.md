@@ -21,6 +21,7 @@ node tests/browser/manuscript-search.cjs
 node tests/browser/manuscript-pdf.cjs
 node tests/browser/workspace-reader.cjs
 node tests/browser/research-selection.cjs
+node tests/browser/research-chronology.cjs
 node tests/browser/project-controls.cjs
 node tests/browser/scenes.cjs
 node tests/browser/docs.cjs
@@ -65,6 +66,11 @@ dossier metadata matching, inert titles, preserved detail DOM, no API requests
 while typing, delayed list refresh, complete association options and their
 selected values. It inspects all seven languages at 1440 and 320 pixels and saves
 screenshots under `/tmp/lixity-list-filters-*`.
+
+The research-chronology suite checks the read-only claim timeline, explicit
+cause/effect saves and revisions, keyword evidence selection, stale project and
+draft responses, and inert data in all seven languages at 1440 and 320 pixels.
+It uses a disposable archive and retains only temporary synthetic screenshots.
 
 The project-controls suite checks manuscript file/drop selection and inert
 filenames, explicit native import confirmation, the existing embedding load
