@@ -1,6 +1,7 @@
 """Real native lifecycle checks use only disposable servers and synthetic text."""
 
 import json
+import os
 import secrets
 import socket
 import subprocess
@@ -9,8 +10,25 @@ import threading
 import urllib.request
 from concurrent.futures import ThreadPoolExecutor
 
+import pytest
+
 from lixity import __version__
 from lixity.service import ServiceManager, _write_json, process_birth
+
+
+@pytest.fixture(autouse=True)
+def darwin_startup_traces(tmp_path, monkeypatch):
+    """Trace only synthetic macOS children that stall during native startup."""
+    if sys.platform != "darwin":
+        return
+    diagnostics = tmp_path / "startup-diagnostics"
+    diagnostics.mkdir()
+    (diagnostics / "sitecustomize.py").write_text(
+        "import faulthandler\nfaulthandler.dump_traceback_later(10, repeat=True)\n",
+        encoding="utf-8",
+    )
+    inherited = os.environ.get("PYTHONPATH")
+    monkeypatch.setenv("PYTHONPATH", str(diagnostics) + (os.pathsep + inherited if inherited else ""))
 
 
 def free_port():
