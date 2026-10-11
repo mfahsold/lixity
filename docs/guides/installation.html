@@ -4,13 +4,13 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Install Lixity and Open a Manuscript Locally</title>
-<meta name="description" content="Install Lixity from GitHub, create an offline manuscript dashboard, and reconnect an existing project. Includes release pins and server troubleshooting."/>
+<meta name="description" content="Install Lixity with uv-managed Python, start the local workspace, and manage updates or removal. Includes fixed release pins, project opening and optional offline reports."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/guides/installation.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
 <meta property="og:title" content="Install Lixity and Open a Manuscript Locally"/>
-<meta property="og:description" content="A practical path from installation to a local manuscript dashboard and research workspace."/>
+<meta property="og:description" content="One isolated installation and packaged start, stop, restart and status commands for the local manuscript workspace."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/guides/installation.html"/>
 </head>
 <body>
@@ -19,23 +19,29 @@
 <a href="../">Lixity · Documentation</a>
 <h1>Install Lixity and open a manuscript locally</h1>
 <p>Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.</p>
-<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-10">10 October 2026</time></p>
+<p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-11">11 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="installation.html" aria-current="page">Installation</a><a href="interpretation.html">Interpret results</a><a href="research-pdf.html">Sources and PDF/OCR</a></nav>
 
 <h2 id="requirements">What do I need?</h2>
-<p>Install Python, Git and <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. These examples use Python 3.12; 3.10 or newer is supported on Linux, macOS and Windows. Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
+<p>Install <a href="https://docs.astral.sh/uv/getting-started/installation/">uv</a>. It installs the published release wheel and supplies managed Python 3.12; no Git or separate Python install is needed. Installation needs an internet connection. Analysis runs offline afterward. PDF import has <a href="research-pdf.html#ocr">additional requirements</a>.</p>
 <div class="notice-box"><strong>License:</strong> Lixity is source-available under LNCL-1.0. Free use is limited to projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">licensing examples</a>.</div>
 
 <h2 id="install">Install Lixity</h2>
-<pre><code>uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
-lixity --version
-lixity about</code></pre>
-<p>This selects a fixed release from GitHub. If <code>lixity</code> is not found, run <code>uv tool update-shell</code>, reopen the terminal and try again. See the <a href="../releases/v2.4.0.md">release notes</a> for changes and compatibility.</p>
-<p>For unreleased development work, replace the installation with:</p>
-<pre><code>uv tool install --force --python 3.12 "git+https://github.com/mfahsold/lixity.git@main"</code></pre>
-<p><code>main</code> changes over time. Most users should keep the fixed release. See the <a href="../INSTALLATION.md#updates-and-removal">update instructions</a> when selecting a newer version, and restart any running Lixity server afterward.</p>
+<pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v2.4.0/lixity-2.4.0-py3-none-any.whl"
+uv tool update-shell</code></pre>
+<p>Open a new terminal, then verify and start the app:</p>
+<pre><code>lixity --version
+lixity service start --open</code></pre>
+<p>This selects a fixed release wheel from GitHub in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration configures new terminals; it does not change an already open one. See the <a href="../releases/v2.4.0.md">release notes</a> for changes and compatibility.</p>
+<details><summary>Development builds instead</summary>
+<p>For unreleased development work, install Git, stop the managed service and replace the installation with:</p>
+<pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"</code></pre>
+<p><code>main</code> changes over time. Verify the version before starting again. Most users should keep the fixed release. See the <a href="../INSTALLATION.md#updates-and-removal">update instructions</a>.</p>
+</details>
 
-<h2 id="first-dashboard">Create the first dashboard</h2>
+<h2 id="first-dashboard">Start the workspace</h2>
+<p>The managed app opens <code>http://127.0.0.1:8765/</code>. Its default is an empty workspace; it does not search your terminal's current folder. Choose <strong>Open Project</strong> for an existing folder or <strong>Analyze a manuscript</strong> for an import preview. Confirm the language and read a passage before interpreting its measurements.</p>
+<details><summary>Generate an offline HTML report instead</summary>
 <p>Save this synthetic text as <code>sample.md</code>. Two short chapters are sufficient to exercise the workflow, but not to establish a reliable stylistic baseline.</p>
 <pre><code>## Chapter 1
 
@@ -46,12 +52,14 @@ The rain stopped. Mara opened the window. The street was quiet.
 At the library, Mara examined a handwritten catalogue while the keeper searched the shelves.</code></pre>
 <pre><code>lixity dashboard sample.md --language en -o sample-dashboard.html</code></pre>
 <p>Open <code>sample-dashboard.html</code> in your browser. Use a longer manuscript with several chapters for more informative results, and read <a href="interpretation.html">how to interpret them</a>. Choose <code>--language de</code> for German or <code>--language en</code> for English. English is the default; <code>--language auto</code> explicitly requests detection.</p>
+</details>
 
 <h2 id="zotero">Optional Zotero Desktop</h2>
 <p>For source capture, install Zotero 10 or later on the same computer and enable its local API in Settings → Advanced. Download the attachments you need. Lixity can browse collections and retain selected PDF/text attachments with your permission. No cloud account is needed. See <a href="research-pdf.html#zotero">Zotero capture and migration</a>; images, audio and video remain in Zotero.</p>
 
 <h2 id="existing-project">Open an existing project and research archive</h2>
-<pre><code>lixity serve /absolute/path/to/project --host 127.0.0.1 --port 8765</code></pre>
+<p>With the service stopped, an explicit project can be supplied when starting:</p>
+<pre><code>lixity service start --open /absolute/path/to/project</code></pre>
 <p>Replace the example path with your project folder. Open <code>http://127.0.0.1:8765/</code> and check the project name in the workspace bar. <strong>Open Project</strong> switches this server to an existing folder and its research. CLI analysis, research and build commands do not switch an already running server. <strong>New Project → Import Manuscript</strong> creates a separate project from uploaded text.</p>
 <p>For a research-only workspace, an initialized archive can be opened without a manuscript. Source records remain available; comparing sources with manuscript text needs a loaded manuscript.</p>
 <p>Switch between Research &amp; Dossiers, Manuscript &amp; Analysis, and Project &amp; Settings. New Project, Open Project and optional guidance are available in every view. Selecting or dropping a manuscript opens its preview directly; confirm to create a separate project. Source and dossier filters narrow their lists; Research → Search looks through retained text.</p>
@@ -59,8 +67,20 @@ At the library, Mara examined a handwritten catalogue while the keeper searched 
 
 <h2 id="restart">Running the server day to day</h2>
 <p>The workspace uses <code>http://127.0.0.1:8765/</code> by default. Built-in analysis runs on your computer; optional integrations have their own setup and data handling. Tabs connected to one server share its active project.</p>
-<p>Stop a foreground server with <code>Ctrl+C</code>. After a computer restart, run the same <code>lixity serve /path/to/project</code> command; no reimport is needed. After updating Lixity or changing OCR settings, stop and restart the server. A browser reload alone does not update its running code.</p>
-<p>Optional background launchers and login startup are described in the <a href="../INSTALLATION.md#running-the-server">server setup reference</a>. Lixity does not install a startup service automatically. Start Zotero for new captures; retained research stays readable when it is closed.</p>
+<pre><code>lixity service status
+lixity service restart
+lixity service stop</code></pre>
+<p>After a computer restart, start the service again; no reimport is needed. Restart uses the saved launch settings, not a later project choice in the browser. A browser reload alone does not update running code.</p>
+<p>The controller manages its own instances. A foreground <code>lixity serve</code> process still stops with <code>Ctrl+C</code>; external systemd, launchd or Task Scheduler entries use their own manager. Login startup is an explicit advanced choice in the <a href="../INSTALLATION.md#optional-startup-at-login">setup reference</a>. Start Zotero for new captures; retained research stays readable while it is closed.</p>
+
+<h2 id="updates">Update or remove Lixity</h2>
+<p>Stop each managed instance before replacing the package. Use the published wheel for the desired release:</p>
+<pre><code>lixity service stop
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v2.4.0/lixity-2.4.0-py3-none-any.whl"
+lixity --version
+lixity service start --open</code></pre>
+<p>For a custom port, use <code>lixity service stop --port 9000</code> with that instance's port before updating. Pass an explicit project again if you want one at startup. <code>uv tool upgrade lixity</code> retains the installed source; a fixed wheel does not become the next release.</p>
+<p>For removal, stop all managed instances and disable any login-startup entry you configured, then run <code>uv tool uninstall lixity</code>. Manuscript folders and research archives remain. See the <a href="../INSTALLATION.md#updates-and-removal">complete update/removal reference</a>.</p>
 
 <h2 id="troubleshooting">The project exists, but the server cannot open it</h2>
 <p>The chooser shows folders available to the computer and account running Lixity. A container or service account may have different access from your terminal. Check the project path and permissions, then restart the intended server. Use Open Project to reconnect the original folder rather than importing another copy.</p>

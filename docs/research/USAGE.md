@@ -607,12 +607,14 @@ lixity research ingest --project ./novel --file ./revised-notes.txt \
 lixity research reindex --project ./novel
 lixity research schema
 
-# Or launch the interactive web dashboard with integrated research panel:
+# Or launch a foreground research server (stop with Ctrl+C):
 lixity serve --research-project ./novel --no-project
 ```
 
 Replace the uppercase placeholders with returned IDs. Search uses the newest
 capture of each source. Earlier passage IDs still cite their original bytes.
+For the managed app, use `lixity service start --open` and **Open Project** to
+select the initialized archive; see the [lifecycle reference](../INSTALLATION.md#running-the-server).
 Repeating a refresh with unchanged bytes and context is a no-op. For native `ingest`, omitting `--source-id` creates a distinct source; identical
 text is not proof of identity. Zotero capture instead uses its structured external
 identity to recognize an already captured attachment.

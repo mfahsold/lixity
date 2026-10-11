@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint typecheck check build screenshots clean docs-check docs-sync serve stop
+.PHONY: help install install-dev test lint typecheck check build screenshots clean docs-check docs-sync run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -53,8 +53,19 @@ clean: ## Remove caches and build artifacts
 
 LIXITY_PORT ?= 8765
 
-serve: ## Start the managed Lixity dashboard (default port 8765). Override with LIXITY_PORT.
-	bash scripts/lixity-start.sh start --port $(LIXITY_PORT)
+run: ## Run the empty dashboard in the foreground (Ctrl+C stops it).
+	"$(VPY)" -m lixity serve --no-project --port $(LIXITY_PORT)
+
+start: ## Start the packaged managed dashboard (default port 8765).
+	"$(VPY)" -m lixity service start --port $(LIXITY_PORT)
+
+serve: start ## Compatibility alias for managed start; use run for foreground.
 
 stop: ## Stop the managed Lixity dashboard instance.
-	bash scripts/lixity-start.sh stop --port $(LIXITY_PORT)
+	"$(VPY)" -m lixity service stop --port $(LIXITY_PORT)
+
+restart: ## Restart the managed instance with its saved startup settings.
+	"$(VPY)" -m lixity service restart --port $(LIXITY_PORT)
+
+status: ## Inspect the managed instance without modifying manuscript data.
+	"$(VPY)" -m lixity service status --port $(LIXITY_PORT)

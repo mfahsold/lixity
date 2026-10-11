@@ -186,12 +186,14 @@
 
   <section id="installation" class="reading-section">
     <h2>Install the current release</h2>
-    <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> and Git. The <a href="guides/installation.html">installation guide</a> explains how to get them on Windows, macOS and Linux.</p>
-    <pre class="cmd-block">uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
-lixity --version
-lixity build manuscript.md --language de</pre>
-    <p>Open <code>exports/manuscript_dashboard.html</code> in your browser. Use <code>--language en</code> for English. English is the default when no language is selected; detection requires <code>--language auto</code>.</p>
-    <p>For the live workspace, run <code>lixity serve --no-project --port 8765</code> and open <code>http://127.0.0.1:8765/</code>.</p>
+    <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> to install the release wheel with managed Python. No Git or separate Python install is needed. The <a href="guides/installation.html">installation guide</a> covers Windows, macOS and Linux.</p>
+    <pre class="cmd-block">uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v2.4.0/lixity-2.4.0-py3-none-any.whl"
+uv tool update-shell</pre>
+    <p>Open a new terminal, then verify and start the app:</p>
+    <pre class="cmd-block">lixity --version
+lixity service start --open</pre>
+    <p>uv supplies the managed Python environment; shell integration takes effect in the new terminal. The app starts an empty local workspace; choose Open Project or Analyze a manuscript, confirm the language and read a passage. English is the default; automatic detection is an explicit choice.</p>
+    <p>Use <code>lixity service status</code>, <code>lixity service restart</code> or <code>lixity service stop</code> for the managed instance. The <a href="guides/installation.html#updates">update and removal guide</a> keeps the isolated program separate from your manuscript folders and research archives.</p>
   </section>
 
   <section id="methods" class="reading-section">

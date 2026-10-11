@@ -255,7 +255,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters pacing scenes motifs showing dashboard pdf serve style build about completion research"
+    local cmds="analyze profile dialogue characters pacing scenes motifs showing dashboard pdf serve service style build about completion research"
     local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
     local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
     if [[ $COMP_CWORD -eq 1 ]]; then
@@ -263,6 +263,10 @@ _lixity_complete() {
         return 0
     fi
     case "$prev" in
+        service)
+            COMPREPLY=( $(compgen -W "start stop restart status" -- "$cur") )
+            return 0
+            ;;
         research)
             COMPREPLY=( $(compgen -W "__LIXITY_RESEARCH_COMMANDS__" -- "$cur") )
             return 0
@@ -281,6 +285,10 @@ _lixity_complete() {
             ;;
         --fdr-method)
             COMPREPLY=( $(compgen -W "bh by" -- "$cur") )
+            return 0
+            ;;
+        --backend)
+            COMPREPLY=( $(compgen -W "auto process systemd" -- "$cur") )
             return 0
             ;;
         --flag-min-severity)
@@ -333,6 +341,7 @@ _lixity() {
     'dashboard:Single-file HTML dashboard'
     'pdf:Compose a PDF analysis report, book layout or submission sheet'
     'serve:Run local HTTP development server and interactive dashboard'
+    'service:Manage an owned local dashboard process'
     'build:Idempotent workspace build'
     'about:Tool metadata for agents'
     'completion:Shell completion script'
@@ -384,6 +393,22 @@ _lixity() {
             '--open[Open in browser]' \
             '--no-project[Start without preloading a project]' \
             '--research-project[Explicit research project root]:directory:_files -/' \
+            "${_lixity_style_flags[@]}"
+          ;;
+        service)
+          _arguments \
+            '1:action:(start stop restart status)' \
+            '2:project:_files' \
+            '--port[Port]:port:' \
+            '--host[Loopback host]:host:(127.0.0.1 localhost)' \
+            '--no-project[Start an empty workspace]' \
+            '--open[Open browser]' \
+            '--backend[Runtime backend]:backend:(auto process systemd)' \
+            '--json[Machine-readable lifecycle result]' \
+            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--title[Project title]:title:' \
+            '--research-project[Explicit research root]:directory:_files -/' \
+            '--debug[Enable diagnostics]' \
             "${_lixity_style_flags[@]}"
           ;;
         build)
@@ -911,6 +936,9 @@ def main(argv: list[str] | None = None) -> int:
             "research", help="Experimental local sources, citations and lexical search (JSON)"
         )
     )
+    from .service import configure as configure_service
+
+    configure_service(sub.add_parser("service", help="Manage an owned local dashboard process"))
     for name, help_text in (
         ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
         ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
@@ -1055,6 +1083,7 @@ def main(argv: list[str] | None = None) -> int:
             )
             continue
         if name == "serve":
+            p.add_argument("--_service-token", help=argparse.SUPPRESS)
             p.add_argument(
                 "path",
                 nargs="?",
@@ -1169,6 +1198,10 @@ def main(argv: list[str] | None = None) -> int:
                 "--sans-bold-font", default=None, help="TrueType file for report headings"
             )
     args = parser.parse_args(argv)
+    if args.command == "service":
+        from .service import run as run_service
+
+        return run_service(args)
     if args.command == "research":
         from .research.cli import run as run_research
 
@@ -1209,6 +1242,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "serve":
         from .server import run_server
+        from .service import ManagedServe
 
         fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
         project_open_overrides = {
@@ -1226,7 +1260,10 @@ def main(argv: list[str] | None = None) -> int:
             )
             if value is not None
         }
+        managed = None
         try:
+            if args._service_token is not None:
+                managed = ManagedServe(args._service_token, args.port)
             run_server(
                 target_path=args.path,
                 host=args.host,
@@ -1239,11 +1276,15 @@ def main(argv: list[str] | None = None) -> int:
                 research_dir=args.research_project,
                 project_open_overrides=project_open_overrides,
                 debug=args.debug,
+                on_ready=managed.ready if managed is not None else None,
             )
             return EXIT_OK
         except (OSError, ValueError, RuntimeError) as exc:
             print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
             return EXIT_ERROR
+        finally:
+            if managed is not None:
+                managed.close()
 
     if args.command == "pdf":
         return _cmd_pdf(args)

@@ -10,6 +10,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [2.4.0] - 2026-10-11
 
 ### Added
+- Packaged `lixity service start|stop|restart|status` lifecycle commands and
+  `python -m lixity`, using the installed Python without a source checkout.
+  Default startup is an empty application-owned workspace; projects are explicit.
+  Ownership/readiness checks and shared launchers replace separate Sh/PowerShell
+  lifecycle implementations. Login startup remains an explicit manager choice.
 - Native manuscript PDF downloads at the top of Manuscript & Analysis, with
   A5 reading layout as the default, A4 submission sheet and analysis report.
   Generation is explicit and reuses the CLI composer; standalone HTML has no
@@ -28,6 +33,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   existing validation, defaults and version pins. `link-evidence` remains available.
 
 ### Changed
+- Recommended application installation uses a pinned release wheel with
+  uv-managed Python, without a Git prerequisite. uv owns installation, explicit
+  release replacement and removal; project storage and application state remain.
 - Existing-archive research CLI commands can omit `--project` when the current
   directory itself contains a verified initialized archive. Explicit paths win;
   no parent, environment or previous-project lookup is performed. Initialization

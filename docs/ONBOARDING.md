@@ -13,8 +13,8 @@ written license; see [Licensing](LICENSING.md).
 | What you want to do | Start here |
 | --- | --- |
 | Explore a manuscript | Build a dashboard using the commands below. |
-| Return to an existing project | Choose **Open Project** or run `lixity serve /path/to/project`. |
-| Start a project | Run `lixity serve --no-project` and choose **New Project**. |
+| Return to an existing project | Start the app and choose **Open Project**. |
+| Start a project | Run `lixity service start --open` and choose **Analyze a manuscript** or **New Project**. |
 | Keep research sources | Open an initialized research project, or initialize one as shown below. |
 | Capture sources from Zotero | Follow the [Zotero setup](research/USAGE.md#zotero-desktop-bridge-since-v1190), then select attachments in the dashboard. |
 
@@ -47,9 +47,7 @@ highlight as a reason to revise.
 ## Use the interactive workspace
 
 ```sh
-lixity serve --no-project --port 8765
-# Or open an existing project:
-lixity serve ./my-novel --port 8765
+lixity service start --open
 ```
 
 Open `http://127.0.0.1:8765/`. The workspace has three views:
@@ -62,6 +60,12 @@ optional guidance. An empty manuscript view offers the same import action.
 **New Project**, **Open Project** and optional welcome guidance remain available
 in every view. Hide the guidance when you no longer need it; **Show guidance**
 reopens it. The browser remembers this preference when local storage is available.
+
+With the service stopped, `lixity service start --open ./my-novel` starts with
+an explicit project instead. The managed service does not need an open terminal.
+Its default startup is an empty workspace; it does not search your terminal's
+folder. Use `lixity service status`, `lixity service restart` and
+`lixity service stop` to manage the instance.
 
 ### Open or import?
 
@@ -225,10 +229,13 @@ language and a sample quotation against the source. For Zotero captures, also
 check the original-item link and metadata. A successful search does not verify
 a claim.
 
-Stop a foreground server with Ctrl+C. To return, run
-`lixity serve /path/to/project` and open the existing project. After updating
-Lixity or changing OCR settings, restart the server; a browser reload alone does
-not load updated code. See [server setup and restart](INSTALLATION.md#running-the-server).
+Stop the managed instance with `lixity service stop`. To return, run
+`lixity service start --open` and open the existing project, or pass an explicit
+project path when starting. Restart uses its recorded launch settings, so a
+different project selected in the live browser does not change its startup
+project. After updates or OCR setting changes, restart the intended instance;
+a browser reload alone does not load updated code. A foreground `lixity serve`
+still stops with Ctrl+C. See [server setup and restart](INSTALLATION.md#running-the-server).
 
 Back up the manuscript separately from the research archive. Paired
 research/Zotero backups exclude manuscripts and external linked attachments.

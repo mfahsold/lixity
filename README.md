@@ -30,17 +30,26 @@ including self-publishing, requires a separate written commercial license.
 
 ## Installation
 
-Lixity runs on Windows, macOS and Linux. It needs Python 3.10 or later.
-The commands below run in a terminal and use [uv](https://docs.astral.sh/uv/) and Git.
-For help installing these tools, or to use pipx instead, follow the
+Lixity runs on Windows, macOS and Linux. Use [uv](https://docs.astral.sh/uv/);
+it supplies the managed Python environment and installs the release wheel.
+For help installing uv or advanced installation options, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
-lixity --version
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v2.4.0/lixity-2.4.0-py3-none-any.whl"
+uv tool update-shell
 ```
 
-This installs the released version. For later upgrades, select the new tag using
+Open a new terminal, then verify and start the app:
+
+```bash
+lixity --version
+lixity service start --open
+```
+
+The service starts an empty local workspace; choose **Open Project** or
+**Analyze a manuscript**.
+For later upgrades, select the new release wheel using
 the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
 the local workspace. [Release notes](docs/releases/v2.4.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
@@ -72,13 +81,19 @@ GitHub Pages contains the documentation. For project management, research
 editing and live settings on your computer, start the local workspace:
 
 ```bash
-lixity serve --no-project --port 8765
+lixity service start --open
 ```
 
 Open `http://127.0.0.1:8765/`. **Open Project** reconnects an existing folder and
 its research archive. **Import Manuscript** previews a selected file and creates
 a new project when you confirm. The [first-project guide](docs/ONBOARDING.md)
 walks through both choices.
+
+Use `lixity service status`, `lixity service restart` or `lixity service stop`
+for the managed instance.
+Before uninstalling, stop managed instances and disable any login startup you
+configured, then run `uv tool uninstall lixity`. Manuscripts and research archives
+remain in their project folders. [Lifecycle reference](docs/INSTALLATION.md#running-the-server).
 
 Begin with the manuscript overview, then open a chapter that interests you.
 The welcome guidance takes you from selecting a manuscript to confirming its

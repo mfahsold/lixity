@@ -5,6 +5,9 @@ on:
     paths:
       - "src/**"
       - "tests/test_research*.py"
+      - "tests/test_service*.py"
+      - "tests/test_server_startup.py"
+      - "tests/test_launcher*.py"
       - "scripts/**"
       - "pyproject.toml"
       - ".github/workflows/**"
@@ -12,6 +15,9 @@ on:
     paths:
       - "src/**"
       - "tests/test_research*.py"
+      - "tests/test_service*.py"
+      - "tests/test_server_startup.py"
+      - "tests/test_launcher*.py"
       - "scripts/**"
       - "pyproject.toml"
       - ".github/workflows/**"
@@ -39,6 +45,6 @@ jobs:
       - name: Install native PDF test dependencies
         if: runner.os == 'macOS'
         run: brew install poppler
-      - name: Run every research suite on this platform
+      - name: Run research and packaged lifecycle suites on this platform
         run: >-
-          python -c "from pathlib import Path; import pytest; tests = sorted(Path('tests').glob('test_research*.py')); assert tests, 'No research tests found'; raise SystemExit(pytest.main([str(path) for path in tests] + ['-W', 'error', '-q', '-p', 'no:asyncio']))"
+          python -c "from pathlib import Path; import pytest; patterns = ('test_research*.py', 'test_service*.py', 'test_server_startup.py', 'test_launcher*.py'); tests = sorted({path for pattern in patterns for path in Path('tests').glob(pattern)}); assert tests, 'No platform tests found'; raise SystemExit(pytest.main([str(path) for path in tests] + ['-W', 'error', '-q', '-p', 'no:asyncio']))"

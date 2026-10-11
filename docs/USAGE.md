@@ -34,18 +34,25 @@ updates, removal, pipx, Python API environments and troubleshooting.
 Lixity is source-available under LNCL-1.0 for non-commercial use, not on PyPI.
 Using it for a book intended for sale requires a separate written commercial
 license, including self-publishing. See [licensing examples](LICENSING.md).
-With Git and uv installed, the recommended CLI setup is:
+With uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
-lixity --version
-lixity about
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v2.4.0/lixity-2.4.0-py3-none-any.whl"
+uv tool update-shell
 ```
 
-`v2.4.0` is the release pin. Choose `@main` only to follow development,
-or a reviewed full commit hash for reproducibility.
-`uv tool upgrade lixity` updates within the chosen source/ref. Reopen your
-terminal after `uv tool update-shell` if the command is not found.
+Open a new terminal, then verify and start the app:
+
+```bash
+lixity --version
+lixity service start --open
+```
+
+`v2.4.0` is the release pin for this wheel installation; it needs no Git or separate Python
+installation. To update, stop the service and reinstall the desired release
+wheel as described in the [update reference](INSTALLATION.md#updates-and-removal).
+`uv tool upgrade lixity` retains the chosen source. `uv tool update-shell`
+changes shell configuration for new terminals.
 The engine and TOML project configuration support Python 3.10+.
 
 Development install (editable, isolated, with the test suite):
@@ -94,7 +101,8 @@ which writes a single HTML file.
 | What repeats itself? | `lixity motifs` | motif presence, top content words, repeated n-grams |
 | Which chapters *tell* instead of *show*? | `lixity showing` | tell/show z, balance per chapter (self-calibrating) |
 | I want to see and click all of it | `lixity dashboard` | single-file HTML, all panels, offline |
-| I want an interactive live server | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
+| I want a foreground server for development or integration | `lixity serve` | loopback HTTP server, live settings, manuscript upload, research panel |
+| I want to start or manage the installed app | `lixity service` | managed start, stop, restart and status without a source checkout |
 | I want to manage and cite research sources | `lixity research` | immutable archives, citations, dossiers, manuscript grounding |
 | I want a printable report or reading copy | `lixity pdf` | A4 report, A5 book layout, 30×60 sheet |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
@@ -723,6 +731,55 @@ The three layouts produce PDFs for analysis, continuous reading and submission.
 They do not add bleed or crop marks, manage print color profiles, generate PDF/X
 or perform printer preflight. Font coverage alone does not establish correct
 typesetting for every script.
+
+### `lixity service`
+
+Since v2.4.0, manage the installed application without a source checkout:
+
+```sh
+lixity service start --open
+lixity service status
+lixity service restart
+lixity service stop
+```
+
+Start uses an empty workspace in an application-owned working directory unless
+you choose a project argument or `LIXITY_DIR`. It launches the same installed Python as
+the CLI. The controller manages its own instances; a foreground `lixity serve`
+process is stopped with Ctrl+C, and external startup units use their OS manager.
+`start` uses fresh launch settings; `restart` reuses saved startup settings with
+any explicit overrides, including after a stop. Neither restores a later project
+choice in the browser. Starting an already running instance reports its status;
+use stop/start or restart to change its launch settings.
+
+| Option | Purpose |
+| --- | --- |
+| `PATH` | Explicit manuscript or project for start/restart. |
+| `--port N` | Select the managed instance; defaults to `LIXITY_PORT` or 8765. |
+| `--host IP` | `127.0.0.1` or `localhost` only; defaults to `LIXITY_HOST` or `127.0.0.1`. |
+| `--no-project` | Clear the startup project, including on restart. |
+| `--open` | Open the browser for a ready owned instance. |
+| `--language`, `--title`, `--research-project`, `--debug` | Explicit startup choices, alongside the existing analysis threshold flags. |
+| `--backend auto\|process\|systemd` | Auto prefers an available Linux user systemd manager; process selects detached handling; explicit systemd fails when unavailable. |
+| `--json` | Return the `lixity-service-local/1` lifecycle result. |
+
+Startup options apply to start/restart. `stop` and `status` select the instance
+by port. Backend selection is per invocation, not saved; repeat an explicit
+`--backend` on restart to retain it. Stop retains saved launch settings and logs.
+App environment variables
+(`LIXITY_*`), including OCR configuration, are inherited at start/restart and are
+not saved in launch settings.
+
+For automation, use `lixity service status --json`. The result always has
+`schema_version`, `ok`, `state` and `message`. When the manager initializes,
+it also includes `url`, `pid`, `backend`, `installed_version`, `running_version`
+and `log`; unavailable values can be null. States are `running`, `starting`,
+`stopped`, `busy` (an unmanaged listener), and `unknown` (unverifiable/error).
+Exit 0 means `ok: true`; exit 1 means false. Status is successful only for a
+ready owned instance. Stopped status exits 1; stopping an already stopped
+instance succeeds. An occupied port is never treated as permission to stop
+its unrelated process.
+See [installation, updates and removal](INSTALLATION.md#running-the-server).
 
 ### `lixity build`
 

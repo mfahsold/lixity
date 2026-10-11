@@ -10,15 +10,15 @@
 
   Management:
     launchctl kickstart -k gui/$(id -u)/com.lixity.serve
-    launchctl kill SIGTERM gui/$(id -u)/com.lixity.serve
-    launchctl bootout gui/$(id -u)/com.lixity.serve   # disable autostart
+    launchctl bootout gui/$(id -u)/com.lixity.serve   # stop and unload
+    launchctl disable gui/$(id -u)/com.lixity.serve   # disable login startup
 
   Logs:
     tail -f /tmp/lixity-stdout.log
     tail -f /tmp/lixity-stderr.log
 
   Edit the ProgramArguments array to change port or add a project path:
-    <string>--port</string><string>9000</string>
+    use the port option with the value 9000
     <string>/Users/you/manuscripts/my-novel</string>
 -->
 <plist version="1.0">
@@ -35,6 +35,7 @@
   <array>
     <string>/Users/Shared/.local/bin/lixity</string>
     <string>serve</string>
+    <string>--no-project</string>
     <string>--host</string>
     <string>127.0.0.1</string>
     <string>--port</string>
@@ -62,7 +63,11 @@
   <key>StandardErrorPath</key>
   <string>/tmp/lixity-stderr.log</string>
 
-  <!-- Working directory: set to your project root if desired.
+  <!-- Neutral startup disables project discovery and creates no exports.
+       To preload a project, replace the no-project flag with its explicit path above.
+       This agent is owned by launchd: bootout it before uninstalling the CLI.
+       `lixity service` does not adopt external launchd agents.
+       Optional working directory:
   <key>WorkingDirectory</key>
   <string>/Users/you/manuscripts/my-novel</string>
   -->

@@ -6,7 +6,7 @@ import os
 import socket
 import sys
 import webbrowser
-from collections.abc import Mapping
+from collections.abc import Callable, Mapping
 from http.server import ThreadingHTTPServer
 from typing import Any
 
@@ -28,6 +28,7 @@ def run_server(
     research_dir: str | None = None,
     project_open_overrides: Mapping[str, Any] | None = None,
     debug: bool = False,
+    on_ready: Callable[[], None] | None = None,
 ) -> None:
     """Runs the Lixity dashboard development server on loopback."""
     if host not in {"127.0.0.1", "localhost"}:
@@ -80,7 +81,8 @@ def run_server(
         except (FileNotFoundError, ValueError):
             source_input = None
 
-    os.makedirs(exports_dir, exist_ok=True)
+    if not no_project:
+        os.makedirs(exports_dir, exist_ok=True)
 
     LixityServerHandler.debug = is_debug
     LixityServerHandler.source_input = source_input
@@ -113,6 +115,8 @@ def run_server(
         webbrowser.open(url)
 
     try:
+        if on_ready is not None:
+            on_ready()
         server.serve_forever()
     except KeyboardInterrupt:
         print("\n[OK] Lixity server stopped.")

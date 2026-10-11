@@ -71,6 +71,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | `lixity dashboard FILE -o ui.html` | single-file HTML dashboard (Settings: z\*, FDR, flags cut, dim threshold) | file path |
 | `lixity pdf FILE [--layout report\|book\|sheet] [-o OUT]` | composed PDF (A4 report, A5 reading layout, 30×60 sheet); `--author`, `--serif-font`, `--bold-font`, `--mono-font`, `--sans-font`, `--sans-bold-font` | file path |
 | `lixity serve [PATH] [--port N] [--host IP] [--no-project]` | native development server & interactive dashboard with project switcher | loopback HTTP server |
+| `lixity service start\|stop\|restart\|status [--port N] [--json]` | managed installed-app lifecycle; start defaults to an empty workspace, optional explicit project | text / JSON |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` (same threshold flags as `style`) | artifact list |
 | `lixity research SUBCOMMAND --project DIR` | evidence-based research archive (init, ingest, search, cite, sources, dossier, compare) | JSON |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
@@ -105,6 +106,21 @@ Release `1.15.0` defaults the analysis language to
 English. Pass the intended manuscript language or explicit `auto`; do not
 assume the previous automatic default. Language-independent JSON identifiers
 remain unchanged. See [LOCALIZATION.md](LOCALIZATION.md).
+
+Since v2.4.0, `python -m lixity` invokes the same CLI in an environment containing
+the package. `service` launches that installed Python rather than preferring a
+different environment in the working directory. Service start defaults to an
+application-owned empty workspace; it does not discover an ambient manuscript.
+Ownership and readiness checks limit lifecycle actions to managed instances.
+Foreground `serve` and independently configured OS units remain separate.
+`--json` returns `lixity-service-local/1` with `ok`, `state` and `message`;
+initialized managers also return URL, PID, backend, installed/running versions
+and log path. States are `running`, `starting`, `stopped`, `busy` and `unknown`.
+Exit 0 means `ok: true`; exit 1 means false, including stopped `status`.
+`stop` succeeds when already stopped. Start uses fresh launch choices; restart
+uses saved choices plus explicit overrides, never the later live-UI selection.
+Backend selection is per invocation and defaults to `auto`, including on restart.
+See [the lifecycle guide](INSTALLATION.md#running-the-server).
 
 Project adapters may reuse `lixity.pipeline.analyze_document` with explicit
 configuration and thresholds. This avoids duplicate metrics calculation and

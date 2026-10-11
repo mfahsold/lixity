@@ -1,94 +1,111 @@
-"""Tests for scripts/lixity-start.sh lifecycle launcher."""
+"""Checkout launchers delegate to the installed lifecycle implementation."""
 
-from __future__ import annotations
-
+import json
 import os
+import plistlib
 import shutil
 import subprocess
-import tempfile
-import unittest
+import sys
 from pathlib import Path
 
+import pytest
 
-class TestLauncher(unittest.TestCase):
-    @classmethod
-    def setUpClass(cls) -> None:
-        cls.script = Path(__file__).resolve().parent.parent / "scripts" / "lixity-start.sh"
-        bash_bin = shutil.which("bash")
-        if not cls.script.exists() or not bash_bin:
-            raise unittest.SkipTest("bash or scripts/lixity-start.sh not available")
-        cls.bash = bash_bin
+SCRIPT = Path(__file__).resolve().parents[1] / "scripts" / "lixity-start.sh"
 
-    def test_help_command(self) -> None:
-        res = subprocess.run(  # noqa: S603
-            [self.bash, str(self.script), "--help"],
-            capture_output=True,
-            text=True,
-            check=False,
+
+@pytest.fixture
+def launcher(tmp_path):
+    bash = shutil.which("bash")
+    if not bash or os.name == "nt":
+        pytest.skip("Requires a native POSIX Bash")
+    installed = tmp_path / "installed"
+    installed.mkdir()
+    marker = tmp_path / "arguments.json"
+    runtime = tmp_path / "runtime"
+    runtime.mkdir()
+    executable = installed / "lixity"
+    executable.write_text(
+        f"#!{sys.executable}\nimport json,os,sys\nfrom pathlib import Path\n"
+        "Path(os.environ['LIXITY_LAUNCHER_TEST_MARKER']).write_text(json.dumps(sys.argv[1:]))\n"
+        "print('Synthetic lifecycle result')\nsys.exit(int(os.environ.get('LIXITY_LAUNCHER_TEST_STATUS', '0')))\n"
+    )
+    executable.chmod(0o755)
+    local = tmp_path / ".venv" / "bin" / "lixity"
+    local.parent.mkdir(parents=True)
+    local.write_text("#!/bin/sh\nexit 99\n")
+    local.chmod(0o755)
+    environment = {**os.environ, "PATH": str(installed) + os.pathsep + os.environ.get("PATH", ""),
+                   "LIXITY_LAUNCHER_TEST_MARKER": str(marker), "XDG_RUNTIME_DIR": str(runtime),
+                   "XDG_STATE_HOME": str(tmp_path / "state")}
+
+    def invoke(*args, status=0):
+        result = subprocess.run(  # noqa: S603 - local wrapper and synthetic installed executable
+            [bash, str(SCRIPT), *args], cwd=tmp_path,
+            env={**environment, "LIXITY_LAUNCHER_TEST_STATUS": str(status)},
+            capture_output=True, text=True, timeout=10, check=False,
         )
-        self.assertEqual(res.returncode, 0)
-        self.assertIn("Usage:", res.stdout)
+        return result, json.loads(marker.read_text()) if marker.exists() else None
 
-    def test_status_when_not_running(self) -> None:
-        res = subprocess.run(  # noqa: S603
-            [self.bash, str(self.script), "status", "--port", "59999"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(res.returncode, 1)
-        self.assertIn("Lixity is not running", res.stdout)
+    return invoke
 
-    def test_restart_of_stopped_service_attempts_start_and_reports_launch_failure(self) -> None:
-        with tempfile.TemporaryDirectory() as directory:
-            root = Path(directory)
-            runtime = root / "runtime"
-            runtime.mkdir()
-            executable = root / ".venv" / "bin" / "lixity"
-            executable.parent.mkdir(parents=True)
-            executable.write_text(
-                '#!/bin/sh\nprintf "%s\\n" "$@" > "$LIXITY_LAUNCHER_TEST_MARKER"\nexit 17\n',
-                encoding="utf-8",
-            )
-            executable.chmod(0o755)
-            marker = root / "attempt.txt"
-            res = subprocess.run(  # noqa: S603 - repository launcher and synthetic executable
-                [self.bash, str(self.script), "restart", "--port", "59997"],
-                cwd=root,
-                env={**os.environ, "XDG_RUNTIME_DIR": str(runtime),
-                     "LIXITY_LAUNCHER_TEST_MARKER": str(marker)},
-                capture_output=True, text=True, check=False, timeout=10,
-            )
-            self.assertTrue(marker.exists(), "Restart must attempt a start even without a live PID")
-            self.assertEqual(marker.read_text().splitlines(),
-                             ["serve", "--host", "127.0.0.1", "--port", "59997"])
-            self.assertNotEqual(res.returncode, 0, "A failed launch cannot be reported as success")
-            self.assertIn("exited during startup", res.stderr)
 
-    def test_stale_pid_cleanup_by_status(self) -> None:
-        xdg = os.environ.get("XDG_RUNTIME_DIR", "")
-        if xdg and os.path.isdir(xdg) and os.access(xdg, os.W_OK):
-            runtime_dir = Path(xdg)
-        else:
-            home_share = Path.home() / ".local" / "share" / "lixity"
-            if home_share.is_dir() and os.access(home_share, os.W_OK):
-                runtime_dir = home_share
-            else:
-                runtime_dir = Path(tempfile.gettempdir()) / f"lixity-{os.geteuid()}"
-        runtime_dir.mkdir(parents=True, exist_ok=True)
+@pytest.mark.parametrize("action", ["start", "stop", "restart", "status"])
+def test_wrapper_delegates_action_to_installed_cli_instead_of_cwd_venv(launcher, action):
+    result, arguments = launcher(action, "--port", "59997")
+    assert result.returncode == 0
+    assert arguments == ["service", action, "--port", "59997"]
 
-        fake_pid_file = runtime_dir / "lixity-59998.pid"
-        fake_pid_file.write_text(f"{os.getpid()}\n", encoding="utf-8")
-        self.assertTrue(fake_pid_file.exists())
 
-        res = subprocess.run(  # noqa: S603
-            [self.bash, str(self.script), "status", "--port", "59998"],
-            capture_output=True,
-            text=True,
-            check=False,
-        )
-        self.assertEqual(res.returncode, 1)
-        self.assertFalse(
-            fake_pid_file.exists(),
-            "Stale/recycled PID file must be cleaned up when process is not listening on port",
-        )
+def test_wrapper_preserves_language_and_space_unicode_arguments(launcher):
+    project = "/synthetic/A book – Grüße"
+    result, arguments = launcher("start", "--language", "de", "--open", project)
+    assert result.returncode == 0
+    assert arguments == ["service", "start", "--language", "de", "--open", project]
+
+
+def test_wrapper_defaults_to_start_and_preserves_controller_exit_status(launcher):
+    result, arguments = launcher(status=17)
+    assert result.returncode == 17
+    assert arguments == ["service", "start"]
+
+
+def test_wrapper_forwards_help_to_the_packaged_interface(launcher):
+    result, arguments = launcher("--help")
+    assert result.returncode == 0
+    assert arguments == ["service", "--help"]
+
+
+def test_macos_template_is_valid_and_has_explicit_neutral_startup():
+    template = plistlib.loads((SCRIPT.parent / "lixity.plist").read_bytes())
+    assert "--no-project" in template["ProgramArguments"]
+    assert template["Label"] == "com.lixity.serve"
+
+
+@pytest.mark.parametrize("target,arguments", [
+    ("run", ["-m", "lixity", "serve", "--no-project", "--port", "59996"]),
+    ("start", ["-m", "lixity", "service", "start", "--port", "59996"]),
+    ("serve", ["-m", "lixity", "service", "start", "--port", "59996"]),
+    ("stop", ["-m", "lixity", "service", "stop", "--port", "59996"]),
+    ("restart", ["-m", "lixity", "service", "restart", "--port", "59996"]),
+    ("status", ["-m", "lixity", "service", "status", "--port", "59996"]),
+])
+def test_make_uses_explicit_interpreter_with_space_containing_venv(tmp_path, target, arguments):
+    make = shutil.which("make")
+    if not make or os.name == "nt":
+        pytest.skip("Requires native POSIX Make")
+    venv = tmp_path / "A developer environment – Grüße"
+    executable = venv / "bin" / "python"
+    executable.parent.mkdir(parents=True)
+    marker = tmp_path / "make-arguments.json"
+    executable.write_text(
+        f"#!{sys.executable}\nimport json,os,sys\nfrom pathlib import Path\n"
+        "Path(os.environ['LIXITY_LAUNCHER_TEST_MARKER']).write_text(json.dumps(sys.argv[1:]))\n"
+    )
+    executable.chmod(0o755)
+    result = subprocess.run(  # noqa: S603 - explicit Makefile and synthetic interpreter
+        [make, "-f", str(SCRIPT.parent.parent / "Makefile"), target, f"VENV={venv}", "LIXITY_PORT=59996"],
+        cwd=tmp_path, env={**os.environ, "LIXITY_LAUNCHER_TEST_MARKER": str(marker)},
+        capture_output=True, text=True, timeout=10, check=False,
+    )
+    assert result.returncode == 0, result.stderr
+    assert json.loads(marker.read_text()) == arguments

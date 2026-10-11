@@ -144,11 +144,12 @@ lixity research claim --project ./novel-research --title "Harbor opening" --stat
 lixity research link-evidence --project ./novel-research --claim-id urn:uuid:CLAIM-UUID-HERE --passage-id urn:uuid:PASSAGE-UUID-HERE --relation supports
 lixity research decision --project ./novel-research --title "Shift opening date" --rationale "Narrative chronology" --claim-id urn:uuid:CLAIM-UUID-HERE --deviation-from-fact
 
-# 9. Open the interactive research dashboard
+# 9. Open a foreground research dashboard (stop with Ctrl+C)
 lixity serve --research-project ./novel-research --no-project
 
 # 10. Audit repository integrity and snapshot checksums
 lixity research audit --project ./novel-research</code></pre>
+<p>For the managed app instead, use <code>lixity service start --open</code> and <strong>Open Project</strong> to select the archive. See the <a href="installation.html#restart">lifecycle guide</a>.</p>
 </details>
 
 <h2 id="limits">Input and research limits</h2>

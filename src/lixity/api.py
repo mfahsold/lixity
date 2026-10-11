@@ -428,6 +428,12 @@ def about() -> dict[str, Any]:
                 "discovery": "/api",
             },
             {
+                "name": "service",
+                "purpose": "start, stop, restart or inspect an explicitly owned local dashboard process",
+                "output": "text|json",
+                "schema_version": "lixity-service-local/1",
+            },
+            {
                 "name": "build",
                 "purpose": "idempotent workspace build (exports/ and archive)",
                 "output": "files",

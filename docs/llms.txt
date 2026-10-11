@@ -93,16 +93,27 @@ includes unimplemented interfaces; use the command reference for available opera
 
 ## Installation and language
 
-Install the CLI from GitHub, not PyPI:
+Install the CLI from the GitHub release wheel, not PyPI:
 
 ```sh
-uv tool install --python 3.12 "git+https://github.com/mfahsold/lixity.git@v2.4.0"
-lixity --version
-lixity about
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v2.4.0/lixity-2.4.0-py3-none-any.whl"
+uv tool update-shell
 ```
 
-`uv tool upgrade lixity` updates the chosen source; pinned refs remain pinned.
-Use `@main` deliberately for development builds. Python 3.10+ is required;
+Open a new terminal, then verify and start:
+
+```sh
+lixity --version
+lixity service start --open
+```
+
+uv supplies managed Python 3.12; neither Git nor a separate Python install is
+needed for this tool route. Select a new release with
+uv tool install --reinstall-package lixity and its explicit release-wheel URL;
+do not force-overwrite other entrypoints by default.
+`uv tool upgrade lixity` retains the chosen source; a fixed wheel stays fixed.
+Git source installs with `@main` are an advanced development route. Python 3.10+
+is required;
 3.10 uses conditional `tomli`. For API use, install in the consuming project's
 environment. Contributor setup: `make install-dev`; checks: `make check`.
 
@@ -118,8 +129,18 @@ language-neutral and source quotations retain their original language.
 
 `lixity serve /path/to/project` reopens an existing project without reimport
 or archive initialization. `--no-project` opens a neutral start screen.
-Lixity installs no automatic startup service. Restart after package updates
-and supply OCR environment variables to the new server process.
+Package installation does not start the application or enable login startup.
+Since v2.4.0, service start|stop|restart|status controls owned managed instances,
+using the same installed Python. Default start uses an app-owned empty working
+directory and does not discover a manuscript from cwd; a project argument or
+LIXITY_DIR is an explicit startup selection. Start uses fresh settings; restart reuses launch
+settings rather than later live-UI project selection. Foreground serve and external
+OS startup units are not adopted. Stop managed instances and disable manually
+configured startup before uv tool uninstall lixity; project storage is preserved.
+Supply OCR environment variables in the new start/restart invocation; they are
+not saved in launch settings. service --json uses lixity-service-local/1 with
+running/starting/stopped/busy/unknown states; exit 0 requires ok=true.
+Stopped status exits 1; stopping an already stopped instance succeeds.
 
 The dashboard separates Research & Dossiers, Manuscript & Analysis, and
 Project & Settings. New/Open and optional guidance remain available.
@@ -171,6 +192,7 @@ in `lixity-api-index/1`. These discovery surfaces complement the public
   v2.3.0 rejects unsupported drawn glyphs with role/codepoint errors and
   fixes folios, final-line width, long-word wrapping and negative word spacing.
 - `lixity serve [FILE|FOLDER] [--research-project DIR] [--no-project]`: local server.
+- `lixity service start|stop|restart|status [--port N]`: packaged managed-app lifecycle.
 - `lixity build [FILE] [--dry-run]`: exports; unchanged input causes no writes.
 - `lixity research SUBCOMMAND --project DIR`: experimental explicit-project archive.
 - Other analyses: `dialogue`, `characters --names A,B`, `pacing`,

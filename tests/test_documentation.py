@@ -224,6 +224,26 @@ class TestDocumentation(unittest.TestCase):
                 self.assertEqual(check_or_sync_files("2.3.4", check_only=True), [])
                 self.assertEqual(find_version_drift("2.3.4"), [])
 
+    def test_wheel_install_pin_checks_and_syncs_both_tag_and_artifact_version(self):
+        import tempfile
+        from unittest.mock import patch
+
+        from sync_docs import check_or_sync_files, find_version_drift
+
+        old = "https://github.com/mfahsold/lixity/releases/download/v1.2.3/lixity-9.8.7-py3-none-any.whl"
+        new = "https://github.com/mfahsold/lixity/releases/download/v2.3.4/lixity-2.3.4-py3-none-any.whl"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            readme = root / "README.md"
+            readme.write_text("Install with uv: " + old + "\n")
+            with patch("sync_docs.ROOT", root):
+                self.assertEqual(check_or_sync_files("2.3.4", check_only=True), ["README.md"])
+                self.assertIn(old, readme.read_text())
+                self.assertEqual(len(find_version_drift("2.3.4")), 2)
+                check_or_sync_files("2.3.4")
+                self.assertEqual(readme.read_text(), "Install with uv: " + new + "\n")
+                self.assertEqual(find_version_drift("2.3.4"), [])
+
     def test_changelog_matches_current_version(self):
         from lixity import __version__
         changelog = (ROOT / "CHANGELOG.md").read_text(encoding="utf-8")

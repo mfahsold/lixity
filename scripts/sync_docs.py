@@ -31,6 +31,10 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
         r"git\+https://github\.com/mfahsold/lixity\.git@v\d+\.\d+\.\d+",
         f"git+https://github.com/mfahsold/lixity.git@v{version}",
     )
+    wheel_pin = (
+        r"https://github\.com/mfahsold/lixity/releases/download/v\d+\.\d+\.\d+/lixity-\d+\.\d+\.\d+-py3-none-any\.whl",
+        f"https://github.com/mfahsold/lixity/releases/download/v{version}/lixity-{version}-py3-none-any.whl",
+    )
     # Rules: (file_path, list of (pattern, replacement))
     rules: list[tuple[Path, list[tuple[str, str]]]] = [
         (
@@ -116,7 +120,7 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
             continue
         original = file_path.read_text(encoding="utf-8")
         updated = original
-        for pattern, repl in replacements:
+        for pattern, repl in [*replacements, wheel_pin]:
             updated = re.sub(pattern, repl, updated)
 
         if updated != original:
@@ -159,6 +163,10 @@ CURRENT_CLAIMS: tuple[tuple[str, re.Pattern[str]], ...] = (
      re.compile(r"This installs \*\*v(\d+\.\d+\.\d+)\*\*")),
     ("pip install pin",
      re.compile(r"lixity\.git@v(\d+\.\d+\.\d+)")),
+    ("wheel release tag pin",
+     re.compile(r"lixity/releases/download/v(\d+\.\d+\.\d+)/lixity-")),
+    ("wheel artifact version pin",
+     re.compile(r"lixity/releases/download/v\d+\.\d+\.\d+/lixity-(\d+\.\d+\.\d+)-py3-none-any\.whl")),
     ("JSON-LD softwareVersion",
      re.compile(r'"softwareVersion":\s*"(\d+\.\d+\.\d+)"')),
     ("header version badge",
