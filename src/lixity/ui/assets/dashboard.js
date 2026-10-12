@@ -2469,12 +2469,40 @@ function researchTimelineScale(entry) {
   return start === end ? start : start + " – " + end;
 }
 
+function researchTimelineAnchor(claimId) {
+  return "research-timeline-" + String(claimId).replace(/[^A-Za-z0-9]+/g, "-");
+}
+
+function researchTimelineStrip(rows) {
+  if (!rows.length) return "";
+  function day(iso) { return Date.parse(iso + "T00:00:00Z") / 86400000; }
+  var earliest = rows.reduce(function(best, entry) { return entry.period.start < best ? entry.period.start : best; }, rows[0].period.start);
+  var latest = rows.reduce(function(best, entry) { return entry.period.end > best ? entry.period.end : best; }, rows[0].period.end);
+  var low = day(earliest), high = day(latest), span = Math.max(high - low, 1);
+  var body = rows.map(function(entry) {
+    var start = day(entry.period.start), end = day(entry.period.end);
+    var left = (start - low) / span * 100;
+    var width = Math.max((end - start) / span * 100, 0.8);
+    return '<li><a class="research-timeline-strip-row" href="#' + researchTimelineAnchor(entry.claim_id) + '">' +
+      '<span class="research-timeline-strip-label"><span class="research-timeline-strip-badge">' +
+      escapeHtml(researchTimelineScale(entry)) + '</span>' + escapeHtml(entry.title) + '</span>' +
+      '<span class="research-timeline-strip-track"><span class="research-timeline-strip-bar" style="left:' +
+      left.toFixed(3) + '%;width:' + width.toFixed(3) + '%"></span></span></a></li>';
+  }).join("");
+  return '<div class="research-timeline-strip"><h4>' + escapeHtml(uiLabel("research_timeline_strip_heading")) + '</h4>' +
+    '<p class="ctl-note">' + escapeHtml(uiFormat("research_timeline_span", {
+      count: rows.length, start: earliest.slice(0, 4), end: latest.slice(0, 4)})) + '</p>' +
+    '<ol>' + body + '</ol>' +
+    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_strip_hint")) + '</p></div>';
+}
+
 function researchTimelineEntry(entry) {
   var scale = researchTimelineScale(entry);
   var scope = [entry.place, (entry.actors || []).join(", ")].filter(Boolean).join(" · ");
   var authored = entry.time_period ? uiLabel("research_scope_time") + " " + entry.time_period : "";
   var details = [authored, scope].filter(Boolean).join(" · ");
-  return '<li data-claim-id="' + escapeHtml(entry.claim_id) + '"><article class="research-card">' +
+  return '<li id="' + researchTimelineAnchor(entry.claim_id) + '" data-claim-id="' + escapeHtml(entry.claim_id) +
+    '"><article class="research-card">' +
     (scale ? '<p class="research-timeline-scale"><span>' + escapeHtml(scale) + '</span></p>' : '') +
     '<h4>' + escapeHtml(entry.title) + '</h4>' +
     (details ? '<p class="ctl-note">' + escapeHtml(details) + '</p>' : '') +
@@ -2517,6 +2545,7 @@ async function refreshResearchClaimProjections() {
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_hint")) + '</p>' +
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_examples")) +
       ' <code>1912 · 1912-05-01 · 1912–1914</code></p>' +
+    researchTimelineStrip(datedRows) +
     '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + ' (' + datedRows.length + ')</h3>' +
     (datedRows.length ? '<ol class="research-timeline research-timeline-dated">' +
       datedRows.map(researchTimelineEntry).join("") + '</ol>' :

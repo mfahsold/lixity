@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser lint typecheck check build release-check screenshots clean docs-check docs-sync run start serve stop restart status
+.PHONY: help install install-dev test browser lint typecheck check build release-check screenshots videos clean docs-check docs-sync run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -46,6 +46,10 @@ release-check: check docs-check ## Check source/docs and prepare release artifac
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	$(PYTHON) scripts/make_screenshots.py
+
+videos: ## Record and publish the walkthrough videos (needs Chromium and ffmpeg)
+	$(PYTHON) scripts/make_screenshots.py --video
+	$(VPY) scripts/make_videos.py
 
 docs-check: ## Check documentation version consistency and link integrity
 	$(PYTHON) scripts/sync_docs.py --check

@@ -71,6 +71,21 @@
   ]
 }
 </script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "VideoObject",
+  "name": "Lixity claims timeline walkthrough",
+  "description": "Open Claims, switch to Timeline, follow a placed row to its claim card and see where free-text periods stay unplaced.",
+  "thumbnailUrl": [
+    "https://mfahsold.github.io/lixity/videos/research-timeline.png"
+  ],
+  "contentUrl": "https://mfahsold.github.io/lixity/videos/research-timeline.mp4",
+  "uploadDate": "2026-10-12",
+  "duration": "PT9S",
+  "inLanguage": "en"
+}
+</script>
 </head>
 <body>
 <a class="skip-link" href="#content">Skip to guide</a>
@@ -138,6 +153,19 @@ lixity research cite --project ./sample-project --query "reading room" \
 
 <h2 id="claim-chronology">Organize claim periods and causal interpretations</h2>
 <p><strong>Since v3.0.0:</strong> inside <strong>Claims</strong>, choose <strong>Timeline</strong>. It places valid four-digit CE years, ISO dates and supported ranges while preserving your original period labels. Missing, unclear or invalid periods remain visible under <strong>Unplaced periods</strong>. Reading makes no archive changes, and creation dates never stand in for historical periods.</p>
+
+<p>The timeline sorts claims by the calendar value in their period and shows how the placed spans relate. Every dated claim is one row on a shared axis; the badge repeats its placed range and <strong>Placed periods</strong> lists the full cards below. Free-text periods such as <em>present day</em> are not calendar values, so they stay under <strong>Unplaced periods</strong> with a reason and a formatting hint. To place a claim, enter a value like <code>1926</code>, <code>1926-03-15</code> or <code>1924–1926</code>. The axis shows only what you entered — placement never verifies a historical fact.</p>
+<figure class="walkthrough">
+  <video controls muted playsinline preload="metadata" poster="../videos/research-timeline.png" width="1280" height="800">
+    <source src="../videos/research-timeline.mp4" type="video/mp4"/>
+    Your browser cannot play this walkthrough; the <a href="../screenshots/dashboard-research-timeline.png">chronology screenshot</a> shows the same view.
+  </video>
+  <figcaption>Short walkthrough: open <strong>Claims</strong>, switch to <strong>Timeline</strong>, follow a row to its claim and read the placement hint (<a href="../videos/research-timeline.gif">also as GIF</a>).</figcaption>
+</figure>
+<figure class="walkthrough">
+  <a href="../screenshots/dashboard-research-timeline.png"><img src="../screenshots/dashboard-research-timeline.png" width="1110" height="1048" alt="Claims timeline with a shared axis, placed period badges and a placement hint for free-text periods" loading="lazy" decoding="async"/></a>
+  <figcaption>The chronology strip, placed cards and the placement hint in one view.</figcaption>
+</figure>
 <p>Under <strong>Cause and effect claims</strong>, choose a proposed cause and effect, review their saved versions and save your interpretation explicitly. A later claim edit leaves the link pinned to its earlier versions and marks it for review. Edit or retract through the shared revision editor; earlier interpretations remain in history. Self-links are rejected, cycles are allowed, and no causal truth or additional links are inferred.</p>
 <div class="notice-box"><strong>Before the first causal save:</strong> back up the complete archive. A saved causal link opts storage into v6, supported by v0.3.0 and historical v3.0.x readers. Require explicit archive-schema support rather than comparing product version numbers. Existing v1–v5 archives remain readable without conversion; read-only views do not upgrade them. Export/restore preserves all accepted history. These additions are not in v2.4.0.</div>
 <pre><code>lixity research timeline --project ./sample-project --format text

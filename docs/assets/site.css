@@ -131,3 +131,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
   html { scroll-behavior: auto; }
   *, *::before, *::after { transition: none !important; animation: none !important; }
 }
+
+figure.walkthrough { margin: 1.4rem 0; max-width: 100%; }
+figure.walkthrough video, figure.walkthrough img { display: block; width: 100%; height: auto; border: 1px solid var(--border); border-radius: 10px; background: var(--surface, #fff); }
+figure.walkthrough figcaption { margin-top: .5rem; color: var(--muted, #555); font-size: .92rem; }

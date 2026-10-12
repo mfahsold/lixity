@@ -180,6 +180,14 @@ Earlier dossier versions keep their original image; no remote picture is fetched
 and images receive no text scores. **Edit section**, **Add claim** and **Add
 decision** keep a large topic manageable without copying whole documents or IDs.
 
+**Chronology:** the Claims **Timeline** sorts every claim with an explicit
+calendar period (`1926`, `1926-03-15`, `1924–1926`) on a shared axis and links
+each bar to its claim card. Free-text periods such as "present day" stay visibly
+unplaced with a reason and a formatting hint; placement never verifies a
+historical fact.
+
+<img src="docs/videos/research-timeline.gif" alt="Walkthrough: the claims timeline places dated claims on a shared axis and jumps from a bar to its claim card" width="900" />
+
 [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html) ·
 [Search and citations](docs/screenshots/dashboard-research-search.png) ·
 [Sources](docs/screenshots/dashboard-research-sources.png) ·

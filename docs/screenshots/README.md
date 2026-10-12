@@ -20,6 +20,7 @@ a selected image. Use the links below for related views and full-size images.
 | Visual references | [Dossier section](dashboard-dossier-image.png), [mobile](dashboard-dossier-image-mobile.png) |
 | Research search | [Passage results](dashboard-research-search.png), [mobile](dashboard-research-search-mobile.png) |
 | Claims and decisions | [Claims](dashboard-research-claims.png), [mobile](dashboard-research-claims-mobile.png), [decisions](dashboard-research-decisions.png), [mobile](dashboard-research-decisions-mobile.png) |
+| Claim chronology | [Timeline with axis, badges and placement hint](dashboard-research-timeline.png), [mobile](dashboard-research-timeline-mobile.png) |
 | Research review | [Decision links and revision pins](dashboard-research-review.png), [mobile](dashboard-research-review-mobile.png) |
 | Related revisions | [Change set preview](dashboard-research-change-set.png), [mobile](dashboard-research-change-set-mobile.png) |
 | Terminal reports | [Analysis](cli-analyze.png), [style](cli-style.png), [research](cli-research.png) |
@@ -34,7 +35,9 @@ five-field draft without storing agreements or recipient records. The dossier
 image is an invented geometric harbour sketch, not a historical map. These examples contain no private
 manuscripts, archives, credentials or running user projects.
 
-Desktop/mobile overviews show a viewport; the heatmap shows its upper section.
+Desktop/mobile overviews show a viewport; element captures are clamped to a
+realistic screen height (1100 px desktop, 1250 px mobile) and the heatmap shows
+its upper section.
 Scene images show the first three scenes, with the first expanded. Their sample
 register is an illustrative assignment; its values come from the analysis.
 Dialog images include the complete form: the capture tool expands their scroll
@@ -71,3 +74,17 @@ Review the images before publishing. `.artifacts/screenshots/captures.json` reco
 PNG dimensions; update the corresponding HTML image attributes if they change.
 Fonts and browser versions can affect pixel output. Use only reviewed synthetic
 or public-domain data for repository screenshots.
+
+## Walkthrough videos
+
+[../videos/research-timeline.mp4](../videos/research-timeline.mp4) is a recorded
+walkthrough of the claims timeline with a synthetic cursor, published with a
+GIF and a poster. Regenerate both parts with `make videos`:
+
+1. `scripts/make_screenshots.py --video` replays the scripted flow against the
+   synthetic fixture and writes WebM recordings to `.artifacts/screenshots/videos/`.
+2. `scripts/make_videos.py` converts them with ffmpeg into `docs/videos/`
+   (MP4, GIF, poster) and enforces size limits.
+
+Flows are code in `scripts/capture_screenshots.cjs`; keep recordings short and
+free of private projects.

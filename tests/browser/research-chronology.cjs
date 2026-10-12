@@ -69,7 +69,7 @@ server.serve_forever()
       assert.equal(await page.locator('#research-claims-timeline').evaluate(element => element.hidden), false, 'Timeline control selects the view before its asynchronous data arrives');
       await page.locator('#r-claims-timeline').hover();
       assert.equal(await page.locator('#r-claims-timeline').evaluate(element => getComputedStyle(element).color), 'rgb(255, 255, 255)', 'Pressed view control remains readable on hover');
-      await page.waitForFunction(() => document.querySelectorAll('#research-claims-timeline ol li').length === 6);
+      await page.waitForFunction(() => document.querySelectorAll('#research-claims-timeline .research-timeline-dated > li, #research-claims-timeline .research-timeline-unplaced > li').length === 6);
       assert.equal(await page.locator('#research-claims-timeline').isVisible(), true, 'Loaded timeline entries are visible');
       const dated = await page.locator('#research-claims-timeline .research-timeline-dated > li').first().getAttribute('data-claim-id');
       assert.equal(dated, fixture.claims[1], '1880 precedes 1900 rather than creation order');
@@ -80,6 +80,12 @@ server.serve_forever()
       assert.ok(headings[0].includes('(3)') && headings[1].includes('(3)'), 'Both chronology sections carry a count');
       const placementHint = await page.evaluate(() => uiLabel('research_timeline_placement_hint'));
       assert.ok((await page.locator('#research-claims-timeline').textContent()).includes(placementHint), 'Unplaced periods explain how to place a claim');
+      const stripRows = page.locator('#research-claims-timeline .research-timeline-strip-row');
+      assert.equal(await stripRows.count(), 3, 'The chronology strip shows every dated claim');
+      const stripHref = await stripRows.first().getAttribute('href');
+      assert.equal(await page.locator('#' + stripHref.slice(1)).count(), 1, 'Strip rows link to their claim card');
+      await stripRows.first().click();
+      assert.equal(new URL(page.url()).hash, stripHref, 'Activating a strip row jumps to its card');
       assert.equal(writes.length, 0, 'Timeline navigation writes no authored records');
       const endpointLabels = await page.locator('#r-relation-from option').allTextContents();
       assert.equal(new Set(endpointLabels).size, endpointLabels.length, 'Duplicate titles and periods still have distinct selectable labels');

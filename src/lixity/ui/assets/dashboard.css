@@ -1203,6 +1203,18 @@ mark.search-hit {
 .research-timeline-scale { margin: 0 0 .35rem; }
 .research-timeline-scale span { display: inline-block; padding: .08rem .5rem; border: 1px solid var(--line); border-radius: 999px; font-variant-numeric: tabular-nums; font-size: .82rem; }
 .research-timeline-reason { margin: .35rem 0 0; font-weight: 600; }
+.research-timeline-strip { margin: .7rem 0 1rem; }
+.research-timeline-strip h4 { margin: 0 0 .2rem; }
+.research-timeline-strip ol { list-style: none; margin: .5rem 0; padding: 0; display: grid; gap: .22rem; }
+.research-timeline-strip-row { display: grid; grid-template-columns: minmax(0, 17rem) minmax(0, 1fr); gap: .6rem; align-items: center; padding: .12rem .3rem; border-radius: 6px; text-decoration: none; color: inherit; }
+.research-timeline-strip-row:hover, .research-timeline-strip-row:focus-visible { background: var(--surface); }
+.research-timeline-strip-label { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--text-small); }
+.research-timeline-strip-badge { display: inline-block; margin-right: .45rem; padding: .05rem .45rem; border: 1px solid var(--line); border-radius: 999px; font-variant-numeric: tabular-nums; font-size: .76rem; }
+.research-timeline-strip-track { position: relative; height: .85rem; background: var(--line); border-radius: 999px; }
+.research-timeline-strip-bar { position: absolute; top: 0; bottom: 0; min-width: .45rem; background: var(--action-bg); border-radius: 999px; }
+@media (max-width: 640px) {
+  .research-timeline-strip-row { grid-template-columns: minmax(0, 1fr); gap: .25rem; }
+}
 .research-relation-section { margin-top: 1rem; }
 .research-relation-fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .7rem; }
 .research-relation-fields > div { min-width: 0; display: grid; gap: .35rem; }
