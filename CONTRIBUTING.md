@@ -125,6 +125,12 @@ documentation checks already ran locally through `make release-check` and in the
 gh attestation verify dist/lixity-X.Y.Z-py3-none-any.whl -R mfahsold/lixity
 ```
 
+Repository-level immutable releases are enabled, so published assets and tags
+cannot change afterwards. Prepare and review the release notes before tagging;
+to correct an already published release, disable the setting with
+`gh api --method DELETE repos/mfahsold/lixity/immutable-releases`, then enable
+it again afterwards.
+
 Documentation deployment remains the separate Pages workflow. A new release with
 a lower version number requires explicit version selection by installations
 already using a higher version; this workflow does not change package-manager

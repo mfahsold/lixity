@@ -12,7 +12,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   patterns and one-pass style-layer bounds; a full novel builds about a quarter
   faster with byte-identical output.
 - Release publishing attaches every artifact to a draft, attests them for
-  `gh attestation verify` and publishes only the complete draft release.
+  `gh attestation verify` and publishes only the complete draft release;
+  repository-level immutable releases protect published assets and tags.
 
 ## [0.3.0] - 2026-10-12
 
