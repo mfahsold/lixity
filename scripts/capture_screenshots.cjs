@@ -8,12 +8,12 @@ async function main() {
   const browser = await launchChromium();
   const results = [];
   try {
-    const page = await browser.newPage({deviceScaleFactor: 1, reducedMotion: 'reduce'});
     const fixturePath = path.join(path.dirname(captures[0].source), 'research-workspace-fixture.json');
     const researchFixture = JSON.parse(fs.readFileSync(fixturePath, 'utf8'));
     // Intercept a synthetic origin so embedded exact-version images use the same
     // resource URLs as the native app without contacting a running server.
-    await page.route('http://lixity-screenshots.test/**', async route => {
+    async function prepareWorkspacePage(target, {cursor = false} = {}) {
+    await target.route('http://lixity-screenshots.test/**', async route => {
       const url = new URL(route.request().url());
       const resource = researchFixture[url.pathname + url.search];
       if (url.pathname === '/api/research/image' && resource && resource.content_base64) {
@@ -26,7 +26,7 @@ async function main() {
       await route.fulfill({status: 200, contentType: 'text/html; charset=utf-8',
         body: fs.readFileSync(capture.source)});
     });
-    await page.addInitScript(({fixture}) => {
+    await target.addInitScript(({fixture}) => {
       window.captureRequests = [];
       window.fetch = (input, options) => {
         const url = typeof input === 'string' ? input : input.url;
@@ -73,6 +73,30 @@ async function main() {
         }));
       };
     }, {fixture: researchFixture});
+    if (cursor) {
+      await target.addInitScript(() => {
+        const attach = () => {
+          const dot = document.createElement('div');
+          dot.id = 'walkthrough-cursor';
+          dot.style.cssText = 'position:fixed;left:-40px;top:-40px;width:22px;height:22px;margin:-11px 0 0 -11px;' +
+            'border-radius:50%;background:rgba(37,99,235,.30);border:2px solid rgba(37,99,235,.85);' +
+            'box-shadow:0 0 0 3px rgba(37,99,235,.15);z-index:2147483647;pointer-events:none;opacity:0;';
+          document.body.appendChild(dot);
+          window.addEventListener('mousemove', event => {
+            dot.style.opacity = '1';
+            dot.style.left = event.clientX + 'px';
+            dot.style.top = event.clientY + 'px';
+          }, {passive: true});
+          window.addEventListener('mousedown', () => { dot.style.transform = 'scale(.72)'; }, {passive: true});
+          window.addEventListener('mouseup', () => { dot.style.transform = 'scale(1)'; }, {passive: true});
+        };
+        if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach);
+        else attach();
+      });
+    }
+    }
+    const page = await browser.newPage({deviceScaleFactor: 1, reducedMotion: 'reduce'});
+    await prepareWorkspacePage(page);
     page.setDefaultTimeout(10000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
@@ -103,14 +127,26 @@ async function main() {
       await page.locator('#import-preview-box').waitFor({state: 'visible'});
       assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
     }
-    async function save(target, selector) {
+    async function save(target, selector, {allowCrop = true} = {}) {
       await settle();
       await page.mouse.move(0, 0);
       if (await page.locator('#lixity-tooltip.visible').count()) await page.keyboard.press('Escape');
       if (await page.locator('#lixity-tooltip').count()) await page.locator('#lixity-tooltip').waitFor({state: 'hidden'});
+      const job = captures.find(item => item.target === target) || {};
+      let clamp = null;
+      if (selector && allowCrop && job.maxHeight) {
+        const naturalHeight = await page.locator(selector).evaluate(element => element.scrollHeight);
+        if (naturalHeight > job.maxHeight) {
+          clamp = await page.addStyleTag({content: `${selector} { max-height: ${job.maxHeight}px !important; overflow: hidden !important; }`});
+        }
+      }
       const options = {path: target, animations: 'disabled'};
-      if (selector) await page.locator(selector).screenshot(options);
-      else await page.screenshot(options);
+      try {
+        if (selector) await page.locator(selector).screenshot(options);
+        else await page.screenshot(options);
+      } finally {
+        if (clamp) await clamp.evaluate(node => node.remove());
+      }
       assert.deepEqual(errors, [], 'Screenshots must be free of runtime and console errors');
       const bytes = fs.readFileSync(target);
       results.push({file: path.basename(target), width: bytes.readUInt32BE(16), height: bytes.readUInt32BE(20)});
@@ -128,7 +164,7 @@ async function main() {
       for (const button of await buttons.all()) {
         assert.ok(await button.evaluate(element => element.getBoundingClientRect().bottom <= element.closest('dialog').getBoundingClientRect().bottom), 'Dialog actions must not be clipped');
       }
-      await save(target, selector);
+      await save(target, selector, {allowCrop: false});
     }
     for (const capture of captures) {
       const name = path.basename(capture.target);
@@ -229,6 +265,15 @@ async function main() {
         await page.locator('#research-revision-batch-review').click();
         await page.locator('#research-revision-batch-apply:enabled').waitFor();
         await saveDialog(capture.target, '#modal-research-revision-batch');
+      } else if (name.startsWith('dashboard-research-timeline')) {
+        await selectView('research');
+        await page.locator('[data-rtab="claims"]').click();
+        await page.locator('#r-claims-timeline').click();
+        await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
+        if (name.includes('mobile')) {
+          assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+        }
+        await save(capture.target, '#research-claims-timeline');
       } else if (name.startsWith('dashboard-research-claims')) {
         await selectView('research');
         await page.locator('[data-rtab="claims"]').click();
@@ -280,6 +325,46 @@ async function main() {
       } else {
         await save(capture.target);
       }
+    }
+    for (const capture of captures.filter(item => item.video)) {
+      const context = await browser.newContext({
+        viewport: {width: capture.width, height: capture.height},
+        reducedMotion: 'reduce',
+        recordVideo: {dir: path.dirname(capture.videoTarget), size: {width: capture.width, height: capture.height}},
+      });
+      const page = await context.newPage();
+      const errors = [];
+      page.on('pageerror', error => errors.push(error.message));
+      page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
+      await prepareWorkspacePage(page, {cursor: true});
+      page.setDefaultTimeout(15000);
+      await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
+      await page.waitForTimeout(700);
+      await page.locator('[data-view="research"]').click();
+      await page.locator('[data-rtab="claims"]').click();
+      await page.waitForTimeout(800);
+      await page.locator('#r-claims-timeline').click();
+      await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
+      await page.waitForTimeout(500);
+      const rows = page.locator('#research-claims-timeline .research-timeline-strip-row');
+      const count = await rows.count();
+      for (let index = 0; index < count; index++) {
+        await rows.nth(index).hover();
+        await page.waitForTimeout(360);
+      }
+      await rows.first().click();
+      await page.waitForTimeout(1600);
+      await page.mouse.wheel(0, 300);
+      await page.waitForTimeout(1200);
+      await page.mouse.wheel(0, -700);
+      await page.waitForTimeout(600);
+      await rows.nth(Math.min(1, count - 1)).hover();
+      await page.waitForTimeout(1200);
+      assert.deepEqual(errors, [], 'Walkthrough recording must be free of runtime errors');
+      const video = page.video();
+      await context.close();
+      fs.copyFileSync(await video.path(), capture.videoTarget);
+      results.push({video: path.basename(capture.videoTarget), bytes: fs.statSync(capture.videoTarget).size});
     }
     const base = path.dirname(captures[0].source);
     assert.deepEqual(errors, []);

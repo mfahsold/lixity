@@ -163,7 +163,7 @@ and images receive no text scores. **Edit section**, **Add claim** and **Add
 decision** keep a large topic manageable without copying whole documents or IDs.
 
 **Chronology:** the Claims **Timeline** sorts every claim with an explicit
-calendar period (`1926`, `1926-03-15`, `1924–1926`) on a shared axis and links
+calendar period (`1926`, `1926-03`, `1926-03-15`, `1924–1926`) on a shared axis and links
 each bar to its claim card. Free-text periods such as "present day" stay visibly
 unplaced with a reason and a formatting hint; placement never verifies a
 historical fact.

@@ -50,6 +50,7 @@ PUBLIC_TREES = {
     "guides": {".html"},
     "screenshots": {".png", ".webp", ".md"},
     "releases": {".md"},
+    "videos": {".mp4", ".webm", ".gif", ".png", ".md"},
     "research": {".md", ".json", ".txt"},
 }
 

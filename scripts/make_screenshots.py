@@ -70,9 +70,15 @@ WINDOW_CHROME = """<!DOCTYPE html>
 """
 
 
-def _queue_capture(source: Path, target: Path, width: int, height: int) -> None:
+def _queue_capture(source: Path, target: Path, width: int, height: int,
+                   max_height: int | None = None) -> None:
+    #: Element captures taller than a real screen are clamped so published
+    #: images stay lifelike; dialogs bypass the clamp to show complete content.
+    if max_height is None:
+        max_height = 1100 if width >= 800 else 1250
     CAPTURES.append({
         "source": str(source), "target": str(target), "width": width, "height": height,
+        "maxHeight": max_height,
     })
 
 
@@ -116,6 +122,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Regenerate README screenshots.")
     parser.add_argument("--manuscript", default="samples/pride-and-prejudice.md")
     parser.add_argument("--only", nargs="+", help="Capture only these screenshot filenames.")
+    parser.add_argument("--video", action="store_true", help="Record the short guided walkthroughs instead of stills.")
     args = parser.parse_args()
     CAPTURES.clear()
 
@@ -431,12 +438,29 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         context={"provenance_note": "Generated from simple geometry for this UI example."},
     )
     visual_url = attached["images"][0]["url"]
+    research_api.create_claim(
+        research_proj,
+        title="Reformed customs seal",
+        statement="The night watchman reports an unharmed seal on the bonded warehouses.",
+        confidence="hypothetical",
+        time_period="1922–1924",
+        place="Hamburg Free Port Zone",
+        dossier_id=dossier_res["dossier_id"],
+    )
+    research_api.create_claim(
+        research_proj,
+        title="Harbour tour research notes",
+        statement="Modern field notes describe the former free port as a museum quarter.",
+        confidence="hypothetical",
+        time_period="present day",
+        place="Hamburg",
+    )
     claim_res = research_api.create_claim(
         research_proj,
         title="Attempted warehouse entry",
         statement="The customs log describes an attempted entry at Warehouse 4 in October 1923.",
         confidence="evidenced",
-        time_period="October 1923",
+        time_period="1923",
         place="Hamburg Free Port Zone",
         actors=["Night watchman", "Customs officers"],
         dossier_id=dossier_res["dossier_id"],
@@ -516,6 +540,11 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         },
         "/api/research/decisions": {"ok": True, **decisions_data},
         "/api/research/review": {"ok": True, **research_api.editorial_review(research_proj)},
+        "/api/research/timeline": {"ok": True, **research_api.timeline(research_proj)},
+        "/api/research/claim-relations?include_retracted=false": {
+            "ok": True, **research_api.list_claim_relations(research_proj)},
+        "/api/research/claim-relations?include_retracted=true": {
+            "ok": True, **research_api.list_claim_relations(research_proj, include_retracted=True)},
         "/api/research-search": {"ok": True, **workspace_search},
     }
     for source in sources_data["sources"]:
@@ -554,7 +583,7 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             identity_check=manuscript_identity_check(None, "Synthetic archival research", "Example Author"),
         ),
     )
-    for view in ("sources", "dossiers", "search", "claims", "decisions", "review", "change-set"):
+    for view in ("sources", "dossiers", "search", "claims", "timeline", "decisions", "review", "change-set"):
         for suffix, width, height in (("", 1480, 1000), ("-mobile", 390, 1000)):
             _queue_capture(
                 research_workspace,
@@ -579,7 +608,16 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         780,
     )
 
-    if args.only:
+    if args.video:
+        video_dir = WORK_DIR / "videos"
+        video_dir.mkdir(parents=True, exist_ok=True)
+        CAPTURES[:] = [{
+            "source": str(research_workspace),
+            "target": str(OUT_DIR / "dashboard-research-timeline.png"),
+            "width": 1280, "height": 800, "video": True,
+            "videoTarget": str(video_dir / "research-timeline.webm"),
+        }]
+    elif args.only:
         requested = set(args.only)
         available = {Path(str(capture["target"])).name for capture in CAPTURES}
         missing = requested - available
