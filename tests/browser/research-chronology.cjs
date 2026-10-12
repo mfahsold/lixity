@@ -74,6 +74,12 @@ server.serve_forever()
       const dated = await page.locator('#research-claims-timeline .research-timeline-dated > li').first().getAttribute('data-claim-id');
       assert.equal(dated, fixture.claims[1], '1880 precedes 1900 rather than creation order');
       assert.equal(await page.locator('#research-claims-timeline .research-timeline-unplaced > li').count(), 3);
+      const scale = await page.locator('#research-claims-timeline .research-timeline-dated > li').first().locator('.research-timeline-scale span').textContent();
+      assert.equal(scale, '1880', 'A dated claim shows its placed calendar range');
+      const headings = await page.locator('#research-claims-timeline h3').allTextContents();
+      assert.ok(headings[0].includes('(3)') && headings[1].includes('(3)'), 'Both chronology sections carry a count');
+      const placementHint = await page.evaluate(() => uiLabel('research_timeline_placement_hint'));
+      assert.ok((await page.locator('#research-claims-timeline').textContent()).includes(placementHint), 'Unplaced periods explain how to place a claim');
       assert.equal(writes.length, 0, 'Timeline navigation writes no authored records');
       const endpointLabels = await page.locator('#r-relation-from option').allTextContents();
       assert.equal(new Set(endpointLabels).size, endpointLabels.length, 'Duplicate titles and periods still have distinct selectable labels');

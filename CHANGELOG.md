@@ -15,6 +15,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- The Claims timeline shows each dated claim's placed calendar range, counts
+  both sections, names the recognized formats and explains why free-text
+  periods such as “present day” stay unplaced by design.
 - NDA drafts offer the recipient a signature line or clear consent in text
   form (for example an email reply) and no longer ask the sending project
   representative for a separate handwritten signature on the sent copy; all

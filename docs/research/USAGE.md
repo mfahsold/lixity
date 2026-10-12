@@ -213,8 +213,10 @@ v0.3.0; they are not part of historical v2.4.0.
 
 In **Claims**, choose **Timeline** to organize the current claim revisions by
 their recorded `time_period`. **List** returns to the ordinary claim cards.
-The view preserves each period label and never substitutes the record's creation
-date. Opening or filtering the timeline changes no archive records or index.
+Each dated claim shows its placed calendar range, both sections carry a count,
+and the view names the recognized formats and how to place a claim. Every period
+label is preserved and the record's creation date is never substituted. Opening
+or filtering the timeline changes no archive records or index.
 
 The chronology places valid four-digit CE years (`0001`–`9999`), ISO calendar
 dates (`YYYY-MM-DD`) and ranges whose endpoints have the same precision. Year
@@ -222,7 +224,8 @@ ranges accept `-`, `–`, `—`, `/` or `..`; date ranges accept `-`, `–`, `�
 For example, `1912`, `1912–1914`, `1912-05-01` and
 `1912-05-01 / 1912-05-03` can be placed. Missing periods, invalid dates/reversed
 ranges and labels such as `autumn 1912`, `1912-05` or `44 BCE` remain visible
-under **Unplaced periods** with a reason. Temporal placement does not verify
+under **Unplaced periods** with a reason; free-text periods such as
+`present day` stay there on purpose. Temporal placement does not verify
 chronology or establish a historical fact.
 
 ```sh
@@ -712,6 +715,12 @@ The research dashboard lets users choose a library and collection, search items,
 inspect attachments, open originals in Zotero and capture or refresh selected
 PDF/text attachments after confirming retention. It marks captured attachments
 and metadata-version changes. This indication is not a comparison of file bytes.
+
+**Open in Zotero** uses the `zotero://` URL protocol: the Zotero installation
+registers that handler for the desktop account, and the running or newly started
+Zotero app selects the item. If a click has no effect, the protocol handler is
+missing — for example with a manually installed or portable copy; update or
+reinstall Zotero's desktop integration. This link is independent of the local API.
 When every active source has a structured external reference, the dashboard hides
 the separate local-import form. Native CLI/API import remains available for
 standalone projects and recovery; retained evidence history is not removed.

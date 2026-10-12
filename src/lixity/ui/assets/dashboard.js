@@ -2459,14 +2459,29 @@ function updateResearchRelationControls() {
     !researchClaimChoices[from] || !researchClaimChoices[to] || from === to;
 }
 
+function researchTimelineScale(entry) {
+  var period = entry.period;
+  if (!period) return "";
+  function part(iso) {
+    return period.precision === "year" ? iso.slice(0, 4) : iso;
+  }
+  var start = part(period.start), end = part(period.end);
+  return start === end ? start : start + " – " + end;
+}
+
 function researchTimelineEntry(entry) {
-  var scope = [entry.time_period, entry.place, (entry.actors || []).join(", ")].filter(Boolean).join(" · ");
+  var scale = researchTimelineScale(entry);
+  var scope = [entry.place, (entry.actors || []).join(", ")].filter(Boolean).join(" · ");
+  var authored = entry.time_period ? uiLabel("research_scope_time") + " " + entry.time_period : "";
+  var details = [authored, scope].filter(Boolean).join(" · ");
   return '<li data-claim-id="' + escapeHtml(entry.claim_id) + '"><article class="research-card">' +
-    '<h4>' + escapeHtml(entry.title) + '</h4><p class="ctl-note">' + escapeHtml(scope) + '</p>' +
+    (scale ? '<p class="research-timeline-scale"><span>' + escapeHtml(scale) + '</span></p>' : '') +
+    '<h4>' + escapeHtml(entry.title) + '</h4>' +
+    (details ? '<p class="ctl-note">' + escapeHtml(details) + '</p>' : '') +
     '<p class="research-timeline-statement">' + escapeHtml(entry.statement) + '</p>' +
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_confidence_" + entry.confidence)) + ' · ' +
       escapeHtml(uiFormat("research_revision_number", {revision: entry.revision})) + '</p>' +
-    (entry.reason ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_" + entry.reason)) + '</p>' : '') +
+    (entry.reason ? '<p class="research-timeline-reason">' + escapeHtml(uiLabel("research_timeline_" + entry.reason)) + '</p>' : '') +
     researchRevisionActions("claim", entry.claim_id) + '</article></li>';
 }
 
@@ -2497,12 +2512,20 @@ async function refreshResearchClaimProjections() {
     researchApiGet("research/claim-relations?include_retracted=" + include)]);
   if (request !== researchProjectionRead || !responses.every(function(data) {return acceptResearchContext(context, data);})) return;
   var timeline = responses[0], relations = responses[1];
+  var datedRows = timeline.dated || [], unplacedRows = timeline.unplaced || [];
   timelineHost.innerHTML = timeline.ok ?
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_hint")) + '</p>' +
-    '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + '</h3><ol class="research-timeline research-timeline-dated">' +
-      (timeline.dated || []).map(researchTimelineEntry).join("") + '</ol>' +
-    '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + '</h3><ol class="research-timeline research-timeline-unplaced">' +
-      (timeline.unplaced || []).map(researchTimelineEntry).join("") + '</ol>' :
+    '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_examples")) +
+      ' <code>1912 · 1912-05-01 · 1912–1914</code></p>' +
+    '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + ' (' + datedRows.length + ')</h3>' +
+    (datedRows.length ? '<ol class="research-timeline research-timeline-dated">' +
+      datedRows.map(researchTimelineEntry).join("") + '</ol>' :
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_dated")) + '</p>') +
+    '<h3>' + escapeHtml(uiLabel("research_timeline_unplaced")) + ' (' + unplacedRows.length + ')</h3>' +
+    (unplacedRows.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_placement_hint")) + '</p>' +
+      '<ol class="research-timeline research-timeline-unplaced">' +
+      unplacedRows.map(researchTimelineEntry).join("") + '</ol>' :
+      '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_unplaced")) + '</p>') :
     '<p class="ctl-note">' + escapeHtml(timeline.message || uiLabel("research_load_claims_failed")) + '</p>';
   if (!relations.ok) {
     relationsHost.textContent = relations.message || uiLabel("research_load_claims_failed");
