@@ -156,13 +156,16 @@ def get_language_profile(key: str) -> LanguageProfile:
     return LANGUAGE_PROFILES.get((key or "").strip().lower(), LANGUAGE_PROFILES["generic"])
 
 
+_WORD_CHAR_RE = re.compile(r"[^\W\d_]+")
+
+
 def detect_language(text: str, min_hits: int = 3) -> str:
     """Detects the language via stop word frequency (dependency-free, offline).
 
     Returns: language key or ``generic`` if the signal is too weak or
     ambiguous (short texts, proper names, numbers).
     """
-    words = re.findall(r"[^\W\d_]+", text.lower())
+    words = _WORD_CHAR_RE.findall(text.lower())
     if not words:
         return "generic"
 

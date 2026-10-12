@@ -115,9 +115,16 @@ and `about --json` metadata. The output is the verified wheel, source archive an
 Preparation does not commit, tag, push or publish. After reviewing the changes
 and obtaining release authorization, run `make browser` for UI-affecting changes,
 push the reviewed commit to `main` and its matching `vX.Y.Z` tag. The tag
-workflow only builds, verifies and smoke-installs the artifacts from the tag
-before attaching them to the GitHub Release; the full source and documentation
-checks already ran locally through `make release-check` and in the `check` job.
+workflow only builds, verifies and smoke-installs the artifacts from the tag,
+attests them for `gh attestation verify`, attaches them to a draft release and
+publishes that draft only when every asset is present. The full source and
+documentation checks already ran locally through `make release-check` and in the
+`check` job. Verify a downloaded artifact with:
+
+```bash
+gh attestation verify dist/lixity-X.Y.Z-py3-none-any.whl -R mfahsold/lixity
+```
+
 Documentation deployment remains the separate Pages workflow. A new release with
 a lower version number requires explicit version selection by installations
 already using a higher version; this workflow does not change package-manager

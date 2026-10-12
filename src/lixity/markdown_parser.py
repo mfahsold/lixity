@@ -19,15 +19,28 @@ if TYPE_CHECKING:
 _FN_REF_PATTERN = re.compile(r"\[\^([^\]]+)\]")
 _FN_REF_STRIP_PATTERN = re.compile(r"\[\^([^\]]+)\]")
 SCENE_BREAK_RE = re.compile(r"(?m)^\s*(?:-{3,}|\*{3,}|_{3,}|•{3,}|#\s*#\s*#|\*\s+\*\s+\*)\s*$")
+_COMMENT_STRIP_RE = re.compile(r"<!--.*?-->", re.DOTALL)
+_FRONT_MATTER_KEY_RE = re.compile(r"[\w-]+\s*:")
+_FENCE_OPENER_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")
+_HEADING_MARKUP_RE = re.compile(r"^#+\s*")
+_HEADING_GE3_RE = re.compile(r"^#{3,6}\s")
+_FOOTNOTE_DEF_RE = re.compile(r"^\[\^([^\]]+)\]:\s*(.*)")
+_EM_TRIPLE_STRIP_RE = re.compile(r"\*\*\*(.*?)\*\*\*")
+_EM_BOLD_STRIP_RE = re.compile(r"\*\*(.*?)\*\*")
+_EM_ITALIC_STRIP_RE = re.compile(r"(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)")
+_EM_UNDERSCORE_STRIP_RE = re.compile(r"(?<!\w)_{1,3}(?=\S)(.*?\S)_{1,3}(?!\w)")
+_EM_TRIPLE_HTML_RE = re.compile(r"\*\*\*(.+?)\*\*\*")
+_EM_BOLD_HTML_RE = re.compile(r"\*\*(.+?)\*\*")
+_EM_ITALIC_HTML_RE = re.compile(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)")
+_CHAPTER_SPANS_CACHE: dict[tuple[str, str], list[tuple[int, str, str, int]]] = {}
 
 
 def _without_comments(content: str) -> str:
     """Remove comments while retaining their original line boundaries."""
-    return re.sub(
-        r"<!--.*?-->",
+    return _COMMENT_STRIP_RE.sub(
         lambda match: "".join(character for character in match.group()
                              if character in "\r\n\v\f\x1c\x1d\x1e\x85\u2028\u2029"),
-        content, flags=re.DOTALL,
+        content,
     )
 
 
@@ -54,7 +67,7 @@ def _front_matter_end(lines: list[str]) -> int:
     first = next((line.strip() for line in lines[1:] if line.strip()), "")
     # A pair of scene dividers around prose is not metadata. Support the common
     # key/value front-matter form without interpreting arbitrary YAML values.
-    if not re.match(r"[\w-]+\s*:", first):
+    if not _FRONT_MATTER_KEY_RE.match(first):
         return 0
     for index, line in enumerate(lines[1:], 1):
         if line.strip() in ("---", "..."):
@@ -64,7 +77,10 @@ def _front_matter_end(lines: list[str]) -> int:
 
 def _fence_closer(line: str) -> re.Pattern[str] | None:
     """Recognize a backtick/tilde opener using the shared scene-fence rules."""
-    opening = re.match(r"^ {0,3}(`{3,}|~{3,})(.*)$", line.rstrip("\r\n"))
+    stripped = line.rstrip("\r\n")
+    if "`" not in stripped and "~" not in stripped:
+        return None
+    opening = _FENCE_OPENER_RE.match(stripped)
     if not opening or (opening[1][0] == "`" and "`" in opening[2]):
         return None
     marker = opening[1]
@@ -103,14 +119,30 @@ def chapter_heading_spans(text: str, config: CorpusConfig) -> list[tuple[int, in
         if match:
             title = line[match.end():].strip()
             if not title:
-                title = re.sub(r"^#+\s*", "", match.group().strip())
+                title = _HEADING_MARKUP_RE.sub("", match.group().strip())
             headings.append((offset, offset + len(original), index + 1, title))
         offset += len(original)
     return headings
 
 
 def _chapter_spans(text: str, config: CorpusConfig) -> list[tuple[int, str, str, int]]:
-    """Accepted chapters with original heading lines for profile alignment."""
+    """Accepted chapters with original heading lines for profile alignment.
+
+    Every report asks for the same document's chapters; cache the most recent
+    (text, configuration) result so one analysis scans and parses each chapter
+    once instead of once per report. One entry keeps the retained text bounded.
+    """
+    key = (text, config.model_dump_json())
+    cached = _CHAPTER_SPANS_CACHE.get(key)
+    if cached is None:
+        cached = _chapter_spans_uncached(text, config)
+        _CHAPTER_SPANS_CACHE.clear()
+        _CHAPTER_SPANS_CACHE[key] = cached
+    return list(cached)
+
+
+def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, str, str, int]]:
+    """Compute accepted chapters with original heading lines for profile alignment."""
     from .language import compile_word_pattern, resolve_language
 
     if config.appendix_marker:
@@ -211,13 +243,13 @@ def strip_inline_markup(text: str) -> str:
     The plain text remains readable; the function is the shared cleaning stage
     of the analyzer, style profile and further analysis tools.
     """
-    text = re.sub(r"<!--.*?-->", "", text, flags=re.DOTALL)
+    text = _COMMENT_STRIP_RE.sub("", text)
     text = _FN_REF_STRIP_PATTERN.sub("", text)
-    text = re.sub(r"\*\*\*(.*?)\*\*\*", r"\1", text)
-    text = re.sub(r"\*\*(.*?)\*\*", r"\1", text)
-    text = re.sub(r"(?<!\*)\*(?!\*)(.*?)(?<!\*)\*(?!\*)", r"\1", text)
+    text = _EM_TRIPLE_STRIP_RE.sub(r"\1", text)
+    text = _EM_BOLD_STRIP_RE.sub(r"\1", text)
+    text = _EM_ITALIC_STRIP_RE.sub(r"\1", text)
     # Underscore emphasis cannot start/end inside a word (snake_case is data).
-    text = re.sub(r"(?<!\w)_{1,3}(?=\S)(.*?\S)_{1,3}(?!\w)", r"\1", text)
+    text = _EM_UNDERSCORE_STRIP_RE.sub(r"\1", text)
     return text.strip()
 
 
@@ -295,7 +327,7 @@ def parse_markdown_blocks(
             i += 1
             continue
 
-        if re.match(r"^#{3,6}\s", stripped):
+        if _HEADING_GE3_RE.match(stripped):
             blocks.append(
                 {"type": "h3", "text": stripped.lstrip("#").strip(), "start_line": i + 1, "end_line": i + 1}
             )
@@ -328,7 +360,7 @@ def parse_markdown_blocks(
             continue
 
         # Footnote definitions [^id]: text
-        fn_match = re.match(r"^\[\^([^\]]+)\]:\s*(.*)", stripped)
+        fn_match = _FOOTNOTE_DEF_RE.match(stripped)
         if fn_match:
             start_line = i + 1
             fn_id = fn_match.group(1)
@@ -503,9 +535,9 @@ def inline_markdown_to_html(
     text = _FN_REF_PATTERN.sub(fn_ref, text)
 
     # 4. Bold-italic, bold, italic
-    text = re.sub(r"\*\*\*(.+?)\*\*\*", r"<strong><em>\1</em></strong>", text)
-    text = re.sub(r"\*\*(.+?)\*\*", r"<strong>\1</strong>", text)
-    text = re.sub(r"(?<!\*)\*(?!\*)(.+?)(?<!\*)\*(?!\*)", r"<em>\1</em>", text)
+    text = _EM_TRIPLE_HTML_RE.sub(r"<strong><em>\1</em></strong>", text)
+    text = _EM_BOLD_HTML_RE.sub(r"<strong>\1</strong>", text)
+    text = _EM_ITALIC_HTML_RE.sub(r"<em>\1</em>", text)
 
     # 5. Links [text](url)
     def link(m: re.Match[str]) -> str:

@@ -511,5 +511,19 @@ class TestReportFormatter(unittest.TestCase):
             self.assertNotIn("180.0", html)
 
 
+def test_chapter_spans_cache_is_transparent_and_returns_copies():
+    from lixity.markdown_parser import _chapter_spans
+    from lixity.models import CorpusConfig
+
+    text = "## One\n\nFirst prose.\n\n## Two\n\nSecond prose.\n"
+    config = CorpusConfig(language="en", appendix_marker="## Notes")
+    first = _chapter_spans(text, config)
+    second = _chapter_spans(text, config)
+    assert first == second
+    assert first is not second
+    first.clear()
+    assert _chapter_spans(text, config) == second
+
+
 if __name__ == "__main__":
     unittest.main()

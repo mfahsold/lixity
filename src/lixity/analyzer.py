@@ -42,6 +42,8 @@ from .syllables import count_syllables as count_syllables_for
 
 _RE_HTML_COMMENT = re.compile(r"<!--.*?-->", re.DOTALL)
 _RE_HEADING_LINE = re.compile(r"(?m)^#+.*$")
+_RE_DASHES = re.compile(r"[–—]")
+_RE_ELLIPSES = re.compile(r"(?:…|\.{3})")
 
 
 @dataclass(frozen=True)
@@ -264,12 +266,12 @@ class CorpusAnalyzer:
         return {
             "periods": text.count("."),
             "commas": text.count(","),
-            "dashes": len(re.findall(r"[–—]", text)),
+            "dashes": len(_RE_DASHES.findall(text)),
             "colons": text.count(":"),
             "semicolons": text.count(";"),
             "questions": text.count("?"),
             "exclamations": text.count("!"),
-            "ellipses": len(re.findall(r"(?:…|\.{3})", text)),
+            "ellipses": len(_RE_ELLIPSES.findall(text)),
         }
 
     def measure_unit(self, text: str) -> ChapterMetrics | None:

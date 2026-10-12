@@ -235,6 +235,11 @@ def render_dashboard(
         values = [value for value, _z in layer_data.get(key, {}).values()]
         return (min(values), max(values)) if values else (0.0, 1.0)
 
+    # Bounds depend on the whole layer once; per-paragraph loops read them.
+    layer_bounds: dict[str, tuple[float, float]] = {
+        layer_key: _layer_range(layer_key) for layer_key in LAYER_FEATURES
+    }
+
     def _layer_tip(key: str, value: float, z: float) -> str:
         direction = label(labels, "layer_above" if z > 0 else "layer_below")
         return f"{_layer_text(key, value)} · {direction}"
@@ -708,7 +713,7 @@ def render_dashboard(
         parts.append('<select class="ctl" id="style-layer">')
         parts.append(f'<option value="">{L("layer_off")}</option>')
         for layer_key in LAYER_FEATURES:
-            low, high = _layer_range(layer_key)
+            low, high = layer_bounds[layer_key]
             parts.append(
                 f'<option value="{layer_key}" '
                 f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
@@ -804,7 +809,7 @@ def render_dashboard(
                     info = layer_data.get(key, {}).get(idx)
                     if info is not None:
                         value, z = info
-                        low, high = _layer_range(key)
+                        low, high = layer_bounds[key]
                         span = (high - low) or 1.0
                         position = (value - low) / span
                         colour = z_color((position * 2.0 - 1.0) * Z_COLOR_LIMIT)

@@ -7,6 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Dashboard and PDF builds reuse cached chapter splitting, precompiled literal
+  patterns and one-pass style-layer bounds; a full novel builds about a quarter
+  faster with byte-identical output.
+- Release publishing attaches every artifact to a draft, attests them for
+  `gh attestation verify` and publishes only the complete draft release.
+
 ## [0.3.0] - 2026-10-12
 
 ### Added

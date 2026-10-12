@@ -4,6 +4,8 @@ on:
     tags: ["v*"]
 permissions:
   contents: write
+  id-token: write
+  attestations: write
 jobs:
   publish:
     runs-on: ubuntu-latest
@@ -19,12 +21,21 @@ jobs:
         run: |
           python -m pip install build
           python scripts/check_release.py --build --smoke --tag "$GITHUB_REF_NAME"
-      - name: Create GitHub Release with artifacts
-        # Third-party publisher pinned to the reviewed v3 commit.
+      - name: Attest the release artifacts
+        uses: actions/attest-build-provenance@v4
+        with:
+          subject-path: dist/*
+      # Draft first, attach every asset, then publish: one atomic release that
+      # stays compatible with immutable releases.
+      - name: Create draft release with artifacts
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           files: dist/*
           fail_on_unmatched_files: true
-          make_latest: true
+          draft: true
           body_path: docs/releases/${{ github.ref_name }}.md
           generate_release_notes: true
+      - name: Publish the verified draft
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest
