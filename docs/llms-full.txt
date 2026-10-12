@@ -5954,6 +5954,38 @@ Seven interface languages do not imply equal linguistic validation: English
 and German currently have the deepest coverage. Shared statistical routines
 operate on language-dependent heuristic inputs.
 
+### Component vocabulary and markup rules
+
+New markup reuses the documented vocabulary instead of introducing parallel
+controls:
+
+- Surfaces: `.panel` for a bordered region, `.ctl-group` for a labelled form
+  block, `.research-card`/`.research-timeline` for authored-record lists, and
+  `.notice-box` for boundary notes.
+- Controls: `.ctl` for neutral buttons and inputs, `.ctl.primary` for the one
+  primary action per form, `.chip` for compact filter or shortcut targets, and
+  `.ctl-status` for live success and error messages. Help terms come from
+  `help_term`; they stay dotted-underlined, keyboard reachable and localized.
+- Structure: shared heading styles for `h2`/`h3`, `.section-heading` for a
+  research sub-block, and `.ctl-note` for secondary prose such as empty states,
+  limits and measurement notes.
+- Measurements use tabular numbers (`font-variant-numeric: tabular-nums`) and
+  keep their unit in the label, not in the value.
+
+Rules for changes:
+
+- Every visible string comes from the seven-language label packs; no hardcoded
+  English in markup.
+- Prefer native elements (`button`, `select`, `details`, `dialog`) and the
+  existing `data-*` interaction hooks over new custom widgets.
+- Keep one primary action per form; secondary actions stay neutral.
+- Avoid new inline styles for spacing or sizing: use the shared tokens and
+  utilities in `dashboard.css` (and `design-tokens.css` for color and type
+  roles). Inline `style` remains reserved for measured values such as bar
+  widths.
+- Responsive stacking is a CSS decision (single column at 640 px), not a second
+  markup tree; new panels must survive 320 px without horizontal overflow.
+
 ## Repository tooling
 
 Maintained developer tooling lives in `scripts/` and is intentionally not

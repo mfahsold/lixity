@@ -21,6 +21,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- Research writes reuse the verified snapshot of the current process while
+  HEAD still names it, roughly halving claim creation and revision cost on
+  large archives; a commit from another process is still detected and
+  rejected, and the strict snapshot guard is unchanged.
 - The claim chronology accepts `YYYY-MM` months and same-precision month
   ranges, and `api.revise_record` mirrors the CLI convenience of omitting
   `expected_snapshot` (current revision checked, changed associations still

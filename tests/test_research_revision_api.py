@@ -3,7 +3,8 @@
 import pytest
 
 from lixity.research import api
-from lixity.research.repository import ResearchConflictError, ResearchError
+from lixity.research.models import Claim
+from lixity.research.repository import Repository, ResearchConflictError, ResearchError
 
 
 def test_python_revision_forwards_the_read_snapshot_when_omitted(tmp_path):
@@ -40,3 +41,17 @@ def test_python_revision_requires_pins_for_new_associations_without_snapshot(tmp
         expected_snapshot=current["snapshot"], expected_revision=1,
         change_kind="correction", reason="Synthetic reviewed association change.")
     assert revised["record"]["dossier_ref"]["id"] == dossier
+
+def test_snapshot_cache_still_sees_commits_from_other_instances(tmp_path):
+    project = tmp_path / "project"
+    api.init(project, title="Synthetic cache archive")
+    reader = Repository(project)
+    before = reader.snapshot()
+
+    api.create_claim(project, title="Gate", statement="The gate opened.")
+
+    after = reader.snapshot()
+    assert after.digest != before.digest
+    assert any(isinstance(record, Claim) for record in after.records.values())
+    with pytest.raises(ResearchConflictError):
+        reader.commit([], {}, before)

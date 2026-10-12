@@ -94,7 +94,8 @@ def test_normal_response_keeps_its_headers_and_unicode_json():
     assert response.response_headers == {
         "Content-Type": "application/json; charset=utf-8", "Content-Length": str(len(body)),
         "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY", "Referrer-Policy": "no-referrer",
+        "X-Frame-Options": "DENY", "Content-Security-Policy": "frame-ancestors 'none'",
+        "Referrer-Policy": "no-referrer",
     }
     assert response.close_connection is False
 

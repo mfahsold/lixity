@@ -151,6 +151,9 @@ class Repository:
         self.root = Path(project).expanduser().resolve()
         self.data = self.root / "research"
         self.cache = self.root / ".lixity" / "research"
+        #: Last verified snapshot of this instance. Reused only while HEAD still
+        #: names the same manifest, so another process's commit is always seen.
+        self._snapshot: Snapshot | None = None
 
     def safe(self, path: Path) -> Path:
         try:
@@ -212,6 +215,9 @@ class Repository:
     def snapshot(self) -> Snapshot:
         try:
             head = Head.model_validate_json(self.read(self.data / "HEAD.json", maximum=4096))
+            cached = self._snapshot
+            if cached is not None and cached.digest == head.sha256:
+                return cached
             manifest = Manifest.model_validate_json(self.verified(self.data / "manifests" / f"{head.sha256}.json", head.sha256))
             records: dict[str, Entity] = {}
             revisions: dict[tuple[str, int], Entity] = {}
@@ -230,6 +236,7 @@ class Repository:
             self.validate(snapshot)
             if self.read(self.data / "project.json") != encode(snapshot.project):
                 raise ResearchError("Project configuration does not match its accepted revision")
+            self._snapshot = snapshot
             return snapshot
         except (ValidationError, json.JSONDecodeError):
             raise ResearchError("Invalid or unsupported research schema") from None
@@ -521,6 +528,7 @@ class Repository:
                 if cache_db.exists():
                     cache_db.unlink()
 
+            self._snapshot = candidate
             return candidate
 
     def citation(self, snapshot: Snapshot, passage: Passage) -> dict[str, Any]:
