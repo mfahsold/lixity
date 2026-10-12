@@ -55,6 +55,7 @@ commands. The make targets create an isolated `.venv`; they do not alter global 
 ```bash
 make install-dev          # or: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make check                # ruff + mypy --strict + pytest -W error
+make browser              # optional local Playwright regression suites
 make docs-check           # version pins, changelog, staged-site link integrity
 ```
 
@@ -71,22 +72,15 @@ RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
 .venv/bin/mypy --strict src
 ```
 
-Core CI (`.github/workflows/tests.yml`) runs on every pull request, push to
-`main` and manual dispatch. Python 3.12 runs the
-full suite, including real Poppler PDF tests. Python 3.10, 3.11 and 3.13 run all
-nonnative tests with `-m "not native_pdf"`; synthetic PDF, worker, timeout and
-provenance coverage remains on every Python version. The selection regression
-test checks that `native_pdf` contains exactly the real Poppler prerequisites.
-Lint and exact wheel/source verification remain unconditional core jobs.
-
-The separate browser and research-platform workflows use GitHub's built-in
-push/PR path filters. Both run for source, scripts, dependency metadata or
-workflow changes. Browser checks also run for documentation and browser-test
-changes; all research suites run on macOS and Windows for research-test changes.
-Each workflow supports manual dispatch and cancels superseded runs. Pip downloads
-are cached. Configure required status checks from the unconditional core workflow.
-Release tags run their own full source checks with Poppler and verify an isolated
-package installation.
+Core CI (`.github/workflows/tests.yml`) is one `check` job on Python 3.12 for
+every pull request, push to `main` and manual dispatch: Ruff, `mypy` and the
+full suite with real Poppler PDF tests. Compatibility interpreters, browser
+regression suites and Windows/macOS suites are local-first. Run `make check`
+with each supported interpreter, `make browser` for rendered desktop/mobile
+workflows, and dispatch the manual `browser` or `research-platforms` workflow
+when a change needs an independent platform signal. Configure required status
+checks from `check`. Pip downloads are cached, and newer pushes cancel
+superseded runs.
 
 Build artifacts with `make build`. The shared `scripts/check_release.py` builds
 the source archive and wheel in a fresh temporary directory, compares both
@@ -119,12 +113,15 @@ and `about --json` metadata. The output is the verified wheel, source archive an
 `.venv/bin/python scripts/check_release.py --tag vX.Y.Z --smoke`.
 
 Preparation does not commit, tag, push or publish. After reviewing the changes
-and obtaining release authorization, push the reviewed commit to `main` and its
-matching `vX.Y.Z` tag. The existing tag-triggered GitHub workflow repeats the same
-release check before attaching artifacts to the GitHub Release. Documentation
-deployment remains the separate Pages workflow. A new release with a lower
-version number requires explicit version selection by installations already
-using a higher version; this workflow does not change package-manager ordering.
+and obtaining release authorization, run `make browser` for UI-affecting changes,
+push the reviewed commit to `main` and its matching `vX.Y.Z` tag. The tag
+workflow only builds, verifies and smoke-installs the artifacts from the tag
+before attaching them to the GitHub Release; the full source and documentation
+checks already ran locally through `make release-check` and in the `check` job.
+Documentation deployment remains the separate Pages workflow. A new release with
+a lower version number requires explicit version selection by installations
+already using a higher version; this workflow does not change package-manager
+ordering.
 
 ### Updating documentation and Pages
 

@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint typecheck check build release-check screenshots clean docs-check docs-sync run start serve stop restart status
+.PHONY: help install install-dev test browser lint typecheck check build release-check screenshots clean docs-check docs-sync run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -25,6 +25,9 @@ install-dev: ## Create .venv and install with dev extras
 
 test: ## Run the full test suite (warnings as errors)
 	PYTHONPATH=src $(VPY) -m pytest -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
+
+browser: ## Run local browser regression suites (needs Node and Playwright)
+	$(PYTHON) scripts/run_browser_suites.py
 
 lint: ## Ruff lint (src, tests, scripts)
 	RUFF_CACHE_DIR=$(RUFF_CACHE) $(VENV)/bin/ruff check src tests scripts

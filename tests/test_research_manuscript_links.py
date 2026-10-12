@@ -25,7 +25,10 @@ def manuscript_archive(tmp_path):
     dossier = api.create_dossier(project, "Reading room", "Synthetic research notes.")["dossier_id"]
     claim = api.create_claim(project, title="Room", statement="The room was open.", dossier_id=dossier)["claim_id"]
     manuscript = project / "draft.md"
-    manuscript.write_text("## Chapter One\n\nThe **reading room** was open. 🦉 A visitor arrived.\n", encoding="utf-8")
+    # Binary writing keeps the fixture bytes identical on every platform; a
+    # text-mode write would translate LF on Windows and break byte-level checks.
+    content = "## Chapter One\n\nThe **reading room** was open. 🦉 A visitor arrived.\n"
+    manuscript.write_bytes(content.encode("utf-8"))
     return project, manuscript, claim, dossier
 
 

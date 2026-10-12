@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 
 from .. import pdf_export
-from ..config import load_project_config
+from ..config import load_project_config, same_config_scope
 from ..io import FileUtils
 from ..pdf_document import PdfError
 from ..workspace import slugify
@@ -51,7 +51,8 @@ class ManuscriptPdfRoutesMixin(ResponseMixin):
                 with warnings.catch_warnings():
                     warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
                     settings = load_project_config(source)
-                    identity = load_project_config(project_root)
+                    identity = (settings if same_config_scope(project_root, source)
+                                else load_project_config(project_root))
 
             content = pdf_export.compose_pdf(
                 text, manuscript=source, layout=layout, language=language,

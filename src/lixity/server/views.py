@@ -13,7 +13,12 @@ from pathlib import Path
 from typing import Any
 
 from ..characters import presence_report
-from ..config import load_project_config, resolve_thresholds, validate_author_name
+from ..config import (
+    load_project_config,
+    resolve_thresholds,
+    same_config_scope,
+    validate_author_name,
+)
 from ..dialogue import dialogue_report
 from ..io import FileUtils
 from ..markers import list_markers
@@ -110,13 +115,17 @@ def build_server_dashboard(
             is_missing = True
             manuscript_name = os.path.basename(source_input)
 
-    settings = load_project_config(source_input) if source_input and os.path.isfile(source_input) else {}
+    source_is_file = bool(source_input and os.path.isfile(source_input))
+    settings = load_project_config(source_input) if source_is_file else {}
     if not source_input and project_root is not None:
         settings = load_project_config(project_root)
     identity_settings = settings
     if project_root is not None:
-        identity_settings = load_project_config(project_root)
-    elif source_input and not os.path.isfile(source_input):
+        # Author/publication stay project-local; reuse the settings read when
+        # the manuscript already sits in the selected root.
+        if source_input and not (source_is_file and same_config_scope(project_root, source_input)):
+            identity_settings = load_project_config(project_root)
+    elif source_input and not source_is_file:
         identity_settings = load_project_config(Path(source_input).parent)
     if identity_settings_override is not None:
         identity_settings = {**identity_settings, **identity_settings_override}

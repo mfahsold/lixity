@@ -8,6 +8,7 @@ from unittest.mock import patch
 import pytest
 
 from lixity.io import FileUtils
+from lixity.server import views
 from lixity.server.handler import LixityServerHandler
 from lixity.server.views import build_server_dashboard
 
@@ -181,3 +182,29 @@ def test_project_open_reads_the_manuscript_once_through_the_shared_snapshot_read
         handler._handle_project_open({"path": str(source)})
     assert handler.response[0] == 200
     assert reads == ["snapshot"]
+
+
+def test_dashboard_reads_shared_project_configuration_once(tmp_path: Path):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("# Synthetic title\n\n## Morning\n\nA synthetic sentence.\n", encoding="utf-8")
+    calls: list[str | None] = []
+    original = views.load_project_config
+
+    def counting(start=None):
+        calls.append(str(start) if start is not None else None)
+        return original(start)
+
+    with patch.object(views, "load_project_config", counting):
+        build_server_dashboard(str(manuscript), project_root=tmp_path, language="en")
+    assert calls == [str(manuscript)]
+
+
+def test_dashboard_keeps_root_identity_for_a_manuscript_in_a_subdirectory(tmp_path: Path):
+    project = tmp_path / "project"
+    drafts = project / "drafts"
+    drafts.mkdir(parents=True)
+    manuscript = drafts / "manuscript.md"
+    manuscript.write_text("# Synthetic\n\n## Scene\n\nA synthetic sentence.\n", encoding="utf-8")
+    (project / "lixity.toml").write_text('author_name = "Synthetic Root Author"\n', encoding="utf-8")
+    html, _ = build_server_dashboard(str(manuscript), project_root=project, language="en")
+    assert 'value="Synthetic Root Author"' in html

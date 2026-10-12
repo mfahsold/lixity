@@ -1,34 +1,15 @@
+# Browser regression suites are local-first: run `make browser` after UI
+# changes and before preparing a release. This workflow runs the same script
+# in one Chromium job on manual dispatch only.
 name: browser
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "src/**"
-      - "tests/browser/**"
-      - "tests/test_ui_contract.py"
-      - "docs/**"
-      - "scripts/**"
-      - "pyproject.toml"
-      - ".github/workflows/**"
-  pull_request:
-    paths:
-      - "src/**"
-      - "tests/browser/**"
-      - "tests/test_ui_contract.py"
-      - "docs/**"
-      - "scripts/**"
-      - "pyproject.toml"
-      - ".github/workflows/**"
   workflow_dispatch:
 permissions:
   contents: read
-concurrency:
-  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
-  cancel-in-progress: true
 jobs:
   browser:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
@@ -42,35 +23,7 @@ jobs:
       - run: python -m pip install .
       - run: npm install --no-save playwright@1.59.1
       - run: npx playwright install --with-deps chromium
-      - name: Check rendered desktop and mobile workflows
+      - name: Run all browser regression suites
         env:
           PYTHON_BIN: python
-        run: |
-          node tests/browser/style-space.cjs
-          node tests/browser/settings.cjs
-          node tests/browser/layout.cjs
-          node tests/browser/research.cjs
-          node tests/browser/list-filters.cjs
-          node tests/browser/project-controls.cjs
-          node tests/browser/project-switch-native.cjs
-          node tests/browser/manuscript-pdf.cjs
-          node tests/browser/workspace-reader.cjs
-          node tests/browser/manuscript-search.cjs
-          node tests/browser/manuscript-links.cjs
-          node tests/browser/manuscript-links-native.cjs
-          node tests/browser/research-selection.cjs
-          node tests/browser/research-chronology.cjs
-          node tests/browser/ui-usability.cjs
-          node tests/browser/publication-settings.cjs
-          node tests/browser/scenes.cjs
-          node tests/browser/docs.cjs
-          node tests/browser/visual-consistency.cjs
-          node tests/browser/debug.cjs
-          node tests/browser/nda-draft.cjs
-          node tests/browser/setup-guide.cjs
-          node tests/browser/project-history.cjs
-          node tests/browser/decision-acknowledgement.cjs
-          node tests/browser/minimal-workflows.cjs
-          node tests/browser/dossier-images.cjs
-          node tests/browser/dossier-workflows.cjs
-          node tests/browser/dossier-claims.cjs
+        run: python scripts/run_browser_suites.py

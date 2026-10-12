@@ -124,6 +124,23 @@ def test_old_project_token_and_cross_origin_downloads_are_rejected(pdf_server):
     assert file_bytes(project) == before
 
 
+def test_download_resolves_shared_project_configuration_once(pdf_server, monkeypatch):
+    from lixity.server import routes_pdf
+
+    port, project, _handler, token = pdf_server
+    calls: list[str | None] = []
+    original = routes_pdf.load_project_config
+
+    def counting(start=None):
+        calls.append(str(start) if start is not None else None)
+        return original(start)
+
+    monkeypatch.setattr(routes_pdf, "load_project_config", counting)
+    status, _headers, body = request(port, {"layout": "book", "project_token": token})
+    assert status == 200, body.decode("utf-8", errors="replace")
+    assert calls == [str(project / "synthetic.md")]
+
+
 @pytest.mark.parametrize("source_state", ["unselected", "missing", "empty", "headings"])
 def test_no_readable_nonempty_selected_manuscript_is_not_exported(pdf_server, source_state):
     port, project, handler, token = pdf_server

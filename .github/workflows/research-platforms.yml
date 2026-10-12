@@ -1,28 +1,7 @@
+# Cross-platform suites are local-first. Dispatch this workflow when a change
+# needs macOS or Windows evidence.
 name: research-platforms
 on:
-  push:
-    branches: ["main"]
-    paths:
-      - "src/**"
-      - "tests/test_research*.py"
-      - "tests/test_service*.py"
-      - "tests/test_server_startup.py"
-      - "tests/test_server_research*.py"
-      - "tests/test_launcher*.py"
-      - "scripts/**"
-      - "pyproject.toml"
-      - ".github/workflows/**"
-  pull_request:
-    paths:
-      - "src/**"
-      - "tests/test_research*.py"
-      - "tests/test_service*.py"
-      - "tests/test_server_startup.py"
-      - "tests/test_server_research*.py"
-      - "tests/test_launcher*.py"
-      - "scripts/**"
-      - "pyproject.toml"
-      - ".github/workflows/**"
   workflow_dispatch:
 permissions:
   contents: read

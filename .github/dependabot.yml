@@ -1,11 +1,14 @@
-# Dependabot: keep GitHub Actions (and any future deps) current
+# Dependabot: one grouped monthly pull request for GitHub Actions updates.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
-      interval: "weekly"
-    open-pull-requests-limit: 5
+      interval: "monthly"
+    open-pull-requests-limit: 3
+    groups:
+      actions:
+        patterns: ["*"]
     labels:
       - "dependencies"
       - "github-actions"

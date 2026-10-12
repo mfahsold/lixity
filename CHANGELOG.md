@@ -45,6 +45,14 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Release preparation reuses one shared source/tag/artifact checker through
   `make release-check RELEASE_TAG=vX.Y.Z`, including installed-wheel smoke checks.
   Version editing, review, tagging and publishing remain separate actions.
+- GitHub Actions are reduced to one `check` job per pull request or `main` push.
+  Browser and cross-platform suites run locally through `make browser` or on
+  manual dispatch, and the tag workflow only builds, verifies, smoke-installs
+  and publishes the reviewed release artifacts. Its third-party publisher is
+  pinned to a reviewed commit.
+- Dashboard and PDF builds reuse one selected-project configuration read when
+  the manuscript and root share a directory. Author and publication settings
+  remain project-local when they do not.
 - Selected-project title, author and publication are saved together through the
   shared prepared configuration writer. Settings prepares the candidate view
   before committing; validation/read/render/write failures preserve previous

@@ -4,33 +4,12 @@ Run after installing the Python development environment and Playwright with
 Chromium. Playwright is optional tooling, not a Lixity runtime dependency.
 
 ```sh
-node tests/browser/style-space.cjs
-node tests/browser/debug.cjs
-node tests/browser/nda-draft.cjs
-node tests/browser/setup-guide.cjs
-node tests/browser/project-history.cjs
-node tests/browser/decision-acknowledgement.cjs
-node tests/browser/minimal-workflows.cjs
-node tests/browser/dossier-images.cjs
-node tests/browser/dossier-workflows.cjs
-node tests/browser/dossier-claims.cjs
-node tests/browser/settings.cjs
-node tests/browser/layout.cjs
-node tests/browser/research.cjs
-node tests/browser/list-filters.cjs
-node tests/browser/manuscript-search.cjs
-node tests/browser/manuscript-links.cjs
-node tests/browser/manuscript-pdf.cjs
-node tests/browser/workspace-reader.cjs
-node tests/browser/research-selection.cjs
-node tests/browser/research-chronology.cjs
-node tests/browser/ui-usability.cjs
-node tests/browser/publication-settings.cjs
-node tests/browser/project-controls.cjs
-node tests/browser/scenes.cjs
-node tests/browser/docs.cjs
-node tests/browser/visual-consistency.cjs
+make browser
+# or: python3 scripts/run_browser_suites.py
 ```
+
+`--list` prints the suite names, `--only NAME` selects suites and `--start NAME`
+resumes after a failure.
 
 If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
 its module directory. `PYTHON_BIN` optionally overrides `.venv/bin/python`.
@@ -47,12 +26,11 @@ API logs retain request metadata without response contents. Preferences do not
 change server logging. Backend request/error UTC timestamps
 are checked separately in `tests/test_server_debug.py`.
 
-The separate browser workflow runs every suite above in one Chromium job
-on pull requests and pushes to `main` that change `src/`, `tests/browser/`,
-`tests/test_ui_contract.py` (shared Python fixtures), `docs/`, `scripts/`,
-`pyproject.toml` or `.github/workflows/`, and on manual dispatch. Newer pushes cancel
-superseded runs. Browser binaries are downloaded for each run; screenshots stay
-temporary and are not uploaded as persistent CI artifacts.
+Browser suites are local-first: run `make browser` after UI changes and before
+preparing a release. The manual `browser` workflow (Actions → browser → Run
+workflow) runs the same script in one Chromium job on demand; screenshots stay
+temporary and are not uploaded as persistent CI artifacts. The manual
+`research-platforms` workflow covers macOS and Windows.
 
 The research test starts its own disposable loopback server and archive. It checks
 persistent New/Open/Show guidance actions after dismissal and in a loaded project,

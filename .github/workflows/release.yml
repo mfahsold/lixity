@@ -5,7 +5,7 @@ on:
 permissions:
   contents: write
 jobs:
-  build-and-release:
+  publish:
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -14,16 +14,14 @@ jobs:
         with:
           python-version: "3.12"
           cache: pip
-          cache-dependency-path: |
-            pyproject.toml
-            .github/workflows/release.yml
-      - run: make install-dev PYTHON=python
-      - name: Install native PDF test dependencies
-        run: sudo apt-get update && sudo apt-get install -y poppler-utils
-      - name: Check and prepare release artifacts
-        run: make release-check RELEASE_TAG="$GITHUB_REF_NAME"
+          cache-dependency-path: pyproject.toml
+      - name: Build, verify and smoke-test release artifacts
+        run: |
+          python -m pip install build
+          python scripts/check_release.py --build --smoke --tag "$GITHUB_REF_NAME"
       - name: Create GitHub Release with artifacts
-        uses: softprops/action-gh-release@v3
+        # Third-party publisher pinned to the reviewed v3 commit.
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           files: dist/*
           fail_on_unmatched_files: true
