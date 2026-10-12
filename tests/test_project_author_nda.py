@@ -19,11 +19,11 @@ def test_project_author_is_printed_on_the_representative_line(tmp_path: Path, la
     assert document.pdf().startswith(b"%PDF-")
 
 
-def test_missing_author_remains_an_empty_manual_signature_line(tmp_path: Path):
+def test_missing_author_remains_an_empty_manual_name_line(tmp_path: Path):
     document = draft_document(tmp_path, name="Synthetic Recipient", project_name="Synthetic Project",
         date="2026-10-09", place="Synthetic City", language="en")
-    assert "Project representative:" in document.text
-    assert "Project representative: ________________________" in document.text
+    assert "Issued and sent by the project representative:" in document.text
+    assert "Issued and sent by the project representative: ________________________" in document.text
     assert not (tmp_path / "nda").exists()
 
 

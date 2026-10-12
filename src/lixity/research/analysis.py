@@ -16,7 +16,7 @@ from ..markdown_parser import chapter_heading_spans, prose_text, split_chapters
 from ..models import SCHEMA_VERSION, CorpusConfig
 from ..pipeline import analyze_document
 from ..style_fingerprint import FEATURES, FingerprintThresholds, dunning_g2
-from ..ui import render_dashboard
+from ..ui import render_analysis
 from .models import Extraction, Passage, Reference, Source, SourceVersion, Tombstone
 from .repository import Repository, ResearchError
 
@@ -195,17 +195,12 @@ def analyze(
     context_for_dashboard["source_version_id"] = version.id
     context_for_dashboard["source_id"] = source.id
 
-    dashboard_html = render_dashboard(
-        analysis.chapters,
-        analysis.paragraphs,
-        metrics=analysis.metrics,
-        fingerprint=analysis.fingerprint,
+    dashboard_html = render_analysis(
+        analysis,
+        resolved,
         title=source.title,
-        labels=resolved.labels,
-        language_name=resolved.name,
-        language_key=resolved.key,
-        document_context=context_for_dashboard,
         flag_min_severity=resolved_thresholds.flag_min_severity,
+        document_context=context_for_dashboard,
         controls=False,
     )
 

@@ -15,6 +15,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- NDA drafts offer the recipient a signature line or clear consent in text
+  form (for example an email reply) and no longer ask the sending project
+  representative for a separate handwritten signature on the sent copy; all
+  seven language templates and the UI hint say consent, not signing.
+- Research & Dossiers leads the Sources tab with the local add-source form;
+  Zotero import follows as its own block and the retained list is titled
+  **Saved sources** in all seven languages. The read-only source dashboard
+  reuses the shared analysis renderer instead of a parallel path, and the
+  language lexicons no longer carry internal duplicate entries.
 - Public documentation and Pages carry the complete social/SEO head contract:
   Open Graph and Twitter images and titles on every page, per-page
   `TechArticle`/`SoftwareApplication` JSON-LD, refreshed sitemap dates and the

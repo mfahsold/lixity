@@ -60,9 +60,12 @@ remain in place. This agreement adds no contractual penalty or blanket liability
 without fault. We agree any changes together.
 
 Recipient: {{recipient_name}}
-Signature ______________________________________________________________
-Project representative: {{project_author}}
-Signature ______________________________________________________________
+Signature (or clear consent in text form, e.g. by email reply):
+________________________________________________________________________
+Date: ____________________________
+
+Issued and sent by the project representative: {{project_author}}
+A separate handwritten signature is not required for this sent copy.
 """,
     "de": """Vertraulichkeitsvereinbarung
 
@@ -124,9 +127,13 @@ Verschulden.
 Gesetzliche Schutzrechte bleiben erhalten. Änderungen vereinbaren wir gemeinsam.
 
 Empfangende Person: {{recipient_name}}
-Unterschrift ___________________________________________________________
-Projektverantwortliche Person: {{project_author}}
-Unterschrift ___________________________________________________________
+Unterschrift (oder Einverständnis in Textform, z. B. per E-Mail-Antwort):
+________________________________________________________________________
+Datum: ____________________________
+
+Versandt durch die projektverantwortliche Person: {{project_author}}
+Für diese versandte Fassung ist keine gesonderte handschriftliche
+Unterschrift erforderlich.
 """,
     "fr": """Accord de confidentialité
 
@@ -187,9 +194,12 @@ pénalité contractuelle ni responsabilité générale sans faute. Nous convenon
 ensemble de toute modification.
 
 Destinataire : {{recipient_name}}
-Signature ______________________________________________________________
-Responsable du projet : {{project_author}}
-Signature ______________________________________________________________
+Signature (ou consentement sous forme textuelle, p. ex. par e-mail) :
+________________________________________________________________________
+Date : ____________________________
+
+Émis et envoyé par le responsable du projet : {{project_author}}
+Aucune signature manuscrite distincte n'est requise pour cet envoi.
 """,
     "es": """Acuerdo de confidencialidad
 
@@ -248,9 +258,12 @@ general sin culpa. Las protecciones legales obligatorias se mantienen. Acordamos
 los cambios entre ambas partes.
 
 Persona destinataria: {{recipient_name}}
-Firma __________________________________________________________________
-Responsable del proyecto: {{project_author}}
-Firma __________________________________________________________________
+Firma (o consentimiento en forma textual, p. ej. por correo electrónico):
+________________________________________________________________________
+Fecha: ____________________________
+
+Emitido y enviado por el responsable del proyecto: {{project_author}}
+No se requiere una firma manuscrita aparte para esta copia enviada.
 """,
     "it": """Accordo di riservatezza
 
@@ -309,9 +322,12 @@ contrattuali né responsabilità generale senza colpa. Concordiamo insieme
 eventuali modifiche.
 
 Destinatario/a: {{recipient_name}}
-Firma __________________________________________________________________
-Responsabile del progetto: {{project_author}}
-Firma __________________________________________________________________
+Firma (o consenso in forma testuale, ad es. con risposta via e-mail):
+________________________________________________________________________
+Data: ____________________________
+
+Emesso e inviato dal responsabile del progetto: {{project_author}}
+Per questa copia inviata non è richiesta una firma autografa separata.
 """,
     "pt": """Acordo de confidencialidade
 
@@ -371,9 +387,12 @@ penalizações contratuais nem responsabilidade geral sem culpa. Acordamos
 as alterações entre ambas as partes.
 
 Pessoa destinatária: {{recipient_name}}
-Assinatura _____________________________________________________________
-Responsável pelo projeto: {{project_author}}
-Assinatura _____________________________________________________________
+Assinatura (ou consentimento em forma textual, p. ex. por e-mail):
+________________________________________________________________________
+Data: ____________________________
+
+Emitido e enviado pelo responsável pelo projeto: {{project_author}}
+Não é exigida uma assinatura manuscrita separada para esta cópia enviada.
 """,
     "nl": """Geheimhoudingsovereenkomst
 
@@ -432,9 +451,13 @@ contractuele boete of algemene aansprakelijkheid zonder schuld toe. Wij spreken
 wijzigingen samen af.
 
 Ontvanger: {{recipient_name}}
-Handtekening ___________________________________________________________
-Projectverantwoordelijke: {{project_author}}
-Handtekening ___________________________________________________________
+Handtekening (of instemming in tekstvorm, bijv. per e-mailantwoord):
+________________________________________________________________________
+Datum: ____________________________
+
+Uitgegeven en verzonden door de projectverantwoordelijke: {{project_author}}
+Voor deze verzonden versie is geen afzonderlijke handgeschreven
+handtekening vereist.
 """,
 }
 

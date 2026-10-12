@@ -136,3 +136,21 @@ def test_poppler_reads_last_page_and_project_language_accents() -> None:
         )
         assert "ENDMARK Müller – Prüfung €" in result.stdout
         assert all(f"Abschnitt {n}:" in result.stdout for n in range(160))
+
+
+@pytest.mark.parametrize("language,consent_marker,no_signature_marker", [
+    ("en", "consent in text form", "not required for this sent copy"),
+    ("de", "Einverständnis in Textform", "keine gesonderte handschriftliche"),
+    ("fr", "forme textuelle", "Aucune signature manuscrite"),
+    ("es", "forma textual", "No se requiere una firma manuscrita"),
+    ("it", "forma testuale", "non è richiesta una firma autografa"),
+    ("pt", "forma textual", "Não é exigida uma assinatura manuscrita"),
+    ("nl", "tekstvorm", "geen afzonderlijke handgeschreven"),
+])
+def test_draft_offers_text_form_consent_without_sender_signature(
+        language: str, consent_marker: str, no_signature_marker: str) -> None:
+    with tempfile.TemporaryDirectory() as directory:
+        project = project_at(Path(directory), language)
+        document = draft(project)
+        assert consent_marker in document.text
+        assert no_signature_marker in document.text

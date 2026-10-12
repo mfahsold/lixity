@@ -12,6 +12,8 @@ import sys
 import tempfile
 import unittest
 
+import pytest
+
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
@@ -647,6 +649,23 @@ def test_configured_override_patterns_apply_in_a_nondefault_language():
     assert chapter.adjective_density > 0
     assert chapter.dialog_pct > 0
     assert chapter.first_person_start_rate > 0
+
+
+@pytest.mark.parametrize("language", ["fr", "it", "es", "pt", "nl"])
+def test_configured_override_patterns_apply_in_every_profile(language):
+    from lixity.analyzer import CorpusAnalyzer
+
+    config = CorpusConfig(
+        language=language,
+        passive_regex=r"\bPASS\b",
+        adjective_regex=r"\bADJ\b",
+        dialogue_regex=r"\[([^\]]+)\]",
+    )
+    metrics = CorpusAnalyzer(config).analyze_text("## Un\n\n[Bonjour] PASS ADJ.\n")
+    chapter = metrics.chapters[0]
+    assert chapter.passive_density > 0
+    assert chapter.adjective_density > 0
+    assert chapter.dialog_pct > 0
 
 
 if __name__ == "__main__":

@@ -128,7 +128,8 @@ class ChapterMetrics(BaseModel):
         description="Tense tendency (canonical: present/past/mixed/neutral).",
     )
     signal_matches: dict[str, int] = Field(
-        default_factory=dict, description="Generic match counts of all signal words."
+        default_factory=dict,
+        description="Generic match counts of all signal words (output-only; not shown by the bundled UI).",
     )
     # --- Self-calibrating style features (house-style fingerprint) ---
     staccato_pct: float = Field(
@@ -217,7 +218,9 @@ class CorpusMetrics(BaseModel):
     dialog_ratio: float = Field(description="Percentage of direct dialogue in narrative prose.")
     total_paragraphs: int = Field(description="Total count of narrative prose paragraphs.")
     avg_paragraph_len: float = Field(description="Average paragraph length in words.")
-    single_line_paragraphs: int = Field(description="Count of short or isolated paragraphs.")
+    single_line_paragraphs: int = Field(
+        description="Count of short or isolated paragraphs (output-only; not shown by the bundled UI)."
+    )
     punctuation: dict[str, int] = Field(description="Absolute frequencies of all punctuation marks.")
     signal_counts: dict[str, int] = Field(description="Match counts of signal keywords.")
     filter_count: int = Field(description="Total count of perception filter verbs.")

@@ -1544,9 +1544,11 @@ name**, **Date** and **Place**. A real loaded project name can be prefilled;
 an empty workspace leaves it blank. The date defaults to the browser's local
 calendar day. Choose **Preview** to read the full friendly agreement, then
 **Download PDF** or **Download text**. The address may span several lines.
-The output is titled **Confidentiality agreement**, with signature lines for the
-recipient and the project representative. Review the details together before
-signing; generating or downloading a file does not record either person's consent.
+The output is titled **Confidentiality agreement**. It offers the recipient a
+signature line or a clear consent in text form, for example a reply to the email
+that delivered the document; the sending project representative needs no separate
+handwritten signature on this sent copy. Review the details together before
+consenting; generating or downloading a file records no consent and no signature.
 The representative's name is filled from **Author name** in project Settings.
 The five NDA input fields remain unchanged. Without a configured author, the
 download keeps a blank name line for manual completion.
