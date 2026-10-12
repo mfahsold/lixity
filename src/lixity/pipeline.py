@@ -47,7 +47,7 @@ def profile_document(
     text: str, config: CorpusConfig, thresholds: FingerprintThresholds
 ) -> tuple[list[ParagraphProfile], list[ChapterProfile]]:
     profile_thresholds = ProfileThresholds(flag_min_severity=thresholds.flag_min_severity)
-    return ParagraphProfiler(config, thresholds=profile_thresholds).profile_blocks(
+    return ParagraphProfiler(config, thresholds=profile_thresholds, sample_text=text).profile_blocks(
         parse_markdown_blocks(text, config)
     )
 
@@ -59,7 +59,7 @@ def fingerprint_document(
     metrics: CorpusMetrics | None = None,
 ) -> StyleFingerprint:
     if metrics is None:
-        metrics = CorpusAnalyzer(config).analyze_text(text)
+        metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
     fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds)
     fingerprint.structural_diagnostics.update(lexical_structural_diagnostics(text, config))
     return fingerprint
@@ -68,7 +68,7 @@ def fingerprint_document(
 def analyze_document(
     text: str, config: CorpusConfig, thresholds: FingerprintThresholds
 ) -> DocumentAnalysis:
-    metrics = CorpusAnalyzer(config).analyze_text(text)
+    metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
     paragraphs, chapters = profile_document(text, config, thresholds)
     fingerprint = fingerprint_document(text, config, thresholds, metrics)
     return DocumentAnalysis(metrics, paragraphs, chapters, fingerprint)

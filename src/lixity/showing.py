@@ -24,8 +24,8 @@ from typing import Any
 
 from .analyzer import CorpusAnalyzer
 from .language import resolve_language
+from .math_core import mad, median, robust_z
 from .models import CorpusConfig
-from .style_fingerprint import mad, median, robust_z
 
 TELL_FEATURES = ("filter_density", "modal_density", "passive_density", "nominalization_density")
 SHOW_FEATURES = ("dialog_pct", "staccato_pct")
@@ -122,7 +122,8 @@ def showing_report(
     """
     config = config or CorpusConfig(language="auto")
     language = resolve_language(config, sample_text=text).key
-    resolved_metrics = metrics if metrics is not None else CorpusAnalyzer(config).analyze_text(text)
+    resolved_metrics = (metrics if metrics is not None
+                        else CorpusAnalyzer(config, sample_text=text).analyze_text(text))
     chapters = resolved_metrics.chapters
     if not chapters:
         return ShowingReport(

@@ -32,7 +32,6 @@ _ABBREVIATIONS_UNIVERSAL = frozenset(
         "etc",
         "e.g",
         "i.e",
-        "no",
         "fig",
         "cf",
         "vol",
@@ -41,7 +40,6 @@ _ABBREVIATIONS_UNIVERSAL = frozenset(
         "sr",
         "inc",
         "ltd",
-        "co",
     }
 )
 
@@ -75,7 +73,7 @@ _ABBREVIATIONS_DE = frozenset(
 )
 
 _ABBREVIATIONS_FR = frozenset({"m", "mme", "mlle", "p.ex", "c.-à-d", "réf", "éd"})
-_ABBREVIATIONS_ES = frozenset({"sr", "sra", "srta", "d.", "p.ej", "etc", "núm"})
+_ABBREVIATIONS_ES = frozenset({"sr", "sra", "srta", "d", "p.ej", "etc", "núm"})
 _ABBREVIATIONS_IT = frozenset({"sig", "sigg", "dott", "d.ssa", "es", "ecc", "n"})
 _ABBREVIATIONS_PT = frozenset({"sr", "sra", "srta", "exmo", "p.ex", "etc", "núm"})
 _ABBREVIATIONS_NL = frozenset({"dhr", "mevr", "bijv", "bv", "d.w.z", "enz", "nr"})
@@ -89,6 +87,11 @@ _ABBREVIATIONS: dict[str, frozenset[str]] = {
     "pt": _ABBREVIATIONS_UNIVERSAL | _ABBREVIATIONS_PT,
     "nl": _ABBREVIATIONS_UNIVERSAL | _ABBREVIATIONS_NL,
 }
+
+#: Sentence-length bins shared by the analyzer and pacing heuristics.
+SHORT_SENTENCE_MAX = 6
+MEDIUM_SENTENCE_MAX = 15
+LONG_SENTENCE_MAX = 25
 
 _MASK = "\x00"  # replaces protected periods
 

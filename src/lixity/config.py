@@ -315,21 +315,21 @@ def same_config_scope(project_root: str | Path | None, start: str | Path | None)
     return (target if target.is_dir() else target.parent) == root
 
 
+#: Threshold keys shared by config resolution and the research analysis.
+THRESHOLD_KEYS: tuple[str, ...] = (
+    "z_mild",
+    "z_strong",
+    "fdr_q",
+    "fdr_method",
+    "min_chapters",
+    "dim_score_threshold",
+    "flag_min_severity",
+)
+
+
 def apply_config_to_thresholds(config: dict[str, Any]) -> dict[str, Any]:
     """Extract threshold-related keys (for FingerprintThresholds builders)."""
-    out: dict[str, Any] = {}
-    for key in (
-        "z_mild",
-        "z_strong",
-        "fdr_q",
-        "fdr_method",
-        "min_chapters",
-        "dim_score_threshold",
-        "flag_min_severity",
-    ):
-        if key in config:
-            out[key] = config[key]
-    return out
+    return {key: config[key] for key in THRESHOLD_KEYS if key in config}
 
 
 def resolve_thresholds(

@@ -21,7 +21,6 @@ __all__ = [
     "SCHEMA_VERSION_ANALYZE",
     "SCHEMA_VERSION_STYLE",
     "STRUCTURAL_DIAGNOSTICS_KEY",
-    "STYLE_SCHEMA_VERSION",
     "TENSE_MIXED",
     "TENSE_NEUTRAL",
     "TENSE_PAST",
@@ -48,9 +47,6 @@ v4 exposes the structural diagnostics block under ``structural_diagnostics``
 distribution shift, co-occurrence, keyness) with passport text label
 ``structural``.
 """
-
-# Alias for call sites that treat the style schema as "the" passport version.
-STYLE_SCHEMA_VERSION = SCHEMA_VERSION_STYLE
 
 
 # ---------------------------------------------------------------------------

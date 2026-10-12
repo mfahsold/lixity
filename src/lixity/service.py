@@ -31,6 +31,7 @@ from typing import Any
 
 from . import __version__
 from .config import resolve_thresholds
+from .language import LANGUAGE_CHOICES
 from .workspace import discover
 
 _OPTIONS = ("language", "title", "research_project", "debug", "open_browser", "z_mild",
@@ -54,7 +55,7 @@ def _validate_settings(settings: Mapping[str, Any]) -> None:
         raise ServiceError("Launch settings must not contain NUL characters")
     if any(settings.get(key) is not None and type(settings[key]) is not bool for key in ("debug", "open_browser")):
         raise ServiceError("Launch setting switches must be booleans")
-    if settings.get("language") is not None and settings["language"] not in ("auto", "de", "en", "fr", "es", "it", "pt", "nl", "generic"):
+    if settings.get("language") is not None and settings["language"] not in LANGUAGE_CHOICES:
         raise ServiceError("Unknown startup language")
     if any(settings.get(key) is not None and type(settings[key]) is not int
            for key in ("min_chapters", "flag_min_severity")):
@@ -76,7 +77,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--host", default=None, help="Loopback host (default: LIXITY_HOST or 127.0.0.1)")
     parser.add_argument("--no-project", action="store_true", default=None, help="Start an empty workspace")
     parser.add_argument("--open", dest="open_browser", action="store_true", default=None)
-    parser.add_argument("--language", choices=("auto", "de", "en", "fr", "es", "it", "pt", "nl", "generic"))
+    parser.add_argument("--language", choices=LANGUAGE_CHOICES)
     parser.add_argument("--title")
     parser.add_argument("--research-project")
     parser.add_argument("--debug", action="store_true", default=None)

@@ -86,8 +86,8 @@ are different conditions.
 Plain robust z:
 
 $$
-z_{\text{raw}} = 0.6745 \cdot \frac{x - \tilde{x}}{\mathrm{MAD}}
-\quad (0.6745 \approx 1/1.4826)
+z_{\text{raw}} = \frac{1}{1.4826} \cdot \frac{x - \tilde{x}}{\mathrm{MAD}}
+\quad (0.6745 \approx 1/1.4826\text{; implemented as the exact inverse})
 $$
 
 Lixity combines the descriptive manuscript spread with an estimated measurement
@@ -441,14 +441,19 @@ of a ranking. These signals describe relative patterns, not prose quality.
 ## 11. Linguistic heuristics (tense, dialogue, sentences, scenes)
 
 These heuristics are transparent rules over curated resources, not a
-grammatical parser. Their constants and guards live in the named modules:
+grammatical parser. Their constants and guards live in the named modules.
+Shared mathematical primitives (robust scale, significance z, normal tail,
+ratio/share/density totalization, plug-in standard errors and published effect
+bands) come from `lixity.math_core`; heuristics import them instead of
+restating formulas.
 
 | Heuristic | Rule | Limits |
 | :--- | :--- | :--- |
 | Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
 | Hook | First sentence ≤ `HOOK_SHORT_SENTENCE` (8) words or ending in `…` (`pacing.py`) | Only the ellipsis character scores; `...` does not |
 | Dialogue paragraph | ≥ 50 % of the paragraph's words inside dialogue spans (`dialogue.py`) | Quotation conventions differ per language |
-| Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Productive `-te`/`-ed` suffixes have verified FP/FN (STABILITY row 6); no productive present pattern exists |
+| Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); no productive present pattern |
+| Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split (`sentences.py`) | Tables are curated and incomplete; tokenless fragments are not sentences |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
 | Dominance | past when `past/(present+ε) > 1.5`, present when `< 0.67` (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
 | Nominal/adjective suffixes | Curated suffix cues minus curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`) |

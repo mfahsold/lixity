@@ -7,7 +7,27 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- `lixity.math_core` is the single source for shared mathematical primitives:
+  robust scale and significance z, the normal two-sided tail, ratio, share and
+  density totalization, plug-in binomial/Poisson standard errors and the
+  published Cliff's-delta bands. `style_fingerprint` re-exports the historical
+  names.
+
 ### Changed
+- Tense heuristics use whole-word stop lists and curated noun exclusions:
+  regular English `-ed` past of listed bases counts again (Pride and Prejudice
+  +7 tokens), German `-tet` forms and noun confusions no longer count as past
+  (Effi Briest −72 wrongly-as-past tokens), with no losses in the measured
+  samples (see `docs/STABILITY.md` row 6).
+- Sentence splitting treats `no.`/`co.` as utterance endings, the Spanish
+  honorific `d` protects initials, paragraph sentence counts ignore tokenless
+  fragments (matching the chapter metric), and `language="auto"` resolves with
+  the sample text in the structure reports.
+- Capability discovery reports image, PDF and manuscript-link support; the
+  language and threshold key lists come from `language.LANGUAGE_CODES` and
+  `config.THRESHOLD_KEYS`; co-occurrence degrees are returned in sorted node
+  order.
 - Dashboard and PDF builds reuse cached chapter splitting, precompiled literal
   patterns and one-pass style-layer bounds; a full novel builds about a quarter
   faster with byte-identical output.

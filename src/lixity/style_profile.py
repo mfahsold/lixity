@@ -9,6 +9,7 @@ from typing import Any
 
 from .language import compile_pattern, compile_word_pattern, count_nominal_matches, resolve_language
 from .markdown_parser import strip_inline_markup
+from .math_core import per_mille
 from .models import CorpusConfig
 from .sentences import split_sentences
 from .status import (
@@ -37,14 +38,20 @@ __all__ = [
 # Re-exported from lixity.status (single source of truth).
 
 
+#: Ratio-band convention of the dominance classification.
+DOMINANCE_EPSILON = 0.001
+DOMINANCE_PRESENT_ABOVE = 1.5
+DOMINANCE_PAST_BELOW = 0.67
+
+
 def dominance_from_hits(present: int, past: int, neutral_max_hits: int = 1) -> str:
     """Dominant tense from marker counts – shared by chapter and paragraph analysis."""
     if present + past <= neutral_max_hits:
         return TENSE_NEUTRAL
-    ratio = present / (past + 0.001)
-    if ratio > 1.5:
+    ratio = present / (past + DOMINANCE_EPSILON)
+    if ratio > DOMINANCE_PRESENT_ABOVE:
         return TENSE_PRESENT
-    if ratio < 0.67:
+    if ratio < DOMINANCE_PAST_BELOW:
         return TENSE_PAST
     return TENSE_MIXED
 
@@ -84,13 +91,30 @@ def classify_severity(
     severe = t.severe_mix_minority, mix_min = t.mix_min_hits.
     """
     t = thresholds or ProfileThresholds()
-    if switch and mixed and minority >= t.severe_mix_minority:
-        return 3
-    if (switch and minority >= t.mix_min_hits) or (mixed and minority >= t.severe_mix_minority):
-        return 2
-    if switch or mixed:
-        return 1
-    return 0
+    conditions = (
+        (3, switch and mixed and minority >= t.severe_mix_minority),
+        (2, (switch and minority >= t.mix_min_hits)
+            or (mixed and minority >= t.severe_mix_minority)),
+        (1, switch or mixed),
+    )
+    return next((severity for severity, holds in conditions if holds), 0)
+
+
+def mixed_tense(
+    present: int, past: int, thresholds: ProfileThresholds
+) -> tuple[bool, float]:
+    """Mixed-tense definition: both marker counts at the floor and a minority share.
+
+    Returns ``(mixed, minority_ratio)``; the ratio is 0.0 without markers.
+    """
+    total = present + past
+    minority_ratio = (min(present, past) / total) if total else 0.0
+    mixed = (
+        present >= thresholds.mix_min_hits
+        and past >= thresholds.mix_min_hits
+        and minority_ratio >= thresholds.mix_min_ratio
+    )
+    return mixed, minority_ratio
 
 
 @dataclass
@@ -166,10 +190,12 @@ class ParagraphProfiler:
         self,
         config: CorpusConfig | None = None,
         thresholds: ProfileThresholds | None = None,
+        *,
+        sample_text: str | None = None,
     ):
         self.config = config or CorpusConfig()
         self.thresholds = thresholds or ProfileThresholds()
-        self.lang = resolve_language(self.config)
+        self.lang = resolve_language(self.config, sample_text=sample_text)
         self._praes = compile_pattern(self.lang.praesens_regex)
         self._praet = compile_pattern(self.lang.praeteritum_regex)
         self._dialogue = compile_pattern(self.lang.dialogue_regex)
@@ -266,18 +292,15 @@ class ParagraphProfiler:
                 continue
 
             words = len(self._word.findall(clean))
-            sentences = split_sentences(clean, self.config.language)
+            # Mirror the chapter metric: a fragment without word tokens is
+            # not a sentence, and a resolved auto language picks its own
+            # abbreviation table.
+            sentences = [s for s in split_sentences(clean, self.lang.key) if self._word.findall(s)]
             present = len(self._praes.findall(clean))
             past = len(self._praet.findall(clean))
             dominant = self._dominant(present, past)
 
-            total = present + past
-            minority_ratio = (min(present, past) / total) if total else 0.0
-            mixed = (
-                present >= self.thresholds.mix_min_hits
-                and past >= self.thresholds.mix_min_hits
-                and minority_ratio >= self.thresholds.mix_min_ratio
-            )
+            mixed, minority_ratio = mixed_tense(present, past, self.thresholds)
 
             switch = (
                 prev_dominant in (TENSE_PRESENT, TENSE_PAST)
@@ -297,15 +320,12 @@ class ParagraphProfiler:
                 else 0.0
             )
 
-            def per_mille(matches: int, base_words: int = words) -> float:
-                return (matches / base_words * 1000.0) if base_words else 0.0
-
-            filter_density = per_mille(len(self._filter.findall(clean)))
-            modal_density = per_mille(sum(1 for t in tokens if t in self._modals))
+            filter_density = per_mille(len(self._filter.findall(clean)), words)
+            modal_density = per_mille(sum(1 for t in tokens if t in self._modals), words)
             nominal_density = per_mille(
-                count_nominal_matches(clean, self._nominal, self._nominal_exclusions)
+                count_nominal_matches(clean, self._nominal, self._nominal_exclusions), words
             )
-            passive_density = per_mille(len(self._passive.findall(clean)))
+            passive_density = per_mille(len(self._passive.findall(clean)), words)
 
             profile = ParagraphProfile(
                 chapter_num=chapter_num,

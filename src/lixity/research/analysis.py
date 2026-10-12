@@ -10,7 +10,7 @@ from typing import Any
 
 from .._version import __version__
 from ..analyzer import CorpusAnalyzer
-from ..config import resolve_thresholds
+from ..config import THRESHOLD_KEYS, resolve_thresholds
 from ..language import compile_word_pattern, resolve_language
 from ..markdown_parser import chapter_heading_spans, prose_text, split_chapters
 from ..models import SCHEMA_VERSION, CorpusConfig
@@ -20,15 +20,7 @@ from ..ui import render_dashboard
 from .models import Extraction, Passage, Reference, Source, SourceVersion, Tombstone
 from .repository import Repository, ResearchError
 
-_ALLOWED_THRESHOLDS = {
-    "z_mild",
-    "z_strong",
-    "fdr_q",
-    "fdr_method",
-    "dim_score_threshold",
-    "flag_min_severity",
-    "min_chapters",
-}
+_ALLOWED_THRESHOLDS = frozenset(THRESHOLD_KEYS)
 
 
 @dataclass(frozen=True)

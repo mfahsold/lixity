@@ -23,16 +23,32 @@ if BASE_DIR not in sys.path:
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
 from lixity.config import resolve_thresholds  # noqa: E402
 from lixity.diversity import hd_d, maas_a2, mattr, mtld, yules_k  # noqa: E402
+from lixity.math_core import (  # noqa: E402
+    CLIFF_BANDS,
+    MAD_TO_SIGMA,
+    binomial_se_percent,
+    per_mille,
+    percent,
+    poisson_se_per_mille,
+    ratio_or_zero,
+    robust_scale,
+)
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
     FingerprintThresholds,
     benjamini_hochberg,
+    benjamini_yekutieli,
+    cliff_delta,
     dunning_g2,
+    effect_label,
+    fdr_rejects,
     jacobi_eigh,
+    lag1_autocorrelation,
     mad,
     median,
     normal_tail_probability,
     robust_z,
+    runs_above_median_z,
     significance_z,
     spearman_rho,
 )
@@ -202,8 +218,9 @@ class TestRobustStatistics(unittest.TestCase):
         self.assertAlmostEqual(1.4826 * 1.0, 1.4826, places=4)
 
     def test_robust_z_and_significance_z(self):
-        # Modified z-score (Iglewicz & Hoaglin): 0.6745 * (x - median) / MAD
-        self.assertAlmostEqual(robust_z(4.0, 2.0, 1.0), 0.6745 * 2.0, places=9)
+        # Modified z-score (Iglewicz & Hoaglin): the exact inverse of the
+        # MAD->sigma factor 1.4826, i.e. 0.674490759... (not a pinned 0.6745).
+        self.assertAlmostEqual(robust_z(4.0, 2.0, 1.0), (1.0 / 1.4826) * 2.0, places=9)
         self.assertEqual(robust_z(4.0, 2.0, 0.0), 0.0)  # no spread -> no statement
         # z* shrinks noisy observations: sigma=1, se=1 -> denominator sqrt(2)
         self.assertAlmostEqual(significance_z(3.0, 1.0, 1.0, 1.0), 2.0 / math.sqrt(2.0), places=9)
@@ -214,6 +231,65 @@ class TestRobustStatistics(unittest.TestCase):
         self.assertAlmostEqual(normal_tail_probability(1.959964), 0.05, places=5)
         self.assertAlmostEqual(normal_tail_probability(2.575829), 0.01, places=5)
         self.assertLess(normal_tail_probability(3.5), normal_tail_probability(2.5))
+
+
+class TestSharedPrimitives(unittest.TestCase):
+    """lixity.math_core is the single source for the plug-in conventions."""
+
+    def test_robust_scale_reuses_the_mad_factor(self):
+        values = [1.0, 2.0, 3.0, 4.0, 40.0]
+        centre = median(values)
+        self.assertEqual(robust_scale(values, centre), MAD_TO_SIGMA * mad(values, centre))
+        self.assertEqual(robust_scale(values), MAD_TO_SIGMA * mad(values, centre))
+
+    def test_ratio_density_and_share_totalize_on_zero_denominator(self):
+        self.assertEqual(per_mille(4, 1000), 4.0)
+        self.assertEqual(per_mille(4, 0), 0.0)
+        self.assertEqual(percent(1, 4), 25.0)
+        self.assertEqual(percent(1, 0), 0.0)
+        self.assertEqual(ratio_or_zero(3.0, 0.0), 0.0)
+        self.assertEqual(ratio_or_zero(3.0, 2.0, scale=10.0), 15.0)
+
+    def test_plugin_standard_errors_match_the_documented_estimators(self):
+        # Binomial SE of a 50 % share over 100 observations: sqrt(.25/100)*100.
+        self.assertAlmostEqual(binomial_se_percent(50.0, 100), 5.0)
+        self.assertEqual(binomial_se_percent(50.0, 0), 0.0)
+        # Poisson SE of 4 hits per 1,000 words: sqrt(4)*1000/1000.
+        self.assertAlmostEqual(poisson_se_per_mille(4, 1000), 2.0)
+        self.assertEqual(poisson_se_per_mille(4, 0), 0.0)
+
+
+class TestPublishedEffectAndFdrReferences(unittest.TestCase):
+    """Known-value anchors from the published literature."""
+
+    def test_cliffs_delta_and_romano_bands(self):
+        self.assertEqual(cliff_delta([2.0, 3.0], [1.0]), 1.0)
+        self.assertEqual(cliff_delta([1.0], [2.0, 3.0]), -1.0)
+        self.assertEqual(cliff_delta([1.0, 2.0], [2.0, 1.0]), 0.0)
+        self.assertEqual(CLIFF_BANDS, (0.147, 0.33, 0.474))
+        labels = [effect_label(value) for value in (0.1469, 0.147, 0.3299, 0.33, 0.4739, 0.474)]
+        self.assertEqual(labels, ["negligible", "small", "small", "medium", "medium", "large"])
+
+    def test_benjamini_yekutieli_and_dispatch(self):
+        cells = [(1, "a", 0.001), (1, "b", 0.02), (1, "c", 0.04)]
+        self.assertEqual(benjamini_hochberg(cells), [(1, "a"), (1, "b"), (1, "c")])
+        # Harmonic factor c(3) = 11/6 lowers the BY threshold to q*3/11.
+        self.assertEqual(benjamini_yekutieli(cells), [(1, "a")])
+        self.assertEqual(fdr_rejects(cells, method="by"), [(1, "a")])
+        self.assertEqual(fdr_rejects(cells, method="bh"), benjamini_hochberg(cells))
+        self.assertEqual(fdr_rejects([], method="by"), [])
+
+    def test_runs_and_lag1_known_values(self):
+        alternating = [1.0, 9.0, 1.0, 9.0, 1.0, 9.0, 1.0, 9.0]
+        pooled = [1.0, 1.0, 1.0, 1.0, 9.0, 9.0, 9.0, 9.0]
+        # mu = 5 and var = 768/448 for n = 8 with 4/4 signs; runs are 8 and 2.
+        expected = 3.0 / math.sqrt(768.0 / 448.0)
+        self.assertAlmostEqual(runs_above_median_z(alternating), expected)
+        self.assertAlmostEqual(runs_above_median_z(pooled), -expected)
+        self.assertIsNone(runs_above_median_z([1.0, 2.0, 3.0]))
+        self.assertEqual(lag1_autocorrelation([1.0, 2.0, 3.0, 4.0]), 0.25)
+        self.assertIsNone(lag1_autocorrelation([1.0, 2.0]))
+        self.assertIsNone(lag1_autocorrelation([3.0, 3.0, 3.0]))
 
 
 class TestBenjaminiHochberg(unittest.TestCase):

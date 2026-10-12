@@ -91,8 +91,11 @@ class TestRobustStatistics(unittest.TestCase):
         self.assertEqual(mad([], 0.0), 0.0)
 
     def test_robust_z(self):
-        self.assertAlmostEqual(robust_z(3.0, 2.0, 1.0), 0.6745)
-        self.assertAlmostEqual(robust_z(1.0, 2.0, 1.0), -0.6745)
+        # Exact inverse of the MAD->sigma factor 1.4826 (1/1.4826), so the
+        # scale conversion and the z-score round-trip without rounding drift.
+        inverse = 1.0 / 1.4826
+        self.assertAlmostEqual(robust_z(3.0, 2.0, 1.0), inverse)
+        self.assertAlmostEqual(robust_z(1.0, 2.0, 1.0), -inverse)
         self.assertEqual(robust_z(9.0, 2.0, 0.0), 0.0)
 
     def test_z_color_is_deterministic_and_clamped(self):

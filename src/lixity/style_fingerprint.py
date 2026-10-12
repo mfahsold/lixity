@@ -11,7 +11,6 @@ or calibrated inference for ordered literary chapters.
 """
 
 import math
-import statistics
 from collections import Counter
 from collections.abc import Iterator, Mapping, Sequence
 from dataclasses import dataclass, field
@@ -22,6 +21,17 @@ from typing import Any, ClassVar
 from .format import num as format_num
 from .language import compile_word_pattern, resolve_language
 from .markdown_parser import prose_text, split_chapters
+from .math_core import (
+    CLIFF_BANDS,
+    MAD_TO_SIGMA,
+    QN_TO_SIGMA,
+    SN_TO_SIGMA,
+    mad,
+    median,
+    normal_two_sided_p,
+    robust_z,
+    significance_z,
+)
 from .models import CorpusConfig
 from .status import (
     PASSPORT_LABEL_SEGMENTED,
@@ -277,33 +287,9 @@ class FingerprintThresholds:
             raise ValueError("flag_min_severity must be 1, 2 or 3")
 
 
-def median(values: list[float]) -> float:
-    return statistics.median(values)
-
-
-def mad(values: list[float], centre: float) -> float:
-    """Median absolute deviation; 0.0 for fewer than two observations."""
-    if len(values) < 2:
-        return 0.0
-    return statistics.median([abs(v - centre) for v in values])
-
-
-def robust_z(value: float, centre: float, spread: float) -> float:
-    """Robust z-score: 0.6745 scales MAD to normal-consistency sigma."""
-    if spread == 0.0:
-        return 0.0
-    return 0.6745 * (value - centre) / spread
-
-
-def significance_z(value: float, centre: float, sigma: float, se: float) -> float:
-    """Deviation tested against house-style spread AND estimation noise."""
-    denom = math.sqrt(sigma**2 + se**2)
-    return (value - centre) / denom if denom > 0.0 else 0.0
-
-
-def normal_tail_probability(z: float) -> float:
-    """Two-sided p-value via math.erf (stdlib, no scipy)."""
-    return math.erfc(abs(z) / math.sqrt(2.0))
+# Robust primitives live in lixity.math_core; re-exported for callers
+# and tests that imported them from this module.
+normal_tail_probability = normal_two_sided_p
 
 
 def benjamini_hochberg(
@@ -366,13 +352,10 @@ def cliff_delta(x: list[float], y: list[float]) -> float:
 
 def effect_label(delta: float) -> str:
     """Romano et al. (2006) bands for |Cliff's delta|."""
-    a = abs(delta)
-    if a < 0.147:
-        return "negligible"
-    if a < 0.33:
-        return "small"
-    if a < 0.474:
-        return "medium"
+    magnitude = abs(delta)
+    for threshold, label in zip(CLIFF_BANDS, ("negligible", "small", "medium"), strict=True):
+        if magnitude < threshold:
+            return label
     return "large"
 
 
@@ -429,7 +412,11 @@ def _midranks(values: list[float]) -> list[float]:
 
 
 def spearman_rho(x: list[float], y: list[float]) -> float:
-    """Spearman rank correlation of two paired samples (average ranks on ties)."""
+    """Spearman rank correlation of two paired samples (average ranks on ties).
+
+    Fewer than three pairs return 0.0: the redundancy caller treats an
+    unmeasurable correlation as "no redundancy" (see docs/METHODS.md §5).
+    """
     n = len(x)
     if n < 3:
         return 0.0
@@ -455,6 +442,9 @@ def _segment_cost(values: list[float], start: int, end: int) -> float:
 
     Cost = n·ln(variance) with variance = (1/n)·Σ(xi − x̄)². Returns 0.0 for
     segments of length ≤ 1 (no variance to measure).
+
+    Kept as the exhaustive segment-cost oracle used by the regression tests;
+    the production changepoint search uses the equivalent incremental moments.
     """
     n = end - start
     if n <= 1:
@@ -802,7 +792,8 @@ def cooccurrence_degrees(tokens: Sequence[str], window: int = 2) -> list[int]:
 
     Nodes are token types; an undirected edge joins every pair within
     ``window`` positions (excluding self-loops). Returns one degree per
-    distinct token (isolates included as 0); empty for empty input.
+    distinct token (isolates included as 0) in sorted node order, so the
+    downstream log-sum is independent of the hash seed; empty for empty input.
     """
     if not tokens or window < 1:
         return []
@@ -818,7 +809,7 @@ def cooccurrence_degrees(tokens: Sequence[str], window: int = 2) -> list[int]:
     for a, b in edges:
         deg[a] += 1
         deg[b] += 1
-    return list(deg.values())
+    return [deg[key] for key in sorted(deg)]
 
 
 def sn_estimator(values: list[float]) -> float:
@@ -839,7 +830,7 @@ def sn_estimator(values: list[float]) -> float:
 
     raw = sorted(inner_medians)[(n - 1) // 2]
     # Asymptotic consistency factor for Gaussian: 1.1926
-    cn = 1.1926
+    cn = SN_TO_SIGMA
     return cn * raw
 
 
@@ -863,7 +854,7 @@ def qn_estimator(values: list[float]) -> float:
 
     raw = diffs[h - 1]  # 1-based → 0-based
     # Modern Gaussian asymptotic scaling, without a finite-n correction.
-    dn = 2.21914
+    dn = QN_TO_SIGMA
     return dn * raw
 
 
@@ -1067,7 +1058,7 @@ class StyleFingerprint:
                 continue
             centre = median(obs)
             spread = mad(obs, centre)
-            sigma = 1.4826 * spread
+            sigma = MAD_TO_SIGMA * spread
             baseline[field_name] = {
                 "median": centre,
                 "mad": spread,

@@ -573,5 +573,61 @@ class TestEngineLicense(unittest.TestCase):
         self.assertIn("Non-Commercial", text)
 
 
+def test_german_present_forms_and_nouns_do_not_count_as_past():
+    from lixity.status import TENSE_PAST
+    from lixity.style_profile import ParagraphProfiler
+
+    profiler = ParagraphProfiler(CorpusConfig(language="de"))
+    blocks = parse_markdown_blocks(
+        "## Eins\n\nDie Geschichte beginnt an der Karte. Der Autor arbeitet an der Seite.\n",
+        profiler.config,
+    )
+    profile = profiler.profile_blocks(blocks)[0][0]
+    assert profile.past_hits == 0
+    assert profile.dominant != TENSE_PAST
+
+
+def test_german_weak_past_forms_still_dominate():
+    from lixity.status import TENSE_PAST
+    from lixity.style_profile import ParagraphProfiler
+
+    profiler = ParagraphProfiler(CorpusConfig(language="de"))
+    blocks = parse_markdown_blocks("## Eins\n\nEr arbeitete und sie redeten.\n", profiler.config)
+    profile = profiler.profile_blocks(blocks)[0][0]
+    assert profile.past_hits >= 2
+    assert profile.dominant == TENSE_PAST
+
+
+def test_english_regular_past_counts_but_stop_words_stay_blocked():
+    from lixity.style_profile import ParagraphProfiler
+
+    profiler = ParagraphProfiler(CorpusConfig(language="en"))
+    counted = parse_markdown_blocks(
+        "## One\n\nShe reduced the noise and promised to stay.\n", profiler.config
+    )
+    assert profiler.profile_blocks(counted)[0][0].past_hits >= 2
+    blocked = parse_markdown_blocks("## One\n\nThe red bed and the tired writer.\n", profiler.config)
+    assert profiler.profile_blocks(blocked)[0][0].past_hits == 0
+
+
+def test_wordless_fragments_do_not_count_as_sentences_or_divide_asl():
+    from lixity.style_profile import ParagraphProfiler
+
+    profiler = ParagraphProfiler(CorpusConfig(language="de"))
+    blocks = parse_markdown_blocks("## Eins\n\nHalt! …\n", profiler.config)
+    profile = profiler.profile_blocks(blocks)[0][0]
+    assert profile.sentences == 1
+    assert profile.asl == 1.0
+
+
+def test_auto_language_resolves_with_sample_text_in_profiler_and_showing():
+    from lixity.showing import showing_report
+    from lixity.style_profile import ParagraphProfiler
+
+    text = "## Eins\n\nIch gehe. Ich sehe den Regen.\n"
+    profiler = ParagraphProfiler(CorpusConfig(language="auto"), sample_text=text)
+    assert profiler.lang.key == "de"
+    assert showing_report(text, CorpusConfig(language="auto")).language == "de"
+
 if __name__ == "__main__":
     unittest.main()

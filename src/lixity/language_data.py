@@ -1395,16 +1395,21 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
 LANGUAGE_PATTERNS = {
     "de": {
         "praeteritum": [
-            # Schwaches Präteritum (Stamm + -te/-test/-tet/-ten); Stopliste gegen Nomen/Adjektive.
-            r"\b(?!bitte|dritte|fünfte|achte|vierte|sechste|siebte|neunte|zehnte|Kate|Note|Date|Mitte|Route|Torte|Rente|Akte|Quote|Kante|Warte|Worte|Schritte|Gerüchte|Beichte|Nichte)\w{3,}(?:test|ten|tet|te)\b",
+            # Weak preterite (stem + -te/-test/-ten); the stop list guards
+            # nouns and adjectives. "-tet" is deliberately absent: the
+            # present 3sg/2pl form (arbeitet, rechnet) is far more frequent
+            # than the rare past 2pl (machtet).
+            r"\b(?!bitte|dritte|fünfte|achte|vierte|sechste|siebte|neunte|zehnte|Kate|Note|Date|Mitte|Route|Torte|Rente|Akte|Quote|Kante|Warte|Worte|Schritte|Gerüchte|Beichte|Nichte|Geschichte|Karte|Seite|Städte|Tante|Kälte)\w{3,}(?:test|ten|te)\b",
             # Perfekt/Plusquamperfekt: haben/sein + Partizip II (ge-/ver-/er-/be-/ent-/zer-/miss-…).
             r"\b(?:habe|hast|hat|haben|habt|hatte|hatten|hattet|bin|bist|ist|sind|seid|war|warst|waren|wart)\s+\w*(?:ge|ver|er|be|ent|zer|miss|hinter|wider)\w+(?:t|en)\b",
         ],
     },
     "en": {
         "praeteritum": [
-            # Regelmäßiges Präteritum (-ed/-ied); Stopliste gegen Adjektive/Nomen ohne Tempuswert.
-            r"\b(?!red|bed|led|wed|shed|spread|tread|disease|noise|nose|poise|promise|surprise|raise|praise|paradise|expertise|franchise|merchandise|disguise|compromise|exercise|precise|concise|advise|revise|devise|supervise|improvise|arise|house|spouse|blouse|tired|bored|scared|excited|interested|worried|pleased|sophisticated|complicated|dedicated|involved|advanced|related|detailed|limited)\w{3,}(?:ied|ed)\b",
+            # Regular preterite (-ed/-ied); the whole-word stop list keeps
+            # the listed forms (red, tired, limited) out while the regular
+            # past of those bases (reduced, promised, raised) still counts.
+            r"\b(?!(?:red|bed|led|wed|shed|spread|tread|disease|noise|nose|poise|promise|surprise|raise|praise|paradise|expertise|franchise|merchandise|disguise|compromise|exercise|precise|concise|advise|revise|devise|supervise|improvise|arise|house|spouse|blouse|tired|bored|scared|excited|interested|worried|pleased|sophisticated|complicated|dedicated|involved|advanced|related|detailed|limited)\b)\w{3,}(?:ied|ed)\b",
         ],
     },
     "fr": {

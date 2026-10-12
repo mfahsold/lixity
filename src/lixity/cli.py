@@ -1377,7 +1377,7 @@ def main(argv: list[str] | None = None) -> int:
         return EXIT_OK
 
     if args.command == "analyze":
-        metrics = CorpusAnalyzer(config).analyze_text(text)
+        metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
         if args.json:
             payload = _meta_payload(resolved.key, metrics=metrics.model_dump())
             print(_json(payload))

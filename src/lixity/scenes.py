@@ -8,8 +8,9 @@ from typing import Any
 from .analyzer import CorpusAnalyzer
 from .diversity import MIN_TOKENS_LD
 from .markdown_parser import split_chapters, split_scenes
+from .math_core import mad, median
 from .models import ChapterMetrics, CorpusConfig
-from .style_fingerprint import FEATURES, mad, median
+from .style_fingerprint import FEATURES
 
 
 def scene_report_for_display(
@@ -87,7 +88,7 @@ def scene_report(
     descriptive and include the measured scene, not external quality baselines.
     """
     assignments, targets = _settings({} if settings is None else settings)
-    analyzer = CorpusAnalyzer(config)
+    analyzer = CorpusAnalyzer(config, sample_text=text)
     measured_chapters = {chapter.num: chapter for chapter in (_premeasured_chapters or ())}
     items: list[dict[str, Any]] = []
     breaks = 0

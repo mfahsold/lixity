@@ -148,7 +148,9 @@ Passive, tense, adjective, nominalization and modality fields count lexical
 markers or suffixes. For example, German `werden` also marks future tense or
 becoming; English `been` also appears in active perfect constructions. These
 counts do not identify syntactic voice or distinguish epistemic uncertainty
-from obligation. Sentence segmentation and syllables are also heuristic.
+from obligation. Sentence segmentation and syllables are also heuristic;
+utterance abbreviations (`no.`, `co.`) split sentences and tokenless
+fragments do not count as sentences.
 Suffix cues over-include on purpose-ambiguous words: English nominal `-th`
 counts *month/health/truth*, German adjective `-ig`/`-al` count
 *König/Saal*, German nominal `-ik`/`-ur` count *Musik/Natur*. Modal lexicons
@@ -234,7 +236,7 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
 | 3 | LD indices on short texts | local guards do not establish reliability | length and parameter sensitivity depend on corpus and estimator | 🟡 **mitigated**: HD-D/MTLD/Maas ≥100 tokens; MATTR requires a full window; `null` is availability, not a validated reliability boundary |
 | 4 | Style fingerprint with few chapters | minimum observations do not establish calibration; missingness can shrink the complete-case set | single chapters have no comparative baseline | 🟡 **mitigated**: dimensions require ≥3 complete chapters and ≥3 varying usable features in one rank space; incomplete scores are omitted; availability is not reliability |
 | 5 | Heuristic syllable counting | language-specific rules; no validated aggregate error rate | no gold-standard corpus in-repo | 🟡 **documented**; used only as a relative signal, formula names shown |
-| 6 | Tense patterns | curated alternations + productive `-te`/`-ed` have FP/FN on ambiguous forms: German present `arbeitet` and nouns like `Geschichte`/`Karte`/`Seite` count as past, English `surprised`/`promised`/`raised`/`reduced` are missed because the stoplist matches word prefixes, and no productive present pattern exists | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth |
+| 6 | Tense patterns | whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); perfect/pluperfect participles still count through the auxiliary pattern | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth. Measured effect of the whole-word fix (12 Oct): Effi Briest −72 wrongly-as-past tokens, Pride and Prejudice +7 true regular past forms, no losses |
 | 7 | Packaging | a wheel could miss `ui/assets/*` or `py.typed` | config exists, never verified in CI | 🟠 → **fixed**: CI job builds a wheel and asserts assets + typing marker are inside |
 | 8 | Project Python environments | an external launcher may select an environment without Lixity | core tests do not verify a project's launcher or installation | 🟡 **documented**: verify the interpreter and package version in the project's environment; project hooks belong to that project |
 | 9 | Publication PDF/EPUB adapters | optional project renderers have their own runtime dependencies | core checks do not verify arbitrary adapter output | 🟡 **documented**: the shared built-in manuscript PDF composer has synthetic integrity/layout tests; project adapters need their own export checks. Neither path provides EPUB/PDF/UA/PDF/X certification |

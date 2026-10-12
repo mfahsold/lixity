@@ -406,7 +406,11 @@ _MARKDOWN_INLINE = re.compile(r"(\*\*|__|\*|_|`)")
 
 
 def _plain(text: str) -> str:
-    """Strip the inline markers a Markdown source carries for its renderers."""
+    """Strip only inline emphasis markers from a PDF heading line.
+
+    Intentionally narrower than ``markdown_parser.strip_inline_markup``:
+    headings keep footnote anchors and comments as literal layout text.
+    """
     return _MARKDOWN_INLINE.sub("", text).strip()
 
 

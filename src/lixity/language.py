@@ -126,6 +126,11 @@ def _build_profiles() -> dict[str, LanguageProfile]:
 
 LANGUAGE_PROFILES: dict[str, LanguageProfile] = _build_profiles()
 
+#: Ordered language codes with a complete profile (without "auto").
+LANGUAGE_CODES: tuple[str, ...] = tuple(LANGUAGE_PROFILES)
+#: Accepted language selectors, including explicit detection.
+LANGUAGE_CHOICES: tuple[str, ...] = ("auto", *LANGUAGE_CODES)
+
 
 def compile_pattern(pattern: str) -> "re.Pattern[str]":
     """Compile a case-insensitive cue; empty cues never match (neutral fallback)."""

@@ -78,5 +78,16 @@ class TestSentenceMetricsIntegration(unittest.TestCase):
         self.assertEqual(paragraphs[0].sentences, 2)
 
 
+def test_utterance_abbreviations_no_longer_merge_sentences():
+    assert split_sentences("He said no. She left.", "en") == ["He said no.", "She left."]
+    assert split_sentences("He answered. She said co.", "en") == ["He answered.", "She said co."]
+
+
+def test_spanish_honorific_d_abbreviation_protects_initials():
+    assert split_sentences("Vino don d. Gómez. Luego salió.", "es") == [
+        "Vino don d. Gómez.",
+        "Luego salió.",
+    ]
+
 if __name__ == "__main__":
     unittest.main()

@@ -45,7 +45,7 @@ def analyze(text: str, language: str = "en", **config_overrides: Any) -> dict[st
     Returns a JSON-safe dict: ``{"meta": {...}, "metrics": {...}}``.
     """
     config, resolved = resolve_document_config(text, language, **config_overrides)
-    metrics = CorpusAnalyzer(config).analyze_text(text)
+    metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
     return {"meta": _meta(resolved.key), "metrics": metrics.model_dump()}
 
 

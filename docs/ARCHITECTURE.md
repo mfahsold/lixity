@@ -36,6 +36,12 @@ described below; the RFC is not an implementation reference.
 | `lixity.service` | Managed local process lifecycle (start/stop/restart/status) | Adopting externally managed units |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
 
+`lixity.math_core` is the single mathematical vocabulary of the analysis core
+(robust scale, significance z, normal tail, ratio/share/density totalization,
+plug-in standard errors and published effect bands). Heuristics import it
+instead of restating formulas; `style_fingerprint` re-exports the historical
+names for callers.
+
 The native server is a package rather than one module, because it is the only
 place where transport, state and view assembly meet. `runtime` owns bind checks
 and startup; `views` composes the dashboard from the shared pipeline and domain

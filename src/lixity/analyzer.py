@@ -30,13 +30,19 @@ from .diversity import (
 from .language import compile_pattern, compile_word_pattern, count_nominal_matches, resolve_language
 from .language_data import READABILITY
 from .markdown_parser import chapter_heading_spans, prose_paragraphs, prose_text, split_chapters
+from .math_core import binomial_se_percent, per_mille, poisson_se_per_mille
 from .models import (
     ChapterMetrics,
     CorpusConfig,
     CorpusMetrics,
     SentenceDistribution,
 )
-from .sentences import split_sentences
+from .sentences import (
+    LONG_SENTENCE_MAX,
+    MEDIUM_SENTENCE_MAX,
+    SHORT_SENTENCE_MAX,
+    split_sentences,
+)
 from .style_profile import dominance_from_hits
 from .syllables import count_syllables as count_syllables_for
 
@@ -63,13 +69,12 @@ class SentenceStats:
 
 def share_se(pct: float, n: int) -> float:
     """Binomial standard error of a share in percentage points (plug-in)."""
-    p = pct / 100.0
-    return (math.sqrt(max(p * (1.0 - p), 0.0) / n) * 100.0) if n else 0.0
+    return binomial_se_percent(pct, n)
 
 
 def count_se(cnt: int, words: int) -> float:
     """Poisson standard error of a count density (per 1,000 words)."""
-    return (math.sqrt(cnt) * 1000.0 / words) if words else 0.0
+    return poisson_se_per_mille(cnt, words)
 
 
 class CorpusAnalyzer:
@@ -78,13 +83,16 @@ class CorpusAnalyzer:
     Performs quantitative corpus linguistics, stylometry and chapter segmentation.
     """
 
-    def __init__(self, config: CorpusConfig | None = None):
-        """
-        Initialises the analyzer with a configuration.
+    def __init__(self, config: CorpusConfig | None = None, *, sample_text: str | None = None):
+        """Initialises the analyzer with a configuration.
+
         If no configuration is passed, the default parameters apply.
+        ``sample_text`` lets an explicit ``language="auto"`` resolve against
+        the text to analyse; without it ``auto`` falls back to ``generic``
+        (documented in docs/LOCALIZATION.md).
         """
         self.config = config or CorpusConfig()
-        self.lang = resolve_language(self.config)
+        self.lang = resolve_language(self.config, sample_text=sample_text)
         self._praes_re = compile_pattern(self.lang.praesens_regex)
         self._praet_re = compile_pattern(self.lang.praeteritum_regex)
         self._filter_re = compile_pattern(self.lang.filter_verbs_regex)
@@ -141,7 +149,7 @@ class CorpusAnalyzer:
     @staticmethod
     def _density(matches: int, words: int) -> float:
         """Occurrences per 1,000 tokens (length-comparable density)."""
-        return (matches / words * 1000.0) if words else 0.0
+        return per_mille(matches, words)
 
     def _jsd_chapter(
         self,
@@ -220,10 +228,10 @@ class CorpusAnalyzer:
         )
         variance = sum((x - asl) ** 2 for x in lengths) / total if total else 0.0
         std = math.sqrt(variance)
-        short = sum(1 for x in lengths if x <= 6)
-        medium = sum(1 for x in lengths if 7 <= x <= 15)
-        long_ = sum(1 for x in lengths if 16 <= x <= 25)
-        complex_ = sum(1 for x in lengths if x > 25)
+        short = sum(1 for x in lengths if x <= SHORT_SENTENCE_MAX)
+        medium = sum(1 for x in lengths if SHORT_SENTENCE_MAX < x <= MEDIUM_SENTENCE_MAX)
+        long_ = sum(1 for x in lengths if MEDIUM_SENTENCE_MAX < x <= LONG_SENTENCE_MAX)
+        complex_ = sum(1 for x in lengths if x > LONG_SENTENCE_MAX)
 
         def _pct(count: int) -> float:
             return (count / total * 100.0) if total else 0.0
@@ -293,7 +301,7 @@ class CorpusAnalyzer:
 
         n_cw = len(c_words)
         c_lower = [w.lower() for w in c_words]
-        c_sentences = split_sentences(cl_b, self.config.language)
+        c_sentences = split_sentences(cl_b, self.lang.key)
         stats = self._sentence_stats(c_sentences)
 
         c_dial = self._dialogue_re.findall(cl_b)
@@ -438,7 +446,7 @@ class CorpusAnalyzer:
         guiraud_r = v_types / math.sqrt(n_tokens) if n_tokens else 0.0
 
         # 4. Sentence-length architecture on the same prose as other metrics.
-        sentences = split_sentences(prose_main, self.config.language)
+        sentences = split_sentences(prose_main, self.lang.key)
         stats = self._sentence_stats(sentences)
         start_entropy, first_person_start_rate, _entropy_se = self._starter_stats(sentences)
 
