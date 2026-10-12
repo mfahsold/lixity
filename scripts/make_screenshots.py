@@ -611,12 +611,21 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     if args.video:
         video_dir = WORK_DIR / "videos"
         video_dir.mkdir(parents=True, exist_ok=True)
-        CAPTURES[:] = [{
-            "source": str(research_workspace),
-            "target": str(OUT_DIR / "dashboard-research-timeline.png"),
-            "width": 1280, "height": 800, "video": True,
-            "videoTarget": str(video_dir / "research-timeline.webm"),
-        }]
+        demo_report = BASE_DIR / "docs" / "demo" / "report.html"
+        CAPTURES[:] = [
+            {
+                "source": str(research_workspace),
+                "target": str(OUT_DIR / "dashboard-research-timeline.png"),
+                "width": 1280, "height": 800, "video": True,
+                "videoTarget": str(video_dir / "research-timeline.webm"),
+            },
+            {
+                "source": str(demo_report),
+                "target": str(OUT_DIR / "dashboard-light.png"),
+                "width": 1280, "height": 800, "video": True,
+                "videoTarget": str(video_dir / "analysis-review.webm"),
+            },
+        ]
     elif args.only:
         requested = set(args.only)
         available = {Path(str(capture["target"])).name for capture in CAPTURES}

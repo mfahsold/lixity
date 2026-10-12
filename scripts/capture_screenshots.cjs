@@ -166,7 +166,7 @@ async function main() {
       }
       await save(target, selector, {allowCrop: false});
     }
-    for (const capture of captures) {
+    for (const capture of captures.filter(item => !item.video)) {
       const name = path.basename(capture.target);
       await open(capture.source, capture.width, capture.height, name.includes('dark') ? 'dark' : 'light');
       if (name.startsWith('dashboard-dimensions') || ['dashboard-light.png', 'dashboard-dark.png', 'dashboard-mobile.png', 'dashboard-reference.png', 'dashboard-heatmap.png', 'dashboard-layer.png'].includes(name)) await selectView('analysis');
@@ -268,7 +268,7 @@ async function main() {
       } else if (name.startsWith('dashboard-research-timeline')) {
         await selectView('research');
         await page.locator('[data-rtab="claims"]').click();
-        await page.locator('#r-claims-timeline').click();
+        await page.locator('#r-open-timeline').click();
         await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
         if (name.includes('mobile')) {
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -338,28 +338,56 @@ async function main() {
       page.on('console', message => { if (message.type() === 'error') errors.push(message.text()); });
       await prepareWorkspacePage(page, {cursor: true});
       page.setDefaultTimeout(15000);
+      const flow = path.basename(capture.videoTarget, '.webm');
       await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
-      await page.waitForTimeout(700);
-      await page.locator('[data-view="research"]').click();
-      await page.locator('[data-rtab="claims"]').click();
-      await page.waitForTimeout(800);
-      await page.locator('#r-claims-timeline').click();
-      await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
-      await page.waitForTimeout(500);
-      const rows = page.locator('#research-claims-timeline .research-timeline-strip-row');
-      const count = await rows.count();
-      for (let index = 0; index < count; index++) {
-        await rows.nth(index).hover();
-        await page.waitForTimeout(360);
+      if (flow === 'analysis-review') {
+        await page.waitForTimeout(900);
+        const cell = page.locator('#heatmap td.z[data-chapter]').first();
+        await cell.scrollIntoViewIfNeeded();
+        await page.waitForTimeout(500);
+        await cell.hover();
+        await page.waitForTimeout(700);
+        await cell.click();
+        await page.waitForTimeout(1300);
+        const values = page.locator('#chapters .paragraph-values > summary').first();
+        if (await values.count()) {
+          await values.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(400);
+          await values.click();
+          await page.waitForTimeout(900);
+        }
+        const dimensions = page.locator('#style-tab-dimensions');
+        if (await dimensions.count()) {
+          await dimensions.scrollIntoViewIfNeeded();
+          await page.waitForTimeout(600);
+          await dimensions.click();
+          await page.waitForTimeout(1200);
+        }
+        await page.mouse.wheel(0, -320);
+        await page.waitForTimeout(900);
+      } else {
+        await page.waitForTimeout(700);
+        await page.locator('[data-view="research"]').click();
+        await page.locator('[data-rtab="claims"]').click();
+        await page.waitForTimeout(800);
+        await page.locator('#r-open-timeline').click();
+        await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
+        await page.waitForTimeout(500);
+        const rows = page.locator('#research-claims-timeline .research-timeline-strip-row');
+        const count = await rows.count();
+        for (let index = 0; index < count; index++) {
+          await rows.nth(index).hover();
+          await page.waitForTimeout(360);
+        }
+        await rows.first().click();
+        await page.waitForTimeout(1600);
+        await page.mouse.wheel(0, 300);
+        await page.waitForTimeout(1200);
+        await page.mouse.wheel(0, -700);
+        await page.waitForTimeout(600);
+        await rows.nth(Math.min(1, count - 1)).hover();
+        await page.waitForTimeout(1200);
       }
-      await rows.first().click();
-      await page.waitForTimeout(1600);
-      await page.mouse.wheel(0, 300);
-      await page.waitForTimeout(1200);
-      await page.mouse.wheel(0, -700);
-      await page.waitForTimeout(600);
-      await rows.nth(Math.min(1, count - 1)).hover();
-      await page.waitForTimeout(1200);
       assert.deepEqual(errors, [], 'Walkthrough recording must be free of runtime errors');
       const video = page.video();
       await context.close();
