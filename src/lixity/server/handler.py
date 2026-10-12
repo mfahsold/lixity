@@ -15,17 +15,17 @@ from urllib.parse import parse_qs, urlparse
 from ..research import api as research_api
 from .constants import MAX_IMAGE_PAYLOAD_BYTES, MAX_PAYLOAD_BYTES, MIME_TYPES
 from .discovery import api_index
+from .routes_manuscript_research import ManuscriptResearchRoutesMixin
 from .routes_markers import MarkerRoutesMixin
 from .routes_nda import NdaRoutesMixin
 from .routes_pdf import ManuscriptPdfRoutesMixin
 from .routes_project import ProjectRoutesMixin
-from .routes_research import ResearchRoutesMixin
 
 
 class LixityServerHandler(
     ProjectRoutesMixin,
     MarkerRoutesMixin,
-    ResearchRoutesMixin,
+    ManuscriptResearchRoutesMixin,
     NdaRoutesMixin,
     ManuscriptPdfRoutesMixin,
     BaseHTTPRequestHandler,
@@ -53,6 +53,8 @@ class LixityServerHandler(
         "/api/research/zotero-status": "_handle_zotero_status",
         "/api/research/decision-impact": "_handle_research_decision_impact",
         "/api/research/review": "_handle_research_review",
+        "/api/research/manuscript-review": "_handle_manuscript_claim_review",
+        "/api/research/manuscript-links": "_handle_manuscript_claim_links",
     }
 
     #: POST actions under /api/ : exact action -> handler method name.
@@ -77,6 +79,7 @@ class LixityServerHandler(
         "research-dossier": "_handle_research_dossier",
         "research-compare": "_handle_research_compare",
         "research-claim-add": "_handle_research_claim_add",
+        "research-manuscript-link": "_handle_manuscript_claim_link",
         "research-claim-relation": "_handle_research_claim_relation_add",
         "research-evidence-link": "_handle_research_evidence_link",
         "research-decision-add": "_handle_research_decision_add",
@@ -92,8 +95,8 @@ class LixityServerHandler(
         {"export", "sync", "audit", "prune", "gdrive"}
     )
 
-    # Serialize selection/settings commits and manuscript writes. PDF composition
-    # and unrelated research/OCR work run outside this lock.
+    # Serialize selection/settings commits, manuscript writes and token-bound
+    # research requests. PDF composition and unbound research work remain outside.
     WORKSPACE_MUTATING_ACTIONS: ClassVar[frozenset[str]] = frozenset({
         "settings", "load", "project-create", "project-open", "analyze", "rebuild",
         "marker-add", "marker-resolve", "research-init",
@@ -210,15 +213,12 @@ class LixityServerHandler(
 
         handler_name = self.POST_ROUTES.get(action)
         if handler_name is not None:
-            guarded_actions = {"research-search", "research-evidence-link", "research-claim-relation",
-                               "research-record-revise", "research-record-prepare",
-                               "research-revision-batch-prepare", "research-revision-batch-apply"}
             relation_write = (action == "research-claim-relation"
                               or (action == "research-record-revise" and payload.get("kind") == "claim_relation")
                               or (action == "research-revision-batch-apply" and isinstance(payload.get("operations"), list)
                                   and any(isinstance(op, dict) and op.get("kind") == "claim_relation"
                                           for op in payload["operations"])))
-            bound_research = action in guarded_actions and ("research_token" in payload or relation_write)
+            bound_research = action.startswith("research-") and ("research_token" in payload or relation_write)
             if action in self.WORKSPACE_MUTATING_ACTIONS or bound_research:
                 with self._workspace_lock:
                     if bound_research and not self._research_context_matches(payload.get("research_token")):

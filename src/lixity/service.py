@@ -31,6 +31,7 @@ from typing import Any
 
 from . import __version__
 from .config import resolve_thresholds
+from .workspace import discover
 
 _OPTIONS = ("language", "title", "research_project", "debug", "open_browser", "z_mild",
             "z_strong", "fdr_q", "fdr_method", "min_chapters", "dim_threshold", "flag_min_severity")
@@ -89,6 +90,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--flag-min-severity", type=int, choices=(1, 2, 3))
 
 
+def _workspace_scope(selector: str | None) -> Path | None:
+    """Use the shared file-to-workspace resolution without reading manuscript text."""
+    if not selector:
+        return None
+    path = Path(selector).expanduser().resolve()
+    return Path(discover(explicit=str(path)).root) if path.is_file() else path
+
+
 def resolve_settings(port: int, overrides: Mapping[str, Any], saved: Mapping[str, Any] | None) -> dict[str, Any]:
     """Resolve explicit startup choices; a plain restart retains saved choices."""
     if not 1 <= port <= 65535:
@@ -97,6 +106,8 @@ def resolve_settings(port: int, overrides: Mapping[str, Any], saved: Mapping[str
         "port": port, "host": os.environ.get("LIXITY_HOST") or "127.0.0.1",
         "project": os.environ.get("LIXITY_DIR") or None,
     }
+    new_project = overrides.get("project")
+    previous_project = settings.get("project")
     settings["port"] = port
     for key in ("host", "project", *_OPTIONS):
         if overrides.get(key) is not None:
@@ -111,6 +122,9 @@ def resolve_settings(port: int, overrides: Mapping[str, Any], saved: Mapping[str
     for key in ("project", "research_project"):
         if settings.get(key):
             settings[key] = str(Path(settings[key]).expanduser().resolve())
+    changed_project = new_project is not None and _workspace_scope(settings.get("project")) != _workspace_scope(previous_project)
+    if (changed_project or overrides.get("no_project")) and overrides.get("title") is None:
+        settings.pop("title", None)
     if settings.get("min_chapters") is not None and settings["min_chapters"] < 2:
         raise ServiceError("--min-chapters must be at least 2")
     return settings

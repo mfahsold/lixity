@@ -15,6 +15,7 @@ from .models import (
     Decision,
     Dossier,
     EvidenceLink,
+    ManuscriptClaimLink,
     Passage,
     Reference,
     SourceVersion,
@@ -24,15 +25,17 @@ from .models import (
 )
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot
 
-Authored = Dossier | Claim | ClaimRelation | EvidenceLink | Decision
+Authored = Dossier | Claim | ClaimRelation | EvidenceLink | ManuscriptClaimLink | Decision
 KINDS: dict[str, type[Authored]] = {
     "dossier": Dossier, "claim": Claim, "evidence_link": EvidenceLink, "decision": Decision,
     "claim_relation": ClaimRelation,
+    "manuscript_claim_link": ManuscriptClaimLink,
 }
 FIELDS = {
     "dossier": {"title", "body", "language", "tags", "evidence_ids"},
     "claim": {"title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"},
     "claim_relation": {"from_claim_id", "from_claim_revision", "to_claim_id", "to_claim_revision", "relation", "state", "rationale"},
+    "manuscript_claim_link": {"claim_id", "claim_revision", "state", "note"},
     "evidence_link": {"claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"},
     "decision": {"title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot", "dossier_ids", "dossier_revisions"},
 }
@@ -41,7 +44,7 @@ FIELDS = {
 def _record(snapshot: Snapshot, kind: str, identifier: str, revision: int | None = None, *,
             unavailable: set[str] | None = None) -> Authored:
     if not isinstance(kind, str) or kind not in KINDS:
-        raise ResearchError("Only dossiers, claims, claim relations, evidence links and decisions can be revised")
+        raise ResearchError("Only dossiers, claims, claim relations, manuscript links, evidence links and decisions can be revised")
     if revision is not None and (type(revision) is not int or revision < 1):
         raise ResearchError("Revision must be a positive integer")
     try:
@@ -119,6 +122,9 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
         association = record.claim_ref
     elif isinstance(record, ClaimRelation):
         citation_scope = "pinned_claim_revisions"
+    elif isinstance(record, ManuscriptClaimLink):
+        association = record.claim_ref
+        citation_scope = "manuscript_association"
     else:
         claim_ref = reference(record) if isinstance(record, Claim) else record.claim_ref
         association = record.dossier_ref if isinstance(record, Claim) else record.claim_ref
@@ -275,7 +281,7 @@ def _apply_changes(
             if "dossier_id" in changes or "dossier_revision" in changes:
                 identifier = changes.get("dossier_id", previous.dossier_ref.id if previous.dossier_ref else None)
                 values["dossier_ref"] = _association(snapshot, identifier, Dossier, previous.dossier_ref, changes.get("dossier_revision"))
-        if isinstance(previous, (EvidenceLink, Decision)) and ("claim_id" in changes or "claim_revision" in changes):
+        if isinstance(previous, (EvidenceLink, ManuscriptClaimLink, Decision)) and ("claim_id" in changes or "claim_revision" in changes):
             identifier = changes.get("claim_id", previous.claim_ref.id if previous.claim_ref else None)
             values["claim_ref"] = _association(snapshot, identifier, Claim, previous.claim_ref, changes.get("claim_revision"))
         if isinstance(previous, ClaimRelation):
@@ -353,7 +359,7 @@ def _validate_revision_links(snapshot: Snapshot, previous: Authored, revised: Au
     elif isinstance(revised, ClaimRelation):
         snapshot.get(revised.from_claim_ref, Claim)
         snapshot.get(revised.to_claim_ref, Claim)
-    elif isinstance(revised, (EvidenceLink, Decision)):
+    elif isinstance(revised, (EvidenceLink, ManuscriptClaimLink, Decision)):
         if revised.claim_ref:
             snapshot.get(revised.claim_ref, Claim)
         if isinstance(revised, EvidenceLink) and (

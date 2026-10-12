@@ -5,10 +5,38 @@ from __future__ import annotations
 import json
 import re
 import unicodedata
+from collections.abc import Mapping
+from pathlib import Path
 from typing import Any
 
-from .config import validate_author_name
-from .markdown_parser import _fence_closer, _front_matter_end, _is_indented_code, _without_comments
+from .config import validate_author_name, validate_project_title
+from .markdown_parser import (
+    _fence_closer,
+    _front_matter_end,
+    _is_indented_code,
+    _without_comments,
+    parse_markdown_blocks,
+    strip_inline_markup,
+)
+
+
+def project_title(
+    manuscript: str, text: str, settings: Mapping[str, Any], override: str | None = None,
+) -> str:
+    """Resolve one explicit title for all adapters using the shared Markdown parser."""
+    if override is not None:
+        return validate_project_title(override)
+    configured = settings.get("title", "")
+    if configured:
+        return validate_project_title(configured)
+    identity = manuscript_identity_check(text, None, None)["title"]
+    if identity["value"]:
+        return validate_project_title(strip_inline_markup(identity["value"]))
+    if identity["source"] != "front_matter":
+        for block in parse_markdown_blocks(text):
+            if block["type"] == "h1":
+                return validate_project_title(strip_inline_markup(block["text"]))
+    return validate_project_title(Path(manuscript).stem)
 
 
 def _scalar(raw: str) -> str | None:

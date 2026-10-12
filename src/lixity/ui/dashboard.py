@@ -15,6 +15,7 @@ from typing import Any
 from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
 from ..format import pct as format_pct
+from ..pipeline import paragraph_identity
 from ..status import FLAG_MIN_SEVERITY
 from ..style_fingerprint import (
     FEATURES,
@@ -35,7 +36,9 @@ from .components import (
     help_term,
     kpi,
     label,
+    license_terms,
     line_label,
+    manuscript_pdf_controls,
     panel_start,
     project_header,
     status_strip,
@@ -63,11 +66,11 @@ from .structural import style_structural
 _ASSET_DIR = _Path(__file__).with_name("assets")
 _CSS = "\n".join(
     (_ASSET_DIR / name).read_text(encoding="utf-8")
-    for name in ("dashboard.css", "dossier-images.css", "workspace-reader.css")
+    for name in ("design-tokens.css", "dashboard.css", "dossier-images.css", "workspace-reader.css", "manuscript-links.css")
 )
 _JS = "\n".join(
     (_ASSET_DIR / name).read_text(encoding="utf-8")
-    for name in ("dashboard.js", "dossier-images.js", "style-space.js", "workspace-reader.js")
+    for name in ("dashboard.js", "dossier-images.js", "style-space.js", "workspace-reader.js", "manuscript-links.js")
 )
 
 
@@ -106,6 +109,10 @@ def render_dashboard(
     author_setting_enabled: bool = False,
     manuscript_pdf_token: str = "",
     research_context_token: str = "",
+    publication: Mapping[str, Any] | None = None,
+    publication_error: str = "",
+    project_token: str = "",
+    manuscript_source_sha256: str = "",
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -244,18 +251,20 @@ def render_dashboard(
         f"<style>{_CSS}</style>",
         "</head>",
         f'<body id="top" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
+        f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
+        f'data-manuscript-links="{int(allowed_actions is not None and "research-manuscript-link" in allowed_actions)}" '
         f'data-image-limits="{image_limits_attribute()}" '
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         '<div class="page">',
-        project_header(title, labels, language_name, engine_name),
+        *(('<div class="workspace-shell">',) if controls else ()),
+        project_header(title, labels, language_name, engine_name, compact=controls),
     ]
 
     has_chapters = bool(chapters) and total_words > 0
     default_view = "analysis" if has_chapters else "research"
 
     if controls:
-        parts.append(f'<nav class="workspace-bar" aria-label="{L("workspace")}">')
-        parts.append(f'<span class="ctl-label">{L("workspace")}</span>')
+        parts.append(f'<nav class="workspace-bar" id="project-controls" aria-label="{L("controls")}">')
         parts.append('<div class="row">')
         parts.append(
             f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>'
@@ -272,6 +281,11 @@ def render_dashboard(
                 f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>'
             )
         parts.append("</div>")
+        if allowed_actions is not None and "manuscript-pdf" in allowed_actions:
+            parts.append(manuscript_pdf_controls(
+                labels, api_base=api_base, project_token=manuscript_pdf_token,
+                available=has_chapters and bool(paragraphs) and bool(manuscript_pdf_token),
+            ))
         parts.append("</nav>")
         parts.append(
             '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
@@ -289,6 +303,7 @@ def render_dashboard(
             "</button>"
             "</nav>"
         )
+        parts.append("</div>")
 
     if status:
         parts.append(status_strip(labels, status))
@@ -407,6 +422,25 @@ def render_dashboard(
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('controls')}</h2>")
 
+        parts.append(
+            settings_form(
+                labels,
+                title,
+                current_language,
+                language_options,
+                replace(
+                    fingerprint.thresholds if fingerprint is not None else FingerprintThresholds(),
+                    flag_min_severity=flag_min_severity,
+                ),
+                project_author=project_author,
+                identity_check=identity_check,
+                author_setting_enabled=author_setting_enabled,
+                publication=publication,
+                publication_error=publication_error,
+                project_token=project_token,
+            )
+        )
+
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
         file_input_id = "ms-file" if action_enabled("load") else "manuscript-import-file"
@@ -440,22 +474,6 @@ def render_dashboard(
             f'<p class="ctl-note">{L("manuscript_load_hint") if action_enabled("load") else L("manuscript_import_hint")}</p>'
         )
         parts.append("</div>")
-
-        parts.append(
-            settings_form(
-                labels,
-                title,
-                current_language,
-                language_options,
-                replace(
-                    fingerprint.thresholds if fingerprint is not None else FingerprintThresholds(),
-                    flag_min_severity=flag_min_severity,
-                ),
-                project_author=project_author,
-                identity_check=identity_check,
-                author_setting_enabled=author_setting_enabled,
-            )
-        )
 
         # Actions advertised by the embedding server.
         visible_actions = [
@@ -592,30 +610,6 @@ def render_dashboard(
             f'<div class="view-pane{" active" if default_view == "analysis" else ""}" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">'
         )
 
-    if controls and allowed_actions is not None and "manuscript-pdf" in allowed_actions:
-        pdf_available = has_chapters and bool(paragraphs) and bool(manuscript_pdf_token)
-        disabled = "" if pdf_available else " disabled"
-        parts.append(
-            '<section class="panel manuscript-pdf" id="manuscript-pdf">'
-            f'<h2>{L("manuscript_pdf_title")}</h2>'
-            f'<p class="panel-guide" id="manuscript-pdf-hint">{L("manuscript_pdf_hint")}</p>'
-            f'<form id="manuscript-pdf-form" method="post" '
-            f'action="{esc(api_base.rstrip("/") + "/manuscript-pdf")}" '
-            f'data-project-token="{esc(manuscript_pdf_token)}" '
-            f'data-available="{str(pdf_available).lower()}" aria-describedby="manuscript-pdf-hint">'
-            '<div class="manuscript-pdf-actions"><div class="setting-field">'
-            f'<label for="manuscript-pdf-layout">{L("manuscript_pdf_layout")}</label>'
-            f'<select class="ctl" id="manuscript-pdf-layout" name="layout"{disabled}>'
-            f'<option value="book">{L("manuscript_pdf_book")}</option>'
-            f'<option value="sheet">{L("manuscript_pdf_sheet")}</option>'
-            f'<option value="report">{L("manuscript_pdf_report")}</option></select></div>'
-            '<button type="submit" class="ctl primary" id="manuscript-pdf-download" disabled>'
-            f'{L("manuscript_pdf_download")}</button></div>'
-            '<p class="ctl-status" id="manuscript-pdf-status" role="status" aria-live="polite">'
-            f'{"" if pdf_available else L("manuscript_pdf_unavailable")}</p></form>'
-            f'<noscript><p class="ctl-note">{L("manuscript_pdf_javascript")}</p></noscript></section>'
-        )
-
     if reader_enabled and has_chapters:
         parts.append(
             '<section class="workspace-reader" id="workspace-reader" '
@@ -661,8 +655,8 @@ def render_dashboard(
             first_index = next(i for i, paragraph in enumerate(paragraphs) if paragraph is first)
             passage_hint = "review_passage_flagged" if candidates else "review_passage_unflagged"
             parts.append(
-                f'<article class="review-route"><h3>{L("review_passage")}</h3>'
-                f'<p>{L(passage_hint)}</p><a class="ctl primary" href="#p-{first_index}" '
+                f'<article class="review-route"><a class="ctl primary" href="#p-{first_index}" '
+                f'data-help="{L(passage_hint)}" '
                 f'data-review-passage="1" data-line="{first.start_line}" data-target="p-{first_index}">'
                 f'{L("review_passage_action")}</a></article>'
             )
@@ -673,12 +667,208 @@ def render_dashboard(
         ]
         if metrics is not None:
             review_routes.append(("review_rhythm", "review_rhythm_hint", "review_rhythm_action", "dist"))
-        for title_key, hint_key, action_key, target in review_routes:
+        for _title_key, hint_key, action_key, target in review_routes:
             parts.append(
-                f'<article class="review-route"><h3>{L(title_key)}</h3><p>{L(hint_key)}</p>'
-                f'<a class="ctl" href="#{target}" data-jump="#{target}">{L(action_key)}</a></article>'
+                f'<article class="review-route"><a class="ctl" href="#{target}" '
+                f'data-help="{L(hint_key)}" data-jump="#{target}">{L(action_key)}</a></article>'
             )
         parts.append('</div></section>')
+
+    # --- Toolbar ----------------------------------------------------------
+    parts.append('<div class="toolbar">')
+    parts.append('<span class="text-search-group">')
+    parts.append(
+        f'<input class="ctl" type="search" id="text-search" autocomplete="off" '
+        f'placeholder="{L("text_search")}" aria-label="{L("text_search")}" '
+        f'aria-controls="chapters"/>'
+    )
+    parts.append(
+        f'<button type="button" class="ctl" id="text-search-prev" hidden '
+        f'aria-label="{L("text_search_prev")}" title="{L("text_search_prev")}">↑</button>'
+    )
+    parts.append(
+        f'<button type="button" class="ctl" id="text-search-next" hidden '
+        f'aria-label="{L("text_search_next")}" title="{L("text_search_next")}">↓</button>'
+    )
+    parts.append(
+        f'<button type="button" class="ctl" id="text-search-clear" hidden>'
+        f"{L('text_search_clear')}</button>"
+    )
+    parts.append(
+        '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'
+    )
+    parts.append("</span>")
+    parts.append(f'<label><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
+    if paragraphs:
+        parts.append(
+            f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
+        )
+        parts.append("<label>")
+        parts.append(f"{help_term(labels, 'layer', L('style_layer'))} ")
+        parts.append('<select class="ctl" id="style-layer">')
+        parts.append(f'<option value="">{L("layer_off")}</option>')
+        for layer_key in LAYER_FEATURES:
+            low, high = _layer_range(layer_key)
+            parts.append(
+                f'<option value="{layer_key}" '
+                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
+                f'data-range="{esc(f"{_layer_text(layer_key, low)} – {_layer_text(layer_key, high)}", quote=True)}">'
+                f"{esc(label(labels, 'layer_' + layer_key))}</option>"
+            )
+        parts.append("</select></label>")
+    parts.append('<span class="legend">')
+    for key, color in (
+        ("present", "var(--present)"),
+        ("past", "var(--past)"),
+        ("mixed", "var(--mixed)"),
+        ("neutral", "var(--neutral)"),
+    ):
+        parts.append(
+            f'<span><span class="swatch" style="background:{color}"></span>{L(key)}</span>'
+        )
+    parts.append(
+        f'<span><span class="swatch" style="background:var(--flag)"></span>'
+        f"{L('severity_2')} / {L('severity_3')}</span>"
+    )
+    parts.append("</span>")
+    parts.append(f'<a class="totop" href="#top">↑ {L("top")}</a>')
+    parts.append("</div>")
+
+    if controls:
+        parts.append(f'<p class="microhint" id="microhint">{L("hint")}</p>')
+
+    parts.append(
+        f'<div class="layer-legend" id="layer-legend" hidden="hidden" '
+        f'data-outliers="{esc(label(labels, "layer_outliers"), quote=True)}" '
+        f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
+    )
+    parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
+    parts.append('<span class="z-gradient"></span>')
+    parts.append(
+        '<span class="layer-scale"><span id="layer-scale-low"></span>'
+        '<span id="layer-scale-high"></span></span>'
+    )
+    parts.append('<span class="layer-count" id="layer-legend-count"></span>')
+    parts.append(
+        f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
+        f"{esc(label(labels, 'layer_only'))}</label>"
+    )
+    parts.append(f'<button class="ctl" id="layer-next">{esc(label(labels, "layer_next"))}</button>')
+    parts.append("</div>")
+
+    if not tense_available:
+        parts.append(f'<p class="hint">{L("no_tense")}</p>')
+
+    parts.append(
+        f'<p class="ctl-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>'
+    )
+
+    # --- Chapter map ------------------------------------------------------
+    by_chapter: dict[int, list[tuple[int, Any]]] = {}
+    paragraph_content: dict[str, list[str]] = {}
+    for idx, p in enumerate(paragraphs):
+        by_chapter.setdefault(p.chapter_num, []).append((idx, p))
+
+    parts.append('<main id="chapters">')
+    for chapter in chapters:
+        chapter_paras = by_chapter.get(chapter.num, [])
+        has_flags = any(p.is_flagged for _, p in chapter_paras)
+        classes = "chapter has-flags" if has_flags else "chapter"
+        parts.append(
+            f'<section class="{classes}" id="ch-{chapter.num}" '
+            f'data-start="{chapter.start_line}" data-end="{chapter.end_line}">'
+        )
+        parts.append('<div class="chapter-head">')
+        parts.append(f"<h2>{chapter.num}. {esc(chapter.title)}</h2>")
+        parts.append(
+            f'<span class="meta">{N(chapter.words, 0)} {L("words")} · '
+            f"{chapter.paragraphs} {L('paragraphs')} · {esc(tense_label(labels, chapter.dominant))} · "
+            f"{chapter.flagged} {L('flagged')} · {L('line')} {chapter.start_line}–{chapter.end_line}</span>"
+        )
+        parts.append("</div>")
+
+        if chapter_paras:
+            parts.append('<div class="strip">')
+            for idx, p in chapter_paras:
+                sev = f" sev-{p.severity}" if p.is_flagged else ""
+                width = max(1.0, p.words / scale * 100.0)
+                dom_label = tense_label(labels, p.dominant)
+                sev_label = label(labels, f"severity_{p.severity}")
+                tooltip = (
+                    f"{line_label(labels, p)} · {dom_label} · "
+                    f"{label(labels, 'present')} {p.present_hits} / "
+                    f"{label(labels, 'past')} {p.past_hits} · {sev_label}"
+                )
+                layer_payload: dict[str, list[Any]] = {}
+                for key in LAYER_FEATURES:
+                    info = layer_data.get(key, {}).get(idx)
+                    if info is not None:
+                        value, z = info
+                        low, high = _layer_range(key)
+                        span = (high - low) or 1.0
+                        position = (value - low) / span
+                        colour = z_color((position * 2.0 - 1.0) * Z_COLOR_LIMIT)
+                        layer_payload[key] = [colour, _layer_tip(key, value, z), round(z, 2)]
+                layer_attr = (
+                    f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
+                    if layer_payload
+                    else ""
+                )
+                parts.append(
+                    f'<button class="chip {tense_class(p.dominant)}{sev}" '
+                    f'style="flex:{width:.2f} 0 auto" data-target="p-{idx}"{layer_attr} '
+                    f'data-tip-base="{esc(tooltip, quote=True)}" '
+                    f'title="{esc(tooltip)}" aria-label="{esc(tooltip)}" aria-expanded="false"></button>'
+                )
+            parts.append("</div>")
+
+            for idx, p in chapter_paras:
+                dom_label = tense_label(labels, p.dominant)
+                sev_label = label(labels, f"severity_{p.severity}")
+                parts.append(
+                    f'<div class="ptext" id="p-{idx}" data-start="{p.start_line}" '
+                    f'data-end="{p.end_line}" data-paragraph-sha256="{paragraph_identity(p)["paragraph_sha256"]}" '
+                    f'data-markers="{int(controls)}"><div class="ptext-inner">'
+                )
+                anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
+                stats = (
+                    f'{label(labels, "present")} {p.present_hits} · {label(labels, "past")} {p.past_hits} · '
+                    f"ASL {N(p.asl, 1)} · {label(labels, 'dialogue')} {P(p.dialogue_pct)} · "
+                    f"{label(labels, 'function_words')} {P(p.function_word_pct)} · "
+                    f"{label(labels, 'feat_filter')} {N(p.filter_density, 1)} · {label(labels, 'feat_modal')} {N(p.modal_density, 1)} · "
+                    f"{label(labels, 'feat_nominal')} {N(p.nominal_density, 1)} · {label(labels, 'feat_passive')} {N(p.passive_density, 1)} · "
+                    f"{p.words} {label(labels, 'words')}"
+                )
+                paragraph_content[f"p-{idx}"] = [p.text, anchor, stats]
+                # The fallback preserves the full offline report without JavaScript.
+                # JavaScript removes the inert fallback before lazy rendering.
+                parts.append(
+                    f'<noscript><p>{esc(p.text)}</p><details class="paragraph-values">'
+                    f'<summary>{L("paragraph_values")}</summary>'
+                    f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div></details>'
+                )
+                if controls:
+                    buttons = " ".join(
+                        f'<button class="ctl" data-marker-kind="{esc(kind, quote=True)}" '
+                        f'data-line="{p.start_line}">+ {esc(label(labels, "marker_" + kind))}</button>'
+                        for kind in ("pruefen", "sachcheck", "todo", "achtung")
+                    )
+                    parts.append(
+                        f'<div class="row marker-row">{buttons}'
+                        f'<span class="marker-note-slot" '
+                        f'data-placeholder="{esc(label(labels, "marker_note"), quote=True)}"></span>'
+                        f"</div>"
+                    )
+                parts.append("</noscript>")
+                parts.append("</div></div>")
+        parts.append("</section>")
+    parts.append("</main>")
+    content_json = json.dumps(paragraph_content, ensure_ascii=False, separators=(",", ":"))
+    # Script raw text does not decode HTML entities. Escape angle brackets so
+    # manuscript strings, including </script>, cannot end this inert JSON block.
+    content_json = content_json.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+    parts.append(f'<script type="application/json" id="paragraph-content">{content_json}</script>')
+
 
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [
@@ -938,197 +1128,6 @@ def render_dashboard(
     # --- Work markers (editor-visible, set from the dashboard) -------
     parts.append(render_markers_panel(markers, chapters, labels, controls))
 
-    # --- Toolbar ----------------------------------------------------------
-    parts.append('<div class="toolbar">')
-    parts.append('<span class="text-search-group">')
-    parts.append(
-        f'<input class="ctl" type="search" id="text-search" autocomplete="off" '
-        f'placeholder="{L("text_search")}" aria-label="{L("text_search")}" '
-        f'aria-controls="chapters"/>'
-    )
-    parts.append(
-        f'<button type="button" class="ctl" id="text-search-prev" hidden '
-        f'aria-label="{L("text_search_prev")}" title="{L("text_search_prev")}">↑</button>'
-    )
-    parts.append(
-        f'<button type="button" class="ctl" id="text-search-next" hidden '
-        f'aria-label="{L("text_search_next")}" title="{L("text_search_next")}">↓</button>'
-    )
-    parts.append(
-        f'<button type="button" class="ctl" id="text-search-clear" hidden>'
-        f"{L('text_search_clear')}</button>"
-    )
-    parts.append(
-        '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'
-    )
-    parts.append("</span>")
-    parts.append(f'<label><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
-    if paragraphs:
-        parts.append(
-            f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
-        )
-        parts.append("<label>")
-        parts.append(f"{help_term(labels, 'layer', L('style_layer'))} ")
-        parts.append('<select class="ctl" id="style-layer">')
-        parts.append(f'<option value="">{L("layer_off")}</option>')
-        for layer_key in LAYER_FEATURES:
-            low, high = _layer_range(layer_key)
-            parts.append(
-                f'<option value="{layer_key}" '
-                f'data-hint="{esc(label(labels, "layer_hint_" + layer_key), quote=True)}" '
-                f'data-range="{esc(f"{_layer_text(layer_key, low)} – {_layer_text(layer_key, high)}", quote=True)}">'
-                f"{esc(label(labels, 'layer_' + layer_key))}</option>"
-            )
-        parts.append("</select></label>")
-    parts.append('<span class="legend">')
-    for key, color in (
-        ("present", "var(--present)"),
-        ("past", "var(--past)"),
-        ("mixed", "var(--mixed)"),
-        ("neutral", "var(--neutral)"),
-    ):
-        parts.append(
-            f'<span><span class="swatch" style="background:{color}"></span>{L(key)}</span>'
-        )
-    parts.append(
-        f'<span><span class="swatch" style="background:var(--flag)"></span>'
-        f"{L('severity_2')} / {L('severity_3')}</span>"
-    )
-    parts.append("</span>")
-    parts.append(f'<a class="totop" href="#top">↑ {L("top")}</a>')
-    parts.append("</div>")
-
-    parts.append(
-        f'<div class="layer-legend" id="layer-legend" hidden="hidden" '
-        f'data-outliers="{esc(label(labels, "layer_outliers"), quote=True)}" '
-        f'data-outliers-one="{esc(label(labels, "layer_outliers_one"), quote=True)}">'
-    )
-    parts.append('<span class="layer-title" id="layer-legend-title" tabindex="0"></span>')
-    parts.append('<span class="z-gradient"></span>')
-    parts.append(
-        '<span class="layer-scale"><span id="layer-scale-low"></span>'
-        '<span id="layer-scale-high"></span></span>'
-    )
-    parts.append('<span class="layer-count" id="layer-legend-count"></span>')
-    parts.append(
-        f'<label class="layer-only"><input type="checkbox" id="layer-only"/> '
-        f"{esc(label(labels, 'layer_only'))}</label>"
-    )
-    parts.append(f'<button class="ctl" id="layer-next">{esc(label(labels, "layer_next"))}</button>')
-    parts.append("</div>")
-
-    if not tense_available:
-        parts.append(f'<p class="hint">{L("no_tense")}</p>')
-
-    parts.append(
-        f'<p class="ctl-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>'
-    )
-
-    # --- Chapter map ------------------------------------------------------
-    by_chapter: dict[int, list[tuple[int, Any]]] = {}
-    paragraph_content: dict[str, list[str]] = {}
-    for idx, p in enumerate(paragraphs):
-        by_chapter.setdefault(p.chapter_num, []).append((idx, p))
-
-    parts.append('<main id="chapters">')
-    for chapter in chapters:
-        chapter_paras = by_chapter.get(chapter.num, [])
-        has_flags = any(p.is_flagged for _, p in chapter_paras)
-        classes = "chapter has-flags" if has_flags else "chapter"
-        parts.append(
-            f'<section class="{classes}" id="ch-{chapter.num}" '
-            f'data-start="{chapter.start_line}" data-end="{chapter.end_line}">'
-        )
-        parts.append('<div class="chapter-head">')
-        parts.append(f"<h2>{chapter.num}. {esc(chapter.title)}</h2>")
-        parts.append(
-            f'<span class="meta">{N(chapter.words, 0)} {L("words")} · '
-            f"{chapter.paragraphs} {L('paragraphs')} · {esc(tense_label(labels, chapter.dominant))} · "
-            f"{chapter.flagged} {L('flagged')} · {L('line')} {chapter.start_line}–{chapter.end_line}</span>"
-        )
-        parts.append("</div>")
-
-        if chapter_paras:
-            parts.append('<div class="strip">')
-            for idx, p in chapter_paras:
-                sev = f" sev-{p.severity}" if p.is_flagged else ""
-                width = max(1.0, p.words / scale * 100.0)
-                dom_label = tense_label(labels, p.dominant)
-                sev_label = label(labels, f"severity_{p.severity}")
-                tooltip = (
-                    f"{line_label(labels, p)} · {dom_label} · "
-                    f"{label(labels, 'present')} {p.present_hits} / "
-                    f"{label(labels, 'past')} {p.past_hits} · {sev_label}"
-                )
-                layer_payload: dict[str, list[Any]] = {}
-                for key in LAYER_FEATURES:
-                    info = layer_data.get(key, {}).get(idx)
-                    if info is not None:
-                        value, z = info
-                        low, high = _layer_range(key)
-                        span = (high - low) or 1.0
-                        position = (value - low) / span
-                        colour = z_color((position * 2.0 - 1.0) * Z_COLOR_LIMIT)
-                        layer_payload[key] = [colour, _layer_tip(key, value, z), round(z, 2)]
-                layer_attr = (
-                    f" data-layers='{esc(json.dumps(layer_payload, ensure_ascii=False), quote=True)}'"
-                    if layer_payload
-                    else ""
-                )
-                parts.append(
-                    f'<button class="chip {tense_class(p.dominant)}{sev}" '
-                    f'style="flex:{width:.2f} 0 auto" data-target="p-{idx}"{layer_attr} '
-                    f'data-tip-base="{esc(tooltip, quote=True)}" '
-                    f'title="{esc(tooltip)}" aria-label="{esc(tooltip)}" aria-expanded="false"></button>'
-                )
-            parts.append("</div>")
-
-            for idx, p in chapter_paras:
-                dom_label = tense_label(labels, p.dominant)
-                sev_label = label(labels, f"severity_{p.severity}")
-                parts.append(
-                    f'<div class="ptext" id="p-{idx}" data-start="{p.start_line}" '
-                    f'data-end="{p.end_line}" data-markers="{int(controls)}"><div class="ptext-inner">'
-                )
-                anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
-                stats = (
-                    f'{label(labels, "present")} {p.present_hits} · {label(labels, "past")} {p.past_hits} · '
-                    f"ASL {N(p.asl, 1)} · {label(labels, 'dialogue')} {P(p.dialogue_pct)} · "
-                    f"{label(labels, 'function_words')} {P(p.function_word_pct)} · "
-                    f"{label(labels, 'feat_filter')} {N(p.filter_density, 1)} · {label(labels, 'feat_modal')} {N(p.modal_density, 1)} · "
-                    f"{label(labels, 'feat_nominal')} {N(p.nominal_density, 1)} · {label(labels, 'feat_passive')} {N(p.passive_density, 1)} · "
-                    f"{p.words} {label(labels, 'words')}"
-                )
-                paragraph_content[f"p-{idx}"] = [p.text, anchor, stats]
-                # The fallback preserves the full offline report without JavaScript.
-                # JavaScript removes the inert fallback before lazy rendering.
-                parts.append(
-                    f'<noscript><p>{esc(p.text)}</p><details class="paragraph-values">'
-                    f'<summary>{L("paragraph_values")}</summary>'
-                    f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div></details>'
-                )
-                if controls:
-                    buttons = " ".join(
-                        f'<button class="ctl" data-marker-kind="{esc(kind, quote=True)}" '
-                        f'data-line="{p.start_line}">+ {esc(label(labels, "marker_" + kind))}</button>'
-                        for kind in ("pruefen", "sachcheck", "todo", "achtung")
-                    )
-                    parts.append(
-                        f'<div class="row marker-row">{buttons}'
-                        f'<span class="marker-note-slot" '
-                        f'data-placeholder="{esc(label(labels, "marker_note"), quote=True)}"></span>'
-                        f"</div>"
-                    )
-                parts.append("</noscript>")
-                parts.append("</div></div>")
-        parts.append("</section>")
-    parts.append("</main>")
-    content_json = json.dumps(paragraph_content, ensure_ascii=False, separators=(",", ":"))
-    # Script raw text does not decode HTML entities. Escape angle brackets so
-    # manuscript strings, including </script>, cannot end this inert JSON block.
-    content_json = content_json.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
-    parts.append(f'<script type="application/json" id="paragraph-content">{content_json}</script>')
-
     # --- Chapter matrix ---------------------------------------------------
     if chapters:
         parts.append(panel_start("matrix", labels, "chapter_table"))
@@ -1213,6 +1212,8 @@ def render_dashboard(
             )
         parts.append("</div></section>")
 
+    if controls:
+        parts.append(license_terms(labels))
     parts.extend(
         [
             "</div>",

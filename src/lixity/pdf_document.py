@@ -2,9 +2,9 @@
 
 Every page is placed explicitly, so the writer depends on no browser, no
 external converter and no document model. Text is addressed through glyph ids
-and Identity-H encoding: that is what makes arbitrary Unicode scripts work with
-a font subset instead of the fixed WinAnsi repertoire the older draft renderer
-is limited to.
+and Identity-H encoding, preserving covered Unicode codepoints rather than the
+fixed WinAnsi repertoire used by the older draft renderer. Contextual shaping
+and bidirectional layout are outside this writer's scope.
 
 Line breaking measures real advance widths from the embedded font, so a measure
 is filled with actual glyph metrics rather than an average-character guess.
@@ -12,7 +12,10 @@ is filled with actual glyph metrics rather than an average-character guess.
 
 from __future__ import annotations
 
+import hashlib
+import math
 import zlib
+from collections.abc import Mapping
 from dataclasses import dataclass, field
 
 from .pdf_font import EmbeddedFont, FontError, subset_font
@@ -42,18 +45,29 @@ class Line:
     word_spacing: float = 0.0
 
 
+@dataclass(frozen=True)
+class PageFurniture:
+    text: str
+    role: str
+    size: float
+    literal: bool = False
+
+
 @dataclass
 class Page:
     width: float
     height: float
     lines: list[Line] = field(default_factory=list)
+    decorated: bool = True
+    bookmarks: list[tuple[str, float]] = field(default_factory=list)
 
 
 def text_width(text: str, face: EmbeddedFont, size: float) -> float:
     return sum(face.advance(ord(character)) / 1000 * size for character in text)
 
 
-def break_lines(text: str, face: EmbeddedFont, size: float, measure: float) -> list[str]:
+def break_lines(text: str, face: EmbeddedFont, size: float, measure: float, *,
+                first_indent: float = 0.0, columns: int | None = None) -> list[str]:
     """Split text into lines that fit ``measure``; explicit newlines always break."""
     result: list[str] = []
     for paragraph in text.split("\n"):
@@ -62,18 +76,23 @@ def break_lines(text: str, face: EmbeddedFont, size: float, measure: float) -> l
             continue
         current = ""
         for word in paragraph.split(" "):
+            available = measure - (first_indent if not result else 0)
             candidate = f"{current} {word}" if current else word
-            if not current or text_width(candidate, face, size) <= measure:
+            if not current or (text_width(candidate, face, size) <= available
+                               and (columns is None or len(candidate) <= columns)):
                 current = candidate
             else:
                 result.append(current)
                 current = word
-            while text_width(current, face, size) > measure and len(current) > 1:
-                cut = len(current) - 1
-                while cut > 1 and text_width(current[:cut], face, size) > measure:
+            available = measure - (first_indent if not result else 0)
+            while (text_width(current, face, size) > available
+                   or (columns is not None and len(current) > columns)) and len(current) > 1:
+                cut = min(len(current) - 1, columns or len(current))
+                while cut > 1 and text_width(current[:cut], face, size) > available:
                     cut -= 1
                 result.append(current[:cut])
                 current = current[cut:]
+                available = measure
         result.append(current)
     return result
 
@@ -83,6 +102,8 @@ def _subset_or_fail(path: str, codepoints: set[int]) -> EmbeddedFont:
         return subset_font(path, codepoints)
     except FontError as error:
         raise PdfError(str(error)) from error
+    except OSError as error:
+        raise PdfError(f"Cannot read configured font: {error}") from error
 
 
 @dataclass(frozen=True)
@@ -93,7 +114,8 @@ class FittedLine:
     slack: float
 
 
-def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) -> list[FittedLine]:
+def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float, *,
+                  first_indent: float = 0.0, allow_tightening: bool = True) -> list[FittedLine]:
     """Break a paragraph into lines, minimising the total badness of the page.
 
     A greedy first-fit break fills each line to the brim and is the reason a
@@ -109,13 +131,14 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) ->
             lines.append(FittedLine("", 0.0))
             continue
         widths = [text_width(word, face, size) for word in words]
-        if any(width > measure for width in widths):
+        indent = first_indent if not lines else 0.0
+        if any(width > measure - indent for width in widths):
             # A word wider than the page has no word-gap solution. Reuse the
             # character breaker so URLs and compound words stay on the page.
-            lines.extend(
-                FittedLine(piece, measure - text_width(piece, face, size))
-                for piece in break_lines(paragraph, face, size, measure)
-            )
+            pieces = break_lines(paragraph, face, size, measure, first_indent=indent)
+            lines.extend(FittedLine(piece, measure - (indent if index == 0 else 0)
+                                    - text_width(piece, face, size))
+                         for index, piece in enumerate(pieces))
             continue
         space = text_width(" ", face, size)
         count = len(words)
@@ -126,11 +149,14 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) ->
             if best[start] == float("inf"):
                 continue
             natural = 0.0
+            available = measure - (indent if start == 0 else 0)
             spaces = 0
             for stop in range(start, count):
                 natural += widths[stop] + (space if stop > start else 0.0)
                 spaces = stop - start
-                slack = measure - natural
+                slack = available - natural
+                if slack < 0 and not allow_tightening:
+                    break
                 final = stop + 1 == count
                 # The last line of a paragraph may end anywhere, so it is scored
                 # on nothing. Charging it for leftover space is what made a
@@ -139,7 +165,7 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) ->
                     if slack < 0:
                         break
                     cost = 0.0
-                elif natural < measure * 0.5:
+                elif natural < available * 0.5:
                     # A line less than half full reads as a break, not as text.
                     # Adding the next word is the only way to improve it, and
                     # the paragraph's last line is exempt above.
@@ -165,7 +191,10 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) ->
         if best[count] == float("inf"):
             # No acceptable chain: fall back to the greedy break rather than
             # emitting nothing, so the text is never silently dropped.
-            lines.extend(_greedy(words, widths, space, size, measure))
+            pieces = break_lines(paragraph, face, size, measure, first_indent=indent)
+            lines.extend(FittedLine(piece, measure - (indent if index == 0 else 0)
+                                    - text_width(piece, face, size))
+                         for index, piece in enumerate(pieces))
             continue
         breaks: list[tuple[int, int]] = []
         position = count
@@ -176,26 +205,8 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float) ->
         breaks.reverse()
         for start, stop in breaks:
             natural = sum(widths[start:stop]) + space * max(0, stop - start - 1)
-            lines.append(FittedLine(" ".join(words[start:stop]), measure - natural))
-    return lines
-
-
-def _greedy(
-    words: list[str], widths: list[float], space: float, size: float, measure: float
-) -> list[FittedLine]:
-    lines: list[FittedLine] = []
-    current: list[int] = []
-    natural = 0.0
-    for index, width in enumerate(widths):
-        candidate = natural + width + (space if current else 0.0)
-        if current and candidate > measure:
-            lines.append(FittedLine(" ".join(words[i] for i in current), measure - natural))
-            current, natural = [index], width
-        else:
-            current.append(index)
-            natural = candidate
-    if current:
-        lines.append(FittedLine(" ".join(words[i] for i in current), measure - natural))
+            lines.append(FittedLine(" ".join(words[start:stop]),
+                                    measure - (indent if start == 0 else 0) - natural))
     return lines
 
 
@@ -207,30 +218,33 @@ class FontSet:
         if missing:
             raise PdfError(f"Missing font file for: {', '.join(sorted(missing))}")
         self.paths = dict(paths)
-        self._codepoints: set[int] = set()
+        self._codepoints: dict[str, set[int]] = {role: set() for role in paths}
         self._faces: dict[str, EmbeddedFont] = {}
 
     def collect(self, role: str, text: str) -> None:
         if role not in self.paths:
             raise PdfError(f"No font configured for the {role} role")
-        before = len(self._codepoints)
-        self._codepoints.update(ord(character) for character in text)
-        if self._faces and len(self._codepoints) != before:
+        codepoints = self._codepoints[role]
+        before = len(codepoints)
+        codepoints.update(ord(character) for character in text)
+        if len(codepoints) != before:
             # Faces are built once from the collected characters. Text seen after
             # a build must widen the subset, otherwise its glyphs are missing.
-            self._faces = {}
+            self._faces.pop(role, None)
 
     def build(self) -> dict[str, EmbeddedFont]:
-        if self._faces:
-            return self._faces
-        if not self._codepoints:
+        if not any(self._codepoints.values()):
             raise PdfError("The document contains no text to render")
         for role, path in self.paths.items():
-            self._faces[role] = _subset_or_fail(path, self._codepoints)
+            if self._codepoints[role] and role not in self._faces:
+                self._faces[role] = _subset_or_fail(path, self._codepoints[role])
         return self._faces
 
     def face(self, role: str) -> EmbeddedFont:
-        return self.build()[role]
+        faces = self.build()
+        if role not in faces:
+            raise PdfError(f"No text collected for the {role} font")
+        return faces[role]
 
     def unmapped(self, role: str, text: str) -> set[str]:
         """Return visible characters the face cannot draw, for an honest error."""
@@ -257,6 +271,9 @@ class Block:
     space_before: float = 0.0
     space_after: float = 0.0
     new_page: bool = False
+    columns: int | None = None
+    decorated: bool = True
+    bookmark: str = ""
 
 
 class Document:
@@ -270,6 +287,7 @@ class Document:
         margins: tuple[float, float, float, float] = (56.0, 56.0, 56.0, 64.0),
         mirror: bool = False,
         baseline: float | None = None,
+        metadata: Mapping[str, str] | None = None,
     ) -> None:
         self.fonts = fonts
         self.width, self.height = page_size
@@ -279,8 +297,9 @@ class Document:
         # sits visibly off centre when the file is printed double-sided.
         self.mirror = mirror
         self.baseline = baseline
+        self.metadata = dict(metadata or {})
         self.blocks: list[Block] = []
-        self.furniture: dict[str, list[Line]] = {}
+        self.furniture: dict[str, list[PageFurniture]] = {}
         self.omit_first: set[str] = set()
 
     @property
@@ -291,23 +310,25 @@ class Document:
         """Round a baseline onto the baseline grid, when one is set."""
         if not self.baseline:
             return cursor
-        return round(cursor / self.baseline) * self.baseline
+        return math.floor(cursor / self.baseline + 1e-9) * self.baseline
 
     def add(self, block: Block) -> None:
         self.fonts.collect(block.role, block.text)
         self.blocks.append(block)
 
     def page_furniture(self, text: str, *, role: str, size: float, position: str,
-                       omit_first: bool = False) -> None:
+                       omit_first: bool = False, literal: bool = False) -> None:
         """Register running heads or folios drawn on the rendered pages.
 
-        ``{folio}`` in the text becomes the page number. A title page carries no
-        folio in a printed book, so ``omit_first`` leaves the first page bare.
+        ``{folio}`` and ``{pages}`` become physical page numbers and totals.
+        ``literal`` keeps entered headers inert; ``omit_first`` omits furniture
+        on the first page, while undecorated frontmatter omits it on every page.
         """
-        self.fonts.collect(role, text + ("0123456789" if "{folio}" in text else ""))
+        numbered = not literal and ("{folio}" in text or "{pages}" in text)
+        self.fonts.collect(role, text + ("0123456789" if numbered else ""))
         self.furniture[position] = [
             *self.furniture.get(position, []),
-            Line(text, 0.0, 0.0, size, role),
+            PageFurniture(text, role, size, literal),
         ]
         if omit_first:
             self.omit_first.add(position)
@@ -318,38 +339,44 @@ class Document:
         page = Page(self.width, self.height)
         cursor = self.height - self.top
 
-        def new_page() -> None:
+        def new_page(decorated: bool) -> None:
             nonlocal page, cursor
             pages.append(page)
-            page = Page(self.width, self.height)
+            page = Page(self.width, self.height, decorated=decorated)
             cursor = self.height - self.top
 
         for block in self.blocks:
             if block.new_page and page.lines:
-                new_page()
+                new_page(block.decorated)
+            if not page.lines:
+                page.decorated = block.decorated
             if block.space_before and cursor < self.height - self.top:
-                cursor -= self._snap(block.space_before)
+                cursor -= block.space_before
             face = faces[block.role]
             step = block.size * block.leading
             # A submission sheet is a fixed character grid, not prose: it is
             # broken at the measure and never spaced out, because the column
             # count is the contract rather than a typographic preference.
-            if block.align == GRID:
+            if block.align == GRID or block.columns is not None:
                 pieces = [FittedLine(piece, 0.0) for piece in break_lines(
-                    block.text, face, block.size, self.measure - block.indent)]
+                    block.text, face, block.size, self.measure,
+                    first_indent=block.indent, columns=block.columns)]
             else:
                 pieces = fit_paragraph(
-                    block.text, face, block.size, self.measure - block.indent
+                    block.text, face, block.size, self.measure, first_indent=block.indent,
+                    allow_tightening=block.align == JUSTIFIED,
                 )
             origin = self._origin(len(pages))
             for index, piece in enumerate(pieces):
-                if cursor - step < self.bottom - 1e-6:
-                    new_page()
+                baseline = self._snap(cursor - block.size)
+                descent = face.metrics.descent * block.size / face.metrics.units_per_em
+                if baseline + descent < self.bottom - 1e-6:
+                    new_page(block.decorated)
                     origin = self._origin(len(pages))
                 # Baselines sit on the grid, and the left edge follows the page
                 # number once mirrored margins are on.
                 baseline = self._snap(cursor - block.size)
-                line = Line(piece.text, origin + block.indent, baseline, block.size,
+                line = Line(piece.text, origin + (block.indent if index == 0 else 0), baseline, block.size,
                             block.role)
                 # The last line of a paragraph is not justified: stretching it
                 # to the margin is the classic give-away of amateur typesetting.
@@ -365,8 +392,12 @@ class Document:
                         block.role,
                     )
                 page.lines.append(line)
-                cursor -= step
-            cursor -= self._snap(block.space_after)
+                if index == 0 and block.bookmark:
+                    page.bookmarks.append((block.bookmark, baseline + block.size))
+                # Advance from the drawn baseline, so quantization cannot make
+                # the following block reuse it at another point size.
+                cursor = baseline + block.size - step
+            cursor -= block.space_after
         pages.append(page)
         return [self._decorate(page, index, len(pages)) for index, page in enumerate(pages)]
 
@@ -400,11 +431,14 @@ class Document:
         return Line(line.text, line.x, line.y, line.size, line.role, word_spacing=extra * space)
 
     def _decorate(self, page: Page, index: int, total: int) -> Page:
+        if not page.decorated:
+            return page
         for position, entries in self.furniture.items():
             if index == 0 and position in self.omit_first:
                 continue
             for entry in entries:
-                text = entry.text.replace("{folio}", str(index + 1))
+                text = (entry.text if entry.literal else
+                        entry.text.replace("{folio}", str(index + 1)).replace("{pages}", str(total)))
                 face = self.fonts.face(entry.role)
                 if position == "footer-centre":
                     y = self.bottom / 2
@@ -412,6 +446,9 @@ class Document:
                 elif position == "footer-right":
                     y = self.bottom / 2
                     x = self._origin(index) + self.measure - text_width(text, face, entry.size)
+                elif position == "header-centre":
+                    y = self.height - self.top / 2
+                    x = self._origin(index) + (self.measure - text_width(text, face, entry.size)) / 2
                 else:
                     y = self.height - self.top / 2
                     x = self.left
@@ -428,12 +465,19 @@ class Document:
                         f"U+{ord(character):04X}" for character in sorted(missing)
                     )
                     raise PdfError(f"Font for {line.role} cannot draw: {characters}")
-        return _write_pdf(pages, self.fonts.build())
+        return _write_pdf(pages, self.fonts.build(), metadata=self.metadata)
 
 
-def _to_unicode_cmap(face: EmbeddedFont) -> str:
-    """Map each embedded glyph id back to the character it stands for."""
-    entries = sorted((glyph, codepoint) for codepoint, glyph in face.glyph_ids.items() if glyph)
+def _cid_map(face: EmbeddedFont) -> dict[int, int]:
+    codepoints = sorted(cp for cp, glyph in face.glyph_ids.items() if glyph)
+    if len(codepoints) > 0xFFFF:
+        raise PdfError("A font has too many distinct Unicode characters for a PDF CID map")
+    return {cp: index for index, cp in enumerate(codepoints, 1)}
+
+
+def _to_unicode_cmap(face: EmbeddedFont, cids: Mapping[int, int] | None = None) -> str:
+    """Map unique PDF character codes back to their original Unicode text."""
+    entries = sorted((cid, cp) for cp, cid in (cids or _cid_map(face)).items())
     chunks = [
         "/CIDInit /ProcSet findresource begin",
         "12 dict begin",
@@ -464,13 +508,11 @@ def _utf16_units(codepoint: int) -> list[int]:
 
 
 def _escape_name(text: str) -> str:
-    return "".join(
-        character if 33 <= ord(character) <= 126 and character not in "()<>[]{}/%" else "#"
-        for character in text
-    )
+    return "".join(chr(byte) if 33 <= byte <= 126 and chr(byte) not in "()<>[]{}/%#"
+                   else f"#{byte:02X}" for byte in text.encode("utf-8"))
 
 
-def _show(line: Line, face: EmbeddedFont) -> str:
+def _show(line: Line, face: EmbeddedFont, cids: Mapping[int, int] | None = None) -> str:
     """Return the text-showing operator for one line.
 
     Justified lines use a TJ array with an explicit adjustment at every word
@@ -481,10 +523,10 @@ def _show(line: Line, face: EmbeddedFont) -> str:
     number moves left, so extra word space is a negative adjustment.
     """
     if not line.word_spacing:
-        return f"<{_hex_glyphs(line.text, face)}> Tj"
+        return f"<{_hex_glyphs(line.text, face, cids)}> Tj"
     adjustment = round(-line.word_spacing * 1000 / line.size)
     if adjustment == 0:
-        return f"<{_hex_glyphs(line.text, face)}> Tj"
+        return f"<{_hex_glyphs(line.text, face, cids)}> Tj"
     tokens = line.text.split(" ")
     array: list[str] = []
     for index, word in enumerate(tokens):
@@ -492,17 +534,23 @@ def _show(line: Line, face: EmbeddedFont) -> str:
         # and replacing it with the adjustment alone shortens the line by the
         # whole natural word spacing, which is roughly the error being fixed.
         chunk = word if index == len(tokens) - 1 else f"{word} "
-        array.append(f"<{_hex_glyphs(chunk, face)}>")
+        array.append(f"<{_hex_glyphs(chunk, face, cids)}>")
         if index < len(tokens) - 1:
             array.append(str(adjustment))
     return "[" + " ".join(array) + "] TJ"
 
 
-def _hex_glyphs(text: str, face: EmbeddedFont) -> str:
-    return "".join(f"{face.glyph_ids.get(ord(character), 0):04X}" for character in text)
+def _hex_glyphs(text: str, face: EmbeddedFont, cids: Mapping[int, int] | None = None) -> str:
+    mapping = cids if cids is not None else _cid_map(face)
+    return "".join(f"{mapping.get(ord(character), 0):04X}" for character in text)
 
 
-def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont]) -> bytes:
+def _pdf_string(text: str) -> bytes:
+    return b"<FEFF" + text.encode("utf-16-be").hex().upper().encode("ascii") + b">"
+
+
+def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont], *,
+               metadata: Mapping[str, str] | None = None) -> bytes:
     roles = sorted({line.role for page in pages for line in page.lines})
     objects: dict[int, bytes] = {}
 
@@ -527,8 +575,12 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont]) -> bytes:
 
     catalog, pages_obj = add(b""), add(b"")
     resources: dict[str, int] = {}
+    character_codes = {role: _cid_map(faces[role]) for role in roles}
     for role in roles:
         face = faces[role]
+        cids = character_codes[role]
+        prefix = "".join(chr(65 + byte % 26) for byte in hashlib.sha256(face.data).digest()[:6])
+        font_name = _escape_name(prefix + "+" + face.metrics.postscript_name)
         scale = 1000 / face.metrics.units_per_em
         font_file = add(
             stream(
@@ -540,7 +592,7 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont]) -> bytes:
         bbox = " ".join(str(round(value * scale, 2)) for value in face.metrics.bbox)
         descriptor = add(
             (
-                f"<< /Type /FontDescriptor /FontName /{_escape_name(role)} /Flags {face.metrics.flags} "
+                f"<< /Type /FontDescriptor /FontName /{font_name} /Flags {face.metrics.flags} "
                 f"/FontBBox [{bbox}] /ItalicAngle {face.metrics.italic_angle:.1f} "
                 f"/Ascent {round(face.metrics.ascent * scale, 2)} "
                 f"/Descent {round(face.metrics.descent * scale, 2)} "
@@ -549,23 +601,25 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont]) -> bytes:
             ).encode("ascii")
         )
         widths = " ".join(
-            f"{face.glyph_ids[codepoint]} [{round(face.advances.get(codepoint, 0) * scale)}]"
-            for codepoint in sorted(face.glyph_ids)
+            f"{cids[codepoint]} [{round(face.advances.get(codepoint, 0) * scale)}]"
+            for codepoint in sorted(cids)
         )
+        glyph_map = add(stream(b"\0\0" + b"".join(
+            face.glyph_ids[cp].to_bytes(2, "big") for cp in sorted(cids))))
         descendant = add(
             (
-                f"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{_escape_name(role)} "
+                f"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{font_name} "
                 f"/CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> "
                 f"/FontDescriptor {descriptor} 0 R /DW 1000 /W [{widths}] "
-                f"/CIDToGIDMap /Identity >>"
+                f"/CIDToGIDMap {glyph_map} 0 R >>"
             ).encode("ascii")
         )
         # Without /ToUnicode a reader has no way back from a glyph id to the
         # character, so the exported text is neither searchable nor copyable.
-        to_unicode = add(stream(_to_unicode_cmap(face).encode("ascii")))
+        to_unicode = add(stream(_to_unicode_cmap(face, cids).encode("ascii")))
         resources[role] = add(
             (
-                f"<< /Type /Font /Subtype /Type0 /BaseFont /{_escape_name(role)} "
+                f"<< /Type /Font /Subtype /Type0 /BaseFont /{font_name} "
                 f"/Encoding /Identity-H /DescendantFonts [{descendant} 0 R] "
                 f"/ToUnicode {to_unicode} 0 R >>"
             ).encode("ascii")
@@ -579,7 +633,7 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont]) -> bytes:
                 "BT",
                 f"/F{roles.index(line.role) + 1} {line.size:.2f} Tf",
                 f"1 0 0 1 {line.x:.2f} {line.y:.2f} Tm",
-                _show(line, faces[line.role]),
+                _show(line, faces[line.role], character_codes[line.role]),
                 "ET",
             ]
         content_object = add(stream("\n".join(parts).encode("ascii")))
@@ -594,12 +648,36 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont]) -> bytes:
             )
         )
 
-    objects[catalog] = f"<< /Type /Catalog /Pages {pages_obj} 0 R >>".encode("ascii")
+    navigation = [(title, y, page_objects[index]) for index, page in enumerate(pages)
+                  for title, y in page.bookmarks]
+    outline_entry = b""
+    if navigation:
+        outline_root = add(b"")
+        outline_nodes = [add(b"") for _entry in navigation]
+        for index, (title, y, destination) in enumerate(navigation):
+            links = f" /Parent {outline_root} 0 R /Dest [{destination} 0 R /XYZ null {y:.2f} null]"
+            if index:
+                links += f" /Prev {outline_nodes[index - 1]} 0 R"
+            if index + 1 < len(outline_nodes):
+                links += f" /Next {outline_nodes[index + 1]} 0 R"
+            objects[outline_nodes[index]] = b"<< /Title " + _pdf_string(title) + links.encode("ascii") + b" >>"
+        objects[outline_root] = (
+            f"<< /Type /Outlines /First {outline_nodes[0]} 0 R /Last {outline_nodes[-1]} 0 R "
+            f"/Count {len(outline_nodes)} >>".encode("ascii"))
+        outline_entry = f" /Outlines {outline_root} 0 R".encode("ascii")
+    settings = metadata or {}
+    language = b" /Lang " + _pdf_string(settings["language"]) if settings.get("language") else b""
+    objects[catalog] = (f"<< /Type /Catalog /Pages {pages_obj} 0 R".encode("ascii")
+                        + language + outline_entry + b" >>")
     objects[pages_obj] = (
         f"<< /Type /Pages /Kids [{' '.join(f'{n} 0 R' for n in page_objects)}] "
         f"/Count {len(page_objects)} >>"
     ).encode("ascii")
 
+    info = add(b"<< " + b" ".join(
+        b"/" + key.encode("ascii") + b" " + _pdf_string(settings[value])
+        for key, value in (("Title", "title"), ("Author", "author")) if settings.get(value)
+    ) + b" >>") if any(settings.get(key) for key in ("title", "author")) else None
     out = bytearray(b"%PDF-1.4\n% Lixity composed document\n")
     offsets: dict[int, int] = {}
     for number in sorted(objects):
@@ -610,9 +688,9 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont]) -> bytes:
     out += f"xref\n0 {size}\n".encode("ascii") + b"0000000000 65535 f \n"
     for number in range(1, size):
         out += f"{offsets[number]:010d} 00000 n \n".encode("ascii")
-    out += (
-        f"trailer\n<< /Size {size} /Root {catalog} 0 R >>\nstartxref\n{xref_at}\n%%EOF\n"
-    ).encode("ascii")
+    info_entry = f" /Info {info} 0 R" if info is not None else ""
+    out += (f"trailer\n<< /Size {size} /Root {catalog} 0 R{info_entry} >>\n"
+            f"startxref\n{xref_at}\n%%EOF\n").encode("ascii")
     return bytes(out)
 
 

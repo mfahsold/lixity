@@ -32,7 +32,7 @@
   "name": "Lixity",
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "3.0.1",
+  "softwareVersion": "0.3.0",
   "description": "Local manuscript analysis, passage search, PDF reports and reading copies, and a traceable research workspace for authors, editors and researchers.",
   "url": "https://mfahsold.github.io/lixity/",
   "codeRepository": "https://github.com/mfahsold/lixity",
@@ -51,7 +51,7 @@
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v3.0.1</span></a>
+    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v0.3.0</span></a>
     <nav class="site-nav" aria-label="Main navigation">
       <a href="guides/first-look.html">First look</a>
       <a href="#visual-suite">Features</a>
@@ -66,26 +66,19 @@
   <section class="hero">
     <h1 class="hero-title">Understand your manuscript.</h1>
     <p class="hero-sub">Read the patterns in your writing. Keep the evidence behind your decisions.</p>
-    <p>Lixity helps authors, editors and researchers see how a manuscript changes from chapter to chapter. Explore sentence lengths, word use, dialogue and tense, then read the passages behind each result.</p>
+    <p>Explore sentence lengths, word use, dialogue and tense from chapter to chapter. Read the passages behind each result, and keep research sources connected to your writing decisions.</p>
     <div class="hero-cta">
       <a class="btn primary" href="demo/report.html">Try the example</a>
       <a class="btn" href="guides/first-look.html">Three-minute first look</a>
     </div>
     <p>Explore an invented manuscript in a read-only report. No installation, account or manuscript upload. <a href="guides/installation.html">Install Lixity for your own writing</a>.</p>
-    <p class="release-note">Current release: <a href="releases/v3.0.1.md">v3.0.1</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
-    <p class="release-note">In 2.3.0: explore the public example before installing, and attach image references to dossiers from the CLI through the same guarded workflow as the app. <a href="research/USAGE.md#keep-a-visual-reference-in-a-dossier">Read the image workflow</a>.</p>
+    <p class="release-note">Current release: <a href="releases/v0.3.0.md">v0.3.0</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
     <p class="license-note">Free for projects with no commercial purpose. Books intended for sale, including self-publishing, need a separate written commercial license. <a href="#licensing">License details</a>.</p>
   </section>
 
   <section id="core-pillars" class="intro">
     <h2>Explore the text. Follow the evidence.</h2>
     <p>Begin with a Markdown manuscript, or open a project with its existing research archive. The dashboard keeps manuscript analysis, research and project settings in three clear views.</p>
-  </section>
-
-  <section id="origin" class="intro">
-    <h2>Used while writing a debut novel.</h2>
-    <p>Matthias Fahsold developed Lixity at ROST Services GmbH and used it while writing his own debut novel. He is the software architect and developer behind the product.</p>
-    <p>Lixity brings manuscript patterns and the evidence behind writing decisions into the same workspace. The public example uses invented text to show how to explore a result and return to its passage. <a href="guides/first-look.html">Follow the three-minute walkthrough</a>.</p>
   </section>
 
   <section id="visual-suite" aria-label="Features and examples">
@@ -138,6 +131,7 @@
         <p>Add a local PNG/JPEG with a description, edit one dossier section, or start a linked claim or decision from the current topic. Saved images keep their exact version; they have no text scores and are never fetched from remote pages.</p>
         <p><strong>Since v2.4.0:</strong> selected source text can prepare an evidence-link draft with the whole-paragraph citation context shown before saving. Read a chosen dossier beside the manuscript with the optional read-only <strong>Dossier alongside</strong> view. <a href="guides/research-pdf.html#evidence-draft">Follow the reading and evidence workflow</a>.</p>
         <p><strong>Since v3.0.0:</strong> organize claim periods in <strong>Timeline</strong>, record proposed cause/effect links between exact claim versions, and find citation passages by keywords. These are your interpretations, not verified historical facts. The first saved causal link opts the archive into v6; claim-list API consumers must update to the new envelope. <a href="guides/research-pdf.html#claim-chronology">Read the workflow and compatibility limits</a>.</p>
+        <p><strong>Since v0.3.0:</strong> associate a selected manuscript quote with an exact claim version after permitting local quote retention. Changed anchors request review and never repin automatically. <a href="guides/research-pdf.html#manuscript-claims">Link manuscript text to a claim</a>.</p>
         <a href="guides/research-pdf.html">Follow the research workflow</a>
       </div>
       <figure class="shot">
@@ -154,7 +148,7 @@
         <a href="guides/installation.html#first-dashboard">Open your first project</a>
       </div>
       <figure class="shot">
-        <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="1257" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" loading="lazy" decoding="async"/></a>
+        <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="1324" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" loading="lazy" decoding="async"/></a>
         <figcaption>Project settings in one place. <a href="screenshots/dashboard-project-import.png">Import preview</a> · <a href="screenshots/dashboard-project-settings-mobile.png">Mobile view</a>.</figcaption>
       </figure>
     </article>
@@ -164,7 +158,8 @@
         <h2>Read a report in the terminal</h2>
         <p>Run <code>lixity analyze manuscript.md --language de</code> for a readable report. Other commands examine paragraphs, dialogue, pacing, style and research records.</p>
         <p>Export an A4 analysis report, an A5 reading copy or an A4 submission sheet with <code>lixity pdf</code>. Fonts are embedded and the text stays searchable; the renderer provides reading layouts without PDF/X production preflight. <a href="USAGE.md#lixity-pdf">Choose a PDF layout</a>.</p>
-        <p><strong>Since v2.4.0:</strong> the native workspace also offers manuscript PDF downloads at the top of Manuscript &amp; Analysis. Choose a layout in <strong>PDF export</strong> and select <strong>Download PDF</strong>. <a href="guides/research-pdf.html#manuscript-export">Find the manuscript PDF workflow</a>.</p>
+        <p><strong>Since v0.3.0:</strong> open the collapsed <strong>PDF export</strong> menu above all three workspace views. Choose a layout, then <strong>Download PDF</strong>. <a href="guides/research-pdf.html#manuscript-export">Find the manuscript PDF workflow</a>.</p>
+        <p><strong>Since v0.3.0:</strong> optional <strong>Publication</strong> fields stay collapsed in Project → Settings and feed the same A5 composer as the CLI. Entered imprint text, PDF metadata, bookmarks and page headers help prepare a reading copy. <a href="guides/research-pdf.html#publication">Read the publication workflow and Germany print/digital limits</a>.</p>
         <p>For software integration, use JSON output or the Python API. Both share the dashboard's analysis pipeline.</p>
         <a href="USAGE.md">Browse the command reference</a>
       </div>
@@ -174,6 +169,12 @@
       </figure>
     </article>
     <p class="capture-note">Open an image to see it at full size. Examples use public-domain literature or synthetic project records. <a href="screenshots/README.md">More views and capture details</a>.</p>
+  </section>
+
+  <section id="origin" class="intro">
+    <h2>Used while writing a debut novel.</h2>
+    <p>Matthias Fahsold developed Lixity at ROST Services GmbH and used it while writing his own debut novel. He is the software architect and developer behind the product.</p>
+    <p>Version 0.3.0 describes development maturity before 1.0 and retains existing features and historical releases. Product, JSON and archive versions are independent. <a href="research/USAGE.md">Check research workflows and compatibility</a>.</p>
   </section>
 
   <section id="guides" class="reading-section">
@@ -188,7 +189,7 @@
   <section id="installation" class="reading-section">
     <h2>Install the current release</h2>
     <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> to install the release wheel with managed Python. No Git or separate Python install is needed. The <a href="guides/installation.html">installation guide</a> covers Windows, macOS and Linux.</p>
-    <pre class="cmd-block">uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.1/lixity-3.0.1-py3-none-any.whl"
+    <pre class="cmd-block">uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
 uv tool update-shell</pre>
     <p>Open a new terminal, then verify and start the app:</p>
     <pre class="cmd-block">lixity --version

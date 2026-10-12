@@ -59,38 +59,5 @@ jobs:
         with:
           python-version: "3.12"
       - run: pip install build
-      - run: python -m build --wheel
-      - name: Verify wheel matches package source and version metadata
-        run: |
-          python - <<'PY'
-          import glob, re, sys, zipfile
-          from pathlib import Path
-
-          wheel = glob.glob("dist/*.whl")[0]
-          zf = zipfile.ZipFile(wheel)
-          names = set(zf.namelist())
-          source = Path("src/lixity")
-          files = set(source.rglob("*.py")) | {source / "py.typed"}
-          files.update(path for path in (source / "ui/assets").iterdir() if path.is_file())
-          expected_files = {"lixity/" + path.relative_to(source).as_posix(): path for path in files}
-          shipped = {name for name in names if name.startswith("lixity/")}
-          missing = sorted(expected_files.keys() - shipped)
-          extra = sorted(shipped - expected_files.keys())
-          if missing or extra:
-              sys.exit(f"wheel package members differ: missing={missing}, extra={extra}")
-          changed = sorted(name for name, path in expected_files.items()
-                           if zf.read(name) != path.read_bytes())
-          if changed:
-              sys.exit(f"wheel contents differ from source: {changed}")
-
-          version_py = Path("src/lixity/_version.py").read_text(encoding="utf-8")
-          m = re.search(r'__version__\s*=\s*"([^"]+)"', version_py)
-          if not m:
-              sys.exit("could not read __version__ from _version.py")
-          expected = m.group(1)
-          dist_info = next(n for n in names if n.endswith(".dist-info/METADATA"))
-          metadata = zf.read(dist_info).decode("utf-8")
-          if f"Version: {expected}" not in metadata:
-              sys.exit(f"wheel METADATA version does not match {expected}")
-          print(f"wheel OK: {expected}")
-          PY
+      - name: Build and verify wheel and source archive
+        run: python scripts/check_release.py --build

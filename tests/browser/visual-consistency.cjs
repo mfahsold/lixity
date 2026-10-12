@@ -18,6 +18,10 @@ print(json.dumps({"analysis": runpy.run_path('tests/test_ui_contract.py')['_full
 assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
 const fixtures = JSON.parse(fixture.stdout);
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-visual-consistency-'));
+const siteRoot = path.join(artifacts, 'site');
+const staged = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'),
+  ['scripts/stage_pages.py', '--output', siteRoot], {cwd: root, encoding: 'utf8'});
+assert.equal(staged.status, 0, staged.stderr);
 const contrast = (first, second) => {
   const luminance = value => value.match(/[\d.]+/g).slice(0, 3).map(Number).map(v => v / 255)
     .map(v => v <= .04045 ? v / 12.92 : ((v + .055) / 1.055) ** 2.4)
@@ -63,8 +67,8 @@ async function checkTypography(page, label) {
         if (url.pathname === '/app' || url.pathname === '/identity') return route.fulfill({contentType: 'text/html', body: fixtures[url.pathname === '/app' ? 'analysis' : 'identity']});
         if (url.pathname.startsWith('/api/')) return route.fulfill({json: {ok: true, locked: true, records: []}});
         const relative = url.pathname.replace(/^\/site\//, '') || 'index.html';
-        const file = path.resolve(root, 'docs', relative);
-        assert.ok(file.startsWith(path.join(root, 'docs') + path.sep));
+        const file = path.resolve(siteRoot, relative);
+        assert.ok(file.startsWith(siteRoot + path.sep));
         return route.fulfill({contentType: file.endsWith('.css') ? 'text/css' : file.endsWith('.js') ? 'text/javascript' : file.endsWith('.svg') ? 'image/svg+xml' : file.endsWith('.png') ? 'image/png' : 'text/html', body: fs.readFileSync(file)});
       });
       const app = await context.newPage(), site = await context.newPage(), identity = await context.newPage();

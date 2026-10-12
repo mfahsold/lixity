@@ -1,10 +1,13 @@
 """Settings retain project author identity without rewriting manuscript data."""
 
+from html.parser import HTMLParser
 from pathlib import Path
+from typing import ClassVar
 from unittest.mock import patch
 
 import pytest
 
+from lixity.io import FileUtils
 from lixity.server.handler import LixityServerHandler
 from lixity.server.views import build_server_dashboard
 
@@ -121,7 +124,60 @@ def test_unreadable_manuscript_reports_unavailable_identity(tmp_path: Path):
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_text("# Synthetic Project\n\nby Synthetic Author\n", encoding="utf-8")
     (tmp_path / "lixity.toml").write_text('author_name = "Synthetic Author"\n', encoding="utf-8")
-    with patch("builtins.open", side_effect=PermissionError("Synthetic read failure")):
+    with patch("lixity.server.views.FileUtils.read_source_snapshot", side_effect=PermissionError("Synthetic read failure")):
         _, info = build_server_dashboard(str(manuscript), title="Synthetic Project", language="en")
     assert info["identity_check"]["title"]["status"] == "unavailable"
     assert info["identity_check"]["author_name"]["status"] == "unavailable"
+
+
+def test_nda_default_uses_the_same_resolved_h1_as_the_project_header(tmp_path: Path):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("# Synthetic target title\n\n## Morning\n\nA synthetic sentence.\n", encoding="utf-8")
+    html, _ = build_server_dashboard(str(manuscript), project_root=tmp_path, language="en")
+    assert '<h1>Synthetic target title</h1>' in html
+    class NdaField(HTMLParser):
+        value = None
+
+        def handle_starttag(self, tag, attrs):
+            values = dict(attrs)
+            if tag == "input" and values.get("id") == "nda-project-name":
+                self.value = values.get("value")
+
+    parser = NdaField()
+    parser.feed(html)
+    assert parser.value == "Synthetic target title"
+
+
+def test_project_open_reads_the_manuscript_once_through_the_shared_snapshot_reader(tmp_path: Path):
+    source = tmp_path / "target.md"
+    source.write_text("# Synthetic target\n\n## Morning\n\nA synthetic sentence.\n", encoding="utf-8")
+
+    class Handler(LixityServerHandler):
+        workspace_root = str(tmp_path / "previous")
+        source_input = None
+        title = None
+        title_custom = False
+        project_open_overrides: ClassVar[dict] = {}
+
+        def _json(self, payload, code=200):
+            self.response = code, payload
+
+    handler = Handler.__new__(Handler)
+    reads = []
+    path_read = Path.read_text
+    snapshot_read = FileUtils.read_source_snapshot
+
+    def reading_path(path, *args, **kwargs):
+        if path == source:
+            reads.append("path")
+        return path_read(path, *args, **kwargs)
+
+    def reading_snapshot(path, *args, **kwargs):
+        if Path(path) == source:
+            reads.append("snapshot")
+        return snapshot_read(path, *args, **kwargs)
+
+    with patch.object(Path, "read_text", reading_path), patch.object(FileUtils, "read_source_snapshot", reading_snapshot):
+        handler._handle_project_open({"path": str(source)})
+    assert handler.response[0] == 200
+    assert reads == ["snapshot"]

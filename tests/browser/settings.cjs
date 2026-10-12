@@ -30,8 +30,8 @@ for locale in ("en", "de", "fr", "es", "it", "pt", "nl"):
          "empty": render_dashboard([], [], controls=True, language_key=locale, labels=labels,
          enabled_actions=("analyze","nda-draft"))}
 print(json.dumps({"baseline":baseline,"fixtures":fixtures}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 8*1024*1024});
-assert.equal(fixture.status, 0, fixture.stderr);
+`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 16*1024*1024});
+assert.equal(fixture.status, 0, fixture.stderr || fixture.error && fixture.error.message);
 const data=JSON.parse(fixture.stdout);
 const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-identity-settings-');
 
@@ -62,7 +62,7 @@ const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-iden
     assert.ok(groups.every(group => group.bottom === '0px' && group.margin === '0px'));
     assert.deepEqual(groups.map(group => group.padding), ['0px', '16px', '16px']);
     await page.locator('#controls').screenshot({path: '/tmp/lixity-controls-fixed.png'});
-    await page.locator('.settings-form .settings-advanced > summary').click();
+    await page.locator('#settings-thresholds > summary').click();
     assert.equal(await page.locator('#set-z-mild').inputValue(), '2.5');
     assert.equal(await page.locator('#set-fdr-q').inputValue(), '0.05');
     await page.locator('#set-z-strong').fill('1.5');
@@ -157,7 +157,7 @@ const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-iden
       assert.equal(await author.inputValue(),draft,'Failed settings preserve the author input');
       assert.equal(await author.isDisabled(),false);
       assert.equal(settingsPosts[0].author_name,draft.trim(),'Only outer whitespace is normalized');
-      assert.equal(settingsPosts[0].title,'Synthetic project','Existing title stays in the ordinary settings payload');
+      assert.equal(settingsPosts[0].title,undefined,'Changing the author does not persist the unchanged display title');
       assert.equal(settingsPosts[0].fdr_q,0.05);
       assert.ok((await page.locator('#ctl-status').textContent()).includes('Synthetic settings failure'));
       await page.locator('#settings-form').screenshot({path:path.join(identityArtifacts,`${language}-${width}.png`)});

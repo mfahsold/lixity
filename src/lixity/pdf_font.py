@@ -22,10 +22,12 @@ SFNT_TRUETYPE = 0x00010000
 SFNT_CFF = 0x4F54544F  # 'OTTO'
 UNIFONT_MAGIC = 0x74746366  # 'ttcf'
 
-# fsType bits: installable embedding and its subsets are the only usable ones.
+# OpenType OS/2 embedding permissions; versions 0–1 ignore the high bits.
 FS_TYPE_RESTRICTED = 0x0002
 FS_TYPE_PREVIEW_AND_PRINT = 0x0004
-FS_TYPE_NO_EMBEDDING = 0x0008
+FS_TYPE_EDITABLE = 0x0008
+FS_TYPE_NO_SUBSETTING = 0x0100
+FS_TYPE_BITMAP_ONLY = 0x0200
 
 
 class FontError(Exception):
@@ -42,6 +44,7 @@ class FontMetrics:
     bbox: tuple[int, int, int, int]
     stem_v: int
     flags: int
+    postscript_name: str = "TrueTypeFont"
 
 
 @dataclass(frozen=True)
@@ -62,14 +65,20 @@ class EmbeddedFont:
 
 
 def _u16(data: bytes, offset: int) -> int:
+    if offset < 0 or offset + 2 > len(data):
+        raise FontError("Font table is truncated")
     return int(struct.unpack_from(">H", data, offset)[0])
 
 
 def _s16(data: bytes, offset: int) -> int:
+    if offset < 0 or offset + 2 > len(data):
+        raise FontError("Font table is truncated")
     return int(struct.unpack_from(">h", data, offset)[0])
 
 
 def _u32(data: bytes, offset: int) -> int:
+    if offset < 0 or offset + 4 > len(data):
+        raise FontError("Font table is truncated")
     return int(struct.unpack_from(">I", data, offset)[0])
 
 
@@ -255,18 +264,16 @@ def _composite_closure(glyf: bytes, loca: list[int], roots: set[int]) -> set[int
 
 
 def _build_cmap(mapping: dict[int, int]) -> bytes:
-    """Emit a format 4 subtable, plus format 12 when non-BMP codepoints are used."""
+    """Use BMP format 4 when bounded, and format 12 for the full repertoire."""
     bmp = {cp: gid for cp, gid in mapping.items() if cp <= 0xFFFF}
-    full = {cp: gid for cp, gid in mapping.items() if cp > 0xFFFF}
-    if not bmp:
-        bmp, full = {0xFFFD: mapping[next(iter(mapping))]}, {}
+    full = mapping if any(cp > 0xFFFF for cp in mapping) else {}
 
     segments: list[tuple[int, int]] = []
     for codepoint in sorted(bmp):
         if (
             segments
             and codepoint == segments[-1][1] + 1
-            and bmp[codepoint] == bmp.get(segments[-1][1], -1) + (codepoint - segments[-1][0])
+            and bmp[codepoint] == bmp.get(segments[-1][1], -1) + 1
             and segments[-1][1] - segments[-1][0] < 0xFFFF
         ):
             segments[-1] = (segments[-1][0], codepoint)
@@ -282,12 +289,14 @@ def _build_cmap(mapping: dict[int, int]) -> bytes:
         ends.append(end)
         starts.append(start)
         # The (0,0) and (0xFFFF,0xFFFF) sentinels must resolve to the missing glyph.
-        deltas.append(0 if start == 0xFFFF else (bmp.get(start, 0) - start) & 0xFFFF)
+        deltas.append(1 if start == 0xFFFF else (bmp.get(start, 0) - start) & 0xFFFF)
         offsets.append(0)
     # Format 4 order is endCode, reservedPad, startCode, idDelta, idRangeOffset.
     # idRangeOffset is always zero here, so glyphIdArray stays empty and the
     # declared length must match exactly or fontTools and viewers reject it.
     length = 16 + seg_count * 8
+    if length > 0xFFFF:
+        return _full_unicode_cmap(mapping)
     entry_selector = max(0, (seg_count - 1).bit_length() - 1)
     search_range = 2 << entry_selector
     subtable = (
@@ -308,25 +317,84 @@ def _build_cmap(mapping: dict[int, int]) -> bytes:
         )
     )
 
-    record = struct.pack(">HHI", 3, 1, 12)
     if not full:
-        return struct.pack(">HH", 0, 1) + record + subtable
+        return struct.pack(">HHHHI", 0, 1, 3, 1, 12) + subtable
+
+    return _full_unicode_cmap(full, subtable)
+
+
+def _full_unicode_cmap(mapping: dict[int, int], bmp_subtable: bytes | None = None) -> bytes:
+    """Share format 12 packing for non-BMP and larger-than-format-4 mappings."""
 
     groups: list[list[int]] = []
-    for codepoint in sorted(full):
+    for codepoint in sorted(mapping):
         if (
             groups
             and codepoint == groups[-1][1] + 1
-            and full[codepoint] == full[groups[-1][1]] + (codepoint - groups[-1][0])
+            and mapping[codepoint] == mapping[groups[-1][1]] + 1
         ):
             groups[-1][1] = codepoint
         else:
             groups.append([codepoint, codepoint])
-    header12 = struct.pack(">HHIII", 12, 0, length + 16, 0, len(groups))
-    body12 = b"".join(struct.pack(">III", start, end, full[start]) for start, end in groups)
-    record12 = struct.pack(">HHI", 3, 10, 4 + 16)
+    header12 = struct.pack(">HHIII", 12, 0, 16 + len(groups) * 12, 0, len(groups))
+    body12 = b"".join(struct.pack(">III", start, end, mapping[start]) for start, end in groups)
+    if bmp_subtable is None:
+        return struct.pack(">HHHHI", 0, 1, 3, 10, 12) + header12 + body12
+    record = struct.pack(">HHI", 3, 1, 20)
+    record12 = struct.pack(">HHI", 3, 10, 20 + len(bmp_subtable))
     header = struct.pack(">HH", 0, 2)
-    return header + record + subtable + record12 + header12 + body12
+    return header + record + record12 + bmp_subtable + header12 + body12
+
+
+def _embedding_permissions(data: bytes) -> None:
+    """Refuse restricted outlines/subsets without misreading editable rights."""
+    if len(data) < 10:
+        raise FontError("Truncated OS/2 embedding permissions")
+    version, fs_type = _u16(data, 0), _u16(data, 8)
+    permission = fs_type & 0x000E
+    if version >= 3 and permission not in (0, 2, 4, 8):
+        raise FontError("Invalid font embedding permissions")
+    # Older tables can combine permissions; the least restrictive takes effect.
+    if permission & FS_TYPE_RESTRICTED and not permission & (
+        FS_TYPE_PREVIEW_AND_PRINT | FS_TYPE_EDITABLE
+    ):
+        raise FontError("Font licence forbids embedding; choose an embeddable TrueType font")
+    if version >= 2:
+        if fs_type & FS_TYPE_NO_SUBSETTING:
+            raise FontError("Font licence forbids subsetting; choose a font permitting subsets")
+        if fs_type & FS_TYPE_BITMAP_ONLY:
+            raise FontError("Font permits bitmap embedding only; TrueType outlines cannot be embedded")
+
+
+def _postscript_name(sfnt: _Sfnt) -> str:
+    if b"name" not in sfnt.tables:
+        return "TrueTypeFont"
+    data = sfnt.table(b"name")
+    if len(data) < 6:
+        raise FontError("Font name table is truncated")
+    choices: list[tuple[int, str]] = []
+    count, strings = _u16(data, 2), _u16(data, 4)
+    for index in range(count):
+        position = 6 + index * 12
+        if position + 12 > len(data):
+            raise FontError("Font name records are truncated")
+        platform, _encoding, _language, name_id, length, offset = struct.unpack_from(
+            ">6H", data, position)
+        if name_id != 6 or strings + offset + length > len(data):
+            continue
+        raw = data[strings + offset:strings + offset + length]
+        try:
+            if platform in (0, 3):
+                name = raw.decode("utf-16-be")
+            elif platform == 1:
+                name = raw.decode("mac_roman")
+            else:
+                continue
+        except UnicodeDecodeError:
+            continue
+        if name.strip():
+            choices.append((2 if platform in (0, 3) else 1, name.strip()))
+    return max(choices)[1] if choices else "TrueTypeFont"
 
 
 def _metrics(sfnt: _Sfnt) -> FontMetrics:
@@ -337,18 +405,18 @@ def _metrics(sfnt: _Sfnt) -> FontMetrics:
     bbox = (_s16(head, 36), _s16(head, 38), _s16(head, 40), _s16(head, 42))
     ascent, descent = _s16(hhea, 4), _s16(hhea, 6)
     cap_height = round(ascent * 0.7)
-    italic, flags, stem_v = 0.0, 32, 80
+    # Identity-H addresses a Unicode CID repertoire, not a standard Latin encoding.
+    italic, flags, stem_v = 0.0, 4, 80
     os2 = sfnt.tables.get(b"OS/2")
     if os2 is not None:
         data = sfnt.table(b"OS/2")
+        _embedding_permissions(data)
         if len(data) >= 78:
-            flags = struct.unpack_from(">H", data, 62)[0]
-            fs_type = _u16(data, 8)
-            if fs_type & (FS_TYPE_RESTRICTED | FS_TYPE_NO_EMBEDDING):
-                raise FontError(
-                    "Font licence forbids embedding; choose a font that allows "
-                    "installable embedding and subsetting"
-                )
+            selection = _u16(data, 62)
+            if selection & (0x0001 | 0x0200):
+                flags |= 64
+            if data[32] == 2 and 2 <= data[33] <= 10:  # PANOSE Latin serif styles
+                flags |= 2
             cap_height = _s16(data, 88) if len(data) >= 90 and _s16(data, 88) else cap_height
     post = sfnt.tables.get(b"post")
     if post is not None:
@@ -357,19 +425,23 @@ def _metrics(sfnt: _Sfnt) -> FontMetrics:
             fixed = struct.unpack_from(">i", data, 4)[0]
             if fixed != 0:  # stored as a 16.16 fraction
                 italic = fixed / 65536.0
+        if len(data) >= 16 and _u32(data, 12):
+            flags |= 1
     # head.macStyle bit 1 marks an italic face; the PDF wants that as bit 6.
     if _s16(head, 44) & 0x0002:
         flags |= 0x0040
     # maxp 0.5 omits the composite fields; both versions describe glyf outlines.
     if _u32(maxp, 0) not in (0x00005000, 0x00010000):
         raise FontError("Unsupported font version")
-    return FontMetrics(units, ascent, descent, cap_height, italic, bbox, stem_v, flags)
+    return FontMetrics(units, ascent, descent, cap_height, italic, bbox, stem_v, flags,
+                       _postscript_name(sfnt))
 
 
 def subset_font(path: str | Path, codepoints: set[int]) -> EmbeddedFont:
     """Build a subset containing ``codepoints`` plus composite dependencies."""
     with Path(path).open("rb") as stream:
         sfnt = _Sfnt(stream.read())
+    metrics = _metrics(sfnt)
     if not codepoints:
         raise FontError("No characters to embed; supply text with at least one printable character")
     cmap = _parse_cmap(sfnt.table(b"cmap"))
@@ -394,17 +466,22 @@ def subset_font(path: str | Path, codepoints: set[int]) -> EmbeddedFont:
     hhea = sfnt.table(b"hhea")
     # hhea uses 16-bit FWORD metrics, so numberOfHMetrics lands at offset 34.
     original_hmetrics = _u16(hhea, 34)
-    advances = []
+    advances, bearings = [], []
     for gid in order:
         # longHorMetric is advanceWidth uint16 plus lsb int16, so entries are 4 bytes.
         if gid < original_hmetrics:
             if (gid + 1) * 4 > len(hmtx):
                 raise FontError("Font hmtx table is shorter than its metric count")
             advances.append(_u16(hmtx, gid * 4))
+            bearings.append(_s16(hmtx, gid * 4 + 2))
         else:
             if original_hmetrics == 0 or original_hmetrics * 4 > len(hmtx):
                 raise FontError("Font hmtx table cannot supply a default advance width")
             advances.append(_u16(hmtx, (original_hmetrics - 1) * 4))
+            bearing_offset = original_hmetrics * 4 + (gid - original_hmetrics) * 2
+            if bearing_offset + 2 > len(hmtx):
+                raise FontError("Font hmtx table lacks a trailing side bearing")
+            bearings.append(_s16(hmtx, bearing_offset))
 
     new_glyf = bytearray()
     new_loca = [0]
@@ -425,7 +502,8 @@ def subset_font(path: str | Path, codepoints: set[int]) -> EmbeddedFont:
     if not new_glyf:
         new_loca = [0, 0]
     loca_blob = struct.pack(f">{len(new_loca)}I", *new_loca)
-    hmtx_blob = b"".join(struct.pack(">Hh", advance, 0) for advance in advances)
+    hmtx_blob = b"".join(struct.pack(">Hh", advance, bearing)
+                         for advance, bearing in zip(advances, bearings, strict=True))
 
     head = bytearray(sfnt.table(b"head"))
     struct.pack_into(">i", head, 8, 0)  # checkSumAdjustment
@@ -446,16 +524,13 @@ def subset_font(path: str | Path, codepoints: set[int]) -> EmbeddedFont:
 
     # post 3.0 stores no glyph names, so the original name data is dropped
     # rather than carried along behind a header that says it is absent.
-    post = bytearray(32)
+    original_post = sfnt.table(b"post") if b"post" in sfnt.tables else b""
+    post = bytearray(original_post[:32].ljust(32, b"\0"))
     struct.pack_into(">I", post, 0, 0x00030000)
-    struct.pack_into(">I", post, 4, 0)  # italicAngle
-    struct.pack_into(">h", post, 12, 0)  # underlinePosition
-    struct.pack_into(">h", post, 14, 100)  # underlineThickness
-    struct.pack_into(">I", post, 16, 1 << 18)  # isFixedPitch
     os2 = bytes(sfnt.table(b"OS/2")) if b"OS/2" in sfnt.tables else b""
     name = bytes(sfnt.table(b"name")) if b"name" in sfnt.tables else b""
 
-    mapping = {cp: remap[gid] for cp, gid in cmap.items() if gid in remap}
+    mapping = {cp: remap[cmap[cp]] for cp in codepoints if cp in cmap and cmap[cp] in remap}
     tables: dict[bytes, bytes] = {
         b"cmap": _build_cmap(mapping),
         b"glyf": bytes(new_glyf),
@@ -470,9 +545,9 @@ def subset_font(path: str | Path, codepoints: set[int]) -> EmbeddedFont:
         tables[b"OS/2"] = os2
     if name:
         tables[b"name"] = name
-    embedded = {cp: remap[gid] for cp, gid in cmap.items() if gid in remap}
+    embedded = mapping
     widths = {cp: advances[new_gid] for cp, new_gid in embedded.items()}
-    return EmbeddedFont(_assemble(tables), embedded, widths, _metrics(sfnt))
+    return EmbeddedFont(_assemble(tables), embedded, widths, metrics)
 
 
 def _outline_stats(glyf: bytes, loca: list[int], glyphs: list[int]) -> tuple[int, int, int, int]:
@@ -597,12 +672,13 @@ def _assemble(tables: dict[bytes, bytes]) -> bytes:
     offset = len(header) + count * 16
     for tag in tags:
         blob = tables[tag]
+        if tag == b"head":
+            blob = blob[:8] + b"\0" * 4 + blob[12:]
         padded = blob + b"\0" * (-len(blob) % 4)
         directory += struct.pack(">4sIII", tag, checksum(blob), offset, len(blob))
         body += padded
         offset += len(padded)
     font = bytearray(header + directory + body)
-    struct.pack_into(">I", font, len(header) + 8 * 16 + 8, 0)  # head.checksum
     head_offset = struct.unpack_from(">I", directory, tags.index(b"head") * 16 + 8)[0]
     struct.pack_into(">I", font, head_offset + 8, 0)
     adjustment = (0xB1B0AFBA - checksum(bytes(font))) & 0xFFFFFFFF

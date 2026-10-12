@@ -6,7 +6,12 @@ plan. The comparison is between code, [METHODS](../METHODS.md),
 [STABILITY](../STABILITY.md), [LOCALIZATION](../LOCALIZATION.md), and the
 primary works listed below. Synthetic probes contain no manuscript or archive
 material. The HD-D correction below was approved and implemented before
-release; the other proposals remain for discussion.
+release. The remaining findings below record the September review state, rather
+than current implementation status. Subsequent fixes include a common tied-rank
+space for style axes, exact guarded segmentation and explicit statistical
+interpretation limits. Consult [METHODS](../METHODS.md) and
+[STABILITY](../STABILITY.md) for maintained behavior; the historical findings
+remain here for provenance.
 
 ## Corrected before release: HD-D identity
 

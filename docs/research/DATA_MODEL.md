@@ -2,12 +2,14 @@
 
 [RFC](README.md) · [Evidence](EVIDENCE.md)
 
-Status: target design specification for the complete RFC. The implemented
-v1.19.0 local workspace supports immutable source captures and passages, native
-authored revisions (dossiers, claims, evidence links and decisions), origin URLs
-and structured Zotero references. Local records use `research-local/1`, `/2` or
-`/3` according to record kind and fields; these are not the illustrative RFC
-schema below. See [USAGE.md](USAGE.md) and [IMPLEMENTATION.md](IMPLEMENTATION.md).
+Status: target design specification for the complete RFC. The implemented local
+workspace supports immutable source captures/passages, authored revision history,
+origin URLs, Zotero references, decision acknowledgements and causal links.
+Upcoming product v0.3.0 additionally provides manual manuscript quote–claim
+associations. Local record/manifest schemas v1–v7 are independent of product
+versions; these are not the illustrative RFC schema below. Historical v3.0.1
+cannot read opt-in v7 archives. See [USAGE.md](USAGE.md) and
+[IMPLEMENTATION.md](IMPLEMENTATION.md) for current contracts.
 The broader interchange model below remains a proposal.
 [The synthetic interchange example](examples/evidence-chain.json) illustrates a
 complete source-to-decision chain; it is not a production database.
@@ -50,6 +52,20 @@ The additive RIS migration bundle has `research-zotero-export-local/1` metadata;
 paired research/Zotero backups use `research-zotero-backup-local/1`. These are
 separate transfer contracts, not replacements for immutable research manifests.
 See [migration and restore scope](USAGE.md#additive-migration-to-zotero).
+
+## Implemented manual manuscript association
+
+`ManuscriptClaimLink` is an authored `research-local/7` record with exact
+`claim_ref`, immutable `ManuscriptAnchor`, active/retracted state and optional
+note. The anchor contains a project-relative source path, raw-source and displayed
+paragraph SHA-256 hashes, line range, exclusive Unicode-codepoint offsets and an
+explicitly retained quote. It does not import a manuscript blob or create source
+evidence. The first save promotes the manifest to v7; reads leave older archives
+unchanged. Generic revisions/history and export/restore preserve these records.
+Moved or ambiguous review candidates are unresolved; review flags do not infer
+semantic support. The RFC `ManuscriptAnchor` row below proposes broader targets
+and relations and must not be used as this record's payload. Read the
+[implemented contract](USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
 ## 1. Common envelope and identity
 

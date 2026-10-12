@@ -4,29 +4,47 @@ Manages symlinking, export naming, and historical archive rotation for
 reproducible manuscript build pipelines.
 """
 
+import contextlib
 import os
 import re
 import shutil
+import tempfile
 from collections.abc import Iterable
 from re import Pattern
+
+TIMESTAMP_PATTERN = r"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}(?:-\d{2}-\d{6}(?:_\d{6,})?)?"
 
 
 def update_stable_link(link_path: str, source_file: str) -> bool:
     """Updates a stable symlink pointing to ``source_file``.
 
     Falls back to a real file copy if the filesystem does not support
-    symlinks. Returns: ``True`` on success.
+    symlinks. The prepared link or copy replaces the stable path atomically;
+    a failure leaves the previous stable artifact in place. Returns ``False``
+    on filesystem failure and ``True`` on success.
     """
+    temp_path: str | None = None
     try:
-        if os.path.lexists(link_path):
-            os.remove(link_path)
+        if not os.path.isfile(source_file):
+            return False
+        directory = os.path.dirname(os.path.abspath(link_path))
+        temp_fd, temp_path = tempfile.mkstemp(dir=directory, prefix=".lixity-link-", suffix=".tmp")
+        os.close(temp_fd)
+        os.unlink(temp_path)
         try:
-            os.symlink(os.path.basename(source_file), link_path)
+            os.symlink(os.path.relpath(os.path.abspath(source_file), directory), temp_path)
         except (OSError, NotImplementedError):
-            shutil.copyfile(source_file, link_path)
+            shutil.copyfile(source_file, temp_path)
+            with open(temp_path, "rb+") as staged:
+                os.fsync(staged.fileno())
+        os.replace(temp_path, link_path)
         return True
     except OSError:
         return False
+    finally:
+        if temp_path is not None:
+            with contextlib.suppress(FileNotFoundError):
+                os.unlink(temp_path)
 
 
 def archive_timestamped(
@@ -65,13 +83,13 @@ def archive_timestamped(
 def prune_archive(
     archive_dir: str,
     keep_last: int = 10,
-    timestamp_pattern: str = r"_\d{4}-\d{2}-\d{2}_\d{2}-\d{2}",
+    timestamp_pattern: str = TIMESTAMP_PATTERN,
 ) -> int:
     """Trims an archive to the last ``keep_last`` versions per artefact family.
 
     The family results from the file name without timestamp (e.g. all
     ``Buch_taschenbuch_*.pdf``). Sorting is lexicographic – for
-    ``YYYY-MM-DD_HH-MM`` timestamps this corresponds to chronological order.
+    minute and microsecond timestamps this corresponds to chronological order.
     Returns: number of deleted old versions.
     """
     if not os.path.isdir(archive_dir):

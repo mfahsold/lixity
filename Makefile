@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test lint typecheck check build screenshots clean docs-check docs-sync run start serve stop restart status
+.PHONY: help install install-dev test lint typecheck check build release-check screenshots clean docs-check docs-sync run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -34,8 +34,12 @@ typecheck: ## mypy --strict on the package
 
 check: lint typecheck test ## Everything CI cares about locally
 
-build: ## Build sdist + wheel into dist/
-	$(VPY) -m build
+build: ## Build fresh source-verified sdist + wheel and checksums into dist/
+	$(VPY) scripts/check_release.py --build
+
+release-check: check docs-check ## Check source/docs and prepare release artifacts (RELEASE_TAG=vX.Y.Z)
+	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to match the source version"; exit 1)
+	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)"
 
 screenshots: ## Regenerate docs/screenshots (needs headless Chromium)
 	$(PYTHON) scripts/make_screenshots.py

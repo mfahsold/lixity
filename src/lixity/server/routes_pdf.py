@@ -8,7 +8,8 @@ from pathlib import Path
 from typing import Any
 
 from .. import pdf_export
-from ..config import load_project_config, validate_author_name
+from ..config import load_project_config
+from ..io import FileUtils
 from ..pdf_document import PdfError
 from ..workspace import slugify
 from ._base import ResponseMixin
@@ -42,7 +43,7 @@ class ManuscriptPdfRoutesMixin(ResponseMixin):
                 if expected_token != token:
                     self._json({"ok": False, "message": "The selected project changed; reload before downloading"}, 409)
                     return
-                text = Path(source).read_text(encoding="utf-8")
+                text = FileUtils.read_file(source)
                 if not text.strip():
                     raise ValueError("The selected manuscript is empty")
                 # The general loader warns and falls back for bad configuration.
@@ -51,11 +52,10 @@ class ManuscriptPdfRoutesMixin(ResponseMixin):
                     warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
                     settings = load_project_config(source)
                     identity = load_project_config(project_root)
-                author = validate_author_name(identity.get("author_name", "")) if layout == "book" else ""
 
             content = pdf_export.compose_pdf(
                 text, manuscript=source, layout=layout, language=language,
-                project_config=settings, title=title, author=author,
+                project_config=settings, title=title, identity_config=identity,
                 thresholds=thresholds, require_prose=True,
             )
         except (OSError, ValueError, RuntimeError, PdfError, UserWarning) as exc:

@@ -1,9 +1,11 @@
 """Shared, accessible settings form with locale-independent HTML values."""
 
+import json
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from ..config import MAX_AUTHOR_NAME_CHARS
+from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
+from ..publication import PUBLICATION_FIELDS
 from ..style_fingerprint import FingerprintThresholds
 from .components import esc, help_term, label
 
@@ -18,13 +20,24 @@ def settings_form(
     project_author: str = "",
     identity_check: Mapping[str, Any] | None = None,
     author_setting_enabled: bool = False,
+    publication: Mapping[str, Any] | None = None,
+    publication_error: str = "",
+    project_token: str = "",
 ) -> str:
     def translated(key: str) -> str:
         return esc(label(labels, key))
 
     defaults = FingerprintThresholds()
+    publication_values: dict[str, str | bool] = {"enabled": (publication or {}).get("enabled") is True}
+    publication_values.update({field.key: value if isinstance(value, str) else ""
+                              for field in PUBLICATION_FIELDS
+                              for value in [(publication or {}).get(field.key, "")]})
+    initial_publication = esc(json.dumps(publication_values, ensure_ascii=False, sort_keys=True))
     parts = [
-        '<form id="settings-form" class="settings-form ctl-group" novalidate>',
+        f'<form id="settings-form" class="settings-form ctl-group" novalidate '
+        f'data-project-token="{esc(project_token)}" data-publication-initial="{initial_publication}" '
+        f'data-publication-editable="{str(author_setting_enabled).lower()}" '
+        f'data-title-initial="{esc(title)}" data-author-initial="{esc(project_author)}">',
         f'<h3>{translated("settings")}</h3>',
         '<div class="settings-grid">',
         f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("language"))}</label>',
@@ -36,7 +49,7 @@ def settings_form(
     parts.extend([
         '</select></div>',
         f'<div class="setting-field"><label for="set-title">{translated("title")}</label>',
-        f'<input class="ctl" id="set-title" value="{esc(title)}"/></div>',
+        f'<input class="ctl" id="set-title" maxlength="{MAX_PROJECT_TITLE_CHARS}" value="{esc(title)}"/></div>',
         f'<div class="setting-field"><label for="set-author-name">{translated("project_author_name")}</label>',
         f'<input class="ctl" id="set-author-name" value="{esc(project_author)}" '
         f'maxlength="{MAX_AUTHOR_NAME_CHARS}" aria-describedby="set-author-name-help" '
@@ -73,8 +86,36 @@ def settings_form(
                 parts.append(f'<div class="ctl-note">{translated("project_identity_source")}: {translated(source_key)}</div>')
             parts.append('</dd>')
         parts.append('</dl></section>')
+    disabled = "" if author_setting_enabled else " disabled"
+    checked = " checked" if publication_values["enabled"] else ""
     parts.extend([
-        '<details class="settings-advanced">',
+        '<details class="settings-advanced publication-settings" id="settings-publication">',
+        f'<summary>{translated("publication_title")}</summary>',
+        f'<p class="panel-guide">{translated("publication_hint" if author_setting_enabled else "publication_unavailable")}</p>',
+        '<p class="ctl-note"><a href="https://mfahsold.github.io/lixity/guides/research-pdf.html#publication" '
+        f'target="_blank" rel="noopener noreferrer">{translated("publication_guide")}</a></p>',
+        f'<label class="research-check publication-enable"><input type="checkbox" id="set-publication-enabled" '
+        f'data-publication-key="enabled"{checked}{disabled}/> {translated("publication_enabled")}</label>',
+    ])
+    if publication_error:
+        parts.append('<p class="ctl-status err" id="publication-settings-error" role="alert">'
+                     f'{translated("publication_invalid")}: {esc(publication_error)}</p>')
+    parts.append('<div class="settings-grid">')
+    for field in PUBLICATION_FIELDS:
+        identifier = "set-publication-" + field.key
+        value = esc(publication_values[field.key])
+        attrs = (f'class="ctl" id="{identifier}" data-publication-key="{field.key}" '
+                 f'maxlength="{field.max_chars}"{disabled}')
+        parts.append(f'<div class="setting-field publication-field-{field.kind} publication-field-{field.key}">'
+                     f'<label for="{identifier}">{translated("publication_" + field.key)}</label>')
+        if field.kind == "multiline":
+            parts.append(f'<textarea {attrs} rows="3">{value}</textarea>')
+        else:
+            parts.append(f'<input type="text" {attrs} value="{value}"/>')
+        parts.append('</div>')
+    parts.append('</div></details>')
+    parts.extend([
+        '<details class="settings-advanced settings-thresholds" id="settings-thresholds">',
         f'<summary>{translated("settings_advanced")}</summary>',
         f'<p class="panel-guide">{translated("settings_guidance")}</p>',
         '<div class="settings-grid">',

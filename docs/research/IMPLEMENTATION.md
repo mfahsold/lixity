@@ -110,6 +110,26 @@ versions; optional evidence guards reject a changed reviewed choice or withdrawn
 source. Delayed/superseded search responses are discarded. Relations are not
 added to existing search scopes or interpreted as factual/transitive evidence.
 
+## Manual manuscript associations
+
+`research.manuscript` owns explicit quote retention, exact claim-revision pins,
+listing and structural anchor review. `ManuscriptClaimLink` is separate from
+imported `Passage`/`EvidenceLink`; no manuscript blob or prose edit is created.
+The existing pipeline's displayed paragraph identity and source snapshot reader
+bind Unicode-codepoint selections to reviewed source bytes. Native routes check
+both selected manuscript and research contexts and delegate to the shared API.
+The first opted-in save uses record/manifest v7; v0.3.0 reads schemas v1–v7 while
+historical v3.0.1 cannot read v7. Reading older archives does not upgrade them.
+
+The native manuscript reader marks only exact resolved quotes, including lazily
+opened paragraphs. Moved/ambiguous candidates stay unresolved and changed claims
+are not repinned automatically. Both dossier readers reuse the current claim list
+and existing viewer/history, with explicit saved quote counts from the same
+snapshot. Zero links does not prove a claim is absent from prose. Ordinary CLI
+updates can omit the global snapshot while requiring a reviewed record revision;
+the backend remains strict and races fail without retries. Detailed implemented
+payloads and limits remain in [USAGE.md](USAGE.md), rather than the RFC interfaces.
+
 ## Zotero and evidence ownership (since v1.19.0)
 
 Zotero can lead bibliography and media management while Lixity owns the evidence

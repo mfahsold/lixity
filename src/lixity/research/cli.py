@@ -4,6 +4,7 @@ import argparse
 import json
 import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal
 
@@ -134,8 +135,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--history", action="store_true", help="List immutable revisions")
             command.add_argument("--inspect", action="store_true", help="Inspect the latest record")
             command.add_argument("--revision", type=int, help="Inspect one historical revision")
-            command.add_argument("--expected-snapshot", help="Snapshot digest required for an update")
-            command.add_argument("--expected-revision", type=int, help="Latest revision required for an update")
+            command.add_argument("--expected-snapshot", help="Optional strict archive digest; if omitted, update checks --expected-revision against the current record")
+            command.add_argument("--expected-revision", type=int, help="Reviewed record revision required for an update; changed associations need explicit pins when snapshot is omitted")
             command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update")
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
@@ -379,10 +380,31 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
     return changes
 
 
+def _require_association_pins(record: Mapping[str, Any], changes: Mapping[str, Any]) -> None:
+    """Without a reviewed archive digest, new associations need explicit versions."""
+    from .repository import ResearchError
+
+    for name in ("claim", "dossier", "from_claim", "to_claim"):
+        identifier = changes.get(name + "_id")
+        existing = record.get(name + "_ref")
+        if (identifier and (not existing or identifier != existing["id"])
+                and changes.get(name + "_revision") is None):
+            flag = name.replace("_", "-")
+            raise ResearchError(f"A changed association requires --{flag}-revision when --expected-snapshot is omitted; "
+                                "inspect the target or use a reviewed --expected-snapshot")
+    if "dossier_ids" in changes:
+        existing_ids = {ref["id"] for ref in record.get("dossier_refs", [])}
+        added = set(changes["dossier_ids"]) - existing_ids
+        pins = changes.get("dossier_revisions", {})
+        if added and (not isinstance(pins, Mapping) or any(identifier not in pins for identifier in added)):
+            raise ResearchError("New dossier associations require explicit --dossier-revisions pins when "
+                                "--expected-snapshot is omitted; inspect the targets or use a reviewed --expected-snapshot")
+
+
 def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     """Dispatch explicit history, inspection and revision modes for existing commands."""
     from . import api
-    from .repository import ResearchError
+    from .repository import ResearchConflictError, ResearchError
 
     command = args.research_command
     kind = {"link-evidence": "evidence_link", "relate": "claim_relation"}.get(command, command)
@@ -421,19 +443,32 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         return api.prepare_record_revision(args.project, kind, record_id,
                                            base_revision=args.base_revision, changes=changes, resolutions=resolutions)
     if args.update:
-        if not args.expected_snapshot or args.expected_revision is None or not args.change_kind or not args.reason:
-            raise ResearchError("Updates require --expected-snapshot, --expected-revision, --change-kind and --reason")
+        if args.expected_revision is None or not args.change_kind or not args.reason:
+            raise ResearchError("Updates require --expected-revision, --change-kind and --reason")
         if args.expected_revision < 1:
             raise ResearchError("Expected revision must be positive")
-        changes = _revision_changes(args)
-        if not changes:
-            raise ResearchError("At least one changed field is required")
-        return api.revise_record(
-            args.project, kind, record_id, changes=changes,
-            expected_snapshot=args.expected_snapshot,
-            expected_revision=args.expected_revision,
-            change_kind=args.change_kind, reason=args.reason, actor=args.actor,
-        )
+        try:
+            expected_snapshot = args.expected_snapshot
+            current = None
+            if expected_snapshot is None:
+                current = api.get_record(args.project, kind, record_id)
+                if current["record"]["revision"] != args.expected_revision:
+                    raise ResearchConflictError("Record revision changed; the reviewed revision is no longer current")
+                expected_snapshot = current["snapshot"]
+            changes = _revision_changes(args)
+            if not changes:
+                raise ResearchError("At least one changed field is required")
+            if current is not None:
+                _require_association_pins(current["record"], changes)
+            return api.revise_record(
+                args.project, kind, record_id, changes=changes,
+                expected_snapshot=expected_snapshot,
+                expected_revision=args.expected_revision,
+                change_kind=args.change_kind, reason=args.reason, actor=args.actor,
+            )
+        except ResearchConflictError as error:
+            raise ResearchConflictError(f"{error}. Use --prepare --base-revision {args.expected_revision} "
+                                        "with your draft fields to review current changes before saving") from None
     if args.history:
         return api.record_history(args.project, kind, record_id)
     if args.revision is not None and args.revision < 1:

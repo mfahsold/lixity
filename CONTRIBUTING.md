@@ -58,9 +58,9 @@ make check                # ruff + mypy --strict + pytest -W error
 make docs-check           # version pins, changelog, staged-site link integrity
 ```
 
-For the dashboard, run `lixity serve --no-project` in the foreground, or use
-`make serve` and `make stop` for the optional background launcher. A custom port
-is selected with `make serve LIXITY_PORT=9000`. See
+For the dashboard, use `make run` in the foreground, or `make start` and
+`make stop` for the managed background service. A custom port
+is selected with `make start LIXITY_PORT=9000`. See
 [server setup](docs/INSTALLATION.md#running-the-server) for Windows and login startup.
 
 Without make:
@@ -88,10 +88,12 @@ are cached. Configure required status checks from the unconditional core workflo
 Release tags run their own full source checks with Poppler and verify an isolated
 package installation.
 
-Build artifacts with `make build` (`python -m build`). It creates the source
-archive first, then builds the wheel from a fresh extraction, avoiding obsolete
-files in an incremental `build/lib`. CI compares the wheel's Python modules,
-typing marker and UI assets with the source filenames and bytes.
+Build artifacts with `make build`. The shared `scripts/check_release.py` builds
+the source archive and wheel in a fresh temporary directory, compares both
+packages' Python modules, typing marker and UI assets against source filenames
+and bytes, and checks exact version metadata. Only after validation does it
+replace managed `dist/` artifacts and write `SHA256SUMS`. Unrelated files or
+directories in `dist/` cause an error and are preserved. CI uses the same checker.
 
 Native PDF tests need Poppler (`pdftotext` and `pdftoppm`) and report an explicit
 skip if it is missing. Select them locally with `pytest -m native_pdf`.
@@ -99,6 +101,30 @@ Synthetic worker and Tesseract protocol tests need no model or installed OCR eng
 Optional hooks are installed with `pre-commit install`; see
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Tags matching `v*` build
 release packages; authorized documentation pushes to `main` deploy Pages.
+
+### Preparing a release
+
+After updating the source version, changelog, release notes and documentation
+pins (`make docs-sync`), run:
+
+```bash
+make release-check RELEASE_TAG=vX.Y.Z
+```
+
+This runs `make check` and `make docs-check`, builds fresh archives, requires an
+exact tag/source/wheel/sdist version match, and installs the wheel in a temporary
+isolated environment outside the checkout. It checks dependencies, CLI version
+and `about --json` metadata. The output is the verified wheel, source archive and
+`SHA256SUMS` in `dist/`. Recheck existing artifacts without rebuilding with
+`.venv/bin/python scripts/check_release.py --tag vX.Y.Z --smoke`.
+
+Preparation does not commit, tag, push or publish. After reviewing the changes
+and obtaining release authorization, push the reviewed commit to `main` and its
+matching `vX.Y.Z` tag. The existing tag-triggered GitHub workflow repeats the same
+release check before attaching artifacts to the GitHub Release. Documentation
+deployment remains the separate Pages workflow. A new release with a lower
+version number requires explicit version selection by installations already
+using a higher version; this workflow does not change package-manager ordering.
 
 ### Updating documentation and Pages
 
@@ -114,7 +140,8 @@ titles, links and reviewed public screenshots; set their actual image dimensions
 Preview the published tree with
 `python3 scripts/stage_pages.py --output /tmp/lixity-pages-preview`, using a new
 directory. Only selected paths inside `docs/` are published. New public paths
-must be added deliberately to the staging rules. Root documents such as README
+must be added deliberately to the staging rules. The shared design-token
+stylesheet is the one explicitly copied packaged asset. Root documents such as README
 and CONTRIBUTING must be linked by their absolute GitHub URL: `../README.md`
 works in a checkout but breaks on Pages. The documentation tests validate links
 against the staged tree.

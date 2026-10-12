@@ -22,6 +22,7 @@ from .pipeline import (
     profile_document,
     resolve_document_config,
 )
+from .project_identity import project_title
 from .scenes import scene_report_for_display
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_dashboard
@@ -31,11 +32,8 @@ EXIT_OK = 0
 EXIT_ERROR = 1
 
 
-def _document_title(args: argparse.Namespace, manuscript: str) -> str:
-    configured = args._project_config.get("title")
-    if isinstance(configured, str) and configured.strip():
-        return configured.strip()
-    return os.path.splitext(os.path.basename(manuscript))[0]
+def _document_title(args: argparse.Namespace, manuscript: str, text: str) -> str:
+    return project_title(manuscript, text, args._project_config)
 
 
 def _thresholds_from_args(
@@ -793,7 +791,6 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    text = workspace.read_manuscript()
     choice = FontChoice(
         serif=args.serif_font,
         serif_bold=args.bold_font,
@@ -802,22 +799,27 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
         sans_bold=args.sans_bold_font,
     )
     try:
+        text = workspace.read_manuscript()
         thresholds = (
             _thresholds_from_args(args, getattr(args, "_project_config", None))
             if args.layout == "report" else None
         )
         payload = compose_pdf(
             text, manuscript=workspace.manuscript, layout=args.layout, language=args.language,
-            project_config=args._project_config, author=args.author or "",
+            project_config=args._project_config, author=args.author,
             thresholds=thresholds, choice=choice,
         )
-    except (PdfError, ValueError, RuntimeError) as exc:
+    except (OSError, PdfError, ValueError, RuntimeError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
     # The composed document belongs beside the manuscript, not in whatever
     # directory the command happened to be started from.
     output = args.output or os.path.join(workspace.root, f"{workspace.slug}-{args.layout}.pdf")
-    changed = FileUtils.atomic_write_bytes_if_changed(output, payload)
+    try:
+        changed = FileUtils.atomic_write_bytes_if_changed(output, payload)
+    except OSError as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
     print(_m("pdf_written" if changed else "pdf_unchanged", output=output))
     return EXIT_OK
 
@@ -830,7 +832,12 @@ def _cmd_build(args: argparse.Namespace) -> int:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
 
-    text = workspace.read_manuscript()
+    try:
+        text = workspace.read_manuscript()
+        title = _document_title(args, workspace.manuscript, text)
+    except (OSError, ValueError) as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
     config, resolved = resolve_document_config(
         text, args.language, project_config=args._project_config
     )
@@ -840,7 +847,6 @@ def _cmd_build(args: argparse.Namespace) -> int:
     metrics = analysis.metrics
     paragraphs, chapters = analysis.paragraphs, analysis.chapters
     fingerprint = analysis.fingerprint
-    title = _document_title(args, workspace.manuscript)
 
     artifacts = {
         f"{workspace.slug}_metrics.json": _json(
@@ -898,7 +904,11 @@ def _cmd_build(args: argparse.Namespace) -> int:
         workspace.ensure_layout()
     changed = 0
     for name, content in artifacts.items():
-        is_changed = workspace.publish(name, content, dry_run=args.dry_run)
+        try:
+            is_changed = workspace.publish(name, content, dry_run=args.dry_run)
+        except OSError as exc:
+            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            return EXIT_ERROR
         changed += is_changed
         prefix = "(dry-run) " if args.dry_run else ""
         state = _m("state_written") if is_changed else _m("state_unchanged")
@@ -1308,8 +1318,7 @@ def main(argv: list[str] | None = None) -> int:
         return _cmd_showing(args)
 
     try:
-        with open(args.file, encoding="utf-8") as f:
-            text = f.read()
+        text = FileUtils.read_file(args.file)
     except OSError as exc:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
@@ -1407,6 +1416,11 @@ def main(argv: list[str] | None = None) -> int:
     names = [
         part.strip() for part in (getattr(args, "names", None) or "").split(",") if part.strip()
     ]
+    try:
+        title = _document_title(args, args.file, text)
+    except ValueError as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
     html = render_dashboard(
         chapters,
         paragraphs,
@@ -1420,14 +1434,18 @@ def main(argv: list[str] | None = None) -> int:
         ),
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, names, config) if names else None,
-        title=_document_title(args, args.file),
+        title=title,
         labels=resolved.labels,
         language_name=resolved.name,
         language_key=resolved.key,
         flag_min_severity=fp_thresholds.flag_min_severity,
     )
     output = args.output or "lixity-dashboard.html"
-    changed = FileUtils.atomic_write_if_changed(output, html)
+    try:
+        changed = FileUtils.atomic_write_if_changed(output, html)
+    except OSError as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
     print(_m("dashboard_written" if changed else "dashboard_unchanged", output=output))
     return EXIT_OK
 

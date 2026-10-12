@@ -13,6 +13,11 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     def L(key: str) -> str:
         return esc(label(labels, key))
 
+    def form_field(identifier: str, key: str, control: str) -> str:
+        return ('<div class="setting-field research-form-field">'
+                f'<label class="form-label" for="{identifier}">{L(key)}</label>'
+                + control + '</div>')
+
     parts: list[str] = [f'<section class="panel controls" id="research-manager" data-research-token="{esc(research_context_token)}">']
     parts.append(f"<h2>{L('research_panel')}</h2>")
     parts.append('<div class="row" style="align-items:center;justify-content:space-between;margin:0;">')
@@ -133,15 +138,19 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('<div class="ctl-group">')
     parts.append(f'<span class="ctl-label">{help_term(labels, "research_dossier", L("research_dossier_heading"))}</span>')
     parts.append('<div class="row" style="margin-bottom:.5rem;">')
-    parts.append(f'<input class="ctl" id="r-dos-title" placeholder="{L("research_dossier_title")}" style="min-width:220px;"/>')
+    parts.append(form_field("r-dos-title", "research_dossier_title",
+                 f'<input class="ctl" id="r-dos-title" placeholder="{L("research_dossier_title")}"/>'))
     parts.append('</div>')
     parts.append('<details class="research-details" id="r-dos-options">')
     parts.append(f'<summary>{L("optional_details")}</summary><div class="row">')
-    parts.append(f'<input class="ctl" id="r-dos-tags" placeholder="{L("research_tags")}" style="min-width:180px;"/>')
-    parts.append(f'<input class="ctl" id="r-dos-eids" aria-label="{L("research_evidence_ids")}" data-help="{L("help_research_passage")}" placeholder="{L("research_evidence_ids")}" style="flex:1;min-width:200px;"/>')
+    parts.append(form_field("r-dos-tags", "research_tags",
+                 f'<input class="ctl" id="r-dos-tags" placeholder="{L("research_tags")}"/>'))
+    parts.append(form_field("r-dos-eids", "research_evidence_ids",
+                 f'<input class="ctl" id="r-dos-eids" data-help="{L("help_research_passage")}" placeholder="{L("research_evidence_ids")}"/>'))
     parts.append('</div></details>')
     parts.append('<div class="row" style="margin-bottom:.5rem;">')
-    parts.append(f'<textarea class="ctl" id="r-dos-body" placeholder="{L("research_dossier_body")}" rows="4" style="width:100%;font-family:inherit;"></textarea>')
+    parts.append(form_field("r-dos-body", "research_dossier_body",
+                 f'<textarea class="ctl" id="r-dos-body" placeholder="{L("research_dossier_body")}" rows="4" style="font-family:inherit;"></textarea>'))
     parts.append('</div>')
     parts.append('<div class="row">')
     parts.append(f'<button class="ctl primary" id="r-dos-create-btn">{L("research_dossier_action")}</button>')
@@ -157,30 +166,37 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('  <div class="ctl-group">')
     parts.append(f'    <span class="ctl-label">{help_term(labels, "research_claim", L("research_claim_heading"))}</span>')
     parts.append('    <div class="row" style="margin-bottom:.5rem;">')
-    parts.append(f'      <input class="ctl" id="r-claim-title" placeholder="{L("research_claim_title")}" style="min-width:220px;flex:1;"/>')
-    parts.append(f'      <select class="ctl" id="r-claim-confidence" aria-label="{L("research_confidence_field")}" data-help="{L("help_research_confidence")}" style="min-width:140px;">')
-    parts.append(f'        <option value="hypothetical">{L("research_confidence_hypothetical")}</option>')
-    parts.append(f'        <option value="evidenced">{L("research_confidence_evidenced")}</option>')
-    parts.append(f'        <option value="disputed">{L("research_confidence_disputed")}</option>')
-    parts.append('      </select>')
+    parts.append(form_field("r-claim-title", "research_claim_title",
+                 f'<input class="ctl" id="r-claim-title" placeholder="{L("research_claim_title")}"/>'))
+    parts.append(form_field("r-claim-confidence", "research_confidence_field",
+                 f'<select class="ctl" id="r-claim-confidence" aria-label="{L("research_confidence_field")}" data-help="{L("help_research_confidence")}">'
+                 f'<option value="hypothetical">{L("research_confidence_hypothetical")}</option>'
+                 f'<option value="evidenced">{L("research_confidence_evidenced")}</option>'
+                 f'<option value="disputed">{L("research_confidence_disputed")}</option></select>'))
     parts.append('    </div>')
     parts.append('    <div class="row" style="margin-bottom:.5rem;">')
-    parts.append(f'      <textarea class="ctl" id="r-claim-statement" placeholder="{L("research_claim_statement")}" rows="3" style="width:100%;font-family:inherit;"></textarea>')
+    parts.append(form_field("r-claim-statement", "research_claim_statement",
+                 f'<textarea class="ctl" id="r-claim-statement" placeholder="{L("research_claim_statement")}" rows="3" style="font-family:inherit;"></textarea>'))
     parts.append('    </div>')
     parts.append('<details class="research-details" id="r-claim-options">')
     parts.append(f'<summary>{L("optional_details")}</summary><div class="row">')
-    parts.append(f'      <input class="ctl" id="r-claim-tags" placeholder="{L("research_tags")}" style="min-width:160px;"/>')
-    parts.append(f'      <select class="ctl" id="r-claim-dossier-select" aria-label="{L("research_dossier")}" style="min-width:180px;"><option value="">{L("research_no_dossier")}</option></select>')
+    parts.append(form_field("r-claim-tags", "research_tags",
+                 f'<input class="ctl" id="r-claim-tags" placeholder="{L("research_tags")}"/>'))
+    parts.append(form_field("r-claim-dossier-select", "research_dossier",
+                 f'<select class="ctl" id="r-claim-dossier-select"><option value="">{L("research_no_dossier")}</option></select>'))
     parts.append('</div>')
     parts.append('    <div class="row" style="margin-bottom:.5rem;">')
-    parts.append(f'      <input class="ctl" id="r-claim-time" placeholder="{L("research_claim_time")}" style="flex:1;min-width:150px;"/>')
-    parts.append(f'      <input class="ctl" id="r-claim-place" placeholder="{L("research_claim_place")}" style="flex:1;min-width:150px;"/>')
-    parts.append(f'      <input class="ctl" id="r-claim-actors" placeholder="{L("research_claim_actors")}" style="flex:1.5;min-width:180px;"/>')
+    parts.append(form_field("r-claim-time", "research_claim_time",
+                 f'<input class="ctl" id="r-claim-time" placeholder="{L("research_claim_time")}"/>'))
+    parts.append(form_field("r-claim-place", "research_claim_place",
+                 f'<input class="ctl" id="r-claim-place" placeholder="{L("research_claim_place")}"/>'))
+    parts.append(form_field("r-claim-actors", "research_claim_actors",
+                 f'<input class="ctl" id="r-claim-actors" placeholder="{L("research_claim_actors")}"/>'))
     parts.append('    </div>')
     parts.append('</details>')
     parts.append('    <div class="row">')
     parts.append(f'      <button class="ctl primary" id="r-claim-create-btn">{L("research_claim_action")}</button>')
-    parts.append('      <button type="button" class="ctl secondary" id="r-claim-matrix-btn" style="margin-left:.5rem;">Export Claim Matrix</button>')
+    parts.append(f'      <button type="button" class="ctl secondary" id="r-claim-matrix-btn">{L("research_export_matrix")}</button>')
     parts.append('    </div>')
     parts.append('  </div>')
     parts.append('  <div class="ctl-group" style="margin-top:.8rem;">')
@@ -229,18 +245,23 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('  <div class="ctl-group">')
     parts.append(f'    <span class="ctl-label">{help_term(labels, "research_decision", L("research_decision_heading"))}</span>')
     parts.append('    <div class="row" style="margin-bottom:.5rem;">')
-    parts.append(f'      <input class="ctl" id="r-decision-title" placeholder="{L("research_decision_title")}" style="min-width:220px;flex:1;"/>')
+    parts.append(form_field("r-decision-title", "research_decision_title",
+                 f'<input class="ctl" id="r-decision-title" placeholder="{L("research_decision_title")}"/>'))
     parts.append('    </div>')
     parts.append('    <div class="row" style="margin-bottom:.5rem;">')
-    parts.append(f'      <textarea class="ctl" id="r-decision-rationale" placeholder="{L("research_decision_rationale")}" rows="3" style="width:100%;font-family:inherit;"></textarea>')
+    parts.append(form_field("r-decision-rationale", "research_decision_rationale",
+                 f'<textarea class="ctl" id="r-decision-rationale" placeholder="{L("research_decision_rationale")}" rows="3" style="font-family:inherit;"></textarea>'))
     parts.append('    </div>')
     parts.append('<details class="research-details" id="r-decision-options">')
     parts.append(f'<summary>{L("optional_details")}</summary><div class="row">')
-    parts.append(f'      <select class="ctl" id="r-decision-claim-select" aria-label="{L("research_select_claim")}" style="min-width:220px;flex:1;"><option value="">{L("research_no_claim_linked")}</option></select>')
-    parts.append(f'      <select class="ctl" id="r-decision-dossier-select" aria-label="{L("research_dossier")}" style="min-width:180px;flex:1;"><option value="">{L("research_no_dossier")}</option></select>')
+    parts.append(form_field("r-decision-claim-select", "research_decision_claim",
+                 f'<select class="ctl" id="r-decision-claim-select"><option value="">{L("research_no_claim_linked")}</option></select>'))
+    parts.append(form_field("r-decision-dossier-select", "research_dossier",
+                 f'<select class="ctl" id="r-decision-dossier-select"><option value="">{L("research_no_dossier")}</option></select>'))
     parts.append('</div>')
     parts.append('    <div class="row" style="margin-bottom:.5rem;">')
-    parts.append(f'      <input class="ctl" id="r-decision-plot" placeholder="{L("research_decision_plot")}" style="flex:1;min-width:250px;"/>')
+    parts.append(form_field("r-decision-plot", "research_decision_plot",
+                 f'<input class="ctl" id="r-decision-plot" placeholder="{L("research_decision_plot")}"/>'))
     parts.append('    </div>')
     parts.append('    <div class="row" style="align-items:center;justify-content:space-between;">')
     parts.append('      <label style="display:flex;align-items:center;gap:.35rem;font-size:.85rem;cursor:pointer;">')

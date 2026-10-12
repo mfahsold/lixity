@@ -99,7 +99,7 @@ and fallback behavior in v1.24.1 are described above and below:
 | Worker response | Validates block types, finite boxes/confidence, warnings and coverage of requested pages; stable sorting by page | Coverage relies on worker declarations and cannot establish recognition accuracy |
 | Missing confidence | Missing or null confidence remains unknown | Worker-supplied numbers are not independently calibrated certainty |
 | Archive | Original PDF, extracted UTF-8 text and exact text spans are retained | Page images, boxes, warnings and verified runtime/model identities are not persisted |
-| Activity label | PDF imports use the legacy `baidu-unlimited-ocr/1` boundary identifier, including native fallback | The identifier is not proof that Baidu inference ran |
+| Activity label | New native Poppler captures/fallback use `poppler-native/1`; local Tesseract uses `tesseract-cli/1`; custom worker captures retain the `baidu-unlimited-ocr/1` boundary identifier | Implementation labels identify the selected boundary, not an independently verified model; cached legacy provenance stays unchanged |
 
 With a worker configured, an invalid `LIXITY_OCR_TIMEOUT` is reported by
 `ocr-status` as `misconfigured_worker`, with corrective guidance. Diagnostics

@@ -38,6 +38,12 @@ authorize redistribution, or place imported text under LNCL-1.0. Your manuscript
 text, imported source texts, and Lixity's software code remain under their own
 separate respective rights and licenses.
 
+Manual manuscript quote–claim links in v0.3.0 separately require
+explicit permission to retain the selected quote locally. That confirmation
+does not authorize publishing the quote. Research backups/exports contain these
+retained manuscript quotations; keep them in the project's private storage.
+See [the retention workflow](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
+
 ## Source-available, not Open Source
 
 Open Source licenses allow commercial use; a non-commercial restriction does

@@ -5,6 +5,7 @@ on:
     paths:
       - "docs/**"
       - "scripts/stage_pages.py"
+      - "src/lixity/ui/assets/design-tokens.css"
       - ".github/workflows/pages.yml"
   workflow_dispatch:
 permissions:

@@ -7,7 +7,41 @@ import json
 from dataclasses import asdict
 from pathlib import Path
 
+from ..config import project_config_snapshot
 from ..style_fingerprint import FingerprintThresholds
+
+
+def _project_config_context(root: Path, config_bytes: bytes | None = None) -> dict[str, str]:
+    """Include selected-root metadata without returning file content or paths."""
+    def digest(name: str) -> str:
+        try:
+            if name == "lixity.toml" and config_bytes is not None:
+                content = config_bytes
+            else:
+                identity, content = project_config_snapshot(root / name)
+                if identity is None:
+                    return "absent"
+            return hashlib.sha256(content).hexdigest()
+        except ValueError:
+            return "unsupported"
+        except OSError:
+            return "unreadable"
+    return {name: digest(name) for name in ("lixity.toml", "pyproject.toml")}
+
+
+def project_settings_token(
+    project_root: str | Path | None, source_input: str | None,
+    *, config_bytes: bytes | None = None,
+) -> str:
+    """Bind metadata saves to the selected root and its observed configuration."""
+    if project_root is None:
+        return ""
+    root = Path(project_root).resolve()
+    context = {
+        "root": str(root), "source": str(Path(source_input).resolve()) if source_input else None,
+        "configuration": _project_config_context(root, config_bytes),
+    }
+    return hashlib.sha256(json.dumps(context, sort_keys=True).encode("utf-8")).hexdigest()
 
 
 def research_context_token(project_root: str | Path | None) -> str:
@@ -26,6 +60,7 @@ def research_context_token(project_root: str | Path | None) -> str:
 def manuscript_pdf_token(
     source_input: str | None, *, project_root: str | Path | None,
     language: str, title: str | None, thresholds: FingerprintThresholds,
+    config_bytes: bytes | None = None,
 ) -> str:
     """Bind a download to selected server metadata without exposing local paths.
 
@@ -39,6 +74,7 @@ def manuscript_pdf_token(
     context = {
         "source": str(source), "root": str(root), "language": language,
         "title": title, "thresholds": asdict(thresholds),
+        "configuration": _project_config_context(root, config_bytes),
     }
     encoded = json.dumps(context, sort_keys=True, separators=(",", ":")).encode("utf-8")
     return hashlib.sha256(encoded).hexdigest()

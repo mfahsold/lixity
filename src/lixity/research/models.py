@@ -1,6 +1,7 @@
 """Strict contracts for the local source-to-citation pilot, not the entire RFC."""
 
 from datetime import datetime
+from pathlib import PurePosixPath
 from typing import Annotated, Any, ClassVar, Literal
 from urllib.parse import urlsplit
 
@@ -31,6 +32,7 @@ Kind = Literal[
     "dossier",
     "claim",
     "claim_relation",
+    "manuscript_claim_link",
     "evidence_link",
     "decision",
     "decision_acknowledgement",
@@ -281,6 +283,52 @@ class ClaimRelation(AuthoredRecord):
         return self
 
 
+class ManuscriptAnchor(StrictModel):
+    """Reviewed quote in displayed paragraph text; the manuscript is not imported."""
+
+    selector_version: Literal["paragraph-profile-text/1"] = "paragraph-profile-text/1"
+    source_path: Annotated[str, Field(min_length=1, max_length=2000)]
+    source_sha256: Digest
+    paragraph_sha256: Digest
+    start_line: Annotated[int, Field(ge=1)]
+    end_line: Annotated[int, Field(ge=1)]
+    start: Annotated[int, Field(ge=0)]
+    end: Annotated[int, Field(gt=0)]
+    quote: Annotated[str, Field(min_length=1, max_length=10000)]
+    offset_unit: Literal["unicode_codepoint"] = "unicode_codepoint"
+    retention_confirmed: Literal[True]
+
+    @field_validator("retention_confirmed", mode="before")
+    @classmethod
+    def explicit_retention(cls, value: Any) -> Any:
+        if value is not True:
+            raise ValueError("Retention confirmation must be the boolean true")
+        return value
+
+    @model_validator(mode="after")
+    def valid_selector(self) -> "ManuscriptAnchor":
+        path = PurePosixPath(self.source_path)
+        if (not path.parts or path.is_absolute() or ".." in path.parts or "\\" in self.source_path
+                or path.as_posix() != self.source_path or any(ord(c) < 32 for c in self.source_path)):
+            raise ValueError("Manuscript path must be normalized and project-relative")
+        if self.end_line < self.start_line or self.end - self.start != len(self.quote) or not self.quote.strip():
+            raise ValueError("Manuscript selector must contain a nonblank exact quote and valid span")
+        return self
+
+
+class ManuscriptClaimLink(AuthoredRecord):
+    """An explicit author association, distinct from retained source evidence."""
+
+    schema_version: Literal["research-local/7"] = "research-local/7"  # type: ignore[assignment]
+    initial_schema_version: ClassVar[str] = "research-local/7"
+    revision_schema_version: ClassVar[str] = "research-local/7"
+    kind: Literal["manuscript_claim_link"] = "manuscript_claim_link"
+    claim_ref: Reference
+    anchor: ManuscriptAnchor
+    state: Literal["active", "retracted"] = "active"
+    note: Annotated[str, Field(min_length=1, max_length=2000)] | None = None
+
+
 def normalize_claim_relation(value: str) -> Literal["causes"]:
     """Accept the results_in input alias without introducing another stored type."""
     if isinstance(value, str) and value.strip().lower() in ("causes", "results_in"):
@@ -369,6 +417,7 @@ Entity = Annotated[
     | Dossier
     | Claim
     | ClaimRelation
+    | ManuscriptClaimLink
     | EvidenceLink
     | Decision
     | DecisionAcknowledgement,
@@ -384,7 +433,7 @@ class Entry(StrictModel):
 
 
 class Manifest(StrictModel):
-    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6"] = "research-manifest-local/1"
+    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7"] = "research-manifest-local/1"
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None

@@ -142,7 +142,7 @@ async function main() {
         await save(capture.target, '#bands');
       } else if (name === 'dashboard-settings.png') {
         await selectView('project');
-        await page.locator('.settings-form .settings-advanced > summary').click();
+        await page.locator('#settings-thresholds > summary').click();
         await save(capture.target, '#settings-form');
       } else if (name === 'dashboard-markers.png') {
         await save(capture.target, '#markers');

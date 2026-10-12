@@ -13,15 +13,19 @@ node tests/browser/decision-acknowledgement.cjs
 node tests/browser/minimal-workflows.cjs
 node tests/browser/dossier-images.cjs
 node tests/browser/dossier-workflows.cjs
+node tests/browser/dossier-claims.cjs
 node tests/browser/settings.cjs
 node tests/browser/layout.cjs
 node tests/browser/research.cjs
 node tests/browser/list-filters.cjs
 node tests/browser/manuscript-search.cjs
+node tests/browser/manuscript-links.cjs
 node tests/browser/manuscript-pdf.cjs
 node tests/browser/workspace-reader.cjs
 node tests/browser/research-selection.cjs
 node tests/browser/research-chronology.cjs
+node tests/browser/ui-usability.cjs
+node tests/browser/publication-settings.cjs
 node tests/browser/project-controls.cjs
 node tests/browser/scenes.cjs
 node tests/browser/docs.cjs
@@ -72,6 +76,12 @@ cause/effect saves and revisions, keyword evidence selection, stale project and
 draft responses, and inert data in all seven languages at 1440 and 320 pixels.
 It uses a disposable archive and retains only temporary synthetic screenshots.
 
+The ui-usability suite holds real synthetic HTTP create responses to check
+single pending saves, preservation of newer drafts, nearby feedback, guarded
+matrix downloads and shared keyboard tabs. The publication-settings suite uses
+the existing Settings endpoint to check explicit metadata, fresh save tokens,
+stale-token refusal, pending drafts and seven localized desktop/mobile forms.
+
 The project-controls suite checks manuscript file/drop selection and inert
 filenames, explicit native import confirmation, the existing embedding load
 payload, persistent New/Open/guidance across the three views, and the initially
@@ -89,10 +99,36 @@ incomplete form submission. HTTP responses and PDF bytes are
 synthetic; real PDF composition is covered by the backend export tests. Screenshots
 and downloaded fixtures stay under `/tmp/lixity-manuscript-pdf-*`.
 
+Run `node tests/browser/manuscript-links-native.cjs` for the real native quote–claim
+save flow. It starts a disposable loopback server and synthetic archive, renders
+the actual dashboard, and saves distinct quotes at 1440 and 320 pixels with
+explicit retention. It checks exact codepoint offsets around an astral character,
+current claim-version pins, archive format 7, real review reads, inert HTML-like
+text, search-highlight overlap and lazy paragraph reopening, then validates the
+saved records through a fresh repository read. Manuscript bytes remain unchanged;
+no HTTP responses are mocked and screenshots stay under
+`/tmp/lixity-manuscript-links-native-*`.
+
+Run `node tests/browser/project-switch-native.cjs` for the real native project
+switch regression. Two synthetic projects have distinct configured titles and
+manuscripts; Alpha starts with an explicit startup title override. Actual Open
+Project submission and reload at 1440 and 320 pixels must select Beta's source,
+research root, heading and NDA project-name field, while reopening the same
+project retains its explicit override. The test checks manuscript/config bytes
+stay unchanged and no NDA is generated or downloaded. It mocks no responses and
+keeps screenshots under `/tmp/lixity-project-switch-native-*`.
+
 The workspace-reader suite checks the optional manuscript/dossier companion
 view in seven locales at desktop and mobile widths. It verifies context-bound
 reads, a read-only dossier, safe rendering, retry, restored analysis panels and
 retained manuscript state. Screenshots stay under `/tmp/lixity-workspace-reader-*`.
+
+The dossier-claims suite uses a disposable native research archive to read the
+current claim associations from dossier detail and the companion reader. It
+checks titled rows, author-assigned review states, saved versions, inert titles,
+shared claim history, empty lists, retry and delayed/wrong-root responses in
+seven locales at 1440 and 320 pixels. It makes no research writes through the UI;
+synthetic screenshots stay under `/tmp/lixity-dossier-claims-*`.
 
 The research-selection suite uses a disposable synthetic archive to select
 source text and prepare an evidence draft. It checks selection boundaries,
@@ -199,3 +235,12 @@ The dossier-workflows suite exercises titled contextual claim/decision forms and
 the shared section editor against a disposable server: preserved drafts and pins,
 body-only preparation, unrelated concurrent-section preservation, explicit
 overlapping conflict choices and desktop/mobile rendering in seven languages.
+
+The manuscript-links test uses synthetic intercepted responses in seven locales
+at 1440 and 320 pixels. It verifies explicit quotation retention, current claim
+version pins, Unicode codepoint selection offsets, inert source text, overlapping
+search/link highlights and lazy reopening. Additional cases reject metrics and
+cross-paragraph selections, conflicting snapshots, changed sources, copied
+projects and unavailable/read-failed sources; moved and ambiguous anchors stay
+review hints. Held reads/writes verify context guards, pending deduplication and
+preservation of a newer draft. Screenshots remain under `/tmp`.

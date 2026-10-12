@@ -49,7 +49,7 @@ class TestPagesStaging(unittest.TestCase):
             stage(docs, output)
             published = {str(path.relative_to(output)).replace("\\", "/")
                          for path in output.rglob("*") if path.is_file()}
-            self.assertEqual(published, set(public))
+            self.assertEqual(published, set(public) | {"assets/design-tokens.css"})
             with self.assertRaises(FileExistsError):
                 stage(docs, output)
 

@@ -20,8 +20,7 @@ class MarkerRoutesMixin(ResponseMixin):
             return
 
         try:
-            with open(src, encoding="utf-8") as f:
-                text = f.read()
+            text = FileUtils.read_file(src)
         except OSError as exc:
             self._json({"ok": False, "message": f"Failed to read manuscript: {exc}"}, 500)
             return
@@ -38,7 +37,11 @@ class MarkerRoutesMixin(ResponseMixin):
                 return
 
             new_text, marker = add_marker(text, kind, note, line)
-            FileUtils.atomic_write_if_changed(src, new_text)
+            try:
+                FileUtils.atomic_write_if_changed(src, new_text)
+            except OSError as exc:
+                self._json({"ok": False, "message": f"Failed to write manuscript: {exc}"}, 500)
+                return
             self.refresh()
             self._json(
                 {
@@ -56,7 +59,11 @@ class MarkerRoutesMixin(ResponseMixin):
                 return
 
             new_text = resolve_marker(text, marker_id)
-            FileUtils.atomic_write_if_changed(src, new_text)
+            try:
+                FileUtils.atomic_write_if_changed(src, new_text)
+            except OSError as exc:
+                self._json({"ok": False, "message": f"Failed to write manuscript: {exc}"}, 500)
+                return
             self.refresh()
             self._json({"ok": True, "message": f"Marker {marker_id} resolved", "reload": True})
             return

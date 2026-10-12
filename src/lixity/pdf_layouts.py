@@ -18,6 +18,7 @@ cannot draw the manuscript's script.
 from __future__ import annotations
 
 import re
+from collections.abc import Mapping
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -115,7 +116,7 @@ _SEARCH_ROOTS = (
 
 @dataclass(frozen=True)
 class FontChoice:
-    """Where the three roles come from: an explicit override or a search."""
+    """PDF font roles, resolved from explicit choices, role settings or host fonts."""
 
     serif: str | None = None
     serif_bold: str | None = None
@@ -123,11 +124,11 @@ class FontChoice:
     sans: str | None = None
     sans_bold: str | None = None
 
-    def roles(self) -> dict[str, str]:
+    def roles(self, required: tuple[str, ...] | None = None) -> dict[str, str]:
         return resolve_fonts({
             "text": self.serif, "heading": self.serif_bold, "mono": self.mono,
             "sans": self.sans, "sans_bold": self.sans_bold,
-        })
+        }, required=required)
 
 
 def _installed_fonts() -> dict[str, str]:
@@ -149,37 +150,32 @@ def _installed_fonts() -> dict[str, str]:
     return index
 
 
-def resolve_fonts(roles: dict[str, str | None]) -> dict[str, str]:
+def resolve_fonts(roles: dict[str, str | None], *,
+                  required: tuple[str, ...] | None = None) -> dict[str, str]:
     """Find one readable file per role, preferring explicit configuration."""
     import os
 
-    # Every standard role is resolved; the caller only supplies overrides.
-    requested = {role: roles.get(role) for role in _ROLE_FONTS}
+    requested = {role: roles.get(role) for role in (required or tuple(_ROLE_FONTS))}
     wanted = {role: _ROLE_FONTS[role] for role in requested}
     found: dict[str, str] = {}
-    explicit = [os.environ[key] for key in sorted(os.environ) if key.startswith("LIXITY_PDF_FONT_")]
+    environment = {role: os.environ.get(f"LIXITY_PDF_FONT_{role.upper()}") for role in requested}
     index = _installed_fonts() if any(not path for path in requested.values()) else {}
     for role, names in wanted.items():
-        configured = requested[role]
+        configured = requested[role] or environment[role]
         if configured:
             if Path(configured).is_file():
                 found[role] = configured
                 continue
             raise FontUnavailable(f"Configured font for {role} does not exist: {configured}")
-        for candidate in explicit:
-            if candidate and Path(candidate).is_file():
-                found[role] = candidate
+        for name in names:
+            if name in index:
+                found[role] = index[name]
                 break
         else:
-            for name in names:
-                if name in index:
-                    found[role] = index[name]
-                    break
-            else:
-                raise FontUnavailable(
-                    f"No usable {role} font found. Set LIXITY_PDF_FONT_{role.upper()} "
-                    f"to a TrueType file, for example one of: {', '.join(names)}"
-                )
+            raise FontUnavailable(
+                f"No usable {role} font found. Set LIXITY_PDF_FONT_{role.upper()} "
+                f"to a TrueType file, for example one of: {', '.join(names)}"
+            )
     return found
 
 
@@ -222,18 +218,14 @@ def fit_size(fonts: FontSet, role: str, measure: float, target: int,
     return round(size, 1)
 
 
-def _fontset(choice: FontChoice | None) -> FontSet:
-    return FontSet((choice or FontChoice()).roles())
+def _fontset(choice: FontChoice | None, required: tuple[str, ...]) -> FontSet:
+    return FontSet((choice or FontChoice()).roles(required))
 
 
 def _report_fontset(choice: FontChoice | None) -> FontSet:
     """A report is read on screen, so it uses a sans face rather than a book face."""
-    resolved = (choice or FontChoice()).roles()
-    resolved.pop("text", None)
-    resolved.pop("heading", None)
-    resolved["text"] = resolved["sans"]
-    resolved["heading"] = resolved["sans_bold"]
-    return FontSet(resolved)
+    resolved = (choice or FontChoice()).roles(("sans", "sans_bold"))
+    return FontSet({"text": resolved["sans"], "heading": resolved["sans_bold"]})
 
 
 def _markdown_line(raw: str) -> str | None:
@@ -288,6 +280,8 @@ def report_pdf(
     markdown: str,
     subtitle: str = "",
     choice: FontChoice | None = None,
+    author: str = "",
+    metadata: Mapping[str, str] | None = None,
 ) -> bytes:
     """Render the analysis report as a paginated A4 document.
 
@@ -296,7 +290,8 @@ def report_pdf(
     head so the block does not read as sinking.
     """
     fonts = _report_fontset(choice)
-    document = Document(fonts, page_size=A4, margins=(62, 62, 56, 78))
+    document = Document(fonts, page_size=A4, margins=(62, 62, 56, 78),
+                        metadata={"title": title, "author": author, **(metadata or {})})
     sections = _paragraphs(markdown)
     sample = " ".join(line for _, lines in sections for line in lines)[:3000]
     size = fit_size(fonts, "text", document.measure, REPORT_CPL, sample)
@@ -316,7 +311,8 @@ def report_pdf(
                 Block(entry, role="text", size=size, leading=leading / size, align=JUSTIFIED,
                       space_after=leading / 2)
             )
-    document.page_furniture("{folio}", role="text", size=8.5, position="footer-centre")
+    _running_header(document, title, author, role="text", size=8)
+    document.page_furniture("{folio}/{pages}", role="text", size=8.5, position="footer-centre")
     return document.render()
 
 
@@ -327,15 +323,18 @@ def book_pdf(
     chapters: list[tuple[str, list[str]]] | None = None,
     body: str = "",
     choice: FontChoice | None = None,
+    metadata: Mapping[str, str] | None = None,
+    front_matter: tuple[str, list[str]] | None = None,
 ) -> bytes:
     """Render a manuscript for continuous reading: serif measure, chapter openings."""
-    fonts = _fontset(choice)
+    fonts = _fontset(choice, ("text", "heading"))
     # Margins follow the classical hierarchy rather than four equal gaps: the
     # foot is larger than the head, because a vertically centred block reads as
     # sinking off the page, and the inside edge is the smaller of the two sides.
     left, right, top, bottom = 46.0, 52.0, 54.0, 74.0
     document = Document(
-        fonts, page_size=A5, margins=(left, right, top, bottom), mirror=True
+        fonts, page_size=A5, margins=(left, right, top, bottom), mirror=True,
+        metadata={"title": title, "author": author, **(metadata or {})},
     )
     sections = _book_sections(chapters, body)
     sample = " ".join(" ".join(paragraphs) for _, paragraphs in sections)[:2000]
@@ -343,12 +342,23 @@ def book_pdf(
     leading = round(size * 1.45, 2)
     document.baseline = leading
     document.add(
-        Block(title, role="heading", size=17, leading=1.3, align=CENTRE, space_after=8)
+        Block(title, role="heading", size=17, leading=1.3, align=CENTRE, space_after=8,
+              decorated=False)
     )
     if author:
         document.add(
-            Block(author, role="text", size=11, leading=1.3, align=CENTRE, space_after=4)
+            Block(author, role="text", size=11, leading=1.3, align=CENTRE, space_after=4,
+                  decorated=False)
         )
+    if front_matter is not None:
+        heading, paragraphs = front_matter
+        document.add(Block(heading, role="heading", size=13.5, new_page=True,
+                           space_after=leading, decorated=False))
+        for paragraph in paragraphs:
+            document.add(Block(paragraph, role="text", size=size,
+                               leading=leading / size, space_after=leading / 2,
+                               decorated=False))
+    first_body = True
     for heading, paragraphs in sections:
         if heading:
             document.add(
@@ -360,6 +370,7 @@ def book_pdf(
                     align=CENTRE,
                     new_page=True,
                     space_after=leading * 2,
+                    bookmark=heading,
                 )
             )
         for index, paragraph in enumerate(paragraphs):
@@ -373,8 +384,11 @@ def book_pdf(
                     # The first paragraph after a chapter opening is set flush,
                     # as a book does; every later one carries a first-line indent.
                     indent=0 if index == 0 else size * 1.4,
+                    new_page=first_body and not heading,
                 )
             )
+            first_body = False
+    _running_header(document, title, author, role="text", size=8)
     document.page_furniture("{folio}", role="text", size=9, position="footer-centre",
                            omit_first=True)
     return document.render()
@@ -402,11 +416,13 @@ def manuscript_pdf(
     chapters: list[tuple[str, list[str]]] | None = None,
     body: str = "",
     choice: FontChoice | None = None,
+    author: str = "",
+    metadata: Mapping[str, str] | None = None,
 ) -> bytes:
     """Render a submission sheet: exactly 30 lines of at most 60 characters."""
     from .pdf_document import text_width
 
-    fonts = _fontset(choice)
+    fonts = _fontset(choice, ("mono",))
     sections = _book_sections(chapters, body)
     # Every character is collected before the face is built: the measure needs
     # real advance widths, and a face measured before the rest of the text is
@@ -430,9 +446,10 @@ def manuscript_pdf(
     # exactly 30 lines. Pagination then falls out of the page geometry instead
     # of a counter that can drift away from what actually fits.
     leading = (A4[1] - top - bottom) / NORM_LINES
-    document = Document(fonts, margins=(side, side, top, bottom))
+    document = Document(fonts, margins=(side, side, top, bottom),
+                        metadata={"title": title, "author": author, **(metadata or {})})
     document.add(Block(title, role="mono", size=size, align=CENTRE,
-                       leading=leading / size, space_after=leading))
+                       leading=leading / size, space_after=leading, columns=NORM_COLUMNS))
 
     # Each paragraph is handed to the document unbroken. Breaking it here and
     # letting the layout break it again put the 60-character limit exactly on
@@ -441,14 +458,33 @@ def manuscript_pdf(
     for heading, paragraphs in sections:
         if heading:
             document.add(Block(heading, role="mono", size=size, leading=leading / size,
-                               align=GRID))
+                               align=GRID, columns=NORM_COLUMNS))
             document.add(Block("", role="mono", size=size, leading=leading / size, align=GRID))
         for paragraph in paragraphs:
             document.add(Block(paragraph, role="mono", size=size, leading=leading / size,
-                               align=GRID))
+                               align=GRID, columns=NORM_COLUMNS))
             document.add(Block("", role="mono", size=size, leading=leading / size, align=GRID))
-    document.page_furniture("", role="mono", size=12, position="footer-centre")
+    _running_header(document, title, author, role="mono", size=8, columns=NORM_COLUMNS)
+    document.page_furniture("{folio}/{pages}", role="mono", size=8, position="footer-centre")
     return document.render()
+
+
+def _running_header(document: Document, title: str, author: str, *, role: str,
+                    size: float, columns: int | None = None) -> None:
+    """Bound literal title/author text to one line outside the body block."""
+    from .pdf_document import text_width
+
+    text = " · ".join(" ".join(value.split()) for value in (title, author) if value.strip())
+    document.fonts.collect(role, text + "...")
+    face = document.fonts.face(role)
+    shortened = text
+    while (text_width(shortened, face, size) > document.measure
+           or (columns is not None and len(shortened) > columns)):
+        text = text[:-1]
+        shortened = text.rstrip() + "..."
+        if not text:
+            break
+    document.page_furniture(shortened, role=role, size=size, position="header-centre", literal=True)
 
 
 __all__ = [

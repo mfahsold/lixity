@@ -102,6 +102,22 @@ v2.3.0, unsupported drawn glyphs fail through the existing processing
 error channel with the font role and Unicode codepoint. See [PDF usage and
 limits](USAGE.md#lixity-pdf).
 
+**Since v0.3.0:** CLI/native PDFs share one in-memory composer,
+selected-project title and `author_name`, and explicit `[publication]` data.
+Only A5 `book` uses the optional imprint section. Entered fields remain optional;
+validation checks syntax/bounds rather than rights or legal completeness.
+PDF Info Title/Author, catalog Lang and A5 chapter bookmarks reuse the document
+writer. Book body pages use physical folios; sheets/reports show current/total.
+Fixed-layout PDF remains the only export here, without EPUB or PDF/UA/PDF/X
+certification. See [the publication field contract](USAGE.md#publication-settings).
+
+**Since v0.3.0:** text/binary writes use the same same-directory
+staged-byte writer. It preserves original mode, fsyncs and atomically replaces;
+errors propagate and temporary files are cleaned. No direct-overwrite fallback
+is attempted. `FileUtils.read_file` reports decoding failures as `OSError`.
+Build versions retain distinct same-minute content and recognize old minute
+archive names. A failed stable-artifact update raises before archive rotation.
+
 Release `1.15.0` defaults the analysis language to
 English. Pass the intended manuscript language or explicit `auto`; do not
 assume the previous automatic default. Language-independent JSON identifiers
@@ -342,8 +358,16 @@ Without JavaScript, all available panels remain readable and native
 chapter-score links continue to work. Existing analysis JSON contracts and
 server action payloads are unchanged.
 
-**Since v2.4.0:** a compatible native server exposes a manuscript PDF
-form before `#analysis-review`. It defaults to `book` (A5 reading layout), with
+**Since v0.3.0:** optional publication controls remain collapsed
+inside the existing `#settings-form` and require an explicit selected project.
+They reuse shared field descriptors and localized labels. Native settings and
+standalone dashboard presentation share bundled `design-tokens.css`; Pages
+imports the same staged bytes. This changes presentation without adding a
+frontend framework or a separate settings persistence path.
+
+**Since v0.3.0:** the native manuscript PDF form introduced in v2.4.0
+is in the global project controls above all three workspace views. The collapsed
+menu provides the download action. It defaults to `book` (A5 reading layout), with
 `sheet` (A4 submission sheet) and `report` (A4 analysis report) alternatives.
 Generation is explicit, returns a PDF attachment and writes no server export,
 manuscript or research archive files. Standalone HTML has no manuscript PDF
@@ -399,7 +423,7 @@ historical certainty.
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form (since v2.4.0) and opaque selected-context token; the client submits `layout` and this token explicitly |
-| `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region (since v2.4.0) |
+| `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
 | `#workspace-reader-toggle` / `#workspace-reader-panel` | opt-in **Dossier alongside** view (since v2.4.0); closing it preserves the existing manuscript DOM/state |
 | `#workspace-reader-dossier` / `#workspace-reader-refresh` / `#workspace-reader-status` / `#workspace-reader-body` | selected dossier, explicit refresh, live status and read-only rendered body (since v2.4.0) |
 | `data-action="<name>"` + `data-payload="<form-id>"` | control-server action |
@@ -681,10 +705,99 @@ are unchanged.
   evidence-link output schemas.
 
 Only a successful explicit causal-relation write opts storage into
-`research-local/6` and `research-manifest-local/6`; v3.0.0 or newer readers are
-then required. Existing v1–v5 archives remain readable without rewriting
+`research-local/6` and `research-manifest-local/6`; v0.3.0 and historical
+v3.0.x readers support them. Require explicit schema support rather than
+comparing product version numbers. Existing v1–v5 archives remain readable without rewriting
 records. Export/restore keeps the same bundle format and all accepted revisions.
 See [period grammar and citation choices](research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300).
+
+### Manual manuscript associations
+
+Product versions describe development maturity, independently of JSON/storage
+versions. v0.3.0 retains historical v3.0.1 features and reads research record and
+manifest schemas v1–v7. A first explicitly permitted manuscript-link save opts
+into v7; historical v3.0.1 cannot read it. Do not compare product numbers to infer
+archive compatibility. Existing analyze/profile schema 2 and style schema 4 stay
+unchanged.
+
+Python `research_api.link_manuscript_claim(project, manuscript, claim_id, *,
+claim_revision, selection, expected_project_id, expected_snapshot,
+expected_source_sha256, allow_retention=False, note=None, actor="local-author",
+language=None, project_config=None)` retains one manually reviewed quote only
+when `allow_retention is True`. `selection` must contain exactly
+`start_line`, `end_line`, `paragraph_sha256`, `start`, `end`, `quote`.
+The raw-source SHA-256 and SHA-256 of UTF-8 displayed `ParagraphProfile.text`
+bind the source and paragraph. Offsets are Unicode codepoints with exclusive end;
+quotes are nonblank, at most 10,000 codepoints, and notes at most 2,000 characters.
+Manuscript paths must stay inside the explicit project, including symlink
+resolution. Expected project, snapshot, source bytes and current claim revision
+must match; save rejects withdrawn claims and stale or ambiguous selections.
+No manuscript blob, source `Passage` or `EvidenceLink` is created.
+
+`list_manuscript_links(project, *, claim_id=None, include_retracted=False)` and
+`review_manuscript_links(project, manuscript, *, expected_project_id=None,
+language=None, project_config=None)` are read-only. Create/list/review envelopes
+are respectively `research-manuscript-link-local/1`,
+`research-manuscript-links-local/1`, `research-manuscript-review-local/1`.
+Stored `ManuscriptClaimLink` uses kind `manuscript_claim_link` and
+`research-local/7`, with exact `claim_ref`, immutable `anchor`,
+`state: active|retracted` and optional `note`. Generic inspection/history,
+revision preparation and atomic batches support this kind. Revision changes
+accept `claim_id`, `claim_revision`, `state`, `note`; unchanged claim IDs retain
+pins. Reanchoring is not implemented.
+
+Review rows expose `claim_revision`, `claim_current_revision`, the pinned claim's
+`dossier_id`/`dossier_revision`, `anchor`, `current_source_sha256`, `flags`,
+`anchor_state`, `candidate_lines`, `resolved_start_line` and `resolved_end_line`.
+States are `resolved|moved|ambiguous|changed|unavailable`; flags include
+`source_changed`, `source_missing`, `source_unreadable`, `claim_changed`,
+`claim_withdrawn`, `anchor_moved`, `anchor_ambiguous`, `anchor_changed`.
+Only exact line/hash/quote matches resolve. Moved/ambiguous candidates stay
+unresolved and pins stay unchanged. Flags indicate structural review, never
+semantic contradiction or factual proof. Shared-pipeline integrations can use
+`lixity.research.manuscript.manuscript_review_data(Repository(project).snapshot(), source_path=...,
+source_sha256=..., paragraphs=..., source_state="available")` without another
+analysis pass; `source_state` also accepts `missing|unreadable`.
+
+Native routes require explicit context guards:
+
+- `GET /api/research/manuscript-review?research_token=...&project_token=...`
+  reviews the selected manuscript. Both tokens are mandatory, singular and
+  passed unchanged from the native UI; unknown query fields fail.
+- `GET /api/research/manuscript-links?research_token=...&claim_id=...&include_retracted=false`
+  lists saved associations. `research_token` is required; `claim_id` and
+  `include_retracted=true|false` are optional. It does not read manuscript bytes.
+- `POST /api/research-manuscript-link` accepts exactly required `project_id`,
+  `research_token`, `project_token`, `expected_snapshot`,
+  `expected_source_sha256`, `claim_id`, positive integer `claim_revision`,
+  `selection` as above and boolean `allow_retention: true`; optional `note`.
+  Unknown fields fail. Invalid selections/permission return HTTP 400; changed
+  selected context/project/snapshot/source/claim revision returns HTTP 409.
+
+Successful native responses add `ok: true` to the corresponding envelope.
+The project token binds selected manuscript/settings; the research token binds
+selected archive root, including restored roots sharing an archive ID. Hash and
+snapshot guards bind reviewed bytes/records. Reads and selection previews write
+nothing; saving retains private quote text locally and never modifies prose.
+Source bytes are checked immediately before publication, without locking editors.
+
+Dossier readers show a reverse list of current claims associated through their
+stored `dossier_ref`, with the existing claim viewer/history. Active saved quote
+counts join explicit links to claim IDs and their pinned dossier IDs from the
+same snapshot as the claim list. Failed/mismatched reads show unavailable counts;
+zero is not proof of nonuse in prose. Historical dossier reads do not reconstruct
+historical claim membership.
+Counts span pinned revisions of the same logical dossier ID; a differing
+`dossier_revision` is shown as a version-review note, not silently repinned.
+
+Ordinary authored CLI `--update` modes require `--expected-revision`,
+`--change-kind` and `--reason`; `--expected-snapshot` is optional. Omission checks
+the reviewed record revision and forwards the current read's snapshot to the
+strict API. Same-record changes/races fail without retries. Supplied digests
+remain strict archive-wide guards. Unchanged association pins remain; new/changed
+associations require explicit revision flags when the snapshot is omitted.
+Batch/image/acknowledgement/Python/HTTP guards are unchanged. See the
+[implemented update workflow](research/USAGE.md#update-one-reviewed-record).
 
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 
@@ -719,10 +832,18 @@ selection metadata; file edits alone do not create a content-version lock.
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, entries: [{name, path, kind}], truncated}`, where `kind` is `directory` or `manuscript`. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
 - `POST /api/project-create`: `{"title": "...", "language": "de", "template": "three_act", "init_research": true}`
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
+  Since v0.3.0, custom/startup titles remain only for the same workspace. A
+  different workspace uses its configuration/shared manuscript title resolution
+  for the header and NDA defaults; explicit language/threshold preferences remain.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
-- `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`. Optional `author_name` persists only that field in the selected project's `lixity.toml`; it needs an active manuscript/archive project and a single-line string of at most 500 characters (empty clears). A failed config write leaves session values unchanged. Unposted threshold fields retain their active values. Numeric fields use JSON numbers, not strings; integers reject fractional values and booleans. The shared `FingerprintThresholds` policy requires finite nonnegative z values with strong ≥ mild, q strictly between 0 and 1, positive dimension threshold, `bh|by`, integer minimum chapters ≥ 2 and severity 1–3. No extra UI ceilings or decimal step rounding apply.
+- `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`. Optional `author_name` needs an active manuscript/archive project and a single-line string of at most 500 characters (empty clears). **Since v0.3.0:** optional `title`, `author_name` and `publication` are prepared and saved together in the selected root's `lixity.toml`; language and analysis controls retain session semantics. `publication` uses the [shared field contract](USAGE.md#publication-settings) and requires a matching opaque `project_token` from `#settings-form`'s `data-project-token`. Any supplied token must match the selected root, source and both root configs; missing/stale required tokens return HTTP 409. Title/author and threshold-only requests remain accepted without a token. The native UI always sends it for an active context. The server prepares the view before committing; validation/read/render/write failures return HTTP 400 without publishing candidate metadata or session/cache state. Success returns `{ok, message, reload, project_token}` with a fresh token. Unposted threshold fields retain their active values. Numeric fields use JSON numbers, not strings; integers reject fractional values and booleans. The shared `FingerprintThresholds` policy requires finite nonnegative z values with strong ≥ mild, q strictly between 0 and 1, positive dimension threshold, `bh|by`, integer minimum chapters ≥ 2 and severity 1–3. No extra UI ceilings or decimal step rounding apply.
 - `POST /api/marker-add`: `{"kind": "todo", "line": 42, "note": "Check dialogue continuity"}`
 - `POST /api/marker-resolve`: `{"id": "m-abcd1234"}`
+
+**Since v0.3.0:** marker read/encoding/write failures return
+HTTP 500 with `{ok: false, message}`. A failed staged write preserves the
+manuscript and does not run a successful dashboard refresh.
+
 - `POST /api/research-ingest`: `{"file": "...", "allow_retention": true, "title": "..."}`
 - `POST /api/research-search`: `{"query": "...", "limit": 10}`
 - `POST /api/research-dossier`: `{"title": "...", "body": "...", "evidence_ids": [...]}`
@@ -756,7 +877,7 @@ derived from the selected resolved research root. It also works for research-onl
 projects and distinguishes restored copies sharing an archive project ID.
 Pass it unchanged. `render_dashboard(..., research_context_token="")` accepts
 this optional renderer metadata; standalone renderers have no native selection
-token. Research GETs can include `research_token`; touched search/evidence POSTs
+token. Research GETs can include `research_token`; all research POSTs
 can include it in their bodies to bind the selected root under the server state
 lock. New causal writes, causal record revisions and causal revision-batch
 application require that token.
@@ -892,7 +1013,7 @@ HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 `{operations}` and `POST /api/research-revision-batch-apply` with
 `{operations, expected_snapshot}`. They return the same versioned envelope.
 
-- `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link`, `decision` and, since v3.0.0, `claim_relation`.
+- `GET /api/research/record?kind=dossier&id=...&revision=1`: inspect a pinned revision; omit `revision` for the current record. Other kinds are `claim`, `evidence_link`, `decision`, `claim_relation` and `manuscript_claim_link`.
 - `GET /api/research/history?kind=dossier&id=...`: revision metadata, newest first.
 - `POST /api/research-record-revise`: `{kind, id, changes, expected_snapshot, expected_revision, change_kind, reason}`. `change_kind` is `correction` or `supersession`; reason is required. HTTP 409 means the draft's snapshot/revision is stale; reload explicitly before deciding what to save. HTTP 400 means invalid fields; immutable/unknown fields are rejected.
 

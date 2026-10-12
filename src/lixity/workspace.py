@@ -21,12 +21,12 @@ from dataclasses import dataclass
 from datetime import datetime
 
 from .io import FileUtils
-from .publishing import archive_timestamped, prune_archive, update_stable_link
+from .publishing import TIMESTAMP_PATTERN, archive_timestamped, prune_archive, update_stable_link
 
 EXPORTS_DIRNAME = "exports"
 ARCHIVE_DIRNAME = "archive"
 ARCHIVE_KEEP_LAST = 10
-TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M"
+TIMESTAMP_FORMAT = "%Y-%m-%d_%H-%M-%S-%f"
 
 MANUSCRIPT_FILENAMES = ("manuscript.md", "manuskript.md")
 _IGNORED_STEMS = {"readme", "agents", "license", "changelog", "index", "nda"}
@@ -100,15 +100,24 @@ class Workspace:
         self.ensure_layout()
         stem, ext = os.path.splitext(filename)
         stamp = datetime.now().astimezone().strftime(TIMESTAMP_FORMAT)
-        versioned_name = f"{stem}_{stamp}{ext}"
+        collision = 0
+        same_stamp = re.compile(rf"{re.escape(stem)}_{stamp}(?:_(\d{{6,}}))?{re.escape(ext)}$")
+        for directory in (self.exports_dir, self.archive_dir):
+            for entry in os.listdir(directory):
+                match = same_stamp.fullmatch(entry)
+                if match is not None:
+                    collision = max(collision, int(match.group(1) or 0) + 1)
+        suffix = f"_{collision:06d}" if collision else ""
+        versioned_name = f"{stem}_{stamp}{suffix}{ext}"
         versioned = self.artifact_path(versioned_name)
         FileUtils.atomic_write_if_changed(versioned, content)
         with contextlib.suppress(OSError):  # mkstemp defaults to 0600
             os.chmod(versioned, 0o644)
-        update_stable_link(stable, versioned)
+        if not update_stable_link(stable, versioned):
+            raise OSError(f"Failed to publish stable artifact: {stable}")
         archive_timestamped(
             self.exports_dir,
-            rf"{re.escape(stem)}_\d{{4}}-\d{{2}}-\d{{2}}_\d{{2}}-\d{{2}}{re.escape(ext)}$",
+            rf"{re.escape(stem)}{TIMESTAMP_PATTERN}{re.escape(ext)}$",
             keep_basenames=[versioned_name],
         )
         prune_archive(self.archive_dir, keep_last=ARCHIVE_KEEP_LAST)

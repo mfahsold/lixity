@@ -82,7 +82,7 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
         assert.ok(await page.locator('.band').first().evaluate(band => band.getBoundingClientRect().width >= 150));
       }
       await page.locator('#tab-view-project').click();
-      await page.locator('.settings-form .settings-advanced > summary').click();
+      await page.locator('#settings-thresholds > summary').click();
       await page.locator('#tab-view-analysis').click();
       await page.locator('#ch-1 .chip').first().click();
       assert.equal(await page.locator('#ch-1 .ptext.open').count(), 1);

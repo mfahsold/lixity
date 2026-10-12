@@ -8,23 +8,26 @@ from __future__ import annotations
 
 import os
 import re
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
 from ..characters import presence_report
 from ..config import load_project_config, resolve_thresholds, validate_author_name
 from ..dialogue import dialogue_report
+from ..io import FileUtils
 from ..markers import list_markers
 from ..motifs import motif_report
 from ..pacing import pacing_report
 from ..pipeline import analyze_document, resolve_document_config
-from ..project_identity import manuscript_identity_check
+from ..project_identity import manuscript_identity_check, project_title
+from ..publication import load_publication
 from ..scenes import scene_report_for_display
 from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
 from ..ui import render_dashboard
 from .constants import NATIVE_UI_ACTIONS
-from .pdf_context import manuscript_pdf_token, research_context_token
+from .pdf_context import manuscript_pdf_token, project_settings_token, research_context_token
 
 MAX_ARTIFACT_BYTES = 200 * 1024 * 1024  # 200 MB
 
@@ -78,6 +81,9 @@ def build_server_dashboard(
     debug: bool = False,
     project_root: str | Path | None = None,
     research_root: str | Path | None = None,
+    identity_settings_override: Mapping[str, Any] | None = None,
+    project_config_bytes: bytes | None = None,
+    strict_source: bool = False,
 ) -> tuple[str, dict[str, Any]]:
     """Generates the interactive dashboard HTML and returns (html, info_dict)."""
     text = ""
@@ -85,26 +91,24 @@ def build_server_dashboard(
     manuscript_name = ""
     is_missing = False
     manuscript_readable = False
+    manuscript_source_sha256 = ""
 
     if source_input:
         if os.path.isfile(source_input):
             try:
-                with open(source_input, encoding="utf-8") as f:
-                    text = f.read()
+                text, manuscript_source_sha256 = FileUtils.read_source_snapshot(source_input)
                 manuscript_readable = True
                 is_empty = not text.strip()
                 manuscript_name = os.path.basename(source_input)
             except OSError:
+                if strict_source:
+                    raise
                 text = ""
         else:
+            if strict_source:
+                raise OSError("The selected manuscript is missing")
             is_missing = True
             manuscript_name = os.path.basename(source_input)
-
-    doc_title = title or (
-        os.path.splitext(manuscript_name)[0]
-        if manuscript_name and not is_missing
-        else ("No Project Loaded" if language != "de" else "Kein Projekt geladen")
-    )
 
     settings = load_project_config(source_input) if source_input and os.path.isfile(source_input) else {}
     if not source_input and project_root is not None:
@@ -114,6 +118,21 @@ def build_server_dashboard(
         identity_settings = load_project_config(project_root)
     elif source_input and not os.path.isfile(source_input):
         identity_settings = load_project_config(Path(source_input).parent)
+    if identity_settings_override is not None:
+        identity_settings = {**identity_settings, **identity_settings_override}
+    try:
+        doc_title = project_title(source_input, text, identity_settings, title) if source_input else (
+            title or identity_settings.get("title") or ("No Project Loaded" if language != "de" else "Kein Projekt geladen")
+        )
+    except ValueError:
+        doc_title = Path(source_input).stem if source_input else "No Project Loaded"
+    publication_error = ""
+    try:
+        publication_values: Mapping[str, Any] = load_publication(identity_settings).model_dump()
+    except ValueError as exc:
+        raw_publication = identity_settings.get("publication", {})
+        publication_values = raw_publication if isinstance(raw_publication, Mapping) else {}
+        publication_error = str(exc)
     raw_author = identity_settings.get("author_name", "")
     try:
         project_author = validate_author_name(raw_author)
@@ -196,16 +215,24 @@ def build_server_dashboard(
         current_language=language,
         flag_min_severity=resolved_thresholds.flag_min_severity,
         enabled_actions=NATIVE_UI_ACTIONS,
-        nda_project_name=title or (
+        nda_project_name=doc_title if source_input else title or (
             os.path.splitext(manuscript_name)[0] if manuscript_name and not is_missing else ""
         ),
         debug=debug,
         project_author=project_author,
         identity_check=identity_check,
         author_setting_enabled=bool(source_input or project_root is not None),
+        publication=publication_values,
+        publication_error=publication_error,
+        project_token=project_settings_token(
+            project_root or (Path(source_input).parent if source_input else None), source_input,
+            config_bytes=project_config_bytes,
+        ),
+        manuscript_source_sha256=manuscript_source_sha256,
         manuscript_pdf_token=manuscript_pdf_token(
             source_input, project_root=project_root, language=language,
             title=title, thresholds=resolved_thresholds,
+            config_bytes=project_config_bytes,
         ) if manuscript_readable and not is_empty else "",
         research_context_token=research_context_token(research_root or project_root),
     )

@@ -1,6 +1,9 @@
 # Architecture and integration boundaries
 
-This document describes the shared architecture through v1.24.1.
+This document describes the maintained shared architecture. Changes introduced in
+0.3.0 are labeled **Since v0.3.0**. Product version
+numbers describe development maturity; JSON and research storage schemas have
+their own independent versions. Historical release numbers remain unchanged.
 The shared pipeline and explicit API threshold mappings were introduced
 in 1.15.0; integrated local project/research workflows arrived in 1.16.0, followed
 by native editing, the self-hosted OCR boundary, offline diagrams and verified
@@ -11,8 +14,9 @@ Experimental extension: [local research workspace](research/USAGE.md).
 exact citations, BagIt-style export/restoration, and a rebuildable SQLite/FTS5 index. It does not import into
 `lixity.pipeline`. Existing analyze/profile v2 and style v4 remain unchanged.
 The workspace also stores dossiers, claims, evidence links and author decisions with full native revision history.
-The [research RFC](research/README.md) additionally specifies broader review workflows,
-manuscript anchors, and hybrid vector search; those are not current dependencies.
+The [research RFC](research/README.md) additionally proposes broader review workflows
+and hybrid vector search. The implemented manual manuscript associations are
+described below; the RFC is not an implementation reference.
 
 ## Layers
 
@@ -23,6 +27,7 @@ manuscript anchors, and hybrid vector search; those are not current dependencies
 | `lixity.pipeline` | Resolve document language; assemble one analysis result | Implicit file reads or mutable global project state |
 | CLI / `lixity.api` | Input/output contracts and threshold resolution | Duplicate analysis algorithms |
 | UI | Render results using shared components and bundled assets | Recompute statistical decisions in JavaScript |
+| `publication` / `pdf_export` | Validate entered publication data; compose shared PDF bytes | Infer legal identities, establish rights or write output files |
 | `lixity.server` | Loopback HTTP transport, request parsing and response envelopes | Analysis decisions, project state resolution, domain logic |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
 
@@ -55,6 +60,44 @@ corpus metrics, chapter profiles, paragraph profiles and the fingerprint.
 The metrics are calculated once and reused during fingerprint construction.
 `profile_document` and `fingerprint_document` support narrower requests.
 
+## Manual manuscript associations
+
+**Since v0.3.0:** `research.manuscript` owns `ManuscriptClaimLink`, separate
+from imported source passages/evidence. Creation retains only an explicitly
+permitted quote and an immutable `paragraph-profile-text/1` anchor: project-relative
+path, raw-source and displayed-paragraph hashes, source lines and Unicode
+codepoint offsets. It pins the exact reviewed claim revision and writes
+`research-local/7` with manifest v7 on the first opted-in save. Existing archives
+remain unchanged on reads. Product v0.3.0 supports schemas v1–v7 independently
+of the historical product numbering; historical v3.0.1 supports only v1–v6.
+
+`pipeline.paragraph_identity` supplies the same paragraph identity to rendering
+and the research API. `FileUtils.read_source_snapshot` binds raw bytes and decoded
+text in one read; manual creation checks source containment and bytes again
+before publication. `manuscript_review_data` accepts the existing validated
+repository snapshot and pipeline paragraphs, avoiding duplicate analysis or a
+second archive read. It derives structural change flags without mutating anchors,
+repinning claims or proving factual support. Unique moved/duplicate paragraph
+candidates remain unresolved. Missing and unreadable sources remain distinct.
+
+`server.routes_manuscript_research` validates selected manuscript and archive
+tokens before delegating to the shared API. The native reader marks only exact
+resolved quote spans, supports lazy paragraph rendering and preserves complete
+text search. Dossier research/companion readers reuse the existing claim viewer
+and history for a reverse list of current claim associations. Saved quote counts
+join explicit links by their pinned dossier ID using one coherent snapshot;
+counts span saved dossier versions and disclose differing revision pins;
+zero counts do not establish manuscript nonuse. There is no automatic evidence
+linking, manuscript import or semantic analysis in this association workflow.
+
+Ordinary authored CLI updates may omit the archive snapshot, while requiring
+the exact reviewed record revision, change kind and reason. The CLI forwards
+its current read's snapshot to the same strict backend writer; record changes
+and races fail without retry. Explicit snapshots and Python/HTTP/batch/image/
+acknowledgement writes retain their existing strict guards. Unchanged association
+pins remain; changed associations require explicit reviewed pins in convenience
+mode. This does not introduce another persistence or reconciliation path.
+
 ## Configuration and multiple projects
 
 Project author identity reuses `author_name` in the existing configuration loader,
@@ -65,6 +108,42 @@ An optimistic file-identity/content check precedes atomic replacement; it is not
 an external editor lock. The UI, NDA renderer and pure `project_identity` checker
 consume that same value. Identity comparisons read a bounded syntax subset and
 never rewrite manuscripts or affect linguistic measurements.
+
+**Since v0.3.0:** `publication.PublicationSettings` and
+`PUBLICATION_FIELDS` define the optional imprint data and field bounds once.
+The existing configuration loader excludes publication data from user/ancestor
+defaults; the settings renderer and PDF composer consume that same model.
+`project_identity.project_title` supplies one code-aware title resolver.
+`pdf_export.compose_pdf` remains the single in-memory entrypoint for CLI and
+native manuscript downloads, with explicit analysis configuration and project
+identity inputs. The CLI owns output-path writes; the native route returns
+bytes after checking selected context. A5 front matter uses only entered data;
+A4 sheet/report composition keeps its existing purpose and body constraints.
+PDF Info/Lang, chapter outlines and page furniture reuse `pdf_document` rather
+than a second writer. Syntax validation is not a publication-compliance check.
+
+`config.prepare_project_settings` constructs one validated candidate for title,
+author and publication while checking that other TOML values remain intact.
+The settings route renders the complete candidate dashboard first, commits
+through `PreparedProjectSettings`, then publishes session/cache state. Decode,
+validation, render or replacement failures do not publish the candidate.
+Selected-context tokens include source/root and digests of both root configs;
+publication saves require one, and PDF downloads reject stale metadata tokens.
+The commit guard checks observed config identity and bytes before replacement;
+it does not lock other processes or turn a manuscript path into a content pin.
+Root configuration snapshots accept regular nonsymlink files and verify the
+opened descriptor's identity; special files fail before a blocking read.
+
+**Since v0.3.0:** text and binary output share
+`FileUtils.atomic_write_bytes_if_changed`: a same-directory stage, complete
+write, flush, original-mode preservation, fsync and atomic replacement. The
+optional `before_replace` guard runs immediately before a changed replacement;
+unchanged bytes skip it. Errors propagate, staging is cleaned and there is no
+system-temporary or direct-overwrite fallback. Settings consumers can supply
+their optimistic identity/content guard through this same entrypoint.
+`Workspace.publish` uses finer timestamps plus a repeated-instant sequence,
+recognizes historical minute names and prepares its stable link/copy before
+replacement. Failed stable publication raises before archive rotation.
 
 ```python
 from pathlib import Path
@@ -142,9 +221,12 @@ introduced. The table omits unmeasured chapters and columns for absent axes.
 ### Visual consistency and evidence
 
 The local dashboard and Pages use the same
-neutral surfaces and blue action palette. The existing stylesheets remain separate
-so exported dashboards stay self-contained; browser checks compare the common
-color roles. Filled actions use `#245b85` with white text in both themes, while
+neutral surfaces and blue action palette. **Since v0.3.0:**
+`ui/assets/design-tokens.css` owns the shared color, type, spacing and control
+roles. Dashboards bundle it into self-contained output; Pages stages the same
+bytes and imports them from its existing stylesheet. Surface-specific rules
+remain in the existing stylesheets; there is no additional theme store.
+Filled actions use `#245b85` with white text in both themes, while
 links and focus rings use a lighter blue on dark surfaces. Analytical diverging
 colors retain their meaning. Heatmap text selects black or white from the actual
 cell luminance, independently of the surrounding theme.

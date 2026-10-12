@@ -18,7 +18,7 @@ from lixity.research.repository import Repository
 from lixity.workspace_labels import WORKSPACE_LABELS
 with tempfile.TemporaryDirectory() as directory:
     p = Path(directory) / 'synthetic-project'
-    api.init(p, title='Synthetic author assessment')
+    initialized = api.init(p, title='Synthetic author assessment')
     first = api.create_dossier(p, title='First <img src=x onerror=alert(1)> dossier', body='Synthetic notes.')['dossier_id']
     second = api.create_dossier(p, title='Second dossier', body='Other synthetic notes.')['dossier_id']
     decision = api.record_decision(p, title='Synthetic decision', rationale='Synthetic author choice.', dossier_ids=[first, second])['decision_id']
@@ -64,7 +64,7 @@ with tempfile.TemporaryDirectory() as directory:
     for language in ('en','de','fr','es','it','pt','nl'):
         html, _ = build_server_dashboard(None, language=language, title='Synthetic author assessment')
         fixtures[language] = {'html': html, 'labels':WORKSPACE_LABELS[language]}
-    print(json.dumps({'fixtures':fixtures, 'initial':initial, 'applied':applied, 'reopened':reopened,
+    print(json.dumps({'project_id':initialized['project_id'], 'fixtures':fixtures, 'initial':initial, 'applied':applied, 'reopened':reopened,
                      'stale':stale, 'withdrawn':withdrawn, 'decision':decision, 'first':first, 'second':second,
                      'after_applied':after_applied, 'applied_second':applied_second, 'after_second':after_second,
                      'details':details, 'external_after_applied':external_after_applied,
@@ -105,10 +105,13 @@ const data = JSON.parse(fixture.stdout);
       }
       if (url.pathname === '/api/research/decision-impact') return route.fulfill({json:{ok:true,...state.impact}});
       if (url.pathname === '/api/research/status') return route.fulfill({json:{
-        ok:true,initialized:true,project_root:'/synthetic',project_id:state.impact.project_id,
+        ok:true,initialized:true,project_root:'/synthetic',project_id:data.project_id,
         sources_count:0,dossiers_count:2,claims_count:0,decisions_count:1
       }});
       if (url.pathname === '/api/research/decisions') return route.fulfill({json:{ok:true,...data.decisions}});
+      if (url.pathname === '/api/research/sources') return route.fulfill({json:{
+        ok:true,schema_version:'research-sources-local/1',project_id:data.project_id,sources:[]
+      }});
       if (url.pathname === '/api/research/dossiers') {
         const id = url.searchParams.get('id');
         const detail = state === data.external_after_applied && id === data.second ? state.detail : data.details[id];
@@ -118,6 +121,7 @@ const data = JSON.parse(fixture.stdout);
       return route.fulfill({contentType:'text/html',body:data.fixtures[language].html});
     });
     await page.goto('http://lixity.test/');
+    await page.waitForFunction(id => researchSelectionProjectId === id, data.project_id);
     await page.locator('[data-rtab=decisions]').click();
     await page.locator('[data-decision-impact]').click();
     await page.locator('#research-decisions-list [data-decision-ack-dossier]').first().waitFor({state:'attached'});

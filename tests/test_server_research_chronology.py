@@ -146,3 +146,31 @@ def test_present_malformed_tokens_cannot_become_unbound_requests(workspace, toke
         status, result = request(route, {**body, "research_token": token})
         assert status == 400 and not result["ok"]
     assert Repository(project).snapshot().digest == before
+
+
+@pytest.mark.parametrize("route,payload", [
+    ("research-claim-add", {"title": "Synthetic claim", "statement": "A synthetic claim."}),
+    ("research-dossier", {"title": "Synthetic dossier", "body": "A synthetic dossier."}),
+    ("research-decision-add", {"title": "Synthetic decision", "rationale": "A synthetic decision."}),
+    ("research-ingest", {"title": "Synthetic source", "text": "A retained synthetic source.", "allow_retention": True}),
+])
+def test_authored_create_refuses_stale_root_before_writing_and_accepts_current_root(workspace, tmp_path, route, payload):
+    project, handler, _, _, request = workspace
+    old_token = research_context_token(project)
+    copied = tmp_path / "restored-authored-copy"
+    shutil.copytree(project, copied)
+    handler.workspace_root = str(copied)
+    handler.research_dir = str(copied)
+    before = Repository(copied).snapshot().digest
+    original = Repository(project).snapshot().digest
+    status, result = request("/api/" + route, {**payload, "research_token": old_token})
+    assert status == 409 and not result["ok"]
+    assert Repository(copied).snapshot().digest == before
+    assert Repository(project).snapshot().digest == original
+    status, result = request("/api/" + route, {**payload, "research_token": None})
+    assert status == 400 and not result["ok"]
+    assert Repository(copied).snapshot().digest == before
+    status, result = request("/api/" + route, {**payload, "research_token": research_context_token(copied)})
+    assert status == 200 and result["ok"]
+    assert Repository(copied).snapshot().digest != before
+    assert Repository(project).snapshot().digest == original

@@ -23,7 +23,7 @@ from ..research.repository import ResearchConflictError, ResearchError
 from ._base import ResponseMixin
 from .pdf_context import manuscript_pdf_token, research_context_token
 
-RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decision", "claim_relation"))
+RESEARCH_RECORD_KINDS = frozenset(("dossier", "claim", "evidence_link", "decision", "claim_relation", "manuscript_claim_link"))
 
 
 class ResearchRoutesMixin(ResponseMixin):

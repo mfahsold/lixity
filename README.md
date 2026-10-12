@@ -19,10 +19,16 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Installation](#installation) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v3.0.1 release notes](docs/releases/v3.0.1.md)
+[v0.3.0 release notes](docs/releases/v0.3.0.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload.
+
+**Development maturity:** v0.3.0 resets the product version to
+reflect development before 1.0. It retains the existing features and published
+release history, including v3.0.1. Public JSON and research storage schema
+versions are independent; v0.3.0 reads existing research archives through v7.
+Select the exact release wheel when upgrading across this lower version number.
 
 Free for projects with no commercial purpose. A book intended for sale,
 including self-publishing, requires a separate written commercial license.
@@ -36,7 +42,7 @@ For help installing uv or advanced installation options, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.1/lixity-3.0.1-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -51,13 +57,13 @@ The service starts an empty local workspace; choose **Open Project** or
 **Analyze a manuscript**.
 For later upgrades, select the new release wheel using
 the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace. [Release notes](docs/releases/v3.0.1.md) describe compatibility
+the local workspace. [Release notes](docs/releases/v0.3.0.md) describe compatibility
 and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
-**Since v3.0.0:** organize claim periods in a read-only timeline,
+**Available in v0.3.0; introduced in historical v3.0.0:** organize claim periods in a read-only timeline,
 record your cause/effect interpretations between exact claim versions, and choose
 source citations by keywords. The first saved causal link opts the archive into
-v6, requiring v3.0.0 or newer readers; claim-list API consumers must also update
+v6, supported by v0.3.0 and the historical v3.0.x releases; claim-list API consumers must also update
 to the new uniform envelope. Existing archive history remains readable.
 See the [research workflow](docs/research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300)
 for chronology and compatibility details.
@@ -157,12 +163,26 @@ preflight and automatic fallback between fonts are not provided.
 
 [Command reference](docs/USAGE.md#lixity-pdf)
 
-**Since v2.4.0:** a compatible native workspace adds manuscript PDF
-downloads at the top of **Manuscript & Analysis**, before **Start your review**.
+**Since v0.3.0:** open **PDF export** in the global project controls,
+available from all three native workspace views.
 Choose **A5 reading copy** (default), **A4 manuscript sheets** or
-**A4 analysis report**, then select **Download PDF**. Generation returns a PDF through the
+**A4 analysis report**, then select **Download PDF** to save it.
+The menu starts collapsed. Generation returns a PDF through the
 browser without writing server export files or changing the manuscript
 or research archive. The terminal command remains available.
+
+**Since v0.3.0:** the same PDF composer reads the selected project's
+title, author and optional publication details. Expand **Publication** in
+**Project → Settings** to enter publisher/printer details, edition, ISBNs,
+rights text or credits; include them in the A5 reading copy with the explicit
+checkbox. Empty fields add no inferred information. PDF metadata, chapter
+bookmarks and running headers help readers navigate; these remain fixed-layout
+PDFs, without EPUB, PDF/UA or PDF/X certification.
+See [publication settings and Germany print/digital guidance](docs/USAGE.md#publication-settings).
+
+**Since v0.3.0:** changed builds retain distinct versions even
+within the same minute. File replacement failures preserve the original bytes
+and report an error; they no longer fall back to writing over the original file.
 
 ### Keep review notes beside the text
 

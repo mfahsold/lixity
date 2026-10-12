@@ -12,7 +12,6 @@ from typing import ClassVar
 
 import pytest
 
-from lixity.pdf_document import PdfError
 from lixity.server import LixityServerHandler
 from lixity.server.pdf_context import manuscript_pdf_token
 from lixity.style_fingerprint import FingerprintThresholds
@@ -145,6 +144,44 @@ def test_no_readable_nonempty_selected_manuscript_is_not_exported(pdf_server, so
         assert "prose" in json.loads(body)["message"]
 
 
+@pytest.mark.native_pdf
+@pytest.mark.skipif(not shutil.which("pdftotext"), reason="requires Poppler pdftotext")
+def test_changed_publication_author_reject_old_token_and_fresh_download_uses_new_metadata(
+    pdf_server, tmp_path,
+):
+    port, project, handler, old_token = pdf_server
+    config = project / "lixity.toml"
+    original = config.read_text(encoding="utf-8")
+    for changed, expected in (
+        (original.replace('author_name = "Synthetic Author"',
+                          'author_name = "Updated Grüße"'), "Updated Grüße"),
+        (original + '\n[publication]\nenabled = true\npublisher_name = "Updated Synthetic Publisher"\n',
+         "Updated Synthetic Publisher"),
+    ):
+        config.write_text(changed, encoding="utf-8")
+        before = file_bytes(project)
+        status, _headers, body = request(port, {"layout": "book", "project_token": old_token})
+        assert status == 409 and json.loads(body)["ok"] is False
+        fresh = manuscript_pdf_token(
+            handler.source_input, project_root=handler.workspace_root, language=handler.language,
+            title=handler.title, thresholds=handler.thresholds,
+        )
+        assert fresh != old_token
+        status, headers, body = request(port, {"layout": "book", "project_token": fresh})
+        assert status == 200 and headers["Content-Type"] == "application/pdf"
+        assert file_bytes(project) == before
+        path = tmp_path / "download-check.pdf"
+        path.write_bytes(body)
+        executable = shutil.which("pdftotext")
+        assert executable
+        result = subprocess.run(  # noqa: S603 - resolved Poppler, synthetic PDF
+            [executable, str(path), "-"], check=True, capture_output=True, text=True,
+        )
+        assert not result.stderr
+        assert expected in result.stdout
+        path.unlink()
+
+
 @pytest.mark.parametrize("malformed", ["source", "config"])
 def test_changed_unreadable_source_or_malformed_config_returns_json(pdf_server, malformed):
     port, project, handler, token = pdf_server
@@ -154,25 +191,22 @@ def test_changed_unreadable_source_or_malformed_config_returns_json(pdf_server, 
         (project / "lixity.toml").write_text('title = "unclosed\n', encoding="utf-8")
     before = file_bytes(project)
     status, headers, body = request(port, {"layout": "book", "project_token": token})
-    assert status == 400 and json.loads(body)["ok"] is False
+    assert status == (409 if malformed == "config" else 400)
+    assert json.loads(body)["ok"] is False
     assert headers["Content-Type"] == "application/json; charset=utf-8"
     assert file_bytes(project) == before
 
 
 def test_font_failure_returns_json_without_creating_artifacts(pdf_server, monkeypatch):
-    from lixity.pdf_layouts import FontChoice
-
     port, project, _handler, token = pdf_server
     before = file_bytes(project)
-
-    def unavailable(_choice):
-        raise PdfError("Synthetic unavailable font")
-
-    monkeypatch.setattr(FontChoice, "roles", unavailable)
+    missing_font = project / "absent.ttf"
+    monkeypatch.setenv("LIXITY_PDF_FONT_TEXT", str(missing_font))
     status, headers, body = request(port, {"layout": "book", "project_token": token})
     assert status == 400
     assert headers["Content-Type"] == "application/json; charset=utf-8"
-    assert json.loads(body)["message"] == "Synthetic unavailable font"
+    assert "Configured font for text does not exist" in json.loads(body)["message"]
+    assert str(missing_font) in json.loads(body)["message"]
     assert file_bytes(project) == before
 
 
@@ -196,6 +230,7 @@ def test_project_change_during_composition_cancels_the_download(pdf_server, monk
         port, {"layout": "book", "project_token": token},
     )))
     pending.start()
+    after_change = before
     try:
         assert started.wait(timeout=5)
         # Real state-changing routes must complete while composition is paused.
@@ -208,6 +243,8 @@ def test_project_change_during_composition_cancels_the_download(pdf_server, monk
             payload = {"path": str(other)}
         status, _headers, body = request(port, payload, action=change)
         assert status == 200, body
+        after_change = file_bytes(project)
+        assert after_change["synthetic.md"] == before["synthetic.md"]
     finally:
         continue_composition.set()
         pending.join(timeout=10)
@@ -215,14 +252,19 @@ def test_project_change_during_composition_cancels_the_download(pdf_server, monk
     status, headers, body = results[0]
     assert status == 409 and json.loads(body)["ok"] is False
     assert headers["Content-Type"] == "application/json; charset=utf-8"
-    assert file_bytes(project) == before
+    # Settings now deliberately persists the title. PDF cancellation must not
+    # write anything beyond that authorized state transition.
+    assert file_bytes(project) == after_change
 
 
 def test_rendered_selection_token_is_accepted_with_implicit_title(pdf_server):
     port, _project, handler, _token = pdf_server
     handler.title = None
     handler.refresh()
-    token = re.search(r'data-project-token="([0-9a-f]{64})"', handler.dashboard_html).group(1)
+    token = re.search(
+        r'<form\b[^>]*id="manuscript-pdf-form"[^>]*data-project-token="([0-9a-f]{64})"',
+        handler.dashboard_html,
+    ).group(1)
     status, _headers, body = request(port, {"layout": "book", "project_token": token})
     assert status == 200 and body.startswith(b"%PDF-1.4")
 

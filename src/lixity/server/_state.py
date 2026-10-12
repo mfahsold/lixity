@@ -1,8 +1,8 @@
 """Shared workspace state for the native server.
 
-`refresh()` is the single place where project state is resolved: manuscript,
-workspace root, exports directory, research root, language, thresholds and the
-rendered dashboard. Every route group reads this state through here.
+Every route group reads selected workspace state here. `refresh()` and prepared
+project/settings transitions reuse `build_server_dashboard` for resolution and
+`publish_dashboard` for the cached view; no route maintains another renderer.
 """
 
 from __future__ import annotations
@@ -23,9 +23,9 @@ if TYPE_CHECKING:
 class WorkspaceState:
     """Mutable workspace state shared by every route group.
 
-    Declared here so route modules can rely on the attributes existing, and so
-    `refresh()` — the single place project state is resolved — has exactly one
-    definition.
+    Declared here so route modules can rely on the attributes existing. Candidate
+    transitions prepare a view before publishing; ordinary refresh uses the same
+    builder and cache publication method.
     """
 
     if TYPE_CHECKING:
@@ -76,9 +76,14 @@ class WorkspaceState:
         return root.resolve() if root and (root / "research").is_dir() else None
 
     @classmethod
+    def publish_dashboard(cls, html: str, info: dict[str, Any]) -> None:
+        """Publish an already prepared view under the caller's workspace lock."""
+        cls.dashboard_html, cls.dashboard_info = html, info
+
+    @classmethod
     def refresh(cls) -> None:
         """Re-analyzes the active manuscript and updates cached dashboard HTML."""
-        cls.dashboard_html, cls.dashboard_info = build_server_dashboard(
+        html, info = build_server_dashboard(
             cls.source_input,
             language=cls.language,
             title=cls.title,
@@ -90,3 +95,4 @@ class WorkspaceState:
             project_root=cls.get_author_project_root(),
             research_root=cls.get_research_root(),
         )
+        cls.publish_dashboard(html, info)

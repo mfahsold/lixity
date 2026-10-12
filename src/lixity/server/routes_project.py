@@ -6,6 +6,7 @@ import contextlib
 import json
 import os
 import re
+import warnings
 from bisect import insort
 from dataclasses import replace
 from pathlib import Path
@@ -15,8 +16,9 @@ from urllib.parse import parse_qs, urlparse
 from ..config import (
     apply_config_to_thresholds,
     load_project_config,
+    prepare_project_settings,
     resolve_thresholds,
-    save_project_author,
+    validate_project_title,
 )
 from ..research import api as research_api
 from ..research.repository import ResearchError
@@ -24,9 +26,8 @@ from ..workspace import discover
 from ..workspace_labels import WORKSPACE_LABELS
 from ._base import ResponseMixin
 from .constants import LANGUAGE_CHOICES
+from .pdf_context import project_settings_token
 from .views import build_server_dashboard, sanitize_filename
-
-MAX_TITLE = 500
 
 
 class ProjectRoutesMixin(ResponseMixin):
@@ -98,19 +99,36 @@ class ProjectRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": f"Unknown language: {lang}"}, 400)
             return
 
-        if "title" in payload:
-            raw_title = payload.get("title")
-            title = str(raw_title or "").strip() or None
-            title_custom = title is not None
-        else:
-            title = self.title
-            title_custom = self.title_custom
-
         try:
+            root = self.get_author_project_root()
+            current_token = project_settings_token(root, self.source_input)
+            if ("publication" in payload or "project_token" in payload) and (
+                    not current_token or payload.get("project_token") != current_token):
+                self._json({"ok": False, "message": "The selected project or its settings changed; reload before saving"}, 409)
+                return
+            title = validate_project_title(payload["title"]) or None if "title" in payload else self.title
+            title_custom = title is not None if "title" in payload else self.title_custom
             thresholds = replace(self.thresholds, **apply_config_to_thresholds(payload))
-            if "author_name" in payload:
-                save_project_author(self.get_author_project_root(), payload["author_name"])
-        except (OSError, TypeError, ValueError) as exc:
+            changes: dict[str, Any] = {key: payload[key] for key in ("title", "author_name", "publication") if key in payload}
+            if root is None:
+                changes.pop("title", None)
+            prepared = prepare_project_settings(root, changes) if changes else None
+            if "project_token" in payload and project_settings_token(root, self.source_input) != current_token:
+                self._json({"ok": False, "message": "Project settings changed while preparing; reload before saving"}, 409)
+                return
+            with warnings.catch_warnings():
+                warnings.filterwarnings("error", category=UserWarning, module=r"lixity\.config")
+                html, info = build_server_dashboard(
+                    self.source_input, language=lang, title=title, thresholds=thresholds,
+                    controls=True, api_base="/api", exports_dir=self.exports_dir, debug=self.debug,
+                    project_root=root, research_root=self.get_research_root(),
+                    identity_settings_override=changes,
+                    project_config_bytes=prepared.content if prepared else None,
+                    strict_source=True,
+                )
+            if prepared:
+                prepared.commit()
+        except (OSError, TypeError, ValueError, RuntimeError, UserWarning) as exc:
             self._json({"ok": False, "message": str(exc)}, 400)
             return
 
@@ -118,11 +136,12 @@ class ProjectRoutesMixin(ResponseMixin):
         self.__class__.title = title
         self.__class__.title_custom = title_custom
         self.__class__.thresholds = thresholds
-        self.refresh()
+        self.publish_dashboard(html, info)
         self._json({
             "ok": True,
             "message": f"Settings applied · Language: {lang} · z* ≥ {thresholds.z_mild:.1f} / {thresholds.z_strong:.1f}",
             "reload": True,
+            "project_token": project_settings_token(root, self.source_input),
         })
 
     def _handle_load(self, payload: dict[str, Any]) -> None:
@@ -277,11 +296,6 @@ class ProjectRoutesMixin(ResponseMixin):
             else:
                 raise ValueError("Project path must be a folder or manuscript file")
 
-            if manuscript is not None:
-                # build_server_dashboard historically treats read errors as an
-                # empty manuscript. Opening must fail before switching state.
-                Path(manuscript).read_text(encoding="utf-8")
-
             settings = load_project_config(ws_root)
             overrides = self.project_open_overrides
             same_project = (
@@ -291,9 +305,8 @@ class ProjectRoutesMixin(ResponseMixin):
             language = overrides.get("language", settings.get("language", "en"))
             if language not in LANGUAGE_CHOICES:
                 raise ValueError(f"Unknown project language: {language}")
-            title = overrides.get(
-                "title", self.title if same_project and self.title_custom else settings.get("title")
-            )
+            # Titles identify a project; startup/session titles must not label a different book or NDA.
+            title = self.title if same_project and self.title_custom else settings.get("title")
             thresholds = resolve_thresholds(
                 project_config=settings,
                 **{
@@ -321,6 +334,7 @@ class ProjectRoutesMixin(ResponseMixin):
                 exports_dir=exports_dir,
                 project_root=ws_root,
                 research_root=ws_root,
+                strict_source=True,
             )
         except (
             OSError,
@@ -341,10 +355,9 @@ class ProjectRoutesMixin(ResponseMixin):
         )
         self.__class__.language = language
         self.__class__.title = title
-        self.__class__.title_custom = "title" in overrides or (same_project and self.title_custom)
+        self.__class__.title_custom = same_project and self.title_custom
         self.__class__.thresholds = thresholds
-        self.__class__.dashboard_html = html
-        self.__class__.dashboard_info = info
+        self.publish_dashboard(html, info)
 
         self._json(
             {

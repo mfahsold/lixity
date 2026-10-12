@@ -93,6 +93,12 @@ const hostileError = '<img src=x onerror="window.pdfInjected=true"> Synthetic pr
       const select = page.locator('#manuscript-pdf-layout');
       const button = page.locator('#manuscript-pdf-download');
       const status = page.locator('#manuscript-pdf-status');
+      assert.equal(await form.locator('xpath=ancestor::*[@id="project-controls"]').count(), 1,
+        'PDF export belongs to the global project controls');
+      assert.equal(await page.locator('#view-pane-analysis #manuscript-pdf-form').count(), 0);
+      assert.equal(await page.locator('#manuscript-pdf-form').count(), 1, 'There is one canonical export form');
+      assert.equal(await form.isVisible(), false, 'Project export starts compact');
+      await page.locator('#manuscript-pdf-title').click();
       assert.equal(await form.isVisible(), true, 'A loaded native manuscript offers PDF export');
       assert.equal(await form.getAttribute('data-project-token'), 'synthetic-token');
       assert.equal(await select.inputValue(), 'book', 'Reading layout is the initial choice');
@@ -102,6 +108,10 @@ const hostileError = '<img src=x onerror="window.pdfInjected=true"> Synthetic pr
       assert.ok((await button.textContent()).trim().length > 0);
       assert.doesNotMatch(await form.textContent(), /manuscript_pdf_[a-z_]+/, 'Controls use translated labels');
       assert.equal(requests.length, 0, 'Loading the dashboard never starts export');
+      for (const view of ['research', 'project', 'analysis']) {
+        await page.locator(`#tab-view-${view}`).click();
+        assert.equal(await form.isVisible(), true, `Project export remains visible in ${view}`);
+      }
 
       for (const layout of ['book', 'sheet', 'report']) {
         await select.selectOption(layout);
@@ -162,6 +172,7 @@ const hostileError = '<img src=x onerror="window.pdfInjected=true"> Synthetic pr
     const noScript = await browser.newPage({javaScriptEnabled: false, viewport: {width: 320, height: 900}});
     await noScript.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: fixtures.en}));
     await noScript.goto('http://lixity.test/');
+    await noScript.locator('#manuscript-pdf-title').click();
     assert.equal(await noScript.locator('#manuscript-pdf-form').isVisible(), true);
     assert.equal(await noScript.locator('#manuscript-pdf-download').isDisabled(), true,
       'Without JavaScript the native action cannot submit an incomplete request');
@@ -181,6 +192,7 @@ const hostileError = '<img src=x onerror="window.pdfInjected=true"> Synthetic pr
       if (['offline', 'embedding', 'implicit'].includes(name)) assert.equal(await form.count(), 0, `${name} has no native export action`);
       else {
         await page.locator('#tab-view-analysis').click();
+        await page.locator('#manuscript-pdf-title').click();
         assert.equal(await form.isVisible(), true, `${name} keeps native export discoverable`);
         assert.equal(await page.locator('#manuscript-pdf-download').isDisabled(), true,
           `${name} cannot export without manuscript paragraphs and a project token`);

@@ -7,7 +7,96 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 3.0.1; release tag: v3.0.1.
+Current release: 0.3.0; release tag: v0.3.0.
+
+Version 0.3.0 resets PRODUCT development maturity before 1.0; historical
+published v3.0.1 and earlier notes/tags remain. Existing features stay available.
+JSON/storage versions are independent: analyze/profile2, style4; research
+records/manifests1–7 readable in v0.3.0. Historical v3.0.1 reads through6, not7.
+Select exact release wheels across the lower product number, not a >= comparison.
+
+Manual manuscript associations require an explicit initialized project and
+selected manuscript inside it. In one opened paragraph select text, choose a
+current claim, explicitly permit local quote retention, then Save. Preview writes
+nothing. Distinct manuscript_claim_link retains only quote/path/raw-source hash/
+paragraph hash/line range/Unicode-codepoint offsets plus note/record metadata;
+no manuscript blob, source Passage/EvidenceLink, prose edit or factual proof.
+selection keys exactly start_line/end_line/paragraph_sha256/start/end/quote;
+exclusive end, offsets in displayed ParagraphProfile.text, hash SHA256 UTF8.
+Quote nonblank<=10000codepoints; note<=2000characters. Reject escaping paths/
+symlinks and stale project/snapshot/source/claim/paragraph selections. First
+successful allow_retention=True save opts into research-local/7 + manifest7;
+read/list/review leave older bytes unchanged. Audit/history/export/restore include
+links and private quotes; manuscript bytes are not source blobs in these exports.
+Python link_manuscript_claim(project, manuscript, claim_id, *, claim_revision,
+selection, expected_project_id, expected_snapshot, expected_source_sha256,
+allow_retention=False, note=None, actor="local-author", language=None,
+project_config=None); list_manuscript_links(project, claim_id=None,
+include_retracted=False); review_manuscript_links(project, manuscript,
+expected_project_id=None, language=None, project_config=None).
+Create/list/review envelopes research-manuscript-link-local/1,
+research-manuscript-links-local/1, research-manuscript-review-local/1.
+Generic revisions kind manuscript_claim_link accept claim_id/claim_revision/state/
+note; anchor immutable, no reanchoring API. Unchanged claim preserves exact pin.
+Review states resolved/moved/ambiguous/changed/unavailable and source/claim/anchor
+flags indicate structural review, not semantic contradiction. Only exact anchors
+mark inline; moved/ambiguous candidates stay unresolved, no automatic repin.
+Native GET /api/research/manuscript-review requires research_token+project_token.
+GET /api/research/manuscript-links requires research_token; optional claim_id and
+include_retracted=true|false. POST /api/research-manuscript-link requires project_id,
+research_token, project_token, expected_snapshot, expected_source_sha256, claim_id,
+positive integer claim_revision, selection, boolean allow_retention:true; note
+optional. Unknown fields fail, invalid400/context-conflict409. Tokens are opaque.
+Dossier research/companion readers show current linked claims with existing
+viewer/history. Active saved quote counts join links by claim and pinned dossier
+ID in the same snapshot; unavailable on mismatch/read failure. Zero is not proof
+of nonuse. Historical dossier reads do not reconstruct historical claim membership.
+Ordinary dossier/claim/link-evidence/decision/relate --update require reviewed
+--expected-revision/--change-kind/--reason; --expected-snapshot optional. Omission
+checks target revision then forwards current snapshot to strict API; unrelated
+previous writes can succeed, same-record changes/races fail without retry/rebase.
+Explicit snapshot remains strict archive-wide. Unchanged association pins remain;
+new/changed associations require explicit revision flags or dossier-revisions map
+when snapshot omitted. Python/HTTP/batch/image/acknowledgement guards unchanged.
+See https://mfahsold.github.io/lixity/research/USAGE.md#associate-a-manuscript-quote-with-a-claim
+and https://mfahsold.github.io/lixity/AGENTS.md#manual-manuscript-associations
+
+Since v0.3.0: CLI/native PDFs share one composer and explicit
+project title/author_name/[publication] data. Publication is collapsed in the
+existing Settings form and disabled without an explicit project. enabled is
+false by default; every text field is optional/empty: publisher_name,
+publisher_address, printer_name, printer_address, edition, year, isbn_print,
+isbn_digital, rights_notice, credits, extra_info. Only A5 book includes entered
+imprint text; long entries can continue across pages. No inferred identities,
+addresses, copyright notice or DNB catalog claim. Validate syntax/bounds/ISBN
+checksums and distinct canonical print/digital identifiers, not legal
+completeness or ownership. Shared Info Title/Author,
+catalog Lang/bookmarks and bounded page headers support navigation. Books use
+physical folios; A4 sheet/report use current/total. Supported exports remain
+A5 book/A4 sheet/A4 report fixed-layout PDF, not EPUB or certified PDF/UA/PDF/X.
+See https://mfahsold.github.io/lixity/USAGE.md#publication-settings
+and https://mfahsold.github.io/lixity/guides/research-pdf.html#publication
+for Germany print identities, voluntary ISBN/rights notice, separate legal
+deposit and applicable BFSG ebook scope/exemptions. Digital provider/website
+duties under MStV18/DDG5 are separate; do not require every webpage field in
+every ebook merely because these entered publication fields exist.
+Apply saves selected-project title/author/publication together in lixity.toml;
+language/thresholds remain session controls. Prepare candidate view before
+guarded file replacement, then publish session/cache. Failure leaves candidate
+metadata/state unpublished. POST /api/settings publication requires the opaque
+settings-form project_token; any supplied token must match source/root/both
+root configs. Missing/stale required token409; validation/read/render/write400.
+Success returns fresh project_token. Title/author/threshold-only calls accept
+omitted tokens; native active-project UI sends one. PDF metadata edits invalidate
+older download context tokens. Optimistic guards are not external-editor locks.
+
+Since v0.3.0: text/binary writes share same-directory staging,
+original-mode preservation, fsync and atomic replacement. Errors propagate;
+no system-temp/direct-write fallback. Decode failures are OSError. Stable
+artifact updates prepare link/copy before replacement; failure preserves old
+stable bytes and stops rotation with an error. Same-minute versions remain
+distinct; old minute archive names remain recognized. Marker failures return
+JSON500 without treating an unsuccessful write as a saved change.
 
 Since v3.0.1, foreground serve and managed service start/restart accept
 --min-chapters, including saved restart thresholds. Values are integers>=2;
@@ -25,7 +114,8 @@ relate creates claim_relation with exact from/to claim revision pins, canonical
 causes; results_in aliases the same direction. Reject self-links, allow authored
 cycles, infer no reverse/transitive edges or truth. Edit/retract via existing
 append-only revision/history/prepare/batch APIs. First successful explicit
-relation write uses research-local/6 and manifest/6, requiring reader>=3.0.0;
+relation write uses research-local/6 and manifest/6, supported by v0.3.0 and
+historical v3.0.x builds; require schema6 support, not a product-number minimum;
 reads leave v1–v5 archives unchanged. Existing export/restore preserves history.
 cite --query searches source paragraphs; a single hit returns research-citation-local/1.
 Zero/multiple hits return unchanged research-search-local/1 JSON, exit1;
@@ -40,7 +130,8 @@ writes/revisions require it. See the implemented research reference and
 releases/v3.0.0.md; these features are not in v2.4.0.
 
 Since v2.4.0: a compatible native server adds manuscript PDF
-downloads at the top of Manuscript & Analysis before Start your review. A5 book
+downloads. Since v0.3.0 places a collapsed PDF export menu in global project
+controls above all three views, with a Download PDF action. A5 book
 is the default; A4 submission sheet and analysis report are alternatives.
 POST /api/manuscript-pdf accepts {layout:book|sheet|report, project_token}, where
 the token is opaque and tied to the selected manuscript context. It returns an
@@ -126,7 +217,7 @@ includes unimplemented interfaces; use the command reference for available opera
 Install the CLI from the GitHub release wheel, not PyPI:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.1/lixity-3.0.1-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -398,8 +489,8 @@ and returns application/pdf or text/plain, not a JSON record envelope.
 Document language: nda.language > resolved server/project language > project
 configuration > en. Optional UTF-8 nda.template stays inside the project; its five
 literal fields are recipient_name/recipient_address/project_title/date/place,
-plus optional project_author from configured author_name. Settings persists that
-single author field only in the active project's lixity.toml. Read-only title/author
+plus optional project_author from configured author_name. Author identity is
+stored only in the active project's lixity.toml. Read-only title/author
 checks recognize explicit flat YAML or leading title-page bylines; missing or
 unsupported metadata is not a mismatch or authorship proof. Manuscripts are not edited.
 Unknown fields and outside paths are rejected. Seven friendly text models are

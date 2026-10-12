@@ -2,6 +2,7 @@
 
 from collections.abc import Mapping
 from dataclasses import dataclass
+from hashlib import sha256
 from typing import Any
 
 from .analyzer import CorpusAnalyzer
@@ -22,6 +23,12 @@ class DocumentAnalysis:
     paragraphs: list[ParagraphProfile]
     chapters: list[ChapterProfile]
     fingerprint: StyleFingerprint
+
+
+def paragraph_identity(paragraph: ParagraphProfile) -> dict[str, Any]:
+    """Identify the exact displayed profile text, without retaining that text."""
+    return {"start_line": paragraph.start_line, "end_line": paragraph.end_line,
+            "paragraph_sha256": sha256(paragraph.text.encode("utf-8")).hexdigest()}
 
 
 def resolve_document_config(

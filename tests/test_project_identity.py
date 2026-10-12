@@ -197,7 +197,7 @@ def test_concurrent_config_change_is_not_overwritten(tmp_path):
         path.write_bytes(b'title = "Concurrent"\n')
         return created
 
-    with patch("lixity.config.tempfile.mkstemp", side_effect=concurrent_create), pytest.raises(ValueError):
+    with patch("lixity.io.tempfile.mkstemp", side_effect=concurrent_create), pytest.raises(ValueError):
         config.save_project_author(tmp_path, "Writer")
     assert path.read_bytes() == b'title = "Concurrent"\n'
     assert set(tmp_path.iterdir()) == {path}

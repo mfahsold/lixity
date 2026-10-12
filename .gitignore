@@ -36,6 +36,14 @@ dmypy.json
 .agents/
 .antigravity/
 .gemini/
+.aws/
+.azure/
+.gcloud/
+.ssh/
+.gnupg/
+/.config/
+/.mcp.json
+/.claude.json
 .worktrees/
 .superpowers/
 /docs/superpowers/plans/
@@ -63,8 +71,10 @@ nda/
 lixity-dashboard.html
 /manuscripts/
 /private/
-/.lixity/
+.lixity/
 /research/
+/backups/
+/backup/
 
 # Secrets & private stores (never commit)
 .env
@@ -86,6 +96,17 @@ credentials*
 .npmrc
 config.local.json
 *.keystore
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.db
+*.db-wal
+*.db-shm
+*.backup
+*.backup.*
 
 # OS artifacts
 .DS_Store
@@ -95,6 +116,7 @@ Thumbs.db
 *.log
 *.log.*
 *.pid
+*.sock
 *.swp
 *.swo
 *~

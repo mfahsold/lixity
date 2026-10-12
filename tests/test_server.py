@@ -17,6 +17,7 @@ from urllib.parse import quote
 
 import pytest
 
+from lixity.io import FileUtils
 from lixity.server import (
     LixityServerHandler,
     build_server_dashboard,
@@ -95,9 +96,15 @@ class TestLixityServer(unittest.TestCase):
         self.assertIn('data-action="analyze"', html)
         self.assertNotIn('data-action="rebuild"', html)
         self.assertIn("Update analysis", html)
-        for absent in ('id="ms-file"', 'id="nda-manager"', 'data-action="export"',
-                       'data-action="sync"', 'data-action="audit"', 'data-action="prune"',
-                       'data-action="gdrive"'):
+        for absent in (
+            'id="ms-file"',
+            'id="nda-manager"',
+            'data-action="export"',
+            'data-action="sync"',
+            'data-action="audit"',
+            'data-action="prune"',
+            'data-action="gdrive"',
+        ):
             self.assertNotIn(absent, html)
         self.assertEqual(info["chapters"], 0)
         self.assertEqual(info["paragraphs"], 0)
@@ -125,7 +132,14 @@ class TestLixityServer(unittest.TestCase):
     def test_project_paths_lists_one_level_and_preserves_project_state(self):
         original_state = {
             name: getattr(LixityServerHandler, name)
-            for name in ("workspace_root", "source_input", "research_dir", "language", "title", "dashboard_html")
+            for name in (
+                "workspace_root",
+                "source_input",
+                "research_dir",
+                "language",
+                "title",
+                "dashboard_html",
+            )
         }
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
@@ -145,24 +159,43 @@ class TestLixityServer(unittest.TestCase):
             result = json.loads(body)
             self.assertEqual(result["path"], str(root))
             self.assertEqual(result["parent"], str(root.parent))
-            self.assertEqual(result["entries"], [
-                {"name": "alpha.md", "path": str(root / "alpha.md"), "kind": "directory"},
-                {"name": "Zulu", "path": str(root / "Zulu"), "kind": "directory"},
-                {"name": "a & 'note'.md", "path": str(root / "a & 'note'.md"), "kind": "manuscript"},
-                {"name": "Notes.TXT", "path": str(root / "Notes.TXT"), "kind": "manuscript"},
-            ])
+            self.assertEqual(
+                result["entries"],
+                [
+                    {"name": "alpha.md", "path": str(root / "alpha.md"), "kind": "directory"},
+                    {"name": "Zulu", "path": str(root / "Zulu"), "kind": "directory"},
+                    {
+                        "name": "a & 'note'.md",
+                        "path": str(root / "a & 'note'.md"),
+                        "kind": "manuscript",
+                    },
+                    {"name": "Notes.TXT", "path": str(root / "Notes.TXT"), "kind": "manuscript"},
+                ],
+            )
             self.assertFalse(result["truncated"])
-            status, body, _ = self.make_request(f"/api/project-paths?path={quote(str(root / 'Notes.TXT'), safe='')}")
+            status, body, _ = self.make_request(
+                f"/api/project-paths?path={quote(str(root / 'Notes.TXT'), safe='')}"
+            )
             self.assertEqual(status, 200, body)
             self.assertEqual(json.loads(body)["path"], str(root))
             empty = root / "Zulu"
-            status, body, _ = self.make_request(f"/api/project-paths?path={quote(str(empty), safe='')}")
+            status, body, _ = self.make_request(
+                f"/api/project-paths?path={quote(str(empty), safe='')}"
+            )
             self.assertEqual(status, 200, body)
-            self.assertEqual(json.loads(body)["entries"], [{
-                "name": "nested.md", "path": str(empty / "nested.md"), "kind": "manuscript",
-            }])
             self.assertEqual(
-                {name: getattr(LixityServerHandler, name) for name in original_state}, original_state,
+                json.loads(body)["entries"],
+                [
+                    {
+                        "name": "nested.md",
+                        "path": str(empty / "nested.md"),
+                        "kind": "manuscript",
+                    }
+                ],
+            )
+            self.assertEqual(
+                {name: getattr(LixityServerHandler, name) for name in original_state},
+                original_state,
             )
 
     def test_project_paths_errors_origin_and_bounded_listing(self):
@@ -186,10 +219,14 @@ class TestLixityServer(unittest.TestCase):
             self.assertEqual(status, 200, body)
             self.assertEqual(json.loads(body)["entries"], [])
             for target, expected in ((root / "missing", 404), (root / "item.pdf", 400)):
-                status, body, _ = self.make_request(f"/api/project-paths?path={quote(str(target), safe='')}")
+                status, body, _ = self.make_request(
+                    f"/api/project-paths?path={quote(str(target), safe='')}"
+                )
                 self.assertEqual(status, expected, body)
                 self.assertFalse(json.loads(body)["ok"])
-            with patch("lixity.server.routes_project.os.scandir", side_effect=PermissionError("denied")):
+            with patch(
+                "lixity.server.routes_project.os.scandir", side_effect=PermissionError("denied")
+            ):
                 status, body, _ = self.make_request(path)
             self.assertEqual(status, 403, body)
             self.assertFalse(json.loads(body)["ok"])
@@ -197,6 +234,7 @@ class TestLixityServer(unittest.TestCase):
                 status, body, _ = self.make_request(path, headers=headers)
                 self.assertEqual(status, 403, body)
                 self.assertFalse(json.loads(body)["ok"])
+
     def test_untrusted_host_forbidden(self):
         status, body, _ = self.make_request("/", headers={"Host": "evil.example.com"})
         self.assertEqual(status, 403)
@@ -271,12 +309,20 @@ class TestLixityServer(unittest.TestCase):
 
         original_state = {
             name: getattr(LixityServerHandler, name)
-            for name in ("language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info")
+            for name in (
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
+            )
         }
         try:
             LixityServerHandler.thresholds = FingerprintThresholds(fdr_method="by", min_chapters=5)
             status, body, _ = self.make_request(
-                "/api/settings", method="POST",
+                "/api/settings",
+                method="POST",
                 body=json.dumps({"language": "fr"}),
                 headers={"Content-Type": "application/json"},
             )
@@ -301,15 +347,22 @@ class TestLixityServer(unittest.TestCase):
                 LixityServerHandler.research_dir = str(project)
                 LixityServerHandler.source_input = str(manuscript)
                 LixityServerHandler.language = "de"
-                with patch("lixity.server.routes_research.research_api.compare_source", return_value={"summary": {}}) as compare:
+                with patch(
+                    "lixity.server.routes_research.research_api.compare_source",
+                    return_value={"summary": {}},
+                ) as compare:
                     status, body, _ = self.make_request(
-                        "/api/research-compare", method="POST",
+                        "/api/research-compare",
+                        method="POST",
                         body=json.dumps({"source_id": "synthetic-source"}),
                         headers={"Content-Type": "application/json"},
                     )
                 self.assertEqual(status, 200, body)
                 compare.assert_called_once_with(
-                    project, "synthetic-source", str(manuscript), language="de",
+                    project,
+                    "synthetic-source",
+                    str(manuscript),
+                    language="de",
                 )
         finally:
             for name, value in original_state.items():
@@ -360,7 +413,18 @@ class TestLixityServer(unittest.TestCase):
     def test_load_rejects_existing_saved_copy_without_switching_project(self):
         original_state = {
             name: getattr(LixityServerHandler, name)
-            for name in ("workspace_root", "source_input", "exports_dir", "research_dir", "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info")
+            for name in (
+                "workspace_root",
+                "source_input",
+                "exports_dir",
+                "research_dir",
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
+            )
         }
         try:
             with tempfile.TemporaryDirectory() as td:
@@ -374,8 +438,11 @@ class TestLixityServer(unittest.TestCase):
                 before_source = LixityServerHandler.source_input
                 before_html = LixityServerHandler.dashboard_html
                 status, body, _ = self.make_request(
-                    "/api/load", method="POST",
-                    body=json.dumps({"name": "draft.md", "content": "## Replacement\n\nNew words."}),
+                    "/api/load",
+                    method="POST",
+                    body=json.dumps(
+                        {"name": "draft.md", "content": "## Replacement\n\nNew words."}
+                    ),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 409, body)
@@ -391,11 +458,15 @@ class TestLixityServer(unittest.TestCase):
         original_html = LixityServerHandler.dashboard_html
         original_source = LixityServerHandler.source_input
         before_artifacts = sorted(Path(self.exports_dir).glob("*"))
-        with patch.object(LixityServerHandler, "refresh", side_effect=AssertionError("unexpected refresh")):
+        with patch.object(
+            LixityServerHandler, "refresh", side_effect=AssertionError("unexpected refresh")
+        ):
             for action in ("export", "sync", "audit", "prune", "gdrive"):
                 with self.subTest(action=action):
                     status, body, _ = self.make_request(
-                        f"/api/{action}", method="POST", body="{}",
+                        f"/api/{action}",
+                        method="POST",
+                        body="{}",
                         headers={"Content-Type": "application/json"},
                     )
                     self.assertEqual(status, 501, body)
@@ -408,7 +479,9 @@ class TestLixityServer(unittest.TestCase):
         for action in ("analyze", "rebuild"):
             with self.subTest(action=action):
                 status, body, _ = self.make_request(
-                    f"/api/{action}", method="POST", body="{}",
+                    f"/api/{action}",
+                    method="POST",
+                    body="{}",
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 200, body)
@@ -443,10 +516,12 @@ class TestLixityServer(unittest.TestCase):
             busy_port = blocker.getsockname()[1]
 
             # Prove the probe is what aborts: setup must not have run yet.
-            with patch("lixity.server.runtime.discover") as discover, \
-                 patch("lixity.server.runtime.os.makedirs") as makedirs, \
-                 self.assertRaises(SystemExit) as raised, \
-                 redirect_stderr(io.StringIO()) as stderr:
+            with (
+                patch("lixity.server.runtime.discover") as discover,
+                patch("lixity.server.runtime.os.makedirs") as makedirs,
+                self.assertRaises(SystemExit) as raised,
+                redirect_stderr(io.StringIO()) as stderr,
+            ):
                 run_server(host="127.0.0.1", port=busy_port, no_project=True)
 
             self.assertEqual(raised.exception.code, 1)
@@ -460,9 +535,17 @@ class TestLixityServer(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "research").mkdir()
-            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.routes_research.research_api.get_record", return_value={"record": {"revision": 1}}) as get_record, \
-                 patch("lixity.server.routes_research.research_api.record_history", return_value={"revisions": []}) as history:
+            with (
+                patch.object(LixityServerHandler, "get_research_root", return_value=root),
+                patch(
+                    "lixity.server.routes_research.research_api.get_record",
+                    return_value={"record": {"revision": 1}},
+                ) as get_record,
+                patch(
+                    "lixity.server.routes_research.research_api.record_history",
+                    return_value={"revisions": []},
+                ) as history,
+            ):
                 status, body, _ = self.make_request(
                     "/api/research/record?kind=dossier&id=urn%3Auuid%3Adossier&revision=1"
                 )
@@ -480,22 +563,50 @@ class TestLixityServer(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "research").mkdir()
-            valid = {"kind": "dossier", "id": "urn:uuid:dossier", "base_revision": 1,
-                     "changes": {"body": "My draft"}, "resolutions": {"title": "mine"}}
-            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.routes_research.research_api.prepare_record_revision", return_value={"ready": True}) as prepare, \
-                 patch("lixity.server.routes_research.research_api.revise_record") as revise:
-                status, body, _ = self.make_request("/api/research-record-prepare", method="POST",
-                    body=json.dumps(valid), headers={"Content-Type": "application/json"})
+            valid = {
+                "kind": "dossier",
+                "id": "urn:uuid:dossier",
+                "base_revision": 1,
+                "changes": {"body": "My draft"},
+                "resolutions": {"title": "mine"},
+            }
+            with (
+                patch.object(LixityServerHandler, "get_research_root", return_value=root),
+                patch(
+                    "lixity.server.routes_research.research_api.prepare_record_revision",
+                    return_value={"ready": True},
+                ) as prepare,
+                patch("lixity.server.routes_research.research_api.revise_record") as revise,
+            ):
+                status, body, _ = self.make_request(
+                    "/api/research-record-prepare",
+                    method="POST",
+                    body=json.dumps(valid),
+                    headers={"Content-Type": "application/json"},
+                )
                 self.assertEqual(status, 200, body)
                 self.assertTrue(json.loads(body)["ready"])
-                prepare.assert_called_once_with(root, "dossier", "urn:uuid:dossier",
-                    base_revision=1, changes={"body": "My draft"}, resolutions={"title": "mine"})
+                prepare.assert_called_once_with(
+                    root,
+                    "dossier",
+                    "urn:uuid:dossier",
+                    base_revision=1,
+                    changes={"body": "My draft"},
+                    resolutions={"title": "mine"},
+                )
                 prepare.reset_mock()
-                for payload in ({**valid, "base_revision": True}, {**valid, "changes": {}},
-                                {**valid, "kind": "source"}, {**valid, "resolutions": []}):
-                    status, body, _ = self.make_request("/api/research-record-prepare", method="POST",
-                        body=json.dumps(payload), headers={"Content-Type": "application/json"})
+                for payload in (
+                    {**valid, "base_revision": True},
+                    {**valid, "changes": {}},
+                    {**valid, "kind": "source"},
+                    {**valid, "resolutions": []},
+                ):
+                    status, body, _ = self.make_request(
+                        "/api/research-record-prepare",
+                        method="POST",
+                        body=json.dumps(payload),
+                        headers={"Content-Type": "application/json"},
+                    )
                     self.assertEqual(status, 400, body)
                 prepare.assert_not_called()
                 revise.assert_not_called()
@@ -504,36 +615,76 @@ class TestLixityServer(unittest.TestCase):
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "research").mkdir()
-            operations = [{"kind": "dossier", "id": "urn:uuid:dossier", "expected_revision": 1,
-                           "changes": {"body": "Reviewed draft"}, "change_kind": "correction", "reason": "Reviewed together"}]
-            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.routes_research.research_api.prepare_record_revisions", return_value={"ready": True}) as prepare, \
-                 patch("lixity.server.routes_research.research_api.apply_record_revisions", return_value={"records": []}) as apply:
-                status, body, _ = self.make_request("/api/research-revision-batch-prepare", method="POST",
-                    body=json.dumps({"operations": operations}), headers={"Content-Type": "application/json"})
+            operations = [
+                {
+                    "kind": "dossier",
+                    "id": "urn:uuid:dossier",
+                    "expected_revision": 1,
+                    "changes": {"body": "Reviewed draft"},
+                    "change_kind": "correction",
+                    "reason": "Reviewed together",
+                }
+            ]
+            with (
+                patch.object(LixityServerHandler, "get_research_root", return_value=root),
+                patch(
+                    "lixity.server.routes_research.research_api.prepare_record_revisions",
+                    return_value={"ready": True},
+                ) as prepare,
+                patch(
+                    "lixity.server.routes_research.research_api.apply_record_revisions",
+                    return_value={"records": []},
+                ) as apply,
+            ):
+                status, body, _ = self.make_request(
+                    "/api/research-revision-batch-prepare",
+                    method="POST",
+                    body=json.dumps({"operations": operations}),
+                    headers={"Content-Type": "application/json"},
+                )
                 self.assertEqual(status, 200, body)
                 prepare.assert_called_once_with(root, operations, actor="local-author")
                 apply.assert_not_called()
-                status, body, _ = self.make_request("/api/research-revision-batch-apply", method="POST",
+                status, body, _ = self.make_request(
+                    "/api/research-revision-batch-apply",
+                    method="POST",
                     body=json.dumps({"operations": operations, "expected_snapshot": "a" * 64}),
-                    headers={"Content-Type": "application/json"})
+                    headers={"Content-Type": "application/json"},
+                )
                 self.assertEqual(status, 200, body)
-                apply.assert_called_once_with(root, operations, expected_snapshot="a" * 64, actor="local-author")
+                apply.assert_called_once_with(
+                    root, operations, expected_snapshot="a" * 64, actor="local-author"
+                )
                 prepare.reset_mock()
                 apply.reset_mock()
                 for action in ("prepare", "apply"):
-                    for payload in ({"operations": []}, {"operations": "instructions"},
-                                    {"operations": [None]}, {"operations": operations, "actor": False}):
-                        status, body, _ = self.make_request(f"/api/research-revision-batch-{action}", method="POST",
-                            body=json.dumps(payload), headers={"Content-Type": "application/json"})
+                    for payload in (
+                        {"operations": []},
+                        {"operations": "instructions"},
+                        {"operations": [None]},
+                        {"operations": operations, "actor": False},
+                    ):
+                        status, body, _ = self.make_request(
+                            f"/api/research-revision-batch-{action}",
+                            method="POST",
+                            body=json.dumps(payload),
+                            headers={"Content-Type": "application/json"},
+                        )
                         self.assertEqual(status, 400, body)
-                status, body, _ = self.make_request("/api/research-revision-batch-apply", method="POST",
-                    body=json.dumps({"operations": operations}), headers={"Content-Type": "application/json"})
+                status, body, _ = self.make_request(
+                    "/api/research-revision-batch-apply",
+                    method="POST",
+                    body=json.dumps({"operations": operations}),
+                    headers={"Content-Type": "application/json"},
+                )
                 self.assertEqual(status, 400, body)
                 for digest in (None, False, {}, ""):
-                    status, body, _ = self.make_request("/api/research-revision-batch-apply", method="POST",
+                    status, body, _ = self.make_request(
+                        "/api/research-revision-batch-apply",
+                        method="POST",
                         body=json.dumps({"operations": operations, "expected_snapshot": digest}),
-                        headers={"Content-Type": "application/json"})
+                        headers={"Content-Type": "application/json"},
+                    )
                     self.assertEqual(status, 400, body)
                 prepare.assert_not_called()
                 apply.assert_not_called()
@@ -545,12 +696,20 @@ class TestLixityServer(unittest.TestCase):
             root = Path(td)
             (root / "research").mkdir()
             with patch.object(LixityServerHandler, "get_research_root", return_value=root):
-                for action, method in (("prepare", "prepare_record_revisions"), ("apply", "apply_record_revisions")):
-                    with patch(f"lixity.server.routes_research.research_api.{method}",
-                               side_effect=ResearchConflictError("Synthetic concurrent change")) as operation:
-                        status, body, _ = self.make_request(f"/api/research-revision-batch-{action}", method="POST",
+                for action, method in (
+                    ("prepare", "prepare_record_revisions"),
+                    ("apply", "apply_record_revisions"),
+                ):
+                    with patch(
+                        f"lixity.server.routes_research.research_api.{method}",
+                        side_effect=ResearchConflictError("Synthetic concurrent change"),
+                    ) as operation:
+                        status, body, _ = self.make_request(
+                            f"/api/research-revision-batch-{action}",
+                            method="POST",
                             body=json.dumps({"operations": [{}], "expected_snapshot": "a" * 64}),
-                            headers={"Content-Type": "application/json"})
+                            headers={"Content-Type": "application/json"},
+                        )
                         self.assertEqual(status, 409, body)
                         self.assertIn("Synthetic concurrent change", json.loads(body)["message"])
                         operation.assert_called_once()
@@ -560,9 +719,13 @@ class TestLixityServer(unittest.TestCase):
             root = Path(td)
             (root / "research").mkdir()
             valid = {
-                "kind": "decision", "id": "urn:uuid:decision", "changes": {"title": "Revised"},
-                "expected_snapshot": "a" * 64, "expected_revision": 1,
-                "change_kind": "correction", "reason": "Correct the heading",
+                "kind": "decision",
+                "id": "urn:uuid:decision",
+                "changes": {"title": "Revised"},
+                "expected_snapshot": "a" * 64,
+                "expected_revision": 1,
+                "change_kind": "correction",
+                "reason": "Correct the heading",
             }
             invalid = (
                 {**valid, "changes": "not an object"},
@@ -574,19 +737,24 @@ class TestLixityServer(unittest.TestCase):
                 {**valid, "kind": "source"},
                 {**valid, "kind": ["claim"]},
             )
-            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.routes_research.research_api.revise_record") as revise:
+            with (
+                patch.object(LixityServerHandler, "get_research_root", return_value=root),
+                patch("lixity.server.routes_research.research_api.revise_record") as revise,
+            ):
                 for payload in invalid:
                     with self.subTest(payload=payload):
                         status, body, _ = self.make_request(
-                            "/api/research-record-revise", method="POST", body=json.dumps(payload),
+                            "/api/research-record-revise",
+                            method="POST",
+                            body=json.dumps(payload),
                             headers={"Content-Type": "application/json"},
                         )
                         self.assertEqual(status, 400, body)
                         self.assertFalse(json.loads(body)["ok"])
                 for path in (
                     "/api/research/record?kind=decision&id=urn%3Auuid%3Adecision&revision=oops",
-                    "/api/research/record?kind=decision&id=urn%3Auuid%3Adecision&revision=" + "9" * 5000,
+                    "/api/research/record?kind=decision&id=urn%3Auuid%3Adecision&revision="
+                    + "9" * 5000,
                     "/api/research/history?kind=decision",
                 ):
                     status, body, _ = self.make_request(path)
@@ -602,28 +770,51 @@ class TestLixityServer(unittest.TestCase):
             root = Path(td)
             (root / "research").mkdir()
             payload = {
-                "kind": "claim", "id": "urn:uuid:claim", "changes": {"place": None},
-                "expected_snapshot": "b" * 64, "expected_revision": 2,
-                "change_kind": "supersession", "reason": "Interpretation changed",
+                "kind": "claim",
+                "id": "urn:uuid:claim",
+                "changes": {"place": None},
+                "expected_snapshot": "b" * 64,
+                "expected_revision": 2,
+                "change_kind": "supersession",
+                "reason": "Interpretation changed",
             }
-            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.routes_research.research_api.revise_record", return_value={"record": {"revision": 3}}) as revise:
+            with (
+                patch.object(LixityServerHandler, "get_research_root", return_value=root),
+                patch(
+                    "lixity.server.routes_research.research_api.revise_record",
+                    return_value={"record": {"revision": 3}},
+                ) as revise,
+            ):
                 status, body, _ = self.make_request(
-                    "/api/research-record-revise", method="POST", body=json.dumps(payload),
+                    "/api/research-record-revise",
+                    method="POST",
+                    body=json.dumps(payload),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 200, body)
                 self.assertTrue(json.loads(body)["ok"])
                 revise.assert_called_once_with(
-                    root, "claim", "urn:uuid:claim", changes={"place": None},
-                    expected_snapshot="b" * 64, expected_revision=2,
-                    change_kind="supersession", reason="Interpretation changed",
+                    root,
+                    "claim",
+                    "urn:uuid:claim",
+                    changes={"place": None},
+                    expected_snapshot="b" * 64,
+                    expected_revision=2,
+                    change_kind="supersession",
+                    reason="Interpretation changed",
                     actor="local-author",
                 )
-            with patch.object(LixityServerHandler, "get_research_root", return_value=root), \
-                 patch("lixity.server.routes_research.research_api.revise_record", side_effect=ResearchConflictError("stale")):
+            with (
+                patch.object(LixityServerHandler, "get_research_root", return_value=root),
+                patch(
+                    "lixity.server.routes_research.research_api.revise_record",
+                    side_effect=ResearchConflictError("stale"),
+                ),
+            ):
                 status, body, _ = self.make_request(
-                    "/api/research-record-revise", method="POST", body=json.dumps(payload),
+                    "/api/research-record-revise",
+                    method="POST",
+                    body=json.dumps(payload),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 409, body)
@@ -638,7 +829,9 @@ class TestLixityServer(unittest.TestCase):
             try:
                 LixityServerHandler.research_dir = rdir
                 ms_path = Path(rdir) / "ms.md"
-                ms_path.write_text("## Chapter 1\n\nThe archives in Prague were quiet.", encoding="utf-8")
+                ms_path.write_text(
+                    "## Chapter 1\n\nThe archives in Prague were quiet.", encoding="utf-8"
+                )
                 LixityServerHandler.source_input = str(ms_path)
 
                 # 1. Status before init
@@ -657,7 +850,9 @@ class TestLixityServer(unittest.TestCase):
                 self.assertIn("model_snapshot", ocr_json)
 
                 # 1c. Dedicated OCR status endpoint with probe
-                ocr_probe_code, ocr_probe_body, _ = self.make_request("/api/research/ocr-status?probe=1")
+                ocr_probe_code, ocr_probe_body, _ = self.make_request(
+                    "/api/research/ocr-status?probe=1"
+                )
                 self.assertEqual(ocr_probe_code, 200)
                 ocr_probe_json = json.loads(ocr_probe_body)
                 self.assertTrue(ocr_probe_json["ok"])
@@ -676,7 +871,9 @@ class TestLixityServer(unittest.TestCase):
                 self.assertTrue(data["ok"])
 
                 # 3. Ingest without retention fails
-                bad_ingest = json.dumps({"content": "A historic letter from 1924.", "title": "Letter"})
+                bad_ingest = json.dumps(
+                    {"content": "A historic letter from 1924.", "title": "Letter"}
+                )
                 status, body, _ = self.make_request(
                     "/api/research-ingest",
                     method="POST",
@@ -688,19 +885,27 @@ class TestLixityServer(unittest.TestCase):
                 # 4. Ingest with retention succeeds
                 for invalid_url in (0, False, [], {}, "javascript:alert(1)"):
                     status, body, _ = self.make_request(
-                        "/api/research-ingest", method="POST",
-                        body=json.dumps({"content": "Synthetic invalid source.",
-                                         "allow_retention": True, "origin_url": invalid_url}),
+                        "/api/research-ingest",
+                        method="POST",
+                        body=json.dumps(
+                            {
+                                "content": "Synthetic invalid source.",
+                                "allow_retention": True,
+                                "origin_url": invalid_url,
+                            }
+                        ),
                         headers={"Content-Type": "application/json"},
                     )
                     self.assertEqual(status, 400, body)
-                ok_ingest = json.dumps({
-                    "content": "The archives in Prague were established in 1924.\n\nThey contain letters.",
-                    "title": "Prague Records",
-                    "allow_retention": True,
-                    "tags": ["history", "prague"],
-                    "origin_url": "https://example.org/prague",
-                })
+                ok_ingest = json.dumps(
+                    {
+                        "content": "The archives in Prague were established in 1924.\n\nThey contain letters.",
+                        "title": "Prague Records",
+                        "allow_retention": True,
+                        "tags": ["history", "prague"],
+                        "origin_url": "https://example.org/prague",
+                    }
+                )
                 status, body, _ = self.make_request(
                     "/api/research-ingest",
                     method="POST",
@@ -718,8 +923,10 @@ class TestLixityServer(unittest.TestCase):
                 sources_data = json.loads(body)
                 self.assertEqual(len(sources_data["sources"]), 1)
                 self.assertEqual(sources_data["sources"][0]["tags"], ["history", "prague"])
-                self.assertEqual(sources_data["sources"][0]["context"]["origin_url"],
-                                 "https://example.org/prague")
+                self.assertEqual(
+                    sources_data["sources"][0]["context"]["origin_url"],
+                    "https://example.org/prague",
+                )
 
                 # 6. Search
                 search_payload = json.dumps({"query": "Prague"})
@@ -735,12 +942,14 @@ class TestLixityServer(unittest.TestCase):
                 passage_id = search_res["hits"][0]["passage_id"]
 
                 # 7. Create Dossier
-                dossier_payload = json.dumps({
-                    "title": "Prague Investigation",
-                    "body": "Evidence confirms the establishment in 1924.",
-                    "tags": ["summary"],
-                    "evidence_ids": [passage_id],
-                })
+                dossier_payload = json.dumps(
+                    {
+                        "title": "Prague Investigation",
+                        "body": "Evidence confirms the establishment in 1924.",
+                        "tags": ["summary"],
+                        "evidence_ids": [passage_id],
+                    }
+                )
                 status, body, _ = self.make_request(
                     "/api/research-dossier",
                     method="POST",
@@ -753,7 +962,8 @@ class TestLixityServer(unittest.TestCase):
 
                 # An authored write invalidates the cache; scoped HTTP search rebuilds it.
                 status, body, _ = self.make_request(
-                    "/api/research-search", method="POST",
+                    "/api/research-search",
+                    method="POST",
                     body=json.dumps({"query": "confirms", "scope": "dossiers"}),
                     headers={"Content-Type": "application/json"},
                 )
@@ -762,9 +972,15 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(scoped["schema_version"], "research-search-local/2")
                 self.assertEqual(scoped["hits"][0]["kind"], "dossier")
                 self.assertEqual(scoped["hits"][0]["record_id"], dos_res["dossier_id"])
-                for invalid in ({"scope": "unknown"}, {"scope": []}, {"limit": "bad"}, {"limit": 0}):
+                for invalid in (
+                    {"scope": "unknown"},
+                    {"scope": []},
+                    {"limit": "bad"},
+                    {"limit": 0},
+                ):
                     status, body, _ = self.make_request(
-                        "/api/research-search", method="POST",
+                        "/api/research-search",
+                        method="POST",
                         body=json.dumps({"query": "confirms", **invalid}),
                         headers={"Content-Type": "application/json"},
                     )
@@ -791,15 +1007,17 @@ class TestLixityServer(unittest.TestCase):
                 self.assertIn("jaccard_similarity", cmp_res["summary"])
 
                 # 10. Create Claim
-                claim_payload = json.dumps({
-                    "title": "Establishment in 1924",
-                    "statement": "The archives in Prague were established in 1924.",
-                    "confidence": "evidenced",
-                    "time_period": "1924",
-                    "place": "Prague",
-                    "actors": ["Archivist"],
-                    "tags": ["founding"],
-                })
+                claim_payload = json.dumps(
+                    {
+                        "title": "Establishment in 1924",
+                        "statement": "The archives in Prague were established in 1924.",
+                        "confidence": "evidenced",
+                        "time_period": "1924",
+                        "place": "Prague",
+                        "actors": ["Archivist"],
+                        "tags": ["founding"],
+                    }
+                )
                 status, body, _ = self.make_request(
                     "/api/research-claim-add",
                     method="POST",
@@ -812,12 +1030,14 @@ class TestLixityServer(unittest.TestCase):
                 claim_id = cl_res["claim_id"]
 
                 # 11. Link Evidence
-                link_payload = json.dumps({
-                    "claim_id": claim_id,
-                    "passage_id": passage_id,
-                    "relation": "supports",
-                    "rationale": "Directly corroborates the year.",
-                })
+                link_payload = json.dumps(
+                    {
+                        "claim_id": claim_id,
+                        "passage_id": passage_id,
+                        "relation": "supports",
+                        "rationale": "Directly corroborates the year.",
+                    }
+                )
                 status, body, _ = self.make_request(
                     "/api/research-evidence-link",
                     method="POST",
@@ -841,13 +1061,15 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(links_data["evidence_links"][0]["relation"], "supports")
 
                 # 13. Record Decision
-                dec_payload = json.dumps({
-                    "title": "Set archive founding in 1910 for plot tension",
-                    "rationale": "Allows characters to explore older secret records.",
-                    "claim_id": claim_id,
-                    "deviation_from_fact": True,
-                    "impact_on_plot": "Adds pre-war tension to chapter 2.",
-                })
+                dec_payload = json.dumps(
+                    {
+                        "title": "Set archive founding in 1910 for plot tension",
+                        "rationale": "Allows characters to explore older secret records.",
+                        "claim_id": claim_id,
+                        "deviation_from_fact": True,
+                        "impact_on_plot": "Adds pre-war tension to chapter 2.",
+                    }
+                )
                 status, body, _ = self.make_request(
                     "/api/research-decision-add",
                     method="POST",
@@ -899,21 +1121,31 @@ class TestLixityServer(unittest.TestCase):
         original_state = {
             name: getattr(LixityServerHandler, name)
             for name in (
-                "workspace_root", "source_input", "exports_dir", "research_dir",
-                "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info",
+                "workspace_root",
+                "source_input",
+                "exports_dir",
+                "research_dir",
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
             )
         }
         try:
             with tempfile.TemporaryDirectory() as td:
                 # 1. Create minimal project
                 proj_dir = Path(td) / "my-novel"
-                create_payload = json.dumps({
-                    "title": "Die Chroniken von Nebelwald",
-                    "language": "de",
-                    "path": str(proj_dir),
-                    "template": "three_act",
-                    "init_research": True,
-                })
+                create_payload = json.dumps(
+                    {
+                        "title": "Die Chroniken von Nebelwald",
+                        "language": "de",
+                        "path": str(proj_dir),
+                        "template": "three_act",
+                        "init_research": True,
+                    }
+                )
                 status, body, _ = self.make_request(
                     "/api/project-create",
                     method="POST",
@@ -974,13 +1206,15 @@ class TestLixityServer(unittest.TestCase):
                 # 5. Create project with custom imported manuscript content
                 proj_upload_dir = Path(td) / "uploaded-novel"
                 imported_text = "    An indented opening.\r\n\r\n## Erstes Kapitel\r\n\r\nDer Wind pfiff durch die alten Gassen der Stadt.  "
-                upload_payload = json.dumps({
-                    "title": "Das verlorene Artefakt",
-                    "language": "de",
-                    "path": str(proj_upload_dir),
-                    "content": imported_text,
-                    "init_research": False,
-                })
+                upload_payload = json.dumps(
+                    {
+                        "title": "Das verlorene Artefakt",
+                        "language": "de",
+                        "path": str(proj_upload_dir),
+                        "content": imported_text,
+                        "init_research": False,
+                    }
+                )
                 status, body, _ = self.make_request(
                     "/api/project-create",
                     method="POST",
@@ -991,7 +1225,9 @@ class TestLixityServer(unittest.TestCase):
                 upload_res = json.loads(body)
                 self.assertTrue(upload_res["ok"])
                 self.assertTrue((proj_upload_dir / "manuscript.md").is_file())
-                self.assertEqual((proj_upload_dir / "manuscript.md").read_bytes(), imported_text.encode("utf-8"))
+                self.assertEqual(
+                    (proj_upload_dir / "manuscript.md").read_bytes(), imported_text.encode("utf-8")
+                )
         finally:
             for name, value in original_state.items():
                 setattr(LixityServerHandler, name, value)
@@ -1008,7 +1244,7 @@ class TestLixityServer(unittest.TestCase):
         self.assertIn('id="open-proj-path"', html)
         self.assertIn('id="link-switch-to-import"', html)
         self.assertIn('id="tab-btn-import"', html)
-        self.assertIn('template-card', html)
+        self.assertIn("template-card", html)
 
         # Research tabs and controls
         self.assertIn('data-rtab="claims"', html)
@@ -1021,13 +1257,28 @@ class TestLixityServer(unittest.TestCase):
         from lixity.config import load_project_config
 
         chapter_titles = {
-            "en": "Chapter 1", "de": "Kapitel 1", "fr": "Chapitre 1",
-            "es": "Capítulo 1", "it": "Capitolo 1", "pt": "Capítulo 1", "nl": "Hoofdstuk 1",
+            "en": "Chapter 1",
+            "de": "Kapitel 1",
+            "fr": "Chapitre 1",
+            "es": "Capítulo 1",
+            "it": "Capitolo 1",
+            "pt": "Capítulo 1",
+            "nl": "Hoofdstuk 1",
         }
         original_state = {
             name: getattr(LixityServerHandler, name)
-            for name in ("workspace_root", "source_input", "exports_dir", "research_dir",
-                         "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info")
+            for name in (
+                "workspace_root",
+                "source_input",
+                "exports_dir",
+                "research_dir",
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
+            )
         }
         try:
             with tempfile.TemporaryDirectory() as directory:
@@ -1036,8 +1287,11 @@ class TestLixityServer(unittest.TestCase):
                         project = Path(directory) / language
                         title = 'A "quoted" title \\ with a newline\nSecond line'
                         status, body, _ = self.make_request(
-                            "/api/project-create", method="POST",
-                            body=json.dumps({"title": title, "path": str(project), "language": language}),
+                            "/api/project-create",
+                            method="POST",
+                            body=json.dumps(
+                                {"title": title, "path": str(project), "language": language}
+                            ),
                             headers={"Content-Type": "application/json"},
                         )
                         self.assertEqual(status, 200, body)
@@ -1050,8 +1304,11 @@ class TestLixityServer(unittest.TestCase):
                 existing = Path(directory) / "en"
                 original_bytes = (existing / "manuscript.md").read_bytes()
                 status, _, _ = self.make_request(
-                    "/api/project-create", method="POST",
-                    body=json.dumps({"title": "Import", "path": str(existing), "content": "Replacement"}),
+                    "/api/project-create",
+                    method="POST",
+                    body=json.dumps(
+                        {"title": "Import", "path": str(existing), "content": "Replacement"}
+                    ),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 409)
@@ -1062,11 +1319,20 @@ class TestLixityServer(unittest.TestCase):
 
     def test_project_open_attaches_existing_research(self):
         from lixity.research import api as research_api
+
         original_state = {
             name: getattr(LixityServerHandler, name)
             for name in (
-                "workspace_root", "source_input", "exports_dir", "research_dir",
-                "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info",
+                "workspace_root",
+                "source_input",
+                "exports_dir",
+                "research_dir",
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
             )
         }
         try:
@@ -1076,31 +1342,49 @@ class TestLixityServer(unittest.TestCase):
                 ms_path = proj_dir / "manuscript.md"
                 ms_path.write_bytes(b"")
                 source_path = Path(td) / "archive-note.txt"
-                source_bytes = b"The reading room opened in 1924.\n\nThe inventory stayed on site.\n"
+                source_bytes = (
+                    b"The reading room opened in 1924.\n\nThe inventory stayed on site.\n"
+                )
                 source_path.write_bytes(source_bytes)
                 research_api.init(proj_dir, title="Historical Research")
                 source = research_api.ingest(
-                    proj_dir, source_path, title="Archive Note", allow_retention=True,
+                    proj_dir,
+                    source_path,
+                    title="Archive Note",
+                    allow_retention=True,
                 )
-                passage_id = research_api.get_source(proj_dir, source["source_id"])["passages"][0]["id"]
+                passage_id = research_api.get_source(proj_dir, source["source_id"])["passages"][0][
+                    "id"
+                ]
                 dossier = research_api.create_dossier(
-                    proj_dir, "Reading Room File", "The opening date is recorded.",
+                    proj_dir,
+                    "Reading Room File",
+                    "The opening date is recorded.",
                     evidence_ids=[passage_id],
                 )
                 claim = research_api.create_claim(
-                    proj_dir, title="Opening date", statement="The room opened in 1924.",
-                    confidence="evidenced", dossier_id=dossier["dossier_id"],
+                    proj_dir,
+                    title="Opening date",
+                    statement="The room opened in 1924.",
+                    confidence="evidenced",
+                    dossier_id=dossier["dossier_id"],
                 )
                 research_api.link_evidence(
-                    proj_dir, claim_id=claim["claim_id"], passage_id=passage_id,
+                    proj_dir,
+                    claim_id=claim["claim_id"],
+                    passage_id=passage_id,
                 )
                 decision = research_api.record_decision(
-                    proj_dir, title="Move opening date", rationale="Plot timing",
-                    claim_id=claim["claim_id"], deviation_from_fact=True,
+                    proj_dir,
+                    title="Move opening date",
+                    rationale="Plot timing",
+                    claim_id=claim["claim_id"],
+                    deviation_from_fact=True,
                 )
                 research_files = {
                     path.relative_to(proj_dir / "research"): path.read_bytes()
-                    for path in (proj_dir / "research").rglob("*") if path.is_file()
+                    for path in (proj_dir / "research").rglob("*")
+                    if path.is_file()
                 }
 
                 for open_path in (proj_dir, ms_path):
@@ -1114,9 +1398,13 @@ class TestLixityServer(unittest.TestCase):
                         self.assertEqual(status, 200)
                         opened = json.loads(body)
                         self.assertTrue(opened["ok"])
-                        self.assertEqual(Path(opened["workspace_root"]).resolve(), proj_dir.resolve())
+                        self.assertEqual(
+                            Path(opened["workspace_root"]).resolve(), proj_dir.resolve()
+                        )
                         self.assertEqual(Path(opened["manuscript"]).resolve(), ms_path.resolve())
-                        self.assertEqual(Path(LixityServerHandler.research_dir).resolve(), proj_dir.resolve())
+                        self.assertEqual(
+                            Path(LixityServerHandler.research_dir).resolve(), proj_dir.resolve()
+                        )
                         self.assertTrue(LixityServerHandler.dashboard_info["is_empty"])
 
                         status, body, _ = self.make_request("/api/research/status")
@@ -1125,9 +1413,15 @@ class TestLixityServer(unittest.TestCase):
                         self.assertTrue(research_status["initialized"])
                         self.assertEqual(research_status["project_title"], "Historical Research")
                         self.assertEqual(
-                            tuple(research_status[key] for key in (
-                                "sources_count", "dossiers_count", "claims_count", "decisions_count",
-                            )),
+                            tuple(
+                                research_status[key]
+                                for key in (
+                                    "sources_count",
+                                    "dossiers_count",
+                                    "claims_count",
+                                    "decisions_count",
+                                )
+                            ),
                             (1, 1, 1, 1),
                         )
 
@@ -1137,8 +1431,10 @@ class TestLixityServer(unittest.TestCase):
                         self.assertEqual(status, 200)
                         source_data = json.loads(body)
                         self.assertEqual(source_data["id"], source["source_id"])
-                        self.assertEqual(source_data["passages"][0]["verbatim"],
-                                         "The reading room opened in 1924.")
+                        self.assertEqual(
+                            source_data["passages"][0]["verbatim"],
+                            "The reading room opened in 1924.",
+                        )
 
                         status, body, _ = self.make_request(
                             f"/api/research/dossiers?id={quote(dossier['dossier_id'], safe='')}"
@@ -1161,8 +1457,10 @@ class TestLixityServer(unittest.TestCase):
                         self.assertEqual(status, 200)
                         evidence_link = json.loads(body)["evidence_links"][0]
                         self.assertEqual(evidence_link["passage_id"], passage_id)
-                        self.assertEqual(evidence_link["citation"]["verbatim"],
-                                         "The reading room opened in 1924.")
+                        self.assertEqual(
+                            evidence_link["citation"]["verbatim"],
+                            "The reading room opened in 1924.",
+                        )
 
                         status, body, _ = self.make_request("/api/research/decisions")
                         self.assertEqual(status, 200)
@@ -1176,7 +1474,8 @@ class TestLixityServer(unittest.TestCase):
                         self.assertEqual(
                             {
                                 path.relative_to(proj_dir / "research"): path.read_bytes()
-                                for path in (proj_dir / "research").rglob("*") if path.is_file()
+                                for path in (proj_dir / "research").rglob("*")
+                                if path.is_file()
                             },
                             research_files,
                         )
@@ -1188,29 +1487,40 @@ class TestLixityServer(unittest.TestCase):
         original_state = {
             name: getattr(LixityServerHandler, name)
             for name in (
-                "workspace_root", "source_input", "exports_dir", "research_dir",
-                "language", "title", "title_custom", "thresholds", "dashboard_html",
-                "dashboard_info", "project_open_overrides",
+                "workspace_root",
+                "source_input",
+                "exports_dir",
+                "research_dir",
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
+                "project_open_overrides",
             )
         }
         try:
             with tempfile.TemporaryDirectory() as td:
                 first = Path(td) / "first"
                 status, body, _ = self.make_request(
-                    "/api/project-create", method="POST",
+                    "/api/project-create",
+                    method="POST",
                     body=json.dumps({"path": str(first), "title": "First title", "language": "de"}),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 200, body)
                 status, body, _ = self.make_request(
-                    "/api/settings", method="POST",
+                    "/api/settings",
+                    method="POST",
                     body=json.dumps({"title": "Edited first title"}),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 200, body)
                 self.assertTrue(LixityServerHandler.title_custom)
                 status, body, _ = self.make_request(
-                    "/api/project-open", method="POST",
+                    "/api/project-open",
+                    method="POST",
                     body=json.dumps({"path": str(first)}),
                     headers={"Content-Type": "application/json"},
                 )
@@ -1219,7 +1529,9 @@ class TestLixityServer(unittest.TestCase):
                 second = Path(td) / "second"
                 second.mkdir()
                 manuscript = second / "manuscript.md"
-                manuscript.write_text("## Chapter One\n\nA synthetic paragraph.\n", encoding="utf-8")
+                manuscript.write_text(
+                    "## Chapter One\n\nA synthetic paragraph.\n", encoding="utf-8"
+                )
                 (second / "lixity.toml").write_text(
                     'title = "Second title"\nlanguage = "fr"\nfdr_q = 0.12\n',
                     encoding="utf-8",
@@ -1227,7 +1539,8 @@ class TestLixityServer(unittest.TestCase):
                 for path in (second, manuscript):
                     with self.subTest(path=path):
                         status, body, _ = self.make_request(
-                            "/api/project-open", method="POST",
+                            "/api/project-open",
+                            method="POST",
                             body=json.dumps({"path": str(path)}),
                             headers={"Content-Type": "application/json"},
                         )
@@ -1239,18 +1552,21 @@ class TestLixityServer(unittest.TestCase):
                         self.assertIn("Second title", LixityServerHandler.dashboard_html)
 
                 LixityServerHandler.project_open_overrides = {
-                    "language": "en", "title": "Session title", "fdr_q": 0.03,
+                    "language": "en",
+                    "title": "Session title",
+                    "fdr_q": 0.03,
                 }
                 status, body, _ = self.make_request(
-                    "/api/project-open", method="POST",
+                    "/api/project-open",
+                    method="POST",
                     body=json.dumps({"path": str(second)}),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 200, body)
                 self.assertEqual(LixityServerHandler.language, "en")
-                self.assertEqual(LixityServerHandler.title, "Session title")
+                self.assertEqual(LixityServerHandler.title, "Second title")
                 self.assertEqual(LixityServerHandler.thresholds.fdr_q, 0.03)
-                self.assertIn("Session title", LixityServerHandler.dashboard_html)
+                self.assertIn("Second title", LixityServerHandler.dashboard_html)
         finally:
             for name, value in original_state.items():
                 setattr(LixityServerHandler, name, value)
@@ -1259,24 +1575,32 @@ class TestLixityServer(unittest.TestCase):
         original_state = {
             name: getattr(LixityServerHandler, name)
             for name in (
-                "workspace_root", "source_input", "exports_dir", "research_dir",
-                "language", "title", "title_custom", "thresholds", "dashboard_html",
-                "dashboard_info", "project_open_overrides",
+                "workspace_root",
+                "source_input",
+                "exports_dir",
+                "research_dir",
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
+                "project_open_overrides",
             )
         }
         try:
             with tempfile.TemporaryDirectory() as td:
                 project = Path(td) / "current"
                 status, body, _ = self.make_request(
-                    "/api/project-create", method="POST",
-                    body=json.dumps({"path": str(project), "title": "Current title", "language": "en"}),
+                    "/api/project-create",
+                    method="POST",
+                    body=json.dumps(
+                        {"path": str(project), "title": "Current title", "language": "en"}
+                    ),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 200, body)
-                before = {
-                    name: getattr(LixityServerHandler, name)
-                    for name in original_state
-                }
+                before = {name: getattr(LixityServerHandler, name) for name in original_state}
                 unsupported = Path(td) / "image.pdf"
                 unsupported.write_bytes(b"%PDF synthetic")
                 invalid = Path(td) / "invalid.md"
@@ -1287,7 +1611,8 @@ class TestLixityServer(unittest.TestCase):
                 for path in (unsupported, invalid, folder):
                     with self.subTest(path=path):
                         status, body, _ = self.make_request(
-                            "/api/project-open", method="POST",
+                            "/api/project-open",
+                            method="POST",
                             body=json.dumps({"path": str(path)}),
                             headers={"Content-Type": "application/json"},
                         )
@@ -1299,23 +1624,28 @@ class TestLixityServer(unittest.TestCase):
                         )
                 unreadable = Path(td) / "unreadable.md"
                 unreadable.write_text("Synthetic manuscript.\n", encoding="utf-8")
-                read_text = Path.read_text
+                snapshot_read = FileUtils.read_source_snapshot
 
                 def fail_target_read(path, *args, **kwargs):
-                    if path == unreadable:
+                    if Path(path) == unreadable:
                         raise PermissionError("Synthetic unreadable manuscript")
-                    return read_text(path, *args, **kwargs)
+                    return snapshot_read(path, *args, **kwargs)
 
-                with patch.object(Path, "read_text", fail_target_read):
+                with patch(
+                    "lixity.server.views.FileUtils.read_source_snapshot",
+                    side_effect=fail_target_read,
+                ):
                     status, body, _ = self.make_request(
-                        "/api/project-open", method="POST",
+                        "/api/project-open",
+                        method="POST",
                         body=json.dumps({"path": str(unreadable)}),
                         headers={"Content-Type": "application/json"},
                     )
                 self.assertEqual(status, 400, body)
                 self.assertIn("Synthetic unreadable manuscript", json.loads(body)["message"])
                 self.assertEqual(
-                    {name: getattr(LixityServerHandler, name) for name in before}, before,
+                    {name: getattr(LixityServerHandler, name) for name in before},
+                    before,
                 )
                 status, body, _ = self.make_request("/")
                 self.assertEqual(status, 200)
@@ -1324,13 +1654,21 @@ class TestLixityServer(unittest.TestCase):
             for name, value in original_state.items():
                 setattr(LixityServerHandler, name, value)
 
-    def test_direct_run_server_title_stays_explicit_when_opening_another_project(self):
+    def test_startup_title_is_scoped_to_its_project_and_nda_uses_new_identity(self):
         original_state = {
             name: getattr(LixityServerHandler, name)
             for name in (
-                "workspace_root", "source_input", "exports_dir", "research_dir",
-                "language", "title", "title_custom", "thresholds", "dashboard_html",
-                "dashboard_info", "project_open_overrides",
+                "workspace_root",
+                "source_input",
+                "exports_dir",
+                "research_dir",
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
+                "project_open_overrides",
             )
         }
         try:
@@ -1339,24 +1677,44 @@ class TestLixityServer(unittest.TestCase):
                 second = Path(td) / "second"
                 for project, title in ((first, "First title"), (second, "Second title")):
                     project.mkdir()
-                    (project / "manuscript.md").write_text("## Chapter\n\nSynthetic text.\n", encoding="utf-8")
+                    (project / "manuscript.md").write_text(
+                        "## Chapter\n\nSynthetic text.\n", encoding="utf-8"
+                    )
                     (project / "lixity.toml").write_text(f'title = "{title}"\n', encoding="utf-8")
                 with (
-                    patch("lixity.server.runtime._LoopbackHTTPServer", side_effect=RuntimeError("stop before bind")),
+                    patch(
+                        "lixity.server.runtime._LoopbackHTTPServer",
+                        side_effect=RuntimeError("stop before bind"),
+                    ),
                     self.assertRaisesRegex(RuntimeError, "stop before bind"),
                 ):
                     # An explicit free port: run_server now probes the port before
                     # setup, so relying on the default 8765 being unused makes the
                     # test depend on whatever else is listening on this machine.
                     run_server(target_path=str(first), title="Direct override", port=_free_port())
-                self.assertEqual(LixityServerHandler.project_open_overrides, {"title": "Direct override"})
+                self.assertEqual(
+                    LixityServerHandler.project_open_overrides, {"title": "Direct override"}
+                )
                 status, body, _ = self.make_request(
-                    "/api/project-open", method="POST",
-                    body=json.dumps({"path": str(second)}),
+                    "/api/project-open",
+                    method="POST",
+                    body=json.dumps({"path": str(first)}),
                     headers={"Content-Type": "application/json"},
                 )
                 self.assertEqual(status, 200, body)
                 self.assertEqual(LixityServerHandler.title, "Direct override")
+                status, body, _ = self.make_request(
+                    "/api/project-open",
+                    method="POST",
+                    body=json.dumps({"path": str(second)}),
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 200, body)
+                self.assertEqual(LixityServerHandler.title, "Second title")
+                self.assertFalse(LixityServerHandler.title_custom)
+                self.assertIn('id="nda-project-name"', LixityServerHandler.dashboard_html)
+                self.assertIn('value="Second title"', LixityServerHandler.dashboard_html)
+                self.assertNotIn('value="Direct override"', LixityServerHandler.dashboard_html)
         finally:
             for name, value in original_state.items():
                 setattr(LixityServerHandler, name, value)
@@ -1367,8 +1725,16 @@ class TestLixityServer(unittest.TestCase):
         original_state = {
             name: getattr(LixityServerHandler, name)
             for name in (
-                "workspace_root", "source_input", "exports_dir", "research_dir",
-                "language", "title", "title_custom", "thresholds", "dashboard_html", "dashboard_info",
+                "workspace_root",
+                "source_input",
+                "exports_dir",
+                "research_dir",
+                "language",
+                "title",
+                "title_custom",
+                "thresholds",
+                "dashboard_html",
+                "dashboard_info",
             )
         }
         try:
@@ -1380,16 +1746,24 @@ class TestLixityServer(unittest.TestCase):
                 source_path.write_bytes(source_bytes)
                 research_api.init(project, title="Reading Room Archive")
                 source = research_api.ingest(
-                    project, source_path, title="Opening Note", allow_retention=True,
+                    project,
+                    source_path,
+                    title="Opening Note",
+                    allow_retention=True,
                 )
-                passage_id = research_api.get_source(project, source["source_id"])["passages"][0]["id"]
+                passage_id = research_api.get_source(project, source["source_id"])["passages"][0][
+                    "id"
+                ]
                 dossier = research_api.create_dossier(
-                    project, "Opening File", "The opening year is recorded.",
+                    project,
+                    "Opening File",
+                    "The opening year is recorded.",
                     evidence_ids=[passage_id],
                 )
                 before_files = {
                     path.relative_to(project): path.read_bytes()
-                    for path in project.rglob("*") if path.is_file()
+                    for path in project.rglob("*")
+                    if path.is_file()
                 }
 
                 status, body, _ = self.make_request(
@@ -1419,8 +1793,9 @@ class TestLixityServer(unittest.TestCase):
                     f"/api/research/sources?id={source['source_id']}"
                 )
                 self.assertEqual(status, 200)
-                self.assertEqual(json.loads(body)["passages"][0]["verbatim"],
-                                 "The reading room opened in 1924.")
+                self.assertEqual(
+                    json.loads(body)["passages"][0]["verbatim"], "The reading room opened in 1924."
+                )
                 status, body, _ = self.make_request(
                     f"/api/research/dossiers?id={dossier['dossier_id']}"
                 )
@@ -1430,8 +1805,11 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(source_path.read_bytes(), source_bytes)
                 self.assertFalse((project / "manuscript.md").exists())
                 self.assertEqual(
-                    {path.relative_to(project): path.read_bytes()
-                     for path in project.rglob("*") if path.is_file()},
+                    {
+                        path.relative_to(project): path.read_bytes()
+                        for path in project.rglob("*")
+                        if path.is_file()
+                    },
                     before_files,
                 )
         finally:
@@ -1514,14 +1892,16 @@ class TestLixityServer(unittest.TestCase):
                 pdf_bytes = make_synthetic_pdf("Native Base64 PDF Ingest Test Passage.")
                 b64_str = base64.b64encode(pdf_bytes).decode("ascii")
 
-                ingest_payload = json.dumps({
-                    "content_base64": b64_str,
-                    "filename": "document.pdf",
-                    "title": "Document Title",
-                    "allow_retention": True,
-                    "tags": ["primary", "pdf"],
-                    "origin_url": "https://example.org/synthetic.pdf",
-                })
+                ingest_payload = json.dumps(
+                    {
+                        "content_base64": b64_str,
+                        "filename": "document.pdf",
+                        "title": "Document Title",
+                        "allow_retention": True,
+                        "tags": ["primary", "pdf"],
+                        "origin_url": "https://example.org/synthetic.pdf",
+                    }
+                )
                 status, body, _ = self.make_request(
                     "/api/research-ingest",
                     method="POST",
@@ -1534,7 +1914,9 @@ class TestLixityServer(unittest.TestCase):
                 self.assertIn("source_id", res)
                 self.assertGreaterEqual(res.get("passages", 0), 1)
                 detail = research_api.get_source(td, res["source_id"])
-                self.assertEqual(detail["context"]["origin_url"], "https://example.org/synthetic.pdf")
+                self.assertEqual(
+                    detail["context"]["origin_url"], "https://example.org/synthetic.pdf"
+                )
             finally:
                 LixityServerHandler.research_dir = orig_rdir
 
@@ -1583,35 +1965,54 @@ class TestLixityServer(unittest.TestCase):
     def test_zotero_routes_bind_current_project_and_require_retention(self):
         from lixity.research import api
         from lixity.research.repository import Repository
+
         with tempfile.TemporaryDirectory() as directory:
-            api.init(directory, title='Synthetic Zotero UI')
+            api.init(directory, title="Synthetic Zotero UI")
             project_id = Repository(directory).snapshot().project.id
-            with patch.object(LixityServerHandler, 'get_research_root', return_value=Path(directory)):
-                with patch('lixity.research.zotero.browse', return_value={'items': []}) as browse:
-                    status, body, _ = self.make_request('/api/research-zotero', 'POST',
-                        json.dumps({'project_id': project_id, 'library':'users/0'}), {'Content-Type':'application/json'})
+            with patch.object(
+                LixityServerHandler, "get_research_root", return_value=Path(directory)
+            ):
+                with patch("lixity.research.zotero.browse", return_value={"items": []}) as browse:
+                    status, body, _ = self.make_request(
+                        "/api/research-zotero",
+                        "POST",
+                        json.dumps({"project_id": project_id, "library": "users/0"}),
+                        {"Content-Type": "application/json"},
+                    )
                     self.assertEqual(status, 200)
-                    self.assertTrue(json.loads(body)['ok'])
+                    self.assertTrue(json.loads(body)["ok"])
                     self.assertEqual(browse.call_args.args[0], Path(directory))
-                with patch('lixity.research.zotero.ingest') as ingest:
-                    for payload in ({'project_id':'wrong','library':'users/0','allow_retention':True},
-                                    {'project_id':project_id,'library':'users/0','allow_retention':False}):
-                        status, _, _ = self.make_request('/api/research-zotero-ingest', 'POST', json.dumps(payload),
-                                                        {'Content-Type':'application/json'})
+                with patch("lixity.research.zotero.ingest") as ingest:
+                    for payload in (
+                        {"project_id": "wrong", "library": "users/0", "allow_retention": True},
+                        {"project_id": project_id, "library": "users/0", "allow_retention": False},
+                    ):
+                        status, _, _ = self.make_request(
+                            "/api/research-zotero-ingest",
+                            "POST",
+                            json.dumps(payload),
+                            {"Content-Type": "application/json"},
+                        )
                         self.assertEqual(status, 400)
                     ingest.assert_not_called()
-                with patch('lixity.research.zotero.ingest_item', return_value={'schema_version': 'research-zotero-batch-ingest-local/1'}) as ingest_item:
+                with patch(
+                    "lixity.research.zotero.ingest_item",
+                    return_value={"schema_version": "research-zotero-batch-ingest-local/1"},
+                ) as ingest_item:
                     status, body, _ = self.make_request(
-                        '/api/research-zotero-ingest', 'POST',
-                        json.dumps({
-                            'project_id': project_id,
-                            'library': 'users/0',
-                            'item_key': 'ABCDEFGH',
-                            'allow_retention': True,
-                            'expected_server_id': 'srv-1',
-                        }),
-                        {'Content-Type': 'application/json'}
+                        "/api/research-zotero-ingest",
+                        "POST",
+                        json.dumps(
+                            {
+                                "project_id": project_id,
+                                "library": "users/0",
+                                "item_key": "ABCDEFGH",
+                                "allow_retention": True,
+                                "expected_server_id": "srv-1",
+                            }
+                        ),
+                        {"Content-Type": "application/json"},
                     )
                     self.assertEqual(status, 200)
                     ingest_item.assert_called_once()
-                    self.assertEqual(ingest_item.call_args.kwargs['item_key'], 'ABCDEFGH')
+                    self.assertEqual(ingest_item.call_args.kwargs["item_key"], "ABCDEFGH")

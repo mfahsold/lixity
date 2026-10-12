@@ -11,6 +11,7 @@ LANGUAGE_CHOICES = ("auto", "de", "en", "fr", "es", "it", "pt", "nl", "generic")
 # Native UI capabilities, also used by synthetic documentation captures.
 NATIVE_UI_ACTIONS = (
     "analyze", "nda-draft", "manuscript-pdf", "research-reader", "research-image-ingest", "research-dossier-image",
+    "research-manuscript-link",
 )
 
 MIME_TYPES = {

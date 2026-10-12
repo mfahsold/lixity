@@ -44,6 +44,15 @@ from .limits import (
 from .limits import (
     MAX_SOURCE_BYTES as MAX_SOURCE_BYTES,
 )
+from .manuscript import (
+    link_manuscript_claim as link_manuscript_claim,
+)
+from .manuscript import (
+    list_manuscript_links as list_manuscript_links,
+)
+from .manuscript import (
+    review_manuscript_links as review_manuscript_links,
+)
 from .models import (
     ENTITY,
     Activity,

@@ -37,7 +37,7 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v3.0.1/lixity-3.0.1-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -48,7 +48,7 @@ lixity --version
 lixity service start --open
 ```
 
-`v3.0.1` is the release pin for this wheel installation; it needs no Git or separate Python
+`v0.3.0` is the release pin for this wheel installation; it needs no Git or separate Python
 installation. To update, stop the service and reinstall the desired release
 wheel as described in the [update reference](INSTALLATION.md#updates-and-removal).
 `uv tool upgrade lixity` retains the chosen source. `uv tool update-shell`
@@ -117,6 +117,9 @@ project and research actions require the local server.
 **Since v1.23.0:** The server dashboard has three views:
 **Research & Dossiers**, **Manuscript & Analysis**, and **Project & Settings**.
 New Project, Open Project and optional guidance remain accessible in every view.
+**Since v0.3.0:** PDF export joins these global project controls.
+The manuscript search, paragraph navigation and chapters precede diagnostic
+panels; optional measurements stay behind the existing **Values** disclosure.
 
 Under Project & Settings, choose or drop a Markdown/plain-text manuscript to see
 its filename. Selection alone sends no request. In the native server,
@@ -143,16 +146,26 @@ Open the generated file in a browser; no server is needed for analysis views.
 
 ### Download a manuscript PDF (since v2.4.0)
 
-The native workspace adds a PDF form at the top of **Manuscript & Analysis**,
-before **Start your review**. Choose **A5 reading copy** (default),
-**A4 manuscript sheets** or **A4 analysis report**, then select **Download PDF**.
-Changing the layout alone does not generate or download a document.
+**Since v0.3.0:** open **PDF export** in the global project controls
+above the three workspace views. Choose **A5 reading copy** (default),
+**A4 manuscript sheets** or **A4 analysis report**, then select **Download PDF**
+to save it. The menu starts collapsed
+and remains available in all three views. Changing the layout alone does not
+generate a document.
 
 The form uses the same composer as [`lixity pdf`](#lixity-pdf) and the currently
 selected manuscript. The response goes directly to your browser as a PDF
-attachment; generation creates no server export files and does not modify the
+response; generation creates no server export files and does not modify the
 manuscript or research archive. A context token prevents an old tab from silently
 exporting a different project after the server's selected context changes.
+
+**Since v0.3.0:** CLI and native exports share configured project
+title/author and [optional publication data](#publication-settings).
+The A5 layout can include entered imprint text after its title page. PDF title,
+author and language metadata, chapter bookmarks and page headers come from the
+same composition path.
+Changes to either selected-root configuration file invalidate an older PDF
+context token; reload the form before downloading after an external metadata edit.
 
 This form requires JavaScript and an explicitly compatible live native server.
 Standalone HTML reports do not provide the download action. The NDA PDF under
@@ -195,6 +208,22 @@ retained paragraph that will be cited. It creates no sentence-level citation and
 saves nothing until the existing form is submitted. See the [research workflow
 limits](research/USAGE.md#reading-and-cli-workflows-since-v240).
 
+### Link a manuscript quote to a claim (v0.3.0)
+
+**Since v0.3.0:** in an opened manuscript paragraph, select text within that
+paragraph, choose **Link selection to claim** (or `Alt+L`), choose a claim and explicitly permit local retention of the selected quote before
+**Save association**. The native workspace records a manual association to that exact claim
+revision; selecting or previewing writes nothing. It retains the quote and an
+exact paragraph anchor, without importing the complete manuscript or editing
+prose. Changed text/claim versions request review; moved or ambiguous paragraphs
+are not automatically relocated. Exact resolved quotes are marked when their
+paragraph opens, and manuscript search continues to cover the complete text.
+
+Dossier readers in Research and **Dossier alongside** list currently linked
+claims with the existing claim viewer and history. Active saved quote counts
+report explicit links against their pinned dossier association, never whether a
+claim is used in prose. See [retention, anchoring and archive v7 compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
+
 ### Reading paragraphs (since v2.3.0)
 
 Open a paragraph to read its manuscript text first. Expand the native **Values**
@@ -212,6 +241,7 @@ the static fallback.
 
 ### Searching the manuscript
 
+Manuscript search and the chapter reader appear before statistical diagnostics.
 The analysis toolbar carries a search field for the manuscript itself. Typing
 filters the chapter list down to the paragraphs that contain the phrase:
 chapters without a match collapse away, every hit is marked, and the arrows step
@@ -244,6 +274,11 @@ first. Expand **Detection thresholds** for labeled numeric controls and their
 explanations. Changes apply only after **Apply**; restoring defaults changes
 the form but does not save it. Invalid numbers and a strong-deviation cutoff
 below the noticeable cutoff are rejected before submission.
+
+**Since v0.3.0:** publication details stay in a collapsed
+**Publication** disclosure beside the existing title and author controls.
+They require an explicit open project. The entered fields and inclusion checkbox
+use the existing Settings submission; they do not create another settings store.
 
 The style matrix keeps its color scale fixed at z* = −2.5 to +2.5, independently
 of your detection threshold. A **●** identifies a cell selected by the engine's
@@ -720,8 +755,25 @@ the PDF is written; a missing glyph reports its font role and Unicode codepoint.
 Default report fonts prefer DejaVu Sans regular/bold for generated analysis
 symbols. Explicit font choices are retained.
 
+**Since v0.3.0:** TrueType subsets preserve glyph metrics and
+composite outlines, Unicode aliases remain distinct when copied, and embedding
+permissions are checked against the font's declared table version. Font roles
+used by another layout do not constrain the chosen layout. Heading/body spacing
+and first-line paragraph indents are corrected without changing the manuscript.
+
+**Since v0.3.0: identity and navigation.** The composer prefers an
+explicit title override, then the selected project's title, then supported
+manuscript title metadata/heading, then the filename. Fenced code examples are
+not title candidates. `--author` overrides the project's `author_name`; an
+explicit empty value clears the PDF byline. PDF Info carries Title/Author when
+present; the catalog carries the resolved language and A5 chapter bookmarks.
+Book body pages have bounded title/author headers and physical page folios;
+title and imprint pages omit these decorations but count toward the folios.
+Sheets and reports use a bounded header and current/total page footer outside
+the prose area; the sheet's 30×60 body grid remains intact.
+
 **Limits.** This is a text and layout renderer. It does not hyphenate, place
-images, build tables of contents with page numbers, mirror a running head
+images, build tables of contents with page numbers, alternate running heads
 between recto and verso, or typeset mathematics. Line breaking minimises badness
 without Knuth–Plass hyphenation, so a narrow measure occasionally leaves a
 loose line. These documents are generated from a Markdown manuscript; the
@@ -730,7 +782,9 @@ manuscript itself is never modified.
 The three layouts produce PDFs for analysis, continuous reading and submission.
 They do not add bleed or crop marks, manage print color profiles, generate PDF/X
 or perform printer preflight. Font coverage alone does not establish correct
-typesetting for every script.
+typesetting for every script. Output remains fixed-layout PDF; there is no EPUB
+export or PDF/UA accessibility certification. Metadata and bookmarks alone do
+not establish accessibility or production compliance.
 
 ### `lixity service`
 
@@ -751,6 +805,10 @@ process is stopped with Ctrl+C, and external startup units use their OS manager.
 any explicit overrides, including after a stop. Neither restores a later project
 choice in the browser. Starting an already running instance reports its status;
 use stop/start or restart to change its launch settings.
+Since v0.3.0, an explicit restart into another project clears its predecessor's
+title unless `--title` supplies a replacement. Plain restart retains the saved
+title. Opening a different project in the UI uses that project's identity for
+the header and NDA form; language/analysis overrides remain session preferences.
 
 | Option | Purpose |
 | --- | --- |
@@ -801,6 +859,13 @@ exactly one timestamped version, updates the stable file name (symlink with
 file-copy fallback) and rotates older versions into `exports/archive/`
 (last 10 kept per artifact family). `--dry-run` prints the plan without
 touching any file.
+
+**Since v0.3.0:** version names include seconds and microseconds,
+with a sequence suffix if the exact timestamp is reused. Changed artifacts
+within one minute retain their distinct contents; existing minute-based archive
+names remain recognized. Stable links or fallback copies are prepared before
+atomic replacement. A failed replacement preserves the previous stable artifact
+and reports an error before moving its older versions into the archive.
 
 **Manuscript discovery:** `<folder>.md`, then `manuscript.md`/`manuskript.md`,
 otherwise the only Markdown file in the folder (README/AGENTS/LICENSE/NDA are
@@ -871,6 +936,11 @@ or from an opened paragraph in the chapter map — both target the exact
 source line. Programmatic access: `api.markers(text)`,
 `api.add_marker(text, kind, note, line)`, `api.resolve_marker(text,
 marker_id)`.
+
+**Since v0.3.0:** marker write or encoding failures return a clear
+HTTP 500 JSON error. Failed staged writes leave the original manuscript bytes
+and permissions intact; they do not fall back to direct overwriting or refresh
+the dashboard as if the save had succeeded.
 
 ## AI agent interface
 
@@ -1132,13 +1202,33 @@ workspace discovery starts in the current directory. The configured `title`
 is used by both `dashboard` and `build`; artifact filenames still follow the
 manuscript filename. An explicit `--language` overrides the project language.
 
-Open **Project → Settings → Author name** in the live workspace. Apply saves
+Historical v3.0.1 provides **Project → Settings → Author name**. Apply saves
 only `author_name` in that project's `lixity.toml`, so it survives a restart.
 Language, title overrides and analysis thresholds keep their existing session
 behavior. An empty author name clears it; no personal name is built into Lixity.
 The field is unavailable until a manuscript or research project is open. Author
 identity comes only from that project's root configuration, never user defaults
 or a parent folder.
+
+**Since v0.3.0:** title, `author_name` and `[publication]` share
+the explicit selected project's configuration. The CLI and native PDF composer
+consume the same identity and publication model. User defaults, ancestor
+folders and an implicit working directory do not supply author or publication
+data. A configured display byline does not identify a publisher or printer.
+With an explicit project, **Apply** saves title, author and publication together
+in `lixity.toml`; language and thresholds retain their session behavior.
+The server prepares the updated dashboard before committing those metadata
+bytes. Validation, decoding, rendering or replacement failures keep the previous
+stored metadata and session/dashboard state. An optimistic config identity/byte
+guard rejects observed concurrent edits; it is not an external-editor lock.
+The native form supplies its selected-project token and returns a fresh token
+after saving. Publication saves require that token; reload after a project or
+root-config change rather than resubmitting stale values. Failed submissions
+keep the draft. Editing while a save is pending preserves newer form values;
+an earlier response does not replace them or a newer selected context. Invalid
+stored publication fields remain visible for explicit correction while manuscript
+analysis stays available; they are not silently cleared or normalized by an
+unrelated title/threshold save.
 
 The nearby identity check compares the displayed project title and configured
 author with explicit manuscript metadata. Supported forms are flat leading YAML
@@ -1173,6 +1263,88 @@ or pass explicit CLI flags to ensure your intended parameters applied.
 All `None` patterns fall back to the curated defaults of the selected language
 profile in `lixity.language_data` — adding a language is a data-layer entry,
 not a code change.
+
+### Publication settings
+
+In the native workspace, open **Project → Settings → Publication**. The
+disclosure is collapsed initially and disabled without an explicit project.
+The inclusion checkbox controls the A5 `book` layout; sheets and analysis
+reports omit the imprint. All text fields are optional and empty by default.
+Only entered nonempty text is emitted: an enabled, entirely empty configuration
+adds no blank imprint page. A single imprint section starts after the title
+page; long addresses or credits can flow onto additional pages.
+
+The same fields can be entered in the selected root's `lixity.toml`:
+
+```toml
+title = "Example manuscript"
+author_name = "Example Writer"
+
+[publication]
+enabled = true
+publisher_name = "Example Press"
+publisher_address = "Example Street 1\nExample Town"
+```
+
+These example identities are synthetic. Enter confirmed information for your
+own project; Lixity does not derive it from prose, a pen name or a project path.
+
+| Key in `[publication]` | Default | Entered information / maximum length |
+| --- | --- | --- |
+| `enabled` | `false` | Boolean inclusion control for A5 imprint text |
+| `publisher_name` | `""` | Publisher/self-publisher identity, 500 characters |
+| `publisher_address` | `""` | Multiline publisher address, 2,000 characters |
+| `printer_name` | `""` | Printer identity, 500 characters |
+| `printer_address` | `""` | Multiline printer address, 2,000 characters |
+| `edition` | `""` | Edition statement, 200 characters |
+| `year` | `""` | Four-digit CE year, `0001`–`9999` |
+| `isbn_print` | `""` | Print identifier, 32 characters |
+| `isbn_digital` | `""` | Digital identifier, 32 characters |
+| `rights_notice` | `""` | Multiline rights text, 3,000 characters |
+| `credits` | `""` | Multiline credits, 3,000 characters |
+| `extra_info` | `""` | Other entered imprint text, 4,000 characters |
+
+Validation checks text types, bounds and unsupported control characters, year
+syntax and ISBN-10/ISBN-13 checksums. Spaces and hyphens are accepted in ISBNs;
+nonempty print and digital identifiers must differ after canonical ISBN-13
+comparison, including equivalent ISBN-10/ISBN-13 forms. Unknown keys fail rather
+than silently disappearing. These checks do not verify assigned ISBNs,
+addresses, rights ownership or legal completeness. No copyright statement or
+Deutsche Nationalbibliothek catalog claim is generated automatically.
+
+#### Germany: print and digital publication
+
+For printed works, imprint requirements depend on the applicable Bundesland.
+For example, Bavaria and North Rhine-Westphalia require printer and publisher
+names or registered business names and addresses; self-publishing identifies
+the author or editor in the publisher role. Enter that identity explicitly,
+independently of a display pen name. See [BayPrG Article 7](https://www.gesetze-bayern.de/Content/Document/BayPrG-7)
+and [NRW Landespressegesetz § 8](https://recht.nrw.de/lrgv/gesetz/18052021-pressegesetz-fuer-das-land-nordrhein-westfalen-landespressegesetz-nrw/).
+
+Digital provider/website duties are separate from a printed-book imprint.
+[MStV § 18](https://www.gesetze-bayern.de/Content/Document/MStV-18) requires
+provider name/address information for telemedia beyond purely personal or family
+purposes. [DDG § 5](https://www.gesetze-im-internet.de/ddg/__5.html) adds contact
+and applicable business disclosures for businesslike digital services normally
+offered for payment. Check the actual provider and distribution channel; these
+rules do not mean every ebook must contain every website-imprint field. Lixity's
+entered publication data does not validate or publish a website imprint.
+
+An ISBN is voluntary. When ISBNs are used, separately available formats such as
+print, PDF and EPUB use distinct identifiers; a single digital field describes
+only the selected digital edition. See the [German ISBN agency FAQ](https://german-isbn.de/faq/faq-isbn).
+Copyright protection generally arises without registration or a notice; an
+optional entered rights notice does not establish ownership. See [WIPO's copyright FAQ](https://www.wipo.int/en/web/copyright/faq-copyright).
+Legal deposit of print and digital publications is a separate process; saving
+metadata or generating a PDF performs no deposit. See [DNBG § 14](https://www.gesetze-im-internet.de/dnbg/__14.html).
+
+The BFSG covers consumer e-book services provided after 28 June 2025. Scope and
+exceptions matter, including the microenterprise exemption for services under
+§ 3(3). See [BFSG § 1](https://www.gesetze-im-internet.de/bfsg/__1.html)
+and [§ 3](https://www.gesetze-im-internet.de/bfsg/__3.html).
+Lixity's supported exports remain A5 book, A4 sheet and A4 report PDFs. They
+provide fixed-layout reading copies, not EPUB or certified PDF/UA/PDF/X files;
+an imprint, searchable text or bookmarks do not establish BFSG compliance.
 
 ### Project NDA configuration (`[nda]`)
 
@@ -1288,7 +1460,8 @@ for response versions and the distinction between authored records and citations
 
 ## Claim chronology, causal interpretations and keyword citations (since v3.0.0)
 
-These commands are available since v3.0.0 and are not in v2.4.0:
+These commands were introduced in historical v3.0.0 and are retained in
+v0.3.0; they are not in historical v2.4.0:
 
 ```sh
 lixity research timeline --project ./sample-project --format text
@@ -1311,7 +1484,7 @@ endpoint revision and snapshot options bind a reviewed choice. Use
 for correction or `--state retracted`. Pins and earlier revisions remain;
 self-links fail, cycles are allowed, and no causal truth or additional links
 are inferred. The first explicit relation write opts the archive into v6,
-which readers before v3.0.0 reject; read-only views preserve v1–v5 archives.
+which historical readers before v3.0.0 reject; v0.3.0 supports v6; read-only views preserve v1–v5 archives.
 
 `cite --query` searches retained source paragraphs. One match resolves a full
 citation; zero/multiple matches return source-search JSON and exit `1` without

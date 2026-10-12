@@ -88,10 +88,10 @@ project, so check the displayed path when switching.
 
 ### Read and explore
 
-**Since v2.4.0:** the native workspace adds a manuscript PDF form
-at the top of **Manuscript & Analysis**, before **Start your review**. Select
+**Since v0.3.0:** the native workspace offers a collapsed manuscript PDF menu
+in the global project controls above all three views. Select
 **A5 reading copy** (the default), **A4 manuscript sheets** or **A4 analysis report**,
-then select **Download PDF**. It generates a PDF from the currently selected
+then select **Download PDF** to save it. It generates a PDF from the currently selected
 manuscript and returns it through your browser; it creates no server export files
 and changes neither the manuscript nor the research archive. The form needs
 JavaScript and a compatible live native server; standalone HTML reports do not
@@ -209,7 +209,8 @@ your proposed cause/effect link explicitly. Later claim edits leave that link
 pinned to its earlier versions and mark it for review. Edit or retract it through
 the shared revision editor; history keeps the earlier interpretation. Before the
 first save, back up the archive and read the v6 compatibility notice: afterward
-every reader must support v3.0.0 or newer.
+every reader must support archive schema v6: v0.3.0 and the
+historical v3.0.x releases do. Product and archive versions are independent.
 
 To add evidence without copying an identifier, choose your claim in the evidence
 form and select **Find source passage**. Search, read a result, choose **Use for

@@ -33,6 +33,19 @@ Engine tests use synthetic/public samples. Project adapters and optional local
 servers have separate trust boundaries and need their own tests; core test
 success is not a security certification for an arbitrary adapter.
 
+### Manual manuscript association limits
+
+Since v0.3.0 retains manually selected quotes only with explicit local
+permission and exact source/paragraph/claim guards. Anchor review detects
+structural changes, not semantic contradictions or factual support. Moved or
+ambiguous candidates remain unresolved, and exact claim pins do not change
+without an explicit revision. A zero saved-link count does not establish that a
+claim is unused in prose. The source recheck before publication is optimistic;
+it does not lock manuscript editors. Archive backups/exports contain retained
+private quotes, but no full manuscript source blob from this workflow. The first
+save opts into research schema v7, unreadable by historical v3.0.1. See
+[retention and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
+
 ### Research and external-library limits
 
 Zotero can lead the source/media catalogue; Lixity retains immutable evidence
@@ -195,8 +208,8 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
   Lixity chooses heatmap text from each cell’s luminance and
   tests the full blue/orange scale. This does not certify every canvas mark or
   every color-vision condition; numeric labels remain essential.
-- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. On current
-  main for 2.0.0, paragraph chips and dimension controls use at least 24×24,
+- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. Since historical
+  2.0.0, paragraph chips and dimension controls use at least 24×24,
   increasing to 44×44 for coarse pointers. Pressed chips retain their target
   size, and long strips scroll horizontally. These checks do not establish
   conformance for the entire interface or every canvas mark.
@@ -218,7 +231,7 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
 | 6 | Tense patterns | curated alternations + productive `-te`/`-ed` have FP/FN on ambiguous forms | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth |
 | 7 | Packaging | a wheel could miss `ui/assets/*` or `py.typed` | config exists, never verified in CI | 🟠 → **fixed**: CI job builds a wheel and asserts assets + typing marker are inside |
 | 8 | Project Python environments | an external launcher may select an environment without Lixity | core tests do not verify a project's launcher or installation | 🟡 **documented**: verify the interpreter and package version in the project's environment; project hooks belong to that project |
-| 9 | Publication PDF/EPUB adapters | optional project renderers have their own runtime dependencies | core analysis tests do not verify an adapter's publication output | 🟡 **documented**: run synthetic export checks in the adapter's environment; native NDA PDF tests cover only the built-in NDA renderer |
+| 9 | Publication PDF/EPUB adapters | optional project renderers have their own runtime dependencies | core checks do not verify arbitrary adapter output | 🟡 **documented**: the shared built-in manuscript PDF composer has synthetic integrity/layout tests; project adapters need their own export checks. Neither path provides EPUB/PDF/UA/PDF/X certification |
 | 10 | Dashboard size | ~2 MB HTML for 95k words, linear growth | per-paragraph payload | 🟡 **documented**; future option: JSON payload + client render |
 | 11 | Cross-machine determinism | float last bits may differ across platforms/Python versions | `math.log` summation order | 🟡 **documented**: byte-identical on the same interpreter; in-process determinism is tested |
 | 12 | NDA draft rendering and downloads | the native PDF cannot represent every Unicode script; downloaded agreements need user retention | generation returns bytes without server files or a recipient registry | 🟡 **documented**: download UTF-8 text for broader local rendering; keep reviewed/signed documents in project-owned storage |

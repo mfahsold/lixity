@@ -246,6 +246,40 @@ document.querySelectorAll(".chip[data-target]").forEach(function(chip) {
 });
 document.body.classList.add("has-js-paragraphs");
 
+// Search and explicit claim links share one renderer over the original text.
+// Interval boundaries are UTF-16 DOM offsets; persisted anchors use codepoints.
+var manuscriptParagraphMarks = Object.create(null);
+function renderParagraphText(paragraph, query) {
+  var panel = paragraph.closest(".ptext"), content = panel && paragraphContent[panel.id];
+  if (!content) return;
+  var text = content[0], spans = [];
+  paragraph.dataset.searchQuery = query || "";
+  if (query) {
+    // Case folding can expand characters such as İ. Match the original text
+    // so every interval keeps its DOM offset; the query remains literal data.
+    var pattern = new RegExp(query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "gi"), match;
+    while ((match = pattern.exec(text)) !== null) {
+      spans.push({start: match.index, end: match.index + match[0].length, search: true});
+    }
+  }
+  (manuscriptParagraphMarks[panel.id] || []).forEach(function(mark) { spans.push(mark); });
+  var boundaries = Array.from(new Set([0, text.length].concat(spans.flatMap(function(span) {
+    return [span.start, span.end];
+  })))).sort(function(a, b) { return a - b; });
+  var fragment = document.createDocumentFragment();
+  for (var i = 0; i < boundaries.length - 1; i++) {
+    var start = boundaries[i], end = boundaries[i + 1];
+    var active = spans.filter(function(span) { return span.start <= start && span.end >= end; });
+    if (!active.length) { fragment.appendChild(document.createTextNode(text.slice(start, end))); continue; }
+    var mark = document.createElement("mark");
+    mark.className = (active.some(function(span) {return span.search;}) ? "text-hit " : "") +
+      (active.some(function(span) {return !span.search;}) ? "manuscript-claim-hit" : "");
+    mark.textContent = text.slice(start, end);
+    fragment.appendChild(mark);
+  }
+  paragraph.replaceChildren(fragment);
+}
+
 function renderParagraph(panel) {
   var inner = panel.querySelector(".ptext-inner");
   if (!inner || inner.querySelector("p")) return;
@@ -255,6 +289,7 @@ function renderParagraph(panel) {
   var text = document.createElement("p");
   text.textContent = content[0];
   inner.appendChild(text);
+  renderParagraphText(text, "");
   var values = document.createElement("details");
   values.className = "paragraph-values";
   var summary = document.createElement("summary");
@@ -285,6 +320,7 @@ function renderParagraph(panel) {
     row.appendChild(slot);
     inner.appendChild(row);
   }
+  document.dispatchEvent(new CustomEvent("lixity:paragraph-rendered", {detail: panel}));
 }
 
 function toggleParagraph(chip, forceOpen) {
@@ -319,6 +355,36 @@ function selectStyleView(viewId, focus) {
   window.dispatchEvent(new Event("resize"));
 }
 
+function syncTabStops(container, selector) {
+  var tabs = Array.from(container.querySelectorAll(selector));
+  var active = tabs.find(function(tab) { return tab.getAttribute("aria-selected") === "true"; }) || tabs[0];
+  tabs.forEach(function(tab) { tab.tabIndex = tab === active ? 0 : -1; });
+}
+
+function initKeyboardTabs(container, selector, manual) {
+  if (!container || container.dataset.keyboardTabs === "true") return;
+  container.dataset.keyboardTabs = "true";
+  syncTabStops(container, selector);
+  new MutationObserver(function() { syncTabStops(container, selector); }).observe(container,
+    {subtree: true, attributes: true, attributeFilter: ["aria-selected"]});
+  container.addEventListener("click", function() {
+    queueMicrotask(function() { syncTabStops(container, selector); });
+  });
+  container.addEventListener("keydown", function(event) {
+    var tabs = Array.from(container.querySelectorAll(selector)).filter(function(tab) { return !tab.disabled; });
+    var index = tabs.indexOf(event.target);
+    if (index < 0 || !tabs.length) return;
+    if (event.key === "ArrowRight") index = (index + 1) % tabs.length;
+    else if (event.key === "ArrowLeft") index = (index + tabs.length - 1) % tabs.length;
+    else if (event.key === "Home") index = 0;
+    else if (event.key === "End") index = tabs.length - 1;
+    else return;
+    event.preventDefault();
+    tabs[index].focus();
+    if (!manual) tabs[index].click();
+  });
+}
+
 function revealStyleTarget(target) {
   var panel = target.closest("#style-panels > .panel");
   if (panel) selectStyleView(panel.id, false);
@@ -334,17 +400,7 @@ function revealStyleTarget(target) {
     var tab = event.target.closest("[data-style-view]");
     if (tab) selectStyleView(tab.dataset.styleView, false);
   });
-  list.addEventListener("keydown", function(event) {
-    var index = tabs.indexOf(event.target);
-    if (index < 0) return;
-    if (event.key === "ArrowRight") index = (index + 1) % tabs.length;
-    else if (event.key === "ArrowLeft") index = (index + tabs.length - 1) % tabs.length;
-    else if (event.key === "Home") index = 0;
-    else if (event.key === "End") index = tabs.length - 1;
-    else return;
-    event.preventDefault();
-    selectStyleView(tabs[index].dataset.styleView, true);
-  });
+  initKeyboardTabs(list, "[data-style-view]", false);
 })();
 
 function setFilter(input, bodyClass, on) {
@@ -462,42 +518,8 @@ if (filter) {
   var restored = null;
   var query = "";
 
-  function unmark(paragraph) {
-    paragraph.querySelectorAll("mark.text-hit").forEach(function (mark) {
-      var parent = mark.parentNode;
-      parent.replaceChild(document.createTextNode(mark.textContent), mark);
-      parent.normalize();
-    });
-  }
-
-  // Marking is built from text nodes and created elements only. Assigning the
-  // query through innerHTML would let a manuscript phrase such as "<img
-  // onerror=...>" become markup in the interface.
-  function mark(paragraph, query) {
-    var walker = document.createTreeWalker(paragraph, NodeFilter.SHOW_TEXT, null);
-    var nodes = [];
-    while (walker.nextNode()) nodes.push(walker.currentNode);
-    nodes.forEach(function (node) {
-      var text = node.nodeValue;
-      var lower = text.toLowerCase();
-      var needle = query.toLowerCase();
-      var at = lower.indexOf(needle);
-      if (at < 0) return;
-      var fragment = document.createDocumentFragment();
-      var start = 0;
-      while (at >= 0) {
-        if (at > start) fragment.appendChild(document.createTextNode(text.slice(start, at)));
-        var hit = document.createElement("mark");
-        hit.className = "text-hit";
-        hit.textContent = text.slice(at, at + query.length);
-        fragment.appendChild(hit);
-        start = at + query.length;
-        at = lower.indexOf(needle, start);
-      }
-      if (start < text.length) fragment.appendChild(document.createTextNode(text.slice(start)));
-      node.parentNode.replaceChild(fragment, node);
-    });
-  }
+  function unmark(paragraph) { renderParagraphText(paragraph, ""); }
+  function mark(paragraph, query) { renderParagraphText(paragraph, query); }
 
   function apply(direction) {
     query = input.value.trim();
@@ -697,11 +719,17 @@ if (layer) {
   layer.addEventListener("change", applyLayer);
   applyLayer();
 }
-async function jsonApi(url, options) {
+async function jsonApi(url, options, responseType) {
   var t0 = performance.now();
   try {
     var response = await fetch(url, options);
-    var data = await response.json();
+    var data;
+    if (response.ok && responseType === "markdown") {
+      if (!/^text\/(markdown|plain)\b/i.test(response.headers.get("Content-Type") || "")) {
+        throw new Error(uiLabel("research_matrix_failed"));
+      }
+      data = {ok: true, text: await response.text()};
+    } else data = await response.json();
     if (!data || typeof data !== "object" || Array.isArray(data)) data = {ok: false};
     if (!response.ok) data.ok = false;
     data.http_status = response.status;
@@ -1010,7 +1038,7 @@ if (settingsForm) {
       input.value = input.dataset.default;
       input.setCustomValidity("");
     });
-    settingsForm.querySelector("details").open = true;
+    document.getElementById("settings-thresholds").open = true;
   });
 }
 var fdrFilter = document.getElementById("heatmap-fdr-only");
@@ -1024,7 +1052,7 @@ if (fdrFilter) {
     document.getElementById("heatmap-empty").hidden = visible > 0;
   });
 }
-async function runAction(action, payload, button) {
+async function runAction(action, payload, button, canReload, acceptResponse) {
   var status = document.getElementById("ctl-status");
   if (status) {
     status.className = "ctl-status";
@@ -1042,13 +1070,17 @@ async function runAction(action, payload, button) {
     var data = await res.json();
     if (!res.ok) data.ok = false;
     LixityLog.api("POST", url, performance.now() - t0, res.status, data);
+    if (acceptResponse && !acceptResponse()) return data;
     if (status) {
       status.className = "ctl-status " + (data.ok ? "ok" : "err");
       status.textContent = (data.ok ? "✓ " : "✗ ") + (data.message || "");
     }
-    if (data.ok && data.reload) { setTimeout(function () { location.reload(); }, 1200); }
+    if (data.ok && data.reload) {
+      setTimeout(function () { if (!canReload || canReload()) location.reload(); }, 1200);
+    }
     return data;
   } catch (err) {
+    if (acceptResponse && !acceptResponse()) return {ok: false, message: String(err)};
     LixityLog.error("runAction (" + action + ") error:", err);
     if (status) {
       status.className = "ctl-status err";
@@ -1076,12 +1108,15 @@ async function submitSettings() {
   strong.setCustomValidity(strong.valueAsNumber < mild.valueAsNumber
     ? document.getElementById("settings-order-error").textContent : "");
   if (!settings.checkValidity()) {
-    settings.querySelector("details").open = true;
+    var invalid = settings.querySelector(":invalid");
+    var disclosure = invalid && invalid.closest("details");
+    if (disclosure) disclosure.open = true;
     settings.reportValidity();
     return;
   }
   payload.language = document.getElementById("set-language").value;
-  payload.title = document.getElementById("set-title").value;
+  var title = document.getElementById("set-title");
+  if (title.value !== settings.dataset.titleInitial) payload.title = title.value;
   var zm = document.getElementById("set-z-mild");
   var zs = document.getElementById("set-z-strong");
   var fq = document.getElementById("set-fdr-q");
@@ -1094,11 +1129,37 @@ async function submitSettings() {
   if (dt) payload.dim_score_threshold = parseFloat(dt.value);
   var author = document.getElementById("set-author-name");
   var authorEnabled = author && author.dataset.authorSettingEnabled === "true";
-  if (authorEnabled) {
+  if (authorEnabled && author.value.trim() !== settings.dataset.authorInitial) {
     payload.author_name = author.value.trim();
     author.disabled = true;
   }
-  try { return await runAction("settings", payload, button); }
+  var publication = {};
+  settings.querySelectorAll("[data-publication-key]").forEach(function(field) {
+    publication[field.dataset.publicationKey] = field.type === "checkbox" ? field.checked : field.value;
+  });
+  var initialPublication = JSON.parse(settings.dataset.publicationInitial || "{}");
+  var samePublication = Object.keys(publication).every(function(key) { return publication[key] === initialPublication[key]; });
+  if (settings.dataset.publicationEditable === "true" && !samePublication) payload.publication = publication;
+  var submittedToken = settings.dataset.projectToken || "";
+  var acceptedToken = submittedToken;
+  if (submittedToken) payload.project_token = submittedToken;
+  var identifiers = Array.from(settings.querySelectorAll("input, textarea, select")).map(function(field) { return field.id; });
+  var submitted = fieldSnapshot(identifiers);
+  function sameContext() { return settings.isConnected && settings.dataset.projectToken === acceptedToken; }
+  function unchanged() { return sameContext() && JSON.stringify(fieldSnapshot(identifiers)) === JSON.stringify(submitted); }
+  try {
+    var result = await runAction("settings", payload, button, unchanged, sameContext);
+    if (result.ok && sameContext()) {
+      if (/^[a-f0-9]{64}$/.test(result.project_token || "")) {
+        acceptedToken = result.project_token;
+        settings.dataset.projectToken = acceptedToken;
+      }
+      if (Object.prototype.hasOwnProperty.call(payload, "title")) settings.dataset.titleInitial = payload.title;
+      if (Object.prototype.hasOwnProperty.call(payload, "author_name")) settings.dataset.authorInitial = payload.author_name;
+      if (payload.publication) settings.dataset.publicationInitial = JSON.stringify(payload.publication);
+    }
+    return result;
+  }
   finally { if (authorEnabled) author.disabled = false; }
 }
 document.querySelectorAll("[data-action]").forEach(function (btn) {
@@ -1162,10 +1223,62 @@ async function researchApiPost(action, payload) {
   return data;
 }
 
-function researchApiGet(endpoint) {
+function researchApiGet(endpoint, responseType) {
   var token = researchContextToken();
   if (token) endpoint += (endpoint.includes("?") ? "&" : "?") + "research_token=" + encodeURIComponent(token);
-  return jsonApi(API + "/" + endpoint);
+  return jsonApi(API + "/" + endpoint, undefined, responseType);
+}
+
+function researchFormStatus(button, message, state) {
+  var identifier = button.id + "-status";
+  var status = document.getElementById(identifier);
+  if (!status) {
+    status = document.createElement("p");
+    status.id = identifier;
+    status.setAttribute("role", "status");
+    status.setAttribute("aria-live", "polite");
+    (button.closest(".row") || button).after(status);
+  }
+  status.className = "ctl-status research-form-status" + (state ? " " + state : "");
+  status.textContent = message || "";
+}
+
+function fieldSnapshot(identifiers) {
+  return Object.fromEntries(identifiers.map(function(identifier) {
+    var field = document.getElementById(identifier);
+    return [identifier, field && field.type === "checkbox" ? field.checked : field ? field.value : ""];
+  }));
+}
+
+async function submitResearchForm(button, action, payload, fields, clearFields, complete, refresh) {
+  if (button.dataset.pending === "true") return;
+  var submitted = fieldSnapshot(fields), context = researchReadContext();
+  button.dataset.pending = "true";
+  button.disabled = true;
+  button.classList.add("busy");
+  button.setAttribute("aria-busy", "true");
+  researchFormStatus(button, uiLabel("form_saving"), "loading");
+  try {
+    var result = await researchApiPost(action, payload);
+    if (!button.isConnected || !acceptResearchContext(context, result)) return;
+    researchFormStatus(button, result.ok ? uiLabel(complete) : result.message || uiLabel("research_status_unavailable"), result.ok ? "ok" : "err");
+    if (result.ok) {
+      if (JSON.stringify(fieldSnapshot(fields)) === JSON.stringify(submitted)) {
+        clearFields.forEach(function(identifier) {
+          var field = document.getElementById(identifier);
+          if (field.type === "checkbox") field.checked = false;
+          else field.value = "";
+        });
+      }
+      refresh();
+    }
+    return result;
+  } finally {
+    button.dataset.pending = "false";
+    button.disabled = false;
+    button.classList.remove("busy");
+    button.removeAttribute("aria-busy");
+  }
 }
 
 function researchContextToken() {
@@ -1670,9 +1783,75 @@ function researchDossierDetailHtml(detail, readOnly) {
     (readOnly ? "" : '<div class="row"><button type="button" class="ctl" data-dossier-claim="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_claim_heading")) + '</button>' +
     '<button type="button" class="ctl" data-dossier-decision="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_decision_heading")) + '</button></div>') +
     (!readOnly && window.LixityDossierImages ? window.LixityDossierImages.actionsHtml(detail) : "") + bodyHtml +
+    (researchContextToken() ? '<section class="research-dossier-claims"><h4>' +
+      escapeHtml(uiLabel("research_dossier_claims")) + '</h4><p class="ctl-note">' +
+      escapeHtml(uiLabel("research_loading")) + '</p></section>' : '') +
     '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(function(citation) {
       return researchCitationHtml(citation, !readOnly);
     }).join("");
+}
+
+// This reverse list projects current Claim.dossier_ref associations and
+// counts explicitly retained links against their pinned dossier association.
+// It never infers unwritten prose use or reconstructs historical dossier claims.
+async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
+  var slot = host.querySelector(".research-dossier-claims");
+  if (!slot || !researchContextToken() || !detail.id || !detail.project_id) return;
+  var context = researchReadContext();
+  var serial = slot._claimsRead = (slot._claimsRead || 0) + 1;
+  function current() {
+    return slot.isConnected && host.contains(slot) && serial === slot._claimsRead &&
+      context.token === researchContextToken() &&
+      (!researchSelectionProjectId || researchSelectionProjectId === detail.project_id) &&
+      (!stillCurrent || stillCurrent());
+  }
+  slot.setAttribute("aria-busy", "true");
+  var results = await Promise.all([
+    researchApiGet("research/claims?dossier_id=" + encodeURIComponent(detail.id)),
+    researchApiGet("research/manuscript-links")
+  ]);
+  var data = results[0], manuscriptLinks = results[1];
+  if (!current()) return;
+  slot.setAttribute("aria-busy", "false");
+  var heading = '<h4>' + escapeHtml(uiLabel("research_dossier_claims")) + '</h4>';
+  if (!data.ok || data.project_id !== detail.project_id || !Array.isArray(data.claims)) {
+    slot.innerHTML = heading + '<p class="ctl-note" role="status">' +
+      escapeHtml(data.message || uiLabel("research_load_claims_failed")) + '</p>' +
+      '<button type="button" class="ctl ctl-sm">' + escapeHtml(uiLabel("research_dossier_claims_retry")) + '</button>';
+    slot.querySelector("button").addEventListener("click", function() {
+      enhanceResearchDossierClaims(host, detail, stillCurrent);
+    });
+    return;
+  }
+  // The API filters the stored reference; reject unrelated rows defensively.
+  var claims = data.claims.filter(function(claim) { return claim.dossier_id === detail.id; });
+  var linksAvailable = manuscriptLinks.ok && manuscriptLinks.project_id === detail.project_id &&
+    manuscriptLinks.snapshot === data.snapshot && Array.isArray(manuscriptLinks.links);
+  slot.innerHTML = heading + '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_claims_hint")) + '</p>' +
+    (claims.length ? '<ul class="research-dossier-claims-list">' + claims.map(function(claim) {
+      var confidence = ["evidenced", "disputed"].includes(claim.confidence) ? claim.confidence : "hypothetical";
+      var badge = confidence === "evidenced" ? "badge-success" : confidence === "disputed" ? "badge-warning" : "badge-neutral";
+      var linked = linksAvailable ? manuscriptLinks.links.filter(function(link) {
+        return link.state === "active" && link.claim_id === claim.id && link.dossier_id === detail.id;
+      }) : [];
+      var usage = linksAvailable ? '<p class="ctl-note" data-manuscript-link-count="' + linked.length + '">' +
+        escapeHtml(linked.length ? uiFormat("research_manuscript_quote_count", {count: linked.length}) :
+          uiLabel("research_manuscript_quote_none")) + '</p>' :
+        '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_unavailable")) + '</p>';
+      if (linked.some(function(link) { return link.claim_changed || link.claim_withdrawn; }))
+        usage += '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_review")) + '</p>';
+      if (linked.some(function(link) { return link.dossier_revision !== detail.revision; }))
+        usage += '<p class="ctl-note" data-dossier-version-review>' + escapeHtml(uiLabel("research_manuscript_quote_dossier_version")) + '</p>';
+      return '<li><strong>' + escapeHtml(claim.title || uiLabel("research_revision_kind_claim")) + '</strong>' +
+        '<div class="row"><span class="research-badge ' + badge + '">' +
+        escapeHtml(uiLabel("research_confidence_" + confidence)) + '</span>' +
+        '<span class="ctl-note" data-claim-revision="' + Number(claim.revision) + '">' +
+        escapeHtml(uiFormat("research_revision_number", {revision: claim.revision})) + '</span>' +
+        '<button type="button" class="ctl ctl-sm" data-research-history="claim" data-record-id="' +
+        escapeHtml(claim.id) + '">' + escapeHtml(uiLabel("research_claim_open")) + '</button></div>' + usage +
+        '<details><summary>' + escapeHtml(uiLabel("research_revision_technical")) + '</summary>' +
+        '<code class="research-record-id">' + escapeHtml(claim.id) + '</code></details></li>';
+    }).join("") + '</ul>' : '<p class="ctl-note">' + escapeHtml(uiLabel("research_dossier_claims_empty")) + '</p>');
 }
 
 function researchDossierSectionAction(detail, section) {
@@ -1710,6 +1889,7 @@ document.addEventListener("lixity:dossier-image-saved", async function(event) {
   summary.parentElement.open = true;
   var host = summary.parentElement.querySelector(".research-details-body");
   host.innerHTML = researchDossierDetailHtml(detail);
+  enhanceResearchDossierClaims(host, detail, function() { return summary.parentElement.open; });
   var add = host.querySelector("[data-dossier-add-image]");
   if (add && restoreFocus && (document.activeElement === previousFocus || document.activeElement === document.body)) add.focus();
   researchStatus(uiLabel("image_saved"), true);
@@ -2931,8 +3111,17 @@ document.addEventListener("click", async function (event) {
     detailHost.textContent = uiLabel("research_details_loading");
     var isSource = detailsBtn.dataset.researchDetail === "source";
     var sourceSelectionProject = researchSelectionProjectId;
+    var detailContext = researchReadContext();
+    var detailRead = detailHost._detailRead = (detailHost._detailRead || 0) + 1;
     var sourceSelectionRead = isSource ? (detailHost._selectionRead = (detailHost._selectionRead || 0) + 1) : null;
     var detail = await researchApiGet("research/" + (isSource ? "sources" : "dossiers") + "?id=" + encodeURIComponent(detailsBtn.dataset.recordId));
+    function detailCurrent() {
+      return detailHost.isConnected && detailRead === detailHost._detailRead &&
+        detailsBtn.parentElement.open && detailContext.token === researchContextToken() &&
+        detailContext.projectId === researchSelectionProjectId;
+    }
+    if (!detailCurrent() || !acceptResearchContext(detailContext, detail)) return;
+    if (detail.ok && detail.id !== detailsBtn.dataset.recordId) return;
     if (isSource && (!detailHost.isConnected || sourceSelectionProject !== researchSelectionProjectId ||
         sourceSelectionRead !== detailHost._selectionRead || !detailsBtn.parentElement.open)) return;
     if (!detail.ok) {
@@ -2988,6 +3177,7 @@ document.addEventListener("click", async function (event) {
       detailHost.querySelector(".research-source-doc-raw").textContent = fullDocText;
     } else {
       detailHost.innerHTML = researchDossierDetailHtml(detail);
+      enhanceResearchDossierClaims(detailHost, detail, detailCurrent);
     }
     return;
   }
@@ -3209,7 +3399,7 @@ function highlightSearchTerms(text, query) {
           '<div class="research-passage-quote">„' + highlightSearchTerms(h.verbatim || "", query) + '“</div>' +
           '<div class="research-passage-cite">' +
             escapeHtml(uiLabel("research_source")) + ' <strong>' + escapeHtml(h.source_title || "") + '</strong> · ' +
-            'Score: ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
+            escapeHtml(uiLabel("research_rank_score")) + ': ' + (h.rank_score !== undefined ? Number(h.rank_score).toFixed(2) : 'n/a') + ' · ' +
             escapeHtml(uiLabel("research_id")) + ' <code style="user-select:all;cursor:pointer;" title="' + escapeHtml(uiLabel("research_select_id")) + '">' + escapeHtml(h.passage_id || "") + '</code>' +
           '</div>' +
           researchPassageActions(h.passage_id, h) +
@@ -3231,28 +3421,23 @@ function highlightSearchTerms(text, query) {
 
   var dosBtn = event.target.closest("#r-dos-create-btn");
   if (dosBtn) {
+    if (dosBtn.dataset.pending === "true") return;
     var dTitle = document.getElementById("r-dos-title");
     var dTags = document.getElementById("r-dos-tags");
     var dEids = document.getElementById("r-dos-eids");
     var dBody = document.getElementById("r-dos-body");
     var titleVal = dTitle ? dTitle.value.trim() : "";
-    if (!titleVal) { researchStatus(uiLabel("research_dossier_title_required"), false); return; }
+    if (!titleVal) { researchFormStatus(dosBtn, uiLabel("research_dossier_title_required"), "err"); return; }
     var tagsArr = (dTags && dTags.value) ? dTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
     var eidsArr = (dEids && dEids.value) ? dEids.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
-    var dres = await researchApiPost("research-dossier", {
+    await submitResearchForm(dosBtn, "research-dossier", {
       title: titleVal,
       body: dBody ? dBody.value : "",
       tags: tagsArr,
       evidence_ids: eidsArr
-    });
-    researchStatus(dres.ok ? uiLabel("research_dossier_complete") : dres.message, dres.ok);
-    if (dres.ok) {
-      if (dTitle) dTitle.value = "";
-      if (dTags) dTags.value = "";
-      if (dEids) dEids.value = "";
-      if (dBody) dBody.value = "";
-      refreshResearchDossiers(null, null, true);
-    }
+    }, ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body"],
+      ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body"], "research_dossier_complete",
+      function() { refreshResearchDossiers(null, null, true); });
     return;
   }
 
@@ -3311,6 +3496,7 @@ function highlightSearchTerms(text, query) {
 
   var claimBtn = event.target.closest("#r-claim-create-btn");
   if (claimBtn) {
+    if (claimBtn.dataset.pending === "true") return;
     var cTitle = document.getElementById("r-claim-title");
     var cConf = document.getElementById("r-claim-confidence");
     var cTags = document.getElementById("r-claim-tags");
@@ -3323,13 +3509,13 @@ function highlightSearchTerms(text, query) {
     var titleVal = cTitle ? cTitle.value.trim() : "";
     var stmtVal = cStmt ? cStmt.value.trim() : "";
     if (!titleVal || !stmtVal) {
-      researchStatus(uiLabel("research_claim_required"), false);
+      researchFormStatus(claimBtn, uiLabel("research_claim_required"), "err");
       return;
     }
     var tagsArr = (cTags && cTags.value) ? cTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
     var actorsArr = (cActors && cActors.value) ? cActors.value.split(",").map(function(a){ return a.trim(); }).filter(Boolean) : [];
 
-    var cres = await researchApiPost("research-claim-add", {
+    await submitResearchForm(claimBtn, "research-claim-add", {
       title: titleVal,
       statement: stmtVal,
       confidence: cConf ? cConf.value : "hypothetical",
@@ -3338,29 +3524,26 @@ function highlightSearchTerms(text, query) {
       actors: actorsArr,
       dossier_id: cDossier ? cDossier.value : "",
       tags: tagsArr
-    });
-    researchStatus(cres.ok ? uiLabel("research_claim_complete") : cres.message, cres.ok);
-    if (cres.ok) {
-      if (cTitle) cTitle.value = "";
-      if (cStmt) cStmt.value = "";
-      if (cTags) cTags.value = "";
-      if (cTime) cTime.value = "";
-      if (cPlace) cPlace.value = "";
-      if (cActors) cActors.value = "";
-      refreshResearchClaims();
-    }
+    }, ["r-claim-title", "r-claim-statement", "r-claim-tags", "r-claim-time", "r-claim-place",
+      "r-claim-actors", "r-claim-confidence", "r-claim-dossier-select"],
+      ["r-claim-title", "r-claim-statement", "r-claim-tags", "r-claim-time", "r-claim-place", "r-claim-actors"],
+      "research_claim_complete", refreshResearchClaims);
     return;
   }
 
   var matrixBtn = event.target.closest("#r-claim-matrix-btn");
   if (matrixBtn) {
+    if (matrixBtn.disabled) return;
+    var matrixContext = researchReadContext();
+    matrixBtn.disabled = true; matrixBtn.setAttribute("aria-busy", "true");
     try {
-      var resp = await fetch((API || "/api") + "/research/matrix?format=md");
+      var resp = await researchApiGet("research/matrix?format=md", "markdown");
+      if (!acceptResearchContext(matrixContext, resp)) return;
       if (!resp.ok) {
-        researchStatus("Failed to generate claim matrix", false);
+        researchFormStatus(matrixBtn, resp.message || uiLabel("research_matrix_failed"), "err");
         return;
       }
-      var mdText = await resp.text();
+      var mdText = resp.text;
       var blob = new Blob([mdText], { type: "text/markdown;charset=utf-8" });
       var url = URL.createObjectURL(blob);
       var a = document.createElement("a");
@@ -3370,10 +3553,10 @@ function highlightSearchTerms(text, query) {
       a.click();
       document.body.removeChild(a);
       URL.revokeObjectURL(url);
-      researchStatus("Claim matrix exported successfully", true);
+      researchFormStatus(matrixBtn, uiLabel("research_matrix_saved"), "ok");
     } catch (e) {
-      researchStatus("Export failed: " + (e.message || e), false);
-    }
+      researchFormStatus(matrixBtn, uiLabel("research_matrix_failed"), "err");
+    } finally { matrixBtn.disabled = false; matrixBtn.removeAttribute("aria-busy"); }
     return;
   }
 
@@ -3438,6 +3621,7 @@ function highlightSearchTerms(text, query) {
 
   var decBtn = event.target.closest("#r-decision-create-btn");
   if (decBtn) {
+    if (decBtn.dataset.pending === "true") return;
     var decTitle = document.getElementById("r-decision-title");
     var decClaim = document.getElementById("r-decision-claim-select");
     var decRat = document.getElementById("r-decision-rationale");
@@ -3448,26 +3632,21 @@ function highlightSearchTerms(text, query) {
     var dTitleVal = decTitle ? decTitle.value.trim() : "";
     var dRatVal = decRat ? decRat.value.trim() : "";
     if (!dTitleVal || !dRatVal) {
-      researchStatus(uiLabel("research_decision_required"), false);
+      researchFormStatus(decBtn, uiLabel("research_decision_required"), "err");
       return;
     }
 
-    var dres = await researchApiPost("research-decision-add", {
+    await submitResearchForm(decBtn, "research-decision-add", {
       title: dTitleVal,
       rationale: dRatVal,
       claim_id: decClaim ? decClaim.value.trim() : "",
       dossier_ids: decDossier && decDossier.value ? [decDossier.value] : [],
       impact_on_plot: decPlot ? decPlot.value.trim() : "",
       deviation_from_fact: decDev ? decDev.checked : false
-    });
-    researchStatus(dres.ok ? uiLabel("research_decision_complete") : dres.message, dres.ok);
-    if (dres.ok) {
-      if (decTitle) decTitle.value = "";
-      if (decRat) decRat.value = "";
-      if (decPlot) decPlot.value = "";
-      if (decDev) decDev.checked = false;
-      refreshResearchDecisions();
-    }
+    }, ["r-decision-title", "r-decision-rationale", "r-decision-plot", "r-decision-deviation",
+      "r-decision-claim-select", "r-decision-dossier-select"],
+      ["r-decision-title", "r-decision-rationale", "r-decision-plot", "r-decision-deviation"],
+      "research_decision_complete", refreshResearchDecisions);
     return;
   }
 
@@ -5186,5 +5365,21 @@ if (window.location.hash) {
 }
 window.LixityWorkspaceReader = {
   label: uiLabel, read: researchApiGet, switchView: switchActiveView,
+  contextToken: researchContextToken, enhanceDossier: enhanceResearchDossierClaims,
   renderDossier: function(detail) { return researchDossierDetailHtml(detail, true); }
+};
+initKeyboardTabs(document.querySelector(".view-navigation"), "[data-view]", false);
+initKeyboardTabs(document.getElementById("research-tabs"), "[data-rtab]", true);
+document.querySelectorAll(".modal-tabs").forEach(function(container) {
+  initKeyboardTabs(container, '[role="tab"]', container.closest("#modal-research-revision") !== null);
+});
+
+window.LixityManuscriptLinks = {
+  label: uiLabel, read: researchApiGet, post: researchApiPost, contextToken: researchContextToken,
+  text: function(panel) { return paragraphContent[panel.id] && paragraphContent[panel.id][0]; },
+  marks: function(panel, spans) {
+    manuscriptParagraphMarks[panel.id] = spans;
+    var paragraph = panel.querySelector(".ptext-inner > p");
+    if (paragraph) renderParagraphText(paragraph, paragraph.dataset.searchQuery || "");
+  }
 };

@@ -50,6 +50,22 @@ def test_explicit_settings_win_over_environment_and_restart_preserves_saved_valu
     assert resolve_settings(9000, {"no_project": True}, saved)["project"] is None
 
 
+def test_restart_discards_saved_title_when_switching_projects(tmp_path):
+    from lixity.service import resolve_settings
+
+    first, second = tmp_path / "first", tmp_path / "second"
+    first.mkdir()
+    (first / "manuscript.md").write_text("Synthetic manuscript.\n", encoding="utf-8")
+    saved = resolve_settings(8765, {"project": str(first), "title": "First title", "language": "de"}, None)
+    assert resolve_settings(8765, {"project": str(first)}, saved)["title"] == "First title"
+    assert resolve_settings(8765, {"project": str(first / "manuscript.md")}, saved)["title"] == "First title"
+    changed = resolve_settings(8765, {"project": str(second)}, saved)
+    assert changed.get("title") is None and changed["language"] == "de"
+    assert resolve_settings(8765, {"no_project": True}, saved).get("title") is None
+    explicit = resolve_settings(8765, {"project": str(second), "title": "Reviewed second title"}, saved)
+    assert explicit["title"] == "Reviewed second title"
+
+
 def test_corrupt_runtime_records_and_unknown_files_are_not_overwritten(tmp_path):
     from lixity.service import ServiceManager
 

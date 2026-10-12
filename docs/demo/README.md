@@ -10,8 +10,8 @@ a benchmark, a calibration corpus or a quality score.
 The notice and complete, unchanged distribution license are appended to the
 rendered document, outside the analyzed input. Do not substitute private
 manuscripts or local project configuration when regenerating this public file.
-The current example is generated with Lixity 2.3.0, as stated in its introductory
-notice and report header.
+The example's introductory notice and report header state the generating
+version. Regenerate it when the maintained UI or release version changes.
 
 From the repository root after [installation](../INSTALLATION.md), regenerate
 with the public Python API and explicit code defaults:
@@ -21,6 +21,7 @@ PYTHONPATH=src .venv/bin/python - <<'PY'
 import html
 from pathlib import Path
 
+from lixity import __version__
 from lixity.api import dashboard
 
 root = Path.cwd()
@@ -30,10 +31,10 @@ report = dashboard(
 )
 assert report.count("</head>") == 1
 report = report.replace("</head>", '<link rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"/>\n</head>', 1)
-notice = '''
+notice = f'''
 <section class="panel" id="demo-context" aria-labelledby="demo-heading">
 <h2 id="demo-heading">Synthetic read-only example</h2>
-<p><strong>Generated with Lixity 2.3.0.</strong> This example includes paragraph
+<p><strong>Generated with Lixity {__version__}.</strong> This example includes paragraph
 Values disclosures, review links and the tabbed style area.</p>
 <p>Six invented English chapters about a night shift at a river signal house.
 This report contains no real manuscript. It accepts no uploads and saves no edits.</p>

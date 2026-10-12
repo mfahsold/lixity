@@ -256,7 +256,7 @@ class LayoutTest(unittest.TestCase):
         chapters = [("Kapitel 1", [paragraph]), ("Kapitel 2", [paragraph, paragraph])]
         data = manuscript_pdf(title="weglaufen", chapters=chapters, choice=CHOSEN)
         self.assertTrue(data.startswith(b"%PDF-1.4"))
-        pages = _composed_pages(data)
+        pages = _composed_pages(data, body_only=True)
         self.assertGreater(len(pages), 1)
         for page in pages:
             self.assertLessEqual(len(page), NORM_LINES)
@@ -274,18 +274,18 @@ class LayoutTest(unittest.TestCase):
         data = manuscript_pdf(
             title="weglaufen", chapters=[("Kapitel", ["Ein kurzer Absatz."])], choice=CHOSEN
         )
-        drawn = [line for page in _composed_pages(data) for line in page]
+        drawn = [line for page in _composed_pages(data, body_only=True) for line in page]
         self.assertTrue(drawn)
         for hexed in drawn:
             self.assertLessEqual(_character_count(hexed), NORM_COLUMNS)
 
 
-def _composed_pages(data: bytes) -> list[list[str]]:
+def _composed_pages(data: bytes, *, body_only: bool = False) -> list[list[str]]:
     """Read back what was drawn on each page, without an external PDF tool.
 
     Content streams are written uncompressed, so the glyph hex strings can be
-    decoded directly. Each glyph is one UTF-16 code unit, which is exactly the
-    character count the submission grid is defined in.
+    decoded directly. Each PDF character code represents one source codepoint;
+    the sheet's running furniture is outside its thirty-line body grid.
     """
     import re
 
@@ -299,13 +299,16 @@ def _composed_pages(data: bytes) -> list[list[str]]:
             continue
         reference = int(re.search(rb"/Contents (\d+) 0 R", body).group(1))
         stream = re.search(rb"stream\n(.*?)\nendstream", objects[reference], re.S).group(1)
-        drawn = [match.group(1) for match in re.finditer(rb"Tm\n<([0-9A-F]+)> Tj", stream)]
+        matches = re.finditer(rb"1 0 0 1 [-.0-9]+ ([-.0-9]+) Tm\n<([0-9A-F]+)> Tj", stream)
+        height = float(re.search(rb"/MediaBox \[0 0 [-.0-9]+ ([-.0-9]+)\]", body).group(1))
+        drawn = [match.group(2) for match in matches
+                 if not body_only or 54 <= float(match.group(1)) <= height - 54]
         pages.append(drawn)
     return pages
 
 
 def _character_count(hexed: str) -> int:
-    """One glyph is one UTF-16 code unit, so the hex length is the character count."""
+    """Each four-digit PDF CID represents one source Unicode codepoint."""
     return len(hexed) // 4
 
 
@@ -389,7 +392,7 @@ class TypesettingTest(unittest.TestCase):
             chapters=[("Kapitel", ["Ein kurzer Absatz fuer den Normbogen." * 4])],
             choice=CHOSEN,
         )
-        for page in _composed_pages(data):
+        for page in _composed_pages(data, body_only=True):
             for drawn in page:
                 self.assertLessEqual(_character_count(drawn), NORM_COLUMNS)
 
@@ -437,7 +440,8 @@ class NativePdfTest(unittest.TestCase):
         for number, page in enumerate(pages[1:], 2):
             lines = page.strip().splitlines()
             self.assertEqual(lines[-1].strip(), str(number))
-            body_pages.append("\n".join(lines[:-1]))
+            self.assertEqual(lines[0].strip(), "Erfundene Geschichten")
+            body_pages.append("\n".join(lines[1:-1]))
         self.assertIn(compound, "".join("\n".join(body_pages).split()))
 
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")

@@ -4,8 +4,9 @@
 The output mirrors the published GitHub Pages layout: ``docs/<name>`` is
 flattened to ``/<name>``. A relative link inside the published documentation
 therefore resolves only if its target is also published, which is why nothing
-outside ``docs/`` is staged -- those files are referenced by absolute repository
-URL instead. ``tests/test_documentation.py`` enforces the result against the
+outside ``docs/`` is staged except the canonical packaged design-token stylesheet;
+repository documents are referenced by absolute URL instead.
+``tests/test_documentation.py`` enforces the result against the
 staged tree rather than the checkout, because a link can be correct in the
 checkout and still break on the site.
 """
@@ -16,7 +17,8 @@ from pathlib import Path
 
 #: Approved files inside ``docs/``, keyed by their path relative to it.
 #:
-#: Nothing outside ``docs/`` is published. Repository-root documents (README,
+#: Only the explicitly selected design-token asset comes from outside ``docs/``.
+#: Repository-root documents (README,
 #: CONTRIBUTING, SECURITY, LICENSE, CHANGELOG) are written for browsing inside
 #: the checkout, where ``docs/`` is a real subdirectory; flattening them onto the
 #: site root would break every ``docs/...`` link they contain. The documentation
@@ -58,8 +60,13 @@ def stage(source: Path, output: Path) -> int:
     if output.resolve().is_relative_to(source.resolve()):
         raise ValueError("Pages output must be outside the documentation source")
     selected: list[Path] = []
+    tokens = Path(__file__).resolve().parents[1] / "src/lixity/ui/assets/design-tokens.css"
+    if tokens.is_symlink() or not tokens.is_file():
+        raise ValueError("Canonical design tokens must be a regular packaged asset")
     for path in sorted(source.rglob("*")):
         relative = path.relative_to(source)
+        if str(relative) == "assets/design-tokens.css":
+            raise ValueError("Pages must use the packaged canonical design tokens")
         if path.is_symlink():
             raise ValueError(f"Symlink in documentation source: {relative}")
         if not path.is_file():
@@ -76,7 +83,10 @@ def stage(source: Path, output: Path) -> int:
         target = output / path.relative_to(source)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
-    return len(selected)
+    token_target = output / "assets/design-tokens.css"
+    token_target.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copyfile(tokens, token_target)
+    return len(selected) + 1
 
 
 def main() -> None:

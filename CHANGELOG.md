@@ -7,6 +7,73 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.3.0] - 2026-10-12
+
+### Added
+- Manual manuscript quote–claim associations with explicit local retention,
+  Unicode-codepoint paragraph anchors and exact claim pins. Creation, listing
+  and structural review share the Python/native API; first opted-in save uses
+  research record/manifest v7. Earlier archives remain unchanged on reads.
+- Dossier research and companion readers list current explicitly linked claims
+  with the existing claim viewer/history and exact-association saved quote counts.
+  Counts do not infer whether prose uses a claim.
+- Explicit selected-project publication fields in the existing Settings form
+  and configuration loader, with one shared model for optional publisher/printer
+  details, edition, year, format ISBNs, rights text, credits and other imprint
+  information. A5 reading copies can include entered imprint text; no identity,
+  address, copyright or DNB catalog statement is inferred.
+- Shared PDF title/author/language metadata, A5 chapter bookmarks and bounded
+  page headers. Book body pages retain physical folios; A4 sheets/reports show
+  current/total page counts outside the body area.
+- Publication guidance distinguishes German state print-imprint requirements,
+  voluntary ISBNs/rights notices, separate legal deposit and BFSG ebook scope.
+  Exports remain A5 book/A4 sheet/A4 report PDFs, without EPUB or PDF/UA/PDF/X
+  certification.
+
+### Changed
+- Product version 0.3.0 describes development maturity before 1.0.
+  Existing features and historical published releases/tags remain. JSON/storage
+  versions are independent; 0.3.0 supports research records/manifests v1–v7.
+- A collapsed global PDF menu remains accessible across all three workspace
+  views, with one download action and the A5 reading copy default.
+  Manuscript search and chapters appear before statistical diagnostics.
+- Ordinary authored CLI `--update` requires the reviewed record revision, change
+  kind and reason, while the archive-wide snapshot is optional. Same-record
+  changes and races fail without retries; an explicit digest stays strict.
+  Unchanged association pins remain, and changed associations in convenience
+  mode require explicit reviewed versions. Strict Python/HTTP/batch guards stay.
+- Release preparation reuses one shared source/tag/artifact checker through
+  `make release-check RELEASE_TAG=vX.Y.Z`, including installed-wheel smoke checks.
+  Version editing, review, tagging and publishing remain separate actions.
+- Selected-project title, author and publication are saved together through the
+  shared prepared configuration writer. Settings prepares the candidate view
+  before committing; validation/read/render/write failures preserve previous
+  metadata and session/cache state. Publication saves require selected-context
+  tokens, and root metadata changes invalidate stale PDF download tokens.
+- Publication stays in a collapsed disclosure within the existing Settings
+  form. Dashboard and Pages presentation share the canonical bundled design
+  tokens while exported dashboards remain self-contained.
+
+### Fixed
+- Project switching scopes a startup/custom title to its original workspace.
+  Another book's header and NDA field use that project's identity. An explicit
+  service restart into another project clears an inherited title unless replaced.
+- Text and binary writes share fail-closed same-directory staging, fsync,
+  original-mode preservation and cleanup. Replacement failures propagate
+  instead of falling back to direct overwriting; text decoding failures use
+  the existing `OSError` read-error boundary.
+- Changed artifacts published in the same minute retain distinct versions.
+  Stable links/copies are prepared before atomic replacement; failed publication
+  preserves the previous stable artifact and reports an error before rotation.
+- Marker read/encoding/write failures return clear HTTP 500 JSON errors;
+  failed staged writes preserve manuscript bytes and do not report success.
+- Genuine TrueType subsets retain glyph metrics and composite outlines,
+  Unicode aliases copy correctly, and embedding-permission checks respect
+  table versions. Unused font roles do not constrain the requested PDF layout.
+- PDF headings and body text no longer share a baseline; first-line paragraph
+  indents, long-header bounds and manuscript title detection reuse the shared
+  layout/parser paths.
+
 ## [3.0.1] - 2026-10-11
 
 ### Fixed
@@ -1668,7 +1735,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v3.0.1...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.3.0...HEAD
+[0.3.0]: https://github.com/mfahsold/lixity/compare/v3.0.1...v0.3.0
 [3.0.1]: https://github.com/mfahsold/lixity/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/mfahsold/lixity/compare/v2.4.0...v3.0.0
 [2.4.0]: https://github.com/mfahsold/lixity/compare/v2.3.0...v2.4.0

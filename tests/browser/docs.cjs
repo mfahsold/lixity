@@ -174,24 +174,24 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         await page.goto('http://lixity.test/lixity/');
         if (javaScriptEnabled) {
           await page.locator('#themeToggle').click();
-          assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+          await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
         }
         await page.locator('#guides a[href="guides/research-pdf.html"]').click();
         assert.ok(page.url().endsWith('/guides/research-pdf.html'));
         if (javaScriptEnabled) {
-          assert.equal(await page.locator('html').getAttribute('data-theme'), 'light', 'Guides keep the chosen theme');
+          await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
           await page.reload();
-          assert.equal(await page.locator('html').getAttribute('data-theme'), 'light', 'Reload keeps the chosen theme');
+          await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
         }
         await page.locator('nav a[href="interpretation.html"]').click();
         assert.ok(page.url().endsWith('/guides/interpretation.html'));
         if (javaScriptEnabled) {
-          assert.equal(await page.locator('html').getAttribute('data-theme'), 'light');
+          await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
           await page.goto('http://lixity.test/lixity/');
           await page.locator('#themeToggle').click();
-          assert.equal(await page.locator('html').getAttribute('data-theme'), 'dark');
+          await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
           await page.locator('#themeToggle').click();
-          assert.equal(await page.locator('html').getAttribute('data-theme'), 'auto');
+          await expect(page.locator('html')).toHaveAttribute('data-theme', 'auto');
           await page.evaluate(() => localStorage.removeItem('lixity-theme'));
         }
       }

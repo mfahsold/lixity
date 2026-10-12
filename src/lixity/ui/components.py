@@ -66,6 +66,7 @@ def contrast_text(background: str) -> str:
 def project_header(
     title: str, labels: Mapping[str, str] | None = None,
     language_name: str = "", engine_name: str = "Lixity",
+    *, compact: bool = False,
 ) -> str:
     subtitle = label(labels, "app_suffix")
     if language_name:
@@ -76,9 +77,18 @@ def project_header(
         f'<span class="version-badge">{esc(label(labels, "version"))} {esc(__version__)}</span>'
         f'<a class="license-badge" href="#license-terms">{esc(label(labels, "license_notice"))}</a>'
         '</div>'
-        f'<span class="project-label">{esc(label(labels, "project_name"))}</span>'
+        + ("" if compact else f'<span class="project-label">{esc(label(labels, "project_name"))}</span>')
+        +
         f'<h1>{esc(title)}</h1><p class="sub">{esc(subtitle)}</p>'
-        f'<p class="microhint" id="microhint">{esc(label(labels, "hint"))}</p>'
+        + ("" if compact else f'<p class="microhint" id="microhint">{esc(label(labels, "hint"))}</p>'
+           + license_terms(labels))
+        + '</header>'
+    )
+
+
+def license_terms(labels: Mapping[str, str] | None) -> str:
+    """Preserve one notice and target regardless of the workspace layout."""
+    return (
         '<aside class="license-terms" id="license-terms" aria-labelledby="license-heading">'
         f'<strong id="license-heading">{esc(label(labels, "license_terms"))}</strong>'
         f'<p>{esc(label(labels, "license_sales_notice"))}</p>'
@@ -88,7 +98,6 @@ def project_header(
         '<a href="mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20License">'
         f'{esc(label(labels, "license_contact"))}</a>'
         '</div></aside>'
-        '</header>'
     )
 
 
@@ -96,6 +105,35 @@ def panel_start(panel_id: str, labels: Mapping[str, str] | None, title_key: str)
     return (
         f'<section class="panel" id="{esc(panel_id)}">'
         f'<h2>{esc(label(labels, title_key))}</h2>'
+    )
+
+
+def manuscript_pdf_controls(
+    labels: Mapping[str, str] | None, *, api_base: str, project_token: str, available: bool,
+) -> str:
+    """The single native PDF form, placed with the global project commands."""
+    def L(key: str) -> str:
+        return esc(label(labels, key))
+    disabled = "" if available else " disabled"
+    return (
+        '<details class="manuscript-pdf" id="manuscript-pdf">'
+        f'<summary class="ctl" id="manuscript-pdf-title">{L("manuscript_pdf_title")}</summary>'
+        f'<form id="manuscript-pdf-form" method="post" '
+        f'action="{esc(api_base.rstrip("/") + "/manuscript-pdf")}" '
+        f'data-project-token="{esc(project_token)}" data-available="{str(available).lower()}" '
+        'aria-describedby="manuscript-pdf-hint">'
+        '<div class="manuscript-pdf-actions"><div class="setting-field">'
+        f'<label for="manuscript-pdf-layout">{L("manuscript_pdf_layout")}</label>'
+        f'<select class="ctl" id="manuscript-pdf-layout" name="layout"{disabled}>'
+        f'<option value="book">{L("manuscript_pdf_book")}</option>'
+        f'<option value="sheet">{L("manuscript_pdf_sheet")}</option>'
+        f'<option value="report">{L("manuscript_pdf_report")}</option></select></div>'
+        '<button type="submit" class="ctl primary" id="manuscript-pdf-download" disabled>'
+        f'{L("manuscript_pdf_download")}</button></div>'
+        '<p class="ctl-status" id="manuscript-pdf-status" role="status" aria-live="polite">'
+        f'{"" if available else L("manuscript_pdf_unavailable")}</p></form>'
+        f'<p class="ctl-note" id="manuscript-pdf-hint">{L("manuscript_pdf_hint")}</p>'
+        f'<noscript><p class="ctl-note">{L("manuscript_pdf_javascript")}</p></noscript></details>'
     )
 
 

@@ -7,6 +7,14 @@ the author's choices. The workspace preserves saved versions and exact quotation
 Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
+Product version v0.3.0 describes development maturity before 1.0;
+it retains the features introduced under the historical v1.x–v3.x releases.
+Product, response and archive schema versions are independent. v0.3.0 reads
+research records/manifests v1–v7, including archives written by v3.0.1. A first
+manual manuscript-link save opts into v7; use v0.3.0 for those archives. Reading
+older archives alone does not upgrade them. Historical release notes describe
+the capabilities of those historical builds, not a numeric minimum for v0.3.0.
+
 | Implemented locally | Outside the current scope |
 | --- | --- |
 | Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
@@ -29,7 +37,8 @@ It does not implement the entire [RFC](README.md).
 | Source listing/tagging, dossiers, scoped claims, evidence relations and authorial decisions | |
 | Structural decision-impact and editorial-review reports | |
 | Claim-evidence matrix export (`lixity research matrix`) | |
-| Claim timelines, authored causal links and keyword citation selection (since v3.0.0) | |
+| Claim timelines, authored causal links and keyword citation selection (historically v3.0.0; retained in v0.3.0) | |
+| Explicit manuscript quote–claim associations and structural anchor review (v0.3.0) | |
 | Cross-corpus linguistic grounding (`lixity research compare`) | |
 | Interactive web research panel in `lixity serve`: source/dossier details, search-to-evidence actions, dossier-linked claims, decisions | |
 
@@ -108,9 +117,99 @@ explicit author acknowledgements are available since 2.0.0; select
 that release explicitly. Upgrading a fixed tag does not choose
 a newer release.
 
+### Associate a manuscript quote with a claim
+
+**Since v0.3.0:** in an opened manuscript paragraph, select text within that
+one paragraph and choose **Link selection to claim** (or press `Alt+L`). Review the exact quote, choose a
+current claim, explicitly permit local retention of the quote, then **Save association**.
+Selection, choosing a claim and previewing the form write nothing. Saving creates
+a distinct `manuscript_claim_link`, with an exact claim-revision pin and paragraph
+anchor. It does not edit prose, import the manuscript as a research source, create
+source evidence or establish factual support. This workflow requires an explicitly
+selected manuscript inside the initialized research project and a compatible
+native server; standalone HTML cannot save links.
+
+Only the selected quote, project-relative source path, raw-source SHA-256,
+paragraph SHA-256, source line range and Unicode-codepoint offsets are retained,
+plus an optional note and ordinary record metadata. The archive stores no full
+manuscript blob. Quotes are nonblank and limited to 10,000 codepoints; notes to
+2,000 characters. Offsets refer to the displayed `ParagraphProfile.text`, with an
+exclusive `end`, rather than UTF-8 bytes or JavaScript UTF-16 units. The paragraph
+hash is SHA-256 of that displayed text encoded as UTF-8. Cross-paragraph,
+ambiguous or stale selections fail. Paths escaping the project, including through
+symlinks, are rejected. Source bytes are checked again before publication; this
+optimistic guard does not lock an external editor.
+
+Saved quotes mark only exact resolved anchors, including paragraphs rendered
+later on opening. Manuscript search still checks complete text. Review reports
+changed source bytes, newer/withdrawn claims, changed paragraphs, unique moved
+paragraphs and ambiguous matches. Moved or ambiguous candidates remain unresolved;
+the reader does not relocate or repin them automatically. These flags request a
+human review, not a semantic contradiction check or factual verdict. Retraction
+and note/claim revisions use the existing record history and strict revision
+API; the anchor is immutable, with no reanchoring interface in this scope.
+
+Python integrations use the same API:
+
+```python
+from lixity.research import api as research_api
+
+research_api.link_manuscript_claim(
+    project, manuscript, claim_id, claim_revision=reviewed_claim_revision,
+    selection={
+        "start_line": start_line, "end_line": end_line,
+        "paragraph_sha256": paragraph_sha256,
+        "start": start_codepoint, "end": end_codepoint, "quote": selected_quote,
+    },
+    expected_project_id=project_id, expected_snapshot=snapshot,
+    expected_source_sha256=source_sha256, allow_retention=True,
+    note="Author's association for review", language="en", project_config=settings,
+)
+research_api.list_manuscript_links(project, claim_id=claim_id)
+research_api.review_manuscript_links(project, manuscript,
+                                     expected_project_id=project_id,
+                                     language="en", project_config=settings)
+```
+
+The create/list/review envelopes are `research-manuscript-link-local/1`,
+`research-manuscript-links-local/1` and `research-manuscript-review-local/1`.
+Lists omit retracted links unless `include_retracted=True`. Review rows preserve
+exact/current claim revisions and the pinned claim's dossier association, with
+`flags`, `anchor_state`, `candidate_lines` and nullable resolved line fields.
+A compatible native server provides guarded manuscript review/list reads and
+an explicit save route; see the [HTTP contract](../AGENTS.md#manual-manuscript-associations).
+There is no new manuscript-link CLI command.
+
+The first successful, retention-confirmed save uses `research-local/7` and
+promotes the manifest to `research-manifest-local/7`. v0.3.0 reads v1–v7; historical
+v3.0.1 cannot read v7. Back up before opting in and use v0.3.0 for every reader
+and writer afterward. Reading/listing/reviewing an older archive does not change
+its bytes. Audit, history and export/restore preserve accepted link records;
+exported quotes remain private manuscript material, while the manuscript itself
+is not included as a source blob. Restoring links without the manuscript leaves
+their anchors unavailable until the source exists at the saved project-relative
+path.
+
+### Claims linked to a dossier
+
+Both the research dossier reader and **Dossier alongside** show the current
+claims explicitly linked to the dossier. **Open claim** uses the existing record
+viewer and saved-version history. The reverse list reads current claim records;
+it does not reconstruct a historical claim list for an older dossier revision.
+
+Each claim can show an active saved manuscript-quote count. The count joins
+explicit links by claim ID and the linked claim revision's pinned dossier ID,
+from the same archive snapshot as the claim list. A changed snapshot or failed
+read makes the count unavailable. Zero means no matching active saved link in
+that snapshot; it does not establish that the claim is unused in the manuscript.
+Newer claim/dossier revisions do not silently change an older link's association.
+Counts include links pinned to other saved versions of the same logical dossier;
+the reader marks that version difference explicitly.
+
 ### Claim chronology and cause/effect links (since v3.0.0)
 
-These additions are available since v3.0.0; they are not part of v2.4.0.
+These additions were introduced in historical v3.0.0 and are retained in
+v0.3.0; they are not part of historical v2.4.0.
 
 In **Claims**, choose **Timeline** to organize the current claim revisions by
 their recorded `time_period`. **List** returns to the ordinary claim cards.
@@ -187,9 +286,10 @@ records. Archive integrity and linked evidence do not verify causality.
 **Archive compatibility:** the first successful explicit causal-link write uses
 `research-local/6` and promotes the manifest to `research-manifest-local/6`.
 It preserves existing source, claim, citation and revision bytes. Merely reading
-the timeline or relations does not upgrade an archive. Readers before v3.0.0
-reject a v6 manifest; back up the complete archive before opting in and use
-v3.0.0 or newer for every reader/writer afterward. Existing v1–v5 archives remain
+the timeline or relations does not upgrade an archive. Historical readers before
+v3.0.0 reject a v6 manifest; v0.3.0 supports it. Back up the complete archive
+before opting in and use a build that explicitly supports schema v6 for every
+reader/writer afterward. Existing v1–v5 archives remain
 readable without conversion. `research export`/`restore` retain their existing
 bundle format and preserve the complete causal-link history. Do not edit HEAD
 or manifest files to downgrade.
@@ -315,6 +415,34 @@ at `GET /api`, even before a project is loaded. HTTP research responses are JSON
 the NDA draft endpoint explicitly downloads PDF or UTF-8 text. Since v2.4.0, the
 manuscript PDF endpoint is also a binary attachment workflow, separate from
 research source import and OCR; see [manuscript PDF downloads](../USAGE.md#download-a-manuscript-pdf-since-v240).
+
+### Update one reviewed record
+
+Ordinary `dossier`, `claim`, `link-evidence`, `decision` and `relate` commands
+with `--update` require `--expected-revision`, `--change-kind` and `--reason`.
+The archive-wide `--expected-snapshot` is optional for these ordinary updates.
+When omitted, the CLI reads the current record, checks that its revision equals
+the one you reviewed and submits that read's snapshot to the unchanged strict
+backend writer. An earlier unrelated write no longer invalidates that update;
+a changed target record or a writer race still fails, without retry, merge or
+rebase. A supplied snapshot remains a strict archive-wide guard, even when the
+target record itself has not changed.
+
+```sh
+lixity research claim --project ./novel --claim-id CLAIM_ID --update \
+  --expected-revision 1 --change-kind correction --reason "Reviewed wording" \
+  --statement "A revised author assertion"
+```
+
+Unchanged association IDs retain their exact saved pins. With an omitted
+snapshot, adding/changing an association requires its explicit reviewed revision:
+`--dossier-revision`, `--claim-revision`, `--from-claim-revision`,
+`--to-claim-revision`, or a `--dossier-revisions` JSON mapping for added decision
+dossiers. Nonexistent pins fail. Immutable passage IDs need no separate revision
+flag. Explicit-snapshot updates retain their existing association behavior.
+Python/HTTP revision APIs, image attachments, acknowledgements and batch writes
+still require their documented exact snapshot/revision guards. Use the preview
+workflow below when a conflict requires reconciliation.
 
 ### Resolve conflicting drafts
 
@@ -1349,14 +1477,14 @@ Dossier body text supports a safe Markdown subset and offline SVG diagram render
 
 ## Limits
 
-The released pilot uses versioned `research-local/*` records and
+The local archive uses versioned `research-local/*` records and
 operation-specific envelopes, not the RFC's illustrative `research/1` bundle.
 Do not assume every command or stored record has the same schema version.
 Structured Zotero captures require `research-local/3` and v3 manifests; unified
 search uses `research-search-local/2`, while source-only search retains v1.
 
 Since v3.0.0, causal claim relations add `research-local/6` and an opt-in v6
-manifest; older readers reject it. See [chronology and causal-link compatibility](#claim-chronology-and-causeeffect-links-since-v300).
+manifest; historical readers before v3.0.0 reject it, while v0.3.0 supports it. See [chronology and causal-link compatibility](#claim-chronology-and-causeeffect-links-since-v300).
 Timeline reads, citation selection and the claims-list API change do not rewrite
 existing v1–v5 archives.
 
