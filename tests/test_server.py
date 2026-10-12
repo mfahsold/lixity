@@ -1203,6 +1203,14 @@ class TestLixityServer(unittest.TestCase):
         finally:
             restore_handler_state(original_state)
 
+    def test_status_strip_uses_singular_units(self):
+        with tempfile.TemporaryDirectory() as td:
+            manuscript = Path(td) / "manuscript.md"
+            manuscript.write_text("# Buch\n\n## Erstes Kapitel\n\nEin einzelner Satz.\n", encoding="utf-8")
+            html, info = build_server_dashboard(str(manuscript), language="de")
+        self.assertEqual(info["chapters"], 1)
+        self.assertIn("1 Kapitel \u00b7 1 Absatz \u00b7 Deutsch", html)
+
     def test_dashboard_welcome_hero_and_modals(self):
         # When no manuscript/chapters loaded, welcome hero and modals must be rendered
         html, info = build_server_dashboard(None, language="de", title="Lixity Empty")

@@ -40,7 +40,7 @@
     if (!current(serial, projectToken, researchToken)) return;
     pending(false);
     if (!result.ok || result.id !== id || (projectId && result.project_id !== projectId)) {
-      message(result.message || bridge.label("reader_error"), "err");
+      message(bridge.errorText(result, bridge.label("reader_error")), "err");
       return;
     }
     var heading = document.createElement("h3");
@@ -61,7 +61,7 @@
     var result = await bridge.read(query());
     if (!current(serial, projectToken, researchToken)) return;
     pending(false);
-    if (!result.ok) { message(result.message || bridge.label("reader_error"), "err"); return; }
+    if (!result.ok) { message(bridge.errorText(result, bridge.label("reader_error")), "err"); return; }
     projectId = result.project_id || null;
     var placeholder = document.createElement("option");
     placeholder.value = "";

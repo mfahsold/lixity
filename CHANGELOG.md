@@ -91,6 +91,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   repository-level immutable releases protect published assets and tags.
 
 ### Fixed
+- Chapter and status counters inflect their units (1 Absatz, 0 Auffälligkeiten),
+  the reader panel uses the same name as its toolbar control, the footer separates
+  product label and title, and an uninitialized research archive now shows the
+  localized state instead of the English API message in the reader and
+  manuscript-link panels.
 - Dashboard artifact links use the served `/artifact/<name>` route instead of a
   bare filename, and the 200 MiB artifact serving limit is enforced.
 - The configured dialogue cue compiles case-insensitively in the analysis core

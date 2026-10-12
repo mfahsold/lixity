@@ -109,7 +109,8 @@
         report.schema_version !== "research-manuscript-review-local/1" || !claims.project_id ||
         claims.project_id !== report.project_id || !claims.snapshot || claims.snapshot !== report.snapshot ||
         report.current_source_sha256 !== value.context.source || report.source_state !== "available" || !validClaims(claims.claims) || !validRows(report.links)) {
-      clearReview(claims.message || report.message); unavailable(claims.message || report.message); return;
+      var reason = bridge.errorText(claims.message ? claims : report);
+      clearReview(reason); unavailable(reason); return;
     }
     draft.claims = claims.claims.filter(function(claim) { return claim.id && Number.isInteger(claim.revision) && claim.revision > 0; });
     draft.projectId = claims.project_id; draft.snapshot = claims.snapshot;
@@ -143,7 +144,7 @@
         !record || record.id !== response.link_id || record.kind !== "manuscript_claim_link" ||
         !pin || pin.id !== claim.id || pin.revision !== claim.revision || !anchor ||
         !Object.keys(submitted.anchor).every(function(key) { return anchor[key] === submitted.anchor[key]; })) {
-      unavailable(response && response.message); return;
+      unavailable(bridge.errorText(response)); return;
     }
     dialog.close();
     var feedback = submitted.panel.querySelector(".manuscript-link-feedback");
@@ -196,7 +197,7 @@
     if (!report.ok || report.schema_version !== "research-manuscript-review-local/1" || !validRows(report.links) ||
         !report.project_id || !report.snapshot || (reviewProjectId && report.project_id !== reviewProjectId) ||
         report.current_source_sha256 !== value.source || report.source_state !== "available") {
-      clearReview(report.message); return;
+      clearReview(bridge.errorText(report)); return;
     }
     applyReview(report, value);
   }

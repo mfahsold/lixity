@@ -182,8 +182,12 @@ def build_server_dashboard(
         {
             "key": "analysis",
             "state": "ok" if chapters else "warn",
-            "detail": _status_text("status_analysis_counts", chapters=len(chapters),
-                                   paragraphs=len(paragraphs), language=resolved.name),
+            "detail": _status_text(
+                "status_analysis_counts",
+                chapters=f"{len(chapters)} {_status_text('chapter' if len(chapters) == 1 else 'chapters')}",
+                paragraphs=f"{len(paragraphs)} {_status_text('paragraphs_one' if len(paragraphs) == 1 else 'paragraphs')}",
+                language=resolved.name,
+            ),
         },
         {
             "key": "exports",

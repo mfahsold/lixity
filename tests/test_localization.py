@@ -142,6 +142,18 @@ class TestLocalization(unittest.TestCase):
                 self.assertIn("42", help_text)
                 self.assertIn(escape(help_text, quote=True), help_term(labels, "hd_d", "HD-D"))
 
+    def test_units_use_singular_forms_and_the_footer_keeps_a_separator(self):
+        paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="de")).profile_blocks(
+            parse_markdown_blocks("## Kapitel\n\nEin einzelner Satz steht hier.\n")
+        )
+        html = render_dashboard(chapters, paragraphs, controls=False,
+                                labels=LANGUAGE_PROFILES["de"].labels, language_key="de",
+                                title="Synthetic title")
+        self.assertIn("1 Absatz", html)
+        self.assertNotIn("1 Abs\u00e4tze", html)
+        self.assertIn("0 Auff\u00e4lligkeiten", html)
+        self.assertIn("</span> \u00b7 <span>", html)
+
     def test_workspace_actions_remain_available_without_guidance_or_legacy_actions(self):
         paragraphs, chapters = ParagraphProfiler(CorpusConfig()).profile_blocks(
             parse_markdown_blocks("## Chapter\n\nThe door opened. The room was quiet.")

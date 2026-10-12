@@ -5431,8 +5431,14 @@ if (window.location.hash) {
     }
   } catch (e) {}
 }
+function researchErrorMessage(result, fallback) {
+  var text = (result && result.message) || fallback;
+  if (text === "Research project not initialized") return uiLabel("research_not_initialized");
+  return text;
+}
 window.LixityWorkspaceReader = {
   label: uiLabel, read: researchApiGet, switchView: switchActiveView,
+  errorText: researchErrorMessage,
   contextToken: researchContextToken, enhanceDossier: enhanceResearchDossierClaims,
   renderDossier: function(detail) { return researchDossierDetailHtml(detail, true); }
 };
@@ -5444,6 +5450,7 @@ document.querySelectorAll(".modal-tabs").forEach(function(container) {
 
 window.LixityManuscriptLinks = {
   label: uiLabel, read: researchApiGet, post: researchApiPost, contextToken: researchContextToken,
+  errorText: researchErrorMessage,
   text: function(panel) { return paragraphContent[panel.id] && paragraphContent[panel.id][0]; },
   marks: function(panel, spans) {
     manuscriptParagraphMarks[panel.id] = spans;

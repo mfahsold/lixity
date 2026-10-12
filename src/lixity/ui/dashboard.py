@@ -816,10 +816,13 @@ def render_dashboard(
         )
         parts.append('<div class="chapter-head">')
         parts.append(f"<h2>{chapter.num}. {esc(chapter.title)}</h2>")
+        words_unit = L("words_one") if chapter.words == 1 else L("words")
+        paragraphs_unit = L("paragraphs_one") if chapter.paragraphs == 1 else L("paragraphs")
+        flags_unit = L("flags_one") if chapter.flagged == 1 else L("flags")
         parts.append(
-            f'<span class="meta">{N(chapter.words, 0)} {L("words")} · '
-            f"{chapter.paragraphs} {L('paragraphs')} · {esc(tense_label(labels, chapter.dominant))} · "
-            f"{chapter.flagged} {L('flagged')} · {L('line')} {chapter.start_line}–{chapter.end_line}</span>"
+            f'<span class="meta">{N(chapter.words, 0)} {words_unit} · '
+            f"{chapter.paragraphs} {paragraphs_unit} · {esc(tense_label(labels, chapter.dominant))} · "
+            f"{chapter.flagged} {flags_unit} · {L('line')} {chapter.start_line}–{chapter.end_line}</span>"
         )
         parts.append("</div>")
 
@@ -1253,7 +1256,7 @@ def render_dashboard(
     parts.extend(
         [
             "</div>",
-            f"<footer><span>{esc(engine_name)} · {L('app_suffix')}</span><span>{esc(title)}</span></footer>",
+            f"<footer><span>{esc(engine_name)} · {L('app_suffix')}</span> · <span>{esc(title)}</span></footer>",
             f"<script>{_JS}</script>",
             "</body>",
             "</html>",
