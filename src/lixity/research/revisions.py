@@ -25,6 +25,7 @@ from .models import (
 )
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot
 from .sections import _section_spans, _section_subtree_end, update_section
+from .timeline import period_warnings
 
 Authored = Dossier | Claim | ClaimRelation | EvidenceLink | ManuscriptClaimLink | Decision
 KINDS: dict[str, type[Authored]] = {
@@ -213,23 +214,55 @@ def _association(snapshot: Snapshot, identifier: Any, expected: type[Authored],
     return reference(snapshot.latest(identifier, expected)).model_dump()
 
 
+def require_association_pins(record: Mapping[str, Any], changes: Mapping[str, Any]) -> None:
+    """Without a reviewed archive digest, new associations need explicit versions."""
+    for name in ("claim", "dossier", "from_claim", "to_claim"):
+        identifier = changes.get(name + "_id")
+        existing = record.get(name + "_ref")
+        if (identifier and (not existing or identifier != existing["id"])
+                and changes.get(name + "_revision") is None):
+            flag = name.replace("_", "-")
+            raise ResearchError(f"A changed association requires --{flag}-revision when --expected-snapshot is omitted; "
+                                "inspect the target or use a reviewed --expected-snapshot")
+    if "dossier_ids" in changes:
+        existing_ids = {ref["id"] for ref in record.get("dossier_refs", [])}
+        added = set(changes["dossier_ids"]) - existing_ids
+        pins = changes.get("dossier_revisions", {})
+        if added and (not isinstance(pins, Mapping) or any(identifier not in pins for identifier in added)):
+            raise ResearchError("New dossier associations require explicit --dossier-revisions pins when "
+                                "--expected-snapshot is omitted; inspect the targets or use a reviewed --expected-snapshot")
+
+
 def revise_record(
     project: str | Path, kind: str, record_id: str, *, changes: Mapping[str, Any],
-    expected_snapshot: str, expected_revision: int, change_kind: str, reason: str,
-    actor: str = "local-author",
+    expected_revision: int, change_kind: str, reason: str,
+    expected_snapshot: str | None = None, actor: str = "local-author",
 ) -> dict[str, Any]:
-    """Append one explicit authored revision; a stale draft never overwrites work."""
-    if not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
-        raise ResearchError("Expected snapshot must be a SHA-256 digest")
+    """Append one explicit authored revision; a stale draft never overwrites work.
+
+    Without ``expected_snapshot`` the current revision is checked and its
+    snapshot forwarded, matching the CLI update flow; changed associations then
+    need explicit revision pins. The strict HTTP route keeps sending its
+    reviewed snapshot. Claims report unplaceable periods as ``warnings``.
+    """
     if type(expected_revision) is not int or expected_revision < 1:
         raise ResearchError("Expected revision must be a positive integer")
+    repository = Repository(project)
+    if expected_snapshot is None:
+        current = repository.snapshot()
+        reviewed = _record(current, kind, record_id)
+        if reviewed.revision != expected_revision:
+            raise ResearchConflictError("Record revision changed; the reviewed revision is no longer current")
+        require_association_pins(reviewed.model_dump(mode="json"), changes)
+        expected_snapshot = current.digest
+    elif not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
+        raise ResearchError("Expected snapshot must be a SHA-256 digest")
     if not isinstance(changes, Mapping) or not changes:
         raise ResearchError("Provide at least one editable field")
     if change_kind not in ("correction", "supersession"):
         raise ResearchError("Choose correction or supersession explicitly")
     if not isinstance(reason, str) or not reason.strip():
         raise ResearchError("A revision reason is required")
-    repository = Repository(project)
     snapshot = repository.snapshot()
     if snapshot.digest != expected_snapshot:
         raise ResearchConflictError("Research snapshot changed; reload the current record before saving")
@@ -240,7 +273,10 @@ def revise_record(
         raise ResearchError("The change contains unknown or immutable fields")
     revised = _apply_changes(snapshot, previous, changes, change_kind=change_kind, reason=reason, actor=actor)
     accepted = repository.commit([revised], {}, snapshot)
-    return _view(repository, accepted, revised)
+    view = _view(repository, accepted, revised)
+    if isinstance(revised, Claim):
+        view["warnings"] = period_warnings(revised.scope.time_period)
+    return view
 
 
 def _apply_changes(

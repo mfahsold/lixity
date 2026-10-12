@@ -124,7 +124,7 @@ from .sections import (
 from .sections import (
     update_section as update_section,
 )
-from .timeline import timeline_data
+from .timeline import period_warnings, timeline_data
 
 
 def envelope(project_id: str, actor: str) -> dict[str, Any]:
@@ -1226,6 +1226,7 @@ def create_claim(
         "title": claim.title,
         "confidence": claim.confidence,
         "snapshot": new_snapshot.digest,
+        "warnings": period_warnings(claim.scope.time_period),
     }
 
 

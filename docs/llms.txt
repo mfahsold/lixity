@@ -109,8 +109,9 @@ links and keyword citation selection. Claims lists intentionally use one
 research-claims-local/2 envelope with claims/project_id/snapshot from one read;
 update old v1 consumers. Stored claim/source/history bytes are unchanged.
 timeline returns research-timeline-local/1 with dated/unplaced current claims.
-Place only valid four-digit CE years, ISO dates and same-precision ranges;
-retain period labels and missing/unrecognized/invalid reasons. Never infer
+Place only valid four-digit CE years, ISO months, ISO dates and same-precision
+ranges; retain period labels and missing/unrecognized/invalid reasons. Claim
+creation and revision responses warn about unplaceable periods. Never infer
 historical dates from creation timestamps or interpret placement as verification.
 relate creates claim_relation with exact from/to claim revision pins, canonical
 causes; results_in aliases the same direction. Reject self-links, allow authored

@@ -2463,7 +2463,9 @@ function researchTimelineScale(entry) {
   var period = entry.period;
   if (!period) return "";
   function part(iso) {
-    return period.precision === "year" ? iso.slice(0, 4) : iso;
+    if (period.precision === "year") return iso.slice(0, 4);
+    if (period.precision === "month") return iso.slice(5, 7) + "/" + iso.slice(0, 4);
+    return iso;
   }
   var start = part(period.start), end = part(period.end);
   return start === end ? start : start + " – " + end;
@@ -2544,7 +2546,7 @@ async function refreshResearchClaimProjections() {
   timelineHost.innerHTML = timeline.ok ?
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_hint")) + '</p>' +
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_examples")) +
-      ' <code>1912 · 1912-05-01 · 1912–1914</code></p>' +
+      ' <code>1912 · 1912-03 · 1912-05-01 · 1912–1914</code></p>' +
     researchTimelineStrip(datedRows) +
     '<h3>' + escapeHtml(uiLabel("research_timeline_dated")) + ' (' + datedRows.length + ')</h3>' +
     (datedRows.length ? '<ol class="research-timeline research-timeline-dated">' +

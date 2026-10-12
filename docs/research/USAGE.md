@@ -135,8 +135,11 @@ plus an optional note and ordinary record metadata. The archive stores no full
 manuscript blob. Quotes are nonblank and limited to 10,000 codepoints; notes to
 2,000 characters. Offsets refer to the displayed `ParagraphProfile.text`, with an
 exclusive `end`, rather than UTF-8 bytes or JavaScript UTF-16 units. The paragraph
-hash is SHA-256 of that displayed text encoded as UTF-8. Cross-paragraph,
-ambiguous or stale selections fail. Paths escaping the project, including through
+hash is SHA-256 of that displayed text encoded as UTF-8. Because that text
+removes inline Markdown (`*emphasis*`, links, inline code), quotes copied from
+the `.md` file must be stripped of formatting before saving; the raw-source
+SHA-256 still binds the file bytes. Cross-paragraph, ambiguous or stale
+selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
 
@@ -218,15 +221,17 @@ and the view names the recognized formats and how to place a claim. Every period
 label is preserved and the record's creation date is never substituted. Opening
 or filtering the timeline changes no archive records or index.
 
-The chronology places valid four-digit CE years (`0001`–`9999`), ISO calendar
-dates (`YYYY-MM-DD`) and ranges whose endpoints have the same precision. Year
-ranges accept `-`, `–`, `—`, `/` or `..`; date ranges accept `-`, `–`, `—`, `/` or `..`.
-For example, `1912`, `1912–1914`, `1912-05-01` and
-`1912-05-01 / 1912-05-03` can be placed. Missing periods, invalid dates/reversed
-ranges and labels such as `autumn 1912`, `1912-05` or `44 BCE` remain visible
+The chronology places valid four-digit CE years (`0001`–`9999`), ISO months
+(`YYYY-MM`), ISO calendar dates (`YYYY-MM-DD`) and ranges whose endpoints have the
+same precision, for example `1912`, `1912-03`, `1912–1914`, `1912-05-01` and
+`1912-05-01 / 1912-05-03`. Ranges accept `–`, `—`, `/` or `..`; a plain hyphen needs
+surrounding spaces so ISO dates are never split. Missing periods, invalid
+dates/reversed ranges and labels such as `autumn 1912` or `44 BCE` remain visible
 under **Unplaced periods** with a reason; free-text periods such as
 `present day` stay there on purpose. Temporal placement does not verify
-chronology or establish a historical fact.
+chronology or establish a historical fact. Creating or revising a claim reports
+an unplaceable period in the envelope's `warnings` list, and the native claim
+form shows the accepted formats under the period field.
 
 ```sh
 lixity research timeline --project ./sample-project

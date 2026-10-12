@@ -187,7 +187,8 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('</div>')
     parts.append('    <div class="row" style="margin-bottom:.5rem;">')
     parts.append(form_field("r-claim-time", "research_claim_time",
-                 f'<input class="ctl" id="r-claim-time" placeholder="{L("research_claim_time")}"/>'))
+                 f'<input class="ctl" id="r-claim-time" placeholder="{L("research_claim_time")}"/>'
+                 f'<span class="ctl-note">{L("research_claim_time_hint")}</span>'))
     parts.append(form_field("r-claim-place", "research_claim_place",
                  f'<input class="ctl" id="r-claim-place" placeholder="{L("research_claim_place")}"/>'))
     parts.append(form_field("r-claim-actors", "research_claim_actors",

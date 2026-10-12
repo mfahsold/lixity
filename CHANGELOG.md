@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Claim creation and claim revision responses carry a `warnings` list when
+  `time_period` is not placeable, and the native claim form shows the accepted
+  calendar formats.
 - `docs/llms-full.txt` bundles the maintained English documentation in
   reading order for AI agents and offline reading; `scripts/build_llms_full.py
   --check` (part of `make docs-check`) keeps the published bundle in sync.
@@ -18,6 +21,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- The claim chronology accepts `YYYY-MM` months and same-precision month
+  ranges, and `api.revise_record` mirrors the CLI convenience of omitting
+  `expected_snapshot` (current revision checked, changed associations still
+  need explicit pins).
 - The README now leads with a plain-language start for non-technical readers
   and keeps command, API and architecture references in a separate map. The
   landing page adds FAQPage, BreadcrumbList and feature-list structured data,

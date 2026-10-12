@@ -181,7 +181,7 @@ and images receive no text scores. **Edit section**, **Add claim** and **Add
 decision** keep a large topic manageable without copying whole documents or IDs.
 
 **Chronology:** the Claims **Timeline** sorts every claim with an explicit
-calendar period (`1926`, `1926-03-15`, `1924–1926`) on a shared axis and links
+calendar period (`1926`, `1926-03`, `1926-03-15`, `1924–1926`) on a shared axis and links
 each bar to its claim card. Free-text periods such as "present day" stay visibly
 unplaced with a reason and a formatting hint; placement never verifies a
 historical fact.
@@ -456,8 +456,9 @@ links and keyword citation selection. Claims lists intentionally use one
 research-claims-local/2 envelope with claims/project_id/snapshot from one read;
 update old v1 consumers. Stored claim/source/history bytes are unchanged.
 timeline returns research-timeline-local/1 with dated/unplaced current claims.
-Place only valid four-digit CE years, ISO dates and same-precision ranges;
-retain period labels and missing/unrecognized/invalid reasons. Never infer
+Place only valid four-digit CE years, ISO months, ISO dates and same-precision
+ranges; retain period labels and missing/unrecognized/invalid reasons. Claim
+creation and revision responses warn about unplaceable periods. Never infer
 historical dates from creation timestamps or interpret placement as verification.
 relate creates claim_relation with exact from/to claim revision pins, canonical
 causes; results_in aliases the same direction. Reject self-links, allow authored
@@ -3359,8 +3360,11 @@ plus an optional note and ordinary record metadata. The archive stores no full
 manuscript blob. Quotes are nonblank and limited to 10,000 codepoints; notes to
 2,000 characters. Offsets refer to the displayed `ParagraphProfile.text`, with an
 exclusive `end`, rather than UTF-8 bytes or JavaScript UTF-16 units. The paragraph
-hash is SHA-256 of that displayed text encoded as UTF-8. Cross-paragraph,
-ambiguous or stale selections fail. Paths escaping the project, including through
+hash is SHA-256 of that displayed text encoded as UTF-8. Because that text
+removes inline Markdown (`*emphasis*`, links, inline code), quotes copied from
+the `.md` file must be stripped of formatting before saving; the raw-source
+SHA-256 still binds the file bytes. Cross-paragraph, ambiguous or stale
+selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
 
@@ -3442,15 +3446,17 @@ and the view names the recognized formats and how to place a claim. Every period
 label is preserved and the record's creation date is never substituted. Opening
 or filtering the timeline changes no archive records or index.
 
-The chronology places valid four-digit CE years (`0001`–`9999`), ISO calendar
-dates (`YYYY-MM-DD`) and ranges whose endpoints have the same precision. Year
-ranges accept `-`, `–`, `—`, `/` or `..`; date ranges accept `-`, `–`, `—`, `/` or `..`.
-For example, `1912`, `1912–1914`, `1912-05-01` and
-`1912-05-01 / 1912-05-03` can be placed. Missing periods, invalid dates/reversed
-ranges and labels such as `autumn 1912`, `1912-05` or `44 BCE` remain visible
+The chronology places valid four-digit CE years (`0001`–`9999`), ISO months
+(`YYYY-MM`), ISO calendar dates (`YYYY-MM-DD`) and ranges whose endpoints have the
+same precision, for example `1912`, `1912-03`, `1912–1914`, `1912-05-01` and
+`1912-05-01 / 1912-05-03`. Ranges accept `–`, `—`, `/` or `..`; a plain hyphen needs
+surrounding spaces so ISO dates are never split. Missing periods, invalid
+dates/reversed ranges and labels such as `autumn 1912` or `44 BCE` remain visible
 under **Unplaced periods** with a reason; free-text periods such as
 `present day` stay there on purpose. Temporal placement does not verify
-chronology or establish a historical fact.
+chronology or establish a historical fact. Creating or revising a claim reports
+an unplaceable period in the envelope's `warnings` list, and the native claim
+form shows the accepted formats under the period field.
 
 ```sh
 lixity research timeline --project ./sample-project
@@ -6716,9 +6722,11 @@ are unchanged.
 
 - `timeline(project, dossier_id=None)` returns `research-timeline-local/1`,
   with project/snapshot metadata, `dated` and `unplaced`. Valid four-digit CE
-  years, ISO dates and same-precision ranges are placed; original `time_period`
-  labels remain, and missing/unrecognized/invalid periods carry a reason. It
-  performs no writes and infers no date from record creation timestamps.
+  years, ISO months (`YYYY-MM`), ISO dates and same-precision ranges are placed;
+  original `time_period` labels remain, and missing/unrecognized/invalid periods
+  carry a reason. Claim creation (`research-claim-local/1`) and claim revision
+  responses add `warnings: list[str]` for an unplaceable period and an empty list
+  otherwise. It performs no writes and infers no date from creation timestamps.
 - `create_claim_relation(project, from_claim_id, to_claim_id, relation="causes",
   rationale=None, from_claim_revision=None, to_claim_revision=None,
   expected_snapshot=None, expected_project_id=None, actor="local-author")`
@@ -7034,6 +7042,12 @@ current body. Unrelated current sections survive. Save through the same strict
 revision route with its returned tokens; another intervening write still fails.
 Prepared decision list changes include `dossier_revisions: {ID: revision}` for
 the selected existing dossiers. Preserve these pins when submitting the preview.
+
+Python `revise_record(..., expected_snapshot=None)` mirrors the CLI
+convenience path: it checks the reviewed revision, requires explicit pins for
+changed associations, and forwards the snapshot of that read; the strict HTTP
+route keeps requiring an explicit snapshot. Claim revisions add the same
+`warnings` list as claim creation.
 
 Python `prepare_record_revisions(project, operations)` returns a read-only
 `research-revision-batch-local/1` preview. Each operation supplies

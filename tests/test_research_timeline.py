@@ -67,6 +67,10 @@ def test_reading_timeline_and_relations_preserves_legacy_archive_bytes(tmp_path,
     ("1912–1914", "1912-01-01", "1914-12-31", "year"),
     ("1912 - 1914", "1912-01-01", "1914-12-31", "year"),
     ("2000-02-29", "2000-02-29", "2000-02-29", "day"),
+    ("1912-05", "1912-05-01", "1912-05-31", "month"),
+    ("2024-02", "2024-02-01", "2024-02-29", "month"),
+    ("1912-05/1912-06", "1912-05-01", "1912-06-30", "month"),
+    ("1912-05 – 1912-06", "1912-05-01", "1912-06-30", "month"),
     ("1912-05-01 / 1912-05-03", "1912-05-01", "1912-05-03", "day"),
     ("1912-05-01 - 1912-05-03", "1912-05-01", "1912-05-03", "day"),
 ])
@@ -81,8 +85,9 @@ def test_explicit_calendar_periods_keep_label_and_precision(tmp_path, label, sta
 
 @pytest.mark.parametrize("label,reason", [
     (None, "missing"), ("autumn 1912", "unrecognized"), ("44 BCE", "unrecognized"),
-    ("1912-05", "unrecognized"), ("2019-02-29", "invalid"), ("0000", "invalid"),
+    ("2019-02-29", "invalid"), ("0000", "invalid"), ("1912-13", "invalid"),
     ("1914–1912", "invalid"), ("1912-05-03 / 1912-05-01", "invalid"),
+    ("1912-05 – 1914", "unrecognized"), ("1912-05-01 - 1912-06", "unrecognized"),
 ])
 def test_unplaced_periods_remain_visible_without_created_date_fallback(tmp_path, label, reason):
     project = tmp_path / "project"
@@ -116,3 +121,21 @@ def test_chronology_uses_latest_claim_scope_and_period_order_not_creation_order(
     assert result["dated"][0]["dossier_id"] == dossier
     assert result["dated"][0]["dossier_revision"] == 1
     assert authoritative_bytes(project) == before
+
+def test_unplaceable_period_warns_without_blocking_the_claim(tmp_path):
+    project = tmp_path / "project"
+    api.init(project, title="Synthetic chronology archive")
+    blocked = api.create_claim(project, title="Approximate", statement="The gate opened.",
+                               time_period="circa 1925")
+    assert blocked["warnings"] and "not placed in the chronology" in blocked["warnings"][0]
+    placed = api.create_claim(project, title="Month", statement="The gate opened.", time_period="2026-03")
+    assert placed["warnings"] == []
+    assert [row["title"] for row in api.timeline(project)["dated"]] == ["Month"]
+
+    # A claim revision to an unplaceable period warns as well; omission of the
+    # snapshot follows the CLI ergonomics and still checks the reviewed revision.
+    revised = api.revise_record(
+        project, "claim", blocked["claim_id"], changes={"time_period": "present day"},
+        expected_revision=1, change_kind="supersession", reason="Synthetic wording update.")
+    assert revised["record"]["revision"] == 2
+    assert revised["warnings"] and "present day" in revised["warnings"][0]

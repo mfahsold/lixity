@@ -694,9 +694,11 @@ are unchanged.
 
 - `timeline(project, dossier_id=None)` returns `research-timeline-local/1`,
   with project/snapshot metadata, `dated` and `unplaced`. Valid four-digit CE
-  years, ISO dates and same-precision ranges are placed; original `time_period`
-  labels remain, and missing/unrecognized/invalid periods carry a reason. It
-  performs no writes and infers no date from record creation timestamps.
+  years, ISO months (`YYYY-MM`), ISO dates and same-precision ranges are placed;
+  original `time_period` labels remain, and missing/unrecognized/invalid periods
+  carry a reason. Claim creation (`research-claim-local/1`) and claim revision
+  responses add `warnings: list[str]` for an unplaceable period and an empty list
+  otherwise. It performs no writes and infers no date from creation timestamps.
 - `create_claim_relation(project, from_claim_id, to_claim_id, relation="causes",
   rationale=None, from_claim_revision=None, to_claim_revision=None,
   expected_snapshot=None, expected_project_id=None, actor="local-author")`
@@ -1012,6 +1014,12 @@ current body. Unrelated current sections survive. Save through the same strict
 revision route with its returned tokens; another intervening write still fails.
 Prepared decision list changes include `dossier_revisions: {ID: revision}` for
 the selected existing dossiers. Preserve these pins when submitting the preview.
+
+Python `revise_record(..., expected_snapshot=None)` mirrors the CLI
+convenience path: it checks the reviewed revision, requires explicit pins for
+changed associations, and forwards the snapshot of that read; the strict HTTP
+route keeps requiring an explicit snapshot. Claim revisions add the same
+`warnings` list as claim creation.
 
 Python `prepare_record_revisions(project, operations)` returns a read-only
 `research-revision-batch-local/1` preview. Each operation supplies
