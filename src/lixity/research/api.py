@@ -128,11 +128,17 @@ from .timeline import timeline_data
 
 
 def envelope(project_id: str, actor: str) -> dict[str, Any]:
+    """Build the shared creation envelope: random urn ID, project, actor and UTC time."""
     return {"id": uuid4().urn, "project_id": project_id, "created_by": actor,
             "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ")}
 
 
 def init(project: str | Path, *, title: str, language: str = "en", actor: str = "local-author") -> dict[str, Any]:
+    """Initialize a new local research archive for an explicit project directory.
+
+    Refuses to overwrite an existing ``research/`` directory. Returns the
+    ``research-init-local/1`` receipt with the project ID and snapshot digest.
+    """
     repository = Repository(project)
     if repository.safe(repository.data).exists():
         raise ResearchError("Research directory already exists; refusing to overwrite it")
@@ -330,6 +336,14 @@ def ingest(project: str | Path, file: str | Path, *, allow_retention: bool = Fal
            origin_url: str | None = None, expected_snapshot: str | None = None,
            allow_fallback: bool = False,
            progress_callback: Callable[[str, str], None] | None = None) -> dict[str, Any]:
+    """Ingest one local file as a retained source and indexed passages.
+
+    Requires ``allow_retention=True``. ``source_id`` explicitly refreshes a
+    matching capture, ``dry_run`` previews without writing, and
+    ``expected_snapshot`` rejects a changed archive. Returns the
+    ``research-ingest-local/1`` receipt; identical captures are no-ops.
+    Source bytes and metadata stay untrusted evidence.
+    """
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (--allow-retention)")
     repository = Repository(project)
@@ -476,14 +490,24 @@ def discard_ingest_checkpoint(project: str | Path, *, checkpoint: str | Path) ->
 
 
 def reindex(project: str | Path) -> dict[str, Any]:
+    """Rebuild the catalogue used by search; returns ``research-index-local/1``."""
     return catalogue.reindex(Repository(project))
 
 
 def search(project: str | Path, query: str, *, limit: int = 20, scope: str = "sources", ensure_fresh: bool = False) -> dict[str, Any]:
+    """Search retained passages or authored records by words, limited by ``scope``.
+
+    Sources use ``research-search-local/1``; ``dossiers``, ``claims``,
+    ``decisions`` and ``all`` use ``research-search-local/2``, where hits
+    carry a ``kind``.
+    """
     return catalogue.search(Repository(project), query, limit=limit, scope=scope, ensure_fresh=ensure_fresh)
 
 
 def cite(project: str | Path, passage_id: str) -> dict[str, Any]:
+    """Resolve one retained passage ID into its full citation envelope
+    (``research-citation-local/1``).
+    """
     repository = Repository(project)
     snapshot = repository.snapshot()
     passage = snapshot.get(Reference(id=passage_id), Passage)
@@ -491,6 +515,11 @@ def cite(project: str | Path, passage_id: str) -> dict[str, Any]:
 
 
 def audit(project: str | Path) -> dict[str, Any]:
+    """Check that retained blobs match their descriptors and references resolve.
+
+    Returns ``research-audit-local/1`` with ``ok`` and the collected error
+    strings; warnings remain advisory.
+    """
     repository = Repository(project)
     errors: list[str] = []
     count = 0
@@ -530,6 +559,7 @@ def audit(project: str | Path) -> dict[str, Any]:
 
 
 def schema() -> dict[str, Any]:
+    """Return the JSON Schema (draft 2020-12) of the research record entity union."""
     return {"$schema": "https://json-schema.org/draft/2020-12/schema", **ENTITY.json_schema()}
 
 
@@ -616,6 +646,11 @@ def withdraw(
     reason: str = "Withdrawn by user",
     actor: str = "local-author",
 ) -> dict[str, Any]:
+    """Withdraw a source or one exact version without deleting retained bytes.
+
+    History and citations keep pointing at the withdrawn record; returns
+    ``research-withdraw-local/1``.
+    """
     reason = reason.strip() if reason else "Withdrawn by user"
     if not (1 <= len(reason) <= 500):
         raise ResearchError("Withdrawal reason must be between 1 and 500 characters")
@@ -669,6 +704,11 @@ def purge(
     actor: str = "local-author",
     dry_run: bool = False,
 ) -> dict[str, Any]:
+    """Delete retained bytes for a source or version and mark it purged.
+
+    ``dry_run`` reports the planned removal without writing; returns
+    ``research-purge-local/1``. Identity metadata remains as a tombstone.
+    """
     reason = reason.strip() if reason else "Purged by user"
     if not (1 <= len(reason) <= 500):
         raise ResearchError("Purge reason must be between 1 and 500 characters")
@@ -1146,6 +1186,11 @@ def create_claim(
     tags: list[str] | None = None,
     actor: str = "local-author",
 ) -> dict[str, Any]:
+    """Create one authored claim with optional period, place, actors and dossier link.
+
+    Returns ``research-claim-local/1``; the claim is an author assertion, not
+    a verified historical fact.
+    """
     repository = Repository(project)
     snapshot = repository.snapshot()
 
@@ -1322,6 +1367,11 @@ def link_evidence(
     expected_claim_revision: int | None = None,
     expected_project_id: str | None = None,
 ) -> dict[str, Any]:
+    """Link one retained passage to a claim with an explicit interpretation.
+
+    ``expected_*`` guards reject changed reviewed context; returns
+    ``research-evidence-link-local/1``. The link records your reading, not proof.
+    """
     repository = Repository(project)
     snapshot = repository.snapshot()
 
@@ -1362,6 +1412,11 @@ def link_evidence(
 
 
 def list_evidence_links(project: str | Path, *, claim_id: str | None = None) -> dict[str, Any]:
+    """List current evidence links, optionally filtered to one claim.
+
+    Withdrawn and purged targets are omitted; returns
+    ``research-evidence-links-local/1``.
+    """
     repository = Repository(project)
     snapshot = repository.snapshot()
 
@@ -1414,6 +1469,11 @@ def record_decision(
     dossier_ids: list[str] | None = None,
     actor: str = "local-author",
 ) -> dict[str, Any]:
+    """Record one authored decision with rationale and optional claim/dossier links.
+
+    Returns ``research-decision-local/1``; a checked deviation marks an
+    explicit departure from the evidence, not its accuracy.
+    """
     repository = Repository(project)
     snapshot = repository.snapshot()
 
@@ -1510,6 +1570,7 @@ def editorial_review(project: str | Path) -> dict[str, Any]:
 
 
 def list_decisions(project: str | Path) -> dict[str, Any]:
+    """List current author decisions; returns ``research-decisions-local/1``."""
     return _list_decisions(Repository(project).snapshot())
 
 

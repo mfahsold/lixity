@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- `docs/llms-full.txt` bundles the maintained English documentation in
+  reading order for AI agents and offline reading; `scripts/build_llms_full.py
+  --check` (part of `make docs-check`) keeps the published bundle in sync.
 - `lixity.math_core` is the single source for shared mathematical primitives:
   robust scale and significance z, the normal two-sided tail, ratio, share and
   density totalization, plug-in binomial/Poisson standard errors and the
@@ -15,6 +18,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- The README now leads with a plain-language start for non-technical readers
+  and keeps command, API and architecture references in a separate map. The
+  landing page adds FAQPage, BreadcrumbList and feature-list structured data,
+  package keywords and classifiers were extended, and the public research API
+  functions carry complete docstrings.
 - The Claims timeline shows each dated claim's placed calendar range, counts
   both sections, names the recognized formats and explains why free-text
   periods such as “present day” stay unplaced by design.

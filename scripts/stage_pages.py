@@ -30,6 +30,7 @@ DOCS_ROOT_FILES = {
     "robots.txt",
     "sitemap.xml",
     "llms.txt",
+    "llms-full.txt",
     "AGENTS.md",
     "ARCHITECTURE.md",
     "INSTALLATION.md",

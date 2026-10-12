@@ -8,6 +8,7 @@
 <meta name="google-site-verification" content="dyCGbdIP0jwCou0a4L_1epggZFVtHKkGE3qQyP9gip0"/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/"/>
 <link rel="alternate" type="text/plain" href="llms.txt" title="Automation summary"/>
+<link rel="alternate" type="text/plain" href="llms-full.txt" title="Full documentation bundle"/>
 <link rel="help" href="AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
 <link rel="sitemap" type="application/xml" href="sitemap.xml"/>
 <meta property="og:type" content="website"/>
@@ -40,6 +41,18 @@
   "codeRepository": "https://github.com/mfahsold/lixity",
   "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"},
   "programmingLanguage": ["Python"],
+  "featureList": [
+    "Local manuscript analysis with sentence rhythm, vocabulary, readability, dialogue and tense measurements",
+    "Chapter comparison against the manuscript's own style reference",
+    "Passage search and paragraph-level review with work markers",
+    "PDF reports, A5 reading copies and submission sheets without external converters",
+    "Local research workspace for sources, claims, decisions and citations",
+    "CLI, Python API and HTTP interfaces for automation"
+  ],
+  "screenshot": [
+    "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
+    "https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"
+  ],
   "sameAs": ["https://github.com/mfahsold/lixity"],
   "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE",
   "inLanguage": ["de", "en", "fr", "es", "it", "pt", "nl"],
@@ -49,6 +62,38 @@
     "priceCurrency": "EUR",
     "description": "Free for projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license."
   }
+}
+</script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  "mainEntity": [
+    {
+      "@type": "Question",
+      "name": "Does my manuscript leave my computer?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Built-in analysis and dashboard generation run on your computer without cloud calls. Optional integrations and separately configured workers have their own setup and data handling."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Will Lixity change my prose?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "Analysis describes patterns and links to passages. It does not rewrite prose. Review notes and research decisions are actions you choose yourself."
+      }
+    },
+    {
+      "@type": "Question",
+      "name": "Can a high score prove that a book is good?",
+      "acceptedAnswer": {
+        "@type": "Answer",
+        "text": "No. A number describes one measured aspect of this text under particular assumptions. Read the affected passages and consider their purpose. Short texts, dialect, historical spelling and mixed languages need particular care."
+      }
+    }
+  ]
 }
 </script>
 </head>
@@ -184,6 +229,7 @@
 
   <section id="guides" class="reading-section">
     <h2>Start with a practical guide</h2>
+    <p>New here? The three-minute first look needs no setup. These guides assume no technical background; the developer reference for commands, JSON contracts and architecture is linked in the page footer and in the <a href="https://github.com/mfahsold/lixity#documentation-map">documentation map</a>.</p>
     <div class="guide-cards">
       <article><h3><a href="guides/installation.html">Install and open a manuscript</a></h3><p>Set up Lixity, create a report and return to an existing project.</p></article>
       <article><h3><a href="guides/interpretation.html">Understand the results</a></h3><p>Read language signals with their text requirements and limitations.</p></article>

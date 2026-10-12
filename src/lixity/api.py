@@ -1,7 +1,11 @@
-"""lixity.api – Programmatic API facade for AI agents and automation.
+"""lixity.api – Programmatic API facade for scripts, agents and integrations.
 
-Provides deterministic, self-describing functions for corpus linguistics,
-tense profiling, self-calibrated style references, work markers, and dashboards.
+Provides deterministic functions for corpus linguistics, tense profiling,
+self-calibrated style references, work markers and dashboards. Every call
+accepts explicit language and threshold settings; pass project settings when
+several projects are involved. JSON payloads carry their schema version in
+``meta``. Interface contracts live in ``docs/AGENTS.md``; interpretation
+limits in ``docs/METHODS.md``.
 """
 
 from __future__ import annotations

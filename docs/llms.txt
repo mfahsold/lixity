@@ -9,6 +9,8 @@
 
 Current release: 0.3.0; release tag: v0.3.0.
 
+Full-text bundle for offline ingestion: https://mfahsold.github.io/lixity/llms-full.txt
+
 Version 0.3.0 resets PRODUCT development maturity before 1.0; historical
 published v3.0.1 and earlier notes/tags remain. Existing features stay available.
 JSON/storage versions are independent: analyze/profile2, style4; research

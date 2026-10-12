@@ -53,6 +53,7 @@ docs-check: ## Check documentation version consistency and link integrity
 
 docs-sync: ## Synchronize documentation version references to match __version__
 	$(PYTHON) scripts/sync_docs.py
+	$(PYTHON) scripts/build_llms_full.py
 
 clean: ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info src/*.egg-info .pytest_cache .mypy_cache \

@@ -102,6 +102,13 @@ class TestDocumentation(unittest.TestCase):
         for block in re.findall(r"<details>.*?</details>", readme, re.DOTALL):
             self.assertNotIn(r"\*", block)
 
+    def test_llms_full_bundle_matches_its_sources(self):
+        """The agent bundle is generated; edit the sources and rerun the builder."""
+        from build_llms_full import build_bundle
+
+        actual = (ROOT / "docs" / "llms-full.txt").read_text(encoding="utf-8")
+        self.assertEqual(actual, build_bundle(), "Run 'python scripts/build_llms_full.py'")
+
     def test_public_entrypoints_explain_book_sales(self):
         for name in ("README.md", "docs/index.html", "docs/llms.txt"):
             with self.subTest(path=name):

@@ -17,24 +17,26 @@ GmbH and used it while writing his own debut novel.
 
 [Try the example](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
-[Installation](#installation) · [What you can do](#what-you-can-do) ·
+[Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
 [v0.3.0 release notes](docs/releases/v0.3.0.md)
 
 The example is a read-only report made from invented text. It needs no
-installation or manuscript upload.
+installation or manuscript upload. Documentation is English; you can read the
+results in German, English, French, Spanish, Italian, Portuguese or Dutch.
 
-**Development maturity:** v0.3.0 resets the product version to
-reflect development before 1.0. It retains the existing features and published
-release history, including v3.0.1. Public JSON and research storage schema
-versions are independent; v0.3.0 reads existing research archives through v7.
-Select the exact release wheel when upgrading across this lower version number.
+## Start here
 
-Free for projects with no commercial purpose. A book intended for sale,
-including self-publishing, requires a separate written commercial license.
-[License details](#license).
+No statistics background is needed, and nothing is uploaded: analysis runs on
+your computer.
 
-## Installation
+1. **Look at the example.** The [read-only report](https://mfahsold.github.io/lixity/demo/report.html)
+   opens directly in the browser and is made from invented text.
+2. **See what the numbers mean.** The [three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
+   walks through chapter comparison, a passage and its measurements.
+3. **Install Lixity** when you want to analyze your own manuscript (next section).
+
+## Install and start
 
 Lixity runs on Windows, macOS and Linux. Use [uv](https://docs.astral.sh/uv/);
 it supplies the managed Python environment and installs the release wheel.
@@ -54,68 +56,16 @@ lixity service start --open
 ```
 
 The service starts an empty local workspace; choose **Open Project** or
-**Analyze a manuscript**.
-For later upgrades, select the new release wheel using
-the [update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace. [Release notes](docs/releases/v0.3.0.md) describe compatibility
-and known limits; the [changelog](CHANGELOG.md) records subsequent work on `main`.
-
-**Available in v0.3.0; introduced in historical v3.0.0:** organize claim periods in a read-only timeline,
-record your cause/effect interpretations between exact claim versions, and choose
-source citations by keywords. The first saved causal link opts the archive into
-v6, supported by v0.3.0 and the historical v3.0.x releases; claim-list API consumers must also update
-to the new uniform envelope. Existing archive history remains readable.
-See the [research workflow](docs/research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300)
-for chronology and compatibility details.
-
-**In 2.3.0:** explore the public example before installing. Attach local image
-references to dossiers from the CLI through the same guarded workflow as the app.
-See the [image workflow](docs/research/USAGE.md#keep-a-visual-reference-in-a-dossier).
-
-**In 2.3.0:** opened paragraphs put the manuscript text first,
-with measurements in a compact **Values** disclosure (**Werte** in German).
-Chapter comparisons, reference bands, dimensions and structural diagnostics share
-one tabbed style area. Closed paragraph contents are created when opened;
-manuscript search still covers the complete text and exported reports work offline.
-
-## Quick Start
-
-Prepare a UTF-8 Markdown file with `## Chapter title` headings, then run:
-
-```bash
-lixity build manuscript.md --language de
-```
-
-Open `exports/manuscript_dashboard.html` in your browser. This report works
-offline. Use `--language en` for English, or select another
-[supported language](#supported-languages). English applies when no language is
-selected; automatic detection requires `--language auto`.
-
-GitHub Pages contains the documentation. For project management, research
-editing and live settings on your computer, start the local workspace:
-
-```bash
-lixity service start --open
-```
-
-Open `http://127.0.0.1:8765/`. **Open Project** reconnects an existing folder and
-its research archive. **Import Manuscript** previews a selected file and creates
-a new project when you confirm. The [first-project guide](docs/ONBOARDING.md)
-walks through both choices.
+**Analyze a manuscript**. The [first-project guide](docs/ONBOARDING.md) walks
+through both choices. For later upgrades, select the new release wheel using the
+[update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
+the local workspace.
 
 Use `lixity service status`, `lixity service restart` or `lixity service stop`
-for the managed instance.
-Before uninstalling, stop managed instances and disable any login startup you
-configured, then run `uv tool uninstall lixity`. Manuscripts and research archives
-remain in their project folders. [Lifecycle reference](docs/INSTALLATION.md#running-the-server).
-
-Begin with the manuscript overview, then open a chapter that interests you.
-The welcome guidance takes you from selecting a manuscript to confirming its
-language and reading a passage. **Start your review** offers direct routes to
-source text, chapter comparison and sentence rhythm; its selected passage is a
-starting point for reading, not a quality ranking.
-Hover over, focus or tap a dotted-underlined measurement label for its explanation.
-Read the passage before changing prose or adjusting comparison settings.
+for the managed instance. Before uninstalling, stop managed instances and
+disable any login startup you configured, then run `uv tool uninstall lixity`.
+Manuscripts and research archives remain in their project folders.
+[Lifecycle reference](docs/INSTALLATION.md#running-the-server).
 
 ## What you can do
 
@@ -146,10 +96,10 @@ and which features distinguish them.
 [Style dimensions](docs/screenshots/dashboard-dimensions.png) ·
 [Reference bands](docs/screenshots/dashboard-reference.png)
 
-Assign scenes to registers—such as dialogue, action or a formal report—so you can
-compare scenes with a similar purpose. Each group has its own middle values
-(medians); you can also set optional targets. Small samples may leave measurements
-unavailable. [Scene example](docs/screenshots/dashboard-scenes.png) ·
+Assign scenes to registers—such as dialogue, action or a formal report—so you
+can compare scenes with a similar purpose. Each group has its own middle values
+(medians); you can also set optional targets. Small samples may leave
+measurements unavailable. [Scene example](docs/screenshots/dashboard-scenes.png) ·
 [Setup and limits](docs/USAGE.md#scene-registers-and-project-targets).
 
 ### Print what the analysis found
@@ -160,29 +110,17 @@ characters. Fonts are embedded as subsets, with searchable text for Unicode
 characters covered by the selected fonts. No converter, no upload, no added
 runtime dependency. These are reading and review layouts; PDF/X production
 preflight and automatic fallback between fonts are not provided.
+[Command reference](docs/USAGE.md#lixity-pdf).
 
-[Command reference](docs/USAGE.md#lixity-pdf)
-
-**Since v0.3.0:** open **PDF export** in the global project controls,
-available from all three native workspace views.
-Choose **A5 reading copy** (default), **A4 manuscript sheets** or
-**A4 analysis report**, then select **Download PDF** to save it.
-The menu starts collapsed. Generation returns a PDF through the
-browser without writing server export files or changing the manuscript
-or research archive. The terminal command remains available.
-
-**Since v0.3.0:** the same PDF composer reads the selected project's
-title, author and optional publication details. Expand **Publication** in
-**Project → Settings** to enter publisher/printer details, edition, ISBNs,
-rights text or credits; include them in the A5 reading copy with the explicit
-checkbox. Empty fields add no inferred information. PDF metadata, chapter
-bookmarks and running headers help readers navigate; these remain fixed-layout
-PDFs, without EPUB, PDF/UA or PDF/X certification.
-See [publication settings and Germany print/digital guidance](docs/USAGE.md#publication-settings).
-
-**Since v0.3.0:** changed builds retain distinct versions even
-within the same minute. File replacement failures preserve the original bytes
-and report an error; they no longer fall back to writing over the original file.
+In the app, **PDF export** in the global project controls offers **A5 reading
+copy** (default), **A4 manuscript sheets** or **A4 analysis report**; the menu
+starts collapsed and generation returns the PDF through the browser without
+writing server export files. The same composer reads the selected project's
+title, author and optional publication details from **Project → Settings →
+Publication**; empty fields add no inferred information. PDF metadata, chapter
+bookmarks and running headers help readers navigate. These remain fixed-layout
+PDFs, without EPUB, PDF/UA or PDF/X certification. See
+[publication settings and Germany print/digital guidance](docs/USAGE.md#publication-settings).
 
 ### Keep review notes beside the text
 
@@ -207,21 +145,17 @@ records what a source says; its accuracy still needs review.
 
 Bring sources from local files or the optional Zotero Desktop bridge. PDF scans
 can use locally installed Tesseract or a configured OCR worker. Import warnings
-explain when extraction is incomplete or a requested fallback was used.
-
-**Since v2.4.0:** select text within an opened source paragraph to
-prepare an evidence-link draft, with the selected quote and full citation context
-shown before saving. Citations still retain the whole paragraph. An optional
-read-only dossier view lets you read chosen notes beside the manuscript. Existing
-archive CLI commands can use a validated initialized current directory, and
-`research link PASSAGE_ID CLAIM_ID` provides a shorter explicit link command.
-See the [workflow scope and limits](docs/research/USAGE.md#reading-and-cli-workflows-since-v240).
+explain when extraction is incomplete or a requested fallback was used. Select
+text within an opened source paragraph to prepare an evidence-link draft, with
+the selected quote and full citation context shown before saving; citations
+retain the whole paragraph. An optional read-only dossier view lets you read
+chosen notes beside the manuscript.
 
 **Review** shows the records explicitly linked to a decision and whether those
-links refer to an older version. You can inspect the earlier and current versions
-before deciding to update a link. Related dossier edits can be previewed and saved
-together; if another edit conflicts, the preview helps you resolve it while
-preserving your draft.
+links refer to an older version. You can inspect the earlier and current
+versions before deciding to update a link. Related dossier edits can be
+previewed and saved together; if another edit conflicts, the preview helps you
+resolve it while preserving your draft.
 
 Add a local PNG/JPEG to a dossier with a description and optional source note.
 Earlier dossier versions keep their original image; no remote picture is fetched
@@ -240,10 +174,11 @@ decision** keep a large topic manageable without copying whole documents or IDs.
 
 Project actions remain available from each workspace view. Preview a manuscript
 before importing it, select its analysis language, and adjust which differences
-you want to examine. The NDA form has just name, optional
-address, project name, date and place. Preview the friendly agreement and
-download a PDF or editable text in the project language. Review it before signing.
-Set **Author name** under **Project → Settings** to fill the project representative's name.
+you want to examine. The NDA form has just name, optional address, project name,
+date and place. Preview the agreement and download a PDF or editable text in the
+project language: the recipient can sign or consent in text form, and the
+sending project representative needs no separate handwritten signature. Set
+**Author name** under **Project → Settings** to fill the representative's name.
 
 <a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" width="900" /></a>
 
@@ -276,23 +211,23 @@ Each measurement answers a specific question about the text:
 Chapter comparisons use the manuscript's middle values and typical spread
 (median and MAD), with an adjustment for estimated sampling noise. Colours mark
 the direction of a difference, not its literary value. Optional statistical
-checks mark a selection for review; they cannot certify that a passage needs editing.
-An unavailable value can mean there is too little text or too few comparable
-chapters to calculate it.
+checks mark a selection for review; they cannot certify that a passage needs
+editing. An unavailable value can mean there is too little text or too few
+comparable chapters to calculate it.
 
 The mathematical core includes several vocabulary measures (HD-D, MTLD, MATTR,
 Guiraud R, Maas a² and Yule's K). They answer related questions using different
 models and sample sizes. Readability and grammatical-pattern indicators have
 language-specific limits. Formulas, citations and worked examples live in
-[Methods](docs/METHODS.md).
-The [interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
+[Methods](docs/METHODS.md). The
+[interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
 explains how to read results; [stability and validation limits](docs/STABILITY.md)
 describe what has and has not been established.
 
-## Supported Languages
+## Supported languages
 
-German (`de`) and English (`en`) have the most extensive linguistic resources and
-language-specific fixtures. French (`fr`), Spanish (`es`), Italian (`it`),
+German (`de`) and English (`en`) have the most extensive linguistic resources
+and language-specific fixtures. French (`fr`), Spanish (`es`), Italian (`it`),
 Portuguese (`pt`) and Dutch (`nl`) also have localized interfaces and analysis
 resources, with narrower heuristic coverage and validation.
 
@@ -300,8 +235,45 @@ Choose the manuscript language explicitly. `LIXITY_LANG=de` selects German
 terminal messages independently of `--language de`, which selects German
 analysis. Documentation is English; source quotations retain their original
 language. Mathematical identifiers and numeric JSON values are language-neutral.
-
 [Language support and limits](docs/LOCALIZATION.md).
+
+## Documentation map
+
+**If you are new to Lixity (no technical background):**
+
+- [Read-only example report](https://mfahsold.github.io/lixity/demo/report.html) —
+  the features in a browser, with invented text.
+- [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
+  — chapter comparison, one passage and its measurements.
+- [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html)
+  — setup, first report and returning to a project.
+- [Understand the results](https://mfahsold.github.io/lixity/guides/interpretation.html)
+  — language signals with their requirements and limits.
+- [Keep sources and citations](https://mfahsold.github.io/lixity/guides/research-pdf.html)
+  — evidence, PDF scans and backups.
+- [First-project walkthrough](docs/ONBOARDING.md) — the two ways to start in the app.
+
+**For technical readers:**
+
+- [Command reference](docs/USAGE.md) — every CLI command, option and output limit.
+- [Interface contracts](docs/AGENTS.md) — JSON schemas, Python API and HTTP routes.
+- [Research commands](docs/research/USAGE.md) — archive workflows and compatibility.
+- [Architecture](docs/ARCHITECTURE.md) · [Methods](docs/METHODS.md) ·
+  [Stability and validation](docs/STABILITY.md) ·
+  [Localization](docs/LOCALIZATION.md) · [Licensing](docs/LICENSING.md).
+- [AI and automation summary](docs/llms.txt) — the maintained entrypoint for
+  agents, with the full-text bundle in [llms-full.txt](docs/llms-full.txt).
+- [Changelog](CHANGELOG.md) · [Release notes](docs/releases/v0.3.0.md).
+
+## Current release
+
+The current release is **v0.3.0**. It resets the product version to reflect
+development before 1.0 and retains the existing features and published release
+history, including v3.0.1. Public JSON and research storage schema versions are
+independent; v0.3.0 reads existing research archives through v7. Select the
+exact release wheel when upgrading across this lower version number.
+[Release notes](docs/releases/v0.3.0.md) describe compatibility and known limits;
+the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 ## Python API and automation
 
