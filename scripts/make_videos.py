@@ -20,6 +20,7 @@ OUT_DIR = BASE_DIR / "docs" / "videos"
 #: name, poster timestamp, max MP4 bytes, max GIF bytes
 WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
     ("research-timeline", "4.5", 2_000_000, 4_000_000),
+    ("analysis-review", "5.5", 2_000_000, 4_000_000),
 )
 
 
@@ -72,7 +73,7 @@ def convert(name: str, poster_at: str, max_mp4: int, max_gif: int) -> None:
             str(source),
             "-an",
             "-vf",
-            "fps=12,scale=880:-1:flags=lanczos,split[s0][s1];"
+            "fps=10,scale=800:-1:flags=lanczos,split[s0][s1];"
             "[s0]palettegen=stats_mode=diff[p];[s1][p]paletteuse=dither=bayer",
             "-loop",
             "0",

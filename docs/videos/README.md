@@ -8,6 +8,7 @@ from synthetic fixtures only; no private project or manuscript appears in them.
 | `research-timeline.mp4` | H.264 video embedded in the research guide |
 | `research-timeline.gif` | Loop for the README and chat previews |
 | `research-timeline.png` | Poster frame and video thumbnail |
+| `analysis-review.mp4` / `.gif` / `.png` | Chapter cell, paragraph Values and style dimensions walkthrough |
 
 Regenerate with `make videos` (needs headless Chromium and ffmpeg):
 

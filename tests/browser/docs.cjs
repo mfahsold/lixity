@@ -145,16 +145,26 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
             await page.locator('h1').scrollIntoViewIfNeeded();
           }
           if (!route) {
-            for (const image of await page.locator('.feature .shot img').all()) {
-              await image.scrollIntoViewIfNeeded();
-              await image.evaluate(element => element.decode());
-              assert.equal(await image.evaluate(element => element.parentElement.getAttribute('href')), await image.getAttribute('src'), 'Feature images open their original PNG without JavaScript');
-              assert.ok(await image.evaluate(element => {
-                const feature = element.closest('article');
-                return feature.querySelector('h2') && feature.querySelector('p').textContent.length > 50;
-              }), 'Each image belongs to an explained feature');
-              assert.deepEqual(await image.evaluate(element => [element.naturalWidth, element.naturalHeight]),
-                [Number(await image.getAttribute('width')), Number(await image.getAttribute('height'))]);
+            const reducedMotion = await page.evaluate(() => matchMedia('(prefers-reduced-motion: reduce)').matches);
+            for (const feature of await page.locator('.feature').all()) {
+              const video = feature.locator('.shot video');
+              if (await video.count()) {
+                assert.ok(await video.evaluate(element => ['autoplay', 'muted', 'loop', 'playsinline'].every(name => element.hasAttribute(name))), 'Feature walkthroughs loop muted and inline');
+                assert.ok(await video.getAttribute('poster'), 'Feature walkthroughs carry a poster');
+                assert.equal(await video.locator('source[type="video/mp4"]').count(), 1, 'Feature walkthroughs carry one MP4 source');
+                if (!reducedMotion) await video.scrollIntoViewIfNeeded();
+              }
+              for (const image of await feature.locator('.shot img').all()) {
+                await image.evaluate(element => { element.loading = 'eager'; return element.decode().catch(() => {}); });
+                if (await image.isVisible()) await image.scrollIntoViewIfNeeded();
+                assert.equal(await image.evaluate(element => element.parentElement.getAttribute('href')), await image.getAttribute('src'), 'Feature images open their original PNG without JavaScript');
+                assert.ok(await image.evaluate(element => {
+                  const feature = element.closest('article');
+                  return feature.querySelector('h2') && feature.querySelector('p').textContent.length > 50;
+                }), 'Each image belongs to an explained feature');
+                assert.deepEqual(await image.evaluate(element => [element.naturalWidth, element.naturalHeight]),
+                  [Number(await image.getAttribute('width')), Number(await image.getAttribute('height'))]);
+              }
             }
             await page.locator('h1').scrollIntoViewIfNeeded();
           }

@@ -82,6 +82,8 @@ shown explicitly.
 [Mobile view](docs/screenshots/dashboard-mobile.png) ·
 [Dark theme](docs/screenshots/dashboard-dark.png)
 
+<img src="docs/videos/analysis-review.gif" alt="Walkthrough: select a chapter cell, expand a paragraph's Values and switch to the style dimensions" width="900" />
+
 ### Compare chapters in context
 
 The chapter map uses your manuscript's chapters as its reference. For example,
