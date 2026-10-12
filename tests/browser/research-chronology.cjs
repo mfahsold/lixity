@@ -65,10 +65,10 @@ server.serve_forever()
       await page.route(fixture.url + '/', route => route.fulfill({contentType: 'text/html', body: html}));
       await page.goto(fixture.url);
       await page.locator('[data-rtab=claims]').click();
-      await page.locator('#r-claims-timeline').click();
-      assert.equal(await page.locator('#research-claims-timeline').evaluate(element => element.hidden), false, 'Timeline control selects the view before its asynchronous data arrives');
-      await page.locator('#r-claims-timeline').hover();
-      assert.equal(await page.locator('#r-claims-timeline').evaluate(element => getComputedStyle(element).color), 'rgb(255, 255, 255)', 'Pressed view control remains readable on hover');
+      await page.locator('#r-open-timeline').click();
+      assert.equal(await page.locator('#rtab-timeline').isVisible(), true, 'The claims entry opens the more prominent timeline tab');
+      await page.locator('[data-rtab=timeline]').hover();
+      assert.equal(await page.locator('[data-rtab=timeline]').evaluate(element => getComputedStyle(element).color), 'rgb(255, 255, 255)', 'Selected research tab remains readable on hover');
       await page.waitForFunction(() => document.querySelectorAll('#research-claims-timeline .research-timeline-dated > li, #research-claims-timeline .research-timeline-unplaced > li').length === 6);
       assert.equal(await page.locator('#research-claims-timeline').isVisible(), true, 'Loaded timeline entries are visible');
       const dated = await page.locator('#research-claims-timeline .research-timeline-dated > li').first().getAttribute('data-claim-id');
@@ -89,7 +89,7 @@ server.serve_forever()
       assert.equal(writes.length, 0, 'Timeline navigation writes no authored records');
       const endpointLabels = await page.locator('#r-relation-from option').allTextContents();
       assert.equal(new Set(endpointLabels).size, endpointLabels.length, 'Duplicate titles and periods still have distinct selectable labels');
-      await page.locator('#r-claims-list').click();
+      await page.locator('[data-rtab=claims]').click();
       const evidenceLabels = await page.locator('#r-link-claim-select option').allTextContents();
       assert.equal(new Set(evidenceLabels).size, evidenceLabels.length, 'Keyword evidence choices distinguish duplicate claim titles, periods and versions');
       const reviewedClaimLabel = await page.locator(`#r-link-claim-select option[value="${fixture.claims[0]}"]`).textContent();
@@ -197,7 +197,6 @@ server.serve_forever()
       assert.equal(await page.locator('#research-evidence-draft img, #research-claims-timeline img').count(), 0);
       assert.equal(await page.evaluate(() => window.chronologyInjected), undefined);
       await page.locator('[data-rtab=claims]').click();
-      await page.locator('#r-claims-timeline').click();
       await page.locator('#r-relation-retracted').check();
       await page.waitForFunction(() => document.querySelector('.research-relation-card'));
       await page.locator('.research-relation-card [data-research-history=claim_relation]').click();

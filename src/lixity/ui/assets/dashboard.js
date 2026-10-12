@@ -2523,7 +2523,8 @@ function researchRelationEndpoint(endpoint) {
 
 async function refreshResearchClaimProjections() {
   var request = ++researchProjectionRead;
-  if (!document.querySelector('.research-tabs [data-rtab="claims"].active')) return;
+  var activeResearchTab = document.querySelector('.research-tabs [data-rtab].active');
+  if (!activeResearchTab || ["claims", "timeline"].indexOf(activeResearchTab.dataset.rtab) === -1) return;
   var context = researchReadContext();
   var timelineHost = document.getElementById("research-claims-timeline");
   var relationsHost = document.getElementById("research-claim-relations");
@@ -2558,6 +2559,12 @@ async function refreshResearchClaimProjections() {
       unplacedRows.map(researchTimelineEntry).join("") + '</ol>' :
       '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_no_unplaced")) + '</p>') :
     '<p class="ctl-note">' + escapeHtml(timeline.message || uiLabel("research_load_claims_failed")) + '</p>';
+  var callout = document.getElementById("r-timeline-callout");
+  if (callout && timeline.ok) {
+    callout.textContent = uiFormat("research_timeline_callout", {
+      dated: datedRows.length, total: datedRows.length + unplacedRows.length});
+    callout.hidden = false;
+  }
   if (!relations.ok) {
     relationsHost.textContent = relations.message || uiLabel("research_load_claims_failed");
     return;
@@ -2581,12 +2588,9 @@ document.addEventListener("change", function(event) {
   if (event.target.id === "r-relation-retracted") refreshResearchClaimProjections();
 });
 document.addEventListener("click", function(event) {
-  if (["r-claims-list", "r-claims-timeline"].includes(event.target.id)) {
-    var timeline = event.target.id === "r-claims-timeline";
-    document.getElementById("research-claims-list").hidden = timeline;
-    document.getElementById("research-claims-timeline").hidden = !timeline;
-    document.getElementById("r-claims-list").setAttribute("aria-pressed", String(!timeline));
-    document.getElementById("r-claims-timeline").setAttribute("aria-pressed", String(timeline));
+  if (event.target.id === "r-open-timeline") {
+    var timelineTab = document.querySelector('.research-tabs [data-rtab="timeline"]');
+    if (timelineTab) timelineTab.click();
   }
   if (event.target.id === "r-find-passage") {
     researchEvidenceReview = reviewedEvidenceClaim();
@@ -3294,6 +3298,7 @@ document.addEventListener("click", async function (event) {
     if (tabBtn.dataset.rtab === "sources") refreshResearchSources();
     if (tabBtn.dataset.rtab === "dossiers") refreshResearchDossiers();
     if (tabBtn.dataset.rtab === "claims") refreshResearchClaims();
+    if (tabBtn.dataset.rtab === "timeline") refreshResearchClaimProjections();
     if (tabBtn.dataset.rtab === "decisions") refreshResearchDecisions();
     if (tabBtn.dataset.rtab === "review") refreshResearchEditorialReview();
     return;
