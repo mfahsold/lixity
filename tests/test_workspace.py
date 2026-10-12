@@ -155,5 +155,33 @@ class TestBuildCommand(unittest.TestCase):
             self.assertFalse((Path(tmp) / "nda").exists())
 
 
+class TestProjectTargetResolution(unittest.TestCase):
+    def test_file_folder_and_empty_policies(self):
+        from lixity.workspace import ProjectTarget, resolve_project_target
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory).resolve()
+            project = root / "book"
+            project.mkdir()
+            manuscript = project / "manuscript.md"
+            manuscript.write_text("# Synthetic\n\nA synthetic sentence.\n", encoding="utf-8")
+            self.assertEqual(resolve_project_target(manuscript),
+                             ProjectTarget(root=str(project), manuscript=str(manuscript)))
+            self.assertEqual(resolve_project_target(project).manuscript, str(manuscript))
+            empty = root / "empty"
+            empty.mkdir()
+            with self.assertRaises(FileNotFoundError):
+                resolve_project_target(empty)
+            self.assertEqual(resolve_project_target(empty, empty="allow"),
+                             ProjectTarget(root=str(empty)))
+            archive = root / "archive"
+            (archive / "research").mkdir(parents=True)
+            self.assertTrue(resolve_project_target(archive, empty="research").research_only)
+            with self.assertRaises(ValueError):
+                resolve_project_target(root / "missing")
+            with self.assertRaises(ValueError):
+                resolve_project_target(project, empty="bogus")
+
+
 if __name__ == "__main__":
     unittest.main()

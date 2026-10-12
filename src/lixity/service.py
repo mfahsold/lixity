@@ -32,7 +32,7 @@ from typing import Any
 from . import __version__
 from .config import resolve_thresholds
 from .language import LANGUAGE_CHOICES
-from .workspace import discover
+from .workspace import resolve_project_target
 
 _OPTIONS = ("language", "title", "research_project", "debug", "open_browser", "z_mild",
             "z_strong", "fdr_q", "fdr_method", "min_chapters", "dim_threshold", "flag_min_severity")
@@ -92,11 +92,15 @@ def configure(parser: argparse.ArgumentParser) -> None:
 
 
 def _workspace_scope(selector: str | None) -> Path | None:
-    """Use the shared file-to-workspace resolution without reading manuscript text."""
+    """Resolve a launch selector's scope without reading manuscript text.
+
+    Files use the shared file-to-workspace rule; a folder or a not-yet-created
+    path keeps its normalized form so saved settings stay comparable.
+    """
     if not selector:
         return None
     path = Path(selector).expanduser().resolve()
-    return Path(discover(explicit=str(path)).root) if path.is_file() else path
+    return Path(resolve_project_target(path, empty="allow").root) if path.is_file() else path
 
 
 def resolve_settings(port: int, overrides: Mapping[str, Any], saved: Mapping[str, Any] | None) -> dict[str, Any]:

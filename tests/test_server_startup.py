@@ -19,10 +19,10 @@ def test_no_project_start_does_not_create_exports_or_analyze_cwd(tmp_path, monke
     server.serve_forever.side_effect = KeyboardInterrupt()
     with patch("lixity.server.runtime.socket.socket") as probe, \
          patch("lixity.server.runtime._LoopbackHTTPServer", return_value=server), \
-         patch("lixity.server.runtime.discover") as discover:
+         patch("lixity.server.runtime.resolve_project_target") as resolve:
         probe.return_value.__enter__.return_value.connect_ex.return_value = 1
         run_server(no_project=True)
-    discover.assert_not_called()
+    resolve.assert_not_called()
     assert LixityServerHandler.source_input is None
     assert LixityServerHandler.dashboard_info["is_empty"]
     assert not (tmp_path / "exports").exists()

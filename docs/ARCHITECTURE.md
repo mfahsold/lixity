@@ -19,7 +19,8 @@ Existing analyze/profile v2 and style v4 remain unchanged.
 The workspace also stores dossiers, claims, evidence links and author decisions with full native revision history.
 The [research RFC](research/README.md) additionally proposes broader review workflows
 and hybrid vector search. The implemented manual manuscript associations are
-described below; the RFC is not an implementation reference.
+described below; the RFC is not an implementation reference. Section spans and
+section edits live in `research/sections.py`; `research.api` re-exports them.
 
 ## Layers
 
@@ -69,6 +70,9 @@ file bytes creates a project at an explicit destination. A browser filename does
 not establish the original file's parent directory. An initialized research
 project can be opened before a manuscript exists. Research storage remains
 explicit in the API even when the server chooses it from an opened workspace.
+All surfaces resolve an explicit selector through
+`workspace.resolve_project_target`, and `run_server` raises on an occupied port
+while printing only when the CLI passes `announce=True`.
 
 `analyze_document(text, config, thresholds)` returns `DocumentAnalysis` with
 corpus metrics, chapter profiles, paragraph profiles and the fingerprint.

@@ -288,6 +288,7 @@ h2, .section-heading, .settings-form h3 {
 mark.text-hit { background: var(--accent-light); color: inherit; padding: 0 .05em; border-radius: .15rem; }
 body.text-search-active .chapter .strip { display: none; }
 .toolbar select { max-width: 15rem; }
+.toolbar-note { flex-basis: 100%; margin: 0; }
 .legend { display: inline-flex; flex-wrap: wrap; gap: 1rem; color: var(--muted); font-size: .78rem; }
 .swatch { display: inline-block; width: .6rem; height: .6rem; border-radius: 2px; margin-right: .3rem; vertical-align: -1px; }
 .totop { margin-left: auto; font-size: .8rem; color: var(--muted); text-decoration: none; }

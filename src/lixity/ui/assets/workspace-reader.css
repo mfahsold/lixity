@@ -1,5 +1,5 @@
-.workspace-reader-bar { display: flex; flex-wrap: wrap; align-items: center; gap: .7rem 1rem; margin-bottom: 1rem; }
-.workspace-reader-bar .ctl-note { flex: 1 1 20rem; }
+.reader-controls { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; flex-basis: 100%; }
+.reader-controls .ctl-note { flex: 1 1 20rem; min-width: 0; }
 .workspace-reader-layout.is-open { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(18rem, .8fr); gap: 1rem; align-items: start; }
 #workspace-analysis-body { min-width: 0; grid-column: 1; grid-row: 1; }
 .workspace-reader-layout.is-open #workspace-analysis-body > :not(#chapters):not(.toolbar) { display: none; }
@@ -14,6 +14,6 @@
   .workspace-reader-panel { grid-column: 1; grid-row: 1; position: static; max-height: 65dvh; }
 }
 @media print {
-  .workspace-reader-bar, .workspace-reader-panel { display: none !important; }
+  .reader-controls, .toolbar-note, .workspace-reader-panel { display: none !important; }
   .workspace-reader-layout.is-open { display: block; }
 }

@@ -19,6 +19,7 @@ import re
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
+from pathlib import Path
 
 from .io import FileUtils
 from .publishing import TIMESTAMP_PATTERN, archive_timestamped, prune_archive, update_stable_link
@@ -159,3 +160,45 @@ def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
         )
     names = ", ".join(os.path.basename(path) for path in markdown)
     raise ValueError(f"Multiple manuscripts in {base}: {names} – please specify explicitly.")
+
+
+@dataclass(frozen=True)
+class ProjectTarget:
+    """Resolved root and optional manuscript for one explicit selector."""
+
+    root: str
+    manuscript: str | None = None
+    research_only: bool = False
+
+
+def resolve_project_target(selector: str | Path, *, empty: str = "error") -> ProjectTarget:
+    """Resolve one explicit file or folder selector without reading manuscript text.
+
+    - A manuscript file selects its parent directory.
+    - A folder uses the shared discovery rules (``<folder>.md``,
+      ``manuscript.md`` and exactly one remaining Markdown file).
+    - ``empty`` decides a folder without a manuscript: ``"error"`` re-raises
+      discovery, ``"research"`` accepts only a folder containing ``research/``
+      and marks it research-only, ``"allow"`` accepts any folder and also
+      swallows ambiguous choices for neutral foreground starts.
+    """
+    if empty not in ("error", "research", "allow"):
+        raise ValueError("Unknown empty-folder policy: " + empty)
+    path = Path(selector).expanduser().resolve()
+    if path.is_file():
+        return ProjectTarget(root=str(path.parent), manuscript=str(path))
+    if not path.is_dir():
+        raise ValueError("Project path must be a folder or manuscript file")
+    try:
+        workspace = discover(root=str(path))
+    except FileNotFoundError:
+        if empty == "research" and (path / "research").is_dir():
+            return ProjectTarget(root=str(path), research_only=True)
+        if empty == "allow":
+            return ProjectTarget(root=str(path))
+        raise
+    except ValueError:
+        if empty == "allow":
+            return ProjectTarget(root=str(path))
+        raise
+    return ProjectTarget(root=workspace.root, manuscript=workspace.manuscript)

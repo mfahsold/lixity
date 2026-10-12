@@ -61,7 +61,7 @@ def test_failed_settings_preparation_or_commit_keeps_original_data_and_session(t
     handler = handler_for(tmp_path)
     payload = {"author_name": "After", "language": "de"}
     if failure == "render":
-        context = patch("lixity.server.views.render_dashboard", side_effect=ValueError("Synthetic render failure"))
+        context = patch("lixity.server.views.render_analysis", side_effect=ValueError("Synthetic render failure"))
     elif failure == "write":
         context = patch("lixity.io.os.replace", side_effect=OSError("Synthetic replace failure"))
     else:

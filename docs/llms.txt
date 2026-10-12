@@ -201,6 +201,7 @@ Contact: mfahsold@googlemail.com.
 - [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html)
 - [Read the results](https://mfahsold.github.io/lixity/guides/interpretation.html)
 - [Archive sources, use PDF/OCR and export manuscript PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html)
+- [Read-only example report](https://mfahsold.github.io/lixity/demo/report.html)
 - [Commands](https://mfahsold.github.io/lixity/USAGE.md)
 - [PDF export options and limits](https://mfahsold.github.io/lixity/USAGE.md#lixity-pdf)
 - [JSON, Python and HTTP contracts](https://mfahsold.github.io/lixity/AGENTS.md)

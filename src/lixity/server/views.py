@@ -30,7 +30,7 @@ from ..publication import load_publication
 from ..scenes import scene_report_for_display
 from ..showing import showing_report
 from ..style_fingerprint import FingerprintThresholds
-from ..ui import render_dashboard
+from ..ui import render_analysis
 from .constants import NATIVE_UI_ACTIONS
 from .pdf_context import manuscript_pdf_token, project_settings_token, research_context_token
 
@@ -127,12 +127,19 @@ def build_server_dashboard(
         identity_settings = load_project_config(Path(source_input).parent)
     if identity_settings_override is not None:
         identity_settings = {**identity_settings, **identity_settings_override}
+    config, resolved = resolve_document_config(text, language, project_config=settings)
+    status_labels = resolved.labels
+
+    def _status_text(key: str, **values: Any) -> str:
+        template = status_labels.get(key) or ""
+        return template.format(**values) if template else key
+
     try:
         doc_title = project_title(source_input, text, identity_settings, title) if source_input else (
-            title or identity_settings.get("title") or ("No Project Loaded" if language != "de" else "Kein Projekt geladen")
+            title or identity_settings.get("title") or _status_text("status_no_project")
         )
     except ValueError:
-        doc_title = Path(source_input).stem if source_input else "No Project Loaded"
+        doc_title = Path(source_input).stem if source_input else _status_text("status_no_project")
     publication_error = ""
     try:
         publication_values: Mapping[str, Any] = load_publication(identity_settings).model_dump()
@@ -148,12 +155,11 @@ def build_server_dashboard(
     identity_check = manuscript_identity_check(
         text if manuscript_readable else None, doc_title, raw_author,
     )
-    config, resolved = resolve_document_config(text, language, project_config=settings)
     resolved_thresholds = thresholds or resolve_thresholds(project_config=settings)
 
     analysis = analyze_document(text, config, resolved_thresholds)
     paragraphs, chapters = analysis.paragraphs, analysis.chapters
-    metrics, fingerprint = analysis.metrics, analysis.fingerprint
+    metrics = analysis.metrics
     markers = list_markers(text) if text else []
 
     artifacts = collect_artifacts(exports_dir) if exports_dir else []
@@ -164,41 +170,38 @@ def build_server_dashboard(
             "key": "manuscript",
             "state": "error" if is_missing else ("warn" if is_empty and manuscript_name else ("ok" if manuscript_name else "unknown")),
             "detail": (
-                f"{manuscript_name} ({'file missing' if resolved.key != 'de' else 'Datei nicht gefunden'})"
+                f"{manuscript_name} ({_status_text('status_missing')})"
                 if is_missing
                 else (
-                    f"{manuscript_name} ({'empty' if resolved.key != 'de' else 'leer'})"
+                    f"{manuscript_name} ({_status_text('status_empty')})"
                     if is_empty and manuscript_name
-                    else (manuscript_name or ("none loaded" if resolved.key != "de" else "kein Manuskript geladen"))
+                    else (manuscript_name or _status_text("status_none_loaded"))
                 )
             ),
         },
         {
             "key": "analysis",
             "state": "ok" if chapters else "warn",
-            "detail": f"{len(chapters)} chapters · {len(paragraphs)} paragraphs · {resolved.name}"
-            if resolved.key != "de"
-            else f"{len(chapters)} Kapitel · {len(paragraphs)} Absätze · {resolved.name}",
+            "detail": _status_text("status_analysis_counts", chapters=len(chapters),
+                                   paragraphs=len(paragraphs), language=resolved.name),
         },
         {
             "key": "exports",
             "state": "ok" if artifacts else "warn",
-            "detail": f"{len(artifacts)} files"
-            if resolved.key != "de"
-            else f"{len(artifacts)} Dateien",
+            "detail": _status_text("status_exports_counts", count=len(artifacts)),
         },
         {
             "key": "markers",
             "state": "warn" if any(m.kind for m in markers) else "ok",
-            "detail": f"{sum(1 for m in markers if m.kind)} open"
-            if resolved.key != "de"
-            else f"{sum(1 for m in markers if m.kind)} offen",
+            "detail": _status_text("status_markers_open", count=sum(1 for m in markers if m.kind)),
         },
     ]
 
-    html_doc = render_dashboard(
-        chapters,
-        paragraphs,
+    html_doc = render_analysis(
+        analysis,
+        resolved,
+        title=doc_title,
+        flag_min_severity=resolved_thresholds.flag_min_severity,
         status=status_items,
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, names, config) if names else None,
@@ -207,20 +210,13 @@ def build_server_dashboard(
         showing=showing_report(text, config, metrics=metrics).to_dict(),
         scenes=scene_report_for_display(text, config, settings.get("scene_analysis"),
                                         premeasured_chapters=metrics.chapters),
-        metrics=metrics,
-        fingerprint=fingerprint,
         markers=markers,
         artifacts=artifacts,
-        title=doc_title,
-        labels=resolved.labels,
-        language_name=resolved.name,
-        language_key=resolved.key,
         tense_available=bool(resolved.praesens_regex and resolved.praeteritum_regex),
         controls=controls,
         api_base=api_base,
         manuscript_name=manuscript_name,
         current_language=language,
-        flag_min_severity=resolved_thresholds.flag_min_severity,
         enabled_actions=NATIVE_UI_ACTIONS,
         nda_project_name=doc_title if source_input else title or (
             os.path.splitext(manuscript_name)[0] if manuscript_name and not is_missing else ""

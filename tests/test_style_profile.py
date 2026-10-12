@@ -629,5 +629,25 @@ def test_auto_language_resolves_with_sample_text_in_profiler_and_showing():
     assert profiler.lang.key == "de"
     assert showing_report(text, CorpusConfig(language="auto")).language == "de"
 
+def test_configured_override_patterns_apply_in_a_nondefault_language():
+    from lixity.analyzer import CorpusAnalyzer
+
+    config = CorpusConfig(
+        language="fr",
+        passive_regex=r"\bété\b",
+        adjective_regex=r"\w+ieux\b",
+        dialogue_regex=r"\[([^\]]+)\]",
+        first_person_starters=["je"],
+    )
+    metrics = CorpusAnalyzer(config).analyze_text(
+        "## Un\n\n[Bonjour] Le ciel a été vieux et curieux. Je reste.\n"
+    )
+    chapter = metrics.chapters[0]
+    assert chapter.passive_density > 0
+    assert chapter.adjective_density > 0
+    assert chapter.dialog_pct > 0
+    assert chapter.first_person_start_rate > 0
+
+
 if __name__ == "__main__":
     unittest.main()

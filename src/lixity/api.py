@@ -22,7 +22,7 @@ from .pipeline import (
 )
 from .status import SCHEMA_VERSION_STYLE
 from .style_fingerprint import FingerprintThresholds as FingerprintThresholds
-from .ui import render_dashboard
+from .ui import render_analysis
 
 PROFILE_KEYS = tuple(LANGUAGE_PROFILES)
 
@@ -299,19 +299,14 @@ def dashboard(
 
     marker_items = list_markers(text)
     from .scenes import scene_report_for_display
-    return render_dashboard(
-        analysis.chapters,
-        analysis.paragraphs,
-        metrics=analysis.metrics,
-        fingerprint=analysis.fingerprint,
+    return render_analysis(
+        analysis,
+        resolved,
+        title=title,
+        flag_min_severity=thresholds.flag_min_severity,
         scenes=scene_report_for_display(text, config, (project_config or {}).get("scene_analysis"),
                                         premeasured_chapters=analysis.metrics.chapters),
-        title=title,
-        labels=resolved.labels,
-        language_name=resolved.name,
-        language_key=resolved.key,
         markers=marker_items if marker_items else None,
-        flag_min_severity=thresholds.flag_min_severity,
     )
 
 

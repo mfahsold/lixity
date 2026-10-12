@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import os
 import socket
-import sys
 import webbrowser
 from collections.abc import Callable, Mapping
 from http.server import ThreadingHTTPServer
@@ -12,7 +11,7 @@ from socketserver import TCPServer
 from typing import Any
 
 from ..style_fingerprint import FingerprintThresholds
-from ..workspace import discover
+from ..workspace import ProjectTarget, resolve_project_target
 from .constants import DEFAULT_HOST, DEFAULT_PORT
 from .handler import LixityServerHandler
 
@@ -38,6 +37,7 @@ def run_server(
     open_browser: bool = False,
     research_dir: str | None = None,
     project_open_overrides: Mapping[str, Any] | None = None,
+    announce: bool = False,
     debug: bool = False,
     on_ready: Callable[[], None] | None = None,
 ) -> None:
@@ -51,46 +51,28 @@ def run_server(
         _probe.settimeout(0.5)
         _in_use = _probe.connect_ex((host, port)) == 0
     if _in_use:
-        print(
-            f"[ERR] Port {port} is already in use.\n"
+        raise RuntimeError(
+            f"Port {port} is already in use.\n"
             f"      If Lixity is already running, open http://{host}:{port}/ in your browser.\n"
             f"      To start on a different port:  lixity serve --port <PORT>\n"
             f"      To stop an existing instance:  kill $(lsof -ti :{port})  # macOS/Linux\n"
-            f"                                     Stop-Process -Id (Get-NetTCPConnection -LocalPort {port}).OwningProcess  # Windows",
-            file=sys.stderr,
+            f"                                     Stop-Process -Id (Get-NetTCPConnection -LocalPort {port}).OwningProcess  # Windows"
         )
-        sys.exit(1)
 
     is_debug = bool(debug or os.environ.get("LIXITY_DEBUG", "").lower() in ("1", "true", "yes"))
     source_input: str | None = None
     workspace_root: str = os.getcwd()
     exports_dir: str = os.path.join(workspace_root, "exports")
 
-    if not no_project and target_path:
-        target_abs = os.path.abspath(target_path)
-        if os.path.isfile(target_abs):
-            source_input = target_abs
-            workspace_root = os.path.dirname(target_abs)
-            exports_dir = os.path.join(workspace_root, "exports")
-        elif os.path.isdir(target_abs):
-            try:
-                ws = discover(root=target_abs)
-                source_input = ws.manuscript
-                workspace_root = ws.root
-                exports_dir = ws.exports_dir
-            except (FileNotFoundError, ValueError):
-                workspace_root = target_abs
-                exports_dir = os.path.join(workspace_root, "exports")
-                source_input = None
-    elif not no_project:
-        # Attempt ambient discovery in current working directory
+    if not no_project:
+        selector = target_path if target_path else workspace_root
         try:
-            ws = discover(root=workspace_root)
-            source_input = ws.manuscript
-            workspace_root = ws.root
-            exports_dir = ws.exports_dir
+            target = resolve_project_target(selector, empty="allow")
         except (FileNotFoundError, ValueError):
-            source_input = None
+            target = ProjectTarget(root=os.getcwd())
+        source_input = target.manuscript
+        workspace_root = target.root
+        exports_dir = os.path.join(workspace_root, "exports")
 
     if not no_project:
         os.makedirs(exports_dir, exist_ok=True)
@@ -115,12 +97,13 @@ def run_server(
     info = LixityServerHandler.dashboard_info
     debug_tag = " (debug mode active)" if is_debug else ""
 
-    print(
-        f"[OK] Lixity server running: {url}{debug_tag}\n"
-        f"     {info.get('chapters')} chapters · {info.get('paragraphs')} paragraphs · "
-        f"{info.get('artifacts')} artifacts (profile: {info.get('language')})\n"
-        f"     Stop with Ctrl+C"
-    )
+    if announce:
+        print(
+            f"[OK] Lixity server running: {url}{debug_tag}\n"
+            f"     {info.get('chapters')} chapters · {info.get('paragraphs')} paragraphs · "
+            f"{info.get('artifacts')} artifacts (profile: {info.get('language')})\n"
+            f"     Stop with Ctrl+C"
+        )
 
     if open_browser:
         webbrowser.open(url)
@@ -130,6 +113,7 @@ def run_server(
             on_ready()
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n[OK] Lixity server stopped.")
+        if announce:
+            print("\n[OK] Lixity server stopped.")
     finally:
         server.server_close()

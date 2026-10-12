@@ -7,7 +7,6 @@ import shutil
 import socket
 import tempfile
 import unittest
-from contextlib import redirect_stderr
 from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import quote
@@ -481,18 +480,16 @@ class TestLixityServer(unittest.TestCase):
 
             # Prove the probe is what aborts: setup must not have run yet.
             with (
-                patch("lixity.server.runtime.discover") as discover,
+                patch("lixity.server.runtime.resolve_project_target") as resolve,
                 patch("lixity.server.runtime.os.makedirs") as makedirs,
-                self.assertRaises(SystemExit) as raised,
-                redirect_stderr(io.StringIO()) as stderr,
+                self.assertRaises(RuntimeError) as raised,
             ):
                 run_server(host="127.0.0.1", port=busy_port, no_project=True)
 
-            self.assertEqual(raised.exception.code, 1)
-            message = stderr.getvalue()
+            message = str(raised.exception)
             self.assertIn(f"Port {busy_port} is already in use", message)
             self.assertIn("--port", message)
-            discover.assert_not_called()
+            resolve.assert_not_called()
             makedirs.assert_not_called()
 
     def test_research_record_and_history_routes_forward_pinned_revision(self):

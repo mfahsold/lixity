@@ -25,7 +25,7 @@ from .pipeline import (
 from .project_identity import project_title
 from .scenes import scene_report_for_display
 from .style_fingerprint import FingerprintThresholds
-from .ui import render_dashboard
+from .ui import render_analysis
 from .workspace import discover
 
 EXIT_OK = 0
@@ -873,22 +873,17 @@ def _cmd_build(args: argparse.Namespace) -> int:
         f"{workspace.slug}_report.md": ReportFormatter.format_markdown_report(
             metrics, labels=resolved.labels, language_key=resolved.key
         ),
-        f"{workspace.slug}_dashboard.html": render_dashboard(
-            chapters,
-            paragraphs,
-            metrics=metrics,
-            fingerprint=fingerprint,
+        f"{workspace.slug}_dashboard.html": render_analysis(
+            analysis,
+            resolved,
+            title=title,
+            flag_min_severity=fp_thresholds.flag_min_severity,
             scenes=scene_report_for_display(
                 text,
                 config,
                 args._project_config.get("scene_analysis"),
                 premeasured_chapters=metrics.chapters,
             ),
-            title=title,
-            labels=resolved.labels,
-            language_name=resolved.name,
-            language_key=resolved.key,
-            flag_min_severity=fp_thresholds.flag_min_severity,
         ),
     }
 
@@ -1286,6 +1281,7 @@ def main(argv: list[str] | None = None) -> int:
                 research_dir=args.research_project,
                 project_open_overrides=project_open_overrides,
                 debug=args.debug,
+                announce=True,
                 on_ready=managed.ready if managed is not None else None,
             )
             return EXIT_OK
@@ -1408,8 +1404,6 @@ def main(argv: list[str] | None = None) -> int:
     fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
     analysis = analyze_document(text, config, fp_thresholds)
     metrics = analysis.metrics
-    paragraphs, chapters = analysis.paragraphs, analysis.chapters
-    fingerprint = analysis.fingerprint
     from .characters import presence_report
     from .dialogue import dialogue_report
 
@@ -1421,11 +1415,11 @@ def main(argv: list[str] | None = None) -> int:
     except ValueError as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
         return EXIT_ERROR
-    html = render_dashboard(
-        chapters,
-        paragraphs,
-        metrics=metrics,
-        fingerprint=fingerprint,
+    html = render_analysis(
+        analysis,
+        resolved,
+        title=title,
+        flag_min_severity=fp_thresholds.flag_min_severity,
         scenes=scene_report_for_display(
             text,
             config,
@@ -1434,11 +1428,6 @@ def main(argv: list[str] | None = None) -> int:
         ),
         dialogue=dialogue_report(text, config).to_dict(),
         characters=presence_report(text, names, config) if names else None,
-        title=title,
-        labels=resolved.labels,
-        language_name=resolved.name,
-        language_key=resolved.key,
-        flag_min_severity=fp_thresholds.flag_min_severity,
     )
     output = args.output or "lixity-dashboard.html"
     try:

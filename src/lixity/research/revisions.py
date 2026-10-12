@@ -24,6 +24,7 @@ from .models import (
     reference,
 )
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot
+from .sections import _section_spans, _section_subtree_end, update_section
 
 Authored = Dossier | Claim | ClaimRelation | EvidenceLink | ManuscriptClaimLink | Decision
 KINDS: dict[str, type[Authored]] = {
@@ -429,7 +430,6 @@ def prepare_dossier_section(
     section: str, content: str, resolutions: Mapping[str, str] | None = None,
 ) -> dict[str, Any]:
     """Reconcile a selected section without replacing unrelated current prose."""
-    from .api import _section_spans, _section_subtree_end, update_section
 
     if type(base_revision) is not int or base_revision < 1:
         raise ResearchError("Base revision must be a positive integer")

@@ -189,7 +189,7 @@ server.serve_forever()
     await expect(page.locator('#open-project-chooser')).not.toBeVisible();
     await expect(page.locator('#open-proj-path')).toHaveValue(path.join(fixture.project, 'manuscript.md'));
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
-    await expect(page.locator('#r-active-root')).toContainText(fixture.project);
+    await expect(page.locator('#r-active-root')).toHaveAttribute('title', fixture.project);
     await page.locator('#tab-view-analysis').click();
     const consistencyTile = page.locator('.kpi').filter({has: page.locator('[data-help]')}).filter({hasText: 'Consistency'}).first();
     await expect(consistencyTile).toContainText('–');
@@ -257,6 +257,7 @@ server.serve_forever()
       '/api/research-zotero-ingest', '/api/research-zotero']);
     assert.equal(fs.readFileSync(path.join(fixture.project, 'manuscript.md'), 'utf8'), '');
     await expect(page.locator('#r-active-root')).toContainText('1 sources, 1 dossiers, 0 claims, 0 decisions');
+    await expect(page.locator('#r-active-root')).toContainText(path.basename(fixture.project), 'The active root stays readable as its folder name');
     await expect(page.locator('#research-init-box')).not.toBeVisible();
     assert.equal(await page.locator('.research-tab-pane:visible').count(), 1);
     const sourceBeforeReopen = await (await page.request.get(fixture.url + '/api/research/sources')).json();
@@ -277,7 +278,7 @@ server.serve_forever()
     await expect(page.locator('#open-proj-path')).toHaveValue(fixture.project);
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
     await expect(page.locator('#modal-project-open')).not.toBeVisible();
-    await expect(page.locator('#r-active-root')).toContainText(fixture.project);
+    await expect(page.locator('#r-active-root')).toHaveAttribute('title', fixture.project);
     await page.locator('#tab-view-research').click();
     const sourceAfterReopen = await (await page.request.get(fixture.url + '/api/research/sources')).json();
     assert.deepEqual(sourceAfterReopen.sources, sourceBeforeReopen.sources);
@@ -916,7 +917,7 @@ server.serve_forever()
     await expect(page.locator('#open-project-chooser-path')).toHaveText(fixture.researchOnly);
     await page.locator('#open-project-chooser-select-folder').click();
     await Promise.all([page.waitForNavigation(), page.locator('#btn-submit-open-project').click()]);
-    await expect(page.locator('#r-active-root')).toContainText(fixture.researchOnly);
+    await expect(page.locator('#r-active-root')).toHaveAttribute('title', fixture.researchOnly);
     await page.locator('#tab-view-research').click();
     await expect(page.locator('#research-init-box')).not.toBeVisible();
     assert.equal((await (await page.request.get(fixture.url + '/api/research/status')).json()).initialized, true);
@@ -971,7 +972,7 @@ server.serve_forever()
     await expect(page.locator('#research-sources-list')).toContainText('Scratch source');
     await page.locator('[data-research-detail="source"]').first().click();
     await expect(page.locator('#research-sources-list')).toContainText('https://example.org/source?a=1&b=2');
-    await expect(page.locator('#r-active-root')).toContainText(scratchProject);
+    await expect(page.locator('#r-active-root')).toHaveAttribute('title', scratchProject);
     // A fully mapped archive retains evidence access while Zotero is offline.
     execFileSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
 import sys

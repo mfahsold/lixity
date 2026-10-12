@@ -22,7 +22,7 @@ from ..config import (
 )
 from ..research import api as research_api
 from ..research.repository import ResearchError
-from ..workspace import discover
+from ..workspace import resolve_project_target
 from ..workspace_labels import WORKSPACE_LABELS
 from ._base import ResponseMixin
 from .constants import LANGUAGE_CHOICES
@@ -274,27 +274,14 @@ class ProjectRoutesMixin(ResponseMixin):
             return
 
         try:
-            if target_path.is_file():
-                if target_path.suffix.lower() not in {".md", ".markdown", ".txt"}:
-                    raise ValueError(
-                        "Unsupported manuscript file type (use .md, .markdown, or .txt)"
-                    )
-                ws_root = str(target_path.parent)
-                manuscript = str(target_path)
-            elif target_path.is_dir():
-                try:
-                    ws = discover(root=str(target_path))
-                except FileNotFoundError:
-                    if not (target_path / "research").is_dir():
-                        raise
-                    research_api.list_sources(target_path)
-                    ws_root = str(target_path)
-                    manuscript = None
-                else:
-                    ws_root = ws.root
-                    manuscript = ws.manuscript
-            else:
-                raise ValueError("Project path must be a folder or manuscript file")
+            if target_path.is_file() and target_path.suffix.lower() not in {".md", ".markdown", ".txt"}:
+                raise ValueError(
+                    "Unsupported manuscript file type (use .md, .markdown, or .txt)"
+                )
+            target = resolve_project_target(target_path, empty="research")
+            ws_root, manuscript = target.root, target.manuscript
+            if target.research_only:
+                research_api.list_sources(target_path)
 
             settings = load_project_config(ws_root)
             overrides = self.project_open_overrides

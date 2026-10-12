@@ -15,7 +15,8 @@ from typing import Any
 from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
 from ..format import pct as format_pct
-from ..pipeline import paragraph_identity
+from ..language import ResolvedLanguage
+from ..pipeline import DocumentAnalysis, paragraph_identity
 from ..status import FLAG_MIN_SEVERITY
 from ..style_fingerprint import (
     FEATURES,
@@ -72,6 +73,34 @@ _JS = "\n".join(
     (_ASSET_DIR / name).read_text(encoding="utf-8")
     for name in ("dashboard.js", "dossier-images.js", "style-space.js", "workspace-reader.js", "manuscript-links.js")
 )
+
+
+def render_analysis(
+    analysis: DocumentAnalysis,
+    resolved: ResolvedLanguage,
+    *,
+    title: str,
+    flag_min_severity: int,
+    **options: Any,
+) -> str:
+    """Render one ``analyze_document`` result through the shared wiring.
+
+    Centralises the chapters/paragraphs/metrics/fingerprint/labels/identity
+    arguments every dashboard surface passes; surface-specific options stay in
+    ``options``.
+    """
+    return render_dashboard(
+        analysis.chapters,
+        analysis.paragraphs,
+        metrics=analysis.metrics,
+        fingerprint=analysis.fingerprint,
+        title=title,
+        labels=resolved.labels,
+        language_name=resolved.name,
+        language_key=resolved.key,
+        flag_min_severity=flag_min_severity,
+        **options,
+    )
 
 
 def render_dashboard(
@@ -281,10 +310,6 @@ def render_dashboard(
         parts.append(
             f'<button type="button" class="ctl" id="welcome-show" aria-controls="welcome-hero" aria-expanded="false"{show_guidance_hidden}>{L("welcome_show")}</button>'
         )
-        if manuscript_name:
-            parts.append(
-                f'<span class="ctl-note">{L("current_manuscript")}: <strong>{esc(manuscript_name)}</strong></span>'
-            )
         parts.append("</div>")
         if allowed_actions is not None and "manuscript-pdf" in allowed_actions:
             parts.append(manuscript_pdf_controls(
@@ -425,7 +450,7 @@ def render_dashboard(
             '<div class="view-pane" id="view-pane-project" data-view-pane="project" role="tabpanel" aria-labelledby="tab-view-project">'
         )
         parts.append('<section class="panel controls" id="controls">')
-        parts.append(f"<h2>{L('controls')}</h2>")
+        parts.append(f"<h2>{L('workspace_project')}</h2>")
 
         parts.append(
             settings_form(
@@ -615,14 +640,18 @@ def render_dashboard(
             f'<div class="view-pane{" active" if default_view == "analysis" else ""}" id="view-pane-analysis" data-view-pane="analysis" role="tabpanel" aria-labelledby="tab-view-analysis">'
         )
 
+    reader_controls = ""
     if reader_enabled and has_chapters:
+        reader_controls = (
+            '<div class="reader-controls">'
+            '<button type="button" class="ctl" id="workspace-reader-toggle" '
+            'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
+            f'{L("reader_toggle")}</button><p class="ctl-note">'
+            f'{L("reader_hint") if manuscript_pdf_token else L("reader_unavailable")}</p></div>'
+        )
         parts.append(
             '<section class="workspace-reader" id="workspace-reader" '
             f'data-project-token="{esc(manuscript_pdf_token)}">'
-            '<div class="workspace-reader-bar">'
-            '<button type="button" class="ctl" id="workspace-reader-toggle" '
-            'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
-            f'{L("reader_toggle")}</button><p class="ctl-note">{L("reader_hint") if manuscript_pdf_token else L("reader_unavailable")}</p></div>'
             '<div class="workspace-reader-layout" id="workspace-reader-layout">'
             '<aside class="panel workspace-reader-panel" id="workspace-reader-panel" '
             'aria-labelledby="workspace-reader-title" hidden>'
@@ -737,6 +766,11 @@ def render_dashboard(
     )
     parts.append("</span>")
     parts.append(f'<a class="totop" href="#top">↑ {L("top")}</a>')
+    if reader_controls:
+        parts.append(reader_controls)
+    parts.append(
+        f'<p class="ctl-note toolbar-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>'
+    )
     parts.append("</div>")
 
     if controls:
@@ -764,9 +798,6 @@ def render_dashboard(
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
 
-    parts.append(
-        f'<p class="ctl-note" id="paragraph-metrics-note">{L("paragraph_metrics_note")}</p>'
-    )
 
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}

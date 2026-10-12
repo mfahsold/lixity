@@ -148,7 +148,13 @@ def _jpeg_dimensions(content: bytes) -> tuple[int, int]:
 
 
 def markdown_code_mask(body: str, *, inline: bool = True) -> str:
-    """Mask code while preserving line breaks and offsets; no Markdown rendering."""
+    """Mask code while preserving line breaks and offsets; no Markdown rendering.
+
+    The browser resolver in ``ui/assets/dossier-images.js`` mirrors this
+    specification (tilde fences, indented code, equal-length inline backtick
+    runs, escaped literals); ``tests/browser/dossier-images.cjs`` and
+    ``tests/test_research_images.py`` pin the same cases.
+    """
     chars = list(body)
     fence: tuple[str, int] | None = None
     offset = 0

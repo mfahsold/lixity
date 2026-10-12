@@ -15,6 +15,26 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- Public documentation and Pages carry the complete social/SEO head contract:
+  Open Graph and Twitter images and titles on every page, per-page
+  `TechArticle`/`SoftwareApplication` JSON-LD, refreshed sitemap dates and the
+  read-only example named in `llms.txt`. `tests/test_pages.py` enforces the
+  contract for every staged page.
+- Cohesion pass on the native workspace: the dossier reading control and the
+  measurement-note line join the reading toolbar, the project bar no longer
+  repeats the manuscript name already shown in the status strip, the project
+  panel title mirrors its navigation label, the research header shows the
+  archive folder name with the full path as a tooltip, and the Zotero capture
+  consent has its own label instead of duplicating the local-source consent.
+- Project selection uses one resolver (`workspace.resolve_project_target`) for
+  the foreground server, the open-project route and the service scope;
+  `research/sections.py` owns the ATX section spans and edits (the research
+  facade re-exports them, removing the deferred reverse imports);
+  `run_server` raises on an occupied port and prints only when the CLI passes
+  `announce=True`.
+- Server status details and the no-project title come from the shared label
+  packs in all seven languages, and every dashboard surface renders through
+  `ui.render_analysis` with one labels/identity/metrics wiring.
 - Tense heuristics use whole-word stop lists and curated noun exclusions:
   regular English `-ed` past of listed bases counts again (Pride and Prejudice
   +7 tokens), German `-tet` forms and noun confusions no longer count as past

@@ -2862,11 +2862,14 @@ async function refreshResearchProjectInfo() {
     zoteroProjectId = status.project_id || null;
   }
   if (activeRootEl && status && status.ok && status.project_root) {
+    var rootPath = String(status.project_root);
+    var rootName = rootPath.split(/[\\/]/).filter(Boolean).pop() || rootPath;
     activeRootEl.className = "ctl-note";
-    activeRootEl.textContent = uiLabel("research_project") + " " + status.project_root;
+    activeRootEl.title = rootPath;
+    activeRootEl.textContent = uiLabel("research_project") + " " + rootName;
     if (status.initialized) {
       activeRootEl.textContent = uiFormat("research_project_summary", {
-        root: status.project_root,
+        root: rootName,
         sources: status.sources_count || 0,
         dossiers: status.dossiers_count || 0,
         claims: status.claims_count || 0,

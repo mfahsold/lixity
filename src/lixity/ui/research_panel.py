@@ -83,7 +83,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'<input class="ctl" id="r-zotero-query" aria-label="{L("research_search_query")}" placeholder="{L("research_search_query")}" style="flex:1;min-width:0;"/>')
     parts.append(f'<button type="button" class="ctl primary" id="r-zotero-browse">{L("zotero_browse")}</button>')
     parts.append('</div>')
-    parts.append(f'<label><input type="checkbox" id="r-zotero-retention"/> {L("research_retention")}</label>')
+    parts.append(f'<label><input type="checkbox" id="r-zotero-retention"/> {L("research_retention_zotero")}</label>')
     parts.append('<div id="r-zotero-results" aria-live="polite"></div></div>')
     parts.append('<div id="r-local-import">')
 
