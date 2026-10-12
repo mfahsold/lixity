@@ -248,8 +248,11 @@ async function restoreFileReads(page) {
       assert.ok(await page.locator('#modal-project-create').isVisible());
       assert.equal(await page.locator('#tab-btn-import').getAttribute('aria-selected'), 'true');
       assert.ok(await page.locator('#import-preview-box').isVisible());
+      assert.ok((await page.locator('#modal-project-create .modal-intro').innerText()).length > 40, 'The create dialog explains its scope in one line');
+      assert.equal(await page.locator('#import-proj-author').isVisible(), true, 'The import dialog offers the optional author name');
       assert.equal(await page.locator('#import-proj-lang').inputValue(), 'en', 'Import starts with the current analysis language');
       await page.locator('#import-proj-title').fill('Synthetic import review');
+      await page.locator('#import-proj-author').fill('Synthetic Author');
       await page.locator('#import-proj-lang').selectOption('fr');
       await page.locator('#import-project-options > summary').click();
       await page.locator('#import-proj-path').fill('/tmp/synthetic-review-project');
@@ -297,6 +300,7 @@ async function restoreFileReads(page) {
     // A new file choice cannot replace or unlock an import already being saved.
     let releaseCreate;
     pendingCreate = new Promise(resolve => {releaseCreate = resolve;});
+    await page.locator('#import-proj-author').fill('Synthetic Author');
     await Promise.all([page.waitForRequest(request => request.url().endsWith('/api/project-create')), page.locator('#btn-submit-import-project').click()]);
     assert.equal(await page.locator('#btn-submit-import-project').isDisabled(), true);
     await page.locator('#import-file-input').setInputFiles({name: 'pending-replacement.md', mimeType: 'text/markdown', buffer: Buffer.from(contentB)});
@@ -305,6 +309,7 @@ async function restoreFileReads(page) {
     assert.equal(await page.evaluate(() => importedFileContent), contentC);
     assert.equal(projectSubmissions.length, 1);
     assert.equal(projectSubmissions[0].content, contentC);
+    assert.equal(projectSubmissions[0].author_name, 'Synthetic Author', 'The optional author name is submitted with the project');
     releaseCreate();
     pendingCreate = null;
     await page.waitForFunction(() => document.querySelector('#import-project-status').textContent.includes('Synthetic import rejected'));

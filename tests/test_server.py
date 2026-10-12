@@ -1088,6 +1088,7 @@ class TestLixityServer(unittest.TestCase):
                     {
                         "title": "Die Chroniken von Nebelwald",
                         "language": "de",
+                        "author_name": "Synthetic Autor",
                         "path": str(proj_dir),
                         "template": "three_act",
                         "init_research": True,
@@ -1106,6 +1107,30 @@ class TestLixityServer(unittest.TestCase):
                 self.assertTrue((proj_dir / "manuscript.md").is_file())
                 self.assertTrue((proj_dir / "lixity.toml").is_file())
                 self.assertTrue((proj_dir / "research").is_dir())
+                self.assertIn(
+                    'author_name = "Synthetic Autor"',
+                    (proj_dir / "lixity.toml").read_text(encoding="utf-8"),
+                )
+
+                # An invalid author name is rejected before anything is written.
+                rejected_dir = Path(td) / "rejected-project"
+                invalid_payload = json.dumps(
+                    {
+                        "title": "Synthetic rejection",
+                        "language": "de",
+                        "author_name": "Two\nlines",
+                        "path": str(rejected_dir),
+                    }
+                )
+                status, body, _ = self.make_request(
+                    "/api/project-create",
+                    method="POST",
+                    body=invalid_payload,
+                    headers={"Content-Type": "application/json"},
+                )
+                self.assertEqual(status, 400)
+                self.assertFalse(json.loads(body)["ok"])
+                self.assertFalse(rejected_dir.exists())
 
                 ms_text = (proj_dir / "manuscript.md").read_text(encoding="utf-8")
                 self.assertIn("Erster Akt: Aufbruch", ms_text)

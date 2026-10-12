@@ -5150,11 +5150,14 @@ if (formImport) {
     var folder = pathEl ? pathEl.value.trim() : "";
     var researchEl = document.getElementById("import-proj-research");
     var initResearch = Boolean(researchEl && researchEl.checked);
+    var authorEl = document.getElementById("import-proj-author");
+    var author = authorEl ? authorEl.value.trim() : "";
 
     var submitBtn = document.getElementById("btn-submit-import-project");
     await submitProjectForm(formImport, "project-create", {
       title: title,
       language: lang,
+      author_name: author,
       path: folder,
       content: importedFileContent,
       init_research: initResearch
@@ -5178,11 +5181,14 @@ if (formCreate) {
     var template = templateEl ? templateEl.value : "minimal";
     var researchEl = document.getElementById("new-proj-research");
     var initResearch = Boolean(researchEl && researchEl.checked);
+    var authorEl = document.getElementById("new-proj-author");
+    var author = authorEl ? authorEl.value.trim() : "";
 
     var submitBtn = document.getElementById("btn-submit-create-project");
     await submitProjectForm(formCreate, "project-create", {
       title: title,
       language: lang,
+      author_name: author,
       path: folder,
       template: template,
       init_research: initResearch

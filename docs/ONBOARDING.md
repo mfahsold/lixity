@@ -77,9 +77,16 @@ Browsing or cancelling does not switch projects.
 
 **New Project → Import Manuscript** creates a separate project from a selected
 or dropped `.md`, `.markdown` or `.txt` file. It does not reopen the original
-folder or its research. Selecting a file opens its preview directly; you confirm the new
-project in the import dialog. **Start New Manuscript** creates a project from a
-template. The Research Novel template also initializes a research archive.
+folder or its research. Selecting a file opens its preview directly; the dialog
+explains the next step in one line and asks only for what it needs: the project
+title (prefilled from the first heading), the analysis language with its effect
+named, and an optional **Author name** used for PDF credits, the title page and
+the NDA. The project folder and the optional research archive stay under
+**Optional details** with sensible defaults. Nothing is uploaded or written
+outside the chosen folder. Confirm the new project in the import dialog.
+**Start New Manuscript** follows the same pattern: title, language, optional
+author, then the narrative template. The Research Novel template also
+initializes a research archive.
 
 An initialized research-only folder can be opened without a manuscript. Its
 sources and notes remain available; manuscript analysis and comparison need a

@@ -948,9 +948,16 @@ Browsing or cancelling does not switch projects.
 
 **New Project → Import Manuscript** creates a separate project from a selected
 or dropped `.md`, `.markdown` or `.txt` file. It does not reopen the original
-folder or its research. Selecting a file opens its preview directly; you confirm the new
-project in the import dialog. **Start New Manuscript** creates a project from a
-template. The Research Novel template also initializes a research archive.
+folder or its research. Selecting a file opens its preview directly; the dialog
+explains the next step in one line and asks only for what it needs: the project
+title (prefilled from the first heading), the analysis language with its effect
+named, and an optional **Author name** used for PDF credits, the title page and
+the NDA. The project folder and the optional research archive stay under
+**Optional details** with sensible defaults. Nothing is uploaded or written
+outside the chosen folder. Confirm the new project in the import dialog.
+**Start New Manuscript** follows the same pattern: title, language, optional
+author, then the narrative template. The Research Novel template also
+initializes a research archive.
 
 An initialized research-only folder can be opened without a manuscript. Its
 sources and notes remain available; manuscript analysis and comparison need a
@@ -6904,7 +6911,7 @@ changed selected context returns HTTP 409. Successful downloads use
 selection metadata; file edits alone do not create a content-version lock.
 
 - `GET /api/project-paths?path=<URL-encoded path>`: read-only browsing on the server computer. Omit `path` for the server user's home; a supported manuscript file lists its parent. Returns `{ok, path, parent, entries: [{name, path, kind}], truncated}`, where `kind` is `directory` or `manuscript`. Listings exclude hidden names, include at most 200 entries, and do not change the workspace. Use a typed path when a large listing is truncated. Host and Origin checks apply.
-- `POST /api/project-create`: `{"title": "...", "language": "de", "template": "three_act", "init_research": true}`
+- `POST /api/project-create`: `{"title": "...", "language": "de", "author_name": "...", "template": "three_act", "init_research": true}`. Optional `author_name` is validated with the shared author rules (single line, at most 500 characters, 400 on failure before any write) and is written into a newly created `lixity.toml`; an existing project config is never overwritten.
 - `POST /api/project-open`: `{"path": "/path/to/project/or/manuscript.md"}`; selects the existing archive, including a research-only folder. The response's `manuscript` is `null` when no manuscript exists.
   Since v0.3.0, custom/startup titles remain only for the same workspace. A
   different workspace uses its configuration/shared manuscript title resolution

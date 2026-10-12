@@ -1512,6 +1512,8 @@ dialog.lixity-modal::backdrop {
   outline: 2px solid var(--accent);
   outline-offset: 1px;
 }
+.modal-intro { margin: 0 0 .7rem; }
+.wizard-hint { display: block; margin-top: .25rem; font-size: .72rem; }
 .modal-tabs {
   display: flex;
   background: var(--bg);

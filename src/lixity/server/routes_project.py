@@ -18,6 +18,7 @@ from ..config import (
     load_project_config,
     prepare_project_settings,
     resolve_thresholds,
+    validate_author_name,
     validate_project_title,
 )
 from ..research import api as research_api
@@ -183,6 +184,15 @@ class ProjectRoutesMixin(ResponseMixin):
         if lang == "auto":
             lang = "en"
 
+        author_value = ""
+        author_input = payload.get("author_name")
+        if isinstance(author_input, str) and author_input.strip():
+            try:
+                author_value = validate_author_name(author_input)
+            except ValueError as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+                return
+
         folder_input = str(payload.get("path") or "").strip()
         if folder_input:
             target_path = Path(folder_input).expanduser().resolve()
@@ -231,9 +241,12 @@ class ProjectRoutesMixin(ResponseMixin):
 
         config_file = target_path / "lixity.toml"
         if not config_file.exists():
-            cfg_text = f'title = {json.dumps(title, ensure_ascii=False)}\nlanguage = {json.dumps(lang)}\n'
+            cfg_lines = [f'title = {json.dumps(title, ensure_ascii=False)}',
+                         f'language = {json.dumps(lang)}']
+            if author_value:
+                cfg_lines.append(f'author_name = {json.dumps(author_value, ensure_ascii=False)}')
             with contextlib.suppress(OSError):
-                config_file.write_text(cfg_text, encoding="utf-8")
+                config_file.write_text("\n".join(cfg_lines) + "\n", encoding="utf-8")
 
         if init_research:
             with contextlib.suppress(ResearchError, OSError, ValueError):
