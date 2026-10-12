@@ -398,11 +398,14 @@ suffix cues are not a full grammatical analysis. Rebuild older reports before
 comparing their nominal-style results with 2.3.0.
 
 Tense classification is a transparent heuristic, not a black box: curated
-high-frequency verb forms are counted per paragraph. A minority tense share of
-≥ 25 % marks a paragraph as `mixed`; a change of the dominant tense between
+high-frequency verb forms are counted per paragraph. `mixed` requires at least
+two markers per tense **and** a minority tense share of ≥ 25 %; the share
+alone does not qualify a paragraph. A change of the dominant tense between
 consecutive paragraphs is a `switch`. Severity levels `0`–`3` (from
 *unremarkable* to *strong friction*) prioritise what is worth a second look;
-the thresholds are injectable via `ProfileThresholds`.
+the exact truth table is documented in `docs/AGENTS.md` §3.5. Only
+`flag_min_severity` reaches the CLI/API/config surfaces; the other
+`ProfileThresholds` fields require direct `ParagraphProfiler` construction.
 
 ```bash
 lixity profile manuscript.md > profile.json
@@ -1120,7 +1123,7 @@ html = api.dashboard(text, language="de", title="My Manuscript", project_config=
 # 5. Work markers (editor-visible HTML comments)
 markers = api.markers(text)
 new_text, marker = api.add_marker(text, kind="pruefen", note="Tense check", line=42)
-updated_text, ok = api.resolve_marker(new_text, marker["id"])
+updated_text = api.resolve_marker(new_text, marker["id"])
 ```
 
 ### Low-Level Classes
@@ -1259,10 +1262,15 @@ or pass explicit CLI flags to ensure your intended parameters applied.
 | `praesens_regex` / `praeteritum_regex` | `None` | Tense markers. |
 | `dialogue_regex` | `None` | Quoted speech detection. |
 | `word_regex` | `None` | Tokenisation. |
+| `passive_regex` | `None` | Passive-voice markers; `None` = language profile. |
+| `nominal_regex` | `None` | Nominalisation cues; `None` = language profile. |
+| `adjective_regex` | `None` | Adjective cues; `None` = language profile. |
+| `first_person_starters` | `None` | First-person cue words; `None` = language profile. |
 
 All `None` patterns fall back to the curated defaults of the selected language
 profile in `lixity.language_data` — adding a language is a data-layer entry,
-not a code change.
+not a code change. `phrases` and `capabilities` are accepted for forward
+compatibility; the bundled engine does not interpret them.
 
 ### Publication settings
 

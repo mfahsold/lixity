@@ -89,7 +89,7 @@ class CorpusAnalyzer:
         self._praet_re = compile_pattern(self.lang.praeteritum_regex)
         self._filter_re = compile_pattern(self.lang.filter_verbs_regex)
         self._word_re = compile_word_pattern(self.lang.word_regex)
-        self._dialogue_re = re.compile(self.lang.dialogue_regex)
+        self._dialogue_re = compile_pattern(self.lang.dialogue_regex)
         # Style heuristics (self-calibrating house-style fingerprint)
         self._passive_re = compile_pattern(self.lang.passive_regex)
         self._nominal_re = compile_pattern(self.lang.nominal_regex)

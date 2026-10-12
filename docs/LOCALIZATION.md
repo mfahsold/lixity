@@ -15,6 +15,11 @@ Analysis language and report language are separate settings:
 | `LIXITY_LANG` | Selects CLI/report presentation independently of analysis. Message packs currently cover German and English. |
 | Dashboard language | Uses resources for all seven supported languages, including workspace and research controls. |
 
+Detection uses the text the caller supplies: `pipeline.resolve_document_config`
+resolves `auto` before analysis. Low-level `CorpusAnalyzer`/`ParagraphProfiler`
+calls resolve `auto` without a sample and fall back to `generic`, so resolve
+`auto` first (or pass a concrete key) before calling them directly.
+
 Research CLI help and errors are English; JSON keys are language-neutral.
 Sources, quotations, filenames, external metadata, claim titles and author
 decisions are preserved as entered. Localization does not translate or verify
@@ -58,7 +63,9 @@ heuristics, not a full grammatical parser. Dialect, historical spelling,
 code-switching and unusual vocabulary need separate evaluation.
 German and English default word patterns include precomposed accented words;
 they do not normalize Unicode or cover every combining-mark spelling. Explicit
-word patterns retain their own flags. Syllable calculation reuses word
+word patterns retain their own flags. Hyphenated compounds stay one token under
+the German and English defaults and split under the other five profiles;
+apostrophes remain word-internal there. Syllable calculation reuses word
 frequencies within a request, preserving the same heuristic values without a
 global cache.
 

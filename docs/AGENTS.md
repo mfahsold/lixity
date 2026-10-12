@@ -288,17 +288,20 @@ Prefer `fdr_flagged` over raw `deviations` for strong claims; read
 The dashboard resolves labels from shared packs; later packs override earlier
 ones; a missing key falls back to English and then to the key itself:
 
-1. `GUIDANCE_LABELS`, then `IDENTITY_LABELS` – interpretation and product identity
-2. `LABELS` – core UI terms (tense, severity, chapters, …)
-3. `METRIC_LABELS` – metric names and control labels
-4. `HELP_TEXTS` – tooltip texts (`help_*`)
-5. `GROUP_LABELS` – KPI group captions
-6. `LAYER_LABELS` – style-layer legend and guidance
-7. `UI_LABELS` – cross-cutting hints (load hint, short scale words)
-8. `WORKSPACE_LABELS` – project dialogs and interactive research controls
+1. `GUIDANCE_LABELS` – interpretation guidance
+2. `SCENE_LABELS` – scene and register panels
+3. `IDENTITY_LABELS` – product identity
+4. `LABELS` – core UI terms (tense, severity, chapters, …)
+5. `METRIC_LABELS` – metric names and control labels
+6. `HELP_TEXTS` – tooltip texts (`help_*`)
+7. `GROUP_LABELS` – KPI group captions
+8. `LAYER_LABELS` – style-layer legend and guidance
+9. `UI_LABELS` – cross-cutting hints (load hint, short scale words)
+10. `WORKSPACE_LABELS` – project dialogs and interactive research controls
 
-`tests/test_ui_contract.py` enforces that every key the renderer uses exists
-in all seven languages.
+`tests/test_ui_contract.py` checks a curated renderer key set plus the extracted
+`help_*` keys; `tests/test_localization.py` checks pack completeness, the
+`SCENE_LABELS` default fallback and the seven-locale workspace/research controls.
 
 ### 3.4 Dashboard interaction contract (for embedding and UI automation)
 
@@ -557,11 +560,13 @@ are quotation segments.
   observations. See [`METHODS.md`](METHODS.md) §4c and
   [`STABILITY.md`](STABILITY.md#structural-diagnostics).
 - **Tense severity (paragraphs)**: `classify_severity` scores a paragraph
-  0–3 (0 = consistent, 1 = mixed without switch, 2 = single switch,
-  3 = multiple switches / long mixed); only severity ≥
-  `FLAG_MIN_SEVERITY` (2) is *flagged* (`is_flagged`), drives the
-  “flagged” KPI and the `#flags` panel. Use `flagged_paragraphs()` for the
-  sorted list (severity desc, line asc) instead of re-implementing the cut.
+  0–3 with the default `ProfileThresholds()`: 3 = switch **and** mixed **and**
+  minority ≥ 3 markers; 2 = (switch and minority ≥ 2) or (mixed and
+  minority ≥ 3); 1 = switch or mixed; 0 = neither. Only severity ≥
+  `FLAG_MIN_SEVERITY` (2) is *flagged* (`is_flagged` is a derived Python
+  property, not a serialized paragraph field), drives the “flagged” KPI and
+  the `#flags` panel. Use `flagged_paragraphs()` for the sorted list
+  (severity desc, line asc) instead of re-implementing the cut.
 - **Caveats**: per-chapter TTR is length-dependent (compare Guiraud R or
   HD-D alongside it, with sampling context); Guiraud is also length-dependent.
   Density features are heuristic counts (suffix/marker
@@ -592,7 +597,7 @@ distance = api.showing(text, language="de")           # -> {"meta", "showing"}
 html = api.dashboard(text, language="de", title="…", project_config={})  # -> HTML string
 marker_list = api.markers(text)                       # -> list of active work markers
 new_text, m = api.add_marker(text, kind="pruefen", note="Verify tense", line=42)
-updated_text, ok = api.resolve_marker(new_text, m["id"])
+updated_text = api.resolve_marker(new_text, m["id"])
 info = api.about()                                    # languages, features, heuristics
 ```
 
@@ -604,6 +609,11 @@ untrusted evidence; a retained quotation is not a verified historical claim.
 
 ```python
 from lixity.research import api as research_api
+
+# Also public in the same facade: project_overview(root_path),
+# read_image(root_path, source_id, version_id), extract_sections(...),
+# update_section(...), list_evidence_links(...), ocr_status(probe=False),
+# ingest_checkpoint(...) and discard_ingest_checkpoint(...).
 
 # Initialize or inspect research project
 research_api.init(root_path, title="Archival Project", language="en")
@@ -856,6 +866,9 @@ manuscript and does not run a successful dashboard refresh.
 - `GET /api/research/sources` and `GET /api/research/dossiers`: lists; add `?id=...` for details.
 - `GET /api/research/claims`: claim list; `?claim_id=...` returns linked evidence and citations.
 - `GET /api/research/decisions`: author decision list.
+- `GET /api/research/matrix?format=json|md|csv`: decision-matrix export.
+- `GET /api/research/ocr-status`: configured OCR worker state; `?probe=1` adds a live test.
+- `GET /api/research/zotero-status`: local Zotero bridge readiness.
 
 **Since v3.0.0:**
 

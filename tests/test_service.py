@@ -319,3 +319,11 @@ def test_windows_exit_during_termination_uses_the_same_handle_and_only_accepts_k
     kernel.GetExitCodeProcess.side_effect = still_running
     with pytest.raises(service.ServiceError, match="Cannot terminate"):
         service._signal_process(12345, 15, "windows:42", "a" * 64)
+
+
+def test_systemd_unit_template_matches_the_managed_cli():
+    unit = (Path(__file__).resolve().parents[1] / "scripts" / "lixity.service").read_text(encoding="utf-8")
+    assert "Environment=LIXITY_PORT=8765" in unit
+    assert "ExecStart=%h/.local/bin/lixity serve --no-project --host 127.0.0.1 --port ${LIXITY_PORT}" in unit
+    assert "WantedBy=default.target" in unit
+    assert "NoNewPrivileges=true" in unit

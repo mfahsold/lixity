@@ -13,7 +13,12 @@ from typing import Any, ClassVar
 from urllib.parse import parse_qs, urlparse
 
 from ..research import api as research_api
-from .constants import MAX_IMAGE_PAYLOAD_BYTES, MAX_PAYLOAD_BYTES, MIME_TYPES
+from .constants import (
+    MAX_ARTIFACT_BYTES,
+    MAX_IMAGE_PAYLOAD_BYTES,
+    MAX_PAYLOAD_BYTES,
+    MIME_TYPES,
+)
 from .discovery import api_index
 from .routes_manuscript_research import ManuscriptResearchRoutesMixin
 from .routes_markers import MarkerRoutesMixin
@@ -182,6 +187,14 @@ class LixityServerHandler(
         real_exports = os.path.realpath(self.exports_dir)
         if not target.startswith(real_exports + os.sep) or not os.path.isfile(target):
             self._json({"ok": False, "message": "Artifact not found"}, 404)
+            return
+        try:
+            size = os.path.getsize(target)
+        except OSError:
+            self._json({"ok": False, "message": "Artifact not found"}, 404)
+            return
+        if size > MAX_ARTIFACT_BYTES:
+            self._json({"ok": False, "message": "Artifact exceeds the serving limit"}, 413)
             return
 
         ctype = MIME_TYPES.get(os.path.splitext(target)[1].lower(), "application/octet-stream")

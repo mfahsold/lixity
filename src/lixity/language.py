@@ -45,7 +45,6 @@ class LanguageProfile:
 
     key: str
     name: str
-    syllable_mode: str
     word_regex: str
     dialogue_regex: str
     praesens_regex: str
@@ -96,7 +95,6 @@ def _build_profiles() -> dict[str, LanguageProfile]:
         profiles[key] = LanguageProfile(
             key=key,
             name=data["name"],
-            syllable_mode=data["syllable_mode"],
             word_regex=data["word_regex"],
             dialogue_regex=data["dialogue_regex"],
             praesens_regex=data["praesens_regex"],

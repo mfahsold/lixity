@@ -2,7 +2,6 @@
 
 import math
 import re
-import statistics
 from collections.abc import Mapping, Sequence
 from typing import Any
 
@@ -10,7 +9,7 @@ from .analyzer import CorpusAnalyzer
 from .diversity import MIN_TOKENS_LD
 from .markdown_parser import split_chapters, split_scenes
 from .models import ChapterMetrics, CorpusConfig
-from .style_fingerprint import FEATURES
+from .style_fingerprint import FEATURES, mad, median
 
 
 def scene_report_for_display(
@@ -133,10 +132,10 @@ def scene_report(
         baselines[group] = {}
         for field, _, _ in FEATURES:
             values = [item["features"][field] for item in members if item["features"][field] is not None]
-            centre = statistics.median(values) if len(values) >= 2 else None
+            centre = median(values) if len(values) >= 2 else None
             baselines[group][field] = {
                 "n": len(values), "median": centre,
-                "mad": statistics.median(abs(value - centre) for value in values) if centre is not None else None,
+                "mad": mad(values, centre) if centre is not None else None,
             }
     return {"items": items, "baselines": baselines, "explicit_scene_breaks": breaks,
             "scenes_are_chapters": breaks == 0,

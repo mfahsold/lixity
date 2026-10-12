@@ -4,7 +4,6 @@ Classifies narrative tense (present / past / mixed / neutral), detects tense fri
 and switches between consecutive paragraphs, and tracks paragraph-level style densities.
 """
 
-import re
 from dataclasses import dataclass
 from typing import Any
 
@@ -173,8 +172,7 @@ class ParagraphProfiler:
         self.lang = resolve_language(self.config)
         self._praes = compile_pattern(self.lang.praesens_regex)
         self._praet = compile_pattern(self.lang.praeteritum_regex)
-        self._markers = re.compile(r"<!--\s*(PRÜFEN|SACHCHECK)\b")
-        self._dialogue = re.compile(self.lang.dialogue_regex)
+        self._dialogue = compile_pattern(self.lang.dialogue_regex)
         self._word = compile_word_pattern(self.lang.word_regex)
         self._appendix_title = self.config.appendix_marker.replace("##", "").strip()
         # Style densities per paragraph (house-style overlay, per 1,000 words)

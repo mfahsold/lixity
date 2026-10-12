@@ -254,7 +254,7 @@ class FingerprintThresholds:
     fdr_q: float = 0.05  # Benjamini-Hochberg / Benjamini-Yekutieli false-discovery rate
     fdr_method: str = "bh"  # "bh" (default) or "by" (arbitrary dependence)
     min_chapters: int = 2  # below this chapter count no baseline is derived
-    dim_score_threshold: float = 2.5  # |dimension score| from here: flagged on that axis
+    dim_score_threshold: float = DIM_SCORE_THRESHOLD  # |dimension score| from here: flagged
     flag_min_severity: int = 2  # paragraph severity floor for the flags panel (1|2|3)
 
     numeric_inputs: ClassVar[Mapping[str, ThresholdInputPolicy]] = MappingProxyType({
@@ -581,7 +581,7 @@ def mann_kendall(
     else:
         z = 0.0
 
-    p = math.erfc(abs(z) / math.sqrt(2.0))
+    p = normal_tail_probability(z)
     return (tau, s, p)
 
 

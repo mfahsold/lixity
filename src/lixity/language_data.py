@@ -410,7 +410,6 @@ LABELS: dict[str, dict[str, str]] = {
 PROFILE_DATA: dict[str, dict[str, Any]] = {
     "de": {
         "name": "Deutsch",
-        "syllable_mode": "de",
         "word_regex": r"\b[^\W_]+(?:[-_][^\W_]+)*\b",
         "dialogue_regex": r"[„»\"]([^“«\"]+)[“«\"]",
         "praesens_regex": (
@@ -633,7 +632,6 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "en": {
         "name": "English",
-        "syllable_mode": "en",
         "word_regex": r"\b[^\W_]+(?:['’-][^\W_]+)*\b",
         "dialogue_regex": r"[“\"]([^”\"]+)[”\"]",
         "praesens_regex": (
@@ -817,7 +815,6 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "fr": {
         "name": "Français",
-        "syllable_mode": "fr",
         "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
         "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
         "praesens_regex": (
@@ -935,7 +932,6 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "es": {
         "name": "Español",
-        "syllable_mode": "es",
         "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
         "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
         "praesens_regex": (
@@ -1058,7 +1054,6 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "it": {
         "name": "Italiano",
-        "syllable_mode": "it",
         "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
         "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
         "praesens_regex": (
@@ -1173,7 +1168,6 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "pt": {
         "name": "Português",
-        "syllable_mode": "pt",
         "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
         "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
         "praesens_regex": (
@@ -1292,7 +1286,6 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "nl": {
         "name": "Nederlands",
-        "syllable_mode": "nl",
         "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
         "dialogue_regex": r"[„\"]([^”\"]+)[”\"]",
         "praesens_regex": (
@@ -1386,7 +1379,6 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "generic": {
         "name": "Generic",
-        "syllable_mode": "generic",
         "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
         "dialogue_regex": r'[“”„«"]([^“”„«"]+)[“”„«"]',
         "praesens_regex": "",
@@ -4140,7 +4132,7 @@ STYLE_DATA: dict[str, dict[str, Any]] = {
 
 
 # Language-calibrated readability formulas (exact coefficients from the literature).
-# Flesch-type: score = constant - asl_coef * ASL - asw_coef * ASW (0–100, higher = easier).
+# Flesch-type: score = constant - asl_coef * ASL - asw_coef * ASW (unclipped; higher = easier).
 class ReadabilityFormula(TypedDict):
     """Coefficients of one language-calibrated Flesch-type formula."""
 

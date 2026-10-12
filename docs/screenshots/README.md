@@ -1,6 +1,6 @@
 # Product screenshots
 
-Browser captures of **v2.2.0**, taken on **9 October 2026**. The
+Browser captures of the maintained dashboard. The
 [project page](https://mfahsold.github.io/lixity/) introduces each feature with
 a selected image. Use the links below for related views and full-size images.
 
@@ -63,11 +63,11 @@ set `PLAYWRIGHT_MODULE=/absolute/path/to/playwright`. To choose a browser, set
 
 The generator reuses the analysis pipeline and research API with explicit default
 thresholds. Temporary HTML, synthetic responses and the capture manifest stay in
-ignored `.screenshots/`; browser actions use those fixtures. It creates no user
+ignored `.artifacts/screenshots/`; browser actions use those fixtures. It creates no user
 projects or stored agreements. Captures use fixed widths and reduced motion and fail
 on runtime errors, missing panels or mobile page overflow.
 
-Review the images before publishing. `.screenshots/capture-results.json` records
+Review the images before publishing. `.artifacts/screenshots/captures.json` records
 PNG dimensions; update the corresponding HTML image attributes if they change.
 Fonts and browser versions can affect pixel output. Use only reviewed synthetic
 or public-domain data for repository screenshots.

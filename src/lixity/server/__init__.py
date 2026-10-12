@@ -8,12 +8,16 @@ Module                 Responsibility
 =====================  =========================================================
 ``runtime``            Bind checks, project resolution, startup and shutdown
 ``handler``            Shared handler state, the route table and dispatch
-``_state``             Workspace state and ``refresh()`` — the only state writer
+``_state``             Workspace state plus shared dashboard-cache publication
 ``_base``              Response helpers plus the Host/Origin guards
 ``routes_project``     Browsing, creation, opening, loading and settings
 ``routes_research``    Sources, dossiers, claims, evidence, decisions, search
+``routes_manuscript_research``  Markdown-selection claim links and review
+``routes_pdf``         Manuscript PDF download composition
 ``routes_nda``         Project-owned NDA management
 ``routes_markers``     Inline author work markers
+``discovery``          Content-free API index assembly
+``pdf_context``        Opaque selected-context tokens
 ``views``              Dashboard rendering and artifact discovery
 ``constants``          Limits, defaults and MIME types
 =====================  =========================================================

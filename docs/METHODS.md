@@ -104,7 +104,10 @@ Standard errors per feature (plug-in estimators, fixed constants, see
 | :--- | :--- |
 | Count densities (per 1 000 words) | Poisson plug-in: $\mathrm{SE} = 1000\sqrt{k}/W$, for observed count $k$ and $W$ tokens |
 | Shares (%) | binomial plug-in: $\mathrm{SE} = 100\sqrt{p(1-p)/N}$ percentage points, with $p$ on 0–1 |
-| ASL, CV, entropy, … | sample-based (variance / delta method) |
+| ASL | sample standard error of the sentence lengths: $\mathrm{SE} = \sigma_s/\sqrt{N_s}$ |
+| Sentence-length CV | delta method: $\mathrm{SE} = \frac{\mathrm{CV}}{\sqrt{2N_s}}\sqrt{1+2\,\mathrm{CV}^2}$ |
+| Start entropy | plug-in variance $(H_2 - H^2)/N$ with $H_2=\sum p\log_2^2 p$; negative values clamp to 0 |
+| Guiraud R | relative-error approximation $\mathrm{SE} = 0.5\,R/\sqrt{N}$ over $N$ content tokens |
 
 Larger standard errors reduce the magnitude of $z^*$, limiting noise-driven
 flags. Exact HD-D has no independent window-sampling SE: its `style_se` entry
@@ -183,11 +186,12 @@ On the ordered per-feature series $x_1,\dots,x_n$ (chapters in order):
 
 - **Runs test** about the series median: $z = (R - \mu_R)/\sigma_R$;
   $\lvert z\rvert \ge 1.96$ puts the feature on `runs_flagged` (temporal
-  structure the i.i.d. FDR model ignores).
-- **Lag-1 autocorrelation** $\rho_1$; critical band $\approx 1/\sqrt{n}$.
-  `mean_lag1_rho` and `acf_critical` are reported; `exchangeable` is
-  false when runs flag or $|\mathrm{mean}(\rho_1)|$ reaches or exceeds the
-  critical value.
+  structure the i.i.d. FDR model ignores); the statistic is omitted for
+  $n < 8$ chapters, mirroring `low_power`.
+- **Lag-1 autocorrelation** $\rho_1$; critical band $\approx 1/\sqrt{n}$,
+  falling back to $1.0$ for $n < 3$. `mean_lag1_rho` and `acf_critical` are
+  reported; `exchangeable` is false when runs flag or
+  $|\mathrm{mean}(\rho_1)|$ reaches or exceeds the critical value.
 - `low_power` is true for $n < 8$ chapters. Neither this flag nor an
   `exchangeable` result establishes calibrated probabilities.
 
@@ -205,13 +209,13 @@ limits are listed below.
 | `changepoints` | exact unpruned dynamic programming for guarded cost $n\ln\sigma^2$ and penalty $2\ln n$ | singleton/zero-variance costs are zero; anchored centred moments; $O(n^2)$ time, $O(n)$ storage; $n<3$ or constant → `[]`; 0-based indices of the first observation after a break |
 | `trends` | Mann–Kendall $S$ with tie-corrected normal $p$ and continuity correction; $\tau=S/\binom n2$ is tau-a | $n<3$ → `None`; constant → $(0,0,1)$; not tie-normalized tau-b |
 | `robust_scales` | Sn: low outer median of high inner medians, including self-distances, ×1.1926; Qn: sorted pairwise distance at rank $\binom{\lfloor n/2\rfloor+1}{2}$, ×2.21914 | Gaussian asymptotic factors; no finite-sample correction; $n<2$ → 0 |
-| `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None` |
+| `tail_index` | **Hill** estimator $\hat\alpha = \bigl[\tfrac1k\sum\ln\frac{x_{(n-i+1)}}{x_{(n-k)}}\bigr]^{-1}$ over the $k$ largest values | $n \ge 5$, $k=\lfloor\sqrt n\rfloor$ (or user $k\ge 2$); non-positive threshold → `None`; $k \ge n$ → `None` |
 | `distribution_shift` | exact empirical-CDF Wasserstein $W_1$ and two-sample KS $D$; stable asymptotic KS $p$ | sort plus linear CDF merge, including ties and unequal sizes; $D=0$ → $p=1$; both halves need $\ge2$ observations; $p$ is not calibrated for tied/fitted distributions |
 | `trending_features` | feature names with Mann–Kendall $p < 0.05$ | summary list |
 | `segmented_features` | feature names with at least one guarded-objective changepoint | summary list |
 | `shifted_features` | feature names with early/late KS $p < 0.05$ | summary list |
-| `cooccurrence` *(token-level)* | content-word graph (window 2); approximate discrete exponent $\hat\alpha=1+n/\sum\ln(k_i/(k_{\min}-0.5))$ and fitted-CDF comparison | estimator follows Clauset–Shalizi–Newman Eq. 3.7; current truncated continuous CDF and ordinary KS $p$ do not establish discrete power-law goodness of fit; ≥50 content tokens, ≥5 positive nonconstant degrees |
-| `keyness` *(token-level)* | **Dunning $G^2$** (log-likelihood ratio) of first-half chapters vs second half, content words only; signed so positive = over in the early half | both halves ≥ 20 content tokens; single-chapter texts omit `keyness` |
+| `cooccurrence` *(token-level)* | content-word graph (window 2; single-character tokens excluded); approximate discrete exponent $\hat\alpha=1+n/\sum\ln(k_i/(k_{\min}-0.5))$ and fitted-CDF comparison | estimator follows Clauset–Shalizi–Newman Eq. 3.7; current truncated continuous CDF and ordinary KS $p$ do not establish discrete power-law goodness of fit; ≥50 content tokens, ≥5 positive nonconstant degrees |
+| `keyness` *(token-level)* | **Dunning $G^2$** (log-likelihood ratio) of first-half chapters vs second half, content words only (single-character tokens excluded); signed so positive = over in the early half | both halves ≥ 20 content tokens; single-chapter texts omit `keyness` |
 
 The legacy Python name `pelt_changepoints` is retained, but the implementation
 does not prune or claim linear time. Its guarded singleton/constant cost does
@@ -318,7 +322,8 @@ variance does not mean literary importance or a simultaneous confidence region.
 
 The separate redundancy list still compares each pair's available chapters:
 |Spearman $\rho$| ≥ `REDUNDANCY_RHO` (0.8). Pairwise availability in that list
-does not define the PCA matrix or its scoring population.
+does not define the PCA matrix or its scoring population. The list is capped
+at the ten strongest pairs.
 
 ## 6. Lexical diversity indices
 
@@ -389,7 +394,8 @@ are fixed and covered by hand-computed tests:
 
 $\mathrm{ASL}$ = words per sentence; $\mathrm{ASW}$ = syllables per word
 (heuristic syllable counter), not syllables per 100 words. These scores are
-not clipped to 0–100. The coefficients above match `language_data.READABILITY`;
+not clipped to 0–100. Empty or fully unmeasurable input returns `0.0` as an
+explicit unavailable sentinel, not a readability score. The coefficients above match `language_data.READABILITY`;
 correct formula dispatch is not empirical validation on every manuscript. **LIX** uses the
 standard Björnsson cut: words with **more than six characters**, for every
 language: $\mathrm{LIX} = \mathrm{ASL} + 100 \cdot \frac{\text{long words}}{\text{tokens}}$.
@@ -418,8 +424,9 @@ skipped). Layer fill uses the absolute value span (min–max per dimension);
 the ring marks $\lvert z \rvert \ge 1.5$ (unusual **for this chapter**).
 
 The separate showing/telling composite standardizes each raw signal against
-the manuscript's chapter median/MAD, then averages the telling and showing
-groups. If MAD is zero, it uses population standard deviation when available.
+the manuscript's chapter median/MAD, then averages each group with equal
+feature weights (four telling and two showing signals); zero spread uses the
+population standard deviation when available.
 Fewer than three chapters or zero spread produce zero component scores.
 `most_telling` and `most_showing` are empty when all balances are identical,
 including this insufficient-data fallback; chapter-order ties are not evidence
@@ -430,6 +437,26 @@ of a ranking. These signals describe relative patterns, not prose quality.
 - No wall-clock in the analysis path; HD-D is an exact frequency calculation.
 - Float operations in fixed order on the same interpreter → byte-identical
   HTML/JSON (platform last-bit differences are documented in STABILITY).
+
+## 11. Linguistic heuristics (tense, dialogue, sentences, scenes)
+
+These heuristics are transparent rules over curated resources, not a
+grammatical parser. Their constants and guards live in the named modules:
+
+| Heuristic | Rule | Limits |
+| :--- | :--- | :--- |
+| Sentence bins | ≤ 6 / 7–15 / 16–25 / > 25 words (`analyzer.py`, `pacing.py`) | Bins describe the supplied text; tokenless fragments distort ASL |
+| Hook | First sentence ≤ `HOOK_SHORT_SENTENCE` (8) words or ending in `…` (`pacing.py`) | Only the ellipsis character scores; `...` does not |
+| Dialogue paragraph | ≥ 50 % of the paragraph's words inside dialogue spans (`dialogue.py`) | Quotation conventions differ per language |
+| Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Productive `-te`/`-ed` suffixes have verified FP/FN (STABILITY row 6); no productive present pattern exists |
+| Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
+| Dominance | past when `past/(present+ε) > 1.5`, present when `< 0.67` (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
+| Nominal/adjective suffixes | Curated suffix cues minus curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`) |
+| Modal lexicons | Curated forms per language | Unequal morphology coverage; not cross-language comparable |
+
+Configured cue patterns override the profile patterns for direct Python calls.
+Cue patterns (including `dialogue_regex`) use the case-insensitive cue
+contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
 - `python -W error` test run + `mypy --strict` + ruff gate every change.
 
 ## Where to plug new thresholds

@@ -12,7 +12,10 @@ export/restoration in 1.17.0.
 Experimental extension: [local research workspace](research/USAGE.md).
 `lixity.research` owns explicit-project ingestion (UTF-8 text and PDFs), immutable snapshots,
 exact citations, BagIt-style export/restoration, and a rebuildable SQLite/FTS5 index. It does not import into
-`lixity.pipeline`. Existing analyze/profile v2 and style v4 remain unchanged.
+`lixity.pipeline`. The reverse direction exists for presentation: `research.analysis`
+renders source dashboards through `lixity.ui`, and `ui.dossier_images` reads
+`research.limits`; the archive itself never becomes pipeline input.
+Existing analyze/profile v2 and style v4 remain unchanged.
 The workspace also stores dossiers, claims, evidence links and author decisions with full native revision history.
 The [research RFC](research/README.md) additionally proposes broader review workflows
 and hybrid vector search. The implemented manual manuscript associations are
@@ -28,20 +31,26 @@ described below; the RFC is not an implementation reference.
 | CLI / `lixity.api` | Input/output contracts and threshold resolution | Duplicate analysis algorithms |
 | UI | Render results using shared components and bundled assets | Recompute statistical decisions in JavaScript |
 | `publication` / `pdf_export` | Validate entered publication data; compose shared PDF bytes | Infer legal identities, establish rights or write output files |
-| `lixity.server` | Loopback HTTP transport, request parsing and response envelopes | Analysis decisions, project state resolution, domain logic |
+| `lixity.server` | Loopback transport, request guards, one shared dashboard assembly and selected-workspace transitions | A second renderer, a second analysis path or CLI/service lifecycles |
+| `config` / `io` / `workspace` | Explicit project metadata, atomic byte I/O and manuscript discovery | Implicit ancestor/user defaults or duplicate writers |
+| `lixity.service` | Managed local process lifecycle (start/stop/restart/status) | Adopting externally managed units |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
 
 The native server is a package rather than one module, because it is the only
-place where transport, state and domain calls meet. `runtime` owns bind checks
-and startup; `views` owns dashboard rendering and is independent of HTTP;
-`_state` owns workspace state and is the single writer via `refresh()`; `_base`
-owns response helpers and the Host/Origin guards; `routes_project`,
-`routes_research`, `routes_nda` and `routes_markers` each own their handlers and
-are composed into one `BaseHTTPRequestHandler` in `handler`. Route handlers
-parse and shape requests and then delegate; they do not resolve project state or
-reimplement domain rules, and the research routes call `lixity.research.api`
-rather than touching the repository. Because each group is a plain class, a
-route module can be read and type-checked on its own.
+place where transport, state and view assembly meet. `runtime` owns bind checks
+and startup; `views` composes the dashboard from the shared pipeline and domain
+reports and stays independent of HTTP; `_state` declares the selected-workspace
+state and the shared cache publication (`publish_dashboard`/`refresh`), while
+workspace transitions are published by `runtime` and the project routes;
+`_base` owns response helpers and the Host/Origin guards; `routes_project`,
+`routes_research`, `routes_manuscript_research`, `routes_pdf`, `routes_nda` and
+`routes_markers` each own their handlers and are composed with `discovery` and
+`pdf_context` into one `BaseHTTPRequestHandler` in `handler`. Handlers parse and
+shape requests and then delegate; research handlers call `lixity.research.api`
+rather than touching the repository, and project handlers own explicit project
+transitions (open/create/settings/import) without duplicating analysis. Because
+each group is a plain class, a route module can be read and type-checked on its
+own.
 
 Research overview requests use `research.api.project_overview` to collect the
 existing lists from one fully validated archive snapshot. Source versions are
@@ -298,6 +307,19 @@ Seven interface languages do not imply equal linguistic validation: English
 and German currently have the deepest coverage. Shared statistical routines
 operate on language-dependent heuristic inputs.
 
+## Repository tooling
+
+Maintained developer tooling lives in `scripts/` and is intentionally not
+packaged. `check_release.py` builds, verifies and smoke-installs release
+archives for the tag workflow; `sync_docs.py` owns release pins and the
+current-version claim scan; `stage_pages.py` owns the public Pages boundary;
+`make_screenshots.py` with `capture_screenshots.cjs` regenerates reviewed
+public imagery; `run_browser_suites.py` with `browser_tools.cjs` runs the local
+and manually dispatched browser checks; the `lixity-start.sh`/`.ps1`,
+`lixity.service` and `lixity.plist` files are compatibility entrypoints that
+delegate to `lixity service`. Workflow contracts are documented in
+`CONTRIBUTING.md`; no script is a second implementation of engine behavior.
+
 ## Verification
 
 - Python tests cover orchestration, configuration precedence, language resources
@@ -307,7 +329,7 @@ operate on language-dependent heuristic inputs.
 - `tests/browser/research.cjs` uses a disposable loopback server and synthetic
   source archive to check project opening, record creation, evidence lifecycle
   states and responsive research controls.
-- The wheel includes both UI scripts, CSS, Python modules and the typing marker.
+- The wheel includes the bundled UI assets (five stylesheets and five scripts), Python modules and the typing marker.
 - Adapter tests belong with their projects; no private manuscript is needed
   for the engine's regression suite.
 

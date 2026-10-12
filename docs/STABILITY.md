@@ -149,6 +149,12 @@ markers or suffixes. For example, German `werden` also marks future tense or
 becoming; English `been` also appears in active perfect constructions. These
 counts do not identify syntactic voice or distinguish epistemic uncertainty
 from obligation. Sentence segmentation and syllables are also heuristic.
+Suffix cues over-include on purpose-ambiguous words: English nominal `-th`
+counts *month/health/truth*, German adjective `-ig`/`-al` count
+*König/Saal*, German nominal `-ik`/`-ur` count *Musik/Natur*. Modal lexicons
+have unequal morphology coverage (German and Dutch include preterite forms,
+the other profiles only present), so `modal_density` is not comparable across
+languages.
 
 Readability coefficient tests verify the declared formulas, not their original
 calibration or reader comprehension. Amstad's original coefficient page and
@@ -228,15 +234,15 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
 | 3 | LD indices on short texts | local guards do not establish reliability | length and parameter sensitivity depend on corpus and estimator | 🟡 **mitigated**: HD-D/MTLD/Maas ≥100 tokens; MATTR requires a full window; `null` is availability, not a validated reliability boundary |
 | 4 | Style fingerprint with few chapters | minimum observations do not establish calibration; missingness can shrink the complete-case set | single chapters have no comparative baseline | 🟡 **mitigated**: dimensions require ≥3 complete chapters and ≥3 varying usable features in one rank space; incomplete scores are omitted; availability is not reliability |
 | 5 | Heuristic syllable counting | language-specific rules; no validated aggregate error rate | no gold-standard corpus in-repo | 🟡 **documented**; used only as a relative signal, formula names shown |
-| 6 | Tense patterns | curated alternations + productive `-te`/`-ed` have FP/FN on ambiguous forms | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth |
+| 6 | Tense patterns | curated alternations + productive `-te`/`-ed` have FP/FN on ambiguous forms: German present `arbeitet` and nouns like `Geschichte`/`Karte`/`Seite` count as past, English `surprised`/`promised`/`raised`/`reduced` are missed because the stoplist matches word prefixes, and no productive present pattern exists | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth |
 | 7 | Packaging | a wheel could miss `ui/assets/*` or `py.typed` | config exists, never verified in CI | 🟠 → **fixed**: CI job builds a wheel and asserts assets + typing marker are inside |
 | 8 | Project Python environments | an external launcher may select an environment without Lixity | core tests do not verify a project's launcher or installation | 🟡 **documented**: verify the interpreter and package version in the project's environment; project hooks belong to that project |
 | 9 | Publication PDF/EPUB adapters | optional project renderers have their own runtime dependencies | core checks do not verify arbitrary adapter output | 🟡 **documented**: the shared built-in manuscript PDF composer has synthetic integrity/layout tests; project adapters need their own export checks. Neither path provides EPUB/PDF/UA/PDF/X certification |
 | 10 | Dashboard size | ~2 MB HTML for 95k words, linear growth | per-paragraph payload | 🟡 **documented**; future option: JSON payload + client render |
-| 11 | Cross-machine determinism | float last bits may differ across platforms/Python versions | `math.log` summation order | 🟡 **documented**: byte-identical on the same interpreter; in-process determinism is tested |
+| 11 | Cross-machine determinism | float last bits may differ across platforms/Python versions | `math.log` summation and co-occurrence insertion order | 🟡 **documented**: byte-identical on the same interpreter; in-process determinism is tested |
 | 12 | NDA draft rendering and downloads | the native PDF cannot represent every Unicode script; downloaded agreements need user retention | generation returns bytes without server files or a recipient registry | 🟡 **documented**: download UTF-8 text for broader local rendering; keep reviewed/signed documents in project-owned storage |
 | 13 | Chip target size | targets must remain reachable in dense strips and pressed states | Chromium checks cover target geometry, keyboard/touch activation and horizontal scrolling | 🟡 **mitigated** since 2.0.0: 24×24 minimums, 44×44 for coarse pointers; targeted tests do not certify complete accessibility conformance |
-| 14 | UI labels architecture | label packs merged at runtime (base → metric → help → group → layer → ui) | fallback chain is implicit | 🟠 → **fixed**: merge order documented in `docs/AGENTS.md` §3.3 + completeness test |
+| 14 | UI labels architecture | label packs merged at runtime (base → guidance → scene → identity → labels → metric → help → group → layer → ui → workspace) | fallback chain is implicit | 🟠 → **fixed**: merge order documented in `docs/AGENTS.md` §3.3 + completeness test |
 | 15 | Status strip | states derive from file presence/mtime – a restored or clock-skewed file can read "stale" although it is current | no content hash in the status path | 🟡 **documented**: state is advisory; undeterminable components render `unknown`, not a fake `ok` |
 | 16 | Marker notes | notes live in an HTML-comment attribute: quotes/newlines must be escaped; very long notes bloat the comment line | `note="…"` in the marker line | 🟠 → **fixed**: escaping on write (round-trip test); **documented** guidance: one short sentence |
 | 17 | Drill-down filters | `data-flags` / `data-only` preselect a view filter; users may wonder why rows are hidden | UI state only, data untouched | 🟡 **documented**; the active filter is visible and one click clears it |

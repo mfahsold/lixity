@@ -15,6 +15,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `gh attestation verify` and publishes only the complete draft release;
   repository-level immutable releases protect published assets and tags.
 
+### Fixed
+- Dashboard artifact links use the served `/artifact/<name>` route instead of a
+  bare filename, and the 200 MiB artifact serving limit is enforced.
+- The configured dialogue cue compiles case-insensitively in the analysis core
+  and profile, matching the documented cue contract; default patterns are
+  punctuation-only and unchanged.
+
 ## [0.3.0] - 2026-10-12
 
 ### Added

@@ -34,8 +34,6 @@ from ..ui import render_dashboard
 from .constants import NATIVE_UI_ACTIONS
 from .pdf_context import manuscript_pdf_token, project_settings_token, research_context_token
 
-MAX_ARTIFACT_BYTES = 200 * 1024 * 1024  # 200 MB
-
 
 def sanitize_filename(raw: str | None) -> str:
     """Sanitizes a manuscript file name to prevent directory traversal."""
@@ -69,7 +67,7 @@ def collect_artifacts(exports_dir: str) -> list[dict[str, Any]]:
             artifacts.append({
                 "name": name,
                 "size_kb": size_kb,
-                "href": name,
+                "href": f"/artifact/{name}",
             })
     return artifacts
 

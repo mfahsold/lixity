@@ -321,7 +321,6 @@ def about() -> dict[str, Any]:
     from .research.cli import command_metadata
     from .research.models import ENTITY, Manifest
     from .style_fingerprint import (
-        DIM_SCORE_THRESHOLD,
         FEATURES,
         N_DIMENSIONS,
         REDUNDANCY_RHO,
@@ -348,7 +347,7 @@ def about() -> dict[str, Any]:
             "flag_min_severity": defaults.flag_min_severity,
             "min_chapters": defaults.min_chapters,
             "n_dimensions": N_DIMENSIONS,
-            "dim_score_threshold": DIM_SCORE_THRESHOLD,
+            "dim_score_threshold": defaults.dim_score_threshold,
             "redundancy_rho": REDUNDANCY_RHO,
             "hd_d_samples": 0,
             "hd_d_sample_size": HD_D_DRAW_SIZE,

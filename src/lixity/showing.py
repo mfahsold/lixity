@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from .analyzer import CorpusAnalyzer
+from .language import resolve_language
 from .models import CorpusConfig
 from .style_fingerprint import mad, median, robust_z
 
@@ -120,11 +121,12 @@ def showing_report(
     book adapter) to reuse the result instead of re-running the analyzer.
     """
     config = config or CorpusConfig(language="auto")
+    language = resolve_language(config, sample_text=text).key
     resolved_metrics = metrics if metrics is not None else CorpusAnalyzer(config).analyze_text(text)
     chapters = resolved_metrics.chapters
     if not chapters:
         return ShowingReport(
-            language=config.language, chapters=0, tell_z_mean=0.0, show_z_mean=0.0, balance_mean=0.0
+            language=language, chapters=0, tell_z_mean=0.0, show_z_mean=0.0, balance_mean=0.0
         )
 
     tell_z: dict[int, float] = {}
@@ -160,7 +162,7 @@ def showing_report(
     if ranked[0].balance == ranked[-1].balance:
         ranked = []
     return ShowingReport(
-        language=config.language,
+        language=language,
         chapters=len(chapter_list),
         tell_z_mean=sum(c.tell_z for c in chapter_list) / len(chapter_list),
         show_z_mean=sum(c.show_z for c in chapter_list) / len(chapter_list),

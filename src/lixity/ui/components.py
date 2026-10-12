@@ -23,6 +23,7 @@ from ..language_data import (
     IDENTITY_LABELS,
     LAYER_LABELS,
     METRIC_LABELS,
+    SCENE_LABELS,
     UI_LABELS,
 )
 from ..status import TENSE_MIXED, TENSE_NEUTRAL, TENSE_PAST, TENSE_PRESENT, Status
@@ -30,6 +31,7 @@ from ..workspace_labels import WORKSPACE_LABELS
 
 _DEFAULT_LABELS = {
     **GUIDANCE_LABELS["en"],
+    **SCENE_LABELS["en"],
     **IDENTITY_LABELS["en"],
     **EN_LABELS,
     **METRIC_LABELS["en"],

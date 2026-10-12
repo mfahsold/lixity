@@ -20,7 +20,7 @@ from lixity.language import LANGUAGE_PROFILES
 from lixity.markdown_parser import parse_markdown_blocks
 from lixity.models import CorpusConfig
 from lixity.style_profile import ParagraphProfiler
-from lixity.ui.components import help_term
+from lixity.ui.components import help_term, label
 from lixity.ui.dashboard import render_dashboard
 from lixity.workspace_labels import WORKSPACE_LABELS
 from tests.support import LOCALES
@@ -74,7 +74,7 @@ class TestLocalization(unittest.TestCase):
         self.assertEqual(api.analyze(text, language="auto")["meta"]["language"], "de")
 
     def test_all_supported_profiles_have_complete_resource_keys(self):
-        for name in ("LABELS", "METRIC_LABELS", "HELP_TEXTS", "GROUP_LABELS", "LAYER_LABELS", "UI_LABELS", "IDENTITY_LABELS", "GUIDANCE_LABELS", "WORKSPACE_LABELS"):
+        for name in ("LABELS", "METRIC_LABELS", "HELP_TEXTS", "GROUP_LABELS", "LAYER_LABELS", "UI_LABELS", "IDENTITY_LABELS", "GUIDANCE_LABELS", "SCENE_LABELS", "WORKSPACE_LABELS"):
             table = WORKSPACE_LABELS if name == "WORKSPACE_LABELS" else getattr(language_data, name)
             for language in LOCALES:
                 with self.subTest(resource=name, language=language):
@@ -215,3 +215,8 @@ class TestLocalization(unittest.TestCase):
                     with patch("lixity.cli.load_project_config", return_value=settings), redirect_stdout(output):
                         self.assertEqual(main(["analyze", str(manuscript), "--json", *flags]), 0)
                     self.assertEqual(json.loads(output.getvalue())["meta"]["language"], expected)
+
+
+def test_default_labels_cover_the_scene_pack():
+    for key, value in language_data.SCENE_LABELS["en"].items():
+        assert label(None, key) == value

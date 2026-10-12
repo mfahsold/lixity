@@ -3,8 +3,9 @@
 Centralises every enum-like string that used to be scattered as literals across
 the codebase: UI component states, narrative tense codes, paragraph severity
 levels, NDA workflow statuses, and the JSON contract keys of the style passport
-(structural diagnostics). Multilingual *labels* stay in ``language_data`` /
-``PASSPORT_TEXTS`` — only the stable machine codes live here.
+(structural diagnostics). Multilingual *labels* stay in ``language_data``; the
+passport text table ``PASSPORT_TEXTS`` lives in ``style_fingerprint`` — only the
+stable machine codes live here.
 """
 
 from __future__ import annotations

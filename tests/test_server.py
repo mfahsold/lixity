@@ -18,6 +18,7 @@ from lixity.io import FileUtils
 from lixity.server import (
     LixityServerHandler,
     build_server_dashboard,
+    collect_artifacts,
     run_server,
     sanitize_filename,
 )
@@ -402,6 +403,20 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(LixityServerHandler.dashboard_html, before_html)
         finally:
             restore_handler_state(original_state)
+
+    def test_artifact_links_use_the_served_route_and_limit(self):
+        target = Path(self.exports_dir) / "linked.html"
+        target.write_text("<p>Synthetic artifact.</p>", encoding="utf-8")
+        self.addCleanup(target.unlink, missing_ok=True)
+        linked = [item for item in collect_artifacts(self.exports_dir) if item["name"] == "linked.html"]
+        self.assertEqual(linked[0]["href"], "/artifact/linked.html")
+        status, body, headers = self.make_request(linked[0]["href"])
+        self.assertEqual(status, 200)
+        self.assertEqual(body, target.read_bytes())
+        self.assertTrue(headers.get("content-type", "").startswith("text/html"))
+        with patch("lixity.server.handler.MAX_ARTIFACT_BYTES", 4):
+            status, _, _ = self.make_request("/artifact/linked.html")
+        self.assertEqual(status, 413)
 
     def test_standalone_unsupported_actions_fail_without_refresh_or_artifacts(self):
         original_html = LixityServerHandler.dashboard_html
