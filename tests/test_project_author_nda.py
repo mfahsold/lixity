@@ -5,9 +5,10 @@ from pathlib import Path
 import pytest
 
 from lixity.nda import draft_document
+from tests.support import LOCALES
 
 
-@pytest.mark.parametrize("language", ["en", "de", "fr", "es", "it", "pt", "nl"])
+@pytest.mark.parametrize("language", list(LOCALES))
 def test_project_author_is_printed_on_the_representative_line(tmp_path: Path, language: str):
     (tmp_path / "lixity.toml").write_text('author_name = "Synthetic Project Author"\n', encoding="utf-8")
     document = draft_document(tmp_path, name="Synthetic Recipient", project_name="Synthetic Project",

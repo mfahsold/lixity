@@ -1,18 +1,12 @@
 """Optional dossier reads remain bound to the manuscript shown in an older tab."""
 
-import http.client
-import json
-import threading
-from http.server import ThreadingHTTPServer
-from typing import ClassVar
 from urllib.parse import urlencode
 
 import pytest
 
 from lixity.research import api
-from lixity.server import LixityServerHandler
 from lixity.server.pdf_context import manuscript_pdf_token
-from lixity.style_fingerprint import FingerprintThresholds
+from tests.support import LoopbackServer, make_handler, send
 
 
 @pytest.fixture
@@ -22,37 +16,21 @@ def reader_server(tmp_path):
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_text("# Synthetic novel\n\n## Chapter\n\nA synthetic manuscript paragraph.\n")
 
-    class Handler(LixityServerHandler):
-        source_input = str(manuscript)
-        workspace_root = str(tmp_path)
-        research_dir = str(tmp_path)
-        exports_dir = str(tmp_path / "exports")
-        language = "en"
-        title = "Synthetic project"
-        thresholds = FingerprintThresholds()
-        project_open_overrides: ClassVar[dict] = {}
-
-    Handler.refresh()
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    token = manuscript_pdf_token(Handler.source_input, project_root=Handler.workspace_root,
-        language=Handler.language, title=Handler.title, thresholds=Handler.thresholds)
+    handler = make_handler(tmp_path, source_input=manuscript, research_dir=tmp_path,
+                           title="Synthetic project")
+    handler.refresh()
+    server = LoopbackServer(handler).start()
+    token = manuscript_pdf_token(handler.source_input, project_root=handler.workspace_root,
+        language=handler.language, title=handler.title, thresholds=handler.thresholds)
     try:
-        yield server.server_port, tmp_path, Handler, token, dossier["dossier_id"]
+        yield server.port, tmp_path, handler, token, dossier["dossier_id"]
     finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
+        server.close()
 
 
 def read(port, query):
-    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=10)
-    connection.request("GET", "/api/research/dossiers?" + urlencode(query, doseq=True))
-    response = connection.getresponse()
-    status, data = response.status, json.loads(response.read())
-    connection.close()
-    return status, data
+    response = send(port, "/api/research/dossiers?" + urlencode(query, doseq=True), timeout=10)
+    return response.status, response.json
 
 
 def contents(project):

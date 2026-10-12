@@ -4,6 +4,7 @@ import unittest
 
 from lixity.language import LANGUAGE_PROFILES
 from lixity.workspace_labels import WORKSPACE_LABELS
+from tests.support import LOCALES
 
 
 class TestInterpretationLabels(unittest.TestCase):
@@ -26,7 +27,7 @@ class TestInterpretationLabels(unittest.TestCase):
     def test_fdr_labels_describe_nominal_selection_without_confirmation(self):
         old_claims = ("confirmed", "bestätigt", "confirmé", "confirmado",
                       "confermato", "bevestigd")
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 labels = LANGUAGE_PROFILES[language].labels
                 self.assertIn("nom", labels["help_fdr"].lower())
@@ -40,7 +41,7 @@ class TestInterpretationLabels(unittest.TestCase):
         independence = {"en": "independent", "de": "unabhängige", "fr": "indépendantes",
                         "es": "independientes", "it": "indipendenti",
                         "pt": "independentes", "nl": "onafhankelijke"}
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 labels = WORKSPACE_LABELS[language]
                 for key in ("help_structural", "structural_guide", "help_changepoints",

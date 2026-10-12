@@ -1,10 +1,7 @@
 """The raster transport stays explicit, bounded and same-origin."""
 
 import base64
-import http.client
 import json
-import threading
-from http.server import ThreadingHTTPServer
 from urllib.parse import urlencode
 from uuid import uuid4
 
@@ -12,39 +9,21 @@ import pytest
 
 from lixity.research import api
 from lixity.research.repository import Repository
-from lixity.server import LixityServerHandler
+from tests.support import LoopbackServer, make_handler
 from tests.test_research_images import png
 
 
 @pytest.fixture
 def endpoint(tmp_path):
-    class Handler(LixityServerHandler):
-        research_dir = str(tmp_path)
-        workspace_root = str(tmp_path)
-        debug = False
-
     project_id = api.init(tmp_path, title="Synthetic image HTTP")["project_id"]
     dossier = api.create_dossier(tmp_path, "Synthetic dossier", "Original note.")["dossier_id"]
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
+    with LoopbackServer(make_handler(tmp_path, research_dir=tmp_path)) as server:
+        def request(path, *, payload=None, headers=None):
+            response = (server.request(path, payload=payload, headers=headers) if payload is not None
+                        else server.request(path, headers=headers))
+            return response.status, response.body, response.headers
 
-    def request(path, *, payload=None, headers=None):
-        connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
-        try:
-            body = json.dumps(payload) if payload is not None else None
-            values = {"Content-Type": "application/json"} if body else {}
-            values.update(headers or {})
-            connection.request("POST" if body else "GET", path, body=body, headers=values)
-            response = connection.getresponse()
-            return response.status, response.read(), dict(response.getheaders())
-        finally:
-            connection.close()
-
-    yield tmp_path, project_id, dossier, request
-    server.shutdown()
-    server.server_close()
-    thread.join(timeout=2)
+        yield tmp_path, project_id, dossier, request
 
 
 def payload(project_id):
@@ -60,10 +39,10 @@ def test_registered_image_capture_and_secure_exact_binary_response(endpoint):
     query = urlencode({"project_id": project_id, "source_id": result["source_id"], "version_id": result["source_version_id"]})
     code, body, headers = request("/api/research/image?" + query)
     assert code == 200 and body == png()
-    assert headers["Content-Type"] == "image/png"
-    assert headers["Cache-Control"] == "no-store"
-    assert headers["X-Content-Type-Options"] == "nosniff"
-    assert headers["Cross-Origin-Resource-Policy"] == "same-origin"
+    assert headers["content-type"] == "image/png"
+    assert headers["cache-control"] == "no-store"
+    assert headers["x-content-type-options"] == "nosniff"
+    assert headers["cross-origin-resource-policy"] == "same-origin"
     for headers in ({"Origin": "https://foreign.invalid"}, {"Sec-Fetch-Site": "cross-site"}):
         assert request("/api/research/image?" + query, headers=headers)[0] == 403
     foreign = urlencode({"project_id": uuid4().urn, "source_id": result["source_id"], "version_id": result["source_version_id"]})

@@ -6,15 +6,14 @@ import pytest
 
 from lixity.server import LixityServerHandler
 from lixity.server.runtime import run_server
+from tests.support import monkeypatch_handler_state
 
 
 def test_no_project_start_does_not_create_exports_or_analyze_cwd(tmp_path, monkeypatch):
     source = tmp_path / "manuscript.md"
     source.write_text("# Synthetic manuscript\n\nA bird crosses the garden.\n")
     monkeypatch.chdir(tmp_path)
-    for key in ("source_input", "workspace_root", "exports_dir", "research_dir", "language", "title",
-                "title_custom", "thresholds", "project_open_overrides", "dashboard_html", "dashboard_info", "debug"):
-        monkeypatch.setattr(LixityServerHandler, key, getattr(LixityServerHandler, key))
+    monkeypatch_handler_state(monkeypatch)
     before = source.read_bytes()
     server = MagicMock()
     server.serve_forever.side_effect = KeyboardInterrupt()
@@ -33,9 +32,7 @@ def test_no_project_start_does_not_create_exports_or_analyze_cwd(tmp_path, monke
 
 def test_readiness_callback_runs_after_bind_and_failure_closes_the_socket(tmp_path, monkeypatch):
     monkeypatch.chdir(tmp_path)
-    for key in ("source_input", "workspace_root", "exports_dir", "research_dir", "language", "title",
-                "title_custom", "thresholds", "project_open_overrides", "dashboard_html", "dashboard_info", "debug"):
-        monkeypatch.setattr(LixityServerHandler, key, getattr(LixityServerHandler, key))
+    monkeypatch_handler_state(monkeypatch)
     events = []
     server = MagicMock()
 
@@ -62,9 +59,7 @@ def test_local_start_binds_without_reverse_dns(tmp_path, monkeypatch, host):
     import socket
 
     monkeypatch.chdir(tmp_path)
-    for key in ("source_input", "workspace_root", "exports_dir", "research_dir", "language", "title",
-                "title_custom", "thresholds", "project_open_overrides", "dashboard_html", "dashboard_info", "debug"):
-        monkeypatch.setattr(LixityServerHandler, key, getattr(LixityServerHandler, key))
+    monkeypatch_handler_state(monkeypatch)
     bound = []
 
     def serve(server):

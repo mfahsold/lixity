@@ -1,20 +1,16 @@
 """Native manuscript PDF downloads bind to the selected workspace without writes."""
 
-import http.client
 import json
 import re
 import shutil
 import subprocess
 import threading
-from http.server import ThreadingHTTPServer
 from pathlib import Path
-from typing import ClassVar
 
 import pytest
 
-from lixity.server import LixityServerHandler
 from lixity.server.pdf_context import manuscript_pdf_token
-from lixity.style_fingerprint import FingerprintThresholds
+from tests.support import LoopbackServer, make_handler, send
 from tests.test_pdf_export import HAVE_FONTS
 
 pytestmark = pytest.mark.skipif(not HAVE_FONTS, reason="requires the DejaVu font family")
@@ -33,44 +29,25 @@ def pdf_server(tmp_path):
         encoding="utf-8",
     )
 
-    class Handler(LixityServerHandler):
-        source_input = str(manuscript)
-        workspace_root = str(tmp_path)
-        exports_dir = str(tmp_path / "exports")
-        research_dir = None
-        language = "de"
-        title = "Configured synthetic title"
-        title_custom = False
-        thresholds = FingerprintThresholds()
-        project_open_overrides: ClassVar[dict[str, str]] = {}
-        debug = False
-
-    Handler.refresh()
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
+    handler = make_handler(
+        tmp_path, source_input=manuscript, language="de", title="Configured synthetic title",
+    )
+    handler.refresh()
+    server = LoopbackServer(handler).start()
     token = manuscript_pdf_token(
-        Handler.source_input, project_root=Handler.workspace_root, language=Handler.language,
-        title=Handler.title, thresholds=Handler.thresholds,
+        handler.source_input, project_root=handler.workspace_root, language=handler.language,
+        title=handler.title, thresholds=handler.thresholds,
     )
     try:
-        yield server.server_port, tmp_path, Handler, token
+        yield server.port, tmp_path, handler, token
     finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
+        server.close()
 
 
 def request(port, payload, *, origin=None, action="manuscript-pdf"):
-    connection = http.client.HTTPConnection("127.0.0.1", port, timeout=15)
-    headers = {"Content-Type": "application/json"}
-    if origin:
-        headers["Origin"] = origin
-    connection.request("POST", "/api/" + action, json.dumps(payload), headers)
-    response = connection.getresponse()
-    result = response.status, dict(response.getheaders()), response.read()
-    connection.close()
-    return result
+    headers = {"Origin": origin} if origin else None
+    response = send(port, "/api/" + action, payload=payload, headers=headers)
+    return response.status, response.headers, response.body
 
 
 def file_bytes(project):
@@ -89,10 +66,10 @@ def test_each_layout_downloads_a_pdf_without_creating_or_changing_files(pdf_serv
     assert status == 200, body.decode("utf-8", errors="replace")
     assert body.startswith(b"%PDF-1.4") and body.rstrip().endswith(b"%%EOF")
     assert b"/MediaBox [0 0 " + page_size + b"]" in body
-    assert headers["Content-Type"] == "application/pdf"
-    assert headers["Content-Disposition"] == f'attachment; filename="synthetic-{layout}.pdf"'
-    assert headers["Content-Length"] == str(len(body))
-    assert headers["Cache-Control"] == "no-store"
+    assert headers["content-type"] == "application/pdf"
+    assert headers["content-disposition"] == f'attachment; filename="synthetic-{layout}.pdf"'
+    assert headers["content-length"] == str(len(body))
+    assert headers["cache-control"] == "no-store"
     assert file_bytes(project) == before
     assert not (project / "exports").exists()
 
@@ -106,7 +83,7 @@ def test_invalid_or_client_supplied_manuscript_inputs_are_rejected(pdf_server, c
     before = file_bytes(project)
     status, headers, body = request(port, {"layout": "book", "project_token": token, **changes})
     assert status == 400
-    assert headers["Content-Type"] == "application/json; charset=utf-8"
+    assert headers["content-type"] == "application/json; charset=utf-8"
     assert json.loads(body)["ok"] is False
     assert file_bytes(project) == before
 
@@ -155,7 +132,7 @@ def test_no_readable_nonempty_selected_manuscript_is_not_exported(pdf_server, so
     before = file_bytes(project)
     status, headers, body = request(port, {"layout": "book", "project_token": token})
     assert status == 400 and json.loads(body)["ok"] is False
-    assert headers["Content-Type"] == "application/json; charset=utf-8"
+    assert headers["content-type"] == "application/json; charset=utf-8"
     assert file_bytes(project) == before
     if source_state == "headings":
         assert "prose" in json.loads(body)["message"]
@@ -185,7 +162,7 @@ def test_changed_publication_author_reject_old_token_and_fresh_download_uses_new
         )
         assert fresh != old_token
         status, headers, body = request(port, {"layout": "book", "project_token": fresh})
-        assert status == 200 and headers["Content-Type"] == "application/pdf"
+        assert status == 200 and headers["content-type"] == "application/pdf"
         assert file_bytes(project) == before
         path = tmp_path / "download-check.pdf"
         path.write_bytes(body)
@@ -210,7 +187,7 @@ def test_changed_unreadable_source_or_malformed_config_returns_json(pdf_server, 
     status, headers, body = request(port, {"layout": "book", "project_token": token})
     assert status == (409 if malformed == "config" else 400)
     assert json.loads(body)["ok"] is False
-    assert headers["Content-Type"] == "application/json; charset=utf-8"
+    assert headers["content-type"] == "application/json; charset=utf-8"
     assert file_bytes(project) == before
 
 
@@ -221,7 +198,7 @@ def test_font_failure_returns_json_without_creating_artifacts(pdf_server, monkey
     monkeypatch.setenv("LIXITY_PDF_FONT_TEXT", str(missing_font))
     status, headers, body = request(port, {"layout": "book", "project_token": token})
     assert status == 400
-    assert headers["Content-Type"] == "application/json; charset=utf-8"
+    assert headers["content-type"] == "application/json; charset=utf-8"
     assert "Configured font for text does not exist" in json.loads(body)["message"]
     assert str(missing_font) in json.loads(body)["message"]
     assert file_bytes(project) == before
@@ -268,7 +245,7 @@ def test_project_change_during_composition_cancels_the_download(pdf_server, monk
     assert not pending.is_alive()
     status, headers, body = results[0]
     assert status == 409 and json.loads(body)["ok"] is False
-    assert headers["Content-Type"] == "application/json; charset=utf-8"
+    assert headers["content-type"] == "application/json; charset=utf-8"
     # Settings now deliberately persists the title. PDF cancellation must not
     # write anything beyond that authorized state transition.
     assert file_bytes(project) == after_change

@@ -10,6 +10,7 @@ from lixity.pipeline import analyze_document, resolve_document_config
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
 from lixity.workspace_labels import WORKSPACE_LABELS
+from tests.support import LOCALES
 
 
 class Controls(HTMLParser):
@@ -75,7 +76,7 @@ class TestSettingsUi(unittest.TestCase):
         text = "## One\n\nI walk. I see the rain.\n\n## Two\n\nThe door was closed.\n"
         config, _language = resolve_document_config(text)
         result = analyze_document(text, config, FingerprintThresholds())
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 labels = get_language_profile(language).labels
                 rendered = render_dashboard(result.chapters, result.paragraphs,
@@ -102,7 +103,7 @@ class TestSettingsUi(unittest.TestCase):
         self.assertIn('class="settings-form ctl-group"', rendered)
 
     def test_localized_settings_keep_machine_readable_number_values(self):
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 rendered = render_dashboard([], [], controls=True, language_key=language,
                                             labels=get_language_profile(language).labels)

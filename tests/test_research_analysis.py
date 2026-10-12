@@ -13,6 +13,7 @@ from lixity import pipeline
 from lixity.markdown_parser import parse_markdown_blocks
 from lixity.research import api
 from lixity.research.repository import ResearchError
+from tests.support import LOCALES
 
 
 class TestResearchAnalysis(unittest.TestCase):
@@ -82,7 +83,7 @@ class TestResearchAnalysis(unittest.TestCase):
         self.assertEqual(citation["source_version_id"], source["source_version_id"])
 
     def test_languages_use_existing_profiles_not_project_default(self):
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl", "generic"):
+        for language in (*LOCALES, "generic"):
             with self.subTest(language=language):
                 source = self.ingest(language=language)
                 result = api.analyze_source(self.project, source["source_id"])

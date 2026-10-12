@@ -1,16 +1,13 @@
 """Tests for lixity.server – loopback development server and interactive dashboard."""
 
-import http.client
 import io
 import json
 import os
 import shutil
 import socket
 import tempfile
-import threading
 import unittest
 from contextlib import redirect_stderr
-from http.server import ThreadingHTTPServer
 from pathlib import Path
 from unittest.mock import patch
 from urllib.parse import quote
@@ -24,6 +21,7 @@ from lixity.server import (
     run_server,
     sanitize_filename,
 )
+from tests.support import LoopbackServer, restore_handler_state, snapshot_handler_state
 
 
 def _free_port() -> int:
@@ -36,6 +34,7 @@ def _free_port() -> int:
 class TestLixityServer(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
+        cls.base_state = snapshot_handler_state()
         cls.temp_dir = tempfile.TemporaryDirectory()
         cls.exports_dir = os.path.join(cls.temp_dir.name, "exports")
         os.makedirs(cls.exports_dir, exist_ok=True)
@@ -47,16 +46,13 @@ class TestLixityServer(unittest.TestCase):
         LixityServerHandler.title_custom = False
         LixityServerHandler.refresh()
 
-        cls.server = ThreadingHTTPServer(("127.0.0.1", 0), LixityServerHandler)
-        cls.thread = threading.Thread(target=cls.server.serve_forever, daemon=True)
-        cls.thread.start()
-        cls.port = cls.server.server_port
+        cls.loop = LoopbackServer(LixityServerHandler).start()
+        cls.port = cls.loop.port
 
     @classmethod
     def tearDownClass(cls):
-        cls.server.shutdown()
-        cls.server.server_close()
-        cls.thread.join(timeout=2)
+        cls.loop.close()
+        restore_handler_state(cls.base_state)
         cls.temp_dir.cleanup()
 
     def make_request(
@@ -66,18 +62,11 @@ class TestLixityServer(unittest.TestCase):
         body: str | bytes | None = None,
         headers: dict[str, str] | None = None,
     ) -> tuple[int, bytes, dict[str, str]]:
-        conn = http.client.HTTPConnection("127.0.0.1", self.port, timeout=5)
-        req_headers = {"Host": f"127.0.0.1:{self.port}"}
-        if headers:
-            req_headers.update(headers)
-        try:
-            conn.request(method, path, body=body, headers=req_headers)
-            resp = conn.getresponse()
-            resp_body = resp.read()
-            resp_headers = {k.lower(): v for k, v in resp.getheaders()}
-            return resp.status, resp_body, resp_headers
-        finally:
-            conn.close()
+        response = self.loop.request(
+            path, method=method, body=body,
+            headers={"Host": f"127.0.0.1:{self.port}", **(headers or {})},
+        )
+        return response.status, response.body, response.headers
 
     def test_sanitize_filename(self):
         self.assertEqual(sanitize_filename("normal.md"), "normal.md")
@@ -130,17 +119,7 @@ class TestLixityServer(unittest.TestCase):
         self.assertEqual(headers.get("x-content-type-options"), "nosniff")
 
     def test_project_paths_lists_one_level_and_preserves_project_state(self):
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "research_dir",
-                "language",
-                "title",
-                "dashboard_html",
-            )
-        }
+        original_state = snapshot_handler_state()
         with tempfile.TemporaryDirectory() as td:
             root = Path(td)
             (root / "Zulu").mkdir()
@@ -307,17 +286,7 @@ class TestLixityServer(unittest.TestCase):
     def test_settings_preserve_threshold_fields_not_exposed_in_ui(self):
         from lixity.style_fingerprint import FingerprintThresholds
 
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             LixityServerHandler.thresholds = FingerprintThresholds(fdr_method="by", min_chapters=5)
             status, body, _ = self.make_request(
@@ -330,14 +299,10 @@ class TestLixityServer(unittest.TestCase):
             self.assertEqual(LixityServerHandler.thresholds.fdr_method, "by")
             self.assertEqual(LixityServerHandler.thresholds.min_chapters, 5)
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_research_compare_uses_current_analysis_language(self):
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in ("research_dir", "source_input", "language")
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
                 project = Path(td)
@@ -365,8 +330,7 @@ class TestLixityServer(unittest.TestCase):
                     language="de",
                 )
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_post_load_and_markers(self):
         sample_text = "## Act 1\n\nFirst line of the story.\nSecond line.\n"
@@ -411,21 +375,7 @@ class TestLixityServer(unittest.TestCase):
         self.assertIn(b'"ok": true', body)
 
     def test_load_rejects_existing_saved_copy_without_switching_project(self):
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "exports_dir",
-                "research_dir",
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
                 exports = Path(td) / "exports"
@@ -451,8 +401,7 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(LixityServerHandler.source_input, before_source)
                 self.assertEqual(LixityServerHandler.dashboard_html, before_html)
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_standalone_unsupported_actions_fail_without_refresh_or_artifacts(self):
         original_html = LixityServerHandler.dashboard_html
@@ -1118,21 +1067,7 @@ class TestLixityServer(unittest.TestCase):
                 LixityServerHandler.source_input = orig_ms
 
     def test_project_create_and_open_workflow(self):
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "exports_dir",
-                "research_dir",
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
                 # 1. Create minimal project
@@ -1229,8 +1164,7 @@ class TestLixityServer(unittest.TestCase):
                     (proj_upload_dir / "manuscript.md").read_bytes(), imported_text.encode("utf-8")
                 )
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_dashboard_welcome_hero_and_modals(self):
         # When no manuscript/chapters loaded, welcome hero and modals must be rendered
@@ -1265,21 +1199,7 @@ class TestLixityServer(unittest.TestCase):
             "pt": "Capítulo 1",
             "nl": "Hoofdstuk 1",
         }
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "exports_dir",
-                "research_dir",
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as directory:
                 for language, heading in chapter_titles.items():
@@ -1314,27 +1234,12 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(status, 409)
                 self.assertEqual((existing / "manuscript.md").read_bytes(), original_bytes)
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_project_open_attaches_existing_research(self):
         from lixity.research import api as research_api
 
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "exports_dir",
-                "research_dir",
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
                 proj_dir = Path(td) / "existing-novel"
@@ -1480,26 +1385,10 @@ class TestLixityServer(unittest.TestCase):
                             research_files,
                         )
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_project_open_loads_target_settings_after_project_create(self):
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "exports_dir",
-                "research_dir",
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-                "project_open_overrides",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
                 first = Path(td) / "first"
@@ -1568,26 +1457,10 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(LixityServerHandler.thresholds.fdr_q, 0.03)
                 self.assertIn("Second title", LixityServerHandler.dashboard_html)
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_project_open_invalid_targets_keep_current_project(self):
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "exports_dir",
-                "research_dir",
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-                "project_open_overrides",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
                 project = Path(td) / "current"
@@ -1651,26 +1524,10 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(status, 200)
                 self.assertIn(b"Current title", body)
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_startup_title_is_scoped_to_its_project_and_nda_uses_new_identity(self):
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "exports_dir",
-                "research_dir",
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-                "project_open_overrides",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
                 first = Path(td) / "first"
@@ -1716,27 +1573,12 @@ class TestLixityServer(unittest.TestCase):
                 self.assertIn('value="Second title"', LixityServerHandler.dashboard_html)
                 self.assertNotIn('value="Direct override"', LixityServerHandler.dashboard_html)
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_project_open_research_only_folder_without_manuscript(self):
         from lixity.research import api as research_api
 
-        original_state = {
-            name: getattr(LixityServerHandler, name)
-            for name in (
-                "workspace_root",
-                "source_input",
-                "exports_dir",
-                "research_dir",
-                "language",
-                "title",
-                "title_custom",
-                "thresholds",
-                "dashboard_html",
-                "dashboard_info",
-            )
-        }
+        original_state = snapshot_handler_state()
         try:
             with tempfile.TemporaryDirectory() as td:
                 project = Path(td) / "research-only"
@@ -1813,8 +1655,7 @@ class TestLixityServer(unittest.TestCase):
                     before_files,
                 )
         finally:
-            for name, value in original_state.items():
-                setattr(LixityServerHandler, name, value)
+            restore_handler_state(original_state)
 
     def test_project_open_research_fallback_preserves_discovery_errors(self):
         from lixity.research import api as research_api

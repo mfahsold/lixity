@@ -1,19 +1,13 @@
 """Native research chronology keeps explicit selected roots and reviewed writes."""
 
-import json
 import shutil
-import threading
-import urllib.error
-import urllib.request
-from typing import ClassVar
 
 import pytest
 
 from lixity.research import api
 from lixity.research.repository import Repository
-from lixity.server import LixityServerHandler
 from lixity.server.pdf_context import research_context_token
-from lixity.server.runtime import _LoopbackHTTPServer
+from tests.support import LoopbackServer, make_handler
 
 
 @pytest.fixture
@@ -23,40 +17,16 @@ def workspace(tmp_path):
     first = api.create_claim(project, title="First cause", statement="A synthetic cause", time_period="1910")
     second = api.create_claim(project, title="Later outcome", statement="A synthetic outcome", time_period="1920")
 
-    class Handler(LixityServerHandler):
-        source_input = None
-        workspace_root = str(project)
-        research_dir = str(project)
-        exports_dir = str(project / "exports")
-        dashboard_html = ""
-        dashboard_info: ClassVar[dict] = {}
-        debug = False
+    handler = make_handler(project, research_dir=project)
+    handler.refresh()
+    with LoopbackServer(handler) as server:
+        def request(route, body=None):
+            headers = {"Origin": server.base}
+            response = (server.request(route, payload=body, headers=headers) if body is not None
+                        else server.request(route, headers=headers))
+            return response.status, response.json
 
-    Handler.refresh()
-    server = _LoopbackHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    base = f"http://127.0.0.1:{server.server_port}"
-
-    def request(route, body=None):
-        headers = {"Origin": base}
-        if body is not None:
-            headers["Content-Type"] = "application/json"
-        message = urllib.request.Request(base + route, headers=headers,  # noqa: S310 - explicit disposable loopback server
-            data=json.dumps(body).encode() if body is not None else None)
-        try:
-            with urllib.request.urlopen(message, timeout=10) as response:  # noqa: S310 - explicit disposable loopback server
-                return response.status, json.load(response)
-        except urllib.error.HTTPError as error:
-            with error:
-                return error.code, json.load(error)
-
-    try:
-        yield project, Handler, first["claim_id"], second["claim_id"], request
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
+        yield project, handler, first["claim_id"], second["claim_id"], request
 
 
 def relation_body(project, first, second):

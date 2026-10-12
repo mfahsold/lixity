@@ -1,42 +1,30 @@
 """Debug diagnostics share timestamps without changing response behavior."""
 
-import http.client
 import io
-import threading
+import tempfile
 import unittest
 from contextlib import redirect_stderr
 from datetime import datetime, timezone
-from http.server import ThreadingHTTPServer
 
-from lixity.server import LixityServerHandler
+from tests.support import LoopbackServer, make_handler
 
 
 class TestServerDebug(unittest.TestCase):
     def setUp(self):
-        class DebugHandler(LixityServerHandler):
-            debug = True
-            dashboard_html = "<!DOCTYPE html><title>Synthetic debug fixture</title>"
-
-        self.handler = DebugHandler
-        self.server = ThreadingHTTPServer(("127.0.0.1", 0), DebugHandler)
-        self.thread = threading.Thread(target=self.server.serve_forever, daemon=True)
-        self.thread.start()
-        self.addCleanup(self.stop_server)
-
-    def stop_server(self):
-        self.server.shutdown()
-        self.server.server_close()
-        self.thread.join(timeout=2)
+        self.temp_dir = tempfile.TemporaryDirectory()
+        self.addCleanup(self.temp_dir.cleanup)
+        self.handler = make_handler(
+            self.temp_dir.name, debug=True,
+            dashboard_html="<!DOCTYPE html><title>Synthetic debug fixture</title>",
+        )
+        self.loop = LoopbackServer(self.handler).start()
+        self.addCleanup(self.loop.close)
 
     def request(self, method, path, body=None):
-        connection = http.client.HTTPConnection("127.0.0.1", self.server.server_port, timeout=5)
-        try:
-            connection.request(method, path, body=body, headers={"Content-Type": "application/json"})
-            response = connection.getresponse()
-            response.read()
-            return response.status
-        finally:
-            connection.close()
+        response = self.loop.request(
+            path, method=method, body=body, headers={"Content-Type": "application/json"},
+        )
+        return response.status
 
     def test_request_and_error_detail_have_valid_utc_timestamps(self):
         output = io.StringIO()

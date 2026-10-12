@@ -1,11 +1,8 @@
 """Route discovery and explicit CLI JSON selection use synthetic local projects."""
 
 import contextlib
-import http.client
 import io
 import json
-import threading
-from http.server import ThreadingHTTPServer
 
 import pytest
 
@@ -14,34 +11,18 @@ from lixity.cli import main
 from lixity.research import api as research
 from lixity.research import cli as research_cli
 from lixity.research.repository import Repository
-from lixity.server import LixityServerHandler
+from tests.support import LoopbackServer, make_handler
 
 
 @pytest.fixture
 def endpoint(tmp_path):
-    class Handler(LixityServerHandler):
-        workspace_root = str(tmp_path)
-        source_input = None
-        research_dir = None
-        debug = False
+    handler = make_handler(tmp_path)
+    with LoopbackServer(handler) as server:
+        def request(path, headers=None, *, method="GET", body=None):
+            response = server.request(path, method=method, body=body, headers=headers)
+            return response.status, response.body, response.headers.get("content-type")
 
-    server = ThreadingHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-
-    def request(path, headers=None, *, method="GET", body=None):
-        connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
-        try:
-            connection.request(method, path, body=body, headers=headers or {})
-            response = connection.getresponse()
-            return response.status, response.read(), response.getheader("Content-Type")
-        finally:
-            connection.close()
-
-    yield Handler, request
-    server.shutdown()
-    server.server_close()
-    thread.join(timeout=2)
+        yield handler, request
 
 
 @pytest.mark.parametrize("path", ["/api", "/api/"])

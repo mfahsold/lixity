@@ -23,6 +23,7 @@ from lixity.style_profile import ParagraphProfiler
 from lixity.ui.components import help_term
 from lixity.ui.dashboard import render_dashboard
 from lixity.workspace_labels import WORKSPACE_LABELS
+from tests.support import LOCALES
 
 
 class _DashboardBodyParser(HTMLParser):
@@ -75,13 +76,13 @@ class TestLocalization(unittest.TestCase):
     def test_all_supported_profiles_have_complete_resource_keys(self):
         for name in ("LABELS", "METRIC_LABELS", "HELP_TEXTS", "GROUP_LABELS", "LAYER_LABELS", "UI_LABELS", "IDENTITY_LABELS", "GUIDANCE_LABELS", "WORKSPACE_LABELS"):
             table = WORKSPACE_LABELS if name == "WORKSPACE_LABELS" else getattr(language_data, name)
-            for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+            for language in LOCALES:
                 with self.subTest(resource=name, language=language):
                     self.assertFalse(set(table["en"]) - set(table[language]))
                     self.assertTrue(all(table[language][key].strip() for key in table["en"]))
 
     def test_workspace_and_research_controls_follow_all_seven_locales(self):
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 labels = LANGUAGE_PROFILES[language].labels
                 rendered = render_dashboard([], [], controls=True, labels=labels, language_key=language)
@@ -134,7 +135,7 @@ class TestLocalization(unittest.TestCase):
                     self.assertEqual(fields(WORKSPACE_LABELS[language][key]), fields(english))
 
     def test_hd_d_help_describes_the_42_token_estimator_in_all_locales(self):
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 labels = LANGUAGE_PROFILES[language].labels
                 help_text = labels["help_hd_d"]
@@ -190,7 +191,7 @@ class TestLocalization(unittest.TestCase):
         from lixity import __version__
         from lixity.ui.components import project_header
 
-        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+        for language in LOCALES:
             with self.subTest(language=language):
                 labels = LANGUAGE_PROFILES[language].labels
                 rendered = project_header('<img src=x onerror="alert(1)">', labels)

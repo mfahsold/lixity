@@ -1,20 +1,16 @@
 """Settings preserve the mathematical threshold domain and exact values."""
 
-import http.client
-import json
-import threading
 from collections.abc import Iterator
 from dataclasses import asdict
 from html.parser import HTMLParser
-from http.server import ThreadingHTTPServer
 from typing import Any
 
 import pytest
 
 from lixity.config import resolve_thresholds
-from lixity.server import LixityServerHandler
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui.settings import settings_form
+from tests.support import LoopbackServer, make_handler
 
 
 class NumberControls(HTMLParser):
@@ -31,38 +27,14 @@ class NumberControls(HTMLParser):
 
 
 @pytest.fixture
-def settings_server(tmp_path) -> Iterator[tuple[type[LixityServerHandler], Any]]:
-    class SettingsHandler(LixityServerHandler):
-        source_input = None
-        workspace_root = str(tmp_path)
-        exports_dir = str(tmp_path / "exports")
-        research_dir = None
-        language = "en"
-        title = "Synthetic project"
-        title_custom = True
-        thresholds = FingerprintThresholds()
+def settings_server(tmp_path) -> Iterator[tuple[type, Any]]:
+    handler = make_handler(tmp_path, title="Synthetic project", title_custom=True)
+    handler.refresh()
+    with LoopbackServer(handler) as server:
+        def post(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
+            return server.request_json("/api/settings", payload=payload)
 
-    SettingsHandler.refresh()
-    server = ThreadingHTTPServer(("127.0.0.1", 0), SettingsHandler)
-    thread = threading.Thread(target=server.serve_forever, kwargs={"poll_interval": 0.01})
-    thread.start()
-
-    def post(payload: dict[str, Any]) -> tuple[int, dict[str, Any]]:
-        connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
-        try:
-            connection.request("POST", "/api/settings", body=json.dumps(payload),
-                               headers={"Content-Type": "application/json"})
-            response = connection.getresponse()
-            return response.status, json.loads(response.read())
-        finally:
-            connection.close()
-
-    try:
-        yield SettingsHandler, post
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=2)
+        yield handler, post
 
 
 @pytest.mark.parametrize("payload", [{"language": "fr"}, {"title": "New synthetic title"}])

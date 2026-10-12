@@ -27,6 +27,7 @@ from lixity.research.models import (
     reference,
 )
 from lixity.research.repository import Repository, ResearchConflictError, encode
+from tests.support import LOCALES
 
 
 def random_uuid() -> str:
@@ -60,7 +61,7 @@ def make_random_dossier(
         created_by="property-tester",
         title=random_text(5, 50),
         body=random_text(10, 500),
-        language=random.choice(["en", "de", "fr", "es", "it", "pt", "nl"]),
+        language=random.choice(list(LOCALES)),
         tags=tags,
         evidence_refs=[],
     )

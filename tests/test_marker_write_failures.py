@@ -2,16 +2,12 @@
 
 from __future__ import annotations
 
-import http.client
-import json
-import threading
-from http.server import ThreadingHTTPServer
 from unittest.mock import patch
 
 import pytest
 
-from lixity.server import LixityServerHandler
 from lixity.server.routes_markers import MarkerRoutesMixin
+from tests.support import LoopbackServer, make_handler
 
 
 class RecordingMarkerHandler(MarkerRoutesMixin):
@@ -77,29 +73,13 @@ def test_marker_http_replacement_failure_returns_json_500(tmp_path, action, payl
     )
     source.write_bytes(original)
 
-    class Handler(LixityServerHandler):
-        source_input = str(source)
-        debug = False
-
-    with ThreadingHTTPServer(("127.0.0.1", 0), Handler) as server:
-        thread = threading.Thread(target=server.serve_forever, daemon=True)
-        thread.start()
-        connection = http.client.HTTPConnection("127.0.0.1", server.server_port, timeout=5)
-        try:
-            with patch("lixity.io.os.replace", side_effect=OSError("replacement unavailable")):
-                connection.request(
-                    "POST", f"/api/{action}", json.dumps(payload),
-                    {"Content-Type": "application/json"},
-                )
-                response = connection.getresponse()
-                body = json.loads(response.read())
-            assert response.status == 500
-            assert response.getheader("Content-Type") == "application/json; charset=utf-8"
-            assert body["ok"] is False
-            assert "write manuscript" in body["message"].lower()
-            assert source.read_bytes() == original
-            assert sorted(path.name for path in tmp_path.iterdir()) == ["manuscript.md"]
-        finally:
-            connection.close()
-            server.shutdown()
-            thread.join(timeout=5)
+    with LoopbackServer(make_handler(tmp_path, source_input=source)) as server:
+        with patch("lixity.io.os.replace", side_effect=OSError("replacement unavailable")):
+            response = server.request(f"/api/{action}", payload=payload)
+        assert response.status == 500
+        assert response.headers["content-type"] == "application/json; charset=utf-8"
+        body = response.json
+        assert body["ok"] is False
+        assert "write manuscript" in body["message"].lower()
+        assert source.read_bytes() == original
+        assert sorted(path.name for path in tmp_path.iterdir()) == ["manuscript.md"]

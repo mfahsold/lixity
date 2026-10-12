@@ -1,23 +1,17 @@
 """Manual manuscript associations bind native selection and reviewed archive state."""
 
 import hashlib
-import json
 import os
 import shutil
-import threading
-import urllib.error
-import urllib.request
-from typing import ClassVar
 
 import pytest
 
 from lixity.pipeline import paragraph_identity, profile_document, resolve_document_config
 from lixity.research import api
 from lixity.research.repository import Repository
-from lixity.server import LixityServerHandler
 from lixity.server.pdf_context import manuscript_pdf_token, research_context_token
-from lixity.server.runtime import _LoopbackHTTPServer
 from lixity.style_fingerprint import FingerprintThresholds
+from tests.support import LoopbackServer, make_handler
 
 
 @pytest.fixture
@@ -29,51 +23,24 @@ def workspace(tmp_path):
     manuscript.write_text(text, encoding="utf-8")
     claim = api.create_claim(project, title="A morning bird", statement="A synthetic observation.")
 
-    class Handler(LixityServerHandler):
-        source_input = str(manuscript)
-        workspace_root = str(project)
-        research_dir = str(project)
-        exports_dir = str(project / "exports")
-        language = "en"
-        title = None
-        thresholds = FingerprintThresholds()
-        dashboard_html = ""
-        dashboard_info: ClassVar[dict] = {}
-        debug = False
+    handler = make_handler(project, source_input=manuscript, research_dir=project)
+    handler.refresh()
+    with LoopbackServer(handler) as server:
+        def request(route, body=None):
+            headers = {"Origin": server.base}
+            response = (server.request(route, payload=body, headers=headers) if body is not None
+                        else server.request(route, headers=headers))
+            return response.status, response.json
 
-    Handler.refresh()
-    server = _LoopbackHTTPServer(("127.0.0.1", 0), Handler)
-    thread = threading.Thread(target=server.serve_forever, daemon=True)
-    thread.start()
-    base = f"http://127.0.0.1:{server.server_port}"
-
-    def request(route, body=None):
-        headers = {"Origin": base}
-        if body is not None:
-            headers["Content-Type"] = "application/json"
-        message = urllib.request.Request(base + route, headers=headers,  # noqa: S310 - disposable loopback
-            data=json.dumps(body).encode() if body is not None else None)
-        try:
-            with urllib.request.urlopen(message, timeout=10) as response:  # noqa: S310 - disposable loopback
-                return response.status, json.load(response)
-        except urllib.error.HTTPError as error:
-            with error:
-                return error.code, json.load(error)
-
-    config, _ = resolve_document_config(text, "en")
-    paragraph = profile_document(text, config, FingerprintThresholds())[0][0]
-    snapshot = Repository(project).snapshot()
-    body = {"project_id": snapshot.project.id, "research_token": research_context_token(project),
-            "project_token": manuscript_pdf_token(str(manuscript), project_root=str(project), language="en", title=None, thresholds=Handler.thresholds),
-            "expected_snapshot": snapshot.digest, "expected_source_sha256": hashlib.sha256(manuscript.read_bytes()).hexdigest(),
-            "claim_id": claim["claim_id"], "claim_revision": 1, "allow_retention": True,
-            "selection": {**paragraph_identity(paragraph), "start": 0, "end": 22, "quote": paragraph.text[:22]}}
-    try:
-        yield project, manuscript, Handler, body, request
-    finally:
-        server.shutdown()
-        server.server_close()
-        thread.join(timeout=5)
+        config, _ = resolve_document_config(text, "en")
+        paragraph = profile_document(text, config, FingerprintThresholds())[0][0]
+        snapshot = Repository(project).snapshot()
+        body = {"project_id": snapshot.project.id, "research_token": research_context_token(project),
+                "project_token": manuscript_pdf_token(str(manuscript), project_root=str(project), language="en", title=None, thresholds=handler.thresholds),
+                "expected_snapshot": snapshot.digest, "expected_source_sha256": hashlib.sha256(manuscript.read_bytes()).hexdigest(),
+                "claim_id": claim["claim_id"], "claim_revision": 1, "allow_retention": True,
+                "selection": {**paragraph_identity(paragraph), "start": 0, "end": 22, "quote": paragraph.text[:22]}}
+        yield project, manuscript, handler, body, request
 
 
 def review_route(body):
