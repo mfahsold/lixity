@@ -44,6 +44,10 @@ class TestPagesStaging(unittest.TestCase):
             for url in media:
                 self.assertTrue(url.startswith(prefix), url)
                 self.assertTrue((output / url[len(prefix):]).is_file(), url)
+            self.assertEqual(
+                (output / "sitemap.xml").read_bytes(), (output / "sitemap-alt.xml").read_bytes(),
+                "The fallback sitemap must stay identical to the submitted one",
+            )
 
     def test_only_product_paths_are_published(self):
         with tempfile.TemporaryDirectory() as directory:

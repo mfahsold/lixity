@@ -29,6 +29,9 @@ DOCS_ROOT_FILES = {
     "index.html",
     "robots.txt",
     "sitemap.xml",
+    # Byte-identical fallback for a Search Console entry whose canonical
+    # path stays stuck on a fetch failure; tests keep both in sync.
+    "sitemap-alt.xml",
     "llms.txt",
     "llms-full.txt",
     "AGENTS.md",
