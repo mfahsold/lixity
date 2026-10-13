@@ -31,10 +31,10 @@ report = dashboard(
 )
 assert report.count("</head>") == 1
 head = """<link rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"/>
-<meta name="description" content="Read-only Lixity example report: six invented chapters with chapter comparison, paragraph values, filters and the complete distribution license. No installation or upload."/>
+<meta name="description" content="A read-only Lixity example: compare six invented chapters, open a paragraph and read its measured values and source lines. No installation."/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="Lixity"/>
-<meta property="og:title" content="An invented night shift – Lixity example report"/>
+<meta property="og:title" content="Lixity example report — an invented night shift"/>
 <meta property="og:description" content="Compare six invented chapters, open a paragraph and read its values in a read-only Lixity report."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/demo/report.html"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
@@ -42,14 +42,19 @@ head = """<link rel="canonical" href="https://mfahsold.github.io/lixity/demo/rep
 <meta property="og:image:height" content="945"/>
 <meta property="og:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
 <meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="An invented night shift – Lixity example report"/>
+<meta name="twitter:title" content="Lixity example report — an invented night shift"/>
 <meta name="twitter:description" content="Compare six invented chapters, open a paragraph and read its values in a read-only Lixity report."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "An invented night shift – Lixity example report", "description": "Read-only Lixity example report with six invented chapters.", "url": "https://mfahsold.github.io/lixity/demo/report.html", "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
+{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity example report — an invented night shift", "description": "A read-only Lixity example: compare six invented chapters, open a paragraph and read its measured values and source lines. No installation.", "url": "https://mfahsold.github.io/lixity/demo/report.html", "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
 </script>
 """
 report = report.replace("</head>", head + "</head>", 1)
+assert report.count("<title>An invented night shift – Style &amp; Tense Analysis</title>") == 1
+report = report.replace(
+    "<title>An invented night shift – Style &amp; Tense Analysis</title>",
+    "<title>Lixity example report — an invented night shift</title>",
+)
 notice = f'''
 <section class="panel" id="demo-context" aria-labelledby="demo-heading">
 <h2 id="demo-heading">Synthetic read-only example</h2>

@@ -28,6 +28,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- Page titles and meta descriptions follow one messaging frame: at most 60
+  and 155 characters, audience and job first, one differentiator (local,
+  nothing uploaded) and no feature lists; the landing page adds durable
+  `WebSite` data so results attribute the content to Lixity.
 - Research writes reuse the verified snapshot of the current process while
   HEAD still names it, roughly halving claim creation and revision cost on
   large archives; a commit from another process is still detected and
