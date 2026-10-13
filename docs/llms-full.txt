@@ -279,6 +279,8 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
   — language signals with their requirements and limits.
 - [Keep sources and citations](https://mfahsold.github.io/lixity/guides/research-pdf.html)
   — evidence, PDF scans and backups.
+- [Compare analysis tools](https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html)
+  — grammar checkers, corpus tools, stylometry packages and Lixity.
 - [First-project walkthrough](docs/ONBOARDING.md) — the two ways to start in the app.
 
 **For technical readers:**
@@ -554,6 +556,8 @@ Contact: mfahsold@googlemail.com.
 - [Read the results](https://mfahsold.github.io/lixity/guides/interpretation.html)
 - [Archive sources, use PDF/OCR and export manuscript PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html)
 - [Read-only example report](https://mfahsold.github.io/lixity/demo/report.html)
+- Markdown versions of the guides: append `.md` to a guide URL (for example
+  https://mfahsold.github.io/lixity/guides/first-look.html.md)
 - [Commands](https://mfahsold.github.io/lixity/USAGE.md)
 - [PDF export options and limits](https://mfahsold.github.io/lixity/USAGE.md#lixity-pdf)
 - [JSON, Python and HTTP contracts](https://mfahsold.github.io/lixity/AGENTS.md)

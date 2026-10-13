@@ -29,9 +29,6 @@ DOCS_ROOT_FILES = {
     "index.html",
     "robots.txt",
     "sitemap.xml",
-    # Byte-identical fallback for a Search Console entry whose canonical
-    # path stays stuck on a fetch failure; tests keep both in sync.
-    "sitemap-alt.xml",
     "llms.txt",
     "llms-full.txt",
     "AGENTS.md",
@@ -50,7 +47,7 @@ DOCS_ROOT_FILES = {
 #: Approved subtrees, keyed by their first path segment.
 PUBLIC_TREES = {
     "assets": {".css", ".js", ".svg", ".png", ".woff2"},
-    "guides": {".html"},
+    "guides": {".html", ".md"},
     "screenshots": {".png", ".webp", ".md"},
     "releases": {".md"},
     "videos": {".mp4", ".webm", ".gif", ".png", ".md"},
@@ -91,7 +88,14 @@ def stage(source: Path, output: Path) -> int:
     token_target = output / "assets/design-tokens.css"
     token_target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(tokens, token_target)
-    return len(selected) + 1
+    extra = 1
+    # Byte-identical fallback for a Search Console entry whose canonical path
+    # stays stuck on a fetch failure; generated here so it cannot drift.
+    sitemap = output / "sitemap.xml"
+    if sitemap.is_file():
+        shutil.copyfile(sitemap, output / "sitemap-alt.xml")
+        extra += 1
+    return len(selected) + extra
 
 
 def main() -> None:

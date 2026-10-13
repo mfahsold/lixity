@@ -261,6 +261,8 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
   — language signals with their requirements and limits.
 - [Keep sources and citations](https://mfahsold.github.io/lixity/guides/research-pdf.html)
   — evidence, PDF scans and backups.
+- [Compare analysis tools](https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html)
+  — grammar checkers, corpus tools, stylometry packages and Lixity.
 - [First-project walkthrough](docs/ONBOARDING.md) — the two ways to start in the app.
 
 **For technical readers:**

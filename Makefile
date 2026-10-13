@@ -53,11 +53,14 @@ videos: ## Record and publish the walkthrough videos (needs Chromium and ffmpeg)
 
 docs-check: ## Check documentation version consistency and link integrity
 	$(PYTHON) scripts/sync_docs.py --check
+	$(PYTHON) scripts/build_llms_full.py --check
+	$(PYTHON) scripts/build_guide_markdown.py --check
 	PYTHONPATH=src $(VPY) -m pytest tests/test_documentation.py -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 
 docs-sync: ## Synchronize documentation version references to match __version__
 	$(PYTHON) scripts/sync_docs.py
 	$(PYTHON) scripts/build_llms_full.py
+	$(PYTHON) scripts/build_guide_markdown.py
 
 clean: ## Remove caches and build artifacts
 	rm -rf build dist *.egg-info src/*.egg-info .pytest_cache .mypy_cache \

@@ -280,9 +280,12 @@ class TestDocumentation(unittest.TestCase):
             output = Path(td) / "site"
             stage(ROOT / "docs", output)
 
-            def anchors(md: Path) -> set[str]:
+            def anchors(target: Path) -> set[str]:
+                text = target.read_text(encoding="utf-8")
+                if target.suffix == ".html":
+                    return set(re.findall(r'id="([^"]+)"', text))
                 found = set()
-                for line in md.read_text(encoding="utf-8").splitlines():
+                for line in text.splitlines():
                     if line.startswith("#"):
                         slug = re.sub(r"[^\w\s-]", "", line.lstrip("#").strip().lower())
                         found.add(re.sub(r"\s+", "-", slug))
@@ -296,6 +299,8 @@ class TestDocumentation(unittest.TestCase):
                 ):
                     target, anchor = m.group(1), m.group(2)
                     resolved = (md.parent / target).resolve()
+                    if resolved.is_dir():
+                        resolved = resolved / "index.html"
                     where = f"{md.relative_to(output)} -> {target}"
                     if not resolved.exists():
                         broken.append(where)

@@ -8,6 +8,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Every guide is also published as clean Markdown for AI agents
+  (`<page>.html.md`, linked from the page and named in `llms.txt`); a generator
+  and a sync test keep the alternates identical to their HTML sources.
+- A comparison guide explains which manuscript analysis tool fits which job
+  (grammar checkers, corpus tools, stylometry packages, story tools and Lixity),
+  with a visible FAQ, source links and a clear statement of where Lixity does
+  not fit.
 - The public sitemap lists the embedded screenshots as image entries and the
   research guide's walkthrough as a video entry, all verified against the
   staged output; the guide articles carry `dateModified` metadata.
