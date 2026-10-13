@@ -67,7 +67,7 @@ dev = [
     "mutmut>=2.4",
     "mypy>=1.8",
     "pytest>=8.0",
-    "ruff==0.16.8",
+    "ruff==0.17.0",
 ]
 
 [project.urls]
