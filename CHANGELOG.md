@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- The public sitemap lists the embedded screenshots as image entries and the
+  research guide's walkthrough as a video entry, all verified against the
+  staged output; the guide articles carry `dateModified` metadata.
 - The project dialogs explain their scope in one line. The import and new-project
   forms ask for an optional author name (used for PDF credits, the title page and
   the NDA) and name what the analysis language affects; the server stores the

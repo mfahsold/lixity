@@ -1,9 +1,61 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-  <url><loc>https://mfahsold.github.io/lixity/</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/guides/first-look.html</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/demo/report.html</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/guides/installation.html</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/guides/interpretation.html</loc><lastmod>2026-10-12</lastmod></url>
-  <url><loc>https://mfahsold.github.io/lixity/guides/research-pdf.html</loc><lastmod>2026-10-12</lastmod></url>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1"
+        xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
+  <url>
+    <loc>https://mfahsold.github.io/lixity/</loc>
+    <lastmod>2026-10-13</lastmod>
+    <image:image>
+      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-light.png</image:loc>
+      <image:title>Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png</image:loc>
+      <image:title>Chapter comparison map showing differences from the manuscript's own style</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-markers.png</image:loc>
+      <image:title>Review markers linked to passages, with statuses and an editable note</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-dossier-image.png</image:loc>
+      <image:title>A local visual reference in a dossier section with a description and source caption</image:title>
+    </image:image>
+    <image:image>
+      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-project-settings.png</image:loc>
+      <image:title>Project settings with manuscript selection, analysis preferences and the NDA generator</image:title>
+    </image:image>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/guides/first-look.html</loc>
+    <lastmod>2026-10-13</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/demo/report.html</loc>
+    <lastmod>2026-10-13</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/guides/installation.html</loc>
+    <lastmod>2026-10-13</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/guides/interpretation.html</loc>
+    <lastmod>2026-10-13</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/guides/research-pdf.html</loc>
+    <lastmod>2026-10-13</lastmod>
+    <image:image>
+      <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-research-timeline.png</image:loc>
+      <image:title>Claims timeline with a shared axis, placed period badges and a placement hint</image:title>
+    </image:image>
+    <video:video>
+      <video:thumbnail_loc>https://mfahsold.github.io/lixity/videos/research-timeline.png</video:thumbnail_loc>
+      <video:title>Lixity claims timeline walkthrough</video:title>
+      <video:description>Open Claims, switch to Timeline, follow a placed row to its claim card and see where free-text periods stay unplaced.</video:description>
+      <video:content_loc>https://mfahsold.github.io/lixity/videos/research-timeline.mp4</video:content_loc>
+      <video:duration>9</video:duration>
+      <video:publication_date>2026-10-12</video:publication_date>
+    </video:video>
+  </url>
 </urlset>

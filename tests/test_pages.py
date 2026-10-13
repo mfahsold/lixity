@@ -30,6 +30,20 @@ class TestPagesStaging(unittest.TestCase):
                       .findall("{*}url/{*}loc")]
             self.assertEqual(len(listed), len(set(listed)))
             self.assertCountEqual(listed, canonical_urls)
+            tree = ET.parse(output / "sitemap.xml")  # noqa: S314
+            sitemap_text = (output / "sitemap.xml").read_text(encoding="utf-8")
+            self.assertIn("sitemap-image/1.1", sitemap_text)
+            self.assertIn("sitemap-video/1.1", sitemap_text)
+            image_ns = "{http://www.google.com/schemas/sitemap-image/1.1}"
+            video_ns = "{http://www.google.com/schemas/sitemap-video/1.1}"
+            prefix = "https://mfahsold.github.io/lixity/"
+            media = [node.text for node in tree.getroot().findall(f".//{image_ns}image/{image_ns}loc")]
+            media += [node.text for node in tree.getroot().findall(f".//{video_ns}video/{video_ns}content_loc")]
+            media += [node.text for node in tree.getroot().findall(f".//{video_ns}video/{video_ns}thumbnail_loc")]
+            self.assertTrue(media, "sitemap media entries")
+            for url in media:
+                self.assertTrue(url.startswith(prefix), url)
+                self.assertTrue((output / url[len(prefix):]).is_file(), url)
 
     def test_only_product_paths_are_published(self):
         with tempfile.TemporaryDirectory() as directory:
