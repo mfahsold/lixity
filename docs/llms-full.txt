@@ -5996,10 +5996,20 @@ Rules for changes:
 - Prefer native elements (`button`, `select`, `details`, `dialog`) and the
   existing `data-*` interaction hooks over new custom widgets.
 - Keep one primary action per form; secondary actions stay neutral.
-- Avoid new inline styles for spacing or sizing: use the shared tokens and
-  utilities in `dashboard.css` (and `design-tokens.css` for color and type
-  roles). Inline `style` remains reserved for measured values such as bar
-  widths.
+- Avoid new inline styles for spacing or sizing. Layout uses the utility
+  classes in `dashboard.css`: a tenth-rem margin scale (`.mt-N`, `.mb-N`,
+  `.my-N`, `.ml-N`, where N is the value in tenths, so `.mb-5` is
+  `margin-bottom: .5rem`), `.w-full`, `.grow`, `.form-col`/`.form-col-wide`,
+  `.field-wide`/`.field-narrow`, `.num-left`/`.num-right`, `.text-note`,
+  `.text-small`, `.gap-sm` and `.select-code`. Repeated component shapes
+  (`.research-dossier-outline`, `.research-subpanel`, `.research-passage-card`,
+  `.research-warning-box`, `.research-block-heading`, `.badge-sm`,
+  `.ctl-compact`) live next to the research styles.
+- Inline `style` remains reserved for measured or dynamic values: bar and
+  track widths, positions, heatmap background colours and data-driven
+  alignments, plus the functional `display:none` toggle on tab panes.
+  `tests/test_inline_styles.py` fails when a forbidden spacing or typography
+  pattern reappears in rendered markup or in the assets.
 - Responsive stacking is a CSS decision (single column at 640 px), not a second
   markup tree; new panels must survive 320 px without horizontal overflow.
 

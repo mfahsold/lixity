@@ -8,6 +8,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- A dependency-audit baseline (`make audit`, pip-audit) and a written update
+  policy; Dependabot now also covers Python packages, and `release-check` runs
+  the audit before producing artifacts.
 - Every guide is also published as clean Markdown for AI agents
   (`<page>.html.md`, linked from the page and named in `llms.txt`); a generator
   and a sync test keep the alternates identical to their HTML sources.
@@ -35,6 +38,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- Dashboard renderer spacing and sizing use shared utility classes from
+  `dashboard.css` instead of inline styles; measured and dynamic values stay
+  inline, and `tests/test_inline_styles.py` keeps the migrated patterns out.
 - Lixity is relicensed: the repository is open source under AGPL-3.0-or-later,
   with an optional written commercial license for integrations that cannot meet
   the AGPL. Writing for any purpose — including self-publishing — needs no extra

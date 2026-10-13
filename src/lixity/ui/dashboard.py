@@ -670,8 +670,8 @@ def render_dashboard(
             '<div class="panel empty-analysis-state">'
             '<div class="empty-state-icon" aria-hidden="true">📖</div>'
             f"<h2>{L('analysis_empty_title')}</h2>"
-            f'<p class="ctl-note" style="max-width:60ch;margin:0 auto 1.2rem;line-height:1.5;">{L("analysis_empty_desc")}</p>'
-            '<div class="row" style="justify-content:center;gap:.6rem;">'
+            f'<p class="ctl-note empty-state-note">{L("analysis_empty_desc")}</p>'
+            '<div class="row empty-actions">'
             f'<button type="button" class="ctl primary" id="analysis-empty-import">{L("welcome_import_action")}</button>'
             f'<button type="button" class="ctl" data-switch-view="project">{L("analysis_empty_to_project")}</button>'
             f'<button type="button" class="ctl" data-switch-view="research">{L("analysis_empty_to_research")}</button>'

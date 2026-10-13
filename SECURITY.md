@@ -60,6 +60,29 @@ checks prevent silently substituting a different attachment during refresh;
 they do not certify the truth or safety of its contents. See
 [Research usage](docs/research/USAGE.md) for exact limits and migration procedures.
 
+## Dependencies and updates
+
+Runtime dependencies are deliberately few and pinned with lower bounds only:
+`pydantic>=2.0.0`, `rich>=13.0.0`, `orjson>=3.9.0` and `tomli>=2.0.1` on
+Python 3.10. A clean audit is a snapshot, not a guarantee.
+
+- **Baseline (13 October 2026, pip-audit 2.10.1).** `make audit` reports no known
+  vulnerabilities for the resolved runtime dependencies, the installed CLI
+  environment and the development tooling. Re-run it before a release; the
+  `release-check` target includes it.
+- **Updates.** Dependabot opens one grouped monthly pull request per
+  ecosystem (Python packages and GitHub Actions). Security advisories appear
+  through GitHub security alerts. Patch and minor updates are merged after CI
+  passes; major updates need a compatibility check, a changelog entry and an
+  audit run. Do not add dependencies for convenience; prefer the standard
+  library and existing components.
+- **Transitive dependencies** are not pinned by Lixity. Hosts that need
+  reproducible installs should pin the full resolved set in their own
+  environment and audit that environment.
+- **Reporting.** If you believe a dependency issue affects Lixity, report it
+  through the private channel at the top of this file; do not open a public
+  issue with exploit details.
+
 ## Repository and deployment hygiene
 
 - Use isolated environments and pin reviewed tags or commits for deployment.

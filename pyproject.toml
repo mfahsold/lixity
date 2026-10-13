@@ -61,6 +61,7 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
+    "pip-audit>=2.7",
     "build>=1.2",
     "hypothesis>=6.0",
     "mutmut>=2.4",

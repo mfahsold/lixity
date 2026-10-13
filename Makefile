@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser lint typecheck check build release-check screenshots videos clean docs-check docs-sync run start serve stop restart status
+.PHONY: help install install-dev test browser lint typecheck check audit build release-check screenshots videos clean docs-check docs-sync run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -35,12 +35,15 @@ lint: ## Ruff lint (src, tests, scripts)
 typecheck: ## mypy --strict on the package
 	MYPY_CACHE_DIR=$(MYPY_CACHE) $(VENV)/bin/mypy --strict src
 
+audit: ## Dependency audit baseline (needs the dev extra with pip-audit)
+	$(VPY) -m pip_audit . --progress-spinner off
+
 check: lint typecheck test ## Everything CI cares about locally
 
 build: ## Build fresh source-verified sdist + wheel and checksums into dist/
 	$(VPY) scripts/check_release.py --build
 
-release-check: check docs-check ## Check source/docs and prepare release artifacts (RELEASE_TAG=vX.Y.Z)
+release-check: check docs-check audit ## Check source/docs and prepare release artifacts (RELEASE_TAG=vX.Y.Z)
 	@test -n "$(RELEASE_TAG)" || (echo "Set RELEASE_TAG=vX.Y.Z to match the source version"; exit 1)
 	$(VPY) scripts/check_release.py --build --smoke --tag "$(RELEASE_TAG)"
 

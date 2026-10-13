@@ -151,13 +151,13 @@ IDENTITY_LABELS = {
     "en": {
         "project_name": "Project", "version": "Version",
         "license_notice": "Open source · AGPL-3.0",
-        "license_sales_notice": "Open source under AGPL-3.0-or-later: writing and selling your manuscript needs no extra permission. A separate written commercial license is available for closed-source integrations.",
+        "license_sales_notice": "Open source under AGPL-3.0-or-later: writing and selling your manuscript, including self-publishing, needs no extra permission. A separate written commercial license is available only for closed-source integrations.",
         "license_terms": "License terms", "license_contact": "Commercial license",
     },
     "de": {
         "project_name": "Projekt", "version": "Version",
         "license_notice": "Open Source · AGPL-3.0",
-        "license_sales_notice": "Open Source unter AGPL-3.0-or-later: Für das Schreiben und Verkaufen deines Manuskripts ist keine zusätzliche Erlaubnis nötig. Eine separate schriftliche kommerzielle Lizenz gibt es für Closed-Source-Integrationen.",
+        "license_sales_notice": "Open Source unter AGPL-3.0-or-later: Für das Schreiben und Verkaufen deines Manuskripts, auch Selfpublishing, ist keine zusätzliche Erlaubnis nötig. Eine separate schriftliche kommerzielle Lizenz gibt es nur für Closed-Source-Integrationen.",
         "license_terms": "Lizenzbedingungen", "license_contact": "Kommerzielle Lizenz",
     },
     "fr": {

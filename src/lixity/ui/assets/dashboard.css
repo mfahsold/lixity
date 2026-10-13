@@ -1195,6 +1195,62 @@ mark.search-hit {
 .research-passage-actions { margin-top: .5rem; }
 .research-claim-views { margin-top: .8rem; }
 .research-claim-views button.ctl[aria-pressed="true"] { background: var(--action-bg); color: var(--on-action); }
+/* Renderer utilities: shared classes for spacing and sizing that would
+   otherwise be inline styles. Measured values (bar widths, positions, colour
+   maps) stay inline; layout uses these classes. Step N means 0.N rem, step 10
+   means 1 rem. */
+.m-0 { margin: 0; }
+.mb-2 { margin-bottom: .2rem; }
+.mb-3 { margin-bottom: .3rem; }
+.mb-5 { margin-bottom: .5rem; }
+.mt-4 { margin-top: .4rem; }
+.mt-5 { margin-top: .5rem; }
+.mt-6 { margin-top: .6rem; }
+.mt-8 { margin-top: .8rem; }
+.mt-10 { margin-top: 1rem; }
+.my-3 { margin: .3rem 0; }
+.my-4 { margin: .4rem 0; }
+.ml-3 { margin-left: .3rem; }
+.ml-4 { margin-left: .4rem; }
+.ml-5 { margin-left: .5rem; }
+.w-full { width: 100%; }
+.grow { flex: 1; min-width: 0; }
+.gap-sm { gap: .4rem; }
+.form-col { flex: 1; }
+.form-col-wide { flex: 2; }
+.field-narrow { min-width: 180px; }
+.field-wide { flex: 1; min-width: 220px; }
+.items-center { align-items: center; }
+.form-row-between { align-items: center; justify-content: space-between; }
+.empty-actions { justify-content: center; gap: .6rem; }
+.fw-medium { font-weight: 500; }
+.num-left { text-align: left; }
+.num-right { text-align: right; }
+.text-note { font-size: .72rem; }
+.text-small { font-size: .78rem; }
+.select-code { user-select: all; cursor: pointer; }
+.empty-state-note { max-width: 60ch; margin: 0 auto 1.2rem; line-height: 1.5; }
+.recent-projects-heading { display: block; font-size: .78rem; font-weight: 600; margin-bottom: .3rem; }
+.ctl { max-width: 100%; }
+textarea.ctl { font-family: inherit; }
+#r-init-title { min-width: 200px; }
+#r-search-query { flex: 1; min-width: 240px; }
+#r-link-relation { min-width: 140px; }
+.research-dossier-outline { margin: .4rem 0 .8rem; padding: .3rem .6rem; background: var(--bg-subtle, rgba(0, 0, 0, 0.03)); border-radius: 4px; font-size: .78rem; }
+.research-excerpt { margin: .3rem 0; color: var(--fg); }
+.research-claim-scope { margin-bottom: .3rem; font-size: .76rem; }
+.research-subpanel { margin-top: .6rem; padding-top: .4rem; border-top: 1px dashed var(--line); }
+.ctl-compact { font-size: .74rem; padding: .2rem .5rem; }
+.badge-sm { font-size: .75rem; padding: 2px 6px; }
+.research-relation-badge { font-size: .7rem; }
+.research-block-heading { font-size: .78rem; font-weight: 600; margin-bottom: .3rem; color: var(--fg); }
+.research-passage-card { margin: .3rem 0; padding: .4rem .6rem; }
+.research-passage-head { display: flex; align-items: center; gap: .4rem; margin-bottom: .2rem; }
+.research-passage-title-note { font-size: .74rem; }
+.research-passage-quote { font-size: .78rem; margin: .2rem 0; }
+.research-chapter-table { width: 100%; font-size: .8rem; }
+.research-warning-box { margin: .5rem 0 .8rem; padding: .4rem .7rem; font-size: .82rem; background: rgba(217, 119, 6, 0.1); border-left: 3px solid var(--warn, #d97706); border-radius: 3px; }
+
 .research-timeline { list-style: none; margin: .8rem 0; padding-left: 1.2rem; border-left: 2px solid var(--line); }
 .research-timeline > li { position: relative; margin: 0 0 .8rem; }
 .research-timeline > li::before { content: ""; position: absolute; width: .55rem; height: .55rem; border-radius: 50%; background: var(--action-bg); left: -1.54rem; top: 1.1rem; }
