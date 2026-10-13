@@ -457,7 +457,7 @@ def about() -> dict[str, Any]:
                 "manifest_schema_versions": Manifest.model_json_schema()["properties"]["schema_version"]["enum"],
             },
         ],
-        "license": "Lixity Non-Commercial License 1.0 (LNCL-1.0)",
+        "license": "AGPL-3.0-or-later",
     }
 
 

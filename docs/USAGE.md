@@ -31,7 +31,7 @@ project, start with the [README](https://github.com/mfahsold/lixity/blob/main/RE
 
 Use the [installation guide](INSTALLATION.md) for Windows/macOS/Linux,
 updates, removal, pipx, Python API environments and troubleshooting.
-Lixity is source-available under LNCL-1.0 for non-commercial use, not on PyPI.
+Lixity is open source under AGPL-3.0-or-later, not on PyPI.
 Using it for a book intended for sale requires a separate written commercial
 license, including self-publishing. See [licensing examples](LICENSING.md).
 With uv installed, the recommended CLI setup is:
@@ -1416,7 +1416,7 @@ browser checks, lint/type checks and wheel packaging checks. Contribution workfl
 
 ## License
 
-Lixity Non-Commercial License 1.0 (LNCL-1.0) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
+GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
 
 ## Unavailable consistency and empty manuscripts (since v1.18.0)

@@ -1,9 +1,9 @@
 # Contributing to Lixity
 
-Lixity is **source-available under LNCL-1.0**, for projects with no commercial
-purpose. Books intended for sale, including self-publishing, require a separate
-written commercial license.
-See [licensing examples](docs/LICENSING.md).
+Lixity is **open source under the AGPL-3.0-or-later**; contributions are
+accepted under the same license. A separate written commercial license exists
+for closed-source integrations that cannot meet the AGPL.
+See [licensing](docs/LICENSING.md).
 
 ## Ground rules
 

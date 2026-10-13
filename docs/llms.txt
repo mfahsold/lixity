@@ -191,11 +191,11 @@ API console diagnostics omit response contents.
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
 
-License: Lixity Non-Commercial License 1.0 (LNCL-1.0), source-available,
-not open source. Free use requires a project with no commercial purpose.
-A book intended for sale, including self-publishing, requires a separate
-written commercial license before that use. Research and education do not
-exempt commercial projects. See [licensing examples](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
+License: AGPL-3.0-or-later (open source). Private, research and commercial
+writing — including self-publishing — needs no extra permission. A separate
+written commercial license is available only for integrations that cannot
+meet the AGPL, for example closed-source products or modified network
+services without source disclosure. See [licensing examples](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
 and the [license](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Contact: mfahsold@googlemail.com.
 
@@ -515,4 +515,4 @@ backend logging. Backend requests and error details share a UTC writer with
 Maintainer: Matthias Fahsold. Source: https://github.com/mfahsold/lixity
 Project page: https://mfahsold.github.io/lixity/
 Samples: public-domain *Effi Briest* (Fontane, Gutenberg #5323) and *Pride and
-Prejudice* (Austen, #1342), not relicensed under LNCL.
+Prejudice* (Austen, #1342), not covered by the AGPL.

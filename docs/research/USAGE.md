@@ -1529,4 +1529,5 @@ permissions or historical completeness. A citation's `availability` indicates
 whether its source is currently available or withdrawn; a purged passage no
 longer resolves. The web panel displays those evidence states for linked
 passages.
-The [non-commercial licensing rules](../LICENSING.md) still apply.
+The [licensing rules](../LICENSING.md) still apply; imported sources keep
+their own rights.

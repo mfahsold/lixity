@@ -8,7 +8,7 @@ dynamic = ["version"]
 description = "Quantitative text linguistics, length-robust stylometry, tense profiling, and self-calibrating style references for literary manuscripts. Pure Python, offline, deterministic."
 readme = "README.md"
 requires-python = ">=3.10"
-license = "LicenseRef-Lixity-Non-Commercial-License-1.0"
+license = "AGPL-3.0-or-later"
 license-files = ["LICENSE"]
 authors = [{ name = "Matthias Fahsold", email = "mfahsold@googlemail.com" }]
 maintainers = [{ name = "Matthias Fahsold", email = "mfahsold@googlemail.com" }]
@@ -37,6 +37,7 @@ keywords = [
 ]
 classifiers = [
     "Development Status :: 4 - Beta",
+    "License :: OSI Approved :: GNU Affero General Public License v3 or later (AGPLv3+)",
     "Environment :: Console",
     "Intended Audience :: Science/Research",
     "Intended Audience :: End Users/Desktop",

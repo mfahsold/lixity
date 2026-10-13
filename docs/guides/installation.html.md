@@ -10,9 +10,9 @@ Install [uv](https://docs.astral.sh/uv/getting-started/installation/). It instal
 
 **License:**
 
-Lixity is source-available under LNCL-1.0. Free use is limited to projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license. Read the
+Lixity is open source under AGPL-3.0-or-later; every writing purpose is covered, including self-publishing. A separate written commercial license exists only for closed-source integrations. Read the
 
-[licensing examples](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
+[licensing guide](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
 
 .
 

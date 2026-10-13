@@ -35,6 +35,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- Lixity is relicensed: the repository is open source under AGPL-3.0-or-later,
+  with an optional written commercial license for integrations that cannot meet
+  the AGPL. Writing for any purpose — including self-publishing — needs no extra
+  permission now; the former LNCL-1.0 text stays available as `LICENSE-LNCL-1.0`
+  for releases up to v0.3.0.
 - Page titles and meta descriptions follow one messaging frame: at most 60
   and 155 characters, audience and job first, one differentiator (local,
   nothing uploaded) and no feature lists; the landing page adds durable

@@ -73,11 +73,10 @@ benchmark, a calibration corpus or a writing-quality verdict.</p>
 license_text = (root / "LICENSE").read_text(encoding="utf-8")
 appendix = '''
 <section class="panel" id="demo-license" aria-labelledby="demo-license-heading">
-<h2 id="demo-license-heading">Distribution license (LNCL-1.0)</h2>
+<h2 id="demo-license-heading">Distribution license (AGPL-3.0)</h2>
 <p>This report and its original synthetic example are distributed under the
-existing Lixity Non-Commercial License. Commercial use requires a separate
-written license. The complete, unchanged repository LICENSE is included below;
-it is an appendix, not part of the analyzed text.</p>
+AGPL-3.0-or-later. The complete, unchanged repository LICENSE is included
+below; it is an appendix, not part of the analyzed text.</p>
 <details><summary>Read the complete LICENSE</summary>
 <pre id="demo-license-text" style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--text-note)">'''
 appendix += html.escape(license_text)

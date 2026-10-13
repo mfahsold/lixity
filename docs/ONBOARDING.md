@@ -4,9 +4,9 @@ Lixity helps you explore sentence rhythm, vocabulary and style patterns in a
 Markdown manuscript on your computer. These signals point to passages worth
 reviewing; they do not measure literary quality or prescribe edits.
 
-Install Lixity using the [installation guide](INSTALLATION.md). Commercial use,
-including a book intended for sale or self-publishing, requires a separate
-written license; see [Licensing](LICENSING.md).
+Install Lixity using the [installation guide](INSTALLATION.md). Lixity is open
+source under AGPL-3.0-or-later, so any writing purpose — private, research or
+commercial — needs no extra permission; see [Licensing](LICENSING.md).
 
 ## Choose your starting point
 

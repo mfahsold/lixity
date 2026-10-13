@@ -48,6 +48,6 @@ There is no quality score to maximize. A deliberate change in voice need not be 
 
 To analyze your own manuscript or keep research notes and decisions, [install Lixity on your computer](installation.html) and open the local workspace. The example demonstrates manuscript analysis; it does not provide editable project or research tools.
 
-Lixity is source-available under LNCL-1.0. Use for a project with a commercial purpose, including a book intended for sale or self-publishing, requires a separate written commercial license before use for that project. [Read the licensing guide](../LICENSING.md) before starting.
+Lixity is open source under AGPL-3.0-or-later: any writing purpose — private, research or commercial, including a book intended for sale or self-publishing — needs no extra permission. A separate written commercial license exists only for closed-source integrations. [Read the licensing guide](../LICENSING.md) before starting.
 
 [Lixity home](../) · [Example report](../demo/report.html) · [Legal notice](../#impressum)

@@ -555,24 +555,30 @@ class TestDashboard(unittest.TestCase):
 
 
 class TestEngineLicense(unittest.TestCase):
-    """Extraction preparation: restrictive engine license (Lixity, LNCL-1.0)."""
+    """Extraction preparation: open-source engine license (Lixity, AGPL-3.0)."""
 
-    def test_license_file_exists_and_is_restrictive(self):
+    def test_license_file_contains_the_agpl(self):
         path = os.path.join(BASE_DIR, "LICENSE")
-        self.assertTrue(os.path.isfile(path), "LICENSE-ENGINE missing")
+        self.assertTrue(os.path.isfile(path), "LICENSE missing")
+        with open(path, encoding="utf-8") as f:
+            text = f.read()
+        self.assertIn("GNU AFFERO GENERAL PUBLIC LICENSE", text)
+        self.assertIn("Version 3, 19 November 2007", text)
+
+    def test_former_license_text_is_preserved(self):
+        path = os.path.join(BASE_DIR, "LICENSE-LNCL-1.0")
+        self.assertTrue(os.path.isfile(path), "former LNCL text missing")
         with open(path, encoding="utf-8") as f:
             text = f.read()
         self.assertIn("Lixity Non-Commercial License", text)
-        self.assertIn("kommerzielle Nutzung", text)
-        self.assertIn("mfahsold@googlemail.com", text)
-        self.assertIn("Forschung", text)
 
-    def test_pyproject_declares_lixity_and_noncommercial_license(self):
+    def test_pyproject_declares_lixity_and_open_source_license(self):
         path = os.path.join(BASE_DIR, "pyproject.toml")
         with open(path, encoding="utf-8") as f:
             text = f.read()
         self.assertIn('name = "lixity"', text)
-        self.assertIn("Non-Commercial", text)
+        self.assertIn('license = "AGPL-3.0-or-later"', text)
+        self.assertIn("GNU Affero General Public License", text)
 
 
 def test_german_present_forms_and_nouns_do_not_count_as_past():

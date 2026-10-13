@@ -1,10 +1,10 @@
 # Install, verify and update Lixity
 
 Lixity runs on your computer on Linux, macOS and Windows. It is
-**source-available under LNCL-1.0, for non-commercial use**. Install it from
-GitHub using the commands below; it is not distributed on PyPI.
-Books intended for sale, including self-publishing, require a separate written
-commercial license. See [licensing examples](LICENSING.md) before installation.
+**open source under AGPL-3.0-or-later**. Install it from GitHub using the
+commands below; it is not distributed on PyPI. Any writing purpose is covered;
+a separate written commercial license exists only for closed-source
+integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 

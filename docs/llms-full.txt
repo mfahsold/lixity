@@ -4,9 +4,9 @@
 > run `python scripts/build_llms_full.py` after changing a bundled document.
 > The individually published files remain authoritative. Product version 0.3.0.
 
-Lixity is source-available software (Lixity Non-Commercial License 1.0).
-Commercial use, including books intended for sale and self-publishing,
-requires a separate written commercial license.
+Lixity is open source under AGPL-3.0-or-later; writing for any purpose is
+covered. A separate written commercial license exists only for closed-source
+integrations that cannot meet the AGPL.
 
 Links inside a section are relative to that file's directory in the repository;
 use the source URL printed above each section to resolve them.
@@ -20,7 +20,7 @@ Source: https://github.com/mfahsold/lixity/blob/main/README.md
 
 [![tests](https://github.com/mfahsold/lixity/actions/workflows/tests.yml/badge.svg)](https://github.com/mfahsold/lixity/actions)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
-![License: LNCL-1.0](https://img.shields.io/badge/license-LNCL--1.0-orange)
+![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 **Read the patterns in your writing. Keep the evidence behind your decisions.**
 
@@ -326,16 +326,19 @@ several outputs can [reuse the shared analysis result](docs/ARCHITECTURE.md#conf
 
 ## License
 
-Lixity is **source-available, not Open Source**. LNCL-1.0 permits use only for
-projects with no commercial purpose. Private writing, research and education
-are not blanket exemptions for commercial projects.
+Lixity is **open source under the AGPL-3.0-or-later**. Use it freely for
+private and commercial writing, research and teaching — including
+self-publishing your book; no extra permission is needed. If you distribute
+Lixity or a modified version, the AGPL requires that recipients receive the
+corresponding source under the same license.
 
-Books intended for sale, including self-publishing, ebooks and print-on-demand,
-paid editing, client work and commercial integrations require a separate written
-commercial license **before use for that project**. If publication plans change,
-contact the maintainer before commercial use or sale.
+A separate written **commercial license** is available for integrations that
+cannot meet the AGPL, for example embedding Lixity in a closed-source product
+or running a modified version as a network service without releasing its
+source.
 
-[Licensing guide](docs/LICENSING.md) · [Full terms](LICENSE) ·
+[Licensing guide](docs/LICENSING.md) · [Full AGPL text](LICENSE) ·
+[Former LNCL-1.0 text](LICENSE-LNCL-1.0) ·
 [Commercial enquiries](mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry)
 
 Maintainer: Matthias Fahsold, Hamburg, Germany. Project operator:
@@ -542,11 +545,11 @@ API console diagnostics omit response contents.
 Version 1.24 adds scene/register targets, guided conflict preparation,
 atomic revision groups, decision impact/review and optional local Tesseract OCR.
 
-License: Lixity Non-Commercial License 1.0 (LNCL-1.0), source-available,
-not open source. Free use requires a project with no commercial purpose.
-A book intended for sale, including self-publishing, requires a separate
-written commercial license before that use. Research and education do not
-exempt commercial projects. See [licensing examples](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
+License: AGPL-3.0-or-later (open source). Private, research and commercial
+writing — including self-publishing — needs no extra permission. A separate
+written commercial license is available only for integrations that cannot
+meet the AGPL, for example closed-source products or modified network
+services without source disclosure. See [licensing examples](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md)
 and the [license](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Contact: mfahsold@googlemail.com.
 
@@ -866,7 +869,7 @@ backend logging. Backend requests and error details share a UTC writer with
 Maintainer: Matthias Fahsold. Source: https://github.com/mfahsold/lixity
 Project page: https://mfahsold.github.io/lixity/
 Samples: public-domain *Effi Briest* (Fontane, Gutenberg #5323) and *Pride and
-Prejudice* (Austen, #1342), not relicensed under LNCL.
+Prejudice* (Austen, #1342), not covered by the AGPL.
 
 ===============================================================================
 ## docs/ONBOARDING.md
@@ -879,9 +882,9 @@ Lixity helps you explore sentence rhythm, vocabulary and style patterns in a
 Markdown manuscript on your computer. These signals point to passages worth
 reviewing; they do not measure literary quality or prescribe edits.
 
-Install Lixity using the [installation guide](INSTALLATION.md). Commercial use,
-including a book intended for sale or self-publishing, requires a separate
-written license; see [Licensing](LICENSING.md).
+Install Lixity using the [installation guide](INSTALLATION.md). Lixity is open
+source under AGPL-3.0-or-later, so any writing purpose — private, research or
+commercial — needs no extra permission; see [Licensing](LICENSING.md).
 
 ## Choose your starting point
 
@@ -1151,10 +1154,10 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md
 # Install, verify and update Lixity
 
 Lixity runs on your computer on Linux, macOS and Windows. It is
-**source-available under LNCL-1.0, for non-commercial use**. Install it from
-GitHub using the commands below; it is not distributed on PyPI.
-Books intended for sale, including self-publishing, require a separate written
-commercial license. See [licensing examples](LICENSING.md) before installation.
+**open source under AGPL-3.0-or-later**. Install it from GitHub using the
+commands below; it is not distributed on PyPI. Any writing purpose is covered;
+a separate written commercial license exists only for closed-source
+integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
 network access. No manuscript upload, account or API key is required.
 
@@ -1669,7 +1672,7 @@ project, start with the [README](https://github.com/mfahsold/lixity/blob/main/RE
 
 Use the [installation guide](INSTALLATION.md) for Windows/macOS/Linux,
 updates, removal, pipx, Python API environments and troubleshooting.
-Lixity is source-available under LNCL-1.0 for non-commercial use, not on PyPI.
+Lixity is open source under AGPL-3.0-or-later, not on PyPI.
 Using it for a book intended for sale requires a separate written commercial
 license, including self-publishing. See [licensing examples](LICENSING.md).
 With uv installed, the recommended CLI setup is:
@@ -3054,7 +3057,7 @@ browser checks, lint/type checks and wheel packaging checks. Contribution workfl
 
 ## License
 
-Lixity Non-Commercial License 1.0 (LNCL-1.0) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
+GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
 Commercial licensing on request: mfahsold@googlemail.com.
 
 ## Unavailable consistency and empty manuscripts (since v1.18.0)
@@ -4767,7 +4770,8 @@ permissions or historical completeness. A citation's `availability` indicates
 whether its source is currently available or withdrawn; a purged passage no
 longer resolves. The web panel displays those evidence states for linked
 passages.
-The [non-commercial licensing rules](../LICENSING.md) still apply.
+The [licensing rules](../LICENSING.md) still apply; imported sources keep
+their own rights.
 
 ===============================================================================
 ## docs/METHODS.md
@@ -7293,41 +7297,58 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md
 
 # Licensing
 
-**Free for non-commercial projects. A book intended for sale requires a
-separate written commercial license—including self-publishing.**
+**Lixity is open source under the GNU Affero General Public License v3.0
+(AGPL-3.0-or-later), with an optional commercial license for uses that cannot
+meet the AGPL.**
 
 | Use of Lixity | Permission |
 | :--- | :--- |
-| Private writing, no commercial purpose | Included LNCL-1.0 |
-| Research or teaching with no commercial purpose | Included LNCL-1.0 |
-| Preparing a book for sale: print, ebook, audiobook or print-on-demand | Separate written commercial license |
-| Paid editing, commissioned writing or client reports | Separate written commercial license |
-| Commercial software, services or publishing workflows | Separate written commercial license |
+| Private writing, research, teaching — any purpose | AGPL-3.0-or-later |
+| Preparing or selling a book, including self-publishing | AGPL-3.0-or-later; no separate permission needed |
+| Paid editing, commissioned writing or client reports | AGPL-3.0-or-later; no separate permission needed |
+| Modifying Lixity for yourself or your organization | AGPL-3.0-or-later (share changes as the AGPL requires) |
+| Redistributing Lixity or a modified version | AGPL-3.0-or-later (source and license must travel with it) |
+| Embedding Lixity in a closed-source product or service | Separate written commercial license |
+| Running a modified Lixity as a network service without releasing the source | Separate written commercial license |
 
-The project's purpose matters, not your job title, organization size or profit.
-An independent author selling a book is not exempt. Research and education are
-not blanket exemptions for commercial projects.
+Writing and selling your manuscript is **your** work: the license covers the
+software, not the text you produce with it. You do not need permission to sell
+a book that was written with Lixity's help.
 
-## When to obtain permission
+## The two options in plain terms
 
-If a sale or other commercial use is planned, obtain permission **before using
-Lixity for that project**. Do not wait for revenue or profit. If a private
-project later becomes commercial, contact the maintainer before further
-commercial use or sale to agree the required permission.
+- **Default: AGPL-3.0-or-later.** Use Lixity freely — privately, commercially,
+  in research and in teaching. If you distribute the software or a modified
+  version, the AGPL requires that recipients receive the corresponding source
+  under the same license. Section 13 covers modified versions offered over a
+  network.
+- **Commercial license.** For organizations that cannot accept the AGPL's
+  copyleft obligations — for example closed-source product integration,
+  proprietary redistribution, or internal policies that exclude AGPL code —
+  a separate written commercial license is available. It grants the same
+  functional rights without the source-sharing obligations.
 
-This concerns permission to use Lixity. It does not transfer ownership of your
-manuscript to Lixity or automatically put your book under the software license.
-Fees and commercial rights must be agreed separately; this page quotes no price
-and grants no commercial permission.
+The maintainer receives no rights to your manuscript, your research sources or
+your book under either option.
+
+## When to talk to the maintainer
 
 Contact [mfahsold@googlemail.com](mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20License)
-with your project, intended publication and use of Lixity.
+**before** distributing Lixity inside a closed-source product or service, or
+when your legal or procurement team needs written commercial terms. Include
+your project, how Lixity is integrated and the intended distribution.
+
+Historical note: releases up to v0.3.0 were published under the Lixity
+Non-Commercial License 1.0 (LNCL-1.0); its unchanged text remains in
+[LICENSE-LNCL-1.0](https://github.com/mfahsold/lixity/blob/main/LICENSE-LNCL-1.0)
+for existing users. Code from this change onward is available under the AGPL,
+and the commercial option replaces the former non-commercial restriction.
 
 ## Rights in imported research sources and citations
 
 Using `lixity research ingest --allow-retention` confirms that you have permission
 to retain a local copy of that material. It does not grant or transfer copyright,
-authorize redistribution, or place imported text under LNCL-1.0. Your manuscript
+authorize redistribution, or place imported text under the AGPL. Your manuscript
 text, imported source texts, and Lixity's software code remain under their own
 separate respective rights and licenses.
 
@@ -7337,16 +7358,8 @@ does not authorize publishing the quote. Research backups/exports contain these
 retained manuscript quotations; keep them in the project's private storage.
 See [the retention workflow](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
-## Source-available, not Open Source
+## Questions
 
-Open Source licenses allow commercial use; a non-commercial restriction does
-not meet the [Open Source Definition](https://opensource.org/osd).
-
-[PolyForm Noncommercial](https://polyformproject.org/licenses/noncommercial/1.0.0)
-is an existing software-specific alternative, but not an Open Source license.
-Its organizational permissions differ from a strict project-based rule, so it
-has **not** replaced LNCL-1.0.
-
-This guide explains the intended policy; [LICENSE](https://github.com/mfahsold/lixity/blob/main/LICENSE) contains the
-terms. Have a qualified lawyer review the wording and commercial agreement,
-especially projects that become commercial after earlier private use.
+This guide explains the intended policy; the full [AGPL text](https://github.com/mfahsold/lixity/blob/main/LICENSE)
+contains the binding terms. Have a qualified lawyer review your situation for
+closed-source integration or any agreement that changes these terms.

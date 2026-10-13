@@ -62,8 +62,7 @@ Inspected baseline: commit `355d51c215a78b3491031f3d9a6feaa8a3c60087`, Lixity
 The analysis core remains offline, Python 3.10+, with its current dependency
 policy. Research providers may need a newer Python environment, downloaded
 models, native libraries or network access. These must be optional and isolated.
-The repository's LNCL-1.0 licensing is unchanged; its current description is
-source-available. Third-party software and model weights retain their own
+The repository is open source under AGPL-3.0-or-later. Third-party software and model weights retain their own
 licenses. Obsidian is an optional client, not a required open-source dependency.
 
 ## 3. Recommended stack and alternatives

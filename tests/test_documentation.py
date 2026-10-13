@@ -90,7 +90,7 @@ class TestDocumentation(unittest.TestCase):
         appendix = re.search(r'<pre\b[^>]*\bid="demo-license-text"[^>]*>(.*?)</pre>', report, re.DOTALL)
         self.assertIsNotNone(appendix)
         self.assertEqual(unescape(appendix[1]), (ROOT / "LICENSE").read_text(encoding="utf-8"))
-        self.assertNotIn("Lixity Non-Commercial License", report.split('<main id="chapters">')[1].split("</main>")[0])
+        self.assertNotIn("GNU AFFERO GENERAL PUBLIC LICENSE", report.split('<main id="chapters">')[1].split("</main>")[0])
 
     def test_math_avoids_macros_rejected_by_github(self):
         for path in (ROOT / "docs").glob("*.md"):

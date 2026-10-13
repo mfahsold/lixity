@@ -54,7 +54,7 @@ No. Analysis, dashboards and PDF export run locally. There is no account and no 
 
 **Is Lixity free?**
 
-Yes for projects with no commercial purpose. Books intended for sale, including self-publishing, require a separate written commercial license before use.
+Yes. Lixity is open source under the AGPL-3.0-or-later, so private, research and commercial writing — including self-publishing — needs no extra permission. A separate written commercial license is available for closed-source integrations.
 
 **Which languages does Lixity support?**
 

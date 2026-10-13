@@ -2,7 +2,7 @@
 
 [![tests](https://github.com/mfahsold/lixity/actions/workflows/tests.yml/badge.svg)](https://github.com/mfahsold/lixity/actions)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
-![License: LNCL-1.0](https://img.shields.io/badge/license-LNCL--1.0-orange)
+![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
 **Read the patterns in your writing. Keep the evidence behind your decisions.**
 
@@ -308,16 +308,19 @@ several outputs can [reuse the shared analysis result](docs/ARCHITECTURE.md#conf
 
 ## License
 
-Lixity is **source-available, not Open Source**. LNCL-1.0 permits use only for
-projects with no commercial purpose. Private writing, research and education
-are not blanket exemptions for commercial projects.
+Lixity is **open source under the AGPL-3.0-or-later**. Use it freely for
+private and commercial writing, research and teaching — including
+self-publishing your book; no extra permission is needed. If you distribute
+Lixity or a modified version, the AGPL requires that recipients receive the
+corresponding source under the same license.
 
-Books intended for sale, including self-publishing, ebooks and print-on-demand,
-paid editing, client work and commercial integrations require a separate written
-commercial license **before use for that project**. If publication plans change,
-contact the maintainer before commercial use or sale.
+A separate written **commercial license** is available for integrations that
+cannot meet the AGPL, for example embedding Lixity in a closed-source product
+or running a modified version as a network service without releasing its
+source.
 
-[Licensing guide](docs/LICENSING.md) · [Full terms](LICENSE) ·
+[Licensing guide](docs/LICENSING.md) · [Full AGPL text](LICENSE) ·
+[Former LNCL-1.0 text](LICENSE-LNCL-1.0) ·
 [Commercial enquiries](mailto:mfahsold@googlemail.com?subject=Lixity%20Commercial%20Inquiry)
 
 Maintainer: Matthias Fahsold, Hamburg, Germany. Project operator:
