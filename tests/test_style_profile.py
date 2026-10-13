@@ -578,7 +578,7 @@ class TestEngineLicense(unittest.TestCase):
             text = f.read()
         self.assertIn('name = "lixity"', text)
         self.assertIn('license = "AGPL-3.0-or-later"', text)
-        self.assertIn("GNU Affero General Public License", text)
+        self.assertIn('license-files = ["LICENSE"]', text)
 
 
 def test_german_present_forms_and_nouns_do_not_count_as_past():
