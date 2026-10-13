@@ -63,6 +63,15 @@ async function selectText(page, text) {
           return route.fulfill({json: {ok: true,
           schema_version: 'research-manuscript-review-local/1', project_id: 'project', snapshot: 'snapshot',
           current_source_sha256: (mode === 'source' ? 'b' : 'a').repeat(64), source_state: mode === 'unavailable' ? 'unreadable' : 'available', links: mode === 'malformed-review' ? {} : mode === 'malformed-row' ? [null] : links}}); }
+        if (url.pathname === '/api/research/status') {
+          return route.fulfill({json: {ok: true, initialized: true, project_id: 'project',
+            project_root: '/tmp/synthetic-research', sources_count: 0, dossiers_count: 0,
+            claims_count: 1, decisions_count: 0}});
+        }
+        if (url.pathname === '/api/research/review') {
+          return route.fulfill({json: {ok: true, schema_version: 'research-editorial-review-local/1',
+            project_id: 'project', snapshot: 'snapshot', decision_count: 0, candidate_count: 0, candidates: []}});
+        }
         if (url.pathname === '/api/research/claims') {
           if (mode === 'heldclaims') { heldClaims = true; await new Promise(resolve => { releaseClaims = resolve; }); }
           return route.fulfill({json: {ok: true,
@@ -116,6 +125,20 @@ async function selectText(page, text) {
       assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
       if (locale === 'en') await page.locator('#' + id).screenshot({path: `/tmp/lixity-manuscript-links-${width}.png`});
       if (locale === 'en' && width === 1440) {
+        // The Review tab lists persisted associations with state, flags and quote.
+        await page.locator('#tab-view-research').click();
+        await page.locator('[data-rtab="review"]').click();
+        const reviewRows = page.locator('#research-manuscript-review .manuscript-link-review-item');
+        await reviewRows.first().waitFor();
+        assert.equal(await page.locator('#research-manuscript-review-section').isVisible(), true, 'A bound manuscript reveals the review section');
+        assert.equal(await reviewRows.count(), 1);
+        const reviewText = await page.locator('#research-manuscript-review').textContent();
+        assert.match(reviewText, /1 saved associations/, 'The review count names the saved associations');
+        assert.match(reviewText, /Exact passage/, 'Resolved anchors report their state');
+        assert.match(reviewText, /Synthetic claim/, 'The pinned claim title stays visible');
+        assert.equal(await page.locator('#research-manuscript-review blockquote').textContent(), 'safe selected');
+        assert.equal(await page.locator('#research-manuscript-review [data-research-history="claim"]').count(), 1);
+        await page.locator('#tab-view-analysis').click();
         // A selection must stay inside manuscript text, never metrics/headings.
         await page.locator('#' + id + ' .paragraph-values > summary').click();
         await page.locator('#' + id + ' .stats').evaluate(el => {
@@ -136,6 +159,10 @@ async function selectText(page, text) {
           mode = scenario; await selectText(page, 'safe selected'); await button.click();
           await page.locator('#manuscript-link-status.err').waitFor();
           assert.equal(await page.locator('#manuscript-link-save').isEnabled(), false, scenario + ' prevents save');
+          if (scenario === 'readfail') {
+            await page.locator('#research-manuscript-review .ctl-status.err').waitFor({state: 'attached'});
+            assert.equal(await page.locator('#research-manuscript-review img').count(), 0, 'Review errors stay inert text');
+          }
           if (scenario === 'source') assert.equal(await page.locator('#' + id + ' mark.manuscript-claim-hit').count(), 0,
             'A source mismatch removes marks on the stale rendered manuscript');
           await dialog.locator('.modal-footer button').first().click();
@@ -148,6 +175,14 @@ async function selectText(page, text) {
           await page.waitForFunction(() => !document.querySelector('#manuscript-link-claim').disabled);
           assert.equal(await page.locator('#' + id + ' mark.manuscript-claim-hit').count(), 0, anchorState + ' does not silently reanchor');
           await dialog.locator('.modal-footer button').first().click();
+          await page.locator('#tab-view-research').click();
+          await page.locator('[data-rtab="review"]').click();
+          await page.locator('#r-review-refresh').click();
+          await page.waitForFunction(expected => document.querySelector('#research-manuscript-review').textContent.includes(expected),
+            {moved: 'Moved passage: review required', ambiguous: 'Multiple possible passages: review required',
+              changed: 'Passage changed: review required', unavailable: 'Source unavailable: review required'}[anchorState]);
+          assert.match(await page.locator('#research-manuscript-review').textContent(), /Source bytes changed · Claim has a newer version/);
+          await page.locator('#tab-view-analysis').click();
         }
         links[0].anchor_state = 'resolved';
         mode = 'malformed-save'; await selectText(page, 'safe selected'); await button.click();

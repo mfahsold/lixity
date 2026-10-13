@@ -181,6 +181,8 @@ exact/current claim revisions and the pinned claim's dossier association, with
 `flags`, `anchor_state`, `candidate_lines` and nullable resolved line fields.
 A compatible native server provides guarded manuscript review/list reads and
 an explicit save route; see the [HTTP contract](../AGENTS.md#manual-manuscript-associations).
+The native research Review tab lists the saved associations with their anchor
+state and flags; its section stays hidden without a selected manuscript.
 There is no new manuscript-link CLI command.
 
 The first successful, retention-confirmed save uses `research-local/7` and

@@ -2828,6 +2828,10 @@ async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
     host.textContent = report.message || uiLabel("research_status_unavailable");
     return;
   }
+  if (report.schema_version !== "research-editorial-review-local/1" || !Array.isArray(report.candidates)) {
+    host.textContent = report.message || uiLabel("research_status_unavailable");
+    return;
+  }
   if (!report.candidates.length) {
     host.textContent = uiLabel("research_editorial_empty");
     return;

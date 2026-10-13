@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- The research Review tab lists saved manuscript associations with anchor
+  state, review flags and the pinned quote; it loads when the tab is opened,
+  with the shared review refresh and after a save, and never re-anchors or
+  writes.
 - A dependency-audit baseline (`make audit`, pip-audit) and a written update
   policy; Dependabot now also covers Python packages, and `release-check` runs
   the audit before producing artifacts.

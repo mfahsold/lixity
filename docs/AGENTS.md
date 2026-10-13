@@ -758,6 +758,10 @@ revision preparation and atomic batches support this kind. Revision changes
 accept `claim_id`, `claim_revision`, `state`, `note`; unchanged claim IDs retain
 pins. Reanchoring is not implemented.
 
+The research **Review** tab lists the saved associations with anchor state,
+flags and pinned quote. It loads when the tab is opened, with the shared review
+refresh and after a save; listing never re-anchors, retracts or writes.
+
 Review rows expose `claim_revision`, `claim_current_revision`, the pinned claim's
 `dossier_id`/`dossier_revision`, `anchor`, `current_source_sha256`, `flags`,
 `anchor_state`, `candidate_lines`, `resolved_start_line` and `resolved_end_line`.

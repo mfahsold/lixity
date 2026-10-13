@@ -287,6 +287,11 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'<p class="ctl-note">{L("research_editorial_help")}</p>')
     parts.append(f'<button type="button" class="ctl" id="r-review-refresh">{L("research_editorial_refresh")}</button>')
     parts.append('<div id="research-editorial-review" aria-live="polite"></div>')
+    parts.append('<section id="research-manuscript-review-section" hidden>')
+    parts.append(f'<h3 class="section-heading">{L("manuscript_link_review")}</h3>')
+    parts.append(f'<p class="ctl-note">{L("manuscript_link_review_help")}</p>')
+    parts.append('<div id="research-manuscript-review" class="manuscript-link-review-list" aria-live="polite"></div>')
+    parts.append('</section>')
     parts.append('</div>')
 
     parts.append('<div class="research-tab-pane" id="rtab-grounding" style="display:none;">')

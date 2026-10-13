@@ -2,10 +2,10 @@
 .manuscript-link-controls .ctl { white-space: normal; }
 .manuscript-claim-hit { color: inherit; background: color-mix(in srgb, var(--accent) 16%, transparent); border-bottom: 2px solid var(--accent); }
 .manuscript-claim-hit.text-hit { background: var(--accent-light); }
-.manuscript-link-review { margin: var(--space-3) 0; }
+.manuscript-link-review, .manuscript-link-review-list { margin: var(--space-3) 0; }
 .manuscript-link-review > summary { cursor: pointer; }
 .manuscript-link-review-item { padding: var(--space-3) 0; border-bottom: 1px solid var(--line); }
-.manuscript-link-review blockquote, .manuscript-link-dialog blockquote { margin: var(--space-2) 0; padding: var(--space-2); border-left: 2px solid var(--accent); overflow-wrap: anywhere; white-space: pre-wrap; }
+.manuscript-link-review blockquote, .manuscript-link-review-list blockquote, .manuscript-link-dialog blockquote { margin: var(--space-2) 0; padding: var(--space-2); border-left: 2px solid var(--accent); overflow-wrap: anywhere; white-space: pre-wrap; }
 .manuscript-link-dialog .modal-body { display: grid; gap: var(--space-3); min-width: 0; }
 .manuscript-link-dialog select { width: 100%; min-width: 0; max-width: 100%; }
 .manuscript-link-dialog .manuscript-link-retention { display: flex; align-items: start; gap: var(--space-2); font-size: var(--text-small); }

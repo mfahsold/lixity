@@ -175,6 +175,14 @@ server.serve_forever()
       await expect(paragraph.locator('mark.manuscript-claim-hit.text-hit')).toHaveText('selected sentence');
       assert.equal((await paragraph.locator('mark.manuscript-claim-hit').allTextContents()).join(''), selection.quote,
         'Source and search marks compose without changing the selected text');
+      await page.locator('#tab-view-research').click();
+      await page.locator('[data-rtab="review"]').click();
+      const reviewRows = page.locator('#research-manuscript-review .manuscript-link-review-item');
+      await reviewRows.first().waitFor();
+      assert.equal(await reviewRows.count(), index + 1, 'The Review tab lists every persisted association once');
+      assert.match(await page.locator('#research-manuscript-review').textContent(), /saved associations/);
+      assert.equal(await page.locator('#research-manuscript-review blockquote').last().textContent(), selection.quote);
+      await page.locator('#tab-view-analysis').click();
       const tokens = await page.evaluate(() => ({
         research: document.querySelector('#research-manager').dataset.researchToken,
         project: document.querySelector('#manuscript-pdf-form').dataset.projectToken,

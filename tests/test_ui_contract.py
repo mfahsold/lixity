@@ -115,6 +115,13 @@ class TestJsDomContract(unittest.TestCase):
         review = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
         self.assertIn('data-target="p-0"', review)
 
+    def test_review_tab_hosts_manuscript_link_section(self):
+        """The Review tab owns the manuscript-link review surface."""
+        html = _full_dashboard()
+        self.assertIn('<section id="research-manuscript-review-section" hidden>', html)
+        self.assertIn('id="research-manuscript-review"', html)
+        self.assertIn('id="research-editorial-review"', html)
+
     def test_native_refresh_and_filter_reset(self):
         """Native controls expose one refresh and an explicit filter escape."""
         from lixity.server import build_server_dashboard
@@ -141,7 +148,9 @@ class TestJsDomContract(unittest.TestCase):
         for language, labels in WORKSPACE_LABELS.items():
             for key in ("optional_details", "marker_save", "marker_saving", "marker_saved",
                         "marker_save_failed", "paragraph_filter_reset", "scene_containing_chapter",
-                        "settings_bound_error", "wizard_research_required"):
+                        "settings_bound_error", "wizard_research_required",
+                        "manuscript_link_review_help", "manuscript_link_review_count",
+                        "manuscript_link_review_empty"):
                 with self.subTest(language=language, key=key):
                     self.assertTrue(labels.get(key), f"Missing {language} label: {key}")
                     self.assertNotEqual(labels[key], key)
