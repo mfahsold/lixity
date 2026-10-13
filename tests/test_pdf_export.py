@@ -247,14 +247,14 @@ class LayoutTest(unittest.TestCase):
             ("Kapitel 1", ["Ein Absatz. " * 200]),
             ("Kapitel 2", ["Noch ein Absatz. " * 200]),
         ]
-        data = book_pdf(title="weglaufen", author="M. Fahsold", chapters=chapters, choice=CHOSEN)
+        data = book_pdf(title="Harbour Story", author="M. Fahsold", chapters=chapters, choice=CHOSEN)
         self.assertTrue(data.startswith(b"%PDF-1.4"))
 
     @needs_fonts
     def test_sheet_layout_keeps_the_thirty_by_sixty_grid(self):
         paragraph = ("Der Zug verlaesst Spoleto kurz nach Mitternacht. " * 12).strip()
         chapters = [("Kapitel 1", [paragraph]), ("Kapitel 2", [paragraph, paragraph])]
-        data = manuscript_pdf(title="weglaufen", chapters=chapters, choice=CHOSEN)
+        data = manuscript_pdf(title="Harbour Story", chapters=chapters, choice=CHOSEN)
         self.assertTrue(data.startswith(b"%PDF-1.4"))
         pages = _composed_pages(data, body_only=True)
         self.assertGreater(len(pages), 1)
@@ -272,7 +272,7 @@ class LayoutTest(unittest.TestCase):
     @needs_fonts
     def test_sheet_draws_only_grid_characters(self):
         data = manuscript_pdf(
-            title="weglaufen", chapters=[("Kapitel", ["Ein kurzer Absatz."])], choice=CHOSEN
+            title="Harbour Story", chapters=[("Kapitel", ["Ein kurzer Absatz."])], choice=CHOSEN
         )
         drawn = [line for page in _composed_pages(data, body_only=True) for line in page]
         self.assertTrue(drawn)
@@ -388,7 +388,7 @@ class TypesettingTest(unittest.TestCase):
 
     def test_grid_layout_never_exceeds_the_column_count(self):
         data = manuscript_pdf(
-            title="weglaufen",
+            title="Harbour Story",
             chapters=[("Kapitel", ["Ein kurzer Absatz fuer den Normbogen." * 4])],
             choice=CHOSEN,
         )

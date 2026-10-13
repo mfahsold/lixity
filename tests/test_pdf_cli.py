@@ -18,7 +18,7 @@ MONO = str(FONTS / "DejaVuSansMono.ttf")
 HAVE_FONTS = all(Path(path).is_file() for path in (SERIF, BOLD, MONO))
 
 MANUSCRIPT = (
-    "# Weglaufen\n\n"
+    "# Harbour Story\n\n"
     "Ein erster Absatz mit ÄÖÜ, einem Gedanken und einem Fragezeichen?\n\n"
     "Zweiter Absatz mit etwas mehr Text, damit der Umbruch arbeiten muss.\n\n"
     "## Kapitel 2\n\n"

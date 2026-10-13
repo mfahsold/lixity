@@ -126,3 +126,18 @@ Thumbs.db
 .idea/
 .vscode/
 .history/
+
+# Lockfiles from local tooling (the project pins via pyproject and release wheels)
+uv.lock
+
+# Further local agent/tool state (never commit)
+.aider*
+.continue/
+.windsurf/
+.cline/
+.serena/
+.crush/
+.qwen/
+.codeium/
+.roo/
+.envrc
