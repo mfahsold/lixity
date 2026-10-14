@@ -20,7 +20,7 @@ environments are [separate advanced routes](#python-api-project-environment).
 These commands work in a terminal, including Windows PowerShell:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.1/lixity-0.4.1-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -31,8 +31,8 @@ lixity --version
 lixity service start --open
 ```
 
-The current release is **v0.4.0**. This command selects a fixed release so that
-reinstalling it uses the same wheel. Read the [release notes](releases/v0.4.0.md)
+The current release is **v0.4.1**. This command selects a fixed release so that
+reinstalling it uses the same wheel. Read the [release notes](releases/v0.4.1.md)
 for changes and compatibility information.
 
 `uv tool update-shell` configures shell integration once; it does not change an
@@ -103,7 +103,7 @@ command, and the new controller deliberately does not adopt its process.
 
 ```sh
 lixity service stop
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.1/lixity-0.4.1-py3-none-any.whl"
 lixity --version
 lixity service start --open
 ```
@@ -142,7 +142,7 @@ development source explicitly, verify its version, and restart its service.
 <summary>Alternative for existing pipx users</summary>
 
 If you already use pipx, install the published wheel with
-`pipx install "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"`,
+`pipx install "https://github.com/mfahsold/lixity/releases/download/v0.4.1/lixity-0.4.1-py3-none-any.whl"`,
 then use `pipx ensurepath` if necessary. Keep using that installer to replace or
 remove its installation rather than overwriting its executable with uv.
 
@@ -388,7 +388,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.4.0"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.4.1"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -397,7 +397,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.4.0"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.4.1"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```

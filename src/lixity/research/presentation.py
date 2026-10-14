@@ -226,9 +226,10 @@ def record_list_report(command: str, result: dict[str, Any], *, markdown: bool =
     can point at ``--json`` instead of printing an empty table.
     """
     entry = _RECORD_LISTS.get(command)
-    rows = result.get(entry[0]) if entry and isinstance(result, dict) else None
-    if not isinstance(rows, list):
+    rows = result.get(entry[0]) if entry is not None and isinstance(result, dict) else None
+    if entry is None or not isinstance(rows, list):
         return None
+    caption = entry[1]
 
     def cell(row: Any, field: str) -> str:
         value = row.get(field, "") if isinstance(row, dict) else ""
@@ -242,7 +243,7 @@ def record_list_report(command: str, result: dict[str, Any], *, markdown: bool =
                  "| " + " | ".join("---" for _ in _RECORD_COLUMNS) + " |"]
         lines.extend("| " + " | ".join(cell(row, field) for field, _ in _RECORD_COLUMNS) + " |"
                      for row in rows)
-        return "\n".join(lines) + f"\n\n{len(rows)} {entry[1]}(s)."
+        return "\n".join(lines) + f"\n\n{len(rows)} {caption}(s)."
 
     widths = [max([len(name), *(len(cell(row, field)) for row in rows)])
               for field, name in _RECORD_COLUMNS]
@@ -251,5 +252,5 @@ def record_list_report(command: str, result: dict[str, Any], *, markdown: bool =
     lines.extend("  ".join(cell(row, field).ljust(width)
                            for (field, _), width in zip(_RECORD_COLUMNS, widths, strict=False)).rstrip()
                  for row in rows)
-    return "\n".join(lines) + f"\n{len(rows)} {entry[1]}(s)."
+    return "\n".join(lines) + f"\n{len(rows)} {caption}(s)."
 

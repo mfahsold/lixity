@@ -19,7 +19,7 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v0.4.0 release notes](docs/releases/v0.4.0.md)
+[v0.4.1 release notes](docs/releases/v0.4.1.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload. Documentation is English; you can read the
@@ -48,7 +48,7 @@ For help installing uv or advanced installation options, follow the
 [installation guide](docs/INSTALLATION.md).
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.1/lixity-0.4.1-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -293,16 +293,16 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
   [Localization](docs/LOCALIZATION.md) · [Licensing](docs/LICENSING.md).
 - [AI and automation summary](docs/llms.txt) — the maintained entrypoint for
   agents, with the full-text bundle in [llms-full.txt](docs/llms-full.txt).
-- [Changelog](CHANGELOG.md) · [Release notes](docs/releases/v0.4.0.md).
+- [Changelog](CHANGELOG.md) · [Release notes](docs/releases/v0.4.1.md).
 
 ## Current release
 
-The current release is **v0.4.0**. It resets the product version to reflect
+The current release is **v0.4.1**. It resets the product version to reflect
 development before 1.0 and retains the existing features and published release
 history, including v3.0.1. Public JSON and research storage schema versions are
 independent; v0.3.0 reads existing research archives through v7. Select the
 exact release wheel when upgrading across this lower version number.
-[Release notes](docs/releases/v0.4.0.md) describe compatibility and known limits;
+[Release notes](docs/releases/v0.4.1.md) describe compatibility and known limits;
 the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 ## Python API and automation

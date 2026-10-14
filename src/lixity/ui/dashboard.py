@@ -571,6 +571,30 @@ def render_dashboard(
         parts.append(
             f'<div class="ctl-status" id="ctl-status" role="status" aria-live="polite">{L("server_hint")}</div>'
         )
+        # Generated files belong to the Results step, directly under the actions.
+        if artifacts:
+            parts.append('<section class="panel">')
+            parts.append(f"<h2>{help_term(labels, 'artifacts', L('generated_files'))}</h2>")
+            parts.append('<div class="artifacts">')
+            for art in artifacts:
+                name = esc(str(art.get("name", "")))
+                meta_bits = []
+                if art.get("size_kb") is not None:
+                    meta_bits.append(f"{N(art['size_kb'], 0)} KB")
+                if art.get("pages"):
+                    meta_bits.append(f"{art['pages']} {label(labels, 'pages')}")
+                meta = " · ".join(meta_bits)
+                href = artifact_href(art.get("href"))
+                link = (
+                    f'<a href="{esc(str(href))}" target="_blank" rel="noopener">{L("open")}</a>'
+                    if href
+                    else ""
+                )
+                parts.append(
+                    f'<div class="artifact"><span class="name">{name}</span>'
+                    f'<span class="meta">{esc(meta)}</span>{link}</div>'
+                )
+            parts.append("</div></section>")
         parts.append("</section>")
 
         if allowed_actions is not None and "nda-draft" in allowed_actions:
@@ -628,29 +652,6 @@ def render_dashboard(
                 'tabindex="0" role="region" aria-labelledby="nda-preview-title"></div></div></section>'
             )
 
-        if artifacts:
-            parts.append('<section class="panel">')
-            parts.append(f"<h2>{help_term(labels, 'artifacts', L('generated_files'))}</h2>")
-            parts.append('<div class="artifacts">')
-            for art in artifacts:
-                name = esc(str(art.get("name", "")))
-                meta_bits = []
-                if art.get("size_kb") is not None:
-                    meta_bits.append(f"{N(art['size_kb'], 0)} KB")
-                if art.get("pages"):
-                    meta_bits.append(f"{art['pages']} {label(labels, 'pages')}")
-                meta = " · ".join(meta_bits)
-                href = artifact_href(art.get("href"))
-                link = (
-                    f'<a href="{esc(str(href))}" target="_blank" rel="noopener">{L("open")}</a>'
-                    if href
-                    else ""
-                )
-                parts.append(
-                    f'<div class="artifact"><span class="name">{name}</span>'
-                    f'<span class="meta">{esc(meta)}</span>{link}</div>'
-                )
-            parts.append("</div></section>")
 
         parts.append("</div>")
         parts.append(render_project_modals(labels, language_key, language_options))

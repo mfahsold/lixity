@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import unittest
+from html.parser import HTMLParser
 from pathlib import Path
 
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -91,6 +92,79 @@ def _full_dashboard(enabled_actions: tuple[str, ...] | None = None) -> str:
     )
 
 
+class _StructureBalance(HTMLParser):
+    """Track explicitly closed structural elements across a rendered page.
+
+    Optional-tag elements (li, p, tr, td) are skipped: HTML allows their end
+    tags to be omitted, so only elements the renderer must close explicitly
+    are checked. Script/style bodies are CDATA for HTMLParser.
+    """
+
+    TRACKED = frozenset({
+        "div", "section", "details", "aside", "figure", "form", "main", "nav",
+        "dialog", "header", "footer", "article",
+    })
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.stack: list[str] = []
+        self.errors: list[str] = []
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag in self.TRACKED:
+            self.stack.append(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag not in self.TRACKED:
+            return
+        if tag not in self.stack:
+            self.errors.append(f"unexpected </{tag}>")
+            return
+        while self.stack and self.stack[-1] != tag:
+            self.errors.append(f"<{self.stack[-1]}> not closed before </{tag}>")
+            self.stack.pop()
+        self.stack.pop()
+
+
+class _PaneOwnership(HTMLParser):
+    """Record which workspace pane holds each key element, plus the pane order."""
+
+    TRACKED = frozenset({
+        "div", "section", "details", "aside", "figure", "form", "main", "nav",
+        "dialog", "header", "footer", "article",
+    })
+    KEYS = frozenset({
+        "research-manager", "analysis-review", "settings-form", "controls",
+        "chapters", "nda-draft", "welcome-hero", "workspace-reader",
+    })
+
+    def __init__(self) -> None:
+        super().__init__(convert_charrefs=True)
+        self.stack: list[str] = []
+        self.pane: str | None = None
+        self.order: list[str] = []
+        self.owners: dict[str, str | None] = {}
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        if tag not in self.TRACKED:
+            return
+        attributes = dict(attrs)
+        element_id = attributes.get("id", "")
+        if element_id.startswith("view-pane-"):
+            self.pane = element_id.removeprefix("view-pane-")
+            self.order.append(self.pane)
+        if element_id in self.KEYS:
+            self.owners[element_id] = self.pane
+        self.stack.append(tag)
+
+    def handle_endtag(self, tag: str) -> None:
+        if tag not in self.TRACKED or tag not in self.stack:
+            return
+        while self.stack and self.stack[-1] != tag:
+            self.stack.pop()
+        self.stack.pop()
+
+
 class TestJsDomContract(unittest.TestCase):
     """Every id the script touches must exist in the markup (no silent breakage)."""
 
@@ -121,6 +195,50 @@ class TestJsDomContract(unittest.TestCase):
         self.assertIn('<section id="research-manuscript-review-section" hidden>', html)
         self.assertIn('id="research-manuscript-review"', html)
         self.assertIn('id="research-editorial-review"', html)
+
+    def test_view_panes_own_their_sections(self):
+        """Each workspace view owns exactly its sections.
+
+        String slicing is not enough here: section ids and CSS classes appear
+        in the embedded stylesheet and script, so a slice can match them by
+        accident. The parser tracks the nearest ancestor pane instead, which
+        is what the browser actually uses for show/hide.
+        """
+        parser = _PaneOwnership()
+        parser.feed(_full_dashboard())
+        self.assertEqual(parser.order, ["research", "project", "analysis"])
+        expected = {
+            "research-manager": "research",
+            "analysis-review": "analysis",
+            "chapters": "analysis",
+            "settings-form": "project",
+            "controls": "project",
+        }
+        # The confidentiality agreement needs the native capability; the default
+        # variant must not render it at all.
+        self.assertNotIn("nda-draft", parser.owners)
+        for key, pane in expected.items():
+            self.assertEqual(parser.owners.get(key), pane,
+                             f"#{key} must live in the {pane} pane, found {parser.owners.get(key)!r}")
+
+    def test_rendered_documents_have_balanced_structure(self):
+        """All rendered variants close the structural tags they open."""
+        from lixity.language import LANGUAGE_PROFILES
+        from lixity.ui import render_dashboard
+
+        labels = LANGUAGE_PROFILES["en"].labels
+        variants = {
+            "full": _full_dashboard(),
+            "limited": _full_dashboard(("manuscript-pdf", "research-reader")),
+            "empty": render_dashboard([], [], controls=True, labels=labels, language_key="en"),
+        }
+        for name, html in variants.items():
+            parser = _StructureBalance()
+            parser.feed(html)
+            self.assertEqual([], parser.errors,
+                             f"{name} document has unbalanced structure: {parser.errors[:4]}")
+            self.assertEqual([], parser.stack,
+                             f"{name} document leaves tags open: {parser.stack[-6:]}")
 
     def test_native_refresh_and_filter_reset(self):
         """Native controls expose one refresh and an explicit filter escape."""

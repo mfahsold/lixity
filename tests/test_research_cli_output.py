@@ -53,6 +53,25 @@ class TestResearchCliOutput(unittest.TestCase):
             self.assertEqual(status, 1)
             self.assertIn("list verb", errors)
 
+    def test_record_lists_render_tables_and_sources_accepts_list(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Table lists", language="en")
+            api.create_dossier(root, "Dossier", "Body text.")
+            status, out, err = self.capture("dossier", "list", "--format", "table", "--project", str(root))
+            self.assertEqual((status, err), (0, ""), err)
+            self.assertIn("ID", out)
+            self.assertIn("Dossier", out)
+            self.assertIn("1 dossier(s).", out)
+            dossiers = json.loads(self.capture("dossier", "list", "--project", str(root))[1])["dossiers"]
+            status, _, err = self.capture("dossier", "--format", "table", "--project", str(root),
+                                          "--dossier-id", dossiers[0]["id"])
+            self.assertEqual(status, 2)
+            self.assertIn("list view", err)
+            status, out, err = self.capture("sources", "list", "--project", str(root))
+            self.assertEqual((status, err), (0, ""), err)
+            self.assertIn("sources", json.loads(out))
+
     def parse(self, *arguments: str) -> argparse.Namespace:
         parser = argparse.ArgumentParser()
         cli.configure(parser)
