@@ -1958,7 +1958,9 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
   .band-row { grid-template-columns: minmax(0, 1fr) 2rem; gap: var(--space-2); padding-block: var(--space-2); }
   .band-label { grid-column: 1 / -1; white-space: normal; }
   .band-summary { display: inline; margin-left: var(--space-2); }
-  .toolbar { gap: var(--space-3); }
+  /* A fully stacked toolbar would cover almost half of a phone viewport
+     while reading: let it scroll away instead of sticking there. */
+  .toolbar { position: static; gap: var(--space-3); }
   .controls input.ctl { max-width: 100%; min-width: 0; }
 }
 

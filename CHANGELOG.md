@@ -15,6 +15,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ### Changed
 - Long chapter and scene lists defer off-screen rendering work
   (`content-visibility: auto`).
+- On phones the analysis toolbar scrolls with the page instead of covering
+  almost half of the viewport while reading.
 
 ## [0.4.1] - 2026-10-14
 
