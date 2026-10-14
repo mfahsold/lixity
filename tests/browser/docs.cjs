@@ -12,7 +12,7 @@ const root = path.join(artifacts, 'site');
 const python = process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python');
 const staged = spawnSync(python, ['scripts/stage_pages.py', '--output', root], {cwd: repository, encoding: 'utf8'});
 assert.equal(staged.status, 0, staged.stderr);
-const routes = ['', 'guides/installation.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'guides/first-look.html', 'demo/report.html'];
+const routes = ['', 'guides/installation.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'guides/first-look.html', 'demo/report.html', 'examples/effi-briest.html', 'examples/pride-and-prejudice.html'];
 
 async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('.page').count(), 1, 'The example uses the generated report layout');
@@ -126,8 +126,15 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
             .filter(node => !(Number(node.getAttribute('width')) > 0 && Number(node.getAttribute('height')) > 0))
             .map(node => node.getAttribute('src'))), [], `${route} has images without dimensions`);
           assert.ok((await page.title()).length > 10);
-          if (route !== 'demo/report.html') {
-            assert.ok((await page.locator('main').innerText()).length > 1000);
+          // Dashboards keep their paragraph text in lazy payloads, so their
+          // substance is checked structurally; content pages need an article.
+          const dashboard = route === 'demo/report.html' || route.startsWith('examples/');
+          if (dashboard) {
+            assert.ok(await page.locator('.chapter').count() > 0, `${route} renders chapters`);
+            assert.ok(await page.locator('.chip').count() > 0, `${route} renders paragraph chips`);
+          } else {
+            assert.ok((await page.locator('main').innerText()).length > 1000,
+              `${route} has too little visible text`);
           }
           assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), 'https://mfahsold.github.io/lixity/' + route);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${route} overflows at ${width}px`);
@@ -208,6 +215,6 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log(`Public docs: six staged pages, desktop/390/320, light/dark, JS on/off, static GET-only journey, report keyboard/filter/chart controls, assets, overflow and console passed. Screenshots: ${artifacts}`);
+    console.log(`Public docs: every staged page, desktop/390/320, light/dark, JS on/off, static GET-only journey, report keyboard/filter/chart controls, assets, overflow and console passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

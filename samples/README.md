@@ -35,6 +35,12 @@ read-only public demonstration. Its [regeneration recipe](../docs/demo/README.md
 uses English and shared code defaults, without discovering local project
 settings. The example is not a benchmark or calibration corpus.
 
+Two public-domain classics are published the same way:
+[`docs/examples/effi-briest.html`](../docs/examples/effi-briest.html) and
+[`docs/examples/pride-and-prejudice.html`](../docs/examples/pride-and-prejudice.html)
+show the first three chapters each, with the complete work as a PDF report next
+to them. `make examples` regenerates all three pages and both reports.
+
 Regenerate the historical examples locally:
 
 ```bash

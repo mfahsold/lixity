@@ -14,85 +14,21 @@ The example's introductory notice and report header state the generating
 version. Regenerate it when the maintained UI or release version changes.
 
 From the repository root after [installation](../INSTALLATION.md), regenerate
-with the public Python API and explicit code defaults:
+every published example with the maintained script:
 
 ```bash
-PYTHONPATH=src .venv/bin/python - <<'PY'
-import html
-from pathlib import Path
-
-from lixity import __version__
-from lixity.api import dashboard
-
-root = Path.cwd()
-text = (root / "samples/first-look.md").read_text(encoding="utf-8")
-report = dashboard(
-    text, language="en", project_config={}, title="An invented night shift"
-)
-assert report.count("</head>") == 1
-head = """<link rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"/>
-<meta name="description" content="A read-only Lixity example: compare six invented chapters, open a paragraph and read its measured values and source lines. No installation."/>
-<meta property="og:type" content="article"/>
-<meta property="og:site_name" content="Lixity"/>
-<meta property="og:title" content="Lixity example report — an invented night shift"/>
-<meta property="og:description" content="Compare six invented chapters, open a paragraph and read its values in a read-only Lixity report."/>
-<meta property="og:url" content="https://mfahsold.github.io/lixity/demo/report.html"/>
-<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<meta property="og:image:width" content="1480"/>
-<meta property="og:image:height" content="945"/>
-<meta property="og:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Lixity example report — an invented night shift"/>
-<meta name="twitter:description" content="Compare six invented chapters, open a paragraph and read its values in a read-only Lixity report."/>
-<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity example report — an invented night shift", "description": "A read-only Lixity example: compare six invented chapters, open a paragraph and read its measured values and source lines. No installation.", "url": "https://mfahsold.github.io/lixity/demo/report.html", "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
-</script>
-"""
-report = report.replace("</head>", head + "</head>", 1)
-assert report.count("<title>An invented night shift – Style &amp; Tense Analysis</title>") == 1
-report = report.replace(
-    "<title>An invented night shift – Style &amp; Tense Analysis</title>",
-    "<title>Lixity example report — an invented night shift</title>",
-)
-notice = f'''
-<section class="panel" id="demo-context" aria-labelledby="demo-heading">
-<h2 id="demo-heading">Synthetic read-only example</h2>
-<p><strong>Generated with Lixity {__version__}.</strong> This example includes paragraph
-Values disclosures, review links and the tabbed style area.</p>
-<p>Six invented English chapters about a night shift at a river signal house.
-This report contains no real manuscript. It accepts no uploads and saves no edits.</p>
-<p>Compare chapters, choose a style layer or open a paragraph to read its text and
-source lines. The 3D view explores the same measured chapter data. These short
-samples and language-dependent heuristics support human review; they are not a
-benchmark, a calibration corpus or a writing-quality verdict.</p>
-<div class="license-links"><a href="../guides/first-look.html">Follow the three-minute walkthrough</a>
-<a href="#demo-license">Read the complete distribution license</a></div>
-</section>
-'''
-license_text = (root / "LICENSE").read_text(encoding="utf-8")
-appendix = '''
-<section class="panel" id="demo-license" aria-labelledby="demo-license-heading">
-<h2 id="demo-license-heading">Distribution license (AGPL-3.0)</h2>
-<p>This report and its original synthetic example are distributed under the
-AGPL-3.0-or-later. The complete, unchanged repository LICENSE is included
-below; it is an appendix, not part of the analyzed text.</p>
-<details><summary>Read the complete LICENSE</summary>
-<pre id="demo-license-text" style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--text-note)">'''
-appendix += html.escape(license_text)
-appendix += "</pre></details>\n</section>\n"
-assert report.count("</header>") == 1
-report = report.replace("</header>", "</header>" + notice, 1)
-boundary = "\n</div>\n<footer>"
-assert report.count(boundary) == 1
-report = report.replace(boundary, appendix + boundary, 1)
-(root / "docs/demo/report.html").write_text(
-    "\n".join(line.rstrip() for line in report.splitlines()) + "\n", encoding="utf-8"
-)
-PY
+make examples
+# or: .venv/bin/python scripts/build_examples.py
 ```
+
+The script uses the public Python API with explicit code defaults, injects the
+canonical and social metadata plus the provenance notice, and rebuilds this
+synthetic demo together with the two public-domain dashboards
+(`examples/effi-briest.html`, `examples/pride-and-prejudice.html`) and their
+complete PDF reports. It reproduces the demo byte for byte and refuses to ship
+an example page beyond its size budget.
 
 Review the regenerated HTML and run `make docs-check` plus the public documentation
 browser check described in [`tests/browser/README.md`](../../tests/browser/README.md).
-The Pages staging script explicitly includes `demo/report.html`; this recipe,
-source Markdown, JSON, archives and other adjacent files are not demo publications.
+The Pages staging script includes `demo/report.html` and the `examples/**` pages;
+the source Markdown, JSON, archives and other adjacent files are not publications.

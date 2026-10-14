@@ -51,6 +51,7 @@ PUBLIC_TREES = {
     "screenshots": {".png", ".webp", ".md"},
     "releases": {".md"},
     "videos": {".mp4", ".webm", ".gif", ".png", ".md"},
+    "examples": {".html", ".pdf", ".md"},
     "research": {".md", ".json", ".txt"},
 }
 

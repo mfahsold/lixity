@@ -526,6 +526,9 @@ with preserved anchors, keyboard navigation and readable no-JavaScript panels.
 
 First look: https://mfahsold.github.io/lixity/guides/first-look.html
 Read-only synthetic report: https://mfahsold.github.io/lixity/demo/report.html
+Public-domain examples (excerpt dashboard and complete PDF report):
+https://mfahsold.github.io/lixity/examples/effi-briest.html
+https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html
 The example uses the shared engine with explicit defaults. It requires no upload
 or account, offers no editing actions, and does not validate literary quality.
 
@@ -559,6 +562,8 @@ Contact: mfahsold@googlemail.com.
 - [Read the results](https://mfahsold.github.io/lixity/guides/interpretation.html)
 - [Archive sources, use PDF/OCR and export manuscript PDFs](https://mfahsold.github.io/lixity/guides/research-pdf.html)
 - [Read-only example report](https://mfahsold.github.io/lixity/demo/report.html)
+- [Effi Briest example dashboard](https://mfahsold.github.io/lixity/examples/effi-briest.html) and [complete PDF report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf)
+- [Pride and Prejudice example dashboard](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html) and [complete PDF report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf)
 - Markdown versions of the guides: append `.md` to a guide URL (for example
   https://mfahsold.github.io/lixity/guides/first-look.html.md)
 - [Commands](https://mfahsold.github.io/lixity/USAGE.md)

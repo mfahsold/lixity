@@ -55,7 +55,8 @@ class TestPagesStaging(unittest.TestCase):
             docs = root / "docs"
             public = ("index.html", "USAGE.md", "guides/install.html", "assets/site.css",
                       "research/USAGE.md", "research/examples/synthetic-source.txt",
-                      "screenshots/public.png", "sitemap.xml", ".nojekyll")
+                      "screenshots/public.png", "sitemap.xml", ".nojekyll",
+                      "examples/novel.html", "examples/novel-report.pdf")
             private = ("superpowers/plans/task.md", "archive/wave2-plan.md", "notes.md",
                        "GROWTH_REVIEW.md", "SECURITY_REVIEW.md",
                        ".planning/secret.md", "research/.scratch/session.md",

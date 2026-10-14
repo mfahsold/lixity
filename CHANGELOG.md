@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Two public-domain example analyses (Effi Briest in German, Pride and
+  Prejudice in English) are published on the documentation site: an
+  interactive excerpt of the opening chapters plus the complete PDF report;
+  `make examples` regenerates every published example deterministically.
 - Research record commands accept an explicit `list` verb
   (`lixity research dossier list`), identical to the default listing; the
   style-drift and distribution-shift headings explain Kendall's tau,
