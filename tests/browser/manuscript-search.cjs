@@ -53,7 +53,8 @@ const fixtures = JSON.parse(fixture.stdout);
         const box = element.getBoundingClientRect();
         return {width: box.width, height: box.height, coarse: matchMedia('(pointer: coarse)').matches};
       }));
-      assert.ok(reviewTargets.every(box => box.width >= 44 && box.height >= (box.coarse ? 44 : 40)),
+      // Sub-pixel rounding can report 43.99997px for an exact 44px target.
+      assert.ok(reviewTargets.every(box => box.width >= 43.99 && box.height >= (box.coarse ? 44 : 40) - 0.01),
         'Review routes provide appropriately sized controls: ' + JSON.stringify(reviewTargets));
       if (locale === 'de') await review.screenshot({path: `/tmp/lixity-review-entry-${width}.png`});
       const passageLink = review.locator('[data-review-passage]');
