@@ -4,12 +4,14 @@ Run after installing the Python development environment and Playwright with
 Chromium. Playwright is optional tooling, not a Lixity runtime dependency.
 
 ```sh
-make browser
-# or: python3 scripts/run_browser_suites.py
+make browser        # everyday core surfaces (fast group)
+make browser-full   # every suite, run before a release
+# or: python3 scripts/run_browser_suites.py --group fast
 ```
 
-`--list` prints the suite names, `--only NAME` selects suites and `--start NAME`
-resumes after a failure.
+`--list` prints the suite names, `--group fast|full` selects the everyday core
+surfaces or everything, `--only NAME` selects suites and `--start NAME` resumes
+after a failure.
 
 If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
 its module directory. `PYTHON_BIN` optionally overrides `.venv/bin/python`.

@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """Run the local browser regression suites in one Chromium at a time.
 
-Every ``tests/browser/*.cjs`` file is an independent suite. Playwright and
-Chromium are optional developer tools; ``tests/browser/README.md`` documents
-installation and environment overrides. The same script backs the manual
-``browser`` workflow dispatch, so local and CI runs stay aligned.
+Every ``tests/browser/*.cjs`` file is an independent suite. ``--group fast``
+runs the everyday core surfaces; ``--group full`` (the default) runs every
+suite and belongs before a release. Playwright and Chromium are optional
+developer tools; ``tests/browser/README.md`` documents installation and
+environment overrides. The same script backs the manual ``browser`` workflow
+dispatch, so local and CI runs stay aligned.
 """
 
 import argparse
@@ -17,6 +19,20 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 SUITE_DIR = ROOT / "tests" / "browser"
 
+# Everyday coverage for UI work; run every suite before a release.
+GROUPS: dict[str, tuple[str, ...]] = {
+    "fast": (
+        "layout.cjs",
+        "minimal-workflows.cjs",
+        "project-controls.cjs",
+        "research.cjs",
+        "scenes.cjs",
+        "settings.cjs",
+        "ui-usability.cjs",
+        "visual-consistency.cjs",
+    ),
+}
+
 
 def suite_names() -> list[str]:
     """Return every registered browser suite in deterministic order."""
@@ -27,13 +43,12 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--list", action="store_true", help="List suite filenames and exit")
     parser.add_argument("--only", nargs="+", metavar="SUITE", help="Run only these suites")
+    parser.add_argument("--group", choices=("fast", "full"), default="full",
+                        help="Run the everyday fast group or every suite (default: full)")
     parser.add_argument("--start", metavar="SUITE", help="Resume at this suite after a failure")
     arguments = parser.parse_args()
 
     names = suite_names()
-    if arguments.list:
-        print("\n".join(names))
-        return 0
     if not names:
         print("No browser suites found under tests/browser/.", file=sys.stderr)
         return 2
@@ -47,11 +62,22 @@ def main() -> int:
         if unknown:
             parser.error("Unknown suites: " + ", ".join(unknown))
         names = [name for name in names if name in requested]
-    elif arguments.start:
-        start = normalize(arguments.start)
-        if start not in names:
-            parser.error(f"Unknown suite: {start}")
-        names = names[names.index(start) :]
+    else:
+        if arguments.group == "fast":
+            fast = set(GROUPS["fast"])
+            unknown = sorted(fast - set(names))
+            if unknown:
+                parser.error("Unknown suites in group fast: " + ", ".join(unknown))
+            names = [name for name in names if name in fast]
+        if arguments.start:
+            start = normalize(arguments.start)
+            if start not in names:
+                parser.error(f"Unknown suite: {start}")
+            names = names[names.index(start) :]
+
+    if arguments.list:
+        print("\n".join(names))
+        return 0
 
     node = shutil.which("node")
     if node is None:

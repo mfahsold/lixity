@@ -26,7 +26,10 @@ install-dev: ## Create .venv and install with dev extras
 test: ## Run the full test suite (warnings as errors)
 	PYTHONPATH=src $(VPY) -m pytest -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 
-browser: ## Run local browser regression suites (needs Node and Playwright)
+browser: ## Run the everyday browser checks (needs Node and Playwright)
+	$(PYTHON) scripts/run_browser_suites.py --group fast
+
+browser-full: ## Run every browser suite before a release
 	$(PYTHON) scripts/run_browser_suites.py
 
 lint: ## Ruff lint (src, tests, scripts)

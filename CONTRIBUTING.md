@@ -55,7 +55,7 @@ commands. The make targets create an isolated `.venv`; they do not alter global 
 ```bash
 make install-dev          # or: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
 make check                # ruff + mypy --strict + pytest -W error
-make browser              # optional local Playwright regression suites
+make browser              # everyday local Playwright checks (browser-full: all)
 make docs-check           # version pins, changelog, staged-site link integrity
 ```
 
@@ -111,6 +111,10 @@ isolated environment outside the checkout. It checks dependencies, CLI version
 and `about --json` metadata. The output is the verified wheel, source archive and
 `SHA256SUMS` in `dist/`. Recheck existing artifacts without rebuilding with
 `.venv/bin/python scripts/check_release.py --tag vX.Y.Z --smoke`.
+
+Code-only releases can skip the generated documentation surfaces. When the UI
+or the published guides change, regenerate them first with `make docs-sync`,
+`make examples` and `make screenshots` (and `make videos` for the walkthroughs).
 
 Preparation does not commit, tag, push or publish. After reviewing the changes
 and obtaining release authorization, run `make browser` for UI-affecting changes,

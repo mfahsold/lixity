@@ -23,6 +23,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   component, a compact `ctl-sm` button size, canonical section headings, and
   removed one-off classes (`secondary`, `ctl-primary`, `research-check`,
   `publication-enable`).
+- Local browser checks run in two groups: `make browser` covers the everyday
+  core surfaces, `make browser-full` runs every suite before a release.
 
 ## [0.4.1] - 2026-10-14
 
