@@ -357,6 +357,16 @@ measurements are available; otherwise it links to `#chapters` with a limitation
 hint. Sentence rhythm uses `#dist` only when metrics are supplied. This reuses
 existing analysis results without a new quality score or ranking.
 
+**Since v0.4.2:** the Analysis view keeps a native section navigation
+(`#analysis-sections`) above the chapters with one link per rendered panel
+(flagged passages, sentence lengths, scenes, motifs, style, chapter matrix).
+Each link carries `data-section-link="<panel-id>"`; the script highlights the
+section currently in view (scrollspy) and only panels this document renders are
+offered. Section links are ordinary anchor links with `data-jump`; they add no
+payload, state or write. Chapter sections stay fully rendered for reliable
+anchor jumps and paragraph taps; only scene-detail tables defer off-screen
+rendering (`content-visibility: auto`).
+
 The existing style panels share a tabbed area since v2.3.0. Navigation to
 `#heatmap`, `#bands`, `#dimensions`, `#structural` or `#feat-<field>` reveals the
 owning panel before scrolling; those anchors remain stable. `ArrowLeft` and
@@ -429,6 +439,7 @@ historical certainty.
 | `.paragraph-values > summary` | native disclosure for source lines and measurements in an opened paragraph |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
+| `#analysis-sections a[data-section-link]` | section navigation (since v0.4.2); highlights the panel in view (scrollspy); only rendered panels are offered |
 | `#manuscript-pdf-form` / `data-project-token` | native PDF form (since v2.4.0) and opaque selected-context token; the client submits `layout` and this token explicitly |
 | `#manuscript-pdf-layout` / `#manuscript-pdf-download` / `#manuscript-pdf-status` | layout selector, download button and live status region; native PDF menu starts collapsed |
 | `#workspace-reader-toggle` / `#workspace-reader-panel` | opt-in **Dossier alongside** view (since v2.4.0); closing it preserves the existing manuscript DOM/state |

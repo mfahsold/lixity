@@ -7,28 +7,37 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-10-14
+
 ### Added
-- The Analysis view keeps a sticky section navigation (flagged passages,
-  sentence lengths, scenes, motifs, style, chapter matrix) with scrollspy;
-  only panels the document actually renders are offered.
+- The Analysis view keeps a section navigation (flagged passages, sentence
+  lengths, scenes, motifs, style, chapter matrix) with scrollspy; only panels
+  the document actually renders are offered.
 
 ### Changed
-- Long chapter and scene lists defer off-screen rendering work
-  (`content-visibility: auto`).
+- Scene detail tables render off-screen content on demand
+  (`content-visibility: auto`) and only show project-target and register-median
+  columns when the project defines them.
 - On phones the analysis toolbar scrolls with the page instead of covering
   almost half of the viewport while reading.
-- Scene detail tables only show project-target and register-median columns
-  when the project defines them.
 - Control components are shared across views and modals: one `form-checkbox`
   component, a compact `ctl-sm` button size, canonical section headings, and
   removed one-off classes (`secondary`, `ctl-primary`, `research-check`,
   `publication-enable`).
+- Layout uses one global `.row` primitive and spacing utilities on the shared
+  `--space` scale; the Pages stylesheet consumes the canonical design tokens
+  without alias duplicates.
 - Local browser checks run in two groups: `make browser` covers the everyday
   core surfaces in parallel workers, `make browser-full` runs every suite
   sequentially before a release.
+
+### Fixed
+- Chapters stay fully rendered while scrolling, so anchor jumps and paragraph
+  taps keep their exact target; only scene details defer off-screen rendering.
 - The research API validates claim confidence, evidence relations and dossier
   languages at the boundary; unsupported dossier languages raise a clear error
-  instead of a raw validation trace.
+  instead of a raw validation trace. Record schema versions share one declared
+  union, so the models carry no type suppressions.
 
 ## [0.4.1] - 2026-10-14
 
@@ -1923,7 +1932,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.1...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.2...HEAD
+[0.4.2]: https://github.com/mfahsold/lixity/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/mfahsold/lixity/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/mfahsold/lixity/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mfahsold/lixity/compare/v3.0.1...v0.3.0
