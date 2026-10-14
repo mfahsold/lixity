@@ -8,6 +8,30 @@ Install Lixity using the [installation guide](INSTALLATION.md). Lixity is open
 source under AGPL-3.0-or-later, so any writing purpose — private, research or
 commercial — needs no extra permission; see [Licensing](LICENSING.md).
 
+## The journey at a glance
+
+| Stage | Where it happens | Continue with |
+| --- | --- | --- |
+| See a finished example | Browser, no installation | [Read-only demo](https://mfahsold.github.io/lixity/demo/report.html) · [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html) · [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html) |
+| Install and start | Terminal, then the local browser | [Installation guide](INSTALLATION.md) · [Use the interactive workspace](#use-the-interactive-workspace) |
+| Choose a project | Welcome screen or workspace bar | [Choose your starting point](#choose-your-starting-point) · [Open or import?](#open-or-import) |
+| First analysis | **Manuscript & Analysis** | [Read and explore](#read-and-explore) |
+| Review notes | Flagged passages and paragraphs | [Work through review notes](#work-through-review-notes) |
+| Research | **Research & Dossiers** | [Research workflow](#research-workflow) |
+| Export and return | PDF export, then restart later | [Check your first session and return later](#check-your-first-session-and-return-later) |
+
+## See a finished example first
+
+Two public-domain novels are published as finished analyses: the
+[Effi Briest example](https://mfahsold.github.io/lixity/examples/effi-briest.html)
+(German) and the
+[Pride and Prejudice example](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
+(English) each pair an interactive excerpt with a complete PDF report. Both run
+in the browser without installation; nothing is uploaded and nothing is saved
+there. The [read-only synthetic demo](https://mfahsold.github.io/lixity/demo/report.html)
+stays the smallest introduction. The local app's welcome screen links the
+example that matches its analysis language.
+
 ## Choose your starting point
 
 | What you want to do | Start here |
@@ -135,6 +159,26 @@ it does not edit prose or establish who wrote the text.
 Book-specific publication and delivery integrations belong to project adapters;
 the shared manuscript PDF layouts are described in the [PDF reference](USAGE.md#lixity-pdf).
 
+## Work through review notes
+
+The editorial loop starts where the measurements point and ends in the
+manuscript:
+
+1. Open the flagged passages list (or any paragraph) and read the excerpt it
+   shows.
+2. Open the paragraph. The text comes first; expand **Values** for source
+   lines, tense labels and the compact measurement line.
+3. Use the marker buttons (**Check**, **Fact-check**, **To-do**, **Attention**)
+   to write a note directly on the passage. Nothing is saved until you choose
+   **Save marker**; cancelling leaves the text unchanged.
+4. Saved markers live as Markdown comments above their paragraph and stay
+   visible in the marker list. Their visibility in a book export depends on the
+   editor or converter you use.
+
+Markers are your decisions: the analysis neither rewrites prose nor resolves a
+flagged passage. See [work markers](USAGE.md#work-markers-editor-visible) and the
+[editorial-loop walkthrough](https://mfahsold.github.io/lixity/#editorial-matrix).
+
 ## Research workflow
 
 The research workspace is experimental. It keeps sources, quotations and authored
@@ -224,6 +268,11 @@ form and select **Find source passage**. Search, read a result, choose **Use for
 claim**, then review its full retained paragraph and save the evidence relation.
 A keyword match or causal interpretation does not verify a claim. A changed
 reviewed context requires another review before saving.
+
+Saved manuscript associations—a selected quote linked to a claim—are listed in
+the research **Review** tab with their anchor state and review flags. A moved,
+changed or ambiguous anchor stays unresolved and is never repinned silently;
+listing them never writes.
 
 See [Research usage](research/USAGE.md) for batch import, claim and decision
 commands, backups and archive limits.

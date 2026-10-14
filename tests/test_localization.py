@@ -94,6 +94,7 @@ class TestLocalization(unittest.TestCase):
                 )
                 self.assertEqual(parser.labels["ctx_provenance_note"], labels["ctx_provenance_note"])
                 for key in ("research_tab_claims", "wizard_import_tab", "wizard_open_note",
+                    "welcome_example",
                             "wizard_choose_action", "welcome_dismiss", "welcome_show"):
                     self.assertTrue(escape(labels[key]) in rendered, key)
                 self.assertIn(f'<p class="ctl-note">{escape(labels["wizard_choose_location"])}</p>', rendered)

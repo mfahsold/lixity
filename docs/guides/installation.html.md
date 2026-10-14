@@ -2,7 +2,7 @@
 
 Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.
 
-Maintained by the Lixity project · Updated 11 October 2026
+Maintained by the Lixity project · Updated 14 October 2026
 
 ## What do I need?
 
@@ -49,6 +49,16 @@ changes over time. Verify the version before starting again. Most users should k
 ## Start the workspace
 
 The managed app opens `http://127.0.0.1:8765/`. Its default is an empty workspace; it does not search your terminal's current folder. Choose **Open Project** for an existing folder or **Analyze a manuscript** for an import preview. Confirm the language and read a passage before interpreting its measurements.
+
+2. Choose **Analyze a manuscript** (or **New Project**) and confirm the preview: title, analysis language and optional author name.
+
+4. Read the **Start your review** panel first: **Open passage**, **Explore chapters** or **Open sentence rhythm**.
+
+6. Work from a flagged passage or open any paragraph, expand **Values** and write a marker note if something needs another look.
+
+8. Export the result with **PDF export**: A5 reading copy, A4 manuscript sheets or the A4 analysis report.
+
+The [first-session guide](../ONBOARDING.md) describes every stage, and the [public-domain examples](https://mfahsold.github.io/lixity/examples/effi-briest.html) show a finished analysis without installation.
 
 **Generate an offline HTML report instead**
 

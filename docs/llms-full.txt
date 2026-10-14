@@ -48,8 +48,12 @@ results in German, English, French, Spanish, Italian, Portuguese or Dutch.
 No statistics background is needed, and nothing is uploaded: analysis runs on
 your computer.
 
-1. **Look at the example.** The [read-only report](https://mfahsold.github.io/lixity/demo/report.html)
-   opens directly in the browser and is made from invented text.
+1. **Look at an example.** The [read-only synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
+   opens directly in the browser and is made from invented text. For real books,
+   the [Effi Briest example](https://mfahsold.github.io/lixity/examples/effi-briest.html)
+   (German) and the [Pride and Prejudice example](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
+   (English) show an interactive excerpt of a public-domain novel next to its
+   complete PDF report.
 2. **See what the numbers mean.** The [three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
    walks through chapter comparison, a passage and its measurements.
 3. **Install Lixity** when you want to analyze your own manuscript (next section).
@@ -128,9 +132,13 @@ measurements unavailable. [Scene example](docs/screenshots/dashboard-scenes.png)
 analysis report, an A5 reading layout, or a submission sheet of 30 lines of 60
 characters. Fonts are embedded as subsets, with searchable text for Unicode
 characters covered by the selected fonts. No converter, no upload, no added
-runtime dependency. These are reading and review layouts; PDF/X production
-preflight and automatic fallback between fonts are not provided.
-[Command reference](docs/USAGE.md#lixity-pdf).
+runtime dependency. The A4 report opens with a cover page and sets its figures
+as aligned tables with a repeated header row. These are reading and review
+layouts; PDF/X production preflight and automatic fallback between fonts are
+not provided. [Command reference](docs/USAGE.md#lixity-pdf).
+
+See the complete output: [Effi Briest report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf) ·
+[Pride and Prejudice report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
 
 In the app, **PDF export** in the global project controls offers **A5 reading
 copy** (default), **A4 manuscript sheets** or **A4 analysis report**; the menu
@@ -144,13 +152,18 @@ PDFs, without EPUB, PDF/UA or PDF/X certification. See
 
 ### Keep review notes beside the text
 
-Inspect paragraphs with their source lines, dialogue and tense labels. Work
-markers keep review notes next to the relevant passage in Markdown. Their
+Start from the flagged passages list, open a paragraph and read its measured
+values, source lines and tense labels. A note can be written directly on the
+passage; work markers keep it next to the relevant text in Markdown. Their
 visibility in a book export depends on the editor or converter you use.
+
+<img src="docs/videos/editorial-loop.gif" alt="Walkthrough: review flagged passages, open a paragraph, read its values and write a marker note on the passage" width="900" />
 
 <a href="docs/screenshots/dashboard-markers.png"><img src="docs/screenshots/dashboard-markers.png" alt="Review markers linked to passages, with statuses and an editable note" width="900" /></a>
 
 [Work-marker instructions](docs/USAGE.md#work-markers-editor-visible) ·
+[Flagged passages](docs/screenshots/dashboard-flags.png) ·
+[Note on a passage](docs/screenshots/dashboard-editorial.png) ·
 [Paragraph view](docs/screenshots/dashboard-layer.png)
 
 ### Connect sources, claims and decisions
@@ -173,7 +186,10 @@ chosen notes beside the manuscript.
 
 **Review** shows the records explicitly linked to a decision and whether those
 links refer to an older version. You can inspect the earlier and current
-versions before deciding to update a link. Related dossier edits can be
+versions before deciding to update a link. Saved manuscript associations—a
+selected quote linked to a claim—appear in the same tab with their anchor state
+and review flags; a moved or changed anchor stays unresolved and is never
+repinned silently. Related dossier edits can be
 previewed and saved together; if another edit conflicts, the preview helps you
 resolve it while preserving your draft.
 
@@ -271,6 +287,8 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 
 - [Read-only example report](https://mfahsold.github.io/lixity/demo/report.html) —
   the features in a browser, with invented text.
+- [Public-domain examples](https://mfahsold.github.io/lixity/examples/effi-briest.html) —
+  Effi Briest (German) and Pride and Prejudice (English), each with a complete PDF report.
 - [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
   — chapter comparison, one passage and its measurements.
 - [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html)
@@ -891,6 +909,30 @@ Install Lixity using the [installation guide](INSTALLATION.md). Lixity is open
 source under AGPL-3.0-or-later, so any writing purpose — private, research or
 commercial — needs no extra permission; see [Licensing](LICENSING.md).
 
+## The journey at a glance
+
+| Stage | Where it happens | Continue with |
+| --- | --- | --- |
+| See a finished example | Browser, no installation | [Read-only demo](https://mfahsold.github.io/lixity/demo/report.html) · [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html) · [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html) |
+| Install and start | Terminal, then the local browser | [Installation guide](INSTALLATION.md) · [Use the interactive workspace](#use-the-interactive-workspace) |
+| Choose a project | Welcome screen or workspace bar | [Choose your starting point](#choose-your-starting-point) · [Open or import?](#open-or-import) |
+| First analysis | **Manuscript & Analysis** | [Read and explore](#read-and-explore) |
+| Review notes | Flagged passages and paragraphs | [Work through review notes](#work-through-review-notes) |
+| Research | **Research & Dossiers** | [Research workflow](#research-workflow) |
+| Export and return | PDF export, then restart later | [Check your first session and return later](#check-your-first-session-and-return-later) |
+
+## See a finished example first
+
+Two public-domain novels are published as finished analyses: the
+[Effi Briest example](https://mfahsold.github.io/lixity/examples/effi-briest.html)
+(German) and the
+[Pride and Prejudice example](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
+(English) each pair an interactive excerpt with a complete PDF report. Both run
+in the browser without installation; nothing is uploaded and nothing is saved
+there. The [read-only synthetic demo](https://mfahsold.github.io/lixity/demo/report.html)
+stays the smallest introduction. The local app's welcome screen links the
+example that matches its analysis language.
+
 ## Choose your starting point
 
 | What you want to do | Start here |
@@ -1018,6 +1060,26 @@ it does not edit prose or establish who wrote the text.
 Book-specific publication and delivery integrations belong to project adapters;
 the shared manuscript PDF layouts are described in the [PDF reference](USAGE.md#lixity-pdf).
 
+## Work through review notes
+
+The editorial loop starts where the measurements point and ends in the
+manuscript:
+
+1. Open the flagged passages list (or any paragraph) and read the excerpt it
+   shows.
+2. Open the paragraph. The text comes first; expand **Values** for source
+   lines, tense labels and the compact measurement line.
+3. Use the marker buttons (**Check**, **Fact-check**, **To-do**, **Attention**)
+   to write a note directly on the passage. Nothing is saved until you choose
+   **Save marker**; cancelling leaves the text unchanged.
+4. Saved markers live as Markdown comments above their paragraph and stay
+   visible in the marker list. Their visibility in a book export depends on the
+   editor or converter you use.
+
+Markers are your decisions: the analysis neither rewrites prose nor resolves a
+flagged passage. See [work markers](USAGE.md#work-markers-editor-visible) and the
+[editorial-loop walkthrough](https://mfahsold.github.io/lixity/#editorial-matrix).
+
 ## Research workflow
 
 The research workspace is experimental. It keeps sources, quotations and authored
@@ -1107,6 +1169,11 @@ form and select **Find source passage**. Search, read a result, choose **Use for
 claim**, then review its full retained paragraph and save the evidence relation.
 A keyword match or causal interpretation does not verify a claim. A changed
 reviewed context requires another review before saving.
+
+Saved manuscript associations—a selected quote linked to a claim—are listed in
+the research **Review** tab with their anchor state and review flags. A moved,
+changed or ambiguous anchor stays unresolved and is never repinned silently;
+listing them never writes.
 
 See [Research usage](research/USAGE.md) for batch import, claim and decision
 commands, backups and archive limits.
@@ -6023,6 +6090,23 @@ Rules for changes:
   pattern reappears in rendered markup or in the assets.
 - Responsive stacking is a CSS decision (single column at 640 px), not a second
   markup tree; new panels must survive 320 px without horizontal overflow.
+
+## First-run journey (server contract)
+
+An empty workspace renders the welcome hero with three actions, the quickstart
+steps and one optional link to the published public-domain examples. That link
+points at the documentation site, opens in a new browser tab and is
+presentation only: the app itself stays usable offline.
+
+After `project-create`, `project-open` or `load`, the server answers with
+`reload: true`. A fresh render chooses its default view from the content: a
+manuscript with chapters opens **Manuscript & Analysis**, while a research-only
+archive opens **Research & Dossiers**. Recent projects are browser-local (local
+storage); the server keeps no journey state. Standalone read-only reports
+(`controls=False`) render no welcome hero, no example link and no project
+actions. The example link and the quickstart copy come from the same seven
+language packs as the rest of the workspace, so the journey is localized like
+every other control.
 
 ## Repository tooling
 

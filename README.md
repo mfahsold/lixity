@@ -30,8 +30,12 @@ results in German, English, French, Spanish, Italian, Portuguese or Dutch.
 No statistics background is needed, and nothing is uploaded: analysis runs on
 your computer.
 
-1. **Look at the example.** The [read-only report](https://mfahsold.github.io/lixity/demo/report.html)
-   opens directly in the browser and is made from invented text.
+1. **Look at an example.** The [read-only synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
+   opens directly in the browser and is made from invented text. For real books,
+   the [Effi Briest example](https://mfahsold.github.io/lixity/examples/effi-briest.html)
+   (German) and the [Pride and Prejudice example](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
+   (English) show an interactive excerpt of a public-domain novel next to its
+   complete PDF report.
 2. **See what the numbers mean.** The [three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
    walks through chapter comparison, a passage and its measurements.
 3. **Install Lixity** when you want to analyze your own manuscript (next section).
@@ -110,9 +114,13 @@ measurements unavailable. [Scene example](docs/screenshots/dashboard-scenes.png)
 analysis report, an A5 reading layout, or a submission sheet of 30 lines of 60
 characters. Fonts are embedded as subsets, with searchable text for Unicode
 characters covered by the selected fonts. No converter, no upload, no added
-runtime dependency. These are reading and review layouts; PDF/X production
-preflight and automatic fallback between fonts are not provided.
-[Command reference](docs/USAGE.md#lixity-pdf).
+runtime dependency. The A4 report opens with a cover page and sets its figures
+as aligned tables with a repeated header row. These are reading and review
+layouts; PDF/X production preflight and automatic fallback between fonts are
+not provided. [Command reference](docs/USAGE.md#lixity-pdf).
+
+See the complete output: [Effi Briest report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf) ·
+[Pride and Prejudice report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
 
 In the app, **PDF export** in the global project controls offers **A5 reading
 copy** (default), **A4 manuscript sheets** or **A4 analysis report**; the menu
@@ -126,13 +134,18 @@ PDFs, without EPUB, PDF/UA or PDF/X certification. See
 
 ### Keep review notes beside the text
 
-Inspect paragraphs with their source lines, dialogue and tense labels. Work
-markers keep review notes next to the relevant passage in Markdown. Their
+Start from the flagged passages list, open a paragraph and read its measured
+values, source lines and tense labels. A note can be written directly on the
+passage; work markers keep it next to the relevant text in Markdown. Their
 visibility in a book export depends on the editor or converter you use.
+
+<img src="docs/videos/editorial-loop.gif" alt="Walkthrough: review flagged passages, open a paragraph, read its values and write a marker note on the passage" width="900" />
 
 <a href="docs/screenshots/dashboard-markers.png"><img src="docs/screenshots/dashboard-markers.png" alt="Review markers linked to passages, with statuses and an editable note" width="900" /></a>
 
 [Work-marker instructions](docs/USAGE.md#work-markers-editor-visible) ·
+[Flagged passages](docs/screenshots/dashboard-flags.png) ·
+[Note on a passage](docs/screenshots/dashboard-editorial.png) ·
 [Paragraph view](docs/screenshots/dashboard-layer.png)
 
 ### Connect sources, claims and decisions
@@ -155,7 +168,10 @@ chosen notes beside the manuscript.
 
 **Review** shows the records explicitly linked to a decision and whether those
 links refer to an older version. You can inspect the earlier and current
-versions before deciding to update a link. Related dossier edits can be
+versions before deciding to update a link. Saved manuscript associations—a
+selected quote linked to a claim—appear in the same tab with their anchor state
+and review flags; a moved or changed anchor stays unresolved and is never
+repinned silently. Related dossier edits can be
 previewed and saved together; if another edit conflicts, the preview helps you
 resolve it while preserving your draft.
 
@@ -253,6 +269,8 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 
 - [Read-only example report](https://mfahsold.github.io/lixity/demo/report.html) —
   the features in a browser, with invented text.
+- [Public-domain examples](https://mfahsold.github.io/lixity/examples/effi-briest.html) —
+  Effi Briest (German) and Pride and Prejudice (English), each with a complete PDF report.
 - [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
   — chapter comparison, one passage and its measurements.
 - [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html)

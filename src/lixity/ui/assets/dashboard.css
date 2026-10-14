@@ -1365,6 +1365,8 @@ textarea.ctl { font-family: inherit; }
   letter-spacing: -.025em;
   color: var(--fg);
 }
+.welcome-example { margin: .35rem 0 0; font-size: var(--text-small); }
+.welcome-example a { color: var(--muted); text-decoration: underline; }
 .welcome-desc {
   color: var(--muted);
   font-size: .95rem;

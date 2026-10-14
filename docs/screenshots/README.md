@@ -12,6 +12,7 @@ a selected image. Use the links below for related views and full-size images.
 | Chapter comparisons | [Heatmap excerpt](dashboard-heatmap.png), [reference bands](dashboard-reference.png), [settings](dashboard-settings.png) |
 | Scene registers | [Scene excerpt](dashboard-scenes.png), [mobile](dashboard-scenes-mobile.png) |
 | Style and annotations | [Dimensions](dashboard-dimensions.png), [dark](dashboard-dimensions-dark.png), [mobile](dashboard-dimensions-mobile.png), [paragraph layers](dashboard-layer.png), [work markers](dashboard-markers.png) |
+| Editorial loop | [Flagged passages](dashboard-flags.png), [note written on a passage](dashboard-editorial.png) |
 | Project setup | [New project](dashboard-project-modal.png), [open project](dashboard-project-open.png), [mobile](dashboard-project-open-mobile.png) |
 | Manuscript import | [Preview and confirmation](dashboard-project-import.png), [mobile](dashboard-project-import-mobile.png) |
 | Project settings | [Settings and file picker](dashboard-project-settings.png), [mobile](dashboard-project-settings-mobile.png), [expanded NDA panel](dashboard-nda.png), [mobile](dashboard-nda-mobile.png) |

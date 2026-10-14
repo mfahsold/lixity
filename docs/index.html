@@ -176,13 +176,16 @@
     <article class="feature" id="editorial-matrix">
       <div class="feature-copy">
         <h2>Keep review notes beside the text</h2>
-        <p>Inspect paragraphs with their source lines, dialogue and tense labels. Work markers keep notes next to the passage you want to revisit.</p>
-        <p>Markers remain editable in Markdown. Their visibility in a book export depends on the editor or converter you use.</p>
+        <p>Start from the flagged passages list. Open a paragraph to read its measured values, source lines and tense labels, then write a note directly on the passage.</p>
+        <p>Work markers keep notes next to the passage you want to revisit and remain editable in Markdown. Their visibility in a book export depends on the editor or converter you use.</p>
         <a href="USAGE.md#work-markers-editor-visible">Use work markers</a>
       </div>
-      <figure class="shot">
-        <a href="screenshots/dashboard-markers.png"><img src="screenshots/dashboard-markers.png" width="1152" height="306" alt="Review markers linked to passages, with statuses and an editable note" loading="lazy" decoding="async"/></a>
-        <figcaption>Illustrative review notes. <a href="screenshots/dashboard-layer.png">Open the paragraph view</a>.</figcaption>
+      <figure class="shot feature-media">
+        <video autoplay muted loop playsinline preload="metadata" poster="videos/editorial-loop.png" width="1280" height="800" aria-label="Animated walkthrough: flagged passages, an opened paragraph with its measured values and a note written on the passage">
+          <source src="videos/editorial-loop.mp4" type="video/mp4"/>
+        </video>
+        <a class="still-only" href="screenshots/dashboard-editorial.png"><img src="screenshots/dashboard-editorial.png" width="1110" height="226" alt="An opened paragraph with its measured values, source line and the note editor for a work marker" loading="lazy" decoding="async"/></a>
+        <figcaption>Watch the editorial loop: flagged passage, paragraph values, note. <a href="screenshots/dashboard-flags.png">Flagged passages</a> · <a href="screenshots/dashboard-markers.png">Marker list</a> · <a href="screenshots/dashboard-layer.png">Paragraph view</a>.</figcaption>
       </figure>
     </article>
 
@@ -227,6 +230,7 @@
         <p>Export an A4 analysis report, an A5 reading copy or an A4 submission sheet with <code>lixity pdf</code>. Fonts are embedded and the text stays searchable; the renderer provides reading layouts without PDF/X production preflight. <a href="USAGE.md#lixity-pdf">Choose a PDF layout</a>.</p>
         <p><strong>Since v0.3.0:</strong> open the collapsed <strong>PDF export</strong> menu above all three workspace views. Choose a layout, then <strong>Download PDF</strong>. <a href="guides/research-pdf.html#manuscript-export">Find the manuscript PDF workflow</a>.</p>
         <p><strong>Since v0.3.0:</strong> optional <strong>Publication</strong> fields stay collapsed in Project → Settings and feed the same A5 composer as the CLI. Entered imprint text, PDF metadata, bookmarks and page headers help prepare a reading copy. <a href="guides/research-pdf.html#publication">Read the publication workflow and Germany print/digital limits</a>.</p>
+        <p>See a complete report: <a href="examples/effi-briest-report.pdf">Effi Briest</a> and <a href="examples/pride-and-prejudice-report.pdf">Pride and Prejudice</a> ship as public-domain example PDFs next to their interactive dashboards.</p>
         <p>For software integration, use JSON output or the Python API. Both share the dashboard's analysis pipeline.</p>
         <a href="USAGE.md">Browse the command reference</a>
       </div>

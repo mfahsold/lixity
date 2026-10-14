@@ -359,6 +359,23 @@ Rules for changes:
 - Responsive stacking is a CSS decision (single column at 640 px), not a second
   markup tree; new panels must survive 320 px without horizontal overflow.
 
+## First-run journey (server contract)
+
+An empty workspace renders the welcome hero with three actions, the quickstart
+steps and one optional link to the published public-domain examples. That link
+points at the documentation site, opens in a new browser tab and is
+presentation only: the app itself stays usable offline.
+
+After `project-create`, `project-open` or `load`, the server answers with
+`reload: true`. A fresh render chooses its default view from the content: a
+manuscript with chapters opens **Manuscript & Analysis**, while a research-only
+archive opens **Research & Dossiers**. Recent projects are browser-local (local
+storage); the server keeps no journey state. Standalone read-only reports
+(`controls=False`) render no welcome hero, no example link and no project
+actions. The example link and the quickstart copy come from the same seven
+language packs as the rest of the workspace, so the journey is localized like
+every other control.
+
 ## Repository tooling
 
 Maintained developer tooling lives in `scripts/` and is intentionally not

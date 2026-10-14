@@ -2,7 +2,7 @@
 
 Four families of tools answer different questions about a manuscript. This page compares them by workflow: what each is good at, what it does not do, and where Lixity fits. None of them replaces an editor, and none of the descriptions below rank the tools against each other.
 
-Maintained by the Lixity project · Updated 13 October 2026
+Maintained by the Lixity project · Updated 14 October 2026
 
 ## The four families at a glance
 
@@ -28,7 +28,7 @@ Maintained by the Lixity project · Updated 13 October 2026
 
 …you want to see how *your* manuscript behaves over its chapters and keep the evidence next to your decisions: sentence rhythm, vocabulary, dialogue and tense; chapter comparisons against the book's own baseline; passages behind every signal; and a local research archive that ties sources and quotations to claims and writing decisions. Analysis runs on your computer, there is no account, and nothing is uploaded. German and English are the deepest language profiles.
 
-Start with the [read-only example report](../demo/report.html) or the [three-minute first look](first-look.html); no installation is needed for either.
+Start with the [read-only example report](../demo/report.html) or the [three-minute first look](first-look.html); no installation is needed for either. For a real book, the [Effi Briest](../examples/effi-briest.html) (German) and [Pride and Prejudice](../examples/pride-and-prejudice.html) (English) examples pair an interactive excerpt with the complete PDF report.
 
 ## Where Lixity does not fit
 
