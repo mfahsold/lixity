@@ -27,7 +27,7 @@ test: ## Run the full test suite (warnings as errors)
 	PYTHONPATH=src $(VPY) -m pytest -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 
 browser: ## Run the everyday browser checks (needs Node and Playwright)
-	$(PYTHON) scripts/run_browser_suites.py --group fast
+	$(PYTHON) scripts/run_browser_suites.py --group fast --jobs 3
 
 browser-full: ## Run every browser suite before a release
 	$(PYTHON) scripts/run_browser_suites.py

@@ -10,8 +10,9 @@ make browser-full   # every suite, run before a release
 ```
 
 `--list` prints the suite names, `--group fast|full` selects the everyday core
-surfaces or everything, `--only NAME` selects suites and `--start NAME` resumes
-after a failure.
+surfaces or everything, `--jobs N` runs independent suites in parallel and
+`--only NAME` selects suites and `--start NAME` resumes after a failure. The
+everyday target uses three workers; the full release pass stays sequential.
 
 If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
 its module directory. `PYTHON_BIN` optionally overrides `.venv/bin/python`.
