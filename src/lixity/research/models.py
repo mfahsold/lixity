@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from pathlib import PurePosixPath
-from typing import Annotated, Any, ClassVar, Literal
+from typing import Annotated, Any, ClassVar, Literal, get_args
 from urllib.parse import urlsplit
 
 from pydantic import (
@@ -21,6 +21,10 @@ from .limits import MAX_PDF_BYTES, MAX_SOURCE_BYTES, MAX_SOURCE_CONTEXT_CHARS
 Identifier = Annotated[str, Field(pattern=r"^urn:uuid:[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$")]
 Digest = Annotated[str, Field(pattern=r"^[0-9a-f]{64}$")]
 Language = Literal["en", "de", "fr", "es", "it", "pt", "nl", "generic"]
+ClaimConfidence = Literal["hypothetical", "evidenced", "disputed"]
+# Runtime views of the strict literals; get_args keeps both in sync.
+LANGUAGES: tuple[Language, ...] = get_args(Language)
+CLAIM_CONFIDENCES: tuple[ClaimConfidence, ...] = get_args(ClaimConfidence)
 Kind = Literal[
     "project",
     "source",
@@ -257,7 +261,7 @@ class Claim(AuthoredRecord):
     kind: Literal["claim"] = "claim"
     title: Annotated[str, Field(min_length=1, max_length=500)]
     statement: Annotated[str, Field(min_length=1, max_length=10000)]
-    confidence: Literal["hypothetical", "evidenced", "disputed"] = "hypothetical"
+    confidence: ClaimConfidence = "hypothetical"
     scope: ClaimScope = Field(default_factory=ClaimScope)
     dossier_ref: Reference | None = None
     tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
@@ -337,6 +341,7 @@ def normalize_claim_relation(value: str) -> Literal["causes"]:
 
 
 EvidenceRelation = Literal["supports", "contradicts", "qualifies", "contextualizes"]
+EVIDENCE_RELATIONS: tuple[EvidenceRelation, ...] = get_args(EvidenceRelation)
 
 
 class EvidenceLink(AuthoredRecord):

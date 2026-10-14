@@ -26,6 +26,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Local browser checks run in two groups: `make browser` covers the everyday
   core surfaces in parallel workers, `make browser-full` runs every suite
   sequentially before a release.
+- The research API validates claim confidence, evidence relations and dossier
+  languages at the boundary; unsupported dossier languages raise a clear error
+  instead of a raw validation trace.
 
 ## [0.4.1] - 2026-10-14
 

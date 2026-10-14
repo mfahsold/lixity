@@ -11,7 +11,7 @@ from collections.abc import Callable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Literal, overload
+from typing import Any, Literal, get_args, overload
 from uuid import uuid4
 
 from pydantic import ValidationError
@@ -52,10 +52,14 @@ from .manuscript import (
     review_manuscript_links as review_manuscript_links,
 )
 from .models import (
+    CLAIM_CONFIDENCES,
     ENTITY,
+    EVIDENCE_RELATIONS,
+    LANGUAGES,
     Activity,
     Blob,
     Claim,
+    ClaimConfidence,
     ClaimRelation,
     ClaimScope,
     Decision,
@@ -65,6 +69,7 @@ from .models import (
     EvidenceLink,
     EvidenceRelation,
     Extraction,
+    Language,
     Passage,
     Project,
     Reference,
@@ -984,6 +989,33 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
     }
 
 
+def claim_confidence(value: object) -> ClaimConfidence:
+    """Normalise a submitted claim confidence at the API boundary."""
+    text = str(value or "").strip().lower()
+    for candidate in CLAIM_CONFIDENCES:
+        if text == candidate:
+            return candidate
+    return "hypothetical"
+
+
+def evidence_relation(value: object) -> EvidenceRelation:
+    """Normalise a submitted evidence relation at the API boundary."""
+    text = str(value or "").strip().lower()
+    for candidate in EVIDENCE_RELATIONS:
+        if text == candidate:
+            return candidate
+    return "supports"
+
+
+def supported_language(value: object) -> Language:
+    """Return the matching project language key or raise a clear error."""
+    text = str(value or "").strip().lower()
+    for candidate in LANGUAGES:
+        if text == candidate:
+            return candidate
+    raise ResearchError(f"Unsupported language: {value!r}")
+
+
 def create_dossier(
     project: str | Path,
     title: str,
@@ -1001,6 +1033,7 @@ def create_dossier(
     title = title.strip()
     if not (1 <= len(title) <= 500):
         raise ResearchError("Dossier title must be between 1 and 500 characters")
+    language = supported_language(language)
 
     evidence_refs = [Reference(id=eid) for eid in dict.fromkeys(evidence_ids or [])]
     for ref in evidence_refs:
@@ -1009,7 +1042,7 @@ def create_dossier(
     dossier = Dossier(
         **envelope(snapshot.project.id, actor),
         title=title,
-        language=language,  # type: ignore[arg-type]
+        language=language,
         tags=tags or [],
         body=body,
         evidence_refs=evidence_refs,
@@ -1178,7 +1211,7 @@ def create_claim(
     *,
     title: str,
     statement: str,
-    confidence: Literal["hypothetical", "evidenced", "disputed"] = "hypothetical",
+    confidence: ClaimConfidence = "hypothetical",
     time_period: str | None = None,
     place: str | None = None,
     actors: list[str] | None = None,
@@ -1623,13 +1656,24 @@ def project_overview(project: str | Path) -> dict[str, Any]:
     return data
 
 
+MatrixFormat = Literal["json", "md", "csv"]
+MATRIX_FORMATS: tuple[MatrixFormat, ...] = get_args(MatrixFormat)
 _FORMAT_SENTINEL = object()
+
+
+def matrix_format(value: object) -> MatrixFormat:
+    """Normalise a submitted matrix format or raise a clear error."""
+    text = str(value or "").strip().lower()
+    for candidate in MATRIX_FORMATS:
+        if text == candidate:
+            return candidate
+    raise ResearchError(f"Unsupported claim matrix format: {value!r}")
 
 
 def claim_matrix(
     project: str | Path,
     *,
-    format: Literal["json", "md", "csv"] | object = _FORMAT_SENTINEL,
+    format: MatrixFormat | object = _FORMAT_SENTINEL,
 ) -> dict[str, Any] | str:
     """Return the claim-evidence-decision matrix.
 
@@ -1647,7 +1691,7 @@ def claim_matrix(
             DeprecationWarning,
             stacklevel=2,
         )
-        return claim_matrix_format(project, format=format)  # type: ignore[arg-type]
+        return claim_matrix_format(project, format=matrix_format(format))
     return claim_matrix_data(project)
 
 
@@ -1881,7 +1925,7 @@ def render_claim_matrix(
 
 
 def claim_matrix_format(
-    project: str | Path, *, format: Literal["json", "md", "csv"] = "json"
+    project: str | Path, *, format: MatrixFormat = "json"
 ) -> dict[str, Any] | str:
     """Data and rendering in one call, selected by `format`."""
     data = claim_matrix_data(project)

@@ -733,10 +733,7 @@ class ResearchRoutesMixin(ResponseMixin):
         if not title or not statement:
             self._json({"ok": False, "message": "Claim title and statement are required"}, 400)
             return
-        raw_conf = str(payload.get("confidence") or "hypothetical").strip().lower()
-        confidence = (
-            raw_conf if raw_conf in ("hypothetical", "evidenced", "disputed") else "hypothetical"
-        )
+        confidence = research_api.claim_confidence(payload.get("confidence"))
         time_period = str(payload.get("time_period") or "").strip() or None
         place = str(payload.get("place") or "").strip() or None
         raw_actors = payload.get("actors")
@@ -757,7 +754,7 @@ class ResearchRoutesMixin(ResponseMixin):
                 root,
                 title=title,
                 statement=statement,
-                confidence=confidence,  # type: ignore[arg-type]
+                confidence=confidence,
                 time_period=time_period,
                 place=place,
                 actors=actors,
@@ -778,12 +775,7 @@ class ResearchRoutesMixin(ResponseMixin):
         if not claim_id or not passage_id:
             self._json({"ok": False, "message": "claim_id and passage_id are required"}, 400)
             return
-        raw_rel = str(payload.get("relation") or "supports").strip().lower()
-        relation = (
-            raw_rel
-            if raw_rel in ("supports", "contradicts", "qualifies", "contextualizes")
-            else "supports"
-        )
+        relation = research_api.evidence_relation(payload.get("relation"))
         rationale = str(payload.get("rationale") or "").strip() or None
         reviewer = str(payload.get("reviewer") or "author").strip()
         try:
@@ -791,7 +783,7 @@ class ResearchRoutesMixin(ResponseMixin):
                 root,
                 claim_id=claim_id,
                 passage_id=passage_id,
-                relation=relation,  # type: ignore[arg-type]
+                relation=relation,
                 rationale=rationale,
                 reviewer=reviewer,
                 expected_snapshot=payload.get("expected_snapshot"),
