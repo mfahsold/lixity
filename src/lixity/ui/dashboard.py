@@ -530,8 +530,10 @@ def render_dashboard(
             if action_enabled(action)
         ]
         if action_enabled("export") or visible_actions:
-            parts.append(f'<h3 class="settings-section">{L("settings_results")}</h3>')
+            # The heading belongs to the results group. Keeping both in one
+            # element preserves the separator rule between adjacent groups.
             parts.append('<div class="ctl-group">')
+            parts.append(f'<h3 class="settings-section">{L("settings_results")}</h3>')
             action_heading = (
                 f"{L('export')} · {L('run_analysis')}"
                 if action_enabled("export") and visible_actions
