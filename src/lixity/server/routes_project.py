@@ -17,6 +17,7 @@ from ..config import (
     apply_config_to_thresholds,
     load_project_config,
     prepare_project_settings,
+    read_project_config,
     resolve_thresholds,
     validate_author_name,
     validate_project_title,
@@ -29,6 +30,34 @@ from ._base import ResponseMixin
 from .constants import LANGUAGE_CHOICES
 from .pdf_context import project_settings_token
 from .views import build_server_dashboard, sanitize_filename
+
+
+def _project_markers(directory: Path) -> bool:
+    """Cheap marker check used while listing one directory level."""
+    try:
+        return (directory / "lixity.toml").is_file() or (directory / "research" / "HEAD.json").is_file()
+    except OSError:
+        return False
+
+
+def _project_probe(directory: Path) -> dict[str, Any]:
+    """Minimal read-only detection: config, research archive, title, language."""
+    try:
+        config = (directory / "lixity.toml").is_file()
+        research = (directory / "research" / "HEAD.json").is_file()
+    except OSError:
+        config = research = False
+    probe: dict[str, Any] = {"detected": bool(config or research), "config": config,
+                             "research": research, "title": None, "language": None}
+    if config:
+        settings = read_project_config(directory)
+        title = settings.get("title")
+        language = settings.get("language")
+        if isinstance(title, str) and title.strip():
+            probe["title"] = title.strip()[:200]
+        if isinstance(language, str) and language in LANGUAGE_CHOICES:
+            probe["language"] = language
+    return probe
 
 
 class ProjectRoutesMixin(ResponseMixin):
@@ -51,7 +80,8 @@ class ProjectRoutesMixin(ResponseMixin):
                 self._json({"ok": False, "message": "Path is not a directory"}, 400)
                 return
 
-            selected: list[tuple[int, str, str, str, str]] = []
+            selected: list[tuple[int, str, str, str, str, bool]] = []
+            manuscripts: list[str] = []
             truncated = False
             with os.scandir(target) as iterator:
                 for entry in iterator:
@@ -74,8 +104,11 @@ class ProjectRoutesMixin(ResponseMixin):
                         # A broken or inaccessible entry should not hide the
                         # rest of an otherwise readable directory.
                         continue
+                    is_project = _project_markers(Path(entry.path)) if kind == "directory" else False
+                    if kind == "manuscript":
+                        manuscripts.append(entry.name)
                     insort(selected, (0 if kind == "directory" else 1, entry.name.casefold(),
-                                      entry.name, entry.path, kind))
+                                      entry.name, entry.path, kind, is_project))
                     if len(selected) > 200:
                         selected.pop()
                         truncated = True
@@ -86,11 +119,18 @@ class ProjectRoutesMixin(ResponseMixin):
             self._json({"ok": False, "message": "Invalid project path"}, 400)
             return
 
+        probe = _project_probe(target)
+        probe["manuscript"] = sorted(manuscripts, key=str.casefold)[0] if manuscripts else None
+        probe["manuscripts"] = len(manuscripts)
         self._json({
             "ok": True, "path": str(target),
             "parent": str(target.parent) if target.parent != target else None,
-            "entries": [{"name": name, "path": path, "kind": kind}
-                        for _, _, name, path, kind in selected],
+            "project": probe,
+            "entries": [
+                {"name": name, "path": path, "kind": kind,
+                 **({"project": project} if kind == "directory" else {})}
+                for _, _, name, path, kind, project in selected
+            ],
             "truncated": truncated,
         })
 

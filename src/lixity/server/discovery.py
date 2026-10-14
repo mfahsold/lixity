@@ -4,6 +4,7 @@ from collections.abc import Mapping
 from typing import Any
 
 from .. import __version__
+from ..site import docs_url
 
 
 def api_index(get_routes: Mapping[str, str], post_routes: Mapping[str, str], *,
@@ -26,5 +27,5 @@ def api_index(get_routes: Mapping[str, str], post_routes: Mapping[str, str], *,
         },
         "project": {"manuscript_loaded": manuscript_loaded, "research_configured": research_configured,
                     "research_store_present": research_store_present, "language": language},
-        "documentation": "https://mfahsold.github.io/lixity/AGENTS.md",
+        "documentation": docs_url("AGENTS.md"),
     }

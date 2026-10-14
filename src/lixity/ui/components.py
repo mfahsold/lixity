@@ -68,7 +68,7 @@ def contrast_text(background: str) -> str:
 def project_header(
     title: str, labels: Mapping[str, str] | None = None,
     language_name: str = "", engine_name: str = "Lixity",
-    *, compact: bool = False,
+    *, compact: bool = False, meta: str = "",
 ) -> str:
     subtitle = label(labels, "app_suffix")
     if language_name:
@@ -82,6 +82,7 @@ def project_header(
         + ("" if compact else f'<span class="project-label">{esc(label(labels, "project_name"))}</span>')
         +
         f'<h1>{esc(title)}</h1><p class="sub">{esc(subtitle)}</p>'
+        + (f'<p class="project-meta">{esc(meta)}</p>' if meta else "")
         + ("" if compact else f'<p class="microhint" id="microhint">{esc(label(labels, "hint"))}</p>'
            + license_terms(labels))
         + '</header>'

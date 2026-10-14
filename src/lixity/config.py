@@ -260,6 +260,22 @@ def _walk_up(start: Path, name: str) -> Path | None:
     return None
 
 
+def read_project_config(directory: str | Path) -> dict[str, Any]:
+    """Read the ``lixity.toml`` beside ``directory`` without walking up.
+
+    Read-only probes (the Open Project chooser) need exactly this folder's
+    configuration; ancestor or user settings must not leak into that answer.
+    Oversized files are ignored instead of parsed.
+    """
+    path = Path(directory) / "lixity.toml"
+    try:
+        if path.is_file() and path.stat().st_size <= 65536:
+            return _load_toml(path)
+    except OSError:
+        pass
+    return {}
+
+
 def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
     """
     Merge user config under project config under nothing else.

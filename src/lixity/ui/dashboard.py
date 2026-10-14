@@ -17,6 +17,7 @@ from ..format import num as format_num
 from ..format import pct as format_pct
 from ..language import ResolvedLanguage
 from ..pipeline import DocumentAnalysis, paragraph_identity
+from ..site import docs_url
 from ..status import FLAG_MIN_SEVERITY
 from ..style_fingerprint import (
     FEATURES,
@@ -273,6 +274,15 @@ def render_dashboard(
         direction = label(labels, "layer_above" if z > 0 else "layer_below")
         return f"{_layer_text(key, value)} · {direction}"
 
+    meta_bits: list[str] = []
+    if chapters and total_words > 0:
+        chapter_key = "chapter" if len(chapters) == 1 else "chapters"
+        meta_bits.append(f"{len(chapters)} {label(labels, chapter_key)}")
+        meta_bits.append(f"{N(total_words, 0)} {label(labels, 'words')}")
+    if manuscript_name:
+        meta_bits.append(manuscript_name)
+    project_meta = " · ".join(meta_bits)
+
     parts = [
         "<!DOCTYPE html>",
         f'<html lang="{html_lang}">',
@@ -291,7 +301,8 @@ def render_dashboard(
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         '<div class="page">',
         *(('<div class="workspace-shell">',) if controls else ()),
-        project_header(title, labels, language_name, engine_name, compact=controls),
+        project_header(title, labels, language_name, engine_name, compact=controls,
+                       meta=project_meta),
     ]
 
     has_chapters = bool(chapters) and total_words > 0
@@ -399,7 +410,7 @@ def render_dashboard(
                        else "examples/pride-and-prejudice.html")
             parts.append(
                 '    <p class="welcome-example"><a href='
-                f'"https://mfahsold.github.io/lixity/{example}" target="_blank" rel="noopener">'
+                f'"{docs_url(example)}" target="_blank" rel="noopener">'
                 f'{L("welcome_example")} ↗</a></p>'
             )
             parts.append(
@@ -462,24 +473,6 @@ def render_dashboard(
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('workspace_project')}</h2>")
 
-        parts.append(
-            settings_form(
-                labels,
-                title,
-                current_language,
-                language_options,
-                replace(
-                    fingerprint.thresholds if fingerprint is not None else FingerprintThresholds(),
-                    flag_min_severity=flag_min_severity,
-                ),
-                project_author=project_author,
-                identity_check=identity_check,
-                author_setting_enabled=author_setting_enabled,
-                publication=publication,
-                publication_error=publication_error,
-                project_token=project_token,
-            )
-        )
 
         parts.append('<div class="ctl-group">')
         parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
@@ -514,6 +507,25 @@ def render_dashboard(
             f'<p class="ctl-note">{L("manuscript_load_hint") if action_enabled("load") else L("manuscript_import_hint")}</p>'
         )
         parts.append("</div>")
+
+        parts.append(
+            settings_form(
+                labels,
+                title,
+                current_language,
+                language_options,
+                replace(
+                    fingerprint.thresholds if fingerprint is not None else FingerprintThresholds(),
+                    flag_min_severity=flag_min_severity,
+                ),
+                project_author=project_author,
+                identity_check=identity_check,
+                author_setting_enabled=author_setting_enabled,
+                publication=publication,
+                publication_error=publication_error,
+                project_token=project_token,
+            )
+        )
 
         # Actions advertised by the embedding server.
         visible_actions = [
@@ -665,11 +677,15 @@ def render_dashboard(
             '<div class="workspace-reader-layout" id="workspace-reader-layout">'
             '<aside class="panel workspace-reader-panel" id="workspace-reader-panel" '
             'aria-labelledby="workspace-reader-title" hidden>'
+            '<div class="workspace-reader-head">'
             f'<h2 id="workspace-reader-title">{L("reader_title")}</h2>'
-            '<div class="setting-field">'
+            f'<button type="button" class="ctl" id="workspace-reader-close" aria-label="{esc(L("modal_close"), quote=True)}">✕</button>'
+            '</div>'
+            '<div class="row workspace-reader-controls">'
+            '<div class="setting-field grow">'
             f'<label for="workspace-reader-dossier">{L("reader_choose")}</label>'
             f'<select class="ctl" id="workspace-reader-dossier"><option value="">{L("reader_choose")}</option></select></div>'
-            f'<button type="button" class="ctl" id="workspace-reader-refresh">{L("reader_refresh")}</button>'
+            f'<button type="button" class="ctl" id="workspace-reader-refresh">{L("reader_refresh")}</button></div>'
             '<p class="ctl-status" id="workspace-reader-status" role="status" aria-live="polite"></p>'
             '<div id="workspace-reader-body"></div></aside>'
             '<div id="workspace-analysis-body">'

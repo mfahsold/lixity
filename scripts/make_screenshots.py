@@ -169,15 +169,7 @@ def main() -> int:
     )
 
     # 3. Dashboard (light, top area) --------------------------------------
-    chap_noun = "Chapters" if is_en else "Kapitel"
-    para_noun = "Paragraphs" if is_en else "Absätze"
     status = [
-        {"key": "manuscript", "state": "ok", "detail": f"{title}.md"},
-        {
-            "key": "analysis",
-            "state": "ok",
-            "detail": f"{len(chapters)} {chap_noun} · {len(paragraphs)} {para_noun}",
-        },
         {"key": "exports", "state": "warn", "detail": "none generated" if is_en else "keine erzeugt"},
         {"key": "markers", "state": "ok", "detail": "no open markers" if is_en else "keine offenen"},
     ]

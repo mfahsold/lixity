@@ -4,6 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping
 
+from ..site import docs_url
 from .components import esc, help_term, label, loading_state
 
 
@@ -41,7 +42,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append('<div id="setup-ocr-steps">')
     parts.append(f'<h3 class="section-heading">OCR</h3><p class="ctl-note">{L("setup_ocr_steps")}</p>')
     parts.append('<p><a class="ctl-link" href="https://tesseract-ocr.github.io/tessdoc/Installation.html" target="_blank" rel="noopener">Tesseract</a> · '
-                 '<a class="ctl-link" href="https://mfahsold.github.io/lixity/INSTALLATION.md#server-environment-and-project-access" target="_blank" rel="noopener">Poppler</a></p>')
+                 f'<a class="ctl-link" href="{docs_url("INSTALLATION.md#server-environment-and-project-access")}" target="_blank" rel="noopener">Poppler</a></p>')
     parts.append("</div>")
     parts.append(f'<p class="ctl-note">{L("setup_language_example")}</p>')
     parts.append('<pre class="research-dossier-body-source">LIXITY_OCR_BACKEND=tesseract\nLIXITY_OCR_LANGUAGES=deu+eng</pre>')

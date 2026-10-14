@@ -5211,6 +5211,7 @@ if (openChooser) {
   var choosePath = document.getElementById("open-project-chooser-path");
   var chooseList = document.getElementById("open-project-chooser-list");
   var chooseStatus = document.getElementById("open-project-chooser-status");
+  var chooseProject = document.getElementById("open-project-chooser-project");
   var openPathInput = document.getElementById("open-proj-path");
   var currentChoosePath = "";
   var parentChoosePath = null;
@@ -5275,6 +5276,20 @@ if (openChooser) {
       currentChoosePath = data.path;
       parentChoosePath = typeof data.parent === "string" ? data.parent : null;
       choosePath.textContent = currentChoosePath;
+      if (chooseProject) {
+        var probe = data.project && typeof data.project === "object" ? data.project : null;
+        if (probe && probe.detected === true) {
+          var details = [];
+          details.push(typeof probe.title === "string" && probe.title ? probe.title : uiLabel("chooser_project_badge"));
+          if (typeof probe.language === "string" && probe.language) details.push(probe.language.toUpperCase());
+          if (typeof probe.manuscript === "string" && probe.manuscript) details.push(probe.manuscript);
+          chooseProject.textContent = uiFormat("chooser_project_found", {details: details.join(" · ")});
+          chooseProject.classList.add("detected");
+        } else {
+          chooseProject.textContent = chooseProject.dataset.empty || "";
+          chooseProject.classList.remove("detected");
+        }
+      }
       chooseParent.disabled = !parentChoosePath;
       chooseFolder.disabled = false;
       data.entries.forEach(function(entry) {
@@ -5296,6 +5311,12 @@ if (openChooser) {
         var name = document.createElement("span");
         name.textContent = entry.name;
         button.append(icon, name);
+        if (entry.kind === "directory" && entry.project === true) {
+          var badge = document.createElement("span");
+          badge.className = "project-chooser-badge";
+          badge.textContent = uiLabel("chooser_project_badge");
+          button.appendChild(badge);
+        }
         item.appendChild(button);
         chooseList.appendChild(item);
       });

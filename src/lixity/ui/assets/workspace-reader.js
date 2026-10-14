@@ -8,6 +8,7 @@
   var layout = document.getElementById("workspace-reader-layout");
   var select = document.getElementById("workspace-reader-dossier");
   var refresh = document.getElementById("workspace-reader-refresh");
+  var close = document.getElementById("workspace-reader-close");
   var status = document.getElementById("workspace-reader-status");
   var body = document.getElementById("workspace-reader-body");
   var enabled = false, requestSerial = 0, projectId = null;
@@ -89,6 +90,7 @@
   }
   toggle.disabled = false;
   toggle.addEventListener("click", function() { setEnabled(!enabled); });
+  if (close) close.addEventListener("click", function() { setEnabled(false); toggle.focus(); });
   select.addEventListener("change", function() { loadDossier(select.value); });
   refresh.addEventListener("click", function() { openDossiers(select.value); });
   panel.addEventListener("keydown", function(event) {

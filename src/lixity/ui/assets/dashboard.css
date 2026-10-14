@@ -1365,6 +1365,10 @@ textarea.ctl { font-family: inherit; }
   letter-spacing: -.025em;
   color: var(--fg);
 }
+.project-chooser-project { margin: .2rem 0 .5rem; }
+.project-chooser-project.detected { color: var(--fg); }
+.project-chooser-badge { margin-left: auto; padding: .05rem .45rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid var(--line); color: var(--muted); font-size: var(--text-note); white-space: nowrap; }
+.project-meta { margin: .35rem 0 0; color: var(--muted); font-size: var(--text-small); }
 .welcome-example { margin: .35rem 0 0; font-size: var(--text-small); }
 .welcome-example a { color: var(--muted); text-decoration: underline; }
 .welcome-desc {

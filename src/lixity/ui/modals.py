@@ -192,6 +192,7 @@ def render_project_modals(
     parts.append('        </div>')
     parts.append(f'        <p class="ctl-note">{L("wizard_choose_location")}</p>')
     parts.append(f'        <p class="ctl-note project-chooser-current">{L("wizard_choose_current")} <code id="open-project-chooser-path"></code></p>')
+    parts.append(f'        <p class="ctl-note project-chooser-project" id="open-project-chooser-project" data-empty="{esc(L("chooser_project_none"), quote=True)}" role="status"></p>')
     parts.append('        <div class="project-chooser-toolbar">')
     parts.append(f'          <button type="button" class="ctl" id="open-project-chooser-home">{L("wizard_choose_home")}</button>')
     parts.append(f'          <button type="button" class="ctl" id="open-project-chooser-parent" disabled>{L("wizard_choose_parent")}</button>')

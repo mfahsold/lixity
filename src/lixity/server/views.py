@@ -165,30 +165,17 @@ def build_server_dashboard(
     artifacts = collect_artifacts(exports_dir) if exports_dir else []
     names = settings.get("names", [])
 
-    status_items = [
-        {
-            "key": "manuscript",
-            "state": "error" if is_missing else ("warn" if is_empty and manuscript_name else ("ok" if manuscript_name else "unknown")),
-            "detail": (
-                f"{manuscript_name} ({_status_text('status_missing')})"
-                if is_missing
-                else (
-                    f"{manuscript_name} ({_status_text('status_empty')})"
-                    if is_empty and manuscript_name
-                    else (manuscript_name or _status_text("status_none_loaded"))
-                )
-            ),
-        },
-        {
-            "key": "analysis",
-            "state": "ok" if chapters else "warn",
-            "detail": _status_text(
-                "status_analysis_counts",
-                chapters=f"{len(chapters)} {_status_text('chapter' if len(chapters) == 1 else 'chapters')}",
-                paragraphs=f"{len(paragraphs)} {_status_text('paragraphs_one' if len(paragraphs) == 1 else 'paragraphs')}",
-                language=resolved.name,
-            ),
-        },
+    # The header already carries the project's identity and scale (chapters,
+    # words, file). The strip is reserved for real problems and operations, so
+    # normal metadata is not reported twice.
+    status_items = []
+    if is_missing:
+        status_items.append({"key": "manuscript", "state": "error",
+                             "detail": f"{manuscript_name} ({_status_text('status_missing')})"})
+    elif is_empty and manuscript_name:
+        status_items.append({"key": "manuscript", "state": "warn",
+                             "detail": f"{manuscript_name} ({_status_text('status_empty')})"})
+    status_items += [
         {
             "key": "exports",
             "state": "ok" if artifacts else "warn",

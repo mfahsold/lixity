@@ -8,6 +8,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Project folders are recognizable while browsing: `/api/project-paths` reports a
+  minimal probe for the listed folder (config, research archive, title, language,
+  manuscript) and marks project directories; the Open Project chooser shows that
+  line and a badge. The header and the Project view show a compact manuscript line
+  (chapters, words, file), and the Project view lists the manuscript before the
+  project settings.
 - Two public-domain example analyses (Effi Briest in German, Pride and
   Prejudice in English) are published on the documentation site: an
   interactive excerpt of the opening chapters plus the complete PDF report;

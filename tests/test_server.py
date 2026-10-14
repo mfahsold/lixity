@@ -141,8 +141,10 @@ class TestLixityServer(unittest.TestCase):
             self.assertEqual(
                 result["entries"],
                 [
-                    {"name": "alpha.md", "path": str(root / "alpha.md"), "kind": "directory"},
-                    {"name": "Zulu", "path": str(root / "Zulu"), "kind": "directory"},
+                    {"name": "alpha.md", "path": str(root / "alpha.md"), "kind": "directory",
+                     "project": False},
+                    {"name": "Zulu", "path": str(root / "Zulu"), "kind": "directory",
+                     "project": False},
                     {
                         "name": "a & 'note'.md",
                         "path": str(root / "a & 'note'.md"),
@@ -176,6 +178,43 @@ class TestLixityServer(unittest.TestCase):
                 {name: getattr(LixityServerHandler, name) for name in original_state},
                 original_state,
             )
+
+    def test_project_paths_detects_lixity_projects_and_metadata(self):
+        with tempfile.TemporaryDirectory() as td:
+            root = Path(td)
+            project = root / "harbour"
+            (project / "research").mkdir(parents=True)
+            (project / "lixity.toml").write_text(
+                'title = "Harbour Story"\nlanguage = "de"\n', encoding="utf-8")
+            (project / "research" / "HEAD.json").write_text("{}", encoding="utf-8")
+            (project / "novel.md").write_text("## One\n\nText.\n", encoding="utf-8")
+            (root / "plain").mkdir()
+
+            path = f"/api/project-paths?path={quote(str(project), safe='')}"
+            status, body, _ = self.make_request(path)
+            self.assertEqual(status, 200, body)
+            probe = json.loads(body)["project"]
+            self.assertTrue(probe["detected"])
+            self.assertTrue(probe["config"])
+            self.assertTrue(probe["research"])
+            self.assertEqual(probe["title"], "Harbour Story")
+            self.assertEqual(probe["language"], "de")
+            self.assertEqual(probe["manuscript"], "novel.md")
+            self.assertEqual(probe["manuscripts"], 1)
+            project_entries = {entry["name"]: entry for entry in json.loads(body)["entries"]}
+            self.assertNotIn("project", project_entries["novel.md"])
+
+            status, body, _ = self.make_request(
+                f"/api/project-paths?path={quote(str(root), safe='')}")
+            self.assertEqual(status, 200, body)
+            entries = {entry["name"]: entry for entry in json.loads(body)["entries"]}
+            self.assertTrue(entries["harbour"]["project"])
+            self.assertFalse(entries["plain"]["project"])
+
+            status, body, _ = self.make_request(
+                f"/api/project-paths?path={quote(str(root / 'plain'), safe='')}")
+            self.assertEqual(status, 200, body)
+            self.assertFalse(json.loads(body)["project"]["detected"])
 
     def test_project_paths_errors_origin_and_bounded_listing(self):
         with tempfile.TemporaryDirectory() as td:
@@ -1209,13 +1248,21 @@ class TestLixityServer(unittest.TestCase):
         finally:
             restore_handler_state(original_state)
 
-    def test_status_strip_uses_singular_units(self):
+    def test_project_meta_uses_singular_units_and_strip_avoids_duplicates(self):
         with tempfile.TemporaryDirectory() as td:
             manuscript = Path(td) / "manuscript.md"
             manuscript.write_text("# Buch\n\n## Erstes Kapitel\n\nEin einzelner Satz.\n", encoding="utf-8")
             html, info = build_server_dashboard(str(manuscript), language="de")
         self.assertEqual(info["chapters"], 1)
-        self.assertIn("1 Kapitel \u00b7 1 Absatz \u00b7 Deutsch", html)
+        # The header carries the project's scale once, with singular units.
+        self.assertIn('<p class="project-meta">1 Kapitel \u00b7 ', html)
+        self.assertIn(" W\u00f6rter \u00b7 manuscript.md</p>", html)
+        # The strip no longer repeats manuscript/analysis metadata; it keeps
+        # the operational entries.
+        strip = html.split('<div class="status-strip">', 1)[1].split("</div>", 1)[0]
+        self.assertNotIn("Absatz", strip)
+        self.assertNotIn("Kapitel", strip)
+        self.assertIn("Exporte", strip)
 
     def test_dashboard_welcome_hero_and_modals(self):
         # When no manuscript/chapters loaded, welcome hero and modals must be rendered

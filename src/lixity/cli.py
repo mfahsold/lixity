@@ -24,6 +24,7 @@ from .pipeline import (
 )
 from .project_identity import project_title
 from .scenes import scene_report_for_display
+from .site import docs_url
 from .style_fingerprint import FingerprintThresholds
 from .ui import render_analysis
 from .workspace import discover
@@ -927,7 +928,7 @@ def main(argv: list[str] | None = None) -> int:
             "Examples:  lixity analyze manuscript.md   |   "
             "lixity style manuscript.md --json   |   "
             "lixity completion bash\n"
-            "Docs: https://mfahsold.github.io/lixity/  ·  "
+            f"Docs: {docs_url()}  ·  "
             "Report language: LIXITY_LANG=de"
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,

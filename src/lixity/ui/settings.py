@@ -6,6 +6,7 @@ from typing import Any
 
 from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
 from ..publication import PUBLICATION_FIELDS
+from ..site import docs_url
 from ..style_fingerprint import FingerprintThresholds
 from .components import esc, help_term, label
 
@@ -92,7 +93,7 @@ def settings_form(
         '<details class="settings-advanced publication-settings" id="settings-publication">',
         f'<summary>{translated("publication_title")}</summary>',
         f'<p class="panel-guide">{translated("publication_hint" if author_setting_enabled else "publication_unavailable")}</p>',
-        '<p class="ctl-note"><a href="https://mfahsold.github.io/lixity/guides/research-pdf.html#publication" '
+        '<p class="ctl-note"><a href="' + docs_url("guides/research-pdf.html#publication") + '" '
         f'target="_blank" rel="noopener noreferrer">{translated("publication_guide")}</a></p>',
         f'<label class="research-check publication-enable"><input type="checkbox" id="set-publication-enabled" '
         f'data-publication-key="enabled"{checked}{disabled}/> {translated("publication_enabled")}</label>',
