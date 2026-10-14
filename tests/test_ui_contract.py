@@ -207,6 +207,28 @@ class TestJsDomContract(unittest.TestCase):
         for target in targets:
             self.assertIn(f'id="{target}"', html, f"Section nav has no target: {target}")
 
+    def test_analysis_section_nav_follows_the_registry(self):
+        """The nav order and labels come from the central registry."""
+        from lixity.ui.components import ANALYSIS_SECTIONS
+
+        html = _full_dashboard()
+        nav = html.split('id="analysis-sections"', 1)[1].split("</nav>", 1)[0]
+        targets = re.findall(r'data-section-link="([^"]+)"', nav)
+        expected = [panel for panel, _key in ANALYSIS_SECTIONS if panel in set(targets)]
+        self.assertEqual(targets, expected)
+
+    def test_checkbox_controls_use_the_shared_component(self):
+        """Every rendered checkbox row uses the one form-checkbox component."""
+        html = _full_dashboard()
+        for control_id in ("filter-flags", "heatmap-fdr-only", "set-publication-enabled",
+                           "r-ingest-retention", "r-zotero-retention", "r-relation-retracted",
+                           "r-decision-deviation", "import-proj-research", "new-proj-research"):
+            pattern = re.compile(
+                r'<label class="form-checkbox"[^>]*>(?:(?!</label>).)*?id="' + re.escape(control_id) + r'"',
+                re.DOTALL,
+            )
+            self.assertRegex(html, pattern, f"#{control_id} must use the form-checkbox component")
+
     def test_review_tab_hosts_manuscript_link_section(self):
         """The Review tab owns the manuscript-link review surface."""
         html = _full_dashboard()

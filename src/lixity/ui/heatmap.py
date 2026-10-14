@@ -13,7 +13,7 @@ from ..style_fingerprint import (
     StyleFingerprint,
     z_color,
 )
-from .components import band_chart, contrast_text, esc, help_term, label
+from .components import band_chart, checkbox_field, contrast_text, esc, help_term, label
 
 FEATURE_HELP_KEYS: dict[str, str] = {
     "asl": "asl",
@@ -66,9 +66,9 @@ def render_heatmap_panel(
         + "</div>"
     )
     parts.append(f'<p class="panel-guide">{L("matrix_reading")}</p>')
+    fdr_only = checkbox_field('<input type="checkbox" id="heatmap-fdr-only"/>', L("matrix_fdr_only"))
     parts.append(
-        f'<div class="matrix-tools"><label class="form-checkbox"><input type="checkbox" id="heatmap-fdr-only"/> '
-        f'{L("matrix_fdr_only")}</label><span class="analysis-method">'
+        f'<div class="matrix-tools">{fdr_only}<span class="analysis-method">'
         f'{esc(fingerprint.thresholds.fdr_method.upper())} · q = {N(fingerprint.thresholds.fdr_q, 2)}'
         f' · |z*| ≥ {N(z_mild, 1)}</span></div>'
     )

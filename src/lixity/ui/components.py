@@ -176,6 +176,46 @@ def help_term(labels: Mapping[str, str] | None, key: str, text: str) -> str:
     )
 
 
+# Central registry: analysis section id -> label key, in display order. Every
+# surface renders only the sections it actually provides, so a new panel adds
+# one navigation entry here instead of touching the renderer and the nav.
+ANALYSIS_SECTIONS: tuple[tuple[str, str], ...] = (
+    ("flags", "panel_flags"),
+    ("dist", "sentence_dist"),
+    ("scenes", "panel_scenes"),
+    ("motifs", "panel_motifs"),
+    ("style", "group_style"),
+    ("matrix", "chapter_table"),
+)
+
+
+def section_nav(links: Sequence[tuple[str, str]], labels: Mapping[str, str] | None) -> str:
+    """Analysis section navigation for the given ``(panel id, label key)`` pairs."""
+    if not links:
+        return ""
+    parts = [
+        f'<nav class="toolbar-sections" id="analysis-sections" '
+        f'aria-label="{esc(label(labels, "sections"))}">'
+    ]
+    for target, label_key in links:
+        parts.append(
+            f'<a href="#{esc(target)}" data-jump="#{esc(target)}" '
+            f'data-section-link="{esc(target)}">{esc(label(labels, label_key))}</a>'
+        )
+    parts.append("</nav>")
+    return "".join(parts)
+
+
+def checkbox_field(input_html: str, text_html: str, *, extra_class: str = "") -> str:
+    """One checkbox row of the shared ``form-checkbox`` component.
+
+    ``input_html`` and ``text_html`` are caller-built markup: pass escaped
+    values or helpers such as :func:`help_term`.
+    """
+    classes = f"form-checkbox {extra_class}".strip()
+    return f'<label class="{classes}">{input_html} {text_html}</label>'
+
+
 # Canonical tense values (status.TENSE_*) are the label keys themselves.
 _TENSE_CLASSES = {TENSE_PRESENT, TENSE_PAST, TENSE_MIXED, TENSE_NEUTRAL}
 

@@ -8,7 +8,7 @@ from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
 from ..publication import PUBLICATION_FIELDS
 from ..site import docs_url
 from ..style_fingerprint import FingerprintThresholds
-from .components import esc, help_term, label
+from .components import checkbox_field, esc, help_term, label
 
 
 def settings_form(
@@ -100,8 +100,11 @@ def settings_form(
         f'<p class="panel-guide">{translated("publication_hint" if author_setting_enabled else "publication_unavailable")}</p>',
         '<p class="ctl-note"><a href="' + docs_url("guides/research-pdf.html#publication") + '" '
         f'target="_blank" rel="noopener noreferrer">{translated("publication_guide")}</a></p>',
-        f'<label class="form-checkbox"><input type="checkbox" id="set-publication-enabled" '
-        f'data-publication-key="enabled"{checked}{disabled}/> {translated("publication_enabled")}</label>',
+        checkbox_field(
+            f'<input type="checkbox" id="set-publication-enabled" '
+            f'data-publication-key="enabled"{checked}{disabled}/>',
+            translated("publication_enabled"),
+        ),
     ])
     if publication_error:
         parts.append('<p class="ctl-status err" id="publication-settings-error" role="alert">'

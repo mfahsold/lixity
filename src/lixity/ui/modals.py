@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping, Sequence
 from typing import Any
 
-from .components import esc, help_term, label
+from .components import checkbox_field, esc, help_term, label
 
 
 def render_project_modals(
@@ -87,7 +87,7 @@ def render_project_modals(
     parts.append(f'            <span class="ctl-note wizard-hint">{L("wizard_folder_note")}</span>')
     parts.append('          </div>')
     parts.append('        <div class="form-group">')
-    parts.append(f'          <label class="form-checkbox"><input type="checkbox" id="import-proj-research"/> <span>{L("wizard_enable_research")}</span></label>')
+    parts.append(checkbox_field('<input type="checkbox" id="import-proj-research"/>', f'<span>{L("wizard_enable_research")}</span>'))
     parts.append('        </div>')
     parts.append('</details>')
     parts.append('        <p class="ctl-status project-form-status" id="import-project-status" role="alert" aria-live="assertive" hidden></p>')
@@ -150,7 +150,7 @@ def render_project_modals(
     parts.append('          </div>')
     parts.append('        </div>')
     parts.append('        <div class="form-group mt-2">')
-    parts.append(f'          <label class="form-checkbox"><input type="checkbox" id="new-proj-research"/> <span>{L("wizard_enable_research")}</span></label>')
+    parts.append(checkbox_field('<input type="checkbox" id="new-proj-research"/>', f'<span>{L("wizard_enable_research")}</span>'))
     parts.append(f'          <p class="ctl-note" id="new-proj-research-required" hidden>{L("wizard_research_required")}</p>')
     parts.append('        </div>')
     parts.append('        <p class="ctl-status project-form-status" id="new-project-status" role="alert" aria-live="assertive" hidden></p>')

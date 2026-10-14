@@ -34,7 +34,9 @@ from ..style_profile import (
 )
 from ..workspace_labels import WORKSPACE_LABELS
 from .components import (
+    ANALYSIS_SECTIONS,
     artifact_href,
+    checkbox_field,
     help_term,
     kpi,
     label,
@@ -43,6 +45,7 @@ from .components import (
     manuscript_pdf_controls,
     panel_start,
     project_header,
+    section_nav,
     status_strip,
     tense_class,
     tense_label,
@@ -759,7 +762,7 @@ def render_dashboard(
         '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'
     )
     parts.append("</span>")
-    parts.append(f'<label class="form-checkbox"><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
+    parts.append(checkbox_field('<input type="checkbox" id="filter-flags"/>', L("filter_flags")))
     if paragraphs:
         parts.append(
             f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'
@@ -826,33 +829,20 @@ def render_dashboard(
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
 
 
-    # Section navigation: a compact table of contents for the long analysis
-    # page. Only panels this document actually renders are offered. The strip
-    # stays in the document flow so it never covers click targets.
-    section_links: list[tuple[str, str]] = []
-    if has_chapters:
-        section_links.append(("flags", "panel_flags"))
+    # Section navigation: only panels this document actually renders, in the
+    # shared registry order (components.ANALYSIS_SECTIONS).
+    available = {"flags"} if has_chapters else set()
     if metrics is not None:
-        section_links.append(("dist", "sentence_dist"))
+        available.add("dist")
     if scenes:
-        section_links.append(("scenes", "panel_scenes"))
+        available.add("scenes")
     if motifs:
-        section_links.append(("motifs", "panel_motifs"))
+        available.add("motifs")
     if has_house_style and fingerprint is not None:
-        section_links.append(("style", "group_style"))
+        available.add("style")
     if chapters:
-        section_links.append(("matrix", "chapter_table"))
-    if section_links:
-        parts.append(
-            f'<nav class="toolbar-sections" id="analysis-sections" '
-            f'aria-label="{esc(L("sections"))}">'
-        )
-        for target, label_key in section_links:
-            parts.append(
-                f'<a href="#{target}" data-jump="#{target}" '
-                f'data-section-link="{target}">{L(label_key)}</a>'
-            )
-        parts.append("</nav>")
+        available.add("matrix")
+    parts.append(section_nav([entry for entry in ANALYSIS_SECTIONS if entry[0] in available], labels))
 
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}

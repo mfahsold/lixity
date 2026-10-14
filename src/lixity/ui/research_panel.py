@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from ..site import docs_url
-from .components import esc, help_term, label, loading_state
+from .components import checkbox_field, esc, help_term, label, loading_state
 
 
 def render_research_panel(labels: Mapping[str, str] | None = None, *, research_context_token: str = "") -> str:
@@ -94,7 +94,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'<textarea class="ctl full-width" id="r-ingest-text" placeholder="{L("research_source_text")}" rows="3"></textarea>')
     parts.append('</div>')
     parts.append('<div class="row">')
-    parts.append(f'<label class="form-checkbox"><input type="checkbox" id="r-ingest-retention" data-help="{L("help_research_ingest")}"/> <span>{L("research_retention")}</span></label>')
+    parts.append(checkbox_field(f'<input type="checkbox" id="r-ingest-retention" data-help="{L("help_research_ingest")}"/>', f'<span>{L("research_retention")}</span>'))
     parts.append(f'<button class="ctl primary" id="r-ingest-btn">{L("research_ingest_action")}</button>')
     parts.append('</div>')
     parts.append('</div>')
@@ -111,7 +111,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'<input class="ctl grow" id="r-zotero-query" aria-label="{L("research_search_query")}" placeholder="{L("research_search_query")}"/>')
     parts.append(f'<button type="button" class="ctl primary" id="r-zotero-browse">{L("zotero_browse")}</button>')
     parts.append('</div>')
-    parts.append(f'<label class="form-checkbox"><input type="checkbox" id="r-zotero-retention"/> {L("research_retention_zotero")}</label>')
+    parts.append(checkbox_field('<input type="checkbox" id="r-zotero-retention"/>', L("research_retention_zotero")))
     parts.append('<div id="r-zotero-results" aria-live="polite"></div></div>')
     parts.append(f'<h3 class="section-heading">{L("zotero_retained")}</h3>')
     parts.append(f'<input class="ctl full-width mb-2" type="search" id="r-filter-sources" aria-label="{L("research_filter_sources")}" placeholder="{L("research_filter_sources")}"/>')
@@ -238,7 +238,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'<p class="ctl-note" id="r-relation-compatibility">{L("research_relation_compatibility")}</p>')
     parts.append(f'<button type="submit" class="ctl primary" id="r-relation-save" disabled>{L("research_relation_save")}</button>')
     parts.append('<p class="ctl-note" id="r-relation-status" role="status"></p></form>')
-    parts.append(f'<label class="form-checkbox"><input type="checkbox" id="r-relation-retracted"/> {L("research_relation_show_retracted")}</label>')
+    parts.append(checkbox_field('<input type="checkbox" id="r-relation-retracted"/>', L("research_relation_show_retracted")))
     parts.append('<div id="research-claim-relations" aria-live="polite"></div></div>')
     parts.append('</div>')
 
@@ -271,10 +271,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
                  f'<input class="ctl" id="r-decision-plot" placeholder="{L("research_decision_plot")}"/>'))
     parts.append('    </div>')
     parts.append('    <div class="row row-between">')
-    parts.append('      <label class="form-checkbox">')
-    parts.append('        <input type="checkbox" id="r-decision-deviation"/>')
-    parts.append(f'        <span>{help_term(labels, "research_deviation", L("research_deviation_checkbox"))}</span>')
-    parts.append('      </label>')
+    parts.append(checkbox_field('<input type="checkbox" id="r-decision-deviation"/>', f'<span>{help_term(labels, "research_deviation", L("research_deviation_checkbox"))}</span>'))
     parts.append('</div></details>')
     parts.append('<div class="row">')
     parts.append(f'      <button class="ctl primary" id="r-decision-create-btn">{L("research_decision_action")}</button>')

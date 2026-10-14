@@ -7,6 +7,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- The analysis section navigation and the checkbox rows are central components
+  (`ANALYSIS_SECTIONS`, `section_nav`, `checkbox_field`), so new panels and
+  controls reuse one markup source instead of a parallel implementation.
+
 ## [0.4.2] - 2026-10-14
 
 ### Added
