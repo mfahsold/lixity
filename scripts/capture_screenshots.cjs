@@ -89,6 +89,17 @@ async function main() {
           }, {passive: true});
           window.addEventListener('mousedown', () => { dot.style.transform = 'scale(.72)'; }, {passive: true});
           window.addEventListener('mouseup', () => { dot.style.transform = 'scale(1)'; }, {passive: true});
+          const caption = document.createElement('div');
+          caption.id = 'walkthrough-caption';
+          caption.style.cssText = 'position:fixed;left:50%;bottom:26px;transform:translateX(-50%);max-width:78%;' +
+            'padding:10px 16px;border-radius:999px;background:rgba(17,24,39,.88);color:#fff;' +
+            'font:600 15px/1.35 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.01em;text-align:center;' +
+            'z-index:2147483647;pointer-events:none;opacity:0;';
+          document.body.appendChild(caption);
+          window.setWalkthroughCaption = text => {
+            caption.textContent = text || '';
+            caption.style.opacity = text ? '1' : '0';
+          };
         };
         if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', attach);
         else attach();
@@ -182,6 +193,19 @@ async function main() {
         await save(capture.target, '#settings-form');
       } else if (name === 'dashboard-markers.png') {
         await save(capture.target, '#markers');
+      } else if (name === 'dashboard-flags.png') {
+        await selectView('analysis');
+        await save(capture.target, '#flags');
+      } else if (name === 'dashboard-editorial.png') {
+        await selectView('analysis');
+        const chip = page.locator('#ch-1 .chip').nth(2);
+        await chip.click();
+        const paragraph = page.locator('#chapters .ptext.open').first();
+        await paragraph.locator('.paragraph-values > summary').click();
+        const trigger = paragraph.locator('.marker-row [data-marker-kind="todo"]');
+        await trigger.click();
+        await paragraph.locator('.marker-note').fill('Check the closing cadence here');
+        await save(capture.target, '#chapters .ptext.open');
       } else if (name === 'dashboard-heatmap.png') {
         await page.addStyleTag({content: '.page { max-width: 1720px; }'});
         await page.evaluate(() => {
@@ -339,9 +363,44 @@ async function main() {
       await prepareWorkspacePage(page, {cursor: true});
       page.setDefaultTimeout(15000);
       const flow = path.basename(capture.videoTarget, '.webm');
+      const say = async text => {
+        await page.evaluate(value => {
+          if (window.setWalkthroughCaption) window.setWalkthroughCaption(value);
+        }, text);
+        await page.waitForTimeout(750);
+      };
       await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
-      if (flow === 'analysis-review') {
+      if (flow === 'editorial-loop') {
+        await page.waitForTimeout(800);
+        await say('Flagged passages open the editorial loop');
+        await page.locator('#flags').scrollIntoViewIfNeeded();
+        await page.waitForTimeout(700);
+        const flagRow = page.locator('#flags [data-marker-kind]').first();
+        if (await flagRow.count()) {
+          await flagRow.hover();
+          await page.waitForTimeout(800);
+        }
+        await say('Every paragraph keeps its measured values');
+        const chip = page.locator('#ch-1 .chip').nth(2);
+        await chip.scrollIntoViewIfNeeded();
+        await chip.hover();
+        await page.waitForTimeout(500);
+        await chip.click();
+        await page.waitForTimeout(1000);
+        await say('Read the values, source lines and tense flags');
+        const paragraph = page.locator('#chapters .ptext.open').first();
+        await paragraph.locator('.paragraph-values > summary').click();
+        await page.waitForTimeout(1000);
+        await say('Write the note directly on the passage');
+        await paragraph.locator('.marker-row [data-marker-kind="todo"]').click();
+        await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 45});
         await page.waitForTimeout(900);
+        await say('Markers stay in the manuscript as Markdown comments');
+        await page.locator('#markers').scrollIntoViewIfNeeded();
+        await page.waitForTimeout(1400);
+      } else if (flow === 'analysis-review') {
+        await page.waitForTimeout(900);
+        await say('A chapter cell opens its passages');
         const cell = page.locator('#heatmap td.z[data-chapter]').first();
         await cell.scrollIntoViewIfNeeded();
         await page.waitForTimeout(500);
@@ -349,6 +408,7 @@ async function main() {
         await page.waitForTimeout(700);
         await cell.click();
         await page.waitForTimeout(1300);
+        await say('Read the values and source lines');
         const values = page.locator('#chapters .paragraph-values > summary').first();
         if (await values.count()) {
           await values.scrollIntoViewIfNeeded();
@@ -358,6 +418,7 @@ async function main() {
         }
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
+          await say('Switch to the style dimensions');
           await dimensions.scrollIntoViewIfNeeded();
           await page.waitForTimeout(600);
           await dimensions.click();
@@ -365,8 +426,11 @@ async function main() {
         }
         await page.mouse.wheel(0, -320);
         await page.waitForTimeout(900);
+        await say('The same measured data in 3D');
+        await page.waitForTimeout(900);
       } else {
         await page.waitForTimeout(700);
+        await say('The timeline places dated claims on one axis');
         await page.locator('[data-view="research"]').click();
         await page.locator('[data-rtab="claims"]').click();
         await page.waitForTimeout(800);
@@ -379,12 +443,14 @@ async function main() {
           await rows.nth(index).hover();
           await page.waitForTimeout(360);
         }
+        await say('Open a claim to read its card');
         await rows.first().click();
         await page.waitForTimeout(1600);
         await page.mouse.wheel(0, 300);
         await page.waitForTimeout(1200);
         await page.mouse.wheel(0, -700);
         await page.waitForTimeout(600);
+        await say('Every row links back to its evidence');
         await rows.nth(Math.min(1, count - 1)).hover();
         await page.waitForTimeout(1200);
       }

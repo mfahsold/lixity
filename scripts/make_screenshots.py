@@ -299,6 +299,25 @@ def main() -> int:
         380,
     )
 
+    # 6b. Editorial loop: the same marked manuscript with the native controls,
+    # so flags, paragraph values and the inline marker note appear together.
+    editorial_dashboard = render_dashboard(
+        marked_chapters,
+        marked_paragraphs,
+        metrics=marked_metrics,
+        fingerprint=marked_analysis.fingerprint,
+        title=title,
+        labels=resolved.labels,
+        language_name=resolved.name,
+        language_key=resolved.key,
+        markers=list_markers(marked),
+        controls=True,
+        enabled_actions=NATIVE_UI_ACTIONS,
+    )
+    editorial_path = _write_html("dashboard-editorial.html", editorial_dashboard)
+    _queue_capture(editorial_path, OUT_DIR / "dashboard-flags.png", 1480, 560)
+    _queue_capture(editorial_path, OUT_DIR / "dashboard-editorial.png", 1480, 760)
+
     # 7. Style layer (draft chapter with the dialogue layer active) --------
     _queue_capture(
         dashboard_path,
@@ -624,6 +643,12 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
                 "target": str(OUT_DIR / "dashboard-light.png"),
                 "width": 1280, "height": 800, "video": True,
                 "videoTarget": str(video_dir / "analysis-review.webm"),
+            },
+            {
+                "source": str(editorial_path),
+                "target": str(OUT_DIR / "dashboard-editorial.png"),
+                "width": 1280, "height": 800, "video": True,
+                "videoTarget": str(video_dir / "editorial-loop.webm"),
             },
         ]
     elif args.only:

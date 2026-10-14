@@ -21,6 +21,7 @@ OUT_DIR = BASE_DIR / "docs" / "videos"
 WALKTHROUGHS: tuple[tuple[str, str, int, int], ...] = (
     ("research-timeline", "4.5", 2_000_000, 4_000_000),
     ("analysis-review", "5.5", 2_000_000, 4_000_000),
+    ("editorial-loop", "11.5", 2_000_000, 4_000_000),
 )
 
 

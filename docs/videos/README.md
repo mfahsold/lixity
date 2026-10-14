@@ -9,6 +9,11 @@ from synthetic fixtures only; no private project or manuscript appears in them.
 | `research-timeline.gif` | Loop for the README and chat previews |
 | `research-timeline.png` | Poster frame and video thumbnail |
 | `analysis-review.mp4` / `.gif` / `.png` | Chapter cell, paragraph Values and style dimensions walkthrough |
+| `editorial-loop.mp4` / `.gif` / `.png` | Flagged passages, an opened paragraph and a marker note written on the passage |
+
+Every walkthrough carries short step captions that name what the recording is
+doing; the recorder overlays them inside the page, so MP4, GIF and poster show
+the same sequence.
 
 Regenerate with `make videos` (needs headless Chromium and ffmpeg):
 
