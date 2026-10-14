@@ -52,7 +52,6 @@ h1 {
 .research-dossier-claims h4, .research-dossier-claims p { margin: 0; }
 .research-dossier-claims-list { display: grid; gap: var(--space-3); margin: 0; padding: 0; list-style: none; }
 .research-dossier-claims-list > li { display: grid; gap: var(--space-2); padding-block: var(--space-3); border-top: 1px solid var(--line); overflow-wrap: anywhere; }
-.research-dossier-claims-list .row { gap: var(--space-2); align-items: center; }
 .research-dossier-claims-list strong, .research-dossier-claims-list code { min-width: 0; overflow-wrap: anywhere; white-space: normal; }
 .settings-form .settings-actions { margin-top: 0; }
 .panel-guide { max-width: 78ch; font-size: var(--text-small); color: var(--muted); line-height: 1.65; margin: .6rem 0 1rem; }
@@ -191,6 +190,7 @@ h2, .section-heading, .settings-form h3 {
   min-height: 4.2rem;
   position: relative;
   overflow: hidden;
+  min-width: 0;
   transition: border-color .18s var(--ease), box-shadow .18s var(--ease), transform .18s var(--ease);
 }
 .kpi:hover { border-color: var(--accent); box-shadow: var(--shadow-lift); transform: translateY(-1px); }
@@ -213,7 +213,6 @@ h2, .section-heading, .settings-form h3 {
   font-variant-numeric: tabular-nums;
   line-height: 1.2;
 }
-.kpi { min-width: 0; }
 .kpi span {
   color: var(--muted);
   font-size: .72rem;
@@ -326,16 +325,6 @@ body.text-search-active .chapter .strip { display: none; }
   .toolbar-sections a { min-height: 2.75rem; }
 }
 
-/* Long chapter and scene lists: defer off-screen rendering work. */
-.chapter {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 160px;
-}
-.scene-detail {
-  content-visibility: auto;
-  contain-intrinsic-size: auto 520px;
-}
-
 /* --- Chapter map ------------------------------------------------------ */
 #chapters { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-3); }
 .chapter {
@@ -345,6 +334,8 @@ body.text-search-active .chapter .strip { display: none; }
   padding: var(--panel-padding);
   margin: 0;
   transition: border-color .15s ease;
+  content-visibility: auto;
+  contain-intrinsic-size: auto 160px;
 }
 .chapter-head {
   display: flex;
@@ -366,14 +357,13 @@ body.text-search-active .chapter .strip { display: none; }
   cursor: pointer;
   opacity: .9;
   touch-action: manipulation;
-  transition: opacity .1s ease;
+  transition: transform .14s var(--ease), opacity .14s var(--ease), background .25s var(--ease);
 }
 .chip:hover, .chip:focus-visible, .chip.active {
   opacity: 1;
   outline: 2px solid var(--fg);
   outline-offset: 1px;
 }
-.chip { transition: transform .14s var(--ease), opacity .14s var(--ease), background .25s var(--ease); }
 .chip:hover { transform: scaleY(1.18); }
 .chip:active { transform: none; opacity: 1; }
 .chip.tense-present { background: var(--present); }
@@ -447,7 +437,7 @@ body.layer-only .chip:not(.outlier):hover { opacity: .6; }
 .paragraph-values[open] .anchor { margin-top: .35rem; }
 body:not(.has-js-paragraphs) .ptext { grid-template-rows: 1fr; opacity: 1; margin-top: .65rem; }
 body:not(.has-js-paragraphs) .ptext-inner { padding: .8rem 1rem; }
-.ptext .row { display: flex; flex-wrap: wrap; gap: .35rem; margin-top: .45rem; }
+.ptext .row { gap: .35rem; margin-top: .45rem; }
 
 /* --- Style passport band chart (data-ink, no numeric table) ----------- */
 .bands { display: grid; gap: .3rem; }
@@ -1048,7 +1038,6 @@ body:not(.has-js-tooltips) .help:focus::after {
 }
 
 /* --- Controls (local server mode) ------------------------------------- */
-.controls .row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; }
 .marker-note-slot { display: inline-flex; min-width: 0; max-width: 100%; }
 [data-marker-editor] { display: flex; flex-wrap: wrap; gap: .3rem; min-width: 0; max-width: 100%; }
 [data-marker-feedback] { flex-basis: 100%; overflow-wrap: anywhere; }
@@ -1211,12 +1200,12 @@ details.nda .row { margin-top: .5rem; }
 .research-passage-card {
   border-left: 3px solid var(--accent);
   background: var(--neutral);
-  padding: .5rem .7rem;
-  margin-block: .4rem;
+  padding: .4rem .6rem;
+  margin: .3rem 0;
   border-radius: 0 4px 4px 0;
   font-size: .84rem;
 }
-.research-passage-quote { font-style: italic; margin-bottom: .25rem; white-space: pre-wrap; }
+.research-passage-quote { font-style: italic; font-size: .78rem; margin: .2rem 0; white-space: pre-wrap; }
 .selection-toolbar { position: sticky; top: .75rem; z-index: 8; display: flex; flex-wrap: wrap; gap: .6rem; padding: .65rem; margin: .75rem 0; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-sm); }
 .selection-toolbar .ctl { max-width: 100%; white-space: normal; }
 .selection-toolbar .selection-reading { flex: 1 1 18rem; min-width: 0; margin: 0; }
@@ -1242,33 +1231,34 @@ mark.search-hit {
 .research-passage-actions { margin-top: .5rem; }
 .research-claim-views { margin-top: .8rem; }
 .research-claim-views button.ctl[aria-pressed="true"] { background: var(--action-bg); color: var(--on-action); }
-/* Renderer utilities: shared classes for spacing and sizing that would
-   otherwise be inline styles. Measured values (bar widths, positions, colour
-   maps) stay inline; layout uses these classes. Step N means 0.N rem, step 10
-   means 1 rem. */
-.m-0 { margin: 0; }
-.mb-2 { margin-bottom: .2rem; }
-.mb-3 { margin-bottom: .3rem; }
-.mb-5 { margin-bottom: .5rem; }
-.mt-4 { margin-top: .4rem; }
-.mt-5 { margin-top: .5rem; }
-.mt-6 { margin-top: .6rem; }
-.mt-8 { margin-top: .8rem; }
-.mt-10 { margin-top: 1rem; }
-.my-3 { margin: .3rem 0; }
-.my-4 { margin: .4rem 0; }
-.ml-3 { margin-left: .3rem; }
-.ml-4 { margin-left: .4rem; }
-.ml-5 { margin-left: .5rem; }
-.w-full { width: 100%; }
-.grow { flex: 1; min-width: 0; }
-.gap-sm { gap: .4rem; }
-.form-col { flex: 1; }
-.form-col-wide { flex: 2; }
+/* Shared layout primitives: rows wrap, keep one gap and let sized fields
+   grow. They apply everywhere, not only inside the control panels. */
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; min-width: 0; }
+.row > * { min-width: 0; }
+.grow { flex: 1 1 0%; min-width: 0; }
+.grow-2 { flex: 2 1 0%; min-width: 0; }
 .field-narrow { min-width: 180px; }
 .field-wide { flex: 1; min-width: 220px; }
-.items-center { align-items: center; }
-.form-row-between { align-items: center; justify-content: space-between; }
+.row-between { align-items: center; justify-content: space-between; }
+
+/* Renderer utilities: shared classes for spacing and sizing that would
+   otherwise be inline styles. The numeric suffix is the shared --space step
+   (1 = .25rem, 2 = .5rem, 3 = .75rem, 4 = 1rem). Measured values (bar widths,
+   positions, colour maps) stay inline; layout uses these classes. */
+.m-0 { margin: 0; }
+.mt-1 { margin-top: var(--space-1); }
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+.mt-4 { margin-top: var(--space-4); }
+.mb-1 { margin-bottom: var(--space-1); }
+.mb-2 { margin-bottom: var(--space-2); }
+.my-1 { margin-block: var(--space-1); }
+.my-2 { margin-block: var(--space-2); }
+.ml-1 { margin-left: var(--space-1); }
+.ml-2 { margin-left: var(--space-2); }
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.full-width { width: 100%; }
 .empty-actions { justify-content: center; gap: .6rem; }
 .fw-medium { font-weight: 500; }
 .num-left { text-align: left; }
@@ -1291,10 +1281,8 @@ textarea.ctl { font-family: inherit; }
 .badge-sm { font-size: .75rem; padding: 2px 6px; }
 .research-relation-badge { font-size: .7rem; }
 .research-block-heading { font-size: .78rem; font-weight: 600; margin-bottom: .3rem; color: var(--fg); }
-.research-passage-card { margin: .3rem 0; padding: .4rem .6rem; }
 .research-passage-head { display: flex; align-items: center; gap: .4rem; margin-bottom: .2rem; }
 .research-passage-title-note { font-size: .74rem; }
-.research-passage-quote { font-size: .78rem; margin: .2rem 0; }
 .research-chapter-table { width: 100%; font-size: .8rem; }
 .research-warning-box { margin: .5rem 0 .8rem; padding: .4rem .7rem; font-size: .82rem; background: rgba(217, 119, 6, 0.1); border-left: 3px solid var(--warn, #d97706); border-radius: 3px; }
 
@@ -1368,7 +1356,6 @@ textarea.ctl { font-family: inherit; }
   padding: var(--space-4);
 }
 .workspace-bar:not(:has(.manuscript-pdf)) { grid-template-columns: minmax(0, 1fr); }
-.workspace-bar .row { display: flex; flex-wrap: wrap; gap: .45rem; align-items: center; }
 .welcome-hero {
   position: relative;
   border: 1px solid var(--line);
@@ -1413,7 +1400,6 @@ textarea.ctl { font-family: inherit; }
   color: var(--fg);
 }
 .project-chooser-list li { display: flex; align-items: center; gap: .4rem; }
-.project-chooser-entry { flex: 1; }
 .project-chooser-project { margin: .2rem 0 .5rem; }
 .project-chooser-project.detected { color: var(--fg); }
 .project-chooser-badge { margin-left: auto; padding: .05rem .45rem; border-radius: 999px; background: color-mix(in srgb, var(--accent) 14%, transparent); border: 1px solid var(--line); color: var(--muted); font-size: var(--text-note); white-space: nowrap; }
@@ -1702,6 +1688,7 @@ dialog.lixity-modal::backdrop {
   display: flex;
   align-items: center;
   gap: .5rem;
+  flex: 1;
   width: 100%;
   border: 0;
   border-radius: 0;
@@ -2341,7 +2328,7 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
   .view-pane { display: block !important; }
 }
 .scene-overview { margin: .4rem 0 .9rem; }
-.scene-detail { margin: .8rem 0; border-top: 1px solid var(--line); padding-top: .6rem; }
+.scene-detail { margin: .8rem 0; border-top: 1px solid var(--line); padding-top: .6rem; content-visibility: auto; contain-intrinsic-size: auto 520px; }
 .scene-detail summary { cursor: pointer; overflow-wrap: anywhere; padding: .5rem 0; }
 .scene-detail .table-wrap { margin-top: .6rem; }
 .scene-detail th small { display: block; font-weight: normal; opacity: .7; }

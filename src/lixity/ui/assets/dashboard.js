@@ -1740,7 +1740,7 @@ function researchDossierDetailHtml(detail, readOnly) {
   if (detail.review_needed && detail.decision_reviews && detail.decision_reviews.length) {
     var needed = detail.decision_reviews.filter(function(r) { return r.status === "review_needed"; });
     if (needed.length) {
-      reviewAlert = '<div class="banner banner-warning research-warning-box">' +
+      reviewAlert = '<div class="research-warning-box">' +
         '<strong>⚠️ ' + escapeHtml(uiLabel("research_review_needed")) + ':</strong> ' +
         needed.map(function(n) { return escapeHtml(n.reason || n.title); }).join(" · ") +
         '</div>';
@@ -1757,7 +1757,7 @@ function researchDossierDetailHtml(detail, readOnly) {
   if (sections.length) {
     sectionsHtml = '<div class="research-dossier-outline research-dossier-outline">' +
       '<strong>' + escapeHtml(uiLabel("research_sections")) + ':</strong> ' +
-      sections.map(function(sec) { return '<span class="research-tag research-tag-section ml-3">' + escapeHtml(sec) + '</span>'; }).join("") +
+      sections.map(function(sec) { return '<span class="research-tag research-tag-section ml-1">' + escapeHtml(sec) + '</span>'; }).join("") +
       '</div>';
   }
   var bodyHtml = "";
@@ -2412,7 +2412,7 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
       return '<span class="research-tag">' + escapeHtml(t) + '</span>';
     }).join(" ");
     var reviewBadge = d.review_needed
-      ? '<span class="research-badge badge-warning ml-4" title="' + escapeHtml(uiLabel("research_review_needed")) + '">' + escapeHtml(uiLabel("research_review_needed")) + '</span>'
+      ? '<span class="research-badge badge-warning ml-2" title="' + escapeHtml(uiLabel("research_review_needed")) + '">' + escapeHtml(uiLabel("research_review_needed")) + '</span>'
       : '';
     var sectionsBadges = (d.sections && d.sections.length)
       ? '<div class="research-dossier-sections"><span class="ctl-note text-note">' + escapeHtml(uiLabel("research_sections")) + ':</span> ' +
@@ -2693,7 +2693,7 @@ async function refreshResearchClaims(overview) {
         '<span class="research-badge ' + confClass + '">' + escapeHtml(confLabel) + '</span>' +
         (c.revision ? '<span class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", { revision: c.revision })) + '</span>' : '') +
       '</div>' +
-      '<div class="research-claim-statement research-prose markdown-body my-4">' + renderSafeMarkdown(c.statement) + '</div>' +
+      '<div class="research-claim-statement research-prose markdown-body my-2">' + renderSafeMarkdown(c.statement) + '</div>' +
       (scopeParts.length ? '<div class="ctl-note research-claim-scope">' + scopeParts.join(" · ") + '</div>' : '') +
       '<div class="ctl-note research-record-id">' + escapeHtml(uiLabel("research_claim_id")) + ' ' + escapeHtml(c.id) + '</div>' +
       (c.dossier_id ? '<div class="ctl-note">' + escapeHtml(uiLabel("research_dossier")) + ': ' + escapeHtml(c.dossier_id) +
@@ -2734,8 +2734,8 @@ async function refreshResearchDecisions(overview) {
         devBadge +
         (d.revision ? '<span class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", { revision: d.revision })) + '</span>' : '') +
       '</div>' +
-      '<div class="research-decision-rationale research-prose markdown-body my-4">' + renderSafeMarkdown(d.rationale) + '</div>' +
-      (d.impact_on_plot ? '<div class="ctl-note my-3 text-small"><strong>' + escapeHtml(uiLabel("research_decision_impact")) + ':</strong> <span class="research-prose markdown-body">' + renderSafeMarkdown(d.impact_on_plot) + '</span></div>' : '') +
+      '<div class="research-decision-rationale research-prose markdown-body my-2">' + renderSafeMarkdown(d.rationale) + '</div>' +
+      (d.impact_on_plot ? '<div class="ctl-note my-1 text-small"><strong>' + escapeHtml(uiLabel("research_decision_impact")) + ':</strong> <span class="research-prose markdown-body">' + renderSafeMarkdown(d.impact_on_plot) + '</span></div>' : '') +
       (d.claim_id ? '<div class="ctl-note research-record-id">' + escapeHtml(uiLabel("research_decision_claim")) + ' ' + escapeHtml(d.claim_id) +
         (d.claim_revision ? ' · ' + escapeHtml(uiFormat("research_revision_number", { revision: d.claim_revision })) : '') + '</div>' : '') +
       '<details class="research-details"><summary data-decision-impact="' + escapeHtml(d.id) + '">' + escapeHtml(uiLabel("research_decision_affected")) + '</summary><div class="research-details-body"></div></details>' +
@@ -2954,7 +2954,7 @@ async function refreshResearchProjectInfo() {
     ocrBox.style.alignItems = "center";
     ocrBox.innerHTML = '<span class="badge ' + badgeClass + ' badge-sm">' +
       escapeHtml(labelText) + '</span>' +
-      (guidanceText ? '<small class="ctl-note ml-5 text-note">' + escapeHtml(guidanceText) + '</small>' : '');
+      (guidanceText ? '<small class="ctl-note ml-2 text-note">' + escapeHtml(guidanceText) + '</small>' : '');
   }
   return status;
 }
@@ -3222,7 +3222,7 @@ document.addEventListener("click", async function (event) {
       detailHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
         (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '') +
         '<div class="research-source-view-bar">' +
-          '<div class="row gap-sm">' +
+          '<div class="row gap-2">' +
             '<button type="button" class="ctl ctl-sm active" data-source-view="doc">📄 ' + escapeHtml(uiLabel("research_doc_view")) + '</button>' +
             '<button type="button" class="ctl ctl-sm" data-source-view="passages">🔍 ' + escapeHtml(uiLabel("research_passages_view")) + ' (' + passagesCount + ')</button>' +
           '</div>' +
@@ -3439,7 +3439,7 @@ function highlightSearchTerms(text, query) {
       var currentScope = scopeEl ? scopeEl.value : "sources";
       var scopeHint = "";
       if (currentScope !== "all") {
-        scopeHint = '<div class="mt-5">' +
+        scopeHint = '<div class="mt-2">' +
           '<span class="ctl-note">' + escapeHtml(uiLabel("research_search_scope_hint")) + ' </span>' +
           '<button type="button" class="ctl ctl-sm" id="r-search-all-btn">' + escapeHtml(uiLabel("research_search_all_records")) + '</button>' +
           '</div>';
@@ -3546,16 +3546,16 @@ function highlightSearchTerms(text, query) {
     }).join("");
 
     if (gHost) {
-      gHost.innerHTML = '<div class="research-card mt-8">' +
-        '<div class="research-card-title mb-5">' + escapeHtml(uiLabel("research_results_for")) + ' ' + escapeHtml(gres.provenance ? gres.provenance.source_title : "") + '</div>' +
+      gHost.innerHTML = '<div class="research-card mt-3">' +
+        '<div class="research-card-title mb-2">' + escapeHtml(uiLabel("research_results_for")) + ' ' + escapeHtml(gres.provenance ? gres.provenance.source_title : "") + '</div>' +
         '<p class="ctl-note">' + escapeHtml(uiLabel("research_comparison_limit")) + '</p>' +
         (crossLanguage ? '<p class="ctl-note research-comparison-warning" role="status">' + escapeHtml(uiLabel("research_cross_language_limit")) + '</p>' : '') +
         '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_similarity")) + '</span><strong>' + (sum.jaccard_similarity !== undefined ? (sum.jaccard_similarity * 100).toFixed(1) + '%' : 'n/a') + '</strong></div>' +
         '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_shared_types")) + '</span><strong>' + (sum.shared_types || 0) + '</strong></div>' +
         '<div class="research-compare-metric"><span>' + escapeHtml(uiLabel("research_word_counts")) + '</span><span>' + (sum.source_content_words || 0) + ' / ' + (sum.manuscript_content_words || 0) + '</span></div>' +
-        (sharedWordsHtml ? '<div class="mt-6"><div class="ctl-label mb-3">' + escapeHtml(uiLabel("research_shared_words")) + '</div><div class="research-tags">' + sharedWordsHtml + '</div></div>' : '') +
-        (keyTermsHtml ? '<div class="mt-6"><div class="ctl-label mb-3">' + escapeHtml(uiLabel("research_source_key_terms")) + '</div><div class="research-tags">' + keyTermsHtml + '</div></div>' : '') +
-        (chRows ? '<div class="mt-8"><div class="ctl-label mb-3">' + escapeHtml(uiLabel("research_chapter_density")) + '</div><table class="research-chapter-table"><thead><tr><th class="num-left">' + escapeHtml(uiLabel("research_chapter")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_tokens")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_density")) + '</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
+        (sharedWordsHtml ? '<div class="mt-2"><div class="ctl-label mb-1">' + escapeHtml(uiLabel("research_shared_words")) + '</div><div class="research-tags">' + sharedWordsHtml + '</div></div>' : '') +
+        (keyTermsHtml ? '<div class="mt-2"><div class="ctl-label mb-1">' + escapeHtml(uiLabel("research_source_key_terms")) + '</div><div class="research-tags">' + keyTermsHtml + '</div></div>' : '') +
+        (chRows ? '<div class="mt-3"><div class="ctl-label mb-1">' + escapeHtml(uiLabel("research_chapter_density")) + '</div><table class="research-chapter-table"><thead><tr><th class="num-left">' + escapeHtml(uiLabel("research_chapter")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_tokens")) + '</th><th class="num-right">' + escapeHtml(uiLabel("research_density")) + '</th></tr></thead><tbody>' + chRows + '</tbody></table></div>' : '') +
       '</div>';
     }
     researchStatus(uiLabel("research_ground_complete"), true);

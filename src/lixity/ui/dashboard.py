@@ -332,15 +332,15 @@ def render_dashboard(
             '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
             f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
             f'<span class="view-nav-icon" aria-hidden="true">📚</span> '
-            f'<span class="view-nav-label">{L("workspace_research")}</span>'
+            f'<span>{L("workspace_research")}</span>'
             "</button>"
             f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
             f'<span class="view-nav-icon" aria-hidden="true">📊</span> '
-            f'<span class="view-nav-label">{L("workspace_analysis")}</span>'
+            f'<span>{L("workspace_analysis")}</span>'
             "</button>"
             f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" aria-controls="view-pane-project" aria-selected="false">'
             f'<span class="view-nav-icon" aria-hidden="true">⚙️</span> '
-            f'<span class="view-nav-label">{L("workspace_project")}</span>'
+            f'<span>{L("workspace_project")}</span>'
             "</button>"
             "</nav>"
         )
@@ -673,7 +673,7 @@ def render_dashboard(
             f'{L("reader_hint") if manuscript_pdf_token else L("reader_unavailable")}</p></div>'
         )
         parts.append(
-            '<section class="workspace-reader" id="workspace-reader" '
+            '<section id="workspace-reader" '
             f'data-project-token="{esc(manuscript_pdf_token)}">'
             '<div class="workspace-reader-layout" id="workspace-reader-layout">'
             '<aside class="panel workspace-reader-panel" id="workspace-reader-panel" '
@@ -705,7 +705,7 @@ def render_dashboard(
             "</div>"
             "</div>"
         )
-        parts.append('<div class="analysis-empty-metrics" hidden>')
+        parts.append('<div hidden>')
 
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
@@ -1176,7 +1176,7 @@ def render_dashboard(
             )
             if controls:
                 parts.append(
-                    f'<td class="flag-actions"><div class="row marker-row">'
+                    f'<td><div class="row marker-row">'
                     f'<button class="ctl" data-marker-kind="todo" '
                     f'data-line="{p.start_line}">+ '
                     f"{esc(label(labels, 'marker_todo'))}</button>"

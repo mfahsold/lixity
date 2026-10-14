@@ -66,3 +66,30 @@ def test_assets_contain_only_measured_or_dynamic_inline_styles() -> None:
             if FORBIDDEN.search(value) and not ALLOWED_VALUE.match(value.strip()):
                 offenders.append(f"{asset.name}: {value}")
     assert offenders == [], f"Assets must use utility classes instead: {offenders}"
+
+STYLESHEET = ROOT / "src/lixity/ui/assets/dashboard.css"
+RETIRED_UTILITIES = (
+    "items-center", "mb-3", "mb-5", "mt-5", "mt-6", "mt-8", "mt-10", "my-3",
+    "my-4", "ml-3", "ml-4", "ml-5", "w-full", "gap-sm", "form-col",
+    "form-col-wide", "form-row-between",
+)
+
+
+RETIRED_MARKUP_CLASSES = (
+    "analysis-empty-metrics", "banner-warning", "flag-actions",
+    "recent-projects-wrap", "view-nav-label",
+)
+
+
+def test_retired_classes_stay_removed() -> None:
+    """Decile utilities and dead markup classes must not come back."""
+    sources = sorted((ROOT / "src/lixity/ui").glob("*.py")) + ASSETS + [STYLESHEET]
+    offenders: list[str] = []
+    for source in sources:
+        text = source.read_text(encoding="utf-8")
+        offenders.extend(
+            f"{source.name}: {name}"
+            for name in (*RETIRED_UTILITIES, *RETIRED_MARKUP_CLASSES)
+            if re.search(rf"(?<![\w-]){re.escape(name)}(?![\w-])", text)
+        )
+    assert offenders == [], f"Retired classes: {offenders}"
