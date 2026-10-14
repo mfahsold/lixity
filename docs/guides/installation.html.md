@@ -19,7 +19,7 @@ Lixity is open source under AGPL-3.0-or-later; every writing purpose is covered,
 ## Install Lixity
 
 ```
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -30,7 +30,7 @@ lixity --version
 lixity service start --open
 ```
 
-This selects a fixed release wheel from GitHub in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.3.0.md) for changes and compatibility.
+This selects a fixed release wheel from GitHub in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.4.0.md) for changes and compatibility.
 
 **Development builds instead**
 
@@ -138,7 +138,7 @@ Stop each managed instance before replacing the package. Use the published wheel
 
 ```
 lixity service stop
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"
 lixity --version
 lixity service start --open
 ```

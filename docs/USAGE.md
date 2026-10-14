@@ -37,7 +37,7 @@ license, including self-publishing. See [licensing examples](LICENSING.md).
 With uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"
 uv tool update-shell
 ```
 
@@ -48,7 +48,7 @@ lixity --version
 lixity service start --open
 ```
 
-`v0.3.0` is the release pin for this wheel installation; it needs no Git or separate Python
+`v0.4.0` is the release pin for this wheel installation; it needs no Git or separate Python
 installation. To update, stop the service and reinstall the desired release
 wheel as described in the [update reference](INSTALLATION.md#updates-and-removal).
 `uv tool upgrade lixity` retains the chosen source. `uv tool update-shell`

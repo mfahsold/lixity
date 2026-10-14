@@ -4,7 +4,7 @@ Four families of tools answer different questions about a manuscript. This page 
 
 Maintained by the Lixity project · Updated 14 October 2026
 
-## The four families at a glance
+## The families at a glance
 
 **Grammar and style checkers** correct sentences and suggest phrasing. **Corpus and concordance tools** explore texts and collections quantitatively. **Stylometry and NLP packages** measure text through scripts. **Story and structure tools** work on plot, scenes and characters. Lixity adds a fifth job: measuring language patterns across one manuscript and always linking a number back to its passage.
 
@@ -23,6 +23,12 @@ Maintained by the Lixity project · Updated 14 October 2026
 ## Choose a story or structure tool if…
 
 …your next decision is about plot, pacing, scenes or character arcs rather than language. [Fictionary](https://fictionary.co/) and [Scrivener](https://www.literatureandlatte.com/scrivener/) with its ecosystem work at the story level. They help you plan and restructure; they do not measure sentence rhythm, dialogue share or tense patterns.
+
+## Or combine Lixity with an AI writing or editing assistant if…
+
+…you want suggestions, rewrites or developmental feedback and accept a subscription for it. In 2025/26 this family is led by ProWritingAid (grammar and style reports; full-manuscript analysis is metered as a paid add-on), AutoCrit (fiction-specific reports and beta-reader simulation), Sudowrite (generative prose and rewriting), Novelcrafter (a Codex-based writing environment that can also run local models for generation) and Marlowe (developmental feedback and comparisons that do not rewrite your prose). Independent field tests in 2025 show that these tools disagree with each other, depend heavily on whether they see a chapter or the whole book, and are genre-sensitive — one test had two market leaders miss the genre of the same manuscript entirely.
+
+These tools work on meaning and suggestion, usually in the cloud, and their answers vary with model and context. Lixity does not rewrite, grade or suggest phrasing; it measures your manuscript's own patterns locally, deterministically and reproducibly, and links every number to its passage. Many authors use both: an assistant for proposals, Lixity for reviewable evidence of what their own text does.
 
 ## Choose Lixity if…
 

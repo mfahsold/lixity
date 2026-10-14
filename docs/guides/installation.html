@@ -88,12 +88,12 @@
 <div class="notice-box"><strong>License:</strong> Lixity is open source under AGPL-3.0-or-later; every writing purpose is covered, including self-publishing. A separate written commercial license exists only for closed-source integrations. Read the <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">licensing guide</a>.</div>
 
 <h2 id="install">Install Lixity</h2>
-<pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
+<pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"
 uv tool update-shell</code></pre>
 <p>Open a new terminal, then verify and start the app:</p>
 <pre><code>lixity --version
 lixity service start --open</code></pre>
-<p>This selects a fixed release wheel from GitHub in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration configures new terminals; it does not change an already open one. See the <a href="../releases/v0.3.0.md">release notes</a> for changes and compatibility.</p>
+<p>This selects a fixed release wheel from GitHub in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. Shell integration configures new terminals; it does not change an already open one. See the <a href="../releases/v0.4.0.md">release notes</a> for changes and compatibility.</p>
 <details><summary>Development builds instead</summary>
 <p>For unreleased development work, install Git, stop the managed service and replace the installation with:</p>
 <pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"</code></pre>
@@ -146,7 +146,7 @@ lixity service stop</code></pre>
 <h2 id="updates">Update or remove Lixity</h2>
 <p>Stop each managed instance before replacing the package. Use the published wheel for the desired release:</p>
 <pre><code>lixity service stop
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.3.0/lixity-0.3.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.0/lixity-0.4.0-py3-none-any.whl"
 lixity --version
 lixity service start --open</code></pre>
 <p>For a custom port, use <code>lixity service stop --port 9000</code> with that instance's port before updating. Pass an explicit project again if you want one at startup. <code>uv tool upgrade lixity</code> retains the installed source; a fixed wheel does not become the next release.</p>

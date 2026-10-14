@@ -477,3 +477,59 @@ contract from §2 across the analysis core and the `dialogue`/`pacing` reports.
 
 Resolution order per key: CLI/API flag → UI session → project config →
 user config → code default (`src/lixity/config.py`).
+
+## Method currency and recent literature
+
+The lexical-diversity and readability choices follow the current methodological
+literature and are re-checked when it changes:
+
+- **Length dependence.** Bestgen's 2024 methodological review confirms that the
+  classic length problem of lexical diversity is addressed by length-reducing
+  indices, but that the reduction parameter itself becomes a source of
+  variance. The review recommends HD-D for an overall score and MATTR/MTLD for
+  local trajectories, with a fixed parameter for cross-text comparability.
+  Lixity computes HD-D on a 42-token draw — the review's preferred value for
+  comparability — reports MTLD and MATTR with fixed windows, and treats
+  per-chapter values as short-text estimates. The same review shows that MATTR
+  weights tokens by position, which is why Lixity reports it as a local measure
+  and keeps HD-D as the corpus-level index.
+- **Minimum text lengths.** Koizumi & In'nami (2012) and Zenker & Kyle (2020)
+  quantify when lexical-diversity indices stabilise. Lixity states these limits
+  in the interface and marks unavailable results instead of hiding them.
+- **Measurement noise.** Kyle et al. (2024) evaluate reliability and validity of
+  lexical-diversity indices against proficiency scores. Lixity follows the same
+  principle with its standard-error approximations (`style_se`) and the
+  noise-adjusted deviation `z*` rather than presenting a bare rank.
+
+Adjacent tasks are deliberately out of scope. Authorship attribution and
+LLM-generated-text detection are separate research fields with their own
+benchmarks and models (Huang et al. 2024; Weerasinghe et al. 2025); their
+results depend on the candidate set, the domain and the generator version.
+Lixity describes the observable patterns of one manuscript. Every signal stays a
+prompt for reading, never a verdict about authorship, quality or machine origin.
+
+References:
+
+- Bestgen, Y. (2024). *The impact of text length on the estimation of lexical
+  diversity: A methodological review.* (Length problem, HD-D/MATTR/MTLD
+  recommendations, parameter 42.)
+- Bestgen, Y. (2024). *Estimating lexical diversity using the moving average
+  type-token ratio (MATTR): Pros and cons.* (Positional weighting of MATTR.)
+- Covington, M. A., & McFall, J. D. (2010). Cutting the Gordian knot: The
+  moving-average type-token ratio (MATTR). *Journal of Quantitative
+  Linguistics* 17(2), 94–100. doi:10.1080/09296171003643098
+- Huang, R., et al. (2024). *Authorship attribution in the era of LLMs:
+  Problems, methodologies, and challenges.* arXiv:2408.08946.
+- Koizumi, R., & In'nami, Y. (2012). Effects of text length on lexical
+  diversity measures. *System* 40(4), 554–564. doi:10.1016/j.system.2012.10.012
+- Kyle, K., Sung, H., Eguchi, M., & Zenker, F. (2024). Evaluating evidence for
+  the reliability and validity of lexical diversity indices. *Studies in Second
+  Language Acquisition* 46(1), 278–299. doi:10.1017/S0272263123000402
+- McCarthy, P. M., & Jarvis, S. (2010). MTLD, vocd-D, and HD-D: A validation
+  study. *Behavior Research Methods* 42(2), 381–392. doi:10.3758/BRM.42.2.381
+- Weerasinghe, J., et al. (2025). Be sure to use the same writing style:
+  Applying authorship verification on large-language-model-generated texts.
+  *Applied Sciences* 15(5), 2467. doi:10.3390/app15052467
+- Zenker, F., & Kyle, K. (2020). Investigating minimum text lengths for lexical
+  diversity indices. *Assessing Writing* 47, 100505.
+  doi:10.1016/j.asw.2020.100505

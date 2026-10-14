@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-10-14
+
 ### Added
 - Project folders are recognizable while browsing: `/api/project-paths` reports a
   minimal probe for the listed folder (config, research archive, title, language,
@@ -1890,7 +1892,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.3.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.0...HEAD
+[0.4.0]: https://github.com/mfahsold/lixity/compare/v0.3.0...v0.4.0
 [0.3.0]: https://github.com/mfahsold/lixity/compare/v3.0.1...v0.3.0
 [3.0.1]: https://github.com/mfahsold/lixity/compare/v3.0.0...v3.0.1
 [3.0.0]: https://github.com/mfahsold/lixity/compare/v2.4.0...v3.0.0
