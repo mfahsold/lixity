@@ -19,6 +19,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   almost half of the viewport while reading.
 - Scene detail tables only show project-target and register-median columns
   when the project defines them.
+- Control components are shared across views and modals: one `form-checkbox`
+  component, a compact `ctl-sm` button size, canonical section headings, and
+  removed one-off classes (`secondary`, `ctl-primary`, `research-check`,
+  `publication-enable`).
 
 ## [0.4.1] - 2026-10-14
 

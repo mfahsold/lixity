@@ -533,7 +533,7 @@ def render_dashboard(
             # The heading belongs to the results group. Keeping both in one
             # element preserves the separator rule between adjacent groups.
             parts.append('<div class="ctl-group">')
-            parts.append(f'<h3 class="settings-section">{L("settings_results")}</h3>')
+            parts.append(f'<h3 class="section-heading">{L("settings_results")}</h3>')
             action_heading = (
                 f"{L('export')} · {L('run_analysis')}"
                 if action_enabled("export") and visible_actions
@@ -759,7 +759,7 @@ def render_dashboard(
         '<span class="ctl-note" id="text-search-status" role="status" aria-live="polite"></span>'
     )
     parts.append("</span>")
-    parts.append(f'<label><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
+    parts.append(f'<label class="form-checkbox"><input type="checkbox" id="filter-flags"/> {L("filter_flags")}</label>')
     if paragraphs:
         parts.append(
             f'<button type="button" class="ctl" id="paragraph-filter-reset">{L("paragraph_filter_reset")}</button>'

@@ -100,7 +100,7 @@ def settings_form(
         f'<p class="panel-guide">{translated("publication_hint" if author_setting_enabled else "publication_unavailable")}</p>',
         '<p class="ctl-note"><a href="' + docs_url("guides/research-pdf.html#publication") + '" '
         f'target="_blank" rel="noopener noreferrer">{translated("publication_guide")}</a></p>',
-        f'<label class="research-check publication-enable"><input type="checkbox" id="set-publication-enabled" '
+        f'<label class="form-checkbox"><input type="checkbox" id="set-publication-enabled" '
         f'data-publication-key="enabled"{checked}{disabled}/> {translated("publication_enabled")}</label>',
     ])
     if publication_error:

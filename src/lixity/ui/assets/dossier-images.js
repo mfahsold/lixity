@@ -160,11 +160,11 @@
       '<label class="form-label" for="dossier-image-origin">' + safe(uiLabel("ctx_origin_url")) + '</label><input class="ctl" id="dossier-image-origin" type="url" maxlength="' + bounds.url + '">' +
       '<label class="form-label" for="dossier-image-note">' + safe(uiLabel("ctx_provenance_note")) + '</label><textarea class="ctl" id="dossier-image-note" rows="3" maxlength="' + bounds.note + '"></textarea>' +
       '<label class="form-label" for="dossier-image-section">' + safe(label("location")) + '</label><select class="ctl" id="dossier-image-section"></select></details>' +
-      '<label class="research-check"><input id="dossier-image-retention" type="checkbox" required><span>' + safe(label("permission")) + '</span></label>' +
+      '<label class="form-checkbox"><input id="dossier-image-retention" type="checkbox" required><span>' + safe(label("permission")) + '</span></label>' +
       '<div id="dossier-image-status" class="ctl-status" role="status" aria-live="polite"></div>' +
       '<div id="dossier-image-conflict" hidden><button type="button" class="ctl" id="dossier-image-review">' + safe(label("review")) + '</button>' +
       '<div id="dossier-image-current"></div><button type="button" class="ctl" id="dossier-image-accept-current" hidden>' + safe(label("accept_current")) + '</button></div>' +
-      '<div class="modal-actions"><button type="button" class="ctl" data-image-close>' + safe(label("cancel")) + '</button><button type="submit" class="ctl ctl-primary" id="dossier-image-save" disabled>' + safe(label("save")) + '</button></div></form></div>';
+      '<div class="modal-actions"><button type="button" class="ctl" data-image-close>' + safe(label("cancel")) + '</button><button type="submit" class="ctl primary" id="dossier-image-save" disabled>' + safe(label("save")) + '</button></div></form></div>';
     document.body.appendChild(dialog); form = field("form");
     dialog.addEventListener("cancel", function(event) { if (state.pending) event.preventDefault(); });
     dialog.addEventListener("close", function() {

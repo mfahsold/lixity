@@ -67,7 +67,7 @@ def render_heatmap_panel(
     )
     parts.append(f'<p class="panel-guide">{L("matrix_reading")}</p>')
     parts.append(
-        f'<div class="matrix-tools"><label><input type="checkbox" id="heatmap-fdr-only"/> '
+        f'<div class="matrix-tools"><label class="form-checkbox"><input type="checkbox" id="heatmap-fdr-only"/> '
         f'{L("matrix_fdr_only")}</label><span class="analysis-method">'
         f'{esc(fingerprint.thresholds.fdr_method.upper())} · q = {N(fingerprint.thresholds.fdr_q, 2)}'
         f' · |z*| ≥ {N(z_mild, 1)}</span></div>'

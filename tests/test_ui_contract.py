@@ -178,6 +178,13 @@ class TestJsDomContract(unittest.TestCase):
         for target in re.findall(r'href="#([^"]+)"', review):
             self.assertTrue(f'id="{target}"' in html, f"Review route has no target: {target}")
 
+    def test_shared_control_components_are_used(self):
+        """Retired one-off control classes must not slip back into markup."""
+        html = _full_dashboard() + render_dashboard([], [], controls=True)
+        for retired in ('class="research-check', "ctl-primary", 'class="ctl secondary"'):
+            self.assertFalse(retired in html, f"retired control class: {retired}")
+        self.assertIn('class="form-checkbox"', html)
+
     def test_review_passage_follows_source_order_among_flagged_candidates(self):
         paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
             parse_markdown_blocks("## Opening\n\nA bird crosses the garden.\n\nRain falls.\n")
