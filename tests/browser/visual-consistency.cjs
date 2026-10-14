@@ -96,6 +96,7 @@ async function checkTypography(page, label) {
           await textRole(identity.locator('.setting-field label').first()), `${theme} ${width}px identity labels`);
         assert.ok(await identity.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
           `${theme} ${width}px identity overflow`);
+        await identity.locator('#settings-identity summary').click();
         await identity.locator('#project-identity-check').screenshot({path: path.join(artifacts, `identity-${theme}-${width}-${hasTouch ? 'touch' : 'mouse'}.png`)});
         await app.locator('#btn-modal-new-project').click();
         const createDialog = app.locator('#modal-project-create');
