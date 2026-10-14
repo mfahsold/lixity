@@ -75,7 +75,8 @@ _CSS = "\n".join(
 )
 _JS = "\n".join(
     (_ASSET_DIR / name).read_text(encoding="utf-8")
-    for name in ("dashboard.js", "dossier-images.js", "style-space.js", "workspace-reader.js", "manuscript-links.js")
+    for name in ("tooltips.js", "dashboard.js", "dossier-images.js", "style-space.js",
+                 "workspace-reader.js", "manuscript-links.js")
 )
 
 
