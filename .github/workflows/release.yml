@@ -39,3 +39,37 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest
+      - name: Stage the verified artifacts for the PyPI job
+        uses: actions/upload-artifact@v7
+        with:
+          name: dist
+          path: dist/
+          if-no-files-found: error
+
+  pypi:
+    needs: publish
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    # Trusted publishing stays disabled until the PyPI publisher for this
+    # repository exists; set the repository variable PUBLISH_PYPI to "true"
+    # after configuring it (Settings -> Secrets and variables -> Actions).
+    if: vars.PUBLISH_PYPI == 'true'
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - name: Fetch the verified artifacts
+        uses: actions/download-artifact@v8
+        with:
+          name: dist
+          path: dist
+      - name: Select the distribution files
+        # The release job also attests SHA256SUMS; PyPI accepts only the wheel
+        # and the sdist, so the upload directory carries exactly those two.
+        run: |
+          mkdir -p upload
+          cp dist/*.whl dist/*.tar.gz upload/
+      - name: Publish to PyPI with trusted publishing
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          packages-dir: upload
