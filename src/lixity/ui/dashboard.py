@@ -474,38 +474,35 @@ def render_dashboard(
         parts.append(f"<h2>{L('workspace_project')}</h2>")
 
 
-        parts.append('<div class="ctl-group">')
-        parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
-        file_input_id = "ms-file" if action_enabled("load") else "manuscript-import-file"
-        parts.append(
-            f'<input type="file" id="{file_input_id}" accept=".md,.markdown,.txt" hidden/>'
-        )
-        parts.append(
-            f'<button type="button" class="file-dropzone dropzone-compact" id="manuscript-dropzone" aria-label="{L("wizard_drop_aria")}" aria-describedby="manuscript-drop-hint manuscript-file-name">'
-        )
-        parts.append(
-            f'<strong>{L("dropzone_drop_here")} <span class="ctl-link">{L("dropzone_browse")}</span></strong>'
-        )
-        parts.append(
-            f'<span class="ctl-note" id="manuscript-drop-hint">{L("dropzone_hint")}</span>'
-        )
-        parts.append("</button>")
-        parts.append(
-            '<p class="ctl-note manuscript-file-name" id="manuscript-file-name" role="status" aria-live="polite"></p>'
-        )
-        parts.append('<div class="row">')
+        # Hosts that advertise `load` get their upload control here. The native
+        # app imports through the single project dialog instead, so this view
+        # does not duplicate that flow.
         if action_enabled("load"):
+            parts.append('<div class="ctl-group">')
+            parts.append(f'<span class="ctl-label">{L("manuscript")}</span>')
+            parts.append('<input type="file" id="ms-file" accept=".md,.markdown,.txt" hidden/>')
+            parts.append(
+                f'<button type="button" class="file-dropzone dropzone-compact" id="manuscript-dropzone" aria-label="{L("wizard_drop_aria")}" aria-describedby="manuscript-drop-hint manuscript-file-name">'
+            )
+            parts.append(
+                f'<strong>{L("dropzone_drop_here")} <span class="ctl-link">{L("dropzone_browse")}</span></strong>'
+            )
+            parts.append(
+                f'<span class="ctl-note" id="manuscript-drop-hint">{L("dropzone_hint")}</span>'
+            )
+            parts.append("</button>")
+            parts.append(
+                '<p class="ctl-note manuscript-file-name" id="manuscript-file-name" role="status" aria-live="polite"></p>'
+            )
+            parts.append('<div class="row">')
             parts.append(
                 f'<button type="button" class="ctl primary" data-action="load" data-payload="load" disabled>{L("dropzone_action")}</button>'
             )
-        else:
+            parts.append("</div>")
             parts.append(
-                f'<button type="button" class="ctl primary" id="manuscript-import-btn" disabled>{L("manuscript_import_action")}</button>'
+                f'<p class="ctl-note">{L("manuscript_load_hint")}</p>'
             )
-        parts.append("</div>")
-        parts.append(
-            f'<p class="ctl-note">{L("manuscript_load_hint") if action_enabled("load") else L("manuscript_import_hint")}</p>'
-        )
+            parts.append("</div>")
         parts.append("</div>")
 
         parts.append(
@@ -542,7 +539,8 @@ def render_dashboard(
                 if action_enabled("export")
                 else L("run_analysis")
             )
-            parts.append(f'<span class="ctl-label">{action_heading}</span>')
+            if action_enabled("export") or len(visible_actions) > 1:
+                parts.append(f'<span class="ctl-label">{action_heading}</span>')
             parts.append('<div class="row">')
             if action_enabled("export"):
                 parts.append(

@@ -34,8 +34,27 @@ const hostileFilename = 'chapter-<img onerror=alert(1)>.markdown';
 const readStateOnly = process.argv.includes('--read-state-only');
 
 // Synthetic drag data exercises the real DOM listeners; all HTTP stays intercepted.
+async function openImportDialog(page) {
+  if (!(await page.locator('#import-dropzone').isVisible())) {
+    await page.locator('#btn-modal-new-project').click();
+    await page.locator('#import-dropzone').waitFor({state: 'visible'});
+  }
+}
+
+async function chooseFile(page, name, content) {
+  await openImportDialog(page);
+  await page.locator('#import-file-input').setInputFiles({name, mimeType: 'text/markdown', buffer: Buffer.from(content)});
+}
+
 async function dropFiles(page, files) {
-  return page.locator('#manuscript-dropzone').evaluate((element, items) => {
+  // Hosts that advertise `load` keep their project-view dropzone; the native
+  // and standalone flows drop into the single project dialog instead.
+  let selector = '#manuscript-dropzone';
+  if (!(await page.locator(selector).count())) {
+    await openImportDialog(page);
+    selector = '#import-dropzone';
+  }
+  return page.locator(selector).evaluate((element, items) => {
     const transfer = new DataTransfer();
     for (const item of items) transfer.items.add(new File([item.content], item.name, {type: item.type || 'text/plain'}));
     const dragover = new DragEvent('dragover', {bubbles: true, cancelable: true, dataTransfer: transfer});
@@ -237,11 +256,12 @@ async function restoreFileReads(page) {
       await page.goto('http://lixity.test/');
       await page.locator('#tab-view-project').click();
       assert.equal(await page.locator('#ms-file, [data-action="load"]').count(), 0, 'Standalone hosts retain their advertised action boundary');
-      assert.equal(await page.locator('#manuscript-import-btn').isDisabled(), true);
+      assert.equal(await page.locator('#manuscript-dropzone, #manuscript-import-file').count(), 0,
+        'The Project view keeps one import entry point: the project dialog');
       const beforeImport = posts.length;
-      await page.locator('#manuscript-import-file').setInputFiles({name: 'standalone.md', mimeType: 'text/markdown', buffer: Buffer.from(syntheticContent)});
-      assert.equal((await page.locator('#manuscript-file-name').textContent()).trim(), 'standalone.md');
-      assert.equal(await page.locator('#manuscript-import-btn').isDisabled(), false);
+      await chooseFile(page, 'standalone.md', syntheticContent);
+      await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'standalone.md');
+      assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
       await dropFiles(page, [{name: 'standalone-dropped.txt', content: syntheticContent}]);
       assert.equal(posts.length, beforeImport, 'Standalone selection stays local until explicit dialog submission');
       await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'standalone-dropped.txt');
@@ -269,12 +289,12 @@ async function restoreFileReads(page) {
     // A cancelled preview must not remain confirmable while another file reads.
     await page.goto('http://lixity.test/');
     await page.locator('#tab-view-project').click();
-    await page.locator('#manuscript-import-file').setInputFiles({name: 'preview-a.md', mimeType: 'text/markdown', buffer: Buffer.from(syntheticContent)});
+    await chooseFile(page, 'preview-a.md', syntheticContent);
     await page.waitForFunction(() => document.querySelector('#import-fpc-filename').textContent === 'preview-a.md');
     await page.locator('#form-project-import [data-close-modal]').click();
     const beforePendingImport = posts.length;
     await holdFileReadCompletions(page);
-    await page.locator('#manuscript-import-file').setInputFiles({name: 'preview-b.md', mimeType: 'text/markdown', buffer: Buffer.from('## Pending B\n\nB content.\n')});
+    await chooseFile(page, 'preview-b.md', '## Pending B\n\nB content.\n');
     assert.equal(await page.locator('#btn-submit-import-project').isDisabled(), true, 'Previous import content cannot be confirmed during a new read');
     assert.equal(await page.locator('#import-preview-box').isVisible(), false);
     assert.equal(await page.evaluate(() => importedFileContent), '');

@@ -129,12 +129,12 @@ async function main() {
       if (await tab.count()) await tab.click();
     }
     async function selectManuscript() {
-      const input = page.locator('#manuscript-import-file');
-      await input.setInputFiles({
+      await page.locator('#btn-modal-new-project').click();
+      await page.locator('#modal-project-create').waitFor({state: 'visible'});
+      await page.locator('#import-file-input').setInputFiles({
         name: 'harbour-story.md', mimeType: 'text/markdown',
         buffer: Buffer.from('# Harbour story\n\n## Arrival\n\nMara reached the harbour before dawn. The customs log lay open on the desk.\n\n## The ledger\n\nShe compared the entry with the night watchman\'s account.\n'),
       });
-      assert.equal((await page.locator('#manuscript-file-name').textContent()).trim(), 'harbour-story.md');
       await page.locator('#import-preview-box').waitFor({state: 'visible'});
       assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);
     }

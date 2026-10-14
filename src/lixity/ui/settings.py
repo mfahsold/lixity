@@ -40,6 +40,7 @@ def settings_form(
         f'data-publication-editable="{str(author_setting_enabled).lower()}" '
         f'data-title-initial="{esc(title)}" data-author-initial="{esc(project_author)}">',
         f'<h3>{translated("settings")}</h3>',
+        f'<p class="panel-guide">{translated("settings_intro")}</p>',
         '<div class="settings-grid">',
         f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("language"))}</label>',
         '<select class="ctl" id="set-language">',
@@ -50,7 +51,9 @@ def settings_form(
     parts.extend([
         '</select></div>',
         f'<div class="setting-field"><label for="set-title">{translated("title")}</label>',
-        f'<input class="ctl" id="set-title" maxlength="{MAX_PROJECT_TITLE_CHARS}" value="{esc(title)}"/></div>',
+        f'<input class="ctl" id="set-title" maxlength="{MAX_PROJECT_TITLE_CHARS}" value="{esc(title)}" '
+        f'aria-describedby="set-title-help"/>',
+        f'<p id="set-title-help">{translated("settings_title_hint")}</p></div>',
         f'<div class="setting-field"><label for="set-author-name">{translated("project_author_name")}</label>',
         f'<input class="ctl" id="set-author-name" value="{esc(project_author)}" '
         f'maxlength="{MAX_AUTHOR_NAME_CHARS}" aria-describedby="set-author-name-help" '
@@ -143,13 +146,28 @@ def settings_form(
             help_text = help_text.replace("Benjamini–Hochberg", "Benjamini–Yekutieli").replace(
                 "Benjamini-Hochberg", "Benjamini–Yekutieli"
             )
+        default_note = esc(label(labels, "settings_default")).replace("{value}", str(default))
         parts.append(
             f'<div class="setting-field"><label for="{control_id}">{translated(key)}</label>'
             f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" '
             f'{" ".join(constraints)} required '
             f'data-default="{default!r}" aria-describedby="{control_id}-help"/>'
-            f'<p id="{control_id}-help">{esc(help_text)}</p></div>'
+            f'<p id="{control_id}-help">{esc(help_text)} <span class="ctl-note">{default_note}</span></p></div>'
         )
+        if key == "fdr_q":
+            method = thresholds.fdr_method.lower()
+            default_method = defaults.fdr_method.lower()
+            method_default = esc(label(labels, "settings_default")).replace(
+                "{value}", "Benjamini–Hochberg" if default_method == "bh" else "Benjamini–Yekutieli")
+            parts.append(
+                f'<div class="setting-field"><label for="set-fdr-method">{translated("settings_fdr_method")}</label>'
+                f'<select class="ctl" id="set-fdr-method" data-default="{default_method}" '
+                f'aria-describedby="set-fdr-method-help">'
+                f'<option value="bh"{" selected" if method == "bh" else ""}>Benjamini–Hochberg</option>'
+                f'<option value="by"{" selected" if method == "by" else ""}>Benjamini–Yekutieli</option>'
+                f'</select><p id="set-fdr-method-help">{esc(label(labels, "help_fdr"))} '
+                f'<span class="ctl-note">{method_default}</span></p></div>'
+            )
     parts.extend([
         '<div class="setting-field">',
         f'<label for="set-flag-min-sev">{translated("flag_min_severity")}</label>',
@@ -157,7 +175,10 @@ def settings_form(
     ])
     for severity in (1, 2, 3):
         selected = " selected" if severity == thresholds.flag_min_severity else ""
-        parts.append(f'<option value="{severity}"{selected}>{translated(f"severity_{severity}")} ≥ {severity}</option>')
+        marker = f' · {translated("settings_default_short")}' if severity == 2 else ""
+        parts.append(
+            f'<option value="{severity}"{selected}>{translated(f"severity_{severity}")} ≥ {severity}{marker}</option>'
+        )
     parts.extend([
         '</select>',
         f'<p id="flag-severity-help">{translated("help_flag_min_severity")}</p></div>',

@@ -1125,6 +1125,8 @@ async function submitSettings() {
   if (zm) payload.z_mild = parseFloat(zm.value);
   if (zs) payload.z_strong = parseFloat(zs.value);
   if (fq) payload.fdr_q = parseFloat(fq.value);
+  var fm = document.getElementById("set-fdr-method");
+  if (fm) payload.fdr_method = fm.value;
   if (fs) payload.flag_min_severity = parseInt(fs.value, 10);
   if (dt) payload.dim_score_threshold = parseFloat(dt.value);
   var author = document.getElementById("set-author-name");
@@ -4743,8 +4745,8 @@ var importedFileContent = "";
 var importedFileRead = 0;
 var researchTemplateChoice = null;
 var manuscriptFile = null;
-var manuscriptInput = document.getElementById("ms-file") || document.getElementById("manuscript-import-file");
-var manuscriptButton = document.querySelector('[data-action="load"]') || document.getElementById("manuscript-import-btn");
+var manuscriptInput = document.getElementById("ms-file");
+var manuscriptButton = document.querySelector('[data-action="load"]');
 
 function supportedManuscriptFile(file) {
   return file && /\.(md|markdown|txt)$/i.test(file.name);
@@ -4770,15 +4772,6 @@ function selectManuscriptFiles(files) {
   if (manuscriptButton && !manuscriptButton.hasAttribute("aria-busy")) manuscriptButton.disabled = false;
   var status = document.getElementById("ctl-status");
   if (status) { status.className = "ctl-status"; status.textContent = ""; }
-  if (manuscriptInput.id === "manuscript-import-file") openManuscriptImport(manuscriptFile);
-}
-
-function openManuscriptImport(file) {
-  var modal = document.getElementById("modal-project-create");
-  if (!modal || typeof modal.showModal !== "function") return;
-  switchModalTab("tab-pane-import");
-  if (!modal.open) modal.showModal();
-  processImportedFile(file);
 }
 
 function switchModalTab(targetPaneId) {
@@ -4874,10 +4867,6 @@ document.addEventListener("click", function (event) {
   var manuscriptDrop = event.target.closest("#manuscript-dropzone");
   if (manuscriptDrop && event.target !== manuscriptInput) {
     if (manuscriptInput) manuscriptInput.click();
-    return;
-  }
-  if (event.target.closest("#manuscript-import-btn") && manuscriptFile) {
-    openManuscriptImport(manuscriptFile);
     return;
   }
   var tabBtn = event.target.closest(".modal-tab-btn");
