@@ -209,6 +209,21 @@ class TestDocumentation(unittest.TestCase):
                 self.assertEqual(len(findings), 4)
                 self.assertTrue(all("current release-note target" in finding for finding in findings))
 
+    def test_zenodo_metadata_matches_citation_and_license(self):
+        """The Zenodo deposit describes the same work as CITATION.cff."""
+        import json
+
+        metadata = json.loads(
+            (Path(__file__).resolve().parents[1] / ".zenodo.json").read_text(encoding="utf-8")
+        )
+        self.assertEqual(metadata["upload_type"], "software")
+        self.assertEqual(metadata["license"], "AGPL-3.0-or-later")
+        self.assertEqual(metadata["access_right"], "open")
+        self.assertEqual([creator["name"] for creator in metadata["creators"]],
+                         ["Fahsold, Matthias"])
+        self.assertTrue(metadata["title"].startswith("Lixity"))
+        self.assertTrue(any(item["scheme"] == "url" for item in metadata["related_identifiers"]))
+
     def test_citation_release_metadata_syncs_without_changing_authorship(self):
         import tempfile
         from unittest.mock import patch

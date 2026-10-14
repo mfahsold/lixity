@@ -1,0 +1,36 @@
+{
+  "title": "Lixity — quantitative text linguistics and stylometry for literary manuscripts",
+  "description": "Lixity analyses literary manuscripts locally and deterministically: sentence rhythm, lexical diversity (HD-D, MTLD, MATTR, Maas, Yule's K), language-calibrated readability, dialogue share, paragraph-level tense profiles and a self-calibrating style reference with robust median/MAD bands, noise-adjusted deviations, Benjamini-Hochberg/Benjamini-Yekutieli selections and effect sizes. It runs offline without a cloud service and is implemented in pure Python. Statistical signals support human review; they are not literary-quality scores.",
+  "upload_type": "software",
+  "license": "AGPL-3.0-or-later",
+  "access_right": "open",
+  "language": "eng",
+  "creators": [
+    {
+      "name": "Fahsold, Matthias"
+    }
+  ],
+  "keywords": [
+    "stylometry",
+    "computational linguistics",
+    "digital humanities",
+    "text analysis",
+    "manuscript analysis",
+    "lexical diversity",
+    "readability",
+    "local-first"
+  ],
+  "related_identifiers": [
+    {
+      "identifier": "https://github.com/mfahsold/lixity",
+      "relation": "isSupplementTo",
+      "scheme": "url"
+    },
+    {
+      "identifier": "https://mfahsold.github.io/lixity/",
+      "relation": "isDocumentedBy",
+      "scheme": "url"
+    }
+  ],
+  "notes": "Deposited from a tagged GitHub release of the software."
+}
