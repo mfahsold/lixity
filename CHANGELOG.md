@@ -8,6 +8,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Added
+- Research record commands accept an explicit `list` verb
+  (`lixity research dossier list`), identical to the default listing; the
+  style-drift and distribution-shift headings explain Kendall's tau,
+  Wasserstein and KS in all seven languages.
 - The research Review tab lists saved manuscript associations with anchor
   state, review flags and the pinned quote; it loads when the tab is opened,
   with the shared review refresh and after a save, and never re-anchors or
@@ -42,6 +46,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   names.
 
 ### Changed
+- `research-record-local/1` adds top-level `kind` and `record_id` (additive;
+  the `record` body is unchanged). Scene detection also recognizes spaced
+  divider lines (`- - -`, `_ _ _`, `• • •`), em-dash rules (`———`) and the
+  asterism (`⁂`); the local server accepts IPv6 loopback `Host` headers.
 - Dashboard renderer spacing and sizing use shared utility classes from
   `dashboard.css` instead of inline styles; measured and dynamic values stay
   inline, and `tests/test_inline_styles.py` keeps the migrated patterns out.

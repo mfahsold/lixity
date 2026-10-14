@@ -77,5 +77,6 @@ class ResponseMixin(WorkspaceState):
     def _trusted_host(self) -> bool:
         host = self.headers.get("Host", "")
         server_port = getattr(self.server, "server_port", DEFAULT_PORT)
-        allowed = {f"127.0.0.1:{server_port}", f"localhost:{server_port}", "127.0.0.1", "localhost"}
+        allowed = {f"127.0.0.1:{server_port}", f"localhost:{server_port}", "127.0.0.1", "localhost",
+                   f"[::1]:{server_port}", "[::1]"}
         return host in allowed

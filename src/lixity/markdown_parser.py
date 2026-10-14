@@ -18,7 +18,10 @@ if TYPE_CHECKING:
 
 _FN_REF_PATTERN = re.compile(r"\[\^([^\]]+)\]")
 _FN_REF_STRIP_PATTERN = re.compile(r"\[\^([^\]]+)\]")
-SCENE_BREAK_RE = re.compile(r"(?m)^\s*(?:-{3,}|\*{3,}|_{3,}|•{3,}|#\s*#\s*#|\*\s+\*\s+\*)\s*$")
+SCENE_BREAK_RE = re.compile(
+    r"(?m)^\s*(?:-{3,}|-\s+-\s+-|\*{3,}|\*\s+\*\s+\*|_{3,}|_\s+_\s+_|"
+    r"•{3,}|•\s+•\s+•|—{3,}|—\s+—\s+—|#\s*#\s*#|⁂)\s*$"
+)
 _COMMENT_STRIP_RE = re.compile(r"<!--.*?-->", re.DOTALL)
 _FRONT_MATTER_KEY_RE = re.compile(r"[\w-]+\s*:")
 _FENCE_OPENER_RE = re.compile(r"^ {0,3}(`{3,}|~{3,})(.*)$")

@@ -449,8 +449,8 @@ JSON fields: `chapters` (total), `figures[]` with `mentions`,
 ### `lixity pacing`
 
 Scene structure, pacing signals and chapter hooks. Scene breaks are explicit
-Markdown dividers (`---`, `* * *`, `***`, `___`, `•••`); scenes per chapter =
-breaks + 1. When the text has **no** explicit dividers, `explicit_scene_breaks`
+Markdown dividers (`---`, `- - -`, `***`, `* * *`, `___`, `_ _ _`, `•••`,
+`• • •`, `———`, `⁂`); scenes per chapter = breaks + 1. When the text has **no** explicit dividers, `explicit_scene_breaks`
 is 0 and `scenes_are_chapters` is true — each chapter is one scene, so scene
 structure is uninformative (the CLI prints a warning; do not read
 `scenes`/`avg_scene_words` as pacing evidence in that case). Per scene and

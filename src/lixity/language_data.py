@@ -3546,6 +3546,8 @@ HELP_TEXTS = {
         "help_fdr_q": "Ein kleineres q macht die nominale FDR-Prüfauswahl strenger. Es ist nicht die Wahrscheinlichkeit, dass ein Kapitel falsch ist; Fehlerraten dieser Kapitelvergleiche sind nicht kalibriert.",
         "help_flag_min_severity": "Untere Schwere für das Flags-Panel – 1 = alles beobachten, 2 = Standard, 3 = nur starke Friktion.",
         "help_dim_score_threshold": "Schwelle der Dimensionsscores |score| – ab hier wird ein Kapitel auf dieser Stilachse markiert.",
+        "help_trends": "Kendalls Tau über die Kapitelreihenfolge (τ, −1 bis +1) mit p-Wert. Werte nahe 0 zeigen keine klare Richtung; ein starker Wert ist ein Hinweis, die Kapitelabfolge zu lesen, kein Beweis für Verschlechterung. Prüfen Sie, ob der Wechsel gewollt ist (z. B. eine neue Erzählstimme).",
+        "help_distribution_shift": "Wasserstein- und KS-Abstand vergleichen die erste und zweite Hälfte der Kapitel. Ein größerer Wert bedeutet stärkere Unterschiede in diesem Merkmal; lesen Sie die betroffenen Kapitel, bevor Sie Schlüsse ziehen.",
         "help_markers": "Notizen direkt im Manuskript: unsichtbare Kommentare über dem Absatz, sichtbar im Editor, nie im Export.",
         "help_passive": "Wortmuster für mögliche Passivkonstruktionen je 1.000 gezählte Wörter. Dieselben Wörter können andere Funktionen haben, etwa Zukunft oder Werden; den Satz vor einer Passivdeutung prüfen.",
         "help_nominal": "Treffer für Nominalisierungssuffixe je 1.000 gezählte Wörter. Ein höherer Wert bedeutet mehr solche Wortformen, nicht automatisch abstraktere oder schwächere Prosa; Suffixe sind nur Hinweise.",
@@ -3583,6 +3585,8 @@ HELP_TEXTS = {
         "help_fdr_q": "Smaller q makes the nominal FDR shortlist stricter. It is not the chance that a chapter is wrong; error rates for these chapter comparisons are not calibrated.",
         "help_flag_min_severity": "Severity floor for the flags panel – 1 = watch everything, 2 = default, 3 = only strong friction.",
         "help_dim_score_threshold": "Dimension-score threshold |score| – from here a chapter is marked on that style axis.",
+        "help_trends": "Kendall's tau over chapter order (τ, −1 to +1) with its p-value. Values near 0 mean no clear direction; a strong value is a prompt to read the chapter sequence, not proof of deterioration. Check whether the change is intentional (for example a new narrative voice).",
+        "help_distribution_shift": "Wasserstein and KS distances compare the first and second half of the chapters. A larger value means the halves differ more in this feature; read the affected chapters before drawing conclusions.",
         "help_markers": "Notes inside the manuscript: invisible comments above the paragraph, visible in the editor, never in exports.",
         "help_passive": "Word-pattern markers associated with passive constructions per 1,000 counted words. The same words can have other grammatical uses; check the sentence before calling it passive.",
         "help_nominal": "Matches to nominalization suffixes per 1,000 counted words. A higher value means more such word forms, not necessarily more abstract or weaker writing; suffixes are only clues.",
@@ -3688,6 +3692,8 @@ HELP_TEXTS = {
         "help_fdr_q": "Un q plus petit rend la sélection FDR nominale plus stricte. Ce n'est pas la probabilité qu'un chapitre soit erroné ; les taux d'erreur de ces comparaisons entre chapitres ne sont pas calibrés.",
         "help_flag_min_severity": "Seuil de sévérité pour les drapeaux – 1 = tout surveiller, 2 = défaut, 3 = friction forte seulement.",
         "help_dim_score_threshold": "Seuil des scores de dimension |score| – un chapitre est marqué sur cet axe à partir de là.",
+        "help_trends": "Tau de Kendall sur l'ordre des chapitres (τ, −1 à +1) avec sa valeur p. Une valeur proche de 0 signifie aucune direction claire ; une valeur forte invite à relire la séquence des chapitres, sans prouver une dégradation. Vérifiez si le changement est voulu (par exemple une nouvelle voix narrative).",
+        "help_distribution_shift": "Les distances de Wasserstein et de KS comparent la première et la seconde moitié des chapitres. Une valeur plus grande signifie des différences plus fortes sur ce trait ; lisez les chapitres concernés avant de conclure.",
         "help_markers": "Notes dans le manuscrit : commentaires invisibles au-dessus du paragraphe, visibles dans l'éditeur, jamais dans les exports.",
     },
     "es": {
@@ -3750,6 +3756,8 @@ HELP_TEXTS = {
         "help_fdr_q": "Un q menor hace más estricta la selección FDR nominal. No es la probabilidad de que un capítulo esté mal; las tasas de error de estas comparaciones entre capítulos no están calibradas.",
         "help_flag_min_severity": "Piso de severidad para los flags – 1 = vigilar todo, 2 = predeterminado, 3 = solo fricción fuerte.",
         "help_dim_score_threshold": "Umbral de puntuación de dimensión |score| – desde aquí un capítulo se marca en ese eje.",
+        "help_trends": "Tau de Kendall sobre el orden de los capítulos (τ, −1 a +1) con su valor p. Los valores cercanos a 0 indican que no hay una dirección clara; un valor fuerte invita a leer la secuencia de capítulos, no demuestra deterioro. Compruebe si el cambio es intencionado (por ejemplo, una nueva voz narrativa).",
+        "help_distribution_shift": "Las distancias de Wasserstein y KS comparan la primera y la segunda mitad de los capítulos. Un valor mayor indica diferencias más fuertes en este rasgo; lea los capítulos afectados antes de sacar conclusiones.",
         "help_markers": "Notas dentro del manuscrito: comentarios invisibles sobre el párrafo, visibles en el editor, nunca en las exportaciones.",
     },
     "it": {
@@ -3812,6 +3820,8 @@ HELP_TEXTS = {
         "help_fdr_q": "Un q più piccolo rende più rigorosa la selezione FDR nominale. Non è la probabilità che un capitolo sia sbagliato; i tassi d'errore di questi confronti tra capitoli non sono calibrati.",
         "help_flag_min_severity": "Soglia di gravità per i flag – 1 = osserva tutto, 2 = predefinito, 3 = solo forte attrito.",
         "help_dim_score_threshold": "Soglia degli punteggi di dimensione |score| – da qui un capitolo è segnato su quell'asse.",
+        "help_trends": "Tau di Kendall sull'ordine dei capitoli (τ, da −1 a +1) con il valore p. Valori vicini a 0 indicano nessuna direzione chiara; un valore forte invita a leggere la sequenza dei capitoli, non prova un peggioramento. Verifica se il cambiamento è voluto (per esempio una nuova voce narrativa).",
+        "help_distribution_shift": "Le distanze di Wasserstein e KS confrontano la prima e la seconda metà dei capitoli. Un valore maggiore indica differenze più forti su questa caratteristica; leggi i capitoli interessati prima di trarre conclusioni.",
         "help_markers": "Note dentro il manoscritto: commenti invisibili sopra il paragrafo, visibili nell'editor, mai negli export.",
     },
     "pt": {
@@ -3874,6 +3884,8 @@ HELP_TEXTS = {
         "help_fdr_q": "Um q menor torna a seleção FDR nominal mais rigorosa. Não é a probabilidade de um capítulo estar errado; as taxas de erro dessas comparações entre capítulos não estão calibradas.",
         "help_flag_min_severity": "Piso de severidade para as flags – 1 = observar tudo, 2 = padrão, 3 = apenas forte atrito.",
         "help_dim_score_threshold": "Limiar das pontuações de dimensão |score| – a partir daqui um capítulo é marcado nesse eixo.",
+        "help_trends": "Tau de Kendall na ordem dos capítulos (τ, −1 a +1) com o valor p. Valores próximos de 0 indicam ausência de direção clara; um valor forte convida a ler a sequência de capítulos, não prova deterioração. Verifique se a mudança é intencional (por exemplo, uma nova voz narrativa).",
+        "help_distribution_shift": "As distâncias de Wasserstein e KS comparam a primeira e a segunda metade dos capítulos. Um valor maior indica diferenças mais fortes neste traço; leia os capítulos afetados antes de tirar conclusões.",
         "help_markers": "Notas dentro do manuscrito: comentários invisíveis acima do parágrafo, visíveis no editor, nunca nas exportações.",
     },
     "nl": {
@@ -3936,6 +3948,8 @@ HELP_TEXTS = {
         "help_fdr_q": "Een kleinere q maakt de nominale FDR-selectie strenger. Het is niet de kans dat een hoofdstuk fout is; foutpercentages voor deze hoofdstukvergelijkingen zijn niet gekalibreerd.",
         "help_flag_min_severity": "Ernstdrempel voor de vlaggen – 1 = alles volgen, 2 = standaard, 3 = alleen sterke wrijving.",
         "help_dim_score_threshold": "Drempel van dimensiescores |score| – vanaf hier wordt een hoofdstuk op die as gemarkeerd.",
+        "help_trends": "Kendalls tau over de hoofdstukvolgorde (τ, −1 tot +1) met p-waarde. Waarden dicht bij 0 betekenen geen duidelijke richting; een sterke waarde is een uitnodiging om de hoofdstukreeks te lezen, geen bewijs van verslechtering. Controleer of de verandering bedoeld is (bijvoorbeeld een nieuwe vertelstem).",
+        "help_distribution_shift": "De Wasserstein- en KS-afstanden vergelijken de eerste en tweede helft van de hoofdstukken. Een grotere waarde betekent sterkere verschillen op dit kenmerk; lees de betrokken hoofdstukken voordat je conclusies trekt.",
         "help_markers": "Notities in het manuscript: onzichtbare commentaren boven de alinea, zichtbaar in de editor, nooit in exports.",
     },
 }

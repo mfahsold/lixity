@@ -219,6 +219,12 @@ class TestLixityServer(unittest.TestCase):
         self.assertEqual(status, 403)
         self.assertIn(b"Untrusted Host forbidden", body)
 
+    def test_loopback_ipv6_host_allowed(self):
+        for host in (f"[::1]:{self.port}", "[::1]"):
+            with self.subTest(host=host):
+                status, body, _ = self.make_request("/", headers={"Host": host})
+                self.assertEqual(status, 200, body)
+
     def test_cross_origin_post_forbidden(self):
         status, body, _ = self.make_request(
             "/api/rebuild",

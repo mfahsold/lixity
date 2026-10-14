@@ -31,6 +31,28 @@ class TestResearchCliOutput(unittest.TestCase):
                 self.assertEqual(set(match[1].split()), expected)
                 self.assertNotIn("__LIXITY_RESEARCH_COMMANDS__", output.getvalue())
 
+    def test_record_commands_accept_an_explicit_list_verb(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="List verb", language="en")
+            api.create_dossier(root, "Dossier", "Body text.")
+            api.create_claim(root, title="Claim", statement="Statement.")
+            api.record_decision(root, title="Decision", rationale="Reason.")
+            for command, key in (("dossier", "dossiers"), ("claim", "claims"), ("decision", "decisions")):
+                with self.subTest(command=command):
+                    verb_status, verb_out, verb_err = self.capture(command, "list", "--project", str(root))
+                    default_status, default_out, _ = self.capture(command, "--project", str(root))
+                    self.assertEqual((verb_status, verb_err), (0, ""), verb_err)
+                    self.assertEqual(default_status, 0)
+                    self.assertEqual(json.loads(verb_out), json.loads(default_out))
+                    self.assertTrue(json.loads(verb_out)[key])
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="List verb conflicts", language="en")
+            status, _, errors = self.capture("claim", "list", "--project", str(root), "--statement", "x")
+            self.assertEqual(status, 1)
+            self.assertIn("list verb", errors)
+
     def parse(self, *arguments: str) -> argparse.Namespace:
         parser = argparse.ArgumentParser()
         cli.configure(parser)

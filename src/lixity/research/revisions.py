@@ -161,7 +161,8 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
     from .images import resolve_dossier_images
     return {
         "schema_version": "research-record-local/1", "project_id": snapshot.project.id,
-        "snapshot": snapshot.digest, "record": record.model_dump(mode="json"),
+        "snapshot": snapshot.digest, "kind": record.kind, "record_id": record.id,
+        "record": record.model_dump(mode="json"),
         "latest_revision": latest.revision, "is_latest": latest.revision == record.revision,
         "citations": citations, "citation_scope": citation_scope,
         "source_updates": source_updates(citations), "reference_updates": reference_updates,

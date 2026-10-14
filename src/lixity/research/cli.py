@@ -139,6 +139,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update")
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
+        if name in ("dossier", "claim", "decision"):
+            command.add_argument("action", nargs="?", choices=("list",), metavar="list",
+                                 help="Explicit list verb; listing is also the default without a record ID")
         if name == "init":
             command.add_argument("--title", required=True)
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
@@ -398,6 +401,10 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     association_revision = getattr(args, "dossier_revision", None) if command == "claim" else getattr(args, "claim_revision", None)
     if (association_revision is not None or getattr(args, "dossier_revisions", None) is not None) and not (args.update or prepare):
         raise ResearchError("An explicit associated revision requires --update or --prepare")
+    if getattr(args, "action", None) == "list":
+        if record_id or args.update or prepare or args.history or args.inspect or args.revision is not None:
+            raise ResearchError("The list verb takes no record ID or revision flags")
+        return None
     requested = args.update or prepare or args.history or args.inspect or args.revision is not None
     if command in ("link-evidence", "decision", "relate") and record_id:
         requested = True
@@ -476,6 +483,10 @@ def run(args: argparse.Namespace) -> int:
 
     try:
         command = args.research_command
+        if getattr(args, "action", None) == "list":
+            creation = ("title", "statement", "rationale", "impact_on_plot", "file")
+            if any(getattr(args, name, None) for name in creation):
+                raise ResearchError("The list verb does not create records; drop the list verb or the creation fields")
         if (command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
                 and args.project is None):
             args.project = _current_project()

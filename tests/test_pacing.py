@@ -130,6 +130,14 @@ class TestReportSurface(unittest.TestCase):
         self.assertFalse(report.scenes_are_chapters)
         self.assertIsNone(report.fastest_chapter)
 
+    def test_spaced_dividers_and_asterism_split_scenes(self):
+        text = ("## Eins\n\nErster Absatz.\n\n- - -\n\nZweiter Absatz.\n\n_ _ _\n\nDritter Absatz.\n\n"
+                "• • •\n\nVierter Absatz.\n\n———\n\nFünfter Absatz.\n\n⁂\n\nSechster Absatz.\n")
+        report = pacing_report(text, DE)
+        self.assertEqual(report.explicit_scene_breaks, 5)
+        self.assertEqual(report.scenes, 6)
+        self.assertFalse(report.scenes_are_chapters)
+
     def test_no_dividers_flags_scenes_are_chapters(self):
         text = "## Eins\n\nEr ging. Sie blieb.\n\n## Zwei\n\nEs war still.\n"
         report = pacing_report(text, DE)

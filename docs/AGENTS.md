@@ -52,6 +52,10 @@ using full IDs in that order and defaulting to `supports`. Other relations,
 rationale, reviewer and actor reuse existing evidence-link validation and output.
 It emits JSON; `link-evidence` retains inspection and revision operations.
 
+Record commands (`dossier`, `claim`, `decision`) also accept an explicit `list`
+verb with the same output as the default listing; it cannot be combined with a
+record ID, revision flags or creation fields.
+
 For installation, version verification, updates and Python environment isolation,
 use [INSTALLATION.md](INSTALLATION.md). Do not assume a CLI tool environment
 is importable by a project adapter. TOML configuration works on Python 3.10+
@@ -465,8 +469,8 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
   are excluded, so chapter numbers match the metrics. **No NER** — the caller
   supplies the names; an empty name list is an error (not a silent empty
   report).
-- `pacing`: scene breaks are explicit dividers (`---`, `* * *`, `***`, `___`,
-  `•••`); `scenes` per chapter = breaks + 1. When no dividers exist,
+- `pacing`: scene breaks are explicit dividers (`---`, `- - -`, `***`, `* * *`,
+  `___`, `_ _ _`, `•••`, `• • •`, `———`, `⁂`); `scenes` per chapter = breaks + 1. When no dividers exist,
   `explicit_scene_breaks=0` and `scenes_are_chapters=true` (scenes ≡
   chapters) — do not read scene counts as pacing evidence then. `hook_score`
   (0–3, heuristic): +1 closing sentence ≤ 8 words, +1 terminal `?`/`!`/`…`,
@@ -1044,7 +1048,7 @@ HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 
 Python equivalents are `research_api.get_record`, `record_history` and
 `revise_record`. Read/revise returns `research-record-local/1` with `project_id`,
-`snapshot`, `record`, `latest_revision`, `is_latest`, `citations`, `citation_scope`,
+`snapshot`, `kind`, `record_id`, `record`, `latest_revision`, `is_latest`, `citations`, `citation_scope`,
 `source_updates` and `reference_updates`. `citation_scope` is `pinned_passages`
 for dossiers and evidence links, or `current_links_to_pinned_claim_revision` for
 claims and decisions. The latter citations include `evidence_link_id`,
