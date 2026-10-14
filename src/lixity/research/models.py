@@ -25,6 +25,13 @@ ClaimConfidence = Literal["hypothetical", "evidenced", "disputed"]
 # Runtime views of the strict literals; get_args keeps both in sync.
 LANGUAGES: tuple[Language, ...] = get_args(Language)
 CLAIM_CONFIDENCES: tuple[ClaimConfidence, ...] = get_args(ClaimConfidence)
+# One union for every stored record version; classes narrow behaviour in their
+# validators while the field type stays invariant (mypy forbids widening it in
+# subclasses, and the runtime contract is the serialized literal).
+SchemaVersion = Literal[
+    "research-local/1", "research-local/2", "research-local/3", "research-local/4",
+    "research-local/5", "research-local/6", "research-local/7",
+]
 Kind = Literal[
     "project",
     "source",
@@ -59,7 +66,7 @@ class Blob(StrictModel):
 
 
 class Record(StrictModel):
-    schema_version: Literal["research-local/1"] = "research-local/1"
+    schema_version: SchemaVersion = "research-local/1"
     id: Identifier
     revision: Annotated[int, Field(ge=1, le=1)] = 1
     project_id: Identifier
@@ -90,7 +97,7 @@ class RevisionChange(StrictModel):
 
 class AuthoredRecord(Record):
     # Frozen authored records intentionally extend the otherwise fixed v1 envelope.
-    schema_version: Literal["research-local/1", "research-local/2"] = "research-local/1"  # type: ignore[assignment]
+    schema_version: SchemaVersion = "research-local/1"
     revision: Annotated[int, Field(ge=1)] = 1
     change: RevisionChange | None = None
     initial_schema_version: ClassVar[str] = "research-local/1"
@@ -180,7 +187,7 @@ class SourceContext(StrictModel):
 
 
 class SourceVersion(Record):
-    schema_version: Literal["research-local/1", "research-local/2", "research-local/3"] = "research-local/1"  # type: ignore[assignment]
+    schema_version: SchemaVersion = "research-local/1"
     kind: Literal["source_version"] = "source_version"
     source_ref: Reference
     sequence: Annotated[int, Field(ge=1)]
@@ -199,7 +206,7 @@ class SourceVersion(Record):
 
 
 class Activity(Record):
-    schema_version: Literal["research-local/1", "research-local/4"] = "research-local/1"  # type: ignore[assignment]
+    schema_version: SchemaVersion = "research-local/1"
     kind: Literal["activity"] = "activity"
     source_version_ref: Reference
     operation: Literal["extract_utf8", "extract_ocr"] = "extract_utf8"
@@ -270,7 +277,7 @@ class Claim(AuthoredRecord):
 class ClaimRelation(AuthoredRecord):
     """An author's causal assertion between exact claim revisions, never proof."""
 
-    schema_version: Literal["research-local/6"] = "research-local/6"  # type: ignore[assignment]
+    schema_version: SchemaVersion = "research-local/6"
     initial_schema_version: ClassVar[str] = "research-local/6"
     revision_schema_version: ClassVar[str] = "research-local/6"
     kind: Literal["claim_relation"] = "claim_relation"
@@ -323,7 +330,7 @@ class ManuscriptAnchor(StrictModel):
 class ManuscriptClaimLink(AuthoredRecord):
     """An explicit author association, distinct from retained source evidence."""
 
-    schema_version: Literal["research-local/7"] = "research-local/7"  # type: ignore[assignment]
+    schema_version: SchemaVersion = "research-local/7"
     initial_schema_version: ClassVar[str] = "research-local/7"
     revision_schema_version: ClassVar[str] = "research-local/7"
     kind: Literal["manuscript_claim_link"] = "manuscript_claim_link"
@@ -366,7 +373,7 @@ class Decision(AuthoredRecord):
 class DecisionAcknowledgement(Record):
     """An author's statement about exact reviewed revisions, never semantic verification."""
 
-    schema_version: Literal["research-local/5"] = "research-local/5"  # type: ignore[assignment]
+    schema_version: SchemaVersion = "research-local/5"
     kind: Literal["decision_acknowledgement"] = "decision_acknowledgement"
     decision_ref: Reference
     dossier_ref: Reference
@@ -376,7 +383,7 @@ class DecisionAcknowledgement(Record):
 
 
 class Tombstone(Record):
-    schema_version: Literal["research-local/1", "research-local/2"] = "research-local/1"  # type: ignore[assignment]
+    schema_version: SchemaVersion = "research-local/1"
     kind: Literal["tombstone"] = "tombstone"
     target_ref: Reference
     source_ref: Reference | None = None
