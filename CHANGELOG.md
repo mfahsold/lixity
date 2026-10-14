@@ -10,6 +10,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.4.0] - 2026-10-14
 
 ### Added
+- `research dossier|claim|decision|sources` accept an explicit `list` verb, and the
+  record lists render as a terminal table (`--format table`, ID/title/revision/date);
+  the untrusted-host message names the loopback URL to use. The Project & Settings
+  page orders by use: project settings, results (analysis + generated files),
+  publication, thresholds, then the confidentiality agreement; the artifact list is
+  named "generated files" and the manuscript comparison is collapsed.
 - Project folders are recognizable while browsing: `/api/project-paths` reports a
   minimal probe for the listed folder (config, research archive, title, language,
   manuscript) and marks project directories; the Open Project chooser shows that

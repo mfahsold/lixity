@@ -19,6 +19,9 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "compare": (("json", "md"), "json"),
     "matrix": (("md", "csv", "json"), "md"),
     "timeline": (("text", "md", "json"), "json"),
+    "dossier": (("json", "table"), "json"),
+    "claim": (("json", "table"), "json"),
+    "decision": (("json", "table"), "json"),
 }
 
 
@@ -139,7 +142,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update")
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
-        if name in ("dossier", "claim", "decision"):
+        if name in ("dossier", "claim", "decision", "sources"):
             command.add_argument("action", nargs="?", choices=("list",), metavar="list",
                                  help="Explicit list verb; listing is also the default without a record ID")
         if name == "init":
@@ -904,6 +907,16 @@ def run(args: argparse.Namespace) -> int:
                 report = audit_report(result, markdown=markdown)
             print_report(report, pager=args.pager)
             return 1 if result.get("ok") is False else 0
+        if command in ("dossier", "claim", "decision") and getattr(args, "format", "json") == "table":
+            from .presentation import record_list_report
+
+            table = record_list_report(command, result)
+            if table is None:
+                print("[error] --format table renders the list view; omit record IDs "
+                      "and use --json for a single record", file=sys.stderr)
+                return 2
+            print(table)
+            return 0
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 1 if result.get("ok") is False else 0
     except ResearchError as error:

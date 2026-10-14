@@ -873,6 +873,7 @@ lixity research dashboard --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUI
 lixity research compare --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --manuscript ./novel.md
 lixity research dossier --project ./novel --title "Reading Room Notes" --file "Notes about a possible 1924 opening." --evidence urn:uuid:YOUR-PASSAGE-UUID
 lixity research dossier list --project ./novel
+lixity research dossier list --project ./novel --format table   # ID, title, revision, date
 lixity research claim --project ./novel --title "Archive Founding" --statement "Founded in 1924." --confidence evidenced
 lixity research claim list --project ./novel
 lixity research link-evidence --project ./novel --claim-id urn:uuid:YOUR-CLAIM-UUID --passage-id urn:uuid:YOUR-PASSAGE-UUID --relation supports

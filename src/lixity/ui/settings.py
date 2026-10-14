@@ -63,6 +63,8 @@ def settings_form(
     ])
     if identity_check is not None:
         parts.extend([
+            '<details class="settings-advanced" id="settings-identity">',
+            f'<summary>{translated("project_identity_title")}</summary>',
             '<section id="project-identity-check" aria-labelledby="project-identity-title">',
             f'<h4 id="project-identity-title">{translated("project_identity_title")}</h4>',
             f'<p class="ctl-note">{translated("project_identity_hint")}</p>',
@@ -89,7 +91,7 @@ def settings_form(
             if source_key:
                 parts.append(f'<div class="ctl-note">{translated("project_identity_source")}: {translated(source_key)}</div>')
             parts.append('</dd>')
-        parts.append('</dl></section>')
+        parts.append('</dl></section></details>')
     disabled = "" if author_setting_enabled else " disabled"
     checked = " checked" if publication_values["enabled"] else ""
     parts.extend([

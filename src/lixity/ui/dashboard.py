@@ -530,6 +530,7 @@ def render_dashboard(
             if action_enabled(action)
         ]
         if action_enabled("export") or visible_actions:
+            parts.append(f'<h3 class="settings-section">{L("settings_results")}</h3>')
             parts.append('<div class="ctl-group">')
             action_heading = (
                 f"{L('export')} · {L('run_analysis')}"
@@ -629,7 +630,7 @@ def render_dashboard(
 
         if artifacts:
             parts.append('<section class="panel">')
-            parts.append(f"<h2>{help_term(labels, 'artifacts', L('artifacts'))}</h2>")
+            parts.append(f"<h2>{help_term(labels, 'artifacts', L('generated_files'))}</h2>")
             parts.append('<div class="artifacts">')
             for art in artifacts:
                 name = esc(str(art.get("name", "")))

@@ -209,3 +209,47 @@ def print_report(text: str, *, pager: bool) -> None:
             console.print(text, end="", soft_wrap=True)
     else:
         console.print(text, end="", soft_wrap=True)
+
+#: Record list envelopes: command -> (payload key, plural caption).
+_RECORD_LISTS = {
+    "dossier": ("dossiers", "dossier"),
+    "claim": ("claims", "claim"),
+    "decision": ("decisions", "decision"),
+}
+_RECORD_COLUMNS = (("id", "ID"), ("title", "Title"), ("revision", "Rev"), ("created_at", "Created"))
+
+
+def record_list_report(command: str, result: dict[str, Any], *, markdown: bool = False) -> str | None:
+    """Render a compact record list (ID, title, revision, date) for the terminal.
+
+    Returns ``None`` when the response is not a list envelope, so the caller
+    can point at ``--json`` instead of printing an empty table.
+    """
+    entry = _RECORD_LISTS.get(command)
+    rows = result.get(entry[0]) if entry and isinstance(result, dict) else None
+    if not isinstance(rows, list):
+        return None
+
+    def cell(row: Any, field: str) -> str:
+        value = row.get(field, "") if isinstance(row, dict) else ""
+        text = str(value).replace("|", "\\|")
+        if field == "id":
+            return text[:8] + "…" if len(text) > 9 else text
+        return text[:60]
+
+    if markdown:
+        lines = ["| " + " | ".join(name for _, name in _RECORD_COLUMNS) + " |",
+                 "| " + " | ".join("---" for _ in _RECORD_COLUMNS) + " |"]
+        lines.extend("| " + " | ".join(cell(row, field) for field, _ in _RECORD_COLUMNS) + " |"
+                     for row in rows)
+        return "\n".join(lines) + f"\n\n{len(rows)} {entry[1]}(s)."
+
+    widths = [max([len(name), *(len(cell(row, field)) for row in rows)])
+              for field, name in _RECORD_COLUMNS]
+    lines = ["  ".join(name.ljust(width) for (_, name), width in zip(_RECORD_COLUMNS, widths, strict=False)).rstrip(),
+             "  ".join("-" * width for width in widths)]
+    lines.extend("  ".join(cell(row, field).ljust(width)
+                           for (field, _), width in zip(_RECORD_COLUMNS, widths, strict=False)).rstrip()
+                 for row in rows)
+    return "\n".join(lines) + f"\n{len(rows)} {entry[1]}(s)."
+
