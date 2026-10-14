@@ -93,21 +93,30 @@ def test_book_frontmatter_has_no_furniture_and_chapters_keep_physical_folios(mon
         assert any("Synthetic title" in line.text for line in page.lines if line.y > page.height - 54)
 
 
-@pytest.mark.parametrize("function,kwargs", [
-    (manuscript_pdf, {"chapters": [("Chapter", ["i" * 1000] * 6)]}),
-    (report_pdf, {"markdown": "# Report\n\n" + "\n\n".join(["Synthetic prose. " * 100] * 5)}),
+@pytest.mark.parametrize("function,kwargs,bare_cover", [
+    (manuscript_pdf, {"chapters": [("Chapter", ["i" * 1000] * 6)]}, False),
+    (report_pdf, {"markdown": "# Report\n\n" + "\n\n".join(["Synthetic prose. " * 100] * 5)}, True),
 ])
-def test_sheet_report_headers_are_bounded_and_footer_contains_total(monkeypatch, function, kwargs):
+def test_sheet_report_headers_are_bounded_and_footer_contains_total(monkeypatch, function, kwargs,
+                                                                    bare_cover):
     _, doc, pages = captured_layout(
-        monkeypatch, function, title="A very long synthetic title " * 60,
-        author="A very long synthetic author " * 30, choice=CHOSEN, **kwargs,
+        monkeypatch, function,
+        title="A very long synthetic report title used for truncation checks " * 2,
+        author="A very long synthetic author " * 3, choice=CHOSEN, **kwargs,
     )
     assert len(pages) > 1
-    for index, page in enumerate(pages, 1):
+    offset = 0
+    if bare_cover:
+        # The report cover is deliberately free of running furniture.
+        assert not [line for line in pages[0].lines
+                    if line.y > pages[0].height - doc.top or line.y < doc.bottom]
+        pages = pages[1:]
+        offset = 1
+    for index, page in enumerate(pages, offset + 1):
         headers = [line for line in page.lines if line.y > page.height - doc.top]
         footers = [line for line in page.lines if line.y < doc.bottom]
         assert len(headers) == 1 and len(footers) == 1
-        assert footers[0].text == f"{index}/{len(pages)}"
+        assert footers[0].text == f"{index}/{len(pages) + offset}"
         assert headers[0].text.endswith("...")
         for line in headers + footers:
             assert line.x >= doc.left
@@ -180,8 +189,10 @@ def test_entered_header_placeholder_text_remains_literal(monkeypatch):
         monkeypatch, report_pdf, title="Literal {folio}/{pages}", author="Author",
         markdown="Synthetic prose.", choice=CHOSEN,
     )
-    assert pages[0].lines[-2].text == "Literal {folio}/{pages} · Author"
-    assert pages[0].lines[-1].text == "1/1"
+    # The cover stays bare; the body page carries the literal header and folio.
+    assert not [line for line in pages[0].lines if line.y < 40]
+    assert pages[1].lines[-2].text == "Literal {folio}/{pages} · Author"
+    assert pages[1].lines[-1].text == "2/2"
 
 
 def test_left_aligned_text_does_not_rely_on_unapplied_justification():

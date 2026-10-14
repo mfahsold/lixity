@@ -230,6 +230,20 @@ class ComposedDocumentTest(unittest.TestCase):
 
 
 class LayoutTest(unittest.TestCase):
+    def test_report_sections_keep_tables_and_skip_thematic_breaks(self):
+        from lixity.pdf_layouts import _report_sections, _TableData
+
+        sections = _report_sections(
+            "### 1.1 Kennzahlen\n\n| Metrik | Wert |\n| :--- | ---: |\n| **ASL** | 19,15 |\n"
+            "\n---\n\n### 1.2 Rhythmus\n"
+        )
+        self.assertEqual([heading for heading, _items in sections], ["1.1 Kennzahlen", "1.2 Rhythmus"])
+        table = sections[0][1][0]
+        self.assertIsInstance(table, _TableData)
+        self.assertEqual(table.header, ["Metrik", "Wert"])
+        self.assertEqual(table.rows, [["ASL", "19,15"]])
+        self.assertEqual(sections[1][1], [])
+
     @needs_fonts
     def test_report_renders_unicode(self):
         data = report_pdf(
@@ -443,6 +457,53 @@ class NativePdfTest(unittest.TestCase):
             self.assertEqual(lines[0].strip(), "Erfundene Geschichten")
             body_pages.append("\n".join(lines[1:-1]))
         self.assertIn(compound, "".join("\n".join(body_pages).split()))
+
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
+    def test_report_tables_align_repeat_and_never_leak_markup(self):
+        pdftotext = shutil.which("pdftotext")
+        if not pdftotext:
+            self.skipTest("requires Poppler pdftotext")
+        rows = [f"| Kennzahl {index:02d} | {index}.000 | Beschreibung {index} |"
+                for index in range(1, 61)]
+        markdown = (
+            "### 1.1 Kennzahlen\n\n| Metrik | Wert | Interpretationsgrenze |\n"
+            "| :--- | ---: | :--- |\n" + "\n".join(rows)
+            + "\n\n---\n\n### 1.2 Rhythmus\n\n| Signal | Wert |\n| :--- | ---: |\n"
+            "| Guiraud (V/√N) | 36,00 |\n"
+        )
+        data = report_pdf(title="Synthetischer Bericht", author="Synthetische Autorin",
+                          markdown=markdown, choice=CHOSEN)
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory) / "report.pdf"
+            path.write_bytes(data)
+            result = subprocess.run(  # noqa: S603 - resolved Poppler, synthetic local input
+                [pdftotext, "-layout", str(path), "-"],
+                check=True, capture_output=True, text=True,
+            )
+        self.assertFalse(result.stderr)
+        pages = result.stdout.split("\f")[:-1]
+        self.assertGreaterEqual(len(pages), 3)
+        # Cover page: title and author only, no section and no table.
+        self.assertIn("Synthetischer Bericht", pages[0])
+        self.assertNotIn("Kennzahlen", pages[0])
+        self.assertIn("1.1 Kennzahlen", pages[1])
+        body = "\n".join(pages[1:])
+        self.assertGreaterEqual(body.count("Metrik"), 2, "the header row repeats after a page break")
+        self.assertIn("Interpretationsgrenze", body, "header words are never broken")
+        self.assertNotIn("|", body)
+        self.assertNotIn("\\sqrt", body)
+        self.assertIn("V/√N", body)
+        # A numeric column stays aligned: right-aligned values end on one edge.
+        ends = []
+        for marker in ("01", "02", "30"):
+            line = next(line for line in body.splitlines() if f"Kennzahl {marker} " in line)
+            token = next(word for word in line.split() if word.endswith(".000"))
+            ends.append(line.index(token) + len(token))
+        self.assertEqual(len(set(ends)), 1, "right-aligned values share one edge")
+        # Rows stay whole: a label and its value never split across pages.
+        page_of_last = next(page for page in pages if "Kennzahl 60 " in page)
+        self.assertIn("60.000", page_of_last)
+        self.assertIn("Beschreibung 60", page_of_last)
 
     @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
     def test_default_report_fonts_preserve_generated_math_symbols(self):

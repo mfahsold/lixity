@@ -704,7 +704,7 @@ lixity pdf manuscript.md --layout book -o reading.pdf
 
 | Layout | Page | Purpose |
 | :--- | :--- | :--- |
-| `report` | A4 | The measured analysis report, set in a sans face for screen reading |
+| `report` | A4 | The measured analysis report: an unnumbered cover page and aligned tables with a repeated header row, set in a sans face for screen reading |
 | `book` | A5 | Continuous reading: serif measure, mirrored margins, chapter openings, folios |
 | `sheet` | A4 | Submission grid: at most 30 lines per page, at most 60 characters per line |
 
@@ -722,6 +722,10 @@ agree on, and where they disagree the guide says so:
   last resort is a ragged edge instead of an unbreakable line.
   Since v2.3.0, an overlong word is split at character boundaries
   to keep it within the page measure without dropping characters.
+- **Report tables.** Measured figures are set as tables, not as ``label · value``
+  prose: columns keep their longest word whole, numeric columns right-align,
+  a row stays on one page and the header row repeats after a page break. Wide
+  tables step their type down slightly instead of breaking headings.
 - **Justification.** Slack is spread over the word gaps, tightening as well as
   stretching, and a line falls back to ragged rather than opening a gap beyond
   a third of an em. The last line of a paragraph is never justified.

@@ -58,6 +58,7 @@ class Page:
     width: float
     height: float
     lines: list[Line] = field(default_factory=list)
+    rules: list[tuple[float, float, float, float, float]] = field(default_factory=list)
     decorated: bool = True
     bookmarks: list[tuple[str, float]] = field(default_factory=list)
 
@@ -66,8 +67,15 @@ def text_width(text: str, face: EmbeddedFont, size: float) -> float:
     return sum(face.advance(ord(character)) / 1000 * size for character in text)
 
 
-def break_lines(text: str, face: EmbeddedFont, size: float, measure: float, *,
-                first_indent: float = 0.0, columns: int | None = None) -> list[str]:
+def break_lines(
+    text: str,
+    face: EmbeddedFont,
+    size: float,
+    measure: float,
+    *,
+    first_indent: float = 0.0,
+    columns: int | None = None,
+) -> list[str]:
     """Split text into lines that fit ``measure``; explicit newlines always break."""
     result: list[str] = []
     for paragraph in text.split("\n"):
@@ -78,15 +86,19 @@ def break_lines(text: str, face: EmbeddedFont, size: float, measure: float, *,
         for word in paragraph.split(" "):
             available = measure - (first_indent if not result else 0)
             candidate = f"{current} {word}" if current else word
-            if not current or (text_width(candidate, face, size) <= available
-                               and (columns is None or len(candidate) <= columns)):
+            if not current or (
+                text_width(candidate, face, size) <= available
+                and (columns is None or len(candidate) <= columns)
+            ):
                 current = candidate
             else:
                 result.append(current)
                 current = word
             available = measure - (first_indent if not result else 0)
-            while (text_width(current, face, size) > available
-                   or (columns is not None and len(current) > columns)) and len(current) > 1:
+            while (
+                text_width(current, face, size) > available
+                or (columns is not None and len(current) > columns)
+            ) and len(current) > 1:
                 cut = min(len(current) - 1, columns or len(current))
                 while cut > 1 and text_width(current[:cut], face, size) > available:
                     cut -= 1
@@ -114,8 +126,15 @@ class FittedLine:
     slack: float
 
 
-def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float, *,
-                  first_indent: float = 0.0, allow_tightening: bool = True) -> list[FittedLine]:
+def fit_paragraph(
+    text: str,
+    face: EmbeddedFont,
+    size: float,
+    measure: float,
+    *,
+    first_indent: float = 0.0,
+    allow_tightening: bool = True,
+) -> list[FittedLine]:
     """Break a paragraph into lines, minimising the total badness of the page.
 
     A greedy first-fit break fills each line to the brim and is the reason a
@@ -136,9 +155,12 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float, *,
             # A word wider than the page has no word-gap solution. Reuse the
             # character breaker so URLs and compound words stay on the page.
             pieces = break_lines(paragraph, face, size, measure, first_indent=indent)
-            lines.extend(FittedLine(piece, measure - (indent if index == 0 else 0)
-                                    - text_width(piece, face, size))
-                         for index, piece in enumerate(pieces))
+            lines.extend(
+                FittedLine(
+                    piece, measure - (indent if index == 0 else 0) - text_width(piece, face, size)
+                )
+                for index, piece in enumerate(pieces)
+            )
             continue
         space = text_width(" ", face, size)
         count = len(words)
@@ -184,7 +206,7 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float, *,
                     if ratio > 1.0:
                         cost = (abs(ratio) ** 3) * 100.0 + 5000.0
                     else:
-                        cost = (abs(ratio) ** 3) * 100.0 + (slack ** 2) / 40.0 + 8.0
+                        cost = (abs(ratio) ** 3) * 100.0 + (slack**2) / 40.0 + 8.0
                 if best[start] + cost < best[stop + 1]:
                     best[stop + 1] = best[start] + cost
                     choice[stop + 1] = start
@@ -192,9 +214,12 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float, *,
             # No acceptable chain: fall back to the greedy break rather than
             # emitting nothing, so the text is never silently dropped.
             pieces = break_lines(paragraph, face, size, measure, first_indent=indent)
-            lines.extend(FittedLine(piece, measure - (indent if index == 0 else 0)
-                                    - text_width(piece, face, size))
-                         for index, piece in enumerate(pieces))
+            lines.extend(
+                FittedLine(
+                    piece, measure - (indent if index == 0 else 0) - text_width(piece, face, size)
+                )
+                for index, piece in enumerate(pieces)
+            )
             continue
         breaks: list[tuple[int, int]] = []
         position = count
@@ -205,8 +230,11 @@ def fit_paragraph(text: str, face: EmbeddedFont, size: float, measure: float, *,
         breaks.reverse()
         for start, stop in breaks:
             natural = sum(widths[start:stop]) + space * max(0, stop - start - 1)
-            lines.append(FittedLine(" ".join(words[start:stop]),
-                                    measure - (indent if start == 0 else 0) - natural))
+            lines.append(
+                FittedLine(
+                    " ".join(words[start:stop]), measure - (indent if start == 0 else 0) - natural
+                )
+            )
     return lines
 
 
@@ -276,6 +304,44 @@ class Block:
     bookmark: str = ""
 
 
+@dataclass
+class Rule:
+    """A horizontal hairline the flow consumes; used for covers and tables."""
+
+    space_before: float = 0.0
+    space_after: float = 0.0
+    width: float = 0.6
+    new_page: bool = False
+    decorated: bool = True
+
+
+@dataclass
+class Table:
+    """A grid placed as one flow item: rows stay whole and wrap inside columns.
+
+    ``widths`` are the column content widths; ``gap`` is the space between
+    columns. The first row is the header when ``header`` is set: it is drawn
+    with ``heading_role``, gets a rule, and is repeated after a page break.
+    """
+
+    rows: list[list[str]]
+    widths: list[float]
+    gap: float = 10.0
+    role: str = "text"
+    heading_role: str = "heading"
+    alignments: list[str] | None = None
+    size: float = 10.0
+    leading: float = 1.3
+    header: bool = True
+    repeat_header: bool = True
+    row_rules: bool = False
+    row_gap: float = 3.0
+    space_before: float = 0.0
+    space_after: float = 0.0
+    new_page: bool = False
+    decorated: bool = True
+
+
 class Document:
     """A paginated text document rendered into one self-contained PDF file."""
 
@@ -298,7 +364,7 @@ class Document:
         self.mirror = mirror
         self.baseline = baseline
         self.metadata = dict(metadata or {})
-        self.blocks: list[Block] = []
+        self.blocks: list[Block | Table | Rule] = []
         self.furniture: dict[str, list[PageFurniture]] = {}
         self.omit_first: set[str] = set()
 
@@ -316,8 +382,35 @@ class Document:
         self.fonts.collect(block.role, block.text)
         self.blocks.append(block)
 
-    def page_furniture(self, text: str, *, role: str, size: float, position: str,
-                       omit_first: bool = False, literal: bool = False) -> None:
+    def add_rule(
+        self,
+        *,
+        space_before: float = 0.0,
+        space_after: float = 0.0,
+        width: float = 0.6,
+        new_page: bool = False,
+        decorated: bool = True,
+    ) -> None:
+        self.blocks.append(Rule(space_before, space_after, width, new_page, decorated))
+
+    def add_table(self, table: Table) -> None:
+        """Collect every cell before the faces are subset, then queue the grid."""
+        for role in {table.role, table.heading_role}:
+            for row in table.rows:
+                for cell in row:
+                    self.fonts.collect(role, cell)
+        self.blocks.append(table)
+
+    def page_furniture(
+        self,
+        text: str,
+        *,
+        role: str,
+        size: float,
+        position: str,
+        omit_first: bool = False,
+        literal: bool = False,
+    ) -> None:
         """Register running heads or folios drawn on the rendered pages.
 
         ``{folio}`` and ``{pages}`` become physical page numbers and totals.
@@ -345,6 +438,77 @@ class Document:
             page = Page(self.width, self.height, decorated=decorated)
             cursor = self.height - self.top
 
+        def draw_table(table: Table) -> None:
+            nonlocal cursor
+            body_face = faces[table.role]
+            head_face = faces[table.heading_role]
+            step = table.size * table.leading
+            aligns = list(table.alignments or ["left"] * len(table.widths))
+            total = sum(table.widths) + table.gap * max(0, len(table.widths) - 1)
+
+            def row_height(cells: list[str], face: EmbeddedFont) -> float:
+                lines = 1
+                for column, cell in enumerate(cells):
+                    if column < len(table.widths):
+                        lines = max(
+                            lines, len(break_lines(cell, face, table.size, table.widths[column]))
+                        )
+                return lines * step
+
+            def draw_row(cells: list[str], face: EmbeddedFont, role: str, *, header: bool) -> None:
+                nonlocal cursor
+                # Table lines are not snapped onto the body baseline grid: their
+                # step is smaller than the grid, so snapping made rows collide.
+                first = cursor - table.size
+                origin = self._origin(len(pages))
+                x = origin
+                height = row_height(cells, face)
+                for column, cell in enumerate(cells):
+                    if column >= len(table.widths):
+                        break
+                    for index, drawn in enumerate(
+                        break_lines(cell, face, table.size, table.widths[column])
+                    ):
+                        if not drawn:
+                            continue
+                        advance = text_width(drawn, face, table.size)
+                        align = aligns[column] if column < len(aligns) else LEFT
+                        if align == "right":
+                            start = x + table.widths[column] - advance
+                        elif align == "centre":
+                            start = x + (table.widths[column] - advance) / 2
+                        else:
+                            start = x
+                        page.lines.append(
+                            Line(drawn, start, first - index * step, table.size, role)
+                        )
+                    x += table.widths[column] + table.gap
+                if header:
+                    rule_y = first - table.size * 0.30
+                    page.rules.append((origin, rule_y, origin + total, rule_y, 0.6))
+                elif table.row_rules:
+                    rule_y = first - height + table.size * 0.55
+                    page.rules.append((origin, rule_y, origin + total, rule_y, 0.4))
+                cursor -= height
+
+            header_row = table.rows[0] if table.header and table.rows else None
+            body_rows = table.rows[1:] if header_row is not None else table.rows
+            if header_row is not None:
+                needed = row_height(header_row, head_face) + table.row_gap
+                if cursor - needed < self.bottom:
+                    new_page(table.decorated)
+                draw_row(header_row, head_face, table.heading_role, header=True)
+                cursor -= table.row_gap
+            for index, row in enumerate(body_rows):
+                gap = table.row_gap if index + 1 < len(body_rows) else 0.0
+                if cursor - (row_height(row, body_face) + gap) < self.bottom:
+                    new_page(table.decorated)
+                    if header_row is not None and table.repeat_header:
+                        draw_row(header_row, head_face, table.heading_role, header=True)
+                        cursor -= table.row_gap
+                draw_row(row, body_face, table.role, header=False)
+                cursor -= gap
+
         for block in self.blocks:
             if block.new_page and page.lines:
                 new_page(block.decorated)
@@ -352,18 +516,39 @@ class Document:
                 page.decorated = block.decorated
             if block.space_before and cursor < self.height - self.top:
                 cursor -= block.space_before
+            if isinstance(block, Table):
+                draw_table(block)
+                cursor -= block.space_after
+                continue
+            if isinstance(block, Rule):
+                origin = self._origin(len(pages))
+                page.rules.append((origin, cursor, origin + self.measure, cursor, block.width))
+                cursor -= block.space_after
+                continue
             face = faces[block.role]
             step = block.size * block.leading
             # A submission sheet is a fixed character grid, not prose: it is
             # broken at the measure and never spaced out, because the column
             # count is the contract rather than a typographic preference.
             if block.align == GRID or block.columns is not None:
-                pieces = [FittedLine(piece, 0.0) for piece in break_lines(
-                    block.text, face, block.size, self.measure,
-                    first_indent=block.indent, columns=block.columns)]
+                pieces = [
+                    FittedLine(piece, 0.0)
+                    for piece in break_lines(
+                        block.text,
+                        face,
+                        block.size,
+                        self.measure,
+                        first_indent=block.indent,
+                        columns=block.columns,
+                    )
+                ]
             else:
                 pieces = fit_paragraph(
-                    block.text, face, block.size, self.measure, first_indent=block.indent,
+                    block.text,
+                    face,
+                    block.size,
+                    self.measure,
+                    first_indent=block.indent,
                     allow_tightening=block.align == JUSTIFIED,
                 )
             origin = self._origin(len(pages))
@@ -376,8 +561,13 @@ class Document:
                 # Baselines sit on the grid, and the left edge follows the page
                 # number once mirrored margins are on.
                 baseline = self._snap(cursor - block.size)
-                line = Line(piece.text, origin + (block.indent if index == 0 else 0), baseline, block.size,
-                            block.role)
+                line = Line(
+                    piece.text,
+                    origin + (block.indent if index == 0 else 0),
+                    baseline,
+                    block.size,
+                    block.role,
+                )
                 # The last line of a paragraph is not justified: stretching it
                 # to the margin is the classic give-away of amateur typesetting.
                 if block.align == JUSTIFIED and piece.text and index < len(pieces) - 1:
@@ -385,8 +575,7 @@ class Document:
                 elif block.align == CENTRE and piece.text:
                     line = Line(
                         piece.text,
-                        origin
-                        + (self.measure - text_width(piece.text, face, block.size)) / 2,
+                        origin + (self.measure - text_width(piece.text, face, block.size)) / 2,
                         baseline,
                         block.size,
                         block.role,
@@ -407,9 +596,7 @@ class Document:
             return self.right
         return self.left
 
-    def _justify(
-        self, line: Line, face: EmbeddedFont, size: float, slack: float
-    ) -> Line:
+    def _justify(self, line: Line, face: EmbeddedFont, size: float, slack: float) -> Line:
         """Spread the line's slack over its word gaps.
 
         The breaker has already chosen the breaks, so the slack is known and
@@ -437,18 +624,29 @@ class Document:
             if index == 0 and position in self.omit_first:
                 continue
             for entry in entries:
-                text = (entry.text if entry.literal else
-                        entry.text.replace("{folio}", str(index + 1)).replace("{pages}", str(total)))
+                text = (
+                    entry.text
+                    if entry.literal
+                    else entry.text.replace("{folio}", str(index + 1)).replace(
+                        "{pages}", str(total)
+                    )
+                )
                 face = self.fonts.face(entry.role)
                 if position == "footer-centre":
                     y = self.bottom / 2
-                    x = self._origin(index) + (self.measure - text_width(text, face, entry.size)) / 2
+                    x = (
+                        self._origin(index)
+                        + (self.measure - text_width(text, face, entry.size)) / 2
+                    )
                 elif position == "footer-right":
                     y = self.bottom / 2
                     x = self._origin(index) + self.measure - text_width(text, face, entry.size)
                 elif position == "header-centre":
                     y = self.height - self.top / 2
-                    x = self._origin(index) + (self.measure - text_width(text, face, entry.size)) / 2
+                    x = (
+                        self._origin(index)
+                        + (self.measure - text_width(text, face, entry.size)) / 2
+                    )
                 else:
                     y = self.height - self.top / 2
                     x = self.left
@@ -508,8 +706,10 @@ def _utf16_units(codepoint: int) -> list[int]:
 
 
 def _escape_name(text: str) -> str:
-    return "".join(chr(byte) if 33 <= byte <= 126 and chr(byte) not in "()<>[]{}/%#"
-                   else f"#{byte:02X}" for byte in text.encode("utf-8"))
+    return "".join(
+        chr(byte) if 33 <= byte <= 126 and chr(byte) not in "()<>[]{}/%#" else f"#{byte:02X}"
+        for byte in text.encode("utf-8")
+    )
 
 
 def _show(line: Line, face: EmbeddedFont, cids: Mapping[int, int] | None = None) -> str:
@@ -549,8 +749,9 @@ def _pdf_string(text: str) -> bytes:
     return b"<FEFF" + text.encode("utf-16-be").hex().upper().encode("ascii") + b">"
 
 
-def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont], *,
-               metadata: Mapping[str, str] | None = None) -> bytes:
+def _write_pdf(
+    pages: list[Page], faces: dict[str, EmbeddedFont], *, metadata: Mapping[str, str] | None = None
+) -> bytes:
     roles = sorted({line.role for page in pages for line in page.lines})
     objects: dict[int, bytes] = {}
 
@@ -604,8 +805,9 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont], *,
             f"{cids[codepoint]} [{round(face.advances.get(codepoint, 0) * scale)}]"
             for codepoint in sorted(cids)
         )
-        glyph_map = add(stream(b"\0\0" + b"".join(
-            face.glyph_ids[cp].to_bytes(2, "big") for cp in sorted(cids))))
+        glyph_map = add(
+            stream(b"\0\0" + b"".join(face.glyph_ids[cp].to_bytes(2, "big") for cp in sorted(cids)))
+        )
         descendant = add(
             (
                 f"<< /Type /Font /Subtype /CIDFontType2 /BaseFont /{font_name} "
@@ -628,6 +830,14 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont], *,
     page_objects: list[int] = []
     for page in pages:
         parts: list[str] = []
+        for x1, y1, x2, y2, rule_width in page.rules:
+            parts += [
+                "q",
+                "0.55 G",
+                f"{rule_width:.2f} w",
+                f"{x1:.2f} {y1:.2f} m {x2:.2f} {y2:.2f} l S",
+                "Q",
+            ]
         for line in page.lines:
             parts += [
                 "BT",
@@ -648,8 +858,11 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont], *,
             )
         )
 
-    navigation = [(title, y, page_objects[index]) for index, page in enumerate(pages)
-                  for title, y in page.bookmarks]
+    navigation = [
+        (title, y, page_objects[index])
+        for index, page in enumerate(pages)
+        for title, y in page.bookmarks
+    ]
     outline_entry = b""
     if navigation:
         outline_root = add(b"")
@@ -660,24 +873,40 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont], *,
                 links += f" /Prev {outline_nodes[index - 1]} 0 R"
             if index + 1 < len(outline_nodes):
                 links += f" /Next {outline_nodes[index + 1]} 0 R"
-            objects[outline_nodes[index]] = b"<< /Title " + _pdf_string(title) + links.encode("ascii") + b" >>"
+            objects[outline_nodes[index]] = (
+                b"<< /Title " + _pdf_string(title) + links.encode("ascii") + b" >>"
+            )
         objects[outline_root] = (
             f"<< /Type /Outlines /First {outline_nodes[0]} 0 R /Last {outline_nodes[-1]} 0 R "
-            f"/Count {len(outline_nodes)} >>".encode("ascii"))
+            f"/Count {len(outline_nodes)} >>".encode("ascii")
+        )
         outline_entry = f" /Outlines {outline_root} 0 R".encode("ascii")
     settings = metadata or {}
     language = b" /Lang " + _pdf_string(settings["language"]) if settings.get("language") else b""
-    objects[catalog] = (f"<< /Type /Catalog /Pages {pages_obj} 0 R".encode("ascii")
-                        + language + outline_entry + b" >>")
+    objects[catalog] = (
+        f"<< /Type /Catalog /Pages {pages_obj} 0 R".encode("ascii")
+        + language
+        + outline_entry
+        + b" >>"
+    )
     objects[pages_obj] = (
         f"<< /Type /Pages /Kids [{' '.join(f'{n} 0 R' for n in page_objects)}] "
         f"/Count {len(page_objects)} >>"
     ).encode("ascii")
 
-    info = add(b"<< " + b" ".join(
-        b"/" + key.encode("ascii") + b" " + _pdf_string(settings[value])
-        for key, value in (("Title", "title"), ("Author", "author")) if settings.get(value)
-    ) + b" >>") if any(settings.get(key) for key in ("title", "author")) else None
+    info = (
+        add(
+            b"<< "
+            + b" ".join(
+                b"/" + key.encode("ascii") + b" " + _pdf_string(settings[value])
+                for key, value in (("Title", "title"), ("Author", "author"))
+                if settings.get(value)
+            )
+            + b" >>"
+        )
+        if any(settings.get(key) for key in ("title", "author"))
+        else None
+    )
     out = bytearray(b"%PDF-1.4\n% Lixity composed document\n")
     offsets: dict[int, int] = {}
     for number in sorted(objects):
@@ -689,8 +918,10 @@ def _write_pdf(pages: list[Page], faces: dict[str, EmbeddedFont], *,
     for number in range(1, size):
         out += f"{offsets[number]:010d} 00000 n \n".encode("ascii")
     info_entry = f" /Info {info} 0 R" if info is not None else ""
-    out += (f"trailer\n<< /Size {size} /Root {catalog} 0 R{info_entry} >>\n"
-            f"startxref\n{xref_at}\n%%EOF\n").encode("ascii")
+    out += (
+        f"trailer\n<< /Size {size} /Root {catalog} 0 R{info_entry} >>\n"
+        f"startxref\n{xref_at}\n%%EOF\n"
+    ).encode("ascii")
     return bytes(out)
 
 
@@ -707,6 +938,8 @@ __all__ = [
     "Line",
     "Page",
     "PdfError",
+    "Rule",
+    "Table",
     "break_lines",
     "text_width",
 ]

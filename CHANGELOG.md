@@ -128,6 +128,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   repository-level immutable releases protect published assets and tags.
 
 ### Fixed
+- The analysis report PDF is composed as a document instead of flattened
+  Markdown: an unnumbered cover page, real tables with right-aligned numeric
+  columns, repeated header rows, whole rows and a PDF outline; the Guiraud
+  label prints as `V/√N` instead of raw LaTeX. Book covers start on the
+  optical third of the page.
 - Chapter and status counters inflect their units (1 Absatz, 0 Auffälligkeiten),
   the reader panel uses the same name as its toolbar control, the footer separates
   product label and title, and an uninitialized research archive now shows the

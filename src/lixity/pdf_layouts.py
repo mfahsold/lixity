@@ -32,7 +32,10 @@ from .pdf_document import (
     Document,
     FontSet,
     PdfError,
+    Table,
+    text_width,
 )
+from .pdf_font import EmbeddedFont
 
 NORM_LINES = 30
 NORM_COLUMNS = 60
@@ -274,6 +277,161 @@ def _paragraphs(markdown: str) -> list[tuple[str, list[str]]]:
     return sections
 
 
+@dataclass(frozen=True)
+class _TableData:
+    """One pipe table from the report Markdown, markers already stripped."""
+
+    header: list[str]
+    rows: list[list[str]]
+
+
+def _table_data(raw_rows: list[str]) -> _TableData | None:
+    """Parse Markdown pipe rows; the alignment rule row is dropped."""
+    rows: list[list[str]] = []
+    for raw in raw_rows:
+        if set(raw) <= set("|-: "):
+            continue
+        cells = [_plain(cell.strip()) for cell in raw.strip("|").split("|")]
+        if any(cells):
+            rows.append(cells)
+    if len(rows) < 2:
+        return None
+    width = max(len(row) for row in rows)
+    return _TableData(rows[0], [row + [""] * (width - len(row)) for row in rows[1:]])
+
+
+def _report_sections(markdown: str) -> list[tuple[str, list[str | _TableData]]]:
+    """Split the report into (heading, items); tables stay tabular.
+
+    The report was previously flattened into ``label · value`` runs, which
+    wrapped like prose and made every figure unreadable. Tables now travel as
+    grids and are placed as grids.
+    """
+    sections: list[tuple[str, list[str | _TableData]]] = []
+    heading = ""
+    items: list[str | _TableData] = []
+    lines = markdown.splitlines()
+    index = 0
+    while index < len(lines):
+        line = lines[index].rstrip()
+        if not line.strip():
+            index += 1
+            continue
+        if re.fullmatch(r"(?:-{3,}|\*{3,}|_{3,})", line.strip()):
+            # The report Markdown separates sections with thematic breaks;
+            # they structure the source, not the printed page.
+            index += 1
+            continue
+        if line.startswith("#"):
+            if heading or items:
+                sections.append((heading, items))
+            heading = _plain(line.lstrip("#").strip())
+            items = []
+            index += 1
+            continue
+        if line.lstrip().startswith("|"):
+            raw_rows: list[str] = []
+            while index < len(lines) and lines[index].lstrip().startswith("|"):
+                raw_rows.append(lines[index].strip())
+                index += 1
+            table = _table_data(raw_rows)
+            if table is not None:
+                items.append(table)
+            continue
+        paragraph: list[str] = []
+        while (index < len(lines) and lines[index].strip()
+               and not lines[index].startswith("#")
+               and not lines[index].lstrip().startswith("|")):
+            raw = lines[index].strip()
+            paragraph.append(("– " + raw[2:].strip()) if raw.startswith(("- ", "* ")) else _plain(raw))
+            index += 1
+        if paragraph:
+            items.append(" ".join(paragraph))
+    if heading or items:
+        sections.append((heading, items))
+    return sections
+
+
+#: A cell whose body values are numbers and units reads as a measured column.
+_NUMERIC_CELL = re.compile(r"^[0-9][0-9 .,%:/( )\u2013\u2014-]*$")
+
+
+def _column_alignments(rows: list[list[str]]) -> list[str]:
+    """Right-align columns whose body values are all numeric."""
+    alignments: list[str] = []
+    for column in range(len(rows[0])):
+        values = [row[column] for row in rows[1:] if row[column]]
+        alignments.append("right" if values and all(_NUMERIC_CELL.match(value) for value in values) else "left")
+    return alignments
+
+
+def _column_widths(header: list[str], rows: list[list[str]], text_face: EmbeddedFont,
+                   heading_face: EmbeddedFont, size: float, measure: float,
+                   gap: float) -> tuple[list[float], float]:
+    """Fit column widths so no word is broken and long cells wrap.
+
+    A naive proportional fit squeezes narrow numeric columns until their
+    headings break mid-word ("Wört/er"). Every column therefore keeps a floor
+    of its longest word plus a little air; the remaining space is shared
+    proportionally to how much each column could still grow.
+    """
+    columns = len(header)
+    naturals: list[float] = []
+    floors: list[float] = []
+    for column in range(columns):
+        natural = text_width(header[column], heading_face, size)
+        floor = max((text_width(word, heading_face, size) for word in header[column].split()),
+                    default=0.0)
+        for row in rows:
+            cell = row[column]
+            natural = max(natural, text_width(cell, text_face, size))
+            for word in cell.split() or [""]:
+                floor = max(floor, text_width(word, text_face, size))
+        floors.append(floor + size * 0.6)
+        naturals.append(natural)
+    available = measure - gap * (columns - 1)
+    if available <= 0:
+        return floors, size
+    if sum(floors) > available:
+        # Prefer a slightly smaller table over broken words: a proportional
+        # squeeze closes every column by a character and breaks every heading.
+        # 0.78 keeps the type legible while the widest columns give way.
+        factor = max(0.78, available / sum(floors))
+        size = round(size * factor, 2)
+        floors = [width * factor for width in floors]
+        naturals = [width * factor for width in naturals]
+    caps = [max(natural, floor) for natural, floor in zip(naturals, floors, strict=False)]
+    widths = list(floors)
+    excess = sum(widths) - available
+    for _ in range(4):
+        if excess <= 1e-6:
+            break
+        for index in sorted(range(columns), key=lambda column: widths[column], reverse=True):
+            if excess <= 1e-6:
+                break
+            take = min(excess, widths[index] * 0.2)
+            widths[index] -= take
+            excess -= take
+    if excess > 1e-6:
+        scale = available / sum(widths)
+        widths = [width * scale for width in widths]
+    leftover = available - sum(widths)
+    if leftover > 1e-6:
+        growth = [max(0.0, cap - width) for cap, width in zip(caps, widths, strict=False)]
+        total = sum(growth)
+        if total > 0:
+            widths = [min(cap, width + leftover * grow / total)
+                      for cap, width, grow in zip(caps, widths, growth, strict=False)]
+        else:
+            widths = [width + leftover / columns for width in widths]
+    return widths, size
+
+
+#: Table type is a step below the body so tables read as reference material.
+_REPORT_TABLE_SCALE = 0.92
+_REPORT_TABLE_GAP = 12.0
+
+
 def report_pdf(
     *,
     title: str,
@@ -283,34 +441,80 @@ def report_pdf(
     author: str = "",
     metadata: Mapping[str, str] | None = None,
 ) -> bytes:
-    """Render the analysis report as a paginated A4 document.
+    """Render the analysis report: a cover page, section headings and tables.
 
-    A report is read on screen and skimmed, so it uses a sans face, symmetric
-    margins and a wider measure than a book. The foot stays larger than the
-    head so the block does not read as sinking.
+    A report is read on screen and skimmed, so it uses a sans face and a wider
+    measure than a book. Figures live in aligned tables instead of flowing
+    prose, the header row repeats after a page break and rows stay whole.
     """
     fonts = _report_fontset(choice)
     document = Document(fonts, page_size=A4, margins=(62, 62, 56, 78),
                         metadata={"title": title, "author": author, **(metadata or {})})
-    sections = _paragraphs(markdown)
-    sample = " ".join(line for _, lines in sections for line in lines)[:3000]
-    size = fit_size(fonts, "text", document.measure, REPORT_CPL, sample)
+    sections = _report_sections(markdown)
+    sample = " ".join(
+        " ".join(item.header + [cell for row in item.rows for cell in row])
+        if isinstance(item, _TableData) else item
+        for _heading, items in sections for item in items
+    )[:3000]
+    size = fit_size(fonts, "text", document.measure, REPORT_CPL, sample or title)
     leading = round(size * 1.5, 2)
     document.baseline = leading
-    document.add(Block(title, role="heading", size=19, leading=1.25, space_after=4))
+
+    # Cover: a bare letterhead keeps the first page calm; content starts on
+    # page two and the running furniture never touches the cover.
+    document.add(Block(title, role="heading", size=22, leading=1.2, space_after=leading * 0.2,
+                       decorated=False))
+    if author:
+        document.add(Block(author, role="text", size=11.5, leading=1.3, space_after=2, decorated=False))
     if subtitle:
-        document.add(Block(subtitle, role="text", size=size, align=CENTRE, space_after=leading))
-    for heading, entries in sections:
+        document.add(Block(subtitle, role="text", size=11, leading=1.3, space_after=2, decorated=False))
+    document.add_rule(space_before=leading * 0.5, space_after=0.0, decorated=False)
+
+    # Collect every character first: table widths are measured against the
+    # finished faces, not against a subset that still changes per block.
+    document.fonts.collect("text", sample or title)
+    for heading, items in sections:
         if heading:
-            document.add(
-                Block(heading, role="heading", size=13, leading=1.3, space_before=leading,
-                      space_after=leading / 2)
-            )
-        for entry in entries:
-            document.add(
-                Block(entry, role="text", size=size, leading=leading / size, align=JUSTIFIED,
-                      space_after=leading / 2)
-            )
+            document.fonts.collect("heading", heading)
+        for item in items:
+            if isinstance(item, _TableData):
+                for cell in item.header:
+                    document.fonts.collect("heading", cell)
+                for row in item.rows:
+                    for cell in row:
+                        document.fonts.collect("text", cell)
+            else:
+                document.fonts.collect("text", item)
+    body_face = document.fonts.face("text")
+    heading_face = document.fonts.face("heading")
+    table_size = round(size * _REPORT_TABLE_SCALE, 1)
+    first = True
+    for heading, items in sections:
+        if heading:
+            document.add(Block(heading, role="heading", size=13.5, leading=1.3,
+                               new_page=first, decorated=True,
+                               space_before=0.0 if first else leading * 1.8,
+                               space_after=leading * 0.7, bookmark=heading))
+            first = False
+        for item in items:
+            if isinstance(item, _TableData):
+                table_rows = [item.header, *item.rows]
+                widths, drawn_size = _column_widths(item.header, item.rows, body_face,
+                                                    heading_face, table_size,
+                                                    document.measure, _REPORT_TABLE_GAP)
+                document.add_table(Table(
+                    rows=table_rows, widths=widths, gap=_REPORT_TABLE_GAP,
+                    alignments=_column_alignments(table_rows),
+                    size=drawn_size, leading=1.32, header=True, repeat_header=True,
+                    row_rules=len(item.rows) >= 8, row_gap=drawn_size * 0.34,
+                    space_before=leading * 0.25, space_after=leading * 1.0,
+                    new_page=first, decorated=True,
+                ))
+            else:
+                document.add(Block(item, role="text", size=size, leading=leading / size,
+                                   align=JUSTIFIED, space_after=leading * 0.5,
+                                   new_page=first, decorated=True))
+            first = False
     _running_header(document, title, author, role="text", size=8)
     document.page_furniture("{folio}/{pages}", role="text", size=8.5, position="footer-centre")
     return document.render()
@@ -341,6 +545,10 @@ def book_pdf(
     size = fit_size(fonts, "text", document.measure, BOOK_CPL, sample)
     leading = round(size * 1.45, 2)
     document.baseline = leading
+    # The cover block sits on the optical third of the page; a title at the top
+    # edge reads as a letterhead, not as a book.
+    spacer = round((A5[1] - top - bottom) * 0.26, 1)
+    document.add(Block("", role="text", size=size, leading=spacer / size, decorated=False))
     document.add(
         Block(title, role="heading", size=17, leading=1.3, align=CENTRE, space_after=8,
               decorated=False)
