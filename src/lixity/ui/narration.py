@@ -55,6 +55,14 @@ def render_scenes_panel(
             f'<td>{N(item["features"].get("asl"))}</td><td>{dialog_text}</td></tr>'
         )
     parts.append('</tbody></table></div>')
+    # Comparison columns only appear when the project actually defines targets
+    # or register medians; otherwise every cell would repeat a dash.
+    has_targets = any(
+        item["targets"].get(field)
+        for item in scenes["items"]
+        for field, _label_key, _unit in FEATURES
+    )
+    has_baseline = any(scenes["baselines"].get(item["group"]) for item in scenes["items"])
     for item in scenes["items"]:
         group = esc(item["group"]) if item["group"] else L("scene_unassigned")
         parts.append(f'<details class="scene-detail" data-scene="{esc(item["id"])}"><summary>'
@@ -63,27 +71,32 @@ def render_scenes_panel(
                      '</summary>')
         parts.append(f'<p><a class="ctl-link" href="#ch-{item["chapter"]}" data-jump="#ch-{item["chapter"]}">'
                      f'{L("scene_containing_chapter")}: {esc(item["chapter_title"])}→</a></p>')
+        header = (f'<th>{L("panel_scenes")}</th><th>{L("scene_value")}</th>'
+                  f'<th>{L("scene_se")}</th>')
+        if has_targets:
+            header += f'<th>{L("scene_range")}</th>'
+        if has_baseline:
+            header += f'<th>{L("scene_baseline")}</th>'
         parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_scenes")}">'
-                     '<table><thead><tr>'
-                     f'<th>{L("panel_scenes")}</th><th>{L("scene_value")}</th>'
-                     f'<th>{L("scene_se")}</th><th>{L("scene_range")}</th>'
-                     f'<th>{L("scene_baseline")}</th></tr></thead><tbody>')
+                     f'<table><thead><tr>{header}</tr></thead><tbody>')
         baseline = scenes["baselines"].get(item["group"], {})
         for field, label_key, unit in FEATURES:
             units = FEATURE_UNITS.get(language_key, {}).get(field, unit)
-            target = item["targets"].get(field)
-            comparison = "—"
-            if target:
-                lower = "…" if target["lower"] is None else N(target["lower"])
-                upper = "…" if target["upper"] is None else N(target["upper"])
-                comparison = f'{lower} – {upper} · {L("scene_" + target["position"])}'
-            reference = baseline.get(field, {})
-            median = N(reference.get("median"))
-            count = reference.get("n", 0)
-            parts.append(f'<tr><th>{L(label_key)} <small>{esc(units)}</small></th>'
-                         f'<td>{N(item["features"][field])}</td>'
-                         f'<td>{N(item["standard_errors"].get(field))}</td><td>{comparison}</td>'
-                         f'<td>{median} (n={count})</td></tr>')
+            row = (f'<tr><th>{L(label_key)} <small>{esc(units)}</small></th>'
+                   f'<td>{N(item["features"][field])}</td>'
+                   f'<td>{N(item["standard_errors"].get(field))}</td>')
+            if has_targets:
+                target = item["targets"].get(field)
+                comparison = "—"
+                if target:
+                    lower = "…" if target["lower"] is None else N(target["lower"])
+                    upper = "…" if target["upper"] is None else N(target["upper"])
+                    comparison = f'{lower} – {upper} · {L("scene_" + target["position"])}'
+                row += f'<td>{comparison}</td>'
+            if has_baseline:
+                reference = baseline.get(field, {})
+                row += f'<td>{N(reference.get("median"))} (n={reference.get("n", 0)})</td>'
+            parts.append(row + "</tr>")
         parts.append('</tbody></table></div></details>')
     parts.append('</section>')
     return "".join(parts)

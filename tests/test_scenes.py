@@ -158,6 +158,32 @@ class SceneContracts(unittest.TestCase):
         self.assertGreaterEqual(overview.count("<td>"), len(report["items"]))
         self.assertNotIn("—</td><td>—", overview.replace(" ", ""))
 
+    def test_scene_detail_only_keeps_comparisons_the_project_defines(self):
+        """Without register assignments the detail table drops empty columns."""
+        from lixity.language import LANGUAGE_PROFILES
+        from lixity.models import CorpusConfig
+        from lixity.ui.narration import render_scenes_panel
+
+        text = "## One\n\n" + "A sentence here. " * 30 + "\n\n" + "Another sentence there. " * 30
+        config = CorpusConfig(language="de")
+        labels = LANGUAGE_PROFILES["de"].labels
+        plain = scene_report(text, config)
+        detail = render_scenes_panel(plain, labels, "de").split(
+            '<details class="scene-detail"', 1)[1].split("</details>", 1)[0]
+        self.assertNotIn("Projektziel", detail)
+        self.assertNotIn("Registermedian", detail)
+        self.assertEqual(detail.split("<thead>", 1)[1].split("</thead>", 1)[0].count("<th>"), 3)
+
+        assigned = scene_report(text, config, {
+            "assignments": {item["id"]: "voice" for item in plain["items"]},
+            "groups": {"voice": {"targets": {"asl": [2, 6]}}},
+        })
+        detail = render_scenes_panel(assigned, labels, "de").split(
+            '<details class="scene-detail"', 1)[1].split("</details>", 1)[0]
+        self.assertIn("Projektziel", detail)
+        self.assertIn("Registermedian", detail)
+        self.assertEqual(detail.split("<thead>", 1)[1].split("</thead>", 1)[0].count("<th>"), 5)
+
     def test_display_does_not_reuse_metrics_for_explicit_single_part_dividers(self):
         text = "## One\n\n---\n\nA door closes.\n\n```text\n***\n```"
         config, _ = resolve_document_config(text)
