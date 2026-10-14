@@ -255,6 +255,13 @@ async function restoreFileReads(page) {
       await page.setViewportSize({width, height: 900});
       await page.goto('http://lixity.test/');
       await page.locator('#tab-view-project').click();
+      assert.equal(await page.locator('#set-fdr-method').count(), 1, 'The threshold section offers the FDR method');
+      assert.deepEqual(await page.locator('#set-fdr-method option').evaluateAll(nodes => nodes.map(node => node.value)),
+        ['bh', 'by'], 'Both documented FDR methods are selectable');
+      assert.ok((await page.locator('#set-fdr-method-help').textContent()).includes('Benjamini'),
+        'The method control explains the selection');
+      assert.ok((await page.locator('#settings-form .panel-guide').first().textContent()).length > 40,
+        'The settings page explains its scope');
       assert.equal(await page.locator('#ms-file, [data-action="load"]').count(), 0, 'Standalone hosts retain their advertised action boundary');
       assert.equal(await page.locator('#manuscript-dropzone, #manuscript-import-file').count(), 0,
         'The Project view keeps one import entry point: the project dialog');

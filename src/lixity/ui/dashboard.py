@@ -503,7 +503,6 @@ def render_dashboard(
                 f'<p class="ctl-note">{L("manuscript_load_hint")}</p>'
             )
             parts.append("</div>")
-        parts.append("</div>")
 
         parts.append(
             settings_form(

@@ -5301,10 +5301,12 @@ if (openChooser) {
         name.textContent = entry.name;
         button.append(icon, name);
         if (entry.kind === "directory" && entry.project === true) {
+          // The badge sits beside the entry button: inside it, it would change
+          // the button's text and break exact-text filters (tests, tooling).
           var badge = document.createElement("span");
           badge.className = "project-chooser-badge";
           badge.textContent = uiLabel("chooser_project_badge");
-          button.appendChild(badge);
+          item.appendChild(badge);
         }
         item.appendChild(button);
         chooseList.appendChild(item);

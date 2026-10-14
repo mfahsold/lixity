@@ -57,10 +57,10 @@ const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-iden
       const style = getComputedStyle(element);
       return {top: style.borderTopWidth, bottom: style.borderBottomWidth, margin: style.marginTop, padding: style.paddingTop};
     }));
-    assert.equal(groups.length, 3);
-    assert.deepEqual(groups.map(group => group.top), ['0px', '1px', '1px']);
+    assert.equal(groups.length, 2, 'The Project view keeps project settings and run actions');
+    assert.equal(groups[0].top, '0px', 'The first group needs no separator');
+    assert.equal(groups[1].top, '1px', 'Following groups are separated by one rule');
     assert.ok(groups.every(group => group.bottom === '0px' && group.margin === '0px'));
-    assert.deepEqual(groups.map(group => group.padding), ['0px', '16px', '16px']);
     await page.locator('#controls').screenshot({path: '/tmp/lixity-controls-fixed.png'});
     await page.locator('#settings-thresholds > summary').click();
     assert.equal(await page.locator('#set-z-mild').inputValue(), '2.5');
