@@ -15,6 +15,7 @@ import contextlib
 import tempfile
 import unittest
 from pathlib import Path
+from typing import Any
 from unittest.mock import patch
 
 from pydantic import ValidationError
@@ -42,7 +43,7 @@ class TestPurgeAtomicity(unittest.TestCase):
         )
         api.init(self.project, title="Purge atomicity test")
 
-    def ingest(self) -> dict:  # type: ignore[type-arg]
+    def ingest(self) -> dict[str, Any]:
         return api.ingest(self.project, self.source_file, allow_retention=True)
 
     def test_archive_openable_when_orphan_deletion_is_interrupted(self) -> None:

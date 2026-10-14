@@ -419,10 +419,10 @@ class TestLexicalDiversityProperties(unittest.TestCase):
         first = hd_d(tokens)
         second = hd_d(tokens)
         self.assertEqual(first, second)
-        self.assertIsNotNone(first)
-        value = float(first)  # type: ignore[arg-type]
-        self.assertGreaterEqual(value, 0.0)
-        self.assertLessEqual(value, 1.0)
+        if first is None:
+            self.fail("hd_d returned None for a measured token list")
+        self.assertGreaterEqual(first, 0.0)
+        self.assertLessEqual(first, 1.0)
 
 
 if __name__ == "__main__":

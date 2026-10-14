@@ -24,6 +24,7 @@ from lixity.research.models import (
     Dossier,
     Reference,
     RevisionChange,
+    SchemaVersion,
     reference,
 )
 from lixity.research.repository import Repository, ResearchConflictError, encode
@@ -49,10 +50,10 @@ def make_random_dossier(
     dossier_id = record_id or random_uuid()
     tags = [random_text(2, 10).replace(" ", "_") for _ in range(random.randint(0, 5))]
     tags = [t for t in tags if t]
-    schema = "research-local/2" if revision_num > 1 else "research-local/1"
+    schema: SchemaVersion = "research-local/2" if revision_num > 1 else "research-local/1"
 
     return Dossier(
-        schema_version=schema,  # type: ignore[arg-type]
+        schema_version=schema,
         id=dossier_id,
         revision=revision_num,
         change=change,

@@ -93,8 +93,9 @@ class TestResearchArchive(unittest.TestCase):
             self.assertIn("research/project.json", names)
 
             manifest_member = tar.extractfile("EXPORT_MANIFEST.json")
-            self.assertIsNotNone(manifest_member)
-            manifest_json = json.loads(manifest_member.read().decode("utf-8"))  # type: ignore[union-attr]
+            if manifest_member is None:
+                self.fail("EXPORT_MANIFEST.json is missing from the archive")
+            manifest_json = json.loads(manifest_member.read().decode("utf-8"))
             self.assertEqual(manifest_json["project_id"], export_meta["project_id"])
             self.assertEqual(manifest_json["snapshot"], export_meta["snapshot"])
 
