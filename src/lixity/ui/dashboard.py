@@ -826,6 +826,34 @@ def render_dashboard(
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
 
 
+    # Section navigation: a compact table of contents for the long analysis
+    # page. Only panels this document actually renders are offered. The strip
+    # stays in the document flow so it never covers click targets.
+    section_links: list[tuple[str, str]] = []
+    if has_chapters:
+        section_links.append(("flags", "panel_flags"))
+    if metrics is not None:
+        section_links.append(("dist", "sentence_dist"))
+    if scenes:
+        section_links.append(("scenes", "panel_scenes"))
+    if motifs:
+        section_links.append(("motifs", "panel_motifs"))
+    if has_house_style and fingerprint is not None:
+        section_links.append(("style", "group_style"))
+    if chapters:
+        section_links.append(("matrix", "chapter_table"))
+    if section_links:
+        parts.append(
+            f'<nav class="toolbar-sections" id="analysis-sections" '
+            f'aria-label="{esc(L("sections"))}">'
+        )
+        for target, label_key in section_links:
+            parts.append(
+                f'<a href="#{target}" data-jump="#{target}" '
+                f'data-section-link="{target}">{L(label_key)}</a>'
+            )
+        parts.append("</nav>")
+
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}
     paragraph_content: dict[str, list[str]] = {}

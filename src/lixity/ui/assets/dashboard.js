@@ -5474,3 +5474,51 @@ window.LixityManuscriptLinks = {
     if (paragraph) renderParagraphText(paragraph, paragraph.dataset.searchQuery || "");
   }
 };
+
+
+// Highlight the analysis section currently in view in the sticky toolbar.
+(function initAnalysisSections() {
+  var nav = document.getElementById("analysis-sections");
+  if (!nav) return;
+  var entries = [];
+  Array.prototype.forEach.call(nav.querySelectorAll("[data-section-link]"), function(link) {
+    var target = document.getElementById(link.getAttribute("data-section-link"));
+    if (target) entries.push({link: link, target: target});
+  });
+  if (entries.length < 2) return;
+  var current = null;
+  function activate(entry) {
+    if (entry === current) return;
+    current = entry;
+    entries.forEach(function(candidate) {
+      if (candidate === entry) candidate.link.setAttribute("aria-current", "true");
+      else candidate.link.removeAttribute("aria-current");
+    });
+  }
+  function closestSection() {
+    var marker = window.scrollY + window.innerHeight * 0.3;
+    var best = entries[0];
+    entries.forEach(function(entry) {
+      if (entry.target.getBoundingClientRect().top + window.scrollY <= marker) best = entry;
+    });
+    return best;
+  }
+  var scheduled = false;
+  function update() {
+    scheduled = false;
+    activate(closestSection());
+  }
+  function schedule() {
+    if (scheduled) return;
+    scheduled = true;
+    window.requestAnimationFrame(update);
+  }
+  window.addEventListener("scroll", schedule, {passive: true});
+  window.addEventListener("resize", schedule, {passive: true});
+  nav.addEventListener("click", function(event) {
+    var link = event.target && event.target.closest ? event.target.closest("[data-section-link]") : null;
+    if (!link) return;
+    entries.forEach(function(entry) { if (entry.link === link) activate(entry); });
+  });
+  update();
+})();

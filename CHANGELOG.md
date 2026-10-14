@@ -7,6 +7,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- The Analysis view keeps a sticky section navigation (flagged passages,
+  sentence lengths, scenes, motifs, style, chapter matrix) with scrollspy;
+  only panels the document actually renders are offered.
+
+### Changed
+- Long chapter and scene lists defer off-screen rendering work
+  (`content-visibility: auto`).
+
 ## [0.4.1] - 2026-10-14
 
 ## [0.4.0] - 2026-10-14

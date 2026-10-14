@@ -134,8 +134,8 @@ class _PaneOwnership(HTMLParser):
         "dialog", "header", "footer", "article",
     })
     KEYS = frozenset({
-        "research-manager", "analysis-review", "settings-form", "controls",
-        "chapters", "nda-draft", "welcome-hero", "workspace-reader",
+        "research-manager", "analysis-review", "analysis-sections", "settings-form",
+        "controls", "chapters", "nda-draft", "welcome-hero", "workspace-reader",
     })
 
     def __init__(self) -> None:
@@ -189,6 +189,17 @@ class TestJsDomContract(unittest.TestCase):
         review = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
         self.assertIn('data-target="p-0"', review)
 
+    def test_analysis_section_nav_only_links_existing_panels(self):
+        """The sticky section nav never offers a panel this document lacks."""
+        html = _full_dashboard()
+        self.assertIn('id="analysis-sections"', html)
+        nav = html.split('id="analysis-sections"', 1)[1].split("</nav>", 1)[0]
+        targets = re.findall(r'data-section-link="([^"]+)"', nav)
+        self.assertGreaterEqual(len(targets), 4)
+        self.assertEqual(len(targets), len(set(targets)), "section links must be unique")
+        for target in targets:
+            self.assertIn(f'id="{target}"', html, f"Section nav has no target: {target}")
+
     def test_review_tab_hosts_manuscript_link_section(self):
         """The Review tab owns the manuscript-link review surface."""
         html = _full_dashboard()
@@ -210,6 +221,7 @@ class TestJsDomContract(unittest.TestCase):
         expected = {
             "research-manager": "research",
             "analysis-review": "analysis",
+            "analysis-sections": "analysis",
             "chapters": "analysis",
             "settings-form": "project",
             "controls": "project",
