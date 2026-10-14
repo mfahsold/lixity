@@ -2291,6 +2291,7 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
   .view-navigation { display: none !important; }
   .view-pane { display: block !important; }
 }
+.scene-overview { margin: .4rem 0 .9rem; }
 .scene-detail { margin: .8rem 0; border-top: 1px solid var(--line); padding-top: .6rem; }
 .scene-detail summary { cursor: pointer; overflow-wrap: anywhere; padding: .5rem 0; }
 .scene-detail .table-wrap { margin-top: .6rem; }

@@ -141,6 +141,23 @@ class SceneContracts(unittest.TestCase):
             self.assertEqual(measure.call_count, 2)
             self.assertEqual(len(standalone["scenes"]["items"]), 2)
 
+    def test_scene_panel_opens_with_a_visible_overview(self):
+        """Every scene is visible before its detail table is expanded."""
+        from lixity.language import LANGUAGE_PROFILES
+        from lixity.models import CorpusConfig
+        from lixity.ui.narration import render_scenes_panel
+
+        text = "## One\n\n" + "A sentence here. " * 30 + "\n\n" + "Another sentence there. " * 30
+        report = scene_report(text, CorpusConfig(language="de"))
+        labels = LANGUAGE_PROFILES["de"].labels
+        html = render_scenes_panel(report, labels, "de")
+        self.assertIn("scene-overview", html)
+        overview = html.split("scene-overview", 1)[1].split("</tbody>", 1)[0]
+        # The overview lists every scene with values; the per-scene tables below
+        # stay collapsed.
+        self.assertGreaterEqual(overview.count("<td>"), len(report["items"]))
+        self.assertNotIn("—</td><td>—", overview.replace(" ", ""))
+
     def test_display_does_not_reuse_metrics_for_explicit_single_part_dividers(self):
         text = "## One\n\n---\n\nA door closes.\n\n```text\n***\n```"
         config, _ = resolve_document_config(text)

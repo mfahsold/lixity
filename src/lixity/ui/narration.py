@@ -36,6 +36,25 @@ def render_scenes_panel(
     parts = [panel_start("scenes", labels, "panel_scenes"),
              f'<p class="hint">{L("scene_guidance")}</p>',
              f'<p class="hint">{L("scene_support")}</p>']
+    # A visible overview avoids scene blocks that read as a title with nothing
+    # under it: the per-scene feature tables stay collapsed below.
+    asl_key = next(label_key for field, label_key, _unit in FEATURES if field == "asl")
+    dialog_key = next(label_key for field, label_key, _unit in FEATURES if field == "dialog_pct")
+    parts.append('<div class="table-wrap scene-overview" tabindex="0" role="region" '
+                 f'aria-label="{L("panel_scenes")}"><table><thead><tr>'
+                 f'<th>{L("panel_scenes")}</th><th>{L("words")}</th><th>{L("sentences")}</th>'
+                 f'<th>{L(asl_key)}</th><th>{L(dialog_key)}</th></tr></thead><tbody>')
+    for item in scenes["items"]:
+        group = esc(item["group"]) if item["group"] else L("scene_unassigned")
+        dialog = item["features"].get("dialog_pct")
+        dialog_text = "—" if dialog is None else f"{format_num(dialog, language_key, 1)} %"
+        parts.append(
+            f'<tr><th>{esc(item["chapter_title"])} · {L("scene_unit")} {item["scene"]} '
+            f'<small>{group}</small></th>'
+            f'<td>{item["words"]}</td><td>{item["sentences"]}</td>'
+            f'<td>{N(item["features"].get("asl"))}</td><td>{dialog_text}</td></tr>'
+        )
+    parts.append('</tbody></table></div>')
     for item in scenes["items"]:
         group = esc(item["group"]) if item["group"] else L("scene_unassigned")
         parts.append(f'<details class="scene-detail" data-scene="{esc(item["id"])}"><summary>'
