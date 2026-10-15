@@ -2,12 +2,19 @@ name: release
 on:
   push:
     tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: Existing release tag to publish to PyPI (for example v0.4.2)
+        required: true
+        type: string
 permissions:
   contents: write
   id-token: write
   attestations: write
 jobs:
   publish:
+    if: github.event_name == 'push'
     runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
@@ -53,16 +60,33 @@ jobs:
     # Trusted publishing stays disabled until the PyPI publisher for this
     # repository exists; set the repository variable PUBLISH_PYPI to "true"
     # after configuring it (Settings -> Secrets and variables -> Actions).
-    if: vars.PUBLISH_PYPI == 'true'
+    # On workflow_dispatch the publish job is skipped and this job builds the
+    # tagged source itself, so an already published (immutable) GitHub release
+    # never has to be recreated just to reach PyPI.
+    if: vars.PUBLISH_PYPI == 'true' && !cancelled() && (github.event_name == 'workflow_dispatch' || needs.publish.result == 'success')
     environment: pypi
     permissions:
       id-token: write
     steps:
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
       - name: Fetch the verified artifacts
+        if: github.event_name == 'push'
         uses: actions/download-artifact@v8
         with:
           name: dist
           path: dist
+      - name: Check out the release tag
+        if: github.event_name == 'workflow_dispatch'
+        uses: actions/checkout@v7
+        with:
+          ref: ${{ inputs.tag }}
+      - name: Build, verify and smoke-test the release artifacts
+        if: github.event_name == 'workflow_dispatch'
+        run: |
+          python -m pip install build
+          python scripts/check_release.py --build --smoke --tag "${{ inputs.tag }}"
       - name: Select the distribution files
         # The release job also attests SHA256SUMS; PyPI accepts only the wheel
         # and the sdist, so the upload directory carries exactly those two.
