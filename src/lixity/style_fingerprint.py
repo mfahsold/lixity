@@ -1036,9 +1036,14 @@ class StyleFingerprint:
             se_col: dict[int, float] = {}
             for chapter in chapters:
                 raw = getattr(chapter, field_name, None)
-                col[chapter.num] = (
-                    float(raw) if isinstance(raw, int | float) and chapter.words > 0 else None
-                )
+                # Sentence variation needs at least two sentences, matching the
+                # scene table; a one-sentence constellation is not measurable.
+                if field_name == "sentence_cv" and chapter.sentences < 2:
+                    col[chapter.num] = None
+                else:
+                    col[chapter.num] = (
+                        float(raw) if isinstance(raw, int | float) and chapter.words > 0 else None
+                    )
                 se_raw = getattr(chapter, "style_se", {}).get(field_name)
                 se_col[chapter.num] = float(se_raw) if isinstance(se_raw, int | float) else 0.0
             values[field_name] = col

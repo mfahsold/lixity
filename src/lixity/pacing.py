@@ -30,7 +30,7 @@ from .language import compile_pattern, compile_word_pattern, resolve_language
 from .markdown_parser import SCENE_BREAK_RE as SCENE_BREAK_RE
 from .markdown_parser import prose_text, split_chapters, split_scenes
 from .models import CorpusConfig
-from .sentences import SHORT_SENTENCE_MAX, split_sentences
+from .sentences import SHORT_SENTENCE_MAX, split_prose_sentences
 
 # Hook heuristic: a closing sentence counts as punchy up to this length.
 HOOK_SHORT_SENTENCE = 8
@@ -141,7 +141,7 @@ def _scene_stats(
     words = len(word_re.findall(scene_text))
     if not words:
         return None
-    sentences = [s for s in split_sentences(scene_text, language_key) if word_re.findall(s)]
+    sentences = [s for s in split_prose_sentences(scene_text, language_key) if word_re.findall(s)]
     sentence_lengths = [len(word_re.findall(s)) for s in sentences]
     dialogue_words = sum(len(word_re.findall(m)) for m in dialogue_re.findall(scene_text))
     short = sum(1 for length in sentence_lengths if length <= SHORT_SENTENCE_MAX)
@@ -156,7 +156,7 @@ def _scene_stats(
 
 
 def _closing_sentence(body: str, language_key: str) -> str:
-    sentences = split_sentences(body, language_key)
+    sentences = split_prose_sentences(body, language_key)
     for sentence in reversed(sentences):
         if sentence.strip():
             return sentence.strip()

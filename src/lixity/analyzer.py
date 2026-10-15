@@ -41,7 +41,7 @@ from .sentences import (
     LONG_SENTENCE_MAX,
     MEDIUM_SENTENCE_MAX,
     SHORT_SENTENCE_MAX,
-    split_sentences,
+    split_prose_sentences,
 )
 from .style_profile import dominance_from_hits
 from .syllables import count_syllables as count_syllables_for
@@ -301,7 +301,7 @@ class CorpusAnalyzer:
 
         n_cw = len(c_words)
         c_lower = [w.lower() for w in c_words]
-        c_sentences = split_sentences(cl_b, self.lang.key)
+        c_sentences = split_prose_sentences(cl_b, self.lang.key)
         stats = self._sentence_stats(c_sentences)
 
         c_dial = self._dialogue_re.findall(cl_b)
@@ -446,7 +446,7 @@ class CorpusAnalyzer:
         guiraud_r = v_types / math.sqrt(n_tokens) if n_tokens else 0.0
 
         # 4. Sentence-length architecture on the same prose as other metrics.
-        sentences = split_sentences(prose_main, self.lang.key)
+        sentences = split_prose_sentences(prose_main, self.lang.key)
         stats = self._sentence_stats(sentences)
         start_entropy, first_person_start_rate, _entropy_se = self._starter_stats(sentences)
 

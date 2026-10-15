@@ -13,6 +13,7 @@ from pathlib import Path
 from threading import RLock
 from typing import TYPE_CHECKING, Any, ClassVar
 
+from ..io import FileUtils
 from ..style_fingerprint import FingerprintThresholds
 from .views import build_server_dashboard
 
@@ -96,3 +97,30 @@ class WorkspaceState:
             research_root=cls.get_research_root(),
         )
         cls.publish_dashboard(html, info)
+
+    @classmethod
+    def refresh_when_source_changed(cls) -> bool:
+        """Rebuilds the cached dashboard when the manuscript changed on disk.
+
+        The digest read is cheap and only a changed file triggers one full
+        rebuild, so a served dashboard never presents numbers that no longer
+        match the manuscript. Returns whether a rebuild was performed.
+        """
+        source = cls.source_input
+        rendered = cls.dashboard_info.get("manuscript_source_sha256")
+        if not source or not rendered or not os.path.isfile(source):
+            return False
+        try:
+            _, current = FileUtils.read_source_snapshot(source)
+        except OSError:
+            return False
+        if current == rendered:
+            return False
+        with cls._workspace_lock:
+            if cls.dashboard_info.get("manuscript_source_sha256") != rendered:
+                return False  # another request already rebuilt this digest
+            try:
+                cls.refresh()
+            except (OSError, ValueError, RuntimeError):
+                return False
+        return True

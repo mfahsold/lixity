@@ -33,7 +33,9 @@ See [LOCALIZATION.md](LOCALIZATION.md) for supported profiles and limitations.
 Token, syllable, dialogue and sentence measures share the supported prose scope:
 body paragraphs, list items and blockquote paragraphs with `>` delimiters
 removed. YAML front matter, code, headings, comments and footnote definitions
-are omitted; inline emphasis and footnote anchors are stripped. This bounded
+are omitted; inline emphasis and footnote anchors are stripped. Sentence
+boundaries never cross a blank line: each semantic block is split on its own,
+and a block without terminal punctuation stays one fragment unit. This bounded
 Markdown policy is not a complete CommonMark parser. Visible prose beneath a
 leading document title (`# …`) before the first chapter contributes to global
 metrics but not chapter-only reports.
@@ -453,7 +455,7 @@ restating formulas.
 | Hook | First sentence ≤ `HOOK_SHORT_SENTENCE` (8) words or ending in `…` (`pacing.py`) | Only the ellipsis character scores; `...` does not |
 | Dialogue paragraph | ≥ 50 % of the paragraph's words inside dialogue spans (`dialogue.py`) | Quotation conventions differ per language |
 | Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); no productive present pattern |
-| Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split (`sentences.py`) | Tables are curated and incomplete; tokenless fragments are not sentences |
+| Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
 | Dominance | past when `past/(present+ε) > 1.5`, present when `< 0.67` (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
 | Nominal/adjective suffixes | Curated suffix cues minus curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`) |

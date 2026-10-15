@@ -106,6 +106,8 @@ _INITIAL_RE = re.compile(r"(?<!\w)([A-ZÄÖÜ])\.(?=\s+[A-ZÄÖÜ])")
 # Closing marks that belong to the preceding sentence
 _CLOSERS = "»«\"“”'’)]"
 _SPLIT_RE = re.compile(r"(?<=[.!?])([»«\"“”'’)\]]*)\s+")
+# Blank line between semantic blocks: a sentence boundary never crosses it.
+_BLOCK_BOUNDARY_RE = re.compile(r"\n[ \t]*\n+")
 
 
 def _protect(text: str, language_key: str) -> str:
@@ -133,4 +135,20 @@ def split_sentences(text: str, language_key: str = "generic") -> list[str]:
         sentence += closers
         if sentence:
             sentences.append(sentence.replace(_MASK, "."))
+    return sentences
+
+
+def split_prose_sentences(text: str, language_key: str = "generic") -> list[str]:
+    """Splits multi-paragraph prose without ever crossing a blank line.
+
+    ``split_sentences`` receives whole chapters here, so an unterminated
+    block (a stage note, a salutation, a sign) would otherwise merge into
+    the next block's sentence and inflate its measured length. Splitting
+    every semantic block on its own keeps fragments local: a block without
+    terminal punctuation stays one fragment unit, matching paragraph
+    profiles and scene measurements.
+    """
+    sentences: list[str] = []
+    for block in _BLOCK_BOUNDARY_RE.split(text):
+        sentences.extend(split_sentences(block, language_key))
     return sentences

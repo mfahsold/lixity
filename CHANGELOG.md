@@ -7,6 +7,18 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+- Sentence segmentation keeps blank-line block boundaries: an unterminated
+  block (stage note, salutation, sign) stays one fragment unit instead of
+  merging into the next block's sentence. Chapter ASL, scene units, corpus
+  sentence statistics and the chapter matrix now agree; recompute older
+  reports before comparing.
+- A chapter with a single sentence no longer receives a sentence-variation
+  deviation; the value stays unavailable, matching the scenes table note.
+- The serve dashboard checks the manuscript digest when the page is loaded
+  and rebuilds itself when the file changed on disk instead of presenting
+  stale numbers.
+
 ## [0.4.6] - 2026-10-15
 
 ### Added

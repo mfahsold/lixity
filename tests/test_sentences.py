@@ -89,5 +89,39 @@ def test_spanish_honorific_d_abbreviation_protects_initials():
         "Luego salió.",
     ]
 
+def test_prose_splitting_keeps_blocks_apart():
+    from lixity.sentences import split_prose_sentences
+
+    assert split_prose_sentences(
+        "[Kinderzeichnung eines Weihnachtsmanns]\n\nLieber Weihnachtsmann,\n"
+        "ich wünsche mir ein buntes Haus.",
+        "de",
+    ) == [
+        "[Kinderzeichnung eines Weihnachtsmanns]",
+        "Lieber Weihnachtsmann,\nich wünsche mir ein buntes Haus.",
+    ]
+    assert split_prose_sentences("Er ging.\n\nENDE", "de") == ["Er ging.", "ENDE"]
+    assert split_prose_sentences("Hallo Welt,\nwie geht es dir.", "de") == [
+        "Hallo Welt,\nwie geht es dir."
+    ]
+
+
+def test_analyzer_and_profile_count_letter_blocks_the_same():
+    from lixity.markdown_parser import parse_markdown_blocks
+    from lixity.style_profile import ParagraphProfiler
+
+    md = (
+        "## Brief I\n\n*[Kinderzeichnung eines Weihnachtsmanns]*\n\n"
+        "Lieber Weihnachtsmann,\nich wünsche mir ein buntes Haus.\n"
+    )
+    metrics = CorpusAnalyzer(CorpusConfig(language="de")).analyze_text(md)
+    paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="de")).profile_blocks(
+        parse_markdown_blocks(md)
+    )
+    assert metrics.chapters[0].sentences == 2
+    assert metrics.chapters[0].asl == chapters[0].asl == 5.5
+    assert paragraphs[-1].asl == 8.0
+
+
 if __name__ == "__main__":
     unittest.main()

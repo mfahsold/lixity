@@ -242,5 +242,6 @@ def build_server_dashboard(
         "language_key": resolved.key,
         "is_empty": is_empty,
         "is_missing": is_missing,
+        "manuscript_source_sha256": manuscript_source_sha256,
     }
     return html_doc, info

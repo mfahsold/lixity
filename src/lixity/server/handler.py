@@ -117,6 +117,7 @@ class LixityServerHandler(
 
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
+            self.refresh_when_source_changed()
             self._send(200, self.dashboard_html.encode("utf-8"), "text/html; charset=utf-8")
             return
 

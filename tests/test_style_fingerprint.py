@@ -213,6 +213,15 @@ class TestStyleFingerprint(unittest.TestCase):
         self.assertIn("Referenz des Normalmodells", german)
         self.assertNotIn("FDR-bestätigt", german)
 
+    def test_sentence_variation_is_withheld_for_one_sentence_chapters(self):
+        metrics = CorpusAnalyzer(self.config).analyze_text(
+            "## Kap 1\n\nEr ging.\n\n## Kap 2\n\n"
+            "Er ging nach Hause. Sie blieb am Fenster. Der Regen fiel leise.\n"
+        )
+        fp = StyleFingerprint.from_metrics(metrics)
+        self.assertIsNone(fp.values["sentence_cv"][1])
+        self.assertIsNotNone(fp.values["sentence_cv"][2])
+
     def test_single_chapter_no_deviations(self):
         one = CorpusAnalyzer(self.config).analyze_text(
             "## Kap 1\n\nIch trinke Kaffee. Ich gehe zum Fenster. Ich sehe den Regen.\n"
