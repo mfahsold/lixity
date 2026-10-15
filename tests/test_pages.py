@@ -98,6 +98,7 @@ class TestPagesStaging(unittest.TestCase):
             self.assertTrue(pages, "Staged pages expected")
             for page in pages:
                 text = page.read_text(encoding="utf-8")
+                relative = page.relative_to(output).as_posix()
                 for pattern, label in (
                     (r'<meta name="description" content="[^"]+"/>', "description"),
                     (r'<link rel="canonical" href="https://[^"]+"/>', "canonical"),
@@ -108,19 +109,24 @@ class TestPagesStaging(unittest.TestCase):
                     (r'<meta name="twitter:card" content="summary_large_image"/>', "twitter:card"),
                     (r'<meta name="twitter:image" content="https://[^"]+"/>', "twitter:image"),
                 ):
-                    self.assertRegex(text, pattern, f"{page.name}: {label}")
+                    self.assertRegex(text, pattern, f"{relative}: {label}")
                 blocks = _re.findall(
                     r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>', text, _re.DOTALL
                 )
-                self.assertTrue(blocks, f"{page.name}: JSON-LD")
+                self.assertTrue(blocks, f"{relative}: JSON-LD")
                 types = [json.loads(block).get("@type") for block in blocks]
-                expected = "SoftwareApplication" if page.name == "index.html" else "TechArticle"
+                # The site root presents the software; the blog index is a
+                # collection and every guide or article page is an article.
+                expected = {
+                    "index.html": "SoftwareApplication",
+                    "blog/index.html": "Blog",
+                }.get(relative, "TechArticle")
                 self.assertTrue(
                     any(
                         expected == item or (isinstance(item, list) and expected in item)
                         for item in types
                     ),
-                    f"{page.name}: JSON-LD {expected}",
+                    f"{relative}: JSON-LD {expected}",
                 )
             sitemap_text = (output / "sitemap.xml").read_text(encoding="utf-8")
             self.assertNotRegex(sitemap_text, r"<lastmod>(?!\d{4}-\d{2}-\d{2})")

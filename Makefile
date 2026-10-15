@@ -64,6 +64,7 @@ docs-check: ## Check documentation version consistency and link integrity
 	$(PYTHON) scripts/sync_docs.py --check
 	$(PYTHON) scripts/build_llms_full.py --check
 	$(PYTHON) scripts/build_guide_markdown.py --check
+	PYTHONPATH=src $(VPY) -m pytest tests/test_pages.py tests/test_guide_markdown.py -q -W error -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 	PYTHONPATH=src $(VPY) -m pytest tests/test_documentation.py -W error -q -p no:asyncio -o cache_dir=$(PYTEST_CACHE)
 
 docs-sync: ## Synchronize documentation version references to match __version__
