@@ -20,6 +20,28 @@ def archive(tmp_path, monkeypatch):
     return project, early["claim_id"], later["claim_id"], missing["claim_id"]
 
 
+def test_period_ranges_accept_plain_and_typographic_dashes():
+    from lixity.research.timeline import parse_period
+
+    expected = {"start": "1929-01-01", "end": "1933-12-31", "precision": "year"}
+    for label in ("1929-1933", "1929 - 1933", "1929 -1933", "1929- 1933", "1929–1933", "1929/1933"):
+        period, reason = parse_period(label)
+        assert reason is None, label
+        assert period == expected, label
+    # ISO endpoints are never split at their own hyphens.
+    month, reason = parse_period("1926-03")
+    assert reason is None and month["precision"] == "month"
+    span, reason = parse_period("1926-03 - 1926-05")
+    assert reason is None
+    assert span == {"start": "1926-03-01", "end": "1926-05-31", "precision": "month"}
+    day, reason = parse_period("1926-03-15")
+    assert reason is None and day["precision"] == "day"
+    # Five trailing digits are not an endpoint; four digits read as a year,
+    # which makes the reversed span invalid rather than silently placed.
+    assert parse_period("1926-03155")[1] == "unrecognized"
+    assert parse_period("1926-0315")[1] == "invalid"
+
+
 def invoke(capsys, *arguments):
     code = main(["research", *arguments])
     output = capsys.readouterr()

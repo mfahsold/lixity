@@ -34,6 +34,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `min_comparable_sentences`; the style panel explains the minimum instead
   of hiding the reference when no chapter reaches the floor. Help texts and
   the chapter-matrix guide name the floors, in all supported languages.
+- Manuscript review recognizes `adjusted` anchors: when the paragraph text
+  changed but the recorded quote still appears exactly once, review names the
+  state (highlighted at its current position) and
+  `reconcile-manuscript --accept-moved` or the review tab's accept action
+  re-pins the refreshed line span, paragraph hash and offsets as a new link
+  revision. Editing the quote itself still requires review.
+- Chronology accepts a plain hyphen between four-digit years (`1929-1933`) as
+  a same-precision range next to the typographic dashes; the claim-time hint
+  documents the form and a test verifies every localized example against the
+  grammar.
 
 ## [0.4.6] - 2026-10-15
 

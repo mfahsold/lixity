@@ -98,7 +98,7 @@ def list_manuscript_links(project: str | Path, *, claim_id: str | None = None,
 def manuscript_review_data(snapshot: Snapshot, *, source_path: str, source_sha256: str | None,
                            paragraphs: Sequence[ParagraphProfile],
                            source_state: str = "available") -> dict[str, Any]:
-    """Derive review flags only; candidates never replace or resolve moved anchors."""
+    """Derive review flags only; resolving happens in an explicit re-pin."""
     identities = [(paragraph, paragraph_identity(paragraph)) for paragraph in paragraphs]
     rows = []
     for record in snapshot.records.values():
@@ -109,7 +109,9 @@ def manuscript_review_data(snapshot: Snapshot, *, source_path: str, source_sha25
         flags = [flag for flag in ("claim_changed", "claim_withdrawn") if row[flag]]
         anchor = record.anchor
         resolved: ParagraphProfile | None = None
-        candidates: list[ParagraphProfile] = []
+        resolved_start: int | None = None
+        resolved_end: int | None = None
+        candidate_lines: list[int] = []
         if source_state != "available":
             flags.append("source_" + source_state)
             state = "unavailable"
@@ -123,15 +125,36 @@ def manuscript_review_data(snapshot: Snapshot, *, source_path: str, source_sha25
                      if p.start_line == anchor.start_line and p.end_line == anchor.end_line]
             if len(exact) == 1:
                 resolved, state = exact[0], "resolved"
+                resolved_start, resolved_end = anchor.start, anchor.end
+                candidate_lines = [resolved.start_line]
             elif len(candidates) > 1:
                 state = "ambiguous"
                 flags.append("anchor_ambiguous")
+                candidate_lines = [p.start_line for p in candidates]
             elif candidates:
-                state = "moved"
+                resolved, state = candidates[0], "moved"
                 flags.append("anchor_moved")
+                resolved_start, resolved_end = anchor.start, anchor.end
+                candidate_lines = [resolved.start_line]
             else:
-                state = "changed"
-                flags.append("anchor_changed")
+                # The pinned paragraph was edited. The recorded quote is the
+                # contract: exactly one remaining occurrence keeps the anchor
+                # resolvable (`adjusted`); missing or duplicated quotes need
+                # review before any re-pin.
+                occurrences = _quote_occurrences(paragraphs, anchor.quote)
+                if len(occurrences) == 1:
+                    resolved, resolved_start = occurrences[0]
+                    resolved_end = resolved_start + len(anchor.quote)
+                    state = "adjusted"
+                    flags.append("anchor_adjusted")
+                    candidate_lines = [resolved.start_line]
+                elif len(occurrences) > 1:
+                    state = "ambiguous"
+                    flags.append("anchor_ambiguous")
+                    candidate_lines = sorted({p.start_line for p, _ in occurrences})
+                else:
+                    state = "changed"
+                    flags.append("anchor_changed")
         # The file-level digest is informational: an edit elsewhere must not
         # re-open associations whose paragraph, line span and quote still match.
         review_blocking = [flag for flag in flags if flag != "source_changed"]
@@ -139,7 +162,8 @@ def manuscript_review_data(snapshot: Snapshot, *, source_path: str, source_sha25
                    anchor_state=state, review_needed=bool(review_blocking),
                    resolved_start_line=resolved.start_line if resolved else None,
                    resolved_end_line=resolved.end_line if resolved else None,
-                   candidate_lines=[p.start_line for p in candidates])
+                   resolved_start=resolved_start, resolved_end=resolved_end,
+                   candidate_lines=candidate_lines)
         rows.append(row)
     return {"schema_version": "research-manuscript-review-local/1", "project_id": snapshot.project.id,
             "snapshot": snapshot.digest, "archive_schema_version": snapshot.manifest.schema_version,
@@ -168,13 +192,21 @@ def review_manuscript_links(project: str | Path, manuscript: str | Path, *,
                                   paragraphs=paragraphs, source_state=state)
 
 
-def _anchor_candidates(paragraphs: Sequence[ParagraphProfile],
-                       record: ManuscriptClaimLink) -> list[ParagraphProfile]:
-    """Paragraphs whose identity and quote still match the recorded anchor."""
-    anchor = record.anchor
-    return [paragraph for paragraph in paragraphs
-            if paragraph_identity(paragraph)["paragraph_sha256"] == anchor.paragraph_sha256
-            and paragraph.text[anchor.start:anchor.end] == anchor.quote]
+def _quote_occurrences(paragraphs: Sequence[ParagraphProfile],
+                       quote: str) -> list[tuple[ParagraphProfile, int]]:
+    """Every exact occurrence of a quote in displayed paragraph text.
+
+    The recorded quote is the link's contract: whole-paragraph hashes guard the
+    pinned identity, but a still-unique quote keeps the anchor resolvable when
+    the surrounding paragraph text changes.
+    """
+    occurrences: list[tuple[ParagraphProfile, int]] = []
+    for paragraph in paragraphs:
+        start = paragraph.text.find(quote)
+        while start != -1:
+            occurrences.append((paragraph, start))
+            start = paragraph.text.find(quote, start + 1)
+    return occurrences
 
 
 def resolve_manuscript_anchor(project: str | Path, manuscript: str | Path, *, query: str,
@@ -225,7 +257,11 @@ def reanchor_manuscript_link(
     expected_source_sha256: str, actor: str = "local-author", language: str | None = None,
     project_config: Mapping[str, Any] | None = None,
 ) -> dict[str, Any]:
-    """Re-pin one uniquely moved anchor; the earlier position stays in history."""
+    """Re-pin one uniquely resolvable anchor; the earlier position stays in history.
+
+    Moved paragraphs keep their recorded quote; adjusted paragraphs were edited
+    outside the quote, so the re-pin also refreshes hash and offsets.
+    """
     repository = Repository(project)
     snapshot = repository.snapshot()
     if expected_project_id != snapshot.project.id:
@@ -249,20 +285,29 @@ def reanchor_manuscript_link(
         raise ResearchError("Manuscript source is missing or unreadable") from exc
     if source_sha256 != expected_source_sha256:
         raise ResearchConflictError("Manuscript source bytes changed; review the current text before saving")
-    candidates = _anchor_candidates(_paragraphs(text, repository, language, project_config), record)
-    if len(candidates) != 1:
-        raise ResearchError("Only a uniquely moved anchor can be re-pinned; review the manuscript first")
-    target = candidates[0]
-    if target.start_line == record.anchor.start_line and target.end_line == record.anchor.end_line:
+    occurrences = _quote_occurrences(
+        _paragraphs(text, repository, language, project_config), record.anchor.quote)
+    if len(occurrences) != 1:
+        raise ResearchError(
+            "Only a uniquely resolvable anchor can be re-pinned; review the manuscript first")
+    target, start = occurrences[0]
+    end = start + len(record.anchor.quote)
+    identity = paragraph_identity(target)
+    unchanged_identity = identity["paragraph_sha256"] == record.anchor.paragraph_sha256
+    if (unchanged_identity and target.start_line == record.anchor.start_line
+            and target.end_line == record.anchor.end_line
+            and start == record.anchor.start and end == record.anchor.end):
         raise ResearchError("The anchor still resolves at its recorded lines; nothing to re-pin")
+    reason = ("Re-anchor to the uniquely moved paragraph" if unchanged_identity
+              else "Re-anchor to the adjusted paragraph (quote unchanged)")
     revised = record.model_copy(update={
         "revision": record.revision + 1,
-        "change": RevisionChange(change_kind="correction",
-                                 reason="Re-anchor to the uniquely moved paragraph",
+        "change": RevisionChange(change_kind="correction", reason=reason,
                                  previous_revision=record.revision),
-        "anchor": record.anchor.model_copy(update={"start_line": target.start_line,
-                                                   "end_line": target.end_line,
-                                                   "source_sha256": source_sha256}),
+        "anchor": record.anchor.model_copy(update={
+            "start_line": target.start_line, "end_line": target.end_line,
+            "paragraph_sha256": identity["paragraph_sha256"],
+            "start": start, "end": end, "source_sha256": source_sha256}),
     })
     # Recheck bytes immediately before publication; this never writes the manuscript.
     if FileUtils.read_source_snapshot(str(path))[1] != source_sha256:

@@ -15,12 +15,15 @@ _ENDPOINTS: tuple[tuple[re.Pattern[str], str], ...] = (
     (re.compile(r"[0-9]{4}"), "year"),
 )
 
-#: Range separators. A hyphen must be surrounded by spaces so ISO dates are
-#: never split; the remaining separators cannot appear inside an endpoint.
-_RANGE_SPLIT = re.compile(r"\s+-\s+|\s*[\u2013\u2014/]\s*|\s*\.\.\s*")
+#: Range separators. A hyphen between two four-digit years is unambiguous
+#: (`1929-1933`) and joins the typographic dash; ISO month/day hyphens are
+#: never split. The remaining separators cannot appear inside an endpoint.
+_RANGE_SPLIT = re.compile(
+    r"\s+-\s+|\s*[\u2013\u2014/]\s*|\s*\.\.\s*|(?<=\d{4})[ \t]*-[ \t]*(?=\d{4})"
+)
 
 #: Example formats shown in creation warnings; mirror the usage documentation.
-PERIOD_FORMATS = "1926, 1926-03, 1926-03-15 or 1924\u20131926"
+PERIOD_FORMATS = "1926, 1926-03, 1926-03-15 or 1924\u20131926 (also 1924-1926)"
 
 
 class _Unrecognized(ValueError):

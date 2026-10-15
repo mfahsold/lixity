@@ -145,14 +145,19 @@ optimistic guard does not lock an external editor.
 
 Saved quotes mark only exact resolved anchors, including paragraphs rendered
 later on opening. Manuscript search still checks complete text. Review reports
-changed source bytes, newer/withdrawn claims, changed paragraphs, unique moved
-paragraphs and ambiguous matches. Moved or ambiguous candidates remain unresolved;
-the reader does not relocate or repin them automatically. These flags request a
-human review, not a semantic contradiction check or factual verdict. Retraction
-and note/claim revisions use the existing record history and strict revision
-API. A uniquely moved anchor is re-pinned explicitly instead of silently: `lixity research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`) writes a new link revision with the moved line span and the current file digest; the earlier anchor stays in revision history. Ambiguous or changed anchors are never re-pinned automatically.
+changed source bytes, newer/withdrawn claims, unique moved paragraphs, adjusted
+paragraphs whose quote is unchanged, and ambiguous matches. Moved or adjusted
+candidates remain unresolved (and highlighted at their current position) until
+an explicit re-pin; ambiguous or edited quotes are never re-pinned. These flags
+request a human review, not a semantic contradiction check or factual verdict.
+Retraction and note/claim revisions use the existing record history and strict
+revision API. A uniquely resolvable anchor is re-pinned explicitly: `lixity
+research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`)
+writes a new link revision with the resolved line span, refreshed paragraph hash
+and offsets for adjusted paragraphs, and the current file digest; the earlier
+anchor stays in revision history.
 
-**On `main` (next release):** the same flow is scriptable from the CLI.
+**Since v0.4.6:** the same flow is scriptable from the CLI.
 `--selection` takes the JSON selection object above (literal or a local file);
 `--expected-snapshot` / `--expected-source-sha256` default to one initial read
 and still fail when the bytes or the archive change before saving.
@@ -169,7 +174,10 @@ lixity research reconcile-manuscript --project ./novel --manuscript novel.md --a
 
 A changed source-file digest (`source_changed`, for example after an edit in an
 unrelated chapter) is informational and does not mark an association for review
-while its paragraph hash, line span and quote still match exactly.
+while its paragraph hash, line span and quote still match exactly. An edit inside
+the paragraph but outside the quote reports `anchor_adjusted` and can be accepted
+with one command or click; editing the quote itself reports `anchor_changed` and
+requires a fresh association.
 
 Python integrations use the same API:
 

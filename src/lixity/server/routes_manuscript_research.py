@@ -98,7 +98,7 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                 or type(payload.get("expected_revision")) is not int or payload["expected_revision"] < 1
                 or any(not isinstance(payload.get(key), str) or not payload[key].strip()
                        for key in ("project_id", "link_id", "expected_snapshot", "expected_source_sha256"))):
-            self._json({"ok": False, "message": "Review the moved anchor before re-pinning it"}, 400)
+            self._json({"ok": False, "message": "Review the moved or adjusted anchor before re-pinning it"}, 400)
             return
         with self._workspace_lock:
             if not self._research_context_matches(payload.get("research_token")):

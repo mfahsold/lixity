@@ -1462,8 +1462,8 @@ lixity research cite --project ./sample-project --query "reading room"
 
 `timeline` is read-only, with JSON (default), text and Markdown formats and an
 optional `--dossier-id`. It places valid four-digit CE years, ISO dates and
-same-precision ranges; original labels and unplaced/invalid periods remain
-visible. Record creation dates never stand in for historical periods.
+same-precision ranges (`1924–1926` and `1924-1926` are both recognized);
+original labels and unplaced/invalid periods remain visible. Record creation dates never stand in for historical periods.
 
 `relate FROM_CLAIM TO_CLAIM` records a proposed cause-to-effect connection.
 `results_in` is an alias for stored `causes` in the same direction. Both complete

@@ -227,7 +227,10 @@ def test_uniquely_moved_paragraph_is_only_a_review_candidate(manuscript_archive)
     reviewed = api.review_manuscript_links(project, manuscript)["links"][0]
     assert reviewed["flags"] == ["source_changed", "anchor_moved"]
     assert reviewed["anchor_state"] == "moved" and reviewed["candidate_lines"] == [5]
-    assert reviewed["resolved_start_line"] is None and reviewed["anchor"]["start_line"] == 3
+    assert reviewed["resolved_start_line"] == 5 and reviewed["resolved_end_line"] == 5
+    assert reviewed["resolved_start"] == selection()["start"]
+    assert reviewed["resolved_end"] == selection()["end"]
+    assert reviewed["anchor"]["start_line"] == 3
     assert accepted_bytes(project) == before
 
 
@@ -455,7 +458,7 @@ def test_reanchor_refuses_ambiguous_or_unchanged_anchors(manuscript_archive):
     report = api.review_manuscript_links(project, manuscript)
     assert report["links"][0]["anchor_state"] == "ambiguous"
     snapshot = Repository(project).snapshot()
-    with pytest.raises(ResearchError, match="uniquely moved"):
+    with pytest.raises(ResearchError, match="uniquely resolvable"):
         api.reanchor_manuscript_link(
             project, manuscript, linked["link_id"], expected_project_id=snapshot.project.id,
             expected_snapshot=snapshot.digest, expected_revision=1,
@@ -474,6 +477,88 @@ def test_resolve_manuscript_anchor_reports_exact_fields(manuscript_archive):
         api.resolve_manuscript_anchor(project, "draft.md", query="room")
     narrowed = api.resolve_manuscript_anchor(project, "draft.md", query="room", line=3)
     assert narrowed["start_line"] == 3
+
+
+def test_paragraph_edit_outside_the_quote_stays_resolvable(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    linked = save_link(manuscript_archive)
+    before = accepted_bytes(project)
+    # The quoted evidence stays verbatim; only surrounding text changes.
+    manuscript.write_text(
+        "## Chapter One\n\nThe **reading room** was open until midnight. 🦉 A visitor arrived.\n",
+        encoding="utf-8")
+    reviewed = api.review_manuscript_links(project, manuscript)["links"][0]
+    assert reviewed["flags"] == ["source_changed", "anchor_adjusted"]
+    assert reviewed["anchor_state"] == "adjusted" and reviewed["review_needed"]
+    assert reviewed["candidate_lines"] == [3]
+    assert reviewed["resolved_start_line"] == 3 and reviewed["resolved_end_line"] == 3
+    assert accepted_bytes(project) == before
+
+    snapshot = Repository(project).snapshot()
+    result = api.reanchor_manuscript_link(
+        project, manuscript, linked["link_id"], expected_project_id=snapshot.project.id,
+        expected_snapshot=snapshot.digest, expected_revision=1,
+        expected_source_sha256=digest(manuscript.read_bytes()))
+    anchor = result["record"]["anchor"]
+    adjusted = "The reading room was open until midnight. 🦉 A visitor arrived."
+    assert anchor["quote"] == "🦉 A visitor arrived."
+    assert anchor["start_line"] == 3 and anchor["end_line"] == 3
+    assert anchor["paragraph_sha256"] == hashlib.sha256(adjusted.encode()).hexdigest()
+    assert anchor["start"] == adjusted.index("🦉 A visitor arrived.")
+    assert anchor["end"] == anchor["start"] + len("🦉 A visitor arrived.")
+    assert result["record"]["change"]["reason"].startswith("Re-anchor to the adjusted")
+    resolved = api.review_manuscript_links(project, manuscript)
+    assert resolved["links"][0]["anchor_state"] == "resolved"
+    assert resolved["review_needed_count"] == 0
+
+
+def test_edited_quote_still_requires_review(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    save_link(manuscript_archive)
+    before = accepted_bytes(project)
+    # The quoted wording itself changed: the retained evidence no longer exists.
+    manuscript.write_text(
+        "## Chapter One\n\nThe **reading room** was open. 🦉 A visitor came by.\n",
+        encoding="utf-8")
+    reviewed = api.review_manuscript_links(project, manuscript)["links"][0]
+    assert reviewed["flags"] == ["source_changed", "anchor_changed"]
+    assert reviewed["anchor_state"] == "changed" and reviewed["review_needed"]
+    snapshot = Repository(project).snapshot()
+    with pytest.raises(ResearchError, match="uniquely resolvable"):
+        api.reanchor_manuscript_link(
+            project, manuscript, api.list_manuscript_links(project)["links"][0]["link_id"],
+            expected_project_id=snapshot.project.id, expected_snapshot=snapshot.digest,
+            expected_revision=1, expected_source_sha256=digest(manuscript.read_bytes()))
+    assert accepted_bytes(project) == before
+
+
+def test_cli_reconcile_previews_and_accepts_adjusted(manuscript_archive, capsys):
+    import argparse
+    import json
+
+    from lixity.research import cli
+
+    project, manuscript, _, _ = manuscript_archive
+    save_link(manuscript_archive)
+    manuscript.write_text(
+        "## Chapter One\n\nThe **reading room** was open until midnight. 🦉 A visitor arrived.\n",
+        encoding="utf-8")
+    parser = argparse.ArgumentParser()
+    cli.configure(parser)
+    preview = parser.parse_args(["reconcile-manuscript", "--project", str(project),
+                                 "--manuscript", "draft.md"])
+    assert cli.run(preview) == 0
+    planned = json.loads(capsys.readouterr().out)
+    assert planned["dry_run"] is True
+    assert planned["candidates"][0]["anchor_state"] == "adjusted"
+    assert planned["candidates"][0]["candidate_lines"] == [3]
+    accept = parser.parse_args(["reconcile-manuscript", "--project", str(project),
+                                "--manuscript", "draft.md", "--accept-moved"])
+    assert cli.run(accept) == 0
+    done = json.loads(capsys.readouterr().out)
+    assert done["dry_run"] is False and done["skipped"] == []
+    assert done["accepted"][0]["revision"] == 2
+    assert api.review_manuscript_links(project, manuscript)["review_needed_count"] == 0
 
 
 def test_cli_find_anchor_and_quote_convenience(manuscript_archive, capsys):

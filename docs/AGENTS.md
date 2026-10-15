@@ -717,8 +717,9 @@ are unchanged.
 - `timeline(project, dossier_id=None)` returns `research-timeline-local/1`,
   with project/snapshot metadata, `dated` and `unplaced`. Valid four-digit CE
   years, ISO months (`YYYY-MM`), ISO dates and same-precision ranges are placed;
-  original `time_period` labels remain, and missing/unrecognized/invalid periods
-  carry a reason. Claim creation (`research-claim-local/1`) and claim revision
+  range separators are the typographic dashes, `/`, `..` and a plain hyphen
+  between two four-digit years (`1929-1933`); original `time_period` labels
+  remain, and missing/unrecognized/invalid periods carry a reason. Claim creation (`research-claim-local/1`) and claim revision
   responses add `warnings: list[str]` for an unplaceable period and an empty list
   otherwise. It performs no writes and infers no date from creation timestamps.
 - `create_claim_relation(project, from_claim_id, to_claim_id, relation="causes",
@@ -778,7 +779,12 @@ Stored `ManuscriptClaimLink` uses kind `manuscript_claim_link` and
 `state: active|retracted` and optional `note`. Generic inspection/history,
 revision preparation and atomic batches support this kind. Revision changes
 accept `claim_id`, `claim_revision`, `state`, `note`; unchanged claim IDs retain
-pins. A uniquely moved anchor is re-pinned explicitly instead: `lixity research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`) writes a new link revision with the moved line span and the current file digest; the earlier anchor stays in history.
+pins. A uniquely resolvable anchor (moved, or adjusted after an edit outside
+the quote) is re-pinned explicitly: `lixity research reconcile-manuscript
+--accept-moved` (or `POST /api/research-manuscript-reanchor`) writes a new link
+revision with the resolved line span, refreshed paragraph hash and offsets for
+adjusted paragraphs, and the current file digest; the earlier anchor stays in
+history. Ambiguous or edited quotes are never re-pinned.
 
 The research **Review** tab lists the saved associations with anchor state,
 flags and pinned quote. It loads when the tab is opened, with the shared review
@@ -786,12 +792,16 @@ refresh and after a save; listing never re-anchors, retracts or writes.
 
 Review rows expose `claim_revision`, `claim_current_revision`, the pinned claim's
 `dossier_id`/`dossier_revision`, `anchor`, `current_source_sha256`, `flags`,
-`anchor_state`, `candidate_lines`, `resolved_start_line` and `resolved_end_line`.
-States are `resolved|moved|ambiguous|changed|unavailable`; flags include
+`anchor_state`, `candidate_lines`, `resolved_start_line`, `resolved_end_line` and
+the resolved codepoint offsets `resolved_start`/`resolved_end` (null when
+unresolved).
+States are `resolved|moved|adjusted|ambiguous|changed|unavailable`; flags include
 `source_changed`, `source_missing`, `source_unreadable`, `claim_changed`,
-`claim_withdrawn`, `anchor_moved`, `anchor_ambiguous`, `anchor_changed`.
-Only exact line/hash/quote matches resolve. Moved/ambiguous candidates stay
-unresolved and pins stay unchanged. Flags indicate structural review, never
+`claim_withdrawn`, `anchor_moved`, `anchor_adjusted`, `anchor_ambiguous`,
+`anchor_changed`. An intact paragraph identity and quote resolve exactly; a
+still-unique quote in an edited paragraph stays resolvable as `adjusted`.
+Ambiguous or changed anchors stay unresolved and pins stay unchanged until an
+explicit re-pin. Flags indicate structural review, never
 semantic contradiction or factual proof. `source_changed` is informational (a different source-file digest) and never sets `review_needed` by itself; review follows the paragraph-level anchor state. Shared-pipeline integrations can use
 `lixity.research.manuscript.manuscript_review_data(Repository(project).snapshot(), source_path=...,
 source_sha256=..., paragraphs=..., source_state="available")` without another

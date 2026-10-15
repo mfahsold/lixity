@@ -211,7 +211,7 @@
       var item = element("div", "", "manuscript-link-review-item");
       item.appendChild(element("p", (row.claim_title || row.claim_id) + " · " +
         label("research_revision_number").replace("{revision}", row.claim_revision)));
-      var state = ["resolved", "moved", "ambiguous", "changed"].includes(row.anchor_state) ? row.anchor_state : "unavailable_anchor";
+      var state = ["resolved", "moved", "adjusted", "ambiguous", "changed"].includes(row.anchor_state) ? row.anchor_state : "unavailable_anchor";
       var flags = [label("manuscript_link_" + state)];
       (row.flags || []).forEach(function(flag) {
         if (["source_changed", "claim_changed", "claim_withdrawn"].includes(flag)) flags.push(label("manuscript_link_" + flag));
@@ -220,8 +220,9 @@
       if (row.anchor) item.appendChild(element("blockquote", row.anchor.quote));
       var history = element("button", label("research_revision_history"), "ctl"); history.type = "button";
       history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id; item.appendChild(history);
-      if (row.anchor_state === "moved") {
-        var accept = element("button", label("manuscript_link_accept_moved"), "ctl");
+      if (row.anchor_state === "moved" || row.anchor_state === "adjusted") {
+        var acceptLabel = row.anchor_state === "adjusted" ? "manuscript_link_accept_adjusted" : "manuscript_link_accept_moved";
+        var accept = element("button", label(acceptLabel), "ctl");
         accept.type = "button"; accept.dataset.manuscriptLinkAccept = row.link_id;
         accept.dataset.manuscriptLinkAcceptRevision = String(row.revision);
         item.appendChild(accept);
@@ -239,6 +240,8 @@
     review = report; reviewProjectId = report.project_id;
     document.querySelectorAll("#chapters .ptext").forEach(function(panel) {
       var text = bridge.text(panel), points = Array.from(text || "");
+      // Only exact resolved anchors are marked inline; moved and adjusted
+      // candidates stay visible in the review list until an explicit re-pin.
       var spans = (report.links || []).filter(function(row) {
         var a = row.anchor;
         return row.anchor_state === "resolved" && a && row.resolved_start_line === Number(panel.dataset.start) &&

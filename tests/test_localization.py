@@ -230,6 +230,20 @@ class TestLocalization(unittest.TestCase):
                     self.assertEqual(json.loads(output.getvalue())["meta"]["language"], expected)
 
 
+def test_documented_claim_time_examples_parse_in_every_locale():
+    """Every example in the claim-time hint must be accepted by the chronology."""
+    from lixity.research.timeline import parse_period
+
+    token = re.compile(r"\b\d{4}(?:-\d{2}-\d{2}|[–-]\d{4}|-\d{2})?\b")
+    for language in LOCALES:
+        hint = WORKSPACE_LABELS[language]["research_claim_time_hint"]
+        examples = token.findall(hint)
+        assert examples, language
+        for example in examples:
+            period, reason = parse_period(example)
+            assert period is not None, (language, example, reason)
+
+
 def test_default_labels_cover_the_scene_pack():
     for key, value in language_data.SCENE_LABELS["en"].items():
         assert label(None, key) == value

@@ -59,7 +59,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("manuscript-links", "List saved manuscript quote-claim associations (read-only)"),
         ("review-manuscript", "Review saved associations against the current manuscript (read-only)"),
         ("find-anchor", "Resolve one displayed-text quote to exact anchor fields (read-only)"),
-        ("reconcile-manuscript", "Preview or write re-pins for uniquely moved manuscript anchors"),
+        ("reconcile-manuscript", "Preview or write re-pins for uniquely moved or adjusted manuscript anchors"),
         ("decision", "Create, list or revise author decisions and fact deviations"),
         ("decision-impact", "Inspect dossiers explicitly linked to an author decision; read-only"),
         ("review", "List structural editorial review candidates; read-only, not semantic judgment"),
@@ -187,9 +187,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name == "reconcile-manuscript":
             command.add_argument("--manuscript", required=True,
                                  help="Manuscript path inside the explicit project")
-            command.add_argument("--link-id", help="Only this association (default: every uniquely moved association)")
+            command.add_argument("--link-id", help="Only this association (default: every uniquely resolvable association)")
             command.add_argument("--accept-moved", action="store_true",
-                                 help="Write the new link revisions; without this flag the command only previews")
+                                 help="Accept uniquely resolvable anchors (moved or adjusted paragraphs); "
+                                      "without this flag the command only previews")
             command.add_argument("--update-sha", action="store_true",
                                  help="Accepted for compatibility; the current file digest is always re-pinned")
             command.add_argument("--expected-snapshot",
@@ -845,13 +846,14 @@ def run(args: argparse.Namespace) -> int:
                 source_sha256 = FileUtils.read_source_snapshot(str(source_path))[1]
             if not args.accept_moved:
                 movable = [row for row in link_review["links"]
-                           if row["anchor_state"] == "moved"
+                           if row["anchor_state"] in ("moved", "adjusted")
                            and (args.link_id is None or row["link_id"] == args.link_id)]
                 result = {"schema_version": "research-manuscript-reconcile-local/1",
                           "project_id": link_review["project_id"], "snapshot": link_review["snapshot"],
                           "source_path": link_review["source_path"], "dry_run": True,
                           "candidates": [{"link_id": row["link_id"], "revision": row["revision"],
                                           "claim_title": row.get("claim_title"),
+                                          "anchor_state": row["anchor_state"],
                                           "candidate_lines": row["candidate_lines"]}
                                          for row in movable]}
             elif args.link_id is not None:
@@ -864,7 +866,8 @@ def run(args: argparse.Namespace) -> int:
                     expected_revision=row["revision"], expected_source_sha256=source_sha256,
                     actor=args.actor, language=args.language)
             else:
-                movable = [row for row in link_review["links"] if row["anchor_state"] == "moved"]
+                movable = [row for row in link_review["links"]
+                           if row["anchor_state"] in ("moved", "adjusted")]
                 accepted: list[dict[str, Any]] = []
                 skipped: list[dict[str, str]] = []
                 for row in movable:

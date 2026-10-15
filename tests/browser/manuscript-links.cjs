@@ -213,7 +213,7 @@ async function selectText(page, text) {
         assert.equal(await dialog.isVisible(), true, 'An archive conflict keeps the reviewed quote visible');
         await dialog.locator('.modal-footer button').first().click();
         mode = 'normal';
-        for (const anchorState of ['moved', 'ambiguous', 'changed', 'unavailable']) {
+        for (const anchorState of ['moved', 'adjusted', 'ambiguous', 'changed', 'unavailable']) {
           links[0].anchor_state = anchorState; links[0].flags = ['source_changed', 'claim_changed'];
           await selectText(page, 'safe selected'); await button.click();
           await page.locator('#manuscript-link-claim').waitFor({state: 'visible'});
@@ -224,10 +224,11 @@ async function selectText(page, text) {
           await page.locator('[data-rtab="review"]').click();
           await page.locator('#r-review-refresh').click();
           await page.waitForFunction(expected => document.querySelector('#research-manuscript-review').textContent.includes(expected),
-            {moved: 'Moved passage: review required', ambiguous: 'Multiple possible passages: review required',
+            {moved: 'Moved passage: review required', adjusted: 'Adjusted paragraph, quote found: can be accepted',
+              ambiguous: 'Multiple possible passages: review required',
               changed: 'Passage changed: review required', unavailable: 'Source unavailable: review required'}[anchorState]);
           assert.match(await page.locator('#research-manuscript-review').textContent(), /Source bytes changed · Claim has a newer version/);
-          if (anchorState === 'moved') {
+          if (anchorState === 'moved' || anchorState === 'adjusted') {
             const accept = page.locator('#research-manuscript-review [data-manuscript-link-accept]').first();
             await accept.waitFor();
             const before = writes.length;
