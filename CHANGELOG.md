@@ -7,10 +7,31 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-10-15
+
+### Added
+- JOSS software paper draft under `paper/` with cited references, and a
+  README research note.
+
 ### Changed
 - The analysis section navigation and the checkbox rows are central components
   (`ANALYSIS_SECTIONS`, `section_nav`, `checkbox_field`), so new panels and
   controls reuse one markup source instead of a parallel implementation.
+- The dashboard script is split into cohesive modules (`tooltips.js`,
+  `interactions.js`, `research.js`, `project-ui.js`); `dashboard.js` keeps the
+  generic core. Load order preserves the original execution sequence.
+- Embedded screenshot dimensions are synchronised from the PNG headers after
+  `make screenshots`.
+- PyPI is the primary installation path in README, the installation guide, the
+  landing page and the `llms` bundle; the pinned release wheel with
+  `SHA256SUMS` remains the reproducible alternative.
+
+### Tooling
+- The release workflow accepts `workflow_dispatch` with a `tag` input and
+  builds for PyPI without touching the immutable GitHub release.
+- Repository hygiene covers local process, editor and tool state: `.pypirc`,
+  `nohup.out`, logs, pid/socket/database leftovers, editor autosaves and
+  additional tool caches are ignored and guarded by the hygiene test.
 
 ## [0.4.2] - 2026-10-14
 
@@ -1937,7 +1958,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.2...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.3...HEAD
+[0.4.3]: https://github.com/mfahsold/lixity/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/mfahsold/lixity/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/mfahsold/lixity/compare/v0.4.0...v0.4.1
 [0.4.0]: https://github.com/mfahsold/lixity/compare/v0.3.0...v0.4.0
