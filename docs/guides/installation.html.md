@@ -30,7 +30,7 @@ lixity --version
 lixity service start --open
 ```
 
-This installs the current release from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). For a pinned, checksum-verified setup, install the release wheel instead — `uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.4/lixity-0.4.4-py3-none-any.whl"` — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.4.4.md) for changes and compatibility.
+This installs the current release from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). For a pinned, checksum-verified setup, install the release wheel instead — `uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.5/lixity-0.4.5-py3-none-any.whl"` — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.4.5.md) for changes and compatibility.
 
 **Development builds instead**
 

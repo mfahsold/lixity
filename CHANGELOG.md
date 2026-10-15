@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.5] - 2026-10-15
+
 ### Added
 - `lixity research <record> --diff` previews an update as a terminal unified
   diff (dossier bodies line by line, other fields as before/after values)
@@ -14,11 +16,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   their help and error messages.
 
 ### Changed
+- Research list commands (`claim`, `dossier`, `timeline`) read only the record
+  kinds they display plus withdrawal state; a 22k-record archive lists claims
+  in 0.38 s instead of 3.4 s. Snapshot digests and JSON envelopes are
+  unchanged; write paths and lookups keep full-archive validation.
 - Research archive snapshots check paths with plain strings and `os.path`
-  calls instead of per-component `pathlib` checks; a 22k-record archive lists
-  claims about a third faster on the development machine.
+  calls instead of per-component `pathlib` checks.
 - `lixity build` reports an unwritable `exports/` folder (sandbox, read-only
   mount) as one `[error]` line with a `--dry-run` hint instead of a traceback.
+  `INSTALLATION.md` notes that product versions such as 1.18.0 or 3.0.1 in
+  older notes predate the 0.3.0 renumbering.
 
 ## [0.4.4] - 2026-10-15
 
@@ -1980,7 +1987,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.4...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.5...HEAD
+[0.4.5]: https://github.com/mfahsold/lixity/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/mfahsold/lixity/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/mfahsold/lixity/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/mfahsold/lixity/compare/v0.4.1...v0.4.2
