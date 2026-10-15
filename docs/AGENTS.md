@@ -806,7 +806,10 @@ Native routes require explicit context guards:
   Unknown fields fail. Invalid selections/permission return HTTP 400; changed
   selected context/project/snapshot/source/claim revision returns HTTP 409.
 
-Successful native responses add `ok: true` to the corresponding envelope.
+Successful native responses add `ok: true` to the corresponding envelope. Error responses on the manuscript-link routes add a stable `code`
+where the UI reacts: `stale-context` (selected manuscript or research context
+changed) and `stale-archive` (snapshot, revision or source conflict), both with
+HTTP 409; other failures remain `{ok: false, message}`.
 The project token binds selected manuscript/settings; the research token binds
 selected archive root, including restored roots sharing an archive ID. Hash and
 snapshot guards bind reviewed bytes/records. Reads and selection previews write

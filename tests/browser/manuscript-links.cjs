@@ -76,11 +76,12 @@ async function selectText(page, text) {
           if (mode === 'heldclaims') { heldClaims = true; await new Promise(resolve => { releaseClaims = resolve; }); }
           return route.fulfill({json: {ok: true,
           schema_version: 'research-claims-local/2', project_id: mode === 'copiedroot' ? 'other-project' : 'project', snapshot: mode === 'claims' ? 'new-snapshot' : 'snapshot',
-          claims: mode === 'emptyclaims' ? [] : mode === 'malformed-claims' ? [null] : [{id: 'claim', revision: 2, title: '<img src=x onerror=window.linkInjected=true> synthetic claim', statement: 'Current statement'}]}}); }
+          claims: mode === 'manyclaims' ? Array.from({length: 9}, (_, index) => ({id: 'claim-' + index, revision: 1, title: 'Synthetic claim ' + index, statement: 'Statement ' + index})) : mode === 'emptyclaims' ? [] : mode === 'malformed-claims' ? [null] : [{id: 'claim', revision: 2, title: '<img src=x onerror=window.linkInjected=true> synthetic claim', statement: 'Current statement'}]}}); }
         if (url.pathname === '/api/research-manuscript-link') {
           const data = request.postDataJSON(); writes.push(data);
           if (mode === 'heldsave') { heldSave = true; await new Promise(resolve => { releaseSave = resolve; }); }
           if (mode === 'malformed-save') return route.fulfill({json: {ok: true, project_id: 'project'}});
+          if (mode === 'archivedrift') return route.fulfill({status: 409, json: {ok: false, code: 'stale-archive', message: 'Synthetic drift'}});
           if (mode === 'savefail') return route.fulfill({status: 409, json: {ok: false, message: 'Claim changed'}});
           anchor = data.selection;
           links = [{link_id: 'link', state: 'active', claim_id: 'claim', claim_revision: 2,
@@ -189,6 +190,23 @@ async function selectText(page, text) {
         assert.equal(await page.locator('#manuscript-link-claim').isEnabled(), false, 'An empty claim list keeps the picker disabled');
         assert.equal(await page.locator('#manuscript-link-status').getAttribute('class'), 'ctl-status', 'An empty claim list is informational, not an error');
         assert.equal(await page.locator('#manuscript-link-status [data-manuscript-link-reload]').count(), 0);
+        await dialog.locator('.modal-footer button').first().click();
+        mode = 'manyclaims';
+        await selectText(page, 'safe selected'); await button.click();
+        await page.waitForFunction(() => !document.querySelector('#manuscript-link-filter').hidden);
+        assert.equal(await page.locator('#manuscript-link-claim option').count(), 10, 'Nine claims plus the placeholder');
+        await page.locator('#manuscript-link-filter').fill('claim 8');
+        assert.equal(await page.locator('#manuscript-link-claim option').count(), 2, 'The filter narrows the claim list');
+        await page.locator('#manuscript-link-filter').fill('');
+        assert.equal(await page.locator('#manuscript-link-claim option').count(), 10, 'Clearing the filter restores the list');
+        await dialog.locator('.modal-footer button').first().click();
+        mode = 'archivedrift';
+        await selectText(page, 'safe selected'); await button.click();
+        await page.locator('#manuscript-link-claim').selectOption('claim');
+        await page.locator('#manuscript-link-retain').check();
+        await page.locator('#manuscript-link-save').click();
+        await page.waitForFunction(() => document.querySelector('#manuscript-link-status').textContent.includes('archive changed while this dialog was open'));
+        assert.equal(await dialog.isVisible(), true, 'An archive conflict keeps the reviewed quote visible');
         await dialog.locator('.modal-footer button').first().click();
         mode = 'normal';
         for (const anchorState of ['moved', 'ambiguous', 'changed', 'unavailable']) {

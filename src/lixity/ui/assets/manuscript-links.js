@@ -5,7 +5,7 @@
   if (!bridge || document.body.dataset.manuscriptLinks !== "1" || !tokenHost ||
       !tokenHost.dataset.projectToken || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
   var draft = null, serial = 0, reviewSerial = 0, review = null, remembered = null, reviewProjectId = null;
-  var pending = new Set(), dialog, picker, quotation, statement, consent, save, status;
+  var pending = new Set(), dialog, picker, quotation, statement, consent, save, status, filterInput;
   var chapters = document.getElementById("chapters");
   if (!chapters) return;
   function element(tag, text, className) {
@@ -73,11 +73,20 @@
     var body = element("div", "", "modal-body");
     quotation = element("blockquote"); quotation.id = "manuscript-link-quote"; body.appendChild(quotation);
     var choose = element("label", label("manuscript_link_choose")); choose.htmlFor = "manuscript-link-claim"; body.appendChild(choose);
+    filterInput = element("input", "", "ctl"); filterInput.type = "text"; filterInput.id = "manuscript-link-filter";
+    filterInput.hidden = true; filterInput.placeholder = label("manuscript_link_filter");
+    filterInput.setAttribute("aria-label", label("manuscript_link_filter"));
+    filterInput.addEventListener("input", function() { fillPicker(); updateSave(); });
+    body.appendChild(filterInput);
     picker = element("select", "", "ctl"); picker.id = "manuscript-link-claim"; body.appendChild(picker);
     statement = element("p", "", "ctl-note"); statement.id = "manuscript-link-statement"; body.appendChild(statement);
     var retention = element("label", "", "manuscript-link-retention");
     consent = element("input"); consent.type = "checkbox"; consent.id = "manuscript-link-retain";
     retention.append(consent, document.createTextNode(label("manuscript_link_retention"))); body.appendChild(retention);
+    var formatNote = element("details", "", "ctl-note manuscript-link-format");
+    formatNote.appendChild(element("summary", label("manuscript_link_format_7")));
+    formatNote.appendChild(element("p", label("manuscript_link_retention_format")));
+    body.appendChild(formatNote);
     status = element("p", "", "ctl-status"); status.id = "manuscript-link-status";
     status.setAttribute("role", "status"); status.setAttribute("aria-live", "polite"); body.appendChild(status);
     card.appendChild(body);
@@ -98,6 +107,17 @@
     button.type = "button"; button.dataset.manuscriptLinkReload = "";
     return button;
   }
+  function fillPicker() {
+    var claims = (draft && draft.claims) || [];
+    var query = filterInput && !filterInput.hidden ? filterInput.value.trim().toLowerCase() : "";
+    picker.replaceChildren(element("option", label("manuscript_link_choose")));
+    picker.firstChild.value = "";
+    claims.forEach(function(claim) {
+      if (query && (claim.title + " " + claim.statement).toLowerCase().indexOf(query) < 0) return;
+      var option = element("option", claim.title + " · " + label("research_revision_number").replace("{revision}", claim.revision));
+      option.value = claim.id; picker.appendChild(option);
+    });
+  }
   function unavailable(message, stale) {
     status.textContent = message || label("manuscript_link_unavailable");
     status.className = "ctl-status err";
@@ -112,6 +132,7 @@
     draft = value; draft.key = JSON.stringify([value.context, value.anchor]);
     quotation.textContent = value.anchor.quote; consent.checked = false; statement.textContent = "";
     picker.replaceChildren(element("option", label("manuscript_link_choose"))); picker.firstChild.value = "";
+    if (filterInput) { filterInput.value = ""; filterInput.hidden = true; }
     picker.disabled = true; status.className = "ctl-status loading"; status.textContent = label("research_loading"); updateSave();
     if (!dialog.open) dialog.showModal();
     var responses = await Promise.all([bridge.read("research/claims"),
@@ -123,16 +144,14 @@
         report.schema_version !== "research-manuscript-review-local/1" || !claims.project_id ||
         claims.project_id !== report.project_id || !claims.snapshot || claims.snapshot !== report.snapshot ||
         report.current_source_sha256 !== value.context.source || report.source_state !== "available" || !validClaims(claims.claims) || !validRows(report.links)) {
-      var stale = staleReport(report, value.context.source);
+      var stale = staleReport(report, value.context.source) || report.code === "stale-context";
       var reason = stale ? label("manuscript_link_stale") : bridge.errorText(claims.message ? claims : report);
       clearReview(reason, stale); unavailable(reason, stale); return;
     }
     draft.claims = claims.claims.filter(function(claim) { return claim.id && Number.isInteger(claim.revision) && claim.revision > 0; });
     draft.projectId = claims.project_id; draft.snapshot = claims.snapshot;
-    draft.claims.forEach(function(claim) {
-      var option = element("option", claim.title + " · " + label("research_revision_number").replace("{revision}", claim.revision));
-      option.value = claim.id; picker.appendChild(option);
-    });
+    if (filterInput) filterInput.hidden = draft.claims.length <= 6;
+    fillPicker();
     if (draft.claims.length) {
       picker.disabled = false; status.className = "ctl-status"; status.textContent = label("manuscript_link_hint"); picker.focus();
     } else {
@@ -156,6 +175,12 @@
     if (!live(submitted.context)) { if (request === serial) { unavailable(); updateSave(); } return; }
     if (request !== serial || draft !== submitted || !dialog.open) return;
     updateSave();
+    if (response && response.ok === false && response.code === "stale-context") {
+      unavailable(label("manuscript_link_stale"), true); return;
+    }
+    if (response && response.ok === false && response.code === "stale-archive") {
+      unavailable(label("manuscript_link_archive_changed")); return;
+    }
     var record = response && response.record, pin = record && record.claim_ref, anchor = record && record.anchor;
     if (!response || !response.ok || response.schema_version !== "research-manuscript-link-local/1" ||
         response.project_id !== submitted.projectId || !response.snapshot || !response.link_id ||
@@ -237,7 +262,7 @@
     if (!report.ok || report.schema_version !== "research-manuscript-review-local/1" || !validRows(report.links) ||
         !report.project_id || !report.snapshot || (reviewProjectId && report.project_id !== reviewProjectId) ||
         report.current_source_sha256 !== value.source || report.source_state !== "available") {
-      var stale = staleReport(report, value.source);
+      var stale = staleReport(report, value.source) || report.code === "stale-context";
       clearReview(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale); return;
     }
     applyReview(report, value);

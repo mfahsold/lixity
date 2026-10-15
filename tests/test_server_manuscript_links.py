@@ -84,7 +84,7 @@ def test_source_edit_requires_refresh_and_reports_review_without_reanchoring(wor
     before = Repository(project).snapshot().digest
     manuscript.write_text(manuscript.read_text().replace("bird", "cloud"), encoding="utf-8")
     status, result = request("/api/research-manuscript-link", {**body, "expected_snapshot": before})
-    assert status == 409 and not result["ok"]
+    assert status == 409 and not result["ok"] and result.get("code") == "stale-archive"
     status, result = request(review_route(body))
     assert status == 200 and result["links"][0]["anchor_state"] == "changed"
     assert result["review_needed_count"] == 1
@@ -99,13 +99,13 @@ def test_restored_copy_and_other_manuscript_refuse_original_context(workspace, t
     handler.source_input = str(copied / "manuscript.md")
     before = Repository(copied).snapshot().digest
     status, result = request("/api/research-manuscript-link", body)
-    assert status == 409 and not result["ok"]
+    assert status == 409 and not result["ok"] and result.get("code") == "stale-context"
     status, result = request(review_route(body))
-    assert status == 409 and not result["ok"]
+    assert status == 409 and not result["ok"] and result.get("code") == "stale-context"
     assert Repository(copied).snapshot().digest == before
     current = {**body, "research_token": research_context_token(copied)}
     status, result = request("/api/research-manuscript-link", current)
-    assert status == 409 and not result["ok"]
+    assert status == 409 and not result["ok"] and result.get("code") == "stale-context"
 
 
 def test_native_read_and_write_require_context_tokens(workspace):

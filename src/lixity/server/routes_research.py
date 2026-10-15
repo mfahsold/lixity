@@ -38,7 +38,8 @@ class ResearchRoutesMixin(ResponseMixin):
         if root is None and self.source_input:
             root = Path(self.workspace_root)
         if token != research_context_token(root):
-            self._json({"ok": False, "message": "Selected research project changed; refresh before continuing"}, 409)
+            self._json({"ok": False, "code": "stale-context",
+                        "message": "Selected research project changed; refresh before continuing"}, 409)
             return False
         return True
 

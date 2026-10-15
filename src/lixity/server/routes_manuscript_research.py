@@ -53,6 +53,13 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                 return
             try:
                 root, source, settings = self._manuscript_context(payload.get("project_token"))
+            except ResearchConflictError as exc:
+                self._json({"ok": False, "code": "stale-context", "message": str(exc)}, 409)
+                return
+            except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+                return
+            try:
                 result = research_api.link_manuscript_claim(
                     root, source, payload["claim_id"], claim_revision=payload["claim_revision"],
                     selection=payload["selection"], expected_project_id=payload["project_id"],
@@ -62,7 +69,7 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                 )
                 self._json({"ok": True, **result})
             except ResearchConflictError as exc:
-                self._json({"ok": False, "message": str(exc)}, 409)
+                self._json({"ok": False, "code": "stale-archive", "message": str(exc)}, 409)
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
                 self._json({"ok": False, "message": str(exc)}, 400)
 
@@ -80,7 +87,7 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
                 result = research_api.review_manuscript_links(root, source, language=self.language, project_config=settings)
                 self._json({"ok": True, **result})
             except ResearchConflictError as exc:
-                self._json({"ok": False, "message": str(exc)}, 409)
+                self._json({"ok": False, "code": "stale-context", "message": str(exc)}, 409)
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
                 self._json({"ok": False, "message": str(exc)}, 400)
 
