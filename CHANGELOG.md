@@ -7,6 +7,29 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.6] - 2026-10-15
+
+### Added
+- `lixity research` manuscript-link commands: `link-manuscript` (explicit
+  `--selection` or a `--quote [--line]` resolution), `manuscript-links`,
+  `review-manuscript`, `find-anchor` (resolve a displayed-text quote to exact
+  anchor fields) and `reconcile-manuscript` (preview or write re-pins for
+  uniquely moved anchors). The native route
+  `POST /api/research-manuscript-reanchor` and an accept action in the review
+  tab complete the workflow; earlier anchors stay in revision history.
+
+### Changed
+- Manuscript review is paragraph-level: a changed source-file digest
+  (`source_changed`) is informational and no longer marks associations for
+  review while their paragraph hash, line span and quote still match; only
+  changed, moved, ambiguous, withdrawn or re-pinned contexts need review.
+- The dashboard folds whole chapters from their heading, opens paragraphs with
+  a visible scroll and an arrival flash, keeps jump anchors precise, offers a
+  reload action for stale manuscript contexts and filters long claim lists;
+  the format-7 note moved behind a disclosure.
+- Manuscript-link routes emit stable 409 `code` values (`stale-context`,
+  `stale-archive`) that the dialog maps to localized, actionable messages.
+
 ## [0.4.5] - 2026-10-15
 
 ### Added
@@ -1987,7 +2010,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.5...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.6...HEAD
+[0.4.6]: https://github.com/mfahsold/lixity/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/mfahsold/lixity/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/mfahsold/lixity/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/mfahsold/lixity/compare/v0.4.2...v0.4.3
