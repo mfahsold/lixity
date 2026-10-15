@@ -93,7 +93,7 @@ uv tool update-shell</code></pre>
 <p>Open a new terminal, then verify and start the app:</p>
 <pre><code>lixity --version
 lixity service start --open</code></pre>
-<p>This installs the current release from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. For a pinned, checksum-verified setup, install the release wheel instead — <code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.3/lixity-0.4.3-py3-none-any.whl"</code> — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the <a href="../releases/v0.4.3.md">release notes</a> for changes and compatibility.</p>
+<p>This installs the current release from PyPI in uv's <a href="https://docs.astral.sh/uv/concepts/tools/">isolated tool environment</a>. For a pinned, checksum-verified setup, install the release wheel instead — <code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.4/lixity-0.4.4-py3-none-any.whl"</code> — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the <a href="../releases/v0.4.4.md">release notes</a> for changes and compatibility.</p>
 <details><summary>Development builds instead</summary>
 <p>For unreleased development work, install Git, stop the managed service and replace the installation with:</p>
 <pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"</code></pre>

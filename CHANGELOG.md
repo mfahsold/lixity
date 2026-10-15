@@ -7,6 +7,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.4] - 2026-10-15
+
+### Changed
+- Installation and citation guidance is consolidated around the two published
+  channels: PyPI for installing and upgrading, GitHub Releases for pinned,
+  checksum-verified setups and Zenodo for citing a released version.
+- First release archived by the Zenodo GitHub integration (concept DOI in
+  `CITATION.cff`).
+
 ## [0.4.3] - 2026-10-15
 
 ### Added
@@ -1958,7 +1967,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.3...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.4...HEAD
+[0.4.4]: https://github.com/mfahsold/lixity/compare/v0.4.3...v0.4.4
 [0.4.3]: https://github.com/mfahsold/lixity/compare/v0.4.2...v0.4.3
 [0.4.2]: https://github.com/mfahsold/lixity/compare/v0.4.1...v0.4.2
 [0.4.1]: https://github.com/mfahsold/lixity/compare/v0.4.0...v0.4.1
