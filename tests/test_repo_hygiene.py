@@ -15,9 +15,18 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 
-FORBIDDEN_PATHS = (".planning/", ".artifacts/", ".worktrees/", ".superpowers/")
+FORBIDDEN_PATHS = (
+    ".planning/", ".artifacts/", ".worktrees/", ".superpowers/", ".opencode/",
+    ".claude/", ".cursor/", ".codex/", ".agent/", ".remember/", ".local/",
+    ".pytest-artifacts/", "exports/", "nda/", ".screenshots/",
+    "playwright-report/", "test-results/", ".playwright-cli/",
+)
 FORBIDDEN_SUFFIXES = (".key", ".pem", ".p12", ".pfx", ".jks", ".keystore")
-FORBIDDEN_NAMES = ("uv.lock",)
+FORBIDDEN_NAMES = ("uv.lock", ".pypirc", ".netrc", ".npmrc", "nohup.out")
+#: Process, database and editor leftovers that belong to a working copy only.
+FORBIDDEN_STATE_ENDINGS = (".log", ".pid", ".sock", ".sqlite", ".sqlite3",
+                           ".sqlite-wal", ".sqlite-shm", ".db", ".db-wal",
+                           ".db-shm", ".swp", ".swo", ".orig", ".bak")
 BINARY_SUFFIXES = (".png", ".jpg", ".jpeg", ".gif", ".ico", ".webm", ".mp4", ".pdf",
                    ".woff2", ".whl", ".gz", ".tar", ".zip", ".so", ".dylib", ".bin")
 SECRET_PATTERNS = (
@@ -51,6 +60,12 @@ def test_no_planning_or_local_state_is_tracked() -> None:
     offenders = [name for name in tracked_files()
                  if name.startswith(FORBIDDEN_PATHS) or Path(name).name in FORBIDDEN_NAMES]
     assert offenders == [], f"Local planning or tool state must not be tracked: {offenders}"
+
+
+def test_no_process_or_editor_state_is_tracked() -> None:
+    offenders = [name for name in tracked_files()
+                 if Path(name).name.endswith(FORBIDDEN_STATE_ENDINGS)]
+    assert offenders == [], f"Process or editor state must not be tracked: {offenders}"
 
 
 def test_no_credentials_or_private_keys_are_tracked() -> None:

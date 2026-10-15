@@ -2,7 +2,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 .venv
+.venv*/
 venv/
+venv*/
 .env/
 build/
 dist/
@@ -94,6 +96,8 @@ secrets/
 credentials*
 .netrc
 .npmrc
+.pypirc
+pip.conf
 config.local.json
 *.keystore
 *.sqlite
@@ -111,6 +115,9 @@ config.local.json
 # OS artifacts
 .DS_Store
 Thumbs.db
+desktop.ini
+.directory
+.fuse_hidden*
 
 # Editor, state, logs & temporary files
 *.log
@@ -123,9 +130,24 @@ Thumbs.db
 *.tmp
 *.bak
 *.orig
+nohup.out
 .idea/
 .vscode/
 .history/
+.#*
+#*#
+*.code-workspace
+*.local.md
+.eslintcache
+.ipynb_checkpoints/
+
+# Local tool caches beyond the Python defaults
+.pyre/
+.pytype/
+.pylint.d/
+.pnpm-store/
+.yarn/
+.parcel-cache/
 
 # Lockfiles from local tooling (the project pins via pyproject and release wheels)
 uv.lock
