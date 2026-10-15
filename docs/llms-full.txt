@@ -1773,43 +1773,19 @@ project, start with the [README](https://github.com/mfahsold/lixity/blob/main/RE
 
 ## Installation
 
-Use the [installation guide](INSTALLATION.md) for Windows/macOS/Linux,
-updates, removal, pipx, Python API environments and troubleshooting.
-Lixity is open source under AGPL-3.0-or-later and published as
-[`lixity` on PyPI](https://pypi.org/project/lixity/); the pinned release wheel
-with `SHA256SUMS` remains available for reproducible setups.
-Using it for a book intended for sale requires a separate written commercial
-license, including self-publishing. See [licensing examples](LICENSING.md).
-With uv installed, the recommended CLI setup is:
+Install Lixity with the [installation guide](INSTALLATION.md); it covers
+Windows/macOS/Linux, the PyPI/uv setup, updates and removal, pipx, Python API
+environments and troubleshooting, and carries the pinned release wheel with
+`SHA256SUMS`. Lixity is open source under AGPL-3.0-or-later: private, research
+and commercial writing, including self-publishing, needs no extra permission; a
+separate written commercial license exists only for closed-source integrations.
+See [licensing examples](LICENSING.md). The engine and TOML project
+configuration support Python 3.10+.
 
-```bash
-uv tool install --python 3.12 --managed-python lixity
-uv tool update-shell
-```
-
-Open a new terminal, then verify and start the app:
-
-```bash
-lixity --version
-lixity service start --open
-```
-
-`uv tool upgrade lixity` installs newer releases; a pinned wheel keeps its fixed
-URL and is replaced explicitly as described in the
-[update reference](INSTALLATION.md#updates-and-removal). `uv tool update-shell`
-changes shell configuration for new terminals.
-The engine and TOML project configuration support Python 3.10+.
-
-Development install (editable, isolated, with the test suite):
-
-```bash
-git clone https://github.com/mfahsold/lixity.git && cd lixity
-make install-dev          # or: python3 -m venv .venv && .venv/bin/pip install -e ".[dev]"
-make check                # ruff + mypy --strict + pytest -W error
-```
-
-See [shell completion](INSTALLATION.md#optional-shell-completion) for safe
-Bash/Zsh setup and user-writable destinations.
+The commands below assume `lixity` is on your `PATH`; [Development](#development)
+covers running from a checkout. See
+[shell completion](INSTALLATION.md#optional-shell-completion) for safe Bash/Zsh
+setup and user-writable destinations.
 
 ## Report language
 
