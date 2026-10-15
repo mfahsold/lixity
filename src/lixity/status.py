@@ -26,6 +26,8 @@ __all__ = [
     "TENSE_PAST",
     "TENSE_PRESENT",
     "ContractKeys",
+    "ManuscriptFlag",
+    "ManuscriptState",
     "Severity",
     "Status",
     "Tense",
@@ -129,6 +131,42 @@ class Severity(IntEnum):
 
 FLAG_MIN_SEVERITY = Severity.NOTABLE
 """Default editorial cut: severity ≥ 2 counts as flagged (1 = watch only)."""
+
+
+# ---------------------------------------------------------------------------
+# Manuscript review (research anchors; labels live in workspace_labels)
+# ---------------------------------------------------------------------------
+
+
+class ManuscriptState(str, Enum):
+    """Anchor resolution state of a saved manuscript association.
+
+    ``resolved`` keeps the pinned identity; ``moved`` and ``adjusted`` stay
+    resolvable but unpinned (moved paragraph, or edited paragraph with an
+    unchanged quote); ``ambiguous`` and ``changed`` need review before any
+    re-pin; ``unavailable`` means the source cannot be read.
+    """
+
+    RESOLVED = "resolved"
+    MOVED = "moved"
+    ADJUSTED = "adjusted"
+    AMBIGUOUS = "ambiguous"
+    CHANGED = "changed"
+    UNAVAILABLE = "unavailable"
+
+
+class ManuscriptFlag(str, Enum):
+    """Structural review flags on a saved manuscript association."""
+
+    SOURCE_CHANGED = "source_changed"
+    SOURCE_MISSING = "source_missing"
+    SOURCE_UNREADABLE = "source_unreadable"
+    CLAIM_CHANGED = "claim_changed"
+    CLAIM_WITHDRAWN = "claim_withdrawn"
+    ANCHOR_MOVED = "anchor_moved"
+    ANCHOR_ADJUSTED = "anchor_adjusted"
+    ANCHOR_AMBIGUOUS = "anchor_ambiguous"
+    ANCHOR_CHANGED = "anchor_changed"
 
 
 # ---------------------------------------------------------------------------

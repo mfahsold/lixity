@@ -244,6 +244,42 @@ def test_documented_claim_time_examples_parse_in_every_locale():
             assert period is not None, (language, example, reason)
 
 
+def test_cli_report_text_packs_share_keys_and_placeholders():
+    """The terminal text packs stay parallel; placeholders must match keys."""
+    from lixity.cli import CLI_TEXTS
+
+    def fields(value: str) -> set[str]:
+        return set(re.findall(r"\{([a-z_]+)\}", value))
+
+    assert set(CLI_TEXTS["en"]) == set(CLI_TEXTS["de"])
+    for key, english in CLI_TEXTS["en"].items():
+        assert fields(CLI_TEXTS["de"][key]) == fields(english), key
+
+
+def test_manuscript_review_codes_have_workspace_labels():
+    """Every review state and displayed flag resolves to a workspace label."""
+    from lixity.status import ManuscriptFlag, ManuscriptState
+
+    def state_key(state: ManuscriptState) -> str:
+        if state is ManuscriptState.UNAVAILABLE:
+            return "manuscript_link_unavailable_anchor"
+        return f"manuscript_link_{state.value}"
+
+    displayed_flags = (
+        ManuscriptFlag.SOURCE_CHANGED,
+        ManuscriptFlag.CLAIM_CHANGED,
+        ManuscriptFlag.CLAIM_WITHDRAWN,
+    )
+    for language in LOCALES:
+        labels = WORKSPACE_LABELS[language]
+        for state in ManuscriptState:
+            key = state_key(state)
+            assert labels.get(key, "").strip(), (language, state, key)
+        for flag in displayed_flags:
+            key = f"manuscript_link_{flag.value}"
+            assert labels.get(key, "").strip(), (language, flag, key)
+
+
 def test_default_labels_cover_the_scene_pack():
     for key, value in language_data.SCENE_LABELS["en"].items():
         assert label(None, key) == value

@@ -253,6 +253,23 @@ class TestCliAgentSurface(unittest.TestCase):
         self.assertIn("pdf", commands)
         self.assertIn("PDF", commands["pdf"])
 
+    def test_completion_scripts_cover_every_parser_command(self):
+        import io
+        from contextlib import redirect_stdout
+
+        from lixity.cli import _COMMANDS
+
+        for shell in ("bash", "zsh"):
+            with self.subTest(shell=shell):
+                script = io.StringIO()
+                with redirect_stdout(script):
+                    self.assertEqual(main(["completion", shell]), 0)
+                emitted = script.getvalue()
+                self.assertNotIn("__LIXITY_", emitted, "completion placeholder left unfilled")
+                for name, _help_text in _COMMANDS:
+                    needle = f"'{name}:" if shell == "zsh" else f" {name} "
+                    self.assertIn(needle, emitted, f"{shell} completion misses {name}")
+
     def test_about_json_flag(self):
         import io
         from contextlib import redirect_stdout

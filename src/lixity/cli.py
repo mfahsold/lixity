@@ -78,7 +78,8 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "about_features": "Features ({count}):",
         "about_heuristics": (
             "Heuristics: z_mild={z_mild}, z_strong={z_strong}, FDR q={fdr_q}, "
-            "min_chapters={min_chapters}, dimensions={n_dimensions}"
+            "min_chapters={min_chapters}, dimensions={n_dimensions}, "
+            "min_words={min_comparable_words}, min_sentences={min_comparable_sentences}"
         ),
         "about_commands": "Commands:",
         "about_license": "License: {license}",
@@ -162,7 +163,8 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "about_features": "Merkmale ({count}):",
         "about_heuristics": (
             "Heuristiken: z_mild={z_mild}, z_strong={z_strong}, FDR q={fdr_q}, "
-            "min_chapters={min_chapters}, Dimensionen={n_dimensions}"
+            "min_chapters={min_chapters}, Dimensionen={n_dimensions}, "
+            "min_words={min_comparable_words}, min_sentences={min_comparable_sentences}"
         ),
         "about_commands": "Kommandos:",
         "about_license": "Lizenz: {license}",
@@ -256,6 +258,42 @@ def _m(key: str, **fmt: object) -> str:
     return text.format(**fmt) if fmt else text
 
 
+def _completion_scripts() -> tuple[str, str]:
+    """Bash and Zsh scripts with live command and research-action lists."""
+    from .research.cli import command_metadata
+
+    research_actions = " ".join(command["name"] for command in command_metadata())
+    names = " ".join(name for name, _help in _COMMANDS)
+    descriptors = "\n".join(f"    '{name}:{help_text}'" for name, help_text in _COMMANDS)
+    bash = (_BASH_COMPLETION.replace("__LIXITY_COMMANDS__", names)
+            .replace("__LIXITY_RESEARCH_COMMANDS__", research_actions))
+    zsh = (_ZSH_COMPLETION.replace("__LIXITY_ZSH_COMMANDS__", descriptors)
+           .replace("__LIXITY_RESEARCH_COMMANDS__", research_actions))
+    return bash, zsh
+
+
+#: Top-level commands: name and help text drive the parser and both emitted
+#: completion scripts, so adding a command lists it everywhere at once.
+_COMMANDS: tuple[tuple[str, str], ...] = (
+    ("research", "Experimental local sources, citations and lexical search (JSON)"),
+    ("service", "Manage an owned local dashboard process"),
+    ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
+    ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
+    ("dialogue", "Dialogue turn structure (text/JSON)"),
+    ("characters", "Character presence across chapters (text/JSON)"),
+    ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
+    ("scenes", "Scene features, register references and author targets (text/JSON)"),
+    ("motifs", "Motif tracking and repetition analysis (text/JSON)"),
+    ("showing", "Showing vs. telling balance (text/JSON)"),
+    ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
+    ("dashboard", "Generate a single-file HTML dashboard"),
+    ("pdf", "Compose a PDF document (analysis report, book layout or 30x60 sheet)"),
+    ("serve", "Run local HTTP development server and interactive dashboard"),
+    ("build", "Idempotent workspace build of analysis exports and artifact archive"),
+    ("about", "Tool metadata for agents: languages, features, heuristics"),
+    ("completion", "Shell completion script (bash or zsh)"),
+)
+
 _BASH_COMPLETION = """# bash completion for lixity – source this file or add it to bash_completion.d/
 #   lixity completion bash > /etc/bash_completion.d/lixity   # system
 #   lixity completion bash > ~/.local/share/bash-completion/completions/lixity
@@ -264,7 +302,7 @@ _lixity_complete() {
     COMPREPLY=()
     cur="${COMP_WORDS[COMP_CWORD]}"
     prev="${COMP_WORDS[COMP_CWORD-1]}"
-    local cmds="analyze profile dialogue characters pacing scenes motifs showing dashboard pdf serve service style build about completion research"
+    local cmds="__LIXITY_COMMANDS__"
     local opts="--help --version --language --json --output -o --dry-run --names --motif --phrases --name"
     local style_opts="--z-mild --z-strong --fdr-q --fdr-method --dim-threshold --flag-min-severity --min-chapters"
     if [[ $COMP_CWORD -eq 1 ]]; then
@@ -338,23 +376,7 @@ _lixity_style_flags=(
 _lixity() {
   local -a cmds
   cmds=(
-    'analyze:Corpus metrics (text/JSON)'
-    'profile:Paragraph tense/style profiles'
-    'dialogue:Dialogue turn structure'
-    'characters:Character presence across chapters'
-    'pacing:Scene structure and pacing'
-    'scenes:Scene features and register targets'
-    'motifs:Motif tracking and repetition'
-    'showing:Showing vs telling balance'
-    'style:Self-calibrated style reference'
-    'dashboard:Single-file HTML dashboard'
-    'pdf:Compose a PDF analysis report, book layout or submission sheet'
-    'serve:Run local HTTP development server and interactive dashboard'
-    'service:Manage an owned local dashboard process'
-    'build:Idempotent workspace build'
-    'about:Tool metadata for agents'
-    'completion:Shell completion script'
-    'research:Experimental local research archive and lexical search'
+__LIXITY_ZSH_COMMANDS__
   )
   _arguments -C \
     '--version[Print version and exit]' \
@@ -499,6 +521,8 @@ def _print_about_text() -> None:
             fdr_q=heuristics["fdr_q"],
             min_chapters=heuristics["min_chapters"],
             n_dimensions=heuristics["n_dimensions"],
+            min_comparable_words=heuristics["min_comparable_words"],
+            min_comparable_sentences=heuristics["min_comparable_sentences"],
         )
     )
     if data.get("commands"):
@@ -954,32 +978,15 @@ def main(argv: list[str] | None = None) -> int:
     parser.add_argument("--version", action="version", version=f"lixity {__version__}")
     sub = parser.add_subparsers(dest="command", required=True, metavar="command")
     from .research.cli import configure as configure_research
-
-    configure_research(
-        sub.add_parser(
-            "research", help="Experimental local sources, citations and lexical search (JSON)"
-        )
-    )
     from .service import configure as configure_service
 
-    configure_service(sub.add_parser("service", help="Manage an owned local dashboard process"))
-    for name, help_text in (
-        ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
-        ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
-        ("dialogue", "Dialogue turn structure (text/JSON)"),
-        ("characters", "Character presence across chapters (text/JSON)"),
-        ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
-        ("scenes", "Scene features, register references and author targets (text/JSON)"),
-        ("motifs", "Motif tracking and repetition analysis (text/JSON)"),
-        ("showing", "Showing vs. telling balance (text/JSON)"),
-        ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
-        ("dashboard", "Generate a single-file HTML dashboard"),
-        ("pdf", "Compose a PDF document (analysis report, book layout or 30x60 sheet)"),
-        ("serve", "Run local HTTP development server and interactive dashboard"),
-        ("build", "Idempotent workspace build of analysis exports and artifact archive"),
-        ("about", "Tool metadata for agents: languages, features, heuristics"),
-        ("completion", "Shell completion script (bash or zsh)"),
-    ):
+    for name, help_text in _COMMANDS:
+        if name == "research":
+            configure_research(sub.add_parser(name, help=help_text))
+            continue
+        if name == "service":
+            configure_service(sub.add_parser(name, help=help_text))
+            continue
         p = sub.add_parser(name, help=help_text)
         if name == "completion":
             p.add_argument(
@@ -1242,19 +1249,12 @@ def main(argv: list[str] | None = None) -> int:
         args.language = project_config.get("language", "en")
 
     if args.command == "completion":
-        from .research.cli import command_metadata
-
-        research_commands = " ".join(command["name"] for command in command_metadata())
         shell = (args.shell or "bash").strip().lower()
         if shell in ("bash", "sh"):
-            sys.stdout.write(
-                _BASH_COMPLETION.replace("__LIXITY_RESEARCH_COMMANDS__", research_commands)
-            )
+            sys.stdout.write(_completion_scripts()[0])
             return EXIT_OK
         if shell == "zsh":
-            sys.stdout.write(
-                _ZSH_COMPLETION.replace("__LIXITY_RESEARCH_COMMANDS__", research_commands)
-            )
+            sys.stdout.write(_completion_scripts()[1])
             return EXIT_OK
         # argparse choices already rejected unknown shells; keep a defensive path
         print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)

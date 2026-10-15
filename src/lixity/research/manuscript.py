@@ -10,6 +10,7 @@ from pydantic import ValidationError
 from ..config import _load_toml
 from ..io import FileUtils
 from ..pipeline import paragraph_identity, profile_document, resolve_document_config
+from ..status import ManuscriptFlag, ManuscriptState
 from ..style_fingerprint import FingerprintThresholds
 from ..style_profile import ParagraphProfile
 from .models import (
@@ -106,34 +107,35 @@ def manuscript_review_data(snapshot: Snapshot, *, source_path: str, source_sha25
                 or record.anchor.source_path != source_path):
             continue
         row = manuscript_link_view(snapshot, record)
-        flags = [flag for flag in ("claim_changed", "claim_withdrawn") if row[flag]]
+        displayed_flags = (ManuscriptFlag.CLAIM_CHANGED, ManuscriptFlag.CLAIM_WITHDRAWN)
+        flags: list[str] = [flag for flag in displayed_flags if row[flag]]
         anchor = record.anchor
         resolved: ParagraphProfile | None = None
         resolved_start: int | None = None
         resolved_end: int | None = None
         candidate_lines: list[int] = []
         if source_state != "available":
-            flags.append("source_" + source_state)
-            state = "unavailable"
+            flags.append("source_" + source_state)  # missing/unreadable keep their own code
+            state = ManuscriptState.UNAVAILABLE
         else:
             if source_sha256 != anchor.source_sha256:
-                flags.append("source_changed")
+                flags.append(ManuscriptFlag.SOURCE_CHANGED)
             candidates = [p for p, identity in identities
                           if identity["paragraph_sha256"] == anchor.paragraph_sha256
                           and p.text[anchor.start:anchor.end] == anchor.quote]
             exact = [p for p in candidates
                      if p.start_line == anchor.start_line and p.end_line == anchor.end_line]
             if len(exact) == 1:
-                resolved, state = exact[0], "resolved"
+                resolved, state = exact[0], ManuscriptState.RESOLVED
                 resolved_start, resolved_end = anchor.start, anchor.end
                 candidate_lines = [resolved.start_line]
             elif len(candidates) > 1:
-                state = "ambiguous"
-                flags.append("anchor_ambiguous")
+                state = ManuscriptState.AMBIGUOUS
+                flags.append(ManuscriptFlag.ANCHOR_AMBIGUOUS)
                 candidate_lines = [p.start_line for p in candidates]
             elif candidates:
-                resolved, state = candidates[0], "moved"
-                flags.append("anchor_moved")
+                resolved, state = candidates[0], ManuscriptState.MOVED
+                flags.append(ManuscriptFlag.ANCHOR_MOVED)
                 resolved_start, resolved_end = anchor.start, anchor.end
                 candidate_lines = [resolved.start_line]
             else:
@@ -145,19 +147,19 @@ def manuscript_review_data(snapshot: Snapshot, *, source_path: str, source_sha25
                 if len(occurrences) == 1:
                     resolved, resolved_start = occurrences[0]
                     resolved_end = resolved_start + len(anchor.quote)
-                    state = "adjusted"
-                    flags.append("anchor_adjusted")
+                    state = ManuscriptState.ADJUSTED
+                    flags.append(ManuscriptFlag.ANCHOR_ADJUSTED)
                     candidate_lines = [resolved.start_line]
                 elif len(occurrences) > 1:
-                    state = "ambiguous"
-                    flags.append("anchor_ambiguous")
+                    state = ManuscriptState.AMBIGUOUS
+                    flags.append(ManuscriptFlag.ANCHOR_AMBIGUOUS)
                     candidate_lines = sorted({p.start_line for p, _ in occurrences})
                 else:
-                    state = "changed"
-                    flags.append("anchor_changed")
+                    state = ManuscriptState.CHANGED
+                    flags.append(ManuscriptFlag.ANCHOR_CHANGED)
         # The file-level digest is informational: an edit elsewhere must not
         # re-open associations whose paragraph, line span and quote still match.
-        review_blocking = [flag for flag in flags if flag != "source_changed"]
+        review_blocking = [flag for flag in flags if flag != ManuscriptFlag.SOURCE_CHANGED]
         row.update(source_path=source_path, current_source_sha256=source_sha256, flags=flags,
                    anchor_state=state, review_needed=bool(review_blocking),
                    resolved_start_line=resolved.start_line if resolved else None,
