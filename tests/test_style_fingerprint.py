@@ -46,20 +46,40 @@ from lixity.ui import render_dashboard  # noqa: E402
 
 SAMPLE = (
     "## Kap 1\n\n"
-    "Ich trinke Kaffee. Ich gehe zum Fenster. Ich sehe den Regen. Ich trinke Tee.\n\n"
-    "Ich trinke noch einen Schluck. Ich gehe zur Tür. Ich sehe die Straße.\n\n"
-    "Ich trinke Wasser. Ich gehe zur Theke und ich sehe den Abend über der Stadt.\n\n"
+    "Ich trinke Kaffee. Ich gehe zum Fenster. Ich sehe den Regen. Ich trinke Tee. "
+    "Ich höre die Straße. Ich sehe die Lichter. Ich trinke noch einen Schluck.\n\n"
+    "Ich gehe zur Tür. Ich sehe die Stadt. Ich trinke Wasser an der Theke. "
+    "Ich sehe den Abend über den Dächern. Ich höre ein fernes Lied. Ich trinke "
+    "schnell. Ich gehe nach Hause.\n\n"
+    "Ich sehe den Mond. Ich trinke noch einmal. Ich gehe zu Bett. Ich höre den "
+    "Wind. Ich trinke den letzten Schluck und ich sehe nichts mehr.\n\n"
+    "Ich höre den Regen. Ich sehe die Tropfen an der Scheibe. Ich trinke Tee und "
+    "ich warte auf den Morgen über der Stadt.\n\n"
     "## Kap 2\n\n"
     "Das Haus wurde verkauft und die Tür war verschlossen worden. Die Zeitung lag "
     "auf dem Tisch. Die Entscheidung fiel schwer. Die Beschreibung der Wohnung "
     "war ausführlich. Das Haus wurde besichtigt und die Miete war bezahlt worden. "
     "Die Zeitung lag auf dem Boden und die Entscheidung war gefallen. Die "
-    "Beschreibung der Wohnung wirkte sachlich und die Miete war hoch.\n"
+    "Beschreibung der Wohnung wirkte sachlich und die Miete war hoch.\n\n"
+    "Die Wohnung wurde gestrichen und die Fenster waren geputzt worden. Die Kaution "
+    "wurde überwiesen und der Vertrag war unterschrieben worden. Die Nachbarn wurden "
+    "gefragt und die Antwort war freundlich gewesen. Die Möbel wurden geliefert und "
+    "die Kartons waren ausgepackt worden.\n\n"
+    "Die Zeitung wurde gelesen und der Kaffee war getrunken worden. Die Rechnung "
+    "wurde geprüft und der Betrag war überwiesen worden. Die Schlüssel wurden "
+    "übergeben und die Übergabe war protokolliert worden.\n"
 )
 
 DIMENSION_SAMPLE = (
-    SAMPLE + "\n## Kap 3\n\nDie Straße glänzt. Regen fällt auf das Pflaster. "
-    "Vor dem Fenster wartet jemand mit einem roten Schirm.\n"
+    SAMPLE + "\n## Kap 3\n\nDie Straße glänzt im Licht. Regen fällt auf das Pflaster. "
+    "Vor dem Fenster wartet jemand mit einem roten Schirm. Der Wind dreht über den "
+    "Dächern. Eine Tür fällt ins Schloss. Die Laternen gehen an. Ein Hund bellt im "
+    "Hof. Der Abend zieht über die Stadt. Die Schatten werden länger. Ein Wagen "
+    "hält an der Ecke. Die Fenster flackern blau. Der Regen lässt nach. "
+    "Die Straße glänzt weiter. Ein Moped knattert durch die Gasse. Die Markisen "
+    "flattern im Wind. Eine Katze schleicht über die Mauer. Der Bäcker schließt "
+    "seine Tür. Zwei Kinder laufen nach Hause. Die Ampel springt auf Rot. "
+    "Ein Mann wartet unter dem Vordach.\n"
 )
 
 
@@ -213,14 +233,23 @@ class TestStyleFingerprint(unittest.TestCase):
         self.assertIn("Referenz des Normalmodells", german)
         self.assertNotIn("FDR-bestätigt", german)
 
-    def test_sentence_variation_is_withheld_for_one_sentence_chapters(self):
+    def test_comparability_floors_withhold_unstable_comparisons(self):
+        long_sentence = " ".join(["Der lange Satz zieht sich über die ganze Zeile"] * 6)
         metrics = CorpusAnalyzer(self.config).analyze_text(
-            "## Kap 1\n\nEr ging.\n\n## Kap 2\n\n"
-            "Er ging nach Hause. Sie blieb am Fenster. Der Regen fiel leise.\n"
+            "## Lang\n\n"
+            f"{long_sentence}. {long_sentence} und weiter. {long_sentence} am Ende.\n\n"
+            "## Kurz\n\nEr ging nach Hause. Sie blieb am Fenster. Der Regen fiel.\n"
         )
         fp = StyleFingerprint.from_metrics(metrics)
+        # The long chapter clears the word floor but not the sentence floor:
+        # distribution features stay unavailable, the mean stays measurable.
+        self.assertIsNone(fp.values["staccato_pct"][1])
         self.assertIsNone(fp.values["sentence_cv"][1])
-        self.assertIsNotNone(fp.values["sentence_cv"][2])
+        self.assertIsNotNone(fp.values["asl"][1])
+        # The short chapter clears neither floor.
+        self.assertIsNone(fp.values["asl"][2])
+        self.assertIsNone(fp.values["dialog_pct"][2])
+        self.assertEqual(fp.z_scores.get(2, {}), {})
 
     def test_single_chapter_no_deviations(self):
         one = CorpusAnalyzer(self.config).analyze_text(

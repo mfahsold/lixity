@@ -756,15 +756,19 @@ def _cmd_showing(args: argparse.Namespace) -> int:
         print(_json(_meta_payload(resolved.key, showing=report.to_dict()), indent=True))
         return EXIT_OK
 
+    def signed(value: "float | None") -> str:
+        # Below the comparability floor no z-score is derived; keep it visible.
+        return "–" if value is None else f"{value:+.2f}"
+
     con = Console()
     summary = Table(box=box.SIMPLE_HEAVY, header_style="bold cyan")
     summary.add_column(_m("show_metric"), style="bold white")
     summary.add_column(_m("show_value"), justify="right", style="cyan")
     for key, value in (
         ("show_chapters", str(report.chapters)),
-        ("show_tell_z", f"{report.tell_z_mean:+.2f}"),
-        ("show_show_z", f"{report.show_z_mean:+.2f}"),
-        ("show_balance", f"{report.balance_mean:+.2f}"),
+        ("show_tell_z", signed(report.tell_z_mean)),
+        ("show_show_z", signed(report.show_z_mean)),
+        ("show_balance", signed(report.balance_mean)),
         ("show_most_telling", ", ".join(map(str, report.most_telling))),
         ("show_most_showing", ", ".join(map(str, report.most_showing))),
     ):
@@ -782,9 +786,9 @@ def _cmd_showing(args: argparse.Namespace) -> int:
             table.add_row(
                 str(chapter.chapter_num),
                 chapter.title,
-                f"{chapter.tell_z:+.2f}",
-                f"{chapter.show_z:+.2f}",
-                f"{chapter.balance:+.2f}",
+                signed(chapter.tell_z),
+                signed(chapter.show_z),
+                signed(chapter.balance),
             )
         con.print(table)
     return EXIT_OK

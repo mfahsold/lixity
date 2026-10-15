@@ -19,21 +19,47 @@ from lixity.showing import showing_report  # noqa: E402
 DE = CorpusConfig(language="de")
 
 # Dialogue-heavy (showing) vs. filter/modal-heavy (telling) chapters; the
-# neutral chapters give the median/MAD reference enough spread.
+# neutral chapters give the median/MAD reference enough spread. Every chapter
+# clears the comparability floor of 100 words.
 NEUTRAL = (
     "Der Regen fiel auf die Straße. Die Stadt war still. Der Abend kam. "
-    "Die Lichter gingen an. Ein Wagen fuhr vorbei.\n"
+    "Die Lichter gingen an. Ein Wagen fuhr vorbei. Die Fenster wurden dunkel. "
+    "Auf dem Asphalt spiegelten sich die Laternen. Ein Hund lief über den Platz. "
+    "Die Uhren am Turm schlugen. Niemand blieb stehen. Die Nacht wurde kalt. "
+    "Der Wind drehte über den Dächern. Ein Zug verließ den Bahnhof. "
+    "Die Geschäfte schlossen leise. Ein Fahrrad klingelte im Hof. "
+    "Die Bäume standen schwarz vor dem Himmel. Eine Tür fiel ins Schloss. "
+    "Die Gasse lag leer. Der Brunnen plätscherte leise. Ein Vogel strich über "
+    "das Dach. Vor dem Tor wartete ein Wagen mit laufendem Motor."
 )
-TEXT = (
-    "## Eins\n\n"
-    "»Komm!«, sagte sie. »Nein!«, sagte er. »Doch!«, rief sie. »Nie!«, rief er.\n"
-    "»Warum?«, fragte sie. »Darum!«, sagte er.\n\n"
-    "## Zwei\n\n"
+DIALOGUE = (
+    "»Komm!«, sagte sie. »Nein!«, sagte er. »Doch!«, rief sie. »Nie!«, rief er. "
+    "»Warum?«, fragte sie. »Darum!«, sagte er. »Warte!«, bat sie. »Gleich!«, "
+    "antwortete er. »Jetzt!«, drängte sie. »Später!«, winkte er ab. »Bitte!«, "
+    "flüsterte sie. »Nein!«, wiederholte er. »Immer!«, lachte sie. »Niemals!«, "
+    "murmelte er. »Hier!«, rief sie. »Dort!«, sagte er. »Sofort!«, verlangte "
+    "sie. »Geduld!«, erwiderte er. »Warum nicht?«, fragte sie. »Weil nicht!«, "
+    "sagte er. »Und morgen?«, hoffte sie. »Vielleicht«, brummte er. "
+    "»Versprochen?«, hakte sie nach. »Versprochen!«, log er. »Schwöre es!«, "
+    "forderte sie. »Ich schwöre!«, sagte er. »Ende!«, sagte sie. »Noch nicht!«, "
+    "antwortete er. »Doch!«, beharrte sie. »Gut!«, gab er schließlich nach."
+)
+TELLING = (
     "Er spürte die Kälte. Er merkte den Wind. Er fühlte den Regen. Er glaubte, "
     "dass es kalt werden könnte. Er spürte das Zittern. Er merkte die Angst. "
-    "Er fühlte die Leere. Er glaubte an nichts. Er spürte den Schmerz.\n\n"
-    "## Drei\n\n" + NEUTRAL + "\n"
-    "## Vier\n\n" + NEUTRAL + "\n"
+    "Er fühlte die Leere. Er glaubte an nichts. Er spürte den Schmerz. "
+    "Er merkte den Druck. Er fühlte die Müdigkeit. Er glaubte, dass niemand "
+    "ihm helfen würde. Er spürte den Hunger. Er merkte die Stille. "
+    "Er fühlte den Zweifel. Er glaubte an den Zufall. Er spürte die Kälte "
+    "wieder. Er merkte, dass er zitterte. Er fühlte den Boden unter den Füßen. "
+    "Er glaubte an einen neuen Morgen. Er merkte die Schwere in den Beinen. "
+    "Er fühlte, dass der Regen nachließ."
+)
+TEXT = (
+    "## Eins\n\n" + DIALOGUE + "\n\n"
+    "## Zwei\n\n" + TELLING + "\n\n"
+    "## Drei\n\n" + NEUTRAL + "\n\n"
+    "## Vier\n\n" + NEUTRAL + "\n\n"
     "## Fünf\n\n" + NEUTRAL + "\n"
 )
 
@@ -50,22 +76,30 @@ class TestShowingReport(unittest.TestCase):
         self.assertIn(1, report.most_showing)
 
     def test_rankings_require_a_distinguishable_chapter_balance(self):
-        samples = (
-            "## One\n\n" + NEUTRAL,
-            "## One\n\n»Komm!«\n\n## Two\n\nEr spürte die Kälte.",
-            "\n".join(f"## {number}\n\n{NEUTRAL}" for number in range(1, 5)),
+        report = showing_report("\n".join(f"## {number}\n\n{NEUTRAL}" for number in range(1, 5)), DE)
+        self.assertTrue(report.chapter_list)
+        self.assertEqual({chapter.balance for chapter in report.chapter_list}, {0.0})
+        self.assertEqual(report.most_telling, [])
+        self.assertEqual(report.most_showing, [])
+        payload = report.to_dict()
+        self.assertEqual(payload["most_telling"], [])
+        self.assertEqual(payload["most_showing"], [])
+        self.assertIsInstance(payload["balance_mean"], float)
+
+    def test_short_chapters_stay_out_of_comparisons(self):
+        text = "## Kurz\n\nEr ging. Sie blieb am Fenster. Der Regen fiel.\n\n" + "\n\n".join(
+            f"## {number}\n\n{NEUTRAL}" for number in range(2, 5)
         )
-        for text in samples:
-            with self.subTest(text=text):
-                report = showing_report(text, DE)
-                self.assertTrue(report.chapter_list)
-                self.assertEqual({chapter.balance for chapter in report.chapter_list}, {0.0})
-                self.assertEqual(report.most_telling, [])
-                self.assertEqual(report.most_showing, [])
-                payload = report.to_dict()
-                self.assertEqual(payload["most_telling"], [])
-                self.assertEqual(payload["most_showing"], [])
-                self.assertIsInstance(payload["balance_mean"], float)
+        report = showing_report(text, DE)
+        short = report.chapter_list[0]
+        self.assertFalse(short.comparable)
+        self.assertIsNone(short.balance)
+        self.assertIsNone(short.tell_z)
+        self.assertEqual(report.comparable_chapters, 3)
+        self.assertNotIn(1, report.most_telling + report.most_showing)
+        payload = report.to_dict()
+        self.assertIsNone(payload["chapter_list"][0]["balance"])
+        self.assertIs(payload["chapter_list"][0]["comparable"], False)
 
     def test_balance_definition(self):
         report = showing_report(TEXT, DE)

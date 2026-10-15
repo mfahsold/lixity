@@ -321,6 +321,8 @@ def about() -> dict[str, Any]:
     from .research.models import ENTITY, Manifest
     from .style_fingerprint import (
         FEATURES,
+        MIN_COMPARABLE_SENTENCES,
+        MIN_COMPARABLE_WORDS,
         N_DIMENSIONS,
         REDUNDANCY_RHO,
     )
@@ -352,6 +354,8 @@ def about() -> dict[str, Any]:
             "hd_d_sample_size": HD_D_DRAW_SIZE,
             "hd_d_method": "hypergeometric_expected_ttr",
             "hd_d_min_tokens": MIN_TOKENS_LD,
+            "min_comparable_words": MIN_COMPARABLE_WORDS,
+            "min_comparable_sentences": MIN_COMPARABLE_SENTENCES,
         },
         "commands": [
             {

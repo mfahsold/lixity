@@ -497,12 +497,18 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
   vs. showing signals (dialogue, staccato) as robust z against the book's own
   chapter medians; `balance = show_z − tell_z` (positive = showing).
   Documented fallback: if MAD = 0 (majority of chapters share the median), the
-  standard deviation is used when nonzero. Fewer than three chapters give zero
-  component scores; `most_telling=[]` and `most_showing=[]` when all balances
-  are identical. Numeric fallback zeros do not support a ranking or an artistic
-  equivalence claim. Heuristic composite, **not** a quality verdict.
-  The dashboard shows `–` for fewer than three chapters or absent comparative
-  signals; JSON fallback scores retain their numeric representation.
+  standard deviation is used when nonzero. Fewer than three comparable chapters
+  give zero component scores; `most_telling=[]` and `most_showing=[]` when all
+  balances are identical. Numeric fallback zeros do not support a ranking or an
+  artistic equivalence claim. Heuristic composite, **not** a quality verdict.
+  Chapters below `MIN_COMPARABLE_WORDS` (100) keep their raw densities but are
+  marked `comparable: false`; their `tell_z`, `show_z` and `balance` are JSON
+  `null`, they are excluded from `comparable_chapters`, the means and both
+  rankings. The dashboard shows `–` for fewer than three comparable chapters,
+  absent comparative signals or non-comparable chapters.
+  `about().heuristics` reports `min_comparable_words` and
+  `min_comparable_sentences`; the style fingerprint applies the same floors to
+  its feature values, baselines and FDR sets (see METHODS.md).
 
 **Boundary note.** Structure modules are deterministic in-text proxies.
 Heuristics (hook score, filter/signal counts, n-gram repetition) measure

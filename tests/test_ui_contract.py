@@ -36,22 +36,31 @@ LANGUAGES = ("de", "en", "fr", "es", "it", "pt", "nl")
 
 SAMPLE = (
     "## Kap 1\n\n"
-    "Ich trinke Kaffee. Ich gehe zum Fenster. Ich sehe den Regen. Ich trinke Tee.\n\n"
+    "Ich trinke Kaffee. Ich gehe zum Fenster. Ich sehe den Regen. Ich trinke Tee. "
+    "Ich höre die Straße. Ich sehe die Lichter. Ich trinke noch einen Schluck.\n\n"
     "Ich trinke noch einen Schluck. Ich gehe zur Tür. Ich sehe die Straße und den "
-    "Regen auf dem Asphalt, der glänzt.\n\n"
+    "Regen auf dem Asphalt, der glänzt. Ich höre ein fernes Lied. Ich sehe den "
+    "Abend über den Dächern.\n\n"
     "Ich spüre die Kälte. Ich merke den Wind. Ich fühle den Regen auf der Haut und "
-    "ich glaube, es wird kalt. Ich spüre das Zittern.\n\n"
-    "Die Straße liegt still. Die Stadt schweigt. Der Abend kommt.\n\n"
+    "ich glaube, es wird kalt. Ich spüre das Zittern. Ich sehe den Mond.\n\n"
+    "Die Straße liegt still. Die Stadt schweigt. Der Abend kommt. Die Lichter "
+    "gehen an. Ein Wagen fährt vorbei.\n\n"
     "Ich trinke Kaffee und ich ging zum Laden. Ich sehe den Regen und ich kaufte Brot. "
-    "Ich gehe nach Hause und ich trank den Tee.\n\n"
+    "Ich gehe nach Hause und ich trank den Tee. Ich höre den Wind und ich sehe "
+    "die Tropfen an der Scheibe.\n\n"
     "## Kap 2\n\n"
     "Das Haus wurde verkauft und die Tür war verschlossen worden. Die Zeitung lag "
     "auf dem Tisch. Die Entscheidung fiel schwer. Die Beschreibung der Wohnung "
     "war ausführlich. Das Haus wurde besichtigt und die Miete war bezahlt worden. "
     "Die Zeitung lag auf dem Boden und die Entscheidung war gefallen. Die "
     "Beschreibung der Wohnung wirkte sachlich und die Miete war hoch.\n\n"
+    "Die Wohnung wurde gestrichen und die Fenster waren geputzt worden. Die Kaution "
+    "wurde überwiesen und der Vertrag war unterschrieben worden. Die Nachbarn wurden "
+    "gefragt und die Antwort war freundlich gewesen. Die Möbel wurden geliefert und "
+    "die Kartons waren ausgepackt worden.\n\n"
     "Ich trinke Kaffee und ich sehe den Regen. Ich gehe zum Fenster und ich spüre "
-    "die Kälte. Ich merke den Wind und ich fühle die Sonne.\n"
+    "die Kälte. Ich merke den Wind und ich fühle die Sonne. Ich trinke Tee und ich "
+    "warte auf den Abend über den Dächern.\n"
 )
 
 
@@ -690,7 +699,8 @@ class TestShowDontTellComponents(unittest.TestCase):
                 for note in labels.values():
                     self.assertIn(f'<p class="ctl-note">{note}</p>', rendered)
 
-        varying = SAMPLE + "\n".join(f"## {number}\n\n{neutral}" for number in range(3, 6))
+        long_neutral = (neutral + " ") * 14
+        varying = SAMPLE + "\n".join(f"## {number}\n\n{long_neutral}" for number in range(3, 6))
         report = showing_report(varying, config).to_dict()
         self.assertTrue(any(chapter["balance"] for chapter in report["chapter_list"]))
         rendered = render_showing_panel(report, labels, "en")
@@ -743,11 +753,17 @@ class TestShowDontTellComponents(unittest.TestCase):
         from lixity.api import analyze_document
         from lixity.style_fingerprint import FingerprintThresholds
 
+        filler_a = "Ich trinke Kaffee und höre die Stadt im Regen. " * 12
+        filler_b = "Ich trinke Tee und sehe die Straße im Licht. " * 12
+        filler_c = "Das Haus wurde verkauft und die Tür war verschlossen worden. " * 9
+        filler_d = "Die Entscheidung fiel schwer und die Miete war bezahlt worden. " * 9
         multi_sample = (
-            "## Kap 1\n\nIch trinke Kaffee. Der Morgen dämmert. Ich gehe zur Tür.\n\n"
-            "## Kap 2\n\nIch trinke Tee. Die Straße schweigt. Ich sehe den Regen.\n\n"
-            "## Kap 3\n\nDas Haus wurde verkauft. Die Tür war verschlossen worden. Die Entscheidung fiel schwer.\n\n"
-            "## Kap 4\n\nDas Haus wurde besichtigt und die Miete war bezahlt worden. Die Beschreibung der Wohnung wirkte sachlich.\n\n"
+            f"## Kap 1\n\nIch trinke Kaffee. Der Morgen dämmert. Ich gehe zur Tür. {filler_a}\n\n"
+            f"## Kap 2\n\nIch trinke Tee. Die Straße schweigt. Ich sehe den Regen. {filler_b}\n\n"
+            f"## Kap 3\n\nDas Haus wurde verkauft. Die Tür war verschlossen worden. "
+            f"Die Entscheidung fiel schwer. {filler_c}\n\n"
+            f"## Kap 4\n\nDas Haus wurde besichtigt und die Miete war bezahlt worden. "
+            f"Die Beschreibung der Wohnung wirkte sachlich. {filler_d}\n\n"
         )
         config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         res = analyze_document(multi_sample, config, FingerprintThresholds())

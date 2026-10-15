@@ -119,6 +119,19 @@ These plug-ins do not establish independence of words/sentences or calibrated
 null probabilities for chapter features. Zero observed events can give zero
 plug-in error without establishing population certainty.
 
+### Comparability floors
+
+Local minimum sizes keep tiny samples out of comparisons. They are policies,
+not reliability guarantees; below a floor the affected value is unavailable
+(a dash in the dashboard, `null` in JSON) and is excluded from medians, MAD,
+dimensions and FDR calculations.
+
+| Floor | Value | Applies to |
+| :--- | :--- | :--- |
+| Words per chapter | `MIN_COMPARABLE_WORDS` = 100 (the `MIN_TOKENS_LD` diversity floor) | every per-chapter feature comparison in the style fingerprint: z*, effect sizes, FDR sets and the reference baseline; showing/telling z-scores, means and rankings. Chapters below it keep their word counts in the matrix but receive no comparison values. Scenes stay descriptive: they show measured values with standard errors, and HD-D remains unavailable below the same word count. |
+| Sentences | `MIN_COMPARABLE_SENTENCES` = 5 | sentence-distribution features: staccato share, cascade share, sentence-length CV, start entropy and first-person starts; shares, variance and entropy from fewer sentences are bound to the sample size. The sentence-length mean (`asl`) stays measurable above the word floor. |
+| Sentences for variation (scenes) | 2 | scene-table sentence CV; a single-sentence unit has no variation. |
+
 ## 3. Thresholds (`FingerprintThresholds`)
 
 | Key | Default | Meaning |

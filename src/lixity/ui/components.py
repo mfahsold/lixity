@@ -164,11 +164,23 @@ def artifact_href(value: Any) -> str:
     return candidate
 
 
-def help_term(labels: Mapping[str, str] | None, key: str, text: str) -> str:
-    """Wraps a term with a tooltip (help text from the language profile)."""
+def help_term(
+    labels: Mapping[str, str] | None,
+    key: str,
+    text: str,
+    fields: Mapping[str, str] | None = None,
+) -> str:
+    """Wraps a term with a tooltip (help text from the language profile).
+
+    ``fields`` substitute ``{name}`` placeholders with live thresholds; label
+    packs keep the wording, the caller owns the numbers.
+    """
     tip = label(labels, f"help_{key}")
     if not tip or tip.startswith("help_"):
         tip = HELP_TEXTS["en"].get(f"help_{key}") or HELP_TEXTS["de"].get(f"help_{key}") or ""
+    if fields:
+        for name, value in fields.items():
+            tip = tip.replace("{" + name + "}", value)
     if not tip:
         return text
     return (

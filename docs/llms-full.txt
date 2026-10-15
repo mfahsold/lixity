@@ -4932,7 +4932,9 @@ See [LOCALIZATION.md](LOCALIZATION.md) for supported profiles and limitations.
 Token, syllable, dialogue and sentence measures share the supported prose scope:
 body paragraphs, list items and blockquote paragraphs with `>` delimiters
 removed. YAML front matter, code, headings, comments and footnote definitions
-are omitted; inline emphasis and footnote anchors are stripped. This bounded
+are omitted; inline emphasis and footnote anchors are stripped. Sentence
+boundaries never cross a blank line: each semantic block is split on its own,
+and a block without terminal punctuation stays one fragment unit. This bounded
 Markdown policy is not a complete CommonMark parser. Visible prose beneath a
 leading document title (`# …`) before the first chapter contributes to global
 metrics but not chapter-only reports.
@@ -5015,6 +5017,19 @@ measurement SE for this feature, **not** certainty about a larger population.
 These plug-ins do not establish independence of words/sentences or calibrated
 null probabilities for chapter features. Zero observed events can give zero
 plug-in error without establishing population certainty.
+
+### Comparability floors
+
+Local minimum sizes keep tiny samples out of comparisons. They are policies,
+not reliability guarantees; below a floor the affected value is unavailable
+(a dash in the dashboard, `null` in JSON) and is excluded from medians, MAD,
+dimensions and FDR calculations.
+
+| Floor | Value | Applies to |
+| :--- | :--- | :--- |
+| Words per chapter | `MIN_COMPARABLE_WORDS` = 100 (the `MIN_TOKENS_LD` diversity floor) | every per-chapter feature comparison in the style fingerprint: z*, effect sizes, FDR sets and the reference baseline; showing/telling z-scores, means and rankings. Chapters below it keep their word counts in the matrix but receive no comparison values. Scenes stay descriptive: they show measured values with standard errors, and HD-D remains unavailable below the same word count. |
+| Sentences | `MIN_COMPARABLE_SENTENCES` = 5 | sentence-distribution features: staccato share, cascade share, sentence-length CV, start entropy and first-person starts; shares, variance and entropy from fewer sentences are bound to the sample size. The sentence-length mean (`asl`) stays measurable above the word floor. |
+| Sentences for variation (scenes) | 2 | scene-table sentence CV; a single-sentence unit has no variation. |
 
 ## 3. Thresholds (`FingerprintThresholds`)
 
@@ -5352,7 +5367,7 @@ restating formulas.
 | Hook | First sentence ≤ `HOOK_SHORT_SENTENCE` (8) words or ending in `…` (`pacing.py`) | Only the ellipsis character scores; `...` does not |
 | Dialogue paragraph | ≥ 50 % of the paragraph's words inside dialogue spans (`dialogue.py`) | Quotation conventions differ per language |
 | Tense mixed/switch | `mixed`: ≥ 2 present and ≥ 2 past markers and minority share ≥ 25 %; `switch`: the dominant tense changes between consecutive paragraphs (`style_profile.py`) | Whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); no productive present pattern |
-| Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split (`sentences.py`) | Tables are curated and incomplete; tokenless fragments are not sentences |
+| Sentence splitter | Language abbreviation tables, digit and initial guards; utterance `no.`/`co.` split; prose splits keep blank-line block boundaries (`split_prose_sentences`) | Tables are curated and incomplete; tokenless fragments are not sentences; an unterminated block stays one fragment unit with its token length |
 | Severity | `classify_severity` truth table; defaults: 3 = switch + mixed + minority ≥ 3, 2 = (switch + minority ≥ 2) or (mixed + minority ≥ 3), 1 = either, 0 = neither | Only `flag_min_severity` reaches CLI/API/config; other `ProfileThresholds` fields need direct `ParagraphProfiler` construction |
 | Dominance | past when `past/(present+ε) > 1.5`, present when `< 0.67` (`style_profile.py`) | Ratio bands are conventions, not measured boundaries |
 | Nominal/adjective suffixes | Curated suffix cues minus curated function words (`language_data.py`) | Over-include (e.g. `month/health/truth`, `König/Saal`, `Musik/Natur`) |
@@ -6776,12 +6791,18 @@ deterministic and documented in [`USAGE.md`](USAGE.md).
   vs. showing signals (dialogue, staccato) as robust z against the book's own
   chapter medians; `balance = show_z − tell_z` (positive = showing).
   Documented fallback: if MAD = 0 (majority of chapters share the median), the
-  standard deviation is used when nonzero. Fewer than three chapters give zero
-  component scores; `most_telling=[]` and `most_showing=[]` when all balances
-  are identical. Numeric fallback zeros do not support a ranking or an artistic
-  equivalence claim. Heuristic composite, **not** a quality verdict.
-  The dashboard shows `–` for fewer than three chapters or absent comparative
-  signals; JSON fallback scores retain their numeric representation.
+  standard deviation is used when nonzero. Fewer than three comparable chapters
+  give zero component scores; `most_telling=[]` and `most_showing=[]` when all
+  balances are identical. Numeric fallback zeros do not support a ranking or an
+  artistic equivalence claim. Heuristic composite, **not** a quality verdict.
+  Chapters below `MIN_COMPARABLE_WORDS` (100) keep their raw densities but are
+  marked `comparable: false`; their `tell_z`, `show_z` and `balance` are JSON
+  `null`, they are excluded from `comparable_chapters`, the means and both
+  rankings. The dashboard shows `–` for fewer than three comparable chapters,
+  absent comparative signals or non-comparable chapters.
+  `about().heuristics` reports `min_comparable_words` and
+  `min_comparable_sentences`; the style fingerprint applies the same floors to
+  its feature values, baselines and FDR sets (see METHODS.md).
 
 **Boundary note.** Structure modules are deterministic in-text proxies.
 Heuristics (hook score, filter/signal counts, n-gram repetition) measure

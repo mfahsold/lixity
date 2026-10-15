@@ -118,7 +118,9 @@ class TestSettingsUi(unittest.TestCase):
                 self.assertIn('id="settings-form"', rendered)
 
     def test_matrix_marks_only_the_core_fdr_set(self):
-        text = "## One\n\nI walk. I see the rain.\n\n## Two\n\nThe house was sold and the door was closed.\n"
+        long_one = "I walk through the rain and I see the lights of the street. " * 9
+        long_two = "The house was sold and the door was closed before the night came. " * 9
+        text = f"## One\n\n{long_one}\n\n## Two\n\n{long_two}\n"
         config, language = resolve_document_config(text, "en")
         result = analyze_document(text, config, FingerprintThresholds())
         result.fingerprint.fdr_flagged = {1: ["asl"]}
@@ -129,7 +131,9 @@ class TestSettingsUi(unittest.TestCase):
         self.assertIn("Cliff", rendered)
 
     def test_color_legend_does_not_misrepresent_configured_threshold(self):
-        text = "## One\n\nI walk. I see the rain.\n\n## Two\n\nThe house was sold and the door was closed.\n"
+        long_one = "I walk through the rain and I see the lights of the street. " * 9
+        long_two = "The house was sold and the door was closed before the night came. " * 9
+        text = f"## One\n\n{long_one}\n\n## Two\n\n{long_two}\n"
         config, language = resolve_document_config(text, "en")
         result = analyze_document(text, config, FingerprintThresholds(z_mild=1.5))
         rendered = render_dashboard(result.chapters, result.paragraphs, metrics=result.metrics,

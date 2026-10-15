@@ -9,7 +9,7 @@ from ..diversity import MIN_TOKENS_LD
 from ..format import num as format_num
 from ..format import pct as format_pct
 from ..showing import MIN_COMPARISON_CHAPTERS
-from ..style_fingerprint import FEATURE_UNITS, FEATURES
+from ..style_fingerprint import FEATURE_UNITS, FEATURES, MIN_COMPARABLE_WORDS
 from ..style_profile import ChapterProfile
 from .components import esc, help_term, kpi, label, panel_start
 
@@ -350,44 +350,58 @@ def render_showing_panel(
         return format_num(value, language_key, decimals, signed)
 
     showing_chapters = showing["chapter_list"]
-    comparable = len(showing_chapters) >= MIN_COMPARISON_CHAPTERS and any(
-        float(chapter.get("tell_z", 0.0) or 0.0) != 0.0
-        or float(chapter.get("show_z", 0.0) or 0.0) != 0.0
-        for chapter in showing_chapters
+    comparable_chapters = [chapter for chapter in showing_chapters if chapter.get("comparable", True)]
+    comparable = len(comparable_chapters) >= MIN_COMPARISON_CHAPTERS and any(
+        float(chapter.get("tell_z") or 0.0) != 0.0
+        or float(chapter.get("show_z") or 0.0) != 0.0
+        for chapter in comparable_chapters
     )
     parts: list[str] = [panel_start("showing", labels, "panel_showing")]
-    parts.append(f'<p class="ctl-note">{L("showing_context_note")}</p>')
+    context_note = esc(
+        label(labels, "showing_context_note").replace("{min_words}", str(MIN_COMPARABLE_WORDS))
+    )
+    parts.append(f'<p class="ctl-note">{context_note}</p>')
     if not comparable:
         note = L("showing_unavailable_note").replace("{min_chapters}", str(MIN_COMPARISON_CHAPTERS))
         parts.append(f'<p class="ctl-note">{note}</p></section>')
         return "".join(parts)
     parts.append('<div class="kpi-row">')
     parts.append(kpi(
-        N(showing.get("tell_z_mean", 0.0), 2, signed=True), L("show_tell")
+        N(float(showing.get("tell_z_mean") or 0.0), 2, signed=True), L("show_tell")
     ))
     parts.append(kpi(
-        N(showing.get("show_z_mean", 0.0), 2, signed=True), L("show_show")
+        N(float(showing.get("show_z_mean") or 0.0), 2, signed=True), L("show_show")
     ))
     parts.append(kpi(
-        N(showing.get("balance_mean", 0.0), 2, signed=True), L("show_balance")
+        N(float(showing.get("balance_mean") or 0.0), 2, signed=True), L("show_balance")
     ))
     parts.append("</div>")
 
     max_abs = (
-        max((abs(float(c.get("balance", 0.0))) for c in showing_chapters), default=0.0) or 1.0
+        max((abs(float(c.get("balance") or 0.0)) for c in comparable_chapters), default=0.0) or 1.0
     )
     parts.append('<div class="dist scrollable">')
     for chapter in showing_chapters:
         num = int(chapter.get("chapter_num", 0))
-        balance = float(chapter.get("balance", 0.0))
+        title_attr = esc(chapter.get("title", ""))
+        label_html = f'{L("chapter")} {num} · {esc(chapter.get("title", ""))}'
+        if not chapter.get("comparable", True):
+            parts.append(
+                f'<div class="row unavailable" title="{title_attr}">'
+                f'<span class="label">{label_html}</span>'
+                f'<span class="bar"></span>'
+                f'<span class="val">–</span>'
+                f"</div>"
+            )
+            continue
+        balance = float(chapter.get("balance") or 0.0)
         width = min(100.0, abs(balance) / max_abs * 100.0)
         bar = f'<i style="width:{width:.1f}%"></i>'
         value = N(balance, 2, signed=True)
-        title_attr = esc(chapter.get("title", ""))
         parts.append(
             f'<div class="row" data-jump="#ch-{num}" role="button" tabindex="0" '
             f'title="{title_attr}">'
-            f'<span class="label">{L("chapter")} {num} · {esc(chapter.get("title", ""))}</span>'
+            f'<span class="label">{label_html}</span>'
             f'<span class="bar">{bar}</span>'
             f'<span class="val">{value}</span>'
             f"</div>"

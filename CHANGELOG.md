@@ -13,11 +13,27 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   merging into the next block's sentence. Chapter ASL, scene units, corpus
   sentence statistics and the chapter matrix now agree; recompute older
   reports before comparing.
-- A chapter with a single sentence no longer receives a sentence-variation
-  deviation; the value stays unavailable, matching the scenes table note.
 - The serve dashboard checks the manuscript digest when the page is loaded
   and rebuilds itself when the file changed on disk instead of presenting
   stale numbers.
+
+### Changed
+- Style comparisons use documented comparability floors: chapters below 100
+  words (`MIN_COMPARABLE_WORDS`, the same floor as the diversity indices)
+  receive no z*, effect sizes or FDR marks, and sentence-distribution
+  features (staccato, cascade, sentence CV, start entropy, first-person
+  starts) need at least five sentences (`MIN_COMPARABLE_SENTENCES`).
+  Baselines, dimensions and structural series use only comparable chapters;
+  the dashboard marks affected values as unavailable and explains the
+  minimum. Showing/telling z-scores, means and rankings apply the same word
+  floor and mark shorter chapters `comparable: false` with null z-values.
+  Recompute older reports before comparing.
+
+### Added
+- `about().heuristics` reports `min_comparable_words` and
+  `min_comparable_sentences`; the style panel explains the minimum instead
+  of hiding the reference when no chapter reaches the floor. Help texts and
+  the chapter-matrix guide name the floors, in all supported languages.
 
 ## [0.4.6] - 2026-10-15
 

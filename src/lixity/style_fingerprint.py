@@ -18,6 +18,7 @@ from itertools import pairwise
 from types import MappingProxyType
 from typing import Any, ClassVar
 
+from .diversity import MIN_TOKENS_LD
 from .format import num as format_num
 from .language import compile_word_pattern, resolve_language
 from .markdown_parser import prose_text, split_chapters
@@ -64,6 +65,25 @@ FEATURES: tuple[tuple[str, str, str], ...] = (
     ("guiraud_r", "feat_guiraud", "index"),
     ("hd_d", "feat_hd_d", "index"),
 )
+
+#: Chapters below this word count get no feature comparisons at all: rates,
+#: shares and deviations from tiny samples are structurally unstable. The same
+#: floor already guards the lexical-diversity indices (``MIN_TOKENS_LD``).
+MIN_COMPARABLE_WORDS = MIN_TOKENS_LD
+
+#: Sentence-distribution features need at least this many sentences: shares,
+#: variance and start entropy from fewer sentences are bound to the sample
+#: size, not to the prose.
+MIN_COMPARABLE_SENTENCES = 5
+
+#: Features whose comparability the sentence floor above guards.
+SENTENCE_DISTRIBUTION_FEATURES = frozenset({
+    "staccato_pct",
+    "kaskade_pct",
+    "sentence_cv",
+    "start_entropy",
+    "first_person_start_rate",
+})
 
 # Localised unit strings per language (FEATURES carries the English defaults).
 # Keys are language codes matching resolve_language().key; missing keys fall
@@ -1036,9 +1056,13 @@ class StyleFingerprint:
             se_col: dict[int, float] = {}
             for chapter in chapters:
                 raw = getattr(chapter, field_name, None)
-                # Sentence variation needs at least two sentences, matching the
-                # scene table; a one-sentence constellation is not measurable.
-                if field_name == "sentence_cv" and chapter.sentences < 2:
+                # Comparability floors: tiny chapters and sentence-distribution
+                # features with few sentences stay unavailable instead of
+                # producing unstable deviations and FDR flags.
+                if chapter.words < MIN_COMPARABLE_WORDS or (
+                    field_name in SENTENCE_DISTRIBUTION_FEATURES
+                    and chapter.sentences < MIN_COMPARABLE_SENTENCES
+                ):
                     col[chapter.num] = None
                 else:
                     col[chapter.num] = (

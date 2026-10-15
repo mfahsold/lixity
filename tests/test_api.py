@@ -23,15 +23,29 @@ from lixity.cli import _BASH_COMPLETION, _ZSH_COMPLETION, main  # noqa: E402
 
 SAMPLE = (
     "## Kap 1\n\n"
-    "Ich trinke Kaffee. Ich gehe zum Fenster. Ich sehe den Regen. Ich trinke Tee.\n\n"
-    "Ich trinke noch einen Schluck. Ich gehe zur Tür. Ich sehe die Straße.\n\n"
-    "Ich trinke Wasser. Ich gehe zur Theke und ich sehe den Abend über der Stadt.\n\n"
+    "Ich trinke Kaffee. Ich gehe zum Fenster. Ich sehe den Regen. Ich trinke Tee. "
+    "Ich höre die Straße. Ich sehe die Lichter. Ich trinke noch einen Schluck.\n\n"
+    "Ich trinke noch einen Schluck. Ich gehe zur Tür. Ich sehe die Straße und den "
+    "Regen auf dem Asphalt, der glänzt. Ich höre ein fernes Lied.\n\n"
+    "Ich trinke Wasser. Ich gehe zur Theke und ich sehe den Abend über der Stadt. "
+    "Ich höre den Wind und ich sehe die Tropfen an der Scheibe. Ich trinke den "
+    "letzten Schluck und ich sehe die Lichter an der Straße.\n\n"
+    "Ich gehe nach Hause. Ich sehe den Mond über den Dächern. Ich höre den Regen "
+    "und ich trinke noch einen Tee. Ich sehe die Tropfen an der Scheibe und ich "
+    "warte auf den Morgen.\n\n"
     "## Kap 2\n\n"
     "Das Haus wurde verkauft und die Tür war verschlossen worden. Die Zeitung lag "
     "auf dem Tisch. Die Entscheidung fiel schwer. Die Beschreibung der Wohnung "
     "war ausführlich. Das Haus wurde besichtigt und die Miete war bezahlt worden. "
     "Die Zeitung lag auf dem Boden und die Entscheidung war gefallen. Die "
-    "Beschreibung der Wohnung wirkte sachlich und die Miete war hoch.\n"
+    "Beschreibung der Wohnung wirkte sachlich und die Miete war hoch.\n\n"
+    "Die Wohnung wurde gestrichen und die Fenster waren geputzt worden. Die Kaution "
+    "wurde überwiesen und der Vertrag war unterschrieben worden. Die Nachbarn wurden "
+    "gefragt und die Antwort war freundlich gewesen. Die Möbel wurden geliefert und "
+    "die Kartons waren ausgepackt worden.\n\n"
+    "Die Rechnung wurde geprüft und der Betrag war überwiesen worden. Die Schlüssel "
+    "wurden übergeben und die Übergabe war protokolliert worden. Die Fenster wurden "
+    "geöffnet und die Räume waren gelüftet worden.\n"
 )
 
 

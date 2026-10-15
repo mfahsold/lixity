@@ -23,6 +23,7 @@ from ..status import FLAG_MIN_SEVERITY
 from ..style_fingerprint import (
     FEATURES,
     LAYER_FEATURES,
+    MIN_COMPARABLE_WORDS,
     Z_COLOR_LIMIT,
     FingerprintThresholds,
     layer_stats,
@@ -842,7 +843,7 @@ def render_dashboard(
         available.add("scenes")
     if motifs:
         available.add("motifs")
-    if has_house_style and fingerprint is not None:
+    if (has_house_style or (fingerprint is not None and metrics is not None and metrics.chapters)):
         available.add("style")
     if chapters:
         available.add("matrix")
@@ -1217,6 +1218,18 @@ def render_dashboard(
         parts.append('</div><div id="style-panels">')
         parts.extend(content for _, _, content in style_views if content)
         parts.append('</div></section>')
+    elif fingerprint is not None and metrics is not None and metrics.chapters:
+        # Chapters exist, but none reaches the comparability floor: explain the
+        # minimum instead of presenting an empty or misleading style reference.
+        min_chapters = fingerprint.thresholds.min_chapters
+        parts.append(f'<section class="panel" id="style"><h2>{L("group_style")}</h2>')
+        parts.append(
+            '<p class="ctl-note">'
+            + L("style_unavailable_note")
+            .replace("{min_chapters}", str(min_chapters))
+            .replace("{min_words}", str(MIN_COMPARABLE_WORDS))
+            + "</p></section>"
+        )
 
     # --- Work markers (editor-visible, set from the dashboard) -------
     parts.append(render_markers_panel(markers, chapters, labels, controls))

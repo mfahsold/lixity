@@ -9,6 +9,8 @@ from ..format import num as format_num
 from ..style_fingerprint import (
     FEATURES,
     LAYER_FEATURES,
+    MIN_COMPARABLE_SENTENCES,
+    MIN_COMPARABLE_WORDS,
     Z_COLOR_LIMIT,
     StyleFingerprint,
     z_color,
@@ -58,14 +60,31 @@ def render_heatmap_panel(
     z_mild = fingerprint.thresholds.z_mild
 
     parts: list[str] = ['<section class="panel" id="heatmap">']
-    parts.append(f"<h2>{help_term(labels, 'heatmap', L('style_fingerprint'))}</h2>")
+    parts.append(
+        "<h2>"
+        + help_term(
+            labels,
+            "heatmap",
+            L("style_fingerprint"),
+            fields={
+                "min_words": str(MIN_COMPARABLE_WORDS),
+                "min_sentences": str(MIN_COMPARABLE_SENTENCES),
+            },
+        )
+        + "</h2>"
+    )
     parts.append(
         '<div class="z-legend">'
         + esc(label(labels, "zscore"))
         + f' <span class="z-gradient"></span> −{N(Z_COLOR_LIMIT, 1)} … +{N(Z_COLOR_LIMIT, 1)}'
         + "</div>"
     )
-    parts.append(f'<p class="panel-guide">{L("matrix_reading")}</p>')
+    reading = (
+        label(labels, "matrix_reading")
+        .replace("{min_words}", str(MIN_COMPARABLE_WORDS))
+        .replace("{min_sentences}", str(MIN_COMPARABLE_SENTENCES))
+    )
+    parts.append(f'<p class="panel-guide">{esc(reading)}</p>')
     fdr_only = checkbox_field('<input type="checkbox" id="heatmap-fdr-only"/>', L("matrix_fdr_only"))
     parts.append(
         f'<div class="matrix-tools">{fdr_only}<span class="analysis-method">'
