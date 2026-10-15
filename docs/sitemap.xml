@@ -70,4 +70,16 @@
       <video:publication_date>2026-10-12</video:publication_date>
     </video:video>
   </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/blog/index.html</loc>
+    <lastmod>2026-10-15</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/blog/tense-switches.html</loc>
+    <lastmod>2026-10-15</lastmod>
+  </url>
+  <url>
+    <loc>https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html</loc>
+    <lastmod>2026-10-15</lastmod>
+  </url>
 </urlset>

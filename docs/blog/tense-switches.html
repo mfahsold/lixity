@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Finding tense switches in a novel — Lixity blog</title>
+<meta name="description" content="Use paragraph-level tense profiles and a flagged-passage list to review tense switches in a novel one passage at a time, with the context that decides whether a switch is intentional."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/blog/tense-switches.html"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="Finding tense switches in a novel"/>
+<meta property="og:description" content="Paragraph-level profiles and a flagged-passage list turn vague tense discomfort into passages you can review one by one."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/blog/tense-switches.html"/>
+<meta property="og:site_name" content="Lixity"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta property="og:image:width" content="1480"/>
+<meta property="og:image:height" content="945"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
+<link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "Finding tense switches in a novel — and deciding which ones matter",
+  "description": "Use paragraph-level tense profiles and a flagged-passage list to review tense switches in a novel one passage at a time.",
+  "url": "https://mfahsold.github.io/lixity/blog/tense-switches.html",
+  "inLanguage": "en",
+  "datePublished": "2026-10-15",
+  "dateModified": "2026-10-15",
+  "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"},
+  "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to article</a>
+<main class="guide" id="content">
+<a href="../">Lixity · Documentation</a>
+<h1>Finding tense switches in a novel — and deciding which ones matter</h1>
+<p class="updated">Posted <time datetime="2026-10-15">15 October 2026</time> · 6 minutes · <a href="index.html">Blog</a></p>
+<nav class="guide-nav" aria-label="Blog"><a href="index.html" aria-current="page">Blog</a><a href="../guides/first-look.html">First look</a><a href="../guides/interpretation.html">Interpret results</a><a href="../examples/effi-briest.html">Example analysis</a></nav>
+
+<h2 id="why">Why tense breaks are a macro-editing topic</h2>
+<p>A tense break is rarely a grammar mistake. In a novel, the base tense is a narrative decision: past for a retrospective narrator, present for immediate scenes, historical present for pressure. What readers notice is not a rule being broken but a <em>signal</em> being sent — often at the wrong moment. Reading an entire manuscript for those signals is slow; that is why editors work with passage-level evidence instead of impressions.</p>
+
+<h2 id="what">What Lixity measures</h2>
+<p>Lixity profiles tense at two levels. Every paragraph gets a heuristic dominance — <strong>present</strong>, <strong>past</strong>, <strong>mixed</strong> or <strong>neutral</strong> — with a severity score from 0 to 3 for paragraphs that switch tense or mix it noticeably. Every chapter gets a dominant tense as well, which is what readers experience as the “base” of a scene.</p>
+<p>Two result sets matter here, and they are different things:</p>
+<ul>
+<li><strong>Flagged paragraphs</strong> (severity ≥ 2) are the short list for review: passages where a switch or a strong mix shows up inside one paragraph.</li>
+<li><strong>Chapter dominance</strong> describes the surrounding norm. Without it, a switch has no reference point.</li>
+</ul>
+<p>The profiles are heuristics over verb forms and markers, not a grammatical parse. Dialogue, embedded clauses and reported speech all shape the counts — which is exactly why the workflow ends with a human reading the passage, not with a number.</p>
+
+<h2 id="workflow">The workflow, step by step</h2>
+<ol>
+<li><strong>Install and open.</strong> <code>uv tool install lixity</code>, then <code>lixity service start --open</code> and choose <strong>Open Project</strong> for your manuscript folder. (See the <a href="../guides/installation.html">installation guide</a> for Windows, macOS and Linux.)</li>
+<li><strong>Start with the review panel.</strong> <strong>Start your review</strong> offers <strong>Open passage</strong> (the first paragraph that meets your flag threshold, in source order), <strong>Explore chapters</strong> and <strong>Open sentence rhythm</strong>.</li>
+<li><strong>Work the flagged list.</strong> The <strong>Flagged passages</strong> panel lists every paragraph at or above the threshold, sorted by severity and line. Each row jumps into the manuscript: the paragraph opens, the page scrolls, the passage flashes — with the “flagged only” filter set, so the rest of the page disappears.</li>
+<li><strong>Read the context before judging.</strong> Expand <strong>Values</strong> inside the opened paragraph for the source lines and measurements. Check the scene: is the switch carried by a letter, a memory, an interior monologue? The chapter line in the header shows the chapter’s dominant tense, so you can see whether the paragraph deviates from its surroundings.</li>
+<li><strong>Record the decision where you read it.</strong> The marker buttons (<strong>+ To-do</strong>, <strong>+ Check</strong>, <strong>+ Attention</strong>) write a review marker into the manuscript as a Markdown comment — invisible in your normal reading view, listed later in the <strong>Work markers</strong> panel.</li>
+</ol>
+
+<h2 id="deliberate">When a switch is deliberate</h2>
+<p>Severity measures a change, not a mistake. Common intentional cases:</p>
+<ul>
+<li><strong>Letters and documents.</strong> A quoted letter often shifts to present or to a different register; readers expect the frame to change.</li>
+<li><strong>Flashbacks and frame narratives.</strong> A chapter that moves from present to past may be doing exactly what the structure asked for.</li>
+<li><strong>Free indirect speech.</strong> A character’s inner voice can pull the tense without a scene break — deliberate, but easy to overuse.</li>
+<li><strong>Cliffhangers and scene turns.</strong> A single present-tense paragraph at the end of a past-tense chapter can be a strong, intentional accent.</li>
+</ul>
+<p>The flagged list does not decide any of this. It makes sure that no unintended break hides in a 400-page manuscript, and that intended ones are visible enough to be a choice.</p>
+
+<h2 id="limits">Reading limits</h2>
+<p>Verb-form heuristics miss irony, ellipsis and unusual syntax; short chapters produce noisy estimates; per-paragraph profiles in dialogue-heavy scenes reflect speaker turns. The <a href="../guides/interpretation.html">interpretation guide</a> and the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">methods document</a> explain the estimators; the <code>flag_min_severity</code> setting (1–3) controls how strict the flagged list is. Statistical signals support a human review — they are not an instruction to rewrite prose, and they are not a quality score.</p>
+
+<h2 id="try">Try it without installing</h2>
+<p>The <a href="../examples/effi-briest.html">Effi Briest example</a> and the <a href="../examples/pride-and-prejudice.html">Pride and Prejudice example</a> are complete, public-domain analyses you can open in the browser. For your own text: install, open the project, and start with a single chapter — the review loop is the same at any length.</p>
+<footer><a href="../">Lixity home</a> · <a href="index.html">Blog</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
+</main>
+</body>
+</html>

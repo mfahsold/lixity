@@ -47,6 +47,7 @@ DOCS_ROOT_FILES = {
 #: Approved subtrees, keyed by their first path segment.
 PUBLIC_TREES = {
     "assets": {".css", ".js", ".svg", ".png", ".woff2"},
+    "blog": {".html"},
     "guides": {".html", ".md"},
     "screenshots": {".png", ".webp", ".md"},
     "releases": {".md"},
