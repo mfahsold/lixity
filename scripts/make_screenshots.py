@@ -17,6 +17,7 @@ import base64
 import html
 import io
 import json
+import re
 import shutil
 import struct
 import subprocess
@@ -116,6 +117,49 @@ def _synthetic_harbour_image() -> bytes:
 
     return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
             + chunk(b"IDAT", zlib.compress(bytes(rows))) + chunk(b"IEND", b""))
+
+
+def sync_embedded_image_sizes() -> int:
+    """Update width/height of docs images to their real PNG size.
+
+    The screenshots are regenerated independently of the pages that embed
+    them; without this step a re-render silently leaves stale attributes
+    behind. Returns the number of corrected <img> tags.
+    """
+    pattern = re.compile(r"<img\s+([^>]*?)/?>", re.DOTALL)
+    attributes = re.compile(r'(\w+)="([^"]*)"')
+    corrected = 0
+    for document in sorted((BASE_DIR / "docs").glob("**/*.html")):
+        markup = document.read_text(encoding="utf-8")
+        changed = False
+        for match in list(pattern.finditer(markup)):
+            values = dict(attributes.findall(match.group(1)))
+            source = values.get("src", "")
+            if not source or source.startswith(("http:", "https:", "data:")):
+                continue
+            image = (document.parent / source).resolve()
+            try:
+                header = image.read_bytes()[:24]
+            except OSError:
+                continue
+            if header[:8] != b"\x89PNG\r\n\x1a\n":
+                continue
+            width, height = struct.unpack(">II", header[16:24])
+            if values.get("width") == str(width) and values.get("height") == str(height):
+                continue
+            tag = match.group(0)
+            new_tag = re.sub(r'width="[^"]*"', f'width="{width}"', tag, count=1)
+            new_tag = re.sub(r'height="[^"]*"', f'height="{height}"', new_tag, count=1)
+            if 'width="' not in tag:
+                new_tag = new_tag.replace("<img", f'<img width="{width}"', 1)
+            if 'height="' not in tag:
+                new_tag = new_tag.replace("<img", f'<img height="{height}"', 1)
+            markup = markup.replace(tag, new_tag, 1)
+            changed = True
+            corrected += 1
+        if changed:
+            document.write_text(markup, encoding="utf-8")
+    return corrected
 
 
 def main() -> int:
@@ -662,8 +706,10 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         timeout=180,
     )
 
+    corrected = sync_embedded_image_sizes()
     print(
         f"Done – {len(list(OUT_DIR.glob('*.png')))} screenshots in {OUT_DIR}"
+        + (f"; {corrected} embedded image size(s) synced" if corrected else "")
     )
     return 0
 
