@@ -116,7 +116,7 @@ class LixityServerHandler(
         path = self.path.split("?", 1)[0]
         if path in ("/", "/index.html"):
             self.refresh_when_source_changed()
-            self._send(200, self.dashboard_html.encode("utf-8"), "text/html; charset=utf-8")
+            self._send_dashboard_shell(self.dashboard_html)
             return
 
         if path.startswith("/artifact/"):
@@ -290,6 +290,21 @@ class LixityServerHandler(
             self._json({"ok": False, "message": "Invalid JSON body"}, 400)
             return None
         return payload
+
+    def log_request(self, code: int | str = "-", size: int | str = "-") -> None:
+        """Access-log the route without its query string.
+
+        Context tokens and other selectors travel in query strings; debug logs
+        keep the route for diagnosis and leave the values out.
+        """
+        if not self.debug:
+            return
+        method, _, remainder = self.requestline.partition(" ")
+        path, _, version = remainder.partition(" ")
+        self._debug_log(
+            f'{self.address_string()} - "{method} {path.split("?", 1)[0]} '
+            f'{version or "HTTP/1.0"}" {code} {size}'
+        )
 
     def log_message(self, format: str, *args: Any) -> None:
         """Suppress default request logging unless debug mode is active."""

@@ -24,7 +24,8 @@ a production-support guarantee.
   risks, not a blanket guarantee for every renderer or host integration.
 - The bundled local HTTP server is a separate boundary from the pure analysis
   engine. NDA encryption, publication exports and document delivery belong to
-  project adapters; review those integrations independently.
+  project adapters; review those integrations independently. The baseline
+  below names its concrete controls and their limits.
 - Custom regular expressions and large inputs can consume CPU or memory.
   Hosts accepting untrusted inputs should impose size, time and concurrency
   limits and must not execute unrestricted user-supplied expressions.
@@ -36,6 +37,64 @@ a production-support guarantee.
   authorization tokens. Use a private local filesystem; shared hostile writers and
   disk-level cryptographic shredding are outside this pilot's scope (controlled
   logical withdrawal and physical object deletion with dry-run preview are supported).
+
+## Local dashboard server baseline (since v0.4.7)
+
+The `serve`/`service` dashboard is a single-user local tool. Its baseline
+follows current guidance for loopback HTTP services: never trust that a request
+is local just because the socket is, and keep every other fetch surface
+default-deny.
+
+- **Loopback bind.** The default host is `127.0.0.1` (`DEFAULT_HOST`). Do not
+  change the bind address to make the dashboard reachable from a network; that
+  removes the primary boundary and needs authentication and TLS that this
+  server does not provide.
+- **Host allow-list (DNS rebinding).** Every request must carry a `Host` header
+  of `127.0.0.1`/`localhost`/`[::1]` with the live port; anything else is
+  rejected with 403 before routing. A rebinding page that resolves its own
+  hostname to the loopback address still sends its hostname as `Host` and is
+  refused.
+- **Origin guard.** State-changing endpoints and JSON reads also reject requests
+  whose `Origin` header names a different host; requests without `Origin` (the
+  CLI, the Task Scheduler launcher) are accepted because the bind and Host check
+  are the boundary.
+- **Response headers.** All responses carry `Cache-Control: no-store`,
+  `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+  `Content-Security-Policy: frame-ancestors 'none'` and
+  `Referrer-Policy: no-referrer`. The dashboard shell adds a per-response
+  nonce policy — `default-src 'none'`, `script-src 'nonce-…'`,
+  `connect-src 'self'`, `base-uri 'none'`, `form-action 'none'` — plus
+  `Cross-Origin-Opener-Policy: same-origin` and a `Permissions-Policy` that
+  denies camera, microphone, geolocation, USB and serial access. Inline
+  *styles* stay allowed because the bundled design system uses style
+  attributes; scripts execute only with the response's nonce, so text injected
+  through a title, marker or manuscript paragraph cannot run.
+- **Payload and file limits.** JSON bodies are capped at 5 MiB, image uploads
+  at 32 MiB and 64 megapixels, artifact streaming at 200 MiB. Artifact names
+  resolve to a basename inside the workspace `exports/` directory through a
+  `realpath` containment check; anything else returns 404. Request bodies are
+  parsed as JSON objects only and rejected with 400 on other shapes.
+- **Context tokens are guards, not credentials.** Research context and project
+  tokens identify the selected project/archive root so a stale tab cannot write
+  into a different copy. They are derived from local paths, not secrets, and
+  they do not authorize against other local processes. The server writes
+  neither part into logs: access logging is off unless `--debug` is active, and
+  debug lines keep timestamp, route and status while dropping the query string
+  (where those tokens travel). Response bodies and manuscript text are never
+  logged.
+- **No outbound traffic.** The dashboard is self-contained; a test asserts the
+  rendered page contains no external URLs. Analysis, export and server commands
+  make no network requests. Zotero access is explicit, opt-in and localhost-only
+  (see below); OCR runs local binaries.
+- **Non-goals.** No user accounts, no multi-user authorization, no TLS, no
+  protection against a hostile process or user that already has filesystem
+  access to the project, and no cryptographic deletion. These are properties of
+  a local single-user tool, not gaps to be patched by configuration.
+
+Server tests assert the Host/Origin guards, header set, nonce freshness and log
+redaction (`tests/test_server.py`, `tests/test_server_disconnect*.py`,
+`tests/test_server_debug.py`); `docs/ARCHITECTURE.md` describes how the layers
+fit together.
 
 ## Optional Zotero boundary (since v1.19.0)
 

@@ -118,6 +118,28 @@ class TestLixityServer(unittest.TestCase):
         self.assertEqual(headers.get("x-frame-options"), "DENY")
         self.assertEqual(headers.get("x-content-type-options"), "nosniff")
 
+    def test_dashboard_shell_sets_a_nonce_content_security_policy(self):
+        import re
+
+        status, body, headers = self.make_request("/")
+        self.assertEqual(status, 200)
+        csp = headers.get("content-security-policy", "")
+        self.assertIn("default-src 'none'", csp)
+        self.assertIn("form-action 'none'", csp)
+        match = re.search(r"script-src 'nonce-([A-Za-z0-9_-]+)'", csp)
+        self.assertIsNotNone(match, csp)
+        nonce = match.group(1)
+        self.assertIn(f'<script nonce="{nonce}">', body.decode("utf-8"))
+        self.assertEqual(headers.get("cross-origin-opener-policy"), "same-origin")
+        self.assertTrue(headers.get("permissions-policy", "").startswith("camera=()"))
+        # Every response carries its own nonce, so a cached page cannot stamp scripts.
+        _status, second_body, second_headers = self.make_request("/")
+        second = re.search(r"script-src 'nonce-([A-Za-z0-9_-]+)'",
+                           second_headers.get("content-security-policy", ""))
+        self.assertIsNotNone(second)
+        self.assertNotEqual(nonce, second.group(1))
+        self.assertIn(f'<script nonce="{second.group(1)}">', second_body.decode("utf-8"))
+
     def test_project_paths_lists_one_level_and_preserves_project_state(self):
         original_state = snapshot_handler_state()
         with tempfile.TemporaryDirectory() as td:

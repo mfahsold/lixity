@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.7] - 2026-10-16
+
 ### Fixed
 - Sentence segmentation keeps blank-line block boundaries: an unterminated
   block (stage note, salutation, sign) stays one fragment unit instead of
@@ -16,6 +18,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The serve dashboard checks the manuscript digest when the page is loaded
   and rebuilds itself when the file changed on disk instead of presenting
   stale numbers.
+- Closed scene details no longer reserve an empty 520 px block each; the
+  deferred-rendering hint now applies only to open details.
+- Count labels use singular forms in all seven languages (`1 Datei`,
+  `1 Treffer`, `1 Zuordnung`, ...); four unused label rows were removed.
 
 ### Changed
 - Style comparisons use documented comparability floors: chapters below 100
@@ -34,6 +40,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `min_comparable_sentences`; the style panel explains the minimum instead
   of hiding the reference when no chapter reaches the floor. Help texts and
   the chapter-matrix guide name the floors, in all supported languages.
+
+### Security
+- The dashboard shell carries a per-response nonce Content Security Policy
+  (default-deny scripts, inline styles only) plus `Cross-Origin-Opener-Policy`
+  and a `Permissions-Policy` denying device APIs.
+- Access and debug logs keep the route without its query string, so research
+  context and project tokens never reach log files. `SECURITY.md` documents the
+  local-server baseline: loopback bind, Host allow-list, Origin guard, payload
+  and artifact limits, and explicit non-goals.
 - Manuscript review recognizes `adjusted` anchors: when the paragraph text
   changed but the recorded quote still appears exactly once, review names the
   state (highlighted at its current position) and
@@ -2048,7 +2063,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.6...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.7...HEAD
+[0.4.7]: https://github.com/mfahsold/lixity/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/mfahsold/lixity/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/mfahsold/lixity/compare/v0.4.4...v0.4.5
 [0.4.4]: https://github.com/mfahsold/lixity/compare/v0.4.3...v0.4.4

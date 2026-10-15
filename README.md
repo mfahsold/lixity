@@ -21,7 +21,7 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v0.4.6 release notes](docs/releases/v0.4.6.md)
+[v0.4.7 release notes](docs/releases/v0.4.7.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload. Documentation is English; you can read the
@@ -297,17 +297,17 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
   [Localization](docs/LOCALIZATION.md) · [Licensing](docs/LICENSING.md).
 - [AI and automation summary](docs/llms.txt) — the maintained entrypoint for
   agents, with the full-text bundle in [llms-full.txt](docs/llms-full.txt).
-- [Changelog](CHANGELOG.md) · [Release notes](docs/releases/v0.4.6.md).
+- [Changelog](CHANGELOG.md) · [Release notes](docs/releases/v0.4.7.md).
 
 ## Current release
 
-The current release is **v0.4.6**. It resets the product version to reflect
+The current release is **v0.4.7**. It resets the product version to reflect
 development before 1.0 and retains the existing features and published release
 history, including v3.0.1. Public JSON and research storage schema versions are
 independent; the 0.3.x/0.4.x line reads existing research archives through v7.
 When upgrading from the historical numbering, install the pinned release wheel
 explicitly; PyPI upgrades continue normally afterwards.
-[Release notes](docs/releases/v0.4.6.md) describe compatibility and known limits;
+[Release notes](docs/releases/v0.4.7.md) describe compatibility and known limits;
 the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 ## Python API and automation

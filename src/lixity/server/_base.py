@@ -7,6 +7,7 @@ response and trust behaviour.
 from __future__ import annotations
 
 import json
+import secrets
 import sys
 from collections.abc import Mapping
 from datetime import datetime, timezone
@@ -32,15 +33,17 @@ class ResponseMixin(WorkspaceState):
 
     def _send(self, code: int, body: bytes, content_type: str, *,
               headers: Mapping[str, str] | None = None) -> None:
+        extra = dict(headers or {})
         self.send_response(code)
         self.send_header("Content-Type", content_type)
         self.send_header("Content-Length", str(len(body)))
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Content-Security-Policy", "frame-ancestors 'none'")
+        self.send_header("Content-Security-Policy",
+                         extra.pop("Content-Security-Policy", "frame-ancestors 'none'"))
         self.send_header("Referrer-Policy", "no-referrer")
-        for name, value in (headers or {}).items():
+        for name, value in extra.items():
             self.send_header(name, value)
         try:
             self.end_headers()
@@ -51,10 +54,41 @@ class ResponseMixin(WorkspaceState):
             self.close_connection = True
             self._debug_log(f"Client disconnected while sending HTTP {code} response")
 
+    def _send_dashboard_shell(self, html: str) -> None:
+        """Serve the dashboard with a per-response script nonce and strict CSP.
+
+        The shell is self-contained: scripts come only from the bundled inline
+        block (nonce), styles stay inline, and everything else is default-deny.
+        A request nonce blocks injected scripts from manuscript or project text,
+        so escaping tests and CSP protect the same boundary.
+        """
+        nonce = secrets.token_urlsafe(16)
+        body = html.replace("<script>", f'<script nonce="{nonce}">')
+        policy = "; ".join((
+            "default-src 'none'",
+            f"script-src 'nonce-{nonce}'",
+            "style-src 'unsafe-inline'",
+            "img-src 'self' data: blob:",
+            "font-src 'self' data:",
+            "media-src 'self' blob:",
+            "connect-src 'self'",
+            "base-uri 'none'",
+            "form-action 'none'",
+            "frame-ancestors 'none'",
+        ))
+        self._send(200, body.encode("utf-8"), "text/html; charset=utf-8", headers={
+            "Content-Security-Policy": policy,
+            "Cross-Origin-Opener-Policy": "same-origin",
+            "Permissions-Policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=()",
+        })
+
     def _json(self, payload: Mapping[str, Any], code: int = 200) -> None:
         if self.debug and code >= 400:
             msg = payload.get("message", "")
-            self._debug_log(f"HTTP {code} on {self.command} {self.path}: {msg}")
+            # Log the route without its query string: context tokens and other
+            # selectors travel there and must not reach diagnostics.
+            route = self.path.split("?", 1)[0]
+            self._debug_log(f"HTTP {code} on {self.command} {route}: {msg}")
         self._send(
             code,
             json.dumps(payload, ensure_ascii=False).encode("utf-8"),

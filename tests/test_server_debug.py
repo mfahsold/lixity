@@ -39,6 +39,15 @@ class TestServerDebug(unittest.TestCase):
             self.assertRegex(line, r"^\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d UTC\] \[server:debug\] ")
             datetime.strptime(line[1:24], "%Y-%m-%d %H:%M:%S UTC").replace(tzinfo=timezone.utc)
 
+    def test_debug_output_keeps_context_tokens_out_of_logs(self):
+        token = "synthetic-context-token-value"  # noqa: S105 - synthetic fixture value
+        output = io.StringIO()
+        with redirect_stderr(output):
+            self.request("GET", f"/api/research/claims?research_token={token}")
+        text = output.getvalue()
+        self.assertNotIn(token, text)
+        self.assertIn("/api/research/claims", text)
+
     def test_disabled_debug_keeps_requests_and_error_detail_quiet(self):
         self.handler.debug = False
         output = io.StringIO()
