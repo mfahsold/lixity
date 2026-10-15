@@ -327,6 +327,14 @@ several outputs can [reuse the shared analysis result](docs/ARCHITECTURE.md#conf
 [Interface contracts](docs/AGENTS.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Research commands](docs/research/USAGE.md) · [Automation summary](docs/llms.txt)
 
+## Research
+
+The methods and the tool's placement among stylometry and corpus tools are
+described in the software paper draft under [`paper/`](paper/paper.md),
+prepared for the [Journal of Open Source Software](https://joss.theoj.org/).
+Released versions are archived on Zenodo; the concept DOI lands in
+[`CITATION.cff`](CITATION.cff) once the first deposit is minted.
+
 ## License
 
 Lixity is **open source under the AGPL-3.0-or-later**. Use it freely for
