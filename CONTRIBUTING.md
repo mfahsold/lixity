@@ -135,6 +135,15 @@ to correct an already published release, disable the setting with
 `gh api --method DELETE repos/mfahsold/lixity/immutable-releases`, then enable
 it again afterwards.
 
+Every tagged release is distributed and archived automatically:
+
+- the workflow uploads wheel and sdist to PyPI when the repository variable
+  `PUBLISH_PYPI` is `true` (trusted publishing, environment `pypi`); if a run
+  misses PyPI, dispatch the same workflow with the `tag` input to build and
+  publish without touching the GitHub release;
+- Zenodo archives each new release once the repository is enabled there, so
+  released versions receive a DOI without a local step.
+
 Documentation deployment remains the separate Pages workflow. A new release with
 a lower version number requires explicit version selection by installations
 already using a higher version; this workflow does not change package-manager

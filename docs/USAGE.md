@@ -31,13 +31,15 @@ project, start with the [README](https://github.com/mfahsold/lixity/blob/main/RE
 
 Use the [installation guide](INSTALLATION.md) for Windows/macOS/Linux,
 updates, removal, pipx, Python API environments and troubleshooting.
-Lixity is open source under AGPL-3.0-or-later, not on PyPI.
+Lixity is open source under AGPL-3.0-or-later and published as
+[`lixity` on PyPI](https://pypi.org/project/lixity/); the pinned release wheel
+with `SHA256SUMS` remains available for reproducible setups.
 Using it for a book intended for sale requires a separate written commercial
 license, including self-publishing. See [licensing examples](LICENSING.md).
 With uv installed, the recommended CLI setup is:
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.3/lixity-0.4.3-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
@@ -48,10 +50,9 @@ lixity --version
 lixity service start --open
 ```
 
-`v0.4.3` is the release pin for this wheel installation; it needs no Git or separate Python
-installation. To update, stop the service and reinstall the desired release
-wheel as described in the [update reference](INSTALLATION.md#updates-and-removal).
-`uv tool upgrade lixity` retains the chosen source. `uv tool update-shell`
+`uv tool upgrade lixity` installs newer releases; a pinned wheel keeps its fixed
+URL and is replaced explicitly as described in the
+[update reference](INSTALLATION.md#updates-and-removal). `uv tool update-shell`
 changes shell configuration for new terminals.
 The engine and TOML project configuration support Python 3.10+.
 
