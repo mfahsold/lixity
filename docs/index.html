@@ -271,8 +271,8 @@
 
   <section id="installation" class="reading-section">
     <h2>Install the current release</h2>
-    <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> to install the release wheel with managed Python. No Git or separate Python install is needed. The <a href="guides/installation.html">installation guide</a> covers Windows, macOS and Linux.</p>
-    <pre class="cmd-block">uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"
+    <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> to install the published package from <a href="https://pypi.org/project/lixity/">PyPI</a> with managed Python. No Git or separate Python install is needed; the <a href="guides/installation.html">installation guide</a> covers Windows, macOS and Linux, plus the pinned release wheel with checksums.</p>
+    <pre class="cmd-block">uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell</pre>
     <p>Open a new terminal, then verify and start the app:</p>
     <pre class="cmd-block">lixity --version

@@ -19,6 +19,7 @@ Source: https://github.com/mfahsold/lixity/blob/main/README.md
 # Lixity
 
 [![tests](https://github.com/mfahsold/lixity/actions/workflows/tests.yml/badge.svg)](https://github.com/mfahsold/lixity/actions)
+[![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
@@ -61,12 +62,14 @@ your computer.
 ## Install and start
 
 Lixity runs on Windows, macOS and Linux. Use [uv](https://docs.astral.sh/uv/);
-it supplies the managed Python environment and installs the release wheel.
-For help installing uv or advanced installation options, follow the
-[installation guide](docs/INSTALLATION.md).
+it supplies the managed Python environment and installs the published package
+from [PyPI](https://pypi.org/project/lixity/). For help installing uv or
+advanced installation options, follow the
+[installation guide](docs/INSTALLATION.md) (it also documents the pinned
+release wheel with `SHA256SUMS` for reproducible setups).
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
@@ -79,9 +82,9 @@ lixity service start --open
 
 The service starts an empty local workspace; choose **Open Project** or
 **Analyze a manuscript**. The [first-project guide](docs/ONBOARDING.md) walks
-through both choices. For later upgrades, select the new release wheel using the
-[update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace.
+through both choices. For later upgrades, run `uv tool upgrade lixity` (or
+reinstall a pinned release wheel) and restart the local workspace; see the
+[update instructions](docs/INSTALLATION.md#updates-and-removal).
 
 Use `lixity service status`, `lixity service restart` or `lixity service stop`
 for the managed instance. Before uninstalling, stop managed instances and
@@ -597,12 +600,16 @@ includes unimplemented interfaces; use the command reference for available opera
 
 ## Installation and language
 
-Install the CLI from the GitHub release wheel, not PyPI:
+Install the published package (`lixity` on [PyPI](https://pypi.org/project/lixity/)):
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
+
+For a pinned, checksum-verifiable setup, install the release wheel instead:
+`uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"`
+(the release page also carries `SHA256SUMS`).
 
 Open a new terminal, then verify and start:
 
@@ -612,10 +619,10 @@ lixity service start --open
 ```
 
 uv supplies managed Python 3.12; neither Git nor a separate Python install is
-needed for this tool route. Select a new release with
-uv tool install --reinstall-package lixity and its explicit release-wheel URL;
-do not force-overwrite other entrypoints by default.
-`uv tool upgrade lixity` retains the chosen source; a fixed wheel stays fixed.
+needed for this tool route. A PyPI install upgrades with
+`uv tool upgrade lixity`; a pinned wheel keeps its fixed URL and is replaced
+with `uv tool install --reinstall-package lixity` and the new wheel.
+Do not force-overwrite other entrypoints by default.
 Git source installs with `@main` are an advanced development route. Python 3.10+
 is required;
 3.10 uses conditional `tomli`. For API use, install in the consuming project's
@@ -1226,8 +1233,9 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md
 # Install, verify and update Lixity
 
 Lixity runs on your computer on Linux, macOS and Windows. It is
-**open source under AGPL-3.0-or-later**. Install it from GitHub using the
-commands below; it is not distributed on PyPI. Any writing purpose is covered;
+**open source under AGPL-3.0-or-later**. Install the published package
+(`lixity` on [PyPI](https://pypi.org/project/lixity/)) or the pinned release
+wheel with the commands below. Any writing purpose is covered;
 a separate written commercial license exists only for closed-source
 integrations. See [licensing](LICENSING.md) before installation.
 Analysis runs offline; downloading Python, the package and dependencies requires
@@ -1245,7 +1253,7 @@ environments are [separate advanced routes](#python-api-project-environment).
 These commands work in a terminal, including Windows PowerShell:
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
@@ -1256,9 +1264,14 @@ lixity --version
 lixity service start --open
 ```
 
-The current release is **v0.4.2**. This command selects a fixed release so that
-reinstalling it uses the same wheel. Read the [release notes](releases/v0.4.2.md)
-for changes and compatibility information.
+The current release is **v0.4.2**. Read the [release notes](releases/v0.4.2.md)
+for changes and compatibility information. For a reproducible, checksum-verified
+setup, install the pinned release wheel instead (the release page also carries
+`SHA256SUMS`):
+
+```sh
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"
+```
 
 `uv tool update-shell` configures shell integration once; it does not change an
 already open terminal. **Open Project** reconnects an existing
@@ -1328,16 +1341,16 @@ command, and the new controller deliberately does not adopt its process.
 
 ```sh
 lixity service stop
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"
+uv tool upgrade lixity
 lixity --version
 lixity service start --open
 ```
 
-Replace the URL with the published wheel for the release you intend to install.
+`uv tool upgrade lixity` selects the newest published release when the tool came
+from PyPI. A tool installed from a pinned wheel keeps that fixed URL — replace it
+with `uv tool install --reinstall-package lixity` and the new wheel URL.
 `--reinstall-package lixity` refreshes that package without forcing ownership
-of another installer's entrypoint. `uv tool upgrade lixity` retains the original
-source and constraints;
-it does not select a newer release wheel. See the official
+of another installer's entrypoint. See the official
 [tool update reference](https://docs.astral.sh/uv/reference/cli/#uv-tool-install).
 If you start with an explicit project, pass that path again after updating.
 
@@ -1366,9 +1379,9 @@ development source explicitly, verify its version, and restart its service.
 <details>
 <summary>Alternative for existing pipx users</summary>
 
-If you already use pipx, install the published wheel with
-`pipx install "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"`,
-then use `pipx ensurepath` if necessary. Keep using that installer to replace or
+If you already use pipx, install the published package with `pipx install lixity`
+(or the pinned wheel URL for an exact release), then use `pipx ensurepath` if
+necessary. Keep using that installer to replace or
 remove its installation rather than overwriting its executable with uv.
 
 </details>

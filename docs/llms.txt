@@ -225,12 +225,16 @@ includes unimplemented interfaces; use the command reference for available opera
 
 ## Installation and language
 
-Install the CLI from the GitHub release wheel, not PyPI:
+Install the published package (`lixity` on [PyPI](https://pypi.org/project/lixity/)):
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
+
+For a pinned, checksum-verifiable setup, install the release wheel instead:
+`uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"`
+(the release page also carries `SHA256SUMS`).
 
 Open a new terminal, then verify and start:
 
@@ -240,10 +244,10 @@ lixity service start --open
 ```
 
 uv supplies managed Python 3.12; neither Git nor a separate Python install is
-needed for this tool route. Select a new release with
-uv tool install --reinstall-package lixity and its explicit release-wheel URL;
-do not force-overwrite other entrypoints by default.
-`uv tool upgrade lixity` retains the chosen source; a fixed wheel stays fixed.
+needed for this tool route. A PyPI install upgrades with
+`uv tool upgrade lixity`; a pinned wheel keeps its fixed URL and is replaced
+with `uv tool install --reinstall-package lixity` and the new wheel.
+Do not force-overwrite other entrypoints by default.
 Git source installs with `@main` are an advanced development route. Python 3.10+
 is required;
 3.10 uses conditional `tomli`. For API use, install in the consuming project's

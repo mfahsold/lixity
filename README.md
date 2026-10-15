@@ -1,6 +1,7 @@
 # Lixity
 
 [![tests](https://github.com/mfahsold/lixity/actions/workflows/tests.yml/badge.svg)](https://github.com/mfahsold/lixity/actions)
+[![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
@@ -43,12 +44,14 @@ your computer.
 ## Install and start
 
 Lixity runs on Windows, macOS and Linux. Use [uv](https://docs.astral.sh/uv/);
-it supplies the managed Python environment and installs the release wheel.
-For help installing uv or advanced installation options, follow the
-[installation guide](docs/INSTALLATION.md).
+it supplies the managed Python environment and installs the published package
+from [PyPI](https://pypi.org/project/lixity/). For help installing uv or
+advanced installation options, follow the
+[installation guide](docs/INSTALLATION.md) (it also documents the pinned
+release wheel with `SHA256SUMS` for reproducible setups).
 
 ```bash
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.2/lixity-0.4.2-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
@@ -61,9 +64,9 @@ lixity service start --open
 
 The service starts an empty local workspace; choose **Open Project** or
 **Analyze a manuscript**. The [first-project guide](docs/ONBOARDING.md) walks
-through both choices. For later upgrades, select the new release wheel using the
-[update instructions](docs/INSTALLATION.md#updates-and-removal), then restart
-the local workspace.
+through both choices. For later upgrades, run `uv tool upgrade lixity` (or
+reinstall a pinned release wheel) and restart the local workspace; see the
+[update instructions](docs/INSTALLATION.md#updates-and-removal).
 
 Use `lixity service status`, `lixity service restart` or `lixity service stop`
 for the managed instance. Before uninstalling, stop managed instances and
