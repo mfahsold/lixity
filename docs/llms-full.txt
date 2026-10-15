@@ -1345,7 +1345,9 @@ version, then start it again. This does not alter manuscript files.
 ### Updates and removal
 
 Version 0.3.0 reset the product number to reflect development maturity before
-1.0 while retaining existing features and historical releases. Historical tags
+1.0 while retaining existing features and historical releases. Notes written
+before the renumbering may mention product versions such as 1.18.0 or
+3.0.1; they describe the same product. Historical tags
 such as 3.0.1 sort higher than the 0.4.x line in a numeric comparison; PyPI
 carries only the 0.4.x line, and `uv tool upgrade lixity` moves forward inside
 it. When choosing files on the release page, select the exact 0.4.x release.
@@ -3767,6 +3769,17 @@ target record itself has not changed.
 lixity research claim --project ./novel --claim-id CLAIM_ID --update \
   --expected-revision 1 --change-kind correction --reason "Reviewed wording" \
   --statement "A revised author assertion"
+```
+
+`--diff` previews the same change as a terminal unified diff and never
+writes: dossier body edits render line by line, other fields as
+before/after values. It computes the diff from the current revision, so
+it shows what an `--update` would submit next, including merged section
+content.
+
+```sh
+lixity research dossier --project ./novel --dossier-id DOSSIER_ID --diff \
+  --section "Smuggling route" --file revised-section.md
 ```
 
 Unchanged association IDs retain their exact saved pins. With an omitted
@@ -7075,7 +7088,8 @@ strict API. Same-record changes/races fail without retries. Supplied digests
 remain strict archive-wide guards. Unchanged association pins remain; new/changed
 associations require explicit revision flags when the snapshot is omitted.
 Batch/image/acknowledgement/Python/HTTP guards are unchanged. See the
-[implemented update workflow](research/USAGE.md#update-one-reviewed-record).
+[implemented update workflow](research/USAGE.md#update-one-reviewed-record). The read-only `--diff` mode prints the
+prepared change as a human unified diff and writes nothing.
 
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 

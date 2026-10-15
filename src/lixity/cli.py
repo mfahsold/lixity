@@ -85,6 +85,11 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "err_prefix": "[error]",
         "err_shell": "Unknown shell: {shell} (bash|zsh)",
         "err_file": "File not readable: {file} ({exc})",
+        "err_build_target": (
+            "Cannot write to the exports folder {dir}: {exc}. Exports need a writable "
+            "folder – read-only mounts and sandboxes block builds; use --dry-run to "
+            "preview changes without writing."
+        ),
         "build_workspace": "Workspace: {root}",
         "build_manuscript": "Manuscript: {file} (language: {language})",
         "state_written": "written",
@@ -164,6 +169,11 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "err_prefix": "[Fehler]",
         "err_shell": "Unbekannte Shell: {shell} (bash|zsh)",
         "err_file": "Datei nicht lesbar: {file} ({exc})",
+        "err_build_target": (
+            "Der Export-Ordner {dir} ist nicht beschreibbar: {exc}. Exporte brauchen "
+            "einen beschreibbaren Ordner – schreibgeschützte Mounts und Sandboxes "
+            "blockieren Builds; mit --dry-run vorab prüfen."
+        ),
         "build_workspace": "Workspace: {root}",
         "build_manuscript": "Manuskript: {file} (Sprache: {language})",
         "state_written": "geschrieben",
@@ -897,13 +907,17 @@ def _cmd_build(args: argparse.Namespace) -> int:
         )
     )
     if not args.dry_run:
-        workspace.ensure_layout()
+        try:
+            workspace.ensure_layout()
+        except OSError as exc:
+            print(f"{_m('err_prefix')} {_m('err_build_target', dir=workspace.exports_dir, exc=exc)}", file=sys.stderr)
+            return EXIT_ERROR
     changed = 0
     for name, content in artifacts.items():
         try:
             is_changed = workspace.publish(name, content, dry_run=args.dry_run)
         except OSError as exc:
-            print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+            print(f"{_m('err_prefix')} {_m('err_build_target', dir=workspace.exports_dir, exc=exc)}", file=sys.stderr)
             return EXIT_ERROR
         changed += is_changed
         prefix = "(dry-run) " if args.dry_run else ""

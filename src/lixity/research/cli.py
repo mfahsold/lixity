@@ -131,6 +131,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name in ("dossier", "claim", "link-evidence", "decision", "relate"):
             command.add_argument("--update", action="store_true", help="Revise the named record")
             command.add_argument("--prepare", action="store_true", help="Preview reconciliation with the current record; never writes")
+            command.add_argument("--diff", action="store_true", help="Preview the change as a unified terminal diff; never writes")
             command.add_argument("--base-revision", type=int, help="Original revision of the draft being prepared")
             command.add_argument("--resolve", action="append", metavar="FIELD=current|mine",
                                  help="Explicit field choice for a --prepare conflict; repeat for each field")
@@ -139,7 +140,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--revision", type=int, help="Inspect one historical revision")
             command.add_argument("--expected-snapshot", help="Optional strict archive digest; if omitted, update checks --expected-revision against the current record")
             command.add_argument("--expected-revision", type=int, help="Reviewed record revision required for an update; changed associations need explicit pins when snapshot is omitted")
-            command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update")
+            command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update (required with --update)")
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
         if name in ("dossier", "claim", "decision", "sources"):
@@ -385,6 +386,42 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
     return changes
 
 
+def _revision_diff_text(kind: str, record_id: str, record: dict[str, Any], preview: dict[str, Any]) -> str:
+    """Render a prepared update as a human unified diff; nothing is written."""
+    import difflib
+
+    color = sys.stdout.isatty()
+    paints = (("+++", "\x1b[1m"), ("---", "\x1b[1m"), ("@@", "\x1b[36m"),
+              ("+", "\x1b[32m"), ("-", "\x1b[31m"))
+
+    def paint(line: str) -> str:
+        if not color:
+            return line
+        for prefix, code in paints:
+            if line.startswith(prefix):
+                return f"{code}{line}\x1b[0m"
+        return line
+
+    changes = dict(preview.get("changes") or {})
+    lines = [f"# {kind} {record_id} @r{record.get('revision')} – preview only, nothing written"]
+    if "body" in changes:
+        diff = difflib.unified_diff(
+            str(record.get("body") or "").splitlines(),
+            str(changes.pop("body")).splitlines(),
+            fromfile=f"{kind} r{record.get('revision')}", tofile="draft", lineterm="",
+        )
+        lines.extend(diff)
+    for field, value in changes.items():
+        lines.append(f"--- {field}")
+        lines.append(f"- {json.dumps(record.get(field), ensure_ascii=False, sort_keys=True)}")
+        lines.append(f"+ {json.dumps(value, ensure_ascii=False, sort_keys=True)}")
+    if len(lines) == 1:
+        lines.append("(no changes)")
+    if preview.get("conflicts"):
+        lines.append(f"! {len(preview['conflicts'])} unresolved conflict(s); resolve with --prepare --resolve")
+    return "\n".join(paint(line) for line in lines)
+
+
 def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     """Dispatch explicit history, inspection and revision modes for existing commands."""
     from . import api
@@ -402,21 +439,21 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     if not prepare and (getattr(args, "base_revision", None) is not None or getattr(args, "resolve", None)):
         raise ResearchError("--base-revision and --resolve require --prepare")
     association_revision = getattr(args, "dossier_revision", None) if command == "claim" else getattr(args, "claim_revision", None)
-    if (association_revision is not None or getattr(args, "dossier_revisions", None) is not None) and not (args.update or prepare):
-        raise ResearchError("An explicit associated revision requires --update or --prepare")
+    if (association_revision is not None or getattr(args, "dossier_revisions", None) is not None) and not (args.update or prepare or getattr(args, "diff", False)):
+        raise ResearchError("An explicit associated revision requires --update, --prepare or --diff; omit it to create a new record")
     if getattr(args, "action", None) == "list":
-        if record_id or args.update or prepare or args.history or args.inspect or args.revision is not None:
+        if record_id or args.update or prepare or getattr(args, "diff", False) or args.history or args.inspect or args.revision is not None:
             raise ResearchError("The list verb takes no record ID or revision flags")
         return None
-    requested = args.update or prepare or args.history or args.inspect or args.revision is not None
+    requested = args.update or prepare or getattr(args, "diff", False) or args.history or args.inspect or args.revision is not None
     if command in ("link-evidence", "decision", "relate") and record_id:
         requested = True
     if not requested:
         return None
     if not record_id:
         raise ResearchError(f"{kind} ID is required for revision, history or inspection")
-    if sum(bool(mode) for mode in (args.update, prepare, args.history, args.inspect, args.revision is not None)) > 1:
-        raise ResearchError("Choose one of --update, --prepare, --history, --inspect or --revision")
+    if sum(bool(mode) for mode in (args.update, prepare, getattr(args, "diff", False), args.history, args.inspect, args.revision is not None)) > 1:
+        raise ResearchError("Choose one of --update, --prepare, --diff, --history, --inspect or --revision")
     if prepare:
         if args.base_revision is None or args.base_revision < 1:
             raise ResearchError("--prepare requires a positive --base-revision")
@@ -431,9 +468,19 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
             raise ResearchError("At least one changed field is required")
         return api.prepare_record_revision(args.project, kind, record_id,
                                            base_revision=args.base_revision, changes=changes, resolutions=resolutions)
+    if getattr(args, "diff", False):
+        changes = _revision_changes(args)
+        if not changes:
+            raise ResearchError("At least one changed field is required")
+        current = api.get_record(args.project, kind, record_id)
+        preview = api.prepare_record_revision(args.project, kind, record_id,
+                                              base_revision=current["record"]["revision"],
+                                              changes=changes, resolutions={})
+        return {"schema_version": "research-revision-diff-local/1",
+                "diff": _revision_diff_text(kind, record_id, current["record"], preview)}
     if args.update:
         if args.expected_revision is None or not args.change_kind or not args.reason:
-            raise ResearchError("Updates require --expected-revision, --change-kind and --reason")
+            raise ResearchError("Updates require --expected-revision, --change-kind and --reason; run --inspect first to read the current revision")
         if args.expected_revision < 1:
             raise ResearchError("Expected revision must be positive")
         try:
@@ -916,6 +963,9 @@ def run(args: argparse.Namespace) -> int:
                       "and use --json for a single record", file=sys.stderr)
                 return 2
             print(table)
+            return 0
+        if isinstance(result, dict) and result.get("schema_version") == "research-revision-diff-local/1":
+            print(result["diff"])
             return 0
         print(json.dumps(result, ensure_ascii=False, indent=2))
         return 1 if result.get("ok") is False else 0

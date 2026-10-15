@@ -444,6 +444,17 @@ lixity research claim --project ./novel --claim-id CLAIM_ID --update \
   --statement "A revised author assertion"
 ```
 
+`--diff` previews the same change as a terminal unified diff and never
+writes: dossier body edits render line by line, other fields as
+before/after values. It computes the diff from the current revision, so
+it shows what an `--update` would submit next, including merged section
+content.
+
+```sh
+lixity research dossier --project ./novel --dossier-id DOSSIER_ID --diff \
+  --section "Smuggling route" --file revised-section.md
+```
+
 Unchanged association IDs retain their exact saved pins. With an omitted
 snapshot, adding/changing an association requires its explicit reviewed revision:
 `--dossier-revision`, `--claim-revision`, `--from-claim-revision`,

@@ -467,5 +467,59 @@ class TestResearchRevisionCli(unittest.TestCase):
         return status, output.getvalue()
 
 
+class TestResearchRevisionDiffPreview(unittest.TestCase):
+    """``--diff`` renders a prepared change for the terminal and never writes."""
+
+    def parse(self, *args: str) -> argparse.Namespace:
+        parser = argparse.ArgumentParser()
+        cli.configure(parser)
+        return parser.parse_args(args)
+
+    def run_diff(self, *args: str) -> tuple[int, str]:
+        output = io.StringIO()
+        with contextlib.redirect_stdout(output):
+            status = cli.run(self.parse(*args))
+        return status, output.getvalue()
+
+    def test_field_diff_previews_changes_without_writing(self):
+        current = {"schema_version": "research-record-local/1",
+                   "record": {"revision": 3, "statement": "Old claim."}}
+        preview = {"schema_version": "research-revision-preview-local/1", "base_revision": 3,
+                   "changes": {"statement": "New claim."}, "conflicts": [], "ready": True}
+        with patch.object(api, "get_record", return_value=current) as read, \
+                patch.object(api, "prepare_record_revision", return_value=preview) as prepare, \
+                patch.object(api, "revise_record") as revise:
+            status, text = self.run_diff(
+                "claim", "--project", "/synthetic", "--claim-id", "urn:uuid:claim",
+                "--diff", "--statement", "New claim.")
+        self.assertEqual(status, 0)
+        self.assertIn('- "Old claim."', text)
+        self.assertIn('+ "New claim."', text)
+        self.assertIn("preview only, nothing written", text)
+        self.assertEqual(prepare.call_args.kwargs["base_revision"], 3)
+        read.assert_called_once_with("/synthetic", "claim", "urn:uuid:claim")
+        revise.assert_not_called()
+
+    def test_section_diff_renders_body_lines_without_writing(self):
+        old_body = "# Target\n\nOriginal.\n"
+        new_body = "# Target\n\nReplacement.\n"
+        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as handle:
+            handle.write("Replacement.")
+            draft = handle.name
+        self.addCleanup(Path(draft).unlink)
+        with patch.object(api, "get_dossier", return_value={"body": old_body}), \
+                patch.object(api, "get_record", return_value={"record": {"revision": 2, "body": old_body}}), \
+                patch.object(api, "prepare_record_revision",
+                             return_value={"changes": {"body": new_body}, "conflicts": [], "ready": True}), \
+                patch.object(api, "revise_record") as revise:
+            status, text = self.run_diff(
+                "dossier", "--project", "/synthetic", "--dossier-id", "urn:uuid:dossier",
+                "--diff", "--section", "Target", "--file", draft)
+        self.assertEqual(status, 0)
+        self.assertIn("-Original.", text)
+        self.assertIn("+Replacement.", text)
+        revise.assert_not_called()
+
+
 if __name__ == "__main__":
     unittest.main()

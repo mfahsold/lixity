@@ -828,7 +828,8 @@ strict API. Same-record changes/races fail without retries. Supplied digests
 remain strict archive-wide guards. Unchanged association pins remain; new/changed
 associations require explicit revision flags when the snapshot is omitted.
 Batch/image/acknowledgement/Python/HTTP guards are unchanged. See the
-[implemented update workflow](research/USAGE.md#update-one-reviewed-record).
+[implemented update workflow](research/USAGE.md#update-one-reviewed-record). The read-only `--diff` mode prints the
+prepared change as a human unified diff and writes nothing.
 
 ### 5.2 HTTP Server Endpoints (for web UI and interactive agent loops)
 

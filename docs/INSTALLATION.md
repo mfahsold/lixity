@@ -102,7 +102,9 @@ version, then start it again. This does not alter manuscript files.
 ### Updates and removal
 
 Version 0.3.0 reset the product number to reflect development maturity before
-1.0 while retaining existing features and historical releases. Historical tags
+1.0 while retaining existing features and historical releases. Notes written
+before the renumbering may mention product versions such as 1.18.0 or
+3.0.1; they describe the same product. Historical tags
 such as 3.0.1 sort higher than the 0.4.x line in a numeric comparison; PyPI
 carries only the 0.4.x line, and `uv tool upgrade lixity` moves forward inside
 it. When choosing files on the release page, select the exact 0.4.x release.

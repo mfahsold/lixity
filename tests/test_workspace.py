@@ -183,5 +183,33 @@ class TestProjectTargetResolution(unittest.TestCase):
                 resolve_project_target(project, empty="bogus")
 
 
+class UnwritableExportsTest(unittest.TestCase):
+    """Sandboxed or read-only exports folders fail cleanly, not with a traceback."""
+
+    def test_build_reports_unwritable_exports_folder(self):
+        if os.name == "nt":
+            self.skipTest("POSIX permissions required")
+        if hasattr(os, "geteuid") and os.geteuid() == 0:
+            self.skipTest("Root ignores directory permissions")
+        with tempfile.TemporaryDirectory() as root:
+            manuscript = Path(root, "manuscript.md")
+            manuscript.write_text("## Chapter\n\nSynthetic sentence.\n", encoding="utf-8")
+            exports = Path(root, "exports")
+            exports.mkdir()
+            os.chmod(exports, 0o555)  # noqa: S103 - synthetic read-only test directory
+            try:
+                stderr = io.StringIO()
+                with contextlib.redirect_stdout(io.StringIO()), contextlib.redirect_stderr(stderr):
+                    status = cli_main(["build", str(manuscript)])
+            finally:
+                os.chmod(exports, 0o755)  # noqa: S103 - restore the synthetic temp directory
+            self.assertEqual(status, 1)
+            message = stderr.getvalue()
+            self.assertIn("[error]", message)
+            self.assertIn(str(exports), message)
+            self.assertIn("--dry-run", message)
+            self.assertNotIn("Traceback", message)
+
+
 if __name__ == "__main__":
     unittest.main()

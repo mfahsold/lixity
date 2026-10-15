@@ -7,6 +7,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- `lixity research <record> --diff` previews an update as a terminal unified
+  diff (dossier bodies line by line, other fields as before/after values)
+  without writing; the record commands also name the update requirements in
+  their help and error messages.
+
+### Changed
+- Research archive snapshots check paths with plain strings and `os.path`
+  calls instead of per-component `pathlib` checks; a 22k-record archive lists
+  claims about a third faster on the development machine.
+- `lixity build` reports an unwritable `exports/` folder (sandbox, read-only
+  mount) as one `[error]` line with a `--dry-run` hint instead of a traceback.
+
 ## [0.4.4] - 2026-10-15
 
 ### Changed

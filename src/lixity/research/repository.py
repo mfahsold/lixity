@@ -151,19 +151,30 @@ class Repository:
         self.root = Path(project).expanduser().resolve()
         self.data = self.root / "research"
         self.cache = self.root / ".lixity" / "research"
+        #: Pre-computed strings for the per-object safety check: a snapshot of a
+        #: large archive runs it tens of thousands of times.
+        self._root_text = str(self.root)
+        self._revisions_text = str(self.data / "revisions")
         #: Last verified snapshot of this instance. Reused only while HEAD still
         #: names the same manifest, so another process's commit is always seen.
         self._snapshot: Snapshot | None = None
 
     def safe(self, path: Path) -> Path:
-        try:
-            relative = path.relative_to(self.root)
-        except ValueError:
-            raise ResearchError("Research path escapes the project") from None
-        current = self.root
-        for part in relative.parts:
-            current = current / part
-            if current.is_symlink():
+        """Rejects paths outside the project or through a symlinked component.
+
+        The check runs once per archive object, so it stays on plain strings and
+        ``os.path`` calls: the previous per-component ``pathlib`` checks
+        dominated the profile of large archives.
+        """
+        root, text = self._root_text, os.fspath(path)
+        if text != root and not text.startswith(root + os.sep):
+            raise ResearchError("Research path escapes the project")
+        current = root
+        for part in text[len(root):].split(os.sep):
+            if not part:
+                continue
+            current = os.path.join(current, part)
+            if os.path.islink(current):
                 raise ResearchError("Symlinks are not allowed inside the research store")
         return path
 
@@ -210,7 +221,7 @@ class Repository:
         return content
 
     def record_path(self, entry: Entry) -> Path:
-        return self.safe(self.data / "revisions" / entry.kind / entry.ref.id[9:] / f"{entry.ref.revision}.json")
+        return self.safe(Path(self._revisions_text, entry.kind, entry.ref.id[9:], f"{entry.ref.revision}.json"))
 
     def snapshot(self) -> Snapshot:
         try:
