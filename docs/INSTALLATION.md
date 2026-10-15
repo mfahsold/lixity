@@ -101,14 +101,15 @@ version, then start it again. This does not alter manuscript files.
 
 ### Updates and removal
 
-Version 0.3.0 resets the product number to reflect development maturity
-before 1.0 while retaining existing features and historical releases. Package
-managers may select historical 3.0.1 as numerically newer. Choose the exact
-v0.3.0 wheel explicitly; do not rely on an unconstrained upgrade or a
-product-number comparison for archive compatibility. v0.3.0 reads research
-schemas v1–v7; historical v3.0.1 cannot read opt-in manuscript-link v7 archives.
-Installing new files does not restart a running workspace; restart explicitly
-after the upgrade.
+Version 0.3.0 reset the product number to reflect development maturity before
+1.0 while retaining existing features and historical releases. Historical tags
+such as 3.0.1 sort higher than the 0.4.x line in a numeric comparison; PyPI
+carries only the 0.4.x line, and `uv tool upgrade lixity` moves forward inside
+it. When choosing files on the release page, select the exact 0.4.x release.
+Do not rely on a product-number comparison for archive compatibility. The
+0.3.x/0.4.x line reads research schemas v1–v7; historical v3.0.1 cannot read
+opt-in manuscript-link v7 archives. Installing new files does not restart a
+running workspace; restart explicitly after the upgrade.
 
 When upgrading from a historical build before v2.4.0, stop its instance through the
 original foreground terminal (Ctrl+C), checkout launcher or configured OS
@@ -192,10 +193,8 @@ title = "My manuscript"
 ```
 
 **Since v0.3.0:** selected-project title, `author_name` and an
-optional `[publication]` table feed the shared CLI/native PDF composer. These
-additions are prepared for v0.3.0; use a development checkout until its wheel is
-published.
-No new renderer, runtime dependency or EPUB exporter is installed.
+optional `[publication]` table feed the shared CLI/native PDF composer. No new
+renderer, runtime dependency or EPUB exporter is installed.
 See [publication configuration and limits](USAGE.md#publication-settings).
 
 For interactive project and research workflows, run `lixity service start --open`

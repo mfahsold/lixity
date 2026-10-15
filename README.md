@@ -304,8 +304,8 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 The current release is **v0.4.4**. It resets the product version to reflect
 development before 1.0 and retains the existing features and published release
 history, including v3.0.1. Public JSON and research storage schema versions are
-independent; v0.3.0 reads existing research archives through v7. When
-upgrading across this lower version number, install the pinned 0.4.3 wheel
+independent; the 0.3.x/0.4.x line reads existing research archives through v7.
+When upgrading from the historical numbering, install the pinned release wheel
 explicitly; PyPI upgrades continue normally afterwards.
 [Release notes](docs/releases/v0.4.4.md) describe compatibility and known limits;
 the [changelog](CHANGELOG.md) records subsequent work on `main`.
