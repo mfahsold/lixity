@@ -152,6 +152,22 @@ human review, not a semantic contradiction check or factual verdict. Retraction
 and note/claim revisions use the existing record history and strict revision
 API; the anchor is immutable, with no reanchoring interface in this scope.
 
+**On `main` (next release):** the same flow is scriptable from the CLI.
+`--selection` takes the JSON selection object above (literal or a local file);
+`--expected-snapshot` / `--expected-source-sha256` default to one initial read
+and still fail when the bytes or the archive change before saving.
+
+```sh
+lixity research link-manuscript --project ./novel --manuscript novel.md \
+  --claim-id CLAIM_ID --claim-revision 2 --selection selection.json --allow-retention
+lixity research manuscript-links --project ./novel
+lixity research review-manuscript --project ./novel --manuscript novel.md
+```
+
+A changed source-file digest (`source_changed`, for example after an edit in an
+unrelated chapter) is informational and does not mark an association for review
+while its paragraph hash, line span and quote still match exactly.
+
 Python integrations use the same API:
 
 ```python

@@ -125,8 +125,11 @@ def manuscript_review_data(snapshot: Snapshot, *, source_path: str, source_sha25
             else:
                 state = "changed"
                 flags.append("anchor_changed")
+        # The file-level digest is informational: an edit elsewhere must not
+        # re-open associations whose paragraph, line span and quote still match.
+        review_blocking = [flag for flag in flags if flag != "source_changed"]
         row.update(source_path=source_path, current_source_sha256=source_sha256, flags=flags,
-                   anchor_state=state, review_needed=bool(flags),
+                   anchor_state=state, review_needed=bool(review_blocking),
                    resolved_start_line=resolved.start_line if resolved else None,
                    resolved_end_line=resolved.end_line if resolved else None,
                    candidate_lines=[p.start_line for p in candidates])
@@ -203,7 +206,9 @@ def link_manuscript_claim(
     matches = [p for p in _paragraphs(text, repository, language, project_config)
                if paragraph_identity(p) == identity]
     if len(matches) != 1 or matches[0].text[anchor.start:anchor.end] != anchor.quote:
-        raise ResearchError("Selection does not match one current displayed manuscript paragraph")
+        raise ResearchError(
+            "Selection does not match one current displayed manuscript paragraph; "
+            "offsets and quotes refer to the displayed text with inline Markdown markers removed")
     from .api import envelope
     try:
         record = ManuscriptClaimLink.model_validate({**envelope(snapshot.project.id, actor),

@@ -55,6 +55,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("relate", "Record, inspect or revise an authored cause/effect assertion between claims"),
         ("link-evidence", "Create, inspect or revise a passage-to-claim evidence link"),
         ("link", "Create an evidence link with positional PASSAGE_ID CLAIM_ID"),
+        ("link-manuscript", "Associate one reviewed manuscript quote with an exact claim revision (retention explicit)"),
+        ("manuscript-links", "List saved manuscript quote-claim associations (read-only)"),
+        ("review-manuscript", "Review saved associations against the current manuscript (read-only)"),
         ("decision", "Create, list or revise author decisions and fact deviations"),
         ("decision-impact", "Inspect dossiers explicitly linked to an author decision; read-only"),
         ("review", "List structural editorial review candidates; read-only, not semantic judgment"),
@@ -143,6 +146,28 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update (required with --update)")
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
+        if name in ("link-manuscript", "review-manuscript"):
+            command.add_argument("--manuscript", required=True,
+                                 help="Manuscript path inside the explicit project")
+            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+        if name == "link-manuscript":
+            command.add_argument("--claim-id", required=True)
+            command.add_argument("--claim-revision", type=int, required=True,
+                                 help="Exact reviewed claim revision to pin")
+            command.add_argument("--selection", required=True,
+                                 help="Selection JSON object (literal or local file) with start_line, "
+                                      "end_line, paragraph_sha256, start, end, quote")
+            command.add_argument("--expected-snapshot",
+                                 help="Optional strict archive digest; the current snapshot is used when omitted")
+            command.add_argument("--expected-source-sha256",
+                                 help="Optional strict source digest; the current file bytes are used when omitted")
+            command.add_argument("--allow-retention", action="store_true",
+                                 help="Confirm permission to retain the local quote (required)")
+            command.add_argument("--note")
+            command.add_argument("--actor", default="local-author")
+        if name == "manuscript-links":
+            command.add_argument("--claim-id", help="Only associations of this claim")
+            command.add_argument("--include-retracted", action="store_true")
         if name in ("dossier", "claim", "decision", "sources"):
             command.add_argument("action", nargs="?", choices=("list",), metavar="list",
                                  help="Explicit list verb; listing is also the default without a record ID")
@@ -317,17 +342,22 @@ def command_metadata() -> list[dict[str, Any]]:
             for name, command in commands.choices.items()]
 
 
-def _source_context(value: str | None) -> dict[str, Any] | None:
-    """Read a source criticism JSON object from an inline value or local file."""
+def _json_object(value: str, what: str) -> dict[str, Any]:
+    """Read a JSON object from an inline value or a local file."""
     from .repository import ResearchError
 
+    path = Path(value)
+    payload = json.loads(path.read_text(encoding="utf-8") if path.is_file() else value)
+    if not isinstance(payload, dict):
+        raise ResearchError(f"{what} must be a JSON object")
+    return payload
+
+
+def _source_context(value: str | None) -> dict[str, Any] | None:
+    """Read a source criticism JSON object from an inline value or local file."""
     if value is None:
         return None
-    path = Path(value)
-    context = json.loads(path.read_text(encoding="utf-8") if path.is_file() else value)
-    if not isinstance(context, dict):
-        raise ResearchError("Source context must be a JSON object")
-    return context
+    return _json_object(value, "Source context")
 
 
 def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
@@ -718,6 +748,31 @@ def run(args: argparse.Namespace) -> int:
                             dry_run=args.dry_run,
                             progress_callback=_zotero_progress,
                         )
+        elif command == "manuscript-links":
+            result = api.list_manuscript_links(args.project, claim_id=args.claim_id,
+                                               include_retracted=args.include_retracted)
+        elif command == "review-manuscript":
+            result = api.review_manuscript_links(args.project, args.manuscript, language=args.language)
+        elif command == "link-manuscript":
+            if not args.allow_retention:
+                raise ResearchError("Explicit local retention permission is required (--allow-retention)")
+            from ..io import FileUtils
+            from .manuscript import _source_path
+            from .repository import Repository
+
+            selection_payload = _json_object(args.selection, "Selection")
+            repository = Repository(args.project)
+            snapshot = repository.snapshot()
+            source_path, _relative = _source_path(repository, args.manuscript)
+            source_sha256 = args.expected_source_sha256
+            if source_sha256 is None:
+                source_sha256 = FileUtils.read_source_snapshot(str(source_path))[1]
+            result = api.link_manuscript_claim(
+                args.project, args.manuscript, args.claim_id, claim_revision=args.claim_revision,
+                selection=selection_payload, expected_project_id=snapshot.project.id,
+                expected_snapshot=args.expected_snapshot or snapshot.digest,
+                expected_source_sha256=source_sha256, allow_retention=True,
+                note=args.note, actor=args.actor, language=args.language)
         elif command == "reindex":
             result = api.reindex(args.project)
         elif command == "search":

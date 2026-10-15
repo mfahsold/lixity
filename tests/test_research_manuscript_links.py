@@ -371,3 +371,45 @@ def test_archive_anchor_retention_flag_is_strict_boolean(manuscript_archive):
     saved = save_link(manuscript_archive)["record"]["anchor"]
     with pytest.raises(ValidationError):
         ManuscriptAnchor.model_validate({**saved, "retention_confirmed": 1})
+
+
+def test_unrelated_source_edit_stays_informational(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    save_link(manuscript_archive)
+    assert api.review_manuscript_links(project, manuscript)["review_needed_count"] == 0
+    manuscript.write_bytes(manuscript.read_bytes() + b"\n## Chapter Two\n\nA later scene arrives.\n")
+    report = api.review_manuscript_links(project, manuscript)
+    row = report["links"][0]
+    assert row["anchor_state"] == "resolved"
+    assert "source_changed" in row["flags"]
+    assert row["review_needed"] is False
+    assert report["review_needed_count"] == 0
+
+
+def test_cli_link_list_and_review_round_trip(manuscript_archive, capsys):
+    import argparse
+    import json
+
+    from lixity.research import cli
+
+    project, _, claim, _ = manuscript_archive
+    parser = argparse.ArgumentParser()
+    cli.configure(parser)
+    link_args = parser.parse_args([
+        "link-manuscript", "--project", str(project), "--manuscript", "draft.md",
+        "--claim-id", claim, "--claim-revision", "1",
+        "--selection", json.dumps(selection()), "--allow-retention"])
+    assert cli.run(link_args) == 0
+    linked = json.loads(capsys.readouterr().out)
+    assert linked["claim_id"] == claim
+    assert linked["record"]["kind"] == "manuscript_claim_link"
+    list_args = parser.parse_args(["manuscript-links", "--project", str(project)])
+    assert cli.run(list_args) == 0
+    listed = json.loads(capsys.readouterr().out)
+    assert [row["link_id"] for row in listed["links"]] == [linked["link_id"]]
+    review_args = parser.parse_args([
+        "review-manuscript", "--project", str(project), "--manuscript", "draft.md"])
+    assert cli.run(review_args) == 0
+    reviewed = json.loads(capsys.readouterr().out)
+    assert reviewed["links"][0]["anchor_state"] == "resolved"
+    assert reviewed["review_needed_count"] == 0

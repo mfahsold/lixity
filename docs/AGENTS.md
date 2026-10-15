@@ -77,7 +77,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | `lixity serve [PATH] [--port N] [--host IP] [--no-project]` | native development server & interactive dashboard with project switcher | loopback HTTP server |
 | `lixity service start\|stop\|restart\|status [--port N] [--json]` | managed installed-app lifecycle; start defaults to an empty workspace, optional explicit project | text / JSON |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` (same threshold flags as `style`) | artifact list |
-| `lixity research SUBCOMMAND --project DIR` | evidence-based research archive (init, ingest, search, cite, sources, dossier, compare) | JSON |
+| `lixity research SUBCOMMAND --project DIR` | evidence-based research archive (init, ingest, search, cite, sources, dossier, compare, link-manuscript, manuscript-links, review-manuscript) | JSON |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
 | `lixity completion bash\|zsh` | shell completion script (all commands + style flags) | script |
 
@@ -786,7 +786,7 @@ States are `resolved|moved|ambiguous|changed|unavailable`; flags include
 `claim_withdrawn`, `anchor_moved`, `anchor_ambiguous`, `anchor_changed`.
 Only exact line/hash/quote matches resolve. Moved/ambiguous candidates stay
 unresolved and pins stay unchanged. Flags indicate structural review, never
-semantic contradiction or factual proof. Shared-pipeline integrations can use
+semantic contradiction or factual proof. `source_changed` is informational (a different source-file digest) and never sets `review_needed` by itself; review follows the paragraph-level anchor state. Shared-pipeline integrations can use
 `lixity.research.manuscript.manuscript_review_data(Repository(project).snapshot(), source_path=...,
 source_sha256=..., paragraphs=..., source_state="available")` without another
 analysis pass; `source_state` also accepts `missing|unreadable`.
