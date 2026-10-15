@@ -2333,9 +2333,13 @@ body.only-flags:not(.text-search-active) .chip:not(.sev-2):not(.sev-3) { display
 }
 .scene-overview { margin: .4rem 0 .9rem; }
 /* Scene details are the one genuinely heavy list (16-row tables each); defer
-   their off-screen rendering. Chapters stay fully rendered: they are scroll and
-   tap targets, and deferred layout there shifts anchors while scrolling. */
-.scene-detail { margin: .8rem 0; border-top: 1px solid var(--line); padding-top: .6rem; content-visibility: auto; contain-intrinsic-size: auto 520px; }
+   their off-screen rendering once they are open. A closed <details> must keep
+   its natural summary height: the intrinsic placeholder would otherwise
+   reserve the empty 520px block and blow up the panel. Chapters stay fully
+   rendered: they are scroll and tap targets, and deferred layout there shifts
+   anchors while scrolling. */
+.scene-detail { margin: .8rem 0; border-top: 1px solid var(--line); padding-top: .6rem; }
+.scene-detail[open] { content-visibility: auto; contain-intrinsic-size: auto 520px; }
 .scene-detail summary { cursor: pointer; overflow-wrap: anywhere; padding: .5rem 0; }
 .scene-detail .table-wrap { margin-top: .6rem; }
 .scene-detail th small { display: block; font-weight: normal; opacity: .7; }

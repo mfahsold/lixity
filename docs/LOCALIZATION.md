@@ -36,7 +36,7 @@ does not establish equal accuracy across languages or genres.
 
 | Concern | What changes with the language |
 | --- | --- |
-| Words and sentences | Word patterns, abbreviations and sentence-boundary rules |
+| Words and sentences | Word patterns, abbreviations and sentence-boundary rules (sentence boundaries never cross blank lines) |
 | Tense and style signals | Present/past markers, function words, pronouns, modality, passive and nominal patterns |
 | Readability | Syllable estimation and the named language-specific coefficient set |
 | Presentation | Labels, scientific explanations, decimal/grouping separators and percentage units |

@@ -131,7 +131,11 @@ def build_server_dashboard(
     status_labels = resolved.labels
 
     def _status_text(key: str, **values: Any) -> str:
-        template = status_labels.get(key) or ""
+        """Localized status text; a count of one picks the ``_one`` row."""
+        chosen = key
+        if values.get("count") == 1 and f"{key}_one" in status_labels:
+            chosen = f"{key}_one"
+        template = status_labels.get(chosen) or status_labels.get(key) or ""
         return template.format(**values) if template else key
 
     try:

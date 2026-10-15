@@ -11,7 +11,9 @@ from lixity.language import get_language_profile
 from lixity.pipeline import analyze_document, resolve_document_config
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
-text = "## Eins\\n\\nIch gehe. Ich sehe den Regen.\\n\\n## Zwei\\n\\nDas Haus wurde verkauft und die Tür war verschlossen.\\n"
+text = ("## Eins\\n\\n" + "Ich gehe. Ich sehe den Regen. Ich höre die Stadt. Ich trinke Kaffee. " * 8
+    + "\\n\\n## Zwei\\n\\n"
+    + "Das Haus wurde verkauft und die Tür war verschlossen. Die Zeitung lag auf dem Tisch. " * 7)
 config, language = resolve_document_config(text, "de")
 result = analyze_document(text, config, FingerprintThresholds())
 result.fingerprint.fdr_flagged = {1: ["asl"]}

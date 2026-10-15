@@ -638,7 +638,7 @@ async function enhanceResearchDossierClaims(host, detail, stillCurrent) {
         return link.state === "active" && link.claim_id === claim.id && link.dossier_id === detail.id;
       }) : [];
       var usage = linksAvailable ? '<p class="ctl-note" data-manuscript-link-count="' + linked.length + '">' +
-        escapeHtml(linked.length ? uiFormat("research_manuscript_quote_count", {count: linked.length}) :
+        escapeHtml(linked.length ? uiCountFormat("research_manuscript_quote_count", linked.length) :
           uiLabel("research_manuscript_quote_none")) + '</p>' :
         '<p class="ctl-note">' + escapeHtml(uiLabel("research_manuscript_quote_unavailable")) + '</p>';
       if (linked.some(function(link) { return link.claim_changed || link.claim_withdrawn; }))
@@ -959,7 +959,7 @@ async function browseZotero(request) {
         escapeHtml(uiLabel(capture ? "zotero_refresh" : "zotero_capture")) + '</button>' : '<span class="ctl-note">' + escapeHtml(uiLabel("zotero_media")) + '</span>') :
         '<button type="button" class="ctl" data-zotero-item="' + index + '">' + escapeHtml(uiLabel("research_view_details")) + '</button>') + '</div></div>';
   }).join("") + (zoteroNextRequest ? '<button type="button" class="ctl" id="r-zotero-more">' + escapeHtml(uiLabel("zotero_more")) + '</button>' : '');
-  if (!items.length) host.textContent = uiFormat("research_hits_count", {count: 0});
+  if (!items.length) host.textContent = uiCountFormat("research_hits_count", 0);
 }
 
 document.addEventListener("change", function(event) {
@@ -1147,7 +1147,7 @@ async function refreshResearchSources(overview, changedId, freshRead) {
     var textSources = sources.filter(function(source) { return !["image/png", "image/jpeg"].includes(source.media_type); });
     selectHost.innerHTML = '<option value="">' + escapeHtml(uiLabel("research_select_source")) + '</option>' +
       textSources.map(function(s) {
-        return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title) + ' (' + escapeHtml(uiFormat("research_passages_count", { count: s.passages })) + ')</option>';
+        return '<option value="' + escapeHtml(s.id) + '">' + escapeHtml(s.title) + ' (' + escapeHtml(uiCountFormat("research_passages_count", s.passages)) + ')</option>';
       }).join("");
     if (textSources.some(function(s) { return s.id === selectedSource; })) selectHost.value = selectedSource;
   }
@@ -1165,7 +1165,7 @@ async function refreshResearchSources(overview, changedId, freshRead) {
     return '<div class="research-card" data-filter-text="' + escapeHtml(filterText).replace(/"/g, "&quot;") + '">' +
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(s.title) + '</span>' +
-        '<span class="ctl-note">' + escapeHtml(["image/png", "image/jpeg"].includes(s.media_type) ? s.media_type : uiFormat("research_passages_count", { count: s.passages })) + ' · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
+        '<span class="ctl-note">' + escapeHtml(["image/png", "image/jpeg"].includes(s.media_type) ? s.media_type : uiCountFormat("research_passages_count", s.passages)) + ' · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
       '</div>' +
       '<div class="ctl-note research-record-id">' + escapeHtml(s.id) + '</div>' +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
@@ -1224,7 +1224,7 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
       '<div class="research-card-header">' +
         '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
         reviewBadge +
-        '<span class="ctl-note">' + escapeHtml(uiFormat("research_evidence_count", { count: d.evidence_count })) + '</span>' +
+        '<span class="ctl-note">' + escapeHtml(uiCountFormat("research_evidence_count", d.evidence_count)) + '</span>' +
         (d.revision ? '<span class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", { revision: d.revision })) + '</span>' : '') +
       '</div>' +
       (d.excerpt ? '<p class="ctl-note research-excerpt">' + escapeHtml(d.excerpt) + '</p>' : '') +
@@ -1295,8 +1295,8 @@ function researchTimelineStrip(rows) {
       left.toFixed(3) + '%;width:' + width.toFixed(3) + '%"></span></span></a></li>';
   }).join("");
   return '<div class="research-timeline-strip"><h4>' + escapeHtml(uiLabel("research_timeline_strip_heading")) + '</h4>' +
-    '<p class="ctl-note">' + escapeHtml(uiFormat("research_timeline_span", {
-      count: rows.length, start: earliest.slice(0, 4), end: latest.slice(0, 4)})) + '</p>' +
+    '<p class="ctl-note">' + escapeHtml(uiCountFormat("research_timeline_span", rows.length,
+      {start: earliest.slice(0, 4), end: latest.slice(0, 4)})) + '</p>' +
     '<ol>' + body + '</ol>' +
     '<p class="ctl-note">' + escapeHtml(uiLabel("research_timeline_strip_hint")) + '</p></div>';
 }
@@ -1639,7 +1639,7 @@ async function refreshResearchEditorialReview(preserve, expectedSnapshot) {
     host.textContent = uiLabel("research_editorial_empty");
     return;
   }
-  var rendered = '<p class="ctl-note">' + escapeHtml(uiFormat("research_editorial_count", {count: report.candidate_count})) + '</p>' +
+  var rendered = '<p class="ctl-note">' + escapeHtml(uiCountFormat("research_editorial_count", report.candidate_count)) + '</p>' +
     report.candidates.map(function(candidate) {
       return '<div class="research-card"><strong>' + escapeHtml(candidate.title) + '</strong>' +
         (candidate.dossier_title ? '<p>' + escapeHtml(candidate.dossier_title) + '</p>' : '') +
@@ -2275,7 +2275,7 @@ function highlightSearchTerms(text, query) {
         '</div>';
       }).join("");
     }
-    researchStatus(uiFormat("research_hits_count", { count: hits.length }), true);
+    researchStatus(uiCountFormat("research_hits_count", hits.length), true);
     return;
   }
 
@@ -2535,7 +2535,7 @@ function highlightSearchTerms(text, query) {
       subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(uiLabel("research_no_linked_evidence")) + '</span>';
       return;
     }
-    subpanel.innerHTML = '<div class="research-block-heading">' + escapeHtml(uiFormat("research_linked_evidence_count", { count: links.length })) + '</div>' +
+    subpanel.innerHTML = '<div class="research-block-heading">' + escapeHtml(uiCountFormat("research_linked_evidence_count", links.length)) + '</div>' +
       links.map(function(l) {
         var relBadge = '<span class="research-badge badge-neutral research-relation-badge">' + escapeHtml(uiLabel("research_relation_" + l.relation)) + '</span>';
         var cite = l.citation || {};

@@ -47,8 +47,10 @@ The native server is a package rather than one module, because it is the only
 place where transport, state and view assembly meet. `runtime` owns bind checks
 and startup; `views` composes the dashboard from the shared pipeline and domain
 reports and stays independent of HTTP; `_state` declares the selected-workspace
-state and the shared cache publication (`publish_dashboard`/`refresh`), while
-workspace transitions are published by `runtime` and the project routes;
+state and the shared cache publication (`publish_dashboard`/`refresh`). Serving
+the dashboard shell re-renders when the manuscript digest changed since the last
+render (`refresh_when_source_changed`), so a cached view never presents stale
+numbers; workspace transitions are published by `runtime` and the project routes;
 `_base` owns response helpers and the Host/Origin guards; `routes_project`,
 `routes_research`, `routes_manuscript_research`, `routes_pdf`, `routes_nda` and
 `routes_markers` each own their handlers and are composed with `discovery` and

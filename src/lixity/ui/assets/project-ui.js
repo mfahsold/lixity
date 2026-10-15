@@ -724,7 +724,8 @@ document.querySelectorAll(".modal-tabs").forEach(function(container) {
 });
 
 window.LixityManuscriptLinks = {
-  label: uiLabel, read: researchApiGet, post: researchApiPost, contextToken: researchContextToken,
+  label: uiLabel, countFormat: uiCountFormat, read: researchApiGet, post: researchApiPost,
+  contextToken: researchContextToken,
   errorText: researchErrorMessage,
   text: function(panel) { return paragraphContent[panel.id] && paragraphContent[panel.id][0]; },
   marks: function(panel, spans) {

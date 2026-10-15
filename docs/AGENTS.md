@@ -177,6 +177,12 @@ these:
   rest of the corpus, in natural-log units `[0, ln(2)]`) and `jsd_top_words` (the most contributing content
   words – interpretable drivers of divergence).
 
+Comparability floors (METHODS.md §2): the fingerprint withholds every feature of
+chapters below 100 words and sentence-distribution features below five
+sentences; below a floor the feature is `null` for that chapter and stays out of
+baselines and FDR sets. The analyze chapter fields above remain measured for any
+chapter with prose.
+
 In 2.3.0, default nominal-suffix counts exclude curated function words at corpus,
 chapter and paragraph scope. Explicit `nominal_regex` overrides retain their
 match semantics; result schemas stay unchanged. Regenerate older reports before

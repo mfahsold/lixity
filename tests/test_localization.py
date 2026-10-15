@@ -280,6 +280,20 @@ def test_manuscript_review_codes_have_workspace_labels():
             assert labels.get(key, "").strip(), (language, flag, key)
 
 
+def test_count_labels_carry_singular_forms():
+    """Every count-noun template has a `_one` row for exactly one item."""
+    # Parenthetical counters ("({count})") and count-free adjectives keep one row.
+    parenthetical = re.compile(r"\(\{count\}\)")
+    invariant = {"status_markers_open"}
+    for key, english in WORKSPACE_LABELS["en"].items():
+        if "{count}" not in english or key.endswith("_one") or key in invariant:
+            continue
+        if parenthetical.search(english):
+            continue
+        for language in LOCALES:
+            assert f"{key}_one" in WORKSPACE_LABELS[language], (key, language)
+
+
 def test_default_labels_cover_the_scene_pack():
     for key, value in language_data.SCENE_LABELS["en"].items():
         assert label(None, key) == value

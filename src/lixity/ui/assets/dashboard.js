@@ -449,6 +449,14 @@ function uiFormat(key, values) {
     return Object.prototype.hasOwnProperty.call(values, name) ? String(values[name]) : match;
   });
 }
+function uiCountFormat(key, count, values) {
+  // A count of one picks the "<key>_one" row when the pack provides it.
+  var singular = key + "_one";
+  var chosen = count === 1 && Object.prototype.hasOwnProperty.call(UI_LABELS, singular) ? singular : key;
+  var payload = values || {};
+  if (!Object.prototype.hasOwnProperty.call(payload, "count")) payload.count = count;
+  return uiFormat(chosen, payload);
+}
 var welcomeHero = document.getElementById("welcome-hero");
 var welcomeDismiss = document.getElementById("welcome-dismiss");
 var welcomeShow = document.getElementById("welcome-show");
