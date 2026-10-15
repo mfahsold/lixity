@@ -134,14 +134,16 @@ def _render_blocks(node: Node, out: list[str]) -> None:
             if text:
                 out.append(text)
         elif child.tag in {"ul", "ol"}:
-            items = []
-            for index, item in enumerate(child.children, start=1):
-                if not isinstance(item, Node) or item.tag != "li":
-                    continue
+            # Whitespace text nodes sit between the <li> elements; counting the
+            # item positions alone keeps ordered lists at 1., 2., 3., ...
+            entries = [item for item in child.children
+                       if isinstance(item, Node) and item.tag == "li"]
+            lines = []
+            for index, item in enumerate(entries, start=1):
                 marker = f"{index}." if child.tag == "ol" else "-"
-                items.append(f"{marker} {_clean(_inline(item))}")
-            if items:
-                out.extend(items)
+                lines.append(f"{marker} {_clean(_inline(item))}")
+            if lines:
+                out.extend(lines)
         elif child.tag == "pre":
             code = "".join(
                 grand

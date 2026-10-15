@@ -50,13 +50,13 @@ changes over time. Verify the version before starting again. Most users should s
 
 The managed app opens `http://127.0.0.1:8765/`. Its default is an empty workspace; it does not search your terminal's current folder. Choose **Open Project** for an existing folder or **Analyze a manuscript** for an import preview. Confirm the language and read a passage before interpreting its measurements.
 
-2. Choose **Analyze a manuscript** (or **New Project**) and confirm the preview: title, analysis language and optional author name.
+1. Choose **Analyze a manuscript** (or **New Project**) and confirm the preview: title, analysis language and optional author name.
 
-4. Read the **Start your review** panel first: **Open passage**, **Explore chapters** or **Open sentence rhythm**.
+2. Read the **Start your review** panel first: **Open passage**, **Explore chapters** or **Open sentence rhythm**.
 
-6. Work from a flagged passage or open any paragraph, expand **Values** and write a marker note if something needs another look.
+3. Work from a flagged passage or open any paragraph, expand **Values** and write a marker note if something needs another look.
 
-8. Export the result with **PDF export**: A5 reading copy, A4 manuscript sheets or the A4 analysis report.
+4. Export the result with **PDF export**: A5 reading copy, A4 manuscript sheets or the A4 analysis report.
 
 The [first-session guide](../ONBOARDING.md) describes every stage, and the [public-domain examples](https://mfahsold.github.io/lixity/examples/effi-briest.html) show a finished analysis without installation.
 

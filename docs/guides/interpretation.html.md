@@ -30,15 +30,15 @@ The showing/telling panel displays “–” with an explanation when there are 
 
 ## A practical review loop
 
-2. Check the manuscript path, selected language and chapter boundaries. English is the default; automatic language detection is an explicit choice.
+1. Check the manuscript path, selected language and chapter boundaries. English is the default; automatic language detection is an explicit choice.
 
-4. Inspect an unusual chapter in the matrix or style bands. Distinguish raw threshold crossings from the separately computed FDR-selected cells.
+2. Inspect an unusual chapter in the matrix or style bands. Distinguish raw threshold crossings from the separately computed FDR-selected cells.
 
-6. Open the associated paragraphs and read the passage. A dialogue scene or deliberate change of narrator may explain the pattern.
+3. Open the associated paragraphs and read the passage. A dialogue scene or deliberate change of narrator may explain the pattern.
 
-8. Record your interpretation or a work marker if useful. A diagnostic does not decide whether to edit.
+4. Record your interpretation or a work marker if useful. A diagnostic does not decide whether to edit.
 
-10. After changing the manuscript, compare results using the same analysis version, language and thresholds.
+5. After changing the manuscript, compare results using the same analysis version, language and thresholds.
 
 **Since v2.3.0:** an opened paragraph shows the passage first, followed by a compact **Values** disclosure (**Werte** in German). Expand it to inspect the measurements. The matrix, reference bands, dimensions and structural diagnostics share one style area with tabs; links to their existing anchors select the relevant panel. Without JavaScript, all available style panels remain readable.
 
