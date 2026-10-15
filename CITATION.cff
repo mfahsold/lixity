@@ -6,6 +6,11 @@ date-released: "2026-10-15"
 license: AGPL-3.0-or-later
 repository-code: "https://github.com/mfahsold/lixity"
 url: "https://mfahsold.github.io/lixity/"
+doi: "10.5281/zenodo.23390297"
+identifiers:
+  - type: doi
+    value: "10.5281/zenodo.23390298"
+    description: "Version DOI for v0.4.4"
 abstract: >-
   Offline, deterministic text-linguistics engine for literary manuscripts:
   sentence rhythm, lexical diversity (HD-D, MTLD, MATTR,

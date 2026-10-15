@@ -2,6 +2,7 @@
 
 [![tests](https://github.com/mfahsold/lixity/actions/workflows/tests.yml/badge.svg)](https://github.com/mfahsold/lixity/actions)
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
@@ -333,8 +334,9 @@ several outputs can [reuse the shared analysis result](docs/ARCHITECTURE.md#conf
 The methods and the tool's placement among stylometry and corpus tools are
 described in the software paper draft under [`paper/`](paper/paper.md),
 prepared for the [Journal of Open Source Software](https://joss.theoj.org/).
-Released versions are archived on Zenodo; the concept DOI lands in
-[`CITATION.cff`](CITATION.cff) once the first deposit is minted.
+Released versions are archived on Zenodo: cite the concept DOI
+[`10.5281/zenodo.23390297`](https://doi.org/10.5281/zenodo.23390297) (see [`CITATION.cff`](CITATION.cff));
+every release also receives its own version DOI.
 
 ## License
 

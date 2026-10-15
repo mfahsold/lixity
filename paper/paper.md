@@ -105,7 +105,8 @@ case studies reproducible without a corpus infrastructure. The PDF report
 layout is designed to be archived alongside the analysis settings that
 produced it, and the research archive keeps quotations and claims citable
 with exact source and revision pins. Deposits of released versions receive
-DOIs via Zenodo so that a specific measurement can be cited.
+DOIs via Zenodo (concept DOI 10.5281/zenodo.23390297) so that a specific
+measurement can be cited.
 
 # AI usage disclosure
 

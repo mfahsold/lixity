@@ -15,7 +15,7 @@ network access. No manuscript upload, account or API key is required.
 |---|---|---|
 | [`lixity` on PyPI](https://pypi.org/project/lixity/) | normal install and upgrades | `uv tool install lixity`; pipx and pip work as well |
 | [GitHub Releases](https://github.com/mfahsold/lixity/releases) | pinned, checksum-verified setups | wheel, sdist and `SHA256SUMS`; build attestations via `gh attestation verify` |
-| Zenodo | citing a released version | releases are archived automatically; the concept DOI lives in [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff) |
+| Zenodo | citing a released version | releases are archived automatically; concept DOI `10.5281/zenodo.23390297` (see [`CITATION.cff`](https://github.com/mfahsold/lixity/blob/main/CITATION.cff)) |
 
 Use the isolated **uv tool** installation for the application and CLI. Install
 [uv](https://docs.astral.sh/uv/getting-started/installation/) first if needed.
