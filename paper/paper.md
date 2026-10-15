@@ -110,20 +110,22 @@ measurement can be cited.
 
 # AI usage disclosure
 
-Generative AI tools were used during development under continuous human
-review:
+The software was created in an agentic, exploration-driven workflow commonly
+described as "vibe coding": several generative AI coding assistants were used
+under continuous human review.
 
-- **Tools and scope.** AI coding assistants were used in a coding-agent
-  environment for code generation and refactoring, test scaffolding,
-  documentation drafting and copy-editing; paper text was drafted with AI
-  assistance. <!-- TODO maintainer before submission: name the tools/models and
-  approximate versions/periods, e.g. "Anthropic Claude via OpenCode (2025-2026),
-  OpenAI GPT via ..., GitHub Copilot ...". -->
+- **Tools and scope.** Multiple AI coding tools and model generations were used
+  over the development period for code drafts, refactorings, test scaffolding,
+  documentation and copy-editing; paper text was drafted with AI assistance and
+  edited by the author. Exact model versions varied between sessions and are not
+  tracked per change; the public repository history records every accepted
+  contribution.
 - **Human review.** The maintainer reviewed, edited and validated every
-  AI-assisted output, ran the test and browser suites before releases, and made
-  the design decisions, measurement definitions and release choices.
+  AI-assisted output, ran the automated test and browser suites before each
+  release, and made the core decisions: measurement definitions, statistical
+  methods, data contracts and release scope.
 - **Correspondence.** Communication with JOSS editors and reviewers is written
-  by the maintainer (no AI assistance, unless translation is needed and
+  by the maintainer (no AI assistance, unless a translation is needed and
   disclosed).
 
 # Acknowledgements
