@@ -82,6 +82,19 @@ server.serve_forever()
               'A second click closes the paragraph');
           }
         }
+        // Chapter folding: the chevron folds the body; jumps expand it again.
+        const foldToggle = chapter.locator("[data-chapter-toggle]");
+        await foldToggle.click();
+        assert.equal(await chapter.evaluate(el => el.classList.contains("collapsed")), true, "The toggle folds the chapter");
+        assert.equal(await chapter.locator(".strip").isVisible(), false, "A folded chapter hides its strip");
+        await foldToggle.click();
+        assert.equal(await chapter.locator(".strip").isVisible(), true, "Unfolding restores the strip");
+        await foldToggle.click();
+        await page.locator('#text-search').fill('Chapter 5 paragraph 9 carries');
+        await page.locator('#text-search').press('Enter');
+        await page.waitForFunction(() => !document.querySelector('#ch-5').classList.contains('collapsed'),
+          null, {timeout: 5000});
+        await page.locator('#text-search').press('Escape');
         assert.deepEqual(errors, []);
         await page.close();
       }

@@ -28,6 +28,21 @@ document.addEventListener("mouseout", function (event) {
 var reduceMotion = window.matchMedia
   && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+function revealChapter(node) {
+  var chapter = node && node.closest ? node.closest(".chapter.collapsed") : null;
+  if (!chapter) return;
+  var toggle = chapter.querySelector("[data-chapter-toggle]");
+  if (toggle) toggleChapter(toggle, true);
+}
+
+function toggleChapter(toggle, expand) {
+  var chapter = toggle.closest(".chapter");
+  if (!chapter) return;
+  var collapsed = expand === undefined ? !chapter.classList.contains("collapsed") : !expand;
+  chapter.classList.toggle("collapsed", collapsed);
+  toggle.setAttribute("aria-expanded", collapsed ? "false" : "true");
+}
+
 function flashOnArrival(target) {
   // Flash after the smooth scroll settles; a flash that fades mid-scroll
   // leaves the destination unmarked ("the anchor does not sit precisely").
@@ -57,6 +72,7 @@ function scrollAndFlash(target) {
   var view = target.closest(".view-pane");
   if (view) switchActiveView(view.dataset.viewPane);
   revealStyleTarget(target);
+  revealChapter(target);
   target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
   flashOnArrival(target);
 }
@@ -160,6 +176,7 @@ function toggleParagraph(chip, forceOpen, instant) {
   if (!panel) return;
   var fromClick = forceOpen === undefined;
   var open = forceOpen === undefined ? !panel.classList.contains("open") : forceOpen;
+  if (open) revealChapter(panel);
   // A collapsed panel measures zero height. Scrolling to that stale geometry
   // lands the expanded block past the viewport ("clicks do not get through",
   // imprecise anchors). Expand synchronously whenever a scroll follows.

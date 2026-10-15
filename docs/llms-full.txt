@@ -6694,6 +6694,7 @@ historical certainty.
 | `data-flags="1"` | additionally preselect "flagged only" |
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
+| `[data-chapter-toggle]` | fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter |
 | `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
 | `.paragraph-values > summary` | native disclosure for source lines and measurements in an opened paragraph |

@@ -344,6 +344,11 @@ body.text-search-active .chapter .strip { display: none; }
 }
 .chapter-head h2 { min-width: 0; overflow-wrap: anywhere; }
 .chapter-head .meta { color: var(--muted); font-size: .78rem; font-variant-numeric: tabular-nums; }
+.chapter-toggle { background: none; border: 0; padding: 0 .35rem 0 0; margin: 0; color: var(--muted); cursor: pointer; font: inherit; }
+.chapter-toggle::before { content: "\25BE"; display: inline-block; transition: transform .15s var(--ease); }
+.chapter-toggle:hover, .chapter-toggle:focus-visible { color: var(--fg); }
+.chapter.collapsed .chapter-toggle::before { transform: rotate(-90deg); }
+.chapter.collapsed > .strip, .chapter.collapsed > .ptext { display: none; }
 .strip { display: flex; gap: 2px; margin: .65rem 0 0; overflow-x: auto; padding: 3px 2px; }
 .chip {
   border: 0;

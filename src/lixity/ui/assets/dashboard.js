@@ -66,6 +66,8 @@ function isMarkerControl(el) {
 var INTERACTIVE = "[data-jump], [data-line], [role='button'], td.z[data-chapter]";
 
 document.addEventListener("click", function (event) {
+  var fold = event.target.closest("[data-chapter-toggle]");
+  if (fold) { toggleChapter(fold); return; }
   var chip = event.target.closest(".chip");
   if (chip) { toggleParagraph(chip); return; }
   var target = event.target.closest(INTERACTIVE);

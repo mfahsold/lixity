@@ -864,7 +864,12 @@ def render_dashboard(
             f'data-start="{chapter.start_line}" data-end="{chapter.end_line}">'
         )
         parts.append('<div class="chapter-head">')
-        parts.append(f"<h2>{chapter.num}. {esc(chapter.title)}</h2>")
+        parts.append(
+            f'<h2><button class="chapter-toggle" type="button" data-chapter-toggle '
+            f'aria-expanded="true" title="{esc(L("chapter_fold"), quote=True)}" '
+            f'aria-label="{esc(L("chapter_fold"), quote=True)}"></button>'
+            f"{chapter.num}. {esc(chapter.title)}</h2>"
+        )
         words_unit = L("words_one") if chapter.words == 1 else L("words")
         paragraphs_unit = L("paragraphs_one") if chapter.paragraphs == 1 else L("paragraphs")
         flags_unit = L("flags_one") if chapter.flagged == 1 else L("flags")
