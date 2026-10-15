@@ -203,3 +203,13 @@ Open an issue with:
 
 Security issues: private mail to **mfahsold@googlemail.com** (see
 [`SECURITY.md`](SECURITY.md)).
+
+## Support and governance
+
+Lixity is maintained by its author, Matthias Fahsold. Bug reports and feature
+requests run through GitHub issues; security reports follow
+[`SECURITY.md`](SECURITY.md). Releases are tagged, recorded in the changelog and
+distributed through PyPI, GitHub Releases and Zenodo. There is no foundation or
+steering committee: changes arrive through pull requests under the repository
+license, and public discussion happens in issues. The maintainer aims to respond
+to reports within a couple of weeks; there is no paid support.

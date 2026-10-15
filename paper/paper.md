@@ -109,9 +109,21 @@ DOIs via Zenodo so that a specific measurement can be cited.
 
 # AI usage disclosure
 
-The software was developed with AI coding assistants under continuous human
-review. Design decisions, measurement definitions, tests, documentation and
-releases are reviewed and accepted by the maintainer.
+Generative AI tools were used during development under continuous human
+review:
+
+- **Tools and scope.** AI coding assistants were used in a coding-agent
+  environment for code generation and refactoring, test scaffolding,
+  documentation drafting and copy-editing; paper text was drafted with AI
+  assistance. <!-- TODO maintainer before submission: name the tools/models and
+  approximate versions/periods, e.g. "Anthropic Claude via OpenCode (2025-2026),
+  OpenAI GPT via ..., GitHub Copilot ...". -->
+- **Human review.** The maintainer reviewed, edited and validated every
+  AI-assisted output, ran the test and browser suites before releases, and made
+  the design decisions, measurement definitions and release choices.
+- **Correspondence.** Communication with JOSS editors and reviewers is written
+  by the maintainer (no AI assistance, unless translation is needed and
+  disclosed).
 
 # Acknowledgements
 
