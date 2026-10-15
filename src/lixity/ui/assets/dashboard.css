@@ -1070,7 +1070,7 @@ button.ctl, #analysis-review a.ctl, select.ctl, input.ctl, textarea.ctl {
   transition: all .12s ease;
 }
 input.ctl, textarea.ctl { cursor: text; }
-textarea.ctl { resize: vertical; }
+textarea.ctl { resize: vertical; font-family: inherit; }
 input.ctl-code { font-family: var(--font-mono); }
 button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
 button.ctl:hover, #analysis-review a.ctl:hover, select.ctl:hover { border-color: var(--accent); color: var(--accent); }
@@ -1267,7 +1267,6 @@ mark.search-hit {
 .empty-state-note { max-width: 60ch; margin: 0 auto 1.2rem; line-height: 1.5; }
 .recent-projects-heading { display: block; font-size: .78rem; font-weight: 600; margin-bottom: .3rem; }
 .ctl { max-width: 100%; }
-textarea.ctl { font-family: inherit; }
 #r-init-title { min-width: 200px; }
 #r-search-query { flex: 1; min-width: 240px; }
 #r-link-relation { min-width: 140px; }

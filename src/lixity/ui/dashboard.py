@@ -9,6 +9,7 @@ import html
 import json
 from collections.abc import Mapping, Sequence
 from dataclasses import replace
+from functools import lru_cache
 from pathlib import Path as _Path
 from typing import Any
 
@@ -69,16 +70,17 @@ from .settings import settings_form
 from .structural import style_structural
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
-_CSS = "\n".join(
-    (_ASSET_DIR / name).read_text(encoding="utf-8")
-    for name in ("design-tokens.css", "dashboard.css", "dossier-images.css", "workspace-reader.css", "manuscript-links.css")
-)
-_JS = "\n".join(
-    (_ASSET_DIR / name).read_text(encoding="utf-8")
-    for name in ("tooltips.js", "interactions.js", "dashboard.js", "research.js",
-                 "project-ui.js", "dossier-images.js", "style-space.js",
-                 "workspace-reader.js", "manuscript-links.js")
-)
+_CSS_FILES = ("design-tokens.css", "dashboard.css", "dossier-images.css",
+              "workspace-reader.css", "manuscript-links.css")
+_JS_FILES = ("tooltips.js", "interactions.js", "dashboard.js", "research.js",
+             "project-ui.js", "dossier-images.js", "style-space.js",
+             "workspace-reader.js", "manuscript-links.js")
+
+
+@lru_cache(maxsize=2)
+def _bundle(files: tuple[str, ...]) -> str:
+    """Join packaged assets on first use; importing the module does no I/O."""
+    return "\n".join((_ASSET_DIR / name).read_text(encoding="utf-8") for name in files)
 
 
 def render_analysis(
@@ -297,7 +299,7 @@ def render_dashboard(
         '<meta name="viewport" content="width=device-width, initial-scale=1"/>',
         *(('<meta name="lixity-debug" content="true"/>',) if debug else ()),
         f"<title>{esc(title)} – {L('app_suffix')}</title>",
-        f"<style>{_CSS}</style>",
+        f"<style>{_bundle(_CSS_FILES)}</style>",
         "</head>",
         f'<body id="top" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
@@ -1304,7 +1306,7 @@ def render_dashboard(
         [
             "</div>",
             f"<footer><span>{esc(engine_name)} · {L('app_suffix')}</span> · <span>{esc(title)}</span></footer>",
-            f"<script>{_JS}</script>",
+            f"<script>{_bundle(_JS_FILES)}</script>",
             "</body>",
             "</html>",
         ]
