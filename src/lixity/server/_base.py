@@ -74,9 +74,19 @@ class ResponseMixin(WorkspaceState):
         host = self.headers.get("Host", "")
         return origin in (f"http://{host}", f"https://{host}")
 
+    def _server_port(self) -> int:
+        return int(getattr(self.server, "server_port", DEFAULT_PORT))
+
     def _trusted_host(self) -> bool:
         host = self.headers.get("Host", "")
-        server_port = getattr(self.server, "server_port", DEFAULT_PORT)
+        server_port = self._server_port()
         allowed = {f"127.0.0.1:{server_port}", f"localhost:{server_port}", "127.0.0.1", "localhost",
                    f"[::1]:{server_port}", "[::1]"}
         return host in allowed
+
+    def _reject_untrusted_host(self) -> None:
+        """Refuse a non-loopback Host header with the readable endpoint hint."""
+        port = self._server_port()
+        self._json({"ok": False, "message": (
+            f"Untrusted Host forbidden; open http://127.0.0.1:{port}/ "
+            f"or http://localhost:{port}/")}, 403)

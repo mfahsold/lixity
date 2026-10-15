@@ -2,13 +2,13 @@
 
 from __future__ import annotations
 
+from ..config import DEFAULT_HOST as DEFAULT_HOST  # re-exported
+from ..config import DEFAULT_PORT as DEFAULT_PORT  # re-exported
 from ..language import LANGUAGE_CHOICES as LANGUAGE_CHOICES  # re-exported
 
 MAX_PAYLOAD_BYTES = 5 * 1024 * 1024  # 5 MB
 MAX_IMAGE_PAYLOAD_BYTES = 32 * 1024 * 1024
 MAX_ARTIFACT_BYTES = 200 * 1024 * 1024  # 200 MB
-DEFAULT_PORT = 8765
-DEFAULT_HOST = "127.0.0.1"
 
 # Native UI capabilities, also used by synthetic documentation captures.
 NATIVE_UI_ACTIONS = (

@@ -28,6 +28,13 @@ from .publication import PublicationSettings, validate_metadata_text
 if TYPE_CHECKING:
     from .style_fingerprint import FingerprintThresholds
 
+#: Default loopback endpoint of the local dashboard service. Shared by the
+#: ``serve``/``service`` CLI entry points and the server package; it lives in
+#: this light module because the CLI must not import the server package just
+#: to know its own default.
+DEFAULT_HOST = "127.0.0.1"
+DEFAULT_PORT = 8765
+
 # Keys that may appear in [tool.lixity] (documented schema).
 TOOL_KEYS = frozenset(
     {

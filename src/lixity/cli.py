@@ -12,7 +12,7 @@ from rich.table import Table
 
 from . import __version__
 from .analyzer import CorpusAnalyzer
-from .config import load_project_config, resolve_thresholds
+from .config import DEFAULT_HOST, DEFAULT_PORT, load_project_config, resolve_thresholds
 from .formatters import ReportFormatter
 from .io import FileUtils
 from .models import SCHEMA_VERSION
@@ -1121,8 +1121,10 @@ def main(argv: list[str] | None = None) -> int:
                 default=None,
                 help="Manuscript file or workspace folder (default: ambient)",
             )
-            p.add_argument("--host", default="127.0.0.1", help="Bind address (default: 127.0.0.1)")
-            p.add_argument("--port", type=int, default=8765, help="Port (default: 8765)")
+            p.add_argument("--host", default=DEFAULT_HOST,
+                           help=f"Bind address (default: {DEFAULT_HOST})")
+            p.add_argument("--port", type=int, default=DEFAULT_PORT,
+                           help=f"Port (default: {DEFAULT_PORT})")
             p.add_argument(
                 "--language",
                 default=None,

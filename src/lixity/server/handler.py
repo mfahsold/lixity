@@ -110,9 +110,7 @@ class LixityServerHandler(
 
     def do_GET(self) -> None:
         if not self._trusted_host():
-            self._json({"ok": False, "message": "Untrusted Host forbidden; open "
-                              f"http://127.0.0.1:{getattr(self.server, 'server_port', 8765)}/ "
-                              f"or http://localhost:{getattr(self.server, 'server_port', 8765)}/"}, 403)
+            self._reject_untrusted_host()
             return
 
         path = self.path.split("?", 1)[0]
@@ -216,9 +214,7 @@ class LixityServerHandler(
             self._json({"ok": False, "message": "Not found"}, 404)
             return
         if not self._trusted_host():
-            self._json({"ok": False, "message": "Untrusted Host forbidden; open "
-                              f"http://127.0.0.1:{getattr(self.server, 'server_port', 8765)}/ "
-                              f"or http://localhost:{getattr(self.server, 'server_port', 8765)}/"}, 403)
+            self._reject_untrusted_host()
             return
         if not self._same_origin():
             self._json({"ok": False, "message": "Cross-origin request forbidden"}, 403)

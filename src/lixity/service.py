@@ -30,7 +30,7 @@ from pathlib import Path
 from typing import Any
 
 from . import __version__
-from .config import resolve_thresholds
+from .config import DEFAULT_HOST, DEFAULT_PORT, resolve_thresholds
 from .language import LANGUAGE_CHOICES
 from .workspace import resolve_project_target
 
@@ -73,8 +73,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
     """Register the four managed lifecycle actions and explicit startup options."""
     parser.add_argument("action", choices=("start", "stop", "restart", "status"))
     parser.add_argument("project", nargs="?", help="Explicit project or manuscript for start/restart")
-    parser.add_argument("--port", type=int, default=None, help="Port (default: LIXITY_PORT or 8765)")
-    parser.add_argument("--host", default=None, help="Loopback host (default: LIXITY_HOST or 127.0.0.1)")
+    parser.add_argument("--port", type=int, default=None,
+                        help=f"Port (default: LIXITY_PORT or {DEFAULT_PORT})")
+    parser.add_argument("--host", default=None,
+                        help=f"Loopback host (default: LIXITY_HOST or {DEFAULT_HOST})")
     parser.add_argument("--no-project", action="store_true", default=None, help="Start an empty workspace")
     parser.add_argument("--open", dest="open_browser", action="store_true", default=None)
     parser.add_argument("--language", choices=LANGUAGE_CHOICES)
@@ -812,7 +814,8 @@ class ManagedServe:
 def run(args: argparse.Namespace) -> int:
     """Print a lifecycle result without interpreting project/source text."""
     try:
-        port = args.port if args.port is not None else int(os.environ.get("LIXITY_PORT") or "8765")
+        port = (args.port if args.port is not None
+                else int(os.environ.get("LIXITY_PORT") or DEFAULT_PORT))
         manager = ServiceManager(port, backend=args.backend)
         choices = {key: getattr(args, key, None) for key in ("host", "project", "no_project", *_OPTIONS)}
         result = manager.control(args.action, choices)
