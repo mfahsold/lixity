@@ -38,7 +38,7 @@ function jumpToLine(row) {
   }
   if (panel) {
     var chip = document.querySelector('.chip[data-target="' + panel.id + '"]');
-    if (chip) toggleParagraph(chip, true);
+    if (chip) toggleParagraph(chip, true, true);
     scrollAndFlash(panel);
     if (row.hasAttribute("data-review-passage")) {
       panel.tabIndex = -1;
@@ -167,7 +167,7 @@ if (filter) {
     cursor = (cursor + direction + hits.length) % hits.length;
     var block = hits[cursor];
     var chip = paragraphChips[block.id];
-    if (chip) toggleParagraph(chip, true);
+    if (chip) toggleParagraph(chip, true, true);
     var paragraph = block.querySelector("p");
     if (paragraph) { unmark(paragraph); mark(paragraph, query); }
     block.scrollIntoView({block: "center", behavior: reduceMotion ? "auto" : "smooth"});
@@ -291,7 +291,7 @@ if (layerNext) {
     if (!chips.length) return;
     if (outlierCursor >= chips.length) outlierCursor = 0;
     var chip = chips[outlierCursor++];
-    toggleParagraph(chip, true);
+    toggleParagraph(chip, true, true);
     scrollAndFlash(chip);
   });
 }

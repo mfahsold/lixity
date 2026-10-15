@@ -409,10 +409,11 @@ class TestJsDomContract(unittest.TestCase):
         self.assertIn("function isMarkerControl", script)
         self.assertIn("[data-marker-kind], [data-marker-resolve]", script)
         self.assertIn("!isMarkerControl(event.target)", script)
-        # jumpToLine opens the target paragraph (data-target / line span)
+        # jumpToLine opens the target paragraph (data-target / line span) and
+        # expands it synchronously, so the scroll measures the final layout
         self.assertIn('getAttribute("data-target")', script)
         self.assertIn(".ptext[data-start]", script)
-        self.assertIn("toggleParagraph(chip, true)", script)
+        self.assertIn("toggleParagraph(chip, true, true)", script)
 
     def test_unified_interaction_contract(self):
         """All content drill-downs are keyboard reachable with one vocabulary."""

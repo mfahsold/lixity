@@ -28,13 +28,37 @@ document.addEventListener("mouseout", function (event) {
 var reduceMotion = window.matchMedia
   && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 
+function flashOnArrival(target) {
+  // Flash after the smooth scroll settles; a flash that fades mid-scroll
+  // leaves the destination unmarked ("the anchor does not sit precisely").
+  var start = window.scrollY, frames = 0;
+  function show() {
+    target.classList.add("flash");
+    setTimeout(function () { target.classList.remove("flash"); }, 1600);
+  }
+  function waitForEnd() {
+    if ("onscrollend" in window) {
+      var handler = function () { window.removeEventListener("scrollend", handler); show(); };
+      window.addEventListener("scrollend", handler);
+      setTimeout(function () { window.removeEventListener("scrollend", handler); show(); }, 2000);
+      return;
+    }
+    setTimeout(show, 450);
+  }
+  (function watch() {
+    frames += 1;
+    if (window.scrollY !== start) { waitForEnd(); return; }
+    if (frames < 3) { requestAnimationFrame(watch); return; }
+    show();
+  })();
+}
+
 function scrollAndFlash(target) {
   var view = target.closest(".view-pane");
   if (view) switchActiveView(view.dataset.viewPane);
   revealStyleTarget(target);
   target.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "start" });
-  target.classList.add("flash");
-  setTimeout(function () { target.classList.remove("flash"); }, 1400);
+  flashOnArrival(target);
 }
 
 var paragraphContentNode = document.getElementById("paragraph-content");
@@ -126,16 +150,35 @@ function renderParagraph(panel) {
   document.dispatchEvent(new CustomEvent("lixity:paragraph-rendered", {detail: panel}));
 }
 
-function toggleParagraph(chip, forceOpen) {
+function panelNeedsScroll(panel) {
+  var rect = panel.getBoundingClientRect();
+  return rect.top >= innerHeight - 24 || rect.bottom <= 0;
+}
+
+function toggleParagraph(chip, forceOpen, instant) {
   var panel = document.getElementById(chip.dataset.target);
   if (!panel) return;
+  var fromClick = forceOpen === undefined;
   var open = forceOpen === undefined ? !panel.classList.contains("open") : forceOpen;
+  // A collapsed panel measures zero height. Scrolling to that stale geometry
+  // lands the expanded block past the viewport ("clicks do not get through",
+  // imprecise anchors). Expand synchronously whenever a scroll follows.
+  var instantExpand = Boolean(open && (instant || (fromClick && panelNeedsScroll(panel))));
+  if (instantExpand) panel.classList.add("no-anim");
   panel.classList.toggle("open", open);
   chip.classList.toggle("active", open);
   chip.setAttribute("aria-expanded", open ? "true" : "false");
   if (open) {
     renderParagraph(panel);
     panel.style.borderLeftColor = chip.style.getPropertyValue("--layer-color") || "";
+    if (instantExpand) void panel.offsetHeight;
+    if (fromClick) {
+      panel.scrollIntoView({ behavior: reduceMotion ? "auto" : "smooth", block: "nearest" });
+      flashOnArrival(panel);
+    }
+    if (instantExpand) requestAnimationFrame(function () {
+      requestAnimationFrame(function () { panel.classList.remove("no-anim"); });
+    });
   } else if (!panel.querySelector(".marker-note")) {
     panel.querySelector(".ptext-inner").replaceChildren();
   }

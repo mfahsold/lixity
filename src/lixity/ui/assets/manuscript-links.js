@@ -58,9 +58,10 @@
   function updateSave() {
     if (!save) return;
     var writing = Boolean(draft && pending.has(draft.key));
-    picker.disabled = !draft || !draft.claims || writing;
-    consent.disabled = !draft || !draft.claims || writing;
-    save.disabled = !draft || !draft.claims || !picker.value || !consent.checked || !live(draft.context) || writing;
+    var ready = Boolean(draft && draft.claims && draft.claims.length);
+    picker.disabled = !ready || writing;
+    consent.disabled = !ready || writing;
+    save.disabled = !ready || !picker.value || !consent.checked || !live(draft.context) || writing;
   }
   function createDialog() {
     if (dialog) return;
@@ -92,7 +93,20 @@
     consent.addEventListener("change", updateSave);
     dialog.addEventListener("close", function() { ++serial; draft = null; remembered = null; });
   }
-  function unavailable(message) { status.textContent = message || label("manuscript_link_unavailable"); status.className = "ctl-status err"; }
+  function reloadButton() {
+    var button = element("button", label("manuscript_link_reload"), "ctl manuscript-link-reload");
+    button.type = "button"; button.dataset.manuscriptLinkReload = "";
+    return button;
+  }
+  function unavailable(message, stale) {
+    status.textContent = message || label("manuscript_link_unavailable");
+    status.className = "ctl-status err";
+    if (stale) status.appendChild(reloadButton());
+  }
+  function staleReport(report, sourceSha) {
+    return Boolean(report && report.ok === true &&
+      (report.current_source_sha256 !== sourceSha || report.source_state !== "available"));
+  }
   async function open(value) {
     createDialog(); var request = ++serial;
     draft = value; draft.key = JSON.stringify([value.context, value.anchor]);
@@ -109,8 +123,9 @@
         report.schema_version !== "research-manuscript-review-local/1" || !claims.project_id ||
         claims.project_id !== report.project_id || !claims.snapshot || claims.snapshot !== report.snapshot ||
         report.current_source_sha256 !== value.context.source || report.source_state !== "available" || !validClaims(claims.claims) || !validRows(report.links)) {
-      var reason = bridge.errorText(claims.message ? claims : report);
-      clearReview(reason); unavailable(reason); return;
+      var stale = staleReport(report, value.context.source);
+      var reason = stale ? label("manuscript_link_stale") : bridge.errorText(claims.message ? claims : report);
+      clearReview(reason, stale); unavailable(reason, stale); return;
     }
     draft.claims = claims.claims.filter(function(claim) { return claim.id && Number.isInteger(claim.revision) && claim.revision > 0; });
     draft.projectId = claims.project_id; draft.snapshot = claims.snapshot;
@@ -118,8 +133,12 @@
       var option = element("option", claim.title + " · " + label("research_revision_number").replace("{revision}", claim.revision));
       option.value = claim.id; picker.appendChild(option);
     });
-    picker.disabled = false; status.className = "ctl-status"; status.textContent = label("manuscript_link_hint");
-    ++reviewSerial; applyReview(report, value.context); updateSave(); picker.focus();
+    if (draft.claims.length) {
+      picker.disabled = false; status.className = "ctl-status"; status.textContent = label("manuscript_link_hint"); picker.focus();
+    } else {
+      status.className = "ctl-status"; status.textContent = label("manuscript_link_empty_claims");
+    }
+    ++reviewSerial; applyReview(report, value.context); updateSave();
   }
   async function saveDraft() {
     updateSave(); if (save.disabled) return;
@@ -200,12 +219,16 @@
     reviewBody.replaceChildren(items.cloneNode(true));
     if (reviewTabHost) reviewTabHost.replaceChildren(items);
   }
-  function clearReview(message) {
+  function reviewNote(message, stale) {
+    var note = element("p", message || label("manuscript_link_unavailable"), "ctl-status err");
+    if (stale) note.appendChild(reloadButton());
+    return note;
+  }
+  function clearReview(message, stale) {
     review = null;
     document.querySelectorAll("#chapters .ptext").forEach(function(panel) { bridge.marks(panel, []); });
-    var note = element("p", message || label("manuscript_link_unavailable"), "ctl-status err");
-    reviewBody.replaceChildren(note);
-    if (reviewTabHost) reviewTabHost.replaceChildren(note.cloneNode(true));
+    reviewBody.replaceChildren(reviewNote(message, stale));
+    if (reviewTabHost) reviewTabHost.replaceChildren(reviewNote(message, stale));
   }
   async function loadReview() {
     var request = ++reviewSerial, value = context();
@@ -214,7 +237,8 @@
     if (!report.ok || report.schema_version !== "research-manuscript-review-local/1" || !validRows(report.links) ||
         !report.project_id || !report.snapshot || (reviewProjectId && report.project_id !== reviewProjectId) ||
         report.current_source_sha256 !== value.source || report.source_state !== "available") {
-      clearReview(bridge.errorText(report)); return;
+      var stale = staleReport(report, value.source);
+      clearReview(stale ? label("manuscript_link_stale") : bridge.errorText(report), stale); return;
     }
     applyReview(report, value);
   }
@@ -246,6 +270,9 @@
   });
   [document.body, tokenHost, document.getElementById("research-manager")].forEach(function(host) {
     if (host) contextObserver.observe(host, {attributes: true, attributeFilter: ["data-project-token", "data-research-token", "data-manuscript-source-sha256"]});
+  });
+  document.addEventListener("click", function(event) {
+    if (event.target.closest("[data-manuscript-link-reload]")) { event.preventDefault(); window.location.reload(); }
   });
   document.addEventListener("selectionchange", function() {
     var value = selection();

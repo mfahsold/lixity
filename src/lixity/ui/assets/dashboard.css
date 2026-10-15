@@ -399,7 +399,9 @@ body.layer-on .chip.has-layer.tense-present { border-top: 2px solid var(--presen
 body.layer-on .chip.has-layer.tense-past { border-top: 2px solid var(--past); }
 body.layer-on .chip.has-layer.tense-mixed { border-top: 2px solid var(--mixed); }
 body.layer-on .chip.has-layer.tense-neutral { border-top: 2px solid var(--neutral); }
-.chapter.flash, .ptext.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.chapter.flash, .ptext.flash, .panel.flash, section.flash { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-light); }
+.ptext.flash { background: color-mix(in srgb, var(--accent-light) 55%, transparent); }
+.ptext.no-anim { transition: none; }
 .row-link { cursor: pointer; }
 .band[role="button"], .load[role="button"] { cursor: pointer; }
 .row-link:hover td { background: var(--accent-light); }

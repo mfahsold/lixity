@@ -14,3 +14,4 @@
 .manuscript-link-dialog .modal-header h3 { overflow-wrap: anywhere; }
 
 .manuscript-link-feedback:empty { display: none; }
+.manuscript-link-reload { margin-left: .5rem; }

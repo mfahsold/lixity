@@ -672,14 +672,12 @@ function checkUrlHashView() {
   revealStyleTarget(target);
   if (target.classList.contains("ptext")) {
     var chip = document.querySelector('.chip[data-target="' + target.id + '"]');
-    if (chip) toggleParagraph(chip, true);
+    if (chip) toggleParagraph(chip, true, true);
   }
   var parentPane = target.closest(".view-pane");
   if (parentPane && parentPane.dataset.viewPane) {
     switchActiveView(parentPane.dataset.viewPane);
-    setTimeout(function() {
-      target.scrollIntoView({ behavior: "smooth", block: "start" });
-    }, 50);
+    requestAnimationFrame(function () { scrollAndFlash(target); });
   }
 }
 

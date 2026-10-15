@@ -76,7 +76,7 @@ async function selectText(page, text) {
           if (mode === 'heldclaims') { heldClaims = true; await new Promise(resolve => { releaseClaims = resolve; }); }
           return route.fulfill({json: {ok: true,
           schema_version: 'research-claims-local/2', project_id: mode === 'copiedroot' ? 'other-project' : 'project', snapshot: mode === 'claims' ? 'new-snapshot' : 'snapshot',
-          claims: mode === 'malformed-claims' ? [null] : [{id: 'claim', revision: 2, title: '<img src=x onerror=window.linkInjected=true> synthetic claim', statement: 'Current statement'}]}}); }
+          claims: mode === 'emptyclaims' ? [] : mode === 'malformed-claims' ? [null] : [{id: 'claim', revision: 2, title: '<img src=x onerror=window.linkInjected=true> synthetic claim', statement: 'Current statement'}]}}); }
         if (url.pathname === '/api/research-manuscript-link') {
           const data = request.postDataJSON(); writes.push(data);
           if (mode === 'heldsave') { heldSave = true; await new Promise(resolve => { releaseSave = resolve; }); }
@@ -163,10 +163,33 @@ async function selectText(page, text) {
             await page.locator('#research-manuscript-review .ctl-status.err').waitFor({state: 'attached'});
             assert.equal(await page.locator('#research-manuscript-review img').count(), 0, 'Review errors stay inert text');
           }
-          if (scenario === 'source') assert.equal(await page.locator('#' + id + ' mark.manuscript-claim-hit').count(), 0,
-            'A source mismatch removes marks on the stale rendered manuscript');
+          if (scenario === 'source') {
+            assert.equal(await page.locator('#' + id + ' mark.manuscript-claim-hit').count(), 0,
+              'A source mismatch removes marks on the stale rendered manuscript');
+            assert.equal(await page.locator('#manuscript-link-status [data-manuscript-link-reload]').count(), 1,
+              'A stale manuscript offers an explicit reload');
+            assert.match(await page.locator('#manuscript-link-status').textContent(), /changed after this page was loaded/);
+          }
+          if (scenario === 'readfail') assert.equal(await page.locator('#manuscript-link-status [data-manuscript-link-reload]').count(), 0,
+            'Unrelated failures stay without a reload action');
           await dialog.locator('.modal-footer button').first().click();
         }
+        mode = 'source';
+        await page.locator('#tab-view-research').click();
+        await page.locator('[data-rtab="review"]').click();
+        await page.waitForFunction(() => document.querySelector('#research-manuscript-review [data-manuscript-link-reload]') !== null,
+          null, {timeout: 5000});
+        assert.equal(await page.locator('#research-manuscript-review [data-manuscript-link-reload]').count(), 1,
+          'The review tab offers the same reload');
+        assert.match(await page.locator('#research-manuscript-review').textContent(), /changed after this page was loaded/);
+        await page.locator('#tab-view-analysis').click();
+        mode = 'emptyclaims';
+        await selectText(page, 'safe selected'); await button.click();
+        await page.waitForFunction(() => document.querySelector('#manuscript-link-status').textContent.includes('No current claims yet'));
+        assert.equal(await page.locator('#manuscript-link-claim').isEnabled(), false, 'An empty claim list keeps the picker disabled');
+        assert.equal(await page.locator('#manuscript-link-status').getAttribute('class'), 'ctl-status', 'An empty claim list is informational, not an error');
+        assert.equal(await page.locator('#manuscript-link-status [data-manuscript-link-reload]').count(), 0);
+        await dialog.locator('.modal-footer button').first().click();
         mode = 'normal';
         for (const anchorState of ['moved', 'ambiguous', 'changed', 'unavailable']) {
           links[0].anchor_state = anchorState; links[0].flags = ['source_changed', 'claim_changed'];
