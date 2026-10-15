@@ -183,8 +183,10 @@ def test_source_snapshot_refuses_fifo_without_waiting_for_a_writer(tmp_path):
         "try: FileUtils.read_source_snapshot(sys.argv[1])\n"
         "except OSError: print('refused')\n"
     )
+    # The timeout stays a hang detector; interpreter startup on a loaded
+    # machine must not decide it.
     result = subprocess.run([sys.executable, "-c", code, str(target)],  # noqa: S603 - synthetic local file
-                            capture_output=True, text=True, timeout=2, check=True)
+                            capture_output=True, text=True, timeout=10, check=True)
     assert result.stdout.strip() == "refused"
 
 

@@ -38,8 +38,15 @@ def free_port():
 
 
 def manager(tmp_path, port):
+    """Disposable lifecycle manager with budgets that survive a loaded machine.
+
+    The waits are hang detectors, not performance thresholds: a concurrent test
+    thread must be able to outwait a slow fork/exec of the spawned worker. The
+    3 s product default for interactive ``retry shortly`` is not under test here.
+    """
     return ServiceManager(port, state_dir=tmp_path / "state", runtime_dir=tmp_path / "runtime",
-                          backend="process", startup_timeout=30, stop_timeout=10)
+                          backend="process", startup_timeout=30, stop_timeout=10,
+                          lock_timeout=30)
 
 
 def startup_diagnostics(app, result):
@@ -52,6 +59,22 @@ def startup_diagnostics(app, result):
     return json.dumps({"result": result, "fixture_files": files}, ensure_ascii=False, indent=2)
 
 
+def start_disposable(tmp_path, overrides):
+    """Start a disposable instance, retrying a port claimed by a foreign process.
+
+    ``free_port()`` releases its probe before the spawned worker binds the
+    number, so a browser or editor can take it in between. That is an
+    environment race, not a lifecycle defect: retry on a fresh port and report
+    the last result otherwise.
+    """
+    for _ in range(3):
+        app = manager(tmp_path, free_port())
+        result = app.control("start", overrides)
+        if result["state"] != "busy" or "unmanaged process" not in result["message"]:
+            return app, result
+    return app, result
+
+
 def test_native_start_status_restart_and_stop_preserve_explicit_project_and_thresholds(tmp_path, monkeypatch):
     for key in ("LIXITY_DIR", "LIXITY_HOST", "LIXITY_PORT"):
         monkeypatch.delenv(key, raising=False)
@@ -60,11 +83,10 @@ def test_native_start_status_restart_and_stop_preserve_explicit_project_and_thre
     source = project / "manuscript.md"
     source.write_text("# Synthetic title\n\n## Opening\n\nEin Vogel fliegt über den Garten.\n", encoding="utf-8")
     before = source.read_bytes()
-    app = manager(tmp_path, free_port())
     opened = []
     monkeypatch.setattr("lixity.service.webbrowser.open", opened.append)
+    app, started = start_disposable(tmp_path, {"project": str(project), "language": "de", "min_chapters": 5})
     try:
-        started = app.control("start", {"project": str(project), "language": "de", "min_chapters": 5})
         assert started["ok"] and started["state"] == "running", startup_diagnostics(app, started)
         first = started["pid"]
         with urllib.request.urlopen(f"http://127.0.0.1:{app.port}/api", timeout=10) as response:
@@ -133,26 +155,32 @@ def test_foreign_listener_is_not_claimed_or_stopped(tmp_path):
 def test_simultaneous_starts_share_one_owned_child(tmp_path, monkeypatch):
     for key in ("LIXITY_DIR", "LIXITY_HOST", "LIXITY_PORT"):
         monkeypatch.delenv(key, raising=False)
-    port = free_port()
-    app = manager(tmp_path, port)
-    barrier = threading.Barrier(2)
+    for attempt in range(3):
+        port = free_port()
+        app = manager(tmp_path, port)
+        barrier = threading.Barrier(2)
 
-    def start():
-        contender = manager(tmp_path, port)
-        barrier.wait(timeout=10)
-        return contender.control("start", {})
+        def start(port=port, barrier=barrier):  # Bind the attempt state for this closure.
+            contender = manager(tmp_path, port)
+            barrier.wait(timeout=10)
+            return contender.control("start", {})
 
-    try:
-        with ThreadPoolExecutor(max_workers=2) as pool:
-            results = list(pool.map(lambda _: start(), range(2)))
-        assert all(result["state"] in ("running", "starting") for result in results), results
-        assert any(result["ok"] for result in results), startup_diagnostics(app, results)
-        status = app.control("status", {})
-        assert status["ok"] and status["state"] == "running", status
-        assert all(result["pid"] == status["pid"] for result in results), results
-        with urllib.request.urlopen(f"http://127.0.0.1:{port}/api", timeout=10) as response:
-            assert json.load(response)["version"] == __version__
-        assert app.control("stop", {})["ok"]
-        assert not app.runtime_file.exists()
-    finally:
-        app.control("stop", {})
+        try:
+            with ThreadPoolExecutor(max_workers=2) as pool:
+                results = list(pool.map(lambda _: start(), range(2)))
+            if attempt < 2 and any("unmanaged process" in result["message"] for result in results):
+                # A foreign process claimed the probed port before the child bound it.
+                # That is an environment race, not a lifecycle defect: retry on a new port.
+                continue
+            assert all(result["state"] in ("running", "starting") for result in results), results
+            assert any(result["ok"] for result in results), startup_diagnostics(app, results)
+            status = app.control("status", {})
+            assert status["ok"] and status["state"] == "running", status
+            assert all(result["pid"] == status["pid"] for result in results), results
+            with urllib.request.urlopen(f"http://127.0.0.1:{port}/api", timeout=10) as response:
+                assert json.load(response)["version"] == __version__
+            assert app.control("stop", {})["ok"]
+            assert not app.runtime_file.exists()
+            break
+        finally:
+            app.control("stop", {})
