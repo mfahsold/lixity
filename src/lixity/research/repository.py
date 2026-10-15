@@ -223,16 +223,28 @@ class Repository:
     def record_path(self, entry: Entry) -> Path:
         return self.safe(Path(self._revisions_text, entry.kind, entry.ref.id[9:], f"{entry.ref.revision}.json"))
 
-    def snapshot(self) -> Snapshot:
+    def snapshot(self, kinds: frozenset[str] | None = None) -> Snapshot:
+        """Read the accepted snapshot; ``kinds`` narrows large archives.
+
+        List commands pass the record kinds they inspect (project and tombstone
+        state are always read) so a large archive is not fully loaded per call.
+        Cross-kind invariants that need a filtered-out kind are skipped, so a
+        caller must include every kind whose records it reads. Write paths and
+        lookups keep the default full snapshot.
+        """
         try:
             head = Head.model_validate_json(self.read(self.data / "HEAD.json", maximum=4096))
-            cached = self._snapshot
-            if cached is not None and cached.digest == head.sha256:
-                return cached
+            if kinds is None:
+                cached = self._snapshot
+                if cached is not None and cached.digest == head.sha256:
+                    return cached
+            wanted = None if kinds is None else kinds | {"project", "tombstone"}
             manifest = Manifest.model_validate_json(self.verified(self.data / "manifests" / f"{head.sha256}.json", head.sha256))
             records: dict[str, Entity] = {}
             revisions: dict[tuple[str, int], Entity] = {}
             for entry in manifest.entries:
+                if wanted is not None and entry.kind not in wanted:
+                    continue
                 record = ENTITY.validate_json(self.verified(self.record_path(entry), entry.sha256))
                 key = (record.id, record.revision)
                 if key in revisions or reference(record) != entry.ref or record.kind != entry.kind:
@@ -244,18 +256,29 @@ class Repository:
                 if previous is None or previous.revision < record.revision:
                     records[record.id] = record
             snapshot = Snapshot(head.sha256, manifest, records, revisions=revisions)
-            self.validate(snapshot)
+            self.validate(snapshot, kinds=wanted)
             if self.read(self.data / "project.json") != encode(snapshot.project):
                 raise ResearchError("Project configuration does not match its accepted revision")
-            self._snapshot = snapshot
+            if kinds is None:
+                self._snapshot = snapshot
             return snapshot
         except (ValidationError, json.JSONDecodeError):
             raise ResearchError("Invalid or unsupported research schema") from None
         except FileNotFoundError:
             raise ResearchError("Research store is missing or incomplete; initialize or restore it") from None
 
-    def validate(self, snapshot: Snapshot) -> None:
+    def validate(self, snapshot: Snapshot, *, kinds: frozenset[str] | None = None) -> None:
+        """Archive invariants for the loaded records.
+
+        With ``kinds`` (a list-command filter), checks that need a record kind
+        outside the filter are skipped; per-record and same-kind invariants
+        still run. Write paths always validate the full archive.
+        """
         project = snapshot.project
+
+        def loaded(kind: str) -> bool:
+            return kinds is None or kind in kinds
+
         histories: dict[str, list[Entity]] = {}
         for (record_id, number), record in snapshot.revisions.items():
             if (record_id, number) != (record.id, record.revision) or record_id not in snapshot.records:
@@ -290,7 +313,8 @@ class Repository:
                 from .images import IMAGE_TYPES
                 if record.blob.media_type in IMAGE_TYPES and record.blob.byte_length > MAX_IMAGE_BYTES:
                     raise ResearchError("Image blobs must be at most 16 MiB")
-                snapshot.get(record.source_ref, Source)
+                if loaded("source"):
+                    snapshot.get(record.source_ref, Source)
                 if descriptors.setdefault(record.blob.sha256, record.blob) != record.blob:
                     raise ResearchError("Inconsistent descriptors for the same blob")
                 key = (record.source_ref.id, record.sequence)
@@ -298,44 +322,53 @@ class Repository:
                     raise ResearchError("Duplicate source version sequence")
                 sequences.add(key)
             elif isinstance(record, Activity):
-                snapshot.get(record.source_version_ref, SourceVersion)
+                if loaded("source_version"):
+                    snapshot.get(record.source_version_ref, SourceVersion)
             elif isinstance(record, Extraction):
-                version = snapshot.get(record.source_version_ref, SourceVersion)
-                activity = snapshot.get(record.activity_ref, Activity)
-                if activity.source_version_ref != record.source_version_ref:
-                    raise ResearchError("Extraction provenance does not match source bytes")
-                if activity.operation == "extract_utf8" and version.blob != record.text_blob:
-                    raise ResearchError("Extraction provenance does not match source bytes")
+                if loaded("source_version") and loaded("activity"):
+                    version = snapshot.get(record.source_version_ref, SourceVersion)
+                    activity = snapshot.get(record.activity_ref, Activity)
+                    if activity.source_version_ref != record.source_version_ref:
+                        raise ResearchError("Extraction provenance does not match source bytes")
+                    if activity.operation == "extract_utf8" and version.blob != record.text_blob:
+                        raise ResearchError("Extraction provenance does not match source bytes")
                 if descriptors.setdefault(record.text_blob.sha256, record.text_blob) != record.text_blob:
                     raise ResearchError("Inconsistent descriptors for the same blob")
             elif isinstance(record, Passage):
-                snapshot.get(record.extraction_ref, Extraction)
+                if loaded("extraction"):
+                    snapshot.get(record.extraction_ref, Extraction)
             elif isinstance(record, Dossier):
-                from .images import resolve_dossier_images
-                resolve_dossier_images(snapshot, record.body)
-                for ref in record.evidence_refs:
-                    if ref not in purged_passages or ref.id in snapshot.records:
-                        snapshot.get(ref, Passage)
+                if loaded("source_version"):
+                    from .images import resolve_dossier_images
+                    resolve_dossier_images(snapshot, record.body)
+                if loaded("passage"):
+                    for ref in record.evidence_refs:
+                        if ref not in purged_passages or ref.id in snapshot.records:
+                            snapshot.get(ref, Passage)
             elif isinstance(record, Claim):
-                if record.dossier_ref:
+                if record.dossier_ref and loaded("dossier"):
                     snapshot.get(record.dossier_ref, Dossier)
             elif isinstance(record, ClaimRelation):
-                snapshot.get(record.from_claim_ref, Claim)
-                snapshot.get(record.to_claim_ref, Claim)
+                if loaded("claim"):
+                    snapshot.get(record.from_claim_ref, Claim)
+                    snapshot.get(record.to_claim_ref, Claim)
             elif isinstance(record, ManuscriptClaimLink):
-                snapshot.get(record.claim_ref, Claim)
+                if loaded("claim"):
+                    snapshot.get(record.claim_ref, Claim)
             elif isinstance(record, EvidenceLink):
-                snapshot.get(record.claim_ref, Claim)
-                if record.passage_ref not in purged_passages or record.passage_ref.id in snapshot.records:
+                if loaded("claim"):
+                    snapshot.get(record.claim_ref, Claim)
+                if loaded("passage") and (record.passage_ref not in purged_passages or record.passage_ref.id in snapshot.records):
                     snapshot.get(record.passage_ref, Passage)
             elif isinstance(record, Decision):
-                if record.claim_ref:
+                if record.claim_ref and loaded("claim"):
                     snapshot.get(record.claim_ref, Claim)
             elif isinstance(record, DecisionAcknowledgement):
-                snapshot.get(record.decision_ref, Decision)
-                snapshot.get(record.dossier_ref, Dossier)
-                if record.supersedes_ref:
-                    snapshot.get(record.supersedes_ref, DecisionAcknowledgement)
+                if loaded("decision") and loaded("dossier"):
+                    snapshot.get(record.decision_ref, Decision)
+                    snapshot.get(record.dossier_ref, Dossier)
+                    if record.supersedes_ref:
+                        snapshot.get(record.supersedes_ref, DecisionAcknowledgement)
             elif isinstance(record, Tombstone):
                 pass
         try:

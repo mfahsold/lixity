@@ -1058,7 +1058,8 @@ def create_dossier(
 
 def list_dossiers(project: str | Path) -> dict[str, Any]:
     """List all active dossiers in the project."""
-    return _list_dossiers(Repository(project).snapshot())
+    return _list_dossiers(Repository(project).snapshot(
+        kinds=frozenset({"dossier", "claim", "decision", "decision_acknowledgement"})))
 
 
 def _list_dossiers(snapshot: Snapshot) -> dict[str, Any]:
@@ -1265,7 +1266,7 @@ def create_claim(
 
 def list_claims(project: str | Path, *, dossier_id: str | None = None) -> dict[str, Any]:
     """Return claims and their selection context from one accepted snapshot."""
-    return _list_claims(Repository(project).snapshot(), dossier_id=dossier_id)
+    return _list_claims(Repository(project).snapshot(kinds=frozenset({"claim"})), dossier_id=dossier_id)
 
 
 def _list_claims(snapshot: Snapshot, *, dossier_id: str | None = None) -> dict[str, Any]:
@@ -1311,7 +1312,7 @@ def _list_claims(snapshot: Snapshot, *, dossier_id: str | None = None) -> dict[s
 
 def timeline(project: str | Path, dossier_id: str | None = None) -> dict[str, Any]:
     """Read conservative chronology without modifying any authored period label."""
-    return timeline_data(Repository(project).snapshot(), dossier_id=dossier_id)
+    return timeline_data(Repository(project).snapshot(kinds=frozenset({"claim"})), dossier_id=dossier_id)
 
 
 def _reviewed_snapshot(snapshot: Snapshot, expected_snapshot: str | None,
