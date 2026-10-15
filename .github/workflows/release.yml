@@ -32,9 +32,24 @@ jobs:
         uses: actions/attest-build-provenance@v4
         with:
           subject-path: dist/*
+      - name: Check whether the release is already published
+        id: release_state
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          state=$(gh release view "$GITHUB_REF_NAME" --json isDraft --jq '.isDraft' 2>/dev/null || echo missing)
+          if [ "$state" = "false" ]; then
+            echo "published=true" >> "$GITHUB_OUTPUT"
+            echo "Release $GITHUB_REF_NAME is already published; skipping release edits."
+          else
+            echo "published=false" >> "$GITHUB_OUTPUT"
+          fi
       # Draft first, attach every asset, then publish: one atomic release that
-      # stays compatible with immutable releases.
+      # stays compatible with immutable releases. Re-runs of an already
+      # published (immutable) release skip these two steps and only restage the
+      # verified artifacts for the PyPI job.
       - name: Create draft release with artifacts
+        if: steps.release_state.outputs.published == 'false'
         uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           files: dist/*
@@ -43,6 +58,7 @@ jobs:
           body_path: docs/releases/${{ github.ref_name }}.md
           generate_release_notes: true
       - name: Publish the verified draft
+        if: steps.release_state.outputs.published == 'false'
         env:
           GH_TOKEN: ${{ github.token }}
         run: gh release edit "$GITHUB_REF_NAME" --draft=false --latest
@@ -97,3 +113,5 @@ jobs:
         uses: pypa/gh-action-pypi-publish@release/v1
         with:
           packages-dir: upload
+          # Catch-up runs are idempotent: uploaded files are skipped.
+          skip-existing: true
