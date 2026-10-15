@@ -15,3 +15,4 @@
 
 .manuscript-link-feedback:empty { display: none; }
 .manuscript-link-reload { margin-left: .5rem; }
+.manuscript-link-review-item .ctl { margin-top: .4rem; margin-right: .4rem; }

@@ -12,7 +12,14 @@ from ..io import FileUtils
 from ..pipeline import paragraph_identity, profile_document, resolve_document_config
 from ..style_fingerprint import FingerprintThresholds
 from ..style_profile import ParagraphProfile
-from .models import Claim, ManuscriptAnchor, ManuscriptClaimLink, Reference, Tombstone
+from .models import (
+    Claim,
+    ManuscriptAnchor,
+    ManuscriptClaimLink,
+    Reference,
+    RevisionChange,
+    Tombstone,
+)
 from .repository import Repository, ResearchConflictError, ResearchError, Snapshot
 
 
@@ -159,6 +166,112 @@ def review_manuscript_links(project: str | Path, manuscript: str | Path, *,
         state, source_sha256 = "unreadable", None
     return manuscript_review_data(snapshot, source_path=relative, source_sha256=source_sha256,
                                   paragraphs=paragraphs, source_state=state)
+
+
+def _anchor_candidates(paragraphs: Sequence[ParagraphProfile],
+                       record: ManuscriptClaimLink) -> list[ParagraphProfile]:
+    """Paragraphs whose identity and quote still match the recorded anchor."""
+    anchor = record.anchor
+    return [paragraph for paragraph in paragraphs
+            if paragraph_identity(paragraph)["paragraph_sha256"] == anchor.paragraph_sha256
+            and paragraph.text[anchor.start:anchor.end] == anchor.quote]
+
+
+def resolve_manuscript_anchor(project: str | Path, manuscript: str | Path, *, query: str,
+                              line: int | None = None, language: str | None = None,
+                              project_config: Mapping[str, Any] | None = None) -> dict[str, Any]:
+    """Resolve one displayed-text quote to exact selection fields (read-only).
+
+    Offsets and quotes refer to ``ParagraphProfile.text`` with inline Markdown
+    markers removed; quotes copied from the Markdown file may need cleanup first.
+    """
+    if not isinstance(query, str) or not query.strip():
+        raise ResearchError("Provide a nonempty quote to resolve")
+    if line is not None and (type(line) is not int or line < 1):
+        raise ResearchError("Line must be a positive integer")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    path, relative = _source_path(repository, manuscript)
+    try:
+        text, _source_sha256 = FileUtils.read_source_snapshot(str(path))
+    except (OSError, UnicodeError) as exc:
+        raise ResearchError("Manuscript source is missing or unreadable") from exc
+    paragraphs = _paragraphs(text, repository, language, project_config)
+    scope = "in the displayed paragraphs"
+    if line is not None:
+        paragraphs = [paragraph for paragraph in paragraphs
+                      if paragraph.start_line <= line <= paragraph.end_line]
+        scope = "in the paragraph at the given line"
+    occurrences = sum(paragraph.text.count(query) for paragraph in paragraphs)
+    if occurrences == 0:
+        raise ResearchError(
+            f"Quote was not found {scope}; inline Markdown markers are removed from the displayed text")
+    if occurrences > 1:
+        lines = ", ".join(str(paragraph.start_line) for paragraph in paragraphs if query in paragraph.text)
+        raise ResearchError(f"Quote is ambiguous {scope} (lines: {lines}); add --line to choose one")
+    paragraph = next(paragraph for paragraph in paragraphs if query in paragraph.text)
+    start = paragraph.text.find(query)
+    identity = paragraph_identity(paragraph)
+    return {"schema_version": "research-anchor-local/1", "project_id": snapshot.project.id,
+            "snapshot": snapshot.digest, "source_path": relative,
+            "start_line": paragraph.start_line, "end_line": paragraph.end_line,
+            "paragraph_sha256": identity["paragraph_sha256"], "start": start,
+            "end": start + len(query), "quote": query}
+
+
+def reanchor_manuscript_link(
+    project: str | Path, manuscript: str | Path, link_id: str, *,
+    expected_project_id: str, expected_snapshot: str, expected_revision: int,
+    expected_source_sha256: str, actor: str = "local-author", language: str | None = None,
+    project_config: Mapping[str, Any] | None = None,
+) -> dict[str, Any]:
+    """Re-pin one uniquely moved anchor; the earlier position stays in history."""
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if expected_project_id != snapshot.project.id:
+        raise ResearchConflictError("Research project changed; reopen the intended project")
+    if expected_snapshot != snapshot.digest:
+        raise ResearchConflictError("Research snapshot changed; reload before saving")
+    try:
+        record = snapshot.latest(Reference(id=link_id).id, ManuscriptClaimLink)
+    except ValidationError:
+        raise ResearchError("Invalid manuscript link identifier") from None
+    if record.state != "active":
+        raise ResearchError("Retracted associations cannot be re-pinned")
+    if type(expected_revision) is not int or record.revision != expected_revision:
+        raise ResearchConflictError("Manuscript link revision changed; review it before re-pinning")
+    path, relative = _source_path(repository, manuscript)
+    if record.anchor.source_path != relative:
+        raise ResearchError("The association belongs to a different manuscript path")
+    try:
+        text, source_sha256 = FileUtils.read_source_snapshot(str(path))
+    except (OSError, UnicodeError) as exc:
+        raise ResearchError("Manuscript source is missing or unreadable") from exc
+    if source_sha256 != expected_source_sha256:
+        raise ResearchConflictError("Manuscript source bytes changed; review the current text before saving")
+    candidates = _anchor_candidates(_paragraphs(text, repository, language, project_config), record)
+    if len(candidates) != 1:
+        raise ResearchError("Only a uniquely moved anchor can be re-pinned; review the manuscript first")
+    target = candidates[0]
+    if target.start_line == record.anchor.start_line and target.end_line == record.anchor.end_line:
+        raise ResearchError("The anchor still resolves at its recorded lines; nothing to re-pin")
+    revised = record.model_copy(update={
+        "revision": record.revision + 1,
+        "change": RevisionChange(change_kind="correction",
+                                 reason="Re-anchor to the uniquely moved paragraph",
+                                 previous_revision=record.revision),
+        "anchor": record.anchor.model_copy(update={"start_line": target.start_line,
+                                                   "end_line": target.end_line,
+                                                   "source_sha256": source_sha256}),
+    })
+    # Recheck bytes immediately before publication; this never writes the manuscript.
+    if FileUtils.read_source_snapshot(str(path))[1] != source_sha256:
+        raise ResearchConflictError("Manuscript source bytes changed before saving")
+    accepted = repository.commit([revised], {}, snapshot)
+    return {"schema_version": "research-manuscript-link-local/1", "project_id": snapshot.project.id,
+            "snapshot": accepted.digest, "archive_schema_version": accepted.manifest.schema_version,
+            "link_id": record.id, "claim_id": record.claim_ref.id, "claim_revision": record.claim_ref.revision,
+            "record": revised.model_dump(mode="json")}
 
 
 def link_manuscript_claim(

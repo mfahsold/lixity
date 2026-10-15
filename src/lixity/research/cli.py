@@ -58,6 +58,8 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("link-manuscript", "Associate one reviewed manuscript quote with an exact claim revision (retention explicit)"),
         ("manuscript-links", "List saved manuscript quote-claim associations (read-only)"),
         ("review-manuscript", "Review saved associations against the current manuscript (read-only)"),
+        ("find-anchor", "Resolve one displayed-text quote to exact anchor fields (read-only)"),
+        ("reconcile-manuscript", "Preview or write re-pins for uniquely moved manuscript anchors"),
         ("decision", "Create, list or revise author decisions and fact deviations"),
         ("decision-impact", "Inspect dossiers explicitly linked to an author decision; read-only"),
         ("review", "List structural editorial review candidates; read-only, not semantic judgment"),
@@ -154,9 +156,15 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--claim-id", required=True)
             command.add_argument("--claim-revision", type=int, required=True,
                                  help="Exact reviewed claim revision to pin")
-            command.add_argument("--selection", required=True,
-                                 help="Selection JSON object (literal or local file) with start_line, "
-                                      "end_line, paragraph_sha256, start, end, quote")
+            source_group = command.add_mutually_exclusive_group(required=True)
+            source_group.add_argument("--selection",
+                                      help="Selection JSON object (literal or local file) with start_line, "
+                                           "end_line, paragraph_sha256, start, end, quote")
+            source_group.add_argument("--quote",
+                                      help="Displayed-text quote; resolved against the manuscript "
+                                           "(combine with --line when the quote is ambiguous)")
+            command.add_argument("--line", type=int,
+                                 help="Restrict a --quote resolution to the paragraph containing this source line")
             command.add_argument("--expected-snapshot",
                                  help="Optional strict archive digest; the current snapshot is used when omitted")
             command.add_argument("--expected-source-sha256",
@@ -168,6 +176,28 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name == "manuscript-links":
             command.add_argument("--claim-id", help="Only associations of this claim")
             command.add_argument("--include-retracted", action="store_true")
+        if name == "find-anchor":
+            command.add_argument("--manuscript", required=True,
+                                 help="Manuscript path inside the explicit project")
+            command.add_argument("--query", required=True,
+                                 help="Exact displayed-text quote (inline Markdown markers removed)")
+            command.add_argument("--line", type=int,
+                                 help="Restrict the search to the paragraph containing this source line")
+            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
+        if name == "reconcile-manuscript":
+            command.add_argument("--manuscript", required=True,
+                                 help="Manuscript path inside the explicit project")
+            command.add_argument("--link-id", help="Only this association (default: every uniquely moved association)")
+            command.add_argument("--accept-moved", action="store_true",
+                                 help="Write the new link revisions; without this flag the command only previews")
+            command.add_argument("--update-sha", action="store_true",
+                                 help="Accepted for compatibility; the current file digest is always re-pinned")
+            command.add_argument("--expected-snapshot",
+                                 help="Optional strict archive digest for the initial review")
+            command.add_argument("--expected-source-sha256",
+                                 help="Optional strict source digest; the current file bytes are used when omitted")
+            command.add_argument("--actor", default="local-author")
+            command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name in ("dossier", "claim", "decision", "sources"):
             command.add_argument("action", nargs="?", choices=("list",), metavar="list",
                                  help="Explicit list verb; listing is also the default without a record ID")
@@ -340,6 +370,24 @@ def command_metadata() -> list[dict[str, Any]]:
              "default_output": command.get_default("cli_default_output"),
              "json_flag": "--json" if "--json" in command._option_string_actions else None}
             for name, command in commands.choices.items()]
+
+
+def _reconcile_outcome(project: str, manuscript: str, row: dict[str, Any], source_sha256: str,
+                       actor: str, language: str | None) -> dict[str, Any]:
+    """Re-pin one moved row, reporting a conflict instead of aborting the batch."""
+    from . import api
+    from .repository import Repository, ResearchConflictError, ResearchError
+
+    try:
+        current = Repository(project).snapshot()
+        single = api.reanchor_manuscript_link(
+            project, manuscript, row["link_id"],
+            expected_project_id=current.project.id, expected_snapshot=current.digest,
+            expected_revision=row["revision"], expected_source_sha256=source_sha256,
+            actor=actor, language=language)
+    except (ResearchError, ResearchConflictError, OSError, ValueError) as error:
+        return {"ok": False, "link_id": row["link_id"], "reason": str(error)}
+    return {"ok": True, "link_id": single["link_id"], "revision": single["record"]["revision"]}
 
 
 def _json_object(value: str, what: str) -> dict[str, Any]:
@@ -760,7 +808,13 @@ def run(args: argparse.Namespace) -> int:
             from .manuscript import _source_path
             from .repository import Repository
 
-            selection_payload = _json_object(args.selection, "Selection")
+            if args.selection is not None:
+                selection_payload = _json_object(args.selection, "Selection")
+            else:
+                resolved = api.resolve_manuscript_anchor(args.project, args.manuscript, query=args.quote,
+                                                         line=args.line, language=args.language)
+                selection_payload = {key: resolved[key] for key in
+                                     ("start_line", "end_line", "paragraph_sha256", "start", "end", "quote")}
             repository = Repository(args.project)
             snapshot = repository.snapshot()
             source_path, _relative = _source_path(repository, args.manuscript)
@@ -773,6 +827,58 @@ def run(args: argparse.Namespace) -> int:
                 expected_snapshot=args.expected_snapshot or snapshot.digest,
                 expected_source_sha256=source_sha256, allow_retention=True,
                 note=args.note, actor=args.actor, language=args.language)
+        elif command == "find-anchor":
+            result = api.resolve_manuscript_anchor(args.project, args.manuscript, query=args.query,
+                                                   line=args.line, language=args.language)
+        elif command == "reconcile-manuscript":
+            from ..io import FileUtils
+            from .manuscript import _source_path
+            from .repository import Repository, ResearchConflictError
+
+            repository = Repository(args.project)
+            link_review = api.review_manuscript_links(args.project, args.manuscript, language=args.language)
+            if args.expected_snapshot is not None and link_review["snapshot"] != args.expected_snapshot:
+                raise ResearchConflictError("Research snapshot changed; reload before reconciling")
+            source_path, _relative = _source_path(repository, args.manuscript)
+            source_sha256 = args.expected_source_sha256
+            if source_sha256 is None:
+                source_sha256 = FileUtils.read_source_snapshot(str(source_path))[1]
+            if not args.accept_moved:
+                movable = [row for row in link_review["links"]
+                           if row["anchor_state"] == "moved"
+                           and (args.link_id is None or row["link_id"] == args.link_id)]
+                result = {"schema_version": "research-manuscript-reconcile-local/1",
+                          "project_id": link_review["project_id"], "snapshot": link_review["snapshot"],
+                          "source_path": link_review["source_path"], "dry_run": True,
+                          "candidates": [{"link_id": row["link_id"], "revision": row["revision"],
+                                          "claim_title": row.get("claim_title"),
+                                          "candidate_lines": row["candidate_lines"]}
+                                         for row in movable]}
+            elif args.link_id is not None:
+                row = next((item for item in link_review["links"] if item["link_id"] == args.link_id), None)
+                if row is None:
+                    raise ResearchError("Unknown manuscript association for this manuscript")
+                result = api.reanchor_manuscript_link(
+                    args.project, args.manuscript, args.link_id,
+                    expected_project_id=link_review["project_id"], expected_snapshot=link_review["snapshot"],
+                    expected_revision=row["revision"], expected_source_sha256=source_sha256,
+                    actor=args.actor, language=args.language)
+            else:
+                movable = [row for row in link_review["links"] if row["anchor_state"] == "moved"]
+                accepted: list[dict[str, Any]] = []
+                skipped: list[dict[str, str]] = []
+                for row in movable:
+                    outcome = _reconcile_outcome(args.project, args.manuscript, row, source_sha256,
+                                                 args.actor, args.language)
+                    if outcome["ok"]:
+                        accepted.append({"link_id": outcome["link_id"], "revision": outcome["revision"]})
+                    else:
+                        skipped.append({"link_id": outcome["link_id"], "reason": outcome["reason"]})
+                result = {"schema_version": "research-manuscript-reconcile-local/1",
+                          "project_id": link_review["project_id"],
+                          "snapshot": Repository(args.project).snapshot().digest,
+                          "source_path": link_review["source_path"], "dry_run": False,
+                          "accepted": accepted, "skipped": skipped}
         elif command == "reindex":
             result = api.reindex(args.project)
         elif command == "search":

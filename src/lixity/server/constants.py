@@ -14,6 +14,7 @@ DEFAULT_HOST = "127.0.0.1"
 NATIVE_UI_ACTIONS = (
     "analyze", "nda-draft", "manuscript-pdf", "research-reader", "research-image-ingest", "research-dossier-image",
     "research-manuscript-link",
+    "research-manuscript-reanchor",
 )
 
 MIME_TYPES = {

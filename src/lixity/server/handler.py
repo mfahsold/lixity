@@ -85,6 +85,7 @@ class LixityServerHandler(
         "research-compare": "_handle_research_compare",
         "research-claim-add": "_handle_research_claim_add",
         "research-manuscript-link": "_handle_manuscript_claim_link",
+        "research-manuscript-reanchor": "_handle_manuscript_claim_reanchor",
         "research-claim-relation": "_handle_research_claim_relation_add",
         "research-evidence-link": "_handle_research_evidence_link",
         "research-decision-add": "_handle_research_decision_add",

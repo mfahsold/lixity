@@ -413,3 +413,114 @@ def test_cli_link_list_and_review_round_trip(manuscript_archive, capsys):
     reviewed = json.loads(capsys.readouterr().out)
     assert reviewed["links"][0]["anchor_state"] == "resolved"
     assert reviewed["review_needed_count"] == 0
+
+
+def test_reanchor_accepts_unique_moved_anchor_and_keeps_history(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    linked = save_link(manuscript_archive)
+    manuscript.write_bytes(
+        "## Chapter One\n\nA new note.\n\nThe **reading room** was open. \U0001F989 A visitor arrived.\n".encode("utf-8"))
+    report = api.review_manuscript_links(project, manuscript)
+    row = report["links"][0]
+    assert row["anchor_state"] == "moved" and row["candidate_lines"] == [5]
+    snapshot = Repository(project).snapshot()
+    result = api.reanchor_manuscript_link(
+        project, manuscript, linked["link_id"], expected_project_id=snapshot.project.id,
+        expected_snapshot=snapshot.digest, expected_revision=1,
+        expected_source_sha256=digest(manuscript.read_bytes()))
+    assert result["record"]["revision"] == 2
+    assert result["record"]["anchor"]["start_line"] == 5
+    assert result["record"]["anchor"]["source_sha256"] == digest(manuscript.read_bytes())
+    reviewed = api.review_manuscript_links(project, manuscript)
+    assert reviewed["links"][0]["anchor_state"] == "resolved"
+    assert reviewed["review_needed_count"] == 0
+    history = api.record_history(project, "manuscript_claim_link", linked["link_id"])
+    assert [entry["revision"] for entry in history["revisions"]] == [2, 1]
+    pinned = api.get_record(project, "manuscript_claim_link", linked["link_id"], revision=1)
+    assert pinned["record"]["anchor"]["start_line"] == 3
+
+
+def test_reanchor_refuses_ambiguous_or_unchanged_anchors(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    linked = save_link(manuscript_archive)
+    snapshot = Repository(project).snapshot()
+    with pytest.raises(ResearchError, match="still resolves"):
+        api.reanchor_manuscript_link(
+            project, manuscript, linked["link_id"], expected_project_id=snapshot.project.id,
+            expected_snapshot=snapshot.digest, expected_revision=1,
+            expected_source_sha256=digest(manuscript.read_bytes()))
+    manuscript.write_bytes(
+        "## Chapter One\n\nA new note.\n\nThe **reading room** was open. \U0001F989 A visitor arrived.\n\n"
+        "The **reading room** was open. \U0001F989 A visitor arrived.\n".encode("utf-8"))
+    report = api.review_manuscript_links(project, manuscript)
+    assert report["links"][0]["anchor_state"] == "ambiguous"
+    snapshot = Repository(project).snapshot()
+    with pytest.raises(ResearchError, match="uniquely moved"):
+        api.reanchor_manuscript_link(
+            project, manuscript, linked["link_id"], expected_project_id=snapshot.project.id,
+            expected_snapshot=snapshot.digest, expected_revision=1,
+            expected_source_sha256=digest(manuscript.read_bytes()))
+
+
+def test_resolve_manuscript_anchor_reports_exact_fields(manuscript_archive):
+    project, manuscript, _, _ = manuscript_archive
+    resolved = api.resolve_manuscript_anchor(project, "draft.md", query="\U0001F989 A visitor arrived.")
+    expected = selection()
+    assert {key: resolved[key] for key in expected} == expected
+    with pytest.raises(ResearchError, match="Markdown"):
+        api.resolve_manuscript_anchor(project, "draft.md", query="**reading room**")
+    manuscript.write_bytes(manuscript.read_bytes() + b"\nA second room. Another visitor arrives.\n")
+    with pytest.raises(ResearchError, match="ambiguous"):
+        api.resolve_manuscript_anchor(project, "draft.md", query="room")
+    narrowed = api.resolve_manuscript_anchor(project, "draft.md", query="room", line=3)
+    assert narrowed["start_line"] == 3
+
+
+def test_cli_find_anchor_and_quote_convenience(manuscript_archive, capsys):
+    import argparse
+    import json
+
+    from lixity.research import cli
+
+    project, _, claim, _ = manuscript_archive
+    parser = argparse.ArgumentParser()
+    cli.configure(parser)
+    find_args = parser.parse_args(["find-anchor", "--project", str(project),
+                                   "--manuscript", "draft.md", "--query", "\U0001F989 A visitor arrived."])
+    assert cli.run(find_args) == 0
+    anchored = json.loads(capsys.readouterr().out)
+    assert {key: anchored[key] for key in selection()} == selection()
+    link_args = parser.parse_args([
+        "link-manuscript", "--project", str(project), "--manuscript", "draft.md",
+        "--claim-id", claim, "--claim-revision", "1", "--quote", "\U0001F989 A visitor arrived.",
+        "--allow-retention"])
+    assert cli.run(link_args) == 0
+    linked = json.loads(capsys.readouterr().out)
+    assert linked["record"]["anchor"]["start_line"] == 3
+
+
+def test_cli_reconcile_previews_and_accepts_moved(manuscript_archive, capsys):
+    import argparse
+    import json
+
+    from lixity.research import cli
+
+    project, manuscript, _, _ = manuscript_archive
+    save_link(manuscript_archive)
+    manuscript.write_bytes(
+        "## Chapter One\n\nA new note.\n\nThe **reading room** was open. \U0001F989 A visitor arrived.\n".encode("utf-8"))
+    parser = argparse.ArgumentParser()
+    cli.configure(parser)
+    preview = parser.parse_args(["reconcile-manuscript", "--project", str(project),
+                                 "--manuscript", "draft.md"])
+    assert cli.run(preview) == 0
+    planned = json.loads(capsys.readouterr().out)
+    assert planned["dry_run"] is True
+    assert planned["candidates"][0]["candidate_lines"] == [5]
+    accept = parser.parse_args(["reconcile-manuscript", "--project", str(project),
+                                "--manuscript", "draft.md", "--accept-moved"])
+    assert cli.run(accept) == 0
+    done = json.loads(capsys.readouterr().out)
+    assert done["dry_run"] is False and done["skipped"] == []
+    assert done["accepted"][0]["revision"] == 2
+    assert api.review_manuscript_links(project, manuscript)["review_needed_count"] == 0

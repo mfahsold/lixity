@@ -91,6 +91,42 @@ class ManuscriptResearchRoutesMixin(ResearchRoutesMixin):
             except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
                 self._json({"ok": False, "message": str(exc)}, 400)
 
+    def _handle_manuscript_claim_reanchor(self, payload: dict[str, Any]) -> None:
+        allowed = {"project_id", "research_token", "project_token", "expected_snapshot",
+                   "expected_revision", "expected_source_sha256", "link_id", "actor"}
+        if (set(payload) - allowed
+                or type(payload.get("expected_revision")) is not int or payload["expected_revision"] < 1
+                or any(not isinstance(payload.get(key), str) or not payload[key].strip()
+                       for key in ("project_id", "link_id", "expected_snapshot", "expected_source_sha256"))):
+            self._json({"ok": False, "message": "Review the moved anchor before re-pinning it"}, 400)
+            return
+        with self._workspace_lock:
+            if not self._research_context_matches(payload.get("research_token")):
+                return
+            try:
+                root, source, settings = self._manuscript_context(payload.get("project_token"))
+            except ResearchConflictError as exc:
+                self._json({"ok": False, "code": "stale-context", "message": str(exc)}, 409)
+                return
+            except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+                return
+            try:
+                result = research_api.reanchor_manuscript_link(
+                    root, source, payload["link_id"],
+                    expected_project_id=payload["project_id"],
+                    expected_snapshot=payload["expected_snapshot"],
+                    expected_revision=payload["expected_revision"],
+                    expected_source_sha256=payload["expected_source_sha256"],
+                    actor=payload.get("actor", "local-author"),
+                    language=self.language, project_config=settings,
+                )
+                self._json({"ok": True, **result})
+            except ResearchConflictError as exc:
+                self._json({"ok": False, "code": "stale-archive", "message": str(exc)}, 409)
+            except (ResearchError, OSError, ValueError, TypeError, UserWarning) as exc:
+                self._json({"ok": False, "message": str(exc)}, 400)
+
     def _handle_manuscript_claim_links(self) -> None:
         query = parse_qs(urlparse(self.path).query, keep_blank_values=True)
         retracted = query.get("include_retracted", ["false"])

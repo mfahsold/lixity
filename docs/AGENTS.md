@@ -77,7 +77,7 @@ is importable by a project adapter. TOML configuration works on Python 3.10+
 | `lixity serve [PATH] [--port N] [--host IP] [--no-project]` | native development server & interactive dashboard with project switcher | loopback HTTP server |
 | `lixity service start\|stop\|restart\|status [--port N] [--json]` | managed installed-app lifecycle; start defaults to an empty workspace, optional explicit project | text / JSON |
 | `lixity build [FILE] [--dry-run]` | idempotent workspace build into `exports/` (same threshold flags as `style`) | artifact list |
-| `lixity research SUBCOMMAND --project DIR` | evidence-based research archive (init, ingest, search, cite, sources, dossier, compare, link-manuscript, manuscript-links, review-manuscript) | JSON |
+| `lixity research SUBCOMMAND --project DIR` | evidence-based research archive (init, ingest, search, cite, sources, dossier, compare, link-manuscript, manuscript-links, review-manuscript, find-anchor, reconcile-manuscript) | JSON |
 | `lixity about` | tool metadata: languages, features, heuristics | text / JSON |
 | `lixity completion bash\|zsh` | shell completion script (all commands + style flags) | script |
 
@@ -772,7 +772,7 @@ Stored `ManuscriptClaimLink` uses kind `manuscript_claim_link` and
 `state: active|retracted` and optional `note`. Generic inspection/history,
 revision preparation and atomic batches support this kind. Revision changes
 accept `claim_id`, `claim_revision`, `state`, `note`; unchanged claim IDs retain
-pins. Reanchoring is not implemented.
+pins. A uniquely moved anchor is re-pinned explicitly instead: `lixity research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`) writes a new link revision with the moved line span and the current file digest; the earlier anchor stays in history.
 
 The research **Review** tab lists the saved associations with anchor state,
 flags and pinned quote. It loads when the tab is opened, with the shared review
@@ -805,6 +805,8 @@ Native routes require explicit context guards:
   `selection` as above and boolean `allow_retention: true`; optional `note`.
   Unknown fields fail. Invalid selections/permission return HTTP 400; changed
   selected context/project/snapshot/source/claim revision returns HTTP 409.
+
+- `POST /api/research-manuscript-reanchor` accepts exactly required `project_id`, `research_token`, `project_token`, `expected_snapshot`, `expected_revision`, `expected_source_sha256` and `link_id`; it re-pins one uniquely moved anchor as a new link revision while earlier positions stay in history. Invalid inputs return HTTP 400; changed selected context/project/snapshot/source/link revision returns HTTP 409 (`stale-context`/`stale-archive`).
 
 Successful native responses add `ok: true` to the corresponding envelope. Error responses on the manuscript-link routes add a stable `code`
 where the UI reacts: `stale-context` (selected manuscript or research context

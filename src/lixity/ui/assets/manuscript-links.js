@@ -220,6 +220,15 @@
       if (row.anchor) item.appendChild(element("blockquote", row.anchor.quote));
       var history = element("button", label("research_revision_history"), "ctl"); history.type = "button";
       history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id; item.appendChild(history);
+      if (row.anchor_state === "moved") {
+        var accept = element("button", label("manuscript_link_accept_moved"), "ctl");
+        accept.type = "button"; accept.dataset.manuscriptLinkAccept = row.link_id;
+        accept.dataset.manuscriptLinkAcceptRevision = String(row.revision);
+        item.appendChild(accept);
+        var acceptStatus = element("p", "", "ctl-status");
+        acceptStatus.dataset.manuscriptLinkAcceptStatus = ""; acceptStatus.hidden = true;
+        item.appendChild(acceptStatus);
+      }
       fragment.appendChild(item);
     });
     if (!(report.links || []).length) fragment.appendChild(element("p", label("manuscript_link_review_empty"), "ctl-note"));
@@ -298,6 +307,31 @@
   });
   document.addEventListener("click", function(event) {
     if (event.target.closest("[data-manuscript-link-reload]")) { event.preventDefault(); window.location.reload(); }
+  });
+  document.addEventListener("click", async function(event) {
+    var accept = event.target.closest("[data-manuscript-link-accept]");
+    if (!accept || accept.disabled) return;
+    var value = context();
+    if (!review || !reviewProjectId || !live(value)) return;
+    var item = accept.closest(".manuscript-link-review-item");
+    var status = item ? item.querySelector("[data-manuscript-link-accept-status]") : null;
+    accept.disabled = true;
+    if (status) { status.hidden = false; status.className = "ctl-status loading"; status.textContent = label("form_saving"); }
+    var response = await bridge.post("research-manuscript-reanchor", {
+      project_id: reviewProjectId, research_token: value.research, project_token: value.project,
+      link_id: accept.dataset.manuscriptLinkAccept,
+      expected_snapshot: review.snapshot,
+      expected_revision: Number(accept.dataset.manuscriptLinkAcceptRevision),
+      expected_source_sha256: value.source});
+    accept.disabled = false;
+    if (response && response.ok) {
+      if (status) { status.className = "ctl-status ok"; status.textContent = label("manuscript_link_reanchored"); }
+      loadReview();
+      return;
+    }
+    if (response && response.code === "stale-context") { clearReview(label("manuscript_link_stale"), true); return; }
+    if (response && response.code === "stale-archive") { clearReview(label("manuscript_link_archive_changed")); return; }
+    if (status) { status.className = "ctl-status err"; status.textContent = bridge.errorText(response); }
   });
   document.addEventListener("selectionchange", function() {
     var value = selection();

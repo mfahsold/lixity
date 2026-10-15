@@ -134,3 +134,23 @@ def test_special_node_replacement_returns_unreadable_and_releases_workspace_lock
     status, selected = request("/api/research/claims?research_token=" + body["research_token"])
     assert status == 200 and selected["ok"]
     assert Repository(project).snapshot().digest == before
+
+
+def test_reanchor_route_repins_unique_moved_anchor(workspace):
+    _project, manuscript, _, body, request = workspace
+    status, created = request("/api/research-manuscript-link", body)
+    assert status == 200
+    text = manuscript.read_text(encoding="utf-8")
+    manuscript.write_text(text.replace("## Morning\n\n", "## Morning\n\nA new note.\n\n"), encoding="utf-8")
+    status, reviewed = request(review_route(body))
+    row = reviewed["links"][0]
+    assert row["anchor_state"] == "moved" and row["candidate_lines"] == [7]
+    payload = {"project_id": body["project_id"], "research_token": body["research_token"],
+               "project_token": body["project_token"], "link_id": created["link_id"],
+               "expected_snapshot": reviewed["snapshot"], "expected_revision": row["revision"],
+               "expected_source_sha256": hashlib.sha256(manuscript.read_bytes()).hexdigest()}
+    status, result = request("/api/research-manuscript-reanchor", payload)
+    assert status == 200 and result["ok"] and result["record"]["revision"] == 2
+    assert result["record"]["anchor"]["start_line"] == 7
+    status, stale = request("/api/research-manuscript-reanchor", payload)
+    assert status == 409 and not stale["ok"] and stale.get("code") == "stale-archive"

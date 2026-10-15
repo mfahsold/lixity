@@ -84,10 +84,14 @@ async function selectText(page, text) {
           if (mode === 'archivedrift') return route.fulfill({status: 409, json: {ok: false, code: 'stale-archive', message: 'Synthetic drift'}});
           if (mode === 'savefail') return route.fulfill({status: 409, json: {ok: false, message: 'Claim changed'}});
           anchor = data.selection;
-          links = [{link_id: 'link', state: 'active', claim_id: 'claim', claim_revision: 2,
+          links = [{link_id: 'link', revision: 1, state: 'active', claim_id: 'claim', claim_revision: 2,
             claim_title: 'Synthetic claim', anchor, anchor_state: 'resolved', flags: [],
             resolved_start_line: anchor.start_line, resolved_end_line: anchor.end_line}];
           return route.fulfill({json: {ok: true, schema_version: 'research-manuscript-link-local/1', project_id: 'project', snapshot: 'accepted-snapshot', link_id: 'link', claim_id: data.claim_id, claim_revision: data.claim_revision, record: {id: 'link', kind: 'manuscript_claim_link', claim_ref: {id: data.claim_id, revision: data.claim_revision}, anchor: data.selection}}});
+        }
+        if (url.pathname === '/api/research-manuscript-reanchor') {
+          const data = request.postDataJSON(); writes.push(data);
+          return route.fulfill({json: {ok: true, schema_version: 'research-manuscript-link-local/1', project_id: 'project', snapshot: 'reanchor-snapshot', link_id: data.link_id, claim_id: 'claim', claim_revision: 2, record: {id: data.link_id, kind: 'manuscript_claim_link', claim_ref: {id: 'claim', revision: 2}}}});
         }
         if (url.pathname.startsWith('/api/')) return route.fulfill({json: {ok: true, locked: true, records: [], sources: [], claims: [], decisions: []}});
         return route.fulfill({contentType: 'text/html', body: html});
@@ -223,6 +227,21 @@ async function selectText(page, text) {
             {moved: 'Moved passage: review required', ambiguous: 'Multiple possible passages: review required',
               changed: 'Passage changed: review required', unavailable: 'Source unavailable: review required'}[anchorState]);
           assert.match(await page.locator('#research-manuscript-review').textContent(), /Source bytes changed · Claim has a newer version/);
+          if (anchorState === 'moved') {
+            const accept = page.locator('#research-manuscript-review [data-manuscript-link-accept]').first();
+            await accept.waitFor();
+            const before = writes.length;
+            const routed = page.waitForResponse(response => response.url().includes('/api/research-manuscript-reanchor'));
+            await accept.click();
+            assert.equal((await (await routed).json()).ok, true);
+            assert.equal(writes.length, before + 1);
+            const payload = writes[before];
+            assert.equal(payload.link_id, 'link');
+            assert.equal(payload.expected_revision, 1);
+            assert.equal(payload.expected_snapshot, 'snapshot');
+            assert.equal(payload.expected_source_sha256, 'a'.repeat(64));
+            assert.equal(payload.project_token, 'synthetic-project-token');
+          }
           await page.locator('#tab-view-analysis').click();
         }
         links[0].anchor_state = 'resolved';

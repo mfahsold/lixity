@@ -150,7 +150,7 @@ paragraphs and ambiguous matches. Moved or ambiguous candidates remain unresolve
 the reader does not relocate or repin them automatically. These flags request a
 human review, not a semantic contradiction check or factual verdict. Retraction
 and note/claim revisions use the existing record history and strict revision
-API; the anchor is immutable, with no reanchoring interface in this scope.
+API. A uniquely moved anchor is re-pinned explicitly instead of silently: `lixity research reconcile-manuscript --accept-moved` (or `POST /api/research-manuscript-reanchor`) writes a new link revision with the moved line span and the current file digest; the earlier anchor stays in revision history. Ambiguous or changed anchors are never re-pinned automatically.
 
 **On `main` (next release):** the same flow is scriptable from the CLI.
 `--selection` takes the JSON selection object above (literal or a local file);
@@ -158,10 +158,13 @@ API; the anchor is immutable, with no reanchoring interface in this scope.
 and still fail when the bytes or the archive change before saving.
 
 ```sh
+lixity research find-anchor --project ./novel --manuscript novel.md --query "exact quote"
 lixity research link-manuscript --project ./novel --manuscript novel.md \
-  --claim-id CLAIM_ID --claim-revision 2 --selection selection.json --allow-retention
+  --claim-id CLAIM_ID --claim-revision 2 --quote "exact quote" --allow-retention
 lixity research manuscript-links --project ./novel
 lixity research review-manuscript --project ./novel --manuscript novel.md
+lixity research reconcile-manuscript --project ./novel --manuscript novel.md            # Vorschau
+lixity research reconcile-manuscript --project ./novel --manuscript novel.md --accept-moved
 ```
 
 A changed source-file digest (`source_changed`, for example after an edit in an
