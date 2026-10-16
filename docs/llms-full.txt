@@ -6341,6 +6341,16 @@ string building:
 - New stateful panels start as components; the remaining hand-built renderers
   (claim relations, editorial review, revision dialogs) migrate incrementally.
 
+The research workspace script is split by topic: `research-core.js` (API,
+form plumbing, escaping), `research-content.js` (markdown, mermaid, dossiers),
+`research-evidence.js` (selection, evidence drafts, citations, Zotero),
+`research-lists.js` (filters and the four record lists), `research-review.js`
+(editorial review), `research-workspace.js` (project info, initialization,
+delegated interactions) and `research-revisions.js` (revision dialogs).
+`_JS_FILES` concatenates them in that order into the single inlined script;
+the split keeps the original statement order, so load-time behaviour is
+identical.
+
 ## First-run journey (server contract)
 
 An empty workspace renders the welcome hero with three actions, the quickstart

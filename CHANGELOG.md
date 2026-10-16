@@ -21,6 +21,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `docs/INSTALLATION.md` documents the log location and settings.
 
 ### Changed
+- Structure: the 3,500-line `assets/research.js` is split into seven topic
+  modules (`research-core`, `-content`, `-evidence`, `-lists`, `-review`,
+  `-workspace`, `-revisions`). `_JS_FILES` concatenates them in the original
+  order, so the served bundle and its load-time behaviour are unchanged.
 - UI cohesion: radius, type and weight values come from the design-token
   ladders instead of one-off numbers; the workspace switch and the research
   sub-tabs share one tab/control recipe, badges and tags are one pill family,
