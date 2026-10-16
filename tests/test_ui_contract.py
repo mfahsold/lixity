@@ -67,7 +67,8 @@ SAMPLE = (
 def _full_dashboard(enabled_actions: tuple[str, ...] | None = None) -> str:
     # Three complete, varying chapters exercise the optional rank-space panel.
     complete = SAMPLE.replace(
-        "## Kap 2", "Ich schaue hinaus. Vor dem Fenster ziehen dunkle Wolken vorbei. " * 3 + "\n\n## Kap 2"
+        "## Kap 2",
+        "Ich schaue hinaus. Vor dem Fenster ziehen dunkle Wolken vorbei. " * 3 + "\n\n## Kap 2",
     )
     complete += "\n" + "Im Zimmer wartet eine Frau neben dem Fenster. " * 8
     complete += "\n\n## Kap 3\n\n" + "Der Morgen beginnt. Regen fällt auf die Straße. " * 15
@@ -109,10 +110,22 @@ class _StructureBalance(HTMLParser):
     are checked. Script/style bodies are CDATA for HTMLParser.
     """
 
-    TRACKED = frozenset({
-        "div", "section", "details", "aside", "figure", "form", "main", "nav",
-        "dialog", "header", "footer", "article",
-    })
+    TRACKED = frozenset(
+        {
+            "div",
+            "section",
+            "details",
+            "aside",
+            "figure",
+            "form",
+            "main",
+            "nav",
+            "dialog",
+            "header",
+            "footer",
+            "article",
+        }
+    )
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -138,14 +151,35 @@ class _StructureBalance(HTMLParser):
 class _PaneOwnership(HTMLParser):
     """Record which workspace pane holds each key element, plus the pane order."""
 
-    TRACKED = frozenset({
-        "div", "section", "details", "aside", "figure", "form", "main", "nav",
-        "dialog", "header", "footer", "article",
-    })
-    KEYS = frozenset({
-        "research-manager", "analysis-review", "analysis-sections", "settings-form",
-        "controls", "chapters", "nda-draft", "welcome-hero", "workspace-reader",
-    })
+    TRACKED = frozenset(
+        {
+            "div",
+            "section",
+            "details",
+            "aside",
+            "figure",
+            "form",
+            "main",
+            "nav",
+            "dialog",
+            "header",
+            "footer",
+            "article",
+        }
+    )
+    KEYS = frozenset(
+        {
+            "research-manager",
+            "analysis-review",
+            "analysis-sections",
+            "settings-form",
+            "controls",
+            "chapters",
+            "nda-draft",
+            "welcome-hero",
+            "workspace-reader",
+        }
+    )
 
     def __init__(self) -> None:
         super().__init__(convert_charrefs=True)
@@ -183,7 +217,7 @@ class TestJsDomContract(unittest.TestCase):
             parse_markdown_blocks("## Opening\n\nA bird crosses the garden. Rain falls.\n")
         )
         html = render_dashboard(chapters, paragraphs)
-        review = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
+        review = html.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
         for target in re.findall(r'href="#([^"]+)"', review):
             self.assertTrue(f'id="{target}"' in html, f"Review route has no target: {target}")
 
@@ -202,7 +236,7 @@ class TestJsDomContract(unittest.TestCase):
         paragraphs[1].severity = 3
         chapters[0].flagged = 2
         html = render_dashboard(chapters, paragraphs)
-        review = html.split('id="analysis-review"', 1)[1].split('</section>', 1)[0]
+        review = html.split('id="analysis-review"', 1)[1].split("</section>", 1)[0]
         self.assertIn('data-target="p-0"', review)
 
     def test_analysis_section_nav_only_links_existing_panels(self):
@@ -229,11 +263,21 @@ class TestJsDomContract(unittest.TestCase):
     def test_checkbox_controls_use_the_shared_component(self):
         """Every rendered checkbox row uses the one form-checkbox component."""
         html = _full_dashboard()
-        for control_id in ("filter-flags", "heatmap-fdr-only", "set-publication-enabled",
-                           "r-ingest-retention", "r-zotero-retention", "r-relation-retracted",
-                           "r-decision-deviation", "import-proj-research", "new-proj-research"):
+        for control_id in (
+            "filter-flags",
+            "heatmap-fdr-only",
+            "set-publication-enabled",
+            "r-ingest-retention",
+            "r-zotero-retention",
+            "r-relation-retracted",
+            "r-decision-deviation",
+            "import-proj-research",
+            "new-proj-research",
+        ):
             pattern = re.compile(
-                r'<label class="form-checkbox"[^>]*>(?:(?!</label>).)*?id="' + re.escape(control_id) + r'"',
+                r'<label class="form-checkbox"[^>]*>(?:(?!</label>).)*?id="'
+                + re.escape(control_id)
+                + r'"',
                 re.DOTALL,
             )
             self.assertRegex(html, pattern, f"#{control_id} must use the form-checkbox component")
@@ -268,8 +312,11 @@ class TestJsDomContract(unittest.TestCase):
         # variant must not render it at all.
         self.assertNotIn("nda-draft", parser.owners)
         for key, pane in expected.items():
-            self.assertEqual(parser.owners.get(key), pane,
-                             f"#{key} must live in the {pane} pane, found {parser.owners.get(key)!r}")
+            self.assertEqual(
+                parser.owners.get(key),
+                pane,
+                f"#{key} must live in the {pane} pane, found {parser.owners.get(key)!r}",
+            )
 
     def test_rendered_documents_have_balanced_structure(self):
         """All rendered variants close the structural tags they open."""
@@ -285,10 +332,12 @@ class TestJsDomContract(unittest.TestCase):
         for name, html in variants.items():
             parser = _StructureBalance()
             parser.feed(html)
-            self.assertEqual([], parser.errors,
-                             f"{name} document has unbalanced structure: {parser.errors[:4]}")
-            self.assertEqual([], parser.stack,
-                             f"{name} document leaves tags open: {parser.stack[-6:]}")
+            self.assertEqual(
+                [], parser.errors, f"{name} document has unbalanced structure: {parser.errors[:4]}"
+            )
+            self.assertEqual(
+                [], parser.stack, f"{name} document leaves tags open: {parser.stack[-6:]}"
+            )
 
     def test_native_refresh_and_filter_reset(self):
         """Native controls expose one refresh and an explicit filter escape."""
@@ -305,8 +354,13 @@ class TestJsDomContract(unittest.TestCase):
     def test_optional_research_metadata_disclosures(self):
         """Optional metadata does not compete with authored content fields."""
         html = _full_dashboard()
-        for identifier in ("r-ingest-options", "r-dos-options", "r-claim-options",
-                           "r-decision-options", "import-project-options"):
+        for identifier in (
+            "r-ingest-options",
+            "r-dos-options",
+            "r-claim-options",
+            "r-decision-options",
+            "import-project-options",
+        ):
             self.assertRegex(html, rf'<details[^>]*id="{identifier}"')
 
     def test_minimal_workflow_labels_cover_every_locale(self):
@@ -314,11 +368,20 @@ class TestJsDomContract(unittest.TestCase):
         from lixity.workspace_labels import WORKSPACE_LABELS
 
         for language, labels in WORKSPACE_LABELS.items():
-            for key in ("optional_details", "marker_save", "marker_saving", "marker_saved",
-                        "marker_save_failed", "paragraph_filter_reset", "scene_containing_chapter",
-                        "settings_bound_error", "wizard_research_required",
-                        "manuscript_link_review_help", "manuscript_link_review_count",
-                        "manuscript_link_review_empty"):
+            for key in (
+                "optional_details",
+                "marker_save",
+                "marker_saving",
+                "marker_saved",
+                "marker_save_failed",
+                "paragraph_filter_reset",
+                "scene_containing_chapter",
+                "settings_bound_error",
+                "wizard_research_required",
+                "manuscript_link_review_help",
+                "manuscript_link_review_count",
+                "manuscript_link_review_empty",
+            ):
                 with self.subTest(language=language, key=key):
                     self.assertTrue(labels.get(key), f"Missing {language} label: {key}")
                     self.assertNotEqual(labels[key], key)
@@ -327,11 +390,14 @@ class TestJsDomContract(unittest.TestCase):
         """Scene reports know their containing chapter, not source offsets."""
         from lixity.scenes import scene_report
         from lixity.ui.narration import render_scenes_panel
-        report = scene_report("## Synthetic chapter\n\nA door shuts.\n\n---\n\nA window opens.",
-                              CorpusConfig(language="en"))
+
+        report = scene_report(
+            "## Synthetic chapter\n\nA door shuts.\n\n---\n\nA window opens.",
+            CorpusConfig(language="en"),
+        )
         html = render_scenes_panel(report, None, "en")
         self.assertIn('href="#ch-1"', html)
-        self.assertNotIn('data-line=', html)
+        self.assertNotIn("data-line=", html)
 
     def test_script_ids_are_rendered(self):
         script = "\n".join(
@@ -427,7 +493,10 @@ class TestJsDomContract(unittest.TestCase):
     def test_unified_interaction_contract(self):
         """All content drill-downs are keyboard reachable with one vocabulary."""
         script = (UI_DIR / "assets" / "dashboard.js").read_text(encoding="utf-8")
-        css = (UI_DIR / "assets" / "dashboard.css").read_text(encoding="utf-8")
+        css = "\n".join(
+            (UI_DIR / "assets" / name).read_text(encoding="utf-8")
+            for name in ("design-tokens.css", "components.css", "dashboard.css")
+        )
         html = _full_dashboard()
         # One selector drives click and keyboard activation.
         self.assertIn("var INTERACTIVE = \"[data-jump], [data-line], [role='button']", script)
@@ -488,34 +557,49 @@ class TestJsDomContract(unittest.TestCase):
 
     def test_nda_draft_has_only_the_five_authorized_fields(self):
         title = '<img src=x onerror="window.ndaInjected=true">'
-        rendered = render_dashboard([], [], title=title, controls=True,
-                                    nda_project_name=title,
-                                    enabled_actions=("nda-draft",))
+        rendered = render_dashboard(
+            [],
+            [],
+            title=title,
+            controls=True,
+            nda_project_name=title,
+            enabled_actions=("nda-draft",),
+        )
         form = re.search(r'<form[^>]*id="nda-draft-form".*?</form>', rendered, re.DOTALL)
         self.assertIsNotNone(form)
         fields = re.findall(r'<(?:input|textarea)[^>]*name="([a-z_]+)"', form.group())
         self.assertEqual(fields, ["name", "address", "project_name", "date", "place"])
         self.assertIn('type="date"', form.group())
-        self.assertIn('value="&lt;img src=x onerror=&quot;window.ndaInjected=true&quot;&gt;"', form.group())
+        self.assertIn(
+            'value="&lt;img src=x onerror=&quot;window.ndaInjected=true&quot;&gt;"', form.group()
+        )
         for legacy in ("nda-manager", "nda-table", "nda-passphrase"):
             self.assertNotIn(f'id="{legacy}"', rendered)
         self.assertNotIn("data-nda-statuses=", rendered)
 
     def test_nda_project_name_does_not_copy_a_placeholder_title(self):
-        rendered = render_dashboard([], [], title="No Project Loaded", controls=True,
-                                    enabled_actions=("nda-draft",))
+        rendered = render_dashboard(
+            [], [], title="No Project Loaded", controls=True, enabled_actions=("nda-draft",)
+        )
         field = re.search(r'<input[^>]*id="nda-project-name"[^>]*>', rendered).group()
         self.assertNotIn('value="No Project Loaded"', field)
         self.assertIn('value=""', field)
 
     def test_nda_draft_requires_an_explicit_live_capability(self):
-        for options in ({}, {"controls": True}, {"controls": True, "enabled_actions": ("nda",)},
-                        {"controls": False, "enabled_actions": ("nda-draft",)}):
+        for options in (
+            {},
+            {"controls": True},
+            {"controls": True, "enabled_actions": ("nda",)},
+            {"controls": False, "enabled_actions": ("nda-draft",)},
+        ):
             with self.subTest(options=options):
                 rendered = render_dashboard([], [], **options)
                 self.assertNotIn('id="nda-draft-form"', rendered)
-        self.assertTrue('id="nda-draft-form"' in render_dashboard(
-            [], [], controls=True, enabled_actions=("nda-draft",)), "Explicit NDA capability renders the form")
+        self.assertTrue(
+            'id="nda-draft-form"'
+            in render_dashboard([], [], controls=True, enabled_actions=("nda-draft",)),
+            "Explicit NDA capability renders the form",
+        )
 
 
 class TestLabelCompleteness(unittest.TestCase):
@@ -643,11 +727,24 @@ class TestLabelCompleteness(unittest.TestCase):
             self.assertEqual(missing, [], f"{language}: missing labels {missing}")
 
     def test_minimal_nda_labels_are_translated(self):
-        keys = ("nda_draft_title", "nda_draft_hint", "nda_draft_name", "nda_draft_address",
-                "nda_draft_project", "nda_draft_date", "nda_draft_place", "nda_draft_preview",
-                "nda_draft_pdf", "nda_draft_text", "nda_draft_working", "nda_draft_ready",
-                "nda_draft_downloaded", "nda_draft_failed", "nda_draft_required",
-                "nda_draft_javascript")
+        keys = (
+            "nda_draft_title",
+            "nda_draft_hint",
+            "nda_draft_name",
+            "nda_draft_address",
+            "nda_draft_project",
+            "nda_draft_date",
+            "nda_draft_place",
+            "nda_draft_preview",
+            "nda_draft_pdf",
+            "nda_draft_text",
+            "nda_draft_working",
+            "nda_draft_ready",
+            "nda_draft_downloaded",
+            "nda_draft_failed",
+            "nda_draft_required",
+            "nda_draft_javascript",
+        )
         for language in LANGUAGES:
             with self.subTest(language=language):
                 self.assertFalse([key for key in keys if not WORKSPACE_LABELS[language].get(key)])
@@ -669,7 +766,9 @@ class TestShowDontTellComponents(unittest.TestCase):
         self.assertIn(f'<p class="ctl-note">{note}</p>', rendered)
         self.assertIn('data-jump="#ch-1"', rendered)
 
-        explicit = pacing_report("## One\n\nDer Regen fiel.\n\n---\n\nDie Stadt schwieg.", config).to_dict()
+        explicit = pacing_report(
+            "## One\n\nDer Regen fiel.\n\n---\n\nDie Stadt schwieg.", config
+        ).to_dict()
         self.assertFalse(explicit["scenes_are_chapters"])
         self.assertNotIn(note, render_pacing_panel(explicit, labels, "en"))
         legacy = {key: value for key, value in fallback.items() if key != "scenes_are_chapters"}

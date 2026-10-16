@@ -1,6 +1,6 @@
 """Spacing and typography stay out of inline styles in markup and assets.
 
-Layout uses the shared utility classes in ``dashboard.css``. Inline ``style``
+Layout uses the shared utility classes in ``components.css`` and ``dashboard.css``. Inline ``style``
 remains reserved for measured or dynamic values (bar widths, positions,
 heatmap colours, data-driven alignments) and the functional ``display:none``
 toggle. This test fails when a converted pattern reappears.
@@ -40,8 +40,11 @@ def _violations(markup: str) -> list[str]:
     # Embedded assets are checked in their own test; script bodies contain the
     # dynamic concatenations, not rendered inline styles.
     rendered = SCRIPT.sub("", markup)
-    return [value for value in STYLE.findall(rendered)
-            if FORBIDDEN.search(value) and not ALLOWED_VALUE.match(value.strip())]
+    return [
+        value
+        for value in STYLE.findall(rendered)
+        if FORBIDDEN.search(value) and not ALLOWED_VALUE.match(value.strip())
+    ]
 
 
 def test_rendered_dashboards_use_no_spacing_inline_styles() -> None:
@@ -51,8 +54,14 @@ def test_rendered_dashboards_use_no_spacing_inline_styles() -> None:
         parse_markdown_blocks("## Kapitel\n\nEin Satz mit genug Wörtern für die Analyse.\n")
     )
     context_marker = "opaque-context"
-    loaded = render_dashboard(chapters, paragraphs, controls=True, labels=labels,
-                              language_key="de", research_context_token=context_marker)
+    loaded = render_dashboard(
+        chapters,
+        paragraphs,
+        controls=True,
+        labels=labels,
+        language_key="de",
+        research_context_token=context_marker,
+    )
     for name, markup in (("empty", empty), ("loaded", loaded)):
         assert not _violations(markup), f"{name} dashboard: {_violations(markup)}"
 
@@ -67,23 +76,44 @@ def test_assets_contain_only_measured_or_dynamic_inline_styles() -> None:
                 offenders.append(f"{asset.name}: {value}")
     assert offenders == [], f"Assets must use utility classes instead: {offenders}"
 
-STYLESHEET = ROOT / "src/lixity/ui/assets/dashboard.css"
+
+STYLESHEETS = (
+    ROOT / "src/lixity/ui/assets/components.css",
+    ROOT / "src/lixity/ui/assets/dashboard.css",
+)
 RETIRED_UTILITIES = (
-    "items-center", "mb-3", "mb-5", "mt-5", "mt-6", "mt-8", "mt-10", "my-3",
-    "my-4", "ml-3", "ml-4", "ml-5", "w-full", "gap-sm", "form-col",
-    "form-col-wide", "form-row-between",
+    "items-center",
+    "mb-3",
+    "mb-5",
+    "mt-5",
+    "mt-6",
+    "mt-8",
+    "mt-10",
+    "my-3",
+    "my-4",
+    "ml-3",
+    "ml-4",
+    "ml-5",
+    "w-full",
+    "gap-sm",
+    "form-col",
+    "form-col-wide",
+    "form-row-between",
 )
 
 
 RETIRED_MARKUP_CLASSES = (
-    "analysis-empty-metrics", "banner-warning", "flag-actions",
-    "recent-projects-wrap", "view-nav-label",
+    "analysis-empty-metrics",
+    "banner-warning",
+    "flag-actions",
+    "recent-projects-wrap",
+    "view-nav-label",
 )
 
 
 def test_retired_classes_stay_removed() -> None:
     """Decile utilities and dead markup classes must not come back."""
-    sources = sorted((ROOT / "src/lixity/ui").glob("*.py")) + ASSETS + [STYLESHEET]
+    sources = sorted((ROOT / "src/lixity/ui").glob("*.py")) + ASSETS + list(STYLESHEETS)
     offenders: list[str] = []
     for source in sources:
         text = source.read_text(encoding="utf-8")

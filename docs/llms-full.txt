@@ -6273,7 +6273,12 @@ Rules for changes:
 `src/lixity/ui/assets/design-tokens.css` is the single source for colour,
 radius, type, spacing and elevation, and it is shared with the staged public
 site (`stage_pages.py` copies it; `docs/assets/site.css` imports it). The
-ladders are deliberately short:
+layers are explicit and inlined in this order: **tokens → components → views**.
+`assets/components.css` holds the shared vocabulary (panels, status, focus,
+tables, badges, controls, layout primitives, renderer utilities) with one
+recipe per family; `assets/dashboard.css` holds the view-specific rules.
+`tests/test_ui_publication.py` asserts the layer order for the standalone
+output. The ladders are deliberately short:
 
 - Radius: `--radius-xs` (inline bits), `--radius-sm` (every control),
   `--radius` (cards, panels), `--radius-lg` (modals), `--radius-pill`

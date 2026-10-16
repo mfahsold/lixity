@@ -1,0 +1,265 @@
+/* Shared component vocabulary: panels, status, focus, tables, badges,
+   controls, layout primitives and renderer utilities. One recipe per
+   family; view-specific rules stay in dashboard.css. Loaded after the
+   design tokens and before the views (see _CSS_FILES). */
+/* --- Panels & Cards --------------------------------------------------- */
+.panel {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: var(--panel-padding);
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, .02);
+}
+.panel h2 {
+  color: var(--fg);
+}
+.panel > * { min-width: 0; margin-block: 0; }
+.panel .hint { margin: 0; }
+.style-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
+.style-tabs [aria-selected="true"] { border-color: var(--accent); background: var(--accent-light); }
+#style-panels { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-4); }
+#style-panels > .panel { padding: 0; border: 0; box-shadow: none; background: transparent; }
+.review-routes { display: flex; flex-wrap: wrap; gap: var(--space-2); }
+.review-route { display: flex; flex-direction: column; align-items: flex-start; gap: .7rem; min-width: 0; }
+.review-route h3 { margin: 0; font-size: var(--text-body); }
+.review-route p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.6; }
+.review-route .ctl { display: inline-flex; align-items: center; max-width: 100%; margin-top: auto; text-decoration: none; }
+.manuscript-pdf { min-width: 0; }
+.manuscript-pdf > summary { cursor: pointer; font-size: var(--text-control); line-height: var(--line-control); min-height: 2.5rem; padding: .45rem .8rem; }
+.manuscript-pdf[open] > summary { margin-bottom: var(--space-3); }
+.manuscript-pdf > .ctl-note { margin-top: var(--space-2); }
+.manuscript-pdf-actions { display: flex; flex-wrap: wrap; align-items: flex-end; gap: var(--space-2); }
+.manuscript-pdf-actions .setting-field { flex: 1 1 14rem; max-width: 24rem; min-width: 0; }
+.manuscript-pdf .ctl-note { max-width: 64ch; }
+.manuscript-pdf-actions .ctl { max-width: 100%; white-space: normal; }
+.manuscript-pdf .ctl-status { overflow-wrap: anywhere; }
+.manuscript-pdf .ctl:disabled { cursor: default; }
+.welcome-more > summary { cursor: pointer; font-size: var(--text-small); min-height: 2.75rem; align-content: center; }
+
+/* --- Component status strip (one glance, deterministic) --------------- */
+.status-strip {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .4rem 1.1rem;
+  align-items: center;
+  margin: 0;
+  padding: .55rem .85rem;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  font-size: var(--text-small);
+  color: var(--muted);
+}
+.status-item { display: inline-flex; align-items: center; gap: .4rem; }
+.status-item b { color: var(--fg); font-weight: var(--weight-semibold); }
+.status-dot {
+  width: .5rem;
+  height: .5rem;
+  border-radius: 50%;
+  background: var(--muted);
+  flex: none;
+}
+.status-item.ok .status-dot { background: var(--present); }
+.status-item.warn .status-dot { background: #d97706; }
+.status-item.error .status-dot { background: var(--flag); }
+.status-item.unknown .status-dot { background: var(--neutral); }
+.status-detail {
+  color: var(--muted);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 22rem;
+}
+
+/* --- Focus & anchors (keyboard accessibility) -------------------------- */
+:where(a, button, select, input, textarea, summary, .chip, .help, [role="button"]):focus-visible {
+  outline: 3px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: var(--radius-xs);
+}
+.chapter, .ptext, .panel, section[id] { scroll-margin-top: 4.5rem; }
+
+/* --- Tables ----------------------------------------------------------- */
+.table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.table-wrap table { width: 100%; }
+.flags-wrap table { min-width: 36rem; }
+#matrix table { min-width: 52rem; }
+#matrix td.num { white-space: nowrap; }
+.table-wrap::-webkit-scrollbar { height: .45rem; }
+.table-wrap::-webkit-scrollbar-thumb { background: var(--line); border-radius: var(--radius-pill); }
+table { width: 100%; border-collapse: collapse; font-size: var(--text-small); }
+th, td { text-align: left; padding: .45rem .6rem; border-bottom: 1px solid var(--line); vertical-align: top; overflow-wrap: anywhere; }
+th {
+  color: var(--muted);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  font-size: var(--text-micro);
+  letter-spacing: .06em;
+  background: var(--surface);
+}
+tbody tr:hover { background: rgba(0, 0, 0, .015); }
+tbody tr:last-child td { border-bottom: 0; }
+td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
+
+/* --- Badges & Dimension cards ----------------------------------------- */
+/* One badge family for every panel: uppercase micro text on a pill. Tone
+   classes (.badge-success/-warning/-neutral/-warn) carry the state colours;
+   .research-badge is an alias kept for existing markup. */
+.badge, .research-badge {
+  display: inline-block;
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  padding: .12rem .5rem;
+  border-radius: var(--radius-pill);
+  border: 1px solid transparent;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  background: var(--neutral);
+  color: var(--fg);
+}
+.badge.marker-pruefen { background: #e0f2fe; color: #0369a1; }
+.badge.marker-sachcheck { background: #fef3c7; color: #92400e; }
+.badge.marker-todo { background: #f3e8ff; color: #6b21a6; }
+.badge.marker-achtung { background: #fee2e2; color: #991b1b; }
+.badge.sev-2 { background: #fef3c7; color: #92400e; }
+.badge.sev-3 { background: #fee2e2; color: #991b1b; }
+
+/* --- Controls (local server mode) ------------------------------------- */
+.ctl-group { display: grid; gap: var(--space-3); padding: 0; min-width: 0; }
+.ctl-group > * { min-width: 0; }
+input[type="file"].ctl { max-width: 100%; }
+.ctl-group + .ctl-group { border-top: 1px solid var(--line); padding-top: var(--space-4); }
+/* One micro-label recipe: field groups, project labels, KPI captions and
+   table headers share the uppercase micro style. */
+.ctl-label, .project-label, .kpi-caption, th {
+  font-size: var(--text-micro);
+  font-weight: var(--weight-semibold);
+  text-transform: uppercase;
+  letter-spacing: .08em;
+  color: var(--muted);
+}
+.ctl-note { color: var(--muted); font-size: var(--text-note); line-height: var(--line-compact); margin: 0; }
+button.ctl, #analysis-review a.ctl, select.ctl, input.ctl, textarea.ctl {
+  font-size: var(--text-control);
+  line-height: var(--line-control);
+  min-height: 2.5rem;
+  padding: .45rem .8rem;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  color: var(--fg);
+  cursor: pointer;
+  transition: all .12s ease;
+}
+input.ctl, textarea.ctl { cursor: text; }
+textarea.ctl { resize: vertical; font-family: inherit; }
+input.ctl-code { font-family: var(--font-mono); }
+button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
+button.ctl:hover, #analysis-review a.ctl:hover, select.ctl:hover { border-color: var(--accent); color: var(--accent); }
+button.ctl { transition: transform .12s var(--ease), border-color .16s var(--ease), background .16s var(--ease); }
+button.ctl:active { transform: scale(.97); }
+button.ctl.busy {
+  color: var(--muted);
+  pointer-events: none;
+  position: relative;
+  padding-left: 1.6rem;
+}
+/* One spinner recipe for the three loading contexts: busy buttons, inline
+   status lines and loading placeholders share size, colour and animation. */
+button.ctl.busy::before,
+.ctl-status.loading::before,
+.loading-spinner {
+  content: "";
+  display: inline-block;
+  width: .8rem;
+  height: .8rem;
+  border: 2px solid var(--line);
+  border-top-color: var(--accent);
+  border-radius: 50%;
+  animation: ctl-spin .7s linear infinite;
+  flex-shrink: 0;
+}
+button.ctl.busy::before {
+  position: absolute;
+  left: .55rem;
+  top: 50%;
+  margin-top: -.4rem;
+}
+@keyframes ctl-spin { to { transform: rotate(360deg); } }
+button.ctl.primary, #analysis-review a.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: var(--weight-strong); }
+button.ctl.primary:hover, #analysis-review a.ctl.primary:hover { background: var(--action-hover); color: var(--on-action); }
+button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
+button.ctl.ctl-compact, a.ctl.ctl-compact {
+  min-height: 2rem;
+  padding: .25rem .6rem;
+  font-size: var(--text-small);
+}
+details.nda { border: 1px solid var(--line); border-radius: var(--radius); padding: .5rem .7rem; margin-top: .6rem; }
+details.nda summary { cursor: pointer; font-size: var(--text-control); }
+details.nda .row { margin-top: .5rem; }
+.ctl-status { color: var(--muted); font-size: var(--text-small); min-height: 1.2em; margin-top: .5rem; }
+.ctl-status.ok { color: var(--present); }
+.ctl-status.err { color: var(--flag); }
+.ctl-status.loading {
+  color: var(--muted);
+  display: inline-flex;
+  align-items: center;
+  gap: .45rem;
+}
+.ctl-status:empty { display: none; }
+
+.loading-state {
+  display: inline-flex;
+  align-items: center;
+  gap: .55rem;
+  color: var(--muted);
+  font-size: var(--text-control);
+  padding: .5rem .75rem;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--line);
+  margin-block: .4rem;
+}
+/* .loading-spinner shares the single spinner recipe (see Controls). */
+
+
+/* Shared layout primitives: rows wrap, keep one gap and let sized fields
+   grow. They apply everywhere, not only inside the control panels. */
+.row { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; min-width: 0; }
+.row > * { min-width: 0; }
+.grow { flex: 1 1 0%; min-width: 0; }
+.grow-2 { flex: 2 1 0%; min-width: 0; }
+.field-narrow { min-width: 180px; }
+.field-wide { flex: 1; min-width: 220px; }
+.row-between { align-items: center; justify-content: space-between; }
+
+/* Renderer utilities: shared classes for spacing and sizing that would
+   otherwise be inline styles. The numeric suffix is the shared --space step
+   (1 = .25rem, 2 = .5rem, 3 = .75rem, 4 = 1rem). Measured values (bar widths,
+   positions, colour maps) stay inline; layout uses these classes. */
+.m-0 { margin: 0; }
+.mt-1 { margin-top: var(--space-1); }
+.mt-2 { margin-top: var(--space-2); }
+.mt-3 { margin-top: var(--space-3); }
+.mt-4 { margin-top: var(--space-4); }
+.mb-1 { margin-bottom: var(--space-1); }
+.mb-2 { margin-bottom: var(--space-2); }
+.my-1 { margin-block: var(--space-1); }
+.my-2 { margin-block: var(--space-2); }
+.ml-1 { margin-left: var(--space-1); }
+.ml-2 { margin-left: var(--space-2); }
+.gap-1 { gap: var(--space-1); }
+.gap-2 { gap: var(--space-2); }
+.full-width { width: 100%; }
+.empty-actions { justify-content: center; gap: .6rem; }
+.fw-medium { font-weight: 500; }
+.num-left { text-align: left; }
+.num-right { text-align: right; }
+.text-note { font-size: var(--text-note); }
+.text-small { font-size: var(--text-small); }
+.select-code { user-select: all; cursor: pointer; }

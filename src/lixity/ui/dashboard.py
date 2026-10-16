@@ -73,6 +73,7 @@ from .structural import style_structural
 _ASSET_DIR = _Path(__file__).with_name("assets")
 _CSS_FILES = (
     "design-tokens.css",
+    "components.css",
     "dashboard.css",
     "dossier-images.css",
     "workspace-reader.css",

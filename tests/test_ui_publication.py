@@ -65,7 +65,10 @@ def test_publication_without_explicit_root_is_disabled_with_no_inferred_data() -
 
 def test_canonical_tokens_are_inlined_before_component_styles() -> None:
     html = render_dashboard([], [])
-    assert html.index("--status-success-fg:") < html.index(".research-card {")
+    tokens = html.index("--status-success-fg:")
+    components = html.index("Shared component vocabulary")
+    views = html.index(".empty-analysis-state {")
+    assert tokens < components < views, "Stylesheet layers: tokens, components, views"
     assert "var(--status-warning-fg)" in html
     assert "design-tokens.css" not in html, "Standalone output must not request a stylesheet"
 

@@ -21,6 +21,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `docs/INSTALLATION.md` documents the log location and settings.
 
 ### Changed
+- Structure: the shared stylesheet vocabulary moved into `assets/components.css`
+  (panels, status, focus, tables, badges, controls, layout primitives, renderer
+  utilities) with the layer order tokens → components → views, asserted for the
+  standalone output. The spinner, micro-label and table recipes are consolidated
+  to one source each.
 - Structure: the 3,500-line `assets/research.js` is split into seven topic
   modules (`research-core`, `-content`, `-evidence`, `-lists`, `-review`,
   `-workspace`, `-revisions`). `_JS_FILES` concatenates them in the original
