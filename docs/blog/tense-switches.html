@@ -45,42 +45,43 @@
 <p class="updated">Posted <time datetime="2026-10-15">15 October 2026</time> · 6 minutes · <a href="index.html">Blog</a></p>
 <nav class="guide-nav" aria-label="Blog"><a href="index.html" aria-current="page">Blog</a><a href="../guides/first-look.html">First look</a><a href="../guides/interpretation.html">Interpret results</a><a href="../examples/effi-briest.html">Example analysis</a></nav>
 
-<h2 id="why">Why tense breaks are a macro-editing topic</h2>
-<p>A tense break is rarely a grammar mistake. In a novel, the base tense is a narrative decision: past for a retrospective narrator, present for immediate scenes, historical present for pressure. What readers notice is not a rule being broken but a <em>signal</em> being sent — often at the wrong moment. Reading an entire manuscript for those signals is slow; that is why editors work with passage-level evidence instead of impressions.</p>
+<h2 id="why">A tense break is rarely a typo</h2>
+<p>The base tense of a novel is a choice. Past tense gives you a narrator looking back. Present tense puts the reader right inside the scene. The historical present adds pressure. A break between them is not a grammar mistake — it is a <em>signal</em> to the reader. The question is only whether you meant to send it, and whether it arrives at the right moment. Reading an entire manuscript just to find those moments is slow, which is why editors work with passages instead of impressions.</p>
 
-<h2 id="what">What Lixity measures</h2>
-<p>Lixity profiles tense at two levels. Every paragraph gets a heuristic dominance — <strong>present</strong>, <strong>past</strong>, <strong>mixed</strong> or <strong>neutral</strong> — with a severity score from 0 to 3 for paragraphs that switch tense or mix it noticeably. Every chapter gets a dominant tense as well, which is what readers experience as the “base” of a scene.</p>
-<p>Two result sets matter here, and they are different things:</p>
+<h2 id="what">What Lixity shows you</h2>
+<p>Lixity reads your manuscript on your own computer and gives every paragraph a simple tense reading: <strong>present</strong>, <strong>past</strong>, <strong>mixed</strong> or <strong>neutral</strong>. Paragraphs that switch or noticeably mix tenses also get a small strength rating from 0 to 3.</p>
+<p>Out of that come two lists, and they answer different questions:</p>
 <ul>
-<li><strong>Flagged paragraphs</strong> (severity ≥ 2) are the short list for review: passages where a switch or a strong mix shows up inside one paragraph.</li>
-<li><strong>Chapter dominance</strong> describes the surrounding norm. Without it, a switch has no reference point.</li>
+<li><strong>Flagged passages</strong> (rating 2 or higher) are your short list: the paragraphs worth a second look.</li>
+<li><strong>The chapter line</strong> tells you the surrounding norm — the tense a reader experiences as the “base” of the scene. Without it, a single switch has nothing to stand out from.</li>
 </ul>
-<p>The profiles are heuristics over verb forms and markers, not a grammatical parse. Dialogue, embedded clauses and reported speech all shape the counts — which is exactly why the workflow ends with a human reading the passage, not with a number.</p>
+<p>One honest sentence: these readings come from verb forms and markers, not from a grammar parse. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage — not a number.</p>
 
-<h2 id="workflow">The workflow, step by step</h2>
+<h2 id="workflow">The review loop, step by step</h2>
 <ol>
-<li><strong>Install and open.</strong> <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code> and choose <strong>Open Project</strong> for your manuscript folder. (See the <a href="../guides/installation.html">installation guide</a> for Windows, macOS and Linux.)</li>
-<li><strong>Start with the review panel.</strong> <strong>Start your review</strong> offers <strong>Open passage</strong> (the first paragraph that meets your flag threshold, in source order), <strong>Explore chapters</strong> and <strong>Open sentence rhythm</strong>.</li>
-<li><strong>Work the flagged list.</strong> The <strong>Flagged passages</strong> panel lists every paragraph at or above the threshold, sorted by severity and line. Each row jumps into the manuscript: the paragraph opens, the page scrolls, the passage flashes — with the “flagged only” filter set, so the rest of the page disappears.</li>
-<li><strong>Read the context before judging.</strong> Expand <strong>Values</strong> inside the opened paragraph for the source lines and measurements. Check the scene: is the switch carried by a letter, a memory, an interior monologue? The chapter line in the header shows the chapter’s dominant tense, so you can see whether the paragraph deviates from its surroundings.</li>
-<li><strong>Record the decision where you read it.</strong> The marker buttons (<strong>+ To-do</strong>, <strong>+ Check</strong>, <strong>+ Attention</strong>) write a review marker into the manuscript as a Markdown comment — invisible in your normal reading view, listed later in the <strong>Work markers</strong> panel.</li>
+<li><strong>Install and open.</strong> <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code> and choose <strong>Open Project</strong> for your manuscript folder. (Windows, macOS and Linux are covered in the <a href="../guides/installation.html">installation guide</a>.) If you just want to see the loop first: the <a href="../demo/report.html">demo report</a> opens in your browser, no install.</li>
+<li><strong>Start with the review panel.</strong> <strong>Start your review</strong> offers <strong>Open passage</strong> (the first paragraph above your threshold, in reading order), <strong>Explore chapters</strong> and <strong>Open sentence rhythm</strong>.</li>
+<li><strong>Work the flagged list.</strong> The <strong>Flagged passages</strong> panel lists every paragraph at or above your threshold, sorted by strength and line. Click a row and the paragraph opens, the page scrolls, the passage flashes — with the “flagged only” filter set, so the rest of the page gets out of your way.</li>
+<li><strong>Read the context before you judge.</strong> Inside the opened paragraph, <strong>Values</strong> shows the source lines and the measurements. Then look at the scene: is the switch carried by a letter, a memory, an interior monologue? The chapter line in the header shows you the norm you are comparing against.</li>
+<li><strong>Write your decision where you read it.</strong> The marker buttons (<strong>+ To-do</strong>, <strong>+ Check</strong>, <strong>+ Attention</strong>) leave a review note in the manuscript as a Markdown comment. It stays invisible while you read and shows up later in the <strong>Work markers</strong> panel.</li>
 </ol>
 
-<h2 id="deliberate">When a switch is deliberate</h2>
-<p>Severity measures a change, not a mistake. Common intentional cases:</p>
+<h2 id="deliberate">When a switch is on purpose</h2>
+<p>A high rating measures a change, not a mistake. These cases are usually intentional:</p>
 <ul>
-<li><strong>Letters and documents.</strong> A quoted letter often shifts to present or to a different register; readers expect the frame to change.</li>
-<li><strong>Flashbacks and frame narratives.</strong> A chapter that moves from present to past may be doing exactly what the structure asked for.</li>
-<li><strong>Free indirect speech.</strong> A character’s inner voice can pull the tense without a scene break — deliberate, but easy to overuse.</li>
-<li><strong>Cliffhangers and scene turns.</strong> A single present-tense paragraph at the end of a past-tense chapter can be a strong, intentional accent.</li>
+<li><strong>Letters and documents.</strong> A quoted letter often shifts into present or into a different register; readers expect the frame to change.</li>
+<li><strong>Flashbacks and frame stories.</strong> Moving from present to past may be exactly what the structure asked for.</li>
+<li><strong>Free indirect speech.</strong> A character’s inner voice can pull the tense along — effective, but easy to overuse.</li>
+<li><strong>A scene turn.</strong> One present-tense paragraph at the end of a past-tense chapter can be a strong, deliberate accent.</li>
 </ul>
-<p>The flagged list does not decide any of this. It makes sure that no unintended break hides in a 400-page manuscript, and that intended ones are visible enough to be a choice.</p>
+<p>The flagged list decides none of this. It makes sure no unintended break hides in a long manuscript — and that the intended ones are visible enough to be a choice.</p>
 
-<h2 id="limits">Reading limits</h2>
-<p>Verb-form heuristics miss irony, ellipsis and unusual syntax; short chapters produce noisy estimates; per-paragraph profiles in dialogue-heavy scenes reflect speaker turns. The <a href="../guides/interpretation.html">interpretation guide</a> and the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">methods document</a> explain the estimators; the <code>flag_min_severity</code> setting (1–3) controls how strict the flagged list is. Statistical signals support a human review — they are not an instruction to rewrite prose, and they are not a quality score.</p>
+<h2 id="limits">What this can and cannot do</h2>
+<p>Verb-form patterns miss irony, ellipsis and unusual syntax. Very short chapters give noisy estimates, which is why Lixity now marks them “not comparable” instead of ranking them. Dialogue-heavy scenes reflect speaker turns, not narrative tense. The <code>flag_min_severity</code> setting (1–3) controls how strict your short list is; start at 2. Lixity never rewrites anything — it is a flashlight, not a judge. The <a href="../guides/interpretation.html">interpretation guide</a> and the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">methods document</a> explain the details.</p>
 
 <h2 id="try">Try it without installing</h2>
-<p>The <a href="../examples/effi-briest.html">Effi Briest example</a> and the <a href="../examples/pride-and-prejudice.html">Pride and Prejudice example</a> are complete, public-domain analyses you can open in the browser. For your own text: install, open the project, and start with a single chapter — the review loop is the same at any length.</p>
+<p>The <a href="../demo/report.html">demo report</a> is made from invented text and opens in your browser. The <a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> examples are complete analyses of public-domain novels. For your own manuscript: install, open the project, and review one chapter — the loop is the same at any length.</p>
+
 <footer><a href="../">Lixity home</a> · <a href="index.html">Blog</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
 </main>
 </body>

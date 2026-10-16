@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>What's new in Lixity — Lixity blog</title>
-<meta name="description" content="Comparable chapter statistics with documented floors, evidence anchors that tolerate editing, a quieter research workspace and one consistent interface — what changed in Lixity 0.4.7 and in the current main branch."/>
+<meta name="description" content="Comparable chapter statistics with documented floors, evidence anchors that tolerate editing, a quieter research workspace and one consistent interface — what changed in Lixity 0.4.8."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
@@ -47,57 +47,59 @@
 
 <p>Lixity is a local-first manuscript analysis tool: it reads a novel on your own computer, shows the rhythm, vocabulary, dialogue and tense behind every result — and keeps the research behind your decisions in one workspace. This release line is about two kinds of trust: <strong>numbers you can actually compare</strong>, and <strong>evidence that does not silently rot</strong> while you edit.</p>
 
-<h2 id="floors">Comparable or marked, never guessed</h2>
-<p>Small chapters used to produce big-looking statistics. A three-sentence stage note could outrank a full chapter in a z-score table simply because short samples are noisy. Comparisons now use documented floors:</p>
+<h2 id="floors">Small chapters no longer shout</h2>
+<p>Short texts are noisy. A three-sentence stage note can look extreme in a z-score table — not because the writing is extreme, but because three sentences are simply not much to measure. So comparisons now have a floor, and they tell you when they cannot say something useful:</p>
 <ul>
-<li>Chapters below <strong>100 words</strong> (<code>MIN_COMPARABLE_WORDS</code>) get no z-scores, effect sizes or FDR marks.</li>
-<li>Sentence-distribution features (staccato, cascade, sentence CV, start entropy, first-person starts) need at least <strong>five sentences</strong> (<code>MIN_COMPARABLE_SENTENCES</code>).</li>
-<li>Showing/telling comparisons use the same word floor and mark short chapters as not comparable instead of inventing a ranking.</li>
+<li>Chapters under <strong>100 words</strong> get no z-scores, no effect sizes, no FDR marks.</li>
+<li>Features about sentence variety (staccato, cascade, sentence length variation) need at least <strong>five sentences</strong>.</li>
+<li>Showing/telling comparisons use the same 100-word floor and mark short chapters “not comparable” instead of giving them a ranking.</li>
 </ul>
-<p>Where a value is withheld, the interface says why — the panel explains the minimum in all seven supported languages instead of hiding the reference silently. Recompute older reports before comparing: the numbers above are honest now, not retroactively patched.</p>
-<p>A smaller fix with the same intent: sentence segmentation no longer merges across blank-line blocks. A salutation, a stage note or a sign-off stays one unit; chapter ASL, scene units and the corpus sentence statistics finally agree on every count.</p>
+<p>Where a value is withheld, the interface explains why — in all seven supported languages. If you have older reports, rebuild them once before comparing; the new numbers are honest, the old ones were optimistic.</p>
+<p>On the same theme: sentence counting now respects blank-line boundaries. A salutation, a stage note or a sign-off stays one unit, and chapter rhythm, scene units and the corpus statistics finally agree with each other.</p>
 
 <h2 id="digest">The dashboard notices when your manuscript changed</h2>
-<p>The local dashboard now checks the manuscript digest when the page loads. If the file changed on disk since the last build, it rebuilds itself instead of presenting yesterday's numbers with today's confidence. No more quietly stale chapter counts.</p>
+<p>The local dashboard checks your manuscript when the page loads. If the file changed on disk since the last build, it rebuilds itself instead of showing yesterday’s numbers with today’s confidence.</p>
 
-<h2 id="anchors">Evidence anchors that tolerate editing</h2>
-<p>Research links between a source quote and a claim or decision are stored as exact anchors: quote, paragraph hash, line span, offsets. Editing is normal, so the review state now distinguishes two cases:</p>
+<h2 id="anchors">Quotes that survive your edits</h2>
+<p>Research links between a source quote and a claim are stored as exact anchors — the quote, the paragraph, the line range. Editing is normal, so the review view now tells two cases apart:</p>
 <ul>
-<li><strong>Edits outside the quote</strong> (the quote still appears exactly once, the paragraph moved or grew): the link is marked <em>adjusted</em> and can be re-pinned in one step — via the review tab or <code>lixity research reconcile-manuscript --accept-moved</code>. The refreshed line span, hash and offsets become a new link revision.</li>
-<li><strong>Edits inside the quote</strong>: the link is <em>changed</em> and stays in review. Lixity never re-pins automatically, because only you can decide whether the meaning survived.</li>
+<li><strong>Changed outside the quote</strong> (the quote is still there, the paragraph moved or grew): the link is marked <em>adjusted</em> and can be re-pinned in one step — in the review tab or with <code>lixity research reconcile-manuscript --accept-moved</code>.</li>
+<li><strong>Changed inside the quote</strong>: the link stays in review. Lixity never re-pins it on its own, because only you can decide whether the meaning survived.</li>
 </ul>
-<p>Chronology entry also got friendlier: a plain hyphen between four-digit years (<code>1929-1933</code>) is now accepted as a same-precision range next to the typographic dashes.</p>
+<p>Small thing, same spirit: you can now type a plain hyphen between years (<code>1929-1933</code>). Lixity reads it as the range you meant.</p>
 
-<h2 id="research">A quieter research workspace</h2>
-<p>The research workspace keeps sources, dossiers, claims, decisions, evidence links and review markers. Recent polish:</p>
+<h2 id="research">A calmer research workspace</h2>
+<p>The research side keeps sources, dossiers, claims, decisions and evidence in one local archive. Recent polish:</p>
 <ul>
-<li>The <strong>timeline is a view, not a planet</strong>: it lives as a List/Timeline switch inside <em>Claims &amp; evidence</em>, next to the entries it orders. The decisions pane states its scope — deliberate choices with a rationale, not historical claims.</li>
-<li><strong>Zotero stays a catalogue, visibly.</strong> Cards show a quiet <em>Zotero ↗</em> link, a type line, and metadata as a proper card; tags are clickable and filter the list. Capturing a source into the archive remains an explicit act.</li>
-<li>Evidence panels keep their loaded citations when other lists refresh — the panel state lives in the list model instead of being rebuilt under you.</li>
-</ul>
-
-<h2 id="interface">One interface, one cast</h2>
-<p>The interface had grown a decade of small decisions: ten border radii, fifteen font sizes between 0.72 and 0.84 rem, three spinner recipes, two tab languages. The current main branch replaces that with a small, enforced system:</p>
-<ul>
-<li><strong>One scale</strong> in the design tokens (radius, type, spacing, colour) — used by the app and the staged documentation site, not copied.</li>
-<li><strong>One control language</strong>: the workspace switch and the research sub-tabs share one tab recipe, badges and tags are one pill family, and compact controls keep the 44 px touch minimum on touch devices.</li>
-<li>A <strong>component layer</strong> (vendored Preact, no build step, CSP-compatible without <code>unsafe-eval</code>) now renders the list panels. That fixed a real bug along the way: the server-rendered “Loading…” placeholder no longer lingers beside the loaded list.</li>
-<li>The <code>visual-consistency</code> browser suite fails when control radii, badge shapes or sampled text sizes leave the scale — the system cannot drift back into one-off values.</li>
+<li>The <strong>timeline is a view</strong>, not a separate world: switch between <strong>List</strong> and <strong>Timeline</strong> right where your claims live. The decisions pane says what it is for — deliberate choices with a reason, not historical claims.</li>
+<li><strong>Zotero stays a catalogue, visibly.</strong> Cards show a quiet <em>Zotero ↗</em> link and a type line; tags filter the list. Capturing a source into your archive is still a deliberate click, never a background sync.</li>
+<li>Evidence panels keep their citations when other lists refresh — nothing you loaded gets rebuilt under your hands.</li>
 </ul>
 
-<h2 id="logging">Logging you can actually find</h2>
-<p>Diagnostics now run through one logging tree with a single UTC format and standard levels. The managed service appends to <code>service-PORT.log</code>, and starting an oversized log rotates it (<code>.1</code>–<code>.3</code>) so it stays bounded. <code>--debug</code>, <code>LIXITY_DEBUG</code> and <code>LIXITY_LOG_LEVEL</code> control the level; <code>lixity service status</code> prints the log path. Request logs keep the route <strong>without</strong> its query string, so research context and project tokens stay out of the file — and log records never contain manuscript text.</p>
+<h2 id="interface">One look, everywhere</h2>
+<p>The interface had collected a decade of small decisions: ten border radii, fifteen font sizes between 0.72 and 0.84 rem, three different spinners, two kinds of tabs. That is now one small system:</p>
+<ul>
+<li><strong>One scale</strong> for corners, text sizes and spacing — shared by the app and the documentation site.</li>
+<li><strong>One control language</strong>: the workspace switch and the research tabs are the same control, badges and tags are one family, and touch devices get 44-pixel targets everywhere.</li>
+<li><strong>A component layer</strong> now renders the list panels (plain vendored JavaScript, no build step). It also fixed a real annoyance: the “Loading…” placeholder no longer lingers next to the loaded list.</li>
+<li>A test suite now fails the build if a new one-off value sneaks in — the system cannot quietly drift back.</li>
+</ul>
 
-<h2 id="security">Security baseline, written down</h2>
-<p>The dashboard shell carries a per-response nonce Content Security Policy (default-deny scripts, inline styles only), <code>Cross-Origin-Opener-Policy</code> and a <code>Permissions-Policy</code> denying device APIs. Loopback bind, Host allow-list, Origin guard, payload and artifact limits and explicit non-goals are documented in the repository's <code>SECURITY.md</code>. Nothing about your manuscript is uploaded: analysis and research stay on your machine.</p>
+<h2 id="logging">Logs you can actually find</h2>
+<p>Diagnostics now go through one logging setup: one line format, standard levels, and a log file that stays bounded (older entries are rotated, not deleted silently). <code>--debug</code>, <code>LIXITY_DEBUG</code> and <code>LIXITY_LOG_LEVEL</code> choose how much you see, and <code>lixity service status</code> prints the path. Request logs keep the route but never the query string, so research context and project tokens stay out of the file — and log records never contain manuscript text.</p>
+
+<h2 id="security">Your privacy, in plain words</h2>
+<p>Lixity runs on your computer. Nothing is uploaded, there is no account, and the browser page only runs the scripts that ship with it (that is what the strict Content Security Policy means). Loopback bind, host allow-list, payload limits and explicit non-goals are written down in the project’s <code>SECURITY.md</code>. The statistical signals support your review; they are not a quality score, and they are not an instruction to rewrite your prose.</p>
 
 <h2 id="try">Try it</h2>
 <ul>
-<li><a href="../guides/first-look.html">Three-minute first look</a> — chapter comparison, a passage and its measurements.</li>
-<li><a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> — complete public-domain analyses in the browser.</li>
-<li>Install: <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code>.</li>
+<li><a href="../demo/report.html">Demo report</a> — invented text, opens in your browser, no install.</li>
+<li><a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> — complete analyses of public-domain novels.</li>
+<li><a href="../guides/first-look.html">First look</a> — from chapter comparison to the passage behind a number, in three minutes.</li>
+<li>For your own manuscript: <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code>.</li>
 </ul>
-<p>The statistical signals support a human review — they are not a quality score, and they are not an instruction to rewrite prose. That has not changed, and it never will.</p>
+<p>If you try it: tell me which passage surprised you — that is the feedback that shapes the next release.</p>
+
 <footer><a href="../">Lixity home</a> · <a href="index.html">Blog</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
 </main>
 </body>

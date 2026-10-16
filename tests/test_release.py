@@ -176,3 +176,21 @@ def test_invalid_fresh_build_preserves_existing_artifacts(
         release_script.build(root, dist)
     assert stale.read_bytes() == b"preserve until successful build"
     assert {path.name for path in dist.iterdir()} == {"lixity-old.whl"}
+
+def test_every_ui_asset_file_is_covered_by_package_data() -> None:
+    """The wheel must ship every asset: the dashboard inlines them from package data."""
+    try:
+        import tomllib
+    except ModuleNotFoundError:  # Python 3.10
+        import tomli as tomllib
+
+    root = Path(__file__).resolve().parents[1]
+    config = tomllib.loads((root / "pyproject.toml").read_text(encoding="utf-8"))
+    patterns = config["tool"]["setuptools"]["package-data"]["lixity"]
+    package = root / "src" / "lixity"
+    covered = set()
+    for pattern in patterns:
+        covered.update(path.resolve() for path in package.glob(pattern) if path.is_file())
+    files = [path for path in (package / "ui" / "assets").rglob("*") if path.is_file()]
+    missing = sorted(str(path.relative_to(package)) for path in files if path.resolve() not in covered)
+    assert missing == [], f"UI assets missing from package-data: {missing}"

@@ -7,7 +7,7 @@
 > and deterministic for fixed text and settings. Research records also contain
 > generated IDs and timestamps.
 
-Current release: 0.4.7; release tag: v0.4.7.
+Current release: 0.4.8; release tag: v0.4.8.
 
 Full-text bundle for offline ingestion: https://mfahsold.github.io/lixity/llms-full.txt
 
@@ -241,7 +241,7 @@ uv tool update-shell
 ```
 
 For a pinned, checksum-verifiable setup, install the release wheel instead:
-`uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.7/lixity-0.4.7-py3-none-any.whl"`
+`uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.8/lixity-0.4.8-py3-none-any.whl"`
 (the release page also carries `SHA256SUMS`).
 
 Open a new terminal, then verify and start:

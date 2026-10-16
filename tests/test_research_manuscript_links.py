@@ -561,6 +561,28 @@ def test_cli_reconcile_previews_and_accepts_adjusted(manuscript_archive, capsys)
     assert api.review_manuscript_links(project, manuscript)["review_needed_count"] == 0
 
 
+def test_cli_manuscript_path_works_positionally(manuscript_archive, capsys):
+    import argparse
+    import json
+
+    from lixity.research import cli
+
+    project, _, _, _ = manuscript_archive
+    parser = argparse.ArgumentParser()
+    cli.configure(parser)
+    positional = parser.parse_args(["review-manuscript", "--project", str(project), "draft.md"])
+    assert positional.manuscript == "draft.md"
+    flag = parser.parse_args(["review-manuscript", "--project", str(project), "--manuscript", "draft.md"])
+    assert flag.manuscript == "draft.md"
+    assert cli.run(positional) == 0
+    assert "links" in json.loads(capsys.readouterr().out)
+    with pytest.raises(SystemExit):
+        parser.parse_args(["review-manuscript", "--project", str(project)])
+    with pytest.raises(SystemExit):
+        parser.parse_args(["review-manuscript", "--project", str(project), "draft.md",
+                           "--manuscript", "draft.md"])
+
+
 def test_cli_find_anchor_and_quote_convenience(manuscript_archive, capsys):
     import argparse
     import json

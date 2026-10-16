@@ -61,6 +61,14 @@ outside detected quotations. The legacy whitespace count `clean_words` is
 unchanged and is not the dialogue-ratio denominator. Recompute older dialogue
 reports and dependent style results before comparing across this correction.
 
+Density features (`filter_density`, modal, passive, nominalisation) are counts
+over the whole prose scope including detected quotations: a perception verb in
+direct speech contributes like one in the narrating voice. The reports do not
+attribute speakers. Treat a high density together with the chapter's
+`dialog_pct` — a value carried by dialogue is characterisation, not narration.
+A narrative-only variant of these densities is a documented candidate for a
+future schema, not part of the current contract.
+
 The 3D dashboard displays up to three derived dimension scores. A point is
 flagged when a completed dimension score reaches the configured absolute
 cutoff on any displayed axis. All feature contributions must be summed before

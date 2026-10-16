@@ -32,6 +32,15 @@ def _non_negative(value: str) -> int:
     return number
 
 
+def _add_manuscript_argument(command: argparse.ArgumentParser) -> None:
+    """Accept the manuscript path positionally (like analyze/scenes) or via --manuscript."""
+    selector = command.add_mutually_exclusive_group(required=True)
+    selector.add_argument("manuscript", nargs="?", default=argparse.SUPPRESS,
+                          help="Manuscript path inside the explicit project")
+    selector.add_argument("--manuscript", dest="manuscript",
+                          help="Manuscript path inside the explicit project (same as the positional argument)")
+
+
 def configure(parser: argparse.ArgumentParser) -> None:
     commands = parser.add_subparsers(dest="research_command", required=True)
     schema_command = commands.add_parser("schema", help="Export the experimental entity JSON schema")
@@ -149,8 +158,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
         if name in ("link-manuscript", "review-manuscript"):
-            command.add_argument("--manuscript", required=True,
-                                 help="Manuscript path inside the explicit project")
+            _add_manuscript_argument(command)
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "link-manuscript":
             command.add_argument("--claim-id", required=True)
@@ -177,16 +185,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--claim-id", help="Only associations of this claim")
             command.add_argument("--include-retracted", action="store_true")
         if name == "find-anchor":
-            command.add_argument("--manuscript", required=True,
-                                 help="Manuscript path inside the explicit project")
+            _add_manuscript_argument(command)
             command.add_argument("--query", required=True,
                                  help="Exact displayed-text quote (inline Markdown markers removed)")
             command.add_argument("--line", type=int,
                                  help="Restrict the search to the paragraph containing this source line")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "reconcile-manuscript":
-            command.add_argument("--manuscript", required=True,
-                                 help="Manuscript path inside the explicit project")
+            _add_manuscript_argument(command)
             command.add_argument("--link-id", help="Only this association (default: every uniquely resolvable association)")
             command.add_argument("--accept-moved", action="store_true",
                                  help="Accept uniquely resolvable anchors (moved or adjusted paragraphs); "

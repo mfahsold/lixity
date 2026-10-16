@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.8] - 2026-10-16
+
 ### Added
 - UI component layer for stateful panels: the dashboard vendors Preact 10.29.8
   (MIT) and htm 3.1.1 (Apache-2.0) as pinned, integrity-checked files and
@@ -20,11 +22,20 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   stderr handler and rotation for the captured service log at service start.
   `docs/INSTALLATION.md` documents the log location and settings.
 
+### Fixed
+- Manuscript-link commands (`link-manuscript`, `review-manuscript`,
+  `find-anchor`, `reconcile-manuscript`) accept the manuscript path
+  positionally like the analysis commands, or via `--manuscript PATH`; exactly
+  one of the two forms is required (both together fail).
+- The reader panel's dossier select and refresh button line up: a panel margin
+  broke the flex-end alignment and pushed the button 11 px below the select.
+- Compact controls (`.ctl-sm`) keep the 44 px touch minimum on coarse
+  pointers; the rule previously lost to the size variant on specificity.
+
 ### Changed
 - Controls: the dimension buttons build on the shared control recipe
   (`.dim-ctl` is a compact variant), the field label/help recipes and the
-  selected state (`aria-pressed`/`.active`) have one source each, and compact
-  controls keep the 44 px touch minimum on coarse pointers.
+  selected state (`aria-pressed`/`.active`) have one source each.
 - Structure: the shared stylesheet vocabulary moved into `assets/components.css`
   (panels, status, focus, tables, badges, controls, layout primitives, renderer
   utilities) with the layer order tokens → components → views, asserted for the
@@ -52,6 +63,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   line naming both views; the decisions pane states its scope ("deliberate
   choices with rationale, not historical claims"). No API, archive or route
   changes.
+- Documentation: the interpretation guide and METHODS state that
+  `filter_density`, modal, passive and nominalisation densities include quoted
+  speech, and how to read them together with `dialog_pct`; a narrative-only
+  variant is recorded as a candidate, not a current contract.
 
 ## [0.4.7] - 2026-10-16
 
@@ -2109,7 +2124,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.7...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.8...HEAD
+[0.4.8]: https://github.com/mfahsold/lixity/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/mfahsold/lixity/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/mfahsold/lixity/compare/v0.4.5...v0.4.6
 [0.4.5]: https://github.com/mfahsold/lixity/compare/v0.4.4...v0.4.5

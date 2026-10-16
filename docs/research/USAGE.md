@@ -163,14 +163,17 @@ anchor stays in revision history.
 and still fail when the bytes or the archive change before saving.
 
 ```sh
-lixity research find-anchor --project ./novel --manuscript novel.md --query "exact quote"
-lixity research link-manuscript --project ./novel --manuscript novel.md \
+lixity research find-anchor --project ./novel novel.md --query "exact quote"
+lixity research link-manuscript --project ./novel novel.md \
   --claim-id CLAIM_ID --claim-revision 2 --quote "exact quote" --allow-retention
 lixity research manuscript-links --project ./novel
-lixity research review-manuscript --project ./novel --manuscript novel.md
-lixity research reconcile-manuscript --project ./novel --manuscript novel.md            # Vorschau
-lixity research reconcile-manuscript --project ./novel --manuscript novel.md --accept-moved
+lixity research review-manuscript --project ./novel novel.md
+lixity research reconcile-manuscript --project ./novel novel.md            # Vorschau
+lixity research reconcile-manuscript --project ./novel novel.md --accept-moved
 ```
+
+The manuscript path is accepted positionally (like `analyze`, `scenes`, `showing`)
+or as `--manuscript PATH`; pass exactly one of the two forms.
 
 A changed source-file digest (`source_changed`, for example after an edit in an
 unrelated chapter) is informational and does not mark an association for review

@@ -89,7 +89,7 @@ version = { attr = "lixity._version.__version__" }
 where = ["src"]
 
 [tool.setuptools.package-data]
-lixity = ["py.typed", "ui/assets/*"]
+lixity = ["py.typed", "ui/assets/*", "ui/assets/vendor/*"]
 
 [tool.pytest.ini_options]
 markers = ["native_pdf: requires real Poppler executables rather than synthetic subprocesses"]
