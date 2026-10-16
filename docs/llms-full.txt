@@ -88,7 +88,10 @@ reinstall a pinned release wheel) and restart the local workspace; see the
 [update instructions](docs/INSTALLATION.md#updates-and-removal).
 
 Use `lixity service status`, `lixity service restart` or `lixity service stop`
-for the managed instance. Before uninstalling, stop managed instances and
+for the managed instance. `status` prints the service log path; diagnostics use
+one UTC log format with levels (`--debug`, `LIXITY_DEBUG`, `LIXITY_LOG_LEVEL`)
+and an oversized log is rotated at start. See
+[logs](docs/INSTALLATION.md#logs). Before uninstalling, stop managed instances and
 disable any login startup you configured, then run `uv tool uninstall lixity`.
 Manuscripts and research archives remain in their project folders.
 [Lifecycle reference](docs/INSTALLATION.md#running-the-server).
@@ -180,7 +183,9 @@ records what a source says; its accuracy still needs review.
 
 <a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Local visual reference inside a dossier section, with a description and an explicit synthetic-source caption" width="900" /></a>
 
-Bring sources from local files or the optional Zotero Desktop bridge. PDF scans
+Bring sources from local files or the optional Zotero Desktop bridge. Zotero
+stays a catalogue: cards link back quietly, the type line explains the item, and
+tags filter the list. PDF scans
 can use locally installed Tesseract or a configured OCR worker. Import warnings
 explain when extraction is incomplete or a requested fallback was used. Select
 text within an opened source paragraph to prepare an evidence-link draft, with
@@ -192,8 +197,10 @@ chosen notes beside the manuscript.
 links refer to an older version. You can inspect the earlier and current
 versions before deciding to update a link. Saved manuscript associations—a
 selected quote linked to a claim—appear in the same tab with their anchor state
-and review flags; a moved or changed anchor stays unresolved and is never
-repinned silently. Related dossier edits can be
+and review flags. An edit outside the quote resolves as *adjusted* and can be
+re-pinned explicitly (review tab or
+`reconcile-manuscript --accept-moved`); editing the quote itself stays
+unresolved. Nothing is repinned silently. Related dossier edits can be
 previewed and saved together; if another edit conflicts, the preview helps you
 resolve it while preserving your draft.
 
@@ -202,8 +209,9 @@ Earlier dossier versions keep their original image; no remote picture is fetched
 and images receive no text scores. **Edit section**, **Add claim** and **Add
 decision** keep a large topic manageable without copying whole documents or IDs.
 
-**Chronology:** the Claims **Timeline** sorts every claim with an explicit
-calendar period (`1926`, `1926-03`, `1926-03-15`, `1924–1926`) on a shared axis and links
+**Chronology:** the **Timeline** view inside *Claims & evidence* sorts every
+claim with an explicit
+calendar period (`1926`, `1926-03`, `1926-03-15`, `1924–1926`, `1929-1933`) on a shared axis and links
 each bar to its claim card. Free-text periods such as "present day" stay visibly
 unplaced with a reason and a formatting hint; placement never verifies a
 historical fact.

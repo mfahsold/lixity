@@ -12,7 +12,7 @@ const root = path.join(artifacts, 'site');
 const python = process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python');
 const staged = spawnSync(python, ['scripts/stage_pages.py', '--output', root], {cwd: repository, encoding: 'utf8'});
 assert.equal(staged.status, 0, staged.stderr);
-const routes = ['', 'guides/installation.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'guides/first-look.html', 'demo/report.html', 'examples/effi-briest.html', 'examples/pride-and-prejudice.html'];
+const routes = ['', 'guides/installation.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'guides/first-look.html', 'demo/report.html', 'examples/effi-briest.html', 'examples/pride-and-prejudice.html', 'blog/index.html', 'blog/whats-new-lixity.html'];
 
 async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('.page').count(), 1, 'The example uses the generated report layout');
@@ -109,7 +109,8 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         assert.equal(url.origin, 'http://lixity.test', 'Public pages must not require external requests');
         assert.ok(url.pathname.startsWith('/lixity/'), 'The public journey must not call an API');
         const relative = decodeURIComponent(url.pathname).replace(/^\/lixity\//, '') || 'index.html';
-        const file = path.resolve(root, relative);
+        let file = path.resolve(root, relative);
+        if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
         assert.ok(file.startsWith(root + path.sep));
         assert.ok(fs.existsSync(file), `Missing public asset ${relative}`);
         const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml'}[path.extname(file)];
@@ -213,6 +214,14 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'auto');
           await page.evaluate(() => localStorage.removeItem('lixity-theme'));
         }
+        // The blog index lists the newest article; its page renders standalone.
+        await page.goto('http://lixity.test/lixity/blog/');
+        const newestArticle = page.locator('article h2 a[href="whats-new-lixity.html"]');
+        assert.equal(await newestArticle.count(), 1, 'The blog index links the newest article');
+        await newestArticle.click();
+        assert.ok(page.url().endsWith('/blog/whats-new-lixity.html'));
+        assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),
+          'https://mfahsold.github.io/lixity/blog/whats-new-lixity.html', 'Canonical URL matches the published page');
       }
       assert.deepEqual(errors, []);
       await context.close();

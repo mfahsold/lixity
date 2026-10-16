@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>What's new in Lixity — Lixity blog</title>
+<meta name="description" content="Comparable chapter statistics with documented floors, evidence anchors that tolerate editing, a quieter research workspace and one consistent interface — what changed in Lixity 0.4.7 and in the current main branch."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="What's new in Lixity: numbers you can compare, evidence that survives edits"/>
+<meta property="og:description" content="Documented comparability floors, evidence anchors that tolerate edits outside the quote, a quieter research workspace and one consistent interface."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
+<meta property="og:site_name" content="Lixity"/>
+<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta property="og:image:width" content="1480"/>
+<meta property="og:image:height" content="945"/>
+<meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:title" content="What's new in Lixity: numbers you can compare, evidence that survives edits"/>
+<meta name="twitter:description" content="Documented comparability floors, evidence anchors that tolerate edits outside the quote, a quieter research workspace and one consistent interface."/>
+<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
+<link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "TechArticle",
+  "headline": "What's new in Lixity: numbers you can compare, evidence that survives edits",
+  "description": "Comparable chapter statistics with documented floors, evidence anchors that tolerate editing, a quieter research workspace and one consistent interface.",
+  "url": "https://mfahsold.github.io/lixity/blog/whats-new-lixity.html",
+  "inLanguage": "en",
+  "datePublished": "2026-10-16",
+  "dateModified": "2026-10-16",
+  "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"},
+  "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to article</a>
+<main class="guide" id="content">
+<a href="../">Lixity · Documentation</a>
+<h1>What's new in Lixity: numbers you can compare, evidence that survives edits</h1>
+<p class="updated">Posted <time datetime="2026-10-16">16 October 2026</time> · 7 minutes · <a href="index.html">Blog</a></p>
+<nav class="guide-nav" aria-label="Blog"><a href="index.html" aria-current="page">Blog</a><a href="../guides/first-look.html">First look</a><a href="../guides/interpretation.html">Interpret results</a><a href="../examples/effi-briest.html">Example analysis</a></nav>
+
+<p>Lixity is a local-first manuscript analysis tool: it reads a novel on your own computer, shows the rhythm, vocabulary, dialogue and tense behind every result — and keeps the research behind your decisions in one workspace. This release line is about two kinds of trust: <strong>numbers you can actually compare</strong>, and <strong>evidence that does not silently rot</strong> while you edit.</p>
+
+<h2 id="floors">Comparable or marked, never guessed</h2>
+<p>Small chapters used to produce big-looking statistics. A three-sentence stage note could outrank a full chapter in a z-score table simply because short samples are noisy. Comparisons now use documented floors:</p>
+<ul>
+<li>Chapters below <strong>100 words</strong> (<code>MIN_COMPARABLE_WORDS</code>) get no z-scores, effect sizes or FDR marks.</li>
+<li>Sentence-distribution features (staccato, cascade, sentence CV, start entropy, first-person starts) need at least <strong>five sentences</strong> (<code>MIN_COMPARABLE_SENTENCES</code>).</li>
+<li>Showing/telling comparisons use the same word floor and mark short chapters as not comparable instead of inventing a ranking.</li>
+</ul>
+<p>Where a value is withheld, the interface says why — the panel explains the minimum in all seven supported languages instead of hiding the reference silently. Recompute older reports before comparing: the numbers above are honest now, not retroactively patched.</p>
+<p>A smaller fix with the same intent: sentence segmentation no longer merges across blank-line blocks. A salutation, a stage note or a sign-off stays one unit; chapter ASL, scene units and the corpus sentence statistics finally agree on every count.</p>
+
+<h2 id="digest">The dashboard notices when your manuscript changed</h2>
+<p>The local dashboard now checks the manuscript digest when the page loads. If the file changed on disk since the last build, it rebuilds itself instead of presenting yesterday's numbers with today's confidence. No more quietly stale chapter counts.</p>
+
+<h2 id="anchors">Evidence anchors that tolerate editing</h2>
+<p>Research links between a source quote and a claim or decision are stored as exact anchors: quote, paragraph hash, line span, offsets. Editing is normal, so the review state now distinguishes two cases:</p>
+<ul>
+<li><strong>Edits outside the quote</strong> (the quote still appears exactly once, the paragraph moved or grew): the link is marked <em>adjusted</em> and can be re-pinned in one step — via the review tab or <code>lixity research reconcile-manuscript --accept-moved</code>. The refreshed line span, hash and offsets become a new link revision.</li>
+<li><strong>Edits inside the quote</strong>: the link is <em>changed</em> and stays in review. Lixity never re-pins automatically, because only you can decide whether the meaning survived.</li>
+</ul>
+<p>Chronology entry also got friendlier: a plain hyphen between four-digit years (<code>1929-1933</code>) is now accepted as a same-precision range next to the typographic dashes.</p>
+
+<h2 id="research">A quieter research workspace</h2>
+<p>The research workspace keeps sources, dossiers, claims, decisions, evidence links and review markers. Recent polish:</p>
+<ul>
+<li>The <strong>timeline is a view, not a planet</strong>: it lives as a List/Timeline switch inside <em>Claims &amp; evidence</em>, next to the entries it orders. The decisions pane states its scope — deliberate choices with a rationale, not historical claims.</li>
+<li><strong>Zotero stays a catalogue, visibly.</strong> Cards show a quiet <em>Zotero ↗</em> link, a type line, and metadata as a proper card; tags are clickable and filter the list. Capturing a source into the archive remains an explicit act.</li>
+<li>Evidence panels keep their loaded citations when other lists refresh — the panel state lives in the list model instead of being rebuilt under you.</li>
+</ul>
+
+<h2 id="interface">One interface, one cast</h2>
+<p>The interface had grown a decade of small decisions: ten border radii, fifteen font sizes between 0.72 and 0.84 rem, three spinner recipes, two tab languages. The current main branch replaces that with a small, enforced system:</p>
+<ul>
+<li><strong>One scale</strong> in the design tokens (radius, type, spacing, colour) — used by the app and the staged documentation site, not copied.</li>
+<li><strong>One control language</strong>: the workspace switch and the research sub-tabs share one tab recipe, badges and tags are one pill family, and compact controls keep the 44 px touch minimum on touch devices.</li>
+<li>A <strong>component layer</strong> (vendored Preact, no build step, CSP-compatible without <code>unsafe-eval</code>) now renders the list panels. That fixed a real bug along the way: the server-rendered “Loading…” placeholder no longer lingers beside the loaded list.</li>
+<li>The <code>visual-consistency</code> browser suite fails when control radii, badge shapes or sampled text sizes leave the scale — the system cannot drift back into one-off values.</li>
+</ul>
+
+<h2 id="logging">Logging you can actually find</h2>
+<p>Diagnostics now run through one logging tree with a single UTC format and standard levels. The managed service appends to <code>service-PORT.log</code>, and starting an oversized log rotates it (<code>.1</code>–<code>.3</code>) so it stays bounded. <code>--debug</code>, <code>LIXITY_DEBUG</code> and <code>LIXITY_LOG_LEVEL</code> control the level; <code>lixity service status</code> prints the log path. Request logs keep the route <strong>without</strong> its query string, so research context and project tokens stay out of the file — and log records never contain manuscript text.</p>
+
+<h2 id="security">Security baseline, written down</h2>
+<p>The dashboard shell carries a per-response nonce Content Security Policy (default-deny scripts, inline styles only), <code>Cross-Origin-Opener-Policy</code> and a <code>Permissions-Policy</code> denying device APIs. Loopback bind, Host allow-list, Origin guard, payload and artifact limits and explicit non-goals are documented in the repository's <code>SECURITY.md</code>. Nothing about your manuscript is uploaded: analysis and research stay on your machine.</p>
+
+<h2 id="try">Try it</h2>
+<ul>
+<li><a href="../guides/first-look.html">Three-minute first look</a> — chapter comparison, a passage and its measurements.</li>
+<li><a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> — complete public-domain analyses in the browser.</li>
+<li>Install: <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code>.</li>
+</ul>
+<p>The statistical signals support a human review — they are not a quality score, and they are not an instruction to rewrite prose. That has not changed, and it never will.</p>
+<footer><a href="../">Lixity home</a> · <a href="index.html">Blog</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
+</main>
+</body>
+</html>

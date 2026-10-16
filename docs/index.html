@@ -134,7 +134,7 @@
       <a class="btn" href="guides/first-look.html">Three-minute first look</a>
     </div>
     <p>Explore an invented manuscript in a read-only report. No installation, account or manuscript upload. <a href="guides/installation.html">Install Lixity for your own writing</a>.</p>
-    <p class="release-note">Current release: <a href="releases/v0.4.7.md">v0.4.7</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
+    <p class="release-note">Current release: <a href="releases/v0.4.7.md">v0.4.7</a> · <a href="blog/whats-new-lixity.html">What's new: comparable numbers, durable evidence anchors, one interface</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
     <p class="license-note">Open source under AGPL-3.0-or-later: private, research and commercial writing, including self-publishing, needs no extra permission. A separate written commercial license is available for closed-source integrations. <a href="#licensing">License details</a>.</p>
   </section>
 
@@ -194,12 +194,12 @@
       <div class="feature-copy">
         <h2>Connect sources, claims and decisions</h2>
         <p>The experimental research workspace keeps sources and quotations in a separate local archive. A dossier gathers notes on a topic; a claim records an assertion you can link to source passages; a decision explains what you chose for the book.</p>
-        <p>Bring sources from local files or Zotero Desktop. PDF scans can use locally installed Tesseract or a configured OCR worker. Saving a source does not establish that it is true.</p>
+        <p>Bring sources from local files or Zotero Desktop. Zotero stays a catalogue: cards link back quietly, the type line explains the item, and tags filter the list. PDF scans can use locally installed Tesseract or a configured OCR worker. Saving a source does not establish that it is true.</p>
         <p>Review conflicting edits with guided previews, inspect <a href="screenshots/dashboard-research-change-set.png">grouped revisions</a> before saving, and follow decision links in the review view. <a href="research/USAGE.md#research-workflows">Read the workflows</a>.</p>
         <p>Add a local PNG/JPEG with a description, edit one dossier section, or start a linked claim or decision from the current topic. Saved images keep their exact version; they have no text scores and are never fetched from remote pages.</p>
         <p><strong>Since v2.4.0:</strong> selected source text can prepare an evidence-link draft with the whole-paragraph citation context shown before saving. Read a chosen dossier beside the manuscript with the optional read-only <strong>Dossier alongside</strong> view. <a href="guides/research-pdf.html#evidence-draft">Follow the reading and evidence workflow</a>.</p>
-        <p><strong>Since v3.0.0:</strong> organize claim periods in <strong>Timeline</strong>, record proposed cause/effect links between exact claim versions, and find citation passages by keywords. These are your interpretations, not verified historical facts. The first saved causal link opts the archive into v6; claim-list API consumers must update to the new envelope. <a href="guides/research-pdf.html#claim-chronology">Read the workflow and compatibility limits</a>.</p>
-        <p><strong>Since v0.3.0:</strong> associate a selected manuscript quote with an exact claim version after permitting local quote retention. Changed anchors request review and never repin automatically. <a href="guides/research-pdf.html#manuscript-claims">Link manuscript text to a claim</a>.</p>
+        <p><strong>Since v3.0.0:</strong> organize claim periods in the <strong>Timeline</strong> view inside <em>Claims &amp; evidence</em> — next to the List view it belongs to — record proposed cause/effect links between exact claim versions, and find citation passages by keywords. These are your interpretations, not verified historical facts. The first saved causal link opts the archive into v6; claim-list API consumers must update to the new envelope. <a href="guides/research-pdf.html#claim-chronology">Read the workflow and compatibility limits</a>.</p>
+        <p><strong>Since v0.3.0:</strong> associate a selected manuscript quote with an exact claim version after permitting local quote retention. Editing outside the quote resolves as <em>adjusted</em> and can be re-pinned explicitly (review tab or <code>reconcile-manuscript --accept-moved</code>); editing the quote itself stays unresolved — nothing repins automatically. <a href="guides/research-pdf.html#manuscript-claims">Link manuscript text to a claim</a>.</p>
         <a href="guides/research-pdf.html">Follow the research workflow</a>
       </div>
       <figure class="shot feature-media">
