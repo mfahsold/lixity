@@ -1833,8 +1833,8 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   .dim-ctl { min-width: 44px; min-height: 44px; }
   /* The compact control size is a pointer-density variant: on touch every
      control keeps the 44px minimum, including the size variants. */
-  button.ctl, button.ctl.ctl-sm, button.ctl.ctl-compact, a.ctl.ctl-sm,
-  #analysis-review a.ctl, select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
+  button.ctl, a.ctl, button.ctl.ctl-sm, button.ctl.ctl-compact, a.ctl.ctl-sm, a.ctl.ctl-compact,
+  select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
   .badge-jump, .band-row, .row-link { min-height: 2.5rem; }
 }
 

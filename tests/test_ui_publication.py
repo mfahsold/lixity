@@ -79,7 +79,10 @@ def test_pages_stages_the_packaged_canonical_tokens(tmp_path: Path) -> None:
     root = Path(__file__).resolve().parents[1]
     output = tmp_path / "pages"
     stage(root / "docs", output)
-    assert (output / "assets/design-tokens.css").read_bytes() == (
-        root / "src/lixity/ui/assets/design-tokens.css"
-    ).read_bytes()
-    assert '@import url("./design-tokens.css")' in (output / "assets/site.css").read_text()
+    for canonical in ("design-tokens.css", "components.css"):
+        assert (output / "assets" / canonical).read_bytes() == (
+            root / "src/lixity/ui/assets" / canonical
+        ).read_bytes()
+    stylesheet = (output / "assets/site.css").read_text()
+    assert '@import url("./design-tokens.css")' in stylesheet
+    assert '@import url("./components.css")' in stylesheet

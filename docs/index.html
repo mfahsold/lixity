@@ -111,65 +111,99 @@
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header">
   <div class="header-inner">
-    <a class="brand" href="#content"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span><span class="brand-badge">v0.4.8</span></a>
-    <nav class="site-nav" aria-label="Main navigation">
-      <a href="guides/first-look.html">First look</a>
-      <a href="#visual-suite">Features</a>
+    <a class="brand" href="./"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span></a>
+    <span class="brand-badge">v0.4.8</span>
+    <nav class="site-nav" aria-label="Main">
+      <a href="#features">Features</a>
       <a href="#examples">Examples</a>
       <a href="#guides">Guides</a>
       <a href="blog/index.html">Blog</a>
       <a href="#methods">Methods</a>
       <a href="https://github.com/mfahsold/lixity">GitHub</a>
     </nav>
-    <button class="theme-btn" id="themeToggle" type="button">Theme: system</button>
+    <button class="ctl theme-btn" id="themeToggle" type="button">Theme: system</button>
   </div>
 </header>
 <main id="content">
   <section class="hero">
-    <h1 class="hero-title">Understand your manuscript.</h1>
-    <p class="hero-sub">Read the patterns in your writing. Keep the evidence behind your decisions.</p>
-    <p>Explore sentence lengths, word use, dialogue and tense from chapter to chapter. Read the passages behind each result, and keep research sources connected to your writing decisions.</p>
-    <div class="hero-cta">
-      <a class="btn primary" href="demo/report.html">Try the example</a>
-      <a class="btn" href="guides/first-look.html">Three-minute first look</a>
+    <div class="hero-copy">
+      <h1 class="hero-title">Understand your manuscript.</h1>
+      <p class="hero-sub">Read the patterns in your writing. Keep the evidence behind your decisions.</p>
+      <p>Lixity is a local analysis tool for authors, editors and researchers. It shows where a chapter's sentence rhythm, vocabulary, dialogue or tense moves away from your own norm — and opens the passage behind every number, so you decide what to do with it.</p>
+      <p class="hero-note">Runs on your computer. No account, no upload, no AI rewriting your prose.</p>
+      <div class="hero-cta">
+        <a class="ctl primary" href="demo/report.html">Try the example</a>
+        <a class="ctl" href="guides/first-look.html">Three-minute first look</a>
+      </div>
+      <p class="release-note">Current release: <a href="releases/v0.4.8.md">v0.4.8</a> · <a href="blog/whats-new-lixity.html">What's new</a>. Built-in analysis runs locally; your editorial choices remain yours.</p>
     </div>
-    <p>Explore an invented manuscript in a read-only report. No installation, account or manuscript upload. <a href="guides/installation.html">Install Lixity for your own writing</a>.</p>
-    <p class="release-note">Current release: <a href="releases/v0.4.8.md">v0.4.8</a> · <a href="blog/whats-new-lixity.html">What's new: comparable numbers, durable evidence anchors, one interface</a>. Built-in analysis runs locally. Your editorial choices remain yours.</p>
-    <p class="license-note">Open source under AGPL-3.0-or-later: private, research and commercial writing, including self-publishing, needs no extra permission. A separate written commercial license is available for closed-source integrations. <a href="#licensing">License details</a>.</p>
+    <figure class="frame">
+      <div class="frame-window">
+        <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+        <a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="1480" height="945" alt="Lixity analysis view: review entry points, chapter map and measures, each linked to its passage" fetchpriority="high"/></a>
+      </div>
+      <figcaption>The analysis view: start your review, scan chapter differences, open any figure's passage. <a href="screenshots/dashboard-mobile.png">Mobile view</a> · <a href="screenshots/dashboard-dark.png">Dark theme</a>.</figcaption>
+    </figure>
   </section>
 
-  <section id="core-pillars" class="intro">
-    <h2>Explore the text. Follow the evidence.</h2>
-    <p>Begin with a Markdown manuscript, or open a project with its existing research archive. The dashboard keeps manuscript analysis, research and project settings in three clear views.</p>
+  <section class="section" id="core-pillars">
+    <div class="section-head">
+      <h2>What makes it different</h2>
+      <p>Four choices shape every number and every screen.</p>
+    </div>
+    <div class="tiles">
+      <article class="tile"><span class="tile-icon" aria-hidden="true">🔒</span><h3>On your computer</h3><p>Nothing is uploaded, there is no account, and the analysis runs offline. Your manuscript never leaves the machine.</p></article>
+      <article class="tile"><span class="tile-icon" aria-hidden="true">📐</span><h3>Your book is the yardstick</h3><p>Chapters are compared against your manuscript's own middle values and spread — not against a corpus of classics. A short list keeps many simultaneous comparisons from inflating the noise.</p></article>
+      <article class="tile"><span class="tile-icon" aria-hidden="true">🔍</span><h3>Every number opens its passage</h3><p>Each figure links to the paragraph behind it. You read, judge, and leave a note where you read.</p></article>
+      <article class="tile"><span class="tile-icon" aria-hidden="true">⚖️</span><h3>Honest limits</h3><p>Short chapters are marked "not comparable" instead of ranked. Signals support your review; they are not a quality score.</p></article>
+    </div>
   </section>
 
-  <section id="visual-suite" aria-label="Features and examples">
+  <section class="section" id="steps">
+    <div class="section-head">
+      <h2>In three steps</h2>
+      <p>From install to your first reviewed passage.</p>
+    </div>
+    <ol class="steps">
+      <li><strong>Install</strong><p><code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code>. <a href="guides/installation.html">Installation guide</a></p></li>
+      <li><strong>Open your project</strong><p>Choose your manuscript folder. Lixity reads Markdown and keeps everything in place.</p></li>
+      <li><strong>Read your first passage</strong><p>Start with the review panel, work the flagged list, and open the passage behind any figure. <a href="guides/first-look.html">Three-minute first look</a></p></li>
+    </ol>
+    <div class="whats-new"><p><strong>New in 0.4.8:</strong> comparable numbers with documented floors, evidence quotes that survive edits outside the quote, one consistent interface, and a findable log. <a href="blog/whats-new-lixity.html">What's new in Lixity →</a></p></div>
+  </section>
+
+  <section id="features" aria-label="Features and examples">
     <article class="feature" id="writing">
       <div class="feature-copy">
         <h2>Understand your writing</h2>
-        <p>See how sentence lengths, vocabulary, dialogue and tense vary throughout your manuscript. Open the passages behind a result before deciding whether to revise.</p>
-        <p>Short or empty texts cannot support every comparison. Unavailable results are shown explicitly.</p>
-        <a href="guides/interpretation.html">Learn how to read the results</a>
+        <p>Sentence rhythm, vocabulary, readability, dialogue dynamics and tense — measured per chapter, with the data requirements stated where they matter.</p>
+        <p>Density values count word-pattern matches per 1,000 words; they are heuristic counts, not a grammatical analysis. Where a value cannot say something useful, the panel explains why instead of showing a number.</p>
+        <a href="guides/interpretation.html">How to read the results</a>
       </div>
-      <figure class="shot">
-        <a href="screenshots/dashboard-light.png"><img src="screenshots/dashboard-light.png" width="1480" height="945" alt="Manuscript overview with sentence rhythm, vocabulary and dialogue measures" loading="lazy" decoding="async"/></a>
-        <figcaption>Language signals beside your manuscript. <a href="screenshots/dashboard-mobile.png">Mobile view</a> · <a href="screenshots/dashboard-dark.png">Dark theme</a>.</figcaption>
+      <figure class="frame">
+        <div class="frame-window">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <a href="screenshots/dashboard-dimensions.png"><img src="screenshots/dashboard-dimensions.png" width="1110" height="942" alt="Style dimensions with chapter loadings, target ranges and flagged chapters" loading="lazy" decoding="async"/></a>
+        </div>
+        <figcaption>Style dimensions from the manuscript's own variation. <a href="screenshots/dashboard-light.png">Analysis overview</a> · <a href="screenshots/cli-style.png">Terminal report</a>.</figcaption>
       </figure>
     </article>
 
     <article class="feature" id="chapters">
       <div class="feature-copy">
         <h2>Compare chapters in context</h2>
-        <p>The chapter map uses your manuscript's chapters as its reference. Longer sentences than usual might reflect a new voice or a formal report. Select a coloured cell to inspect that chapter.</p>
-        <p>The style axes bring together related measurements, helping you see which chapters share patterns and which features distinguish them.</p>
-        <p>Measure scenes within registers you choose, with optional targets and sample limits. <a href="USAGE.md#scene-registers-and-project-targets">Set up scene comparisons</a>.</p>
-        <a href="guides/interpretation.html#consistency">Understand chapter comparisons</a>
+        <p>The chapter map shows where the book is noticeably different from itself. Colours give the direction; the tooltip names the measure and the value.</p>
+        <p>Comparisons use the book's own middle values and typical spread, with an adjustment for estimated sampling noise. Chapter comparisons need at least the documented sample size; the panel says so instead of guessing.</p>
+        <a href="screenshots/dashboard-heatmap.png">Open the chapter map</a>
       </div>
-      <figure class="shot feature-media">
-        <video autoplay muted loop playsinline preload="metadata" poster="videos/analysis-review.png" width="1280" height="800" aria-label="Animated walkthrough: select a chapter cell, expand a paragraph's Values and switch to the style dimensions">
-          <source src="videos/analysis-review.mp4" type="video/mp4"/>
-        </video>
-        <a class="still-only" href="screenshots/dashboard-heatmap.png"><img src="screenshots/dashboard-heatmap.png" width="1660" height="874" alt="Chapter map showing language differences from the manuscript's own style" loading="lazy" decoding="async"/></a>
+      <figure class="frame feature-media">
+        <div class="frame-window">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <video autoplay muted loop playsinline preload="metadata" poster="videos/analysis-review.png" width="1280" height="800" aria-label="Animated walkthrough: select a chapter cell, expand a paragraph's Values and switch to the style dimensions">
+            <source src="videos/analysis-review.mp4" type="video/mp4"/>
+          </video>
+          <a class="still-only" href="screenshots/dashboard-heatmap.png"><img src="screenshots/dashboard-heatmap.png" width="1660" height="874" alt="Chapter map showing language differences from the manuscript's own style" loading="lazy" decoding="async"/></a>
+        </div>
         <figcaption>Watch the walkthrough: chapter cell, paragraph values, style dimensions. <a href="screenshots/dashboard-heatmap.png">Chapter map</a> · <a href="screenshots/dashboard-dimensions.png">Style dimensions</a> · <a href="screenshots/dashboard-reference.png">Reference bands</a>.</figcaption>
       </figure>
     </article>
@@ -177,15 +211,18 @@
     <article class="feature" id="editorial-matrix">
       <div class="feature-copy">
         <h2>Keep review notes beside the text</h2>
-        <p>Start from the flagged passages list. Open a paragraph to read its measured values, source lines and tense labels, then write a note directly on the passage.</p>
-        <p>Work markers keep notes next to the passage you want to revisit and remain editable in Markdown. Their visibility in a book export depends on the editor or converter you use.</p>
-        <a href="USAGE.md#work-markers-editor-visible">Use work markers</a>
+        <p>The review loop starts at the flagged list: every paragraph that meets your severity threshold, sorted by strength and line. Click a row and the passage opens, with its source lines and measurements.</p>
+        <p>Notes you write stay in the manuscript as Markdown comments — invisible while reading, listed later in the work markers. Nothing is rewritten for you.</p>
+        <a href="screenshots/dashboard-flags.png">Open the flagged list</a>
       </div>
-      <figure class="shot feature-media">
-        <video autoplay muted loop playsinline preload="metadata" poster="videos/editorial-loop.png" width="1280" height="800" aria-label="Animated walkthrough: flagged passages, an opened paragraph with its measured values and a note written on the passage">
-          <source src="videos/editorial-loop.mp4" type="video/mp4"/>
-        </video>
-        <a class="still-only" href="screenshots/dashboard-editorial.png"><img src="screenshots/dashboard-editorial.png" width="1110" height="226" alt="An opened paragraph with its measured values, source line and the note editor for a work marker" loading="lazy" decoding="async"/></a>
+      <figure class="frame feature-media">
+        <div class="frame-window">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <video autoplay muted loop playsinline preload="metadata" poster="videos/editorial-loop.png" width="1280" height="800" aria-label="Animated walkthrough: flagged passages, an opened paragraph with its measured values and a note written on the passage">
+            <source src="videos/editorial-loop.mp4" type="video/mp4"/>
+          </video>
+          <a class="still-only" href="screenshots/dashboard-editorial.png"><img src="screenshots/dashboard-editorial.png" width="1110" height="226" alt="An opened paragraph with its measured values, source line and the note editor for a work marker" loading="lazy" decoding="async"/></a>
+        </div>
         <figcaption>Watch the editorial loop: flagged passage, paragraph values, note. <a href="screenshots/dashboard-flags.png">Flagged passages</a> · <a href="screenshots/dashboard-markers.png">Marker list</a> · <a href="screenshots/dashboard-layer.png">Paragraph view</a>.</figcaption>
       </figure>
     </article>
@@ -193,84 +230,84 @@
     <article class="feature" id="research-workspace">
       <div class="feature-copy">
         <h2>Connect sources, claims and decisions</h2>
-        <p>The experimental research workspace keeps sources and quotations in a separate local archive. A dossier gathers notes on a topic; a claim records an assertion you can link to source passages; a decision explains what you chose for the book.</p>
-        <p>Bring sources from local files or Zotero Desktop. Zotero stays a catalogue: cards link back quietly, the type line explains the item, and tags filter the list. PDF scans can use locally installed Tesseract or a configured OCR worker. Saving a source does not establish that it is true.</p>
-        <p>Review conflicting edits with guided previews, inspect <a href="screenshots/dashboard-research-change-set.png">grouped revisions</a> before saving, and follow decision links in the review view. <a href="research/USAGE.md#research-workflows">Read the workflows</a>.</p>
-        <p>Add a local PNG/JPEG with a description, edit one dossier section, or start a linked claim or decision from the current topic. Saved images keep their exact version; they have no text scores and are never fetched from remote pages.</p>
-        <p><strong>Since v2.4.0:</strong> selected source text can prepare an evidence-link draft with the whole-paragraph citation context shown before saving. Read a chosen dossier beside the manuscript with the optional read-only <strong>Dossier alongside</strong> view. <a href="guides/research-pdf.html#evidence-draft">Follow the reading and evidence workflow</a>.</p>
-        <p><strong>Since v3.0.0:</strong> organize claim periods in the <strong>Timeline</strong> view inside <em>Claims &amp; evidence</em> — next to the List view it belongs to — record proposed cause/effect links between exact claim versions, and find citation passages by keywords. These are your interpretations, not verified historical facts. The first saved causal link opts the archive into v6; claim-list API consumers must update to the new envelope. <a href="guides/research-pdf.html#claim-chronology">Read the workflow and compatibility limits</a>.</p>
-        <p><strong>Since v0.3.0:</strong> associate a selected manuscript quote with an exact claim version after permitting local quote retention. Editing outside the quote resolves as <em>adjusted</em> and can be re-pinned explicitly (review tab or <code>reconcile-manuscript --accept-moved</code>); editing the quote itself stays unresolved — nothing repins automatically. <a href="guides/research-pdf.html#manuscript-claims">Link manuscript text to a claim</a>.</p>
-        <a href="guides/research-pdf.html">Follow the research workflow</a>
+        <p>The research workspace keeps sources, quotations and notes in a separate local archive. A dossier gathers notes on a topic; a claim records an assertion you can link to source passages; a decision explains what you chose for the book.</p>
+        <p>Bring sources from local files or Zotero Desktop. Zotero stays a catalogue: cards link back quietly, the type line explains the item, and tags filter the list. Saving a source does not establish that it is true.</p>
+        <p>The timeline is a view inside <em>Claims &amp; evidence</em>. Edits outside a quote can be re-pinned explicitly; an edited quote stays in review, because only you can decide whether the meaning survived. <a href="guides/research-pdf.html">Follow the research workflow</a>.</p>
       </div>
-      <figure class="shot feature-media">
-        <video autoplay muted loop playsinline preload="metadata" poster="videos/research-timeline.png" width="1280" height="800" aria-label="Animated walkthrough: the claims timeline places dated claims on a shared axis and links each row to its claim card">
-          <source src="videos/research-timeline.mp4" type="video/mp4"/>
-        </video>
-        <a class="still-only" href="screenshots/dashboard-dossier-image.png"><img src="screenshots/dashboard-dossier-image.png" width="1082" height="481" alt="A local visual reference in a dossier section, with a description and an explicit synthetic-source caption" loading="lazy" decoding="async"/></a>
-        <figcaption>Watch the claims timeline in motion. <a href="screenshots/dashboard-dossier-image.png">Visual reference in a dossier</a> · <a href="screenshots/dashboard-research-search.png">Search and citations</a> · <a href="screenshots/dashboard-research-review.png">Decision review</a>.</figcaption>
+      <figure class="frame feature-media">
+        <div class="frame-window">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <video autoplay muted loop playsinline preload="metadata" poster="videos/research-timeline.png" width="1280" height="800" aria-label="Animated walkthrough: dated claims on a shared timeline axis, each row linking to its claim card">
+            <source src="videos/research-timeline.mp4" type="video/mp4"/>
+          </video>
+          <a class="still-only" href="screenshots/dashboard-research-timeline.png"><img src="screenshots/dashboard-research-timeline.png" width="1110" height="1036" alt="Claim timeline placing dated claims on a shared axis" loading="lazy" decoding="async"/></a>
+        </div>
+        <figcaption>Watch the chronology walkthrough. <a href="screenshots/dashboard-research-timeline.png">Timeline</a> · <a href="screenshots/dashboard-research-claims.png">Claims and evidence</a> · <a href="screenshots/dashboard-research-review.png">Review</a> · <a href="screenshots/dashboard-dossier-image.png">Visual reference</a>.</figcaption>
       </figure>
     </article>
 
     <article class="feature" id="projects">
       <div class="feature-copy">
         <h2>Choose a project and its settings</h2>
-        <p>Project actions remain available in each workspace view. <strong>Open Project</strong> reconnects an existing folder and its research. <strong>Import Manuscript</strong> previews a file and creates a new project when you confirm.</p>
-        <p>Choose the analysis language and which differences to examine. Set Author name under Project → Settings. Fill in five simple NDA fields, preview a friendly agreement with the project representative's name, then download a PDF or editable text.</p>
-        <a href="guides/installation.html#first-dashboard">Open your first project</a>
+        <p>Lixity keeps manuscript analysis, research and project settings in three clear views. Open a folder, confirm the language, and adjust detection thresholds when you need to.</p>
+        <p>Project data, publication details and detection thresholds live with the project. The article's own decisions stay yours.</p>
+        <a href="guides/installation.html">Set up your first project</a>
       </div>
-      <figure class="shot">
-        <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="1005" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" loading="lazy" decoding="async"/></a>
-        <figcaption>Project settings in one place. <a href="screenshots/dashboard-project-import.png">Import preview</a> · <a href="screenshots/dashboard-project-settings-mobile.png">Mobile view</a>.</figcaption>
+      <figure class="frame">
+        <div class="frame-window">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <a href="screenshots/dashboard-project-settings.png"><img src="screenshots/dashboard-project-settings.png" width="1152" height="1005" alt="Project and settings view with manuscript import, language, title and detection thresholds" loading="lazy" decoding="async"/></a>
+        </div>
+        <figcaption>Project and settings, including the language and threshold controls. <a href="screenshots/dashboard-project-open.png">Open project</a> · <a href="screenshots/dashboard-project-settings-mobile.png">Mobile</a>.</figcaption>
       </figure>
     </article>
 
     <article class="feature" id="cli-api">
       <div class="feature-copy">
         <h2>Read a report in the terminal</h2>
-        <p>Run <code>lixity analyze manuscript.md --language de</code> for a readable report. Other commands examine paragraphs, dialogue, pacing, style and research records.</p>
-        <p>Export an A4 analysis report, an A5 reading copy or an A4 submission sheet with <code>lixity pdf</code>. Fonts are embedded and the text stays searchable; the renderer provides reading layouts without PDF/X production preflight. <a href="USAGE.md#lixity-pdf">Choose a PDF layout</a>.</p>
-        <p><strong>Since v0.3.0:</strong> open the collapsed <strong>PDF export</strong> menu above all three workspace views. Choose a layout, then <strong>Download PDF</strong>. <a href="guides/research-pdf.html#manuscript-export">Find the manuscript PDF workflow</a>.</p>
-        <p><strong>Since v0.3.0:</strong> optional <strong>Publication</strong> fields stay collapsed in Project → Settings and feed the same A5 composer as the CLI. Entered imprint text, PDF metadata, bookmarks and page headers help prepare a reading copy. <a href="guides/research-pdf.html#publication">Read the publication workflow and Germany print/digital limits</a>.</p>
-        <p>See a complete report: <a href="examples/effi-briest-report.pdf">Effi Briest</a> and <a href="examples/pride-and-prejudice-report.pdf">Pride and Prejudice</a> ship as public-domain example PDFs next to their interactive dashboards.</p>
-        <p>For software integration, use JSON output or the Python API. Both share the dashboard's analysis pipeline.</p>
+        <p>Every dashboard view has a command-line counterpart: JSON for your own scripts, Markdown and PDF for reading, and a single-file HTML report you can send to others.</p>
+        <p>Use <code>lixity about --json</code> to inspect languages, features and thresholds; the Python API and the HTTP interface share the same contracts.</p>
         <a href="USAGE.md">Browse the command reference</a>
       </div>
-      <figure class="shot">
-        <a href="screenshots/cli-analyze.png"><img src="screenshots/cli-analyze.png" width="1320" height="840" alt="Terminal report with sentence lengths, readability and vocabulary measures" loading="lazy" decoding="async"/></a>
+      <figure class="frame">
+        <div class="frame-window">
+          <div class="frame-bar" aria-hidden="true"><i></i><i></i><i></i></div>
+          <a href="screenshots/cli-analyze.png"><img src="screenshots/cli-analyze.png" width="1320" height="840" alt="Terminal report with sentence lengths, readability and vocabulary measures" loading="lazy" decoding="async"/></a>
+        </div>
         <figcaption>A terminal report excerpt. <a href="screenshots/cli-style.png">Style report</a> · <a href="screenshots/cli-research.png">Research output</a>.</figcaption>
       </figure>
     </article>
-    <p class="capture-note">Open an image to see it at full size. Examples use public-domain literature or synthetic project records. <a href="screenshots/README.md">More views and capture details</a>.</p>
+    <p class="capture-note">Open an image to see it at full size. Examples use public-domain literature or synthetic project records. <a href="screenshots/README.md">More views and capture details</a></p>
   </section>
 
-  <section id="origin" class="intro">
+  <section id="origin" class="section">
     <h2>Used while writing a debut novel.</h2>
     <p>Matthias Fahsold developed Lixity at ROST Services GmbH and used it while writing his own debut novel. He is the software architect and developer behind the product.</p>
-    <p>Version 0.3.0 describes development maturity before 1.0 and retains existing features and historical releases. Product, JSON and archive versions are independent. <a href="research/USAGE.md">Check research workflows and compatibility</a>.</p>
+    <p>Product, JSON and archive versions are independent; <a href="research/USAGE.md">research workflows and compatibility</a> are documented separately, and the <a href="STABILITY.md">validation register</a> states what the numbers do not establish.</p>
   </section>
 
-  <section id="examples" class="reading-section">
+  <section id="examples" class="section">
     <h2>Read a complete example</h2>
     <p>Two public-domain novels analysed offline: an interactive excerpt of the opening chapters plus the complete PDF report. No installation, no account, no upload.</p>
-    <div class="guide-cards">
-      <article><h3><a href="examples/effi-briest.html">Effi Briest — interactive dashboard</a></h3><p>Theodor Fontane's novel in German; the complete work ships as a <a href="examples/effi-briest-report.pdf">PDF report</a>.</p></article>
-      <article><h3><a href="examples/pride-and-prejudice.html">Pride and Prejudice — interactive dashboard</a></h3><p>Jane Austen's novel in English; the complete work ships as a <a href="examples/pride-and-prejudice-report.pdf">PDF report</a>.</p></article>
-      <article><h3><a href="demo/report.html">Synthetic first-look report</a></h3><p>Six invented chapters to explore every panel and interaction.</p></article>
+    <div class="card-grid">
+      <article class="card"><h3><a href="examples/effi-briest.html">Effi Briest — interactive dashboard</a></h3><p>Theodor Fontane's novel in German; the complete work ships as a <a href="examples/effi-briest-report.pdf">PDF report</a>.</p></article>
+      <article class="card"><h3><a href="examples/pride-and-prejudice.html">Pride and Prejudice — interactive dashboard</a></h3><p>Jane Austen's novel in English; the complete work ships as a <a href="examples/pride-and-prejudice-report.pdf">PDF report</a>.</p></article>
+      <article class="card"><h3><a href="demo/report.html">Synthetic first-look report</a></h3><p>Six invented chapters to explore every panel and interaction.</p></article>
     </div>
   </section>
 
-  <section id="guides" class="reading-section">
+  <section id="guides" class="section">
     <h2>Start with a practical guide</h2>
     <p>New here? The three-minute first look needs no setup. These guides assume no technical background; the developer reference for commands, JSON contracts and architecture is linked in the page footer and in the <a href="https://github.com/mfahsold/lixity#documentation-map">documentation map</a>.</p>
-    <div class="guide-cards">
-      <article><h3><a href="guides/installation.html">Install and open a manuscript</a></h3><p>Set up Lixity, create a report and return to an existing project.</p></article>
-      <article><h3><a href="guides/interpretation.html">Understand the results</a></h3><p>Read language signals with their text requirements and limitations.</p></article>
-      <article><h3><a href="guides/manuscript-analysis-tools.html">Compare analysis tools</a></h3><p>Grammar checkers, corpus tools, stylometry packages and Lixity — which fits which job.</p></article>
-      <article><h3><a href="guides/research-pdf.html">Keep sources and citations</a></h3><p>Retain selected evidence, work with PDF scans and test a backup.</p></article>
+    <div class="card-grid">
+      <article class="card"><h3><a href="guides/installation.html">Install and open a manuscript</a></h3><p>Set up Lixity, create a report and return to an existing project.</p></article>
+      <article class="card"><h3><a href="guides/interpretation.html">Understand the results</a></h3><p>Read language signals with their text requirements and limitations.</p></article>
+      <article class="card"><h3><a href="guides/manuscript-analysis-tools.html">Compare analysis tools</a></h3><p>Grammar checkers, corpus tools, stylometry packages and Lixity — which fits which job.</p></article>
+      <article class="card"><h3><a href="guides/research-pdf.html">Keep sources and citations</a></h3><p>Retain selected evidence, work with PDF scans and test a backup.</p></article>
     </div>
   </section>
 
-  <section id="installation" class="reading-section">
+  <section id="installation" class="section">
     <h2>Install the current release</h2>
     <p>These terminal commands use <a href="https://docs.astral.sh/uv/">uv</a> to install the published package from <a href="https://pypi.org/project/lixity/">PyPI</a> with managed Python. No Git or separate Python install is needed; the <a href="guides/installation.html">installation guide</a> covers Windows, macOS and Linux, the pinned release wheel with checksums, and updates or removal.</p>
     <pre class="cmd-block">uv tool install --python 3.12 --managed-python lixity
@@ -281,7 +318,7 @@ lixity service start --open</pre>
     <p>The app starts an empty local workspace: choose Open Project or Analyze a manuscript, confirm the language and read a passage. English is the default; automatic detection is an explicit choice. Use <code>lixity service status</code>, <code>lixity service restart</code> or <code>lixity service stop</code> for the managed instance.</p>
   </section>
 
-  <section id="methods" class="reading-section">
+  <section id="methods" class="section">
     <h2>A scientific foundation, with stated limits</h2>
     <p>Lixity measures language patterns; it does not grade literary quality or prescribe a style. A deliberate change in voice, register or subject can explain a signal.</p>
     <p>Chapter comparisons use the book's middle values and typical spread (median and MAD), with an adjustment for estimated sampling noise. Colours show the direction of a difference. Optional statistical checks mark a selection for review; you decide what the passages mean for the book.</p>
@@ -295,14 +332,14 @@ html = api.dashboard(text, language="de", project_config={})</pre>
     </details>
   </section>
 
-  <section id="faq" class="reading-section">
+  <section id="faq" class="section">
     <h2>Common questions</h2>
     <details><summary>Does my manuscript leave my computer?</summary><p>Built-in analysis and dashboard generation run on your computer without cloud calls. Optional integrations and separately configured workers have their own setup and data handling.</p></details>
     <details><summary>Will Lixity change my prose?</summary><p>Analysis describes patterns and links to passages. It does not rewrite prose. Review notes and research decisions are actions you choose yourself.</p></details>
     <details><summary>Can a high score prove that a book is good?</summary><p>No. A number describes one measured aspect of this text under particular assumptions. Read the affected passages and consider their purpose. Short texts, dialect, historical spelling and mixed languages need particular care.</p></details>
   </section>
 
-  <section id="licensing" class="reading-section">
+  <section id="licensing" class="section">
     <h2>License and contact</h2>
     <p><strong>Open source under the AGPL-3.0-or-later.</strong> Use Lixity freely for private and commercial writing, research and teaching — including self-publishing your book; no extra permission is needed. If you distribute Lixity or a modified version, the AGPL requires that recipients receive the corresponding source under the same license.</p>
     <p>A separate written <strong>commercial license</strong> is available for integrations that cannot meet the AGPL, for example embedding Lixity in a closed-source product or running a modified version as a network service without releasing its source.</p>
@@ -310,7 +347,7 @@ html = api.dashboard(text, language="de", project_config={})</pre>
     <p>Maintainer: Matthias Fahsold, Hamburg, Germany. Project operator: ROST Services GmbH, Rümpel, Germany.</p>
   </section>
 
-  <section id="impressum" class="reading-section">
+  <section id="impressum" class="section">
     <h2>Legal notice</h2>
     <address><strong>ROST Services GmbH</strong><br/>Dorfstraße 36<br/>23843 Rümpel, Germany<br/>Phone: <a href="tel:+4945316677725">04531 6677725</a><br/>Email: <a href="mailto:info@rost-services.de">info@rost-services.de</a></address>
     <p>Managing directors: René Fromhagen, Timo Helmsing.<br/>Commercial register: Local Court of Lübeck, HRB 23529 HL.<br/>VAT identification number: DE360042691.</p>

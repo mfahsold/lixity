@@ -7,6 +7,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Documentation site: the landing page is rebuilt as a product page - framed
+  app screenshots (analysis, chapter map, review loop, research workspace,
+  project settings, terminal), a "what makes it different" tile row, a
+  three-step start, and reordered feature blocks. The staged site now shares
+  `assets/components.css` with the app (staging boundary extended), controls
+  use the shared `.ctl` vocabulary, and the docs suite checks the frames and
+  captures the landing page full-page.
+
 ## [0.4.8] - 2026-10-16
 
 ### Added

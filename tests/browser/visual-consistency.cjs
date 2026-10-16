@@ -70,7 +70,7 @@ async function checkScale(page, label) {
   });
   assert.equal(ladder['--text-micro'], '11.2px', `${label} micro step`);
   assert.deepEqual(Object.keys(ladder).length, 6, `${label} ladder`);
-  const radii = await page.locator('button.ctl:not(.ctl-link):visible, select.ctl:visible, input.ctl:visible, textarea.ctl:visible, .view-nav-tab:visible, .btn:visible, .theme-btn:visible')
+  const radii = await page.locator('button.ctl:not(.ctl-link):visible, a.ctl:visible, select.ctl:visible, input.ctl:visible, textarea.ctl:visible, .view-nav-tab:visible, .theme-btn:visible')
     .evaluateAll(elements => Array.from(new Set(elements.map(element => getComputedStyle(element).borderRadius))));
   assert.deepEqual(radii, [await page.evaluate(() => {
     const probe = document.createElement('span');
@@ -188,7 +188,7 @@ async function checkScale(page, label) {
             `${theme} pressed paragraph target: ${JSON.stringify(pressed)}`);
         } finally { await app.keyboard.up('Space'); }
         assert.equal(await site.locator('html').evaluate(el => getComputedStyle(el).scrollBehavior), 'auto');
-        assert.equal(await site.locator('.btn').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
+        assert.equal(await site.locator('.ctl').first().evaluate(el => getComputedStyle(el).transitionDuration), '0s');
         const heatmapColors = await app.locator('td.z[style]').evaluateAll(nodes => nodes.map(node => {
           const css = getComputedStyle(node);
           return [css.color, css.backgroundColor];
@@ -197,7 +197,7 @@ async function checkScale(page, label) {
         heatmapColors.forEach(([text, fill]) => assert.ok(contrast(text, fill) >= 4.5, `${theme} heatmap label contrast`));
         await app.locator('#tab-view-project').focus();
         await app.keyboard.press('Enter');
-        for (const [page, selector, label] of [[app, 'button.ctl.primary', 'app'], [site, '.btn.primary', 'site']]) {
+        for (const [page, selector, label] of [[app, 'button.ctl.primary', 'app'], [site, 'a.ctl.primary', 'site']]) {
           const control = page.locator(selector).filter({visible: true}).first();
           await control.focus();
           const style = await control.evaluate(el => {

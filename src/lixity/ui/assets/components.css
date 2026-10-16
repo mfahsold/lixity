@@ -158,7 +158,7 @@ input[type="file"].ctl { max-width: 100%; }
   letter-spacing: normal;
   text-transform: none;
 }
-button.ctl, #analysis-review a.ctl, select.ctl, input.ctl, textarea.ctl {
+button.ctl, a.ctl, select.ctl, input.ctl, textarea.ctl {
   font-size: var(--text-control);
   line-height: var(--line-control);
   min-height: 2.5rem;
@@ -174,7 +174,7 @@ input.ctl, textarea.ctl { cursor: text; }
 textarea.ctl { resize: vertical; font-family: inherit; }
 input.ctl-code { font-family: var(--font-mono); }
 button.ctl-link { background: none; border: none; color: var(--accent); text-decoration: underline; cursor: pointer; padding: 0; }
-button.ctl:hover, #analysis-review a.ctl:hover, select.ctl:hover { border-color: var(--accent); color: var(--accent); }
+button.ctl:hover, a.ctl:hover, select.ctl:hover { border-color: var(--accent); color: var(--accent); }
 button.ctl { transition: transform .12s var(--ease), border-color .16s var(--ease), background .16s var(--ease); }
 button.ctl:active { transform: scale(.97); }
 /* One selected state for toggles and tabs (aria-pressed or .active). */
@@ -214,8 +214,8 @@ button.ctl.busy::before {
   margin-top: -.4rem;
 }
 @keyframes ctl-spin { to { transform: rotate(360deg); } }
-button.ctl.primary, #analysis-review a.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: var(--weight-strong); }
-button.ctl.primary:hover, #analysis-review a.ctl.primary:hover { background: var(--action-hover); color: var(--on-action); }
+button.ctl.primary, a.ctl.primary { background: var(--action-bg); border-color: var(--action-bg); color: var(--on-action); font-weight: var(--weight-strong); }
+button.ctl.primary:hover, a.ctl.primary:hover { background: var(--action-hover); color: var(--on-action); }
 button.ctl.ctl-sm, a.ctl.ctl-sm, select.ctl.ctl-sm,
 button.ctl.ctl-compact, a.ctl.ctl-compact {
   min-height: 2rem;

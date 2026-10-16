@@ -64,13 +64,16 @@ def stage(source: Path, output: Path) -> int:
     if output.resolve().is_relative_to(source.resolve()):
         raise ValueError("Pages output must be outside the documentation source")
     selected: list[Path] = []
-    tokens = Path(__file__).resolve().parents[1] / "src/lixity/ui/assets/design-tokens.css"
-    if tokens.is_symlink() or not tokens.is_file():
-        raise ValueError("Canonical design tokens must be a regular packaged asset")
+    assets = Path(__file__).resolve().parents[1] / "src/lixity/ui/assets"
+    tokens = assets / "design-tokens.css"
+    components = assets / "components.css"
+    for canonical in (tokens, components):
+        if canonical.is_symlink() or not canonical.is_file():
+            raise ValueError("Canonical design assets must be regular packaged files")
     for path in sorted(source.rglob("*")):
         relative = path.relative_to(source)
-        if str(relative) == "assets/design-tokens.css":
-            raise ValueError("Pages must use the packaged canonical design tokens")
+        if str(relative) in ("assets/design-tokens.css", "assets/components.css"):
+            raise ValueError("Pages must use the packaged canonical design assets")
         if path.is_symlink():
             raise ValueError(f"Symlink in documentation source: {relative}")
         if not path.is_file():
@@ -87,9 +90,10 @@ def stage(source: Path, output: Path) -> int:
         target = output / path.relative_to(source)
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(path, target)
-    token_target = output / "assets/design-tokens.css"
-    token_target.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copyfile(tokens, token_target)
+    for canonical in (tokens, components):
+        target = output / "assets" / canonical.name
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copyfile(canonical, target)
     extra = 1
     # Byte-identical fallback for a Search Console entry whose canonical path
     # stays stuck on a fetch failure; generated here so it cannot drift.
