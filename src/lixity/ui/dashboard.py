@@ -75,8 +75,8 @@ _CSS_FILES = ("design-tokens.css", "dashboard.css", "dossier-images.css",
               "workspace-reader.css", "manuscript-links.css")
 _JS_FILES = ("vendor/preact-10.29.8.min.js", "vendor/htm-3.1.1.umd.js",
              "tooltips.js", "interactions.js", "dashboard.js", "zotero-results.js",
-             "research.js", "project-ui.js", "dossier-images.js", "style-space.js",
-             "workspace-reader.js", "manuscript-links.js")
+             "research-cards.js", "research.js", "project-ui.js", "dossier-images.js",
+             "style-space.js", "workspace-reader.js", "manuscript-links.js")
 
 
 @lru_cache(maxsize=2)

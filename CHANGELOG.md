@@ -12,9 +12,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (MIT) and htm 3.1.1 (Apache-2.0) as pinned, integrity-checked files and
   inlines them into the single script - no build step, no runtime network and
   CSP-compatible without `unsafe-eval`. The Zotero catalogue results
-  (`assets/zotero-results.js`) are the first panel on this layer.
+  (`assets/zotero-results.js`) and the research record lists
+  (`assets/research-cards.js`: sources, dossiers, claims, decisions) run on
+  this layer.
 
 ### Changed
+- Research workspace: the record lists render through one shared card
+  component; the hand-rolled per-card identity diffing was removed. The
+  claims evidence panel keeps loaded evidence in the list model, so
+  re-renders no longer lose or misplace it.
 - Research workspace: the claim timeline is a view switch (List/Timeline)
   inside "Thesen & Belege" instead of a separate top-level tab, with a purpose
   line naming both views; the decisions pane states its scope ("deliberate

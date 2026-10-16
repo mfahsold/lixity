@@ -6246,21 +6246,38 @@ string building:
   involved; `_JS_FILES` inlines them into the single dashboard script, so the
   page stays self-contained, works offline and needs no `unsafe-eval` under the
   nonce CSP (htm is pure string parsing, not `new Function`).
-- Components render into an existing host element and own only their subtree;
-  the Zotero catalogue results (`assets/zotero-results.js`) are the first panel
-  on this layer. Components call the shared `uiLabel`/`uiCountFormat` helpers,
-  so localization keeps one source.
+- Components render into an existing host element and own only their subtree.
+  The Zotero catalogue results (`assets/zotero-results.js`) and the four
+  research record lists - sources, dossiers, claims, decisions
+  (`assets/research-cards.js`, `LixityResearchCards`) - run on this layer.
+  Components call the shared `uiLabel`/`uiCountFormat` helpers, so
+  localization keeps one source.
 - Keep the DOM contract stable: class names and `data-*` hooks used by the
   delegated click handlers and the browser suites are part of a component's
   output. Actions stay in the plain event handlers; components render.
 - Never write `textContent`/`innerHTML` into a component host: unmount first
   (`LixityZoteroResults.clear`) or render the message through the component;
   preact patches against its own vnode tree.
+- Async content that belongs to a card is model state, not DOM state: the
+  claims evidence panel renders `item.evidenceHtml` from the list model and
+  the loader re-renders after the fetch. Containers that keep a manual fill
+  contract (`.research-details-body` for source/dossier/decision details) are
+  rendered childless so preact diffs them as no-ops.
 - Components receive plain data; business rules (pagination, capture matching,
-  context tokens) stay in the panel script. Vendor updates follow
-  `vendor/README.md` (registry tarball, integrity check, browser suites).
+  context tokens) stay in the panel script. A cache of the current list model
+  lets loaders (evidence, details) re-render after async updates.
+- Card re-renders replace the previous hand-rolled identity diffing: source,
+  dossier and claim cards are keyed by the serialized record, so an unchanged
+  record governs the same DOM element (open details and loaded content survive
+  a refresh) and a changed record gets a fresh card (stale details content is
+  dropped). Decision cards are keyed per refresh instead, because their impact
+  panel loads on demand and could otherwise keep stale acknowledgement state -
+  matching the previous renderer, which replaced the whole list. Lists render
+  fully on every refresh and `filterResearchList` still toggles `hidden` on
+  the component output. Vendor updates follow `vendor/README.md` (registry
+  tarball, integrity check, browser suites).
 - New stateful panels start as components; the remaining hand-built renderers
-  (research lists, revision dialogs) migrate incrementally.
+  (claim relations, editorial review, revision dialogs) migrate incrementally.
 
 ## First-run journey (server contract)
 

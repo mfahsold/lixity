@@ -1085,43 +1085,6 @@ document.addEventListener("click", function(event) {
   }
 });
 
-function replaceResearchCard(listHost, html, identity, preserve, previousCard) {
-  if (preserve && previousCard && previousCard._researchIdentity === identity) return previousCard;
-  var fresh = document.createElement("div");
-  fresh.innerHTML = html;
-  var card = fresh.firstElementChild;
-  if (card) card._researchIdentity = identity;
-  if (previousCard && card) previousCard.replaceWith(card);
-  else if (card && !preserve) {
-    if (!listHost.querySelector(".research-card")) listHost.replaceChildren();
-    listHost.prepend(card);
-  }
-  return card;
-}
-
-function renderResearchCards(listHost, records, rendered, changedId) {
-  var previousCards = new Map();
-  listHost.querySelectorAll("[data-research-detail]").forEach(function(summary) {
-    previousCards.set(summary.dataset.recordId, summary.closest(".research-card"));
-  });
-  var cards = records.map(function(record, index) {
-    return replaceResearchCard(listHost, rendered[index], JSON.stringify(record), !changedId, previousCards.get(record.id));
-  });
-  if (changedId) {
-    if (!cards.length && previousCards.has(changedId)) previousCards.get(changedId).remove();
-    return;
-  }
-  var retained = new Set(cards);
-  Array.from(listHost.children).forEach(function(child) {
-    if (!retained.has(child)) child.remove();
-  });
-  var cursor = listHost.firstElementChild;
-  cards.forEach(function(card) {
-    if (card !== cursor) listHost.insertBefore(card, cursor);
-    cursor = card.nextElementSibling;
-  });
-}
-
 // Coalesce ordinary in-flight reads only; post-write refreshes supersede older reads.
 var researchListRefreshes = {};
 function researchListRead(kind, overview, changedId, freshRead) {
@@ -1153,10 +1116,7 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   var listHost = document.getElementById("research-sources-list");
   var selectHost = document.getElementById("r-ground-source-select");
   if (!listHost) return;
-  if (!listHost.children.length) {
-    listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
-      escapeHtml(uiLabel("research_loading")) + '</span></div>';
-  }
+  if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
   var reading = await researchListRead("sources", overview, changedId, freshRead);
   if (!acceptResearchList("sources", reading)) return;
   var data = reading.data;
@@ -1169,7 +1129,7 @@ async function refreshResearchSources(overview, changedId, freshRead) {
     ++researchProjectStatusRead;
   }
   if (!data.ok) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_sources_failed")) + '</p>';
+    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_sources_failed")});
     filterResearchList("sources");
     return;
   }
@@ -1189,44 +1149,38 @@ async function refreshResearchSources(overview, changedId, freshRead) {
     if (textSources.some(function(s) { return s.id === selectedSource; })) selectHost.value = selectedSource;
   }
   if (!sources.length) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_sources")) + '</p>';
+    LixityResearchCards.render(listHost, {message: uiLabel("research_no_sources")});
     filterResearchList("sources");
     return;
   }
-  var selected = sources.filter(function(s) { return !changedId || s.id === changedId; });
-  var rendered = selected.map(function(s) {
-    var tagsHtml = (s.tags || []).map(function(t) {
-      return '<button type="button" class="research-tag" data-filter-tag="' + escapeHtml(t) + '" title="' +
-        escapeHtml(uiLabel("research_filter_tag")) + '">' + escapeHtml(t) + '</button>';
-    }).join(" ");
-    var filterText = [s.title, s.id].concat(s.tags || []).join(" ").toLowerCase();
-    return '<div class="research-card" data-filter-text="' + escapeHtml(filterText).replace(/"/g, "&quot;") + '">' +
-      '<div class="research-card-header">' +
-        '<span class="research-card-title">' + escapeHtml(s.title) + '</span>' +
-        '<span class="ctl-note">' + escapeHtml(["image/png", "image/jpeg"].includes(s.media_type) ? s.media_type : uiCountFormat("research_passages_count", s.passages)) + ' · ' + Math.round((s.byte_length || 0) / 1024) + ' KB</span>' +
-      '</div>' +
-      '<div class="ctl-note research-record-id">' + escapeHtml(s.id) + '</div>' +
-      (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
-      (s.context && s.context.external_reference ? zoteroOpenLink(s.context.external_reference.library, s.context.external_reference.item_key, true) : "") +
-      researchDetailsControl("source", s.id) +
-    '</div>';
-  });
-  renderResearchCards(listHost, selected, rendered, changedId);
+  LixityResearchCards.render(listHost, {items: sources.map(function(s) {
+    var external = s.context && s.context.external_reference;
+    return {
+      key: JSON.stringify(s),
+      id: s.id,
+      title: s.title,
+      metaRight: [(["image/png", "image/jpeg"].includes(s.media_type) ? s.media_type
+        : uiCountFormat("research_passages_count", s.passages)) + " · " + Math.round((s.byte_length || 0) / 1024) + " KB"],
+      idLine: s.id,
+      tags: s.tags || [],
+      tagsInteractive: true,
+      zotero: external ? {library: external.library, key: external.item_key} : null,
+      details: "source",
+      filterText: [s.title, s.id].concat(s.tags || []).join(" ").toLowerCase(),
+    };
+  })});
   filterResearchList("sources");
 }
 
 async function refreshResearchDossiers(overview, changedId, freshRead) {
   var listHost = document.getElementById("research-dossiers-list");
   if (!listHost) return;
-  if (!listHost.children.length) {
-    listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
-      escapeHtml(uiLabel("research_loading")) + '</span></div>';
-  }
+  if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
   var reading = await researchListRead("dossiers", overview, changedId, freshRead);
   if (!acceptResearchList("dossiers", reading)) return;
   var data = reading.data;
   if (!data.ok) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_dossiers_failed")) + '</p>';
+    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_dossiers_failed")});
     filterResearchList("dossiers");
     return;
   }
@@ -1241,41 +1195,32 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
     if (dossiers.some(function(d) { return d.id === selectedDossier; })) dossierSelect.value = selectedDossier;
   });
   if (!dossiers.length) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_dossiers")) + '</p>';
+    LixityResearchCards.render(listHost, {message: uiLabel("research_no_dossiers")});
     filterResearchList("dossiers");
     return;
   }
-  var selected = dossiers.filter(function(d) { return !changedId || d.id === changedId; });
-  var rendered = selected.map(function(d) {
-    var tagsHtml = (d.tags || []).map(function(t) {
-      return '<button type="button" class="research-tag" data-filter-tag="' + escapeHtml(t) + '" title="' +
-        escapeHtml(uiLabel("research_filter_tag")) + '">' + escapeHtml(t) + '</button>';
-    }).join(" ");
-    var reviewBadge = d.review_needed
-      ? '<span class="research-badge badge-warning ml-2" title="' + escapeHtml(uiLabel("research_review_needed")) + '">' + escapeHtml(uiLabel("research_review_needed")) + '</span>'
-      : '';
-    var sectionsBadges = (d.sections && d.sections.length)
-      ? '<div class="research-dossier-sections"><span class="ctl-note text-note">' + escapeHtml(uiLabel("research_sections")) + ':</span> ' +
-        d.sections.map(function(s) { return '<button type="button" class="research-tag research-tag-section" data-filter-tag="' + escapeHtml(s) + '" title="' +
-          escapeHtml(uiLabel("research_filter_tag")) + '">' + escapeHtml(s) + '</button>'; }).join(" ") + '</div>'
-      : '';
-    var filterText = [d.title, d.id, d.excerpt].concat(d.tags || [], d.sections || []).join(" ").toLowerCase();
-    return '<div class="research-card" data-filter-text="' + escapeHtml(filterText).replace(/"/g, "&quot;") + '">' +
-      '<div class="research-card-header">' +
-        '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
-        reviewBadge +
-        '<span class="ctl-note">' + escapeHtml(uiCountFormat("research_evidence_count", d.evidence_count)) + '</span>' +
-        (d.revision ? '<span class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", { revision: d.revision })) + '</span>' : '') +
-      '</div>' +
-      (d.excerpt ? '<p class="ctl-note research-excerpt">' + escapeHtml(d.excerpt) + '</p>' : '') +
-      sectionsBadges +
-      (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
-      researchDetailsControl("dossier", d.id) +
-      (document.getElementById("workspace-reader") ? '<button type="button" class="ctl" data-workspace-dossier="' + escapeHtml(d.id) + '">' + escapeHtml(uiLabel("reader_toggle")) + '</button>' : '') +
-      researchRevisionActions("dossier", d.id) +
-    '</div>';
-  });
-  renderResearchCards(listHost, selected, rendered, changedId);
+  LixityResearchCards.render(listHost, {items: dossiers.map(function(d) {
+    var badges = d.review_needed
+      ? [{label: uiLabel("research_review_needed"), cls: "badge-warning ml-2", title: uiLabel("research_review_needed")}]
+      : [];
+    var metaRight = [uiCountFormat("research_evidence_count", d.evidence_count)];
+    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    return {
+      key: JSON.stringify(d),
+      id: d.id,
+      title: d.title,
+      badges: badges,
+      metaRight: metaRight,
+      excerpt: d.excerpt,
+      sections: d.sections || [],
+      tags: d.tags || [],
+      tagsInteractive: true,
+      details: "dossier",
+      reader: Boolean(document.getElementById("workspace-reader")),
+      revision: "dossier",
+      filterText: [d.title, d.id, d.excerpt].concat(d.tags || [], d.sections || []).join(" ").toLowerCase(),
+    };
+  })});
   filterResearchList("dossiers");
 }
 
@@ -1476,6 +1421,14 @@ if (researchRelationForm) researchRelationForm.addEventListener("submit", async 
   }
 });
 
+var researchClaimCardItems = [];
+var researchDecisionsRender = 0;
+
+function renderResearchClaimCards() {
+  var host = document.getElementById("research-claims-list");
+  if (host) LixityResearchCards.render(host, {items: researchClaimCardItems});
+}
+
 async function refreshResearchClaims(overview) {
   var request = ++researchClaimsRead;
   var context = researchReadContext();
@@ -1483,14 +1436,12 @@ async function refreshResearchClaims(overview) {
   var selectHost = document.getElementById("r-decision-claim-select");
   var linkClaimSelect = document.getElementById("r-link-claim-select");
   if (!listHost) return;
-  if (!listHost.children.length) {
-    listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
-      escapeHtml(uiLabel("research_loading")) + '</span></div>';
-  }
+  if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
   var data = overview && Array.isArray(overview.claims) ? overview : await researchApiGet("research/claims");
   if (request !== researchClaimsRead || !acceptResearchContext(context, data)) return;
   if (!data.ok) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_claims_failed")) + '</p>';
+    researchClaimCardItems = [];
+    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_claims_failed")});
     return;
   }
   var claims = data.claims || [];
@@ -1514,77 +1465,89 @@ async function refreshResearchClaims(overview) {
     if (claims.some(function(c) { return c.id === selectedEvidenceClaim; })) linkClaimSelect.value = selectedEvidenceClaim;
   }
   if (!claims.length) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_claims")) + '</p>';
+    researchClaimCardItems = [];
+    LixityResearchCards.render(listHost, {message: uiLabel("research_no_claims")});
     return;
   }
-  listHost.innerHTML = claims.map(function(c) {
+  researchClaimCardItems = claims.map(function(c) {
     var confClass = c.confidence === "evidenced" ? "badge-success" : (c.confidence === "disputed" ? "badge-warning" : "badge-neutral");
-    var confLabel = c.confidence === "evidenced" ? uiLabel("research_confidence_evidenced") : (c.confidence === "disputed" ? uiLabel("research_confidence_disputed") : uiLabel("research_confidence_hypothetical"));
+    var confLabel = c.confidence === "evidenced" ? uiLabel("research_confidence_evidenced")
+      : (c.confidence === "disputed" ? uiLabel("research_confidence_disputed") : uiLabel("research_confidence_hypothetical"));
     var scopeParts = [];
     if (c.scope) {
-      if (c.scope.time_period) scopeParts.push(escapeHtml(uiLabel("research_scope_time")) + " " + escapeHtml(c.scope.time_period));
-      if (c.scope.place) scopeParts.push(escapeHtml(uiLabel("research_scope_place")) + " " + escapeHtml(c.scope.place));
-      if (c.scope.actors && c.scope.actors.length) scopeParts.push(escapeHtml(uiLabel("research_scope_actors")) + " " + escapeHtml(c.scope.actors.join(", ")));
+      if (c.scope.time_period) scopeParts.push(uiLabel("research_scope_time") + " " + c.scope.time_period);
+      if (c.scope.place) scopeParts.push(uiLabel("research_scope_place") + " " + c.scope.place);
+      if (c.scope.actors && c.scope.actors.length) scopeParts.push(uiLabel("research_scope_actors") + " " + c.scope.actors.join(", "));
     }
-    var tagsHtml = (c.tags || []).map(function(t) {
-      return '<span class="research-tag">' + escapeHtml(t) + '</span>';
-    }).join(" ");
-
-    return '<div class="research-card">' +
-      '<div class="research-card-header">' +
-        '<span class="research-card-title">' + escapeHtml(c.title) + '</span>' +
-        '<span class="research-badge ' + confClass + '">' + escapeHtml(confLabel) + '</span>' +
-        (c.revision ? '<span class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", { revision: c.revision })) + '</span>' : '') +
-      '</div>' +
-      '<div class="research-claim-statement research-prose markdown-body my-2">' + renderSafeMarkdown(c.statement) + '</div>' +
-      (scopeParts.length ? '<div class="ctl-note research-claim-scope">' + scopeParts.join(" · ") + '</div>' : '') +
-      '<div class="ctl-note research-record-id">' + escapeHtml(uiLabel("research_claim_id")) + ' ' + escapeHtml(c.id) + '</div>' +
-      (c.dossier_id ? '<div class="ctl-note">' + escapeHtml(uiLabel("research_dossier")) + ': ' + escapeHtml(c.dossier_id) +
-        (c.dossier_revision ? ' · ' + escapeHtml(uiFormat("research_revision_number", { revision: c.dossier_revision })) : '') + '</div>' : '') +
-      (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
-      '<div class="claim-evidence-subpanel research-subpanel" id="claim-evidence-' + escapeHtml(c.id) + '">' +
-        '<button type="button" class="ctl ctl-compact" data-load-evidence="' + escapeHtml(c.id) + '">' + escapeHtml(uiLabel("research_load_evidence")) + '</button>' +
-      '</div>' +
-      researchRevisionActions("claim", c.id) +
-    '</div>';
-  }).join("");
+    var metaRight = [];
+    if (c.revision) metaRight.push(uiFormat("research_revision_number", { revision: c.revision }));
+    var dossierLine = null;
+    if (c.dossier_id) {
+      dossierLine = uiLabel("research_dossier") + ": " + c.dossier_id +
+        (c.dossier_revision ? " · " + uiFormat("research_revision_number", { revision: c.dossier_revision }) : "");
+    }
+    return {
+      key: JSON.stringify(c),
+      id: c.id,
+      title: c.title,
+      badges: [{label: confLabel, cls: confClass}],
+      metaRight: metaRight,
+      statementHtml: renderSafeMarkdown(c.statement),
+      scopeText: scopeParts.join(" · "),
+      idLine: uiLabel("research_claim_id") + " " + c.id,
+      dossierLine: dossierLine,
+      tags: c.tags || [],
+      evidence: true,
+      revision: "claim",
+    };
+  });
+  renderResearchClaimCards();
 }
 
 async function refreshResearchDecisions(overview) {
   var listHost = document.getElementById("research-decisions-list");
   if (!listHost) return;
-  if (!listHost.children.length) {
-    listHost.innerHTML = '<div class="loading-state"><span class="loading-spinner" aria-hidden="true"></span><span class="loading-text">' +
-      escapeHtml(uiLabel("research_loading")) + '</span></div>';
-  }
+  if (!listHost.children.length) LixityResearchCards.render(listHost, {loading: true});
   var data = overview && Array.isArray(overview.decisions) ? overview : await researchApiGet("research/decisions");
   if (!data.ok) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(data.message || uiLabel("research_load_decisions_failed")) + '</p>';
+    LixityResearchCards.render(listHost, {message: data.message || uiLabel("research_load_decisions_failed")});
     return;
   }
   var decisions = data.decisions || [];
   if (!decisions.length) {
-    listHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_no_decisions")) + '</p>';
+    LixityResearchCards.render(listHost, {message: uiLabel("research_no_decisions")});
     return;
   }
-  listHost.innerHTML = decisions.map(function(d) {
-    var devBadge = d.deviation_from_fact
-      ? '<span class="research-badge badge-warning">' + escapeHtml(uiLabel("research_deliberate_deviation")) + '</span>'
-      : '<span class="research-badge badge-neutral">' + escapeHtml(uiLabel("research_no_deviation_recorded")) + '</span>';
-    return '<div class="research-card">' +
-      '<div class="research-card-header">' +
-        '<span class="research-card-title">' + escapeHtml(d.title) + '</span>' +
-        devBadge +
-        (d.revision ? '<span class="ctl-note">' + escapeHtml(uiFormat("research_revision_number", { revision: d.revision })) + '</span>' : '') +
-      '</div>' +
-      '<div class="research-decision-rationale research-prose markdown-body my-2">' + renderSafeMarkdown(d.rationale) + '</div>' +
-      (d.impact_on_plot ? '<div class="ctl-note my-1 text-small"><strong>' + escapeHtml(uiLabel("research_decision_impact")) + ':</strong> <span class="research-prose markdown-body">' + renderSafeMarkdown(d.impact_on_plot) + '</span></div>' : '') +
-      (d.claim_id ? '<div class="ctl-note research-record-id">' + escapeHtml(uiLabel("research_decision_claim")) + ' ' + escapeHtml(d.claim_id) +
-        (d.claim_revision ? ' · ' + escapeHtml(uiFormat("research_revision_number", { revision: d.claim_revision })) : '') + '</div>' : '') +
-      '<details class="research-details"><summary data-decision-impact="' + escapeHtml(d.id) + '">' + escapeHtml(uiLabel("research_decision_affected")) + '</summary><div class="research-details-body"></div></details>' +
-      researchRevisionActions("decision", d.id) +
-    '</div>';
-  }).join("");
+  // The previous string renderer replaced the whole list, so a refresh closed
+  // any open decision impact panel and dropped its loaded content. Keep that:
+  // the impact view can hold stale acknowledgement state. Sources and dossiers
+  // keep their open details via identity keys.
+  var decisionsRender = ++researchDecisionsRender;
+  LixityResearchCards.render(listHost, {items: decisions.map(function(d) {
+    var badges = [d.deviation_from_fact
+      ? {label: uiLabel("research_deliberate_deviation"), cls: "badge-warning"}
+      : {label: uiLabel("research_no_deviation_recorded"), cls: "badge-neutral"}];
+    var metaRight = [];
+    if (d.revision) metaRight.push(uiFormat("research_revision_number", { revision: d.revision }));
+    var claimLine = null;
+    if (d.claim_id) {
+      claimLine = uiLabel("research_decision_claim") + " " + d.claim_id +
+        (d.claim_revision ? " · " + uiFormat("research_revision_number", { revision: d.claim_revision }) : "");
+    }
+    return {
+      key: "decision:" + decisionsRender + ":" + d.id,
+      id: d.id,
+      title: d.title,
+      badges: badges,
+      metaRight: metaRight,
+      rationaleHtml: renderSafeMarkdown(d.rationale),
+      impactHtml: d.impact_on_plot ? renderSafeMarkdown(d.impact_on_plot) : null,
+      impactLabel: uiLabel("research_decision_impact"),
+      idLine: claimLine,
+      decisionImpact: true,
+      revision: "decision",
+    };
+  })});
 }
 
 function researchEditorialFlags(flags, decisionAfterDossier) {
@@ -2579,20 +2542,30 @@ function highlightSearchTerms(text, query) {
   var loadEvBtn = event.target.closest("[data-load-evidence]");
   if (loadEvBtn) {
     var cid = loadEvBtn.dataset.loadEvidence;
-    var subpanel = document.getElementById("claim-evidence-" + cid);
-    if (!subpanel) return;
-    subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(uiLabel("research_loading_evidence")) + '</span>';
+    var cardItem = researchClaimCardItems.find(function(entry) { return entry.id === cid; });
+    if (!cardItem) return;
+    var evidenceToken = researchContextToken();
+    var evidenceProject = researchSelectionProjectId;
+    cardItem.evidenceHtml = '<span class="ctl-note">' + escapeHtml(uiLabel("research_loading_evidence")) + '</span>';
+    renderResearchClaimCards();
     var evData = await researchApiGet("research/claims?claim_id=" + encodeURIComponent(cid));
-    if (!evData.ok) {
-      subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(evData.message || uiLabel("research_load_evidence_failed")) + '</span>';
-      return;
-    }
-    var links = evData.evidence_links || [];
-    if (!links.length) {
-      subpanel.innerHTML = '<span class="ctl-note">' + escapeHtml(uiLabel("research_no_linked_evidence")) + '</span>';
-      return;
-    }
-    subpanel.innerHTML = '<div class="research-block-heading">' + escapeHtml(uiCountFormat("research_linked_evidence_count", links.length)) + '</div>' +
+    if (cardItem !== researchClaimCardItems.find(function(entry) { return entry.id === cid; }) ||
+        evidenceToken !== researchContextToken() || evidenceProject !== researchSelectionProjectId) return;
+    cardItem.evidenceHtml = researchEvidencePanelHtml(evData);
+    renderResearchClaimCards();
+    return;
+  }
+});
+
+function researchEvidencePanelHtml(evData) {
+  if (!evData.ok) {
+    return '<span class="ctl-note">' + escapeHtml(evData.message || uiLabel("research_load_evidence_failed")) + '</span>';
+  }
+  var links = evData.evidence_links || [];
+  if (!links.length) {
+    return '<span class="ctl-note">' + escapeHtml(uiLabel("research_no_linked_evidence")) + '</span>';
+  }
+  return '<div class="research-block-heading">' + escapeHtml(uiCountFormat("research_linked_evidence_count", links.length)) + '</div>' +
       links.map(function(l) {
         var relBadge = '<span class="research-badge badge-neutral research-relation-badge">' + escapeHtml(uiLabel("research_relation_" + l.relation)) + '</span>';
         var cite = l.citation || {};
@@ -2614,9 +2587,7 @@ function highlightSearchTerms(text, query) {
           researchRevisionActions("evidence_link", l.id) +
         '</div>';
       }).join("");
-    return;
-  }
-});
+}
 
 // One revision dialog serves all authored research records. References are
 // edited by ID; the API preserves their pinned revisions when IDs are unchanged.
