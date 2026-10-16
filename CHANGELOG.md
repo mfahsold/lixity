@@ -7,6 +7,32 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.4.9] - 2026-10-16
+
+### Added
+- `lixity schema` exports tool metadata (languages, features, heuristics and
+  commands) as JSON for discoverable machine integration, alongside
+  `lixity about`.
+
+### Fixed
+- Manuscript-link commands (`link-manuscript`, `review-manuscript`,
+  `find-anchor`, `reconcile-manuscript`) accept the manuscript path
+  positionally as the analysis commands do, or via `--manuscript PATH`; exactly
+  one of the two forms is required.
+- The reader panel's dossier select and refresh button share one top edge (a
+  panel margin had overridden the controls row reset and pushed the button 11 px
+  below the select).
+- Compact controls (`.ctl-sm`) keep the 44 px touch minimum on coarse pointers;
+  the size variant previously beat the touch rule on specificity.
+
+### Changed
+- The documentation site is rebuilt as a product page: framed application
+  windows, a "what makes it different" tile row, a three-step start and
+  reordered feature blocks. The staged site now shares `assets/components.css`;
+  controls use the shared `.ctl` vocabulary, and the docs suite checks the
+  frames and captures the landing page full page.
+
+
 ### Changed
 - Documentation site: the landing page is rebuilt as a product page - framed
   app screenshots (analysis, chapter map, review loop, research workspace,
@@ -2133,7 +2159,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.8...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.9...HEAD
+[0.4.9]: https://github.com/mfahsold/lixity/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/mfahsold/lixity/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/mfahsold/lixity/compare/v0.4.6...v0.4.7
 [0.4.6]: https://github.com/mfahsold/lixity/compare/v0.4.5...v0.4.6
