@@ -933,64 +933,47 @@ function clearZoteroSelection() {
   zoteroSelection = null;
   zoteroNextRequest = null;
   var host = document.getElementById("r-zotero-results");
-  if (host) host.textContent = "";
+  if (host) {
+    if (window.LixityZoteroResults) window.LixityZoteroResults.clear(host);
+    else host.textContent = "";
+  }
   var retention = document.getElementById("r-zotero-retention");
   if (retention) retention.checked = false;
+}
+
+function zoteroSetMessage(host, text) {
+  // Messages render through the component as well: writing text nodes next to
+  // a preact tree leaves residues that the next patch cannot account for.
+  window.LixityZoteroResults.render(host, {message: text});
 }
 
 async function browseZotero(request) {
   var serial = ++zoteroRequestSerial;
   var host = document.getElementById("r-zotero-results");
-  host.textContent = uiLabel("research_loading");
+  zoteroSetMessage(host, uiLabel("research_loading"));
   var result = await researchApiPost("research-zotero", request);
   if (serial !== zoteroRequestSerial || request.project_id !== zoteroProjectId) return;
-  if (!result.ok) { host.textContent = result.message || uiLabel("research_search_failed"); return; }
+  if (!result.ok) { zoteroSetMessage(host, result.message || uiLabel("research_search_failed")); return; }
   zoteroSelection = {request: request, result: result};
   zoteroNextRequest = result.next_start === null || result.next_start === undefined ? null : Object.assign({}, request, {start: result.next_start});
-  var items = result.attachments || result.items || [];
-  var typeHelp = escapeHtml(uiLabel("zotero_type_help"));
-  var cards = [];
-  if (result.item) {
-    // A note or other top-level entry has no capturable attachment of its own:
-    // show its catalogue metadata instead of an empty list.
-    var parent = result.item.data || {};
-    var parentTags = (parent.tags || []).map(function(tag) { return tag.tag; }).filter(Boolean);
-    cards.push('<div class="research-card research-zotero-parent">' +
-      '<div class="research-card-header"><span class="research-card-title">' + escapeHtml(parent.title || result.item.key) + '</span>' +
-      '<span class="ctl-note" title="' + typeHelp + '">' + escapeHtml(uiLabel("zotero_type") + ": " + (parent.itemType || "")) + '</span></div>' +
-      (parent.date ? '<div class="ctl-note">' + escapeHtml(parent.date) + '</div>' : '') +
-      (parentTags.length ? '<div class="research-tags">' + parentTags.map(function(tag) {
-        return '<button type="button" class="research-tag" data-zotero-tag="' + escapeHtml(tag) + '" title="' +
-          escapeHtml(uiLabel("zotero_tag_filter")) + '">' + escapeHtml(tag) + '</button>';
-      }).join(" ") + '</div>' : "") +
-      '<p class="ctl-note">' + escapeHtml(uiLabel("zotero_external_note")) + '</p>' +
-      '<div class="row">' + zoteroOpenLink(request.library, result.item.key, true) + '</div></div>');
-  }
-  cards.push(items.map(function(item, index) {
-    var data = item.data || {};
+  var items = (result.attachments || result.items || []).map(function(item) {
     var capture = (result.captures || []).find(function(c) {
       return c.server_id === result.server_id && zoteroLibraryIdentity(c.library) === zoteroLibraryIdentity(request.library) && c.attachment_key === item.key;
     });
-    var supported = ["application/pdf", "text/plain", "text/markdown"].includes(data.contentType) &&
-      ["imported_file", "imported_url", "linked_file"].includes(data.linkMode);
-    var changed = capture && (capture.attachment_version !== item.version ||
-      (result.item && capture.item_version !== result.item.version));
-    var typeText = data.itemType === "attachment" ? (data.contentType || "") : (uiLabel("zotero_type") + ": " + (data.itemType || ""));
-    return '<div class="research-card"><div class="research-card-header">' +
-      '<span class="research-card-title">' + escapeHtml(data.title || item.key) + '</span>' +
-      '<span class="ctl-note"' + (data.itemType === "attachment" ? '' : ' title="' + typeHelp + '"') + '>' + escapeHtml(typeText) + '</span></div>' +
-      (capture ? '<p class="ctl-note">' + escapeHtml(uiLabel(changed ? "zotero_metadata_changed" : "zotero_linked")) + '</p>' : '') +
-      (data.itemType === "note" ? '<p class="ctl-note">' + escapeHtml(uiLabel("zotero_note_hint")) + '</p>' : '') +
-      '<div class="row">' +
-      (data.itemType === "attachment" ? (supported && result.server_id ? '<button type="button" class="ctl primary" data-zotero-capture="' + index + '">' +
-        escapeHtml(uiLabel(capture ? "zotero_refresh" : "zotero_capture")) + '</button>' : '<span class="ctl-note">' + escapeHtml(uiLabel("zotero_media")) + '</span>') :
-        '<button type="button" class="ctl" data-zotero-item="' + index + '">' + escapeHtml(uiLabel("research_view_details")) + '</button>') +
-      zoteroOpenLink(request.library, item.key, true) + '</div></div>';
-  }).join(""));
-  host.innerHTML = cards.join("") +
-    (result.item && !items.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("zotero_no_attachments")) + '</p>' : "") +
-    (zoteroNextRequest ? '<button type="button" class="ctl" id="r-zotero-more">' + escapeHtml(uiLabel("zotero_more")) + '</button>' : "");
-  if (!items.length && !result.item) host.textContent = uiCountFormat("research_hits_count", 0);
+    return {key: item.key, version: item.version, data: item.data || {}, capture: capture || null};
+  });
+  if (!items.length && !result.item) {
+    zoteroSetMessage(host, uiCountFormat("research_hits_count", 0));
+    return;
+  }
+  // Rendering lives in the component layer (assets/zotero-results.js).
+  window.LixityZoteroResults.render(host, {
+    library: request.library,
+    item: result.item || null,
+    items: items,
+    serverId: result.server_id || null,
+    next: zoteroNextRequest !== null,
+  });
 }
 
 document.addEventListener("change", function(event) {

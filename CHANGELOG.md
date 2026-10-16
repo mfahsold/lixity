@@ -7,6 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- UI component layer for stateful panels: the dashboard vendors Preact 10.29.8
+  (MIT) and htm 3.1.1 (Apache-2.0) as pinned, integrity-checked files and
+  inlines them into the single script - no build step, no runtime network and
+  CSP-compatible without `unsafe-eval`. The Zotero catalogue results
+  (`assets/zotero-results.js`) are the first panel on this layer.
+
 ### Changed
 - Research workspace: the claim timeline is a view switch (List/Timeline)
   inside "Thesen & Belege" instead of a separate top-level tab, with a purpose

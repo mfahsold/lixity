@@ -361,6 +361,34 @@ Rules for changes:
 - Responsive stacking is a CSS decision (single column at 640 px), not a second
   markup tree; new panels must survive 320 px without horizontal overflow.
 
+### Stateful panels: the component layer (vendored Preact + HTM)
+
+The shell, static exports and most panels stay server-rendered: one Python
+renderer feeds the live dashboard, the single-file export and the tests. For
+stateful panels, new work uses a small client component layer instead of ad-hoc
+string building:
+
+- `src/lixity/ui/assets/vendor/` vendors **Preact 10** (MIT) and **htm**
+  (Apache-2.0) as pinned UMD/IIFE files. No package manager or build step is
+  involved; `_JS_FILES` inlines them into the single dashboard script, so the
+  page stays self-contained, works offline and needs no `unsafe-eval` under the
+  nonce CSP (htm is pure string parsing, not `new Function`).
+- Components render into an existing host element and own only their subtree;
+  the Zotero catalogue results (`assets/zotero-results.js`) are the first panel
+  on this layer. Components call the shared `uiLabel`/`uiCountFormat` helpers,
+  so localization keeps one source.
+- Keep the DOM contract stable: class names and `data-*` hooks used by the
+  delegated click handlers and the browser suites are part of a component's
+  output. Actions stay in the plain event handlers; components render.
+- Never write `textContent`/`innerHTML` into a component host: unmount first
+  (`LixityZoteroResults.clear`) or render the message through the component;
+  preact patches against its own vnode tree.
+- Components receive plain data; business rules (pagination, capture matching,
+  context tokens) stay in the panel script. Vendor updates follow
+  `vendor/README.md` (registry tarball, integrity check, browser suites).
+- New stateful panels start as components; the remaining hand-built renderers
+  (research lists, revision dialogs) migrate incrementally.
+
 ## First-run journey (server contract)
 
 An empty workspace renders the welcome hero with three actions, the quickstart

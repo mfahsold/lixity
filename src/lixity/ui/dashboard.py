@@ -73,8 +73,9 @@ from .structural import style_structural
 _ASSET_DIR = _Path(__file__).with_name("assets")
 _CSS_FILES = ("design-tokens.css", "dashboard.css", "dossier-images.css",
               "workspace-reader.css", "manuscript-links.css")
-_JS_FILES = ("tooltips.js", "interactions.js", "dashboard.js", "research.js",
-             "project-ui.js", "dossier-images.js", "style-space.js",
+_JS_FILES = ("vendor/preact-10.29.8.min.js", "vendor/htm-3.1.1.umd.js",
+             "tooltips.js", "interactions.js", "dashboard.js", "zotero-results.js",
+             "research.js", "project-ui.js", "dossier-images.js", "style-space.js",
              "workspace-reader.js", "manuscript-links.js")
 
 

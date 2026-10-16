@@ -135,6 +135,10 @@ Python 3.10. A clean audit is a snapshot, not a guarantee.
   passes; major updates need a compatibility check, a changelog entry and an
   audit run. Do not add dependencies for convenience; prefer the standard
   library and existing components.
+- **Vendored browser assets.** Preact and htm ship as pinned files under
+  `src/lixity/ui/assets/vendor/` with recorded sha512 integrity and license
+  texts; the dashboard inlines them and never fetches them at runtime. Update
+  them through the documented checklist and re-run the browser suites.
 - **Transitive dependencies** are not pinned by Lixity. Hosts that need
   reproducible installs should pin the full resolved set in their own
   environment and audit that environment.

@@ -61,6 +61,18 @@ does not authorize publishing the quote. Research backups/exports contain these
 retained manuscript quotations; keep them in the project's private storage.
 See [the retention workflow](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
+## Third-party components
+
+Lixity's own code is AGPL-3.0-or-later. The single-file dashboard vendors two
+small browser libraries, pinned and shipped with their license texts:
+
+- **Preact 10.29.8** — MIT, `src/lixity/ui/assets/vendor/preact.LICENSE`.
+- **htm 3.1.1** — Apache-2.0, `src/lixity/ui/assets/vendor/htm.LICENSE`.
+
+`src/lixity/ui/assets/vendor/README.md` records the exact upstream tarballs and
+sha512 integrity values. Neither library is fetched at runtime, neither is a
+Python dependency, and the release wheel ships them as package data.
+
 ## Questions
 
 This guide explains the intended policy; the full [AGPL text](https://github.com/mfahsold/lixity/blob/main/LICENSE)
