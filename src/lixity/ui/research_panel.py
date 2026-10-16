@@ -57,7 +57,6 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(f'<button type="button" class="ctl" data-rtab="search" role="tab" aria-selected="false">{L("research_tab_search")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="dossiers" role="tab" aria-selected="false">{L("research_tab_dossiers")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="claims" role="tab" aria-selected="false">{L("research_tab_claims")}</button>')
-    parts.append(f'<button type="button" class="ctl" data-rtab="timeline" role="tab" aria-selected="false">{L("research_claim_timeline")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="decisions" role="tab" aria-selected="false">{L("research_tab_decisions")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="review" role="tab" aria-selected="false">{L("research_tab_review")}</button>')
     parts.append(f'<button type="button" class="ctl" data-rtab="grounding" role="tab" aria-selected="false">{L("research_tab_grounding")}</button>')
@@ -165,6 +164,12 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
 
     # Tab Pane: Claims & Evidence Links
     parts.append('<div class="research-tab-pane" id="rtab-claims" style="display:none;">')
+    parts.append(f'<p class="ctl-note" id="research-claims-intro">{L("research_claims_intro")}</p>')
+    parts.append('<div class="research-views" id="r-claim-views" role="group">')
+    parts.append(f'<button type="button" class="ctl active" data-claim-view="list" aria-pressed="true">{L("research_claim_view_list")}</button>')
+    parts.append(f'<button type="button" class="ctl" data-claim-view="timeline" aria-pressed="false">{L("research_claim_timeline")}</button>')
+    parts.append('</div>')
+    parts.append('<div id="rtab-claims-list">')
     parts.append('  <div class="ctl-group">')
     parts.append(f'    <span class="ctl-label">{help_term(labels, "research_claim", L("research_claim_heading"))}</span>')
     parts.append('    <div class="row mb-2">')
@@ -241,14 +246,15 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(checkbox_field('<input type="checkbox" id="r-relation-retracted"/>', L("research_relation_show_retracted")))
     parts.append('<div id="research-claim-relations" aria-live="polite"></div></div>')
     parts.append('</div>')
-
-    # Tab Pane: Timeline
-    parts.append('<div class="research-tab-pane" id="rtab-timeline" style="display:none;">')
+    # Timeline subview: the same claims, sorted by their recorded period.
+    parts.append('<div id="rtab-timeline" style="display:none;">')
     parts.append(f'<div id="research-claims-timeline" aria-live="polite">{loading_state(label(labels, "research_loading"))}</div>')
+    parts.append('</div>')
     parts.append('</div>')
 
     # Tab Pane: Decisions
     parts.append('<div class="research-tab-pane" id="rtab-decisions" style="display:none;">')
+    parts.append(f'<p class="ctl-note" id="research-decisions-intro">{L("research_decisions_intro")}</p>')
     parts.append('  <div class="ctl-group">')
     parts.append(f'    <span class="ctl-label">{help_term(labels, "research_decision", L("research_decision_heading"))}</span>')
     parts.append('    <div class="row mb-2">')

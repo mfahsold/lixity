@@ -7,6 +7,13 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Research workspace: the claim timeline is a view switch (List/Timeline)
+  inside "Thesen & Belege" instead of a separate top-level tab, with a purpose
+  line naming both views; the decisions pane states its scope ("deliberate
+  choices with rationale, not historical claims"). No API, archive or route
+  changes.
+
 ## [0.4.7] - 2026-10-16
 
 ### Fixed

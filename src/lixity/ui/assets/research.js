@@ -1327,7 +1327,7 @@ function researchRelationEndpoint(endpoint) {
 async function refreshResearchClaimProjections() {
   var request = ++researchProjectionRead;
   var activeResearchTab = document.querySelector('.research-tabs [data-rtab].active');
-  if (!activeResearchTab || ["claims", "timeline"].indexOf(activeResearchTab.dataset.rtab) === -1) return;
+  if (!activeResearchTab || activeResearchTab.dataset.rtab !== "claims") return;
   var context = researchReadContext();
   var timelineHost = document.getElementById("research-claims-timeline");
   var relationsHost = document.getElementById("research-claim-relations");
@@ -1392,8 +1392,10 @@ document.addEventListener("change", function(event) {
 });
 document.addEventListener("click", function(event) {
   if (event.target.id === "r-open-timeline") {
-    var timelineTab = document.querySelector('.research-tabs [data-rtab="timeline"]');
-    if (timelineTab) timelineTab.click();
+    var claimsTab = document.querySelector('.research-tabs [data-rtab="claims"]');
+    if (claimsTab && !claimsTab.classList.contains("active")) claimsTab.click();
+    var timelineView = document.querySelector('[data-claim-view="timeline"]');
+    if (timelineView) timelineView.click();
   }
   if (event.target.id === "r-find-passage") {
     researchEvidenceReview = reviewedEvidenceClaim();
@@ -2089,6 +2091,22 @@ document.addEventListener("click", async function (event) {
     return;
   }
 
+  var viewBtn = event.target.closest("[data-claim-view]");
+  if (viewBtn) {
+    document.querySelectorAll("[data-claim-view]").forEach(function(button) {
+      var selected = button === viewBtn;
+      button.classList.toggle("active", selected);
+      button.setAttribute("aria-pressed", String(selected));
+    });
+    var showTimeline = viewBtn.dataset.claimView === "timeline";
+    var claimsList = document.getElementById("rtab-claims-list");
+    var timelinePane = document.getElementById("rtab-timeline");
+    if (claimsList) claimsList.style.display = showTimeline ? "none" : "block";
+    if (timelinePane) timelinePane.style.display = showTimeline ? "block" : "none";
+    if (showTimeline) refreshResearchClaimProjections();
+    return;
+  }
+
   var tabBtn = event.target.closest("[data-rtab]");
   if (tabBtn) {
     clearResearchSourceSelections();
@@ -2104,8 +2122,7 @@ document.addEventListener("click", async function (event) {
     });
     if (tabBtn.dataset.rtab === "sources") refreshResearchSources();
     if (tabBtn.dataset.rtab === "dossiers") refreshResearchDossiers();
-    if (tabBtn.dataset.rtab === "claims") refreshResearchClaims();
-    if (tabBtn.dataset.rtab === "timeline") refreshResearchClaimProjections();
+    if (tabBtn.dataset.rtab === "claims") { refreshResearchClaims(); refreshResearchClaimProjections(); }
     if (tabBtn.dataset.rtab === "decisions") refreshResearchDecisions();
     if (tabBtn.dataset.rtab === "review") refreshResearchEditorialReview();
     return;

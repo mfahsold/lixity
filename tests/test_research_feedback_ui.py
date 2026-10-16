@@ -30,7 +30,8 @@ def test_research_feedback_controls_are_localized_and_selection_token_is_inert(l
     assert elements.ids["rtab-timeline"][0] == "div"
     assert elements.ids["research-claims-timeline"][0] == "div"
     assert elements.ids["r-open-timeline"][0] == "button"
-    assert 'data-rtab="timeline"' in page
+    assert elements.ids["r-claim-views"][0] == "div"
+    assert 'data-claim-view="timeline"' in page
     assert elements.ids["r-find-passage"][0] == "button"
     assert elements.ids["r-relation-form"][0] == "form"
     assert elements.ids["r-relation-from"][0] == elements.ids["r-relation-to"][0] == "select"
