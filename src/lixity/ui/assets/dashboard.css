@@ -31,9 +31,8 @@ h1 {
 .settings-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1rem 1.5rem; }
 .setting-field { min-width: 0; }
 .research-form-field { flex: 1 1 12rem; min-width: 0; }
-.setting-field label { display: block; font-size: var(--text-small); font-weight: var(--weight-semibold); line-height: var(--line-compact); margin-bottom: .35rem; }
 .setting-field .ctl { width: 100%; min-width: 0; max-width: none; }
-.setting-field p { margin: .35rem 0 0; color: var(--muted); font-size: var(--text-note); line-height: var(--line-compact); }
+.setting-field p { margin: .35rem 0 0; }
 .settings-advanced { margin: 0; }
 .settings-advanced summary { cursor: pointer; font-weight: var(--weight-semibold); font-size: var(--text-control); padding-block: .4rem; }
 .settings-actions, .matrix-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-top: .8rem; }
@@ -593,38 +592,14 @@ td.flag-excerpt {
   gap: .35rem;
   align-items: center;
 }
-.dim-ctl {
-  display: inline-flex;
-  align-items: center;
-  min-width: 24px;
-  min-height: 24px;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius-xs);
-  padding: .2rem .5rem;
-  font-size: var(--text-note);
-  color: var(--muted);
-  cursor: pointer;
-  transition: all .15s ease;
-  user-select: none;
-}
+.dim-ctl { min-width: 24px; min-height: 24px; user-select: none; }
 .dim-navigation { padding: .5rem .85rem; border-top: 1px solid var(--line); }
 .dim-navigation .dim-ctl { flex: 1 0 auto; justify-content: center; }
 .dim-score-wrap { max-height: 20rem; border-top: 1px solid var(--line); }
 .dim-score-wrap table { min-width: 32rem; }
 .dim-score-wrap caption { padding: .6rem; text-align: left; font-weight: var(--weight-strong); color: var(--fg); }
 .dim-score-wrap td.num { white-space: nowrap; }
-.dim-chapter-jump { max-width: 100%; text-decoration: none; }
-.dim-ctl:hover {
-  border-color: var(--accent);
-  color: var(--fg);
-}
-.dim-ctl.active {
-  background: var(--accent-light);
-  border-color: var(--accent);
-  color: var(--accent);
-  font-weight: var(--weight-semibold);
-}
+.dim-chapter-jump { display: inline-flex; align-items: center; min-height: 24px; max-width: 100%; text-decoration: none; }
 .dim-canvas-wrap {
   position: relative;
   width: 100%;
@@ -957,7 +932,6 @@ body:not(.has-js-tooltips) .help:focus::after {
     flex-shrink: 0;
   }
 }
-.research-tabs button.ctl.active, .research-views button.ctl.active { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); font-weight: var(--weight-strong); }
 .research-views { display: flex; flex-wrap: wrap; gap: var(--space-2); align-items: center; margin: .6rem 0 .9rem; }
 .research-tab-pane { display: grid; gap: var(--space-3); }
 #research-manager .ctl-group { grid-template-columns: minmax(0, 1fr); }
@@ -1014,7 +988,6 @@ mark.search-hit {
 .research-details-body dd { margin: 0 0 .4rem; }
 .research-passage-actions { margin-top: .5rem; }
 .research-claim-views { margin-top: .8rem; }
-.research-claim-views button.ctl[aria-pressed="true"] { background: var(--action-bg); color: var(--on-action); }
 
 .empty-state-note { max-width: 60ch; margin: 0 auto 1.2rem; line-height: 1.5; }
 .recent-projects-heading { display: block; font-size: var(--text-small); font-weight: var(--weight-semibold); margin-bottom: .3rem; }
@@ -1476,16 +1449,6 @@ dialog.lixity-modal::backdrop {
   .project-path-row { flex-direction: column; }
   .project-path-row button { align-self: flex-start; }
 }
-.form-label {
-  display: block;
-  font-size: var(--text-small);
-  font-weight: var(--weight-semibold);
-  line-height: var(--line-compact);
-  color: var(--fg);
-  margin-bottom: .15rem;
-  letter-spacing: normal;
-  text-transform: none;
-}
 .form-checkbox {
   display: inline-flex;
   align-items: center;
@@ -1868,7 +1831,10 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 @media (pointer: coarse) {
   .chip { min-width: 44px; height: 44px; }
   .dim-ctl { min-width: 44px; min-height: 44px; }
-  button.ctl, #analysis-review a.ctl, select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
+  /* The compact control size is a pointer-density variant: on touch every
+     control keeps the 44px minimum, including the size variants. */
+  button.ctl, button.ctl.ctl-sm, button.ctl.ctl-compact, a.ctl.ctl-sm,
+  #analysis-review a.ctl, select.ctl, input.ctl, .modal-close { min-height: 2.75rem; }
   .badge-jump, .band-row, .row-link { min-height: 2.5rem; }
 }
 
@@ -1907,12 +1873,6 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 .view-nav-tab:hover {
   border-color: var(--accent);
   color: var(--accent);
-}
-.view-nav-tab.active {
-  background: var(--action-bg);
-  color: var(--on-action);
-  border-color: var(--action-bg);
-  font-weight: var(--weight-semibold);
 }
 .view-nav-icon {
   font-size: 1.05rem;

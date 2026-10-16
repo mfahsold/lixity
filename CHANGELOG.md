@@ -21,6 +21,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   `docs/INSTALLATION.md` documents the log location and settings.
 
 ### Changed
+- Controls: the dimension buttons build on the shared control recipe
+  (`.dim-ctl` is a compact variant), the field label/help recipes and the
+  selected state (`aria-pressed`/`.active`) have one source each, and compact
+  controls keep the 44 px touch minimum on coarse pointers.
 - Structure: the shared stylesheet vocabulary moved into `assets/components.css`
   (panels, status, focus, tables, badges, controls, layout primitives, renderer
   utilities) with the layer order tokens → components → views, asserted for the

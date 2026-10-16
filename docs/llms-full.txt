@@ -6290,8 +6290,12 @@ output. The ladders are deliberately short:
 - Component families: `.ctl` (with `.primary`, `.ctl-sm`/`.ctl-compact`,
   `.ctl-link`), one tab recipe (`.view-navigation`/`.view-nav-tab` and
   `.research-tabs` are the same control with a filled active state), one
-  badge family (`.badge`/`.research-badge` plus `.badge-success/-warning/
-  -neutral/-warn` tones, pills) and `.research-tag` pills.
+  selected state (`aria-pressed`/`.active`), one badge family
+  (`.badge`/`.research-badge` plus `.badge-success/-warning/-neutral/-warn`
+  tones, pills), `.research-tag` pills, one field pattern (`.setting-field`,
+  `.form-label`, help text via `.ctl-note`) and one spinner recipe for busy
+  buttons, inline status and loading placeholders. Dense clusters such as the
+  dimension controls (`.dim-ctl`) are compact variants of the same control.
 
 `tests/browser/visual-consistency.cjs` enforces the discipline: control
 radii, badge pills and sampled text sizes must come from the ladders, so a

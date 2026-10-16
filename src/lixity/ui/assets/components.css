@@ -143,7 +143,21 @@ input[type="file"].ctl { max-width: 100%; }
   letter-spacing: .08em;
   color: var(--muted);
 }
-.ctl-note { color: var(--muted); font-size: var(--text-note); line-height: var(--line-compact); margin: 0; }
+/* One note/help recipe: inline notes and field help share size and colour. */
+.ctl-note, .setting-field p { color: var(--muted); font-size: var(--text-note); line-height: var(--line-compact); }
+.ctl-note { margin: 0; }
+.setting-field p { margin: .35rem 0 0; }
+/* One field label recipe for settings, modals and research forms. */
+.setting-field label, .form-label {
+  display: block;
+  font-size: var(--text-small);
+  font-weight: var(--weight-semibold);
+  line-height: var(--line-compact);
+  color: var(--fg);
+  margin-bottom: .35rem;
+  letter-spacing: normal;
+  text-transform: none;
+}
 button.ctl, #analysis-review a.ctl, select.ctl, input.ctl, textarea.ctl {
   font-size: var(--text-control);
   line-height: var(--line-control);
@@ -163,6 +177,15 @@ button.ctl-link { background: none; border: none; color: var(--accent); text-dec
 button.ctl:hover, #analysis-review a.ctl:hover, select.ctl:hover { border-color: var(--accent); color: var(--accent); }
 button.ctl { transition: transform .12s var(--ease), border-color .16s var(--ease), background .16s var(--ease); }
 button.ctl:active { transform: scale(.97); }
+/* One selected state for toggles and tabs (aria-pressed or .active). */
+button.ctl.active,
+button.ctl[aria-pressed="true"],
+.view-nav-tab.active {
+  background: var(--action-bg);
+  color: var(--on-action);
+  border-color: var(--action-bg);
+  font-weight: var(--weight-strong);
+}
 button.ctl.busy {
   color: var(--muted);
   pointer-events: none;

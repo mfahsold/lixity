@@ -100,9 +100,9 @@ def style_dimensions(
         ("dim-ctl-corr", "dim_ctl_corridor", True),
         ("dim-ctl-spin", "dim_ctl_spin", False),
     ):
-        parts.append(toggle_button(label(labels, key), control_id, pressed, "dim-ctl"))
+        parts.append(toggle_button(label(labels, key), control_id, pressed, "ctl ctl-sm dim-ctl"))
     parts.append(
-        f'<button type="button" class="dim-ctl" id="dim-ctl-reset" title="{translated("dim_ctl_reset")}">{translated("dim_ctl_reset")}</button>'
+        f'<button type="button" class="ctl ctl-sm dim-ctl" id="dim-ctl-reset" title="{translated("dim_ctl_reset")}">{translated("dim_ctl_reset")}</button>'
         f"</div></div>"
     )
     parts.append(
@@ -127,7 +127,7 @@ def style_dimensions(
         ("dim-ctl-zoom-out", "dim_ctl_zoom_out"),
     ):
         parts.append(
-            f'<button type="button" class="dim-ctl" id="{control_id}">'
+            f'<button type="button" class="ctl ctl-sm dim-ctl" id="{control_id}">'
             f'{translated(key)}</button>'
         )
     parts.append("</div>")
