@@ -282,7 +282,8 @@ const data = JSON.parse(fixture.stdout);
     assert.equal(await hiddenImpact.locator('[data-decision-ack-status=review_needed]').count(), 1, 'The same acted pair cannot still offer a duplicate Mark as applied action');
     const second = host.locator(`[data-decision-ack-dossier="${data.second}"]`);
     assert.equal(await second.getAttribute('data-decision-ack-snapshot'), data.applied.snapshot, 'Own successful CAS advances the remaining review token');
-    assert.ok((await host.textContent()).includes(data.fixtures.en.labels.research_editorial_count.replace('{count}', '1')), 'The review count agrees with the reconciled server view');
+    assert.ok((await host.textContent()).includes(data.fixtures.en.labels.research_editorial_count_one.replace('{count}', '1')),
+      'The review count agrees with the reconciled server view');
     response = {ok:true,...data.applied_second};
     state = data.after_second;
     await second.locator('[data-decision-ack-status=applied]').click();

@@ -34,7 +34,9 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
     assert.ok(page.url().endsWith('#ch-2'), 'Chapter anchors work without JavaScript');
     return;
   }
-  assert.equal(await page.locator('#ch-2').evaluate(element => element.classList.contains('flash')), true, 'The chapter link navigates to its actual text section');
+  // The flash lands after the smooth scroll settles (see flashOnArrival).
+  await page.waitForFunction(selector => document.querySelector(selector).classList.contains('flash'),
+    '#ch-2', {timeout: 2500});
   const chip = page.locator('#ch-2 .chip').first();
   const target = await chip.getAttribute('data-target');
   const passage = page.locator('#' + target);

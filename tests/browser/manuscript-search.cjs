@@ -68,7 +68,9 @@ const fixtures = JSON.parse(fixture.stdout);
       await review.locator('[href="#heatmap"]').click();
       assert.equal(await page.locator('#heatmap').isVisible(), true);
       await review.locator('[href="#dist"]').click();
-      assert.equal(await page.locator('#dist').evaluate(element => element.classList.contains('flash')), true);
+      // The flash lands after the smooth scroll settles (see flashOnArrival).
+      await page.waitForFunction(selector => document.querySelector(selector).classList.contains('flash'),
+        '#dist', {timeout: 2500});
 
       const field = page.locator('#text-search');
       assert.equal(await field.count(), 1, 'manuscript search field exists');

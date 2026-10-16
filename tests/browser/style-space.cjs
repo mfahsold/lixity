@@ -87,9 +87,12 @@ assert.equal(fixture.status,0,fixture.stderr);
     const chapter = page.locator('#dim-scores a[href="#ch-1"]');
     await chapter.focus();
     await page.keyboard.press('Enter');
-    assert.equal(await page.locator('#ch-1').evaluate(element => element.classList.contains('flash')), true);
+    // The flash lands after the smooth scroll settles (see flashOnArrival).
+    await page.waitForFunction(selector => document.querySelector(selector).classList.contains('flash'),
+      '#ch-1', {timeout: 2500});
     await page.locator('#dim-scores a[href="#ch-2"]').tap();
-    assert.equal(await page.locator('#ch-2').evaluate(element => element.classList.contains('flash')), true);
+    await page.waitForFunction(selector => document.querySelector(selector).classList.contains('flash'),
+      '#ch-2', {timeout: 2500});
     assert.equal(await page.evaluate(() => Boolean(window.tooltipInjected)), false);
   });
   await check('chapter score links work without JavaScript', async () => {
