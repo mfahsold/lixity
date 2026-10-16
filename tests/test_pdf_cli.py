@@ -150,6 +150,32 @@ class PdfCommandTest(unittest.TestCase):
         self.assertEqual(main(command), 1)
         self.assertFalse((Path(directory.name) / "manuscript-book.pdf").exists())
 
+    def test_title_and_draft_notice_flags_and_project_config(self):
+        directory, manuscript = self._workspace()
+        (Path(directory.name) / "lixity.toml").write_text(
+            'title = "Konfigurierter Titel"\ndraft_notice = "Vertraulicher Entwurf"\n',
+            encoding="utf-8",
+        )
+        command = [
+            "pdf",
+            str(manuscript),
+            "--language",
+            "de",
+            "--layout",
+            "book",
+            "--title",
+            "Übersteuerter Titel",
+            "--author",
+            "Testautorin",
+            "--draft-notice",
+            "Testleser-Fassung",
+            *_fonts(),
+        ]
+        self.assertEqual(main(command), 0)
+        data = (Path(directory.name) / "manuscript-book.pdf").read_bytes()
+        encoded_title = b"<FEFF" + "Übersteuerter Titel".encode("utf-16-be").hex().upper().encode() + b">"
+        self.assertIn(b"/Title " + encoded_title, data)
+
     def test_command_accepts_help(self):
         with self.assertRaises(SystemExit) as caught:
             main(["pdf", "--help"])

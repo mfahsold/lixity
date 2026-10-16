@@ -4,18 +4,23 @@ Run after installing the Python development environment and Playwright with
 Chromium. Playwright is optional tooling, not a Lixity runtime dependency.
 
 ```sh
-make browser        # everyday core surfaces (fast group)
-make browser-full   # every suite, run before a release
-# or: python3 scripts/run_browser_suites.py --group fast
+make browser          # everyday core surfaces (fast group, 3 workers)
+make browser-changed  # only the suites affected by modified git paths
+make browser-full     # every suite, run before a release (3 workers)
+# or: python3 scripts/run_browser_suites.py --area research --jobs 3
 ```
 
 `--list` prints the suite names, `--group fast|full` selects the everyday core
-surfaces or everything, `--jobs N` runs independent suites in parallel and
-`--only NAME` selects suites and `--start NAME` resumes after a failure. The
-everyday target uses three workers; the full release pass stays sequential.
+surfaces or everything, `--area NAME` runs one surface (`docs`, `research`,
+`analysis`, `project`, `tokens`), `--changed [BASE]` maps modified git paths
+to the affected areas (falling back to the full set when a shared foundation
+changed), `--jobs N` runs independent suites in parallel, `--only NAME`
+selects suites and `--start NAME` resumes after a failure.
 
-If Playwright is installed outside this repository, set `PLAYWRIGHT_MODULE` to
-its module directory. `PYTHON_BIN` optionally overrides `.venv/bin/python`.
+`scripts/browser_tools.cjs` probes common local Playwright and Chromium
+locations automatically; `PLAYWRIGHT_MODULE` and
+`PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` remain optional overrides.
+`PYTHON_BIN` optionally overrides `.venv/bin/python`.
 The style-space test generates a synthetic manuscript, checks canvas interaction,
 keyboard/touch rotation and zoom, semantic chapter-score links with JavaScript
 enabled and disabled, tooltip escaping, idle rendering, touch targets and mobile

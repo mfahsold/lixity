@@ -1,4 +1,4 @@
-.PHONY: help install install-dev test browser lint typecheck check audit build release-check screenshots videos examples clean docs-check docs-sync run start serve stop restart status
+.PHONY: help install install-dev test browser browser-changed browser-full lint typecheck check audit build release-check screenshots videos examples clean docs-check docs-sync run start serve stop restart status
 
 PYTHON ?= python3
 VENV ?= .venv
@@ -29,8 +29,11 @@ test: ## Run the full test suite (warnings as errors)
 browser: ## Run the everyday browser checks (needs Node and Playwright)
 	$(PYTHON) scripts/run_browser_suites.py --group fast --jobs 3
 
+browser-changed: ## Run only the browser suites for modified paths (safe fallback to full)
+	$(PYTHON) scripts/run_browser_suites.py --changed --jobs 3
+
 browser-full: ## Run every browser suite before a release
-	$(PYTHON) scripts/run_browser_suites.py
+	$(PYTHON) scripts/run_browser_suites.py --jobs 3
 
 lint: ## Ruff lint (src, tests, scripts)
 	RUFF_CACHE_DIR=$(RUFF_CACHE) $(VENV)/bin/ruff check src tests scripts

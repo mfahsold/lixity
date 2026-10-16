@@ -202,3 +202,26 @@ def test_left_aligned_text_does_not_rely_on_unapplied_justification():
     for page in doc._compose():
         for line in page.lines:
             assert text_width(line.text, fonts.face("text"), line.size) <= doc.measure + 0.01
+
+
+@pytest.mark.skipif(not HAVE_FONTS, reason="requires DejaVu fonts")
+def test_draft_notice_joins_running_header_in_every_layout(monkeypatch):
+    _, _, report_pages = captured_layout(
+        monkeypatch, report_pdf, title="Synthetic Report", author="Author",
+        draft_notice="Confidential draft", markdown="Synthetic prose.", choice=CHOSEN,
+    )
+    assert report_pages[1].lines[-2].text == "Synthetic Report · Author · Confidential draft"
+
+    _, _, book_pages = captured_layout(
+        monkeypatch, book_pdf, title="Synthetic Book", author="Author",
+        draft_notice="Confidential draft",
+        chapters=[("One", ["Paragraph."]), ("Two", ["Another."])], choice=CHOSEN,
+    )
+    assert any(line.text == "Synthetic Book · Author · Confidential draft" for line in book_pages[1].lines)
+
+    _, _, sheet_pages = captured_layout(
+        monkeypatch, manuscript_pdf, title="Sheet", author="Author",
+        draft_notice="Draft", chapters=[("One", ["Paragraph."])], choice=CHOSEN,
+    )
+    assert any(line.text == "Sheet · Author · Draft" for line in sheet_pages[0].lines)
+

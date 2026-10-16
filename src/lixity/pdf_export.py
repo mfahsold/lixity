@@ -5,7 +5,7 @@ from __future__ import annotations
 from collections.abc import Mapping
 from typing import Any
 
-from .config import resolve_thresholds, validate_author_name
+from .config import resolve_thresholds, validate_author_name, validate_draft_notice
 from .formatters import ReportFormatter
 from .markdown_parser import prose_paragraphs, split_chapters
 from .models import CorpusConfig
@@ -33,7 +33,8 @@ def manuscript_sections(text: str, config: CorpusConfig) -> list[tuple[str, list
 def compose_pdf(
     text: str, *, manuscript: str, layout: str, language: str = "en",
     project_config: Mapping[str, Any] | None = None, title: str | None = None,
-    author: str | None = None, thresholds: FingerprintThresholds | None = None,
+    author: str | None = None, draft_notice: str | None = None,
+    thresholds: FingerprintThresholds | None = None,
     choice: FontChoice | None = None, require_prose: bool = False,
     identity_config: Mapping[str, Any] | None = None,
 ) -> bytes:
@@ -46,6 +47,9 @@ def compose_pdf(
     config, resolved = resolve_document_config(text, language, project_config=settings)
     document_title = project_title(manuscript, text, identity, title)
     document_author = validate_author_name(identity.get("author_name", "") if author is None else author)
+    document_draft = validate_draft_notice(
+        identity.get("draft_notice", "") if draft_notice is None else draft_notice
+    )
     metadata = {"title": document_title, "author": document_author,
                 "language": resolved.key if resolved.key != "generic" else "und"}
     sections = manuscript_sections(text, config) if layout != "report" or require_prose else []
@@ -59,13 +63,14 @@ def compose_pdf(
             markdown=ReportFormatter.format_markdown_report(
                 metrics, labels=resolved.labels, language_key=resolved.key,
             ),
-            author=document_author, metadata=metadata, choice=choice,
+            author=document_author, draft_notice=document_draft,
+            metadata=metadata, choice=choice,
         )
     if layout == "book":
-        return book_pdf(title=document_title, author=document_author, chapters=sections, choice=choice,
-                        metadata=metadata,
+        return book_pdf(title=document_title, author=document_author, draft_notice=document_draft,
+                        chapters=sections, choice=choice, metadata=metadata,
                         front_matter=publication_imprint(
                             publication, WORKSPACE_LABELS.get(resolved.key, WORKSPACE_LABELS["en"]),
                         ) if publication else None)
-    return manuscript_pdf(title=document_title, author=document_author, chapters=sections,
-                          metadata=metadata, choice=choice)
+    return manuscript_pdf(title=document_title, author=document_author, draft_notice=document_draft,
+                          chapters=sections, metadata=metadata, choice=choice)

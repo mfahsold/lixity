@@ -265,10 +265,12 @@ def _completion_scripts() -> tuple[str, str]:
     research_actions = " ".join(command["name"] for command in command_metadata())
     names = " ".join(name for name, _help in _COMMANDS)
     descriptors = "\n".join(f"    '{name}:{help_text}'" for name, help_text in _COMMANDS)
-    bash = (_BASH_COMPLETION.replace("__LIXITY_COMMANDS__", names)
-            .replace("__LIXITY_RESEARCH_COMMANDS__", research_actions))
-    zsh = (_ZSH_COMPLETION.replace("__LIXITY_ZSH_COMMANDS__", descriptors)
-           .replace("__LIXITY_RESEARCH_COMMANDS__", research_actions))
+    bash = _BASH_COMPLETION.replace("__LIXITY_COMMANDS__", names).replace(
+        "__LIXITY_RESEARCH_COMMANDS__", research_actions
+    )
+    zsh = _ZSH_COMPLETION.replace("__LIXITY_ZSH_COMMANDS__", descriptors).replace(
+        "__LIXITY_RESEARCH_COMMANDS__", research_actions
+    )
     return bash, zsh
 
 
@@ -291,6 +293,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
     ("about", "Tool metadata for agents: languages, features, heuristics"),
+    ("schema", "Tool metadata for agents: languages, features, heuristics"),
     ("completion", "Shell completion script (bash or zsh)"),
 )
 
@@ -841,12 +844,20 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
         text = workspace.read_manuscript()
         thresholds = (
             _thresholds_from_args(args, getattr(args, "_project_config", None))
-            if args.layout == "report" else None
+            if args.layout == "report"
+            else None
         )
         payload = compose_pdf(
-            text, manuscript=workspace.manuscript, layout=args.layout, language=args.language,
-            project_config=args._project_config, author=args.author,
-            thresholds=thresholds, choice=choice,
+            text,
+            manuscript=workspace.manuscript,
+            layout=args.layout,
+            language=args.language,
+            project_config=args._project_config,
+            title=args.title,
+            author=args.author,
+            draft_notice=args.draft_notice,
+            thresholds=thresholds,
+            choice=choice,
         )
     except (OSError, PdfError, ValueError, RuntimeError) as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
@@ -938,14 +949,20 @@ def _cmd_build(args: argparse.Namespace) -> int:
         try:
             workspace.ensure_layout()
         except OSError as exc:
-            print(f"{_m('err_prefix')} {_m('err_build_target', dir=workspace.exports_dir, exc=exc)}", file=sys.stderr)
+            print(
+                f"{_m('err_prefix')} {_m('err_build_target', dir=workspace.exports_dir, exc=exc)}",
+                file=sys.stderr,
+            )
             return EXIT_ERROR
     changed = 0
     for name, content in artifacts.items():
         try:
             is_changed = workspace.publish(name, content, dry_run=args.dry_run)
         except OSError as exc:
-            print(f"{_m('err_prefix')} {_m('err_build_target', dir=workspace.exports_dir, exc=exc)}", file=sys.stderr)
+            print(
+                f"{_m('err_prefix')} {_m('err_build_target', dir=workspace.exports_dir, exc=exc)}",
+                file=sys.stderr,
+            )
             return EXIT_ERROR
         changed += is_changed
         prefix = "(dry-run) " if args.dry_run else ""
@@ -999,6 +1016,9 @@ def main(argv: list[str] | None = None) -> int:
             continue
         if name == "about":
             p.add_argument("--json", action="store_true", help="JSON output")
+            continue
+        if name == "schema":
+            p.add_argument("--json", action="store_true", help="JSON schema/contract metadata")
             continue
         if name == "scenes":
             p.add_argument("file", help="Markdown manuscript")
@@ -1121,10 +1141,12 @@ def main(argv: list[str] | None = None) -> int:
                 default=None,
                 help="Manuscript file or workspace folder (default: ambient)",
             )
-            p.add_argument("--host", default=DEFAULT_HOST,
-                           help=f"Bind address (default: {DEFAULT_HOST})")
-            p.add_argument("--port", type=int, default=DEFAULT_PORT,
-                           help=f"Port (default: {DEFAULT_PORT})")
+            p.add_argument(
+                "--host", default=DEFAULT_HOST, help=f"Bind address (default: {DEFAULT_HOST})"
+            )
+            p.add_argument(
+                "--port", type=int, default=DEFAULT_PORT, help=f"Port (default: {DEFAULT_PORT})"
+            )
             p.add_argument(
                 "--language",
                 default=None,
@@ -1222,7 +1244,17 @@ def main(argv: list[str] | None = None) -> int:
                 help="report: analysis report (A4) · book: reading layout (A5) · "
                 "sheet: 30 lines of 60 characters",
             )
+            p.add_argument(
+                "--title",
+                default=None,
+                help="Document title override (default: project or manuscript title)",
+            )
             p.add_argument("--author", default=None, help="Author line for the book layout")
+            p.add_argument(
+                "--draft-notice",
+                default=None,
+                help="Running-header notice on every layout (default: project draft_notice)",
+            )
             p.add_argument("--serif-font", default=None, help="TrueType file for running text")
             p.add_argument("--bold-font", default=None, help="TrueType file for headings")
             p.add_argument("--mono-font", default=None, help="TrueType file for the sheet grid")
@@ -1264,6 +1296,10 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.command == "about":
         _print_about_json() if args.json else _print_about_text()
+        return EXIT_OK
+
+    if args.command == "schema":
+        _print_about_json()
         return EXIT_OK
 
     if args.command == "serve":

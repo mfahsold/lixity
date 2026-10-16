@@ -439,6 +439,7 @@ def report_pdf(
     subtitle: str = "",
     choice: FontChoice | None = None,
     author: str = "",
+    draft_notice: str = "",
     metadata: Mapping[str, str] | None = None,
 ) -> bytes:
     """Render the analysis report: a cover page, section headings and tables.
@@ -515,7 +516,7 @@ def report_pdf(
                                    align=JUSTIFIED, space_after=leading * 0.5,
                                    new_page=first, decorated=True))
             first = False
-    _running_header(document, title, author, role="text", size=8)
+    _running_header(document, title, author, role="text", size=8, draft_notice=draft_notice)
     document.page_furniture("{folio}/{pages}", role="text", size=8.5, position="footer-centre")
     return document.render()
 
@@ -524,6 +525,7 @@ def book_pdf(
     *,
     title: str,
     author: str = "",
+    draft_notice: str = "",
     chapters: list[tuple[str, list[str]]] | None = None,
     body: str = "",
     choice: FontChoice | None = None,
@@ -596,7 +598,7 @@ def book_pdf(
                 )
             )
             first_body = False
-    _running_header(document, title, author, role="text", size=8)
+    _running_header(document, title, author, role="text", size=8, draft_notice=draft_notice)
     document.page_furniture("{folio}", role="text", size=9, position="footer-centre",
                            omit_first=True)
     return document.render()
@@ -629,6 +631,7 @@ def manuscript_pdf(
     body: str = "",
     choice: FontChoice | None = None,
     author: str = "",
+    draft_notice: str = "",
     metadata: Mapping[str, str] | None = None,
 ) -> bytes:
     """Render a submission sheet: exactly 30 lines of at most 60 characters."""
@@ -639,7 +642,7 @@ def manuscript_pdf(
     # Every character is collected before the face is built: the measure needs
     # real advance widths, and a face measured before the rest of the text is
     # known would report zero for characters it has not seen yet.
-    fonts.collect("mono", title)
+    fonts.collect("mono", title + " " + draft_notice)
     for heading, paragraphs in sections:
         fonts.collect("mono", heading)
         for paragraph in paragraphs:
@@ -676,17 +679,20 @@ def manuscript_pdf(
             document.add(Block(paragraph, role="mono", size=size, leading=leading / size,
                                align=GRID, columns=NORM_COLUMNS))
             document.add(Block("", role="mono", size=size, leading=leading / size, align=GRID))
-    _running_header(document, title, author, role="mono", size=8, columns=NORM_COLUMNS)
+    _running_header(document, title, author, role="mono", size=8, columns=NORM_COLUMNS,
+                    draft_notice=draft_notice)
     document.page_furniture("{folio}/{pages}", role="mono", size=8, position="footer-centre")
     return document.render()
 
 
 def _running_header(document: Document, title: str, author: str, *, role: str,
-                    size: float, columns: int | None = None) -> None:
-    """Bound literal title/author text to one line outside the body block."""
+                    size: float, columns: int | None = None, draft_notice: str = "") -> None:
+    """Bound literal title/author/draft-notice text to one line outside the body block."""
     from .pdf_document import text_width
 
-    text = " · ".join(" ".join(value.split()) for value in (title, author) if value.strip())
+    text = " · ".join(
+        " ".join(value.split()) for value in (title, author, draft_notice) if value.strip()
+    )
     document.fonts.collect(role, text + "...")
     face = document.fonts.face(role)
     shortened = text

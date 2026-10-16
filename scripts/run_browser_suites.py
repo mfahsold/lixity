@@ -3,15 +3,20 @@
 
 Every ``tests/browser/*.cjs`` file is an independent suite. ``--group fast``
 runs the everyday core surfaces; ``--group full`` (the default) runs every
-suite and belongs before a release. ``--jobs N`` runs N independent suites in
-parallel and keeps the machine reasonably busy; the suites do not share state.
-Playwright and Chromium are optional developer tools; ``tests/browser/README.md``
-documents installation and environment overrides. The same script backs the
-manual ``browser`` workflow dispatch, so local and CI runs stay aligned.
+suite and belongs before a release. ``--area NAME`` runs the suites for one
+surface (``docs``, ``research``, ``analysis``, ``project``, ``tokens``), and
+``--changed`` maps changed git paths to the affected areas (falling back to the
+full set when a shared renderer or unknown UI path changed). ``--jobs N`` runs
+N independent suites in parallel and keeps the machine reasonably busy; the
+suites do not share state. Playwright and Chromium are optional developer
+tools; ``tests/browser/README.md`` documents installation and environment
+overrides. The same script backs the manual ``browser`` workflow dispatch, so
+local and CI runs stay aligned.
 """
 
 import argparse
 import concurrent.futures
+import fnmatch
 import shutil
 import subprocess
 import sys
@@ -35,10 +40,156 @@ GROUPS: dict[str, tuple[str, ...]] = {
     ),
 }
 
+# Surface areas for targeted runs (--area and --changed). Every suite belongs
+# to at least one area; tests/test_ci_selection.py verifies complete coverage.
+AREAS: dict[str, tuple[str, ...]] = {
+    "docs": (
+        "docs.cjs",
+        "visual-consistency.cjs",
+    ),
+    "tokens": (
+        "docs.cjs",
+        "layout.cjs",
+        "visual-consistency.cjs",
+    ),
+    "analysis": (
+        "layout.cjs",
+        "manuscript-pdf.cjs",
+        "manuscript-search.cjs",
+        "minimal-workflows.cjs",
+        "paragraph-feedback.cjs",
+        "scenes.cjs",
+        "style-space.cjs",
+        "ui-usability.cjs",
+        "visual-consistency.cjs",
+    ),
+    "project": (
+        "debug.cjs",
+        "nda-draft.cjs",
+        "project-controls.cjs",
+        "project-history.cjs",
+        "project-switch-native.cjs",
+        "publication-settings.cjs",
+        "settings.cjs",
+        "setup-guide.cjs",
+        "ui-usability.cjs",
+        "visual-consistency.cjs",
+    ),
+    "research": (
+        "decision-acknowledgement.cjs",
+        "dossier-claims.cjs",
+        "dossier-images.cjs",
+        "dossier-workflows.cjs",
+        "list-filters.cjs",
+        "manuscript-links-native.cjs",
+        "manuscript-links.cjs",
+        "research-chronology.cjs",
+        "research-selection.cjs",
+        "research.cjs",
+        "workspace-reader.cjs",
+    ),
+}
+
+# Path patterns -> area names; "full" forces the complete suite set when a
+# shared foundation changed. Unmatched UI paths also fall back to "full".
+PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
+    ("docs/*", ("docs",)),
+    ("scripts/stage_pages.py", ("docs",)),
+    ("src/lixity/ui/assets/design-tokens.css", ("tokens",)),
+    ("src/lixity/ui/assets/components.css", ("tokens", "analysis", "project")),
+    ("src/lixity/ui/assets/research*", ("research",)),
+    ("src/lixity/ui/assets/zotero-results.js", ("research",)),
+    ("src/lixity/ui/assets/dossier-images.*", ("research",)),
+    ("src/lixity/ui/assets/workspace-reader.*", ("research",)),
+    ("src/lixity/ui/assets/manuscript-links.*", ("research",)),
+    ("src/lixity/ui/research_panel.py", ("research",)),
+    ("src/lixity/research/*", ("research",)),
+    ("src/lixity/server/routes_research.py", ("research",)),
+    ("src/lixity/server/routes_manuscript_research.py", ("research",)),
+    ("src/lixity/ui/assets/project-ui.js", ("project",)),
+    ("src/lixity/ui/modals.py", ("project",)),
+    ("src/lixity/ui/settings.py", ("project",)),
+    ("src/lixity/server/routes_project.py", ("project",)),
+    ("src/lixity/server/routes_nda.py", ("project",)),
+    ("src/lixity/ui/assets/interactions.js", ("analysis",)),
+    ("src/lixity/ui/assets/style-space.js", ("analysis",)),
+    ("src/lixity/ui/assets/tooltips.js", ("analysis",)),
+    ("src/lixity/ui/dimensions.py", ("analysis",)),
+    ("src/lixity/ui/heatmap.py", ("analysis",)),
+    ("src/lixity/ui/narration.py", ("analysis",)),
+    ("src/lixity/ui/structural.py", ("analysis",)),
+    ("src/lixity/server/routes_pdf.py", ("analysis",)),
+    ("src/lixity/server/routes_markers.py", ("analysis",)),
+    ("src/lixity/ui/assets/component-layer.js", ("full",)),
+    ("src/lixity/ui/assets/dashboard.*", ("full",)),
+    ("src/lixity/ui/dashboard.py", ("full",)),
+    ("src/lixity/ui/components.py", ("full",)),
+    ("src/lixity/workspace_labels.py", ("full",)),
+)
+
 
 def suite_names() -> list[str]:
     """Return every registered browser suite in deterministic order."""
     return [path.name for path in sorted(SUITE_DIR.glob("*.cjs"))]
+
+
+def changed_git_paths(base: str | None = None) -> list[str]:
+    """Return repo-relative paths modified in the working tree or since ``base``."""
+    commands = (
+        [["git", "diff", "--name-only", base, "HEAD"]]
+        if base
+        else [
+            ["git", "diff", "--name-only"],
+            ["git", "diff", "--cached", "--name-only"],
+            ["git", "ls-files", "--others", "--exclude-standard"],
+        ]
+    )
+    found: set[str] = set()
+    for command in commands:
+        result = subprocess.run(  # noqa: S603 - fixed git arguments
+            command, cwd=ROOT, check=False, capture_output=True, text=True
+        )
+        if result.returncode == 0:
+            found.update(line.strip() for line in result.stdout.splitlines() if line.strip())
+    return sorted(found)
+
+
+def suites_for_paths(paths: list[str], available: list[str] | None = None) -> list[str]:
+    """Map repo-relative paths to the browser suites they can affect.
+
+    Returns the fast group when no UI/docs/server/research path is present, and
+    the full set when a shared foundation or an unmapped UI path changed.
+    """
+    names = available if available is not None else suite_names()
+    known = set(names)
+    selected: set[str] = set()
+    relevant = False
+    for raw in paths:
+        path = raw.strip().lstrip("./")
+        if not path:
+            continue
+        if path.startswith("tests/browser/") and path.endswith(".cjs"):
+            relevant = True
+            candidate = Path(path).name
+            if candidate in known:
+                selected.add(candidate)
+            continue
+        matched = False
+        for pattern, areas in PATH_RULES:
+            if fnmatch.fnmatch(path, pattern):
+                relevant = True
+                matched = True
+                if "full" in areas:
+                    return list(names)
+                for area in areas:
+                    selected.update(AREAS[area])
+        if not matched and path.startswith(
+            ("src/lixity/ui/", "src/lixity/server/", "tests/browser/")
+        ):
+            return list(names)
+    if not relevant:
+        selected.update(GROUPS["fast"])
+    return [name for name in names if name in selected]
 
 
 def run_suite(node: str, name: str, capture: bool) -> tuple[str, float, int, str]:
@@ -82,10 +233,34 @@ def main() -> int:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--list", action="store_true", help="List suite filenames and exit")
     parser.add_argument("--only", nargs="+", metavar="SUITE", help="Run only these suites")
-    parser.add_argument("--group", choices=("fast", "full"), default="full",
-                        help="Run the everyday fast group or every suite (default: full)")
-    parser.add_argument("--jobs", type=int, default=1, metavar="N",
-                        help="Run N independent suites in parallel (default: 1)")
+    parser.add_argument(
+        "--area",
+        nargs="+",
+        choices=tuple(sorted(AREAS)),
+        metavar="AREA",
+        help="Run the suites for one or more surface areas: " + ", ".join(sorted(AREAS)),
+    )
+    parser.add_argument(
+        "--changed",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="BASE",
+        help="Select suites from git changes (working tree, or diff from BASE to HEAD)",
+    )
+    parser.add_argument(
+        "--group",
+        choices=("fast", "full"),
+        default="full",
+        help="Run the everyday fast group or every suite (default: full)",
+    )
+    parser.add_argument(
+        "--jobs",
+        type=int,
+        default=1,
+        metavar="N",
+        help="Run N independent suites in parallel (default: 1)",
+    )
     parser.add_argument("--start", metavar="SUITE", help="Resume at this suite after a failure")
     arguments = parser.parse_args()
 
@@ -103,6 +278,14 @@ def main() -> int:
         if unknown:
             parser.error("Unknown suites: " + ", ".join(unknown))
         names = [name for name in names if name in requested]
+    elif arguments.area:
+        selected: set[str] = set()
+        for area in arguments.area:
+            selected.update(AREAS[area])
+        names = [name for name in names if name in selected]
+    elif arguments.changed is not None:
+        paths = changed_git_paths(arguments.changed or None)
+        names = suites_for_paths(paths, names)
     else:
         if arguments.group == "fast":
             fast = set(GROUPS["fast"])
@@ -110,11 +293,11 @@ def main() -> int:
             if unknown:
                 parser.error("Unknown suites in group fast: " + ", ".join(unknown))
             names = [name for name in names if name in fast]
-        if arguments.start:
-            start = normalize(arguments.start)
-            if start not in names:
-                parser.error(f"Unknown suite: {start}")
-            names = names[names.index(start) :]
+    if arguments.start:
+        start = normalize(arguments.start)
+        if start not in names:
+            parser.error(f"Unknown suite: {start}")
+        names = names[names.index(start) :]
 
     if arguments.list:
         print("\n".join(names))
@@ -126,9 +309,9 @@ def main() -> int:
         return 2
 
     if arguments.jobs > 1:
-        if arguments.jobs > len(names):
-            parser.error("--jobs cannot exceed the number of selected suites")
-        return run_parallel(node, names, arguments.jobs)
+        jobs = min(arguments.jobs, len(names))
+        if jobs > 1:
+            return run_parallel(node, names, jobs)
 
     started = time.monotonic()
     for index, name in enumerate(names, start=1):

@@ -194,8 +194,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name == "reconcile-manuscript":
             _add_manuscript_argument(command)
             command.add_argument("--link-id", help="Only this association (default: every uniquely resolvable association)")
+            command.add_argument("--new-quote",
+                                 help="Explicitly replace a changed association's quote with the revised displayed-text quote (requires --link-id)")
+            command.add_argument("--line", type=int,
+                                 help="Restrict --new-quote resolution to the paragraph containing this source line")
+            command.add_argument("--reason",
+                                 help="Optional revision reason when updating a quote")
             command.add_argument("--accept-moved", action="store_true",
-                                 help="Accept uniquely resolvable anchors (moved or adjusted paragraphs); "
+                                 help="Accept uniquely resolvable anchors (or apply --new-quote); "
                                       "without this flag the command only previews")
             command.add_argument("--update-sha", action="store_true",
                                  help="Accepted for compatibility; the current file digest is always re-pinned")
@@ -850,7 +856,25 @@ def run(args: argparse.Namespace) -> int:
             source_sha256 = args.expected_source_sha256
             if source_sha256 is None:
                 source_sha256 = FileUtils.read_source_snapshot(str(source_path))[1]
-            if not args.accept_moved:
+            if args.new_quote is not None and args.link_id is None:
+                raise ResearchError("--new-quote requires --link-id")
+            if args.new_quote is not None and not args.accept_moved:
+                row = next((item for item in link_review["links"] if item["link_id"] == args.link_id), None)
+                if row is None:
+                    raise ResearchError("Unknown manuscript association for this manuscript")
+                resolved = api.resolve_manuscript_anchor(
+                    args.project, args.manuscript, query=args.new_quote,
+                    line=args.line, language=args.language)
+                result = {"schema_version": "research-manuscript-reconcile-local/1",
+                          "project_id": link_review["project_id"], "snapshot": link_review["snapshot"],
+                          "source_path": link_review["source_path"], "dry_run": True,
+                          "candidates": [{"link_id": row["link_id"], "revision": row["revision"],
+                                          "claim_title": row.get("claim_title"),
+                                          "anchor_state": row["anchor_state"],
+                                          "old_quote": row["anchor"]["quote"],
+                                          "new_quote": resolved["quote"],
+                                          "candidate_lines": [resolved["start_line"]]}]}
+            elif not args.accept_moved:
                 movable = [row for row in link_review["links"]
                            if row["anchor_state"] in ("moved", "adjusted")
                            and (args.link_id is None or row["link_id"] == args.link_id)]
@@ -870,7 +894,8 @@ def run(args: argparse.Namespace) -> int:
                     args.project, args.manuscript, args.link_id,
                     expected_project_id=link_review["project_id"], expected_snapshot=link_review["snapshot"],
                     expected_revision=row["revision"], expected_source_sha256=source_sha256,
-                    actor=args.actor, language=args.language)
+                    actor=args.actor, language=args.language,
+                    new_quote=args.new_quote, line=args.line, reason=args.reason)
             else:
                 movable = [row for row in link_review["links"]
                            if row["anchor_state"] in ("moved", "adjusted")]

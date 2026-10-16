@@ -561,6 +561,50 @@ def test_cli_reconcile_previews_and_accepts_adjusted(manuscript_archive, capsys)
     assert api.review_manuscript_links(project, manuscript)["review_needed_count"] == 0
 
 
+def test_cli_reconcile_previews_and_repins_changed_quote_explicitly(manuscript_archive, capsys):
+    import argparse
+    import json
+
+    from lixity.research import cli
+
+    project, manuscript, _, _ = manuscript_archive
+    saved = save_link(manuscript_archive)
+    link_id = saved["link_id"]
+    manuscript.write_text(
+        "## Chapter One\n\nThe **study room** was open until midnight. 🦉\n",
+        encoding="utf-8",
+    )
+    assert api.review_manuscript_links(project, manuscript)["links"][0]["anchor_state"] == "changed"
+    parser = argparse.ArgumentParser()
+    cli.configure(parser)
+    preview = parser.parse_args([
+        "reconcile-manuscript", "--project", str(project), "draft.md",
+        "--link-id", link_id, "--new-quote", "The study room was open",
+    ])
+    assert cli.run(preview) == 0
+    planned = json.loads(capsys.readouterr().out)
+    assert planned["dry_run"] is True
+    assert planned["candidates"][0]["old_quote"] == "🦉 A visitor arrived."
+    assert planned["candidates"][0]["new_quote"] == "The study room was open"
+    assert planned["candidates"][0]["candidate_lines"] == [3]
+
+    apply = parser.parse_args([
+        "reconcile-manuscript", "--project", str(project), "draft.md",
+        "--link-id", link_id, "--new-quote", "The study room was open",
+        "--reason", "Glättung des Satzes", "--accept-moved",
+    ])
+    assert cli.run(apply) == 0
+    done = json.loads(capsys.readouterr().out)
+    assert done["record"]["revision"] == 2
+    assert done["record"]["anchor"]["quote"] == "The study room was open"
+    assert done["record"]["change"]["reason"] == "Glättung des Satzes"
+    review = api.review_manuscript_links(project, manuscript)
+    assert review["review_needed_count"] == 0
+    assert review["links"][0]["anchor_state"] == "resolved"
+    history = api.record_history(project, "manuscript_claim_link", link_id)
+    assert len(history["revisions"]) == 2
+
+
 def test_cli_manuscript_path_works_positionally(manuscript_archive, capsys):
     import argparse
     import json

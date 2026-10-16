@@ -44,3 +44,43 @@ class TestNativePdfSelection(unittest.TestCase):
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
         collected = {line for line in result.stdout.splitlines() if line.startswith("tests/")}
         self.assertEqual(collected, expected)
+
+class TestBrowserSuiteSelection(unittest.TestCase):
+    """Every browser suite belongs to an area, and --changed falls back safely."""
+
+    def test_areas_and_groups_cover_every_suite_without_stale_names(self):
+        from scripts.run_browser_suites import AREAS, GROUPS, suite_names
+
+        actual = set(suite_names())
+        self.assertGreaterEqual(len(actual), 20)
+        for group, members in GROUPS.items():
+            unknown = sorted(set(members) - actual)
+            self.assertEqual(unknown, [], f"Unknown suites in group {group}: {unknown}")
+        covered: set[str] = set()
+        for area, members in AREAS.items():
+            unknown = sorted(set(members) - actual)
+            self.assertEqual(unknown, [], f"Unknown suites in area {area}: {unknown}")
+            covered.update(members)
+        unassigned = sorted(actual - covered)
+        self.assertEqual(unassigned, [], f"Suites missing from AREAS: {unassigned}")
+
+    def test_changed_mapping_selects_the_affected_area_and_falls_back_to_full(self):
+        from scripts.run_browser_suites import AREAS, GROUPS, suite_names, suites_for_paths
+
+        all_suites = suite_names()
+        self.assertEqual(
+            suites_for_paths(["docs/index.html"]),
+            [name for name in all_suites if name in AREAS["docs"]],
+        )
+        self.assertEqual(
+            suites_for_paths(["src/lixity/ui/assets/research-lists.js"]),
+            [name for name in all_suites if name in AREAS["research"]],
+        )
+        self.assertEqual(
+            suites_for_paths(["src/lixity/analyzer.py"]),
+            [name for name in all_suites if name in GROUPS["fast"]],
+        )
+        # Shared foundations and unmapped UI files must run the full set.
+        self.assertEqual(suites_for_paths(["src/lixity/ui/dashboard.py"]), all_suites)
+        self.assertEqual(suites_for_paths(["src/lixity/ui/new_panel.py"]), all_suites)
+        self.assertEqual(suites_for_paths(["tests/browser/docs.cjs"]), ["docs.cjs"])

@@ -40,6 +40,7 @@ TOOL_KEYS = frozenset(
     {
         "title",
         "author_name",
+        "draft_notice",
         "publication",
         "z_mild",
         "z_strong",
@@ -60,6 +61,7 @@ TOOL_KEYS = frozenset(
 
 MAX_AUTHOR_NAME_CHARS = 500
 MAX_PROJECT_TITLE_CHARS = 500
+MAX_DRAFT_NOTICE_CHARS = 500
 
 
 def validate_author_name(value: object) -> str:
@@ -70,6 +72,11 @@ def validate_author_name(value: object) -> str:
 def validate_project_title(value: object) -> str:
     """Validate the same bounded title used by UI and PDF metadata."""
     return validate_metadata_text(value, "Title", MAX_PROJECT_TITLE_CHARS)
+
+
+def validate_draft_notice(value: object) -> str:
+    """Validate an optional running-header notice (e.g. 'Confidential draft')."""
+    return validate_metadata_text(value, "Draft notice", MAX_DRAFT_NOTICE_CHARS)
 
 
 def _same_toml(left: Any, right: Any) -> bool:
@@ -300,6 +307,7 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
     if user.is_file():
         merged.update(_load_toml(user))
         merged.pop("author_name", None)
+        merged.pop("draft_notice", None)
         merged.pop("publication", None)
 
     project = _walk_up(here, "pyproject.toml")
@@ -307,6 +315,7 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
         settings = _load_toml(project)
         if start is None or project.parent != here:
             settings.pop("author_name", None)
+            settings.pop("draft_notice", None)
             settings.pop("publication", None)
         merged.update(settings)
 
@@ -315,6 +324,7 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
         settings = _load_toml(local)
         if start is None or local.parent != here:
             settings.pop("author_name", None)
+            settings.pop("draft_notice", None)
             settings.pop("publication", None)
         merged.update(settings)
 
