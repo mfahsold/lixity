@@ -312,6 +312,10 @@ server.serve_forever()
     await page.locator('#r-claim-dossier-select').selectOption(dossiers.dossiers[0].id);
     await page.locator('#r-claim-create-btn').click();
     await expect(page.locator('#research-claims-list')).toContainText(claimTitle);
+    for (const host of ['research-sources-list', 'research-dossiers-list', 'research-claims-list', 'research-decisions-list']) {
+      assert.equal(await page.locator(`#${host} > .loading-state`).count(), 0,
+        `The ${host} host drops its server placeholder on the first component render`);
+    }
     assert.equal(await page.locator('#research-claims-list img').count(), 0);
     const claims = await (await page.request.get(fixture.url + '/api/research/claims')).json();
     assert.equal(claims.claims.length, 1);

@@ -6,7 +6,7 @@
 // component renders only.
 (function () {
   "use strict";
-  var html = htm.bind(preact.h);
+  var html = LixityComponents.html;
 
   function catalogueHref(library, key) {
     if (!/^[A-Z0-9]{8}$/.test(key || "") || !/^(users\/\d+|groups\/[1-9]\d*)$/.test(library || "")) return null;
@@ -87,10 +87,10 @@
 
   window.LixityZoteroResults = {
     render: function (host, model) {
-      preact.render(html`<${Results} ...${model} />`, host);
+      LixityComponents.mount(host, html`<${Results} ...${model} />`);
     },
     clear: function (host) {
-      preact.render(null, host);
+      LixityComponents.unmount(host);
     },
   };
 })();

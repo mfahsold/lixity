@@ -361,6 +361,30 @@ Rules for changes:
 - Responsive stacking is a CSS decision (single column at 640 px), not a second
   markup tree; new panels must survive 320 px without horizontal overflow.
 
+### Design system: one scale, one control language
+
+`src/lixity/ui/assets/design-tokens.css` is the single source for colour,
+radius, type, spacing and elevation, and it is shared with the staged public
+site (`stage_pages.py` copies it; `docs/assets/site.css` imports it). The
+ladders are deliberately short:
+
+- Radius: `--radius-xs` (inline bits), `--radius-sm` (every control),
+  `--radius` (cards, panels), `--radius-lg` (modals), `--radius-pill`
+  (badges, tags, tracks). Rules never hard-code a radius.
+- Type: `--text-micro`, `--text-note`, `--text-small`, `--text-control`,
+  `--text-section-title`, `--text-body`. Display headings (project title,
+  welcome hero, markdown h1-h3) are the documented exception; every other
+  rule uses a token.
+- Component families: `.ctl` (with `.primary`, `.ctl-sm`/`.ctl-compact`,
+  `.ctl-link`), one tab recipe (`.view-navigation`/`.view-nav-tab` and
+  `.research-tabs` are the same control with a filled active state), one
+  badge family (`.badge`/`.research-badge` plus `.badge-success/-warning/
+  -neutral/-warn` tones, pills) and `.research-tag` pills.
+
+`tests/browser/visual-consistency.cjs` enforces the discipline: control
+radii, badge pills and sampled text sizes must come from the ladders, so a
+new one-off value fails the suite instead of quietly drifting.
+
 ### Stateful panels: the component layer (vendored Preact + HTM)
 
 The shell, static exports and most panels stay server-rendered: one Python
@@ -373,6 +397,10 @@ string building:
   involved; `_JS_FILES` inlines them into the single dashboard script, so the
   page stays self-contained, works offline and needs no `unsafe-eval` under the
   nonce CSP (htm is pure string parsing, not `new Function`).
+- `assets/component-layer.js` is the one entry point: panels render through
+  `LixityComponents.mount(host, vnode)`, which clears the host on the first
+  mount so a server-rendered loading placeholder cannot survive beside the
+  rendered tree, and unmounts through `LixityComponents.unmount`.
 - Components render into an existing host element and own only their subtree.
   The Zotero catalogue results (`assets/zotero-results.js`) and the four
   research record lists - sources, dossiers, claims, decisions

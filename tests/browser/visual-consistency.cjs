@@ -56,6 +56,43 @@ async function checkTypography(page, label) {
   assert.notEqual((await textRole(page.locator('.project-header h1'))).family, body.family,
     `${label} project title keeps its literary font`);
 }
+// The design tokens are the single source for radius and type sizes: every
+// control shares one radius, badges and tags are pills, and the sampled text
+// roles stay on the published ladder.
+async function checkScale(page, label) {
+  const ladder = await page.evaluate(() => {
+    const root = getComputedStyle(document.documentElement);
+    return Object.fromEntries(['--text-micro', '--text-note', '--text-small', '--text-control',
+      '--text-section-title', '--text-body'].map(name => {
+      const rem = parseFloat(root.getPropertyValue(name));
+      return [name, `${Number((rem * 16).toFixed(3))}px`];
+    }));
+  });
+  assert.equal(ladder['--text-micro'], '11.2px', `${label} micro step`);
+  assert.deepEqual(Object.keys(ladder).length, 6, `${label} ladder`);
+  const radii = await page.locator('button.ctl:not(.ctl-link):visible, select.ctl:visible, input.ctl:visible, textarea.ctl:visible, .view-nav-tab:visible, .btn:visible, .theme-btn:visible')
+    .evaluateAll(elements => Array.from(new Set(elements.map(element => getComputedStyle(element).borderRadius))));
+  assert.deepEqual(radii, [await page.evaluate(() => {
+    const probe = document.createElement('span');
+    probe.style.borderRadius = 'var(--radius-sm)';
+    document.body.appendChild(probe);
+    const value = getComputedStyle(probe).borderRadius;
+    probe.remove();
+    return value;
+  })], `${label} control radius`);
+  const pillNodes = page.locator('.badge:visible, .badge-sm:visible, .research-tag:visible, .version-badge:visible, .research-badge:visible');
+  if (await pillNodes.count()) {
+    const pills = await pillNodes.evaluateAll(elements => Array.from(new Set(elements.map(element => getComputedStyle(element).borderRadius))));
+    assert.deepEqual(pills, ['999px'], `${label} badge and tag radius`);
+  }
+  const textNodes = page.locator('.ctl-note:visible, .text-note:visible, table:visible, .badge:visible');
+  if (await textNodes.count()) {
+    const sizes = await textNodes.evaluateAll(elements => Array.from(new Set(elements.map(element => getComputedStyle(element).fontSize))));
+    const allowed = Object.values(ladder);
+    const strays = sizes.filter(size => !allowed.includes(size));
+    assert.deepEqual(strays, [], `${label} text sizes off the token ladder (${JSON.stringify(sizes)})`);
+  }
+}
 (async () => {
   const browser = await launchChromium();
   try {
@@ -89,6 +126,8 @@ async function checkTypography(page, label) {
         });
         assert.deepEqual(await roles(app), await roles(site), `palette mismatch: ${theme}`);
         await checkTypography(app, `${theme} ${width}px`);
+        await checkScale(app, `${theme} ${width}px app`);
+        await checkScale(site, `${theme} ${width}px site`);
         await identity.setViewportSize({width, height: 1000});
         await identity.goto('http://lixity.test/identity');
         await identity.locator('#tab-view-project').click();

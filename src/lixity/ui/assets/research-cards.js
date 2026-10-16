@@ -13,7 +13,7 @@
 // because their impact panel loads on demand and could keep stale state.
 (function () {
   "use strict";
-  var html = htm.bind(preact.h);
+  var html = LixityComponents.html;
 
   function CatalogueLink(props) {
     var key = props.itemKey || "";
@@ -111,7 +111,7 @@
 
   window.LixityResearchCards = {
     render: function (host, model) {
-      preact.render(html`<${ResearchList} ...${model} />`, host);
+      LixityComponents.mount(host, html`<${ResearchList} ...${model} />`);
     },
   };
 })();

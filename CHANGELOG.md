@@ -17,10 +17,19 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   this layer.
 
 ### Changed
+- UI cohesion: radius, type and weight values come from the design-token
+  ladders instead of one-off numbers; the workspace switch and the research
+  sub-tabs share one tab/control recipe, badges and tags are one pill family,
+  and the staged public site uses the same control metrics. The
+  `visual-consistency` browser suite now fails when control radii, badge
+  pills or sampled text sizes leave the ladders.
 - Research workspace: the record lists render through one shared card
   component; the hand-rolled per-card identity diffing was removed. The
   claims evidence panel keeps loaded evidence in the list model, so
   re-renders no longer lose or misplace it.
+- Component layer: panels mount through `LixityComponents.mount`, so the
+  server-rendered loading placeholder no longer survives beside the first
+  rendered list (the empty list hosts show the component tree only).
 - Research workspace: the claim timeline is a view switch (List/Timeline)
   inside "Thesen & Belege" instead of a separate top-level tab, with a purpose
   line naming both views; the decisions pane states its scope ("deliberate

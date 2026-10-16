@@ -20,10 +20,18 @@ class Controls(HTMLParser):
 
 def test_publication_fields_are_collapsed_escaped_and_context_bound() -> None:
     html = render_dashboard(
-        [], [], controls=True, author_setting_enabled=True,
-        publication={"enabled": True, "publisher_name": 'Synthetic <script>alert(1)</script>',
-                     "publisher_address": "Synthetic street\nSynthetic town", "year": "2026"},
-        publication_error='<img src=x onerror="alert(1)">', project_token="a" * 64,
+        [],
+        [],
+        controls=True,
+        author_setting_enabled=True,
+        publication={
+            "enabled": True,
+            "publisher_name": "Synthetic <script>alert(1)</script>",
+            "publisher_address": "Synthetic street\nSynthetic town",
+            "year": "2026",
+        },
+        publication_error='<img src=x onerror="alert(1)">',
+        project_token="a" * 64,
     )
     parsed = Controls()
     parsed.feed(html)
@@ -31,7 +39,10 @@ def test_publication_fields_are_collapsed_escaped_and_context_bound() -> None:
     assert parsed.elements["settings-form"]["data-project-token"] == "a" * 64
     assert parsed.elements["set-publication-enabled"]["type"] == "checkbox"
     assert "checked" in parsed.elements["set-publication-enabled"]
-    assert parsed.elements["set-publication-publisher_name"]["value"] == 'Synthetic <script>alert(1)</script>'
+    assert (
+        parsed.elements["set-publication-publisher_name"]["value"]
+        == "Synthetic <script>alert(1)</script>"
+    )
     assert "disabled" not in parsed.elements["set-publication-publisher_name"]
     assert "Synthetic &lt;script&gt;alert(1)&lt;/script&gt;" in html
     assert '<img src=x onerror="alert(1)">' not in html
@@ -42,7 +53,9 @@ def test_publication_without_explicit_root_is_disabled_with_no_inferred_data() -
     html = render_dashboard([], [], controls=True)
     parsed = Controls()
     parsed.feed(html)
-    fields = {key: value for key, value in parsed.elements.items() if key.startswith("set-publication-")}
+    fields = {
+        key: value for key, value in parsed.elements.items() if key.startswith("set-publication-")
+    }
     assert len(fields) == 12
     assert all("disabled" in value for value in fields.values())
     assert "checked" not in fields["set-publication-enabled"]
@@ -52,7 +65,7 @@ def test_publication_without_explicit_root_is_disabled_with_no_inferred_data() -
 
 def test_canonical_tokens_are_inlined_before_component_styles() -> None:
     html = render_dashboard([], [])
-    assert html.index("--status-success-fg:") < html.index(".research-badge.badge-success")
+    assert html.index("--status-success-fg:") < html.index(".research-card {")
     assert "var(--status-warning-fg)" in html
     assert "design-tokens.css" not in html, "Standalone output must not request a stylesheet"
 

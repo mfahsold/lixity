@@ -12,7 +12,7 @@ a { color: var(--accent); text-underline-offset: .18em; }
 a:hover { text-decoration-thickness: 2px; }
 p, li, figcaption { overflow-wrap: anywhere; }
 h1, h2, h3 { color: var(--fg-heading); line-height: 1.2; }
-h1, h2 { font-family: var(--font-title); text-wrap: balance; font-weight: 700; }
+h1, h2 { font-family: var(--font-title); text-wrap: balance; font-weight: var(--weight-strong); }
 h2 { font-size: clamp(1.6rem, 3vw, 2rem); margin: 0 0 1rem; }
 h3 { font-size: 1.08rem; }
 p { margin: 0 0 1.15rem; }
@@ -27,13 +27,14 @@ section[id], article[id] { scroll-margin-top: 2rem; }
 .site-header { border-bottom: 1px solid var(--line); padding: 1rem 1.5rem; }
 .header-inner { max-width: 72rem; margin: auto; display: flex; flex-wrap: wrap; align-items: center; gap: 1rem 2rem; }
 .brand { display: flex; align-items: center; gap: .65rem; color: var(--fg-heading); text-decoration: none; }
-.brand-logo { width: 2rem; height: 2rem; display: grid; place-items: center; background: var(--action-bg); color: var(--on-action); border-radius: 6px; font-family: var(--font-title); font-size: 1.4rem; }
-.brand-name { font-size: 1.25rem; font-weight: 700; }
-.brand-badge { color: var(--muted); font-size: .8rem; }
-.site-nav { display: flex; flex-wrap: wrap; flex: 1; gap: 1.2rem; font-size: .9rem; }
+.brand-logo { width: 2rem; height: 2rem; display: grid; place-items: center; background: var(--action-bg); color: var(--on-action); border-radius: var(--radius-sm); font-family: var(--font-title); font-size: 1.4rem; }
+.brand-name { font-size: 1.25rem; font-weight: var(--weight-strong); }
+.brand-badge { color: var(--muted); font-size: var(--text-small); }
+.site-nav { display: flex; flex-wrap: wrap; flex: 1; gap: 1.2rem; font-size: var(--text-control); }
 .site-nav a { color: var(--muted); text-decoration: none; padding: .5rem 0; }
 .site-nav a:hover { color: var(--accent); text-decoration: underline; }
-.theme-btn { padding: .55rem .8rem; min-height: 2.75rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--fg); font: inherit; font-size: .85rem; cursor: pointer; }
+.theme-btn { padding: .45rem .8rem; min-height: 2.5rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font: inherit; font-size: var(--text-control); cursor: pointer; }
+.theme-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 main { max-width: 72rem; margin: auto; padding: 0 1.5rem 3rem; }
 .hero { max-width: 48rem; padding: 4rem 0 2.5rem; }
@@ -41,11 +42,16 @@ main { max-width: 72rem; margin: auto; padding: 0 1.5rem 3rem; }
 .hero-sub { font-size: clamp(1.15rem, 2vw, 1.4rem); line-height: 1.5; }
 .hero > p { max-width: 62ch; }
 .hero-cta { display: flex; flex-wrap: wrap; gap: .8rem; margin: 1.8rem 0; }
-.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 2.75rem; padding: .65rem 1.1rem; border: 1px solid var(--line-strong); border-radius: 6px; background: var(--surface); color: var(--fg); font-weight: 600; text-decoration: none; }
-.btn:hover { border-color: var(--accent); }
-.btn.primary { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); }
+/* One control recipe with the app: same height, padding, radius and type. */
+.btn { display: inline-flex; align-items: center; justify-content: center; min-height: 2.5rem; padding: .45rem .8rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm); background: var(--surface); color: var(--fg); font-size: var(--text-control); line-height: var(--line-control); font-weight: var(--weight-semibold); text-decoration: none; }
+.btn:hover { border-color: var(--accent); color: var(--accent); }
+.btn.primary { background: var(--action-bg); color: var(--on-action); border-color: var(--action-bg); font-weight: var(--weight-strong); }
 .btn.primary:hover { background: var(--action-hover); }
-.release-note, .license-note, .capture-note { color: var(--muted); font-size: .9rem; }
+/* Touch targets keep the 44px minimum, exactly like the app controls. */
+@media (pointer: coarse) {
+  .btn, .theme-btn, .site-nav a { min-height: 2.75rem; }
+}
+.release-note, .license-note, .capture-note { color: var(--muted); font-size: var(--text-control); }
 .license-note { border-left: 2px solid var(--line-strong); padding-left: 1rem; }
 .intro { max-width: 48rem; margin: 1rem 0 2.5rem; }
 #origin { padding-top: 2.5rem; border-top: 1px solid var(--line); }
@@ -56,7 +62,7 @@ main { max-width: 72rem; margin: auto; padding: 0 1.5rem 3rem; }
 .shot { min-width: 0; margin: 0; }
 .shot > a { display: block; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: #f8fafc; }
 .shot img { display: block; width: 100%; height: auto; max-height: 29rem; object-fit: contain; }
-.shot figcaption { padding: .8rem 0 0; color: var(--muted); font-size: .85rem; }
+.shot figcaption { padding: .8rem 0 0; color: var(--muted); font-size: var(--text-small); }
 .capture-note { padding: 1rem 0; }
 .reading-section { max-width: 54rem; padding: 3rem 0; border-top: 1px solid var(--line); }
 .reading-section > p { max-width: 72ch; }
@@ -64,15 +70,15 @@ main { max-width: 72rem; margin: auto; padding: 0 1.5rem 3rem; }
 .guide-cards h3 { margin: 0 0 .7rem; line-height: 1.4; }
 .guide-cards p { margin: 0; color: var(--muted); }
 
-code { font-family: var(--font-mono); font-size: .88em; background: var(--bg-subtle); padding: .1rem .25rem; border-radius: 3px; }
-pre { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem; font: .85rem/1.65 var(--font-mono); overflow-x: auto; }
+code { font-family: var(--font-mono); font-size: .88em; background: var(--bg-subtle); padding: .1rem .25rem; border-radius: var(--radius-xs); }
+pre { min-width: 0; white-space: pre-wrap; overflow-wrap: anywhere; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.25rem; font: var(--text-control)/1.65 var(--font-mono); overflow-x: auto; }
 pre code { padding: 0; background: none; }
 details { border-bottom: 1px solid var(--line); padding: 1rem 0; }
 details:last-of-type { border-bottom: 0; }
-summary { cursor: pointer; font-weight: 600; color: var(--fg-heading); }
+summary { cursor: pointer; font-weight: var(--weight-semibold); color: var(--fg-heading); }
 details p { margin: 1rem 0 0; }
 address { font-style: normal; }
-footer { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: .85rem; }
+footer { margin-top: 2rem; padding-top: 1.5rem; border-top: 1px solid var(--line); color: var(--muted); font-size: var(--text-small); }
 footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 
 /* Guides use the same typography, palette and controls. */
@@ -82,9 +88,9 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .guide p, .guide li { max-width: 72ch; line-height: 1.75; }
 .guide li { margin-bottom: .55rem; }
 .guide code, .guide a { overflow-wrap: anywhere; }
-.guide .updated { color: var(--muted); font-size: .85rem; }
+.guide .updated { color: var(--muted); font-size: var(--text-small); }
 .guide-nav { display: flex; flex-wrap: wrap; gap: .65rem 1.3rem; padding: 1rem 0; border-block: 1px solid var(--line); }
-.guide-nav a[aria-current="page"] { color: var(--fg-heading); font-weight: 600; }
+.guide-nav a[aria-current="page"] { color: var(--fg-heading); font-weight: var(--weight-semibold); }
 .guide-toc { margin: 1.5rem 0 2rem; }
 .guide-toc ul { display: flex; flex-wrap: wrap; gap: .5rem 1.2rem; padding: 0; margin: .5rem 0 0; list-style: none; }
 .guide-toc li { margin: 0; }
@@ -95,11 +101,11 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 .guide img { width: 100%; height: auto; border-radius: var(--radius); }
 .feature-table-wrapper { overflow-x: auto; margin: 1.5rem 0; border: 1px solid var(--line); border-radius: var(--radius); }
 .feature-table-wrapper:focus-visible { outline: 3px solid var(--accent); outline-offset: 4px; }
-.editorial-table { border-collapse: collapse; font-size: .92rem; text-align: left; }
+.editorial-table { border-collapse: collapse; font-size: var(--text-small); text-align: left; }
 .editorial-table th, .editorial-table td { padding: .9rem; border-bottom: 1px solid var(--line); }
 .editorial-table th { background: var(--surface); }
 .editorial-table tr:last-child td { border-bottom: 0; }
-.tech-metric { font-family: var(--font-mono); font-size: .85rem; color: var(--accent); }
+.tech-metric { font-family: var(--font-mono); font-size: var(--text-small); color: var(--accent); }
 
 @media (max-width: 800px) {
   .feature { grid-template-columns: 1fr; gap: 1.5rem; padding: 2.2rem 0; }
@@ -113,7 +119,7 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
   .header-inner { gap: .7rem 1rem; }
   .site-nav { order: 3; flex-basis: 100%; gap: 1.3rem; }
   .theme-btn { margin-left: auto; }
-  .brand-badge { font-size: .72rem; }
+  .brand-badge { font-size: var(--text-micro); }
   .hero-cta .btn { width: 100%; }
 }
 @media (prefers-reduced-motion: reduce) {
@@ -122,10 +128,10 @@ footer nav { display: flex; flex-wrap: wrap; gap: 1rem; }
 }
 
 figure.walkthrough { margin: 1.4rem 0; max-width: 100%; }
-figure.walkthrough video, figure.walkthrough img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: 10px; background: var(--surface, #fff); }
-figure.walkthrough figcaption { margin-top: .5rem; color: var(--muted, #555); font-size: .92rem; }
+figure.walkthrough video, figure.walkthrough img { display: block; width: 100%; height: auto; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface, #fff); }
+figure.walkthrough figcaption { margin-top: .5rem; color: var(--muted, #555); font-size: var(--text-small); }
 
-.feature-media video { display: block; width: 100%; height: auto; border-radius: 10px; }
+.feature-media video { display: block; width: 100%; height: auto; border-radius: var(--radius); }
 .feature-media a.still-only { display: none; }
 @media (prefers-reduced-motion: reduce) {
   .feature-media video { display: none; }

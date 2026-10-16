@@ -71,12 +71,29 @@ from .settings import settings_form
 from .structural import style_structural
 
 _ASSET_DIR = _Path(__file__).with_name("assets")
-_CSS_FILES = ("design-tokens.css", "dashboard.css", "dossier-images.css",
-              "workspace-reader.css", "manuscript-links.css")
-_JS_FILES = ("vendor/preact-10.29.8.min.js", "vendor/htm-3.1.1.umd.js",
-             "tooltips.js", "interactions.js", "dashboard.js", "zotero-results.js",
-             "research-cards.js", "research.js", "project-ui.js", "dossier-images.js",
-             "style-space.js", "workspace-reader.js", "manuscript-links.js")
+_CSS_FILES = (
+    "design-tokens.css",
+    "dashboard.css",
+    "dossier-images.css",
+    "workspace-reader.css",
+    "manuscript-links.css",
+)
+_JS_FILES = (
+    "vendor/preact-10.29.8.min.js",
+    "vendor/htm-3.1.1.umd.js",
+    "component-layer.js",
+    "tooltips.js",
+    "interactions.js",
+    "dashboard.js",
+    "zotero-results.js",
+    "research-cards.js",
+    "research.js",
+    "project-ui.js",
+    "dossier-images.js",
+    "style-space.js",
+    "workspace-reader.js",
+    "manuscript-links.js",
+)
 
 
 @lru_cache(maxsize=2)
@@ -181,7 +198,9 @@ def render_dashboard(
     def action_enabled(action: str) -> bool:
         return allowed_actions is None or action in allowed_actions
 
-    reader_enabled = controls and allowed_actions is not None and "research-reader" in allowed_actions
+    reader_enabled = (
+        controls and allowed_actions is not None and "research-reader" in allowed_actions
+    )
 
     def L(key: str) -> str:
         return esc(label(labels, key))
@@ -310,15 +329,18 @@ def render_dashboard(
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         '<div class="page">',
         *(('<div class="workspace-shell">',) if controls else ()),
-        project_header(title, labels, language_name, engine_name, compact=controls,
-                       meta=project_meta),
+        project_header(
+            title, labels, language_name, engine_name, compact=controls, meta=project_meta
+        ),
     ]
 
     has_chapters = bool(chapters) and total_words > 0
     default_view = "analysis" if has_chapters else "research"
 
     if controls:
-        parts.append(f'<nav class="workspace-bar" id="project-controls" aria-label="{L("controls")}">')
+        parts.append(
+            f'<nav class="workspace-bar" id="project-controls" aria-label="{L("controls")}">'
+        )
         parts.append('<div class="row">')
         parts.append(
             f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>'
@@ -332,24 +354,28 @@ def render_dashboard(
         )
         parts.append("</div>")
         if allowed_actions is not None and "manuscript-pdf" in allowed_actions:
-            parts.append(manuscript_pdf_controls(
-                labels, api_base=api_base, project_token=manuscript_pdf_token,
-                available=has_chapters and bool(paragraphs) and bool(manuscript_pdf_token),
-            ))
+            parts.append(
+                manuscript_pdf_controls(
+                    labels,
+                    api_base=api_base,
+                    project_token=manuscript_pdf_token,
+                    available=has_chapters and bool(paragraphs) and bool(manuscript_pdf_token),
+                )
+            )
         parts.append("</nav>")
         parts.append(
             '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
             f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
             f'<span class="view-nav-icon" aria-hidden="true">📚</span> '
-            f'<span>{L("workspace_research")}</span>'
+            f"<span>{L('workspace_research')}</span>"
             "</button>"
             f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
             f'<span class="view-nav-icon" aria-hidden="true">📊</span> '
-            f'<span>{L("workspace_analysis")}</span>'
+            f"<span>{L('workspace_analysis')}</span>"
             "</button>"
             f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" aria-controls="view-pane-project" aria-selected="false">'
             f'<span class="view-nav-icon" aria-hidden="true">⚙️</span> '
-            f'<span>{L("workspace_project")}</span>'
+            f"<span>{L('workspace_project')}</span>"
             "</button>"
             "</nav>"
         )
@@ -415,12 +441,15 @@ def render_dashboard(
             # The public examples lower the barrier of the first step: they show a
             # finished report without importing a manuscript. The analysis
             # language selects the matching public-domain book.
-            example = ("examples/effi-briest.html" if language_key == "de"
-                       else "examples/pride-and-prejudice.html")
+            example = (
+                "examples/effi-briest.html"
+                if language_key == "de"
+                else "examples/pride-and-prejudice.html"
+            )
             parts.append(
                 '    <p class="welcome-example"><a href='
                 f'"{docs_url(example)}" target="_blank" rel="noopener">'
-                f'{L("welcome_example")} ↗</a></p>'
+                f"{L('welcome_example')} ↗</a></p>"
             )
             parts.append(
                 '    <section id="welcome-project-recent" data-recent-projects hidden aria-labelledby="welcome-project-recent-heading">'
@@ -456,7 +485,9 @@ def render_dashboard(
             )
         parts.append("      </div>")
         parts.append("    </div>")
-        parts.append(f'    <details class="welcome-more"><summary>{L("welcome_more")}</summary><div class="welcome-features">')
+        parts.append(
+            f'    <details class="welcome-more"><summary>{L("welcome_more")}</summary><div class="welcome-features">'
+        )
         for title_key, desc_key in (
             ("welcome_fdr", "welcome_fdr_desc"),
             ("welcome_style", "welcome_style_desc"),
@@ -481,7 +512,6 @@ def render_dashboard(
         )
         parts.append('<section class="panel controls" id="controls">')
         parts.append(f"<h2>{L('workspace_project')}</h2>")
-
 
         # Hosts that advertise `load` get their upload control here. The native
         # app imports through the single project dialog instead, so this view
@@ -508,9 +538,7 @@ def render_dashboard(
                 f'<button type="button" class="ctl primary" data-action="load" data-payload="load" disabled>{L("dropzone_action")}</button>'
             )
             parts.append("</div>")
-            parts.append(
-                f'<p class="ctl-note">{L("manuscript_load_hint")}</p>'
-            )
+            parts.append(f'<p class="ctl-note">{L("manuscript_load_hint")}</p>')
             parts.append("</div>")
 
         parts.append(
@@ -663,7 +691,6 @@ def render_dashboard(
                 'tabindex="0" role="region" aria-labelledby="nda-preview-title"></div></div></section>'
             )
 
-
         parts.append("</div>")
         parts.append(render_project_modals(labels, language_key, language_options))
 
@@ -679,7 +706,7 @@ def render_dashboard(
             '<button type="button" class="ctl" id="workspace-reader-toggle" '
             'aria-expanded="false" aria-controls="workspace-reader-panel" disabled>'
             f'{L("reader_toggle")}</button><p class="ctl-note">'
-            f'{L("reader_hint") if manuscript_pdf_token else L("reader_unavailable")}</p></div>'
+            f"{L('reader_hint') if manuscript_pdf_token else L('reader_unavailable')}</p></div>"
         )
         parts.append(
             '<section id="workspace-reader" '
@@ -690,7 +717,7 @@ def render_dashboard(
             '<div class="workspace-reader-head">'
             f'<h2 id="workspace-reader-title">{L("reader_title")}</h2>'
             f'<button type="button" class="ctl" id="workspace-reader-close" aria-label="{esc(L("modal_close"), quote=True)}">✕</button>'
-            '</div>'
+            "</div>"
             '<div class="row workspace-reader-controls">'
             '<div class="setting-field grow">'
             f'<label for="workspace-reader-dossier">{L("reader_choose")}</label>'
@@ -714,35 +741,47 @@ def render_dashboard(
             "</div>"
             "</div>"
         )
-        parts.append('<div hidden>')
+        parts.append("<div hidden>")
 
     if has_chapters:
         parts.append(f'<section class="panel" id="analysis-review"><h2>{L("review_title")}</h2>')
         parts.append(f'<p class="panel-guide">{L("review_intro")}</p><div class="review-routes">')
         if paragraphs:
             candidates = flagged_paragraphs(list(paragraphs), min_severity=flag_min_severity)
-            first = min(candidates, key=lambda paragraph: paragraph.start_line) if candidates else paragraphs[0]
+            first = (
+                min(candidates, key=lambda paragraph: paragraph.start_line)
+                if candidates
+                else paragraphs[0]
+            )
             first_index = next(i for i, paragraph in enumerate(paragraphs) if paragraph is first)
             passage_hint = "review_passage_flagged" if candidates else "review_passage_unflagged"
             parts.append(
                 f'<article class="review-route"><a class="ctl primary" href="#p-{first_index}" '
                 f'data-help="{L(passage_hint)}" '
                 f'data-review-passage="1" data-line="{first.start_line}" data-target="p-{first_index}">'
-                f'{L("review_passage_action")}</a></article>'
+                f"{L('review_passage_action')}</a></article>"
             )
-        compare_target = "heatmap" if has_house_style and metrics is not None and metrics.chapters else "chapters"
-        compare_hint = "review_compare_hint" if compare_target == "heatmap" else "review_compare_limited"
+        compare_target = (
+            "heatmap"
+            if has_house_style and metrics is not None and metrics.chapters
+            else "chapters"
+        )
+        compare_hint = (
+            "review_compare_hint" if compare_target == "heatmap" else "review_compare_limited"
+        )
         review_routes = [
             ("review_compare", compare_hint, "review_compare_action", compare_target),
         ]
         if metrics is not None:
-            review_routes.append(("review_rhythm", "review_rhythm_hint", "review_rhythm_action", "dist"))
+            review_routes.append(
+                ("review_rhythm", "review_rhythm_hint", "review_rhythm_action", "dist")
+            )
         for _title_key, hint_key, action_key, target in review_routes:
             parts.append(
                 f'<article class="review-route"><a class="ctl" href="#{target}" '
                 f'data-help="{L(hint_key)}" data-jump="#{target}">{L(action_key)}</a></article>'
             )
-        parts.append('</div></section>')
+        parts.append("</div></section>")
 
     # --- Toolbar ----------------------------------------------------------
     parts.append('<div class="toolbar">')
@@ -834,7 +873,6 @@ def render_dashboard(
     if not tense_available:
         parts.append(f'<p class="hint">{L("no_tense")}</p>')
 
-
     # Section navigation: only panels this document actually renders, in the
     # shared registry order (components.ANALYSIS_SECTIONS).
     available = {"flags"} if has_chapters else set()
@@ -844,11 +882,13 @@ def render_dashboard(
         available.add("scenes")
     if motifs:
         available.add("motifs")
-    if (has_house_style or (fingerprint is not None and metrics is not None and metrics.chapters)):
+    if has_house_style or (fingerprint is not None and metrics is not None and metrics.chapters):
         available.add("style")
     if chapters:
         available.add("matrix")
-    parts.append(section_nav([entry for entry in ANALYSIS_SECTIONS if entry[0] in available], labels))
+    parts.append(
+        section_nav([entry for entry in ANALYSIS_SECTIONS if entry[0] in available], labels)
+    )
 
     # --- Chapter map ------------------------------------------------------
     by_chapter: dict[int, list[tuple[int, Any]]] = {}
@@ -927,7 +967,7 @@ def render_dashboard(
                 )
                 anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
                 stats = (
-                    f'{label(labels, "present")} {p.present_hits} · {label(labels, "past")} {p.past_hits} · '
+                    f"{label(labels, 'present')} {p.present_hits} · {label(labels, 'past')} {p.past_hits} · "
                     f"ASL {N(p.asl, 1)} · {label(labels, 'dialogue')} {P(p.dialogue_pct)} · "
                     f"{label(labels, 'function_words')} {P(p.function_word_pct)} · "
                     f"{label(labels, 'feat_filter')} {N(p.filter_density, 1)} · {label(labels, 'feat_modal')} {N(p.modal_density, 1)} · "
@@ -939,7 +979,7 @@ def render_dashboard(
                 # JavaScript removes the inert fallback before lazy rendering.
                 parts.append(
                     f'<noscript><p>{esc(p.text)}</p><details class="paragraph-values">'
-                    f'<summary>{L("paragraph_values")}</summary>'
+                    f"<summary>{L('paragraph_values')}</summary>"
                     f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div></details>'
                 )
                 if controls:
@@ -961,9 +1001,10 @@ def render_dashboard(
     content_json = json.dumps(paragraph_content, ensure_ascii=False, separators=(",", ":"))
     # Script raw text does not decode HTML entities. Escape angle brackets so
     # manuscript strings, including </script>, cannot end this inert JSON block.
-    content_json = content_json.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+    content_json = (
+        content_json.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
+    )
     parts.append(f'<script type="application/json" id="paragraph-content">{content_json}</script>')
-
 
     # --- Key metrics (grouped for scanability) ----------------------------
     scope_tiles = [
@@ -1203,13 +1244,31 @@ def render_dashboard(
     # --- Style heatmap & passport (self-calibrated house style) -----------
     if has_house_style and fingerprint is not None and metrics is not None and metrics.chapters:
         style_views = [
-            ("heatmap", "style_fingerprint", render_heatmap_panel(fingerprint, metrics, labels, language_key)),
-            ("bands", "style_passport", render_style_passport_panel(fingerprint, labels, language_key)),
-            ("dimensions", "style_dimensions", style_dimensions(chapters, fingerprint, labels, language_key)),
-            ("structural", "panel_structural", style_structural(chapters, fingerprint, labels, language_key)),
+            (
+                "heatmap",
+                "style_fingerprint",
+                render_heatmap_panel(fingerprint, metrics, labels, language_key),
+            ),
+            (
+                "bands",
+                "style_passport",
+                render_style_passport_panel(fingerprint, labels, language_key),
+            ),
+            (
+                "dimensions",
+                "style_dimensions",
+                style_dimensions(chapters, fingerprint, labels, language_key),
+            ),
+            (
+                "structural",
+                "panel_structural",
+                style_structural(chapters, fingerprint, labels, language_key),
+            ),
         ]
         parts.append(f'<section class="panel style-panel" id="style"><h2>{L("group_style")}</h2>')
-        parts.append(f'<div class="style-tabs" id="style-tabs" role="tablist" aria-label="{L("group_style")}" hidden>')
+        parts.append(
+            f'<div class="style-tabs" id="style-tabs" role="tablist" aria-label="{L("group_style")}" hidden>'
+        )
         for view_id, label_key, content in style_views:
             if content:
                 parts.append(
@@ -1218,7 +1277,7 @@ def render_dashboard(
                 )
         parts.append('</div><div id="style-panels">')
         parts.extend(content for _, _, content in style_views if content)
-        parts.append('</div></section>')
+        parts.append("</div></section>")
     elif fingerprint is not None and metrics is not None and metrics.chapters:
         # Chapters exist, but none reaches the comparability floor: explain the
         # minimum instead of presenting an empty or misleading style reference.
