@@ -69,6 +69,10 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
       assert.equal(await panel.isVisible(), true);
       assert.equal(await toggle.getAttribute('aria-expanded'), 'true');
+      const controlTops = await page.evaluate(() => ['workspace-reader-dossier', 'workspace-reader-refresh']
+        .map(id => Math.round(document.getElementById(id).getBoundingClientRect().top)));
+      assert.ok(Math.abs(controlTops[0] - controlTops[1]) <= 1,
+        `The dossier select and refresh button line up: ${JSON.stringify(controlTops)}`);
       assert.equal(await select.inputValue(), '', 'Opening does not silently pick a dossier');
       await select.selectOption(dossier.id);
       await body.locator('.research-dossier-body-rendered p').filter({hasText: 'Historical source notes.'}).waitFor();

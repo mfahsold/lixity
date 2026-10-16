@@ -92,6 +92,24 @@ async function checkScale(page, label) {
     const strays = sizes.filter(size => !allowed.includes(size));
     assert.deepEqual(strays, [], `${label} text sizes off the token ladder (${JSON.stringify(sizes)})`);
   }
+  // One control size per class: the computed minimum height is shared by every
+  // default control (and every compact one). Rendered height may grow when a
+  // long label wraps on narrow viewports - that is layout, not drift.
+  const controlSizes = await page.locator(
+    'button.ctl:not(.ctl-sm):not(.ctl-compact):not(.ctl-link):visible, select.ctl:not(.ctl-sm):visible, input.ctl:not(.ctl-sm):visible')
+    .evaluateAll(elements => elements.map(element => ({
+      id: element.id || element.className, minHeight: getComputedStyle(element).minHeight})));
+  if (controlSizes.length) {
+    const sizes = Array.from(new Set(controlSizes.map(box => box.minHeight)));
+    assert.equal(sizes.length, 1, `${label} default control minimum heights: ${JSON.stringify(controlSizes)}`);
+  }
+  const compactSizes = await page.locator('.ctl-sm:visible')
+    .evaluateAll(elements => elements.map(element => ({
+      id: element.id || element.className, minHeight: getComputedStyle(element).minHeight})));
+  if (compactSizes.length) {
+    const sizes = Array.from(new Set(compactSizes.map(box => box.minHeight)));
+    assert.equal(sizes.length, 1, `${label} compact control minimum heights: ${JSON.stringify(compactSizes)}`);
+  }
 }
 (async () => {
   const browser = await launchChromium();
@@ -128,6 +146,8 @@ async function checkScale(page, label) {
         await checkTypography(app, `${theme} ${width}px`);
         await checkScale(app, `${theme} ${width}px app`);
         await checkScale(site, `${theme} ${width}px site`);
+        await app.locator('#tab-view-analysis').click();
+        await checkScale(app, `${theme} ${width}px analysis`);
         await identity.setViewportSize({width, height: 1000});
         await identity.goto('http://lixity.test/identity');
         await identity.locator('#tab-view-project').click();
