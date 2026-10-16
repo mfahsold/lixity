@@ -6,6 +6,7 @@ import unittest
 from contextlib import redirect_stderr
 from datetime import datetime, timezone
 
+from lixity import log
 from tests.support import LoopbackServer, make_handler
 
 
@@ -13,8 +14,11 @@ class TestServerDebug(unittest.TestCase):
     def setUp(self):
         self.temp_dir = tempfile.TemporaryDirectory()
         self.addCleanup(self.temp_dir.cleanup)
+        log.configure(level="DEBUG", force=True)
+        self.addCleanup(log.configure, level="INFO", force=True)
         self.handler = make_handler(
-            self.temp_dir.name, debug=True,
+            self.temp_dir.name,
+            debug=True,
             dashboard_html="<!DOCTYPE html><title>Synthetic debug fixture</title>",
         )
         self.loop = LoopbackServer(self.handler).start()
@@ -22,7 +26,10 @@ class TestServerDebug(unittest.TestCase):
 
     def request(self, method, path, body=None):
         response = self.loop.request(
-            path, method=method, body=body, headers={"Content-Type": "application/json"},
+            path,
+            method=method,
+            body=body,
+            headers={"Content-Type": "application/json"},
         )
         return response.status
 
@@ -36,8 +43,8 @@ class TestServerDebug(unittest.TestCase):
         self.assertTrue(any("HTTP 400" in line and "Invalid JSON body" in line for line in lines))
         self.assertTrue(any('"GET / HTTP/1.1" 200' in line for line in lines))
         for line in lines:
-            self.assertRegex(line, r"^\[\d{4}-\d\d-\d\d \d\d:\d\d:\d\d UTC\] \[server:debug\] ")
-            datetime.strptime(line[1:24], "%Y-%m-%d %H:%M:%S UTC").replace(tzinfo=timezone.utc)
+            self.assertRegex(line, r"^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d UTC DEBUG lixity\.server ")
+            datetime.strptime(line[:23], "%Y-%m-%d %H:%M:%S UTC").replace(tzinfo=timezone.utc)
 
     def test_debug_output_keeps_context_tokens_out_of_logs(self):
         token = "synthetic-context-token-value"  # noqa: S105 - synthetic fixture value

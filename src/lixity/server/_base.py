@@ -8,11 +8,10 @@ from __future__ import annotations
 
 import json
 import secrets
-import sys
 from collections.abc import Mapping
-from datetime import datetime, timezone
 from typing import Any
 
+from ..log import get_logger
 from ._state import WorkspaceState
 from .constants import DEFAULT_PORT
 
@@ -23,16 +22,19 @@ class ResponseMixin(WorkspaceState):
     Inherits the workspace state so every route group sees the same attributes.
     """
 
-    def _debug_log(self, message: str) -> None:
-        """Write request and error diagnostics with the same UTC prefix."""
-        if not self.debug:
-            return
-        now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M:%S UTC")
-        sys.stderr.write(f"[{now}] [server:debug] {message}\n")
-        sys.stderr.flush()
+    _log = get_logger("server")
 
-    def _send(self, code: int, body: bytes, content_type: str, *,
-              headers: Mapping[str, str] | None = None) -> None:
+    def _debug_log(self, message: str) -> None:
+        """Record request and error diagnostics on the shared logger.
+
+        The call sites gate on ``debug``; the logger level decides whether a
+        record is written. Messages never contain query strings or content.
+        """
+        self._log.debug(message)
+
+    def _send(
+        self, code: int, body: bytes, content_type: str, *, headers: Mapping[str, str] | None = None
+    ) -> None:
         extra = dict(headers or {})
         self.send_response(code)
         self.send_header("Content-Type", content_type)
@@ -40,8 +42,10 @@ class ResponseMixin(WorkspaceState):
         self.send_header("Cache-Control", "no-store")
         self.send_header("X-Content-Type-Options", "nosniff")
         self.send_header("X-Frame-Options", "DENY")
-        self.send_header("Content-Security-Policy",
-                         extra.pop("Content-Security-Policy", "frame-ancestors 'none'"))
+        self.send_header(
+            "Content-Security-Policy",
+            extra.pop("Content-Security-Policy", "frame-ancestors 'none'"),
+        )
         self.send_header("Referrer-Policy", "no-referrer")
         for name, value in extra.items():
             self.send_header(name, value)
@@ -64,23 +68,30 @@ class ResponseMixin(WorkspaceState):
         """
         nonce = secrets.token_urlsafe(16)
         body = html.replace("<script>", f'<script nonce="{nonce}">')
-        policy = "; ".join((
-            "default-src 'none'",
-            f"script-src 'nonce-{nonce}'",
-            "style-src 'unsafe-inline'",
-            "img-src 'self' data: blob:",
-            "font-src 'self' data:",
-            "media-src 'self' blob:",
-            "connect-src 'self'",
-            "base-uri 'none'",
-            "form-action 'none'",
-            "frame-ancestors 'none'",
-        ))
-        self._send(200, body.encode("utf-8"), "text/html; charset=utf-8", headers={
-            "Content-Security-Policy": policy,
-            "Cross-Origin-Opener-Policy": "same-origin",
-            "Permissions-Policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=()",
-        })
+        policy = "; ".join(
+            (
+                "default-src 'none'",
+                f"script-src 'nonce-{nonce}'",
+                "style-src 'unsafe-inline'",
+                "img-src 'self' data: blob:",
+                "font-src 'self' data:",
+                "media-src 'self' blob:",
+                "connect-src 'self'",
+                "base-uri 'none'",
+                "form-action 'none'",
+                "frame-ancestors 'none'",
+            )
+        )
+        self._send(
+            200,
+            body.encode("utf-8"),
+            "text/html; charset=utf-8",
+            headers={
+                "Content-Security-Policy": policy,
+                "Cross-Origin-Opener-Policy": "same-origin",
+                "Permissions-Policy": "camera=(), microphone=(), geolocation=(), usb=(), serial=()",
+            },
+        )
 
     def _json(self, payload: Mapping[str, Any], code: int = 200) -> None:
         if self.debug and code >= 400:
@@ -114,13 +125,26 @@ class ResponseMixin(WorkspaceState):
     def _trusted_host(self) -> bool:
         host = self.headers.get("Host", "")
         server_port = self._server_port()
-        allowed = {f"127.0.0.1:{server_port}", f"localhost:{server_port}", "127.0.0.1", "localhost",
-                   f"[::1]:{server_port}", "[::1]"}
+        allowed = {
+            f"127.0.0.1:{server_port}",
+            f"localhost:{server_port}",
+            "127.0.0.1",
+            "localhost",
+            f"[::1]:{server_port}",
+            "[::1]",
+        }
         return host in allowed
 
     def _reject_untrusted_host(self) -> None:
         """Refuse a non-loopback Host header with the readable endpoint hint."""
         port = self._server_port()
-        self._json({"ok": False, "message": (
-            f"Untrusted Host forbidden; open http://127.0.0.1:{port}/ "
-            f"or http://localhost:{port}/")}, 403)
+        self._json(
+            {
+                "ok": False,
+                "message": (
+                    f"Untrusted Host forbidden; open http://127.0.0.1:{port}/ "
+                    f"or http://localhost:{port}/"
+                ),
+            },
+            403,
+        )

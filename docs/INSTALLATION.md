@@ -282,6 +282,24 @@ retains launch settings and logs; uv uninstall removes the tool environment,
 leaving application state and user imports intact. There is no cleanup command
 that deletes project storage.
 
+#### Logs
+
+Every diagnostic goes through one logging tree (`lixity.*`) with a single UTC
+line format and standard levels; stdout stays the result channel of the CLI,
+and the service appends the process' stderr to `service-PORT.log`. `lixity
+service status` prints that path, so `tail -f` follows a running server.
+
+| Setting | Effect |
+| --- | --- |
+| `--debug` (start/restart) | DEBUG level; request lines and error details |
+| `LIXITY_DEBUG=1` | Same as `--debug` for the foreground server |
+| `LIXITY_LOG_LEVEL` | Explicit level name (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+
+`service-PORT.log` is bounded: starting the service rotates an oversized log
+to `service-PORT.log.1` … `.3` (oldest dropped). Request logs never contain
+query strings, so context tokens and selectors stay out of the file; log
+records and runtime files never contain manuscript text.
+
 </details>
 
 For a foreground server, including development and embedding use, keep the

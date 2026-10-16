@@ -28,7 +28,9 @@ def darwin_startup_traces(tmp_path, monkeypatch):
         encoding="utf-8",
     )
     inherited = os.environ.get("PYTHONPATH")
-    monkeypatch.setenv("PYTHONPATH", str(diagnostics) + (os.pathsep + inherited if inherited else ""))
+    monkeypatch.setenv(
+        "PYTHONPATH", str(diagnostics) + (os.pathsep + inherited if inherited else "")
+    )
 
 
 def free_port():
@@ -44,9 +46,15 @@ def manager(tmp_path, port):
     thread must be able to outwait a slow fork/exec of the spawned worker. The
     3 s product default for interactive ``retry shortly`` is not under test here.
     """
-    return ServiceManager(port, state_dir=tmp_path / "state", runtime_dir=tmp_path / "runtime",
-                          backend="process", startup_timeout=30, stop_timeout=10,
-                          lock_timeout=30)
+    return ServiceManager(
+        port,
+        state_dir=tmp_path / "state",
+        runtime_dir=tmp_path / "runtime",
+        backend="process",
+        startup_timeout=30,
+        stop_timeout=10,
+        lock_timeout=30,
+    )
 
 
 def startup_diagnostics(app, result):
@@ -55,7 +63,11 @@ def startup_diagnostics(app, result):
         return ""
     files = {}
     for path in (app.runtime_file, app.ready_file, app.log_file):
-        files[path.name] = path.read_text(encoding="utf-8", errors="replace")[-12000:] if path.exists() else "missing"
+        files[path.name] = (
+            path.read_text(encoding="utf-8", errors="replace")[-12000:]
+            if path.exists()
+            else "missing"
+        )
     return json.dumps({"result": result, "fixture_files": files}, ensure_ascii=False, indent=2)
 
 
@@ -75,17 +87,23 @@ def start_disposable(tmp_path, overrides):
     return app, result
 
 
-def test_native_start_status_restart_and_stop_preserve_explicit_project_and_thresholds(tmp_path, monkeypatch):
+def test_native_start_status_restart_and_stop_preserve_explicit_project_and_thresholds(
+    tmp_path, monkeypatch
+):
     for key in ("LIXITY_DIR", "LIXITY_HOST", "LIXITY_PORT"):
         monkeypatch.delenv(key, raising=False)
     project = tmp_path / "A book – Grüße"
     project.mkdir()
     source = project / "manuscript.md"
-    source.write_text("# Synthetic title\n\n## Opening\n\nEin Vogel fliegt über den Garten.\n", encoding="utf-8")
+    source.write_text(
+        "# Synthetic title\n\n## Opening\n\nEin Vogel fliegt über den Garten.\n", encoding="utf-8"
+    )
     before = source.read_bytes()
     opened = []
     monkeypatch.setattr("lixity.service.webbrowser.open", opened.append)
-    app, started = start_disposable(tmp_path, {"project": str(project), "language": "de", "min_chapters": 5})
+    app, started = start_disposable(
+        tmp_path, {"project": str(project), "language": "de", "min_chapters": 5}
+    )
     try:
         assert started["ok"] and started["state"] == "running", startup_diagnostics(app, started)
         first = started["pid"]
@@ -98,9 +116,13 @@ def test_native_start_status_restart_and_stop_preserve_explicit_project_and_thre
         assert status["ok"] and status["pid"] == first
         existing = app.control("start", {"open_browser": True})
         assert existing["ok"] and existing["pid"] == first
-        assert opened == [started["url"]], "Daily start --open opens the existing instance without a second process"
+        assert opened == [started["url"]], (
+            "Daily start --open opens the existing instance without a second process"
+        )
         restarted = app.control("restart", {})
-        assert restarted["ok"] and restarted["state"] == "running", startup_diagnostics(app, restarted)
+        assert restarted["ok"] and restarted["state"] == "running", startup_diagnostics(
+            app, restarted
+        )
         assert restarted["pid"] != first
         with urllib.request.urlopen(f"http://127.0.0.1:{app.port}/api", timeout=10) as response:
             data = json.load(response)
@@ -116,17 +138,47 @@ def test_native_start_status_restart_and_stop_preserve_explicit_project_and_thre
         app.control("stop", {})
 
 
+def test_start_rotates_an_oversized_service_log(tmp_path):
+    app, started = start_disposable(tmp_path, {})
+    try:
+        assert started["ok"] and started["state"] == "running", startup_diagnostics(app, started)
+        assert app.control("stop", {})["ok"]
+        oversized = "x" * 2_100_000
+        app.log_file.write_text(oversized, encoding="utf-8")
+        restarted = app.control("start", {})
+        assert restarted["ok"] and restarted["state"] == "running", startup_diagnostics(
+            app, restarted
+        )
+        rotated = app.log_file.with_name(app.log_file.name + ".1")
+        assert rotated.read_text(encoding="utf-8") == oversized
+        assert app.log_file.stat().st_size < len(oversized), "The new log starts after rotation"
+    finally:
+        app.control("stop", {})
+
+
 def test_live_owned_unready_process_is_still_stoppable(tmp_path):
     app = manager(tmp_path, free_port())
     token = secrets.token_hex(32)
     child = subprocess.Popen(  # noqa: S603 - synthetic owned child, no source data
         [sys.executable, "-c", "import time; time.sleep(60)", "--_service-token=" + token],
-        stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+        stdout=subprocess.DEVNULL,
+        stderr=subprocess.DEVNULL,
     )
     try:
-        _write_json(app.runtime_file, {"schema_version": "lixity-service-runtime/1", "port": app.port,
-            "pid": child.pid, "birth": process_birth(child.pid), "token": token, "backend": "process",
-            "unit": None, "ready": False, "version": __version__})
+        _write_json(
+            app.runtime_file,
+            {
+                "schema_version": "lixity-service-runtime/1",
+                "port": app.port,
+                "pid": child.pid,
+                "birth": process_birth(child.pid),
+                "token": token,
+                "backend": "process",
+                "unit": None,
+                "ready": False,
+                "version": __version__,
+            },
+        )
         status = app.control("status", {})
         assert status["state"] == "starting" and not status["ok"], status
         stopped = app.control("stop", {})

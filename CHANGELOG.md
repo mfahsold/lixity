@@ -15,6 +15,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   (`assets/zotero-results.js`) and the research record lists
   (`assets/research-cards.js`: sources, dossiers, claims, decisions) run on
   this layer.
+- Central logging: one `lixity.*` logger tree with a UTC line format, standard
+  levels (`--debug`, `LIXITY_DEBUG`, `LIXITY_LOG_LEVEL`), a redirect-aware
+  stderr handler and rotation for the captured service log at service start.
+  `docs/INSTALLATION.md` documents the log location and settings.
 
 ### Changed
 - UI cohesion: radius, type and weight values come from the design-token

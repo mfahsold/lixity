@@ -232,6 +232,22 @@ is required. Chapter-title tooltips are created as text nodes, not executable
 markup. Rendering and point picking share projected coordinates. Animation
 is scheduled only while rotation is enabled and the page is visible.
 
+### Logging
+
+`src/lixity/log.py` is the one logging entry point. Modules log through
+`get_logger()` under the `lixity` tree; the CLI keeps stdout as its result
+channel and sends diagnostics through logging. Lines use a single UTC format
+(`YYYY-MM-DD HH:MM:SS UTC LEVEL lixity.<area> message`) with standard levels,
+resolved from an explicit argument, else `LIXITY_LOG_LEVEL`, else DEBUG while
+`LIXITY_DEBUG`/`--debug` is active, else INFO.
+
+The managed service appends the child's stderr to `service-PORT.log`;
+`rotate_service_log()` bounds that file at service start (one writer per file,
+rotated to `.1`–`.3`). The stderr handler follows `sys.stderr` at emit time,
+so `redirect_stderr`, the captured service descriptor and tests all see the
+same stream. Request logs never contain query strings — context tokens and
+selectors travel there — and log records never contain manuscript text.
+
 **Since 2.0.0:** `ui/dimensions.py` renders a semantic score
 table from the same measured points as the canvas payload. It exposes chapter
 titles, actual dimension scores and descriptive flag text with native chapter

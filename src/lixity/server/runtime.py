@@ -10,6 +10,7 @@ from http.server import ThreadingHTTPServer
 from socketserver import TCPServer
 from typing import Any
 
+from ..log import configure as configure_logging
 from ..style_fingerprint import FingerprintThresholds
 from ..workspace import ProjectTarget, resolve_project_target
 from .constants import DEFAULT_HOST, DEFAULT_PORT
@@ -60,6 +61,7 @@ def run_server(
         )
 
     is_debug = bool(debug or os.environ.get("LIXITY_DEBUG", "").lower() in ("1", "true", "yes"))
+    configure_logging(level="DEBUG" if is_debug else None)
     source_input: str | None = None
     workspace_root: str = os.getcwd()
     exports_dir: str = os.path.join(workspace_root, "exports")

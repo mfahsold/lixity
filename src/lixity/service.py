@@ -32,10 +32,23 @@ from typing import Any
 from . import __version__
 from .config import DEFAULT_HOST, DEFAULT_PORT, resolve_thresholds
 from .language import LANGUAGE_CHOICES
+from .log import rotate_service_log
 from .workspace import resolve_project_target
 
-_OPTIONS = ("language", "title", "research_project", "debug", "open_browser", "z_mild",
-            "z_strong", "fdr_q", "fdr_method", "min_chapters", "dim_threshold", "flag_min_severity")
+_OPTIONS = (
+    "language",
+    "title",
+    "research_project",
+    "debug",
+    "open_browser",
+    "z_mild",
+    "z_strong",
+    "fdr_q",
+    "fdr_method",
+    "min_chapters",
+    "dim_threshold",
+    "flag_min_severity",
+)
 _CHILDREN: dict[int, subprocess.Popen[bytes]] = {}
 
 
@@ -53,38 +66,59 @@ def _validate_settings(settings: Mapping[str, Any]) -> None:
         raise ServiceError("Launch setting strings are invalid")
     if any(isinstance(settings.get(key), str) and "\0" in settings[key] for key in strings):
         raise ServiceError("Launch settings must not contain NUL characters")
-    if any(settings.get(key) is not None and type(settings[key]) is not bool for key in ("debug", "open_browser")):
+    if any(
+        settings.get(key) is not None and type(settings[key]) is not bool
+        for key in ("debug", "open_browser")
+    ):
         raise ServiceError("Launch setting switches must be booleans")
     if settings.get("language") is not None and settings["language"] not in LANGUAGE_CHOICES:
         raise ServiceError("Unknown startup language")
-    if any(settings.get(key) is not None and type(settings[key]) is not int
-           for key in ("min_chapters", "flag_min_severity")):
+    if any(
+        settings.get(key) is not None and type(settings[key]) is not int
+        for key in ("min_chapters", "flag_min_severity")
+    ):
         raise ServiceError("Startup chapter/severity values must be integers")
     for key in ("z_mild", "z_strong", "fdr_q", "dim_threshold"):
         if settings.get(key) is not None and type(settings[key]) not in (int, float):
             raise ServiceError("Startup thresholds must be numbers")
-    resolve_thresholds(project_config={}, z_mild=settings.get("z_mild"), z_strong=settings.get("z_strong"),
-                       fdr_q=settings.get("fdr_q"), fdr_method=settings.get("fdr_method"),
-                       min_chapters=settings.get("min_chapters"), flag_min_severity=settings.get("flag_min_severity"),
-                       dim_score_threshold=settings.get("dim_threshold"))
+    resolve_thresholds(
+        project_config={},
+        z_mild=settings.get("z_mild"),
+        z_strong=settings.get("z_strong"),
+        fdr_q=settings.get("fdr_q"),
+        fdr_method=settings.get("fdr_method"),
+        min_chapters=settings.get("min_chapters"),
+        flag_min_severity=settings.get("flag_min_severity"),
+        dim_score_threshold=settings.get("dim_threshold"),
+    )
 
 
 def configure(parser: argparse.ArgumentParser) -> None:
     """Register the four managed lifecycle actions and explicit startup options."""
     parser.add_argument("action", choices=("start", "stop", "restart", "status"))
-    parser.add_argument("project", nargs="?", help="Explicit project or manuscript for start/restart")
-    parser.add_argument("--port", type=int, default=None,
-                        help=f"Port (default: LIXITY_PORT or {DEFAULT_PORT})")
-    parser.add_argument("--host", default=None,
-                        help=f"Loopback host (default: LIXITY_HOST or {DEFAULT_HOST})")
-    parser.add_argument("--no-project", action="store_true", default=None, help="Start an empty workspace")
+    parser.add_argument(
+        "project", nargs="?", help="Explicit project or manuscript for start/restart"
+    )
+    parser.add_argument(
+        "--port", type=int, default=None, help=f"Port (default: LIXITY_PORT or {DEFAULT_PORT})"
+    )
+    parser.add_argument(
+        "--host", default=None, help=f"Loopback host (default: LIXITY_HOST or {DEFAULT_HOST})"
+    )
+    parser.add_argument(
+        "--no-project", action="store_true", default=None, help="Start an empty workspace"
+    )
     parser.add_argument("--open", dest="open_browser", action="store_true", default=None)
     parser.add_argument("--language", choices=LANGUAGE_CHOICES)
     parser.add_argument("--title")
     parser.add_argument("--research-project")
     parser.add_argument("--debug", action="store_true", default=None)
-    parser.add_argument("--backend", choices=("auto", "process", "systemd"), default="auto",
-                        help="auto prefers an available Linux systemd user manager")
+    parser.add_argument(
+        "--backend",
+        choices=("auto", "process", "systemd"),
+        default="auto",
+        help="auto prefers an available Linux systemd user manager",
+    )
     parser.add_argument("--json", action="store_true", help="Machine-readable lifecycle result")
     for flag in ("z-mild", "z-strong", "fdr-q", "dim-threshold"):
         parser.add_argument("--" + flag, type=float)
@@ -105,14 +139,21 @@ def _workspace_scope(selector: str | None) -> Path | None:
     return Path(resolve_project_target(path, empty="allow").root) if path.is_file() else path
 
 
-def resolve_settings(port: int, overrides: Mapping[str, Any], saved: Mapping[str, Any] | None) -> dict[str, Any]:
+def resolve_settings(
+    port: int, overrides: Mapping[str, Any], saved: Mapping[str, Any] | None
+) -> dict[str, Any]:
     """Resolve explicit startup choices; a plain restart retains saved choices."""
     if not 1 <= port <= 65535:
         raise ServiceError("Port must be between 1 and 65535")
-    settings: dict[str, Any] = dict(saved) if saved is not None else {
-        "port": port, "host": os.environ.get("LIXITY_HOST") or "127.0.0.1",
-        "project": os.environ.get("LIXITY_DIR") or None,
-    }
+    settings: dict[str, Any] = (
+        dict(saved)
+        if saved is not None
+        else {
+            "port": port,
+            "host": os.environ.get("LIXITY_HOST") or "127.0.0.1",
+            "project": os.environ.get("LIXITY_DIR") or None,
+        }
+    )
     new_project = overrides.get("project")
     previous_project = settings.get("project")
     settings["port"] = port
@@ -129,7 +170,9 @@ def resolve_settings(port: int, overrides: Mapping[str, Any], saved: Mapping[str
     for key in ("project", "research_project"):
         if settings.get(key):
             settings[key] = str(Path(settings[key]).expanduser().resolve())
-    changed_project = new_project is not None and _workspace_scope(settings.get("project")) != _workspace_scope(previous_project)
+    changed_project = new_project is not None and _workspace_scope(
+        settings.get("project")
+    ) != _workspace_scope(previous_project)
     if (changed_project or overrides.get("no_project")) and overrides.get("title") is None:
         settings.pop("title", None)
     if settings.get("min_chapters") is not None and settings["min_chapters"] < 2:
@@ -139,8 +182,14 @@ def resolve_settings(port: int, overrides: Mapping[str, Any], saved: Mapping[str
 
 def worker_argv(settings: Mapping[str, Any], token: str) -> list[str]:
     """Invoke this installation, preserving every user value as one argument."""
-    argv = [sys.executable, "-m", "lixity", "serve",
-            f"--host={settings['host']}", f"--port={settings['port']}"]
+    argv = [
+        sys.executable,
+        "-m",
+        "lixity",
+        "serve",
+        f"--host={settings['host']}",
+        f"--port={settings['port']}",
+    ]
     if settings.get("project"):
         argv.append(str(settings["project"]))
     else:
@@ -206,10 +255,16 @@ def _write_json(path: Path, value: Mapping[str, Any]) -> None:
             Path(temporary).unlink()
 
 
-def _run(argv: Sequence[str], *, timeout: float = 5,
-         env: Mapping[str, str] | None = None) -> subprocess.CompletedProcess[str]:
+def _run(
+    argv: Sequence[str], *, timeout: float = 5, env: Mapping[str, str] | None = None
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(  # noqa: S603 - fixed OS utilities and validated argument arrays
-        list(argv), capture_output=True, text=True, timeout=timeout, check=False, env=env,
+        list(argv),
+        capture_output=True,
+        text=True,
+        timeout=timeout,
+        check=False,
+        env=env,
     )
 
 
@@ -228,9 +283,13 @@ def process_birth(pid: int) -> str | None:
                 return None
             raise ServiceError("Cannot inspect the recorded Windows process")
         try:
-            kernel.GetProcessTimes.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.FILETIME),
-                                              ctypes.POINTER(wintypes.FILETIME), ctypes.POINTER(wintypes.FILETIME),
-                                              ctypes.POINTER(wintypes.FILETIME))
+            kernel.GetProcessTimes.argtypes = (
+                wintypes.HANDLE,
+                ctypes.POINTER(wintypes.FILETIME),
+                ctypes.POINTER(wintypes.FILETIME),
+                ctypes.POINTER(wintypes.FILETIME),
+                ctypes.POINTER(wintypes.FILETIME),
+            )
             kernel.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
             code = wintypes.DWORD()
             if not kernel.GetExitCodeProcess(handle, ctypes.byref(code)):
@@ -238,8 +297,13 @@ def process_birth(pid: int) -> str | None:
             if code.value != 259:
                 return None
             created, exited, user, system = (wintypes.FILETIME() for _ in range(4))
-            if not kernel.GetProcessTimes(handle, ctypes.byref(created), ctypes.byref(exited),
-                                          ctypes.byref(user), ctypes.byref(system)):
+            if not kernel.GetProcessTimes(
+                handle,
+                ctypes.byref(created),
+                ctypes.byref(exited),
+                ctypes.byref(user),
+                ctypes.byref(system),
+            ):
                 raise ServiceError("Cannot determine the recorded Windows process birth")
             return f"windows:{(created.dwHighDateTime << 32) | created.dwLowDateTime}"
         finally:
@@ -269,8 +333,10 @@ def process_birth(pid: int) -> str | None:
     ps = shutil.which("ps")
     if not ps:
         raise ServiceError("Process birth inspection requires ps on this platform")
-    result = _run([ps, "-ww", "-p", str(pid), "-o", "lstart=", "-o", "stat="],
-                  env={"LC_ALL": "C", "TZ": "UTC"})
+    result = _run(
+        [ps, "-ww", "-p", str(pid), "-o", "lstart=", "-o", "stat="],
+        env={"LC_ALL": "C", "TZ": "UTC"},
+    )
     if result.returncode != 0 or not result.stdout.strip():
         try:
             os.kill(pid, 0)
@@ -297,8 +363,10 @@ def _has_marker(pid: int, token: str) -> bool:
         powershell = shutil.which("powershell.exe") or shutil.which("pwsh.exe")
         if not powershell:
             raise ServiceError("Windows ownership inspection requires PowerShell")
-        command = (f'$line=(Get-CimInstance Win32_Process -Filter "ProcessId={pid}").CommandLine;'
-                   '[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes([string]$line))')
+        command = (
+            f'$line=(Get-CimInstance Win32_Process -Filter "ProcessId={pid}").CommandLine;'
+            "[Convert]::ToBase64String([Text.Encoding]::Unicode.GetBytes([string]$line))"
+        )
         result = _run([powershell, "-NoProfile", "-NonInteractive", "-Command", command])
         if result.returncode != 0 or not result.stdout.strip():
             raise ServiceError("Cannot verify the recorded Windows process command")
@@ -328,7 +396,10 @@ def _has_marker(pid: int, token: str) -> bool:
         library = ctypes.CDLL(None, use_errno=True)
         name = (ctypes.c_int * 3)(1, 49, pid)  # CTL_KERN, KERN_PROCARGS2, owned PID
         length = ctypes.c_size_t()
-        if library.sysctl(name, 3, None, ctypes.byref(length), None, 0) != 0 or not 4 <= length.value <= 1024 * 1024:
+        if (
+            library.sysctl(name, 3, None, ctypes.byref(length), None, 0) != 0
+            or not 4 <= length.value <= 1024 * 1024
+        ):
             raise ServiceError("Cannot inspect the recorded macOS argument boundaries")
         buffer = ctypes.create_string_buffer(length.value)
         if library.sysctl(name, 3, buffer, ctypes.byref(length), None, 0) != 0:
@@ -350,7 +421,9 @@ def _has_marker(pid: int, token: str) -> bool:
         ps = shutil.which("ps")
         if not ps:
             raise ServiceError("Process ownership inspection requires ps")
-        result = _run([ps, "-ww", "-p", str(pid), "-o", "command="], env={"LC_ALL": "C", "TZ": "UTC"})
+        result = _run(
+            [ps, "-ww", "-p", str(pid), "-o", "command="], env={"LC_ALL": "C", "TZ": "UTC"}
+        )
     if result.returncode != 0 or not result.stdout.strip():
         raise ServiceError("Cannot verify the recorded process command")
     return result.stdout.rstrip().endswith(" " + marker)
@@ -367,7 +440,9 @@ def _signal_process(pid: int, number: int, birth: str, token: str | None = None)
             if exc.errno not in (errno.ENOSYS, errno.ENOTSUP):
                 raise
             if token is None:
-                raise ServiceError("This kernel cannot signal a process with verified ownership") from exc
+                raise ServiceError(
+                    "This kernel cannot signal a process with verified ownership"
+                ) from exc
             if process_birth(pid) == birth and _has_marker(pid, token):
                 with contextlib.suppress(ProcessLookupError):
                     os.kill(pid, number)
@@ -382,7 +457,9 @@ def _signal_process(pid: int, number: int, birth: str, token: str | None = None)
                     if exc.errno not in (errno.ENOSYS, errno.ENOTSUP):
                         raise
                     if token is None:
-                        raise ServiceError("This kernel cannot signal a process with verified ownership") from exc
+                        raise ServiceError(
+                            "This kernel cannot signal a process with verified ownership"
+                        ) from exc
                     if process_birth(pid) == birth and _has_marker(pid, token):
                         with contextlib.suppress(ProcessLookupError):
                             os.kill(pid, number)
@@ -401,20 +478,35 @@ def _signal_process(pid: int, number: int, birth: str, token: str | None = None)
                 return
             raise ServiceError("Cannot open the owned Windows process for termination")
         try:
-            kernel.GetProcessTimes.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.FILETIME),
-                                              ctypes.POINTER(wintypes.FILETIME), ctypes.POINTER(wintypes.FILETIME),
-                                              ctypes.POINTER(wintypes.FILETIME))
+            kernel.GetProcessTimes.argtypes = (
+                wintypes.HANDLE,
+                ctypes.POINTER(wintypes.FILETIME),
+                ctypes.POINTER(wintypes.FILETIME),
+                ctypes.POINTER(wintypes.FILETIME),
+                ctypes.POINTER(wintypes.FILETIME),
+            )
             created, exited, user, system = (wintypes.FILETIME() for _ in range(4))
-            if not kernel.GetProcessTimes(handle, ctypes.byref(created), ctypes.byref(exited),
-                                          ctypes.byref(user), ctypes.byref(system)):
+            if not kernel.GetProcessTimes(
+                handle,
+                ctypes.byref(created),
+                ctypes.byref(exited),
+                ctypes.byref(user),
+                ctypes.byref(system),
+            ):
                 raise ServiceError("Cannot verify the owned Windows process before termination")
             current = f"windows:{(created.dwHighDateTime << 32) | created.dwLowDateTime}"
             if current == birth:
                 kernel.TerminateProcess.argtypes = (wintypes.HANDLE, wintypes.UINT)
                 if not kernel.TerminateProcess(handle, 0):
-                    kernel.GetExitCodeProcess.argtypes = (wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD))
+                    kernel.GetExitCodeProcess.argtypes = (
+                        wintypes.HANDLE,
+                        ctypes.POINTER(wintypes.DWORD),
+                    )
                     code = wintypes.DWORD()
-                    if not kernel.GetExitCodeProcess(handle, ctypes.byref(code)) or code.value == 259:
+                    if (
+                        not kernel.GetExitCodeProcess(handle, ctypes.byref(code))
+                        or code.value == 259
+                    ):
                         raise ServiceError("Cannot terminate the owned Windows process")
         finally:
             kernel.CloseHandle.argtypes = (wintypes.HANDLE,)
@@ -440,13 +532,23 @@ def _runtime_record(path: Path, port: int) -> dict[str, Any] | None:
     record = _read_json(path)
     if record is None:
         return None
-    if (record.get("schema_version") != "lixity-service-runtime/1" or record.get("port") != port
-            or not isinstance(record.get("token"), str) or not re.fullmatch(r"[0-9a-f]{64}", record["token"])
-            or record.get("backend") not in ("process", "systemd")
-            or (record.get("pid") is not None and (type(record["pid"]) is not int or not 0 < record["pid"] <= 2**31 - 1))
-            or (record.get("birth") is not None and not isinstance(record["birth"], str))
-            or (record["backend"] == "process" and record.get("unit") is not None)
-            or (record["backend"] == "systemd" and record.get("unit") != _unit_name(port, record["token"]))):
+    if (
+        record.get("schema_version") != "lixity-service-runtime/1"
+        or record.get("port") != port
+        or not isinstance(record.get("token"), str)
+        or not re.fullmatch(r"[0-9a-f]{64}", record["token"])
+        or record.get("backend") not in ("process", "systemd")
+        or (
+            record.get("pid") is not None
+            and (type(record["pid"]) is not int or not 0 < record["pid"] <= 2**31 - 1)
+        )
+        or (record.get("birth") is not None and not isinstance(record["birth"], str))
+        or (record["backend"] == "process" and record.get("unit") is not None)
+        or (
+            record["backend"] == "systemd"
+            and record.get("unit") != _unit_name(port, record["token"])
+        )
+    ):
         raise ServiceError("Unrecognized managed process record; it was left unchanged")
     return record
 
@@ -458,10 +560,18 @@ def _locations() -> tuple[Path, Path]:
         base = Path.home() / "Library" / "Application Support"
     else:
         configured = os.environ.get("XDG_STATE_HOME")
-        base = Path(configured) if configured and Path(configured).is_absolute() else Path.home() / ".local" / "state"
+        base = (
+            Path(configured)
+            if configured and Path(configured).is_absolute()
+            else Path.home() / ".local" / "state"
+        )
     state = Path(os.environ.get("LIXITY_SERVICE_STATE_DIR") or base / "lixity" / "service")
     configured_runtime = os.environ.get("XDG_RUNTIME_DIR")
-    runtime_base = Path(configured_runtime) if configured_runtime and Path(configured_runtime).is_absolute() else state / "runtime"
+    runtime_base = (
+        Path(configured_runtime)
+        if configured_runtime and Path(configured_runtime).is_absolute()
+        else state / "runtime"
+    )
     runtime = Path(os.environ.get("LIXITY_SERVICE_RUNTIME_DIR") or runtime_base / "lixity-service")
     return state, runtime
 
@@ -469,18 +579,33 @@ def _locations() -> tuple[Path, Path]:
 class ServiceManager:
     """Manage one port without adopting other processes or service managers."""
 
-    def __init__(self, port: int, *, state_dir: Path | None = None, runtime_dir: Path | None = None,
-                 backend: str = "auto", startup_timeout: float = 15, stop_timeout: float = 5,
-                 lock_timeout: float = 3) -> None:
+    def __init__(
+        self,
+        port: int,
+        *,
+        state_dir: Path | None = None,
+        runtime_dir: Path | None = None,
+        backend: str = "auto",
+        startup_timeout: float = 15,
+        stop_timeout: float = 5,
+        lock_timeout: float = 3,
+    ) -> None:
         if not 1 <= port <= 65535:
             raise ServiceError("Port must be between 1 and 65535")
         state, runtime = _locations()
         self.port, self.backend = port, backend
-        state_path, runtime_path = (state_dir or state).expanduser(), (runtime_dir or runtime).expanduser()
+        state_path, runtime_path = (
+            (state_dir or state).expanduser(),
+            (runtime_dir or runtime).expanduser(),
+        )
         if state_path.is_symlink() or runtime_path.is_symlink():
             raise ServiceError("Managed state directories must not be symbolic links")
         self.state_dir, self.runtime_dir = state_path.resolve(), runtime_path.resolve()
-        self.startup_timeout, self.stop_timeout, self.lock_timeout = startup_timeout, stop_timeout, lock_timeout
+        self.startup_timeout, self.stop_timeout, self.lock_timeout = (
+            startup_timeout,
+            stop_timeout,
+            lock_timeout,
+        )
         _private_dir(self.state_dir)
         _private_dir(self.runtime_dir)
         self.runtime_file = self.runtime_dir / f"service-{port}.json"
@@ -501,15 +626,19 @@ class ServiceManager:
                 try:
                     if sys.platform == "win32":
                         import msvcrt
+
                         os.lseek(descriptor, 0, os.SEEK_SET)
                         msvcrt.locking(descriptor, msvcrt.LK_NBLCK, 1)
                     else:
                         import fcntl
+
                         fcntl.flock(descriptor, fcntl.LOCK_EX | fcntl.LOCK_NB)
                     break
                 except OSError as exc:
                     if time.monotonic() >= deadline:
-                        raise ServiceError("Another lifecycle operation is busy; retry shortly", "busy") from exc
+                        raise ServiceError(
+                            "Another lifecycle operation is busy; retry shortly", "busy"
+                        ) from exc
                     time.sleep(0.05)
             yield
         finally:
@@ -525,14 +654,21 @@ class ServiceManager:
         stored = _read_json(self.settings_file)
         if stored is None:
             return None
-        if stored.get("schema_version") != "lixity-service-settings/1" or not isinstance(stored.get("settings"), dict):
+        if stored.get("schema_version") != "lixity-service-settings/1" or not isinstance(
+            stored.get("settings"), dict
+        ):
             raise ServiceError("Unrecognized launch settings; they were left unchanged")
         settings = stored["settings"]
-        if (settings.get("port") != self.port or settings.get("host") not in ("127.0.0.1", "localhost")
-                or set(settings) - {"port", "host", "project", *_OPTIONS}):
+        if (
+            settings.get("port") != self.port
+            or settings.get("host") not in ("127.0.0.1", "localhost")
+            or set(settings) - {"port", "host", "project", *_OPTIONS}
+        ):
             raise ServiceError("Invalid saved launch settings; they were left unchanged")
-        if any(settings.get(key) is not None and not isinstance(settings[key], str)
-               for key in ("project", "language", "title", "research_project", "fdr_method")):
+        if any(
+            settings.get(key) is not None and not isinstance(settings[key], str)
+            for key in ("project", "language", "title", "research_project", "fdr_method")
+        ):
             raise ServiceError("Invalid saved launch setting types; they were left unchanged")
         _validate_settings(settings)
         return dict(settings)
@@ -541,7 +677,9 @@ class ServiceManager:
         executable = shutil.which("systemctl")
         if not executable:
             raise ServiceError("The recorded user-service backend is unavailable")
-        result = _run([executable, "--user", "show", str(record["unit"]), "--property=MainPID", "--value"])
+        result = _run(
+            [executable, "--user", "show", str(record["unit"]), "--property=MainPID", "--value"]
+        )
         if result.returncode != 0:
             raise ServiceError("Cannot inspect the recorded user service")
         return int(result.stdout.strip() or "0")
@@ -550,13 +688,29 @@ class ServiceManager:
         executable = shutil.which("systemctl")
         if not executable:
             raise ServiceError("The recorded user-service backend is unavailable")
-        result = _run([executable, "--user", "show", str(record["unit"]),
-                       "--property=MainPID", "--property=LoadState", "--property=ActiveState"])
+        result = _run(
+            [
+                executable,
+                "--user",
+                "show",
+                str(record["unit"]),
+                "--property=MainPID",
+                "--property=LoadState",
+                "--property=ActiveState",
+            ]
+        )
         if result.returncode != 0:
-            raise ServiceError("Cannot determine whether the pending user service still owns a child")
+            raise ServiceError(
+                "Cannot determine whether the pending user service still owns a child"
+            )
         values = dict(line.split("=", 1) for line in result.stdout.splitlines() if "=" in line)
-        return bool(values.get("MainPID") == "0" and
-                    (values.get("LoadState") == "not-found" or values.get("ActiveState") in ("inactive", "failed")))
+        return bool(
+            values.get("MainPID") == "0"
+            and (
+                values.get("LoadState") == "not-found"
+                or values.get("ActiveState") in ("inactive", "failed")
+            )
+        )
 
     def _owned(self, record: Mapping[str, Any]) -> bool:
         pid, birth = record.get("pid"), record.get("birth")
@@ -566,41 +720,96 @@ class ServiceManager:
             return False
         return bool(record["backend"] != "systemd" or self._unit_pid(record) == pid)
 
-    def _result(self, state: str, settings: Mapping[str, Any], record: Mapping[str, Any] | None = None,
-                *, ok: bool = False, message: str = "") -> dict[str, Any]:
-        return {"schema_version": "lixity-service-local/1", "ok": ok, "state": state,
-                "url": f"http://{settings['host']}:{self.port}/", "pid": record.get("pid") if record else None,
-                "backend": record.get("backend") if record else None, "installed_version": __version__,
-                "running_version": record.get("version") if record and state in ("running", "starting") else None,
-                "log": str(self.log_file), "message": message}
+    def _result(
+        self,
+        state: str,
+        settings: Mapping[str, Any],
+        record: Mapping[str, Any] | None = None,
+        *,
+        ok: bool = False,
+        message: str = "",
+    ) -> dict[str, Any]:
+        return {
+            "schema_version": "lixity-service-local/1",
+            "ok": ok,
+            "state": state,
+            "url": f"http://{settings['host']}:{self.port}/",
+            "pid": record.get("pid") if record else None,
+            "backend": record.get("backend") if record else None,
+            "installed_version": __version__,
+            "running_version": record.get("version")
+            if record and state in ("running", "starting")
+            else None,
+            "log": str(self.log_file),
+            "message": message,
+        }
 
-    def _status(self, settings: Mapping[str, Any], *, expected_token: str | None = None) -> dict[str, Any]:
+    def _status(
+        self, settings: Mapping[str, Any], *, expected_token: str | None = None
+    ) -> dict[str, Any]:
         record = _runtime_record(self.runtime_file, self.port)
         if expected_token is not None and (record is None or record["token"] != expected_token):
-            return self._result("stopped", settings,
-                                message="This launch was superseded by another lifecycle operation")
-        pending = bool(record and (record.get("pid") is None or
-                       (record.get("birth") is None and process_birth(record["pid"]) is not None)))
-        if pending and record and record["backend"] == "systemd" and self._unit_has_no_child(record):
+            return self._result(
+                "stopped",
+                settings,
+                message="This launch was superseded by another lifecycle operation",
+            )
+        pending = bool(
+            record
+            and (
+                record.get("pid") is None
+                or (record.get("birth") is None and process_birth(record["pid"]) is not None)
+            )
+        )
+        if (
+            pending
+            and record
+            and record["backend"] == "systemd"
+            and self._unit_has_no_child(record)
+        ):
             pending = False
         if pending:
-            return self._result("starting", settings, record,
-                                message="Launch is awaiting ownership registration; its record was retained")
+            return self._result(
+                "starting",
+                settings,
+                record,
+                message="Launch is awaiting ownership registration; its record was retained",
+            )
         if record and self._owned(record):
             ready = _read_json(self.ready_file)
-            listening = bool(ready and ready.get("schema_version") == "lixity-service-ready/1"
-                             and ready.get("token") == record["token"] and ready.get("pid") == record["pid"]
-                             and ready.get("birth") == record["birth"] and _port_open(str(settings["host"]), self.port))
+            listening = bool(
+                ready
+                and ready.get("schema_version") == "lixity-service-ready/1"
+                and ready.get("token") == record["token"]
+                and ready.get("pid") == record["pid"]
+                and ready.get("birth") == record["birth"]
+                and _port_open(str(settings["host"]), self.port)
+            )
             state = "running" if listening else "starting"
-            return self._result(state, settings, record, ok=listening,
-                                message="Lixity is running" if listening else "Owned Lixity process is still starting")
+            return self._result(
+                state,
+                settings,
+                record,
+                ok=listening,
+                message="Lixity is running"
+                if listening
+                else "Owned Lixity process is still starting",
+            )
         if _port_open(str(settings["host"]), self.port):
-            return self._result("busy", settings, message="Port is occupied by an unmanaged process; it will not be stopped")
+            return self._result(
+                "busy",
+                settings,
+                message="Port is occupied by an unmanaged process; it will not be stopped",
+            )
         return self._result("stopped", settings, message="Lixity is stopped")
 
     def _remove_ready(self, token: str) -> None:
         ready = _read_json(self.ready_file)
-        if ready and ready.get("schema_version") == "lixity-service-ready/1" and ready.get("token") == token:
+        if (
+            ready
+            and ready.get("schema_version") == "lixity-service-ready/1"
+            and ready.get("token") == token
+        ):
             self.ready_file.unlink()
 
     def _stop(self, settings: Mapping[str, Any]) -> dict[str, Any]:
@@ -616,17 +825,30 @@ class ServiceManager:
         pid, birth = int(record["pid"]), str(record["birth"])
         if record["backend"] == "systemd":
             executable = shutil.which("systemctl")
-            if not executable or _run([executable, "--user", "stop", str(record["unit"])], timeout=10).returncode:
+            if (
+                not executable
+                or _run([executable, "--user", "stop", str(record["unit"])], timeout=10).returncode
+            ):
                 raise ServiceError("Could not stop the owned user service")
         else:
-            _signal_process(pid, signal.SIGTERM if os.name == "nt" else signal.SIGINT, birth, str(record["token"]))
+            _signal_process(
+                pid,
+                signal.SIGTERM if os.name == "nt" else signal.SIGINT,
+                birth,
+                str(record["token"]),
+            )
         deadline = time.monotonic() + self.stop_timeout
         while process_birth(pid) == birth and time.monotonic() < deadline:
             time.sleep(0.05)
         if process_birth(pid) == birth:
             if record["backend"] == "systemd":
                 raise ServiceError("The owned user service has not stopped")
-            _signal_process(pid, signal.SIGTERM if os.name == "nt" else signal.SIGKILL, birth, str(record["token"]))
+            _signal_process(
+                pid,
+                signal.SIGTERM if os.name == "nt" else signal.SIGKILL,
+                birth,
+                str(record["token"]),
+            )
             time.sleep(0.1)
         if process_birth(pid) == birth:
             raise ServiceError("The owned process has not stopped")
@@ -639,9 +861,13 @@ class ServiceManager:
 
     def _systemd_available(self) -> bool:
         executable, runner = shutil.which("systemctl"), shutil.which("systemd-run")
-        return bool(sys.platform.startswith("linux") and executable and runner
-                    and _run([executable, "--user", "is-active", "default.target"]).returncode == 0
-                    and "--expand-environment" in _run([runner, "--help"]).stdout)
+        return bool(
+            sys.platform.startswith("linux")
+            and executable
+            and runner
+            and _run([executable, "--user", "is-active", "default.target"]).returncode == 0
+            and "--expand-environment" in _run([runner, "--help"]).stdout
+        )
 
     def _start(self, settings: dict[str, Any]) -> tuple[dict[str, Any], str | None]:
         for key in ("project", "research_project"):
@@ -654,62 +880,109 @@ class ServiceManager:
         if previous:
             self._remove_ready(str(previous["token"]))
         elif self.ready_file.exists():
-            raise ServiceError("Orphan readiness record was left unchanged; inspect it before starting")
+            raise ServiceError(
+                "Orphan readiness record was left unchanged; inspect it before starting"
+            )
         token = secrets.token_hex(32)
         use_systemd = self.backend != "process" and self._systemd_available()
         if self.backend == "systemd" and not use_systemd:
             raise ServiceError("No usable systemd user manager is available")
         backend = "systemd" if use_systemd else "process"
-        record: dict[str, Any] = {"schema_version": "lixity-service-runtime/1", "port": self.port,
-            "token": token, "pid": None, "birth": None, "backend": backend,
+        record: dict[str, Any] = {
+            "schema_version": "lixity-service-runtime/1",
+            "port": self.port,
+            "token": token,
+            "pid": None,
+            "birth": None,
+            "backend": backend,
             "unit": _unit_name(self.port, token) if use_systemd else None,
-            "ready": False, "version": __version__}
+            "ready": False,
+            "version": __version__,
+        }
         _private_dir(self.work_dir)
         if self.log_file.exists() and self._settings() is None:
             raise ServiceError("An unrecognized existing log was left unchanged")
-        _write_json(self.settings_file, {"schema_version": "lixity-service-settings/1", "settings": settings})
+        _write_json(
+            self.settings_file,
+            {"schema_version": "lixity-service-settings/1", "settings": settings},
+        )
         _write_json(self.runtime_file, record)
         argv = worker_argv(settings, token)
         package_parent = str(Path(__file__).resolve().parent.parent)
-        inherited = [str(Path(part).expanduser().resolve()) for part in os.environ.get("PYTHONPATH", "").split(os.pathsep) if part]
+        inherited = [
+            str(Path(part).expanduser().resolve())
+            for part in os.environ.get("PYTHONPATH", "").split(os.pathsep)
+            if part
+        ]
         python_path = os.pathsep.join([package_parent, *inherited])
-        environment = {**os.environ, "LIXITY_SERVICE_RECORD": str(self.runtime_file),
-                       "PYTHONUNBUFFERED": "1", "PYTHONPATH": python_path}
-        log_fd = os.open(self.log_file, os.O_CREAT | os.O_WRONLY | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0), 0o600)
+        environment = {
+            **os.environ,
+            "LIXITY_SERVICE_RECORD": str(self.runtime_file),
+            "PYTHONUNBUFFERED": "1",
+            "PYTHONPATH": python_path,
+        }
+        rotate_service_log(self.log_file)
+        log_fd = os.open(
+            self.log_file,
+            os.O_CREAT | os.O_WRONLY | os.O_APPEND | getattr(os, "O_NOFOLLOW", 0),
+            0o600,
+        )
         os.close(log_fd)
         if use_systemd:
             executable = shutil.which("systemd-run")
             if executable is None:
                 raise ServiceError("The systemd-run executable disappeared before launch")
-            command = [executable, "--user", "--quiet", "--collect", "--unit=" + str(record["unit"]),
-                       "--property=Type=exec", "--property=KillMode=control-group", "--property=Restart=no",
-                       "--expand-environment=no",
-                       "--property=StandardOutput=append:" + str(self.log_file),
-                       "--property=StandardError=append:" + str(self.log_file),
-                       "--working-directory=" + str(self.work_dir),
-                       "--setenv=LIXITY_SERVICE_RECORD=" + str(self.runtime_file), "--setenv=PYTHONUNBUFFERED=1",
-                       "--setenv=PYTHONPATH=" + python_path]
+            command = [
+                executable,
+                "--user",
+                "--quiet",
+                "--collect",
+                "--unit=" + str(record["unit"]),
+                "--property=Type=exec",
+                "--property=KillMode=control-group",
+                "--property=Restart=no",
+                "--expand-environment=no",
+                "--property=StandardOutput=append:" + str(self.log_file),
+                "--property=StandardError=append:" + str(self.log_file),
+                "--working-directory=" + str(self.work_dir),
+                "--setenv=LIXITY_SERVICE_RECORD=" + str(self.runtime_file),
+                "--setenv=PYTHONUNBUFFERED=1",
+                "--setenv=PYTHONPATH=" + python_path,
+            ]
             # Pass app environment by name; never serialize its values or place
             # OCR configuration/credentials in command-line arguments or records.
-            command.extend("--setenv=" + key for key in os.environ
-                           if key.startswith("LIXITY_") and key != "LIXITY_SERVICE_RECORD")
+            command.extend(
+                "--setenv=" + key
+                for key in os.environ
+                if key.startswith("LIXITY_") and key != "LIXITY_SERVICE_RECORD"
+            )
             command.extend(["--", *argv])
             if _run(command, timeout=10).returncode:
                 latest = _runtime_record(self.runtime_file, self.port)
                 if latest and latest["token"] == token and self._unit_has_no_child(latest):
                     self._remove_ready(token)
                     self.runtime_file.unlink()
-                raise ServiceError("The managed user service failed to start; inspect the service log")
+                raise ServiceError(
+                    "The managed user service failed to start; inspect the service log"
+                )
             pid = self._unit_pid(record)
         else:
             with self.log_file.open("ab") as log:
                 options: dict[str, Any] = {"start_new_session": True}
                 if sys.platform == "win32":
-                    options = {"creationflags": subprocess.CREATE_NEW_PROCESS_GROUP | subprocess.DETACHED_PROCESS}
+                    options = {
+                        "creationflags": subprocess.CREATE_NEW_PROCESS_GROUP
+                        | subprocess.DETACHED_PROCESS
+                    }
                 try:
                     child = subprocess.Popen(  # noqa: S603 - current interpreter and validated argument array
-                        argv, cwd=self.work_dir, env=environment, stdin=subprocess.DEVNULL,
-                        stdout=log, stderr=log, **options,
+                        argv,
+                        cwd=self.work_dir,
+                        env=environment,
+                        stdin=subprocess.DEVNULL,
+                        stdout=log,
+                        stderr=log,
+                        **options,
                     )
                 except (OSError, ValueError):
                     # Popen did not return a child: this is positively known
@@ -741,7 +1014,9 @@ class ServiceManager:
                 raise ServiceError("Unknown lifecycle action")
             with self._locked():
                 saved = self._settings()
-                settings = resolve_settings(self.port, overrides, saved if action != "start" else None)
+                settings = resolve_settings(
+                    self.port, overrides, saved if action != "start" else None
+                )
                 if action == "status":
                     return self._status(saved or settings)
                 if action == "stop":
@@ -767,8 +1042,11 @@ class ServiceManager:
                 result["message"] = "Managed server exited during startup; inspect the service log"
             return result
         except (ServiceError, OSError, ValueError, subprocess.SubprocessError) as exc:
-            return self._result(exc.state if isinstance(exc, ServiceError) else "unknown", settings,
-                                message=str(exc))
+            return self._result(
+                exc.state if isinstance(exc, ServiceError) else "unknown",
+                settings,
+                message=str(exc),
+            )
 
 
 class ManagedServe:
@@ -795,13 +1073,21 @@ class ManagedServe:
         if record and record["token"] == self.token:
             path = self.path.with_name(f"service-{self.port}.ready.json")
             old = _read_json(path)
-            if old and (old.get("schema_version") != "lixity-service-ready/1"
-                        or old.get("token") != self.token):
+            if old and (
+                old.get("schema_version") != "lixity-service-ready/1"
+                or old.get("token") != self.token
+            ):
                 raise ServiceError("Unrecognized readiness file was left unchanged")
-            _write_json(path, {
-                "schema_version": "lixity-service-ready/1", "token": self.token,
-                "pid": self.pid, "birth": self.birth, "version": __version__,
-            })
+            _write_json(
+                path,
+                {
+                    "schema_version": "lixity-service-ready/1",
+                    "token": self.token,
+                    "pid": self.pid,
+                    "birth": self.birth,
+                    "version": __version__,
+                },
+            )
 
     def close(self) -> None:
         ready_path = self.path.with_name(f"service-{self.port}.ready.json")
@@ -814,18 +1100,30 @@ class ManagedServe:
 def run(args: argparse.Namespace) -> int:
     """Print a lifecycle result without interpreting project/source text."""
     try:
-        port = (args.port if args.port is not None
-                else int(os.environ.get("LIXITY_PORT") or DEFAULT_PORT))
+        port = (
+            args.port
+            if args.port is not None
+            else int(os.environ.get("LIXITY_PORT") or DEFAULT_PORT)
+        )
         manager = ServiceManager(port, backend=args.backend)
-        choices = {key: getattr(args, key, None) for key in ("host", "project", "no_project", *_OPTIONS)}
+        choices = {
+            key: getattr(args, key, None) for key in ("host", "project", "no_project", *_OPTIONS)
+        }
         result = manager.control(args.action, choices)
     except (ServiceError, OSError, ValueError) as exc:
-        result = {"schema_version": "lixity-service-local/1", "ok": False, "state": "unknown", "message": str(exc)}
+        result = {
+            "schema_version": "lixity-service-local/1",
+            "ok": False,
+            "state": "unknown",
+            "message": str(exc),
+        }
     if args.json:
         print(json.dumps(result, ensure_ascii=False))
     else:
         prefix = "[OK]" if result["ok"] else "[--]"
-        print(f"{prefix} {result['message']}" + (f" → {result['url']}" if result.get("url") else ""))
+        print(
+            f"{prefix} {result['message']}" + (f" → {result['url']}" if result.get("url") else "")
+        )
         if result.get("log") and args.action in ("start", "restart"):
             print(f"Log: {result['log']}")
     return 0 if result["ok"] else 1

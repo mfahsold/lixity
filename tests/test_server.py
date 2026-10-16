@@ -13,6 +13,7 @@ from urllib.parse import quote
 
 import pytest
 
+from lixity import log
 from lixity.io import FileUtils
 from lixity.server import (
     LixityServerHandler,
@@ -63,7 +64,9 @@ class TestLixityServer(unittest.TestCase):
         headers: dict[str, str] | None = None,
     ) -> tuple[int, bytes, dict[str, str]]:
         response = self.loop.request(
-            path, method=method, body=body,
+            path,
+            method=method,
+            body=body,
             headers={"Host": f"127.0.0.1:{self.port}", **(headers or {})},
         )
         return response.status, response.body, response.headers
@@ -134,8 +137,10 @@ class TestLixityServer(unittest.TestCase):
         self.assertTrue(headers.get("permissions-policy", "").startswith("camera=()"))
         # Every response carries its own nonce, so a cached page cannot stamp scripts.
         _status, second_body, second_headers = self.make_request("/")
-        second = re.search(r"script-src 'nonce-([A-Za-z0-9_-]+)'",
-                           second_headers.get("content-security-policy", ""))
+        second = re.search(
+            r"script-src 'nonce-([A-Za-z0-9_-]+)'",
+            second_headers.get("content-security-policy", ""),
+        )
         self.assertIsNotNone(second)
         self.assertNotEqual(nonce, second.group(1))
         self.assertIn(f'<script nonce="{second.group(1)}">', second_body.decode("utf-8"))
@@ -163,10 +168,18 @@ class TestLixityServer(unittest.TestCase):
             self.assertEqual(
                 result["entries"],
                 [
-                    {"name": "alpha.md", "path": str(root / "alpha.md"), "kind": "directory",
-                     "project": False},
-                    {"name": "Zulu", "path": str(root / "Zulu"), "kind": "directory",
-                     "project": False},
+                    {
+                        "name": "alpha.md",
+                        "path": str(root / "alpha.md"),
+                        "kind": "directory",
+                        "project": False,
+                    },
+                    {
+                        "name": "Zulu",
+                        "path": str(root / "Zulu"),
+                        "kind": "directory",
+                        "project": False,
+                    },
                     {
                         "name": "a & 'note'.md",
                         "path": str(root / "a & 'note'.md"),
@@ -207,7 +220,8 @@ class TestLixityServer(unittest.TestCase):
             project = root / "harbour"
             (project / "research").mkdir(parents=True)
             (project / "lixity.toml").write_text(
-                'title = "Harbour Story"\nlanguage = "de"\n', encoding="utf-8")
+                'title = "Harbour Story"\nlanguage = "de"\n', encoding="utf-8"
+            )
             (project / "research" / "HEAD.json").write_text("{}", encoding="utf-8")
             (project / "novel.md").write_text("## One\n\nText.\n", encoding="utf-8")
             (root / "plain").mkdir()
@@ -227,14 +241,16 @@ class TestLixityServer(unittest.TestCase):
             self.assertNotIn("project", project_entries["novel.md"])
 
             status, body, _ = self.make_request(
-                f"/api/project-paths?path={quote(str(root), safe='')}")
+                f"/api/project-paths?path={quote(str(root), safe='')}"
+            )
             self.assertEqual(status, 200, body)
             entries = {entry["name"]: entry for entry in json.loads(body)["entries"]}
             self.assertTrue(entries["harbour"]["project"])
             self.assertFalse(entries["plain"]["project"])
 
             status, body, _ = self.make_request(
-                f"/api/project-paths?path={quote(str(root / 'plain'), safe='')}")
+                f"/api/project-paths?path={quote(str(root / 'plain'), safe='')}"
+            )
             self.assertEqual(status, 200, body)
             self.assertFalse(json.loads(body)["project"]["detected"])
 
@@ -474,7 +490,9 @@ class TestLixityServer(unittest.TestCase):
         target = Path(self.exports_dir) / "linked.html"
         target.write_text("<p>Synthetic artifact.</p>", encoding="utf-8")
         self.addCleanup(target.unlink, missing_ok=True)
-        linked = [item for item in collect_artifacts(self.exports_dir) if item["name"] == "linked.html"]
+        linked = [
+            item for item in collect_artifacts(self.exports_dir) if item["name"] == "linked.html"
+        ]
         self.assertEqual(linked[0]["href"], "/artifact/linked.html")
         status, body, headers = self.make_request(linked[0]["href"])
         self.assertEqual(status, 200)
@@ -1273,7 +1291,9 @@ class TestLixityServer(unittest.TestCase):
     def test_project_meta_uses_singular_units_and_strip_avoids_duplicates(self):
         with tempfile.TemporaryDirectory() as td:
             manuscript = Path(td) / "manuscript.md"
-            manuscript.write_text("# Buch\n\n## Erstes Kapitel\n\nEin einzelner Satz.\n", encoding="utf-8")
+            manuscript.write_text(
+                "# Buch\n\n## Erstes Kapitel\n\nEin einzelner Satz.\n", encoding="utf-8"
+            )
             html, info = build_server_dashboard(str(manuscript), language="de")
         self.assertEqual(info["chapters"], 1)
         # The header carries the project's scale once, with singular units.
@@ -1884,6 +1904,7 @@ class TestLixityServer(unittest.TestCase):
     def test_server_debug_mode_logging(self):
         orig_debug = LixityServerHandler.debug
         try:
+            log.configure(level="DEBUG", force=True)
             LixityServerHandler.debug = True
             LixityServerHandler.refresh()
             with patch("sys.stderr", new_callable=io.StringIO) as fake_stderr:
@@ -1891,7 +1912,7 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(status, 200)
                 html_text = body.decode("utf-8")
                 self.assertIn('<meta name="lixity-debug" content="true"/>', html_text)
-                self.assertIn("[server:debug]", fake_stderr.getvalue())
+                self.assertIn("lixity.server", fake_stderr.getvalue())
 
                 # Test 400 bad request logging
                 fake_stderr.seek(0)
@@ -1905,6 +1926,7 @@ class TestLixityServer(unittest.TestCase):
                 self.assertEqual(status_bad, 400)
                 self.assertIn("HTTP 400", fake_stderr.getvalue())
         finally:
+            log.configure(level="INFO", force=True)
             LixityServerHandler.debug = orig_debug
             LixityServerHandler.refresh()
 

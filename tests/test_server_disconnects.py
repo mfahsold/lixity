@@ -6,6 +6,7 @@ from contextlib import redirect_stderr
 
 import pytest
 
+from lixity import log
 from lixity.research import api
 from lixity.server._base import ResponseMixin
 from lixity.server.routes_nda import NdaRoutesMixin
@@ -46,7 +47,9 @@ class ResponseHarness(ResponseMixin):
         self.wfile.write(b"synthetic headers\r\n\r\n")
 
 
-@pytest.mark.parametrize("error_type", [BrokenPipeError, ConnectionResetError, ConnectionAbortedError])
+@pytest.mark.parametrize(
+    "error_type", [BrokenPipeError, ConnectionResetError, ConnectionAbortedError]
+)
 @pytest.mark.parametrize("fail_at", [1, 2], ids=["headers", "body"])
 def test_expected_client_abort_stops_one_response(error_type, fail_at):
     writer = DisconnectWriter(error_type(), fail_at=fail_at)
@@ -58,7 +61,9 @@ def test_expected_client_abort_stops_one_response(error_type, fail_at):
 
 
 def test_non_transport_write_error_still_propagates():
-    response = ResponseHarness(DisconnectWriter(OSError("Synthetic unexpected write failure"), fail_at=2))
+    response = ResponseHarness(
+        DisconnectWriter(OSError("Synthetic unexpected write failure"), fail_at=2)
+    )
     with pytest.raises(OSError, match="unexpected write failure"):
         response._json({"ok": True})
     assert response.close_connection is False
@@ -77,11 +82,15 @@ def test_response_preparation_failure_is_not_mistaken_for_client_abort():
 def test_abort_debug_message_is_generic_and_timestamped():
     response = ResponseHarness(DisconnectWriter(BrokenPipeError(), fail_at=2))
     response.debug = True
-    output = io.StringIO()
-    with redirect_stderr(output):
-        response._json({"ok": True, "text": "Synthetic private-looking content"})
+    log.configure(level="DEBUG", force=True)
+    try:
+        output = io.StringIO()
+        with redirect_stderr(output):
+            response._json({"ok": True, "text": "Synthetic private-looking content"})
+    finally:
+        log.configure(level="INFO", force=True)
     assert "HTTP 200" in output.getvalue()
-    assert "UTC] [server:debug]" in output.getvalue()
+    assert "UTC DEBUG lixity.server" in output.getvalue()
     assert "Synthetic private-looking content" not in output.getvalue()
 
 
@@ -92,9 +101,12 @@ def test_normal_response_keeps_its_headers_and_unicode_json():
     body = writer.getvalue().split(b"\r\n\r\n", 1)[1]
     assert json.loads(body) == {"ok": True, "text": "Synthetic café"}
     assert response.response_headers == {
-        "Content-Type": "application/json; charset=utf-8", "Content-Length": str(len(body)),
-        "Cache-Control": "no-store", "X-Content-Type-Options": "nosniff",
-        "X-Frame-Options": "DENY", "Content-Security-Policy": "frame-ancestors 'none'",
+        "Content-Type": "application/json; charset=utf-8",
+        "Content-Length": str(len(body)),
+        "Cache-Control": "no-store",
+        "X-Content-Type-Options": "nosniff",
+        "X-Frame-Options": "DENY",
+        "Content-Security-Policy": "frame-ancestors 'none'",
         "Referrer-Policy": "no-referrer",
     }
     assert response.close_connection is False
@@ -143,10 +155,20 @@ def test_download_client_abort_uses_the_same_boundary(tmp_path, output):
 
     response = DownloadResponse(DisconnectWriter(ConnectionResetError(), fail_at=2))
     response.dashboard_info = {"language_key": "en"}
-    response._handle_nda_draft({"name": "Synthetic Reader", "project_name": "Synthetic project",
-                              "date": "2026-10-06", "place": "Synthetic city", "format": output})
+    response._handle_nda_draft(
+        {
+            "name": "Synthetic Reader",
+            "project_name": "Synthetic project",
+            "date": "2026-10-06",
+            "place": "Synthetic city",
+            "format": output,
+        }
+    )
     assert response.codes == [200]
     assert response.close_connection is True
-    assert response.response_headers["Content-Disposition"] == f'attachment; filename="nda.{"pdf" if output == "pdf" else "txt"}"'
+    assert (
+        response.response_headers["Content-Disposition"]
+        == f'attachment; filename="nda.{"pdf" if output == "pdf" else "txt"}"'
+    )
     assert response.response_headers["Content-Language"] == "en"
     assert response.response_headers["Cache-Control"] == "no-store"
