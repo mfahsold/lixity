@@ -209,7 +209,8 @@ server.serve_forever()
       } else if (payload.mode === 'collections') {
         await route.fulfill({json: {ok: true, collections: [{key: 'STUVWXYZ', data: {name: 'Synthetic collection'}}], next_start: null}});
       } else {
-        const item = {key: 'ABCDEFGH', version: 1, data: {itemType: 'book', title: '<img src=x onerror=alert(1)> Synthetic Zotero'}};
+        const item = {key: 'ABCDEFGH', version: 1,
+          data: {itemType: 'book', title: '<img src=x onerror=alert(1)> Synthetic Zotero', tags: [{tag: 'SyntheticTag'}]}};
         const attachments = [{key:'JKLMNPQR', version: 1, data: {itemType:'attachment', title:'Synthetic text', contentType:'text/plain', linkMode:'imported_file'}},
           {key:'23456789', version:1, data:{itemType:'attachment', title:'Synthetic audio', contentType:'audio/wav', linkMode:'imported_file'}}];
         await route.fulfill({json: {ok:true, server_id:'synthetic-instance', next_start:null, captures:[],
@@ -222,6 +223,15 @@ server.serve_forever()
     await page.locator('#r-zotero-browse').click();
     await expect(page.locator('#r-zotero-results')).toContainText('<img src=x onerror=alert(1)>');
     assert.equal(await page.locator('#r-zotero-results img').count(), 0);
+    await page.locator('[data-zotero-item]').click();
+    await expect(page.locator('#r-zotero-results')).toContainText('Synthetic audio');
+    assert.equal(await page.locator('#r-zotero-results .research-zotero-parent').count(), 1, 'Item details show the catalogue entry card');
+    await expect(page.locator('#r-zotero-results .research-zotero-parent')).toContainText('Zotero type: book');
+    assert.equal(await page.locator('#r-zotero-results a.ctl[href^="zotero://"]').count(), 0, 'Dense lists avoid per-card Zotero buttons');
+    assert.ok(await page.locator('#r-zotero-results .research-zotero-link').count() >= 2, 'Quiet catalogue links stay available');
+    await page.locator('#r-zotero-results [data-zotero-tag]').first().click();
+    assert.equal(await page.locator('#r-zotero-query').inputValue(), 'SyntheticTag', 'Catalogue tags run a quick search');
+    await expect(page.locator('#r-zotero-results')).toContainText('Synthetic Zotero');
     await page.locator('[data-zotero-item]').click();
     await expect(page.locator('#r-zotero-results')).toContainText('Synthetic audio');
     assert.equal(await page.locator('[data-zotero-capture]').count(), 1);
@@ -254,6 +264,8 @@ server.serve_forever()
     await expect(page.locator('#research-sources-list .research-details-body')).toContainText('The synthetic archive opened in 1924.');
     assert.deepEqual(mutations, ['/api/project-create', '/api/project-open', '/api/project-open',
       '/api/research-zotero', '/api/research-zotero', '/api/research-zotero',
+      // Catalogue tag search and reopened details stay read-only.
+      '/api/research-zotero', '/api/research-zotero',
       '/api/research-zotero-ingest', '/api/research-zotero']);
     assert.equal(fs.readFileSync(path.join(fixture.project, 'manuscript.md'), 'utf8'), '');
     await expect(page.locator('#r-active-root')).toContainText('1 sources, 1 dossiers, 0 claims, 0 decisions');

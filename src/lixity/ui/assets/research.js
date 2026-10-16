@@ -916,10 +916,16 @@ function zoteroLibraryIdentity(library) {
   return /^users\/(0|[1-9]\d*)$/.test(library || "") ? "users/0" : library;
 }
 
-function zoteroOpenLink(library, key) {
+function zoteroOpenLink(library, key, quiet) {
   if (!/^[A-Z0-9]{8}$/.test(key || "") || !/^(users\/\d+|groups\/[1-9]\d*)$/.test(library || "")) return "";
   var prefix = library.startsWith("groups/") ? library : "library";
-  return '<a class="ctl" href="zotero://select/' + prefix + '/items/' + key + '">' + escapeHtml(uiLabel("zotero_open")) + '</a>';
+  var href = 'zotero://select/' + prefix + '/items/' + key;
+  if (quiet) {
+    // Dense lists show a quiet catalogue link instead of a button on every card.
+    return '<a class="research-zotero-link" href="' + href + '" title="' +
+      escapeHtml(uiLabel("zotero_open")) + '">Zotero ↗</a>';
+  }
+  return '<a class="ctl" href="' + href + '">' + escapeHtml(uiLabel("zotero_open")) + '</a>';
 }
 
 function clearZoteroSelection() {
@@ -942,7 +948,25 @@ async function browseZotero(request) {
   zoteroSelection = {request: request, result: result};
   zoteroNextRequest = result.next_start === null || result.next_start === undefined ? null : Object.assign({}, request, {start: result.next_start});
   var items = result.attachments || result.items || [];
-  host.innerHTML = items.map(function(item, index) {
+  var typeHelp = escapeHtml(uiLabel("zotero_type_help"));
+  var cards = [];
+  if (result.item) {
+    // A note or other top-level entry has no capturable attachment of its own:
+    // show its catalogue metadata instead of an empty list.
+    var parent = result.item.data || {};
+    var parentTags = (parent.tags || []).map(function(tag) { return tag.tag; }).filter(Boolean);
+    cards.push('<div class="research-card research-zotero-parent">' +
+      '<div class="research-card-header"><span class="research-card-title">' + escapeHtml(parent.title || result.item.key) + '</span>' +
+      '<span class="ctl-note" title="' + typeHelp + '">' + escapeHtml(uiLabel("zotero_type") + ": " + (parent.itemType || "")) + '</span></div>' +
+      (parent.date ? '<div class="ctl-note">' + escapeHtml(parent.date) + '</div>' : '') +
+      (parentTags.length ? '<div class="research-tags">' + parentTags.map(function(tag) {
+        return '<button type="button" class="research-tag" data-zotero-tag="' + escapeHtml(tag) + '" title="' +
+          escapeHtml(uiLabel("zotero_tag_filter")) + '">' + escapeHtml(tag) + '</button>';
+      }).join(" ") + '</div>' : "") +
+      '<p class="ctl-note">' + escapeHtml(uiLabel("zotero_external_note")) + '</p>' +
+      '<div class="row">' + zoteroOpenLink(request.library, result.item.key, true) + '</div></div>');
+  }
+  cards.push(items.map(function(item, index) {
     var data = item.data || {};
     var capture = (result.captures || []).find(function(c) {
       return c.server_id === result.server_id && zoteroLibraryIdentity(c.library) === zoteroLibraryIdentity(request.library) && c.attachment_key === item.key;
@@ -951,15 +975,22 @@ async function browseZotero(request) {
       ["imported_file", "imported_url", "linked_file"].includes(data.linkMode);
     var changed = capture && (capture.attachment_version !== item.version ||
       (result.item && capture.item_version !== result.item.version));
-    return '<div class="research-card"><strong>' + escapeHtml(data.title || item.key) + '</strong>' +
-      '<p class="ctl-note">' + escapeHtml(data.contentType || data.itemType || "") + '</p>' +
+    var typeText = data.itemType === "attachment" ? (data.contentType || "") : (uiLabel("zotero_type") + ": " + (data.itemType || ""));
+    return '<div class="research-card"><div class="research-card-header">' +
+      '<span class="research-card-title">' + escapeHtml(data.title || item.key) + '</span>' +
+      '<span class="ctl-note"' + (data.itemType === "attachment" ? '' : ' title="' + typeHelp + '"') + '>' + escapeHtml(typeText) + '</span></div>' +
       (capture ? '<p class="ctl-note">' + escapeHtml(uiLabel(changed ? "zotero_metadata_changed" : "zotero_linked")) + '</p>' : '') +
-      '<div class="row">' + zoteroOpenLink(request.library, item.key) +
+      (data.itemType === "note" ? '<p class="ctl-note">' + escapeHtml(uiLabel("zotero_note_hint")) + '</p>' : '') +
+      '<div class="row">' +
       (data.itemType === "attachment" ? (supported && result.server_id ? '<button type="button" class="ctl primary" data-zotero-capture="' + index + '">' +
         escapeHtml(uiLabel(capture ? "zotero_refresh" : "zotero_capture")) + '</button>' : '<span class="ctl-note">' + escapeHtml(uiLabel("zotero_media")) + '</span>') :
-        '<button type="button" class="ctl" data-zotero-item="' + index + '">' + escapeHtml(uiLabel("research_view_details")) + '</button>') + '</div></div>';
-  }).join("") + (zoteroNextRequest ? '<button type="button" class="ctl" id="r-zotero-more">' + escapeHtml(uiLabel("zotero_more")) + '</button>' : '');
-  if (!items.length) host.textContent = uiCountFormat("research_hits_count", 0);
+        '<button type="button" class="ctl" data-zotero-item="' + index + '">' + escapeHtml(uiLabel("research_view_details")) + '</button>') +
+      zoteroOpenLink(request.library, item.key, true) + '</div></div>';
+  }).join(""));
+  host.innerHTML = cards.join("") +
+    (result.item && !items.length ? '<p class="ctl-note">' + escapeHtml(uiLabel("zotero_no_attachments")) + '</p>' : "") +
+    (zoteroNextRequest ? '<button type="button" class="ctl" id="r-zotero-more">' + escapeHtml(uiLabel("zotero_more")) + '</button>' : "");
+  if (!items.length && !result.item) host.textContent = uiCountFormat("research_hits_count", 0);
 }
 
 document.addEventListener("change", function(event) {
@@ -1046,6 +1077,29 @@ function filterResearchList(kind) {
 document.addEventListener("input", function(event) {
   if (event.target.id === "r-filter-sources") filterResearchList("sources");
   if (event.target.id === "r-filter-dossiers") filterResearchList("dossiers");
+});
+
+document.addEventListener("click", function(event) {
+  var filterTag = event.target.closest("[data-filter-tag]");
+  if (filterTag) {
+    var list = filterTag.closest("#research-sources-list, #research-dossiers-list");
+    var kind = list && list.id === "research-dossiers-list" ? "dossiers" : "sources";
+    var input = document.getElementById("r-filter-" + kind);
+    if (input) {
+      input.value = filterTag.dataset.filterTag;
+      filterResearchList(kind);
+    }
+    return;
+  }
+  var zoteroTag = event.target.closest("[data-zotero-tag]");
+  if (zoteroTag) {
+    var query = document.getElementById("r-zotero-query");
+    var browse = document.getElementById("r-zotero-browse");
+    if (query && browse) {
+      query.value = zoteroTag.dataset.zoteroTag;
+      browse.click();
+    }
+  }
 });
 
 function replaceResearchCard(listHost, html, identity, preserve, previousCard) {
@@ -1159,7 +1213,8 @@ async function refreshResearchSources(overview, changedId, freshRead) {
   var selected = sources.filter(function(s) { return !changedId || s.id === changedId; });
   var rendered = selected.map(function(s) {
     var tagsHtml = (s.tags || []).map(function(t) {
-      return '<span class="research-tag">' + escapeHtml(t) + '</span>';
+      return '<button type="button" class="research-tag" data-filter-tag="' + escapeHtml(t) + '" title="' +
+        escapeHtml(uiLabel("research_filter_tag")) + '">' + escapeHtml(t) + '</button>';
     }).join(" ");
     var filterText = [s.title, s.id].concat(s.tags || []).join(" ").toLowerCase();
     return '<div class="research-card" data-filter-text="' + escapeHtml(filterText).replace(/"/g, "&quot;") + '">' +
@@ -1169,7 +1224,7 @@ async function refreshResearchSources(overview, changedId, freshRead) {
       '</div>' +
       '<div class="ctl-note research-record-id">' + escapeHtml(s.id) + '</div>' +
       (tagsHtml ? '<div class="research-tags">' + tagsHtml + '</div>' : '') +
-      (s.context && s.context.external_reference ? zoteroOpenLink(s.context.external_reference.library, s.context.external_reference.item_key) : "") +
+      (s.context && s.context.external_reference ? zoteroOpenLink(s.context.external_reference.library, s.context.external_reference.item_key, true) : "") +
       researchDetailsControl("source", s.id) +
     '</div>';
   });
@@ -1210,14 +1265,16 @@ async function refreshResearchDossiers(overview, changedId, freshRead) {
   var selected = dossiers.filter(function(d) { return !changedId || d.id === changedId; });
   var rendered = selected.map(function(d) {
     var tagsHtml = (d.tags || []).map(function(t) {
-      return '<span class="research-tag">' + escapeHtml(t) + '</span>';
+      return '<button type="button" class="research-tag" data-filter-tag="' + escapeHtml(t) + '" title="' +
+        escapeHtml(uiLabel("research_filter_tag")) + '">' + escapeHtml(t) + '</button>';
     }).join(" ");
     var reviewBadge = d.review_needed
       ? '<span class="research-badge badge-warning ml-2" title="' + escapeHtml(uiLabel("research_review_needed")) + '">' + escapeHtml(uiLabel("research_review_needed")) + '</span>'
       : '';
     var sectionsBadges = (d.sections && d.sections.length)
       ? '<div class="research-dossier-sections"><span class="ctl-note text-note">' + escapeHtml(uiLabel("research_sections")) + ':</span> ' +
-        d.sections.map(function(s) { return '<span class="research-tag research-tag-section">' + escapeHtml(s) + '</span>'; }).join(" ") + '</div>'
+        d.sections.map(function(s) { return '<button type="button" class="research-tag research-tag-section" data-filter-tag="' + escapeHtml(s) + '" title="' +
+          escapeHtml(uiLabel("research_filter_tag")) + '">' + escapeHtml(s) + '</button>'; }).join(" ") + '</div>'
       : '';
     var filterText = [d.title, d.id, d.excerpt].concat(d.tags || [], d.sections || []).join(" ").toLowerCase();
     return '<div class="research-card" data-filter-text="' + escapeHtml(filterText).replace(/"/g, "&quot;") + '">' +
