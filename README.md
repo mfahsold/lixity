@@ -44,24 +44,28 @@ your computer.
 
 ## Install and start
 
-Lixity runs on Windows, macOS and Linux. Use [uv](https://docs.astral.sh/uv/);
-it supplies the managed Python environment and installs the published package
-from [PyPI](https://pypi.org/project/lixity/). For help installing uv or
-advanced installation options, follow the
-[installation guide](docs/INSTALLATION.md) (it also documents the pinned
-release wheel with `SHA256SUMS` for reproducible setups).
+Lixity runs on Windows, macOS and Linux. You never have to touch a terminal
+after the first setup:
 
-```bash
-uv tool install --python 3.12 --managed-python lixity
-uv tool update-shell
-```
-
-Open a new terminal, then verify and start the app:
-
-```bash
-lixity --version
-lixity service start --open
-```
+1. **Try it first** — open the
+   [synthetic report](https://mfahsold.github.io/lixity/demo/report.html) or the
+   [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html) /
+   [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
+   examples. No install, no account, no upload.
+2. **Install once** (one command, takes about a minute):
+   ```bash
+   uv tool install --python 3.12 --managed-python lixity
+   uv tool update-shell
+   ```
+   [uv](https://docs.astral.sh/uv/) supplies the managed Python environment and
+   installs the published package from [PyPI](https://pypi.org/project/lixity/);
+   the [installation guide](docs/INSTALLATION.md) covers Windows, macOS and Linux,
+   the pinned release wheel with `SHA256SUMS`, updates and removal.
+3. **Open a new terminal once**, then run `lixity --version` and
+   `lixity service start --open`. From then on, Lixity lives in your menu:
+   double-click the `lixity-start.sh` / `lixity-start.ps1` launcher that ships
+   with the package, or use the managed service (`lixity service start --open`).
+   No daily terminal needed.
 
 The service starts an empty local workspace; choose **Open Project** or
 **Analyze a manuscript**. The [first-project guide](docs/ONBOARDING.md) walks

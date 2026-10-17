@@ -106,7 +106,7 @@ async function main() {
       });
     }
     }
-    const page = await browser.newPage({deviceScaleFactor: 1, reducedMotion: 'reduce'});
+    const page = await browser.newPage({deviceScaleFactor: 2, reducedMotion: 'reduce'});
     await prepareWorkspacePage(page);
     page.setDefaultTimeout(10000);
     const errors = [];
@@ -355,6 +355,7 @@ async function main() {
         viewport: {width: capture.width, height: capture.height},
         reducedMotion: 'reduce',
         recordVideo: {dir: path.dirname(capture.videoTarget), size: {width: capture.width, height: capture.height}},
+        deviceScaleFactor: 2,
       });
       const page = await context.newPage();
       const errors = [];
@@ -367,92 +368,92 @@ async function main() {
         await page.evaluate(value => {
           if (window.setWalkthroughCaption) window.setWalkthroughCaption(value);
         }, text);
-        await page.waitForTimeout(750);
+        await page.waitForTimeout(1500);
       };
       await page.goto('http://lixity-screenshots.test/' + path.basename(capture.source));
       if (flow === 'editorial-loop') {
-        await page.waitForTimeout(800);
-        await say('Flagged passages open the editorial loop');
+        await page.waitForTimeout(1200);
+        await say('Flagged passages become your review queue');
         await page.locator('#flags').scrollIntoViewIfNeeded();
-        await page.waitForTimeout(700);
+        await page.waitForTimeout(1100);
         const flagRow = page.locator('#flags [data-marker-kind]').first();
         if (await flagRow.count()) {
           await flagRow.hover();
-          await page.waitForTimeout(800);
+          await page.waitForTimeout(1200);
         }
-        await say('Every paragraph keeps its measured values');
+        await say('Open a paragraph to read its values and source lines');
         const chip = page.locator('#ch-1 .chip').nth(2);
         await chip.scrollIntoViewIfNeeded();
         await chip.hover();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(750);
         await chip.click();
-        await page.waitForTimeout(1000);
+        await page.waitForTimeout(1500);
         await say('Read the values, source lines and tense flags');
         const paragraph = page.locator('#chapters .ptext.open').first();
         await paragraph.locator('.paragraph-values > summary').click();
-        await page.waitForTimeout(1000);
-        await say('Write the note directly on the passage');
+        await page.waitForTimeout(1500);
+        await say('Write the note where you read it');
         await paragraph.locator('.marker-row [data-marker-kind="todo"]').click();
-        await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 45});
-        await page.waitForTimeout(900);
+        await paragraph.locator('.marker-note').pressSequentially('Check the closing cadence here', {delay: 60});
+        await page.waitForTimeout(1300);
         await say('Markers stay in the manuscript as Markdown comments');
         await page.locator('#markers').scrollIntoViewIfNeeded();
-        await page.waitForTimeout(1400);
+        await page.waitForTimeout(2000);
       } else if (flow === 'analysis-review') {
-        await page.waitForTimeout(900);
-        await say('A chapter cell opens its passages');
+        await page.waitForTimeout(1300);
+        await say('A chapter cell opens its paragraphs');
         const cell = page.locator('#heatmap td.z[data-chapter]').first();
         await cell.scrollIntoViewIfNeeded();
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(750);
         await cell.hover();
-        await page.waitForTimeout(700);
+        await page.waitForTimeout(1100);
         await cell.click();
-        await page.waitForTimeout(1300);
-        await say('Read the values and source lines');
+        await page.waitForTimeout(1500);
+        await say('Read the values and source lines before you judge');
         const values = page.locator('#chapters .paragraph-values > summary').first();
         if (await values.count()) {
           await values.scrollIntoViewIfNeeded();
-          await page.waitForTimeout(400);
+          await page.waitForTimeout(600);
           await values.click();
-          await page.waitForTimeout(900);
+          await page.waitForTimeout(1300);
         }
         const dimensions = page.locator('#style-tab-dimensions');
         if (await dimensions.count()) {
-          await say('Switch to the style dimensions');
+          await say('Switch to the style dimensions for the same data');
           await dimensions.scrollIntoViewIfNeeded();
-          await page.waitForTimeout(600);
+          await page.waitForTimeout(900);
           await dimensions.click();
-          await page.waitForTimeout(1200);
+          await page.waitForTimeout(1700);
         }
         await page.mouse.wheel(0, -320);
-        await page.waitForTimeout(900);
-        await say('The same measured data in 3D');
-        await page.waitForTimeout(900);
+        await page.waitForTimeout(1300);
+        await say('The same measured data, in three dimensions');
+        await page.waitForTimeout(1300);
       } else {
-        await page.waitForTimeout(700);
-        await say('The timeline places dated claims on one axis');
+        await page.waitForTimeout(1100);
+        await say('The timeline places dated claims on one shared axis');
         await page.locator('[data-view="research"]').click();
         await page.locator('[data-rtab="claims"]').click();
-        await page.waitForTimeout(800);
+        await page.waitForTimeout(1200);
         await page.locator('#r-open-timeline').click();
         await page.waitForFunction(() => document.querySelector('#research-claims-timeline .research-timeline-strip-row'));
-        await page.waitForTimeout(500);
+        await page.waitForTimeout(750);
         const rows = page.locator('#research-claims-timeline .research-timeline-strip-row');
         const count = await rows.count();
         for (let index = 0; index < count; index++) {
           await rows.nth(index).hover();
-          await page.waitForTimeout(360);
+          await page.waitForTimeout(500);
         }
-        await say('Open a claim to read its card');
+        await say('Open a claim to read its card and evidence');
         await rows.first().click();
         await page.waitForTimeout(1600);
         await page.mouse.wheel(0, 300);
-        await page.waitForTimeout(1200);
+        await page.waitForTimeout(1700);
         await page.mouse.wheel(0, -700);
-        await page.waitForTimeout(600);
-        await say('Every row links back to its evidence');
+        await page.waitForTimeout(900);
+        await say('Every bar links back to its claim and evidence');
         await rows.nth(Math.min(1, count - 1)).hover();
-        await page.waitForTimeout(1200);
+        await page.waitForTimeout(1700);
       }
       assert.deepEqual(errors, [], 'Walkthrough recording must be free of runtime errors');
       const video = page.video();

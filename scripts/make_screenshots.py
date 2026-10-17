@@ -277,6 +277,22 @@ def main() -> int:
         945,
     )
 
+    # 4b. Dark surface variants for the marketing shots. The staged site leads
+    # with the dark surface; light variants stay available in the captions.
+    for name, width, height in (
+        ("dashboard-mobile-dark.png", 390, 1028),
+        ("dashboard-heatmap-dark.png", 1750, 1000),
+        ("dashboard-dimensions-dark.png", 1600, 1050),
+        ("dashboard-flags-dark.png", 1152, 501),
+        ("dashboard-research-timeline-dark.png", 1110, 1036),
+        ("dashboard-research-claims-dark.png", 1152, 1101),
+        ("dashboard-research-dossiers-dark.png", 1152, 1101),
+        ("dashboard-project-settings-dark.png", 1152, 1005),
+        ("dashboard-dossier-image-dark.png", 1082, 481),
+        ("dashboard-scenes-dark.png", 1152, 1101),
+    ):
+        _queue_capture(dashboard_path, OUT_DIR / name, width, height)
+
     # 5. Dashboard sections ------------------------------------------------
     _queue_capture(
         dashboard_path,
