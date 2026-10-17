@@ -4,7 +4,7 @@
         xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">
   <url>
     <loc>https://mfahsold.github.io/lixity/</loc>
-    <lastmod>2026-10-13</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <image:image>
       <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-light.png</image:loc>
       <image:title>Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures</image:title>
@@ -28,35 +28,35 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/first-look.html</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/demo/report.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/examples/effi-briest.html</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/installation.html</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/interpretation.html</loc>
-    <lastmod>2026-10-13</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/guides/research-pdf.html</loc>
-    <lastmod>2026-10-14</lastmod>
+    <lastmod>2026-10-17</lastmod>
     <image:image>
       <image:loc>https://mfahsold.github.io/lixity/screenshots/dashboard-research-timeline.png</image:loc>
       <image:title>Claims timeline with a shared axis, placed period badges and a placement hint</image:title>
@@ -72,18 +72,18 @@
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/index.html</loc>
-    <lastmod>2026-10-16</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/whats-new-lixity.html</loc>
-    <lastmod>2026-10-16</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/tense-switches.html</loc>
-    <lastmod>2026-10-15</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
   <url>
     <loc>https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html</loc>
-    <lastmod>2026-10-15</lastmod>
+    <lastmod>2026-10-17</lastmod>
   </url>
 </urlset>
