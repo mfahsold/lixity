@@ -305,16 +305,15 @@ manuscript is required. See [contributor checks](https://github.com/mfahsold/lix
 
 ## External research libraries (since v1.19.0)
 
-The optional `research.zotero` adapter uses Zotero Desktop's local HTTP API for
-bibliographic browsing and explicitly selected evidence capture. Lixity owns
-retained evidence, analysis, claims, dossiers and decisions; it never reads or
-writes Zotero's database. Captured evidence remains usable without Zotero.
-
-This follows the separation used by [Zettlr's reference-manager integration](https://docs.zettlr.com/en/editor/citations.html),
-though Zettlr primarily reads exported bibliographies and Lixity captures evidence
-through the [Zotero local API](https://www.zotero.org/support/dev/web_api/v3/local_api).
-[novelWriter's tags and references](https://novelwriter.io/docs/usage/tags_and_references.html)
-illustrate the complementary authoring concern: connecting story notes and scenes.
+Zotero owns acquisition, bibliographic editing, ordinary reading and notes.
+Lixity owns retained evidence, authored project records and manuscript associations.
+The optional `research.zotero` adapter captures selected evidence through the
+[local HTTP API](https://www.zotero.org/support/dev/web_api/v3/local_api); it never
+reads or writes Zotero's database. Keep the attachment selector and source-return
+actions small. The retained passage reader serves evidence selection and review.
+Captures preserve the version used by a claim independently of Zotero; they are
+not a live library mirror. UI consolidation preserves source IDs, historical
+citations and storage contracts.
 
 The adapter adds no runtime dependency and bundles no Zotero application code.
 Its additive RIS export preserves sources/citations and delegates import to

@@ -31,6 +31,10 @@ Review the regenerated HTML and run `make docs-check` plus the public documentat
 browser check described in [`tests/browser/README.md`](../../tests/browser/README.md).
 `research.html` reuses the native research reader with a generated, GET-only
 `research-data.json` fixture. It has no editing, import or local-machine actions.
+Current main (unreleased) adds a [synthetic manuscript](../research/examples/harbour-manuscript.md):
+follow a dossier's claim to retained evidence, then open Review to inspect the
+saved manuscript quotation and its claim revision. The same API creates the
+records used by the page and screenshots; there is no live Zotero connection.
 The historical Hamburg map and photochrom are reviewed public-domain sources;
 [their manifest](../assets/research/sources.json) records credits and exact file
 hashes. Prose, claims, people and journeys are fictional demonstration material.

@@ -4,13 +4,13 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>Lixity research: sources, citations and PDF export</title>
-<meta name="description" content="Keep sources and citations in a local research archive, read scanned PDFs with your own OCR tools, and export print-ready PDFs or A4 reports."/>
+<meta name="description" content="Use Zotero for sources and reading, connect retained evidence to manuscript claims in Lixity, and export editorial, reading or submission PDFs."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/guides/research-pdf.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
 <meta property="og:type" content="article"/>
 <meta property="og:title" content="Lixity research: sources, citations and PDF export"/>
-<meta property="og:description" content="Keep sources and citations in a local research archive, read scanned PDFs with your own OCR tools, and export print-ready PDFs or A4 reports."/>
+<meta property="og:description" content="Use Zotero for sources and reading, connect retained evidence to manuscript claims in Lixity, and export editorial, reading or submission PDFs."/>
 <meta property="og:url" content="https://mfahsold.github.io/lixity/guides/research-pdf.html"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
@@ -19,7 +19,7 @@
 <meta property="og:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Lixity research: sources, citations and PDF export"/>
-<meta name="twitter:description" content="Keep sources and citations in a local research archive, read scanned PDFs with your own OCR tools, and export print-ready PDFs or A4 reports."/>
+<meta name="twitter:description" content="Use Zotero for sources and reading, connect retained evidence to manuscript claims in Lixity, and export editorial, reading or submission PDFs."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
 <meta name="twitter:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
 <link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
@@ -30,7 +30,7 @@
   "@context": "https://schema.org",
   "@type": "TechArticle",
   "headline": "Lixity research: sources, citations and PDF export",
-  "description": "Keep sources and citations in a local research archive, read scanned PDFs with your own OCR tools, and export print-ready PDFs or A4 reports.",
+  "description": "Use Zotero for sources and reading, connect retained evidence to manuscript claims in Lixity, and export editorial, reading or submission PDFs.",
   "url": "https://mfahsold.github.io/lixity/guides/research-pdf.html",
   "inLanguage": "en",
   "author": {
@@ -75,7 +75,7 @@
     {
       "@type": "ListItem",
       "position": 3,
-      "name": "Keep sources and work with PDFs",
+      "name": "Connect research to your manuscript",
       "item": "https://mfahsold.github.io/lixity/guides/research-pdf.html"
     }
   ]
@@ -101,13 +101,14 @@
 <a class="skip-link" href="#content">Skip to guide</a>
 <main class="guide" id="content">
 <a href="../">Lixity · Documentation</a>
-<h1>Keep sources and work with PDFs</h1>
-<p>Keep permitted source copies, cite exact passages and connect them with research notes, claims and writing decisions. Lixity's research workspace is experimental. An import or citation helps you review evidence; it does not establish that a claim is true.</p>
+<h1>Connect research to your manuscript</h1>
+<p>Collect sources, read and annotate in Zotero. Use Lixity's experimental research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.</p>
+<p><strong>Current main (unreleased):</strong> research opens with dossiers; source selection and alternative local import are compact optional sections. Existing archives and command interfaces stay compatible.</p>
 <p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-19">19 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="first-look.html">First look</a><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="manuscript-analysis-tools.html">Compare tools</a><a href="research-pdf.html" aria-current="page">Sources and PDF/OCR</a></nav>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
 
-<nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#manuscript-export">Manuscript PDF</a></li><li><a href="#publication">Publication details</a></li><li><a href="#manuscript-claims">Manuscript claims</a></li><li><a href="#ocr">Scans and OCR</a></li></ul></nav>
+<nav class="guide-toc" aria-label="On this page"><strong>On this page</strong><ul><li><a href="#zotero">Zotero and evidence</a></li><li><a href="#manuscript-claims">Manuscript claims</a></li><li><a href="#places-and-routes">Places and journeys</a></li><li><a href="#manuscript-export">Manuscript PDF</a></li><li><a href="#publication">Publication details</a></li><li><a href="#ocr">Scans and OCR</a></li></ul></nav>
 <h2 id="manuscript-export">Export a manuscript as PDF</h2>
 <p>Open <strong>PDF export</strong> above the workspace views, choose a purpose and select <strong>Download PDF</strong>. The same composer serves the browser and CLI; downloads create no server export files and change no manuscript. Standalone HTML has no download action.</p>
 <p><strong>Since v0.7.0:</strong> the initial choice is an A4 editorial copy with line numbers and a correction margin. The same manuscript structure feeds the reading and submission layouts.</p>
@@ -134,15 +135,16 @@ lixity research ingest --project ./sample-project --file ./source.txt --allow-re
 lixity research batch-ingest --project ./sample-project --allow-retention --progress ./sources/*.txt
 lixity research search --project ./sample-project --query "reading room"</code></pre>
 <p><code>--allow-retention</code> confirms your permission to keep source bytes locally. It neither grants redistribution rights nor makes a claim true. Avoid importing sensitive sources into public repositories.</p>
-<p>In <strong>Research → Sources</strong>, choose a text or PDF file, or paste text. Add optional details if needed, then confirm retention. Import is disabled while processing; a failed submission keeps the form for correction. If all active sources are linked to Zotero, the dashboard shows Zotero capture instead; direct import remains available through the API.</p>
+<p>For an authorized file outside Zotero, expand <strong>Research → Evidence captures → Alternative: import a local source</strong>. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. If all active sources are linked to Zotero, use Zotero capture instead; direct import remains available through the CLI/API.</p>
 <p>For a visual reference, open a dossier and choose <strong>Add image</strong>. Preview an authorized local PNG/JPEG, describe it and confirm retention before saving. The original image and dossier version are saved together. Earlier versions keep their exact image; removed images show an unavailable placeholder. Images have no extracted text or linguistic scores. See <a href="../research/USAGE.md#keep-a-visual-reference-in-a-dossier">format limits and archive compatibility</a>.</p>
 
 <h2 id="origin-url">What does the origin URL do?</h2>
 <p>This field records the original HTTP(S) address in source details and citations. Lixity does not fetch the page or monitor it. Use a stable public address where appropriate; credentials and whitespace are rejected. Do not include private access tokens or signed download links.</p>
 <p>Matching URLs do not merge sources. Refreshing a named source with a new URL creates a new capture; earlier citations keep their original text and URL. These captures use the v2 archive format. Back up before upgrading and use compatible readers and writers; see <a href="../research/USAGE.md">archive compatibility</a>.</p>
 
-<h2 id="zotero">Use Zotero as the source and media catalogue</h2>
-<p>Run Zotero on the same computer as Lixity and download the attachments you need. In Research → Sources → Zotero, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Since v0.7.0, eligible attachments include PNG/JPEG visual sources without text extraction, alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.</p>
+<h2 id="zotero">Keep source work in Zotero</h2>
+<p>Zotero owns bibliographic metadata, ordinary reading, annotations and general notes. Lixity's attachment selector captures only the evidence versions needed for your project; <strong>Open in Zotero</strong> returns to the source for further work.</p>
+<p>Run Zotero on the same computer and download the attachments you need. Open <strong>Research → Evidence captures → Capture from Zotero</strong>, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Since v0.7.0, eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.</p>
 <p>Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.</p>
 <p>To bring existing Lixity sources into Zotero, <code>research zotero-export</code> creates a RIS import bundle with retained files and their identifiers. Export preserves the Lixity archive. Follow the <a href="../research/USAGE.md#zotero-desktop-bridge-since-v1190">setup, migration and compatibility reference</a>, and verify imported files before relying on the new workflow.</p>
 

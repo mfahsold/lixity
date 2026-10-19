@@ -157,7 +157,7 @@ async function initResearchUI(freshRead) {
   if (initBox) initBox.style.display = "none";
   if (tabs) tabs.style.display = "flex";
   var activeTab = document.querySelector(".research-tabs button.active");
-  var targetPane = activeTab ? "rtab-" + activeTab.dataset.rtab : "rtab-sources";
+  var targetPane = activeTab ? "rtab-" + activeTab.dataset.rtab : "rtab-dossiers";
   document.querySelectorAll(".research-tab-pane").forEach(function(p) {
     p.style.display = p.id === targetPane ? "block" : "none";
   });
@@ -319,6 +319,10 @@ document.addEventListener("click", async function (event) {
     if (isSource) {
       clearResearchSourceSelections();
       var context = detail.context || {};
+      var external = context.external_reference;
+      var sourceReturn = external ? zoteroOpenLink(external.library, external.item_key) : "";
+      var captureContext = '<p class="ctl-note">' + escapeHtml(uiLabel("research_captures_hint")) + '</p>' +
+        (sourceReturn ? '<p>' + sourceReturn + '</p>' : '');
       var contextRows = ["genre", "created_period", "depicted_period", "place", "perspective", "original_language", "is_translation", "provenance_note", "origin_url"].filter(function(key) {
         return context[key] !== null && context[key] !== undefined && context[key] !== "";
       }).map(function(key) {
@@ -326,7 +330,7 @@ document.addEventListener("click", async function (event) {
         return '<dt>' + escapeHtml(uiLabel("ctx_" + key)) + '</dt><dd>' + escapeHtml(value) + '</dd>';
       }).join("");
       if (["image/png", "image/jpeg"].includes(detail.media_type)) {
-        detailHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
+        detailHost.innerHTML = captureContext + '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
           '<p><strong>' + escapeHtml(detail.media_type) + '</strong> · ' + escapeHtml(uiLabel("image_text_unavailable")) + '</p>' +
           (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '');
         return;
@@ -340,7 +344,7 @@ document.addEventListener("click", async function (event) {
       detailHost._selectionDetail = {projectId: sourceSelectionProject, title: detail.title,
         passages: (detail.passages || []).map(function(p) {return Object.assign({}, p, {plain: selectionPlainText(p.verbatim)});})};
 
-      detailHost.innerHTML = '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
+      detailHost.innerHTML = captureContext + '<p class="ctl-note">' + escapeHtml(uiLabel("research_context_unverified")) + '</p>' +
         (contextRows ? '<h4>' + escapeHtml(uiLabel("research_source_context")) + '</h4><dl>' + contextRows + '</dl>' : '') +
         '<div class="research-source-view-bar">' +
           '<div class="row gap-2">' +

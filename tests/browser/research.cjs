@@ -195,8 +195,16 @@ server.serve_forever()
     await expect(consistencyTile).toContainText('–');
     assert.equal(await consistencyTile.locator('.kpi-bar').count(), 0);
     await page.locator('#tab-view-research').click();
+    await expect(page.locator('#rtab-dossiers')).toBeVisible();
+    await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected', 'true');
+    await page.locator('[data-rtab=sources]').click();
     await expect(page.locator('#research-sources-list')).toContainText('Synthetic source');
     await expect(page.locator('#zotero-box')).toBeVisible();
+    await expect(page.locator('#r-zotero-browse')).not.toBeVisible();
+    await expect(page.locator('#r-ingest-text')).not.toBeVisible();
+    assert.ok(await page.locator('#research-sources-list').evaluate(element => element.getBoundingClientRect().bottom <=
+      document.getElementById('zotero-box').getBoundingClientRect().top), 'Retained evidence precedes capture controls');
+    await page.locator('#zotero-box > summary').click();
     let zoteroCapture = null;
     const zoteroWarning = 'Synthetic OCR fallback: <img src=x onerror=alert(1)> review native text.';
     await page.route('**/api/research-zotero*', async route => {
@@ -818,7 +826,7 @@ server.serve_forever()
       }
     }
     // Presentation language changes labels, not archive identity or stored text.
-    const sourceTabs = {en: 'Sources', de: 'Quellen', fr: 'Sources', es: 'Fuentes', it: 'Fonti', pt: 'Fontes', nl: 'Bronnen'};
+    const sourceTabs = {en: 'Evidence captures', de: 'Belegkopien', fr: 'Sources conservées', es: 'Fuentes conservadas', it: 'Fonti conservate', pt: 'Fontes preservadas', nl: 'Bewaarde bronnen'};
     for (const [language, sourcesLabel] of Object.entries(sourceTabs)) {
       const response = await page.request.post(fixture.url + '/api/settings', {data: {language}});
       assert.equal((await response.json()).ok, true);
@@ -842,6 +850,8 @@ server.serve_forever()
             await route.fulfill({response, json: body});
           });
           await page.reload();
+          await page.locator('[data-rtab=sources]').click();
+          await page.locator('#r-local-import > summary').click();
           await expect(page.locator('#r-ocr-diagnostic-box')).toContainText(label);
           await expect(page.locator('#r-ocr-diagnostic-box')).not.toContainText('English backend');
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
@@ -864,6 +874,7 @@ server.serve_forever()
           });
           await page.reload();
           await page.locator('[data-rtab="sources"]').click();
+          await page.locator('#r-local-import > summary').click();
           await expect(page.locator('#r-ocr-diagnostic-box')).toContainText(expectedLabel);
           await expect(page.locator('#r-ocr-diagnostic-box')).toContainText('Sprachen: deu + eng.');
           await expect(page.locator('#r-ocr-diagnostic-box')).not.toContainText('English backend');
@@ -965,6 +976,9 @@ server.serve_forever()
     await page.locator('#r-init-title').fill('Scratch research');
     await page.locator('#r-init-btn').click();
     await expect(page.locator('#research-tabs')).toBeVisible();
+    await expect(page.locator('#rtab-dossiers')).toBeVisible();
+    await page.locator('[data-rtab=sources]').click();
+    await page.locator('#r-local-import > summary').click();
     await page.locator('#r-ingest-options > summary').click();
     await page.locator('#r-ingest-title').fill('Scratch source');
     await page.locator('#r-ingest-origin-url').fill('javascript:alert(1)');
@@ -1012,9 +1026,12 @@ context['external_reference'] = {'provider': 'zotero', 'server_id': 'synthetic-i
 api.ingest(project, text, source_id=source['id'], allow_retention=True, context=context)
 `, scratchProject], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}});
     await page.reload();
+    await page.locator('[data-rtab=sources]').click();
     await expect(page.locator('#r-local-import')).not.toBeVisible();
     await expect(page.locator('#research-sources-list')).toContainText('Scratch source');
     await expect(page.locator('#research-sources-list a[href="zotero://select/library/items/ABCDEFGH"]')).toBeVisible();
+    await expect(page.locator('#research-sources-list a[href="zotero://select/library/items/ABCDEFGH"]')).toHaveText('Open in Zotero ↗');
+    await page.locator('#zotero-box > summary').click();
     let zoteroOffline = true;
     await page.route('**/api/research-zotero', route => route.fulfill({json: zoteroOffline
       ? {ok: false, message: 'Synthetic Zotero unavailable; start the selected profile.'}
@@ -1024,6 +1041,7 @@ api.ingest(project, text, source_id=source['id'], allow_retention=True, context=
     await expect(page.locator('#r-zotero-browse')).toBeEnabled();
     await page.locator('[data-research-detail="source"]').first().click();
     await expect(page.locator('#research-sources-list')).toContainText('A synthetic source for a new local project.');
+    await expect(page.locator('#research-sources-list .research-details-body a[href="zotero://select/library/items/ABCDEFGH"]')).toHaveText('Open in Zotero');
     zoteroOffline = false;
     await page.locator('#r-zotero-browse').click();
     await expect(page.locator('#r-zotero-results')).not.toContainText('Synthetic Zotero unavailable');

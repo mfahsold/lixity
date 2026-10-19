@@ -46,6 +46,8 @@ from lixity.ui import render_dashboard  # noqa: E402
 CAPTURES: list[dict[str, str | int]] = []
 WORK_DIR = BASE_DIR / ".artifacts" / "screenshots"
 OUT_DIR = BASE_DIR / "docs" / "screenshots"
+RESEARCH_DEMO_CONTEXT = "synthetic-research-example"
+RESEARCH_DEMO_MANUSCRIPT_CONTEXT = "synthetic-harbour-manuscript"
 
 WINDOW_CHROME = """<!DOCTYPE html>
 <html><head><meta charset="utf-8"/><style>
@@ -161,10 +163,11 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
 
     fixture = {url: public_value(value) for url, value in research_fixture.items()
                if url.startswith("/api/research/") and url not in resources}
-    document = render_dashboard([], [], title="Hamburg harbour research example", controls=True, enabled_actions=[])
+    document = render_research_workspace(research_fixture, title="Hamburg harbour research example",
+                                         enabled_actions=["manuscript-pdf", "research-manuscript-link"])
     document = re.sub(r"<title>[^<]*</title>", "<title>Lixity research example — Hamburg harbour</title>", document, count=1)
     head = _head_metadata(canonical=f"{SITE}/demo/research.html", title="Lixity research example — Hamburg harbour",
-                          description="Explore a read-only research dossier with credited historical imagery and fictional journey notes.",
+                          description="Follow retained source evidence through an authored claim to a saved synthetic manuscript quote, with credited historical imagery.",
                           language="en", preview_image=("screenshots/dashboard-dossier-image.png",
                               "Historical Hamburg map retained with source provenance in a research dossier"))
     allowed = ("[data-rtab]:not([data-rtab=search]):not([data-rtab=grounding]), "
@@ -175,7 +178,7 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
               "#research-setup-guide, #research-init-box, #r-local-import, #zotero-box, #research-revision-batch-review, "
               "[data-rtab=search], [data-rtab=grounding], #rtab-search, #rtab-grounding, #rtab-dossiers > .ctl-group, "
               "#rtab-claims-list > .ctl-group:not(.research-timeline-entry):not(.research-relation-section), "
-              "#r-relation-form, #rtab-decisions > .ctl-group, #research-manuscript-review-section")
+              "#r-relation-form, #rtab-decisions > .ctl-group")
     policy = f"""<style>
 {hidden} {{ display: none !important; }}
 button:not(:is({allowed})) {{ display: none !important; }}
@@ -204,14 +207,14 @@ document.addEventListener("DOMContentLoaded", function () {{
     }});
   }}
   document.addEventListener("click", function (event) {{
-    var control = event.target.closest("button");
+    var control = event.target.closest("button, a[href^='zotero:']");
     if (control && !control.matches(allowed)) {{ event.preventDefault(); event.stopImmediatePropagation(); }}
   }}, true);
   document.addEventListener("submit", function (event) {{ event.preventDefault(); event.stopImmediatePropagation(); }}, true);
   disableWrites();
   new MutationObserver(disableWrites).observe(document.body, {{childList: true, subtree: true}});
   switchActiveView("research");
-  document.getElementById("research-hint").textContent = "Read-only public example: filter sources, open dossiers and images, inspect claims, timeline and saved versions.";
+  document.getElementById("research-hint").textContent = "Read-only public example: open a dossier, inspect its linked claim and retained evidence, then find the saved manuscript quote in Review.";
 }});
 </script>
 """
@@ -219,14 +222,19 @@ document.addEventListener("DOMContentLoaded", function () {{
                     'script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src \'self\' data:; '
                     'connect-src \'self\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
     document = document.replace("</head>", restrictions + head + policy + "</head>", 1)
-    notice = _notice(f"Lixity {__version__} · read-only research example", [
-        "Explore Sources, Dossiers, Claims, Decisions and Review. Dossiers contain the historical map and photograph; select an image to enlarge it. "
-        "The coordinate sketch has no background tiles and does not calculate routes.",
-        "The customs log, weather notes, people, Warehouse 4 incident and journeys are fictional demonstration records. "
+    notice = _notice(f"Lixity {__version__} · read-only research example · Current main (unreleased)", [
+        "Start with Dossiers: Warehouse 4 case notes links to an authored claim and one saved manuscript quote. "
+        "Claims exposes the retained supporting passage; Review shows the exact saved quote and its claim-version pin. "
+        "Decisions records the author's fictional choices. These links are explicit associations, not automatic fact checks.",
+        "Zotero normally owns bibliography, reading and source notes. Lixity retains selected evidence and authored records for manuscript work. "
+        "This offline example has no live Zotero connection: its customs-log capture contains explicitly synthetic Zotero identity metadata, "
+        "and source-return actions are disabled. The retained passage, authored claim and manuscript quote are separate records.",
+        "The customs log, weather notes, manuscript, people, Warehouse 4 incident and journeys are fictional demonstration records. "
         "The dated public-domain visuals provide setting references and do not verify events or conditions in 1923. "
-        "Coordinates are approximate author-entered examples, not surveyed places or historical route reconstructions.",
+        "Select a dossier image to enlarge it. Coordinates are approximate author-entered examples; the sketch has no background tiles and does not calculate routes.",
         f"Generated with Lixity {__version__}. This page cannot import, edit or save records.",
-    ], [("../guides/research-pdf.html", "Research walkthrough"), ("../index.html", "Lixity home"), ("#research-source-credits", "Image source credits")])
+    ], [("../guides/research-pdf.html", "Research walkthrough"), ("../research/examples/harbour-manuscript.md", "Synthetic manuscript"),
+        ("../index.html", "Lixity home"), ("#research-source-credits", "Image source credits")])
     fallback = ('<noscript><style>#research-manager {display:none !important;}</style>'
                 '<section class="panel"><p>This interactive read-only example requires JavaScript. '
                 'Source credits remain available below.</p></section></noscript>')
@@ -246,6 +254,16 @@ document.addEventListener("DOMContentLoaded", function () {{
     destination.write_text(document, encoding="utf-8")
     destination.with_name("research-data.json").write_text(json.dumps(fixture, ensure_ascii=False), encoding="utf-8")
     return destination
+
+
+def render_research_workspace(research_fixture: dict, **options) -> str:
+    """Reuse the native read-only quote review with fixed offline fixture context."""
+    review = research_fixture["/api/research/manuscript-review?project_token=" + RESEARCH_DEMO_MANUSCRIPT_CONTEXT]
+    return render_dashboard(
+        [], [], controls=True, research_context_token=RESEARCH_DEMO_CONTEXT,
+        manuscript_pdf_token=RESEARCH_DEMO_MANUSCRIPT_CONTEXT,
+        manuscript_source_sha256=review["current_source_sha256"], **options,
+    )
 
 
 def build_research_fixture(work_dir: Path, *, language: str = "en",
@@ -287,7 +305,10 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
             "depicted_period": "October 1923",
             "place": "Hamburg Free Port Zone",
             "perspective": "Third-Person Administrative",
-            "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
+            "provenance_note": "Synthetic demonstration text and Zotero identity metadata; not an archival document or verified historical account. "
+                               "No live Zotero connection was used. The retained bytes remain available independently of Zotero.",
+            "external_reference": {"provider": "zotero", "server_id": "synthetic-offline-example", "library": "users/0",
+                                   "item_key": "DEMOLOG1", "attachment_key": "DEMOTXT1", "item_version": 1, "attachment_version": 1},
             "tags": ["Customs", "Warehouse 4"],
         },
         allow_retention=True,
@@ -413,6 +434,18 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         deviation_from_fact=True,
         impact_on_plot="The protagonist arrives before the night watchman calls for help.",
     )
+    manuscript = research_proj / "harbour-manuscript.md"
+    manuscript.write_bytes((BASE_DIR / "docs/research/examples/harbour-manuscript.md").read_bytes())
+    anchor = research_api.resolve_manuscript_anchor(
+        research_proj, manuscript, query="Someone had tried the eastern gate of Warehouse 4.",
+    )
+    research_api.link_manuscript_claim(
+        research_proj, manuscript, claim_res["claim_id"], claim_revision=1,
+        selection={key: anchor[key] for key in ("start_line", "end_line", "paragraph_sha256", "start", "end", "quote")},
+        expected_project_id=anchor["project_id"], expected_snapshot=anchor["snapshot"],
+        expected_source_sha256=sha256(manuscript.read_bytes()).hexdigest(), allow_retention=True,
+        note="Explicit author association in a synthetic manuscript; not evidence that the fictional incident happened.",
+    )
     sources_data = research_api.list_sources(research_proj)
     dossiers_data = research_api.list_dossiers(research_proj)
     claims_data = research_api.list_claims(research_proj)
@@ -466,6 +499,9 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         },
         "/api/research/decisions": {"ok": True, **decisions_data},
         "/api/research/review": {"ok": True, **research_api.editorial_review(research_proj)},
+        "/api/research/manuscript-links": {"ok": True, **research_api.list_manuscript_links(research_proj)},
+        "/api/research/manuscript-review?project_token=" + RESEARCH_DEMO_MANUSCRIPT_CONTEXT: {
+            "ok": True, **research_api.review_manuscript_links(research_proj, manuscript)},
         "/api/research/timeline": {"ok": True, **research_api.timeline(research_proj)},
         "/api/research/claim-relations?include_retracted=false": {
             "ok": True, **research_api.list_claim_relations(research_proj)},
@@ -480,6 +516,9 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
     for dossier in dossiers_data["dossiers"]:
         research_fixture["/api/research/dossiers?id=" + quote(dossier["id"], safe="")] = {
             "ok": True, **research_api.get_dossier(research_proj, dossier["id"]),
+        }
+        research_fixture["/api/research/claims?dossier_id=" + quote(dossier["id"], safe="")] = {
+            "ok": True, **research_api.list_claims(research_proj, dossier_id=dossier["id"]),
         }
     for kind, records in (("dossier", dossiers_data["dossiers"]), ("claim", claims_data["claims"]),
                           ("decision", decisions_data["decisions"])):
@@ -515,6 +554,13 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         )}
     research_fixture["/api/research-record-prepare"] = revision_previews
     research_fixture["/api/research-revision-batch-prepare"] = {"ok": True, **research_api.prepare_record_revisions(research_proj, operations)}
+    # Exact aliases preserve the native context-bound GET URLs without making
+    # the public adapter strip arbitrary parameters or emulate a live server.
+    research_fixture.update({
+        url + ("&" if "?" in url else "?") + "research_token=" + RESEARCH_DEMO_CONTEXT: value
+        for url, value in list(research_fixture.items())
+        if url.startswith("/api/research/") and url not in image_resources
+    })
     return research_fixture
 
 
@@ -815,8 +861,8 @@ def main() -> int:
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",
-        render_dashboard(
-            [], [], title="Synthetic archival research", controls=True,
+        render_research_workspace(
+            research_fixture, title="Synthetic archival research",
             labels=resolved.labels, language_name=resolved.name, language_key=resolved.key,
             current_language=resolved.key, enabled_actions=NATIVE_UI_ACTIONS,
             project_author="Example Author", author_setting_enabled=True,

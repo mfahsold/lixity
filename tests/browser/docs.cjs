@@ -28,14 +28,17 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const notice = page.locator('#example-context');
   const credits = page.locator('#research-source-credits');
   await expect(notice).toContainText('read-only research example');
+  await expect(notice).toContainText('Current main (unreleased)');
   await expect(notice).toContainText('Generated with Lixity');
   await expect(notice).toContainText('fictional');
+  await expect(notice).toContainText('no live Zotero connection');
+  await expect(notice).toContainText('retained passage, authored claim and manuscript quote are separate records');
   await expect(notice).toContainText('cannot import, edit or save');
   await expect(credits).toContainText('Richard Krause');
   await expect(credits).toContainText('Library of Congress');
   await expect(credits.locator('a[href="../assets/research/sources.json"]')).toBeVisible();
   function assertReadOnly() {
-    return expect(page.locator('input[type=file], textarea, [data-research-revise], [data-dossier-add-image], [data-geo-add], [data-geo-remove], [data-action], #research-revision-edit-tab, #research-revision-save, #research-revision-batch-add, #r-dos-create-btn, #r-claim-create-btn, #r-decision-create-btn, #r-ingest-btn, #r-zotero-browse, .view-navigation, #project-controls')
+    return expect(page.locator('input[type=file], textarea, [data-research-revise], [data-dossier-add-image], [data-geo-add], [data-geo-remove], [data-action], [data-manuscript-link-selection], [data-manuscript-link-accept], a[href^="zotero:"], #research-revision-edit-tab, #research-revision-save, #research-revision-batch-add, #r-dos-create-btn, #r-claim-create-btn, #r-decision-create-btn, #r-ingest-btn, #r-zotero-browse, .view-navigation, #project-controls')
       .locator('visible=true')).toHaveCount(0);
   }
   await assertReadOnly();
@@ -46,7 +49,16 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
     await expect(credits.locator('h2')).toBeInViewport();
     return;
   }
+  await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#research-dossiers-list .research-card')).toHaveCount(2);
+  await page.locator('[data-rtab=sources]').click();
   await expect(page.locator('#research-sources-list .research-card')).toHaveCount(4);
+  await expect(page.locator('#zotero-box')).not.toHaveAttribute('open', '');
+  const zoteroReturn = page.locator('#research-sources-list a[href^="zotero:"]');
+  await expect(zoteroReturn).toHaveCount(1);
+  assert.equal(await zoteroReturn.evaluate(link =>
+    link.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}))), false,
+  'Offline fixture source-return links cannot activate the Zotero protocol');
   await page.locator('#r-filter-sources').fill('Hamburg free-port');
   await expect(page.locator('#research-sources-list .research-card').locator('visible=true')).toHaveCount(1);
   const source = page.locator('#research-sources-list .research-card').filter({hasText: 'Hamburg free-port area, circa 1900'});
@@ -59,6 +71,9 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
   await dossier.locator('[data-research-detail=dossier]').click();
   const detail = dossier.locator('.research-details-body');
+  const authoredClaim = detail.locator('.research-dossier-claims-list li').filter({hasText: 'Attempted warehouse entry'});
+  await expect(authoredClaim.locator('[data-manuscript-link-count="1"]')).toBeVisible();
+  await expect(authoredClaim.locator('[data-claim-revision="1"]')).toBeVisible();
   await expect(detail.locator('.dossier-image img')).toHaveCount(2);
   for (const image of await detail.locator('.dossier-image img').all()) {
     await image.evaluate(element => { element.loading = 'eager'; return element.decode(); });
@@ -109,6 +124,17 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('[data-rtab=review]').click();
   await expect(page.locator('#research-editorial-review')).not.toContainText('Loading');
   await expect(page.locator('#research-editorial-review')).toContainText('Warehouse 4 case notes');
+  const manuscriptReview = page.locator('#research-manuscript-review');
+  await expect(manuscriptReview.locator('.manuscript-link-review-item')).toHaveCount(1);
+  await expect(manuscriptReview).toContainText('Attempted warehouse entry');
+  await expect(manuscriptReview.locator('blockquote')).toHaveText('Someone had tried the eastern gate of Warehouse 4.');
+  await expect(manuscriptReview).toContainText('Exact passage');
+  await expect(manuscriptReview).toContainText('Saved version 1');
+  await manuscriptReview.locator('[data-research-history=claim]').click();
+  await expect(history).toContainText('The customs log describes an attempted entry');
+  await page.keyboard.press('Escape');
+  await manuscriptReview.scrollIntoViewIfNeeded();
+  await page.screenshot({path: path.join(artifacts, `research-manuscript-review-${width}-${colorScheme}.png`)});
   await assertReadOnly();
 }
 
@@ -328,6 +354,6 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only journey, report keyboard/filter/chart controls, read-only research source/image/geography/history/timeline journey, assets, overflow and console passed. Screenshots: ${artifacts}`);
+    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only journey, report keyboard/filter/chart controls, read-only research source/image/geography/history/timeline/manuscript-quote journey, assets, overflow and console passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

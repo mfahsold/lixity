@@ -69,6 +69,10 @@ permission to retain bytes. Retrieved text and authored claim/evidence records d
 not establish factual truth. Source analysis stays separate from the manuscript
 baseline. No automatic web import, factual verification or cloud sync is provided.
 
+Zotero handles source-library editing and ordinary reading; Lixity retains
+selected evidence versions and their claim/manuscript relations. The bridge is
+read-only. Local imports and captured evidence remain usable without Zotero.
+
 Standalone reports embed manuscript text. Keep them, retained quotes, credentials
 and private paths out of shared logs or fixtures. Native context tokens reject
 stale selections; they are not authentication. Review the contract before writes.

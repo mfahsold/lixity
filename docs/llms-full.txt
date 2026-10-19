@@ -149,25 +149,24 @@ visibility in a book export depends on the editor or converter you use.
 
 ### Connect sources, claims and decisions
 
-The experimental research workspace keeps selected sources, quotations and notes
-in a separate local archive. A dossier gathers notes on a topic; a claim records
-an assertion you can link to source passages; a decision explains what you chose
-for the book. Filter by title or tag, or search the saved text. A saved quotation
-records what a source says; its accuracy still needs review.
+Use Zotero for collecting sources, reading and general research notes. Lixity's
+experimental research workspace connects selected evidence to claims, authorial
+decisions and exact manuscript quotations. A dossier gathers the material for a
+topic or scene. Saved evidence records what a source says, not whether it is true.
 
-<a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Local visual reference inside a dossier section, with a description and an explicit synthetic-source caption" width="900" /></a>
+<a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Historical Hamburg map in a fictional scene dossier, with source provenance" width="900" /></a>
 
-Import authorized local files or selected Zotero Desktop attachments.
-Scans can use local Tesseract or a configured OCR worker; inspect extraction
-warnings and quotations. Evidence links pin source paragraphs, while manuscript
-quote associations connect reviewed prose to exact claim revisions.
+Capture selected Zotero Desktop attachments or import authorized local files.
+Retained versions keep earlier quotations usable independently of Zotero.
+Metadata editing and ordinary reading stay in Zotero; Lixity provides the
+passage view needed to select and review evidence. Scans can use local
+Tesseract or a configured OCR worker.
 
 **Review** identifies older linked versions and changed manuscript anchors for
 your assessment. Related revisions can be previewed and saved together;
-conflicts preserve your draft. Nothing is repinned silently. Add local images
-as visual references, or use **Timeline** to organize claims with explicit
-calendar periods. These links and views record your interpretation; they do
-not establish factual truth. [Research workflows and limits](docs/research/USAGE.md).
+conflicts preserve your draft. Nothing is repinned silently. Images, structured
+places and character paths can accompany a dossier; **Timeline** organizes dated
+claims. [Research workflows and limits](docs/research/USAGE.md).
 
 <img src="docs/videos/research-timeline.gif" alt="Walkthrough: the claims timeline places dated claims on a shared axis and jumps from a bar to its claim card" width="900" />
 
@@ -400,6 +399,10 @@ delivery or publication. Research requires an explicit initialized project and
 permission to retain bytes. Retrieved text and authored claim/evidence records do
 not establish factual truth. Source analysis stays separate from the manuscript
 baseline. No automatic web import, factual verification or cloud sync is provided.
+
+Zotero handles source-library editing and ordinary reading; Lixity retains
+selected evidence versions and their claim/manuscript relations. The bridge is
+read-only. Local imports and captured evidence remain usable without Zotero.
 
 Standalone reports embed manuscript text. Keep them, retained quotes, credentials
 and private paths out of shared logs or fixtures. Native context tokens reject
@@ -1162,6 +1165,9 @@ server; start the installed workspace with `lixity service start --open`.
 The live workspace separates research, analysis and project settings. Use
 [Onboarding](ONBOARDING.md#open-or-import) for create/import/open: a file preview
 writes nothing until confirmation; opening reconnects an existing project.
+For research, use Zotero for ordinary source work and Lixity for retained evidence,
+authored records and manuscript associations; the [research guide](research/USAGE.md)
+defines that boundary and the optional local-import workflow.
 
 <a id="download-a-manuscript-pdf-since-v240"></a>
 
@@ -2142,6 +2148,17 @@ or extend language-specific linguistic validation.
 
 ## Research workflows
 
+Use Zotero for source collection, bibliographic metadata, ordinary reading,
+annotations and general notes. Lixity connects selected evidence to authored
+claims, decisions, dossiers and manuscript quotations. Historical maps and
+photographs remain source material; character journeys and their scene context
+are authored project records.
+
+**Current main (unreleased):** the research view starts with dossiers. The saved
+evidence area keeps Zotero selection and optional local import behind compact
+disclosures. Existing archives, citations and CLI/HTTP commands are unchanged.
+Zotero is optional: retained evidence and authorized local imports work without it.
+
 <a id="reading-and-cli-workflows-since-v240"></a>
 ### Reading and CLI workflows
 
@@ -2668,8 +2685,10 @@ not the dossier's geographic data.
 <a id="zotero-desktop-bridge-since-v1190"></a>
 ## Zotero Desktop bridge
 
-Zotero owns library metadata and media; Lixity retains selected evidence captures
-and authored research records. Enable Zotero's **Settings → Advanced → Allow
+Zotero owns the source library and its editable metadata, reading and notes.
+Lixity retains explicitly selected evidence versions and authored project records;
+these are stable captures, not a second synchronized library. Use **Open in Zotero**
+to return to the source. Enable Zotero's **Settings → Advanced → Allow
 other applications on this computer to communicate with Zotero**. No account,
 cloud API key, plugin or additional Python dependency is required. The bridge
 reads the local API and never writes Zotero's database or library.
@@ -4584,16 +4603,15 @@ manuscript is required. See [contributor checks](https://github.com/mfahsold/lix
 
 ## External research libraries (since v1.19.0)
 
-The optional `research.zotero` adapter uses Zotero Desktop's local HTTP API for
-bibliographic browsing and explicitly selected evidence capture. Lixity owns
-retained evidence, analysis, claims, dossiers and decisions; it never reads or
-writes Zotero's database. Captured evidence remains usable without Zotero.
-
-This follows the separation used by [Zettlr's reference-manager integration](https://docs.zettlr.com/en/editor/citations.html),
-though Zettlr primarily reads exported bibliographies and Lixity captures evidence
-through the [Zotero local API](https://www.zotero.org/support/dev/web_api/v3/local_api).
-[novelWriter's tags and references](https://novelwriter.io/docs/usage/tags_and_references.html)
-illustrate the complementary authoring concern: connecting story notes and scenes.
+Zotero owns acquisition, bibliographic editing, ordinary reading and notes.
+Lixity owns retained evidence, authored project records and manuscript associations.
+The optional `research.zotero` adapter captures selected evidence through the
+[local HTTP API](https://www.zotero.org/support/dev/web_api/v3/local_api); it never
+reads or writes Zotero's database. Keep the attachment selector and source-return
+actions small. The retained passage reader serves evidence selection and review.
+Captures preserve the version used by a claim independently of Zotero; they are
+not a live library mirror. UI consolidation preserves source IDs, historical
+citations and storage contracts.
 
 The adapter adds no runtime dependency and bundles no Zotero application code.
 Its additive RIS export preserves sources/citations and delegates import to

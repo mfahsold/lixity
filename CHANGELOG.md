@@ -7,6 +7,11 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- Research prioritizes dossiers, claims and manuscript review. Zotero remains the
+  source-library and reading interface; capture selection and alternative local
+  imports use compact disclosures. Retained evidence and archive contracts stay intact.
+
 ## [0.7.0] - 2026-10-19
 
 ### Added

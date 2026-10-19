@@ -40,6 +40,40 @@ server.serve_forever()
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.goto(fixture.url);
     await page.locator('[data-view=research]').click();
+    await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected','true');
+    await expect(page.locator('#rtab-dossiers')).toBeVisible();
+    await page.locator('[data-rtab=dossiers]').focus();await page.keyboard.press('ArrowRight');
+    await expect(page.locator('[data-rtab=claims]')).toBeFocused();
+    await page.keyboard.press('Enter');
+    await expect(page.locator('#rtab-claims')).toBeVisible();
+    await page.locator('[data-rtab=sources]').click();
+    await expect(page.locator('#r-ingest-text')).not.toBeVisible();
+    await expect(page.locator('#r-zotero-browse')).not.toBeVisible();
+    let zoteroReads=0;
+    await page.route('**/api/research-zotero',route=>{zoteroReads++;return route.fulfill({json:{ok:false,message:'Synthetic Zotero unavailable'}});});
+    await page.locator('#zotero-box > summary').focus();await page.keyboard.press('Enter');
+    await expect(page.locator('#r-zotero-browse')).toBeVisible();
+    if(width===320)assert.ok((await page.locator('#r-zotero-query').boundingBox()).width>=200,
+      'Mobile capture search must leave enough room to enter a query');
+    assert.equal(zoteroReads,0,'Opening the capture selector never browses or retains automatically');
+    await page.locator('#r-zotero-query').fill('Unsaved synthetic capture search');
+    await page.locator('#r-zotero-retention').check();
+    await page.locator('#zotero-box > summary').click();
+    await page.locator('#zotero-box > summary').click();
+    await expect(page.locator('#r-zotero-query')).toHaveValue('Unsaved synthetic capture search');
+    await expect(page.locator('#r-zotero-retention')).toBeChecked();
+    await page.locator('#r-zotero-browse').click();
+    await expect(page.locator('#r-zotero-results')).toContainText('Synthetic Zotero unavailable');
+    await page.locator('#r-local-import > summary').focus();await page.keyboard.press('Space');
+    await page.locator('#r-ingest-text').fill('An unsaved synthetic local capture.');
+    await page.locator('#r-local-import > summary').click();
+    await page.locator('[data-rtab=dossiers]').click();
+    await page.locator('[data-rtab=sources]').click();
+    await page.locator('#r-local-import > summary').click();
+    await expect(page.locator('#r-ingest-text')).toHaveValue('An unsaved synthetic local capture.');
+    await expect(page.locator('#r-zotero-results')).toContainText('Synthetic Zotero unavailable');
+    assert.equal(zoteroReads,1,'Tab and disclosure changes preserve the result without a repeat browse');
+    await page.unroute('**/api/research-zotero');
     for(const [tab,action,button,title,body] of [
       ['claims','research-claim-add','r-claim-create-btn','r-claim-title','r-claim-statement'],
       ['dossiers','research-dossier','r-dos-create-btn','r-dos-title','r-dos-body'],

@@ -77,6 +77,9 @@ server; start the installed workspace with `lixity service start --open`.
 The live workspace separates research, analysis and project settings. Use
 [Onboarding](ONBOARDING.md#open-or-import) for create/import/open: a file preview
 writes nothing until confirmation; opening reconnects an existing project.
+For research, use Zotero for ordinary source work and Lixity for retained evidence,
+authored records and manuscript associations; the [research guide](research/USAGE.md)
+defines that boundary and the optional local-import workflow.
 
 <a id="download-a-manuscript-pdf-since-v240"></a>
 

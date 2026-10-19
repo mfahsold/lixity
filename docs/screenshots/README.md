@@ -3,6 +3,8 @@
 Browser captures of the maintained dashboard. The
 [project page](https://mfahsold.github.io/lixity/) introduces each feature with
 a selected image. Use the links below for related views and full-size images.
+Research captures reflect current main (unreleased): dossiers are the starting
+point, with compact source capture and a synthetic manuscript association.
 
 ## Browse by feature
 
@@ -16,14 +18,14 @@ a selected image. Use the links below for related views and full-size images.
 | Project setup | [New project](dashboard-project-modal.png), [open project](dashboard-project-open.png), [mobile](dashboard-project-open-mobile.png) |
 | Manuscript import | [Preview and confirmation](dashboard-project-import.png), [mobile](dashboard-project-import-mobile.png) |
 | Project settings | [Settings and file picker](dashboard-project-settings.png), [mobile](dashboard-project-settings-mobile.png), [expanded NDA panel](dashboard-nda.png), [mobile](dashboard-nda-mobile.png) |
-| Research sources | [Source report](dashboard-research.png), [source list](dashboard-research-sources.png), [mobile](dashboard-research-sources-mobile.png) |
+| Retained evidence | [Source report](dashboard-research.png), [capture list](dashboard-research-sources.png), [mobile](dashboard-research-sources-mobile.png) |
 | Research dossiers | [Filtered notes with an exact-version image](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
 | Visual references | [Historical map](dashboard-dossier-image.png), [mobile map](dashboard-dossier-image-mobile.png), [photochrom](dashboard-dossier-photo.png), [mobile photochrom](dashboard-dossier-photo-mobile.png) |
 | Places and journeys | [Coordinate sketch](dashboard-dossier-geography.png), [mobile](dashboard-dossier-geography-mobile.png) |
 | Research search | [Passage results](dashboard-research-search.png), [mobile](dashboard-research-search-mobile.png) |
 | Claims and decisions | [Claims](dashboard-research-claims.png), [mobile](dashboard-research-claims-mobile.png), [decisions](dashboard-research-decisions.png), [mobile](dashboard-research-decisions-mobile.png) |
 | Claim chronology | [Timeline with axis, badges and placement hint](dashboard-research-timeline.png), [mobile](dashboard-research-timeline-mobile.png) |
-| Research review | [Decision links and revision pins](dashboard-research-review.png), [mobile](dashboard-research-review-mobile.png) |
+| Research review | [Saved manuscript quote and claim revision](dashboard-research-review.png), [mobile](dashboard-research-review-mobile.png) |
 | Related revisions | [Change set preview](dashboard-research-change-set.png), [mobile](dashboard-research-change-set-mobile.png) |
 | Terminal reports | [Analysis](cli-analyze.png), [style](cli-style.png), [research](cli-research.png) |
 

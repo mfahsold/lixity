@@ -63,16 +63,49 @@ def test_research_fixture_retains_reviewed_visuals_with_credit_and_fiction_bound
     assert api.audit(project)["ok"]
 
 
+def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_manuscript(tmp_path, research_fixture):
+    project = tmp_path / "research-demo"
+    links = research_fixture["/api/research/manuscript-links"]
+    assert len(links["links"]) == 1
+    link = links["links"][0]
+    assert link["anchor"]["source_path"] == "harbour-manuscript.md"
+    assert link["anchor"]["quote"] == "Someone had tried the eastern gate of Warehouse 4."
+    assert link["claim_title"] == "Attempted warehouse entry"
+    assert link["claim_revision"] == 1
+    assert link["state"] == "active"
+    assert (project / "harbour-manuscript.md").read_bytes() == (
+        ROOT / "docs/research/examples/harbour-manuscript.md").read_bytes()
+    assert api.list_manuscript_links(project) == {key: value for key, value in links.items() if key != "ok"}
+    evidence = api.list_evidence_links(project, claim_id=link["claim_id"])["evidence_links"]
+    assert len(evidence) == 1
+    assert evidence[0]["relation"] == "supports"
+    source = next(source for source in api.list_sources(project)["sources"]
+                  if source["title"] == "Port Authority Customs Log (synthetic)")
+    assert source["context"]["external_reference"]["server_id"] == "synthetic-offline-example"
+    assert "No live Zotero connection" in source["context"]["provenance_note"]
+    assert all(source["title"] != "harbour-manuscript.md" for source in api.list_sources(project)["sources"])
+    review = research_fixture["/api/research/manuscript-review?project_token=synthetic-harbour-manuscript"]
+    assert review["links"][0]["anchor_state"] == "resolved"
+    assert review["review_needed_count"] == 0
+    assert review["current_source_sha256"] == hashlib.sha256((project / "harbour-manuscript.md").read_bytes()).hexdigest()
+    assert api.audit(project)["ok"]
+
+
 def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_path, research_fixture):
     target = make_screenshots.build_research_demo(tmp_path, research_fixture)
     assert target == tmp_path / "docs/demo/research.html"
     document = target.read_text()
     fixture_path = target.with_name("research-data.json")
     fixture = json.loads(fixture_path.read_text())
-    assert f"Lixity {__version__} · read-only research example" in document
+    assert f"Lixity {__version__} · read-only research example · Current main (unreleased)" in document
+    assert f"Generated with Lixity {__version__}." in document
     assert "Hamburg free-port area, circa 1900" in document
     assert "Ships in the Harbor, Hamburg, Germany" in document
+    assert "Zotero normally owns bibliography, reading and source notes" in document
+    assert "no live Zotero connection" in document
+    assert "saved manuscript quote" in document
     assert "content_base64" not in fixture_path.read_text()
+    assert "Mara stopped beneath the quay lamp" not in fixture_path.read_text()
     assert "data:image" not in document
     assert all(url.startswith("/api/research/") for url in fixture)
     assert not any(url.startswith("/api/research/image") for url in fixture)
@@ -104,10 +137,17 @@ vm.runInNewContext(adapter, {window, document: {baseURI: 'https://demo.invalid/d
 (async () => {
   const response = await window.fetch('/api/research/sources');
   assert.equal((await response.json()).sources.length, 4);
+  const links = await (await window.fetch('/api/research/manuscript-links')).json();
+  assert.equal(links.links.length, 1);
+  const review = await (await window.fetch('/api/research/manuscript-review?project_token=synthetic-harbour-manuscript&research_token=synthetic-research-example')).json();
+  assert.equal(review.links[0].anchor.quote, 'Someone had tried the eastern gate of Warehouse 4.');
   await assert.rejects(() => window.fetch('/api/research/sources', {method: 'POST'}), /read.only/i);
+  await assert.rejects(() => window.fetch('/api/research-manuscript-link', {method: 'POST'}), /read.only/i);
+  await assert.rejects(() => window.fetch('zotero://select/library/items/DEMOLOG1'), /read.only/i);
   await assert.rejects(() => window.fetch('https://example.org/api/research/sources'), /read.only/i);
   await assert.rejects(() => window.fetch('/api/project-paths'), /read.only/i);
   await assert.rejects(() => window.fetch('/api/research/unknown'), /read.only/i);
+  await assert.rejects(() => window.fetch('/api/research/manuscript-links?research_token=unrecognized'), /read.only/i);
   assert.deepEqual(calls, ['https://demo.invalid/demo/research-data.json']);
 })().catch(error => {console.error(error); process.exitCode = 1;});
 """

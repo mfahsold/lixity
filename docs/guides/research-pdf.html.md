@@ -1,6 +1,8 @@
-# Keep sources and work with PDFs
+# Connect research to your manuscript
 
-Keep permitted source copies, cite exact passages and connect them with research notes, claims and writing decisions. Lixity's research workspace is experimental. An import or citation helps you review evidence; it does not establish that a claim is true.
+Collect sources, read and annotate in Zotero. Use Lixity's experimental research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.
+
+**Current main (unreleased):** research opens with dossiers; source selection and alternative local import are compact optional sections. Existing archives and command interfaces stay compatible.
 
 Maintained by the Lixity project · Updated 19 October 2026
 
@@ -69,7 +71,7 @@ lixity research search --project ./sample-project --query "reading room"
 
 `--allow-retention` confirms your permission to keep source bytes locally. It neither grants redistribution rights nor makes a claim true. Avoid importing sensitive sources into public repositories.
 
-In **Research → Sources**, choose a text or PDF file, or paste text. Add optional details if needed, then confirm retention. Import is disabled while processing; a failed submission keeps the form for correction. If all active sources are linked to Zotero, the dashboard shows Zotero capture instead; direct import remains available through the API.
+For an authorized file outside Zotero, expand **Research → Evidence captures → Alternative: import a local source**. Choose a text or PDF file, or paste text, and confirm retention. A failed submission keeps the draft. If all active sources are linked to Zotero, use Zotero capture instead; direct import remains available through the CLI/API.
 
 For a visual reference, open a dossier and choose **Add image**. Preview an authorized local PNG/JPEG, describe it and confirm retention before saving. The original image and dossier version are saved together. Earlier versions keep their exact image; removed images show an unavailable placeholder. Images have no extracted text or linguistic scores. See [format limits and archive compatibility](../research/USAGE.md#keep-a-visual-reference-in-a-dossier).
 
@@ -79,9 +81,11 @@ This field records the original HTTP(S) address in source details and citations.
 
 Matching URLs do not merge sources. Refreshing a named source with a new URL creates a new capture; earlier citations keep their original text and URL. These captures use the v2 archive format. Back up before upgrading and use compatible readers and writers; see [archive compatibility](../research/USAGE.md).
 
-## Use Zotero as the source and media catalogue
+## Keep source work in Zotero
 
-Run Zotero on the same computer as Lixity and download the attachments you need. In Research → Sources → Zotero, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Since v0.7.0, eligible attachments include PNG/JPEG visual sources without text extraction, alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
+Zotero owns bibliographic metadata, ordinary reading, annotations and general notes. Lixity's attachment selector captures only the evidence versions needed for your project; **Open in Zotero** returns to the source for further work.
+
+Run Zotero on the same computer and download the attachments you need. Open **Research → Evidence captures → Capture from Zotero**, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Since v0.7.0, eligible attachments include PNG/JPEG alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
 
 Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.
 

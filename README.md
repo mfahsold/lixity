@@ -131,25 +131,24 @@ visibility in a book export depends on the editor or converter you use.
 
 ### Connect sources, claims and decisions
 
-The experimental research workspace keeps selected sources, quotations and notes
-in a separate local archive. A dossier gathers notes on a topic; a claim records
-an assertion you can link to source passages; a decision explains what you chose
-for the book. Filter by title or tag, or search the saved text. A saved quotation
-records what a source says; its accuracy still needs review.
+Use Zotero for collecting sources, reading and general research notes. Lixity's
+experimental research workspace connects selected evidence to claims, authorial
+decisions and exact manuscript quotations. A dossier gathers the material for a
+topic or scene. Saved evidence records what a source says, not whether it is true.
 
-<a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Local visual reference inside a dossier section, with a description and an explicit synthetic-source caption" width="900" /></a>
+<a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Historical Hamburg map in a fictional scene dossier, with source provenance" width="900" /></a>
 
-Import authorized local files or selected Zotero Desktop attachments.
-Scans can use local Tesseract or a configured OCR worker; inspect extraction
-warnings and quotations. Evidence links pin source paragraphs, while manuscript
-quote associations connect reviewed prose to exact claim revisions.
+Capture selected Zotero Desktop attachments or import authorized local files.
+Retained versions keep earlier quotations usable independently of Zotero.
+Metadata editing and ordinary reading stay in Zotero; Lixity provides the
+passage view needed to select and review evidence. Scans can use local
+Tesseract or a configured OCR worker.
 
 **Review** identifies older linked versions and changed manuscript anchors for
 your assessment. Related revisions can be previewed and saved together;
-conflicts preserve your draft. Nothing is repinned silently. Add local images
-as visual references, or use **Timeline** to organize claims with explicit
-calendar periods. These links and views record your interpretation; they do
-not establish factual truth. [Research workflows and limits](docs/research/USAGE.md).
+conflicts preserve your draft. Nothing is repinned silently. Images, structured
+places and character paths can accompany a dossier; **Timeline** organizes dated
+claims. [Research workflows and limits](docs/research/USAGE.md).
 
 <img src="docs/videos/research-timeline.gif" alt="Walkthrough: the claims timeline places dated claims on a shared axis and jumps from a bar to its claim card" width="900" />
 

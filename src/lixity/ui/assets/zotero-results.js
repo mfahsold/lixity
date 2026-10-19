@@ -17,7 +17,7 @@
   function CatalogueLink(props) {
     var href = catalogueHref(props.library, props.itemKey);
     if (!href) return null;
-    return html`<a class="research-zotero-link" href=${href} title=${uiLabel("zotero_open")}>Zotero ↗</a>`;
+    return html`<a class="research-zotero-link" href=${href} title=${uiLabel("zotero_open")}>${uiLabel("zotero_open")} ↗</a>`;
   }
 
   function typeText(data) {

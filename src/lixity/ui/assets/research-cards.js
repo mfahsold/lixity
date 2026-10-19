@@ -21,7 +21,7 @@
     if (!/^[A-Z0-9]{8}$/.test(key) || !/^(users\/\d+|groups\/[1-9]\d*)$/.test(library)) return null;
     var prefix = library.startsWith("groups/") ? library : "library";
     return html`<a class="research-zotero-link" href=${"zotero://select/" + prefix + "/items/" + key}
-      title=${uiLabel("zotero_open")}>Zotero ↗</a>`;
+      title=${uiLabel("zotero_open")}>${uiLabel("zotero_open")} ↗</a>`;
   }
 
   function Tag(props) {
@@ -51,6 +51,7 @@
           return html`<span key=${"m" + index} class="ctl-note">${text}</span>`;
         })}
       </div>
+      ${item.zotero ? html`<${CatalogueLink} library=${item.zotero.library} itemKey=${item.zotero.key} />` : null}
       ${item.excerpt ? html`<p class="ctl-note research-excerpt">${item.excerpt}</p>` : null}
       ${item.statementHtml
         ? html`<div class="research-claim-statement research-prose markdown-body my-2"
@@ -75,7 +76,6 @@
           return html`<${Tag} key=${tag} value=${tag} interactive=${Boolean(item.tagsInteractive)} />`;
         })}
       </div>` : null}
-      ${item.zotero ? html`<${CatalogueLink} library=${item.zotero.library} itemKey=${item.zotero.key} />` : null}
       ${item.details ? html`<details class="research-details">
         <summary data-research-detail=${item.details} data-record-id=${item.id}>${uiLabel("research_view_details")}</summary>
         <div class="research-details-body"></div>

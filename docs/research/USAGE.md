@@ -30,6 +30,17 @@ or extend language-specific linguistic validation.
 
 ## Research workflows
 
+Use Zotero for source collection, bibliographic metadata, ordinary reading,
+annotations and general notes. Lixity connects selected evidence to authored
+claims, decisions, dossiers and manuscript quotations. Historical maps and
+photographs remain source material; character journeys and their scene context
+are authored project records.
+
+**Current main (unreleased):** the research view starts with dossiers. The saved
+evidence area keeps Zotero selection and optional local import behind compact
+disclosures. Existing archives, citations and CLI/HTTP commands are unchanged.
+Zotero is optional: retained evidence and authorized local imports work without it.
+
 <a id="reading-and-cli-workflows-since-v240"></a>
 ### Reading and CLI workflows
 
@@ -556,8 +567,10 @@ not the dossier's geographic data.
 <a id="zotero-desktop-bridge-since-v1190"></a>
 ## Zotero Desktop bridge
 
-Zotero owns library metadata and media; Lixity retains selected evidence captures
-and authored research records. Enable Zotero's **Settings → Advanced → Allow
+Zotero owns the source library and its editable metadata, reading and notes.
+Lixity retains explicitly selected evidence versions and authored project records;
+these are stable captures, not a second synchronized library. Use **Open in Zotero**
+to return to the source. Enable Zotero's **Settings → Advanced → Allow
 other applications on this computer to communicate with Zotero**. No account,
 cloud API key, plugin or additional Python dependency is required. The bridge
 reads the local API and never writes Zotero's database or library.

@@ -274,7 +274,8 @@ async function main() {
         await selectView('research');
         await page.locator('[data-rtab="review"]').click();
         await page.locator('#research-editorial-review .research-card').first().waitFor();
-        await save(capture.target, '#research-manager');
+        await page.locator('#research-manuscript-review .manuscript-link-review-item').first().waitFor();
+        await save(capture.target, '#research-manuscript-review-section');
       } else if (name.startsWith('dashboard-research-change-set')) {
         await selectView('research');
         await page.locator('[data-rtab="dossiers"]').click();
@@ -324,6 +325,10 @@ async function main() {
         const sources = name.startsWith('dashboard-research-sources');
         const kind = sources ? 'sources' : 'dossiers';
         await page.locator(`[data-rtab="${kind}"]`).click();
+        if (sources) {
+          assert.equal(await page.locator('#zotero-box').getAttribute('open'), null, 'Zotero capture stays optional until opened');
+          assert.equal(await page.locator('#r-local-import').getAttribute('open'), null, 'Local import stays optional until opened');
+        }
         await page.locator(`#research-${kind}-list .research-card`).first().waitFor();
         await settle();
         const before = await page.evaluate(() => captureRequests.length);

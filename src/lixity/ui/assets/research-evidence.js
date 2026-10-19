@@ -221,7 +221,7 @@ function zoteroOpenLink(library, key, quiet) {
   if (quiet) {
     // Dense lists show a quiet catalogue link instead of a button on every card.
     return '<a class="research-zotero-link" href="' + href + '" title="' +
-      escapeHtml(uiLabel("zotero_open")) + '">Zotero ↗</a>';
+      escapeHtml(uiLabel("zotero_open")) + '">' + escapeHtml(uiLabel("zotero_open")) + ' ↗</a>';
   }
   return '<a class="ctl" href="' + href + '">' + escapeHtml(uiLabel("zotero_open")) + '</a>';
 }

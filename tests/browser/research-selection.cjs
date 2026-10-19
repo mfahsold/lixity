@@ -84,6 +84,7 @@ server.serve_forever()
       page.on('request', request => {if (request.method() === 'POST') posts.push({path: new URL(request.url()).pathname, payload: request.postDataJSON()});});
       await page.route(fixture.url + '/', route => route.fulfill({contentType: 'text/html', body: html}));
       await page.goto(fixture.url);
+      await page.locator('[data-rtab=sources]').click();
       await page.locator('[data-research-detail=source]').click();
       const doc = '.research-source-doc-rendered';
       await page.waitForFunction(() => document.querySelector('.research-source-doc-rendered p'));

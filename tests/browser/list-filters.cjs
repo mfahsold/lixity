@@ -95,6 +95,7 @@ server.serve_forever()
     await page.goto(fixture.url);
     await expect(page.locator('html')).toHaveAttribute('lang', 'en');
     await expect(page.locator('#research-manager')).toBeVisible();
+    await page.locator('[data-rtab=sources]').click();
     await expect(page.locator('#research-sources-list .research-card')).toHaveCount(2);
     await expect(page.locator('#r-filter-sources')).toBeVisible();
     await expect(page.locator('#r-filter-sources')).toHaveAccessibleName('Filter sources…');
@@ -316,6 +317,15 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
       pt: ['Filtrar fontes…', 'Filtrar dossiês…', 'Nenhum resultado'],
       nl: ['Bronnen filteren…', 'Dossiers filteren…', 'Geen resultaten'],
     };
+    const captureLabels = {
+      en: ['Evidence captures', 'Capture from Zotero', 'Alternative: import a local source'],
+      de: ['Belegkopien', 'Aus Zotero übernehmen', 'Alternative: lokale Quelle importieren'],
+      fr: ['Sources conservées', 'Conserver depuis Zotero', 'Alternative : importer une source locale'],
+      es: ['Fuentes conservadas', 'Conservar desde Zotero', 'Alternativa: importar una fuente local'],
+      it: ['Fonti conservate', 'Acquisisci da Zotero', 'Alternativa: importa una fonte locale'],
+      pt: ['Fontes preservadas', 'Preservar do Zotero', 'Alternativa: importar uma fonte local'],
+      nl: ['Bewaarde bronnen', 'Uit Zotero bewaren', 'Alternatief: lokale bron importeren'],
+    };
     for (const [language, [sourcesName, dossiersName, noResults]] of Object.entries(languages)) {
       assert.equal((await (await page.request.post(fixture.url + '/api/settings', {data: {language}})).json()).ok, true);
       for (const width of [1440, 320]) {
@@ -323,6 +333,9 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
         await page.reload();
         await page.locator('[data-view=research]').click();
         await expect(page.locator('html')).toHaveAttribute('lang', language);
+        await expect(page.locator('#rtab-dossiers')).toBeVisible();
+        await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected', 'true');
+        await page.locator('#research-manager').screenshot({path: path.join(artifacts, `dossiers-default-${language}-${width}.png`)});
         for (const [kind, name] of [['sources', sourcesName], ['dossiers', dossiersName]]) {
           await page.locator(`[data-rtab=${kind}]`).click();
           await expect(page.locator('#research-' + kind + '-list .research-card')).toHaveCount(3);
@@ -349,6 +362,23 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${language} ${kind} overflow at ${width}`);
           await page.locator('#research-manager').screenshot({path: path.join(artifacts, `${kind}-${language}-${width}.png`)});
         }
+        await page.locator('[data-rtab=sources]').click();
+        await expect(page.locator('[data-rtab=sources]')).toHaveText(captureLabels[language][0]);
+        await expect(page.locator('#zotero-box > summary')).toHaveText(captureLabels[language][1]);
+        await expect(page.locator('#r-local-import > summary')).toHaveText(captureLabels[language][2]);
+        await expect(page.locator('#r-zotero-browse')).not.toBeVisible();
+        await expect(page.locator('#r-ingest-text')).not.toBeVisible();
+        for (const summary of ['#zotero-box > summary', '#r-local-import > summary']) {
+          await page.locator(summary).focus();
+          await page.keyboard.press('Enter');
+        }
+        await expect(page.locator('#r-zotero-browse')).toBeVisible();
+        if (width === 320) assert.ok((await page.locator('#r-zotero-query').boundingBox()).width >= 200,
+          `${language} mobile Zotero query must remain usable beside its translated action`);
+        await expect(page.locator('#r-ingest-text')).toBeVisible();
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+          `${language} expanded capture selectors overflow at ${width}px`);
+        await page.locator('#research-manager').screenshot({path: path.join(artifacts, `capture-selectors-${language}-${width}.png`)});
       }
     }
     assert.equal((await (await page.request.post(fixture.url + '/api/settings', {data: {language: 'en'}})).json()).ok, true);
@@ -381,6 +411,7 @@ api.create_dossier(p, title='Gamma dossier', body='A newly retained dossier.')
         }, kind);
         await bounded(oldReady, `${action} pre-write list interception`);
         if (action === 'import') {
+          await page.locator('#r-local-import > summary').click();
           await page.locator('#r-ingest-title').evaluate(element => { element.closest('details').open = true; });
           await page.locator('#r-ingest-title').fill(title);
           await page.locator('#r-ingest-text').fill('A permitted synthetic source for the post-write refresh regression.');
