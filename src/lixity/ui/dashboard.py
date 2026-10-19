@@ -75,7 +75,10 @@ _CSS_FILES = (
     "design-tokens.css",
     "components.css",
     "dashboard.css",
+    "vendor/photoswipe-5.4.4.css",
+    "research-media.css",
     "dossier-images.css",
+    "vendor/leaflet-1.9.4.css",
     "dossier-geography.css",
     "workspace-reader.css",
     "manuscript-links.css",
@@ -83,6 +86,9 @@ _CSS_FILES = (
 _JS_FILES = (
     "vendor/preact-10.29.8.min.js",
     "vendor/htm-3.1.1.umd.js",
+    "vendor/leaflet-1.9.4.min.js",
+    "vendor/photoswipe-5.4.4.umd.min.js",
+    "research-media.js",
     "component-layer.js",
     "tooltips.js",
     "interactions.js",
@@ -110,6 +116,12 @@ _JS_FILES = (
 def _bundle(files: tuple[str, ...]) -> str:
     """Join packaged assets on first use; importing the module does no I/O."""
     return "\n".join((_ASSET_DIR / name).read_text(encoding="utf-8") for name in files)
+
+
+def _script_json(value: Any) -> str:
+    """Keep JSON data inside an inert HTML script's raw-text boundary."""
+    return (json.dumps(value, ensure_ascii=False, separators=(",", ":"))
+            .replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e"))
 
 
 def render_analysis(
@@ -275,7 +287,7 @@ def render_dashboard(
     if flag_min_severity not in (1, 2, 3):
         flag_min_severity = int(FLAG_MIN_SEVERITY)
     total_flagged = sum(1 for p in paragraphs if p.severity >= flag_min_severity)
-    scale = max((p.words for p in paragraphs), default=1)
+    scale = max(1, max((p.words for p in paragraphs), default=1))
     feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
 
     function_pct = (
@@ -1010,12 +1022,7 @@ def render_dashboard(
                 parts.append("</div></noscript></div>")
         parts.append("</section>")
     parts.append("</main>")
-    content_json = json.dumps(paragraph_content, ensure_ascii=False, separators=(",", ":"))
-    # Script raw text does not decode HTML entities. Escape angle brackets so
-    # manuscript strings, including </script>, cannot end this inert JSON block.
-    content_json = (
-        content_json.replace("&", "\\u0026").replace("<", "\\u003c").replace(">", "\\u003e")
-    )
+    content_json = _script_json(paragraph_content)
     parts.append(f'<script type="application/json" id="paragraph-content">{content_json}</script>')
 
     # --- Key metrics (grouped for scanability) ----------------------------
@@ -1397,6 +1404,8 @@ def render_dashboard(
         [
             "</div>",
             f"<footer><span>{esc(engine_name)} · {L('app_suffix')}</span> · <span>{esc(title)}</span></footer>",
+            ('<script type="application/json" id="research-diagram-library">'
+             + _script_json(_bundle(("vendor/mermaid-tiny-12.2.0.min.js",))) + "</script>" if controls else ""),
             f"<script>{_bundle(_JS_FILES)}</script>",
             "</body>",
             "</html>",

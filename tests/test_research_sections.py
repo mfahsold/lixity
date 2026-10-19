@@ -135,7 +135,7 @@ class TestResearchSections(unittest.TestCase):
             cli.configure(parser)
             args = parser.parse_args([
                 "dossier", "--project", str(project), "--dossier-id", dossier["dossier_id"],
-                "--update", "--section", "Target", "--file", "New.",
+                "--update", "--section", "Target", "--body", "New.",
                 "--expected-snapshot", current["snapshot"], "--expected-revision", "1",
                 "--change-kind", "correction", "--reason", "Synthetic section update",
             ])

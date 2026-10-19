@@ -57,6 +57,22 @@ class ResearchStorageError(ResearchError):
     """The archive cannot be safely read or written; an item cannot be skipped."""
 
 
+def _lock_failure(path: Path, error: OSError, *, acquiring: bool = False) -> ResearchStorageError:
+    """Describe the failed OS operation without changing the locking protocol."""
+    busy = acquiring and (error.errno == errno.EAGAIN or (
+        sys.platform == "win32" and error.errno in (errno.EACCES, errno.EDEADLK)
+    ))
+    if busy:
+        context = "Research writer is busy; retry after it finishes"
+    elif error.errno == errno.EROFS:
+        context = "Research writer lock is on a read-only filesystem; use a writable project location"
+    elif error.errno in (errno.EACCES, errno.EPERM):
+        context = "Research writer lock access denied; check project directory permissions"
+    else:
+        context = "Research writer lock I/O failed; check project filesystem availability"
+    return ResearchStorageError(f"{context}: {path} ({error})")
+
+
 def encode(value: StrictModel) -> bytes:
     fields = value.model_dump(mode="json")
     if isinstance(value, AuthoredRecord) and value.change is None:
@@ -189,8 +205,12 @@ class Repository:
     @contextmanager
     def locked(self) -> Iterator[None]:
         lock = self.safe(self.cache / "writer.lock")
-        lock.parent.mkdir(parents=True, exist_ok=True)
-        with lock.open("a+b") as stream:
+        try:
+            lock.parent.mkdir(parents=True, exist_ok=True)
+            stream = lock.open("a+b")
+        except OSError as exc:
+            raise _lock_failure(lock, exc) from exc
+        with stream:
             try:
                 if sys.platform == "win32":
                     import msvcrt
@@ -205,12 +225,7 @@ class Repository:
 
                     fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             except OSError as exc:
-                busy = exc.errno == errno.EAGAIN or (
-                    sys.platform == "win32" and exc.errno in (errno.EACCES, errno.EDEADLK)
-                )
-                if not busy:
-                    raise
-                raise ResearchStorageError("Research writer is busy; retry after it finishes") from exc
+                raise _lock_failure(lock, exc, acquiring=True) from exc
             try:
                 yield
             finally:
@@ -467,6 +482,91 @@ class Repository:
         except ResearchError as exc:
             raise ResearchStorageError(str(exc)) from exc
 
+    def prepare_commit(
+        self, additions: list[Entity], current: Snapshot | None,
+        removals: set[str] | None = None,
+    ) -> tuple[Snapshot, bytes]:
+        """Validate a prospective snapshot and encode its manifest without I/O.
+
+        Writers still lock, reload and compare HEAD before calling this
+        owner. Read-only authored previews use their observed snapshot;
+        filesystem availability and retained blob checks remain write-time.
+        """
+        records = dict(current.records) if current else {}
+        revisions = dict(current.revisions) if current else {}
+        entries = list(current.manifest.entries) if current else []
+
+        if removals:
+            if any(isinstance(records.get(record_id), (AuthoredRecord, DecisionAcknowledgement)) for record_id in removals):
+                raise ResearchError("Authored revision history cannot be removed")
+            records = {k: v for k, v in records.items() if k not in removals}
+            revisions = {key: record for key, record in revisions.items() if key[0] not in removals}
+            entries = [e for e in entries if e.ref.id not in removals]
+
+        for record in additions:
+            try:
+                ENTITY.validate_json(encode(record))
+            except ValidationError:
+                raise ResearchError("Invalid or unsupported research schema") from None
+            previous = records.get(record.id)
+            if previous is not None:
+                if (not isinstance(record, AuthoredRecord) or previous.kind != record.kind
+                        or record.revision != previous.revision + 1):
+                    raise ResearchError("Accepted records cannot be overwritten; append the next authored revision")
+            elif record.revision != 1:
+                raise ResearchError("A record must start at revision 1")
+            records[record.id] = record
+            revisions[(record.id, record.revision)] = record
+            entries.append(Entry(kind=record.kind, ref=reference(record), sha256=digest(encode(record))))
+        project = next((record for record in records.values() if isinstance(record, Project)), None)
+        if project is None:
+            raise ResearchError("Project record required")
+        schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7", "research-manifest-local/8"]
+        schema = ("research-manifest-local/8" if any(record.schema_version == "research-local/8" for record in records.values())
+                  or (current and current.manifest.schema_version == "research-manifest-local/8")
+                  else "research-manifest-local/7" if any(record.schema_version == "research-local/7" for record in records.values())
+                  or (current and current.manifest.schema_version == "research-manifest-local/7")
+                  else "research-manifest-local/6" if any(record.schema_version == "research-local/6" for record in records.values())
+                  or (current and current.manifest.schema_version == "research-manifest-local/6")
+                  else "research-manifest-local/5" if any(record.schema_version == "research-local/5" for record in records.values())
+                  or (current and current.manifest.schema_version == "research-manifest-local/5")
+                  else "research-manifest-local/4" if any(record.schema_version == "research-local/4" for record in records.values())
+                  or (current and current.manifest.schema_version == "research-manifest-local/4")
+                  else "research-manifest-local/3" if any(record.schema_version == "research-local/3" for record in records.values())
+                  or (current and current.manifest.schema_version == "research-manifest-local/3")
+                  else "research-manifest-local/2" if any(record.schema_version == "research-local/2" for record in records.values())
+                  or (current and current.manifest.schema_version == "research-manifest-local/2")
+                  else "research-manifest-local/1")
+        manifest = Manifest(schema_version=schema, project_id=project.id, generation=current.manifest.generation + 1 if current else 1,
+                            parent=current.digest if current else None, entries=entries)
+        manifest_bytes = encode(manifest)
+        candidate = Snapshot(digest(manifest_bytes), manifest, records, revisions=revisions)
+        for record in additions:
+            if isinstance(record, Dossier):
+                from .images import validate_image_changes
+                predecessor = current.records.get(record.id) if current else None
+                retained = predecessor.evidence_refs if isinstance(predecessor, Dossier) else []
+                validate_image_changes(candidate, record.body, predecessor.body if isinstance(predecessor, Dossier) else "")
+                for ref in record.evidence_refs:
+                    if ref not in retained:
+                        candidate.get(ref, Passage)
+            elif isinstance(record, EvidenceLink):
+                predecessor = current.records.get(record.id) if current else None
+                if not isinstance(predecessor, EvidenceLink) or record.passage_ref != predecessor.passage_ref:
+                    candidate.get(record.passage_ref, Passage)
+            elif isinstance(record, Tombstone) and record.operation == "purge" and record.target_kind == "passage":
+                if current is None or not removals or record.target_ref.id not in removals:
+                    raise ResearchError("Passage purge tombstone requires an accepted passage removal")
+                current.get(record.target_ref, Passage)
+            elif isinstance(record, Tombstone) and record.operation == "purge" and record.target_kind == "source_version":
+                if current is None or not removals or record.target_ref.id not in removals:
+                    raise ResearchError("Source version purge tombstone requires an accepted version removal")
+                removed_version = current.get(record.target_ref, SourceVersion)
+                if record.source_ref is not None and record.source_ref != removed_version.source_ref:
+                    raise ResearchError("Purge tombstone source ownership does not match the removed source version")
+        self.validate(candidate)
+        return candidate, manifest_bytes
+
     def _commit(
         self,
         additions: list[Entity],
@@ -479,79 +579,9 @@ class Repository:
             current = self.snapshot() if self.safe(self.data / "HEAD.json").exists() else None
             if (current.digest if current else None) != (expected.digest if expected else None):
                 raise ResearchConflictError("Research snapshot changed; retry from the current HEAD")
-            records = dict(current.records) if current else {}
-            revisions = dict(current.revisions) if current else {}
-            entries = list(current.manifest.entries) if current else []
-
-            if removals:
-                if any(isinstance(records.get(record_id), (AuthoredRecord, DecisionAcknowledgement)) for record_id in removals):
-                    raise ResearchError("Authored revision history cannot be removed")
-                records = {k: v for k, v in records.items() if k not in removals}
-                revisions = {key: record for key, record in revisions.items() if key[0] not in removals}
-                entries = [e for e in entries if e.ref.id not in removals]
-
-            for record in additions:
-                try:
-                    ENTITY.validate_json(encode(record))
-                except ValidationError:
-                    raise ResearchError("Invalid or unsupported research schema") from None
-                previous = records.get(record.id)
-                if previous is not None:
-                    if (not isinstance(record, AuthoredRecord) or previous.kind != record.kind
-                            or record.revision != previous.revision + 1):
-                        raise ResearchError("Accepted records cannot be overwritten; append the next authored revision")
-                elif record.revision != 1:
-                    raise ResearchError("A record must start at revision 1")
-                records[record.id] = record
-                revisions[(record.id, record.revision)] = record
-                entries.append(Entry(kind=record.kind, ref=reference(record), sha256=digest(encode(record))))
-            project = next((record for record in records.values() if isinstance(record, Project)), None)
-            if project is None:
-                raise ResearchError("Project record required")
-            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7", "research-manifest-local/8"]
-            schema = ("research-manifest-local/8" if any(record.schema_version == "research-local/8" for record in records.values())
-                      or (current and current.manifest.schema_version == "research-manifest-local/8")
-                      else "research-manifest-local/7" if any(record.schema_version == "research-local/7" for record in records.values())
-                      or (current and current.manifest.schema_version == "research-manifest-local/7")
-                      else "research-manifest-local/6" if any(record.schema_version == "research-local/6" for record in records.values())
-                      or (current and current.manifest.schema_version == "research-manifest-local/6")
-                      else "research-manifest-local/5" if any(record.schema_version == "research-local/5" for record in records.values())
-                      or (current and current.manifest.schema_version == "research-manifest-local/5")
-                      else "research-manifest-local/4" if any(record.schema_version == "research-local/4" for record in records.values())
-                      or (current and current.manifest.schema_version == "research-manifest-local/4")
-                      else "research-manifest-local/3" if any(record.schema_version == "research-local/3" for record in records.values())
-                      or (current and current.manifest.schema_version == "research-manifest-local/3")
-                      else "research-manifest-local/2" if any(record.schema_version == "research-local/2" for record in records.values())
-                      or (current and current.manifest.schema_version == "research-manifest-local/2")
-                      else "research-manifest-local/1")
-            manifest = Manifest(schema_version=schema, project_id=project.id, generation=current.manifest.generation + 1 if current else 1,
-                                parent=current.digest if current else None, entries=entries)
-            manifest_bytes = encode(manifest)
-            candidate = Snapshot(digest(manifest_bytes), manifest, records, revisions=revisions)
-            for record in additions:
-                if isinstance(record, Dossier):
-                    from .images import validate_image_changes
-                    predecessor = current.records.get(record.id) if current else None
-                    retained = predecessor.evidence_refs if isinstance(predecessor, Dossier) else []
-                    validate_image_changes(candidate, record.body, predecessor.body if isinstance(predecessor, Dossier) else "")
-                    for ref in record.evidence_refs:
-                        if ref not in retained:
-                            candidate.get(ref, Passage)
-                elif isinstance(record, EvidenceLink):
-                    predecessor = current.records.get(record.id) if current else None
-                    if not isinstance(predecessor, EvidenceLink) or record.passage_ref != predecessor.passage_ref:
-                        candidate.get(record.passage_ref, Passage)
-                elif isinstance(record, Tombstone) and record.operation == "purge" and record.target_kind == "passage":
-                    if current is None or not removals or record.target_ref.id not in removals:
-                        raise ResearchError("Passage purge tombstone requires an accepted passage removal")
-                    current.get(record.target_ref, Passage)
-                elif isinstance(record, Tombstone) and record.operation == "purge" and record.target_kind == "source_version":
-                    if current is None or not removals or record.target_ref.id not in removals:
-                        raise ResearchError("Source version purge tombstone requires an accepted version removal")
-                    removed_version = current.get(record.target_ref, SourceVersion)
-                    if record.source_ref is not None and record.source_ref != removed_version.source_ref:
-                        raise ResearchError("Purge tombstone source ownership does not match the removed source version")
-            self.validate(candidate)
+            candidate, manifest_bytes = self.prepare_commit(additions, current, removals)
+            entries = candidate.manifest.entries
+            project = candidate.project
             for checksum, content in blobs.items():
                 if digest(content) != checksum:
                     raise ResearchError("Blob digest does not match bytes")

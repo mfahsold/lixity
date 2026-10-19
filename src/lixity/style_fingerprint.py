@@ -1690,6 +1690,8 @@ def layer_stats(paragraphs: Sequence[Any], layer: str) -> dict[int, tuple[float,
         return {}
     by_chapter: dict[int, list[tuple[int, float]]] = {}
     for idx, p in enumerate(paragraphs):
+        if getattr(p, "words", 0) <= 0:
+            continue
         value = getattr(p, field_name, None)
         if not isinstance(value, int | float):
             continue

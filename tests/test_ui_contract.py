@@ -142,7 +142,46 @@ class _PaneOwnership(HTMLParser):
 
 
 class TestJsDomContract(unittest.TestCase):
+    def test_optional_diagram_library_stays_inert_and_preserves_raw_text_delimiters(self):
+        import json
+        from unittest.mock import patch
+
+        from lixity.ui.dashboard import _bundle
+
+        program = "window.syntheticLibrary = '</script><b id=unexpected-library-markup> & \\n';\n"
+        paragraphs, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks("## Opening\n\nRain falls.\n"))
+
+        def asset(files):
+            return program if any(name.startswith("vendor/mermaid-") for name in files) else _bundle(files)
+
+        with patch("lixity.ui.dashboard._bundle", side_effect=asset):
+            document = render_dashboard(chapters, paragraphs, controls=True)
+            plain_report = render_dashboard(chapters, paragraphs, controls=False)
+        payload = re.search(r'<script type="application/json" id="research-diagram-library">(.*?)</script>',
+                            document, re.DOTALL)
+        self.assertIsNotNone(payload)
+        self.assertEqual(json.loads(payload[1]), program)
+        self.assertNotIn("<b id=unexpected-library-markup>", document)
+        self.assertNotIn('id="research-diagram-library"', plain_report)
+
     """Every id the script touches must exist in the markup (no silent breakage)."""
+
+    def test_character_panel_separates_declared_pov_in_all_locales(self):
+        from lixity.language import resolve_language
+        from lixity.ui.narration import render_characters_panel
+
+        report = {"chapters": 2, "figures": [{"name": "Mara", "mentions": 0,
+                  "chapters_present": [], "declared_pov_chapters": [2]}]}
+        for language in ("en", "de", "fr", "es", "it", "pt", "nl"):
+            with self.subTest(language=language):
+                labels = resolve_language(CorpusConfig(language=language)).labels
+                panel = render_characters_panel(report, [], labels)
+                self.assertIn(labels["chr_pov"], panel)
+                self.assertIn(labels["panel_characters"], panel)
+                self.assertIn('<td>2</td>', panel)
+                self.assertIn('tabindex="0" role="region"', panel)
+                self.assertNotIn('data-jump=', panel)
 
     def test_review_routes_only_offer_existing_analysis_targets(self):
         config = CorpusConfig(language="en")

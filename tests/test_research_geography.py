@@ -10,7 +10,7 @@ from lixity.research import api
 from lixity.research.models import Dossier
 from lixity.research.repository import Repository, ResearchConflictError, ResearchError, encode
 from lixity.server.pdf_context import research_context_token
-from tests.research_support import capture_research, revise_record
+from tests.research_support import capture_research, retained_files, revise_record
 from tests.support import LoopbackServer, make_handler
 
 
@@ -34,11 +34,6 @@ def geography():
          "properties": {"label": "Marshland", "feature_type": "wetland"}},
         {"type": "Feature", "geometry": None, "properties": {"label": "Unlocated estate"}},
     ]}
-
-
-def retained_files(project):
-    return {str(path.relative_to(project)): path.read_bytes()
-            for path in (project / "research").rglob("*") if path.is_file()}
 
 
 def test_first_geography_write_opts_in_and_legacy_reencoding_stays_unchanged(project):
@@ -238,7 +233,7 @@ def test_cli_accepts_inline_file_and_null_geography_with_revision_guards(project
     source = tmp_path / "geography.json"
     source.write_text(json.dumps(geography()), encoding="utf-8")
     status, output, errors = capture_research("dossier", "--project", str(project), "--title", "Synthetic location",
-                                            "--file", "Synthetic prose.", "--geography", str(source))
+                                            "--body", "Synthetic prose.", "--geography", str(source))
     assert status == 0, errors
     identifier = json.loads(output)["dossier_id"]
     changed = copy.deepcopy(geography())

@@ -355,7 +355,18 @@ async function main() {
         }
         if (name.startsWith('dashboard-dossier-geography')) {
           await card.locator('.dossier-geography .geography-sketch').waitFor();
+          await card.locator('[data-geo-map]').click();
+          await card.locator('.geography-map.leaflet-container').waitFor();
           await save(capture.target, '.research-details-body .dossier-geography');
+        } else if (name.startsWith('dashboard-dossier-diagram')) {
+          const diagram = card.locator('[data-research-diagram]').first();
+          await diagram.scrollIntoViewIfNeeded();
+          await diagram.locator('svg.research-diagram').waitFor();
+          await save(capture.target, '[data-research-diagram]');
+        } else if (name.startsWith('dashboard-dossier-image-zoom')) {
+          await card.locator('[data-dossier-enlarge]').first().click();
+          await page.locator('#modal-dossier-image-enlarge .pswp__item[aria-hidden=false] img.pswp__img').waitFor();
+          await save(capture.target, '#modal-dossier-image-enlarge');
         } else if (name.startsWith('dashboard-dossier-image') || name.startsWith('dashboard-dossier-photo')) {
           const alt = name.startsWith('dashboard-dossier-photo') ? "Hamburg's Hansahafen" : 'Historical coloured plan';
           const section = card.locator('.research-dossier-section-block').filter({has: page.locator('.dossier-image img[alt*="' + alt + '"]')});

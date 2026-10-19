@@ -162,7 +162,7 @@ def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, 
         title = first.split("\n", 1)[0][2:].strip() if first.startswith("# ") else ""
         original_lines = text.splitlines(keepends=True)
         body = _trim_blank_lines("".join(original_lines[front_matter_end:]))
-        prose = prose_text(body, _front_matter=False)
+        prose = "\n\n".join(prose_paragraphs(body, _front_matter=False, _counting=False))
         return [(1, title, body, 1)] if word_re.search(prose) else []
     spans: list[tuple[int, int, int, str | None]] = []
     if first and not first.startswith("# "):
@@ -189,7 +189,7 @@ def _chapter_spans_uncached(text: str, config: CorpusConfig) -> list[tuple[int, 
                 body = _trim_blank_lines("\n".join(lines[1:]))
         else:
             title = saved_title
-        prose = prose_text(body, _front_matter=False)
+        prose = "\n\n".join(prose_paragraphs(body, _front_matter=False, _counting=False))
         if not word_re.search(prose):
             continue
         chapters.append((len(chapters) + 1, title, body, line))
@@ -256,7 +256,154 @@ def strip_inline_markup(text: str) -> str:
     return text.strip()
 
 
+_BACKTICKS = re.compile(r"`+")
+
+
+class _InlineDelimiters:
+    """Index the shared recognizers' bounded pairs once per original text."""
+
+    def __init__(self, text: str) -> None:
+        self.closers: dict[int, int] = {}
+        self.code: dict[int, tuple[int, int]] = {}
+        stacks: dict[str, list[int]] = {"[": [], "(": []}
+        index = 0
+        while index < len(text):
+            char = text[index]
+            if char == "\\":
+                index += 2
+                continue
+            if char == "\n":
+                for stack in stacks.values():
+                    stack.clear()
+            elif char in stacks:
+                stacks[char].append(index)
+            elif char in "])":
+                stack = stacks["[" if char == "]" else "("]
+                if stack:
+                    self.closers[stack.pop()] = index
+            index += 1
+        following: dict[int, int] = {}
+        for run in reversed(list(_BACKTICKS.finditer(text))):
+            # Preserve recognition even when a caller starts inside an
+            # unmatched run: only a later complete run can close its suffix.
+            for start in range(run.start(), run.end()):
+                width = run.end() - start
+                if width in following:
+                    self.code[start] = following[width], width
+            following[run.end() - run.start()] = run.end()
+
+
+def _code_end(text: str, start: int, *, delimiters: _InlineDelimiters | None = None) -> tuple[int, int] | None:
+    """Return the matching backtick span and its delimiter width, when closed."""
+    if delimiters is not None:
+        return delimiters.code.get(start)
+    opening = _BACKTICKS.match(text, start)
+    if opening is None:
+        return None
+    marker = opening.group()
+    pattern = re.compile(r"(?<!`)" + re.escape(marker) + r"(?!`)")
+    closing = pattern.search(text, start + len(marker))
+    return (closing.end(), len(marker)) if closing else None
+
+
+def _link_ranges(text: str, start: int, *, delimiters: _InlineDelimiters | None = None,
+                 limit: int | None = None) -> tuple[tuple[int, int], tuple[int, int], int, bool] | None:
+    """Recognize link ranges without copying labels during nested traversal."""
+    limit = len(text) if limit is None else limit
+    image = text.startswith("![", start)
+    opening = start + 1 if image else start
+    if opening >= limit or not text.startswith("[", opening):
+        return None
+
+    def closing_at(position: int, left: str, right: str) -> int | None:
+        if delimiters is not None:
+            end = delimiters.closers.get(position)
+            return end if end is not None and end < limit else None
+        depth = 1
+        index = position + 1
+        while index < limit and text[index] != "\n":
+            if text[index] == "\\":
+                index += 2
+                continue
+            if text[index] == left:
+                depth += 1
+            elif text[index] == right:
+                depth -= 1
+                if not depth:
+                    return index
+            index += 1
+        return None
+
+    label_end = closing_at(opening, "[", "]")
+    if label_end is None:
+        return None
+    label = opening + 1, label_end
+    destination_start = label_end + 1
+    if destination_start < limit and text.startswith("(", destination_start):
+        end = closing_at(destination_start, "(", ")")
+    elif destination_start < limit and text.startswith("[", destination_start):
+        end = closing_at(destination_start, "[", "]")
+    else:
+        return (label, label, label_end + 1, True) if image else None
+    if end is None:
+        return None
+    return label, (destination_start + 1, end), end + 1, image
+
+
+def _link_at(text: str, start: int, *, delimiters: _InlineDelimiters | None = None) -> tuple[str, str, int, bool] | None:
+    """Read a bounded inline link/image destination, allowing grouped parentheses."""
+    ranges = _link_ranges(text, start, delimiters=delimiters)
+    if ranges is None:
+        return None
+    label_range, destination_range, end, image = ranges
+    label = text[slice(*label_range)]
+    return label, text[slice(*destination_range)] or label, end, image
+
+
 _LINK_PATTERN = re.compile(r"\[([^\]]+)\]\(([^)\s]+)\)")
+
+_LINK_DEFINITION = re.compile(r"(?m)^ {0,3}\[[^\]\n]+\]:[^\n]*(?:\n|$)")
+
+
+def counting_inline_text(text: str) -> str:
+    """Project bounded Markdown prose for counts, without changing display anchors.
+
+    Link labels contribute; destinations, reference definitions, images and
+    closed inline code do not. Malformed syntax remains literal text. Recognition
+    is shared with manuscript presentation but never interprets or rejects TeX.
+    Iterative label traversal avoids a recursion limit or silently lost text.
+    """
+    text = _LINK_DEFINITION.sub(" ", text)
+    delimiters = _InlineDelimiters(text)
+    pending = [(0, len(text))]
+    parts: list[str] = []
+    while pending:
+        index, limit = pending.pop()
+        while index < limit:
+            char = text[index]
+            if char == "\\" and index + 1 < limit and text[index + 1] in r"\`*_{}[]()#+-.!":
+                parts.append(text[index + 1])
+                index += 2
+                continue
+            if char == "`":
+                code = _code_end(text, index, delimiters=delimiters)
+                if code and code[0] <= limit:
+                    parts.append(" ")
+                    index = code[0]
+                    continue
+            if char in "![":
+                link = _link_ranges(text, index, delimiters=delimiters, limit=limit)
+                if link:
+                    label, _destination, end, image = link
+                    if image:
+                        parts.append(" ")
+                        index = end
+                        continue
+                    pending.extend(((end, limit), label))
+                    break
+            parts.append(char)
+            index += 1
+    return strip_inline_markup("".join(parts))
 
 
 def parse_markdown_blocks(
@@ -458,14 +605,17 @@ def parse_markdown_blocks(
 
 
 def prose_paragraphs(
-    content: str, config: CorpusConfig | None = None, *, _front_matter: bool = True
+    content: str, config: CorpusConfig | None = None, *, _front_matter: bool = True,
+    _counting: bool = True,
 ) -> list[str]:
     """Supported analysis prose, reusing blocks rather than splitting newlines.
 
     Body paragraphs, list items and quoted-block paragraphs contribute text.
     YAML front matter, headings, comments, code and footnote definitions do not.
-    Inline emphasis and footnote anchors are removed. This is a bounded Markdown
-    policy, not a general CommonMark implementation. Paragraph profiles retain
+    Inline counting excludes non-prose markup. The private membership projection
+    retains the established chapter numbering even for image/code-only bodies.
+    This is a bounded Markdown policy, not a general CommonMark implementation.
+    Paragraph profiles retain
     their documented narrower body/list scope and original block line anchors.
     Chapter/scene callers disable document-only front matter handling.
     """
@@ -474,7 +624,7 @@ def prose_paragraphs(
         values = (block["paras"] if block["type"] == "quote_block" else
                   [block["text"]] if block["type"] in ("p", "list_item") else [])
         for value in values:
-            clean = strip_inline_markup(value)
+            clean = counting_inline_text(value) if _counting else strip_inline_markup(value)
             if clean:
                 paragraphs.append(clean)
     return paragraphs

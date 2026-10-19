@@ -2,14 +2,16 @@
 
 import argparse
 import json
+import re
 import sys
 import time
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any, Literal
 
 from pydantic import ValidationError
 
-from .limits import MAX_IMAGE_BYTES
+from .limits import MAX_IMAGE_BYTES, MAX_RESEARCH_OBJECT_BYTES
 
 OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "sources": (("text", "md", "json"), "json"),
@@ -47,54 +49,79 @@ def _add_manuscript_argument(command: argparse.ArgumentParser) -> None:
                           help="Manuscript path inside the explicit project (same as the positional argument)")
 
 
+COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
+    ('init', 'Create an explicit local research project', 'Sources and captures', ()),
+    ('sources', 'List active sources, versions, tags, and passage counts', 'Sources and captures', ('source',)),
+    ('zotero', 'Preview a local Zotero library or item attachments (read-only)', 'Sources and captures', ()),
+    ('zotero-ingest', 'Capture one selected local Zotero PDF/text attachment', 'Sources and captures', ()),
+    ('ingest', 'Archive local UTF-8 text, PDF, PNG or JPEG; PDF scans require configured local OCR', 'Sources and captures', ()),
+    ('dossier', 'Create, list or inspect research dossiers', 'Dossiers, claims and decisions', ('dossiers',)),
+    ('dossier-image', 'Capture a local PNG/JPEG and attach it to a dossier atomically', 'Dossiers, claims and decisions', ()),
+    ('claim', 'Create, list or revise research claims and hypotheses', 'Dossiers, claims and decisions', ('claims',)),
+    ('decision', 'Create, list or revise author decisions and fact deviations', 'Dossiers, claims and decisions', ('decisions',)),
+    ('relate', 'Record, inspect or revise an authored cause/effect assertion between claims', 'Dossiers, claims and decisions', ()),
+    ('link-evidence', 'Create, inspect or revise a passage-to-claim evidence link', 'Dossiers, claims and decisions', ()),
+    ('link', 'Create an evidence link with positional PASSAGE_ID CLAIM_ID', 'Dossiers, claims and decisions', ()),
+    ('revise-batch', 'Preview related authored-record revisions, then apply them together explicitly', 'Dossiers, claims and decisions', ()),
+    ('link-manuscript', 'Associate one reviewed manuscript quote with an exact claim revision (retention explicit)', 'Manuscript associations', ()),
+    ('manuscript-links', 'List saved manuscript quote-claim associations (read-only)', 'Manuscript associations', ()),
+    ('review-manuscript', 'Review saved associations against the current manuscript (read-only)', 'Manuscript associations', ()),
+    ('unlink-manuscript', 'Retract one saved manuscript association (history retained)', 'Manuscript associations', ()),
+    ('find-anchor', 'Resolve one displayed-text quote to exact anchor fields (read-only)', 'Manuscript associations', ()),
+    ('reconcile-manuscript', 'Preview or write re-pins for uniquely moved or adjusted manuscript anchors', 'Manuscript associations', ()),
+    ('search', 'Search the latest source versions with literal words', 'Search and review', ()),
+    ('cite', 'Resolve an immutable source passage', 'Search and review', ()),
+    ('timeline', 'Read a conservative chronology from recorded claim periods', 'Search and review', ()),
+    ('matrix', 'Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)', 'Search and review', ()),
+    ('review', 'List structural editorial review candidates; read-only, not semantic judgment', 'Search and review', ()),
+    ('decision-impact', 'Inspect dossiers explicitly linked to an author decision; read-only', 'Search and review', ()),
+    ('mark-applied', 'Record an author acknowledgement for exact decision and dossier revisions', 'Search and review', ()),
+    ('reopen', 'Explicitly reopen review of exact decision and dossier revisions', 'Search and review', ()),
+    ('analyze', 'Analyze verified source text and return metrics and style reference (JSON)', 'Source analysis', ()),
+    ('dashboard', 'Render local HTML source report', 'Source analysis', ()),
+    ('compare', 'Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)', 'Source analysis', ()),
+    ('audit', 'Check retained records, hashes and citation positions', 'Archive and maintenance', ()),
+    ('reindex', 'Rebuild the disposable SQLite/FTS5 search index', 'Archive and maintenance', ()),
+    ('withdraw', 'Withdraw an archived source or version, marking citations and excluding from search', 'Archive and maintenance', ()),
+    ('purge', 'Physically delete archived source records, passages, and unshared blobs', 'Archive and maintenance', ()),
+    ('export', 'Export research store to verified archive (.tar.gz)', 'Archive and maintenance', ()),
+    ('restore', 'Restore research store from verified archive (.tar.gz)', 'Archive and maintenance', ()),
+    ('zotero-backup', 'Back up research and a closed Zotero data directory together', 'Archive and maintenance', ()),
+    ('zotero-restore', 'Verify and restore a paired backup into a new directory', 'Archive and maintenance', ()),
+    ('zotero-export', 'Export active captures and provenance for additive Zotero import', 'Archive and maintenance', ()),
+    ('ocr-status', 'Inspect runtime diagnostic status for OCR and PDF extraction', 'Archive and maintenance', ()),
+    ('schema', 'Export the experimental entity JSON schema', 'Archive and maintenance', ()),
+)
+
+
+class _ResearchHelpFormatter(argparse.HelpFormatter):
+    """Group the registered flat grammar without maintaining another command list."""
+
+    def _format_action(self, action: argparse.Action) -> str:
+        if not isinstance(action, argparse._SubParsersAction):
+            return super()._format_action(action)
+        groups: dict[str, list[argparse.Action]] = {}
+        for choice in action._choices_actions:
+            command = action.choices[choice.dest]
+            groups.setdefault(command.get_default("cli_group"), []).append(choice)
+        parts = []
+        for group, choices in groups.items():
+            parts.append(" " * self._current_indent + group + ":\n")
+            self._indent()
+            parts.extend(self._format_action(choice) for choice in choices)
+            self._dedent()
+        return "".join(parts)
+
+
 def configure(parser: argparse.ArgumentParser) -> None:
-    commands = parser.add_subparsers(dest="research_command", required=True)
-    schema_command = commands.add_parser("schema", help="Export the experimental entity JSON schema")
-    schema_command.set_defaults(cli_output_formats=("json",), cli_default_output="json",
-                                cli_purpose="Export the experimental entity JSON schema")
-    for name, help_text in (
-        ("init", "Create an explicit local research project"),
-        ("ingest", "Archive local UTF-8 text, PDF, PNG or JPEG; PDF scans require configured local OCR"),
-        ("reindex", "Rebuild the disposable SQLite/FTS5 search index"),
-        ("search", "Search the latest source versions with literal words"),
-        ("cite", "Resolve an immutable source passage"),
-        ("audit", "Check retained records, hashes and citation positions"),
-        ("analyze", "Analyze verified source text and return metrics and style reference (JSON)"),
-        ("dashboard", "Render local HTML source report"),
-        ("compare", "Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)"),
-        ("sources", "List active sources, versions, tags, and passage counts"),
-        ("dossier", "Create, list or inspect research dossiers"),
-        ("dossier-image", "Capture a local PNG/JPEG and attach it to a dossier atomically"),
-        ("claim", "Create, list or revise research claims and hypotheses"),
-        ("timeline", "Read a conservative chronology from recorded claim periods"),
-        ("relate", "Record, inspect or revise an authored cause/effect assertion between claims"),
-        ("link-evidence", "Create, inspect or revise a passage-to-claim evidence link"),
-        ("link", "Create an evidence link with positional PASSAGE_ID CLAIM_ID"),
-        ("link-manuscript", "Associate one reviewed manuscript quote with an exact claim revision (retention explicit)"),
-        ("manuscript-links", "List saved manuscript quote-claim associations (read-only)"),
-        ("review-manuscript", "Review saved associations against the current manuscript (read-only)"),
-        ("unlink-manuscript", "Retract one saved manuscript association (history retained)"),
-        ("find-anchor", "Resolve one displayed-text quote to exact anchor fields (read-only)"),
-        ("reconcile-manuscript", "Preview or write re-pins for uniquely moved or adjusted manuscript anchors"),
-        ("decision", "Create, list or revise author decisions and fact deviations"),
-        ("decision-impact", "Inspect dossiers explicitly linked to an author decision; read-only"),
-        ("review", "List structural editorial review candidates; read-only, not semantic judgment"),
-        ("mark-applied", "Record an author acknowledgement for exact decision and dossier revisions"),
-        ("reopen", "Explicitly reopen review of exact decision and dossier revisions"),
-        ("revise-batch", "Preview related authored-record revisions, then apply them together explicitly"),
-        ("withdraw", "Withdraw an archived source or version, marking citations and excluding from search"),
-        ("purge", "Physically delete archived source records, passages, and unshared blobs"),
-        ("export", "Export research store to verified archive (.tar.gz)"),
-        ("restore", "Restore research store from verified archive (.tar.gz)"),
-        ("zotero-backup", "Back up research and a closed Zotero data directory together"),
-        ("zotero-restore", "Verify and restore a paired backup into a new directory"),
-        ("zotero-export", "Export active captures and provenance for additive Zotero import"),
-        ("zotero", "Preview a local Zotero library or item attachments (read-only)"),
-        ("zotero-ingest", "Capture one selected local Zotero PDF/text attachment"),
-        ("ocr-status", "Inspect runtime diagnostic status for OCR and PDF extraction"),
-        ("matrix", "Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)"),
-    ):
-        command = commands.add_parser(name, help=help_text, description=help_text)
+    parser.formatter_class = _ResearchHelpFormatter
+    commands = parser.add_subparsers(dest="research_command", required=True, metavar="COMMAND")
+    for name, help_text, group, aliases in COMMAND_DEFINITIONS:
+        command = commands.add_parser(name, aliases=list(aliases), help=help_text, description=help_text)
+        command.set_defaults(research_command=name, cli_group=group, cli_aliases=aliases)
+        if name == "schema":
+            command.set_defaults(cli_output_formats=("json",), cli_default_output="json", cli_purpose=help_text)
+            continue
         formats, default_format = OUTPUT_FORMATS.get(name, (("html",), "html") if name == "dashboard"
                                                     else (("json",), "json"))
         command.set_defaults(cli_output_formats=formats, cli_default_output=default_format,
@@ -151,8 +178,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
                 command.add_argument("--progress", action="store_true", help="Report real-time progress phases on stderr")
         if name in ("dossier", "claim", "link-evidence", "decision", "relate"):
             command.add_argument("--update", action="store_true", help="Revise the named record")
-            command.add_argument("--prepare", action="store_true", help="Preview reconciliation with the current record; never writes")
+            command.add_argument("--dry-run", action="store_true", help="Validate an --update exactly without writing or acquiring the writer lock")
+            command.add_argument("--prepare", action="store_true", help="Preview reconciliation with the current record; never changes the archive")
             command.add_argument("--diff", action="store_true", help="Preview the change as a unified terminal diff; never writes")
+            command.add_argument("--from-revision", type=int, help="With --diff, compare this saved revision instead of a draft")
+            command.add_argument("--to-revision", type=int, help="Saved destination for --diff --from-revision (default: HEAD)")
             command.add_argument("--base-revision", type=int, help="Original revision of the draft being prepared")
             command.add_argument("--resolve", action="append", metavar="FIELD=current|mine",
                                  help="Explicit field choice for a --prepare conflict; repeat for each field")
@@ -164,7 +194,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--latest", action="store_true",
                                  help="Use the current HEAD revision of the record as --expected-revision "
                                       "(single-author convenience; implies --expected-snapshot from the same read)")
-            command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update (required with --update)")
+            command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category required for --update or a reviewed --output packet")
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
         if name in ("link-manuscript", "review-manuscript"):
@@ -282,7 +312,12 @@ def configure(parser: argparse.ArgumentParser) -> None:
         elif name == "dossier":
             command.add_argument("--dossier-id", help="Dossier UUID to inspect")
             command.add_argument("--title", help="Title for new dossier")
-            command.add_argument("--file", help="Path to markdown body file or raw text")
+            content = command.add_mutually_exclusive_group()
+            content.add_argument("--file", help="Existing readable UTF-8 Markdown file; use --body for literal text")
+            content.add_argument("--body", help="Literal authored Markdown body (alternative to --file PATH)")
+            content.add_argument("--edit-file", help="Exported dossier edit document to reconcile with --prepare")
+            command.add_argument("--export-edit", metavar="PATH", help="Export a selected revision as an editable Markdown draft; never overwrites")
+            command.add_argument("--output", metavar="PATH", help="With --prepare --edit-file, write a ready reviewed packet for revise-batch; never overwrites")
             command.add_argument("--tags", help="Comma-separated tags")
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
             command.add_argument("--geography", metavar="JSON_OR_FILE",
@@ -406,8 +441,9 @@ def command_metadata() -> list[dict[str, Any]]:
     return [{"name": name, "purpose": command.get_default("cli_purpose"),
              "output_formats": list(command.get_default("cli_output_formats")),
              "default_output": command.get_default("cli_default_output"),
-             "json_flag": "--json" if "--json" in command._option_string_actions else None}
-            for name, command in commands.choices.items()]
+             "json_flag": "--json" if "--json" in command._option_string_actions else None,
+             "aliases": list(command.get_default("cli_aliases")), "group": command.get_default("cli_group")}
+            for name, command in commands.choices.items() if name == command.get_default("research_command")]
 
 
 def _reconcile_outcome(project: str, manuscript: str, row: dict[str, Any], source_sha256: str,
@@ -486,6 +522,28 @@ def _geography(value: str | None) -> dict[str, Any] | None:
     return payload
 
 
+def _dossier_content(*, file: str | None, body: str | None) -> str | None:
+    """Keep explicit UTF-8 file input distinct from literal authored text."""
+    from .repository import ResearchError
+
+    if file is not None and body is not None:
+        raise ResearchError("Choose --file PATH or --body TEXT, not both")
+    if file is None:
+        return body
+    try:
+        with Path(file).open("rb") as stream:
+            content = stream.read(MAX_RESEARCH_OBJECT_BYTES + 1)
+    except OSError as error:
+        raise ResearchError(f"Cannot read --file {file!r}: {error.strerror or error}. "
+                            "Use --body TEXT for literal authored content") from error
+    if len(content) > MAX_RESEARCH_OBJECT_BYTES:
+        raise ResearchError("Dossier --file exceeds the supported byte size")
+    try:
+        return content.decode("utf-8")
+    except UnicodeError as error:
+        raise ResearchError(f"Dossier --file {file!r} must contain valid UTF-8") from error
+
+
 def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
     """Collect only flags supplied for an authored-record update."""
     kind = args.research_command
@@ -521,31 +579,18 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
             changes["dossier_revisions"] = json.loads(args.dossier_revisions)
     if kind == "dossier" and args.geography is not None:
         changes["geography"] = _geography(args.geography)
-    if kind == "dossier" and args.file is not None:
-        body_path = Path(args.file)
-        new_content = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
-        if getattr(args, "section", None):
-            from . import api
-            record_id = getattr(args, "dossier_id", None)
-            if record_id:
-                if getattr(args, "prepare", False):
-                    base = api.get_record(args.project, "dossier", record_id, revision=args.base_revision)
-                    original_body = base["record"]["body"]
-                else:
-                    original_body = api.get_dossier(args.project, record_id)["body"]
-                changes["body"] = api.update_section(original_body, args.section, new_content)
-            else:
-                changes["body"] = new_content
-        else:
-            changes["body"] = new_content
-    elif kind == "dossier" and getattr(args, "section", None) and (getattr(args, "update", False) or getattr(args, "prepare", False)):
+    if kind == "dossier" and (args.file is not None or args.body is not None):
+        changes["body"] = _dossier_content(file=args.file, body=args.body)
+    elif kind == "dossier" and getattr(args, "section", None) and any(
+        getattr(args, flag, False) for flag in ("update", "prepare", "diff")
+    ):
         from .repository import ResearchError
-        raise ResearchError("Updating a dossier section requires --file with new section content")
+        raise ResearchError("Updating a dossier section requires --file PATH or --body TEXT with new content")
     return changes
 
 
-def _revision_diff_text(kind: str, record_id: str, record: dict[str, Any], preview: dict[str, Any]) -> str:
-    """Render a prepared update as a human unified diff; nothing is written."""
+def _revision_diff_text(comparison: dict[str, Any]) -> str:
+    """Render canonical editable-field comparisons without another archive read."""
     import difflib
 
     from .presentation import safe_text
@@ -556,38 +601,98 @@ def _revision_diff_text(kind: str, record_id: str, record: dict[str, Any], previ
 
     def paint(line: str) -> str:
         line = safe_text(line)
-        if not color:
-            return line
-        for prefix, code in paints:
-            if line.startswith(prefix):
-                return f"{code}{line}\x1b[0m"
+        if color:
+            for prefix, code in paints:
+                if line.startswith(prefix):
+                    return f"{code}{line}\x1b[0m"
         return line
 
-    changes = dict(preview.get("changes") or {})
-    lines = [f"# {kind} {record_id} @r{record.get('revision')} – preview only, nothing written"]
-    if "body" in changes:
-        diff = difflib.unified_diff(
-            str(record.get("body") or "").splitlines(),
-            str(changes.pop("body")).splitlines(),
-            fromfile=f"{kind} r{record.get('revision')}", tofile="draft", lineterm="",
-        )
-        lines.extend(diff)
-    for field, value in changes.items():
-        lines.append(f"--- {field}")
-        lines.append(f"- {json.dumps(record.get(field), ensure_ascii=False, sort_keys=True)}")
-        lines.append(f"+ {json.dumps(value, ensure_ascii=False, sort_keys=True)}")
-    if len(lines) == 1:
+    kind, record_id = comparison["kind"], comparison["record_id"]
+    first, last = comparison["from_revision"], comparison["to_revision"]
+    destination = f"r{last}" if last is not None else "draft"
+    lines = [f"# {kind} {record_id} @r{first} → {destination} – preview only, nothing written"]
+    for item in comparison["fields"]:
+        name, before, after = item["field"], item["before"], item["after"]
+        if name == "body":
+            lines.extend(difflib.unified_diff(str(before or "").splitlines(), str(after or "").splitlines(),
+                                            fromfile=f"{kind} r{first}", tofile=destination, lineterm=""))
+        else:
+            lines.extend([f"--- {name}", f"- {json.dumps(before, ensure_ascii=False, sort_keys=True)}",
+                          f"+ {json.dumps(after, ensure_ascii=False, sort_keys=True)}"])
+    if not comparison["fields"]:
         lines.append("(no changes)")
-    if preview.get("conflicts"):
-        lines.append(f"! {len(preview['conflicts'])} unresolved conflict(s); resolve with --prepare --resolve")
     return "\n".join(paint(line) for line in lines)
+
+
+def _revision_resolutions(choices: list[str] | None) -> dict[str, Literal["current", "mine"]]:
+    from .repository import ResearchError
+
+    resolutions: dict[str, Literal["current", "mine"]] = {}
+    for choice in choices or []:
+        field, separator, selection = choice.partition("=")
+        if not field or not separator or selection not in ("current", "mine") or field in resolutions:
+            raise ResearchError("Each --resolve must name one unique FIELD=current|mine choice")
+        resolutions[field] = "current" if selection == "current" else "mine"
+    return resolutions
+
+
+def _dossier_edit_action(args: argparse.Namespace, record_id: str | None) -> dict[str, Any] | None:
+    """Adapt explicit edit documents to the existing revision and batch workflows."""
+    from . import api
+    from .dossier_edit import (
+        decode_dossier_edit,
+        read_dossier_edit,
+        write_dossier_edit,
+        write_research_draft_file,
+    )
+    from .repository import ResearchConflictError, ResearchError
+
+    if not any(value is not None for value in (args.export_edit, args.edit_file, args.output)):
+        return None
+    if not record_id:
+        raise ResearchError("A selected dossier ID is required for edit export or preparation")
+    fields = ("title", "file", "body", "tags", "evidence", "geography", "language", "section")
+    if any(getattr(args, field, None) is not None for field in fields) or args.summary or args.omit_citations:
+        raise ResearchError("Edit documents cannot be combined with ordinary dossier fields or bounded reads")
+    if args.export_edit is not None:
+        if any((args.update, args.prepare, args.diff, args.history, args.inspect,
+                args.edit_file is not None, args.output is not None)):
+            raise ResearchError("--export-edit permits only a selected ID and optional --revision")
+        write_dossier_edit(args.project, record_id, args.export_edit, revision=args.revision)
+        return {"schema_version": "research-dossier-edit-export-local/1", "record_id": record_id,
+                "output": str(Path(args.export_edit).expanduser().absolute())}
+    if not args.prepare or args.edit_file is None:
+        raise ResearchError("--edit-file and --output require --prepare --edit-file PATH")
+    if any((args.update, args.diff, args.history, args.inspect, args.revision is not None)):
+        raise ResearchError("Edit documents require --prepare without other revision modes")
+    document = read_dossier_edit(args.edit_file)
+    if args.base_revision is not None and args.base_revision != decode_dossier_edit(document)["base_revision"]:
+        raise ResearchError("--base-revision differs from the exported edit document")
+    preview = api.prepare_dossier_edit(args.project, record_id, document,
+                                       resolutions=_revision_resolutions(args.resolve))
+    if args.output is None:
+        if args.change_kind is not None or args.reason is not None:
+            raise ResearchError("A revision reason and change kind accompany --output PATH for a reviewed packet")
+        return preview
+    if not args.change_kind or not args.reason:
+        raise ResearchError("A reviewed output packet requires --change-kind and --reason")
+    if not preview["ready"] or not preview["has_changes"]:
+        return preview
+    current = preview["current"]
+    operations: list[Mapping[str, Any]] = [
+        {"kind": "dossier", "id": record_id, "expected_revision": current["record"]["revision"],
+         "changes": preview["changes"], "change_kind": args.change_kind, "reason": args.reason}]
+    packet = api.prepare_record_revisions(args.project, operations, actor=args.actor)
+    if packet["snapshot"] != current["snapshot"]:
+        raise ResearchConflictError("Research snapshot changed between reconciliation and packet preparation; prepare again")
+    write_research_draft_file(args.project, args.output, json.dumps(packet, ensure_ascii=False, allow_nan=False, indent=2) + "\n")
+    return packet
 
 
 def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     """Dispatch explicit history, inspection and revision modes for existing commands."""
     from . import api
     from .repository import ResearchConflictError, ResearchError
-    from .revisions import require_association_pins
 
     command = args.research_command
     kind = {"link-evidence": "evidence_link", "relate": "claim_relation"}.get(command, command)
@@ -597,11 +702,29 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         "relate": "relation_id",
     }[command])
     prepare = getattr(args, "prepare", False)
+    if args.dry_run and not args.update:
+        raise ResearchError("--dry-run requires --update; --prepare and --diff already write nothing")
+    if ((args.from_revision is not None or args.to_revision is not None)
+            and (not args.diff or args.from_revision is None)):
+        raise ResearchError("Historical comparison requires --diff --from-revision N [--to-revision M]")
+    if getattr(args, "latest", False):
+        if not args.update:
+            raise ResearchError("--latest requires --update; --diff already previews the current record")
+        if args.expected_revision is not None:
+            raise ResearchError("Choose --latest or --expected-revision, not both")
+    if not args.update and (args.expected_revision is not None or args.expected_snapshot is not None):
+        raise ResearchError("--expected-revision and --expected-snapshot require --update")
+    packet_requested = (command == "dossier" and prepare and getattr(args, "edit_file", None) is not None
+                        and getattr(args, "output", None) is not None)
+    if not (args.update or packet_requested) and (args.change_kind is not None or args.reason is not None):
+        raise ResearchError("--change-kind and --reason require --update or --prepare --edit-file PATH --output PATH")
     if not prepare and (getattr(args, "base_revision", None) is not None or getattr(args, "resolve", None)):
         raise ResearchError("--base-revision and --resolve require --prepare")
     association_revision = getattr(args, "dossier_revision", None) if command == "claim" else getattr(args, "claim_revision", None)
     if (association_revision is not None or getattr(args, "dossier_revisions", None) is not None) and not (args.update or prepare or getattr(args, "diff", False)):
         raise ResearchError("An explicit associated revision requires --update, --prepare or --diff; omit it to create a new record")
+    if command == "dossier" and (edit_result := _dossier_edit_action(args, record_id)) is not None:
+        return edit_result
     if getattr(args, "action", None) == "list":
         if record_id or args.update or prepare or getattr(args, "diff", False) or args.history or args.inspect or args.revision is not None:
             raise ResearchError("The list verb takes no record ID or revision flags")
@@ -618,27 +741,26 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
     if prepare:
         if args.base_revision is None or args.base_revision < 1:
             raise ResearchError("--prepare requires a positive --base-revision")
-        resolutions: dict[str, Literal["current", "mine"]] = {}
-        for choice in args.resolve or []:
-            field, separator, selection = choice.partition("=")
-            if not field or not separator or selection not in ("current", "mine") or field in resolutions:
-                raise ResearchError("Each --resolve must name one unique FIELD=current|mine choice")
-            resolutions[field] = "current" if selection == "current" else "mine"
+        resolutions = _revision_resolutions(args.resolve)
         changes = _revision_changes(args)
         if not changes:
-            raise ResearchError("At least one changed field is required")
+            raise ResearchError("Supply at least one draft field; use --inspect to read the record or --history to list saved revisions")
         return api.prepare_record_revision(args.project, kind, record_id,
-                                           base_revision=args.base_revision, changes=changes, resolutions=resolutions)
+                                           base_revision=args.base_revision, changes=changes, resolutions=resolutions,
+                                           **({"section": args.section} if getattr(args, "section", None) else {}))
     if getattr(args, "diff", False):
         changes = _revision_changes(args)
-        if not changes:
-            raise ResearchError("At least one changed field is required")
-        current = api.get_record(args.project, kind, record_id)
-        preview = api.prepare_record_revision(args.project, kind, record_id,
-                                              base_revision=current["record"]["revision"],
-                                              changes=changes, resolutions={})
-        return {"schema_version": "research-revision-diff-local/1",
-                "diff": _revision_diff_text(kind, record_id, current["record"], preview)}
+        if args.from_revision is not None:
+            if changes or getattr(args, "section", None):
+                raise ResearchError("Historical comparison takes no draft fields or section selector")
+            comparison = api.compare_record_revisions(args.project, kind, record_id,
+                                                       from_revision=args.from_revision, to_revision=args.to_revision)
+        elif not changes:
+            raise ResearchError("Supply at least one draft field; use --inspect to read the record or --history to list saved revisions")
+        else:
+            comparison = api.preview_record_changes(args.project, kind, record_id, changes=changes,
+                                                    **({"section": args.section} if getattr(args, "section", None) else {}))
+        return {"schema_version": "research-revision-diff-local/1", "diff": _revision_diff_text(comparison)}
     if args.update:
         if getattr(args, "latest", False) and args.expected_revision is None:
             current = api.get_record(args.project, kind, record_id)
@@ -652,19 +774,18 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         try:
             changes = _revision_changes(args)
             if not changes:
-                raise ResearchError("At least one changed field is required")
-            expected_snapshot = args.expected_snapshot
-            if expected_snapshot is None:
-                current = api.get_record(args.project, kind, record_id)
-                if current["record"]["revision"] != args.expected_revision:
-                    raise ResearchConflictError("Record revision changed; the reviewed revision is no longer current")
-                require_association_pins(current["record"], changes)
-                expected_snapshot = current["snapshot"]
+                raise ResearchError("Supply at least one draft field; use --inspect to read the record or --history to list saved revisions")
+            options: dict[str, Any] = {}
+            if getattr(args, "section", None):
+                options["section"] = args.section
+            if args.dry_run:
+                options["dry_run"] = True
             return api.revise_record(
                 args.project, kind, record_id, changes=changes,
-                expected_snapshot=expected_snapshot,
+                expected_snapshot=args.expected_snapshot,
                 expected_revision=args.expected_revision,
                 change_kind=args.change_kind, reason=args.reason, actor=args.actor,
+                **options,
             )
         except ResearchConflictError as error:
             raise ResearchConflictError(f"{error}. Use --prepare --base-revision {args.expected_revision} "
@@ -698,6 +819,8 @@ def _record_text(result: dict[str, Any]) -> str:
     def prose(value: Any) -> str:
         return "\n".join(safe_text(line) for line in str(value).split("\n"))
 
+    if result.get("schema_version") == "research-revision-write-preview-local/1":
+        return _revision_diff_text(result) + "\n"
     if result.get("schema_version") == "research-revision-diff-local/1":
         return str(result["diff"]).rstrip() + "\n"
     if result.get("schema_version") == "research-history-local/1":
@@ -726,6 +849,35 @@ def _record_text(result: dict[str, Any]) -> str:
     return "\n".join(lines).rstrip() + "\n"
 
 
+def _normalize_cli_identifiers(args: argparse.Namespace) -> None:
+    """Accept complete bare UUIDv4 selectors without loosening stored/HTTP IDs."""
+    def identifier(value: str) -> str:
+        if re.fullmatch(r"[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}",
+                        value, flags=re.IGNORECASE):
+            return "urn:uuid:" + value.lower()
+        return value
+
+    for field in ("action", "record_id", "source_id", "version_id", "passage", "passage_id", "claim_id",
+                  "dossier_id", "decision_id", "relation_id", "evidence_link_id", "link_id",
+                  "from_claim_id", "to_claim_id"):
+        value = getattr(args, field, None)
+        if isinstance(value, str):
+            setattr(args, field, identifier(value))
+    for field in ("evidence", "dossiers"):
+        value = getattr(args, field, None)
+        if isinstance(value, str):
+            setattr(args, field, ",".join(identifier(part.strip()) for part in value.split(",")))
+    pins = getattr(args, "dossier_revisions", None)
+    if pins is not None:
+        value = json.loads(pins)
+        if isinstance(value, dict):
+            normalized = {identifier(key): revision for key, revision in value.items()}
+            if len(normalized) != len(value):
+                from .repository import ResearchError
+                raise ResearchError("Dossier revision keys identify the same record more than once")
+            args.dossier_revisions = json.dumps(normalized)
+
+
 def run(args: argparse.Namespace) -> int:
     import sqlite3
 
@@ -733,9 +885,13 @@ def run(args: argparse.Namespace) -> int:
     from .repository import ResearchError
 
     try:
+        _normalize_cli_identifiers(args)
         command = args.research_command
+        section = getattr(args, "section", None)
+        if section is not None and not section.strip():
+            raise ResearchError("--section requires a nonblank heading")
         if getattr(args, "action", None) == "list":
-            creation = ("title", "statement", "rationale", "impact_on_plot", "file", "geography")
+            creation = ("title", "statement", "rationale", "impact_on_plot", "file", "body", "geography")
             if any(getattr(args, name, None) for name in creation):
                 raise ResearchError("The list verb does not create records; drop the list verb or the creation fields")
         if (command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
@@ -760,7 +916,7 @@ def run(args: argparse.Namespace) -> int:
                 rid = action
                 args.action = None
                 if not any(getattr(args, mode, None) for mode in
-                           ("update", "prepare", "diff", "history", "inspect", "revision")):
+                           ("update", "prepare", "diff", "history", "inspect", "revision", "export_edit")):
                     args.inspect = True
             if rid is not None:
                 if getattr(args, flag, None) not in (None, rid):
@@ -1155,9 +1311,7 @@ def run(args: argparse.Namespace) -> int:
             result = api.editorial_review(args.project)
         elif command == "revise-batch":
             operations = json.loads(Path(args.file).read_text(encoding="utf-8"))
-            if isinstance(operations, dict) and operations.get("schema_version") == "research-revision-batch-local/1":
-                operations = operations.get("operations")
-            if not isinstance(operations, list) or not all(isinstance(item, dict) for item in operations):
+            if not isinstance(operations, (list, dict)):
                 raise ResearchError("Batch file must contain a JSON operations list or a research-revision-batch-local/1 preview")
             if args.apply:
                 result = api.apply_record_revisions(args.project, operations,
@@ -1177,9 +1331,10 @@ def run(args: argparse.Namespace) -> int:
                     summary=getattr(args, "summary", False),
                     include_citations=not getattr(args, "omit_citations", False),
                 )
-            elif getattr(args, "title", None) and getattr(args, "file", None):
-                body_path = Path(args.file)
-                body = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
+            elif getattr(args, "title", None) and (args.file is not None or args.body is not None):
+                body = _dossier_content(file=args.file, body=args.body)
+                if body is None:
+                    raise ResearchError("Creating a dossier requires --file PATH or --body TEXT")
                 raw_tags = getattr(args, "tags", "") or ""
                 tags = [t.strip() for t in raw_tags.split(",") if t.strip()]
                 raw_ev = getattr(args, "evidence", "") or ""

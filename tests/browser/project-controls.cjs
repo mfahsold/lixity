@@ -1,11 +1,11 @@
 const fs = require('node:fs');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
-const {spawnSync} = require('node:child_process');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const root = path.resolve(__dirname, '../..');
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const {fixtures, standalone} = pythonFixture(`
 import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
@@ -24,9 +24,7 @@ def standalone(*args, **kwargs):
                     enabled_actions=['analyze', 'rebuild'])
 render.__globals__['render_dashboard'] = standalone
 print(json.dumps({'fixtures': fixtures, 'standalone': render()}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, encoding: 'utf8', maxBuffer: 32*1024*1024});
-assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
-const {fixtures, standalone} = JSON.parse(fixture.stdout);
+`, {root});
 const screenshotDir = fs.mkdtempSync('/tmp/lixity-project-controls-');
 const syntheticContent = '## Synthetic chapter\r\n\r\nThe rain stopped.\r\nA café opened.\r\n';
 const hostileFilename = 'chapter-<img onerror=alert(1)>.markdown';

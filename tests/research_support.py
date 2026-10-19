@@ -30,6 +30,12 @@ def capture_research(*arguments: str) -> tuple[int, str, str]:
     return status, output.getvalue(), errors.getvalue()
 
 
+def retained_files(project: Path) -> dict[str, bytes]:
+    """Compare authoritative archive bytes around previews and rejected writes."""
+    return {str(path.relative_to(project)): path.read_bytes()
+            for path in (project / "research").rglob("*") if path.is_file()}
+
+
 def revise_record(
     project: str | Path, kind: str, identifier: str, changes: dict[str, Any], *,
     change_kind: str = "correction", reason: str = "Synthetic reviewed revision.",

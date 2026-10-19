@@ -7,9 +7,10 @@ const {spawnSync} = require('node:child_process');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const {startNativeServer} = require('./support/native-server.cjs');
 
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-manuscript-pdf-'));
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const {fixtures, gates} = pythonFixture(`
 import json
 from lixity.language import get_language_profile
 from lixity.ui import render_dashboard
@@ -44,9 +45,7 @@ gates['no_paragraphs'] = render()
 gates['empty'] = render_dashboard([], [], controls=True,
     enabled_actions=['manuscript-pdf'], manuscript_pdf_token='')
 print(json.dumps({'fixtures': fixtures, 'gates': gates}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
-assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
-const {fixtures, gates} = JSON.parse(fixture.stdout);
+`, {root});
 
 // Synthetic responses isolate download recovery; the final case exercises
 // actual PDF composition through the native server.

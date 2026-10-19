@@ -7,14 +7,35 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Added
+- Exact authored-update dry runs and historical revision comparisons through the
+  existing research revision API and CLI.
+- Explicit dossier Markdown export, three-way preview and reviewed batch packets;
+  application remains bound to the reviewed project and archive snapshot.
+- Project-local character profiles with literal aliases and separately declared
+  viewpoint chapters, exposed through the existing configuration discovery.
+- Bundled Leaflet geography interaction, offline by default, with explicit,
+  nonpersistent OpenStreetMap tile permission; shared PhotoSwipe image/diagram
+  zoom and Mermaid tiny rendering with inspectable source and restricted features.
+
 ### Changed
 - Research prioritizes dossiers, claims and manuscript review. Zotero remains the
   source-library and reading interface; capture selection and alternative local
   imports use compact disclosures. Retained evidence and archive contracts stay intact.
+- Research help groups commands and exposes aliases in discovery/completion.
+  CLI selectors accept bare UUIDv4 identifiers; archive/API identifiers remain canonical.
+- Dossier `--file` now requires an existing readable UTF-8 file. Use `--body` for
+  literal text; this intentionally replaces the former missing-path-as-text fallback.
 
 ### Fixed
 - Selected workspace tabs keep readable text when hovered in light and dark themes.
 - Cropped documentation captures preserve the full research navigation height.
+- Revision preparation shares validation for sections and record fields, preserves
+  concurrent unrelated sections and compares prospective changes in one snapshot.
+- Name and prose counts exclude Markdown destinations, images and code while
+  preserving displayed paragraph anchors and manuscript chapter numbering.
+- Research writer diagnostics distinguish contention from read-only, permission
+  and other I/O failures without changing the canonical lock location.
 
 ## [0.7.0] - 2026-10-19
 

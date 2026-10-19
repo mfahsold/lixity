@@ -75,6 +75,14 @@ def test_section_prepare_rejects_ambiguous_and_missing_headings(dossier):
     assert api.get_dossier(project, identifier)["editable_sections"] == []
 
 
+def test_section_api_does_not_treat_a_missing_heading_as_a_whole_body_edit(dossier):
+    project, identifier = dossier
+    before = Repository(project).snapshot().digest
+    with pytest.raises(ResearchError, match="section heading"):
+        api.prepare_dossier_section(project, identifier, base_revision=1, section=None, content="Replacement")
+    assert Repository(project).snapshot().digest == before
+
+
 def test_section_targets_exclude_preamble_code_and_casefold_duplicates(dossier):
     project, identifier = dossier
     current = api.get_record(project, "dossier", identifier)

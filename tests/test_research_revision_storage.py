@@ -45,7 +45,15 @@ class TestResearchRevisionStorage(unittest.TestCase):
         self.assertEqual(original.manifest.schema_version, "research-manifest-local/1")
         self.assertNotIn(b'"change"', encode(self.original))
         second = self.revision(self.original, title="Corrected")
+        with (patch.object(self.repository, "locked", side_effect=AssertionError("Preparation must not lock")),
+              patch("lixity.research.repository.publish", side_effect=AssertionError("Preparation must not publish"))):
+            prepared, manifest_bytes = self.repository.prepare_commit([second], original)
+        self.assertEqual(manifest_bytes, encode(prepared.manifest))
+        self.assertEqual(original.latest(self.original.id, Dossier), self.original)
+        for entry in original.manifest.entries:
+            self.assertEqual(self.repository.record_path(entry).read_bytes(), before[entry.ref])
         changed = self.repository.commit([second], {}, original)
+        self.assertEqual(changed.digest, prepared.digest)
         loaded = self.repository.snapshot()
         self.assertEqual(changed.digest, loaded.digest)
         self.assertEqual(loaded.manifest.schema_version, "research-manifest-local/2")

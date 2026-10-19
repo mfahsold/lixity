@@ -5,6 +5,7 @@ import json
 import pytest
 
 from lixity.research import api
+from lixity.research.repository import Repository
 from tests.research_support import capture_research
 from tests.research_support import revise_record as revise
 
@@ -52,15 +53,16 @@ def test_same_record_change_requires_prepare_instead_of_overwrite(archive):
 
 def test_snapshot_convenience_never_retries_writer_race(archive, monkeypatch):
     project, _, claim = archive
-    writer = api.revise_record
+    writer = Repository.commit
     calls = []
 
-    def race(*args, **kwargs):
-        calls.append(kwargs)
-        api.create_dossier(project, "Race notes", "Synthetic racing write.")
-        return writer(*args, **kwargs)
+    def race(self, records, blobs, snapshot):
+        if any(record.id == claim for record in records):
+            calls.append(snapshot.digest)
+            api.create_dossier(project, "Race notes", "Synthetic racing write.")
+        return writer(self, records, blobs, snapshot)
 
-    monkeypatch.setattr(api, "revise_record", race)
+    monkeypatch.setattr(Repository, "commit", race)
     status, result, errors = update(project, claim, "--title", "My title")
     assert status == 1 and result is None
     assert "snapshot changed" in errors.lower() and "--prepare" in errors
@@ -145,6 +147,119 @@ def test_omitted_snapshot_still_requires_reviewed_revision(archive):
                                  "--title", "My title", "--change-kind", "correction", "--reason", "Synthetic update")
     assert status == 1 and result is None and "--expected-revision" in errors
     assert api.get_record(project, "claim", claim)["record"]["revision"] == 1
+
+
+@pytest.mark.parametrize("flags", [
+    ("--latest",), ("--diff", "--title", "Draft", "--expected-revision", "99"),
+    ("--history", "--reason", "Ignored reason"),
+    ("--prepare", "--base-revision", "1", "--title", "Draft", "--reason", "Ignored reason"),
+    ("--dry-run", "--title", "Draft"),
+    ("--diff", "--to-revision", "2"),
+    ("--diff", "--from-revision", "1", "--title", "Draft"),
+    ("--update", "--latest", "--expected-revision", "1", "--title", "Draft",
+     "--change-kind", "correction", "--reason", "Synthetic correction"),
+])
+def test_irrelevant_revision_flags_are_rejected_without_writing(archive, flags):
+    project, _, claim = archive
+    before = Repository(project).snapshot().digest
+    status, _, errors = capture_research("claim", claim, "--project", str(project), *flags)
+    assert status == 1 and "[error]" in errors
+    assert Repository(project).snapshot().digest == before
+
+
+@pytest.mark.parametrize("selector", ["named", "positional", "matching_both"])
+def test_bare_record_ids_normalize_before_selector_comparison(archive, selector):
+    project, _, claim = archive
+    bare = claim.removeprefix("urn:uuid:").upper()
+    flags = {"named": ("--claim-id", bare), "positional": (bare,),
+             "matching_both": (bare, "--claim-id", claim)}[selector]
+    status, result, errors = run("claim", *flags, "--project", str(project), "--inspect")
+    assert status == 0, errors
+    assert result["record_id"] == claim
+
+
+def test_bare_csv_associations_and_revision_map_share_canonical_ids(archive):
+    project, dossier, claim = archive
+    decision = api.record_decision(project, title="Choice", rationale="Synthetic rationale.")["decision_id"]
+    status, result, errors = run("decision", decision, "--project", str(project), "--update",
+                                "--latest", "--change-kind", "correction", "--reason", "Attach notes",
+                                "--claim-id", claim.removeprefix("urn:uuid:"), "--claim-revision", "1",
+                                "--dossiers", dossier.removeprefix("urn:uuid:"),
+                                "--dossier-revisions", json.dumps({dossier.removeprefix("urn:uuid:").upper(): 1}))
+    assert status == 0, errors
+    assert result["record"]["claim_ref"] == {"id": claim, "revision": 1}
+    assert result["record"]["dossier_refs"] == [{"id": dossier, "revision": 1}]
+
+
+@pytest.mark.parametrize("id_form", ["named", "positional"])
+def test_latest_update_accepts_named_or_positional_record_id(archive, id_form):
+    project, _, claim = archive
+    selector = ("--claim-id", claim) if id_form == "named" else (claim,)
+    status, result, errors = run("claim", *selector, "--project", str(project), "--update", "--latest",
+                                "--statement", "The room was closed.", "--change-kind", "correction",
+                                "--reason", "Synthetic correction.")
+    assert status == 0, errors
+    assert result["record"]["revision"] == 2
+    assert result["record"]["statement"] == "The room was closed."
+
+
+def test_latest_uses_one_reviewed_snapshot(archive, monkeypatch):
+    project, dossier, claim = archive
+    get_record = api.get_record
+    changed = False
+
+    def concurrent_change(*args, **kwargs):
+        nonlocal changed
+        reviewed = get_record(*args, **kwargs)
+        if not changed:
+            changed = True
+            revise(project, "dossier", dossier, {"title": "Concurrent notes"})
+        return reviewed
+
+    monkeypatch.setattr(api, "get_record", concurrent_change)
+    status, result, errors = run("claim", "--claim-id", claim, "--project", str(project), "--update",
+                                "--latest", "--statement", "The room was closed.",
+                                "--change-kind", "correction", "--reason", "Synthetic correction.")
+    assert status == 1 and result is None and "snapshot" in errors.lower()
+    assert get_record(project, "claim", claim)["record"]["revision"] == 1
+
+
+def test_cli_exact_update_preview_and_explicit_history_comparison(archive):
+    project, _, claim = archive
+    before = Repository(project).snapshot().digest
+    status, preview, errors = run("claim", claim, "--project", str(project), "--update", "--dry-run", "--latest",
+                                  "--title", "Draft title", "--change-kind", "correction", "--reason", "Synthetic preview")
+    assert status == 0, errors
+    assert preview["candidate"]["title"] == "Draft title" and preview["dry_run"] is True
+    assert Repository(project).snapshot().digest == before
+    revise(project, "claim", claim, {"title": "Saved title"})
+    status, output, errors = capture_research("claim", claim, "--project", str(project), "--diff",
+                                              "--from-revision", "1", "--to-revision", "2")
+    assert status == 0, errors
+    assert '- "Room"' in output and '+ "Saved title"' in output
+    assert api.get_record(project, "claim", claim)["record"]["revision"] == 2
+
+
+def test_edit_packet_rejects_snapshot_change_between_preparation_steps(archive, monkeypatch):
+    from lixity.research.dossier_edit import write_dossier_edit
+
+    project, dossier, _ = archive
+    edit_file, packet_file = project / "draft.md", project / "reviewed.json"
+    write_dossier_edit(project, dossier, edit_file)
+    edit_file.write_bytes(edit_file.read_bytes().replace(b"Synthetic notes.", b"Reviewed notes."))
+    prepare = api.prepare_record_revisions
+
+    def concurrent_change(*args, **kwargs):
+        api.create_dossier(project, "Concurrent note", "An unrelated author write.")
+        return prepare(*args, **kwargs)
+
+    monkeypatch.setattr(api, "prepare_record_revisions", concurrent_change)
+    status, output, errors = capture_research("dossier", dossier, "--project", str(project),
+                                              "--prepare", "--edit-file", str(edit_file), "--output", str(packet_file),
+                                              "--change-kind", "correction", "--reason", "Synthetic review")
+    assert status == 1 and not output and "snapshot changed" in errors.lower()
+    assert not packet_file.exists()
+    assert api.get_dossier(project, dossier)["body"] == "Synthetic notes."
 
 
 @pytest.mark.parametrize("command", ["decision", "relate"])

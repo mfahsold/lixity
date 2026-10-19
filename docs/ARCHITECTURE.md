@@ -71,15 +71,29 @@ snapshot, disclose differing revision pins and do not establish manuscript use o
 nonuse. Rendering preserves exact resolved quote spans and complete text search.
 
 Ordinary authored CLI updates require a reviewed revision, change kind and reason;
-when the archive snapshot is omitted, the current read's snapshot guards the same
-strict writer. Changed associations require explicit reviewed pins in this mode.
-Races fail without retry. Explicit snapshots and Python/HTTP/batch/image/
-acknowledgement writes keep their strict guards; there is one persistence path.
+when the archive snapshot is omitted, the backend's current read guards the same
+strict writer. Changed associations require reviewed pins; races fail without retry.
+Current-main `research.revisions` shares candidate validation across exact writes,
+dry runs and batch preparation. Prospective comparison uses one snapshot for both
+values; historical comparison resolves saved revisions without repinning. Section
+reconciliation changes only the selected body subtree while ordinary field changes
+use the same candidate. HTTP, images, acknowledgements and batches retain their
+explicit guards. No preview establishes that a future write will succeed.
+
+Current-main `research.dossier_edit` encodes an explicit leading JSON comment and
+the exact body as a Markdown draft. It validates identity/base and delegates to
+existing three-way preparation; ready changes become ordinary batch operations.
+Versioned reviewed packets bind project and snapshot through the shared backend.
+The archive stays authoritative: there is no parallel store, watcher or two-way
+sync. Exports use exclusive publication outside the archive/internal directory.
+The canonical project writer lock remains the only mutex; diagnostic error types
+distinguish contention, read-only/permission failures and other I/O errors.
 
 ## Configuration and multiple projects
 
-Explicit root settings own author identity, publication and chapter registers;
-user/ancestor defaults cannot supply them. `project_identity` compares only bounded
+Explicit root settings own author identity, publication, chapter registers and
+current-main character profiles; user/ancestor defaults cannot supply them.
+`project_identity` compares only bounded
 manuscript metadata syntax, without rewriting text or affecting measurements.
 `PublicationSettings`/`PUBLICATION_FIELDS` supply field validation to configuration,
 settings and PDF composition. `pdf_export.compose_pdf` composes bytes for CLI and
@@ -125,6 +139,11 @@ Use `analyze_document(text, config, thresholds)` when several outputs need the s
 measurements. Project adapters own their characters, motifs, paths and artifacts.
 
 The shared Markdown parser defines measurement prose and chapter numbering.
+Current-main inline counting retains visible link labels and excludes link targets,
+images and code. It stays separate from displayed paragraph text and quote identity;
+zero-token chapters retain their source numbering. `characters.CharacterProfile`
+owns literal alias/declared-POV validation and its discoverable schema; one resolver
+serves CLI, API and dashboard. Declared POV stays separate from lexical mention counts.
 Paragraph profiles cover body/list blocks; legacy whitespace counts remain
 separate. Token regex flags are preserved, while linguistic cue patterns have a
 case-insensitive compiler. [Methods](METHODS.md) defines exact scopes and numerical
@@ -146,6 +165,15 @@ not executable markup. Rendering and point picking share projected coordinates. 
 is scheduled only while rotation is enabled and the page is visible. The live
 shell applies a per-response script nonce and default-deny CSP; bundled components
 require no `unsafe-eval`.
+
+Current-main research media reuse bundled PhotoSwipe 5.4.4 for retained images and
+generated diagrams. Mermaid tiny 12.2.0 owns diagram syntax/layout and initializes
+only when a diagram first becomes visible; restrictions disable resource loading,
+click actions and configuration directives, with source retained on failure.
+Leaflet 1.9.4 provides offline geographic vectors. The only optional map network
+requests are OpenStreetMap tiles after explicit, nonpersistent permission scoped
+to the open map/project context. Tiles reveal the client IP and viewed area;
+attached historical images remain independent evidence, not calibrated basemaps.
 
 ### Logging
 
@@ -170,41 +198,15 @@ renderer. Unmeasured chapters and absent axes are omitted.
 
 ### Visual consistency and evidence
 
-The local dashboard and Pages use the same
-neutral surfaces and blue action palette. **Since v0.3.0:**
-`ui/assets/design-tokens.css` owns the shared color, type, spacing and control
-roles. Dashboards bundle it into self-contained output; Pages stages the same
-bytes and imports them from its existing stylesheet. Surface-specific rules
-remain in the existing stylesheets; there is no additional theme store.
-Filled actions use `#245b85` with white text in both themes, while
-links and focus rings use a lighter blue on dark surfaces. Analytical diverging
-colors retain their meaning. Heatmap text selects black or white from the actual
-cell luminance, independently of the surrounding theme.
-
-The presentation follows these evidence-informed constraints:
-
-- [WCAG contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html)
-  guides text contrast; visible focus outlines supplement color changes.
-- [WCAG target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
-  specifies a 24 CSS-pixel minimum with exceptions. Primary workspace controls
-  use at least 40 pixels and 44 on coarse pointers as a product choice. Since
-  2.0.0, paragraph chips and dimension controls use 24×24 pixels, or
-  44×44 on coarse pointers, with no pressed-state shrinking. This does not
-  establish target-size conformance for every compact data mark.
-- [NN/g's controlled eye-tracking experiment](https://www.nngroup.com/articles/flat-ui-less-attention-cause-uncertainty/)
-  supports retaining visible button boundaries and link cues. Its findability
-  tasks do not establish a Lixity-specific productivity improvement.
-- [Reading research reviewed by Kevin Larson](https://learn.microsoft.com/en-us/typography/develop/word-recognition)
-  informs the use of mixed-case labels rather than forced uppercase. System sans
-  fonts serve controls and reading text; local serif fonts distinguish titles.
-  Native controls inherit the UI font; shared size, weight and line-height
-  tokens keep equivalent settings, dialog and research roles consistent.
-  No single typeface, blue hue or line width is asserted to be universally optimal.
-- Reading paragraphs use relative font sizes, generous leading and a 72-character
-  maximum measure where appropriate. This is a design choice, not an empirical
-  optimum. [WCAG text spacing](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html)
-  concerns preserving content and functionality when users override spacing;
-  its override values are not mandatory default typography.
+The local dashboard and Pages share `ui/assets/design-tokens.css`; components and
+surface styles own actual color, typography, spacing and control rules. Heatmap
+text selects contrast from cell luminance. Native controls, visible boundaries,
+focus outlines and non-color cues support navigation. [WCAG contrast](https://www.w3.org/WAI/WCAG22/Understanding/contrast-minimum.html),
+[target size](https://www.w3.org/WAI/WCAG22/Understanding/target-size-minimum.html)
+and [text-spacing overrides](https://www.w3.org/WAI/WCAG22/Understanding/text-spacing.html)
+inform the checks; defaults are product choices, not universal typographic optima.
+Exact tokens and dimensions belong to CSS and executable checks rather than a
+second prose specification.
 
 Desktop/mobile rendering, keyboard focus, text-spacing overrides, reduced motion
 and both themes are checked with synthetic content. Automated checks and the
@@ -262,11 +264,9 @@ spacing/typography patterns. New panels must remain usable at 320 px.
 
 ### Design system: one scale, one control language
 
-`assets/design-tokens.css` owns shared color, radius, type, spacing and elevation.
-CSS is bundled in token → component → view order. Pages stages the canonical
-packaged design assets. Controls, badges and ordinary text use the short token
-ladders; display headings are the documented exception. The visual-consistency
-browser suite checks sampled token use, focus, contrast and text spacing.
+CSS bundles in token → component → view order. The shared token and component
+owners above apply to Pages and the dashboard; browser checks sample token use,
+focus, contrast and text spacing.
 
 ### Stateful panels: the component layer (vendored Preact + HTM)
 

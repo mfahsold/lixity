@@ -129,6 +129,10 @@ class TestLixityServer(unittest.TestCase):
         csp = headers.get("content-security-policy", "")
         self.assertIn("default-src 'none'", csp)
         self.assertIn("form-action 'none'", csp)
+        directives = dict(part.strip().split(" ", 1) for part in csp.split(";"))
+        self.assertEqual(directives["img-src"].split(),
+                         ["'self'", "data:", "blob:", "https://tile.openstreetmap.org"])
+        self.assertEqual(directives["connect-src"], "'self'")
         match = re.search(r"script-src 'nonce-([A-Za-z0-9_-]+)'", csp)
         self.assertIsNotNone(match, csp)
         nonce = match.group(1)

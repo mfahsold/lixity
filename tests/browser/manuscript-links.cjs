@@ -1,10 +1,10 @@
 // Synthetic manuscript selections are explicit local claim associations.
 const assert = require('node:assert/strict');
 const path = require('node:path');
-const {spawnSync} = require('node:child_process');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const root = path.resolve(__dirname, '../..');
-const generated = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const fixtures = pythonFixture(`
 import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
@@ -22,9 +22,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     render.__globals__['render_dashboard'] = localized
     fixtures[locale] = render()
 print(json.dumps(fixtures))
-`], {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024});
-assert.equal(generated.status, 0, generated.stderr || String(generated.error));
-const fixtures = JSON.parse(generated.stdout);
+`, {root});
 async function waitUntil(predicate) {
   const deadline = Date.now() + 10000;
   while (!predicate()) {

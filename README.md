@@ -150,6 +150,11 @@ conflicts preserve your draft. Nothing is repinned silently. Images, structured
 places and character paths can accompany a dossier; **Timeline** organizes dated
 claims. [Research workflows and limits](docs/research/USAGE.md).
 
+**Current main (unreleased):** edit an exported dossier in Markdown, review its
+changes against the archive and apply the prepared revision explicitly. Images
+and diagrams share a zoom viewer; interactive geography works offline, with
+OpenStreetMap tiles available only after an explicit network opt-in.
+
 <img src="docs/videos/research-timeline.gif" alt="Walkthrough: the claims timeline places dated claims on a shared axis and jumps from a bar to its claim card" width="900" />
 
 [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html) ·
@@ -165,6 +170,9 @@ claims. [Research workflows and limits](docs/research/USAGE.md).
 Preview a manuscript before importing it, select its analysis language and
 adjust which differences you want to examine. Project settings also hold the
 author name, publication details and optional confidentiality-agreement controls.
+Current main also supports [literal character aliases and declared viewpoint
+chapters](docs/USAGE.md#character-profiles); name counts remain separate from
+author-declared perspective.
 
 <a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" width="900" /></a>
 
@@ -213,23 +221,15 @@ describe what has and has not been established.
 Read the workflows: [Intentional registers](https://mfahsold.github.io/lixity/blog/intentional-registers.html) ·
 [Local word echoes](https://mfahsold.github.io/lixity/blog/local-word-echoes.html).
 
-The [research preview](docs/demo/research.html)
-uses attributed historical harbour images alongside fictional places and paths.
-Its geography editor and Zotero image capture are available **since v0.7.0**;
-[research usage](docs/research/USAGE.md) records compatibility.
+The [research preview](docs/demo/research.html) uses attributed historical harbour
+images and fictional journeys. [Research usage](docs/research/USAGE.md) records compatibility.
 
 ## Supported languages
 
-German (`de`) and English (`en`) have the most extensive linguistic resources
-and language-specific fixtures. French (`fr`), Spanish (`es`), Italian (`it`),
-Portuguese (`pt`) and Dutch (`nl`) also have localized interfaces and analysis
-resources, with narrower heuristic coverage and validation.
-
-Choose the manuscript language explicitly. `LIXITY_LANG=de` selects German
-terminal messages independently of `--language de`, which selects German
-analysis. Documentation is English; source quotations retain their original
-language. Mathematical identifiers and numeric JSON values are language-neutral.
-[Language support and limits](docs/LOCALIZATION.md).
+English and German have the deepest linguistic validation. French, Spanish,
+Italian, Portuguese and Dutch also have localized interfaces and analysis
+resources, with narrower heuristic coverage. Choose the manuscript language
+explicitly; terminal presentation is separate. [Language settings and limits](docs/LOCALIZATION.md).
 
 ## Documentation map
 
@@ -246,14 +246,11 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 ## Current release
 
 The current release is **v0.7.0**, continuing the pre-1.0 development line;
-historical v3.0.1 and earlier notes and tags remain available. Public JSON and
-research storage schema versions are independent; this release reads
-research archives through v8. Ordinary dossier encodings stay unchanged until a
-geographic save opts into v8; older readers cannot open v8 archives.
-When upgrading from the historical numbering, install the pinned release wheel
-explicitly; PyPI upgrades continue normally afterwards.
-[Release notes](docs/releases/v0.7.0.md) describe compatibility and known limits;
-the [changelog](CHANGELOG.md) records subsequent work on `main`.
+historical v3.0.1 and earlier tags remain available. Product and schema versions
+are independent. This release reads research archives through v8; geographic
+saves opt into v8, which older readers cannot open. See [Release notes](docs/releases/v0.7.0.md)
+for compatibility and upgrading from historical numbering, and the
+[changelog](CHANGELOG.md) for subsequent work on `main`.
 
 ## Python API and automation
 
@@ -263,16 +260,11 @@ from lixity import api
 html = api.dashboard(text, language="de", project_config={})
 ```
 
-CLI, Python and dashboard analysis share one pipeline. Analysis/profile JSON uses
-schema **v2**; style JSON uses **v4**. Integrations should pass explicit project
-settings when working with several projects. Inspect installed capabilities with
-`lixity about --json` and `lixity COMMAND --help`.
-
-Choose `api.analyze` for numeric results or `api.fingerprint` for a style
-reference. For several outputs, [reuse one analysis result](docs/ARCHITECTURE.md#configuration-and-multiple-projects).
-
-[Interface contracts](docs/AGENTS.md) · [Architecture](docs/ARCHITECTURE.md) ·
-[Research commands](docs/research/USAGE.md) · [Automation summary](docs/llms.txt)
+CLI, Python and dashboard analysis share one pipeline. Pass explicit project
+settings for multi-project integrations and inspect `lixity about --json` for
+installed capabilities. [Interface contracts](docs/AGENTS.md) define result schemas;
+[architecture](docs/ARCHITECTURE.md#configuration-and-multiple-projects) explains
+reusing one analysis result for several outputs.
 
 ## Research
 

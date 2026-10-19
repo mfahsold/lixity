@@ -6,7 +6,7 @@
   var target = new RegExp("^lixity:image/(" + uuid + ")/(" + uuid + ")$");
   var reads = new Map();
   var state = {generation: 0, pending: false, bytes: null, url: null, current: null, review: null};
-  var dialog, form, enlarger;
+  var dialog, form;
   function label(key) {
     var shared = {close: "modal_close", cancel: "modal_cancel", permission: "research_retention", source_title: "research_source_title"};
     return uiLabel(shared[key] || "image_" + key);
@@ -310,19 +310,19 @@
   }
   function enlarge(button) {
     var source = button.querySelector("img");
-    if (!source || !source.complete || !source.naturalWidth) return;
-    if (!enlarger) {
-      enlarger = document.createElement("dialog"); enlarger.id = "modal-dossier-image-enlarge"; enlarger.className = "lixity-modal";
-      enlarger.setAttribute("aria-label", label("enlarge"));
-      enlarger.innerHTML = '<div class="modal-card"><div class="modal-header"><h3>' + safe(label("attachment")) +
-        '</h3><button type="button" class="modal-close" aria-label="' + safe(label("close")) + '">×</button></div><div class="modal-body"></div></div>';
-      document.body.appendChild(enlarger);
-      enlarger.querySelector("button").addEventListener("click", function() { enlarger.close(); });
-      enlarger.addEventListener("close", function() { enlarger.querySelector(".modal-body").replaceChildren(); if (enlarger.trigger && enlarger.trigger.isConnected) enlarger.trigger.focus(); });
-    }
-    enlarger.trigger = button;
-    var image = source.cloneNode(); image.loading = "eager";
-    enlarger.querySelector(".modal-body").replaceChildren(image); enlarger.showModal();
+    if (!source || !source.complete || !source.naturalWidth || !window.LixityResearchMedia) return;
+    var group = button.closest(".research-dossier-body-rendered") || button.closest(".research-prose") || button.parentElement.parentElement;
+    var images = Array.from(group.querySelectorAll("[data-dossier-enlarge] img")).filter(function(image) {
+      return image.complete && image.naturalWidth && image.naturalHeight;
+    });
+    var items = images.map(function(image) {
+      var caption = image.closest("figure").querySelector("figcaption");
+      var parts = [], text = caption && document.createTreeWalker(caption, NodeFilter.SHOW_TEXT);
+      while (text && text.nextNode()) parts.push(text.currentNode.textContent.trim());
+      return {src: image.currentSrc || image.src, width: image.naturalWidth, height: image.naturalHeight,
+              alt: image.alt, caption: (image.alt ? image.alt + " — " : "") + parts.filter(Boolean).join(" ")};
+    });
+    window.LixityResearchMedia.open(items, images.indexOf(source), button);
   }
   document.addEventListener("click", function(event) {
     var add = event.target.closest("[data-dossier-add-image]");

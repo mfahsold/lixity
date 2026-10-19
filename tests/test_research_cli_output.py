@@ -10,14 +10,29 @@ from pathlib import Path
 from unittest.mock import patch
 
 from lixity.research import api, cli
-from tests.research_support import capture_research, parse_research_args
+from tests.research_support import capture_research, parse_research_args, retained_files
 
 
 class TestResearchCliOutput(unittest.TestCase):
+    def test_help_groups_registered_commands_without_loading_a_project(self):
+        import argparse
+
+        parser = argparse.ArgumentParser(prog="lixity research")
+        cli.configure(parser)
+        help_text = parser.format_help()
+        self.assertIn("COMMAND ...", help_text)
+        self.assertNotIn("{schema,init,", help_text)
+        groups = {command["group"] for command in cli.command_metadata()}
+        for group in groups:
+            self.assertIn(group + ":", help_text)
+        dossier = next(command for command in cli.command_metadata() if command["name"] == "dossier")
+        self.assertEqual(dossier["aliases"], ["dossiers"])
+
     def test_shell_completions_follow_the_registered_research_commands(self):
         from lixity.cli import main
 
-        expected = {command["name"] for command in cli.command_metadata()}
+        expected = {name for command in cli.command_metadata()
+                    for name in (command["name"], *command.get("aliases", []))}
         for shell, pattern in (
             ("bash", r'research\)\s+COMPREPLY=\( \$\(compgen -W "([^"]+)"'),
             ("zsh", r"'1:action:\(([^)]*)\)'"),
@@ -38,7 +53,9 @@ class TestResearchCliOutput(unittest.TestCase):
             api.create_dossier(root, "Dossier", "Body text.")
             api.create_claim(root, title="Claim", statement="Statement.")
             api.record_decision(root, title="Decision", rationale="Reason.")
-            for command, key in (("dossier", "dossiers"), ("claim", "claims"), ("decision", "decisions")):
+            for command, key in (("dossier", "dossiers"), ("dossiers", "dossiers"),
+                                 ("claim", "claims"), ("claims", "claims"),
+                                 ("decision", "decisions"), ("decisions", "decisions")):
                 with self.subTest(command=command):
                     verb_status, verb_out, verb_err = self.capture(command, "list", "--project", str(root))
                     default_status, default_out, _ = self.capture(command, "--project", str(root))
@@ -133,7 +150,7 @@ class TestResearchCliOutput(unittest.TestCase):
             api.init(root, title="Synthetic diff output")
             records = (
                 ("dossier", api.create_dossier(root, "Dossier", "Dossier body.\x1b[2J")["dossier_id"],
-                 "--file", "Dossier body.", "Revised dossier body.\x1b]52;c;synthetic\x07"),
+                 "--body", "Dossier body.", "Revised dossier body.\x1b]52;c;synthetic\x07"),
                 ("claim", api.create_claim(root, title="Claim", statement="Claim statement.")["claim_id"],
                  "--statement", "Claim statement.", "Revised claim statement."),
                 ("decision", api.record_decision(root, title="Decision", rationale="Decision rationale.")["decision_id"],
@@ -153,6 +170,53 @@ class TestResearchCliOutput(unittest.TestCase):
                     self.assertNotIn("\x1b", output)
                     self.assertNotIn("\x07", output)
                     self.assertEqual(Repository(root).snapshot().digest, before)
+
+    def test_diff_reports_nested_scope_and_reference_pins(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic comparison")
+            dossier = api.create_dossier(root, "Notes", "Body.")["dossier_id"]
+            claim = api.create_claim(root, title="Place", statement="Synthetic statement.",
+                                     place="Old harbour", time_period="1924", dossier_id=dossier)["claim_id"]
+            from tests.research_support import revise_record
+            revise_record(root, "dossier", dossier, {"title": "New notes"})
+            status, output, errors = self.capture("claim", claim, "--project", str(root), "--diff",
+                                                  "--place", "New harbour", "--time-period", "1925",
+                                                  "--dossier-revision", "2")
+            self.assertEqual((status, errors), (0, ""))
+            self.assertIn('- "Old harbour"', output)
+            self.assertIn('- "1924"', output)
+            self.assertIn('"revision": 1', output)
+            self.assertIn('"revision": 2', output)
+
+    def test_diff_keeps_one_observation_when_another_writer_advances(self):
+        from lixity.research.repository import Repository
+        from tests.research_support import revise_record
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic delayed comparison")
+            claim = api.create_claim(root, title="Original title", statement="Synthetic statement.")["claim_id"]
+            snapshot = Repository.snapshot
+            armed = True
+
+            def delayed(repository, *args, **kwargs):
+                nonlocal armed
+                observed = snapshot(repository, *args, **kwargs)
+                if armed:
+                    armed = False
+                    revise_record(root, "claim", claim, {"title": "Concurrent title"})
+                return observed
+
+            with patch.object(Repository, "snapshot", delayed):
+                status, output, errors = self.capture("claim", claim, "--project", str(root),
+                                                      "--diff", "--title", "Draft title")
+            self.assertEqual((status, errors), (0, ""))
+            self.assertIn("@r1", output)
+            self.assertIn('- "Original title"', output)
+            self.assertIn('+ "Draft title"', output)
+            self.assertNotIn("Concurrent title", output)
+            self.assertEqual(api.get_record(root, "claim", claim)["record"]["title"], "Concurrent title")
 
     parse = staticmethod(parse_research_args)
     capture = staticmethod(capture_research)
@@ -332,11 +396,12 @@ class TestResearchCliOutput(unittest.TestCase):
             batch_file = Path(td) / "changes.json"
             batch_file.write_text(json.dumps(operations), encoding="utf-8")
             before = api.audit(project)["snapshot"]
+            before_files = retained_files(project)
             status, output, errors = self.capture("revise-batch", "--project", str(project), "--file", str(batch_file))
             self.assertEqual((status, errors), (0, ""))
             preview = json.loads(output)
             self.assertEqual(preview["snapshot"], before)
-            self.assertEqual(api.audit(project)["snapshot"], before)
+            self.assertEqual(retained_files(project), before_files)
             batch_file.write_text(output, encoding="utf-8")
             for flags in (("--apply",), ("--expected-snapshot", before), ("--expected-snapshot", "")):
                 status, output, errors = self.capture("revise-batch", "--project", str(project),
@@ -349,9 +414,10 @@ class TestResearchCliOutput(unittest.TestCase):
                 "--file", str(batch_file), "--apply", "--expected-snapshot", before, "--actor", "reviewing-author")
             self.assertEqual((status, errors), (0, ""))
             self.assertEqual(len(json.loads(output)["records"]), 2)
-            for identifier in identifiers:
+            for i, identifier in enumerate(identifiers):
                 record = api.get_record(project, "dossier", identifier)["record"]
                 self.assertEqual(record["revision"], 2)
+                self.assertEqual(record["body"], f"Reviewed note {i}.")
                 self.assertEqual(record["created_by"], "reviewing-author")
             status, output, errors = self.capture("revise-batch", "--project", str(project),
                 "--file", str(batch_file), "--apply", "--expected-snapshot", before)
@@ -359,17 +425,43 @@ class TestResearchCliOutput(unittest.TestCase):
             self.assertEqual(output, "")
             self.assertTrue(errors)
 
-    def test_batch_cli_rejects_other_json_envelopes_without_calling_revision_api(self):
-        with tempfile.TemporaryDirectory() as td, patch.object(api, "prepare_record_revisions") as prepare:
+    def test_batch_cli_rejects_invalid_packets_without_changing_archive_bytes(self):
+        with tempfile.TemporaryDirectory() as td:
+            project = Path(td) / "project"
+            api.init(project, title="Synthetic packet validation")
+            identifier = api.create_dossier(project, "Note", "Original.")["dossier_id"]
+            operations = [{"kind": "dossier", "id": identifier, "expected_revision": 1,
+                           "changes": {"body": "Reviewed note."}, "change_kind": "correction",
+                           "reason": "Reviewed packet."}]
+            packet = api.prepare_record_revisions(project, operations)
+            before = retained_files(project)
             path = Path(td) / "changes.json"
-            for payload in ({"operations": []}, {"schema_version": "other/1", "operations": []}, "instructions"):
-                with self.subTest(payload=payload):
-                    path.write_text(json.dumps(payload), encoding="utf-8")
-                    status, output, errors = self.capture("revise-batch", "--project", "/synthetic", "--file", str(path))
-                    self.assertEqual(status, 1)
-                    self.assertEqual(output, "")
-                    self.assertIn("operations", errors)
-            prepare.assert_not_called()
+            invalid = {
+                "missing envelope": {"operations": operations},
+                "unknown schema": packet | {"schema_version": "other/1"},
+                "not reviewed": packet | {"ready": False},
+                "unexpected field": packet | {"unreviewed": True},
+                "non-object": "instructions",
+            }
+            for name, payload in invalid.items():
+                path.write_text(json.dumps(payload), encoding="utf-8")
+                for apply in (False, True):
+                    with self.subTest(packet=name, apply=apply):
+                        flags = ("--apply", "--expected-snapshot", packet["snapshot"]) if apply else ()
+                        status, output, errors = self.capture("revise-batch", "--project", str(project),
+                                                              "--file", str(path), *flags)
+                        self.assertEqual(status, 1)
+                        self.assertEqual(output, "")
+                        self.assertTrue(errors)
+                        self.assertEqual(retained_files(project), before)
+
+            # Legacy raw operations still apply through the explicit snapshot guard.
+            path.write_text(json.dumps(operations), encoding="utf-8")
+            status, output, errors = self.capture("revise-batch", "--project", str(project), "--file", str(path),
+                                                  "--apply", "--expected-snapshot", packet["snapshot"])
+            self.assertEqual((status, errors), (0, ""))
+            self.assertEqual(json.loads(output)["records"], [{"kind": "dossier", "id": identifier, "revision": 2}])
+            self.assertEqual(api.get_record(project, "dossier", identifier)["record"]["body"], "Reviewed note.")
 
     def editorial_results(self) -> tuple[dict, dict]:
         impact = {"schema_version": "research-decision-impact-local/1", "snapshot": "a" * 64,

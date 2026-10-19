@@ -54,10 +54,26 @@ server.serve_forever()
     });
     browser = await launchChromium();
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}, hasTouch: true});
+    await page.addInitScript(() => {
+      // Preserve real intersection delivery while tracking diagram resources.
+      const NativeObserver = window.IntersectionObserver;
+      window.researchDiagramObservations = new Set();
+      window.IntersectionObserver = class extends NativeObserver {
+        observe(target) {
+          if (target.matches('[data-research-diagram]')) window.researchDiagramObservations.add(target);
+          super.observe(target);
+        }
+        unobserve(target) {
+          window.researchDiagramObservations.delete(target);
+          super.unobserve(target);
+        }
+      };
+    });
     page.setDefaultTimeout(10000);
     const errors = [];
     page.on('pageerror', error => errors.push(error.message));
     await page.goto(fixture.url);
+    assert.equal(await page.evaluate(() => typeof window.mermaid), 'undefined', 'Unused diagram library must remain uninitialized');
     await expect(page.locator('#welcome-hero')).toBeVisible();
     await expect(page.locator('#research-init-box')).toBeVisible();
     assert.equal(await page.locator('.research-tab-pane:visible').count(), 0);
@@ -483,7 +499,7 @@ server.serve_forever()
     await page.locator(`[data-research-revise=dossier][data-record-id="${dossierId}"]`).click();
     await expect(field('body')).toHaveValue(/End of synthetic dossier\./);
     await field('title').fill('Revised synthetic dossier');
-    const revisedBody = 'A revised note with **important bold** and <img src=x onerror=alert(1)> as inert text.\n\n| Year | Event |\n| :--- | :--- |\n| 1924 | Opening |\n\n```mermaid\ngraph TD\n  A[Start] --> B[Finish]\n```\n\n[internal](lixity:dossier/test-ref) and [bad](javascript:alert(1))';
+    const revisedBody = 'A revised note with **important bold** and <img src=x onerror=alert(1)> as inert text.\n\n| Year | Event |\n| :--- | :--- |\n| 1924 | Opening |\n\n```mermaid\ngraph TD\n subgraph Evidence\n  A[Start] --> B[Finish]\n end\n```\n\n[internal](lixity:dossier/test-ref) and [bad](javascript:alert(1))';
     await field('body').fill(revisedBody);
     await chooseChange();
     assert.ok((await field('body').boundingBox()).height >= 150, 'Dossier body editor must have usable height');
@@ -506,8 +522,96 @@ server.serve_forever()
     assert.equal(await page.locator('#research-revision-history-detail img').count(), 0);
     await expect(page.locator('#research-revision-history-detail strong')).toContainText('important bold');
     await expect(page.locator('#research-revision-history-detail table.research-table')).toBeVisible();
+    await page.locator('#research-revision-history-detail [data-research-diagram]').scrollIntoViewIfNeeded();
     await expect(page.locator('#research-revision-history-detail svg.research-diagram')).toBeVisible();
     await expect(page.locator('#research-revision-history-detail .rd-node text')).toContainText(['Start', 'Finish']);
+    await expect(page.locator('#research-revision-history-detail svg.research-diagram')).toContainText('Evidence');
+    const diagramRequests = [];
+    await page.route('https://tile.openstreetmap.org/**', route => { diagramRequests.push(route.request().url()); return route.abort(); });
+    const diagramCases = [
+      ['graph TD\n A[First] --> B[Second]\n B --> A', 'ready'],
+      ['sequenceDiagram\n participant A as Reader\n participant B as Archive\n A->>B: Read\n Note over A,B: Evidence', 'ready'],
+      ['not a supported diagram', 'failed'],
+      ['graph TD\n A@{ img: "https://tile.openstreetmap.org/0/0/0.png" }', 'failed'],
+      ['graph TD\n A[Text]\n classDef bad fill:url(https://tile.openstreetmap.org/0/0/0.png)\n class A bad', 'failed'],
+      ['graph TD; A[Text]; style A fill:red', 'failed'],
+      ['graph TD\n A[Text]; classDef bad fill:red; class A bad', 'failed'],
+    ];
+    for (const [source, state] of diagramCases) {
+      await page.evaluate(source => {
+        document.getElementById('diagram-regression')?.remove();
+        const host = document.createElement('div'); host.id = 'diagram-regression';
+        host.innerHTML = renderSafeMarkdown('```mermaid\n' + source + '\n```');
+        document.getElementById('research-revision-history-detail').appendChild(host);
+      }, source);
+      const host = page.locator('#diagram-regression [data-research-diagram]');
+      await host.scrollIntoViewIfNeeded();
+      await expect(host).toHaveAttribute('data-diagram-state', state);
+      await expect(host.locator('code')).toHaveText(source);
+      if (state === 'ready') {
+        await host.locator('[data-diagram-enlarge]').click();
+        const diagramImage = page.locator('#modal-dossier-image-enlarge img.pswp__img');
+        await expect(diagramImage).toBeVisible();
+        await expect.poll(() => diagramImage.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+        await page.keyboard.press('Escape');
+        await expect(revisionDialog).toBeVisible();
+      }
+    }
+    assert.deepEqual(diagramRequests, [], 'Diagrams never request map tiles or external image resources');
+    await page.evaluate(() => document.getElementById('diagram-regression').remove());
+    // Offscreen diagrams may be replaced by a detail refresh before rendering.
+    // Release the old observer target, then allow that same subtree to remount.
+    await page.evaluate(() => {
+      const host = document.createElement('div'); host.id = 'diagram-remount';
+      host.style.position = 'absolute'; host.style.top = '100000px';
+      host.innerHTML = renderSafeMarkdown('```mermaid\ngraph TD\n A[Remounted] --> B[Ready]\n```');
+      window.detachedResearchDiagram = host;
+      document.getElementById('research-revision-history-detail').appendChild(host);
+    });
+    await expect.poll(() => page.evaluate(() => researchDiagramObservations.has(detachedResearchDiagram.firstElementChild))).toBe(true);
+    await page.evaluate(() => detachedResearchDiagram.remove());
+    await expect.poll(() => page.evaluate(() => researchDiagramObservations.has(detachedResearchDiagram.firstElementChild))).toBe(false);
+    await page.evaluate(() => {
+      detachedResearchDiagram.removeAttribute('style');
+      document.getElementById('research-revision-history-detail').appendChild(detachedResearchDiagram);
+    });
+    await page.locator('#diagram-remount').scrollIntoViewIfNeeded();
+    await expect(page.locator('#diagram-remount [data-research-diagram]')).toHaveAttribute('data-diagram-state', 'ready');
+    await page.evaluate(() => { detachedResearchDiagram.remove(); delete window.detachedResearchDiagram; });
+
+    // A completed render must not leave a detached host permanently pending.
+    await page.evaluate(() => {
+      const originalRender = mermaid.render;
+      window.restoreResearchDiagramRenderer = () => { mermaid.render = originalRender; };
+      mermaid.render = function(id, code) {
+        if (!code.includes('PendingMount')) return originalRender.call(mermaid, id, code);
+        return new Promise(resolve => {
+          window.resolveResearchDiagram = () => resolve(originalRender.call(mermaid, id, code));
+        });
+      };
+      const host = document.createElement('div'); host.id = 'diagram-pending-remount';
+      host.innerHTML = renderSafeMarkdown('```mermaid\ngraph TD\n A[PendingMount] --> B[Ready]\n```');
+      window.pendingResearchDiagram = host;
+      document.getElementById('research-revision-history-detail').appendChild(host);
+    });
+    await page.locator('#diagram-pending-remount').scrollIntoViewIfNeeded();
+    await expect.poll(() => page.evaluate(() => typeof resolveResearchDiagram)).toBe('function');
+    await expect(page.locator('#diagram-pending-remount [data-research-diagram]')).toHaveAttribute('data-diagram-state', 'pending');
+    await page.evaluate(() => {
+      pendingResearchDiagram.remove();
+      restoreResearchDiagramRenderer();
+      resolveResearchDiagram();
+    });
+    await expect.poll(() => page.evaluate(() => pendingResearchDiagram.firstElementChild.dataset.diagramState)).not.toBe('pending');
+    await page.evaluate(() => document.getElementById('research-revision-history-detail').appendChild(pendingResearchDiagram));
+    await page.locator('#diagram-pending-remount').scrollIntoViewIfNeeded();
+    await expect(page.locator('#diagram-pending-remount [data-research-diagram]')).toHaveAttribute('data-diagram-state', 'ready');
+    await page.evaluate(() => {
+      pendingResearchDiagram.remove();
+      delete window.pendingResearchDiagram;
+      delete window.restoreResearchDiagramRenderer;
+      delete window.resolveResearchDiagram;
+    });
     await expect(page.locator('#research-revision-history-detail code.lixity-ref')).toContainText('internal (dossier/test-ref)');
     assert.equal(await page.locator('#research-revision-history-detail a[href*="javascript"]').count(), 0);
     await page.locator('#research-revision-history-detail [data-source-toggle]').click();

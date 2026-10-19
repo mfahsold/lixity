@@ -259,15 +259,18 @@ summary and per-chapter measurements for automation.
 
 ### `lixity characters`
 
-Find appearances and gaps for supplied names or alias patterns:
+Count supplied names or alias patterns across chapters:
 
 ```bash
 lixity characters manuscript.md --name "Alex|Alexander" --name Morgan --json
 ```
 
 Matching is whole-word and case-insensitive, excludes appendix/front matter,
-and reports mentions, chapter presence, span and longest gap. There is no named
-entity recognition: empty names fail rather than trigger automatic discovery.
+and reports mentions, mention-based chapter span and longest gap. A match does
+not establish physical presence, speaker identity or viewpoint. Current main
+can use [project-local literal profiles](#character-profiles) when explicit names
+are omitted. Explicit names replace configured selections, including an empty
+selection; the standalone command rejects empty names rather than discovering entities.
 The [structure-result contract](AGENTS.md#35-structure-modules-dialogue-characters-pacing-motifs-showing)
 documents all dialogue, character, pacing, motif and showing result fields.
 
@@ -681,6 +684,10 @@ value as an editing instruction.
 
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
+**Current main (unreleased):** shared counting excludes inline code, images and
+Markdown link destinations while retaining visible link labels. This measurement
+projection does not change displayed paragraph text, saved quote identities or
+chapter numbering; a chapter without countable prose still retains its number.
 
 ## Known limitations & stability
 
@@ -799,7 +806,8 @@ lixity schema --section configuration
 
 The `configuration` object (`lixity-configuration/1`) reports accepted keys,
 project-only keys, uninterpreted keys, native-settings persistence/session scope,
-and component schemas for corpus, threshold and publication settings. Defaults
+and component schemas for corpus, threshold and publication settings. Current main
+also exposes the owning character-profile schema. Defaults
 are annotations, not active project/server values. Scene and NDA settings retain
 their owning component's validation; this is not a
 single complete project-file schema. Threshold comments also state finite-number
@@ -809,6 +817,28 @@ Older releases provide `lixity about --json` and `lixity COMMAND --help`; Python
 callers can inspect `CorpusConfig.model_json_schema()` for corpus fields. Optional
 `None` linguistic patterns use the selected language profile's defaults.
 `phrases` and `capabilities` are accepted but uninterpreted by the bundled engine.
+
+### Character profiles
+
+**Current main (unreleased):** define literal aliases and optional author-declared
+viewpoint chapters in the selected project's configuration:
+
+```toml
+[characters.Alex]
+aliases = ["Alexander", "A. Rivers"]
+pov_in_chapters = [1, 3]
+```
+
+The profile name is also matched. Aliases are literal text, unlike legacy `names`
+and explicit `--name` regular-expression patterns. Explicit name selections win;
+an existing `characters` table, even empty, replaces legacy `names`. Profiles come
+only from the explicit project root, not user/ancestor defaults. The CLI and
+dashboard share this resolver; Python accepts explicit `project_config`.
+
+Declared viewpoint appears separately as `declared_pov_chapters`; it does not
+increase mention counts or fill mention gaps. Chapter numbers must exist in the
+current manuscript. No pronoun resolution, narrator inference or named-entity
+recognition is performed. Use configuration discovery for accepted fields and bounds.
 
 ### Chapter register settings
 

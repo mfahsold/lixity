@@ -323,6 +323,23 @@ class TestStyleFingerprint(unittest.TestCase):
 
 
 class TestParagraphLayers(unittest.TestCase):
+    def test_inline_code_only_paragraph_retains_anchor_without_contributing_to_layers(self):
+        config = CorpusConfig(language="en")
+        text = "## Main\n\nDoor opens.\n\nThe door closes.\n\n`OnlyCode`\n"
+        paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
+        self.assertEqual([paragraph.words for paragraph in paragraphs], [2, 3, 0])
+        self.assertEqual((paragraphs[2].text, paragraphs[2].start_line, paragraphs[2].end_line),
+                         ("`OnlyCode`", 7, 7))
+        self.assertEqual(layer_stats(paragraphs, "asl"), {})
+
+        text = text.replace("`OnlyCode`", "A window opens slowly.\n\n`OnlyCode`")
+        paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
+        measured = layer_stats(paragraphs[:3], "asl")
+        self.assertEqual(set(measured), {0, 1, 2})
+        self.assertEqual(layer_stats(paragraphs, "asl"), measured)
+        self.assertEqual((paragraphs[3].text, paragraphs[3].start_line, paragraphs[3].end_line),
+                         ("`OnlyCode`", 9, 9))
+
     def test_layer_stats_within_chapter(self):
         md = (
             "## Kap 1\n\n"

@@ -2,263 +2,110 @@
 // Split of the former research.js; _JS_FILES concatenates the parts in
 // the original order, so load-time behaviour is unchanged.
 function renderMermaidSvg(escapedCode) {
-  var temp = document.createElement("textarea");
-  temp.innerHTML = escapedCode;
-  var code = temp.value.trim();
-
-  try {
-    var lines = code.split("\n").map(function(l) { return l.trim(); }).filter(function(l) {
-      return l && !l.startsWith("%%");
-    });
-    if (!lines.length) return "";
-
-    var header = lines[0].toLowerCase();
-
-    // 1. Flowchart / Graph
-    if (/^(graph|flowchart)\s+(td|tb|lr|rl)/i.test(header)) {
-      var dirMatch = header.match(/^(?:graph|flowchart)\s+(td|tb|lr|rl)/i);
-      var dir = dirMatch ? dirMatch[1].toUpperCase() : "TD";
-      var isLR = dir === "LR" || dir === "RL";
-
-      var nodes = {};
-      var edges = [];
-
-      function getOrCreateNode(id, label, shape) {
-        if (!nodes[id]) {
-          nodes[id] = { id: id, label: label || id, shape: shape || "rect" };
-        } else {
-          if (label) nodes[id].label = label;
-          if (shape) nodes[id].shape = shape;
-        }
-        return nodes[id];
-      }
-
-      for (var i = 1; i < lines.length; i++) {
-        var line = lines[i];
-
-        var edgePattern = /^([a-zA-Z0-9_\-]+)(?:\[(.*?)\]|\((.*?)\)|\{(.*?)\})?\s*(-->|---|==>|-\.->)\s*(?:\|(.*?)\|)?\s*([a-zA-Z0-9_\-]+)(?:\[(.*?)\]|\((.*?)\)|\{(.*?)\})?$/;
-        var m = line.match(edgePattern);
-        if (m) {
-          var fromId = m[1];
-          var fromLabel = m[2] || m[3] || m[4];
-          var fromShape = m[4] ? "diamond" : (m[3] ? "round" : "rect");
-          var edgeLabel = m[6] || "";
-          var toId = m[7];
-          var toLabel = m[8] || m[9] || m[10];
-          var toShape = m[10] ? "diamond" : (m[9] ? "round" : "rect");
-
-          getOrCreateNode(fromId, fromLabel, fromShape);
-          getOrCreateNode(toId, toLabel, toShape);
-          edges.push({ from: fromId, to: toId, label: edgeLabel });
-          continue;
-        }
-
-        var nodePattern = /^([a-zA-Z0-9_\-]+)(?:\[(.*?)\]|\((.*?)\)|\{(.*?)\})$/;
-        var nm = line.match(nodePattern);
-        if (nm) {
-          var nId = nm[1];
-          var nLabel = nm[2] || nm[3] || nm[4];
-          var nShape = nm[4] ? "diamond" : (nm[3] ? "round" : "rect");
-          getOrCreateNode(nId, nLabel, nShape);
-        }
-      }
-
-      var nodeIds = Object.keys(nodes);
-      if (nodeIds.length) {
-        var inDegrees = {};
-        var adj = {};
-        nodeIds.forEach(function(id) { inDegrees[id] = 0; adj[id] = []; });
-        edges.forEach(function(e) {
-          if (inDegrees[e.to] !== undefined) inDegrees[e.to]++;
-          if (adj[e.from]) adj[e.from].push(e.to);
-        });
-
-        var ranks = {};
-        var maxRank = 0;
-        var queue = [];
-        nodeIds.forEach(function(id) {
-          if (inDegrees[id] === 0) {
-            ranks[id] = 0;
-            queue.push(id);
-          }
-        });
-        if (!queue.length && nodeIds.length) {
-          ranks[nodeIds[0]] = 0;
-          queue.push(nodeIds[0]);
-        }
-
-        while (queue.length) {
-          var curr = queue.shift();
-          var curRank = ranks[curr] || 0;
-          adj[curr].forEach(function(next) {
-            var nRank = (ranks[next] === undefined) ? curRank + 1 : Math.max(ranks[next], curRank + 1);
-            ranks[next] = nRank;
-            if (nRank > maxRank) maxRank = nRank;
-            inDegrees[next]--;
-            if (inDegrees[next] <= 0) queue.push(next);
-          });
-        }
-        nodeIds.forEach(function(id) {
-          if (ranks[id] === undefined) ranks[id] = 0;
-        });
-
-        var rankGroups = [];
-        for (var r = 0; r <= maxRank; r++) rankGroups.push([]);
-        nodeIds.forEach(function(id) {
-          rankGroups[ranks[id]].push(id);
-        });
-
-        var nodePos = {};
-        var padX = 25, padY = 25;
-        var rankSep = isLR ? 150 : 80;
-        var nodeSep = isLR ? 60 : 120;
-        var totalWidth = 0, totalHeight = 0;
-
-        rankGroups.forEach(function(group, rIdx) {
-          group.forEach(function(id, idx) {
-            var label = nodes[id].label;
-            var w = Math.max(85, label.length * 8 + 20);
-            var h = 36;
-            var x, y;
-            if (isLR) {
-              x = padX + rIdx * rankSep;
-              y = padY + idx * nodeSep;
-              totalWidth = Math.max(totalWidth, x + w + padX);
-              totalHeight = Math.max(totalHeight, y + h + padY);
-            } else {
-              x = padX + idx * nodeSep;
-              y = padY + rIdx * rankSep;
-              totalWidth = Math.max(totalWidth, x + w + padX);
-              totalHeight = Math.max(totalHeight, y + h + padY);
-            }
-            nodePos[id] = { x: x, y: y, w: w, h: h };
-          });
-        });
-
-        totalWidth = Math.max(totalWidth, 180);
-        totalHeight = Math.max(totalHeight, 90);
-
-        var svgParts = [
-          '<div class="research-diagram-wrap"><svg class="research-diagram" viewBox="0 0 ' + totalWidth + ' ' + totalHeight + '" role="img" aria-label="Flowchart">',
-          '<defs><marker id="rd-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">',
-          '<path d="M 0 1 L 10 5 L 0 9 z" fill="var(--muted, #64748b)" /></marker></defs>'
-        ];
-
-        edges.forEach(function(e) {
-          var p1 = nodePos[e.from];
-          var p2 = nodePos[e.to];
-          if (!p1 || !p2) return;
-
-          var startX = isLR ? (p1.x + p1.w) : (p1.x + p1.w / 2);
-          var startY = isLR ? (p1.y + p1.h / 2) : (p1.y + p1.h);
-          var endX = isLR ? p2.x : (p2.x + p2.w / 2);
-          var endY = isLR ? (p2.y + p2.h / 2) : p2.y;
-
-          var midX = (startX + endX) / 2;
-          var midY = (startY + endY) / 2;
-          var d = 'M ' + startX + ' ' + startY + ' C ' + (isLR ? midX : startX) + ' ' + (isLR ? startY : midY) + ', ' + (isLR ? midX : endX) + ' ' + (isLR ? endY : midY) + ', ' + endX + ' ' + endY;
-
-          svgParts.push('<path d="' + d + '" fill="none" stroke="var(--muted, #64748b)" stroke-width="1.5" marker-end="url(#rd-arrow)" />');
-          if (e.label) {
-            svgParts.push('<rect x="' + (midX - (e.label.length * 4)) + '" y="' + (midY - 8) + '" width="' + (e.label.length * 8) + '" height="16" fill="var(--bg, #fff)" rx="3" />');
-            svgParts.push('<text x="' + midX + '" y="' + (midY + 4) + '" fill="var(--muted, #64748b)" font-size="10" text-anchor="middle">' + escapeHtml(e.label) + '</text>');
-          }
-        });
-
-        nodeIds.forEach(function(id) {
-          var pos = nodePos[id];
-          var n = nodes[id];
-          var rx = (n.shape === "round") ? "18" : (n.shape === "diamond" ? "0" : "6");
-          svgParts.push('<g class="rd-node" tabindex="0" role="group" aria-label="' + escapeHtml(n.label) + '">');
-          svgParts.push('<rect x="' + pos.x + '" y="' + pos.y + '" width="' + pos.w + '" height="' + pos.h + '" rx="' + rx + '" fill="var(--surface, #f8fafc)" stroke="var(--accent, #3b82f6)" stroke-width="1.5" />');
-          svgParts.push('<text x="' + (pos.x + pos.w / 2) + '" y="' + (pos.y + pos.h / 2 + 4) + '" fill="var(--fg, #0f172a)" font-size="12" font-weight="500" text-anchor="middle">' + escapeHtml(n.label) + '</text>');
-          svgParts.push('</g>');
-        });
-
-        svgParts.push('</svg></div>');
-        return svgParts.join("");
-      }
-    }
-
-    // 2. Sequence diagram
-    if (/^sequencediagram/i.test(header)) {
-      var participants = [];
-      var pIndices = {};
-      var messages = [];
-
-      for (var s = 1; s < lines.length; s++) {
-        var sline = lines[s];
-        var pMatch = sline.match(/^participant\s+([a-zA-Z0-9_\-]+)(?:\s+as\s+(.*))?$/i);
-        if (pMatch) {
-          var pId = pMatch[1];
-          var pName = pMatch[2] || pId;
-          if (pIndices[pId] === undefined) {
-            pIndices[pId] = participants.length;
-            participants.push({ id: pId, label: pName });
-          }
-          continue;
-        }
-
-        var msgMatch = sline.match(/^([a-zA-Z0-9_\-]+)\s*(->>|-->>|->|-->)\s*([a-zA-Z0-9_\-]+)\s*:\s*(.*)$/);
-        if (msgMatch) {
-          var fromP = msgMatch[1];
-          var arrType = msgMatch[2];
-          var toP = msgMatch[3];
-          var msgText = msgMatch[4];
-
-          [fromP, toP].forEach(function(pid) {
-            if (pIndices[pid] === undefined) {
-              pIndices[pid] = participants.length;
-              participants.push({ id: pid, label: pid });
-            }
-          });
-          messages.push({ from: fromP, to: toP, text: msgText, dashed: arrType.includes("--") });
-        }
-      }
-
-      if (participants.length >= 2) {
-        var colWidth = 140;
-        var pWidth = 100;
-        var pHeight = 32;
-        var sWidth = Math.max(280, participants.length * colWidth + 40);
-        var msgSep = 45;
-        var topY = 30;
-        var sHeight = topY + (messages.length + 1) * msgSep + 30;
-
-        var seqSvg = [
-          '<div class="research-diagram-wrap"><svg class="research-diagram" viewBox="0 0 ' + sWidth + ' ' + sHeight + '" role="img" aria-label="Sequence diagram">',
-          '<defs><marker id="rd-seq-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">',
-          '<path d="M 0 1 L 10 5 L 0 9 z" fill="var(--accent, #3b82f6)" /></marker></defs>'
-        ];
-
-        participants.forEach(function(p, pIdx) {
-          var centerX = 30 + pIdx * colWidth + pWidth / 2;
-          seqSvg.push('<line x1="' + centerX + '" y1="' + (topY + pHeight) + '" x2="' + centerX + '" y2="' + (sHeight - 15) + '" stroke="var(--line, #e2e8f0)" stroke-dasharray="4" stroke-width="1.5" />');
-          seqSvg.push('<rect x="' + (centerX - pWidth / 2) + '" y="' + topY + '" width="' + pWidth + '" height="' + pHeight + '" rx="4" fill="var(--surface, #f8fafc)" stroke="var(--accent, #3b82f6)" stroke-width="1.5" />');
-          seqSvg.push('<text x="' + centerX + '" y="' + (topY + pHeight / 2 + 4) + '" fill="var(--fg, #0f172a)" font-size="12" font-weight="500" text-anchor="middle">' + escapeHtml(p.label) + '</text>');
-        });
-
-        messages.forEach(function(msg, mIdx) {
-          var y = topY + pHeight + (mIdx + 1) * msgSep;
-          var x1 = 30 + pIndices[msg.from] * colWidth + pWidth / 2;
-          var x2 = 30 + pIndices[msg.to] * colWidth + pWidth / 2;
-          var midX = (x1 + x2) / 2;
-          var strokeDash = msg.dashed ? ' stroke-dasharray="4"' : '';
-
-          seqSvg.push('<line x1="' + x1 + '" y1="' + y + '" x2="' + x2 + '" y2="' + y + '" stroke="var(--accent, #3b82f6)" stroke-width="1.5"' + strokeDash + ' marker-end="url(#rd-seq-arrow)" />');
-          seqSvg.push('<text x="' + midX + '" y="' + (y - 6) + '" fill="var(--fg, #0f172a)" font-size="11" text-anchor="middle">' + escapeHtml(msg.text) + '</text>');
-        });
-
-        seqSvg.push('</svg></div>');
-        return seqSvg.join("");
-      }
-    }
-  } catch (err) {
-    // Fallback on parse failure
-  }
-
-  return '<div class="research-diagram-wrap"><div class="research-diagram-note">' + escapeHtml(uiLabel("research_diagram_source")) + '</div><pre class="language-mermaid"><code>' + escapedCode.trim() + '</code></pre></div>';
+  return '<figure class="research-diagram-wrap" data-research-diagram>' +
+    '<div class="research-diagram-canvas" aria-busy="true"></div>' +
+    '<button type="button" class="ctl" data-diagram-enlarge hidden>' + escapeHtml(uiLabel("diagram_enlarge")) + '</button>' +
+    '<details class="research-diagram-source"><summary>' + escapeHtml(uiLabel("research_diagram_source")) +
+    '</summary><pre class="language-mermaid"><code>' + escapedCode.trim() + '</code></pre></details></figure>';
 }
+
+// Mermaid owns syntax and layout. Render only visible diagrams, retaining their
+// inert source on failure; never execute diagram click bindings or load images.
+(function () {
+  var sequence = 0;
+  var nonce = document.currentScript && document.currentScript.nonce;
+  function renderer() {
+    if (window.mermaid) return window.mermaid;
+    var bundled = document.getElementById("research-diagram-library");
+    if (!bundled) throw new Error("Diagram library unavailable");
+    var script = document.createElement("script");
+    if (nonce) script.nonce = nonce;
+    script.textContent = JSON.parse(bundled.textContent);
+    document.head.appendChild(script);
+    script.remove(); bundled.remove();
+    mermaid.initialize({
+    startOnLoad: false, securityLevel: "strict", suppressErrorRendering: true,
+    theme: "base", themeVariables: {primaryColor: "#eef4f8", primaryBorderColor: "#35516b",
+      primaryTextColor: "#1f2d3a", lineColor: "#53697b", secondaryColor: "#f8fafc",
+      tertiaryColor: "#f1f5f9", clusterBkg: "#f4f7fa", clusterBorder: "#bac9d6"},
+    maxTextSize: 50000, maxEdges: 500, htmlLabels: false,
+    flowchart: {htmlLabels: false, useMaxWidth: true},
+    secure: ["secure", "securityLevel", "startOnLoad", "maxTextSize", "maxEdges", "suppressErrorRendering", "htmlLabels", "flowchart", "theme", "themeVariables"],
+    });
+    return window.mermaid;
+  }
+  async function render(host) {
+    if (host.dataset.diagramState || !host.isConnected) return;
+    host.dataset.diagramState = "pending";
+    var canvas = host.querySelector(".research-diagram-canvas");
+    var code = host.querySelector("code").textContent;
+    var header = code.split("\n").find(function(line) { return line.trim() && !/^\s*%%/.test(line); }) || "";
+    var restricted = false;
+    try {
+      // Rendering itself creates temporary DOM. Reject resource-bearing and
+      // configurable syntax before calling Mermaid, not only after its output.
+      restricted = !/^(?:graph|flowchart|sequenceDiagram|classDiagram|stateDiagram(?:-v2)?|erDiagram|gantt|journey|pie|timeline|gitGraph|quadrantChart|requirementDiagram|xychart(?:-beta)?)\b/i.test(header.trim()) ||
+        /%%\s*\{|@\s*\{|!\[|<(?:img|image|svg|iframe|foreignObject|script|style)\b/i.test(code) ||
+        /(?:^|[;\r\n])\s*(?:classDef|style|linkStyle|click|links?)\b/i.test(code);
+      if (restricted) throw new Error("Disabled diagram features");
+      if (code.length > 50000) throw new Error("Diagram size limit");
+      var result = await renderer().render("lixity-diagram-" + (++sequence), code);
+      if (!host.isConnected) { delete host.dataset.diagramState; return; }
+      var parsed = new DOMParser().parseFromString(result.svg, "image/svg+xml");
+      var svg = parsed.documentElement;
+      if (svg.localName !== "svg") throw new Error("Invalid diagram output");
+      svg.querySelectorAll("script, foreignObject, image").forEach(function(node) { node.remove(); });
+      svg.querySelectorAll("*").forEach(function(node) {
+        Array.from(node.attributes).forEach(function(attribute) {
+          if (/^on/i.test(attribute.name) || (/href$/i.test(attribute.name) && !attribute.value.startsWith("#")))
+            node.removeAttribute(attribute.name);
+        });
+      });
+      svg.classList.add("research-diagram");
+      svg.setAttribute("role", "img");
+      if (!svg.hasAttribute("aria-label") && !svg.hasAttribute("aria-labelledby")) svg.setAttribute("aria-label", uiLabel("research_diagram_source"));
+      svg.querySelectorAll(".node").forEach(function(node) { node.classList.add("rd-node"); });
+      canvas.replaceChildren(document.importNode(svg, true));
+      host.querySelector("[data-diagram-enlarge]").hidden = false;
+      host.dataset.diagramState = "ready";
+    } catch (_) {
+      canvas.textContent = uiLabel(restricted ? "diagram_restricted" : "diagram_failed");
+      host.querySelector("details").open = true;
+      host.dataset.diagramState = "failed";
+    } finally { canvas.setAttribute("aria-busy", "false"); }
+  }
+  var visible = "IntersectionObserver" in window ? new IntersectionObserver(function(entries) {
+    entries.forEach(function(entry) { if (entry.isIntersecting) { visible.unobserve(entry.target); render(entry.target); } });
+  }, {rootMargin: "150px"}) : null;
+  function observe(root, removed) {
+    if (!(root instanceof Element)) return;
+    var hosts = root.matches("[data-research-diagram]") ? [root] : root.querySelectorAll("[data-research-diagram]");
+    hosts.forEach(function(host) {
+      if (removed) { if (visible) visible.unobserve(host); }
+      else if (!host.dataset.diagramState) { if (visible) visible.observe(host); else render(host); }
+    });
+  }
+  new MutationObserver(function(records) { records.forEach(function(record) {
+    record.removedNodes.forEach(function(node) { observe(node, true); });
+    record.addedNodes.forEach(function(node) { observe(node, false); });
+  }); })
+    .observe(document.body, {childList: true, subtree: true});
+  observe(document.body);
+  document.addEventListener("click", function(event) {
+    var button = event.target.closest("[data-diagram-enlarge]");
+    if (!button || !window.LixityResearchMedia) return;
+    var host = button.closest("[data-research-diagram]"), svg = host.querySelector("svg");
+    if (!svg) return;
+    var clone = svg.cloneNode(true), box = svg.viewBox.baseVal;
+    clone.setAttribute("width", Math.max(1, box.width));
+    clone.setAttribute("height", Math.max(1, box.height));
+    var url = URL.createObjectURL(new Blob([new XMLSerializer().serializeToString(clone)], {type: "image/svg+xml"}));
+    var opened = window.LixityResearchMedia.open([{src: url, width: Math.max(1, box.width), height: Math.max(1, box.height),
+      alt: svg.getAttribute("aria-label") || uiLabel("diagram_enlarge"), caption: uiLabel("research_diagram_source")}], 0, button,
+      function() { URL.revokeObjectURL(url); });
+    if (!opened) URL.revokeObjectURL(url);
+  });
+})();
 
 function renderSafeMarkdown(rawText, dossierContext) {
   if (!rawText) return "";

@@ -167,27 +167,32 @@ def dialogue(text: str, language: str = "en", **config_overrides: Any) -> dict[s
 
 def characters(
     text: str,
-    names: Mapping[str, str] | Sequence[str],
+    names: Mapping[str, str] | Sequence[str] | None = None,
     language: str = "en",
+    *, project_config: Mapping[str, Any] | None = None,
     **config_overrides: Any,
 ) -> dict[str, Any]:
     """
-    Character presence across chapters for curated name patterns.
+    Curated name mentions, with separately declared POV from explicit project settings.
 
     ``names`` is a sequence of display names or a mapping
     ``pattern -> display name`` (aliases), e.g. ``{"Matthias|Matze": "Matthias"}``.
+    Omitted names use only explicit ``project_config`` profiles or legacy names;
+    an explicit empty selection still raises. Name matches do not infer scene presence.
     Returns ``{"meta": {...}, "chapters": n, "figures": [...]}``.
     Raises ``ValueError`` when ``names`` is empty (no NER — names required).
     """
-    if not names:
+    from .characters import presence_report, resolve_character_settings
+
+    selection = resolve_character_settings(names, project_config or {})
+    if not selection.names:
         raise ValueError(
             "characters requires at least one name or alias pattern "
             "(no NER — the caller supplies the names)"
         )
-    config, resolved = resolve_document_config(text, language, **config_overrides)
-    from .characters import presence_report
+    config, resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
 
-    report = presence_report(text, names, config)
+    report = presence_report(text, selection.names, config, declared_pov=selection.declared_pov)
     return {"meta": _meta(resolved.key), **report}
 
 
@@ -278,15 +283,16 @@ def dashboard(
     flag_min_severity: int | None = None,
     min_chapters: int | None = None,
     project_config: Mapping[str, Any] | None = None,
+    names: Mapping[str, str] | Sequence[str] | None = None,
     **config_overrides: Any,
 ) -> str:
     """
     Renders the complete single-file HTML dashboard (self-contained, no CDN,
     deterministic). Returns the HTML document as a string.
 
-    ``project_config`` supplies thresholds, known corpus settings and scene registers; ``{}`` uses code
-    defaults without reading the current directory. Optional structure panels
-    and server controls require the lower-level renderer and an adapter.
+    ``project_config`` supplies thresholds, known corpus settings, character profiles and scene registers; ``{}`` uses code
+    defaults without reading the current directory. Other optional structure
+    panels and server controls require the lower-level renderer and an adapter.
     """
     config, resolved = resolve_document_config(text, language, project_config=project_config, **config_overrides)
     thresholds = resolve_thresholds(
@@ -303,7 +309,10 @@ def dashboard(
     from .markers import list_markers
 
     marker_items = list_markers(text)
+    from .characters import presence_report, resolve_character_settings
     from .scenes import scene_report_for_display
+
+    selection = resolve_character_settings(names, project_config or {})
     return render_analysis(
         analysis,
         resolved,
@@ -312,6 +321,8 @@ def dashboard(
         scenes=scene_report_for_display(text, config, (project_config or {}).get("scene_analysis"),
                                         premeasured_chapters=analysis.metrics.chapters),
         markers=marker_items if marker_items else None,
+        characters=(presence_report(text, selection.names, config, declared_pov=selection.declared_pov)
+                    if selection.names else None),
     )
 
 
@@ -384,7 +395,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "characters",
-                "purpose": "character presence per chapter (names or aliases)",
+                "purpose": "curated name mentions per chapter and separate author-declared POV",
                 "output": "text|json",
                 "schema_version": SCHEMA_VERSION,
             },
@@ -454,7 +465,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "research",
-                "purpose": "experimental local UTF-8 source archive, exact citations and SQLite lexical search; CLI uses --project or a verified current project directory",
+                "purpose": "experimental explicit-project archive: retained evidence, authored dossiers/claims/decisions and guarded revision workflows",
                 "output": "command-dependent",
                 "subcommands": command_metadata(),
                 "status": "experimental",

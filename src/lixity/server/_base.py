@@ -73,7 +73,7 @@ class ResponseMixin(WorkspaceState):
                 "default-src 'none'",
                 f"script-src 'nonce-{nonce}'",
                 "style-src 'unsafe-inline'",
-                "img-src 'self' data: blob:",
+                "img-src 'self' data: blob: https://tile.openstreetmap.org",
                 "font-src 'self' data:",
                 "media-src 'self' blob:",
                 "connect-src 'self'",

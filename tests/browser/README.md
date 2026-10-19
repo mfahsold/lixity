@@ -21,6 +21,9 @@ Before starting suites, the runner executes the support directory's Node tests.
 These check disposable-server startup, malformed readiness data, early exits,
 timeouts and cleanup. `--list` only lists suites. Native-server helpers keep
 readiness and termination handling shared without replacing the real HTTP flows.
+Large Python-generated JSON fixtures use a disposable file-backed transport.
+Complete dashboard HTML and bundled assets are retained without a fixed stdout
+pipe budget; success, generation failures and malformed JSON all clean up files.
 
 Localized suites retain all seven languages at desktop and mobile widths for
 rendering, labels and submitted machine values. Language-independent interaction

@@ -98,6 +98,64 @@ class TestDialogueReport(unittest.TestCase):
 
 
 class TestCharacterPresence(unittest.TestCase):
+    def test_literal_profiles_and_declared_pov_do_not_change_name_mentions(self):
+        from lixity.characters import resolve_character_settings
+
+        settings = {"names": ["Other"], "characters": {
+            "Mara Quinn": {"aliases": ["Mara", "Mara Quinn", "Mara"], "pov_in_chapters": [2]},
+            "R.E.": {"aliases": ["R.E."]},
+        }}
+        resolved = resolve_character_settings(None, settings)
+        text = '## One\n\nMara Quinn meets Mara and R.E. RXE.\n\n## Two\n\nShe waits.\n'
+        report = presence_report(text, resolved.names, DE, declared_pov=resolved.declared_pov)
+        figures = {f["name"]: f for f in report["figures"]}
+        self.assertEqual(set(figures), {"Mara Quinn", "R.E."})
+        self.assertEqual(figures["Mara Quinn"]["mentions"], 2)
+        self.assertEqual(figures["Mara Quinn"]["chapters_present"], [1])
+        self.assertEqual(figures["Mara Quinn"]["declared_pov_chapters"], [2])
+        self.assertEqual(figures["Mara Quinn"]["presence_ratio"], 0.5)
+        self.assertEqual(figures["R.E."]["mentions"], 1)
+
+    def test_character_resolution_distinguishes_absent_and_explicit_empty(self):
+        from lixity.characters import resolve_character_settings
+
+        self.assertEqual(resolve_character_settings(None, {"names": ["Mara"]}).names, ["Mara"])
+        self.assertFalse(resolve_character_settings(None, {"names": ["Mara"], "characters": {}}).names)
+        self.assertFalse(resolve_character_settings([], {"characters": {"Mara": {}}}).names)
+        self.assertEqual(resolve_character_settings(["Other"], {"characters": False}).names, ["Other"])
+
+    def test_invalid_active_profiles_and_pov_chapters_are_not_silent_defaults(self):
+        from lixity.characters import resolve_character_settings
+
+        invalid = [False, {"": {}}, {"Mara": {"unknown": True}}, {"Mara": {"aliases": "Mara"}},
+                   {"Mara": {"aliases": [""]}}, {"Mara": {"aliases": [4]}},
+                   *({"Mara": {"pov_in_chapters": value}} for value in ([True], [0], [-1], [1.5], [1, 1]))]
+        for profiles in invalid:
+            with self.subTest(profiles=profiles), self.assertRaises(ValueError):
+                resolve_character_settings(None, {"characters": profiles, "names": ["Mara"]})
+        resolved = resolve_character_settings(None, {"characters": {"Mara": {"pov_in_chapters": [2]}}})
+        with self.assertRaisesRegex(ValueError, "chapter"):
+            presence_report("## One\n\nMara waits.\n", resolved.names, DE, declared_pov=resolved.declared_pov)
+
+    def test_declared_pov_uses_exact_structural_numbers_after_inline_only_chapters(self):
+        from lixity.analyzer import CorpusAnalyzer
+        from lixity.characters import resolve_character_settings
+        from lixity.registers import resolve_chapter_registers
+
+        text = ('## Image\n\n![Mara](portrait.png)\n\n## Code\n\n`Mara`\n\n'
+                + "\n\n".join(f"## Chapter {number}\n\nMara opens the door." for number in range(3, 13)))
+        resolved = resolve_character_settings(None, {"characters": {"Mara": {"pov_in_chapters": [1]}}})
+        report = presence_report(text, resolved.names, DE, declared_pov=resolved.declared_pov)
+        self.assertEqual(report["chapters"], 12)
+        self.assertEqual(report["figures"][0]["declared_pov_chapters"], [1])
+        self.assertEqual(report["figures"][0]["chapters_present"], list(range(3, 13)))
+        metrics = CorpusAnalyzer(DE).analyze_text(text)
+        self.assertEqual(resolve_chapter_registers(metrics.chapters, {"1": "voice"}), {1: "voice"})
+        self.assertEqual([c.num for c in metrics.chapters], list(range(1, 13)))
+        self.assertIsNone(metrics.chapters[0].hd_d)
+        self.assertEqual(metrics.chapters[0].style_se, {})
+
+
     def test_mentions_and_chapters(self):
         figures = character_presence(MANUSCRIPT, ["Anna", "Matthias"], DE)
         by_name = {figure.name: figure for figure in figures}
@@ -113,8 +171,23 @@ class TestCharacterPresence(unittest.TestCase):
         self.assertEqual(report["chapters"], 2)
 
     def test_aliases_map_to_one_figure(self):
-        figures = character_presence(MANUSCRIPT, {"Anna|Anni": "Anna"}, DE)
+        figures = character_presence("## One\n\nAnna meets Anni.\n", {"Anna": "Anna", "Anni": "Anna"}, DE)
         self.assertEqual(figures[0].name, "Anna")
+        self.assertEqual(figures[0].mentions, 2)
+
+    def test_overlapping_aliases_and_captures_count_each_mention_once(self):
+        figures = character_presence(
+            "## One\n\nMara Quinn met Mara.\n", {"(Mara)": "Mara", "Mara Quinn": "Mara"}, DE)
+        self.assertEqual([(f.name, f.mentions) for f in figures], [("Mara", 2)])
+
+    def test_only_visible_prose_names_count_without_inferring_presence(self):
+        text = ('## One\n\n[Mara](https://example.org/Mara) was not there. '
+                '`Mara` ![Mara](portrait.png) ![Mara][portrait] <!-- Mara -->\n\n'
+                '[portrait]: https://example.org/Mara\n\n```text\nMara\n```\n\n'
+                '## Two\n\nShe opens the door.\n')
+        figure = character_presence(text, ["Mara"], DE)[0]
+        self.assertEqual(figure.mentions, 1)
+        self.assertEqual(figure.chapters_present, [1])
 
     def test_longest_gap(self):
         text = (

@@ -1,11 +1,11 @@
 // The author can search the manuscript itself, not only the research archive.
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
-const {spawnSync} = require('node:child_process');
 const path = require('node:path');
 const assert = require('node:assert/strict');
 
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const root = path.resolve(__dirname, '../..');
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const fixtures = pythonFixture(`
 import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
@@ -31,10 +31,7 @@ def standalone(*args, **kwargs):
 render.__globals__['render_dashboard'] = standalone
 fixtures['en']['standalone_html'] = render()
 print(json.dumps(fixtures))
-`],
-  {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, encoding: 'utf8', maxBuffer: 8 * 1024 * 1024});
-assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
-const fixtures = JSON.parse(fixture.stdout);
+`, {root});
 
 (async () => {
   const browser = await launchChromium();

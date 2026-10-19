@@ -173,7 +173,9 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
     allowed = ("[data-rtab]:not([data-rtab=search]):not([data-rtab=grounding]), "
                "[data-claim-view], #r-open-timeline, #r-review-refresh, [data-filter-tag], "
                "[data-load-evidence], [data-research-history], [data-research-revision], #research-revision-history-tab, "
-               "[data-close-modal], [data-dossier-enlarge], #modal-dossier-image-enlarge button, [data-source-view], [data-source-toggle]")
+               "[data-close-modal], [data-dossier-enlarge], #modal-dossier-image-enlarge button, "
+               "[data-geo-select], [data-geo-map], [data-geo-fit], .leaflet-control-zoom a, [data-diagram-enlarge], "
+               "[data-source-view], [data-source-toggle]")
     hidden = ("#project-controls, .view-navigation, #view-pane-analysis, #view-pane-project, #welcome-hero, "
               "#research-setup-guide, #research-init-box, #r-local-import, #zotero-box, #research-revision-batch-review, "
               "[data-rtab=search], [data-rtab=grounding], #rtab-search, #rtab-grounding, #rtab-dossiers > .ctl-group, "
@@ -219,7 +221,8 @@ document.addEventListener("DOMContentLoaded", function () {{
 </script>
 """
     restrictions = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
-                    'script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src \'self\' data:; '
+                    'script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; '
+                    'img-src \'self\' data: blob: https://tile.openstreetmap.org; '
                     'connect-src \'self\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
     document = document.replace("</head>", restrictions + head + policy + "</head>", 1)
     notice = _notice(f"Lixity {__version__} · read-only research example · Current main (unreleased)", [
@@ -231,7 +234,9 @@ document.addEventListener("DOMContentLoaded", function () {{
         "and source-return actions are disabled. The retained passage, authored claim and manuscript quote are separate records.",
         "The customs log, weather notes, manuscript, people, Warehouse 4 incident and journeys are fictional demonstration records. "
         "The dated public-domain visuals provide setting references and do not verify events or conditions in 1923. "
-        "Select a dossier image to enlarge it. Coordinates are approximate author-entered examples; the sketch has no background tiles and does not calculate routes.",
+        "Select a dossier image or diagram to enlarge and zoom it. Coordinates are approximate author-entered examples. "
+        "Interactive maps start with offline vectors; OpenStreetMap tiles load only when explicitly enabled and reveal the visible area to that provider. "
+        "No route or line of sight is calculated.",
         f"Generated with Lixity {__version__}. This page cannot import, edit or save records.",
     ], [("../guides/research-pdf.html", "Research walkthrough"), ("../research/examples/harbour-manuscript.md", "Synthetic manuscript"),
         ("../index.html", "Lixity home"), ("#research-source-credits", "Image source credits")])
@@ -349,6 +354,9 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         title="Warehouse 4 case notes",
         body="## Timeline\n\nCompare the night watchman's account with the synthetic customs log.\n\n"
         "## Open Questions\n\nKeep source quotations separate from the author's fictional scene decisions.\n\n"
+        "## Evidence trail\n\nThese are explicit author associations, not automatic fact checks.\n\n"
+        "```mermaid\nflowchart LR\n subgraph Retained evidence\n  P[Customs log passage]\n end\n"
+        " P --> C[Authored claim]\n C --> Q[Saved manuscript quote]\n C --> D[Author decision]\n```\n\n"
         "## Historical map\n\nCirca-1900 reference; not evidence of the invented 1923 incident.\n\n"
         "## Historical harbour view\n\n1890–1900 photochrom reference; not a photograph of the fictional event.",
         tags=["Warehouse", "Timeline"],
@@ -878,7 +886,7 @@ def main() -> int:
                 height,
             )
     for suffix, width in (("", 1480), ("-mobile", 390)):
-        for visual in ("image", "photo", "geography"):
+        for visual in ("image", "photo", "geography", "diagram", "image-zoom"):
             _queue_capture(research_workspace, OUT_DIR / f"dashboard-dossier-{visual}{suffix}.png", width, 1000)
 
     cli_research_text = (

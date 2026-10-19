@@ -253,6 +253,21 @@ def test_publication_discovery_describes_defaults_and_normalized_text_limits():
     assert "maxLength" not in fields["publisher_name"], "Bounds apply after normalization, not to raw JSON text"
     assert "0001" in schema["description"] and "9999" in schema["description"]
     assert "ISBN" in schema["description"]
+
+
+def test_character_discovery_uses_the_owning_profile_schema_without_project_values():
+    from lixity.characters import CharacterProfile
+
+    settings = api.about()["configuration"]
+    assert "characters" in settings["accepted_keys"]
+    assert "characters" in settings["project_only_keys"]
+    schema = settings["characters_schema"]
+    assert schema["type"] == "object"
+    assert schema["additionalProperties"] == CharacterProfile.model_json_schema()
+    assert schema["additionalProperties"]["additionalProperties"] is False
+    assert schema["additionalProperties"]["properties"]["pov_in_chapters"]["items"] == {
+        "minimum": 1, "type": "integer",
+    }
     assert PublicationSettings(publisher_name=" " * 1000 + "Synthetic publisher").publisher_name == "Synthetic publisher"
 
 

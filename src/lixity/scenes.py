@@ -78,7 +78,7 @@ def scene_report(
             measured = measured_chapters.get(chapter_num) if not scene_breaks else None
             if measured is None or measured.title != title:
                 measured = analyzer.measure_unit(part)
-            if measured is None:
+            if measured is None or measured.words == 0:
                 continue
             identifier = f"{chapter_num}:{index}"
             group = assignments.get(identifier)

@@ -67,9 +67,9 @@
     return geometry.type === "Point" ? geometry.coordinates.join(", ") :
       geometry.type === "LineString" ? lines(geometry.coordinates) : geometry.coordinates.map(lines).join("\n\n");
   }
-  function sketch(value) {
+  function coordinateFrame(value) {
     var points = value.features.flatMap(function(feature) { return geometryPoints(feature.geometry); });
-    if (!points.length) return "";
+    if (!points.length) return null;
     // Place the longitude seam in the largest empty gap, so a local dateline
     // crossing stays local. This flat coordinate sketch is not a projection.
     var longitudes = points.map(function(point) { return (point[0] + 360) % 360; }).sort(function(a, b) { return a - b; });
@@ -78,43 +78,218 @@
       var next = index + 1 < longitudes.length ? longitudes[index + 1] : longitudes[0] + 360;
       if (next - lon > gap) { gap = next - lon; start = next % 360; }
     });
-    function longitude(lon) { return ((lon + 360) % 360 - start + 360) % 360; }
+    return {points: points, start: start, longitude: function(lon) { return ((lon + 360) % 360 - start + 360) % 360 + start; }};
+  }
+  function sketch(value, interactive) {
+    var frame = coordinateFrame(value);
+    if (!frame) return "";
+    var points = frame.points;
+    function longitude(lon) { return frame.longitude(lon) - frame.start; }
     var xs = points.map(function(point) { return longitude(point[0]); }), ys = points.map(function(point) { return point[1]; });
     var minX = Math.min.apply(null, xs), maxX = Math.max.apply(null, xs), minY = Math.min.apply(null, ys), maxY = Math.max.apply(null, ys);
     var spanX = Math.max(maxX - minX, .01), spanY = Math.max(maxY - minY, .01), scale = Math.min(560 / spanX, 250 / spanY);
     function xy(point) { return [(300 + (longitude(point[0]) - (minX + maxX) / 2) * scale).toFixed(2),
       (155 - (point[1] - (minY + maxY) / 2) * scale).toFixed(2)]; }
-    var shapes = value.features.map(function(feature, index) {
+    var ordered = value.features.map(function(feature, index) { return {feature: feature, index: index}; });
+    // A route can end at a point. Paint points last so their controls remain
+    // reachable instead of being covered by the route's endpoint.
+    ordered.sort(function(a, b) {
+      return Number(a.feature.geometry && a.feature.geometry.type === "Point") - Number(b.feature.geometry && b.feature.geometry.type === "Point");
+    });
+    var shapes = ordered.map(function(entry) {
+      var feature = entry.feature, index = entry.index;
       var geometry = feature.geometry;
       if (!geometry) return "";
-      var title = '<title>' + safe((index + 1) + ". " + feature.properties.label) + '</title>';
+      var name = safe((index + 1) + ". " + feature.properties.label);
+      var title = '<title>' + name + '</title>';
+      var attributes = interactive ? ' data-geo-select="' + index + '" tabindex="0" role="button" aria-pressed="false" aria-label="' + name + '"' : '';
       if (geometry.type === "Point") {
         var point = xy(geometry.coordinates);
-        return '<g>' + title + '<circle cx="' + point[0] + '" cy="' + point[1] + '" r="5"/><text x="' + (Number(point[0]) + 9) + '" y="' + (Number(point[1]) - 8) + '">' + (index + 1) + '</text></g>';
+        return '<g' + attributes + '>' + title + '<circle cx="' + point[0] + '" cy="' + point[1] + '" r="5"/><text x="' + (Number(point[0]) + 9) + '" y="' + (Number(point[1]) - 8) + '">' + (index + 1) + '</text></g>';
       }
       var rings = geometry.type === "Polygon" ? geometry.coordinates : [geometry.coordinates];
       var paths = rings.map(function(ring) { return ring.map(function(point, i) { return (i ? "L" : "M") + xy(point).join(" "); }).join(" ") + (geometry.type === "Polygon" ? " Z" : ""); }).join(" ");
       var anchor = xy(geometry.type === "LineString" ? geometry.coordinates[Math.floor(geometry.coordinates.length / 2)] : rings[0][0]);
-      return '<g>' + title + '<path class="geography-' + (geometry.type === "Polygon" ? "area" : "route") + '" d="' + paths + '" fill-rule="evenodd"/>' +
+      return '<g' + attributes + '>' + title + '<path class="geography-' + (geometry.type === "Polygon" ? "area" : "route") + '" d="' + paths + '" fill-rule="evenodd"/>' +
         '<text x="' + (Number(anchor[0]) + 9) + '" y="' + (Number(anchor[1]) - 8) + '">' + (index + 1) + '</text></g>';
     }).join("");
-    return '<svg class="geography-sketch" viewBox="0 0 600 310" role="img" aria-label="' + safe(label("sketch")) + '"><title>' + safe(label("sketch")) + '</title>' + shapes + '</svg>';
+    return '<svg class="geography-sketch" viewBox="0 0 600 310" role="' + (interactive ? 'group' : 'img') + '" aria-label="' + safe(label("sketch")) + '"><title>' + safe(label("sketch")) + '</title>' + shapes + '</svg>';
   }
   function html(value) {
     if (!value) return "";
     try { value = validate(value); } catch (_) { return '<p class="ctl-note">' + safe(label("invalid")) + '</p>'; }
     if (!value.features.length) return "";
-    return '<section class="dossier-geography"><h4>' + safe(label("title")) + '</h4><p class="ctl-note">' + safe(label("hint")) + '</p>' + sketch(value) +
-      '<ol class="geography-feature-list">' + value.features.map(function(feature) {
+    var canMap = Boolean(coordinateFrame(value));
+    var mapControls = canMap ? '<button type="button" class="ctl ctl-sm" data-geo-map aria-expanded="false">' + safe(label("map")) + '</button>' +
+      '<div class="geography-map-tools" hidden><button type="button" class="ctl ctl-sm" data-geo-fit>' + safe(label("fit")) + '</button>' +
+      '<label class="form-checkbox"><input type="checkbox" data-geo-basemap/><span>' + safe(label("basemap")) + '</span></label>' +
+      '<p class="ctl-note geography-basemap-hint">' + safe(label("basemap_hint")) + '</p></div>' +
+      '<div class="geography-map" hidden role="group" aria-label="' + safe(label("map_label")) + '"></div><p class="ctl-status geography-map-status" role="status"></p>' : '';
+    return '<section class="dossier-geography" data-geo-geometries="' + safe(JSON.stringify(value.features.map(function(feature) { return feature.geometry; }))) + '"><h4>' + safe(label("title")) + '</h4><p class="ctl-note">' + safe(label("hint")) + '</p>' +
+      '<p class="ctl-note geography-navigation-hint">' + safe(label("navigation_hint")) + '</p>' + mapControls + sketch(value, true) +
+      '<ol class="geography-feature-list">' + value.features.map(function(feature, index) {
         var props = feature.properties, geometry = feature.geometry;
         var meta = [label(geometry ? geometry.type : "unknown"), props.time_period, (props.actors || []).join(", "),
           props.transport ? label(props.transport) : "", props.feature_type].filter(Boolean);
-        return '<li><strong>' + safe(props.label) + '</strong><p class="ctl-note">' + meta.map(safe).join(" · ") + '</p>' +
+        return '<li data-geo-feature-index="' + index + '"><button type="button" class="ctl ctl-link geography-feature-select" data-geo-select="' + index + '" aria-pressed="false"><strong>' + safe(props.label) + '</strong></button><p class="ctl-note">' + meta.map(safe).join(" · ") + '</p>' +
           (props.description ? '<p>' + safe(props.description) + '</p>' : '') +
           (props.waypoint_labels && props.waypoint_labels.length ? '<p>' + props.waypoint_labels.map(safe).join(" → ") + '</p>' : '') +
           (geometry ? '<details><summary>' + safe(label("coordinates")) + '</summary><pre>' + safe(coordinateText(geometry)) + '</pre></details>' : '') + '</li>';
       }).join("") + '</ol></section>';
   }
+  function selectFeature(control) {
+    var root = control.closest(".dossier-geography");
+    if (!root) return;
+    var index = control.dataset.geoSelect;
+    if (!/^(0|[1-9]\d*)$/.test(index || "")) return;
+    var entry = root.querySelector('li[data-geo-feature-index="' + index + '"]');
+    if (!entry) return;
+    // Selection belongs only to this rendered view; repeated history/companion
+    // hosts share no state, and replacing the HTML discards the old selection.
+    root.querySelectorAll("[data-geo-select]").forEach(function(node) {
+      var selected = node.dataset.geoSelect === index;
+      node.classList.toggle("is-selected", selected);
+      node.setAttribute("aria-pressed", selected ? "true" : "false");
+    });
+    root.querySelectorAll("li[data-geo-feature-index]").forEach(function(node) {
+      node.classList.toggle("is-selected", node === entry);
+    });
+    var coordinates = entry.querySelector("details");
+    if (coordinates) coordinates.open = true;
+    if (control.closest("svg")) {
+      entry.querySelector("button[data-geo-select]").focus({preventScroll: true});
+      entry.scrollIntoView({block: "nearest"});
+    }
+  }
+  var maps = new Map();
+  function mapContext() {
+    return [typeof researchContextToken === "function" ? researchContextToken() : "",
+      typeof researchSelectionProjectId === "undefined" ? "" : researchSelectionProjectId].join("\n");
+  }
+  function visible(root) { return root.isConnected && root.getClientRects().length > 0; }
+  function stopTiles(state) {
+    var tiles = state.tiles;
+    state.tiles = null;
+    if (tiles) state.map.removeLayer(tiles);
+    var checkbox = state.root.querySelector("[data-geo-basemap]");
+    if (checkbox) checkbox.checked = false;
+  }
+  function stopMap(state) {
+    stopTiles(state);
+    state.map.remove();
+    delete state.host._geographyMap;
+    state.host.replaceChildren(); state.host.hidden = true;
+    state.root.classList.remove("geography-map-active");
+    var tools = state.root.querySelector(".geography-map-tools");
+    if (tools) tools.hidden = true;
+    var toggle = state.root.querySelector("[data-geo-map]");
+    if (toggle) { toggle.setAttribute("aria-expanded", "false"); toggle.textContent = label("map"); }
+    maps.delete(state.root);
+  }
+  function fit(state) {
+    var bounds = state.layers.getBounds();
+    if (bounds.isValid()) state.map.fitBounds(bounds, {padding: [24, 24], maxZoom: 15, animate: false});
+  }
+  function startMap(root) {
+    var status = root.querySelector(".geography-map-status"), host = root.querySelector(".geography-map");
+    var state;
+    try {
+      if (!window.L || !visible(root)) throw invalid();
+      var value = validate({type: "FeatureCollection", features: JSON.parse(root.dataset.geoGeometries).map(function(geometry, index) {
+        return {type: "Feature", geometry: geometry, properties: {label: root.querySelector('button[data-geo-select="' + index + '"]').textContent}};
+      })});
+      var frame = coordinateFrame(value);
+      if (!frame) throw invalid();
+      host.hidden = false; root.classList.add("geography-map-active");
+      var map = window.L.map(host, {zoomControl: false, scrollWheelZoom: false, minZoom: 0, maxZoom: 19,
+        zoomAnimation: false, fadeAnimation: false, markerZoomAnimation: false, inertia: false});
+      host._geographyMap = map;
+      state = {root: root, host: host, map: map, tiles: null, context: mapContext(), layers: null};
+      maps.set(root, state);
+      map.setView([frame.points[0][1], frame.longitude(frame.points[0][0])], 5, {animate: false});
+      window.L.control.zoom({zoomInTitle: label("zoom_in"), zoomOutTitle: label("zoom_out")}).addTo(map);
+      state.layers = window.L.geoJSON(value, {
+        coordsToLatLng: function(coords) { return window.L.latLng(coords[1], frame.longitude(coords[0])); },
+        pointToLayer: function(feature, point) { return window.L.circleMarker(point, {radius: 7}); },
+        style: {color: "var(--accent)", weight: 3, fillOpacity: .12},
+      }).addTo(map);
+      state.layers.eachLayer(function(layer) {
+        var index = value.features.indexOf(layer.feature), node = layer.getElement();
+        node.dataset.geoSelect = String(index); node.setAttribute("tabindex", "0");
+        node.setAttribute("role", "button"); node.setAttribute("aria-pressed", "false");
+        node.setAttribute("aria-label", (index + 1) + ". " + layer.feature.properties.label);
+        layer.on("click", function() { selectFeature(node); });
+        layer.bindTooltip(String(index + 1), {permanent: true, direction: "top", className: "geography-map-number"});
+        if (layer.feature.geometry.type === "Point") layer.bringToFront();
+      });
+      var drawing = host.querySelector(".leaflet-overlay-pane > svg");
+      if (drawing) { drawing.setAttribute("role", "group"); drawing.setAttribute("aria-label", label("map_label")); }
+      fit(state);
+      root.querySelector(".geography-map-tools").hidden = false;
+      var toggle = root.querySelector("[data-geo-map]");
+      toggle.setAttribute("aria-expanded", "true"); toggle.textContent = label("show_sketch");
+      status.textContent = "";
+      var selected = root.querySelector('button[data-geo-select][aria-pressed="true"]');
+      if (selected) selectFeature(selected);
+    } catch (_) {
+      if (state) stopMap(state);
+      else { host.hidden = true; root.classList.remove("geography-map-active"); }
+      status.textContent = label("map_failed");
+    }
+  }
+  document.addEventListener("click", function(event) {
+    var toggle = event.target.closest("[data-geo-map], [data-geo-fit]");
+    if (toggle) {
+      var root = toggle.closest(".dossier-geography"), state = maps.get(root);
+      if (state && (!state.host.isConnected || state.host !== root.querySelector(".geography-map"))) { stopMap(state); state = null; }
+      if (toggle.hasAttribute("data-geo-fit")) { if (state) fit(state); }
+      else if (state) stopMap(state);
+      else startMap(root);
+      return;
+    }
+    var control = event.target.closest("[data-geo-select]");
+    if (control) selectFeature(control);
+  });
+  document.addEventListener("keydown", function(event) {
+    var control = event.target.closest("svg [data-geo-select]");
+    if (!control || !["Enter", " "].includes(event.key)) return;
+    event.preventDefault();
+    selectFeature(control);
+  });
+  document.addEventListener("change", function(event) {
+    if (!event.target.matches("[data-geo-basemap]")) return;
+    var root = event.target.closest(".dossier-geography"), state = maps.get(root);
+    if (!state || state.context !== mapContext() || !visible(root)) { event.target.checked = false; return; }
+    if (!event.target.checked) { stopTiles(state); return; }
+    root.querySelector(".geography-map-status").textContent = "";
+    var tiles = window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
+      maxZoom: 19, keepBuffer: 0, updateWhenIdle: true, referrerPolicy: "origin",
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
+    });
+    state.tiles = tiles;
+    tiles.on("tileerror", function() {
+      if (state.tiles !== tiles) return;
+      stopTiles(state); root.querySelector(".geography-map-status").textContent = label("basemap_failed");
+    });
+    tiles.addTo(state.map);
+  });
+  document.addEventListener("click", function(event) {
+    // End online approval before a navigation handler can resize a hidden map.
+    if (event.target.closest("[data-view], [data-switch-view], [data-rtab]")) maps.forEach(stopTiles);
+  }, true);
+  var checkingMaps = false;
+  new MutationObserver(function() {
+    if (!maps.size || checkingMaps) return;
+    checkingMaps = true;
+    queueMicrotask(function() {
+      checkingMaps = false;
+      maps.forEach(function(state) {
+        if (!visible(state.root) || !state.host.isConnected || state.context !== mapContext()) stopMap(state);
+      });
+    });
+  }).observe(document.documentElement, {subtree: true, childList: true, attributes: true,
+    attributeFilter: ["class", "style", "hidden", "open", "data-research-token"]});
+  window.addEventListener("pagehide", function() { maps.forEach(stopMap); });
   function mount(host, identifier, value) {
     var root = document.createElement("details"); root.id = identifier + "-editor"; root.className = "geography-editor research-details";
     var summary = document.createElement("summary"); summary.textContent = label("title"); root.appendChild(summary);

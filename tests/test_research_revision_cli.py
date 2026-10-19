@@ -21,6 +21,143 @@ class TestResearchRevisionCli(unittest.TestCase):
             status = cli.run(self.parse(*args))
         return status, json.loads(output.getvalue())
 
+
+    def test_invalid_dossier_files_fail_before_each_operation_can_write(self):
+        from lixity.research.repository import Repository
+        from tests.research_support import capture_research
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            api.init(project, title="Synthetic file validation")
+            identifier = api.create_dossier(project, "Notes", "Keep authored content.")["dossier_id"]
+            invalid_utf8 = project / "invalid.md"
+            invalid_utf8.write_bytes(b"\xff")
+            before = Repository(project).snapshot().digest
+            for bad_file in (project / "missing.md", project, invalid_utf8):
+                for mode in ((), ("--prepare", "--base-revision", "1"), ("--diff",),
+                             ("--update", "--latest", "--change-kind", "correction", "--reason", "Synthetic update")):
+                    selector = (identifier,) if mode else ()
+                    with self.subTest(file=bad_file.name, mode=mode):
+                        status, output, errors = capture_research("dossier", *selector, "--project", str(project),
+                                                                 "--title", "Notes", "--file", str(bad_file), *mode)
+                        self.assertEqual((status, output), (1, ""))
+                        self.assertIn("--file", errors)
+                        self.assertEqual(Repository(project).snapshot().digest, before)
+
+    def test_file_and_literal_body_share_create_prepare_diff_and_update(self):
+        from tests.research_support import capture_research
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            api.init(project, title="Synthetic authored inputs")
+            content = "# Target\r\n\r\nOriginal.  \r\n"
+            draft = project / "note.md"
+            draft.write_bytes(content.encode("utf-8"))
+            identifiers = []
+            for flag, value in (("--file", str(draft)), ("--body", content)):
+                status, created = self.run_json("dossier", "--project", str(project), "--title", "Notes", flag, value)
+                self.assertEqual(status, 0)
+                identifiers.append(created["dossier_id"])
+                self.assertEqual(api.get_dossier(project, identifiers[-1])["body"], content)
+            for flag, value in (("--file", str(draft)), ("--body", content)):
+                identifier = identifiers[0] if flag == "--file" else identifiers[1]
+                status, preview = self.run_json("dossier", identifier, "--project", str(project),
+                                                "--prepare", "--base-revision", "1", flag, value)
+                self.assertEqual(status, 0)
+                self.assertFalse(preview["has_changes"])
+                status, output, errors = capture_research("dossier", identifier, "--project", str(project),
+                                                         "--diff", flag, value)
+                self.assertEqual((status, errors), (0, ""))
+                self.assertIn("(no changes)", output)
+                status, saved = self.run_json("dossier", identifier, "--project", str(project),
+                                              "--update", "--latest", "--change-kind", "correction",
+                                              "--reason", "Synthetic content update", flag, value)
+                self.assertEqual(status, 0)
+                self.assertEqual(saved["record"]["body"], content)
+
+    def test_exported_dossier_edits_apply_the_reviewed_packet_not_a_later_file(self):
+        from lixity.research.repository import Repository
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            api.init(project, title="Synthetic Markdown workflow")
+            identifier = api.create_dossier(project, "Notes", "# Notes\n\nOriginal body.\n")["dossier_id"]
+            edit_file, packet_file = project / "draft.md", project / "reviewed.json"
+            before = Repository(project).snapshot().digest
+            status, _ = self.run_json("dossier", identifier, "--project", str(project),
+                                      "--export-edit", str(edit_file))
+            self.assertEqual(status, 0)
+            self.assertEqual(Repository(project).snapshot().digest, before)
+            edit_file.write_bytes(edit_file.read_bytes().replace(b"Original body.", b"Reviewed body."))
+            status, preview = self.run_json("dossier", identifier, "--project", str(project),
+                                            "--prepare", "--edit-file", str(edit_file))
+            self.assertEqual(status, 0)
+            self.assertTrue(preview["ready"])
+            self.assertIn("Reviewed body.", preview["changes"]["body"])
+            status, packet = self.run_json("dossier", identifier, "--project", str(project),
+                                           "--prepare", "--edit-file", str(edit_file), "--output", str(packet_file),
+                                           "--change-kind", "correction", "--reason", "Reviewed external draft")
+            self.assertEqual(status, 0)
+            self.assertEqual(packet["schema_version"], "research-revision-batch-local/1")
+            self.assertEqual(json.loads(packet_file.read_text(encoding="utf-8")), packet)
+            self.assertEqual(Repository(project).snapshot().digest, before)
+            edit_file.write_bytes(edit_file.read_bytes().replace(b"Reviewed body.", b"Unreviewed newer body."))
+            status, _ = self.run_json("revise-batch", "--project", str(project), "--file", str(packet_file),
+                                      "--apply", "--expected-snapshot", packet["snapshot"])
+            self.assertEqual(status, 0)
+            saved = api.get_record(project, "dossier", identifier)
+            self.assertEqual(saved["record"]["revision"], 2)
+            self.assertEqual(saved["record"]["body"], "# Notes\n\nReviewed body.\n")
+            self.assertEqual(api.list_sources(project)["sources"], [])
+
+    def test_unchanged_or_conflicting_edit_previews_never_emit_a_packet(self):
+        from tests.research_support import revise_record
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            api.init(project, title="Synthetic edit reconciliation")
+            identifier = api.create_dossier(project, "Notes", "Original body.")["dossier_id"]
+            edit_file, packet_file = project / "draft.md", project / "reviewed.json"
+            self.run_json("dossier", identifier, "--project", str(project), "--export-edit", str(edit_file))
+            arguments = ("dossier", identifier, "--project", str(project), "--prepare", "--edit-file", str(edit_file),
+                         "--output", str(packet_file), "--change-kind", "correction", "--reason", "Synthetic review")
+            status, preview = self.run_json(*arguments)
+            self.assertEqual(status, 0)
+            self.assertFalse(preview["has_changes"])
+            self.assertFalse(packet_file.exists())
+            revise_record(project, "dossier", identifier, {"body": "Concurrent body."})
+            edit_file.write_bytes(edit_file.read_bytes().replace(b"Original body.", b"Draft body."))
+            status, preview = self.run_json(*arguments)
+            self.assertEqual(status, 0)
+            self.assertFalse(preview["ready"])
+            self.assertEqual(preview["conflicts"][0]["field"], "body")
+            self.assertFalse(packet_file.exists())
+
+    def test_reviewed_packet_cannot_be_rebased_by_replacing_the_apply_snapshot(self):
+        from lixity.research.repository import Repository
+        from tests.research_support import capture_research, retained_files
+
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            api.init(project, title="Synthetic packet binding")
+            identifier = api.create_dossier(project, "Notes", "Original body.")["dossier_id"]
+            packet = api.prepare_record_revisions(project, [{"kind": "dossier", "id": identifier,
+                "expected_revision": 1, "changes": {"body": "Reviewed body."},
+                "change_kind": "correction", "reason": "Synthetic review"}])
+            packet_file = project / "reviewed.json"
+            api.create_dossier(project, "Unrelated", "Another writer's note.")
+            current = Repository(project).snapshot()
+            for changed in ({}, {"snapshot": current.digest,
+                                  "project_id": "urn:uuid:00000000-0000-4000-8000-000000000099"}):
+                with self.subTest(fields=changed):
+                    packet_file.write_text(json.dumps(packet | changed), encoding="utf-8")
+                    before = retained_files(project)
+                    status, output, errors = capture_research("revise-batch", "--project", str(project),
+                        "--file", str(packet_file), "--apply", "--expected-snapshot", current.digest)
+                    self.assertEqual((status, output), (1, ""))
+                    self.assertTrue("snapshot" in errors.lower() or "project" in errors.lower())
+                    self.assertEqual(retained_files(project), before)
+
     def test_prepare_revision_is_read_only_and_passes_explicit_resolutions(self):
         preview = {"ready": True, "changes": {"title": "Mine"}, "conflicts": []}
         with patch.object(api, "prepare_record_revision", return_value=preview) as prepare, \
@@ -54,17 +191,26 @@ class TestResearchRevisionCli(unittest.TestCase):
             create.assert_not_called()
             inspect.assert_not_called()
 
-    def test_prepare_section_uses_pinned_body_not_latest_body(self):
-        with patch.object(api, "get_record", return_value={"record": {"body": "# Target\n\nBase.\n\n# Other\n\nOriginal.\n"}}) as read, \
-                patch.object(api, "get_dossier") as latest, \
-                patch.object(api, "prepare_record_revision", return_value={"ready": True}) as prepare:
-            self.run_json("dossier", "--project", "/synthetic", "--dossier-id", "urn:uuid:dossier",
-                          "--prepare", "--base-revision", "1", "--section", "Target", "--file", "Replacement.")
-        read.assert_called_once_with("/synthetic", "dossier", "urn:uuid:dossier", revision=1)
-        latest.assert_not_called()
-        submitted = prepare.call_args.kwargs["changes"]["body"]
-        self.assertIn("Replacement.", submitted)
-        self.assertIn("Original.", submitted)
+    def test_prepare_section_merges_other_sections_and_dossier_fields(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            api.init(project, title="Synthetic section draft")
+            identifier = api.create_dossier(project, "Base title", "# Target\n\nBase.\n\n# Other\n\nOriginal.\n")["dossier_id"]
+            reviewed = api.get_record(project, "dossier", identifier)
+            api.revise_record(project, "dossier", identifier,
+                              expected_snapshot=reviewed["snapshot"], expected_revision=1,
+                              changes={"body": reviewed["record"]["body"].replace("Original.", "Concurrent other.")},
+                              change_kind="correction", reason="Synthetic concurrent section edit")
+            before = api.get_record(project, "dossier", identifier)
+            status, preview = self.run_json("dossier", identifier, "--project", str(project),
+                                           "--prepare", "--base-revision", "1", "--title", "My title",
+                                           "--section", "Target", "--body", "Replacement.")
+            self.assertEqual(status, 0)
+            self.assertTrue(preview["ready"])
+            self.assertEqual(preview["changes"]["title"], "My title")
+            self.assertIn("Replacement.", preview["changes"]["body"])
+            self.assertIn("Concurrent other.", preview["changes"]["body"])
+            self.assertEqual(api.get_record(project, "dossier", identifier), before)
 
     def test_prepare_modes_and_resolution_shape_fail_without_writes(self):
         with patch.object(api, "prepare_record_revision") as prepare, patch.object(api, "revise_record") as revise:
@@ -211,7 +357,7 @@ class TestResearchRevisionCli(unittest.TestCase):
 
             status, dossier = self.run_json(
                 "dossier", "--project", str(project), "--title", "Archive note",
-                "--file", "Synthetic note.", "--actor", "dossier-author",
+                "--body", "Synthetic note.", "--actor", "dossier-author",
             )
             self.assertEqual(status, 0)
             status, claim = self.run_json(
@@ -249,7 +395,7 @@ class TestResearchRevisionCli(unittest.TestCase):
             current = api.get_record(project, "dossier", dossier_id)
             update = (
                 "dossier", "--project", str(project), "--dossier-id", dossier_id,
-                "--update", "--file", "Corrected note.",
+                "--update", "--body", "Corrected note.",
                 "--expected-snapshot", current["snapshot"], "--expected-revision", "1",
                 "--change-kind", "correction", "--reason", "Correct the note",
             )
@@ -364,12 +510,31 @@ class TestResearchRevisionCli(unittest.TestCase):
             self.assertIn("stale", err_buf.getvalue())
 
     def test_cli_dossier_summary_section_and_section_update(self):
+        from tests.research_support import capture_research, retained_files
+
         with tempfile.TemporaryDirectory() as td:
             project = Path(td) / "project"
             api.init(project, title="Dossier Project")
             body = "# Overview\n\nInitial facts.\n\n## Section A\n\nContent of A.\n\n## Section B\n\nContent of B."
             dossier = api.create_dossier(project, "Doc Dossier", body)
             did = dossier["dossier_id"]
+
+            before = retained_files(project)
+            modes = (
+                (), ("--summary",), ("--history",), ("--diff", "--body", "Replacement."),
+                ("--prepare", "--base-revision", "1", "--body", "Replacement."),
+                ("--update", "--latest", "--body", "Replacement.",
+                 "--change-kind", "correction", "--reason", "Synthetic section update"),
+            )
+            for heading in ("", " \t"):
+                for mode in modes:
+                    with self.subTest(section=heading, mode=mode):
+                        status, output, errors = capture_research(
+                            "dossier", did, "--project", str(project), "--section", heading, *mode)
+                        self.assertEqual((status, output), (1, ""))
+                        self.assertIn("--section", errors)
+                        self.assertIn("heading", errors)
+                        self.assertEqual(retained_files(project), before)
 
             # CLI --summary
             status, summary = self.run_json(
@@ -414,7 +579,7 @@ class TestResearchRevisionCli(unittest.TestCase):
                     "--change-kind", "correction", "--reason", "Missing file",
                 ))
             self.assertNotEqual(err_status, 0)
-            self.assertIn("requires --file", err_buf.getvalue())
+            self.assertIn("requires --file PATH or --body TEXT", err_buf.getvalue())
 
     def test_cli_decision_with_dossier_link(self):
         with tempfile.TemporaryDirectory() as td:
@@ -475,44 +640,21 @@ class TestResearchRevisionDiffPreview(unittest.TestCase):
             status = cli.run(self.parse(*args))
         return status, output.getvalue()
 
-    def test_field_diff_previews_changes_without_writing(self):
-        current = {"schema_version": "research-record-local/1",
-                   "record": {"revision": 3, "statement": "Old claim."}}
-        preview = {"schema_version": "research-revision-preview-local/1", "base_revision": 3,
-                   "changes": {"statement": "New claim."}, "conflicts": [], "ready": True}
-        with patch.object(api, "get_record", return_value=current) as read, \
-                patch.object(api, "prepare_record_revision", return_value=preview) as prepare, \
-                patch.object(api, "revise_record") as revise:
-            status, text = self.run_diff(
-                "claim", "--project", "/synthetic", "--claim-id", "urn:uuid:claim",
-                "--diff", "--statement", "New claim.")
-        self.assertEqual(status, 0)
-        self.assertIn('- "Old claim."', text)
-        self.assertIn('+ "New claim."', text)
-        self.assertIn("preview only, nothing written", text)
-        self.assertEqual(prepare.call_args.kwargs["base_revision"], 3)
-        read.assert_called_once_with("/synthetic", "claim", "urn:uuid:claim")
-        revise.assert_not_called()
-
-    def test_section_diff_renders_body_lines_without_writing(self):
-        old_body = "# Target\n\nOriginal.\n"
-        new_body = "# Target\n\nReplacement.\n"
-        with tempfile.NamedTemporaryFile("w", suffix=".md", delete=False, encoding="utf-8") as handle:
-            handle.write("Replacement.")
-            draft = handle.name
-        self.addCleanup(Path(draft).unlink)
-        with patch.object(api, "get_dossier", return_value={"body": old_body}), \
-                patch.object(api, "get_record", return_value={"record": {"revision": 2, "body": old_body}}), \
-                patch.object(api, "prepare_record_revision",
-                             return_value={"changes": {"body": new_body}, "conflicts": [], "ready": True}), \
-                patch.object(api, "revise_record") as revise:
-            status, text = self.run_diff(
-                "dossier", "--project", "/synthetic", "--dossier-id", "urn:uuid:dossier",
-                "--diff", "--section", "Target", "--file", draft)
-        self.assertEqual(status, 0)
-        self.assertIn("-Original.", text)
-        self.assertIn("+Replacement.", text)
-        revise.assert_not_called()
+    def test_section_diff_renders_only_the_requested_change_without_writing(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            api.init(project, title="Synthetic section comparison")
+            identifier = api.create_dossier(project, "Notes", "# Target\n\nOriginal.\n\n# Other\n\nKeep this.\n")["dossier_id"]
+            draft = project / "draft.md"
+            draft.write_text("Replacement.", encoding="utf-8")
+            before = api.get_record(project, "dossier", identifier)
+            status, text = self.run_diff("dossier", identifier, "--project", str(project),
+                                         "--diff", "--section", "Target", "--file", str(draft))
+            self.assertEqual(status, 0)
+            self.assertIn("-Original.", text)
+            self.assertIn("+Replacement.", text)
+            self.assertNotIn("-Keep this.", text)
+            self.assertEqual(api.get_record(project, "dossier", identifier), before)
 
 
 if __name__ == "__main__":

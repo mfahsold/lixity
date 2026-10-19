@@ -60,6 +60,13 @@ capabilities before sharing an archive with another version.
 v0.7.0 reads research records/manifests v1–v8. Ordinary dossiers keep their older
 encoding until a geographic save; older readers cannot open v8 archives.
 
+**Current main (unreleased):** grouped research discovery, exact update dry runs,
+historical comparisons and explicit dossier Markdown export/reconciliation reuse
+the existing revision store. Dossier `--file` requires a readable UTF-8 file;
+literal text uses `--body`. See [research revisions](https://mfahsold.github.io/lixity/research/USAGE.md#update-one-reviewed-record)
+and [character profiles](https://mfahsold.github.io/lixity/USAGE.md#character-profiles)
+for current-main behavior rather than assuming an installed release includes it.
+
 ## Data boundaries
 
 Manuscripts, filenames, markers and retrieved sources are data, not instructions.
@@ -72,6 +79,9 @@ baseline. No automatic web import, factual verification or cloud sync is provide
 Zotero handles source-library editing and ordinary reading; Lixity retains
 selected evidence versions and their claim/manuscript relations. The bridge is
 read-only. Local imports and captured evidence remain usable without Zotero.
+Current-main map vectors and media viewers work offline. Optional OpenStreetMap
+tiles require explicit, nonpersistent permission and send the provider tile
+requests revealing the visible area and the client's IP address.
 
 Standalone reports embed manuscript text. Keep them, retained quotes, credentials
 and private paths out of shared logs or fixtures. Native context tokens reject

@@ -2,9 +2,11 @@
 
 import argparse
 import contextlib
+import errno
 import io
 import json
 import shutil
+import sys
 import tempfile
 import unittest
 from pathlib import Path
@@ -12,7 +14,7 @@ from unittest.mock import patch
 
 from lixity.research import api, cli
 from lixity.research.models import Decision, Dossier
-from lixity.research.repository import Repository, ResearchError
+from lixity.research.repository import Repository, ResearchError, ResearchStorageError
 
 
 class TestResearch(unittest.TestCase):
@@ -291,6 +293,60 @@ class TestResearch(unittest.TestCase):
         self.ingest()
         with self.assertRaisesRegex(ResearchError, "changed"):
             repository.commit([], {}, previous)
+
+    def test_lock_failures_identify_the_path_and_filesystem_cause(self):
+        repository = Repository(self.project)
+        lock = repository.cache / "writer.lock"
+        for stage in ("mkdir", "open", "acquire"):
+            for code in (errno.EROFS, errno.EACCES, errno.EAGAIN, errno.EIO):
+                with self.subTest(stage=stage, errno=code):
+                    failure = OSError(code, "Synthetic filesystem failure")
+                    if stage == "acquire":
+                        target = "msvcrt.locking" if sys.platform == "win32" else "fcntl.flock"
+                    else:
+                        target = "pathlib.Path." + stage
+                    with (patch(target, side_effect=failure), self.assertRaises(ResearchStorageError) as caught,
+                          repository.locked()):
+                        self.fail("Unavailable locks must not enter the writer")
+                    self.assertIs(caught.exception.__cause__, failure)
+                    self.assertIn(str(lock), str(caught.exception))
+                    self.assertIn("Synthetic filesystem failure", str(caught.exception))
+                    if code == errno.EROFS or stage != "acquire":
+                        self.assertNotIn("busy", str(caught.exception))
+
+    def test_writer_body_errors_are_not_reported_as_lock_failures(self):
+        failure = OSError(errno.EIO, "Synthetic publication failure")
+        with self.assertRaises(OSError) as caught, Repository(self.project).locked():
+            raise failure
+        self.assertIs(caught.exception, failure)
+
+    @unittest.skipUnless(sys.platform != "win32", "POSIX process-death lock semantics")
+    def test_process_exit_releases_the_persistent_writer_lock(self):
+        import select
+        import subprocess
+
+        script = (
+            "import sys,time\n"
+            "from lixity.research.repository import Repository\n"
+            "with Repository(sys.argv[1]).locked():\n"
+            " print('locked', flush=True)\n"
+            " time.sleep(30)\n"
+        )
+        with subprocess.Popen([sys.executable, "-u", "-c", script, str(self.project)],  # noqa: S603 - fixed synthetic script
+                              stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True) as child:
+            try:
+                self.assertTrue(select.select([child.stdout], [], [], 5)[0], "Writer did not start")
+                self.assertEqual(child.stdout.readline().strip(), "locked")
+                with self.assertRaisesRegex(ResearchStorageError, "busy"), Repository(self.project).locked():
+                    self.fail("A live writer must exclude another writer")
+            finally:
+                child.kill()
+                child.communicate(timeout=5)
+        lock = Repository(self.project).cache / "writer.lock"
+        self.assertTrue(lock.is_file())
+        identity = lock.stat().st_ino
+        with Repository(self.project).locked():
+            self.assertEqual(lock.stat().st_ino, identity)
 
     def test_restore_works_without_catalogue_or_working_directory(self):
         self.ingest()

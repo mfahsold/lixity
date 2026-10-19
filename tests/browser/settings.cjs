@@ -1,12 +1,12 @@
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
-const {spawnSync} = require('node:child_process');
 const path = require('node:path');
 const fs = require('node:fs');
 const assert = require('node:assert/strict');
 const {startNativeServer} = require('./support/native-server.cjs');
 
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const root = path.resolve(__dirname, '../..');
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const data = pythonFixture(`
 import json
 from lixity.workspace_labels import WORKSPACE_LABELS
 from lixity.language import get_language_profile
@@ -34,9 +34,7 @@ for locale in ("en", "de", "fr", "es", "it", "pt", "nl"):
          "empty": render_dashboard([], [], controls=True, language_key=locale, labels=labels,
          enabled_actions=("analyze","nda-draft"))}
 print(json.dumps({"baseline":baseline,"fixtures":fixtures}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 16*1024*1024});
-assert.equal(fixture.status, 0, fixture.stderr || fixture.error && fixture.error.message);
-const data=JSON.parse(fixture.stdout);
+`, {root});
 const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-identity-settings-');
 
 async function verifyNativeDefaults(browser) {

@@ -2,7 +2,7 @@
 
 Collect sources, read and annotate in Zotero. Use Lixity's experimental research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.
 
-**Current main (unreleased):** research opens with dossiers; source selection and alternative local import are compact optional sections. Existing archives and command interfaces stay compatible.
+**Current main (unreleased):** research opens with dossiers and compact source-capture options. Existing archives remain readable. Dossier `--file` now requires an existing UTF-8 file; use `--body` for literal text. Installed help describes available commands.
 
 Maintained by the Lixity project · Updated 19 October 2026
 
@@ -99,7 +99,9 @@ To bring existing Lixity sources into Zotero, `research zotero-export` creates a
 
 *Historical visual references stay attached to exact source versions. [Mobile map view](../screenshots/dashboard-dossier-image-mobile.png) · [Harbour photochrom](../screenshots/dashboard-dossier-photo.png) · [Places and journeys](../screenshots/dashboard-dossier-geography.png) · [Credits and file hashes](../assets/research/sources.json).*
 
-In the native workspace, use **Places and routes** in the dossier editor for named points, paths and areas. The local coordinate view preserves descriptions, periods, actors and transport choices; it does not calculate roads or travel times. A map image remains separate from the sketch. See [editing, supported GeoJSON and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+Use **Places and routes** in the dossier editor for named points, paths and areas, with descriptions, periods, actors and transport choices. **Current main:** interactive vectors work offline; optional OpenStreetMap tiles need explicit, nonpersistent permission and disclose the viewed area and client IP to the provider. There is no road routing or travel-time calculation. Historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+
+Current-main images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.png). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
 
 ## Search sources and current notes
 
@@ -171,7 +173,7 @@ lixity research search --query "reading room"
 lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relation contextualizes
 ```
 
-Replace the placeholders with full returned IDs, passage first and claim second. The short command creates an evidence link; `link-evidence` retains its existing creation, inspection and revision operations. See [scope, defaults and compatibility](../research/USAGE.md#reading-and-cli-workflows-since-v240).
+Use returned IDs, passage first and claim second. Current main also accepts complete bare UUIDv4 selectors and exposes plural aliases in grouped help. The short command creates an evidence link; `link-evidence` retains inspection and revision operations. See [scope and compatibility](../research/USAGE.md#reading-and-cli-workflows-since-v240).
 
 ## Associate manuscript text with a claim
 
@@ -196,14 +198,7 @@ lixity research ocr-status
 lixity research ingest --project ./sample-project --file ./document.pdf --allow-retention
 ```
 
-| Diagnostic status | Meaning and next action |
-| --- | --- |
-| `native_only` | Poppler tools are available. Text-layer PDFs can be extracted; select Tesseract or a configured worker for scans. |
-| `ready` | The selected engine and required page rendering are available. This is a configuration check, not a recognition-quality test. |
-| `partial` | Page rendering is unavailable. Native text extraction may still work; install pdftoppm to use OCR on scans. |
-| `misconfigured_worker` | The configured executable was not found or is not executable, or its timeout setting is invalid. Check its path, permissions and `LIXITY_OCR_TIMEOUT` in the server environment. |
-| `misconfigured_backend` | Check the selected backend, local Tesseract, installed language data and timeout. Run `lixity research ocr-status` for details. |
-| `missing_dependencies` | Install Poppler for local PDF extraction; select Tesseract or a configured worker for scans. |
+Diagnostics identify missing tools, language data and configuration errors with corrective guidance. A ready engine or successful synthetic probe does not measure recognition accuracy; automation must inspect `probe.ok`, not just the exit code. See [diagnostic states and failure semantics](../research/USAGE.md#native-pdfs-versus-scans).
 
 Install `poppler-utils` on Debian/Ubuntu or `poppler` with Homebrew on macOS. The server must be able to find `pdftotext` and `pdftoppm`. Check extracted quotations against the original PDF; configuration checks do not measure recognition accuracy.
 
@@ -242,6 +237,8 @@ Restore into a new, empty target. Restoration checks paths, checksums and record
 `research zotero-backup` pairs the archive with a selected Zotero data folder; you must close Zotero first. `research zotero-restore` verifies and restores both into a new directory without replacing a working library. Manuscripts, application profiles and external linked attachments need separate backups. Test a restored citation and follow the [backup reference](../research/USAGE.md) before relying on the pair.
 
 ## Command-line example: sources to decisions
+
+**Current main (unreleased):** for authored notes, use the explicit [Markdown export → edit → preview → apply workflow](../research/USAGE.md#edit-an-exported-markdown-dossier). The archive stays authoritative; a reviewed packet binds its project and snapshot. Exact update dry runs validate a proposed write, historical diffs compare saved revisions, and three-way preparation reconciles a draft. Source ingest is separate and does not create authored notes from Markdown exports.
 
 This optional example uses authorized local source files. Replace paths and UUID placeholders with the files and identifiers returned by earlier commands. Initialize the archive only once, and prepare `./sources/harbor-dossier.md` before importing that dossier.
 

@@ -2,12 +2,12 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawnSync} = require('node:child_process');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 
+const {pythonFixture} = require('./support/python-fixture.cjs');
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-nda-draft-'));
-const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
+const {fixtures, pdf, standalone} = pythonFixture(`
 import base64, json
 from lixity.language import get_language_profile
 from lixity.ui import render_dashboard
@@ -23,9 +23,7 @@ for language in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
 print(json.dumps({'fixtures': fixtures, 'pdf': base64.b64encode(
     _minimal_pdf('Synthetic agreement', ['Synthetic download transport fixture.'])).decode('ascii'),
     'standalone': render_dashboard([], [], controls=True, enabled_actions=['analyze', 'rebuild'])}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
-assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
-const {fixtures, pdf, standalone} = JSON.parse(fixture.stdout);
+`, {root});
 const pdfBytes = Buffer.from(pdf, 'base64');
 const name = '<img src=x onerror="window.ndaInjected=true">';
 const address = 'Synthetic address\nSecond line';

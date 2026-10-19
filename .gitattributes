@@ -1,0 +1,6 @@
+# Preserve exact pinned upstream bytes, including whitespace in template literals.
+src/lixity/ui/assets/vendor/mermaid-tiny-12.2.0.min.js whitespace=-blank-at-eol
+# Distributed upstream files retain their CRLF line endings.
+src/lixity/ui/assets/vendor/leaflet-1.9.4.css whitespace=cr-at-eol
+src/lixity/ui/assets/vendor/leaflet.LICENSE whitespace=cr-at-eol
+src/lixity/ui/assets/vendor/photoswipe.LICENSE whitespace=cr-at-eol

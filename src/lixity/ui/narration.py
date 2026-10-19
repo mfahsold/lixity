@@ -188,7 +188,10 @@ def render_characters_panel(
     chapters: Sequence[ChapterProfile],
     labels: Mapping[str, str] | None = None,
 ) -> str:
-    """Renders the character presence panel."""
+    """Render measured name mentions separately from author-declared POV."""
+    if characters and characters.get("error"):
+        return (panel_start("characters", labels, "panel_characters")
+                + f'<p role="status">{esc(characters["error"])}</p></section>')
     if not (characters and characters.get("figures")):
         return ""
 
@@ -196,7 +199,9 @@ def render_characters_panel(
         return esc(label(labels, key))
 
     parts: list[str] = [panel_start("characters", labels, "panel_characters")]
-    parts.append('<div class="table-wrap"><table><thead><tr>')
+    parts.append(f'<p class="hint">{L("chr_hint")}</p>')
+    has_pov = any("declared_pov_chapters" in figure for figure in characters["figures"])
+    parts.append(f'<div class="table-wrap" tabindex="0" role="region" aria-label="{L("panel_characters")}"><table><thead><tr>')
     parts.extend(
         f"<th>{L(key)}</th>"
         for key in (
@@ -208,6 +213,8 @@ def render_characters_panel(
             "chr_share",
         )
     )
+    if has_pov:
+        parts.append(f'<th>{L("chr_pov")}</th>')
     parts.append("</tr></thead><tbody>")
     total = int(characters.get("chapters", 0))
     for figure in characters["figures"]:
@@ -229,8 +236,11 @@ def render_characters_panel(
             f'<td class="num" title="{span_title}">{esc(chapter_span)}</td>'
             f'<td class="num">{int(figure.get("longest_gap", 0))}</td>'
             f'<td class="num bar-cell"><i style="--v:{min(100.0, share):.1f}%"></i>{share:.0f} %</td>'
-            f"</tr>"
         )
+        if has_pov:
+            declared = ", ".join(str(int(number)) for number in figure.get("declared_pov_chapters", [])) or "–"
+            parts.append(f'<td>{esc(declared)}</td>')
+        parts.append("</tr>")
     parts.append("</tbody></table></div></section>")
     return "".join(parts)
 

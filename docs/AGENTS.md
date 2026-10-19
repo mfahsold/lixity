@@ -55,6 +55,7 @@ explicitly where supported and inspect the installed default before parsing.
 section as JSON. The additive `configuration` object has independent schema
 `lixity-configuration/1`: accepted/project-only/uninterpreted keys, corpus,
 threshold and publication component schemas, and native-settings persistence/session scope.
+Current main adds `characters_schema` from the owning character-profile model.
 It describes installed defaults and validation vocabulary, never effective project
 values or a complete schema for every project setting. Discovery commands read no
 project configuration. Older releases use unfiltered `about --json` and command
@@ -247,7 +248,10 @@ deterministic proxies, with the following scope and availability rules.
   without mention), `presence_ratio`, `per_chapter`. Appendix and front matter
   are excluded, so chapter numbers match the metrics. **No NER** — the caller
   supplies the names; an empty name list is an error (not a silent empty
-  report).
+  report). Current-main project profiles escape literal aliases and add
+  `declared_pov_chapters` separately when configured. These author declarations
+  never alter lexical counts or imply inferred perspective. See
+  [configuration and precedence](USAGE.md#character-profiles).
 - `pacing`: scene breaks are explicit dividers (`---`, `- - -`, `***`, `* * *`,
   `___`, `_ _ _`, `•••`, `• • •`, `———`, `⁂`); `scenes` per chapter = breaks + 1. When no dividers exist,
   `explicit_scene_breaks=0` and `scenes_are_chapters=true` (scenes ≡
@@ -400,6 +404,13 @@ updated_text = api.resolve_marker(new_text, m["id"])
 info = api.about()                                    # languages, features, heuristics
 ```
 
+Current main accepts omitted `names` in `api.characters(..., project_config=...)`
+to resolve that explicit mapping's profiles/legacy names; it does not discover
+character configuration implicitly. An explicit empty selection suppresses fallback
+and fails the standalone character request. Shared prose counting excludes link
+destinations, images and code without changing `paragraph-profile-text/1` anchors
+or removing empty lexical chapters from numbering.
+
 ### 5.1 Research API (`lixity.research.api`)
 
 Import `from lixity.research import api as research_api` and pass an explicit
@@ -452,6 +463,36 @@ are shared across CLI, Python and HTTP.
 `link_evidence` accepts `expected_project_id`, `expected_snapshot` and
 `expected_claim_revision`. Supplied guards reject changed reviewed context or
 withdrawn evidence while preserving full-paragraph citation semantics.
+
+**Current main (unreleased), revision API:**
+
+- `preview_record_changes(project, kind, id, changes=..., section=None)` compares
+  current and draft values from one snapshot. `compare_record_revisions(project,
+  kind, id, from_revision=N, to_revision=None)` compares saved versions; omitted
+  destination means that snapshot's HEAD. Both return
+  `research-revision-comparison-local/1` with `project_id`, `snapshot`, `kind`,
+  `record_id`, `from_revision`, `to_revision` and `fields: [{field,before,after}]`.
+  A draft destination has `to_revision: null`; saved endpoints retain exact pins.
+- `revise_record(..., dry_run=True)` validates the exact write candidate with
+  the ordinary revision/pin/reason guards, returning
+  `research-revision-write-preview-local/1`: comparison fields plus
+  `expected_revision`, `changes`, `candidate`, `ready: true`, `dry_run: true`
+  and claim-only `warnings`. It never locks or commits and does not reconcile conflicts.
+- `prepare_record_revision(..., base_revision=N, changes=..., section=None,
+  resolutions=None)` performs three-way reconciliation, retaining
+  `research-revision-preview-local/1`. A selected section bounds body comparison;
+  metadata can change alongside it. `prepare_dossier_section` remains a wrapper.
+- `export_dossier_edit(project, id, revision=None)` returns Markdown beginning with
+  a `lixity-dossier-edit/1` JSON comment. `prepare_dossier_edit(project, id,
+  document, resolutions=None)` validates identity/base and returns the same
+  three-way preview. Header fields are project ID, kind, record ID, base revision
+  and editable `fields` (title, language, tags, geography, evidence IDs); all text
+  after the comment is the unchanged body suffix. Unknown/duplicate keys fail.
+  This is authored-record exchange, not source ingest or automatic synchronization.
+
+CLI aliases and bare UUIDv4 normalization are input conveniences, not new domain
+identifiers. Exact arguments belong to installed help; the [Markdown workflow](research/USAGE.md#edit-an-exported-markdown-dossier)
+owns file creation, preview and explicit application.
 
 ### Manual manuscript associations
 
@@ -775,8 +816,8 @@ Prepared decision list changes include `dossier_revisions: {ID: revision}` for
 the selected existing dossiers. Preserve these pins when submitting the preview.
 
 Python `revise_record(..., expected_snapshot=None)` mirrors the CLI
-convenience path: it checks the reviewed revision, requires explicit pins for
-changed associations, and forwards the snapshot of that read; the strict HTTP
+convenience path: the backend checks the reviewed revision, requires explicit pins
+for changed associations and commits against that same read; the strict HTTP
 route keeps requiring an explicit snapshot. Claim revisions add the same
 `warnings` list as claim creation.
 
@@ -788,6 +829,9 @@ all operations before one commit; errors and races accept none. It returns
 record references, without duplicating full dossier bodies/citation graphs.
 Duplicate IDs and references to future revisions inside the same batch are
 rejected. See [research workflows](research/USAGE.md#research-workflows).
+Current main accepts the full ready preparation envelope as well as a raw list in
+both Python batch functions. A versioned envelope must match the selected project
+and reviewed snapshot; replacing its guard with a newer snapshot cannot rebase it.
 
 HTTP equivalents are `POST /api/research-revision-batch-prepare` with
 `{operations}` and `POST /api/research-revision-batch-apply` with

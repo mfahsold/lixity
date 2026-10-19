@@ -75,16 +75,24 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(authoredClaim.locator('[data-manuscript-link-count="1"]')).toBeVisible();
   await expect(authoredClaim.locator('[data-claim-revision="1"]')).toBeVisible();
   await expect(detail.locator('.dossier-image img')).toHaveCount(2);
-  for (const image of await detail.locator('.dossier-image img').all()) {
+  const dossierImages = await detail.locator('.dossier-image img').all();
+  await Promise.all(dossierImages.map(image => image.evaluate(element => { element.loading = 'eager'; return element.decode(); })));
+  let imageIndex = 0;
+  for (const image of dossierImages) {
     await image.evaluate(element => { element.loading = 'eager'; return element.decode(); });
     assert.ok(await image.evaluate(element => element.naturalWidth > 1000 && element.naturalHeight > 1000), 'Reviewed public images decode at their original resolution');
     assert.match(await image.getAttribute('src'), /\.\.\/assets\/research\/hamburg-.+\.jpg$/);
     await image.locator('..').click();
     const enlarged = page.locator('#modal-dossier-image-enlarge');
     await expect(enlarged).toBeVisible();
-    await expect(enlarged.locator('img')).toHaveAttribute('src', await image.getAttribute('src'));
+    await expect(enlarged.locator('.pswp__item[aria-hidden=false] img.pswp__img')).toHaveAttribute('src', await image.evaluate(element => element.currentSrc));
+    await expect(enlarged.locator('.pswp__counter')).toHaveText(`${imageIndex + 1} / 2`);
+    await enlarged.locator('.pswp__button--zoom').click();
+    await expect(enlarged.locator('.pswp')).toHaveClass(/pswp--zoomed-in/);
+    await page.screenshot({path: path.join(artifacts, `research-image-viewer-${imageIndex}-${width}-${colorScheme}.png`)});
     await page.keyboard.press('Escape');
     await expect(enlarged).not.toBeVisible();
+    imageIndex++;
   }
   const sourceContext = detail.locator('.dossier-image figcaption details').first();
   await sourceContext.locator('summary').click();
@@ -98,6 +106,17 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(geography.locator('li')).toHaveCount(5);
   const labels = await geography.locator('svg text').evaluateAll(nodes => nodes.map(node => [node.getAttribute('x'), node.getAttribute('y')].join(',')));
   assert.equal(new Set(labels).size, labels.length, 'Canonical point and route number markers use distinct anchors');
+  await geography.locator('[data-geo-map]').click();
+  await expect(geography.locator('.geography-map.leaflet-container')).toBeVisible();
+  await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
+  await geography.locator('[data-geo-fit]').click();
+  const diagram = detail.locator('[data-research-diagram]').first();
+  await diagram.scrollIntoViewIfNeeded();
+  await expect(diagram).toHaveAttribute('data-diagram-state', 'ready');
+  await diagram.locator('[data-diagram-enlarge]').click();
+  await expect(page.locator('#modal-dossier-image-enlarge img.pswp__img')).toBeVisible();
+  await expect.poll(() => page.locator('#modal-dossier-image-enlarge img.pswp__img').evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+  await page.keyboard.press('Escape');
   await assertReadOnly();
   await geography.scrollIntoViewIfNeeded();
   await page.screenshot({path: path.join(artifacts, `research-geography-${width}-${colorScheme}.png`)});

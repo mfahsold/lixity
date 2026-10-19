@@ -453,13 +453,13 @@ class CorpusAnalyzer:
         # 5. Readability & complexity (language-calibrated Flesch family + LIX)
         total_syllables = sum(self.count_syllables(t) * count for t, count in freqs.items())
         asw = total_syllables / n_tokens if n_tokens else 0.0
+        lw_min = self.long_word_min()
         if n_tokens == 0 or stats.total == 0:
             flesch_de = 0.0
             flesch_variant = self.readability(0.0, 0.0)[1]
             lix = 0.0
         else:
             flesch_de, flesch_variant = self.readability(stats.asl, asw)
-            lw_min = self.long_word_min()
             long_words = sum(1 for t in tokens if len(t) > lw_min)
             pct_long_words = (long_words / n_tokens) * 100.0 if n_tokens else 0.0
             lix = stats.asl + pct_long_words
@@ -491,10 +491,15 @@ class CorpusAnalyzer:
         #    appendix + empty-body rules identical to the structure modules).
         chapters: list[ChapterMetrics] = []
         chapter_tokens: list[list[str]] = []
-        for _split_num, title, body in split_chapters(main_text, self.config):
-            chapter, c_lower = self._chapter_metrics(len(chapters) + 1, title, body, lw_min)
+        for number, title, body in split_chapters(main_text, self.config):
+            chapter, c_lower = self._chapter_metrics(number, title, body, lw_min)
             if chapter is None:
-                continue
+                # Preserve structural chapter identity when its old visible
+                # text consists entirely of newly excluded inline markup.
+                # No diversity or measurement uncertainty can be estimated.
+                chapter = ChapterMetrics(num=number, title=title, words=0,
+                                         sentences=0, asl=0.0, dialog_pct=0.0, ttr=0.0,
+                                         dominance="neutral")
             chapters.append(chapter)
             chapter_tokens.append(c_lower)
 

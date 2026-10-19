@@ -21,8 +21,12 @@ from lixity.research import api
 from lixity.server import LixityServerHandler
 project=Path(sys.argv[1])/'synthetic-project'
 api.init(project,title='Synthetic usability project')
+manuscript=project/'manuscript.md'
+manuscript.write_text('## One\\n\\nMara waits.\\n\\n## Two\\n\\nShe opens the door.\\n',encoding='utf-8')
+(project/'lixity.toml').write_text('[characters.Mara]\\npov_in_chapters = [2]\\n',encoding='utf-8')
 LixityServerHandler.workspace_root=str(project)
 LixityServerHandler.research_dir=str(project)
+LixityServerHandler.source_input=str(manuscript)
 LixityServerHandler.language='en'
 LixityServerHandler.refresh()
 server=ThreadingHTTPServer(('127.0.0.1',0),LixityServerHandler)
@@ -39,6 +43,26 @@ server.serve_forever()
     page.setDefaultTimeout(10000);
     const errors=[];page.on('pageerror',error=>errors.push(error.message));
     await page.goto(fixture.url);
+    await expect(page.locator('#characters')).toContainText('Character name mentions');
+    await expect(page.locator('#characters')).toContainText('Declared POV chapters');
+    const figure=page.locator('#characters tbody tr').first();
+    await expect(figure.locator('td').nth(1)).toHaveText('1');
+    await expect(figure.locator('td').nth(2)).toHaveText('1 / 2');
+    await expect(figure.locator('td').last()).toHaveText('2');
+    if(width===320) {
+      const table=page.locator('#characters .table-wrap');
+      assert.ok((await page.locator('#characters th').first().boundingBox()).width>=50,
+        'Character headers must remain readable instead of wrapping into single letters');
+      assert.ok(await page.locator('#characters th').first().evaluate(element=>{
+        const style=getComputedStyle(element);
+        return element.getBoundingClientRect().height-parseFloat(style.paddingTop)-parseFloat(style.paddingBottom)<=parseFloat(style.lineHeight)+1;
+      }),'Short character headings keep whole words on mobile');
+      await table.focus();await page.keyboard.press('ArrowRight');
+      await expect.poll(()=>table.evaluate(element=>element.scrollLeft)).toBeGreaterThan(0);
+      await table.evaluate(element=>{element.scrollLeft=0;});
+    }
+    await page.locator('#characters').screenshot({path:path.join(artifacts,`characters-${width}.png`)});
+    assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
     await page.locator('[data-view=research]').click();
     await expect(page.locator('[data-rtab=dossiers]')).toHaveAttribute('aria-selected','true');
     await expect(page.locator('#rtab-dossiers')).toBeVisible();

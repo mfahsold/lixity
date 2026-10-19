@@ -2037,6 +2037,8 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 .scene-detail[open] { content-visibility: auto; contain-intrinsic-size: auto 520px; }
 .scene-detail summary { cursor: pointer; overflow-wrap: anywhere; padding: .5rem 0; }
 .scene-detail .table-wrap { margin-top: .6rem; }
+#characters table { min-width: 48rem; }
+#characters th { white-space: nowrap; }
 .scene-detail th small { display: block; font-weight: normal; opacity: .7; }
 .scene-detail table { min-width: 44rem; }
 .scene-detail th:not(:first-child), .scene-detail td { min-width: 6rem; white-space: nowrap; }

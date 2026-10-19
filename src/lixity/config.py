@@ -4,8 +4,8 @@ Resolution order (first match wins per key):
   CLI flag / API kwarg  >  UI server session  >  project pyproject.toml
   >  ~/.config/lixity.toml  >  code defaults.
 
-Only scalar keys and simple lists/maps are read; unknown keys are ignored so
-forward-compatible configs stay loadable.
+Known settings use their owning component's validation. Unknown keys are ignored
+so forward-compatible configs stay loadable.
 """
 
 from __future__ import annotations
@@ -40,7 +40,7 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
-PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "register_profiles", "chapter_registers")
+PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "register_profiles", "chapter_registers", "characters")
 PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "register_profiles", "chapter_registers")
 
 # Keys that may appear in [tool.lixity] (documented schema).
@@ -58,6 +58,7 @@ TOOL_KEYS = frozenset(
         "flag_min_severity",
         "min_chapters",
         "names",
+        "characters",
         "motifs",
         "nda",
         "scene_analysis",
@@ -347,7 +348,7 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
     """
     Merge user config under project config under nothing else.
     Returns only known keys present in either file. Identity, publication and
-    chapter registers are explicit project data, never inherited from user
+    chapter registers and character profiles are explicit project data, never inherited from user
     settings, ancestor folders or an implicit cwd.
     """
     here = Path(start).resolve() if start else Path.cwd()
@@ -417,6 +418,7 @@ def configuration_metadata() -> dict[str, Any]:
     The component schemas expose defaults and local field constraints. They do
     not replace the existing validators or model the entire project file.
     """
+    from .characters import character_configuration_schema
     from .style_fingerprint import FingerprintThresholds
 
     corpus_schema = CorpusConfig.model_json_schema()
@@ -444,7 +446,7 @@ def configuration_metadata() -> dict[str, Any]:
         "project_only_keys": list(PROJECT_ONLY_KEYS),
         "scope": (
             "Accepted keys describe the project loader, not one validation schema. "
-            "The component schemas cover CorpusConfig, FingerprintThresholds and PublicationSettings; "
+            "The component schemas cover CorpusConfig, FingerprintThresholds, PublicationSettings and character profiles; "
             "component validators also enforce rules such as valid register assignments. "
             "Other keys use their owning component's validation. Defaults are annotations, "
             "not effective project or server-session values. Project-only keys require an "
@@ -452,6 +454,7 @@ def configuration_metadata() -> dict[str, Any]:
         ),
         "corpus_schema": corpus_schema,
         "publication_schema": publication_configuration_schema(),
+        "characters_schema": character_configuration_schema(),
         "threshold_schema": {
             "type": "object", "properties": properties, "additionalProperties": False,
             "$comment": (

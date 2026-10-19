@@ -10,6 +10,38 @@ from lixity.server import build_server_dashboard
 
 
 class TestServerConfiguration(unittest.TestCase):
+    def test_invalid_character_settings_are_visible_instead_of_falling_back(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            manuscript = root / "manuscript.md"
+            manuscript.write_text("## One\n\nMara waits.\n")
+            (root / "lixity.toml").write_text('names = ["Legacy"]\n[characters.Mara]\npov_in_chapters = [2]\n')
+            html, _ = build_server_dashboard(str(manuscript), project_root=root)
+            panel = html.split('id="characters"', 1)[1].split('</section>', 1)[0]
+            self.assertIn('role="status"', panel)
+            self.assertIn('Declared POV chapters no longer match', panel)
+            self.assertNotIn('Legacy', panel)
+
+    def test_character_profiles_belong_to_selected_root_and_second_project(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            imported = root / "exports"
+            imported.mkdir()
+            manuscript = imported / "manuscript.md"
+            manuscript.write_text("## One\n\nMara waits.\n\n## Two\n\nShe leaves.\n")
+            (root / "lixity.toml").write_text('[characters.Mara]\npov_in_chapters = [2]\n')
+            (imported / "lixity.toml").write_text('[characters.Other]\n')
+            html, _ = build_server_dashboard(str(manuscript), project_root=root)
+            panel = html.split('id="characters"', 1)[1].split('</section>', 1)[0]
+            self.assertIn('Mara', panel)
+            self.assertNotIn('Other', panel)
+            self.assertIn('Declared POV', panel)
+            second = root / "second"
+            second.mkdir()
+            (second / "lixity.toml").write_text('names = ["Legacy"]\n[characters]\n')
+            html, _ = build_server_dashboard(str(manuscript), project_root=second)
+            self.assertNotIn('id="characters"', html)
+
     def test_dashboard_defaults_to_english_with_explicit_detection_available(self):
         with tempfile.TemporaryDirectory() as directory:
             manuscript = Path(directory) / "manuscript.md"

@@ -24,6 +24,12 @@ from .archive import (
 from .archive import (
     restore_archive as restore_archive,
 )
+from .dossier_edit import (
+    export_dossier_edit as export_dossier_edit,
+)
+from .dossier_edit import (
+    prepare_dossier_edit as prepare_dossier_edit,
+)
 from .images import (
     IMAGE_SUFFIXES,
     IMAGE_TYPES,
@@ -106,6 +112,9 @@ from .revisions import (
     source_updates,
 )
 from .revisions import (
+    compare_record_revisions as compare_record_revisions,
+)
+from .revisions import (
     get_record as get_record,
 )
 from .revisions import (
@@ -116,6 +125,9 @@ from .revisions import (
 )
 from .revisions import (
     prepare_record_revisions as prepare_record_revisions,
+)
+from .revisions import (
+    preview_record_changes as preview_record_changes,
 )
 from .revisions import (
     record_history as record_history,

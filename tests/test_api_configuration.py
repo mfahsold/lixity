@@ -16,6 +16,57 @@ TEXT = "## One\n\nI walk in the rain.\n\n## Two\n\nThe door was closed.\n"
 
 
 class TestApiConfiguration(unittest.TestCase):
+    def test_profiles_are_project_local_but_legacy_names_keep_their_scope(self):
+        from lixity.config import load_project_config
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            user = root / "user.toml"
+            user.write_text('names = ["Legacy"]\n[characters.User]\n')
+            project = root / "project"
+            project.mkdir()
+            (project / "lixity.toml").write_text('[characters.Local]\n')
+            nested = project / "nested"
+            nested.mkdir()
+            with patch("lixity.config.os.path.expanduser", return_value=str(user)):
+                local = load_project_config(project)
+                inherited = load_project_config(nested)
+            self.assertEqual(local["characters"], {"Local": {}})
+            self.assertNotIn("characters", inherited)
+            self.assertEqual(inherited["names"], ["Legacy"])
+
+    def test_character_configuration_reaches_cli_api_and_offline_dashboard(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            manuscript = project / "manuscript.md"
+            text = "## One\n\nMara waits.\n\n## Two\n\nShe opens the door.\n"
+            manuscript.write_text(text, encoding="utf-8")
+            for configuration, settings in (
+                ('names = ["Mara"]\n', {"names": ["Mara"]}),
+                ('[characters.Mara]\npov_in_chapters = [2]\n', {"characters": {"Mara": {"pov_in_chapters": [2]}}}),
+            ):
+                with self.subTest(configuration=configuration):
+                    (project / "lixity.toml").write_text(configuration, encoding="utf-8")
+                    expected = api.characters(text, project_config=settings)
+                    output = io.StringIO()
+                    with redirect_stdout(output):
+                        self.assertEqual(main(["characters", str(manuscript), "--json"]), 0)
+                    self.assertEqual(json.loads(output.getvalue()), expected)
+                    output = io.StringIO()
+                    with redirect_stdout(output):
+                        self.assertEqual(main(["characters", str(manuscript), "--name", "Other", "--json"]), 0)
+                    explicit = json.loads(output.getvalue())["figures"]
+                    self.assertEqual([figure["name"] for figure in explicit], ["Other"])
+                    self.assertNotIn("declared_pov_chapters", explicit[0])
+                    dashboard = project / "dashboard.html"
+                    with redirect_stdout(io.StringIO()):
+                        self.assertEqual(main(["dashboard", str(manuscript), "-o", str(dashboard)]), 0)
+                    self.assertIn('id="characters"', dashboard.read_text(encoding="utf-8"))
+                    self.assertIn('id="characters"', api.dashboard(text, project_config=settings))
+                    self.assertEqual(api.characters(text, ["Other"], project_config=settings)["figures"][0]["name"], "Other")
+                    with self.assertRaises(ValueError):
+                        api.characters(text, [], project_config=settings)
+
     def test_project_corpus_patterns_reach_cli_and_api(self):
         from lixity.config import load_project_config
 

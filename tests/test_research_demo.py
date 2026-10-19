@@ -1,5 +1,6 @@
 """The public research example retains reviewed visuals and permits fixture reads only."""
 
+import base64
 import hashlib
 import json
 import re
@@ -106,7 +107,6 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert "saved manuscript quote" in document
     assert "content_base64" not in fixture_path.read_text()
     assert "Mara stopped beneath the quay lamp" not in fixture_path.read_text()
-    assert "data:image" not in document
     assert all(url.startswith("/api/research/") for url in fixture)
     assert not any(url.startswith("/api/research/image") for url in fixture)
     dossiers = fixture["/api/research/dossiers"]["dossiers"]
@@ -115,7 +115,9 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     assert {image["url"] for image in details["images"]} == {
         "../assets/research/hamburg-free-port-1900.jpg", "../assets/research/hamburg-harbour-1890-1900.jpg"}
     for item in json.loads((ROOT / "docs/assets/research/sources.json").read_text())["sources"]:
-        assert hashlib.sha256((ROOT / "docs/assets/research" / item["filename"]).read_bytes()).hexdigest() == item["sha256"]
+        source_bytes = (ROOT / "docs/assets/research" / item["filename"]).read_bytes()
+        assert base64.b64encode(source_bytes).decode("ascii") not in document
+        assert hashlib.sha256(source_bytes).hexdigest() == item["sha256"]
 
 
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is needed to exercise the public read adapter")

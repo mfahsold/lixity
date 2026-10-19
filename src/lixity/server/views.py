@@ -12,7 +12,7 @@ from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
-from ..characters import presence_report
+from ..characters import presence_report, resolve_character_settings
 from ..config import (
     load_project_config,
     resolve_thresholds,
@@ -130,10 +130,13 @@ def build_server_dashboard(
         # including manuscripts imported beneath its exports directory.
         settings = {**settings, **{key: identity_settings.get(key, {})
                                   for key in ("register_profiles", "chapter_registers")}}
+        settings.pop("characters", None)
+        if "characters" in identity_settings:
+            settings["characters"] = identity_settings["characters"]
     if identity_settings_override is not None:
         identity_settings = {**identity_settings, **identity_settings_override}
         settings = {**settings, **{key: value for key, value in identity_settings_override.items()
-                                  if key in {"register_profiles", "chapter_registers"}}}
+                                  if key in {"register_profiles", "chapter_registers", "characters"}}}
     config, resolved = resolve_document_config(text, language, project_config=settings)
     status_labels = resolved.labels
 
@@ -174,7 +177,12 @@ def build_server_dashboard(
     markers = list_markers(text) if text else []
 
     artifacts = collect_artifacts(exports_dir) if exports_dir else []
-    names = settings.get("names", [])
+    try:
+        selection = resolve_character_settings(None, settings)
+        character_report = (presence_report(text, selection.names, config, declared_pov=selection.declared_pov)
+                            if selection.names else None)
+    except ValueError as exc:
+        character_report = {"error": str(exc)}
 
     # The header already carries the project's identity and scale (chapters,
     # words, file). The strip is reserved for real problems and operations, so
@@ -206,7 +214,7 @@ def build_server_dashboard(
         flag_min_severity=resolved_thresholds.flag_min_severity,
         status=status_items,
         dialogue=dialogue_report(text, config).to_dict(),
-        characters=presence_report(text, names, config) if names else None,
+        characters=character_report,
         pacing=pacing_report(text, config).to_dict(),
         motifs=motif_report(text, settings.get("motifs", {}), config).to_dict(),
         showing=showing_report(text, config, metrics=metrics).to_dict(),

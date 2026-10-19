@@ -65,6 +65,24 @@ class TestWordContract(unittest.TestCase):
 
 
 class TestParagraphContract(unittest.TestCase):
+    def test_inline_counting_keeps_display_text_and_saved_paragraph_identity(self):
+        from lixity.pipeline import paragraph_identity
+
+        text = '## Main\n\nMara reads [the letter](https://example.org/Mara) beside `Mara`.\n'
+        config = CorpusConfig(language="en")
+        paragraphs, chapters = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
+        self.assertEqual(paragraphs[0].text,
+                         'Mara reads [the letter](https://example.org/Mara) beside `Mara`.')
+        self.assertEqual(paragraph_identity(paragraphs[0]), {
+            "start_line": 3, "end_line": 3,
+            "paragraph_sha256": "83ac24212cd02c2b14d4d4d5ffe4f33752df2281645423f00afca884c40418dd",
+        })
+        self.assertEqual(paragraphs[0].words, 5)
+        self.assertEqual(chapters[0].words, 5)
+        self.assertEqual(CorpusAnalyzer(config).analyze_text(text).tokens, 5)
+        self.assertEqual(dialogue_report(text, config).words, 5)
+        self.assertEqual(scene_report(text, config)["items"][0]["words"], 5)
+
     def test_lf_and_crlf_share_paragraph_counts_and_original_line_anchors(self):
         text = ('## Main\n\n<!-- hidden\ncomment -->\n\n'
                 '"Door opens."\nA window closes.\n \t\n"River flows."\n')
@@ -93,6 +111,79 @@ class TestParagraphContract(unittest.TestCase):
 
 
 class TestProseScope(unittest.TestCase):
+    def test_malformed_inline_syntax_has_bounded_scan_work_and_stays_literal(self):
+        from lixity import markdown_parser
+
+        class ReadBudget(str):
+            reads = 0
+
+            def __getitem__(self, key):
+                self.reads += 1
+                if self.reads > 40 * len(self):
+                    raise AssertionError("Malformed prose caused repeated suffix scans")
+                return super().__getitem__(key)
+
+        brackets = "[" * 1024 + " ordinary prose."
+        # Instrument character access after the existing reference-definition
+        # pass; bound work, not wall-clock time or a particular data structure.
+        with patch.object(markdown_parser, "_LINK_DEFINITION") as definitions:
+            definitions.sub.side_effect = lambda _replacement, text: ReadBudget(text)
+            self.assertEqual(markdown_parser.counting_inline_text(brackets), brackets)
+        backticks = " ".join("`" * width for width in range(1, 121)) + " ordinary prose."
+        self.assertEqual(markdown_parser.counting_inline_text(backticks), backticks)
+        nested = "Mara"
+        for _ in range(1000):
+            nested = f"[{nested}](destination)"
+        self.assertEqual(markdown_parser.counting_inline_text(nested), "Mara")
+
+    def test_inline_only_manuscripts_keep_anchors_and_render_without_fabricated_signals(self):
+        from lixity import api
+
+        for body in ('![Mara](portrait.png)', '`Mara`'):
+            with self.subTest(body=body):
+                text = f"## Main\n\n{body}\n"
+                metrics = api.analyze(text, project_config={})["metrics"]
+                self.assertEqual(metrics["tokens"], 0)
+                self.assertEqual(metrics["chapters"][0]["words"], 0)
+                self.assertIsNone(metrics["chapters"][0]["hd_d"])
+                self.assertEqual(metrics["chapters"][0]["style_se"], {})
+                html = api.dashboard(text, project_config={"characters": {"Mara": {"pov_in_chapters": [1]}}})
+                self.assertIn('id="ch-1"', html)
+                self.assertIn('id="p-0"', html)
+                self.assertIn('Declared POV chapters', html)
+
+    def test_inline_only_chapters_keep_numbers_when_counting_excludes_their_content(self):
+        from lixity.characters import presence_report
+        from lixity.registers import resolve_chapter_registers
+
+        text = ('## Image\n\n![Mara](portrait.png)\n\n'
+                '## Code\n\n`Mara`\n\n## Real\n\nMara opens the door.\n')
+        config = CorpusConfig(language="en")
+        self.assertEqual([(n, title) for n, title, _ in split_chapters(text, config)],
+                         [(1, "Image"), (2, "Code"), (3, "Real")])
+        metrics = CorpusAnalyzer(config).analyze_text(text)
+        self.assertEqual([(c.num, c.title, c.words) for c in metrics.chapters],
+                         [(1, "Image", 0), (2, "Code", 0), (3, "Real", 4)])
+        self.assertEqual(resolve_chapter_registers(metrics.chapters, {"3": "voice"}), {3: "voice"})
+        self.assertEqual(scene_report(text, config),
+                         scene_report(text, config, _premeasured_chapters=metrics.chapters))
+        self.assertEqual(presence_report(text, ["Mara"], config)["figures"][0]["chapters_present"], [3])
+        paragraphs, _ = ParagraphProfiler(config).profile_blocks(parse_markdown_blocks(text, config))
+        self.assertEqual([(p.chapter_num, p.words) for p in paragraphs], [(1, 0), (2, 0), (3, 4)])
+
+    def test_nested_and_escaped_links_use_visible_labels_only(self):
+        from lixity.characters import presence_report
+
+        text = ('## Main\n\n[Mara [Quinn]](https://example.org/map_(Mara)) '
+                r'and [Mara \[Quinn\]](https://example.org/Mara).' '\n')
+        config = CorpusConfig(language="en")
+        self.assertEqual(CorpusAnalyzer(config).analyze_text(text).tokens, 5)
+        self.assertEqual(presence_report(text, ["Mara"], config)["figures"][0]["mentions"], 2)
+        nested = "Mara"
+        for _ in range(20):
+            nested = f"[{nested}](https://example.org/Mara)"
+        self.assertEqual(presence_report("## Main\n\n" + nested, ["Mara"], config)["figures"][0]["mentions"], 1)
+
     def test_code_is_excluded_and_visible_front_matter_stays_global(self):
         config = CorpusConfig(language="en")
         text = ('# Book title\n\nAuthor metadata.\n\n## Main\n\n'

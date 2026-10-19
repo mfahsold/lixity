@@ -102,7 +102,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "dashboard_unchanged": "Dashboard unchanged: {output}",
         "pdf_written": "PDF written: {output}",
         "pdf_unchanged": "PDF unchanged: {output}",
-        "err_no_names": "No figure names given (use --name or --names).",
+        "err_no_names": "No figure names selected (use --name, --names or project characters settings).",
         "dlg_metric": "Dialogue metric",
         "dlg_value": "Value",
         "dlg_turns": "Turns (quoted segments)",
@@ -116,10 +116,11 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "dlg_title": "Title",
         "chr_name": "Figure",
         "chr_mentions": "Mentions",
-        "chr_chapters": "Chapters present",
+        "chr_chapters": "Chapters with mentions",
         "chr_span": "Chapter span",
-        "chr_gap": "Longest gap",
-        "chr_share": "Presence",
+        "chr_gap": "Internal gap",
+        "chr_share": "Mention coverage",
+        "chr_pov": "Declared POV chapters",
         "pac_metric": "Pacing metric",
         "pac_value": "Value",
         "pac_chapters": "Chapters",
@@ -189,7 +190,7 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "dashboard_unchanged": "Dashboard unverändert: {output}",
         "pdf_written": "PDF geschrieben: {output}",
         "pdf_unchanged": "PDF unverändert: {output}",
-        "err_no_names": "Keine Figurennamen angegeben (--name oder --names).",
+        "err_no_names": "Keine Figurennamen ausgewählt (--name, --names oder characters in der Projektkonfiguration).",
         "dlg_metric": "Dialogmetrik",
         "dlg_value": "Wert",
         "dlg_turns": "Turns (Redeabschnitte)",
@@ -203,10 +204,11 @@ CLI_TEXTS: dict[str, dict[str, str]] = {
         "dlg_title": "Titel",
         "chr_name": "Figur",
         "chr_mentions": "Erwähnungen",
-        "chr_chapters": "Kapitel anwesend",
+        "chr_chapters": "Kapitel mit Nennung",
         "chr_span": "Kapitelspanne",
-        "chr_gap": "Größte Lücke",
-        "chr_share": "Präsenz",
+        "chr_gap": "Interne Lücke",
+        "chr_share": "Nennungsanteil",
+        "chr_pov": "Deklarierte Perspektivkapitel",
         "pac_metric": "Pacing-Metrik",
         "pac_value": "Wert",
         "pac_chapters": "Kapitel",
@@ -263,7 +265,8 @@ def _completion_scripts() -> tuple[str, str]:
     """Bash and Zsh scripts with live command and research-action lists."""
     from .research.cli import command_metadata
 
-    research_actions = " ".join(command["name"] for command in command_metadata())
+    research_actions = " ".join(name for command in command_metadata()
+                                for name in (command["name"], *command.get("aliases", [])))
     names = " ".join(name for name, _help in _COMMANDS)
     descriptors = "\n".join(f"    '{name}:{help_text}'" for name, help_text in _COMMANDS)
     sections = " ".join(_ABOUT_SECTIONS)
@@ -284,7 +287,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
     ("profile", "Paragraph tense/style estimates for supported body/list blocks (JSON)"),
     ("dialogue", "Dialogue turn structure (text/JSON)"),
-    ("characters", "Character presence across chapters (text/JSON)"),
+    ("characters", "Curated name mentions and declared POV across chapters (text/JSON)"),
     ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
     ("scenes", "Scene features, register references and author targets (text/JSON)"),
     ("motifs", "Motif tracking, repetition and local phrase echoes (text/JSON)"),
@@ -611,26 +614,28 @@ def _cmd_dialogue(args: argparse.Namespace) -> int:
 
 
 def _cmd_characters(args: argparse.Namespace) -> int:
-    """Character presence as a Rich table or JSON."""
+    """Curated name mentions and declared POV as a Rich table or JSON."""
+    from .characters import presence_report, resolve_character_settings
+
     names: list[str] = list(args.name or [])
-    if args.names:
+    if args.names is not None:
         names.extend(part.strip() for part in args.names.split(",") if part.strip())
-    if not names:
-        print(f"{_m('err_prefix')} {_m('err_no_names')}", file=sys.stderr)
-        return EXIT_ERROR
     try:
+        selection = resolve_character_settings(
+            names if args.name or args.names is not None else None, args._project_config)
+        if not selection.names:
+            print(f"{_m('err_prefix')} {_m('err_no_names')}", file=sys.stderr)
+            return EXIT_ERROR
         with open(args.file, encoding="utf-8") as f:
             text = f.read()
-    except OSError as exc:
+        config, resolved = resolve_document_config(text, args.language, project_config=args._project_config)
+        report = presence_report(text, selection.names, config, declared_pov=selection.declared_pov)
+    except (OSError, UnicodeError) as exc:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
-
-    from .characters import presence_report
-
-    config, resolved = resolve_document_config(
-        text, args.language, project_config=args._project_config
-    )
-    report = presence_report(text, names, config)
+    except ValueError as exc:
+        print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
+        return EXIT_ERROR
 
     if args.json:
         print(_json(_meta_payload(resolved.key, **report), indent=True))
@@ -644,20 +649,25 @@ def _cmd_characters(args: argparse.Namespace) -> int:
     table.add_column(_m("chr_span"))
     table.add_column(_m("chr_gap"), justify="right")
     table.add_column(_m("chr_share"), justify="right")
+    if selection.declared_pov:
+        table.add_column(_m("chr_pov"))
     for figure in report["figures"]:
         span = (
             f"{figure['first_chapter']}–{figure['last_chapter']}"
             if figure["first_chapter"]
             else "–"
         )
-        table.add_row(
+        row = [
             figure["name"],
             str(figure["mentions"]),
             f"{len(figure['chapters_present'])} / {report['chapters']}",
             span,
             str(figure["longest_gap"]),
             f"{figure['presence_ratio'] * 100:.0f} %",
-        )
+        ]
+        if selection.declared_pov:
+            row.append(", ".join(str(number) for number in figure.get("declared_pov_chapters", [])) or "–")
+        table.add_row(*row)
     con.print(table)
     return EXIT_OK
 
@@ -1126,9 +1136,9 @@ def main(argv: list[str] | None = None) -> int:
                 "--name",
                 action="append",
                 default=[],
-                help="Figure name or alias pattern (repeatable)",
+                help="Figure name or alias regex (repeatable; overrides project selection)",
             )
-            p.add_argument("--names", help="Comma-separated figure names")
+            p.add_argument("--names", help="Comma-separated names; omitted uses project characters or legacy names")
             p.add_argument(
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
             )
@@ -1425,13 +1435,17 @@ def main(argv: list[str] | None = None) -> int:
     fp_thresholds = _thresholds_from_args(args, getattr(args, "_project_config", None))
     analysis = analyze_document(text, config, fp_thresholds)
     metrics = analysis.metrics
-    from .characters import presence_report
+    from .characters import presence_report, resolve_character_settings
     from .dialogue import dialogue_report
 
-    names = [
-        part.strip() for part in (getattr(args, "names", None) or "").split(",") if part.strip()
-    ]
     try:
+        raw_names = getattr(args, "names", None)
+        selection = resolve_character_settings(
+            [part.strip() for part in raw_names.split(",") if part.strip()] if raw_names is not None else None,
+            args._project_config,
+        )
+        character_report = (presence_report(text, selection.names, config, declared_pov=selection.declared_pov)
+                            if selection.names else None)
         title = _document_title(args, args.file, text)
     except ValueError as exc:
         print(f"{_m('err_prefix')} {exc}", file=sys.stderr)
@@ -1448,7 +1462,7 @@ def main(argv: list[str] | None = None) -> int:
             premeasured_chapters=metrics.chapters,
         ),
         dialogue=dialogue_report(text, config).to_dict(),
-        characters=presence_report(text, names, config) if names else None,
+        characters=character_report,
     )
     output = args.output or "lixity-dashboard.html"
     try:

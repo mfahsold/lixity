@@ -38,7 +38,9 @@ are authored project records.
 
 **Current main (unreleased):** the research view starts with dossiers. The saved
 evidence area keeps Zotero selection and optional local import behind compact
-disclosures. Existing archives, citations and CLI/HTTP commands are unchanged.
+disclosures. Revision previews, historical comparisons and explicit Markdown
+editing reuse the existing archive. Dossier `--file` now reads an existing UTF-8
+file; migrate literal text arguments to `--body`. Archives and citations are unchanged.
 Zotero is optional: retained evidence and authorized local imports work without it.
 
 <a id="reading-and-cli-workflows-since-v240"></a>
@@ -57,7 +59,11 @@ lixity research search --query "reading room"
 lixity research link PASSAGE_ID CLAIM_ID --relation contextualizes
 ```
 
-Use full returned IDs. `link` creates evidence; `link-evidence` also supports
+Use returned IDs. Current main also accepts complete bare UUIDv4 selectors in the
+CLI and canonicalizes them to `urn:uuid:…`; API and stored identifiers stay strict.
+Grouped help and discovery expose command aliases, including `dossiers`, `claims`
+and `decisions`, without separate command implementations.
+`link` creates evidence; `link-evidence` also supports
 inspection and revisions. In the source reader, selecting text within one
 uniquely resolved retained paragraph prepares an evidence draft. Review its
 quote and full paragraph context, choose a claim/relation and save separately.
@@ -358,18 +364,16 @@ binary/text attachment workflows.
 
 `dossier`, `claim` and `decision` accept `list`, `show ID`, `inspect ID` or a
 positional ID; explicit update/history modes still work with that ID. Their
-`--latest` convenience option uses record revision and snapshot from one read;
-subsequent changes fail. Explicit snapshots stay strict.
+`--latest` convenience option selects the current revision and snapshot together;
+a later write still fails. Inspect the record first when human review is required.
 
 Ordinary `dossier`, `claim`, `link-evidence`, `decision` and `relate` commands
 with `--update` require `--expected-revision`, `--change-kind` and `--reason`.
 The archive-wide `--expected-snapshot` is optional for these ordinary updates.
-When omitted, the CLI reads the current record, checks that its revision equals
-the one you reviewed and submits that read's snapshot to the unchanged strict
-backend writer. An earlier unrelated write no longer invalidates that update;
-a changed target record or a writer race still fails, without retry, merge or
-rebase. A supplied snapshot remains a strict archive-wide guard, even when the
-target record itself has not changed.
+When omitted, the backend checks the reviewed target revision and uses that
+read's snapshot for the strict commit. Earlier unrelated writes are allowed;
+changed targets and later races fail without retry or rebase. An explicit
+snapshot guards the entire archive, including unrelated changes.
 
 ```sh
 lixity research claim --project ./novel --claim-id CLAIM_ID --update \
@@ -377,26 +381,29 @@ lixity research claim --project ./novel --claim-id CLAIM_ID --update \
   --statement "A revised author assertion"
 ```
 
-`--diff` previews the same change as a terminal unified diff and never
-writes: dossier body edits render line by line, other fields as
-before/after values. It computes the diff from the current revision, so
-it shows what an `--update` would submit next, including merged section
-content.
+**Current main (unreleased):** `--update --dry-run` validates the exact proposed
+write, including revision, reason, association pins and optional snapshot, without
+taking the writer lock or publishing records. It does not merge drafts or promise
+that a later commit will succeed. `--diff` instead compares supplied fields with
+the current record in one coherent read; it is a comparison, not write validation.
+Add `--from-revision N` to compare saved versions, optionally selecting
+`--to-revision M`; an omitted destination means the HEAD observed in that read.
 
 ```sh
 lixity research dossier --project ./novel --dossier-id DOSSIER_ID --diff \
   --section "Smuggling route" --file revised-section.md
+lixity research dossier DOSSIER_ID --project ./novel --diff --from-revision 1
 ```
 
-Unchanged association IDs retain their exact saved pins. With an omitted
-snapshot, adding/changing an association requires its explicit reviewed revision:
-`--dossier-revision`, `--claim-revision`, `--from-claim-revision`,
-`--to-claim-revision`, or a `--dossier-revisions` JSON mapping for added decision
-dossiers. Nonexistent pins fail. Immutable passage IDs need no separate revision
-flag. Explicit-snapshot updates retain their existing association behavior.
-Python `revise_record` supports the same optional-snapshot convenience. HTTP
-revisions, image attachments, acknowledgements and batches retain explicit guards. Use the preview
-workflow below when a conflict requires reconciliation.
+Unchanged associations retain their exact saved pins. Without an explicit snapshot,
+changed associations require explicit reviewed revisions; inspect command help for
+the corresponding pin options. Historical comparisons never repin. Python shares
+these semantics; HTTP, images, acknowledgements and batches keep explicit guards.
+
+For dossier body input, use `--file existing.md` or `--body "Literal text"`, never
+both. Current main rejects missing, unreadable or non-UTF-8 files before a write;
+it no longer interprets a missing filename as body text. This applies equally to
+creation, updates, preparation and prospective comparison.
 
 ### Resolve conflicting drafts
 
@@ -408,8 +415,9 @@ draft; save separately. Preparing or selecting a resolution writes nothing.
 Another change before saving still rejects the save and keeps the draft.
 
 CLI users can prepare a draft with `--prepare --base-revision N` instead of
-`--update`. Resolve
-overlapping fields with repeated `--resolve FIELD=current` or `FIELD=mine`.
+`--update`. This is three-way reconciliation of the saved base, current record
+and draft, unlike exact update dry-run. Resolve overlapping fields with repeated
+`--resolve FIELD=current` or `FIELD=mine`.
 Submit the resulting changes with the returned snapshot/revision tokens through
 the existing strict update command. Association IDs and revision pins are
 compared together; unchanged associations keep their historical pins.
@@ -432,12 +440,40 @@ ignored; repeated heading names reject ambiguous reads/updates. Other text,
 line endings and evidence references are preserved. Prepared section drafts
 start from the selected base revision, never a silently substituted current body.
 
-The Python equivalent `prepare_dossier_section(project, id, base_revision=N,
-section="Heading", content="Draft")` prepares a read-only, section-bounded
-three-way comparison. Save its full merged `changes` with the returned current
-snapshot and revision through `revise_record`. `get_dossier(..., revision=N)`
-reads the exact saved version; `editable_sections` lists real, unique headings,
-excluding code and the generated preamble label.
+Preparation can combine section text and ordinary metadata changes through the
+same revision path; unrelated current sections survive. Python entrypoints and
+result contracts are in the [automation reference](../AGENTS.md#51-research-api-lixityresearchapi).
+
+### Edit an exported Markdown dossier
+
+**Current main (unreleased):** the archive remains authoritative. Export an
+existing dossier, edit the file, preview reconciliation, then apply the reviewed
+packet explicitly:
+
+```sh
+lixity research dossier ID --project ./novel --export-edit draft.md
+# Edit draft.md, retaining its leading lixity-dossier-edit/1 JSON comment.
+lixity research dossier ID --project ./novel --prepare --edit-file draft.md
+lixity research dossier ID --project ./novel --prepare --edit-file draft.md \
+  --output reviewed.json --change-kind correction --reason "Reviewed draft"
+lixity research revise-batch --project ./novel --file reviewed.json \
+  --apply --expected-snapshot DIGEST
+```
+
+Use the snapshot returned with the ready packet. The versioned packet binds the
+reviewed project and snapshot; a later archive change requires another preview,
+not substituting a newer digest. Applying reads the packet, not later edits to
+the Markdown file. Export and packet output require new files outside the archive
+and its internal `.lixity` directory; existing files are never overwritten.
+
+The leading comment identifies the project, record and base revision. Its
+`fields` object edits title, language, tags, geography and evidence IDs; the
+remaining file is the exact body, including ordinary front matter and line endings.
+Keep the exported identity fields unchanged. Changed overlapping fields need an
+explicit resolution. Unchanged or conflicting previews create no packet; inspect
+`has_changes` and `ready` in the result. This is an explicit round trip, with no
+new-record import, file watcher, deletion synchronization or automatic repinning.
+`ingest` retains source evidence; it does not import authored dossier drafts.
 
 ### Keep a visual reference in a dossier
 
@@ -448,7 +484,8 @@ commit together or accept neither. A stale save requires refresh and review.
 
 Earlier dossier revisions retain exact image versions. Withdrawn/purged/missing
 images show unavailable placeholders. Source-page URLs are metadata, never fetched.
-Click an image to enlarge it; Escape closes it. Images create no text passages,
+Click an image to enlarge it; Escape closes it. Current main uses a shared
+PhotoSwipe zoom viewer for retained images and rendered diagrams. Images create no text passages,
 linguistic scores, OCR or factual verification. Label generated/reconstructed
 references in the caption and `context.provenance_note`; retain the actual source
 of documentary photographs.
@@ -501,7 +538,9 @@ envelope; each operation has `kind`, `id`, `expected_revision`, `changes`,
 `change_kind` and `reason`. Preparation writes nothing. Apply validates all
 operations before one commit; invalid inputs/races accept none. Duplicate IDs
 and references to revisions created by that same batch fail. Existing evidence
-and explicitly pinned references stay intact.
+and explicitly pinned references stay intact. A versioned preparation envelope
+must match the selected project and its reviewed snapshot at application; a raw
+operations list uses the explicitly supplied snapshot guard.
 
 ### Mark a decision as applied to a reviewed dossier
 
@@ -553,9 +592,12 @@ fictional positions and walking/driving paths. CLI creation accepts `--geography
 ordinary dossier revision, history, search and backup retain the same data.
 Use command help and `research schema` for accepted fields and bounds.
 
-Coordinates are finite WGS84 longitude/latitude pairs. The offline view is a
-coordinate sketch: it provides no basemap, geocoding, road routing, travel times
-or historical verification. An attached map image is a separate source, not a
+Coordinates are finite WGS84 longitude/latitude pairs. **Current main (unreleased):**
+the numbered sketch and interactive Leaflet vector view work offline. Optional
+OpenStreetMap tiles require explicit permission; requests disclose the visible
+map area and client IP to the provider. Permission is not persisted and resets
+when the map/project context closes. There is no geocoding, road routing, travel
+time calculation or historical verification. An attached map image is a separate source, not a
 georeferenced background. Keep supporting quotations and exact-version images
 in the dossier's existing evidence and body. Unknown geometry stays unplaced.
 
@@ -722,6 +764,8 @@ application-level usability or that an external attachment was included.
 Install using the [installation guide](../INSTALLATION.md#cli-current-release)
 or a development checkout (`make install-dev`). SQLite must include FTS5;
 PDF extraction has the [separate prerequisites](#native-pdfs-versus-scans).
+Prepare authorized `notes.txt` and an authored `notes.md` before these commands;
+the latter is dossier content, not a second source capture.
 
 ```sh
 lixity research init --project ./novel --title "Novel research" --language en
@@ -842,35 +886,23 @@ or **Supersession** for a changed interpretation or authorial choice, and give
 a reason. Save keeps the record's ID and adds one immutable revision. **History**
 opens earlier accepted versions; it does not restore or overwrite them.
 
-An edit does not create an additional active dossier. Existing associations
-remain pinned to the versions they originally referenced. For example, changing
-a claim does not make its old supporting link evidence for the revised statement;
-the UI shows the earlier claim revision for review. Creating a new association
-uses the target's current revision. Submitting an unchanged association keeps
-its original pin. To review an association against a revised claim or dossier,
-explicitly change its associated revision in the editor. The earlier association
-remains inspectable in history.
+Existing associations retain their saved pins; new associations use the target's
+current revision. To associate evidence with a revised claim/dossier, explicitly
+change that pin in the editor. Old associations remain inspectable in history;
+editing a statement does not turn its old evidence into support for the new wording.
 
-The editor preserves its draft when validation, a request or a conflict fails.
-If any archive write occurred since the editor was opened, saving returns a
-conflict. **Reload current** explicitly discards the draft and loads the current
-record; nothing is silently merged or retried. Cancel closes the editor without
-writing.
+The editor preserves failed drafts. Any archive write after opening makes its
+snapshot stale. Use [three-way review](#resolve-conflicting-drafts), or **Reload
+current** to discard the draft explicitly; Cancel closes without writing.
 
-Use the [ordinary update workflow](#update-one-reviewed-record), then inspect
-history or an exact revision through the same record command. Omitted fields
-stay unchanged; empty optional values clear them, and empty comma-separated
-lists clear the corresponding list. `--no-deviation-from-fact` clears that flag.
-Python uses `get_record`, `revise_record` and `record_history`; HTTP keeps its
-explicit snapshot/revision guards. See [automation](../AGENTS.md#52-http-server-endpoints-for-web-ui-and-interactive-agent-loops)
-for payloads and versioned envelopes.
+Use the [ordinary update workflow](#update-one-reviewed-record) to inspect or
+revise through the CLI. Omitted fields stay unchanged; explicit empty optional
+values/lists clear them. The [automation reference](../AGENTS.md#51-research-api-lixityresearchapi)
+owns Python/HTTP payloads and versioned envelopes.
 
-Source refresh never rewrites authored records. A newer-capture notice compares
-explicit passage citations with the source's latest available capture; the
-original quote remains visible. Copied body text alone does not establish an
-association with a source, and neither filenames nor titles are used to guess
-one. Existing historical imports can therefore remain unchanged until the
-author explicitly revises them.
+Source refresh never rewrites authored records. Newer-capture notices compare
+explicit citations with the latest capture while preserving the original quote.
+Copied text, titles and filenames do not establish source associations.
 
 Historical dossier and evidence-link views resolve their pinned passages.
 Claim and decision views show the current evidence links to their pinned claim
@@ -886,6 +918,11 @@ entire archive at an earlier date.
 - `.lixity/research/`: disposable catalogue and writer lock.
 
 ### Withdrawal vs. purge
+
+These operations concern sources. A dossier revision marked `supersession`
+records why that revision changed; it does not retire the dossier or establish
+a replacement link. Listing already respects stored dossier tombstones, but no
+public dossier-retirement, replacement-link or merge operation is provided.
 
 - **Withdrawal (`withdraw`)**: Preserves the audit trail and archived source text,
   records a tombstone in the manifest, excludes the source or version from default
@@ -952,6 +989,9 @@ Uncommitted objects left after interruption are ignored, not selected by date.
 Locks release when the process exits. A stale expected HEAD fails rather than
 overwriting another ingestion. Interrupted initialization may leave an incomplete
 directory: preserve it for inspection; `init` refuses to overwrite it.
+Current-main diagnostics distinguish a busy writer from read-only, permission and
+other I/O failures at the canonical project lock. A lock file's existence does
+not prove contention; no alternate `/tmp` lock or unlocked fallback is used.
 
 Files are flushed before publication; directory syncing is used on POSIX.
 If an interrupted authored edit leaves a valid next-revision file outside the
@@ -1027,13 +1067,11 @@ models. Run diagnostics in the same environment as the server:
 lixity research ocr-status [--worker-cmd PATH] [--probe]
 ```
 
-Pass `--probe` (or query `GET /api/research/ocr-status?probe=1`) to execute a
-synthetic request to the selected worker or Tesseract backend and report
-execution and latency. Native mode has no OCR worker to probe. A successful
-probe upgrades only `ready` to `ready (probed)`; it cannot override an invalid
-timeout/backend configuration or missing rasterizer (`partial`). Inspect
-`probe.ok` and configuration/dependency fields together. The diagnostic CLI
-still exits `0` when the probe fails, so exit status alone is not a health gate.
+`--probe` (HTTP `?probe=1`) executes a synthetic worker/Tesseract request and
+reports execution/latency; native mode has no worker to probe. Success upgrades
+only `ready` to `ready (probed)`, never invalid configuration or `partial`.
+Inspect `probe.ok` and configuration/dependencies together: the diagnostic CLI
+exits `0` even when a probe fails.
 
 The same information is available at `GET /api/research/ocr-status` and in
 `GET /api/research/status`. The dashboard maps these codes to localized labels:
@@ -1047,11 +1085,9 @@ The same information is available at `GET /api/research/ocr-status` and in
 | `misconfigured_backend` | Invalid backend/native timeout, or unavailable Tesseract/language data | Check `LIXITY_OCR_BACKEND`, `LIXITY_OCR_LANGUAGES`, timeout and local installation |
 | `missing_dependencies` | No complete usable setup | Install Poppler and select a scan backend when needed |
 
-Configuration diagnostics inspect executable availability, not model weights,
-snapshot integrity, GPU resources or recognition accuracy. A synthetic probe
-checks only that request, not real-model or GPU validation. The
-worker model/recipe identifiers are configuration constants, not attestations.
-`ready` therefore means configured, not an end-to-end health check; use `--probe` to verify live execution.
+Diagnostics establish executable availability; a probe establishes only that
+request's execution. Neither verifies model weights, GPU resources or recognition
+accuracy. Worker model/recipe identifiers are requested constants, not attestations.
 
 Native extraction refuses an undeterminable page count. If Poppler's `pdfinfo` is
 absent and the page tree is not readable in the raw file -- typically because a
@@ -1151,10 +1187,14 @@ behavior belongs to its deployment's privacy boundary.
 
 ## Safe Markdown and offline diagram rendering
 
-Dossier body text supports a safe Markdown subset and offline SVG diagram rendering directly in the browser without external dependencies, CDNs, or network access:
-- **Safe Markdown**: Paragraphs, headings (h1–h6), bold, italic, blockquotes, ordered/unordered lists, code spans, code blocks, and GFM tables. Raw HTML is strictly escaped to prevent cross-site scripting (XSS).
-- **Offline diagrams**: Fenced code blocks with `mermaid` syntax are parsed and converted to native inline SVGs by Lixity's built-in vector generator. Supported types include flowcharts (`graph TD`, `graph LR`) and sequence diagrams (`sequenceDiagram`).
-- **Source inspectability**: Any rendered diagram provides a collapsible "Show diagram source" control to view the raw specification.
+Dossier bodies support headings, emphasis, quotations, lists, code and tables;
+raw HTML stays escaped. **Current main (unreleased):** bundled Mermaid tiny 12.2.0
+renders supported `mermaid` fences offline instead of the former partial renderer.
+The library initializes when a diagram first becomes visible. Image/resource
+syntax, click actions and configuration/style directives are disabled; unsupported
+or invalid diagrams keep their inspectable source. Rendered SVGs share the local
+PhotoSwipe 5.4.4 zoom viewer with images. Neither renderer loads a CDN or uploads
+the diagram; optional map tiles have the separate permission boundary above.
 
 ## Limits
 

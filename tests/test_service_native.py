@@ -231,7 +231,8 @@ def test_simultaneous_starts_share_one_owned_child(tmp_path, monkeypatch):
             assert all(result["pid"] == status["pid"] for result in results), results
             with urllib.request.urlopen(f"http://127.0.0.1:{port}/api", timeout=10) as response:
                 assert json.load(response)["version"] == __version__
-            assert app.control("stop", {})["ok"]
+            stopped = app.control("stop", {})
+            assert stopped["ok"], startup_diagnostics(app, stopped)
             assert not app.runtime_file.exists()
             break
         finally:

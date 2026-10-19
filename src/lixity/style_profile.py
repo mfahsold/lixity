@@ -8,7 +8,7 @@ from dataclasses import dataclass
 from typing import Any
 
 from .language import compile_pattern, compile_word_pattern, count_nominal_matches, resolve_language
-from .markdown_parser import strip_inline_markup
+from .markdown_parser import counting_inline_text, strip_inline_markup
 from .math_core import per_mille
 from .models import CorpusConfig
 from .sentences import split_sentences
@@ -287,9 +287,11 @@ class ParagraphProfiler:
                 continue
 
             raw_text = block.get("text", "")
-            clean = strip_inline_markup(raw_text)
-            if not clean:
+            display_text = strip_inline_markup(raw_text)
+            if not display_text:
                 continue
+
+            clean = counting_inline_text(raw_text)
 
             words = len(self._word.findall(clean))
             # Mirror the chapter metric: a fragment without word tokens is
@@ -348,7 +350,7 @@ class ParagraphProfiler:
                 modal_density=round(modal_density, 1),
                 nominal_density=round(nominal_density, 1),
                 passive_density=round(passive_density, 1),
-                text=clean,
+                text=display_text,
                 flag_min=self.thresholds.flag_min_severity,
             )
             paragraphs.append(profile)

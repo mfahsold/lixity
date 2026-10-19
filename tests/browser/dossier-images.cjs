@@ -253,6 +253,10 @@ server.serve_forever()
     assert.equal(await figure.locator('script').count(), 0);
     await figure.locator('[data-dossier-enlarge]').click();
     await expect(page.locator('#modal-dossier-image-enlarge')).toBeVisible();
+    await expect(page.locator('#modal-dossier-image-enlarge .pswp__button--zoom')).toBeVisible();
+    await expect(page.locator('#modal-dossier-image-enlarge .pswp__caption')).toContainText('synthetic.png');
+    await expect(page.locator('#modal-dossier-image-enlarge .pswp__caption')).toContainText('Synthetic provenance');
+    await expect(page.locator('#modal-dossier-image-enlarge .pswp__caption')).toContainText('Source context Synthetic provenance');
     await page.keyboard.press('Escape');
     await expect(figure.locator('[data-dossier-enlarge]')).toBeFocused();
     const detail = await (await page.request.get(fixture.url + '/api/research/dossiers?id=' + fixture.dossier)).json();

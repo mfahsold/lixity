@@ -15,9 +15,12 @@ from typing import Literal
 
 from .markdown_parser import (
     SCENE_BREAK_RE,
+    _code_end,
     _fence_closer,
     _front_matter_end,
+    _InlineDelimiters,
     _is_indented_code,
+    _link_at,
     _without_comments,
     chapter_heading_spans,
     inline_markdown_to_html,
@@ -54,7 +57,6 @@ _LIST = re.compile(r"^ {0,3}([-+*]|\d+[.)])\s+")
 _HEADING = re.compile(r"^ {0,3}(#{1,6})\s+")
 _PAGE_BREAK = re.compile(r"\\(?:newpage|clearpage)\s*")
 _UNDERSCORE = re.compile(r"(?<!\w)(_{1,3})(?=\S)(.*?\S)\1(?!\w)")
-_BACKTICKS = re.compile(r"`+")
 _COMMAND = re.compile(r"[A-Za-z]+[0-9]*")
 _WINDOWS_PATH = re.compile(r'(?:[A-Za-z]:\\|\\\\[^\\\s]+\\)[^\s{}*<>|?"]+')
 _SPACED_PATH = re.compile(r'(?:[ \t]+[\w.-]+)+\\[^\s{}*<>|?"]+')
@@ -62,56 +64,6 @@ _TEX_TAGS = {
     "emph": "emph", "textit": "em", "textbf": "strong", "texttt": "code",
     "textnormal": "normal",
 }
-
-
-def _code_end(text: str, start: int) -> tuple[int, int] | None:
-    """Return the matching backtick span and its delimiter width, when closed."""
-    opening = _BACKTICKS.match(text, start)
-    if opening is None:
-        return None
-    marker = opening.group()
-    pattern = re.compile(r"(?<!`)" + re.escape(marker) + r"(?!`)")
-    closing = pattern.search(text, start + len(marker))
-    return (closing.end(), len(marker)) if closing else None
-
-
-def _link_at(text: str, start: int) -> tuple[str, str, int, bool] | None:
-    """Read a bounded inline link/image destination, allowing grouped parentheses."""
-    image = text.startswith("![", start)
-    opening = start + 1 if image else start
-    if not text.startswith("[", opening):
-        return None
-
-    def closing_at(position: int, left: str, right: str) -> int | None:
-        depth = 1
-        index = position + 1
-        while index < len(text) and text[index] != "\n":
-            if text[index] == "\\":
-                index += 2
-                continue
-            if text[index] == left:
-                depth += 1
-            elif text[index] == right:
-                depth -= 1
-                if not depth:
-                    return index
-            index += 1
-        return None
-
-    label_end = closing_at(opening, "[", "]")
-    if label_end is None:
-        return None
-    label = text[opening + 1:label_end]
-    destination_start = label_end + 1
-    if text.startswith("(", destination_start):
-        end = closing_at(destination_start, "(", ")")
-    elif text.startswith("[", destination_start):
-        end = closing_at(destination_start, "[", "]")
-    else:
-        return (label, label, label_end + 1, True) if image else None
-    if end is None:
-        return None
-    return label, text[destination_start + 1:end] or label, end + 1, image
 
 
 class _RunReader(HTMLParser):
@@ -171,6 +123,7 @@ class _RunReader(HTMLParser):
 
 
 def _inline_runs(text: str, *, start_line: int = 1, page_breaks: bool = False) -> list[TextRun]:
+    delimiters = _InlineDelimiters(text)
     protected: list[str] = []
     prefix = "\x01PRESENTATION\x02"
     while prefix in text:
@@ -190,7 +143,7 @@ def _inline_runs(text: str, *, start_line: int = 1, page_breaks: bool = False) -
         index = start
         while index < len(text):
             char = text[index]
-            link = _link_at(text, index) if char in "![" else None
+            link = _link_at(text, index, delimiters=delimiters) if char in "![" else None
             if link:
                 label, reference, index, image = link
                 if image:
@@ -221,7 +174,7 @@ def _inline_runs(text: str, *, start_line: int = 1, page_breaks: bool = False) -
                 index = path_end
                 continue
             if char == "`":
-                span = _code_end(text, index)
+                span = _code_end(text, index, delimiters=delimiters)
                 if span:
                     end, width = span
                     literal = text[index + width:end - width].replace("\n", " ")

@@ -700,17 +700,6 @@ def test_manuscript_commands_render_requested_format(manuscript_archive, capsys,
         assert "preview" in output.lower()
 
 
-@pytest.mark.parametrize("id_form", ["named", "positional"])
-def test_latest_update_accepts_named_or_positional_record_id(manuscript_archive, capsys, id_form):
-    project, _, claim, _ = manuscript_archive
-    parser = research_parser()
-    selector = ["--claim-id", claim] if id_form == "named" else [claim]
-    args = parser.parse_args(["claim", *selector, "--project", str(project), "--update", "--latest",
-                              "--statement", "The room was closed.", "--change-kind", "correction",
-                              "--reason", "Synthetic correction."])
-    assert cli.run(args) == 0
-    record = json.loads(capsys.readouterr().out)["record"]
-    assert record["revision"] == 2 and record["statement"] == "The room was closed."
 
 
 def test_record_grammar_rejects_unknown_action(manuscript_archive, capsys):
@@ -741,27 +730,6 @@ def test_reconcile_quote_preview_text_shows_replacement(manuscript_archive, caps
     assert "ManuscriptState" not in output
 
 
-def test_latest_uses_one_reviewed_snapshot(manuscript_archive, monkeypatch, capsys):
-    project, _, claim, dossier = manuscript_archive
-    get_record = api.get_record
-    changed = False
-
-    def concurrent_change(*args, **kwargs):
-        nonlocal changed
-        reviewed = get_record(*args, **kwargs)
-        if not changed:
-            changed = True
-            revise(project, "dossier", dossier, {"title": "Concurrent notes"})
-        return reviewed
-
-    monkeypatch.setattr(api, "get_record", concurrent_change)
-    parser = research_parser()
-    args = parser.parse_args(["claim", "--claim-id", claim, "--project", str(project), "--update",
-                              "--latest", "--statement", "The room was closed.",
-                              "--change-kind", "correction", "--reason", "Synthetic correction."])
-    assert cli.run(args) == 1
-    assert "snapshot" in capsys.readouterr().err.lower()
-    assert get_record(project, "claim", claim)["record"]["revision"] == 1
 
 
 @pytest.mark.parametrize("failure_point", [
