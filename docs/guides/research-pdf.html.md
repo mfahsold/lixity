@@ -99,7 +99,7 @@ In the [Warehouse 4 demo project's Research view](../demo/report.html#research-m
 
 *Historical visual references stay attached to exact source versions. [Mobile map view](../screenshots/dashboard-dossier-image-mobile.png) · [Harbour photochrom](../screenshots/dashboard-dossier-photo.png) · [Places and journeys](../screenshots/dashboard-dossier-geography.png) · [Credits and file hashes](../assets/research/sources.json).*
 
-Use **Places and routes** in the dossier editor for named points, paths and areas, with descriptions, periods, actors and transport choices. **Since v0.7.1:** interactive vectors work offline; optional OpenStreetMap tiles need explicit, nonpersistent permission and disclose the viewed area and client IP to the provider. There is no road routing or travel-time calculation. Historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+Use **Places and routes** in the dossier editor for named points, paths and areas. **Current main, after v0.7.1:** maps open with OpenStreetMap; turn off the background or choose the numbered sketch for offline use. Tile requests disclose the viewed area and client IP to the provider. The view explains its measurements and limits; historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
 Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.png). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
 

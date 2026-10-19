@@ -13,6 +13,15 @@ async function main() {
     // Intercept a synthetic origin so embedded exact-version images use the same
     // resource URLs as the native app without contacting a running server.
     async function prepareWorkspacePage(target, {cursor = false} = {}) {
+    // Published map captures show real OSM tiles, with their native attribution.
+    // Load only the normal visible viewport; regression suites stub tile bytes.
+    await target.route('https://tile.openstreetmap.org/**', async route => {
+      const url = new URL(route.request().url());
+      assert.equal(route.request().method(), 'GET');
+      assert.match(url.pathname, /^\/\d+\/\d+\/\d+\.png$/);
+      assert.equal(url.search, '');
+      await route.continue();
+    });
     await target.route('http://lixity-screenshots.test/**', async route => {
       const url = new URL(route.request().url());
       const resource = researchFixture[url.pathname + url.search];
@@ -249,7 +258,7 @@ async function main() {
         if (name.includes('mobile')) await page.locator('#dim-projection').selectOption('d1-d2');
         assert.equal(await page.evaluate(() => captureRequests.length), before,
           'Chapter selection and planar projection use the existing local analysis');
-        await captureThrough(capture, '#dimensions', '.dim-selection-panel');
+        await captureThrough(capture, '#dimensions', '.dim-layout');
         await save(capture.target, '#dimensions');
       } else if (name === 'dashboard-reference.png') {
         await page.locator('#style-tab-bands').click();
@@ -411,14 +420,19 @@ async function main() {
           }
         }
         if (name.startsWith('dashboard-dossier-geography')) {
-          await card.locator('.dossier-geography .geography-sketch').waitFor();
+          const map = card.locator('.geography-map.leaflet-container');
+          await map.waitFor();
           const before = await page.evaluate(() => captureRequests.length);
           await card.locator('.geography-feature-list button[data-geo-select="2"]').click();
           await card.locator('[data-geo-frame]').click();
           await card.locator('.geography-map.leaflet-container').waitFor();
           await card.locator('[data-geo-fit]').click();
           assert.match(await card.locator('.geography-selected').innerText(), /Night watchman/);
-          assert.equal(await card.locator('[data-geo-basemap]').isChecked(), false);
+          await map.scrollIntoViewIfNeeded();
+          assert.equal(await card.locator('[data-geo-basemap]').isChecked(), true);
+          await map.locator('.leaflet-tile-loaded').first().waitFor();
+          await map.locator('.leaflet-tile-container img').evaluateAll(images => Promise.all(images.map(image => image.decode())));
+          assert.match(await map.locator('.leaflet-control-attribution').innerText(), /OpenStreetMap/);
           assert.equal(await page.evaluate(() => captureRequests.length), before,
             'Authored route selection and map framing require no further requests');
           await captureThrough(capture, '.research-details-body .dossier-geography', '.research-details-body .geography-method');

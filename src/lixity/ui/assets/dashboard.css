@@ -567,7 +567,7 @@ td.flag-excerpt {
 .dim-cutoff > p { color: var(--muted); line-height: var(--line-body); }
 .dim-view-control { display: flex; align-items: center; gap: .75rem; padding: .5rem .85rem; }
 .dim-view-control select { min-width: 0; max-width: 100%; }
-.dim-selection-panel { padding: .85rem; border-top: 1px solid var(--line); }
+.dim-selection-panel { min-width: 0; padding: .85rem; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
 .dim-selection-panel label { display: block; font-weight: var(--weight-semibold); margin-bottom: .35rem; }
 .dim-selection-panel select { display: block; width: 100%; min-width: 0; max-width: 100%; }
 #dim-selection { overflow-wrap: anywhere; }
@@ -584,9 +584,9 @@ td.flag-excerpt {
 #dim-expert .table-wrap { max-height: 20rem; }
 .dim-layout {
   display: grid;
-  grid-template-columns: minmax(min(100%, 340px), 1.15fr) minmax(min(100%, 300px), 1fr);
+  grid-template-columns: minmax(min(100%, 340px), 1.8fr) minmax(min(100%, 280px), 1fr);
   gap: 1.25rem;
-  align-items: stretch;
+  align-items: start;
   margin-top: .5rem;
 }
 .dim-3d-box {
@@ -624,7 +624,7 @@ td.flag-excerpt {
 .dim-ctl { min-width: 24px; min-height: 24px; user-select: none; }
 .dim-navigation { padding: .5rem .85rem; border-top: 1px solid var(--line); }
 .dim-navigation .dim-ctl { flex: 1 0 auto; justify-content: center; }
-.dim-score-wrap { max-height: 20rem; border-top: 1px solid var(--line); }
+.dim-score-wrap { max-height: 20rem; margin-top: 1rem; border: 1px solid var(--line); border-radius: var(--radius); }
 .dim-score-wrap table { min-width: 32rem; }
 .dim-score-wrap caption { padding: .6rem; text-align: left; font-weight: var(--weight-strong); color: var(--fg); }
 .dim-score-wrap td.num { white-space: nowrap; }
@@ -701,10 +701,13 @@ td.flag-excerpt {
 }
 .dim-cards-col {
   min-width: 0;
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
   gap: .75rem;
+  margin-top: 1rem;
 }
+.dim-cards-col + .hint { margin: .75rem 0 0; }
+.dim-card .loadings { grid-template-columns: repeat(auto-fit, minmax(min(100%, 11rem), 1fr)); }
 .dim-card {
   padding: .75rem .9rem;
   border: 1px solid var(--line);
@@ -715,6 +718,8 @@ td.flag-excerpt {
 }
 .dim-header {
   display: flex;
+  flex-wrap: wrap;
+  gap: .3rem .6rem;
   align-items: baseline;
   justify-content: space-between;
   font-size: var(--text-control);
@@ -1832,31 +1837,6 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   color: var(--accent);
   border-color: var(--accent-light);
   background: var(--bg);
-}
-
-/* Offline Diagrams */
-.research-diagram-wrap {
-  margin: 1rem 0;
-  overflow-x: auto;
-  text-align: center;
-  background: var(--bg);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 1rem 0.5rem;
-}
-.research-diagram {
-  max-width: 100%;
-  height: auto;
-  display: inline-block;
-  vertical-align: middle;
-}
-.research-diagram text { font-family: inherit; }
-.research-diagram-note {
-  font-size: var(--text-micro);
-  color: var(--muted);
-  text-align: left;
-  margin-bottom: 0.35rem;
-  padding: 0 0.5rem;
 }
 
 /* Interactive controls and paragraph chips have a larger touch target. */

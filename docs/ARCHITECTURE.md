@@ -170,9 +170,10 @@ Research media reuse bundled PhotoSwipe 5.4.4 for retained images and
 generated diagrams. Mermaid tiny 12.2.0 owns diagram syntax/layout and initializes
 only when a diagram first becomes visible; restrictions disable resource loading,
 click actions and configuration directives, with source retained on failure.
-Leaflet 1.9.4 provides offline geographic vectors. The only optional map network
-requests are OpenStreetMap tiles after explicit, nonpersistent permission scoped
-to the open map/project context. Tiles reveal the client IP and viewed area;
+Leaflet 1.9.4 provides geographic vectors. **Current main, after v0.7.1:** visible
+maps load OpenStreetMap tiles by default; users can turn off the background or
+choose the offline sketch. Tile requests stop outside the visible map/project
+context. Tiles reveal the client IP and viewed area;
 attached historical images remain independent evidence, not calibrated basemaps.
 
 ### Logging

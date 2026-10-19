@@ -100,12 +100,12 @@ does not change an already retained quotation. An integrity check is not a fact 
 
 **Since v0.7.1:** edit an exported dossier in Markdown, review its
 changes against the archive and apply the prepared revision explicitly. Images
-and diagrams share a zoom viewer; geography starts offline, with optional
-OpenStreetMap tiles. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
+and diagrams share a zoom viewer. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
 keep name counts separate from author-declared perspective.
 
 **On current main:** guided map and style-space views explain their measurements
-where you use them, with the same context available in the CLI.
+where you use them, with the same context available in the CLI. Maps open with
+OpenStreetMap; local vectors and the numbered sketch remain available offline.
 
 ## How to read the results
 
@@ -285,9 +285,10 @@ baseline. No automatic web import, factual verification or cloud sync is provide
 Zotero handles source-library editing and ordinary reading; Lixity retains
 selected evidence versions and their claim/manuscript relations. The bridge is
 read-only. Local imports and captured evidence remain usable without Zotero.
-Map vectors and media viewers work offline. Optional OpenStreetMap
-tiles require explicit, nonpersistent permission and send the provider tile
-requests revealing the visible area and the client's IP address.
+Map vectors and media viewers work offline. On current main, visible maps use
+OpenStreetMap by default, with a switch to local vectors or the numbered sketch.
+Tile requests reveal the viewed area and client IP to the provider and stop
+outside the visible map/project context.
 
 Standalone reports embed manuscript text. Keep them, retained quotes, credentials
 and private paths out of shared logs or fixtures. Native context tokens reject
@@ -2579,14 +2580,14 @@ fictional positions and journeys. Field help, `research dossier --help` and
 `research schema` describe the supported inputs; ordinary revisions and backups
 retain them with the dossier.
 
-Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:**
-the numbered sketch and interactive Leaflet vector view work offline. Optional
-OpenStreetMap tiles require explicit permission; requests disclose the visible
-map area and client IP to the provider. Permission is not persisted and resets
-when the map/project context closes. There is no geocoding, road routing, travel
-time calculation or historical verification. An attached map image is a separate source, not a
-georeferenced background. Supporting quotations and images remain dossier evidence;
-unknown geometry stays unplaced.
+Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:** the
+numbered sketch and interactive Leaflet vectors work offline. **Current main:**
+maps open with OpenStreetMap. Turn off the background or choose the sketch for
+offline use; tile requests disclose the viewed area and client IP to the provider
+and stop outside the visible map/project context. There is no geocoding, road
+routing, travel time calculation or historical verification. Attached map images
+remain separate evidence, not georeferenced backgrounds; unknown geometry stays
+unplaced.
 
 Only a geographic save opts into record/manifest v8. Later revisions remain v8
 even after removing geography; reading ordinary dossiers preserves their older
@@ -3203,7 +3204,7 @@ The library initializes when a diagram first becomes visible. Image/resource
 syntax, click actions and configuration/style directives are disabled; unsupported
 or invalid diagrams keep their inspectable source. Rendered SVGs share the local
 PhotoSwipe 5.4.4 zoom viewer with images. Neither renderer loads a CDN or uploads
-the diagram; optional map tiles have the separate permission boundary above.
+the diagram; map tiles have the separate network boundary above.
 
 ## Limits
 
@@ -4324,9 +4325,10 @@ Research media reuse bundled PhotoSwipe 5.4.4 for retained images and
 generated diagrams. Mermaid tiny 12.2.0 owns diagram syntax/layout and initializes
 only when a diagram first becomes visible; restrictions disable resource loading,
 click actions and configuration directives, with source retained on failure.
-Leaflet 1.9.4 provides offline geographic vectors. The only optional map network
-requests are OpenStreetMap tiles after explicit, nonpersistent permission scoped
-to the open map/project context. Tiles reveal the client IP and viewed area;
+Leaflet 1.9.4 provides geographic vectors. **Current main, after v0.7.1:** visible
+maps load OpenStreetMap tiles by default; users can turn off the background or
+choose the offline sketch. Tile requests stop outside the visible map/project
+context. Tiles reveal the client IP and viewed area;
 attached historical images remain independent evidence, not calibrated basemaps.
 
 ### Logging

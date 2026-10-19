@@ -58,6 +58,45 @@ assert.equal(fixture.status,0,fixture.stderr);
     await target.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await target.screenshot({path:path.join(artifacts,name), animations:'disabled'});
   }
+  async function observeCanvasLabels(target) {
+    await target.addInitScript(() => {
+      window.canvasLabels = [];
+      const clear = CanvasRenderingContext2D.prototype.clearRect;
+      const paint = CanvasRenderingContext2D.prototype.fillText;
+      CanvasRenderingContext2D.prototype.clearRect = function(...args) {
+        if (this.canvas.id === 'dim-3d-canvas') window.canvasLabels = [];
+        return clear.apply(this, args);
+      };
+      CanvasRenderingContext2D.prototype.fillText = function(text, x, y, ...args) {
+        if (this.canvas.id === 'dim-3d-canvas') {
+          const metrics = this.measureText(text);
+          window.canvasLabels.push({text, font: this.font,
+            left: x - metrics.actualBoundingBoxLeft, right: x + metrics.actualBoundingBoxRight,
+            top: y - metrics.actualBoundingBoxAscent, bottom: y + metrics.actualBoundingBoxDescent});
+        }
+        return paint.call(this, text, x, y, ...args);
+      };
+    });
+  }
+  async function checkCanvasLabels(target) {
+    const {labels, width, height} = await target.evaluate(() => {
+      const canvas = document.querySelector('#dim-3d-canvas');
+      return {labels: window.canvasLabels, width: canvas.clientWidth, height: canvas.clientHeight};
+    });
+    assert.ok(labels.some(label => label.text === '+D1'), JSON.stringify(labels));
+    assert.ok(labels.some(label => /^\d+$/.test(label.text)), JSON.stringify(labels));
+    for (const [index, label] of labels.entries()) {
+      assert.ok(Number(label.font.match(/(\d+)px/)[1]) >= 12, JSON.stringify(label));
+      assert.match(label.text, /^(?:[+−]D[123]|\d+)$/);
+      assert.ok(label.left >= 0 && label.right <= width && label.top >= 0 && label.bottom <= height,
+        JSON.stringify({label, width, height}));
+      for (const previous of labels.slice(0, index)) {
+        assert.ok(label.right <= previous.left || label.left >= previous.right ||
+          label.bottom <= previous.top || label.top >= previous.bottom,
+        'Canvas labels overlap: ' + JSON.stringify({label, previous}));
+      }
+    }
+  }
   await check('chapter selection persists independently of hover and reading', async () => {
     const selector = page.locator('#dim-chapter-select');
     await selector.selectOption('2');
@@ -268,9 +307,10 @@ assert.equal(fixture.status,0,fixture.stderr);
   for (const [language, localized] of Object.entries(locales)) {
     for (const width of [1440, 320]) {
       await check(`${language} style help and chapter selection at ${width}px`, async () => {
-        const localizedPage = await browser.newPage({viewport:{width,height:1000}, hasTouch:width===320});
+        const localizedPage = await browser.newPage({viewport:{width,height:1000}, hasTouch:width===320, reducedMotion:'reduce'});
         try {
           localizedPage.on('pageerror', error => errors.push(error.message));
+          await observeCanvasLabels(localizedPage);
           await localizedPage.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:localized}));
           await localizedPage.goto('http://lixity.test/');
           await localizedPage.locator('#style-tab-dimensions').click();
@@ -289,7 +329,30 @@ assert.equal(fixture.status,0,fixture.stderr);
           });
           assert.ok((await localizedPage.locator('#dim-selection').textContent()).includes(await row.locator('td').last().textContent()));
           const spatial = await localizedPage.locator('#dim-3d-canvas').evaluate(element => element.toDataURL());
+          const layout = await dimensions.evaluate(element => {
+            const box = selector => {
+              const {x,y,width,height} = element.querySelector(selector).getBoundingClientRect();
+              return {x,y,width,height};
+            };
+            return {panel: element.getBoundingClientRect().width, plot: box('.dim-3d-box'),
+              inspector: box('.dim-selection-panel'), cards: box('.dim-cards-col'), scores: box('.dim-score-wrap')};
+          });
+          if (width === 1440) {
+            assert.ok(layout.inspector.x >= layout.plot.x + layout.plot.width,
+              'Chapter inspector must sit beside the desktop plot: ' + JSON.stringify(layout));
+            assert.ok(Math.abs(layout.inspector.y - layout.plot.y) <= 1, JSON.stringify(layout));
+          } else {
+            assert.ok(layout.inspector.y >= layout.plot.y + layout.plot.height, JSON.stringify(layout));
+          }
+          assert.ok(layout.cards.y >= Math.max(layout.plot.y + layout.plot.height,
+            layout.inspector.y + layout.inspector.height), JSON.stringify(layout));
+          assert.ok(Math.abs(layout.scores.width - layout.panel) <= 2,
+            'Chapter scores must use the panel width: ' + JSON.stringify(layout));
+          assert.ok(layout.scores.y >= layout.cards.y + layout.cards.height, JSON.stringify(layout));
+          await checkCanvasLabels(localizedPage);
           await localizedPage.locator('#dim-projection').selectOption('d1-d2');
+          await checkCanvasLabels(localizedPage);
+          await localizedPage.locator('#dim-3d-canvas').screenshot({path:path.join(artifacts, `${language}-${width}-canvas.png`)});
           assert.notEqual(await localizedPage.locator('#dim-3d-canvas').evaluate(element => element.toDataURL()), spatial);
           assert.equal(await localizedPage.locator('#dim-ctl-left').isDisabled(), true);
           await localizedPage.locator('#dim-expert summary').click();

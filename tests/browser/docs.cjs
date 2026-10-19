@@ -146,12 +146,21 @@ async function checkDemoLocalControl(control) {
 async function checkGeographyInsights(page, geography) {
   await expect(geography).toContainText("Night watchman's walk");
   await expect(geography).toContainText("Customs officer's drive");
-  await expect(geography.locator('svg')).toBeVisible();
+  const map = geography.locator('.geography-map.leaflet-container');
+  await geography.scrollIntoViewIfNeeded();
+  await expect(map).toBeVisible();
+  await map.scrollIntoViewIfNeeded();
+  await expect(geography.locator('[data-geo-basemap]')).toBeChecked();
+  await expect(map.locator('.leaflet-tile-loaded').first()).toBeVisible();
+  await expect(map.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
+  // Offline interactions remain independently testable after the default
+  // background has been explicitly disabled, without changing the map view.
+  await geography.locator('[data-geo-basemap]').uncheck();
   await expect(geography.locator('li')).toHaveCount(5);
   await expect(geography.locator('.geography-overview')).toContainText('5 located');
   await expect(geography.locator('.geography-overview')).toContainText('0 unplaced');
   await expect(geography.locator('.geography-legend')).toContainText('Route');
-  const labels = await geography.locator('svg text').evaluateAll(nodes => nodes.map(node => [node.getAttribute('x'), node.getAttribute('y')].join(',')));
+  const labels = await geography.locator('.geography-sketch text').evaluateAll(nodes => nodes.map(node => [node.getAttribute('x'), node.getAttribute('y')].join(',')));
   assert.equal(new Set(labels).size, labels.length, 'Canonical point and route number markers use distinct anchors');
   await withoutRequests(page, 'Map selection, context and framing stay local without tiles or writes', async () => {
     const route = geography.locator('.geography-feature-list [data-geo-feature-index="2"]');
@@ -162,7 +171,6 @@ async function checkGeographyInsights(page, geography) {
     await expect(selected).toContainText(await route.locator('.geography-route-facts').innerText());
     await expect(geography.locator('[data-geo-frame]')).toBeEnabled();
     await geography.locator('[data-geo-frame]').click();
-    const map = geography.locator('.geography-map.leaflet-container');
     await expect(map).toBeVisible();
     await expect(map.locator('[data-geo-select="2"]')).toHaveAttribute('aria-pressed', 'true');
     const focusedZoom = await map.evaluate(element => element._geographyMap.getZoom());
@@ -266,6 +274,11 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const diagram = detail.locator('[data-research-diagram]').first();
   await diagram.scrollIntoViewIfNeeded();
   await expect(diagram).toHaveAttribute('data-diagram-state', 'ready');
+  await expect(diagram.locator('.research-diagram-canvas')).toHaveAccessibleName('Diagram, scroll horizontally when needed');
+  assert.ok(await diagram.locator('svg').evaluate(svg => [...svg.querySelectorAll('text')].every(text => {
+    const transform = text.getScreenCTM();
+    return parseFloat(getComputedStyle(text).fontSize) * Math.hypot(transform.a, transform.b) >= 12;
+  })), 'Public research diagrams keep readable labels at every tested width');
   await diagram.locator('[data-diagram-enlarge]').click();
   await expect(page.locator('#modal-dossier-image-enlarge img.pswp__img')).toBeVisible();
   await expect.poll(() => page.locator('#modal-dossier-image-enlarge img.pswp__img').evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
@@ -675,7 +688,14 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         const request = route.request();
         const url = new URL(request.url());
         assert.equal(request.method(), 'GET', 'The public journey must make only static GET requests');
-        assert.equal(url.origin, 'http://lixity.test', 'Public pages must not require external requests');
+        if (url.origin === 'https://tile.openstreetmap.org' && /^\/\d+\/\d+\/\d+\.png$/.test(url.pathname) && !url.search) {
+          // Synthetic tile bytes keep the default map journey deterministic;
+          // published captures use normal current-viewport OSM requests.
+          await route.fulfill({contentType: 'image/png', body: Buffer.from(
+            'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+jC1sAAAAASUVORK5CYII=', 'base64')});
+          return;
+        }
+        assert.equal(url.origin, 'http://lixity.test', 'Only the visible OSM map may request an external resource');
         assert.ok(url.pathname.startsWith('/lixity/'), 'The public journey must not call an API');
         const relative = decodeURIComponent(url.pathname).replace(/^\/lixity\//, '') || 'index.html';
         let file = path.resolve(root, relative);

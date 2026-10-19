@@ -3,7 +3,8 @@
 // the original order, so load-time behaviour is unchanged.
 function renderMermaidSvg(escapedCode) {
   return '<figure class="research-diagram-wrap" data-research-diagram>' +
-    '<div class="research-diagram-canvas" aria-busy="true"></div>' +
+    '<div class="research-diagram-canvas" aria-busy="true" tabindex="0" role="region" aria-label="' + escapeHtml(uiLabel("diagram_viewport")) + '"></div>' +
+    '<p class="ctl-note research-diagram-note" hidden>' + escapeHtml(uiLabel("diagram_viewport")) + '</p>' +
     '<button type="button" class="ctl" data-diagram-enlarge hidden>' + escapeHtml(uiLabel("diagram_enlarge")) + '</button>' +
     '<details class="research-diagram-source"><summary>' + escapeHtml(uiLabel("research_diagram_source")) +
     '</summary><pre class="language-mermaid"><code>' + escapedCode.trim() + '</code></pre></details></figure>';
@@ -62,10 +63,18 @@ function renderMermaidSvg(escapedCode) {
         });
       });
       svg.classList.add("research-diagram");
+      // Preserve Mermaid's layout and label size; the canvas scrolls when the
+      // intrinsic diagram is wider than the dossier, instead of shrinking it.
+      var box = svg.viewBox.baseVal;
+      if (box.width > 0 && box.height > 0) {
+        svg.setAttribute("width", box.width);
+        svg.setAttribute("height", box.height);
+      }
       svg.setAttribute("role", "img");
       if (!svg.hasAttribute("aria-label") && !svg.hasAttribute("aria-labelledby")) svg.setAttribute("aria-label", uiLabel("research_diagram_source"));
       svg.querySelectorAll(".node").forEach(function(node) { node.classList.add("rd-node"); });
       canvas.replaceChildren(document.importNode(svg, true));
+      host.querySelector(".research-diagram-note").hidden = false;
       host.querySelector("[data-diagram-enlarge]").hidden = false;
       host.dataset.diagramState = "ready";
     } catch (_) {

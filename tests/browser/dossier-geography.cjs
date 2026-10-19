@@ -45,11 +45,21 @@ server.serve_forever()
     const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
     page.setDefaultTimeout(10000);
     const errors = [], external = [], writes = [], requests = [], tileRequests = [];
-    let tilesAllowed = false, failTiles = false;
+    let failTiles = false;
+    await page.route('https://tile.openstreetmap.org/**', route => route.fulfill(failTiles ? {status: 503, body: 'Synthetic provider unavailable'} :
+      {contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#edf2ef"/></svg>'}));
+    async function showSketch(view) {
+      await view.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+      if (await view.locator('[data-geo-map]').getAttribute('aria-expanded') === 'true') {
+        await view.locator('[data-geo-basemap]').uncheck();
+        await view.locator('[data-geo-map]').click();
+      }
+      await expect(view.locator('.geography-sketch')).toBeVisible();
+    }
     page.on('pageerror', error => errors.push(error.message));
     page.on('request', request => {
       requests.push(request.url());
-      if (request.url().startsWith('https://tile.openstreetmap.org/') && tilesAllowed) {
+      if (request.url().startsWith('https://tile.openstreetmap.org/')) {
         tileRequests.push({url: request.url(), referer: request.headers().referer});
       } else if (!request.url().startsWith(fixture.url) && !request.url().startsWith('blob:')) external.push(request.url());
       if (request.method() === 'POST') writes.push(request.postDataJSON());
@@ -92,8 +102,9 @@ server.serve_forever()
       });
       const boundary = page.locator('#markdown-geography-boundary');
       const mapBoundary = boundary.locator('.dossier-geography');
-      await mapBoundary.locator('[data-geo-map]').click();
+      await mapBoundary.scrollIntoViewIfNeeded();
       await expect(mapBoundary.locator('.geography-map')).toBeVisible();
+      await expect(mapBoundary.locator('[data-geo-basemap]')).toBeChecked();
       await expect(mapBoundary.locator('.geography-sketch')).toBeHidden();
       assert.equal(await mapBoundary.locator('em').count(), 0, 'Prose emphasis must not wrap geographic controls');
       assert.equal(await mapBoundary.locator('h4').evaluate(node => getComputedStyle(node).fontStyle), 'normal');
@@ -112,6 +123,92 @@ server.serve_forever()
       await boundary.evaluate(node => node.remove());
     }
     await page.setViewportSize({width: 1440, height: 1000});
+    await page.evaluate(() => {
+      const host = document.createElement('div'); host.id = 'geo-default-lifecycle'; host.hidden = true;
+      host.style.marginTop = '200vh';
+      host.innerHTML = LixityDossierGeography.html({type: 'FeatureCollection', features: [
+        {type: 'Feature', geometry: {type: 'Point', coordinates: [11, 47]}, properties: {label: 'Synthetic lifecycle place'}},
+      ]});
+      document.body.appendChild(host);
+    });
+    const lifecycle = page.locator('#geo-default-lifecycle .dossier-geography');
+    const lifecycleMap = lifecycle.locator('.geography-map');
+    const beforeHidden = tileRequests.length;
+    await page.locator('#geo-default-lifecycle').evaluate(node => { node.hidden = false; });
+    await lifecycle.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect(lifecycle.locator('[data-geo-map]')).toHaveAttribute('aria-expanded', 'false');
+    assert.equal(tileRequests.length, beforeHidden, 'An offscreen saved reader never requests tiles');
+    await lifecycle.scrollIntoViewIfNeeded();
+    await expect(lifecycleMap).toBeVisible();
+    await lifecycleMap.scrollIntoViewIfNeeded();
+    await expect(lifecycle.locator('[data-geo-basemap]')).toBeChecked();
+    await expect(lifecycleMap.locator('.leaflet-tile-loaded')).not.toHaveCount(0);
+    await page.evaluate(() => scrollTo(0, 0));
+    await expect(lifecycleMap.locator('.leaflet-tile')).toHaveCount(0);
+    const beforeOffscreenResize = tileRequests.length;
+    await page.setViewportSize({width: 1420, height: 1000});
+    assert.equal(tileRequests.length, beforeOffscreenResize, 'Offscreen map resizing cannot request tiles');
+    await lifecycleMap.scrollIntoViewIfNeeded();
+    await expect(lifecycleMap.locator('.leaflet-tile-loaded')).not.toHaveCount(0);
+    await lifecycle.locator('[data-geo-basemap]').uncheck();
+    const beforeOff = tileRequests.length;
+    await lifecycle.evaluate(node => { node.classList.add('synthetic-mutation'); });
+    await page.evaluate(() => scrollTo(0, 0));
+    await lifecycle.scrollIntoViewIfNeeded();
+    await expect(lifecycle.locator('[data-geo-basemap]')).not.toBeChecked();
+    await expect(lifecycleMap.locator('.leaflet-tile')).toHaveCount(0);
+    assert.equal(tileRequests.length, beforeOff, 'Explicit tiles off survives mutations and viewport changes');
+    await lifecycle.locator('[data-geo-basemap]').check();
+    await lifecycleMap.scrollIntoViewIfNeeded();
+    await expect(lifecycleMap.locator('.leaflet-tile-loaded')).not.toHaveCount(0);
+    await page.evaluate(() => {
+      Object.defineProperty(document, 'hidden', {configurable: true, value: true});
+      document.dispatchEvent(new Event('visibilitychange'));
+    });
+    await expect(lifecycleMap.locator('.leaflet-tile')).toHaveCount(0);
+    const beforeBackground = tileRequests.length;
+    await lifecycleMap.locator('.leaflet-control-zoom-in').click();
+    assert.equal(tileRequests.length, beforeBackground, 'A background document cannot request tiles');
+    await page.evaluate(() => { delete document.hidden; document.dispatchEvent(new Event('visibilitychange')); });
+    await expect(lifecycleMap.locator('.leaflet-tile-loaded')).not.toHaveCount(0);
+    await page.evaluate(() => window.dispatchEvent(new Event('pagehide')));
+    await expect(lifecycleMap.locator('.leaflet-map-pane')).toHaveCount(0);
+    await lifecycle.evaluate(node => { node.classList.add('after-pagehide'); });
+    await expect(lifecycleMap).toBeHidden();
+    await page.evaluate(() => window.dispatchEvent(new Event('pageshow')));
+    await expect(lifecycleMap).toBeVisible();
+    await showSketch(lifecycle);
+    await lifecycle.evaluate(node => { node.classList.add('after-explicit-sketch'); });
+    await expect(lifecycleMap).toBeHidden();
+    const beforeStale = tileRequests.length;
+    const lifecycleToken = await lifecycle.evaluate(root => {
+      const panel = document.getElementById('research-manager'), token = panel.dataset.researchToken;
+      const savedHTML = root.outerHTML;
+      panel.dataset.researchToken = 'synthetic-delayed-geography-context';
+      const host = document.createElement('div'); host.id = 'geo-stale-render'; host.innerHTML = savedHTML;
+      document.body.appendChild(host);
+      return token;
+    });
+    const stale = page.locator('#geo-stale-render .dossier-geography');
+    await stale.scrollIntoViewIfNeeded();
+    await stale.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await expect(stale.locator('[data-geo-map]')).toHaveAttribute('aria-expanded', 'false');
+    await expect(stale.locator('.leaflet-map-pane')).toHaveCount(0);
+    assert.equal(tileRequests.length, beforeStale, 'Delayed HTML keeps its original project context and never requests tiles');
+    await page.evaluate(token => {
+      document.getElementById('geo-stale-render').remove();
+      document.getElementById('research-manager').dataset.researchToken = token;
+    }, lifecycleToken);
+    const beforeUnplaced = tileRequests.length;
+    await lifecycle.evaluate(root => {
+      root.parentElement.innerHTML = LixityDossierGeography.html({type: 'FeatureCollection', features: [
+        {type: 'Feature', geometry: null, properties: {label: 'Synthetic unplaced record'}},
+      ]});
+    });
+    await lifecycle.scrollIntoViewIfNeeded();
+    await expect(lifecycleMap).toHaveCount(0);
+    assert.equal(tileRequests.length, beforeUnplaced, 'Unknown geometry never invents a map or requests tiles');
+    await page.locator('#geo-default-lifecycle').evaluate(node => node.remove());
     await page.locator('#r-dos-title').fill('Synthetic harbour journey');
     await page.locator('#r-dos-body').fill('# Context\n\nSynthetic route notes.');
     const create = page.locator('#r-dos-geography-editor');
@@ -186,9 +283,14 @@ server.serve_forever()
     await openDetails();
     await expect(page.locator('.research-details-body .dossier-geography')).toContainText('Mira’s journey');
     await expect(page.locator('.research-details-body .dossier-geography')).toContainText('1902');
-    assert.equal(await page.locator('.dossier-geography img').count(), 0, 'Feature metadata is inert text');
+    assert.equal(await page.locator('.geography-feature-list img').count(), 0, 'Feature metadata is inert text');
     assert.equal(await page.evaluate(() => Boolean(window.geoInjected)), false);
     const geography = page.locator('.research-details-body .dossier-geography');
+    await geography.scrollIntoViewIfNeeded();
+    await expect(geography.locator('[data-geo-map]')).toHaveAttribute('aria-expanded', 'true');
+    await expect(geography.locator('[data-geo-basemap]')).toBeChecked();
+    await expect(geography.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
+    await showSketch(geography);
     await expect(geography.locator('.geography-overview')).toContainText('2 located');
     await expect(geography.locator('.geography-legend')).toContainText(/point/i);
     await expect(geography.locator('.geography-method')).toContainText('spherical');
@@ -241,6 +343,8 @@ server.serve_forever()
       copy.innerHTML = window.LixityDossierGeography.html(value); document.getElementById('research-manager').appendChild(copy);
     }, saved.record.geography);
     const secondGeography = page.locator('#geo-navigation-copy .dossier-geography');
+    await secondGeography.scrollIntoViewIfNeeded();
+    await showSketch(secondGeography);
     const requestCount = requests.length, writeCount = writes.length;
     await secondGeography.locator('svg [data-geo-select="1"]').focus();
     await page.keyboard.press('Enter');
@@ -250,6 +354,7 @@ server.serve_forever()
     await page.evaluate(value => {
       document.getElementById('geo-navigation-copy').innerHTML = window.LixityDossierGeography.html(value);
     }, saved.record.geography);
+    await showSketch(secondGeography);
     await expect(secondGeography.locator('[aria-pressed="true"]')).toHaveCount(0);
     await secondGeography.locator('button[data-geo-select="0"]').click();
     await expect(secondGeography.locator('svg [data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
@@ -275,7 +380,8 @@ server.serve_forever()
       document.getElementById('research-manager').appendChild(host);
     });
     const polar = page.locator('#geo-polar-copy .dossier-geography');
-    await polar.locator('[data-geo-map]').click();
+    await polar.scrollIntoViewIfNeeded();
+    await expect(polar.locator('.geography-map')).toBeVisible();
     await expect(polar.locator('.geography-projection-hint')).toContainText('85.05');
     await polar.locator('button[data-geo-select="0"]').click();
     await expect(polar.locator('pre')).toHaveText('25, 90');
@@ -283,15 +389,13 @@ server.serve_forever()
     await expect(polar.locator('[aria-pressed="true"]')).toHaveCount(0);
     await expect(polar.locator('[data-geo-frame]')).toBeDisabled();
     await page.locator('#geo-polar-copy').evaluate(node => node.remove());
-    await page.route('https://tile.openstreetmap.org/**', route => route.fulfill(failTiles ? {status: 503, body: 'Synthetic provider unavailable'} :
-      {contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#edf2ef"/></svg>'}));
     const mapToggle = geography.locator('[data-geo-map]'), map = geography.locator('.geography-map');
     await mapToggle.click();
     await expect(map).toBeVisible();
     await expect(map.locator('.leaflet-interactive')).toHaveCount(2);
     await expect(map.locator('.leaflet-overlay-pane > svg')).toHaveAttribute('role', 'group');
     await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
-    assert.equal(tileRequests.length, 0, 'Offline pan/zoom has no tile provider by default');
+    const offlineTiles = tileRequests.length;
     const initialMap = await map.evaluate(node => ({zoom: node._geographyMap.getZoom(), center: node._geographyMap.getCenter()}));
     await map.locator('.leaflet-control-zoom-in').click();
     await expect.poll(() => map.evaluate(node => node._geographyMap.getZoom())).toBeGreaterThan(initialMap.zoom);
@@ -313,52 +417,56 @@ server.serve_forever()
     await expect(listButton(0)).toBeFocused();
     await listButton(0).click();
     await expect(map.locator('[data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
-    assert.equal(tileRequests.length, 0, 'Vector navigation never opts into a provider');
+    assert.equal(tileRequests.length, offlineTiles, 'Explicit offline vector navigation never restarts tiles');
     await expect(geography.locator('.geography-basemap-hint')).toContainText('OpenStreetMap');
-    tilesAllowed = true;
     await geography.locator('[data-geo-basemap]').check();
-    await expect.poll(() => tileRequests.length).toBeGreaterThan(0);
+    await map.scrollIntoViewIfNeeded();
+    await expect(map.locator('.leaflet-tile-loaded')).not.toHaveCount(0);
     await expect(map.locator('.leaflet-control-attribution')).toContainText('OpenStreetMap');
     assert.ok(tileRequests.every(request => new URL(request.url).hostname === 'tile.openstreetmap.org' &&
       /^\/\d+\/\d+\/\d+\.png$/.test(new URL(request.url).pathname)), 'Only standard current-viewport tile URLs are permitted');
     assert.ok(tileRequests.every(request => request.referer === fixture.url + '/'), 'Tile referrers contain only the local origin');
     await page.locator('[data-rtab=sources]').click();
-    tilesAllowed = false;
     const hiddenTiles = tileRequests.length;
+    await page.setViewportSize({width: 1380, height: 980});
+    assert.equal(tileRequests.length, hiddenTiles, 'Hidden readers issue no tile requests when resized');
     await page.locator('[data-rtab=dossiers]').click();
-    await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
-    await expect(mapToggle).toHaveAttribute('aria-expanded', 'false');
-    await mapToggle.click();
+    await geography.scrollIntoViewIfNeeded();
     await expect(map).toBeVisible();
-    await map.locator('.leaflet-control-zoom-in').click();
-    assert.equal(tileRequests.length, hiddenTiles, 'Returning to a view never restores online approval');
-    tilesAllowed = true;
-    await geography.locator('[data-geo-basemap]').check();
-    await expect.poll(() => tileRequests.length).toBeGreaterThan(hiddenTiles);
+    await map.scrollIntoViewIfNeeded();
+    await expect(mapToggle).toHaveAttribute('aria-expanded', 'true');
+    await expect(geography.locator('[data-geo-basemap]')).toBeChecked();
+    await expect(map).toBeVisible();
+    await expect(map.locator('.leaflet-tile-loaded')).not.toHaveCount(0);
     const originalToken = await page.evaluate(() => {
       const host = document.getElementById('research-manager'), token = host.dataset.researchToken;
       host.dataset.researchToken = 'synthetic-context-change'; return token;
     });
     await expect(mapToggle).toHaveAttribute('aria-expanded', 'false');
     await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
-    tilesAllowed = false;
     await page.evaluate(token => { document.getElementById('research-manager').dataset.researchToken = token; }, originalToken);
-    await expect(geography.locator('svg.geography-sketch')).toBeVisible();
-    failTiles = true; tilesAllowed = true;
-    await mapToggle.click();
+    await map.scrollIntoViewIfNeeded();
+    await expect(map).toBeVisible();
+    failTiles = true;
     // Use a new zoom level so previously decoded successful tiles cannot mask
-    // a real provider failure. Fast failure may reset approval before click ends.
+    // a real provider failure. Fast failure may disable tiles before click ends.
     await map.locator('.leaflet-control-zoom-in').click();
     await map.locator('.leaflet-control-zoom-in').click();
     await map.locator('.leaflet-control-zoom-in').click();
-    await geography.locator('[data-geo-basemap]').click();
     await expect.poll(async () => ({message: await geography.locator('.geography-map-status').textContent(),
       errors, tileCount: tileRequests.length})).toMatchObject({message: expect.stringContaining('could not be loaded')});
     await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
     await expect(map.locator('.leaflet-tile')).toHaveCount(0);
     await expect(map.locator('.leaflet-interactive')).toHaveCount(2);
-    tilesAllowed = false;
+    const failedTiles = tileRequests.length;
     await map.locator('.leaflet-control-zoom-in').click();
+    await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
+    assert.equal(tileRequests.length, failedTiles, 'Provider failure stays offline until an explicit retry');
+    failTiles = false;
+    await geography.locator('[data-geo-basemap]').check();
+    await expect.poll(() => tileRequests.length).toBeGreaterThan(failedTiles);
+    await expect(geography.locator('.geography-map-status')).toBeEmpty();
+    await geography.locator('[data-geo-basemap]').uncheck();
     await mapToggle.click();
     assert.equal((await (await page.request.get(recordURL)).json()).snapshot, saved.snapshot, 'Provider failure preserves the archive');
     await page.locator(`[data-research-revise=dossier][data-record-id="${id}"]:not([data-dossier-section])`).click();
@@ -466,7 +574,9 @@ server.serve_forever()
     await openDetails();
     await expect(page.locator('.research-details-body .dossier-geography')).toContainText('Unknown destination');
     await expect(page.locator('.research-details-body .dossier-geography')).toContainText('Location unknown');
-    assert.ok(!(await page.locator('.research-details-body .dossier-geography svg').innerHTML()).match(/NaN|Infinity/));
+    await geography.scrollIntoViewIfNeeded();
+    await showSketch(geography);
+    assert.ok(!(await page.locator('.research-details-body .dossier-geography .geography-sketch').innerHTML()).match(/NaN|Infinity/));
     assert.ok(await page.locator('.research-details-body .geography-sketch path').evaluate(node => node.getBBox().height > 100), 'Dateline area stays local instead of flattening across 358 degrees');
     await page.locator('[data-dossier-section=Context]').click();
     await expect(page.locator('#research-revision-field-geography')).toHaveCount(0, 'Section editor changes only body');
@@ -494,6 +604,8 @@ server.serve_forever()
         await page.setViewportSize({width, height: 950});
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${language}/${width}: dossier fits viewport`);
         const view = page.locator('.research-details-body .dossier-geography');
+        await view.scrollIntoViewIfNeeded();
+        await showSketch(view);
         assert.ok(!(await view.locator('.geography-overview').textContent()).includes('geography_'), `${language}: overview translated`);
         assert.ok(!(await view.locator('.geography-navigation-hint').textContent()).includes('geography_'), `${language}: navigation guidance translated`);
         const beforeNavigation = requests.length;
@@ -556,7 +668,7 @@ server.serve_forever()
     await staticPage.close();
     assert.ok(writes.some(write => write.geography && write.research_token), 'Create uses selected research context');
     assert.deepEqual(errors, []);
-    assert.deepEqual(external, [], 'Geography stays offline');
+    assert.deepEqual(external, [], 'Geography only requests the standard intercepted tile endpoint');
     console.log(`Dossier geography: native create/edit/import/CAS/history/companion, local pointer/keyboard selection, independent hosts, static fallback and seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
   } finally {
     if (stderr.includes('Traceback')) console.error(stderr);

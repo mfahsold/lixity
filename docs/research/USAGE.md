@@ -612,14 +612,14 @@ fictional positions and journeys. Field help, `research dossier --help` and
 `research schema` describe the supported inputs; ordinary revisions and backups
 retain them with the dossier.
 
-Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:**
-the numbered sketch and interactive Leaflet vector view work offline. Optional
-OpenStreetMap tiles require explicit permission; requests disclose the visible
-map area and client IP to the provider. Permission is not persisted and resets
-when the map/project context closes. There is no geocoding, road routing, travel
-time calculation or historical verification. An attached map image is a separate source, not a
-georeferenced background. Supporting quotations and images remain dossier evidence;
-unknown geometry stays unplaced.
+Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:** the
+numbered sketch and interactive Leaflet vectors work offline. **Current main:**
+maps open with OpenStreetMap. Turn off the background or choose the sketch for
+offline use; tile requests disclose the viewed area and client IP to the provider
+and stop outside the visible map/project context. There is no geocoding, road
+routing, travel time calculation or historical verification. Attached map images
+remain separate evidence, not georeferenced backgrounds; unknown geometry stays
+unplaced.
 
 Only a geographic save opts into record/manifest v8. Later revisions remain v8
 even after removing geography; reading ordinary dossiers preserves their older
@@ -1236,7 +1236,7 @@ The library initializes when a diagram first becomes visible. Image/resource
 syntax, click actions and configuration/style directives are disabled; unsupported
 or invalid diagrams keep their inspectable source. Rendered SVGs share the local
 PhotoSwipe 5.4.4 zoom viewer with images. Neither renderer loads a CDN or uploads
-the diagram; optional map tiles have the separate permission boundary above.
+the diagram; map tiles have the separate network boundary above.
 
 ## Limits
 

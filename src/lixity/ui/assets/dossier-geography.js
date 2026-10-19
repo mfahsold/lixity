@@ -164,7 +164,7 @@
       '<label class="form-checkbox"><input type="checkbox" data-geo-basemap/><span>' + safe(label("basemap")) + '</span></label>' +
       '<p class="ctl-note geography-basemap-hint">' + safe(label("basemap_hint")) + '</p></div>' +
       '<div class="geography-map" hidden role="group" aria-label="' + safe(label("map_label")) + '"></div><p class="ctl-status geography-map-status" role="status"></p>' : '';
-    return '<section class="dossier-geography" data-geo-geometries="' + safe(JSON.stringify(value.features.map(function(feature) { return feature.geometry; }))) + '"><h4>' + safe(label("title")) + '</h4><p class="ctl-note">' + safe(label("hint")) + '</p>' +
+    return '<section class="dossier-geography" data-geo-context="' + safe(mapContext()) + '" data-geo-geometries="' + safe(JSON.stringify(value.features.map(function(feature) { return feature.geometry; }))) + '"><h4>' + safe(label("title")) + '</h4><p class="ctl-note">' + safe(label("hint")) + '</p>' +
       overview + legend + '<p class="ctl-note geography-navigation-hint">' + safe(label("navigation_hint")) + '</p>' +
       '<div class="geography-selected" role="status" aria-live="polite"><p class="ctl-note">' + safe(label("selected_empty")) + '</p></div>' +
       '<div class="row geography-selection-actions">' + (canMap ? '<button type="button" class="ctl ctl-sm" data-geo-frame disabled>' + safe(label("frame")) + '</button>' : '') +
@@ -223,21 +223,40 @@
     root.querySelector(".geography-selected").innerHTML = '<p class="ctl-note">' + safe(label("selected_empty")) + '</p>';
     root.querySelectorAll("[data-geo-frame], [data-geo-details], [data-geo-clear]").forEach(function(node) { node.disabled = true; });
   }
-  var maps = new Map();
+  // Choices belong to one rendered reader. A new revision/host starts online;
+  // hidden readers keep their choice, while stale project roots never rebind.
+  var maps = new Map(), preferences = new WeakMap(), observed = new Set(), pageActive = true;
   function mapContext() {
     return [typeof researchContextToken === "function" ? researchContextToken() : "",
       typeof researchSelectionProjectId === "undefined" ? "" : researchSelectionProjectId].join("\n");
   }
-  function visible(root) { return root.isConnected && root.getClientRects().length > 0; }
-  function stopTiles(state) {
+  function visible(root) { return root.isConnected && root.getClientRects().length > 0 && getComputedStyle(root).visibility === "visible"; }
+  function viewed(node) {
+    if (!pageActive || document.hidden || !visible(node)) return false;
+    var bounds = node.getBoundingClientRect();
+    if (bounds.bottom <= 0 || bounds.right <= 0 || bounds.top >= innerHeight || bounds.left >= innerWidth) return false;
+    // A saved reader may scroll inside its own pane, rather than the window.
+    for (var parent = node.parentElement; parent; parent = parent.parentElement) {
+      var style = getComputedStyle(parent), clip = parent.getBoundingClientRect();
+      if (/(auto|scroll|hidden|clip)/.test(style.overflowY) && (bounds.bottom <= clip.top || bounds.top >= clip.bottom)) return false;
+      if (/(auto|scroll|hidden|clip)/.test(style.overflowX) && (bounds.right <= clip.left || bounds.left >= clip.right)) return false;
+    }
+    return true;
+  }
+  function preference(root) {
+    if (!preferences.has(root)) preferences.set(root, {map: true, tiles: true});
+    return preferences.get(root);
+  }
+  function stopTiles(state, paused) {
     var tiles = state.tiles;
     state.tiles = null;
     if (tiles) state.map.removeLayer(tiles);
     var checkbox = state.root.querySelector("[data-geo-basemap]");
-    if (checkbox) checkbox.checked = false;
+    if (checkbox) checkbox.checked = Boolean(paused && preference(state.root).tiles);
   }
   function stopMap(state) {
     stopTiles(state);
+    if (visibilityObserver) visibilityObserver.unobserve(state.host);
     state.map.remove();
     delete state.host._geographyMap;
     state.host.replaceChildren(); state.host.hidden = true;
@@ -268,6 +287,7 @@
       host._geographyMap = map;
       state = {root: root, host: host, map: map, tiles: null, context: mapContext(), layers: null};
       maps.set(root, state);
+      if (visibilityObserver) visibilityObserver.observe(host);
       map.setView([frame.points[0][1], frame.longitude(frame.points[0][0])], 5, {animate: false});
       window.L.control.zoom({zoomInTitle: label("zoom_in"), zoomOutTitle: label("zoom_out")}).addTo(map);
       window.L.control.scale({metric: true, imperial: false}).addTo(map);
@@ -292,12 +312,15 @@
       if (drawing) { drawing.setAttribute("role", "group"); drawing.setAttribute("aria-label", label("map_label")); }
       fit(state);
       root.querySelector(".geography-map-tools").hidden = false;
+      root.querySelector("[data-geo-basemap]").checked = preference(root).tiles;
       var toggle = root.querySelector("[data-geo-map]");
       toggle.setAttribute("aria-expanded", "true"); toggle.textContent = label("show_sketch");
-      status.textContent = "";
+      if (preference(root).tiles) status.textContent = "";
       var selected = root.querySelector('button[data-geo-select][aria-pressed="true"]');
       if (selected) selectFeature(selected);
+      startTiles(state);
     } catch (_) {
+      preference(root).map = false;
       if (state) stopMap(state);
       else { host.hidden = true; root.classList.remove("geography-map-active"); }
       status.textContent = label("map_failed");
@@ -312,6 +335,7 @@
       if (action.hasAttribute("data-geo-details")) {
         selected.focus({preventScroll: true}); selected.scrollIntoView({block: "nearest"});
       } else {
+        preference(owner).map = true;
         if (!maps.has(owner)) startMap(owner);
         var selectedState = maps.get(owner);
         if (selectedState) selectedState.layers.eachLayer(function(layer) {
@@ -327,8 +351,8 @@
       var root = toggle.closest(".dossier-geography"), state = maps.get(root);
       if (state && (!state.host.isConnected || state.host !== root.querySelector(".geography-map"))) { stopMap(state); state = null; }
       if (toggle.hasAttribute("data-geo-fit")) { if (state) fit(state); }
-      else if (state) stopMap(state);
-      else startMap(root);
+      else if (state) { preference(root).map = false; stopMap(state); }
+      else { preference(root).map = true; startMap(root); }
       return;
     }
     var control = event.target.closest("[data-geo-select]");
@@ -344,36 +368,69 @@
     if (!event.target.matches("[data-geo-basemap]")) return;
     var root = event.target.closest(".dossier-geography"), state = maps.get(root);
     if (!state || state.context !== mapContext() || !visible(root)) { event.target.checked = false; return; }
+    preference(root).tiles = event.target.checked;
     if (!event.target.checked) { stopTiles(state); return; }
+    startTiles(state);
+  });
+  function startTiles(state) {
+    var root = state.root;
+    if (state.tiles || !preference(root).tiles || state.context !== mapContext() ||
+        root.dataset.geoContext !== mapContext() || !viewed(state.host)) return;
     root.querySelector(".geography-map-status").textContent = "";
     var tiles = window.L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
       maxZoom: 19, keepBuffer: 0, updateWhenIdle: true, referrerPolicy: "origin",
       attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors',
     });
     state.tiles = tiles;
+    root.querySelector("[data-geo-basemap]").checked = true;
     tiles.on("tileerror", function() {
       if (state.tiles !== tiles) return;
+      preference(root).tiles = false;
       stopTiles(state); root.querySelector(".geography-map-status").textContent = label("basemap_failed");
     });
     tiles.addTo(state.map);
-  });
+  }
   document.addEventListener("click", function(event) {
-    // End online approval before a navigation handler can resize a hidden map.
-    if (event.target.closest("[data-view], [data-switch-view], [data-rtab]")) maps.forEach(stopTiles);
+    // Stop requests before a navigation handler can resize a hidden map.
+    if (event.target.closest("[data-view], [data-switch-view], [data-rtab]")) maps.forEach(function(state) { stopTiles(state, true); });
   }, true);
   var checkingMaps = false;
-  new MutationObserver(function() {
-    if (!maps.size || checkingMaps) return;
-    checkingMaps = true;
-    queueMicrotask(function() {
-      checkingMaps = false;
-      maps.forEach(function(state) {
-        if (!visible(state.root) || !state.host.isConnected || state.context !== mapContext()) stopMap(state);
-      });
+  function refreshMaps() {
+    checkingMaps = false;
+    maps.forEach(function(state) {
+      if (!visible(state.root) || !state.host.isConnected || state.host !== state.root.querySelector(".geography-map") ||
+          state.context !== mapContext()) stopMap(state);
+      else if (!viewed(state.host)) stopTiles(state, true);
     });
-  }).observe(document.documentElement, {subtree: true, childList: true, attributes: true,
+    observed.forEach(function(root) {
+      if (!root.isConnected) { if (visibilityObserver) visibilityObserver.unobserve(root); observed.delete(root); }
+    });
+    document.querySelectorAll(".dossier-geography[data-geo-geometries]").forEach(function(root) {
+      if (!root.querySelector("[data-geo-map]")) return;
+      if (!observed.has(root)) { observed.add(root); if (visibilityObserver) visibilityObserver.observe(root); }
+      if (root.dataset.geoContext !== mapContext() || !preference(root).map || !viewed(root)) return;
+      if (!maps.has(root)) startMap(root);
+      var state = maps.get(root);
+      if (state) startTiles(state);
+    });
+  }
+  function scheduleMaps() {
+    if (checkingMaps) return;
+    checkingMaps = true;
+    queueMicrotask(refreshMaps);
+  }
+  var visibilityObserver = window.IntersectionObserver ? new IntersectionObserver(scheduleMaps) : null;
+  new MutationObserver(scheduleMaps).observe(document.documentElement, {subtree: true, childList: true, attributes: true,
     attributeFilter: ["class", "style", "hidden", "open", "data-research-token"]});
-  window.addEventListener("pagehide", function() { maps.forEach(stopMap); });
+  document.addEventListener("scroll", scheduleMaps, true);
+  window.addEventListener("resize", scheduleMaps);
+  document.addEventListener("visibilitychange", function() {
+    if (document.hidden) maps.forEach(function(state) { stopTiles(state, true); });
+    else scheduleMaps();
+  });
+  scheduleMaps();
+  window.addEventListener("pagehide", function() { pageActive = false; maps.forEach(stopMap); });
+  window.addEventListener("pageshow", function() { pageActive = true; scheduleMaps(); });
   function mount(host, identifier, value) {
     var root = document.createElement("details"); root.id = identifier + "-editor"; root.className = "geography-editor research-details";
     var summary = document.createElement("summary"); summary.textContent = label("title"); root.appendChild(summary);

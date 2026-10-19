@@ -19,6 +19,69 @@ function waitForHeldResponse(promise, label) {
   })]).finally(() => clearTimeout(timer));
 }
 
+async function checkDiagramReadability(page) {
+  const diagrams = [
+    ['wide', 'flowchart LR\n A[Collect sources] --> B[Check provenance] --> C[Compare evidence] --> D[Record decision]'],
+    ['vertical', 'flowchart TD\n A[Read] --> B[Review] --> C[Decide]'],
+  ];
+  await page.evaluate(diagrams => {
+    const host = document.createElement('section'); host.id = 'diagram-readability';
+    host.innerHTML = diagrams.map(([name, source]) => '<div data-diagram-fixture="' + name + '">' +
+      renderSafeMarkdown('```mermaid\n' + source + '\n```') + '</div>').join('');
+    document.querySelector('.research-dossier-body-rendered .research-prose').appendChild(host);
+  }, diagrams);
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({width, height: 1000});
+    for (const theme of ['light', 'dark']) {
+      await page.evaluate(theme => { document.documentElement.dataset.theme = theme; }, theme);
+      for (const [name, source] of diagrams) {
+        const figure = page.locator(`[data-diagram-fixture=${name}] [data-research-diagram]`);
+        await figure.scrollIntoViewIfNeeded();
+        await expect(figure).toHaveAttribute('data-diagram-state', 'ready');
+        await expect(figure.locator('code')).toHaveText(source);
+        await expect(figure.getByText('Diagram, scroll horizontally when needed', {exact: true})).toBeVisible();
+        const metrics = await figure.evaluate(element => {
+          const svg = element.querySelector('svg'), canvas = element.querySelector('.research-diagram-canvas');
+          const bounds = svg.getBoundingClientRect(), outer = element.getBoundingClientRect(), viewport = canvas.getBoundingClientRect();
+          const fonts = [...svg.querySelectorAll('text')].map(text => {
+            const transform = text.getScreenCTM();
+            return parseFloat(getComputedStyle(text).fontSize) * Math.hypot(transform.a, transform.b);
+          });
+          return {width: bounds.width, height: bounds.height, intrinsicWidth: svg.viewBox.baseVal.width,
+            minimumFont: Math.min(...fonts), viewportWidth: canvas.clientWidth, contentWidth: canvas.scrollWidth,
+            left: outer.left, right: outer.right, diagramStart: bounds.left - viewport.left,
+            pageWidth: document.documentElement.scrollWidth};
+        });
+        await figure.screenshot({path: path.join(artifacts, `diagram-${name}-${theme}-${width}.png`)});
+        assert.ok(Number.isFinite(metrics.minimumFont) && metrics.minimumFont >= 12, `${name} ${theme} ${width}px readable labels: ${JSON.stringify(metrics)}`);
+        assert.ok(metrics.width >= metrics.intrinsicWidth * .98, `${name} retains Mermaid's intrinsic layout`);
+        assert.ok(metrics.diagramStart >= 0, 'The start of an overflowing diagram remains reachable');
+        assert.ok(metrics.left >= 0 && metrics.right <= width && metrics.pageWidth <= width, `${name} must not widen the page`);
+        if (name === 'wide' && width === 320) {
+          assert.ok(metrics.contentWidth > metrics.viewportWidth, 'Wide diagrams scroll within their own viewport');
+          const canvas = figure.locator('.research-diagram-canvas');
+          await expect(canvas).toHaveAccessibleName('Diagram, scroll horizontally when needed');
+          await canvas.focus();
+          await page.keyboard.press('ArrowRight');
+          await expect.poll(() => canvas.evaluate(element => element.scrollLeft)).toBeGreaterThan(0);
+          await page.keyboard.press('Tab');
+          await expect(figure.locator('[data-diagram-enlarge]')).toBeFocused();
+          await page.keyboard.press('Enter');
+          const viewer = page.locator('#modal-dossier-image-enlarge');
+          await expect(viewer.locator('img.pswp__img')).toBeVisible();
+          await expect.poll(() => viewer.locator('img.pswp__img').evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+          await page.keyboard.press('Escape');
+          await expect(figure.locator('[data-diagram-enlarge]')).toBeFocused();
+          await canvas.evaluate(element => { element.scrollLeft = 0; });
+        }
+        if (name === 'vertical' || width === 1440) assert.ok(metrics.contentWidth <= metrics.viewportWidth, `Fitting diagrams avoid unnecessary scrolling: ${JSON.stringify(metrics)}`);
+      }
+    }
+  }
+  await page.evaluate(() => { document.getElementById('diagram-readability').remove(); document.documentElement.dataset.theme = 'light'; });
+  await page.setViewportSize({width: 1440, height: 1000});
+}
+
 (async () => {
   const server = spawn(python, ['-u', '-c', `
 import json, struct, sys, zlib
@@ -90,6 +153,7 @@ server.serve_forever()
     await page.locator('[data-rtab=dossiers]').click();
     await page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`).click();
     await expect(page.locator('[data-dossier-add-image]')).toBeVisible();
+    await checkDiagramReadability(page);
     await page.locator('[data-dossier-add-image]').click();
     const dialog = page.locator('#modal-dossier-image');
     const file = {name: 'synthetic.png', mimeType: 'image/png', buffer: fs.readFileSync(path.join(artifacts, 'synthetic.png'))};
@@ -441,7 +505,7 @@ server.serve_forever()
     }
     assert.deepEqual(external, [], 'Images must not make external requests');
     assert.deepEqual(errors, []);
-    console.log(`Dossier images: PNG/JPEG decoding; preview cancel/race/limits; atomic save busy/error/CAS recovery; exact old pins, full/section/history and lifecycle states; hostile data with no external requests; seven locales at 1440/390/320 passed. Screenshots: ${artifacts}`);
+    console.log(`Dossier images: readable Mermaid viewport/keyboard enlargement at 1440/320 in light/dark; PNG/JPEG decoding; preview cancel/race/limits; atomic save busy/error/CAS recovery; exact old pins, full/section/history and lifecycle states; hostile data with no external requests; seven locales at 1440/390/320 passed. Screenshots: ${artifacts}`);
   } finally {
     releaseHeldResponses.forEach(release => release());
     if (stderr.includes('Traceback')) console.error(stderr);

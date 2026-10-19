@@ -82,12 +82,12 @@ does not change an already retained quotation. An integrity check is not a fact 
 
 **Since v0.7.1:** edit an exported dossier in Markdown, review its
 changes against the archive and apply the prepared revision explicitly. Images
-and diagrams share a zoom viewer; geography starts offline, with optional
-OpenStreetMap tiles. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
+and diagrams share a zoom viewer. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
 keep name counts separate from author-declared perspective.
 
 **On current main:** guided map and style-space views explain their measurements
-where you use them, with the same context available in the CLI.
+where you use them, with the same context available in the CLI. Maps open with
+OpenStreetMap; local vectors and the numbered sketch remain available offline.
 
 ## How to read the results
 

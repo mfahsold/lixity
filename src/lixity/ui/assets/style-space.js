@@ -281,6 +281,42 @@
     }
     ctx.restore();
 
+    projectedPoints = points.map(function(point) {
+      var projected = project(point.x, point.y, point.z, cx, cy, radius);
+      return {orig: point, x: projected.x, y: projected.y, depth: projected.depth,
+        scale: projected.scale, isHovered: hoveredPoint && hoveredPoint.ch === point.ch,
+        isSelected: selectedPoint && selectedPoint.ch === point.ch};
+    });
+    var pointBoxes = projectedPoints.map(function(point) {
+      var size = nodeRadius(point) + (point.orig.flagged ? 5 : 2);
+      return {left: point.x - size, right: point.x + size, top: point.y - size, bottom: point.y + size};
+    });
+    var labelBoxes = [];
+    function overlaps(a, b) {
+      return a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
+    }
+    function labelPositions(x, y, gap, halfWidth) {
+      return [[x + gap + halfWidth, y], [x - gap - halfWidth, y], [x, y - gap - 8], [x, y + gap + 8],
+        [x + gap + halfWidth, y - gap], [x - gap - halfWidth, y - gap],
+        [x + gap + halfWidth, y + gap], [x - gap - halfWidth, y + gap]];
+    }
+    function paintLabel(text, positions) {
+      var metrics = ctx.measureText(text);
+      for (var candidate = 0; candidate < positions.length; candidate++) {
+        var x = Math.max(metrics.actualBoundingBoxLeft + 4, Math.min(w - metrics.actualBoundingBoxRight - 4, positions[candidate][0]));
+        var y = Math.max(metrics.actualBoundingBoxAscent + 4, Math.min(h - metrics.actualBoundingBoxDescent - 4, positions[candidate][1]));
+        var box = {left: x - metrics.actualBoundingBoxLeft - 2, right: x + metrics.actualBoundingBoxRight + 2,
+          top: y - metrics.actualBoundingBoxAscent - 2, bottom: y + metrics.actualBoundingBoxDescent + 2};
+        if (labelBoxes.some(function(other) { return overlaps(box, other); }) ||
+            pointBoxes.some(function(other) { return overlaps(box, other); })) continue;
+        labelBoxes.push(box);
+        ctx.fillText(text, x, y);
+        return;
+      }
+      // Dense projections can exhaust these bounded positions. The point,
+      // tooltip, chapter selector and score table remain available.
+    }
+
     // 2. Coordinate Axes: Dim 1 (X), Dim 2 (Y), Dim 3 (Z)
     var axisLength = threshold * 1.15;
     var axisDefs = [
@@ -291,7 +327,7 @@
 
     ctx.save();
     ctx.lineWidth = 1;
-    ctx.font = "10px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+    ctx.font = "12px -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
     ctx.textAlign = "center";
     ctx.textBaseline = "middle";
 
@@ -305,12 +341,14 @@
 
       if (ax.info) {
         ctx.fillStyle = muted;
-        if (ax.info.pos) {
-          ctx.fillText("+" + ax.name + " (" + ax.info.pos + ")", ax.endPos.x, ax.endPos.y - 10);
-        }
-        if (ax.info.neg) {
-          ctx.fillText("−" + ax.name + " (" + ax.info.neg + ")", ax.endNeg.x, ax.endNeg.y + 10);
-        }
+        // Full signed feature meanings stay in the persistent inspector.
+        [["+", ax.endPos], ["−", ax.endNeg]].forEach(function(side) {
+          var text = side[0] + ax.name, end = side[1];
+          var distance = Math.hypot(end.x - cx, end.y - cy) || 1;
+          var positions = labelPositions(end.x, end.y, 8, ctx.measureText(text).width / 2);
+          positions.unshift([end.x + (end.x - cx) / distance * 18, end.y + (end.y - cy) / distance * 18]);
+          paintLabel(text, positions);
+        });
       }
     }
     ctx.restore();
@@ -343,22 +381,6 @@
       ctx.restore();
     }
 
-    // 4. Project all points
-    projectedPoints = [];
-    for (var pIdx = 0; pIdx < points.length; pIdx++) {
-      var pt = points[pIdx];
-      var pr = project(pt.x, pt.y, pt.z, cx, cy, radius);
-      projectedPoints.push({
-        orig: pt,
-        x: pr.x,
-        y: pr.y,
-        depth: pr.depth,
-        scale: pr.scale,
-        isHovered: (hoveredPoint && hoveredPoint.ch === pt.ch),
-        isSelected: selectedPoint && selectedPoint.ch === pt.ch
-      });
-    }
-
     // 5. Draw Narrative Trajectory Line
     if (showTrajectory && projectedPoints.length > 1) {
       ctx.save();
@@ -382,9 +404,7 @@
     for (var s = 0; s < sortedPoints.length; s++) {
       var spt = sortedPoints[s];
       var orig = spt.orig;
-      var nodeR = (orig.flagged ? 6.5 : 4.5) * (0.8 + spt.scale * 0.35);
-      if (spt.isHovered) nodeR *= 1.4;
-      else if (spt.isSelected) nodeR *= 1.2;
+      var nodeR = nodeRadius(spt);
 
       if (spt.isHovered) {
         var floorProj = project(orig.x, 0, orig.z, cx, cy, radius);
@@ -434,14 +454,26 @@
         ctx.stroke();
       }
 
-      ctx.font = "bold 9px ui-monospace, SFMono-Regular, Menlo, monospace";
-      ctx.textAlign = "left";
-      ctx.textBaseline = "middle";
-      ctx.fillStyle = spt.isHovered || orig.flagged ? fg : muted;
-      ctx.fillText(String(orig.ch), spt.x + nodeR + 3, spt.y);
-
       ctx.restore();
     }
+    ctx.save();
+    ctx.font = "bold 12px ui-monospace, SFMono-Regular, Menlo, monospace";
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    // Keep the selected chapter's numeral when nearby points compete for space.
+    sortedPoints.sort(function(a, b) { return Number(b.isSelected || b.isHovered) - Number(a.isSelected || a.isHovered); });
+    sortedPoints.forEach(function(point) {
+      if (point.x < 0 || point.x > w || point.y < 0 || point.y > h) return;
+      ctx.fillStyle = point.isHovered || point.orig.flagged ? fg : muted;
+      var text = String(point.orig.ch);
+      paintLabel(text, labelPositions(point.x, point.y, nodeRadius(point) + 8, ctx.measureText(text).width / 2));
+    });
+    ctx.restore();
+  }
+
+  function nodeRadius(point) {
+    return (point.orig.flagged ? 6.5 : 4.5) * (0.8 + point.scale * 0.35) *
+      (point.isHovered ? 1.4 : point.isSelected ? 1.2 : 1);
   }
 
   function getCanvasPos(e) {

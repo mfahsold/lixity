@@ -101,6 +101,7 @@ def style_dimensions(
             parts.append(f'<button type="button" class="ctl ctl-sm dim-ctl" id="{control_id}">{translated(key)}</button>')
         parts.append(f'</div><div class="dim-3d-footer"><span>{translated("dim_3d_hint")}</span><span>{len(points_data)} / {len(chapters)} {translated("chapters")}</span></div>')
         parts.append(f'<details class="dim-cutoff"><summary>{translated("dim_score_threshold")}: |score| ≥ {threshold_label}</summary><p>{translated("dim_cutoff", threshold=threshold_label)}</p></details>')
+        parts.append('</div>')
         point = points_data[0]
         parts.append(f'<div class="dim-selection-panel"><label for="dim-chapter-select">{translated("dim_choose_chapter")}</label><select class="ctl dim-ctl" id="dim-chapter-select" disabled>')
         parts.extend(f'<option value="{option["ch"]}">{option["ch"]}. {esc(option["title"])}</option>'
@@ -112,17 +113,7 @@ def style_dimensions(
                                  for side in ("pos", "neg") if axis[side])
             parts.append(f'<div><dt>D{axis["idx"]}<span class="dim-axis-meaning">{esc(meaning)}</span></dt><dd>{number(score, signed=bool(score))}</dd></div>')
         parts.append(f'</dl><p>{translated("flagged" if point["flagged"] else "dim_not_flagged")}</p></div><p class="hint">{translated("dim_score_units")}</p><a class="ctl dim-ctl" id="dim-read-chapter" href="#ch-{point["ch"]}" data-jump="#ch-{point["ch"]}">{translated("dim_read_chapter")}</a></div>')
-        parts.append('<div class="table-wrap dim-score-wrap" tabindex="0" role="region" aria-labelledby="dim-scores-caption"><table id="dim-scores">'
-                     f'<caption id="dim-scores-caption">{translated("dim_scores")}</caption><thead><tr><th scope="col">{translated("chapter")}</th>')
-        parts.extend(f'<th scope="col">D{axis["idx"]}</th>' for axis in axes_data)
-        parts.append(f'<th scope="col">{translated("dim_flagged")}</th></tr></thead><tbody>')
-        for point in points_data:
-            parts.append(f'<tr><th scope="row"><a class="dim-ctl dim-chapter-jump" href="#ch-{point["ch"]}" data-jump="#ch-{point["ch"]}">{point["ch"]}. {esc(point["title"])}</a></th>')
-            for coordinate in ("x", "y", "z")[:len(axes_data)]:
-                score = cast(float, point[coordinate]) or 0.0
-                parts.append(f'<td class="num">{number(score, signed=bool(score))}</td>')
-            parts.append(f'<td>{translated("flagged" if point["flagged"] else "dim_not_flagged")}</td></tr>')
-        parts.append('</tbody></table></div></div><div class="dim-cards-col">')
+        parts.append('</div><div class="dim-cards-col">')
         feature_layers = {field: key for key, field in LAYER_FEATURES.items()}
         for dim in dim_list:
             positive, negative = dimension_loading_poles(dim["loadings"])
@@ -140,7 +131,18 @@ def style_dimensions(
                 flagged = ", ".join(str(ch) for ch in dim["flagged"])
                 parts.append(f'<div class="dim-meta">{translated("dim_flagged")}: {esc(flagged)}</div>')
             parts.append('</div>')
-        parts.append(f'<p class="hint">{translated("dim_poles")}</p></div></div>')
+        parts.append(f'</div><p class="hint">{translated("dim_poles")}</p>')
+        parts.append('<div class="table-wrap dim-score-wrap" tabindex="0" role="region" aria-labelledby="dim-scores-caption"><table id="dim-scores">'
+                     f'<caption id="dim-scores-caption">{translated("dim_scores")}</caption><thead><tr><th scope="col">{translated("chapter")}</th>')
+        parts.extend(f'<th scope="col">D{axis["idx"]}</th>' for axis in axes_data)
+        parts.append(f'<th scope="col">{translated("dim_flagged")}</th></tr></thead><tbody>')
+        for point in points_data:
+            parts.append(f'<tr><th scope="row"><a class="dim-ctl dim-chapter-jump" href="#ch-{point["ch"]}" data-jump="#ch-{point["ch"]}">{point["ch"]}. {esc(point["title"])}</a></th>')
+            for coordinate in ("x", "y", "z")[:len(axes_data)]:
+                score = cast(float, point[coordinate]) or 0.0
+                parts.append(f'<td class="num">{number(score, signed=bool(score))}</td>')
+            parts.append(f'<td>{translated("flagged" if point["flagged"] else "dim_not_flagged")}</td></tr>')
+        parts.append('</tbody></table></div>')
     if not points_data:
         parts.append(f'<p class="hint dim-cutoff">{translated("dim_cutoff", threshold=threshold_label)}</p>')
     parts.append(f'<details id="dim-expert"><summary>{translated("dim_expert")}</summary><p>{translated("dim_method")}</p><p>{translated("dim_limits")}</p>')

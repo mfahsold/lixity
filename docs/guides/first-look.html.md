@@ -42,7 +42,7 @@ Ask what changed: the kind of scene, what the character is doing, or how the sen
 
 Switch to [**Research**](../demo/report.html#research-manager) and open **Warehouse 4 case notes**. Inspect its historical map and harbour view, then open the linked **Attempted warehouse entry** claim and retained customs-log passage.
 
-In its geography view, select a place or route to read its context and frame it on the offline map. The view explains its coordinates, distances and limits.
+In its geography view, select a place or route to read its context and frame it on the map. The view explains its coordinates, distances and limits.
 
 Open **Review** to find the saved quote: “Someone had tried the eastern gate of Warehouse 4.” The source passage, authored claim and manuscript quotation are separate records connected by an explicit author association. The log, people and incident are invented; the credited historical images do not verify them.
 

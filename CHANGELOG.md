@@ -17,7 +17,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   claim-evidence matrix use the existing application controls.
 - Geography reads share placement coverage, authored route context and approximate
   vertex-chain distances across the API, CLI and map/companion views. Maps add
-  selected-feature framing, a legend and a metric scale without online requests.
+  selected-feature framing, a legend and a metric scale. Visible maps open with
+  OpenStreetMap; the background can be disabled and local vectors/sketches remain
+  available offline. Tile requests stop outside the active visible map context.
 - Style-space views and CLI output explain projection support, retained variation,
   active cutoffs and chapter scores, with persistent selection, planar inspection
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
@@ -26,6 +28,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Escape in research dialogs preserves open paragraphs in the hidden Analysis view.
 - Style-axis descriptions use actual positive/negative loadings and distinguish
   an absent pole or zero-variance axis from an opposing stylistic tendency.
+- Style-space plots keep chapter details alongside the canvas, with full-width
+  scores below and readable axis/chapter labels. Research diagrams retain a
+  readable scale on narrow screens through a keyboard-scrollable viewport.
 
 ## [0.7.1] - 2026-10-19
 

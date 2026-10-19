@@ -83,9 +83,10 @@ baseline. No automatic web import, factual verification or cloud sync is provide
 Zotero handles source-library editing and ordinary reading; Lixity retains
 selected evidence versions and their claim/manuscript relations. The bridge is
 read-only. Local imports and captured evidence remain usable without Zotero.
-Map vectors and media viewers work offline. Optional OpenStreetMap
-tiles require explicit, nonpersistent permission and send the provider tile
-requests revealing the visible area and the client's IP address.
+Map vectors and media viewers work offline. On current main, visible maps use
+OpenStreetMap by default, with a switch to local vectors or the numbered sketch.
+Tile requests reveal the viewed area and client IP to the provider and stop
+outside the visible map/project context.
 
 Standalone reports embed manuscript text. Keep them, retained quotes, credentials
 and private paths out of shared logs or fixtures. Native context tokens reject
