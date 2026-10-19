@@ -130,7 +130,7 @@ Since v3.0.1, foreground `serve` and managed start/restart accept `--min-chapter
 
 The controller manages its own instances. A foreground `lixity serve` process still stops with `Ctrl+C`; external systemd, launchd or Task Scheduler entries use their own manager. Login startup is an explicit advanced choice in the [setup reference](../INSTALLATION.md#optional-startup-at-login). Start Zotero for new captures; retained research stays readable while it is closed.
 
-**Since v0.3.0:** the product number describes development maturity before 1.0. It retains existing features and historical releases. PyPI carries the 0.4.x line and the historical 3.0.1 release was never published there, so `uv tool upgrade lixity` always moves forward within that line; wheel-pinned installs replace their URL explicitly. Research storage versions are independent: 0.4.x reads v1–v7, while historical 3.0.1 cannot read manuscript-link v7 archives. Restart the workspace explicitly after updating.
+PyPI installations use `uv tool upgrade lixity`; wheel-pinned installations require the new release URL. Restart the workspace after updating. Product versions describe development maturity and are independent of research storage versions; consult the [archive compatibility guidance](../research/USAGE.md#storage-lifecycle-and-recovery) before sharing an archive with older readers.
 
 ## Update or remove Lixity
 

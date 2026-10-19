@@ -6,7 +6,7 @@ Maintained by the Lixity project · Updated 19 October 2026
 
 ## The families at a glance
 
-**Grammar and style checkers** correct sentences and suggest phrasing. **Corpus and concordance tools** explore texts and collections quantitatively. **Stylometry and NLP packages** measure text through scripts. **Story and structure tools** work on plot, scenes and characters. Lixity adds a fifth job: measuring language patterns across one manuscript and always linking a number back to its passage.
+**Grammar and style checkers** correct sentences and suggest phrasing. **Corpus and concordance tools** explore texts and collections quantitatively. **Stylometry and NLP packages** measure text through scripts. **Story and structure tools** work on plot, scenes and characters. Lixity adds a fifth job: comparing language patterns across one manuscript, with paragraph measurements linked to source lines.
 
 | Tool family | Primary focus | Runs locally | Account needed | Typical fit |
 | --- | --- | --- | --- | --- |
