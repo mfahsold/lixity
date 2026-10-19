@@ -18,7 +18,7 @@ Two details keep this useful instead of noisy:
 
 ## Walkthrough: the public example
 
-Open the [Effi Briest example](../examples/effi-briest.html) in the browser. The read-only dashboard contains the novel's opening three chapters; its linked [PDF report](../examples/effi-briest-report.pdf) covers the complete public-domain novel. The two reports use different chapter sets, so their reference baselines need not match. The interactive excerpt shows the three views discussed here:
+Open the [Effi Briest case study](../examples/effi-briest.html) in the browser. The read-only dashboard contains the novel's opening three chapters; its linked [PDF report](../examples/effi-briest-report.pdf) covers the complete public-domain novel. The two reports use different chapter sets, so their reference baselines need not match. The interactive excerpt shows the three views discussed here:
 
 1. **The chapter map (heatmap).** Rows are chapters, columns are features; colour encodes the noise-adjusted deviation from the manuscript's own reference. Scanning a row tells you which feature moved in that chapter; scanning a column tells you where a feature drifts over the book. A selected set of cells is the FDR set — the rest are visible but unselected.
 

@@ -40,11 +40,15 @@ DOCS_ROOT_FILES = {
     "ONBOARDING.md",
     "STABILITY.md",
     "USAGE.md",
-    # One reviewed, generated example; sibling inputs/build files stay private to the repo.
+    # One project demo and its reviewed outputs; sibling build files stay unpublished.
     "demo/report.html",
-    # One reviewed read-only research fixture and its attributed public-domain sources.
+    # The former research page is a compatibility entry, not a second project.
     "demo/research.html",
     "demo/research-data.json",
+    "demo/warehouse-4-editor.pdf",
+    "demo/warehouse-4-book.pdf",
+    "demo/warehouse-4-sheet.pdf",
+    "demo/warehouse-4-report.pdf",
     "assets/research/sources.json",
     "assets/research/hamburg-free-port-1900.jpg",
     "assets/research/hamburg-harbour-1890-1900.jpg",

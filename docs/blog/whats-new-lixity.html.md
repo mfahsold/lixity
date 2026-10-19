@@ -66,7 +66,7 @@ Built-in analysis and dashboard generation run on your computer without cloud ca
 
 - [Demo report](../demo/report.html) — invented text, opens in your browser, no install.
 
-- [Effi Briest](../examples/effi-briest.html) and [Pride and Prejudice](../examples/pride-and-prejudice.html) — interactive dashboards of the opening three chapters, each with a linked PDF analysis of the complete public-domain novel.
+- [Effi Briest](../examples/effi-briest.html) and [Pride and Prejudice](../examples/pride-and-prejudice.html) — literary case studies with interactive opening-chapter dashboards and PDF analyses of the complete public-domain novels.
 
 - [First look](../guides/first-look.html) — a three-minute tour of chapter comparisons and paragraphs with local measurements.
 

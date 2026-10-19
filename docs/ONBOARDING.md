@@ -1,8 +1,9 @@
 # Start using Lixity
 
-Try the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
-or [illustrated first look](guides/first-look.html), then use your own manuscript
-below. [Installation](INSTALLATION.md) owns setup, upgrades and service management;
+Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
+the shared demo project for manuscript analysis, research and PDF layouts.
+The [illustrated first look](guides/first-look.html) follows that same project;
+then use your own manuscript below. [Installation](INSTALLATION.md) owns setup, upgrades and service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
 <a id="the-journey-at-a-glance"></a>

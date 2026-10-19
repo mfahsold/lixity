@@ -898,6 +898,12 @@ implement. `None` preserves the historical full control set for existing hosts;
 adapters should supply their actual capabilities. Project, settings and research
 controls are independent of that list.
 
+**Current main (unreleased):** `research-manuscript-review` enables saved quote
+review and highlights without association editing. Supply the selected
+`manuscript_pdf_token`, `research_context_token` and `manuscript_source_sha256`.
+The existing `research-manuscript-link` capability continues to enable both
+review and editing. This capability does not make other project controls read-only.
+
 Responses include `ok`; `message` is optional. Successful reads add the relevant
 data envelope. Treat `ok: false` as unavailable data, not an empty archive.
 Distinguish uninitialized status, empty lists and load failures. Respect

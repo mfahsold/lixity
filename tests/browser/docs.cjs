@@ -19,12 +19,14 @@ function htmlRoutes(directory, prefix = '') {
       : entry.name.endsWith('.html') ? [relative === 'index.html' ? '' : relative] : [];
   });
 }
-const routes = htmlRoutes(root).sort();
+const routes = htmlRoutes(root).filter(route => route !== 'demo/research.html').sort();
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
 const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/research-pdf.html', 'demo/report.html',
-  'demo/research.html', 'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html']);
+  'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html']);
 const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
-  'blog/whats-new-lixity.html', 'demo/report.html', 'demo/research.html', 'examples/effi-briest.html']);
+  'blog/whats-new-lixity.html', 'demo/report.html', 'examples/effi-briest.html']);
+const demoTitle = 'The Crate at Warehouse 4';
+const demoQuote = 'Someone had tried the eastern gate of Warehouse 4.';
 
 async function returnToTop(page, route) {
   const backTop = page.locator('a.site-back-top[href="#top"]');
@@ -45,6 +47,9 @@ async function checkReturnNavigation(page, route, exercise) {
   await expect(navigation).toBeVisible();
   const home = navigation.locator(`a[href="${route ? '../' : './'}"]`);
   await expect(home).toBeVisible();
+  const demo = navigation.getByRole('link', {name: 'Demo', exact: true});
+  await expect(demo).toHaveAttribute('href', route ? '../demo/report.html' : 'demo/report.html');
+  if (route.startsWith('examples/')) await expect(demo).not.toHaveAttribute('aria-current', /.+/);
   const breadcrumbs = page.locator('.site-breadcrumbs');
   if (!route) {
     await expect(home).toHaveAttribute('aria-current', 'page');
@@ -53,7 +58,8 @@ async function checkReturnNavigation(page, route, exercise) {
     await expect(breadcrumbs.locator('[aria-current=page]')).toHaveCount(1);
     const parent = route.startsWith('guides/') ? '../#guides'
       : route === 'blog/index.html' ? '../'
-        : route.startsWith('blog/') ? 'index.html' : '../#examples';
+        : route.startsWith('blog/') ? 'index.html'
+          : route === 'demo/report.html' ? '../#examples' : '../';
     await expect(breadcrumbs.locator('a').last()).toHaveAttribute('href', parent);
   }
   const backTop = page.locator('a.site-back-top[href="#top"]');
@@ -90,7 +96,7 @@ async function checkReturnNavigation(page, route, exercise) {
 async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const notice = page.locator('#example-context');
   const credits = page.locator('#research-source-credits');
-  await expect(notice).toContainText('read-only research example');
+  await expect(notice).toContainText('read-only');
   await expect(notice).toContainText('Generated with Lixity');
   await expect(notice).toContainText('fictional');
   await expect(notice).toContainText('no live Zotero connection');
@@ -100,14 +106,12 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(credits).toContainText('Library of Congress');
   await expect(credits.locator('a[href="../assets/research/sources.json"]')).toBeVisible();
   function assertReadOnly() {
-    return expect(page.locator('input[type=file], textarea, [data-research-revise], [data-dossier-add-image], [data-geo-add], [data-geo-remove], [data-action], [data-manuscript-link-selection], [data-manuscript-link-accept], a[href^="zotero:"], #research-revision-edit-tab, #research-revision-save, #research-revision-batch-add, #r-dos-create-btn, #r-claim-create-btn, #r-decision-create-btn, #r-ingest-btn, #r-zotero-browse, .view-navigation, #project-controls')
+    return expect(page.locator('input[type=file], textarea, [data-research-revise], [data-dossier-add-image], [data-geo-add], [data-geo-remove], [data-action], [data-manuscript-link-selection], [data-manuscript-link-accept], a[href^="zotero:"], #research-revision-edit-tab, #research-revision-save, #research-revision-batch-add, #r-dos-create-btn, #r-claim-create-btn, #r-decision-create-btn, #r-ingest-btn, #r-zotero-browse, #tab-view-project, #project-controls')
       .locator('visible=true')).toHaveCount(0);
   }
   await assertReadOnly();
   if (!javaScriptEnabled) {
-    await expect(page.getByText('This interactive read-only example requires JavaScript. Source credits remain available below.', {exact: true})).toBeVisible();
-    await notice.locator('a[href="#research-source-credits"]').click();
-    await expect(page).toHaveURL(/#research-source-credits$/);
+    await credits.locator('h2').scrollIntoViewIfNeeded();
     await expect(credits.locator('h2')).toBeInViewport();
     return;
   }
@@ -208,7 +212,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const manuscriptReview = page.locator('#research-manuscript-review');
   await expect(manuscriptReview.locator('.manuscript-link-review-item')).toHaveCount(1);
   await expect(manuscriptReview).toContainText('Attempted warehouse entry');
-  await expect(manuscriptReview.locator('blockquote')).toHaveText('Someone had tried the eastern gate of Warehouse 4.');
+  await expect(manuscriptReview.locator('blockquote')).toHaveText(demoQuote);
   await expect(manuscriptReview).toContainText('Exact passage');
   await expect(manuscriptReview).toContainText('Saved version 1');
   await manuscriptReview.locator('[data-research-history=claim]').click();
@@ -222,9 +226,11 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
 async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('.page').count(), 1, 'The example uses the generated report layout');
   assert.ok((await page.locator('.page').innerText()).length > 1000);
-  assert.equal(await page.locator('form, input[type=file], textarea, [contenteditable=true], #controls, #nda-draft, #view-pane-project, #view-pane-research, [data-marker-kind]').count(), 0, 'The example has no upload, writer, settings, NDA or editing controls');
+  assert.equal(await page.locator('input[type=file], textarea, [contenteditable=true], #controls, #nda-draft, #view-pane-project, [data-marker-kind]')
+    .locator('visible=true').count(), 0, 'The example exposes no upload, writer, settings, NDA or editing controls');
   assert.equal(await page.locator('.chapter').count(), 6);
   assert.ok(await page.locator('.chip').count() > 6, 'The report exposes actual paragraph blocks');
+  if (javaScriptEnabled && (colorScheme !== 'light' || width === 390)) return;
   if (javaScriptEnabled) await page.locator('#style-tab-dimensions').click();
   else {
     assert.equal(await page.locator('#style-panels > .panel:visible').count(), 4);
@@ -298,6 +304,77 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#dimensions').screenshot({path: path.join(artifacts, `report-style-${width}-${colorScheme}.png`)});
 }
 
+async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
+  await expect(page.locator('h1')).toHaveText(demoTitle);
+  for (const layout of ['editor', 'book', 'sheet', 'report']) {
+    await expect(page.locator(`a[href="warehouse-4-${layout}.pdf"]`).first()).toBeVisible();
+  }
+  await checkReport(page, javaScriptEnabled, width, colorScheme);
+  if (!javaScriptEnabled) {
+    await checkResearchDemo(page, false, width, colorScheme);
+    return;
+  }
+  await expect(page.locator('#tab-view-analysis')).toBeVisible();
+  await expect(page.locator('#tab-view-research')).toBeVisible();
+  await expect(page.locator('#tab-view-project')).not.toBeVisible();
+  await expect(page.locator('body')).toHaveAttribute('data-manuscript-links', 'read');
+  if (colorScheme !== 'light' || width === 390) return;
+  // The saved research quotation belongs to the very manuscript being analysed.
+  await page.locator('#text-search').fill(demoQuote);
+  const passage = page.locator('#chapters .ptext.open').filter({hasText: demoQuote}).first();
+  await expect(passage.locator('p').first()).toContainText(demoQuote);
+  await passage.locator('.paragraph-values > summary').click();
+  await page.locator('#style-layer').selectOption('asl');
+  const passageId = await passage.getAttribute('id');
+  const paragraphText = await passage.locator('p').first().innerText();
+  await passage.locator('p').first().evaluate(node => {
+    const range = document.createRange(); range.selectNodeContents(node);
+    getSelection().removeAllRanges(); getSelection().addRange(range);
+    document.dispatchEvent(new Event('selectionchange'));
+  });
+  await page.keyboard.press('Alt+l');
+  await expect(page.locator('#manuscript-link-dialog, [data-manuscript-link-selection]')).toHaveCount(0);
+  await page.evaluate(() => getSelection().removeAllRanges());
+  await page.locator('#tab-view-analysis').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#tab-view-research')).toBeFocused();
+  await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
+  await checkResearchDemo(page, true, width, colorScheme);
+  await page.locator('#tab-view-analysis').click();
+  await expect(page.locator('#text-search')).toHaveValue(demoQuote);
+  await expect(page.locator('#style-layer')).toHaveValue('asl');
+  await expect(page.locator('#' + passageId + ' .paragraph-values')).toHaveAttribute('open', '');
+  await expect(page.locator('#' + passageId + ' p').first()).toHaveText(paragraphText);
+  await expect(page.locator('#' + passageId + ' mark.manuscript-claim-hit')).toHaveText(demoQuote);
+  await page.locator('#tab-view-research').click();
+  await expect(page.locator('[data-rtab=review]')).toHaveAttribute('aria-selected', 'true');
+  await expect(page.locator('#research-manuscript-review blockquote')).toHaveText(demoQuote);
+  await page.locator('#tab-view-analysis').click();
+  await page.locator('#view-pane-analysis, .view-nav-tab').evaluateAll(async nodes => {
+    await Promise.all(nodes.flatMap(node => node.getAnimations().map(animation => animation.finished.catch(() => {}))));
+  });
+  await expect(page.locator('#view-pane-analysis')).toHaveCSS('opacity', '1');
+  await expect(page.locator('#tab-view-analysis')).toBeEnabled();
+  await expect(page.locator('#tab-view-research')).toBeEnabled();
+  await page.locator('#' + passageId + ' p').first().scrollIntoViewIfNeeded();
+  await expect(page.locator('#' + passageId + ' p').first()).toBeInViewport();
+  await page.screenshot({path: path.join(artifacts, `demo-roundtrip-${width}.png`)});
+}
+
+async function checkLegacyResearchURL(page, javaScriptEnabled) {
+  await page.goto('http://lixity.test/lixity/demo/research.html');
+  await expect(page).toHaveURL('http://lixity.test/lixity/demo/report.html#research-manager');
+  await expect(page.locator('h1')).toHaveText(demoTitle);
+  await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', 'https://mfahsold.github.io/lixity/demo/report.html');
+  if (javaScriptEnabled) {
+    await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#research-manager')).toBeVisible();
+  } else {
+    await expect(page.locator('#chapters .ptext p').first()).toBeVisible();
+    await expect(page.locator('#research-source-credits')).toContainText('Library of Congress');
+  }
+}
+
 (async () => {
   const browser = await launchChromium();
   try {
@@ -318,7 +395,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
         assert.ok(file.startsWith(root + path.sep));
         assert.ok(fs.existsSync(file), `Missing public asset ${relative}`);
-        const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml'}[path.extname(file)];
+        const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.pdf': 'application/pdf'}[path.extname(file)];
         await route.fulfill({contentType, body: fs.readFileSync(file)});
       });
       for (const width of [1440, 390, 320]) {
@@ -341,8 +418,6 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
           if (dashboard) {
             assert.ok(await page.locator('.chapter').count() > 0, `${route} renders chapters`);
             assert.ok(await page.locator('.chip').count() > 0, `${route} renders paragraph chips`);
-          } else if (route === 'demo/research.html') {
-            assert.ok((await page.locator('#research-source-credits').innerText()).length > 1000, 'The research example has readable source credits without scripting');
           } else {
             assert.ok((await page.locator('main').innerText()).length > 1000,
               `${route} has too little visible text`);
@@ -393,8 +468,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
             await page.locator('h1').scrollIntoViewIfNeeded();
           }
           await page.screenshot({path: path.join(artifacts, `${route ? path.basename(route, '.html') : 'home'}-${width}-${colorScheme}${javaScriptEnabled ? '' : '-js-off'}.png`), fullPage: route === '' || route === 'guides/first-look.html'});
-          if (route === 'demo/report.html') await checkReport(page, javaScriptEnabled, width, colorScheme);
-          if (route === 'demo/research.html') await checkResearchDemo(page, javaScriptEnabled, width, colorScheme);
+          if (route === 'demo/report.html') await checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme);
         }
         await page.goto('http://lixity.test/lixity/');
         await page.locator('.hero-cta a[href="guides/first-look.html"]').click();
@@ -410,12 +484,10 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         await page.locator('.site-return a[href="./"]').click();
         await expect(page).toHaveURL('http://lixity.test/lixity/');
         await page.locator('.hero-cta a.primary[href="demo/report.html"]').click();
-        assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the report directly');
-        await page.locator('.site-breadcrumbs a[href="../#examples"]').click();
-        await expect(page).toHaveURL('http://lixity.test/lixity/#examples');
-        await expect(page.locator('#examples h2')).toBeInViewport();
-        await returnToTop(page, 'Examples parent');
-        await page.locator('.site-return a[href="./"]').click();
+        assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the one demo directly');
+        await page.locator('.site-return a').filter({hasText: /^Demo$/}).click();
+        await expect(page).toHaveURL('http://lixity.test/lixity/demo/report.html');
+        await page.locator('.site-breadcrumbs a[href="../"]').click();
         await expect(page).toHaveURL('http://lixity.test/lixity/');
         if (javaScriptEnabled) {
           await page.locator('#themeToggle').click();
@@ -454,9 +526,10 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         await page.locator('.site-return a[href="../"]').click();
         await expect(page).toHaveURL('http://lixity.test/lixity/');
       }
+      if (colorScheme === 'light') await checkLegacyResearchURL(page, javaScriptEnabled);
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, keyboard return/focus and stable disclosures, breadcrumb/Home destination journeys, static GET-only journey, report keyboard/filter/chart controls, read-only research source/image/geography/history/timeline/manuscript-quote journey, assets, overflow and console passed. Screenshots: ${artifacts}`);
+    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only navigation, one six-chapter demo Analysis/Research state roundtrip with evidence/quote and PDF links, legacy research redirect, case-study rendering, keyboard/focus/console passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

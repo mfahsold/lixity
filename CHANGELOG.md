@@ -7,6 +7,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+- One public Warehouse 4 demo combines the same manuscript, analysis, research,
+  images, geography and PDF exports. Former research links open that project;
+  public-domain novel analyses remain secondary case studies.
+- Embedding adapters can enable manuscript review without association editing.
+
+### Fixed
+- Escape in research dialogs preserves open paragraphs in the hidden Analysis view.
+
 ## [0.7.1] - 2026-10-19
 
 ### Added

@@ -3,8 +3,8 @@
 Browser captures of the maintained dashboard. The
 [project page](https://mfahsold.github.io/lixity/) introduces each feature with
 a selected image. Use the links below for related views and full-size images.
-Research captures reflect v0.7.1: dossiers are the starting
-point, with compact source capture and a synthetic manuscript association.
+All product captures follow [*The Crate at Warehouse 4*](../demo/report.html):
+the same six-chapter manuscript, research records and project metadata.
 
 ## Browse by feature
 
@@ -31,9 +31,10 @@ point, with compact source capture and a synthetic manuscript association.
 
 ## Data and capture scope
 
-Analysis views use the public-domain Austen sample documented in
-[samples/README.md](https://github.com/mfahsold/lixity/blob/main/samples/README.md).
-Project paths, author settings, research prose, claims and decisions are synthetic.
+Analysis and research views use the synthetic
+[Warehouse 4 manuscript](../research/examples/harbour-manuscript.md), whose owning
+source is `samples/first-look.md`. Project paths, author settings, research prose,
+claims and decisions belong to the same invented project.
 Marker notes exist only in an in-memory copy. The NDA view previews a synthetic
 five-field draft without storing agreements or recipient records. Research visuals
 use a historical Hamburg map excerpt and a Photochrom Print Collection harbour

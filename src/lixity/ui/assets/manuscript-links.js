@@ -1,9 +1,13 @@
 (function () {
   "use strict";
   var bridge = window.LixityManuscriptLinks;
-  var tokenHost = document.getElementById("manuscript-pdf-form") || document.getElementById("workspace-reader");
-  if (!bridge || document.body.dataset.manuscriptLinks !== "1" || !tokenHost ||
-      !tokenHost.dataset.projectToken || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
+  var canWrite = document.body.dataset.manuscriptLinks === "1";
+  var tokenHost = document.getElementById("manuscript-pdf-form") || document.getElementById("workspace-reader") || document.body;
+  function projectToken() {
+    return tokenHost === document.body ? tokenHost.dataset.manuscriptProjectToken : tokenHost.dataset.projectToken;
+  }
+  if (!bridge || (!canWrite && document.body.dataset.manuscriptLinks !== "read") ||
+      !projectToken() || !bridge.contextToken() || !document.body.dataset.manuscriptSourceSha256) return;
   var draft = null, serial = 0, reviewSerial = 0, review = null, remembered = null, reviewProjectId = null;
   var pending = new Set(), dialog, picker, quotation, statement, consent, save, status, filterInput;
   var chapters = document.getElementById("chapters");
@@ -16,7 +20,7 @@
   }
   function label(key) { return bridge.label(key); }
   function context() {
-    return {research: bridge.contextToken(), project: tokenHost.dataset.projectToken,
+    return {research: bridge.contextToken(), project: projectToken(),
       source: document.body.dataset.manuscriptSourceSha256};
   }
   function same(a, b) { return a.research === b.research && a.project === b.project && a.source === b.source; }
@@ -220,7 +224,7 @@
       if (row.anchor) item.appendChild(element("blockquote", row.anchor.quote));
       var history = element("button", label("research_revision_history"), "ctl"); history.type = "button";
       history.dataset.researchHistory = "claim"; history.dataset.recordId = row.claim_id; item.appendChild(history);
-      if (row.anchor_state === "moved" || row.anchor_state === "adjusted") {
+      if (canWrite && (row.anchor_state === "moved" || row.anchor_state === "adjusted")) {
         var acceptLabel = row.anchor_state === "adjusted" ? "manuscript_link_accept_adjusted" : "manuscript_link_accept_moved";
         var accept = element("button", label(acceptLabel), "ctl");
         accept.type = "button"; accept.dataset.manuscriptLinkAccept = row.link_id;
@@ -280,6 +284,11 @@
     applyReview(report, value);
   }
   function enhance(panel) {
+    if (!canWrite) {
+      if (review) applyReview(review, context());
+      else if (reviewSerial === 0) loadReview();
+      return;
+    }
     var inner = panel.querySelector(".ptext-inner");
     if (!inner || inner.querySelector("[data-manuscript-link-selection]")) return;
     var row = inner.querySelector(".marker-row") || element("div", "", "row manuscript-link-controls");
@@ -306,12 +315,12 @@
     if (dialog && dialog.open) { unavailable(); updateSave(); }
   });
   [document.body, tokenHost, document.getElementById("research-manager")].forEach(function(host) {
-    if (host) contextObserver.observe(host, {attributes: true, attributeFilter: ["data-project-token", "data-research-token", "data-manuscript-source-sha256"]});
+    if (host) contextObserver.observe(host, {attributes: true, attributeFilter: ["data-project-token", "data-manuscript-project-token", "data-research-token", "data-manuscript-source-sha256"]});
   });
   document.addEventListener("click", function(event) {
     if (event.target.closest("[data-manuscript-link-reload]")) { event.preventDefault(); window.location.reload(); }
   });
-  document.addEventListener("click", async function(event) {
+  if (canWrite) document.addEventListener("click", async function(event) {
     var accept = event.target.closest("[data-manuscript-link-accept]");
     if (!accept || accept.disabled) return;
     var value = context();
@@ -336,12 +345,12 @@
     if (response && response.code === "stale-archive") { clearReview(label("manuscript_link_archive_changed")); return; }
     if (status) { status.className = "ctl-status err"; status.textContent = bridge.errorText(response); }
   });
-  document.addEventListener("selectionchange", function() {
+  if (canWrite) document.addEventListener("selectionchange", function() {
     var value = selection();
     if (value) remembered = value;
     else if (window.getSelection() && !window.getSelection().isCollapsed) remembered = null;
   });
-  document.addEventListener("keydown", function(event) {
+  if (canWrite) document.addEventListener("keydown", function(event) {
     if (event.altKey && !event.ctrlKey && !event.metaKey && event.key.toLowerCase() === "l" && !(dialog && dialog.open)) {
       var value = selection(); if (value) { event.preventDefault(); open(value); }
     }

@@ -42,7 +42,7 @@ Lixity’s built-in analysis computes documented statistics from your manuscript
 
 …you want to see how *your* manuscript behaves over its chapters and keep the evidence next to your decisions: sentence rhythm, vocabulary, dialogue and tense; comparisons against the book’s own baseline; paragraph text and measurements for review; and a local research archive connecting sources and quotations to claims and writing decisions. Built-in analysis runs on your computer without cloud calls or an account. German and English have the deepest language profiles.
 
-Start with the [read-only example report](../demo/report.html) or the [three-minute first look](first-look.html); no installation is needed for either. For a real book, the [Effi Briest](../examples/effi-briest.html) (German) and [Pride and Prejudice](../examples/pride-and-prejudice.html) (English) examples pair an interactive excerpt with the complete PDF report.
+Explore [*The Crate at Warehouse 4*](../demo/report.html), one read-only project with manuscript analysis, research and PDF layouts, using the [first-look walkthrough](first-look.html). No installation is needed. The separate [Fontane case study](../blog/effi-briest-case-study.html) examines a public-domain novel; it is not another product demo.
 
 ## Where Lixity does not fit
 

@@ -78,6 +78,10 @@ document.addEventListener("click", function (event) {
 document.addEventListener("keydown", function (event) {
   if (event.defaultPrevented) return;
   if (event.key === "Escape") {
+    // Dialogs and other workspace views own Escape while analysis is hidden.
+    if (document.querySelector("dialog[open]")) return;
+    var analysisPane = document.getElementById("view-pane-analysis");
+    if (analysisPane && !analysisPane.classList.contains("active")) return;
     closeNoteField();
     document.querySelectorAll(".ptext.open").forEach(function (panel) {
       var chip = document.querySelector('.chip[data-target="' + panel.id + '"]');

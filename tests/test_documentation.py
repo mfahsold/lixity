@@ -55,6 +55,10 @@ class TestDocumentation(unittest.TestCase):
                 resolved[page] = local
             self.assertIn(pages[1], resolved[pages[0]])
             self.assertIn(pages[2], resolved[pages[1]])
+            for layout in ("editor", "book", "sheet", "report"):
+                pdf = output / "demo" / f"warehouse-4-{layout}.pdf"
+                self.assertIn(pdf, resolved[pages[2]], "All PDF examples belong to the same demo project")
+                self.assertTrue(pdf.read_bytes().startswith(b"%PDF-"), f"Invalid staged PDF: {pdf.name}")
 
     def test_synthetic_demo_distributes_complete_license_as_an_appendix(self):
         """A standalone generated report retains the unchanged distribution terms."""

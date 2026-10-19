@@ -200,6 +200,8 @@ def render_dashboard(
     preserves the other existing controls. NDA generation requires explicit
     ``nda-draft`` capability; ``nda_project_name`` supplies a real project name
     separately from a placeholder dashboard title.
+    ``research-manuscript-review`` enables saved-anchor inspection without
+    editing; ``research-manuscript-link`` also enables association writes.
     Manuscript PDF generation requires explicit ``manuscript-pdf`` capability
     and an opaque ``manuscript_pdf_token`` for the selected server context.
     ``research_context_token`` binds native research controls to their selected
@@ -223,6 +225,11 @@ def render_dashboard(
 
     reader_enabled = (
         controls and allowed_actions is not None and "research-reader" in allowed_actions
+    )
+    manuscript_links_mode = (
+        "1" if allowed_actions is not None and "research-manuscript-link" in allowed_actions
+        else "read" if allowed_actions is not None and "research-manuscript-review" in allowed_actions
+        else "0"
     )
 
     def L(key: str) -> str:
@@ -347,7 +354,8 @@ def render_dashboard(
         "</head>",
         f'<body id="top" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
-        f'data-manuscript-links="{int(allowed_actions is not None and "research-manuscript-link" in allowed_actions)}" '
+        f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
+        f'data-manuscript-links="{manuscript_links_mode}" '
         f'data-image-limits="{image_limits_attribute()}" '
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',

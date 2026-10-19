@@ -22,15 +22,15 @@ and
 
 Open **PDF export** above the workspace views, choose a purpose and select **Download PDF**. The same composer serves the browser and CLI; downloads create no server export files and change no manuscript. Standalone HTML has no download action.
 
-**Since v0.7.0:** the initial choice is an A4 editorial copy with line numbers and a correction margin. The same manuscript structure feeds the reading and submission layouts.
+**Since v0.7.0:** the initial choice is an A4 editorial copy with line numbers and a correction margin. Compare the same six chapters of *The Crate at Warehouse 4* in all four prepared files below; these are exports from the shared demo project.
 
-- **Editorial copy:** A4, readable text and space for annotations. [Example PDF](../examples/effi-briest-editor.pdf).
+- **Editorial copy:** A4, readable text and space for annotations. [Example PDF](../demo/warehouse-4-editor.pdf).
 
-- **Reading copy:** A5, chapter openings and continuous reading. [Same excerpt](../examples/effi-briest-book.pdf).
+- **Reading copy:** A5, chapter openings and continuous reading. [Same excerpt](../demo/warehouse-4-book.pdf).
 
-- **Submission sheets:** A4, at most 30 lines of 60 characters. [Same excerpt](../examples/effi-briest-sheet.pdf).
+- **Submission sheets:** A4, at most 30 lines of 60 characters. [Same excerpt](../demo/warehouse-4-sheet.pdf).
 
-- **Analysis report:** metric tables rather than the manuscript. [Complete report](../examples/effi-briest-report.pdf).
+- **Analysis report:** metric tables rather than the manuscript. [Complete report](../demo/warehouse-4-report.pdf).
 
 ```
 lixity pdf manuscript.md --layout editor -o editorial.pdf
@@ -93,7 +93,7 @@ To bring existing Lixity sources into Zotero, `research zotero-export` creates a
 
 ## Read a place alongside its sources
 
-**Since v0.7.0:** the [read-only research example](../demo/research.html) combines a historical Hamburg harbour plan, a photochrom print and fictional scene notes. Open its dossier to inspect the images, source links and an authored walking/driving sketch. The historical images do not establish the invented event or journey.
+In the [Warehouse 4 demo project's Research view](../demo/report.html#research-manager), open **Warehouse 4 case notes** to inspect the historical Hamburg map, photochrom, source links and authored walking/driving sketch. Its claim, customs-log passage and saved manuscript quote belong to the same project used by Analysis and the PDF copies. The historical images do not establish the invented event or journey.
 
 ![Retained historical map in the Hamburg research dossier, with its source and provenance](../screenshots/dashboard-dossier-image.png)
 

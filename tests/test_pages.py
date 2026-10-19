@@ -36,7 +36,7 @@ class PageHead(HTMLParser):
         if tag == "link":
             self.links.append(values)
         elif tag == "meta":
-            key = values.get("property") or values.get("name")
+            key = values.get("property") or values.get("name") or values.get("http-equiv")
             if key:
                 self.meta.setdefault(key, []).append(values.get("content", ""))
         elif tag == "script" and values.get("type") == "application/ld+json":
@@ -64,21 +64,17 @@ class TestPagesStaging(unittest.TestCase):
             "<title>Original</title>", "<title>Research &amp; maps</title>",
         ))
 
-    def test_generated_research_preview_uses_its_own_image(self):
-        from scripts.build_examples import _head_metadata
-
-        metadata = _head_metadata(
-            canonical=SITE + "demo/research.html", title="Research example",
-            description="Historical sources and fictional scene notes", language="en",
-            preview_image=("screenshots/dashboard-dossier-image.png", "Retained historical map"),
-        )
+    def test_legacy_research_page_redirects_to_the_single_workspace(self):
+        docs = Path(__file__).resolve().parents[1] / "docs"
+        document = (docs / "demo/research.html").read_text(encoding="utf-8")
         head = PageHead()
-        head.feed("<head>" + metadata + "</head>")
-        expected = SITE + "screenshots/dashboard-dossier-image.png"
-        self.assertEqual(head.meta["og:image"], [expected])
-        self.assertEqual(head.meta["twitter:image"], [expected])
-        self.assertEqual(head.structured[0]["image"]["url"], expected)
-        self.assertEqual(head.meta["og:image:alt"], ["Retained historical map"])
+        head.feed(document)
+        self.assertEqual([link["href"] for link in head.links if link.get("rel") == "canonical"],
+                         [SITE + "demo/report.html"])
+        self.assertRegex(head.meta.get("refresh", [""])[0], r"(?i)^0;\s*url=report\.html#research-manager$")
+        self.assertIn('href="report.html#research-manager"', document)
+        self.assertNotIn('id="research-manager"', document)
+        self.assertLess(len(document.encode("utf-8")), 8_000, "The old URL is a compatibility page, not a second workspace")
 
     def test_sitemap_covers_published_html_canonicals(self):
         class Canonicals(HTMLParser):
@@ -93,6 +89,8 @@ class TestPagesStaging(unittest.TestCase):
             stage(docs, output)
             canonical_urls = []
             for page in output.rglob("*.html"):
+                if page.relative_to(output).as_posix() == "demo/research.html":
+                    continue  # The tested compatibility redirect shares the report's canonical.
                 Canonicals().feed(page.read_text(encoding="utf-8"))
             # This XML is maintained repository content, never an imported document.
             listed = [node.text for node in ET.parse(output / "sitemap.xml")  # noqa: S314
@@ -127,6 +125,8 @@ class TestPagesStaging(unittest.TestCase):
                       "assets/research/hamburg-free-port-1900.jpg",
                       "assets/research/hamburg-harbour-1890-1900.jpg", "assets/research/sources.json",
                       "demo/report.html", "demo/research.html", "demo/research-data.json",
+                      "demo/warehouse-4-editor.pdf", "demo/warehouse-4-book.pdf",
+                      "demo/warehouse-4-sheet.pdf", "demo/warehouse-4-report.pdf",
                       "research/USAGE.md", "research/examples/synthetic-source.txt",
                       "screenshots/public.png", "sitemap.xml", ".nojekyll",
                       "examples/novel.html", "examples/novel-report.pdf")
@@ -137,7 +137,8 @@ class TestPagesStaging(unittest.TestCase):
             private += ("blog/session-notes.md",)
             private += ("assets/research/unreviewed.jpg", "demo/local-source.json",)
             private += ("demo/unapproved.html", "demo/source.md", "demo/output.json",
-                        "demo/archive.zip", "demo/helpers/input.html")
+                        "demo/archive.zip", "demo/helpers/input.html", "demo/private.pdf",
+                        "demo/warehouse-4-draft.pdf")
             for name in public + private:
                 path = docs / name
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -179,6 +180,9 @@ class TestPagesStaging(unittest.TestCase):
                        for node in ET.parse(output / "sitemap.xml").getroot()}  # noqa: S314
             for page in pages:
                 relative = page.relative_to(output).as_posix()
+                if relative == "demo/research.html":
+                    self.assertNotIn(SITE + relative, sitemap)
+                    continue  # Its canonical/refresh/fallback link have a dedicated contract above.
                 head = PageHead()
                 head.feed(page.read_text(encoding="utf-8"))
                 canonical = SITE + ("" if relative == "index.html" else relative)

@@ -2,6 +2,7 @@
 
 import base64
 import hashlib
+import html
 import json
 import re
 import shutil
@@ -74,8 +75,8 @@ def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_ma
     assert link["claim_title"] == "Attempted warehouse entry"
     assert link["claim_revision"] == 1
     assert link["state"] == "active"
-    assert (project / "harbour-manuscript.md").read_bytes() == (
-        ROOT / "docs/research/examples/harbour-manuscript.md").read_bytes()
+    manuscript_bytes = (ROOT / "samples/first-look.md").read_bytes()
+    assert (project / "harbour-manuscript.md").read_bytes() == manuscript_bytes
     assert api.list_manuscript_links(project) == {key: value for key, value in links.items() if key != "ok"}
     evidence = api.list_evidence_links(project, claim_id=link["claim_id"])["evidence_links"]
     assert len(evidence) == 1
@@ -94,17 +95,32 @@ def test_research_fixture_connects_retained_evidence_to_an_authored_claim_and_ma
 
 def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_path, research_fixture):
     target = make_screenshots.build_research_demo(tmp_path, research_fixture)
-    assert target == tmp_path / "docs/demo/research.html"
+    assert target == tmp_path / "docs/demo/report.html"
     document = target.read_text()
     fixture_path = target.with_name("research-data.json")
     fixture = json.loads(fixture_path.read_text())
-    assert f"Lixity {__version__} · read-only research example" in document
+    assert f"Lixity {__version__} · read-only project demo" in document
     assert f"Generated with Lixity {__version__}." in document
     assert "Hamburg free-port area, circa 1900" in document
     assert "Ships in the Harbor, Hamburg, Germany" in document
     assert "Zotero normally owns bibliography, reading and source notes" in document
     assert "no live Zotero connection" in document
     assert "saved manuscript quote" in document
+    assert len(re.findall(r'<section class="chapter(?: [^\"]*)?" id="ch-\d+"', document)) == 6
+    assert 'data-manuscript-links="read"' in document
+    source = (ROOT / "samples/first-look.md").read_bytes()
+    assert f'data-manuscript-source-sha256="{hashlib.sha256(source).hexdigest()}"' in document
+    assert (tmp_path / "docs/research/examples/harbour-manuscript.md").read_bytes() == source
+    assert (ROOT / "LICENSE").read_text().strip() in html.unescape(document)
+    for layout in ("editor", "book", "sheet", "report"):
+        filename = f"warehouse-4-{layout}.pdf"
+        assert f'href="{filename}"' in document
+        assert target.with_name(filename).read_bytes().startswith(b"%PDF-")
+    legacy = target.with_name("research.html").read_text()
+    assert 'http-equiv="refresh" content="0; url=report.html#research-manager"' in legacy
+    assert 'href="report.html#research-manager"' in legacy
+    assert 'rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"' in legacy
+    assert "research-demo-adapter" not in legacy
     assert "content_base64" not in fixture_path.read_text()
     assert "Mara stopped beneath the quay lamp" not in fixture_path.read_text()
     assert all(url.startswith("/api/research/") for url in fixture)

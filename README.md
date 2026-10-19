@@ -16,19 +16,19 @@ serves the scene before deciding what to keep or revise.
 
 ![Lixity dashboard — chapter comparison, sentence rhythm and passage drill-down](docs/screenshots/dashboard-dark.png)
 
-[Try the report](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Explore the demo project](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [v0.7.1 release notes](docs/releases/v0.7.1.md)
 
 ## Try it in 30 seconds
 
-Open the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html),
-select a chapter cell and open a paragraph. No install, account or upload is
-needed. Also explore [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html),
-[Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
-or the [read-only research workspace](https://mfahsold.github.io/lixity/demo/research.html).
-Examples use invented or public-domain text.
+Open [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html):
+one read-only project with six invented English chapters. Compare the opening
+setting with chapter 2's action, then open a paragraph. Switch to **Research**
+to follow the same story through a dossier, retained sources, a claim and its
+saved manuscript quote. Compare the project's four PDF layouts from the demo.
+No install, account or upload is needed.
 
 <a id="start-here"></a>
 Built-in analysis runs on your computer. Optional external OCR workers have
@@ -73,7 +73,7 @@ does not change an already retained quotation. An integrity check is not a fact 
 
 <a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Historical Hamburg map in a fictional scene dossier, with source provenance" width="900" /></a>
 
-[Try the research example](docs/demo/research.html) ·
+[Open Research in the demo project](https://mfahsold.github.io/lixity/demo/report.html#research-manager) ·
 [Workflows and compatibility](docs/research/USAGE.md) ·
 [Places and journeys](docs/screenshots/dashboard-dossier-geography.png)
 

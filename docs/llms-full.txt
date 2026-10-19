@@ -34,19 +34,19 @@ serves the scene before deciding what to keep or revise.
 
 ![Lixity dashboard — chapter comparison, sentence rhythm and passage drill-down](docs/screenshots/dashboard-dark.png)
 
-[Try the report](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Explore the demo project](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [v0.7.1 release notes](docs/releases/v0.7.1.md)
 
 ## Try it in 30 seconds
 
-Open the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html),
-select a chapter cell and open a paragraph. No install, account or upload is
-needed. Also explore [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html),
-[Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
-or the [read-only research workspace](https://mfahsold.github.io/lixity/demo/research.html).
-Examples use invented or public-domain text.
+Open [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html):
+one read-only project with six invented English chapters. Compare the opening
+setting with chapter 2's action, then open a paragraph. Switch to **Research**
+to follow the same story through a dossier, retained sources, a claim and its
+saved manuscript quote. Compare the project's four PDF layouts from the demo.
+No install, account or upload is needed.
 
 <a id="start-here"></a>
 Built-in analysis runs on your computer. Optional external OCR workers have
@@ -91,7 +91,7 @@ does not change an already retained quotation. An integrity check is not a fact 
 
 <a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Historical Hamburg map in a fictional scene dossier, with source provenance" width="900" /></a>
 
-[Try the research example](docs/demo/research.html) ·
+[Open Research in the demo project](https://mfahsold.github.io/lixity/demo/report.html#research-manager) ·
 [Workflows and compatibility](docs/research/USAGE.md) ·
 [Places and journeys](docs/screenshots/dashboard-dossier-geography.png)
 
@@ -236,7 +236,7 @@ Use active result metadata when interpreting thresholds and unavailable values.
 
 ## Choose a reference
 
-- [First look](https://mfahsold.github.io/lixity/guides/first-look.html): read a report and choose a starting point.
+- [First look](https://mfahsold.github.io/lixity/guides/first-look.html): follow the Warehouse 4 demo from chapter comparison to research and PDF layouts.
 - [Installation and service lifecycle](https://mfahsold.github.io/lixity/guides/installation.html): install, select a project, start, stop and upgrade.
 - [Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html): measurements, review signals and uncertainty.
 - [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, settings, registers and PDF export; since v0.7.0, A4 editorial copies include line numbers and comment margins.
@@ -289,17 +289,25 @@ written commercial license. See [licensing](https://github.com/mfahsold/lixity/b
 [source](https://github.com/mfahsold/lixity), [contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
 and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 
-## Reviewed public examples
+## One demo project
 
-- [Synthetic report](https://mfahsold.github.io/lixity/demo/report.html).
-- [Research preview](https://mfahsold.github.io/lixity/demo/research.html): attributed historical harbour images and fictional geography; available since v0.7.0.
-- [Effi Briest opening chapters](https://mfahsold.github.io/lixity/examples/effi-briest.html) and [PDF report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf).
-- [Pride and Prejudice opening chapters](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html) and [PDF report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
+[The Crate at Warehouse 4](https://mfahsold.github.io/lixity/demo/report.html)
+is the default read-only product walkthrough: six synthetic English chapters,
+Analysis and Research views, retained sources, authored claims and a saved
+manuscript quote in one project. Its [manuscript](https://mfahsold.github.io/lixity/research/examples/harbour-manuscript.md)
+also supplies all four PDFs: [editorial](https://mfahsold.github.io/lixity/demo/warehouse-4-editor.pdf),
+[reading](https://mfahsold.github.io/lixity/demo/warehouse-4-book.pdf),
+[submission](https://mfahsold.github.io/lixity/demo/warehouse-4-sheet.pdf) and
+[analysis report](https://mfahsold.github.io/lixity/demo/warehouse-4-report.pdf).
+No upload or account is required. The old research-demo URL is a compatibility
+entry into this same project, not a second dataset.
 
-The Fontane (Gutenberg #5323) and Austen (#1342) source texts are public domain,
-separate from the software license. Examples need no upload or account.
-The research preview's [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)
-records the public-domain image provenance; authored routes are illustrative.
+The [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)
+records the public-domain map/photo provenance; people, events and routes are fictional.
+Separate literary case studies remain linked from the [Fontane article](https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html)
+and [tense-review article](https://mfahsold.github.io/lixity/blog/tense-switches.html).
+Their Fontane (Gutenberg #5323) and Austen (#1342) texts are public domain,
+separate from the software license, and are not the demo manuscript.
 
 ===============================================================================
 ## docs/ONBOARDING.md
@@ -308,9 +316,10 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md
 
 # Start using Lixity
 
-Try the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
-or [illustrated first look](guides/first-look.html), then use your own manuscript
-below. [Installation](INSTALLATION.md) owns setup, upgrades and service management;
+Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
+the shared demo project for manuscript analysis, research and PDF layouts.
+The [illustrated first look](guides/first-look.html) follows that same project;
+then use your own manuscript below. [Installation](INSTALLATION.md) owns setup, upgrades and service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
 <a id="the-journey-at-a-glance"></a>
@@ -1359,10 +1368,11 @@ prefaces, subheadings, scene breaks, lists, quotations and notes survive export.
 Inline emphasis uses font styles; notes are collected as endnotes. Embedded
 LaTeX text formatting is a bounded subset, never executed as TeX. Unsupported
 TeX constructs report an error rather than silently changing the manuscript.
-Compare the same public-domain excerpt as an
-[editorial copy](examples/effi-briest-editor.pdf),
-[reading copy](examples/effi-briest-book.pdf) or
-[submission grid](examples/effi-briest-sheet.pdf).
+Compare the same six-chapter *The Crate at Warehouse 4* manuscript as an
+[editorial copy](demo/warehouse-4-editor.pdf),
+[reading copy](demo/warehouse-4-book.pdf),
+[submission grid](demo/warehouse-4-sheet.pdf) or
+[analysis report](demo/warehouse-4-report.pdf).
 
 The composer wraps paragraphs and overlong words but does not hyphenate, place
 images, typeset mathematics, create page-numbered tables of contents or alternate
@@ -1461,21 +1471,14 @@ Useful entrypoints: [source/current-record search](research/USAGE.md#search-curr
 Use the same supported application version for every archive writer; product
 release numbers, archive versions and response schemas are independent.
 
-## Worked example: a sequel in the author's style
+<a id="worked-example-a-sequel-in-the-authors-style"></a>
+## Literary case study
 
-The public-domain `samples/effi-briest.md` (Fontane's *Effi Briest*, Project
-Gutenberg #5323) and the sample sequel in `samples/effi-briest-folge/` illustrate
-a manual reference comparison:
-
-```sh
-lixity style samples/effi-briest.md --language de --json > /tmp/effi-reference.json
-lixity analyze samples/effi-briest-folge/effi-briest-folge.md --language de --json > /tmp/effi-draft.json
-```
-
-Generate both texts with the same analysis version and settings. `analyze` does
-not load a separate reference passport automatically. Topic, dialogue or an
-intentional voice change can explain differences; matching the reference
-distribution does not establish literary quality.
+The [Fontane case study](blog/effi-briest-case-study.html) explores a reference
+built from a public-domain novel. Its linked excerpt and complete-book report
+have different chapter sets and can have different baselines. These are named
+case-study artifacts; the [Warehouse 4 project](demo/report.html) is the product
+walkthrough. Matching any reference distribution does not establish literary quality.
 
 ## Work markers (editor-visible)
 
@@ -5383,6 +5386,12 @@ they do not create artifacts or report success. `render_dashboard` accepts
 implement. `None` preserves the historical full control set for existing hosts;
 adapters should supply their actual capabilities. Project, settings and research
 controls are independent of that list.
+
+**Current main (unreleased):** `research-manuscript-review` enables saved quote
+review and highlights without association editing. Supply the selected
+`manuscript_pdf_token`, `research_context_token` and `manuscript_source_sha256`.
+The existing `research-manuscript-link` capability continues to enable both
+review and editing. This capability does not make other project controls read-only.
 
 Responses include `ok`; `message` is optional. Successful reads add the relevant
 data envelope. Treat `ok: false` as unavailable data, not an empty archive.

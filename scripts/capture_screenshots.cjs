@@ -135,8 +135,8 @@ async function main() {
       await page.locator('#btn-modal-new-project').click();
       await page.locator('#modal-project-create').waitFor({state: 'visible'});
       await page.locator('#import-file-input').setInputFiles({
-        name: 'harbour-story.md', mimeType: 'text/markdown',
-        buffer: Buffer.from('# Harbour story\n\n## Arrival\n\nMara reached the harbour before dawn. The customs log lay open on the desk.\n\n## The ledger\n\nShe compared the entry with the night watchman\'s account.\n'),
+        name: 'warehouse-4.md', mimeType: 'text/markdown',
+        buffer: fs.readFileSync(path.join(__dirname, '..', 'samples', 'first-look.md')),
       });
       await page.locator('#import-preview-box').waitFor({state: 'visible'});
       assert.equal(await page.locator('#btn-submit-import-project').isEnabled(), true);

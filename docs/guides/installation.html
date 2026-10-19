@@ -84,7 +84,7 @@
 </head>
 <body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to guide</a>
-<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides" aria-current="location">Guides</a><a href="../blog/index.html">Articles</a><a href="../#examples">Examples</a></nav>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides" aria-current="location">Guides</a><a href="../blog/index.html">Articles</a><a href="../demo/report.html">Demo</a></nav>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Installation</span></li></ol></nav>
 <h1>Install Lixity and open a manuscript locally</h1>
@@ -115,20 +115,13 @@ lixity service start --open</code></pre>
 <li>Choose <strong>Analyze a manuscript</strong> (or <strong>New Project</strong>) and confirm the preview: title, analysis language and optional author name.</li>
 <li>Read the <strong>Start your review</strong> panel first: <strong>Open passage</strong>, <strong>Explore chapters</strong> or <strong>Open sentence rhythm</strong>.</li>
 <li>Work from a flagged passage or open any paragraph, expand <strong>Values</strong> and write a marker note if something needs another look.</li>
-<li>Export the result with <strong>PDF export</strong>: A5 reading copy, A4 manuscript sheets or the A4 analysis report.</li>
+<li>Export the result with <strong>PDF export</strong>: A4 editorial copy, A5 reading copy, A4 manuscript sheets or the A4 analysis report.</li>
 </ol>
-<p>The <a href="../ONBOARDING.md">first-session guide</a> describes every stage, and the <a href="https://mfahsold.github.io/lixity/examples/effi-briest.html">public-domain examples</a> show a finished analysis without installation.</p>
+<p>The <a href="../ONBOARDING.md">first-session guide</a> describes every stage. Explore <a href="../demo/report.html"><em>The Crate at Warehouse 4</em></a> to see the same six-chapter project across Analysis, Research and prepared PDF layouts without installation.</p>
 <details><summary>Generate an offline HTML report instead</summary>
-<p>Save this synthetic text as <code>sample.md</code>. Two short chapters are sufficient to exercise the workflow, but not to establish a reliable stylistic baseline.</p>
-<pre><code>## Chapter 1
-
-The rain stopped. Mara opened the window. The street was quiet.
-
-## Chapter 2
-
-At the library, Mara examined a handwritten catalogue while the keeper searched the shelves.</code></pre>
-<pre><code>lixity dashboard sample.md --language en -o sample-dashboard.html</code></pre>
-<p>Open <code>sample-dashboard.html</code> in your browser. Use a longer manuscript with several chapters for more informative results, and read <a href="interpretation.html">how to interpret them</a>. Choose <code>--language de</code> for German or <code>--language en</code> for English. English is the default; <code>--language auto</code> explicitly requests detection.</p>
+<p>Download the demo's <a href="../research/examples/harbour-manuscript.md">Warehouse 4 manuscript</a> and save it as <code>warehouse-4.md</code>, then run:</p>
+<pre><code>lixity dashboard warehouse-4.md --language en -o warehouse-4.html</code></pre>
+<p>Open <code>warehouse-4.html</code> in your browser. This generates an analysis report from the same six chapters; the public demo also includes prepared research records. The short synthetic manuscript exercises the workflow, not a reliable literary baseline. Read <a href="interpretation.html">how to interpret the results</a>. English is the default; use <code>--language de</code> for German or explicit <code>--language auto</code> for detection.</p>
 </details>
 
 <h2 id="zotero">Optional Zotero Desktop</h2>

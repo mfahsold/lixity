@@ -40,7 +40,7 @@ Use active result metadata when interpreting thresholds and unavailable values.
 
 ## Choose a reference
 
-- [First look](https://mfahsold.github.io/lixity/guides/first-look.html): read a report and choose a starting point.
+- [First look](https://mfahsold.github.io/lixity/guides/first-look.html): follow the Warehouse 4 demo from chapter comparison to research and PDF layouts.
 - [Installation and service lifecycle](https://mfahsold.github.io/lixity/guides/installation.html): install, select a project, start, stop and upgrade.
 - [Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html): measurements, review signals and uncertainty.
 - [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, settings, registers and PDF export; since v0.7.0, A4 editorial copies include line numbers and comment margins.
@@ -93,14 +93,22 @@ written commercial license. See [licensing](https://github.com/mfahsold/lixity/b
 [source](https://github.com/mfahsold/lixity), [contributing](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
 and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 
-## Reviewed public examples
+## One demo project
 
-- [Synthetic report](https://mfahsold.github.io/lixity/demo/report.html).
-- [Research preview](https://mfahsold.github.io/lixity/demo/research.html): attributed historical harbour images and fictional geography; available since v0.7.0.
-- [Effi Briest opening chapters](https://mfahsold.github.io/lixity/examples/effi-briest.html) and [PDF report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf).
-- [Pride and Prejudice opening chapters](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html) and [PDF report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
+[The Crate at Warehouse 4](https://mfahsold.github.io/lixity/demo/report.html)
+is the default read-only product walkthrough: six synthetic English chapters,
+Analysis and Research views, retained sources, authored claims and a saved
+manuscript quote in one project. Its [manuscript](https://mfahsold.github.io/lixity/research/examples/harbour-manuscript.md)
+also supplies all four PDFs: [editorial](https://mfahsold.github.io/lixity/demo/warehouse-4-editor.pdf),
+[reading](https://mfahsold.github.io/lixity/demo/warehouse-4-book.pdf),
+[submission](https://mfahsold.github.io/lixity/demo/warehouse-4-sheet.pdf) and
+[analysis report](https://mfahsold.github.io/lixity/demo/warehouse-4-report.pdf).
+No upload or account is required. The old research-demo URL is a compatibility
+entry into this same project, not a second dataset.
 
-The Fontane (Gutenberg #5323) and Austen (#1342) source texts are public domain,
-separate from the software license. Examples need no upload or account.
-The research preview's [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)
-records the public-domain image provenance; authored routes are illustrative.
+The [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)
+records the public-domain map/photo provenance; people, events and routes are fictional.
+Separate literary case studies remain linked from the [Fontane article](https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html)
+and [tense-review article](https://mfahsold.github.io/lixity/blog/tense-switches.html).
+Their Fontane (Gutenberg #5323) and Austen (#1342) texts are public domain,
+separate from the software license, and are not the demo manuscript.

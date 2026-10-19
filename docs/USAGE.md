@@ -466,10 +466,11 @@ prefaces, subheadings, scene breaks, lists, quotations and notes survive export.
 Inline emphasis uses font styles; notes are collected as endnotes. Embedded
 LaTeX text formatting is a bounded subset, never executed as TeX. Unsupported
 TeX constructs report an error rather than silently changing the manuscript.
-Compare the same public-domain excerpt as an
-[editorial copy](examples/effi-briest-editor.pdf),
-[reading copy](examples/effi-briest-book.pdf) or
-[submission grid](examples/effi-briest-sheet.pdf).
+Compare the same six-chapter *The Crate at Warehouse 4* manuscript as an
+[editorial copy](demo/warehouse-4-editor.pdf),
+[reading copy](demo/warehouse-4-book.pdf),
+[submission grid](demo/warehouse-4-sheet.pdf) or
+[analysis report](demo/warehouse-4-report.pdf).
 
 The composer wraps paragraphs and overlong words but does not hyphenate, place
 images, typeset mathematics, create page-numbered tables of contents or alternate
@@ -568,21 +569,14 @@ Useful entrypoints: [source/current-record search](research/USAGE.md#search-curr
 Use the same supported application version for every archive writer; product
 release numbers, archive versions and response schemas are independent.
 
-## Worked example: a sequel in the author's style
+<a id="worked-example-a-sequel-in-the-authors-style"></a>
+## Literary case study
 
-The public-domain `samples/effi-briest.md` (Fontane's *Effi Briest*, Project
-Gutenberg #5323) and the sample sequel in `samples/effi-briest-folge/` illustrate
-a manual reference comparison:
-
-```sh
-lixity style samples/effi-briest.md --language de --json > /tmp/effi-reference.json
-lixity analyze samples/effi-briest-folge/effi-briest-folge.md --language de --json > /tmp/effi-draft.json
-```
-
-Generate both texts with the same analysis version and settings. `analyze` does
-not load a separate reference passport automatically. Topic, dialogue or an
-intentional voice change can explain differences; matching the reference
-distribution does not establish literary quality.
+The [Fontane case study](blog/effi-briest-case-study.html) explores a reference
+built from a public-domain novel. Its linked excerpt and complete-book report
+have different chapter sets and can have different baselines. These are named
+case-study artifacts; the [Warehouse 4 project](demo/report.html) is the product
+walkthrough. Matching any reference distribution does not establish literary quality.
 
 ## Work markers (editor-visible)
 

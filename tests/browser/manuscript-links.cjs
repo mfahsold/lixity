@@ -21,6 +21,13 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
             'manuscript_source_sha256': 'a' * 64})
     render.__globals__['render_dashboard'] = localized
     fixtures[locale] = render()
+def read_only(*args, **kwargs):
+    return original(*args, **{**kwargs, 'language_key': 'en',
+        'enabled_actions': ['research-manuscript-review'],
+        'manuscript_pdf_token': 'synthetic-project-token', 'research_context_token': 'synthetic-research-token',
+        'manuscript_source_sha256': 'a' * 64})
+render.__globals__['render_dashboard'] = read_only
+fixtures['read-only'] = render()
 print(json.dumps(fixtures))
 `, {root});
 async function waitUntil(predicate) {
@@ -48,7 +55,54 @@ async function selectText(page, text) {
 (async () => {
   const browser = await launchChromium();
   try {
-    for (const [locale, html] of Object.entries(fixtures)) for (const width of [1440, 320]) {
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport: {width, height: 900}});
+      const errors = [], writes = []; let anchorState = 'moved';
+      page.on('pageerror', error => errors.push(error.message));
+      await page.route('http://lixity.test/**', async route => {
+        const request = route.request(), url = new URL(request.url());
+        if (request.method() !== 'GET') { writes.push(url.pathname); return route.abort(); }
+        if (url.pathname === '/api/research/manuscript-review') {
+          assert.equal(url.searchParams.get('project_token'), 'synthetic-project-token');
+          const anchor = await page.locator('#chapters .ptext').first().evaluate(panel => ({
+            start_line: Number(panel.dataset.start), end_line: Number(panel.dataset.end),
+            paragraph_sha256: panel.dataset.paragraphSha256, start: 4, end: 17, quote: 'safe selected',
+          }));
+          return route.fulfill({json: {ok: true, schema_version: 'research-manuscript-review-local/1',
+            project_id: 'project', snapshot: 'snapshot', current_source_sha256: 'a'.repeat(64), source_state: 'available',
+            links: [{link_id: 'link', revision: 1, claim_id: 'claim', claim_revision: 1, claim_title: 'Synthetic claim',
+              anchor, anchor_state: anchorState, flags: [], resolved_start_line: anchor.start_line, resolved_end_line: anchor.end_line}]}});
+        }
+        if (url.pathname.startsWith('/api/')) return route.fulfill({json: {ok: true, initialized: true,
+          project_id: 'project', snapshot: 'snapshot', sources: [], dossiers: [], claims: [], decisions: [], candidates: []}});
+        return route.fulfill({contentType: 'text/html', body: fixtures['read-only']});
+      });
+      await page.goto('http://lixity.test/');
+      assert.equal(await page.locator('body').getAttribute('data-manuscript-links'), 'read');
+      assert.equal(await page.locator('#manuscript-pdf-form, #workspace-reader').count(), 0,
+        'Review alone does not advertise PDF generation or a separate reader');
+      await page.locator('#tab-view-analysis').click();
+      await page.locator('#chapters .chip').first().click();
+      await selectText(page, 'safe selected'); await page.keyboard.press('Alt+l');
+      assert.equal(await page.locator('[data-manuscript-link-selection], #manuscript-link-dialog').count(), 0,
+        'Read-only review exposes no selection writer or editing shortcut');
+      await page.locator('#tab-view-research').click();
+      await page.locator('[data-rtab=review]').click();
+      await page.locator('#research-manuscript-review blockquote').waitFor();
+      assert.equal(await page.locator('#research-manuscript-review blockquote').textContent(), 'safe selected');
+      assert.equal(await page.locator('[data-manuscript-link-accept]').count(), 0,
+        'A moved anchor stays inspectable without offering a write action');
+      anchorState = 'resolved'; await page.locator('#r-review-refresh').click();
+      await page.locator('mark.manuscript-claim-hit').waitFor({state: 'attached'});
+      await page.locator('#tab-view-analysis').click();
+      assert.equal(await page.locator('mark.manuscript-claim-hit').first().textContent(), 'safe selected');
+      await page.locator('body').evaluate(body => { body.dataset.manuscriptProjectToken = 'changed-project'; });
+      await page.waitForFunction(() => !document.querySelector('mark.manuscript-claim-hit'));
+      assert.deepEqual(writes, []); assert.deepEqual(errors, []);
+      await page.screenshot({path: `/tmp/lixity-manuscript-review-read-only-${width}.png`});
+      await page.close();
+    }
+    for (const [locale, html] of Object.entries(fixtures).filter(([locale]) => locale !== 'read-only')) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}, hasTouch: true});
       const errors = [], writes = []; let links = [], anchor, mode = "normal", heldSave, releaseSave, heldClaims, releaseClaims;
       page.on('pageerror', error => errors.push(error.message));
@@ -277,6 +331,6 @@ async function selectText(page, text) {
       }
       assert.deepEqual(errors, []); await page.close();
     }
-    console.log('Manual manuscript links: seven locales at 1440/320, retention, exact pins/codepoints, inert text, overlapping search/lazy marks; selection boundaries, stale/malformed envelopes, context/held responses and pending controls passed.');
+    console.log('Manuscript links: read-only review at1440/320 without writers or PDF controls; seven editing locales at1440/320, retention, exact pins/codepoints, inert text, lazy marks, selection boundaries, stale/malformed contexts, held responses and pending controls passed.');
   } finally { await browser.close(); }
 })().catch(error => {console.error(error); process.exitCode = 1;});

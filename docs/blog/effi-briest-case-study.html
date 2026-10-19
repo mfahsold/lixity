@@ -4,7 +4,7 @@
 <meta charset="utf-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1"/>
 <title>A reference corridor from Effi Briest — Lixity blog</title>
-<meta name="description" content="A walkthrough of the public Effi Briest example: how a self-calibrating style reference describes where a manuscript moves away from its own norm — without turning measurements into verdicts."/>
+<meta name="description" content="A walkthrough of the public Effi Briest case study: how a self-calibrating style reference describes where a manuscript moves away from its own norm — without turning measurements into verdicts."/>
 <link rel="canonical" href="https://mfahsold.github.io/lixity/blog/effi-briest-case-study.html"/>
 <link rel="stylesheet" href="../assets/site.css"/>
 <script src="../assets/site.js" defer></script>
@@ -15,7 +15,7 @@
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png"/>
 <meta property="og:image:width" content="3320"/>
-<meta property="og:image:height" content="1748"/>
+<meta property="og:image:height" content="940"/>
 <meta property="og:image:alt" content="Lixity chapter comparison heatmap"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="A reference corridor from Effi Briest"/>
@@ -50,7 +50,7 @@
     "@type": "ImageObject",
     "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-heatmap.png",
     "width": 3320,
-    "height": 1748,
+    "height": 940,
     "caption": "Lixity chapter comparison heatmap"
   }
 }
@@ -58,7 +58,7 @@
 </head>
 <body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to article</a>
-<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides">Guides</a><a href="index.html" aria-current="location">Articles</a><a href="../#examples">Examples</a></nav>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides">Guides</a><a href="index.html" aria-current="location">Articles</a><a href="../demo/report.html">Demo</a></nav>
 <main class="guide" id="content">
 <nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Effi Briest case study</span></li></ol></nav>
 <h1>A reference corridor from <em>Effi Briest</em>: measuring a draft against its own model</h1>
@@ -76,7 +76,7 @@
 </ul>
 
 <h2 id="walkthrough">Walkthrough: the public example</h2>
-<p>Open the <a href="../examples/effi-briest.html">Effi Briest example</a> in the browser. The read-only dashboard contains the novel's opening three chapters; its linked <a href="../examples/effi-briest-report.pdf">PDF report</a> covers the complete public-domain novel. The two reports use different chapter sets, so their reference baselines need not match. The interactive excerpt shows the three views discussed here:</p>
+<p>Open the <a href="../examples/effi-briest.html">Effi Briest case study</a> in the browser. The read-only dashboard contains the novel's opening three chapters; its linked <a href="../examples/effi-briest-report.pdf">PDF report</a> covers the complete public-domain novel. The two reports use different chapter sets, so their reference baselines need not match. The interactive excerpt shows the three views discussed here:</p>
 <ol>
 <li><strong>The chapter map (heatmap).</strong> Rows are chapters, columns are features; colour encodes the noise-adjusted deviation from the manuscript's own reference. Scanning a row tells you which feature moved in that chapter; scanning a column tells you where a feature drifts over the book. A selected set of cells is the FDR set — the rest are visible but unselected.</li>
 <li><strong>The style reference (bands).</strong> Each feature shows its corridor, the median tick and the strongest outliers as dots. This is the “what is normal here” view — the part a fixed style rule cannot provide.</li>

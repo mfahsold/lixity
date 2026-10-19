@@ -1,49 +1,44 @@
-# Read-only public examples
+# One read-only demo project
 
-`report.html` is a self-contained Lixity dashboard of
-[`samples/first-look.md`](../../samples/first-look.md): six entirely invented
-English chapters. It uses real paragraph, chapter, filter and 3D interactions
-from the existing renderer, with no server controls. The small example is not
-a benchmark, a calibration corpus or a quality score.
+[*The Crate at Warehouse 4*](report.html) is the shared product walkthrough.
+Its six synthetic English chapters come from
+[`samples/first-look.md`](../../samples/first-look.md); the published
+[manuscript](../research/examples/harbour-manuscript.md) contains identical bytes.
+Analysis, research, screenshots and PDF layouts use that same project.
 
-The notice and complete, unchanged distribution license are appended to the
-rendered document, outside the analyzed input. Do not substitute private
-manuscripts or local project configuration when regenerating this public file.
-The example's introductory notice and report header state the generating
-version. Regenerate it when the maintained UI or release version changes.
+Start with chapter 1's setting and chapter 2's action, then switch to Research.
+Follow **Warehouse 4 case notes** to a claim, its retained source passage and
+the saved manuscript quote in Review. Historical map/photo sources have
+[reviewed credits and file hashes](../assets/research/sources.json). People,
+customs records, incidents and journeys are invented; the visuals do not verify
+them, and coordinates are not georeferenced to the map image.
 
-From the repository root after [installation](../INSTALLATION.md), regenerate
-the analysis and manuscript PDF examples with the maintained script:
+## Public artifacts
 
-```bash
-make examples
-# or: .venv/bin/python scripts/build_examples.py
-```
+- `report.html`: the existing application renderer with Analysis and Research
+  views, a GET-only `research-data.json` adapter and reviewed visual assets.
+  Editing, imports and local-machine actions are disabled; there is no live
+  Zotero connection or access to a user's running service.
+- `research.html`: compatibility entry to `report.html#research-manager`.
+- The same six chapters as an [editorial copy](warehouse-4-editor.pdf),
+  [reading copy](warehouse-4-book.pdf), [submission sheets](warehouse-4-sheet.pdf)
+  and [analysis report](warehouse-4-report.pdf).
 
-The script uses the public Python API with explicit code defaults, injects the
-canonical and social metadata plus the provenance notice, and rebuilds this
-synthetic demo together with the two public-domain dashboards
-(`examples/effi-briest.html`, `examples/pride-and-prejudice.html`) and their
-complete PDF reports. It reproduces the demo byte for byte and refuses to ship
-an example page beyond its size budget.
+The generating version, provenance notice and unchanged distribution-license
+appendix stay outside the analyzed manuscript. The short text is a demonstration,
+not a calibration corpus, benchmark or literary-quality score. Public pages use
+only reviewed synthetic/public-domain material and explicit code defaults.
 
-Review the regenerated HTML and run `make docs-check` plus the public documentation
-browser check described in [`tests/browser/README.md`](../../tests/browser/README.md).
-`research.html` reuses the native research reader with a generated, GET-only
-`research-data.json` fixture. It has no editing, import or local-machine actions.
-Since v0.7.1, the demo includes a [synthetic manuscript](../research/examples/harbour-manuscript.md):
-follow a dossier's claim to retained evidence, then open Review to inspect the
-saved manuscript quotation and its claim revision. The same API creates the
-records used by the page and screenshots; there is no live Zotero connection.
-The historical Hamburg map and photochrom are reviewed public-domain sources;
-[their manifest](../assets/research/sources.json) records credits and exact file
-hashes. Prose, claims, people and journeys are fictional demonstration material.
-The coordinate view is not georeferenced to the historical map.
+## Regenerate
 
-Regenerate the research fixture, page and screenshots with `make screenshots`.
-Both examples use the maintained application renderer; neither contacts Zotero
-or a user's running service. Research geography and this public research example
-are available since v0.7.0.
+After [installation](../INSTALLATION.md), use `make examples` for the demo and
+PDFs, `make screenshots` for product captures, and `make videos` for walkthroughs.
+These entrypoints reuse the existing analysis, research and PDF APIs. Fontane
+and Austen outputs under `examples/` remain named literary case studies linked
+from the relevant articles; they are not alternative demo projects.
 
-The Pages boundary explicitly includes these three demo files and the reviewed
-visual assets. Other adjacent inputs, archives and local fixtures stay excluded.
+Review the output and run `make docs-check` plus the public-documentation browser
+check in [`tests/browser/README.md`](../../tests/browser/README.md). The explicit
+Pages boundary includes the demo page, compatibility entry, read-only fixture,
+four PDFs and reviewed visual assets. Source archives, private manuscripts,
+credentials and local build state remain excluded.

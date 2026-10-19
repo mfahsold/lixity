@@ -1,12 +1,14 @@
 #!/usr/bin/env python3
 """Regenerate the published read-only example reports.
 
-Three single-file dashboards are published on the documentation site:
+Three dashboard pages are published on the documentation site:
 
-* ``demo/report.html`` - the synthetic six-chapter first-look example;
+* ``demo/report.html`` - one synthetic six-chapter analysis/research project;
 * ``examples/effi-briest.html`` - the opening chapters of a public-domain novel;
 * ``examples/pride-and-prejudice.html`` - the opening chapters of a public-domain novel.
 
+The project also includes four manuscript/analysis PDF layouts and a bounded
+static research fixture. Its former research URL is a compatibility redirect.
 The two classic works also ship as complete analysis reports
 (``examples/<slug>-report.pdf``). The Effi Briest excerpt additionally demonstrates
 the shared editorial, reading and submission PDF layouts. Every HTML page carries canonical and social
@@ -182,19 +184,22 @@ def _notice(heading: str, paragraphs: list[str], links: list[tuple[str, str]]) -
 """
 
 
-def _site_navigation(report: str, title: str) -> str:
+def _site_navigation(report: str, title: str, *, demo: bool = False) -> str:
     """Keep public examples connected without adding external report assets."""
     stylesheet = (ROOT / "docs/assets/site.css").read_text(encoding="utf-8")
     start, end = "/* Public navigation start */", "/* Public navigation end */"
     _require(stylesheet.count(start) == stylesheet.count(end) == 1,
              "the shared public navigation stylesheet must have one bounded block")
     styles = stylesheet.partition(start)[2].partition(end)[0]
+    current = ' aria-current="location"' if demo else ""
+    parent = '<li><a href="../#examples">Demo</a></li>' if demo else ""
     navigation = (
         '<nav class="site-return" aria-label="Lixity navigation">'
         '<a href="../">Home</a><a href="../#guides">Guides</a>'
-        '<a href="../blog/index.html">Articles</a><a href="../#examples" aria-current="location">Examples</a>'
+        '<a href="../blog/index.html">Articles</a>'
+        f'<a href="../demo/report.html"{current}>Demo</a>'
         '</nav><nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol>'
-        '<li><a href="../">Home</a></li><li><a href="../#examples">Examples</a></li>'
+        '<li><a href="../">Home</a></li>' + parent +
         f'<li><span aria-current="page">{html.escape(title)}</span></li></ol></nav>'
     )
     _require(report.count('<body id="top"') == 1, "the report must have one top target")
@@ -205,58 +210,14 @@ def _site_navigation(report: str, title: str) -> str:
 
 
 def build_demo(root: Path) -> Path:
-    """The synthetic first-look example, exactly as documented in docs/demo/README.md."""
-    text = (root / "samples/first-look.md").read_text(encoding="utf-8")
-    report = dashboard(text, language="en", project_config={}, title="An invented night shift")
-    _require(report.count("</head>") == 1, "the dashboard must carry exactly one head")
-    head = _head_metadata(
-        canonical=f"{SITE}/demo/report.html",
-        title="Lixity example report — an invented night shift",
-        description=("A read-only Lixity example: compare six invented chapters, open a paragraph "
-                     "and read its measured values and source lines. No installation."),
-        language="en",
-    )
-    report = report.replace("</head>", head + "</head>", 1)
-    _require(report.count("<title>An invented night shift – Style &amp; Tense Analysis</title>") == 1,
-             "the demo title is missing")
-    report = report.replace(
-        "<title>An invented night shift – Style &amp; Tense Analysis</title>",
-        "<title>Lixity example report — an invented night shift</title>",
-    )
-    notice = f"""
-<section class="panel" id="demo-context" aria-labelledby="demo-heading">
-<h2 id="demo-heading">Synthetic read-only example</h2>
-<p><strong>Generated with Lixity {__version__}.</strong> This example includes paragraph
-Values disclosures, review links and the tabbed style area.</p>
-<p>Six invented English chapters about a night shift at a river signal house.
-This report contains no real manuscript. It accepts no uploads and saves no edits.</p>
-<p>Compare chapters, choose a style layer or open a paragraph to read its text and
-source lines. The 3D view explores the same measured chapter data. These short
-samples and language-dependent heuristics support human review; they are not a
-benchmark, a calibration corpus or a writing-quality verdict.</p>
-<div class="license-links"><a href="../guides/first-look.html">Follow the three-minute walkthrough</a>
-<a href="#demo-license">Read the complete distribution license</a></div>
-</section>
-"""
-    license_text = (root / "LICENSE").read_text(encoding="utf-8")
-    appendix = """
-<section class="panel" id="demo-license" aria-labelledby="demo-license-heading">
-<h2 id="demo-license-heading">Distribution license (AGPL-3.0)</h2>
-<p>This report and its original synthetic example are distributed under the
-AGPL-3.0-or-later. The complete, unchanged repository LICENSE is included
-below; it is an appendix, not part of the analyzed text.</p>
-<details><summary>Read the complete LICENSE</summary>
-<pre id="demo-license-text" style="white-space:pre-wrap;overflow-wrap:anywhere;font-size:var(--text-note)">"""
-    appendix += html.escape(license_text)
-    appendix += "</pre></details>\n</section>\n"
-    report = report.replace("</header>", "</header>" + notice, 1)
-    boundary = "\n</div>\n<footer>"
-    _require(report.count(boundary) == 1, "the demo footer boundary is missing")
-    report = report.replace(boundary, appendix + boundary, 1)
-    report = _site_navigation(report, "Invented night shift")
-    target = root / "docs/demo/report.html"
-    target.write_text(_finalize(report), encoding="utf-8")
-    return target
+    """Build the one public project through the shared native workspace builder."""
+    from tempfile import TemporaryDirectory
+
+    from make_screenshots import build_research_demo, build_research_fixture
+
+    with TemporaryDirectory(prefix="lixity-public-demo-") as directory:
+        fixture = build_research_fixture(Path(directory))
+        return build_research_demo(root, fixture)
 
 
 def excerpt(text: str, chapters: int) -> str:

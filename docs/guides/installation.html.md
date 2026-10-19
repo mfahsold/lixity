@@ -56,43 +56,41 @@ The managed app opens `http://127.0.0.1:8765/`. Its default is an empty workspac
 
 3. Work from a flagged passage or open any paragraph, expand **Values** and write a marker note if something needs another look.
 
-4. Export the result with **PDF export**: A5 reading copy, A4 manuscript sheets or the A4 analysis report.
+4. Export the result with **PDF export**: A4 editorial copy, A5 reading copy, A4 manuscript sheets or the A4 analysis report.
 
-The [first-session guide](../ONBOARDING.md) describes every stage, and the [public-domain examples](https://mfahsold.github.io/lixity/examples/effi-briest.html) show a finished analysis without installation.
+The [first-session guide](../ONBOARDING.md) describes every stage. Explore [*The Crate at Warehouse 4*](../demo/report.html) to see the same six-chapter project across Analysis, Research and prepared PDF layouts without installation.
 
 **Generate an offline HTML report instead**
 
-Save this synthetic text as
+Download the demo's
 
-`sample.md`
+[Warehouse 4 manuscript](../research/examples/harbour-manuscript.md)
 
-. Two short chapters are sufficient to exercise the workflow, but not to establish a reliable stylistic baseline.
+and save it as
 
-`## Chapter 1 The rain stopped. Mara opened the window. The street was quiet. ## Chapter 2 At the library, Mara examined a handwritten catalogue while the keeper searched the shelves.`
+`warehouse-4.md`
 
-`lixity dashboard sample.md --language en -o sample-dashboard.html`
+, then run:
+
+`lixity dashboard warehouse-4.md --language en -o warehouse-4.html`
 
 Open
 
-`sample-dashboard.html`
+`warehouse-4.html`
 
-in your browser. Use a longer manuscript with several chapters for more informative results, and read
+in your browser. This generates an analysis report from the same six chapters; the public demo also includes prepared research records. The short synthetic manuscript exercises the workflow, not a reliable literary baseline. Read
 
-[how to interpret them](interpretation.html)
+[how to interpret the results](interpretation.html)
 
-. Choose
+. English is the default; use
 
 `--language de`
 
-for German or
-
-`--language en`
-
-for English. English is the default;
+for German or explicit
 
 `--language auto`
 
-explicitly requests detection.
+for detection.
 
 ## Optional Zotero Desktop
 
