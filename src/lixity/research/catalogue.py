@@ -16,7 +16,14 @@ SEARCH_SCOPES = {"sources": "passage", "dossiers": "dossier", "claims": "claim",
 def authored_text(record: Dossier | Claim | Decision) -> str:
     """Search only current authored content, not revision reasons or old references."""
     if isinstance(record, Dossier):
-        return "\n".join([record.body, *record.tags])
+        parts = [record.body, *record.tags]
+        if record.geography:
+            for feature in record.geography.features:
+                properties = feature.properties
+                parts.extend([properties.label, properties.description or "", properties.time_period or "",
+                              properties.feature_type or "", properties.transport or "",
+                              *properties.actors, *properties.waypoint_labels])
+        return "\n".join(parts)
     if isinstance(record, Claim):
         return "\n".join([record.statement, *record.tags, record.scope.time_period or "",
                           record.scope.place or "", *record.scope.actors])

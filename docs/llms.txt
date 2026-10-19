@@ -5,7 +5,7 @@
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.6.0; release tag: v0.6.0.
+Current release: 0.7.0; release tag: v0.7.0.
 
 This discovery index links maintained references. Published guides may describe
 newer behavior than an installed tool. The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
@@ -43,20 +43,22 @@ Use active result metadata when interpreting thresholds and unavailable values.
 - [First look](https://mfahsold.github.io/lixity/guides/first-look.html): read a report and choose a starting point.
 - [Installation and service lifecycle](https://mfahsold.github.io/lixity/guides/installation.html): install, select a project, start, stop and upgrade.
 - [Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html): measurements, review signals and uncertainty.
-- [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, project settings, registers and PDF export.
+- [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, settings, registers and PDF export; since v0.7.0, A4 editorial copies include line numbers and comment margins.
 - [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, Python entrypoints, HTTP requests and context guards.
 - [Implemented research](https://mfahsold.github.io/lixity/research/USAGE.md): retention, citations, claims, revisions, manuscript associations and recovery.
 - [Research and PDF guide](https://mfahsold.github.io/lixity/guides/research-pdf.html): source capture, OCR, Zotero and PDF workflows.
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.6.0.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.0.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
 URL. The [research RFC](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md)
 includes unimplemented proposals; use the implemented reference for available operations.
 Product, response and archive versions are independent. Inspect installed schema
 capabilities before sharing an archive with another version.
+v0.7.0 reads research records/manifests v1–v8. Ordinary dossiers keep their older
+encoding until a geographic save; older readers cannot open v8 archives.
 
 ## Data boundaries
 
@@ -80,8 +82,11 @@ and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 ## Reviewed public examples
 
 - [Synthetic report](https://mfahsold.github.io/lixity/demo/report.html).
+- [Research preview](https://mfahsold.github.io/lixity/demo/research.html): attributed historical harbour images and fictional geography; available since v0.7.0.
 - [Effi Briest opening chapters](https://mfahsold.github.io/lixity/examples/effi-briest.html) and [PDF report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf).
 - [Pride and Prejudice opening chapters](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html) and [PDF report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
 
 The Fontane (Gutenberg #5323) and Austen (#1342) source texts are public domain,
 separate from the software license. Examples need no upload or account.
+The research preview's [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)
+records the public-domain image provenance; authored routes are illustrative.

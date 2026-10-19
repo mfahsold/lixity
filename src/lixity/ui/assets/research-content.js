@@ -487,6 +487,7 @@ function researchDossierDetailHtml(detail, readOnly) {
     (readOnly ? "" : '<div class="row"><button type="button" class="ctl" data-dossier-claim="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_claim_heading")) + '</button>' +
     '<button type="button" class="ctl" data-dossier-decision="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_decision_heading")) + '</button></div>') +
     (!readOnly && window.LixityDossierImages ? window.LixityDossierImages.actionsHtml(detail) : "") + bodyHtml +
+    (window.LixityDossierGeography ? window.LixityDossierGeography.html(detail.geography) : "") +
     (researchContextToken() ? '<section class="research-dossier-claims"><h4>' +
       escapeHtml(uiLabel("research_dossier_claims")) + '</h4><p class="ctl-note">' +
       escapeHtml(uiLabel("research_loading")) + '</p></section>' : '') +

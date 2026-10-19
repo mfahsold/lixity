@@ -86,6 +86,13 @@ settings and PDF composition. `pdf_export.compose_pdf` composes bytes for CLI an
 HTTP; callers own output writes. Front matter uses entered data, and syntax checks
 do not establish publication compliance.
 
+Since v0.7.0, manuscript PDFs use one presentation projection
+(`manuscript_document`) of the shared Markdown blocks. It retains structure and readable
+inline styles rather than using the statistical prose filter. Book, editorial
+and submission layouts share block placement and the same PDF document engine;
+the analysis report retains its metric tables. Editorial geometry reuses
+`BookLayoutConfig`, which also remains available to embedding adapters.
+
 `config.prepare_project_settings` validates one settings candidate while
 preserving unrelated TOML values. The route renders that candidate,
 commits through `PreparedProjectSettings`, then publishes session/cache state.
@@ -299,7 +306,7 @@ manuscript is required. See [contributor checks](https://github.com/mfahsold/lix
 ## External research libraries (since v1.19.0)
 
 The optional `research.zotero` adapter uses Zotero Desktop's local HTTP API for
-bibliographic browsing and explicitly selected PDF/text capture. Lixity owns
+bibliographic browsing and explicitly selected evidence capture. Lixity owns
 retained evidence, analysis, claims, dossiers and decisions; it never reads or
 writes Zotero's database. Captured evidence remains usable without Zotero.
 
@@ -322,7 +329,16 @@ external identity. Evidence captures and references remain in Lixity backups;
 Zotero's library and unselected media require their own backup.
 
 Zotero is optional for existing analysis and retained evidence. There is no
-automatic background or cloud synchronization. Images, audio and video can be
-managed in Zotero, but are not made searchable evidence by the PDF/text bridge.
+automatic background or cloud synchronization. Since v0.7.0 it also captures
+PNG/JPEG through the shared image pipeline; visual sources have no text passages.
+Audio/video and other unsupported media remain managed in Zotero.
 See [research usage](research/USAGE.md#zotero-desktop-bridge-since-v1190)
 for implemented behavior and portability limits.
+
+Since v0.7.0, optional, bounded GeoJSON is stored within existing Dossier revisions
+(record/manifest v8). The same revision, conflict, search and backup paths apply;
+ordinary dossiers retain their older encoding until a geographic save. Older
+readers cannot open v8 archives. A shared offline coordinate view
+serves dossier, history and manuscript-companion readers. Images remain separate
+versioned sources; neither their presence nor a route line establishes geographic
+calibration, navigability or historical accuracy.

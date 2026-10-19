@@ -291,7 +291,7 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("showing", "Showing vs. telling balance (text/JSON)"),
     ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
     ("dashboard", "Generate a single-file HTML dashboard"),
-    ("pdf", "Compose a PDF document (analysis report, book layout or 30x60 sheet)"),
+    ("pdf", "Compose a PDF for editing, reading, submission or analysis"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
     ("about", "Installed metadata: commands, configuration, languages, features and heuristics"),
@@ -857,6 +857,8 @@ def _cmd_pdf(args: argparse.Namespace) -> int:
         mono=args.mono_font,
         sans=args.sans_font,
         sans_bold=args.sans_bold_font,
+        serif_italic=args.italic_font,
+        serif_bold_italic=args.bold_italic_font,
     )
     try:
         text = workspace.read_manuscript()
@@ -1189,19 +1191,28 @@ def main(argv: list[str] | None = None) -> int:
         )
         p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
         if name == "pdf":
+            from .pdf_export import PDF_LAYOUTS
+
+            p.epilog = (
+                "Manuscript layouts retain headings, scene breaks, lists, quotations and endnotes. "
+                r"Embedded LaTeX supports \emph, \textit, \textbf, \texttt and \textnormal; "
+                r"standalone \newpage/\clearpage request page breaks. "
+                "No TeX execution, mathematics typesetting or image placement. "
+                "Unsupported TeX constructs fail before the output file is written."
+            )
             p.add_argument(
                 "--layout",
-                choices=("report", "book", "sheet"),
+                choices=PDF_LAYOUTS,
                 default="report",
-                help="report: analysis report (A4) · book: reading layout (A5) · "
-                "sheet: 30 lines of 60 characters",
+                help="editor: A4 editorial copy with line numbers and comment margins · "
+                "book: A5 reading copy · sheet: 30 lines of 60 characters · report: A4 analysis",
             )
             p.add_argument(
                 "--title",
                 default=None,
                 help="Document title override (default: project or manuscript title)",
             )
-            p.add_argument("--author", default=None, help="Author line for the book layout")
+            p.add_argument("--author", default=None, help="Author byline and running header")
             p.add_argument(
                 "--draft-notice",
                 default=None,
@@ -1209,6 +1220,8 @@ def main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("--serif-font", default=None, help="TrueType file for running text")
             p.add_argument("--bold-font", default=None, help="TrueType file for headings")
+            p.add_argument("--italic-font", default=None, help="TrueType file for italic manuscript text")
+            p.add_argument("--bold-italic-font", default=None, help="TrueType file for bold italic manuscript text")
             p.add_argument("--mono-font", default=None, help="TrueType file for the sheet grid")
             p.add_argument("--sans-font", default=None, help="TrueType file for the report text")
             p.add_argument(

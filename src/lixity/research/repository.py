@@ -61,8 +61,11 @@ def encode(value: StrictModel) -> bytes:
     fields = value.model_dump(mode="json")
     if isinstance(value, AuthoredRecord) and value.change is None:
         fields.pop("change", None)
-    return (json.dumps(fields, ensure_ascii=False,
-                       sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    content = (json.dumps(fields, ensure_ascii=False,
+                         sort_keys=True, separators=(",", ":")) + "\n").encode("utf-8")
+    if len(content) > MAX_RESEARCH_OBJECT_BYTES:
+        raise ResearchError("Research object exceeds the supported size")
+    return content
 
 
 def digest(content: bytes) -> str:
@@ -307,6 +310,14 @@ class Repository:
                 raise ResearchError("Authored revision history must be contiguous")
             if any(revision.kind != record.kind for revision in history):
                 raise ResearchError("Record identity cannot change kind")
+            if isinstance(record, Dossier):
+                first_geography = min((revision.revision for revision in history
+                                       if revision.schema_version == "research-local/8"), default=None)
+                if first_geography is not None and any(
+                    revision.revision >= first_geography and revision.schema_version != "research-local/8"
+                    for revision in history
+                ):
+                    raise ResearchError("Dossier revisions must retain version 8 after geography opt-in")
             if int(record.schema_version.rsplit("/", 1)[1]) > int(snapshot.manifest.schema_version.rsplit("/", 1)[1]):
                 raise ResearchError(f"Version {record.schema_version[-1]} records require manifest version {record.schema_version[-1]} or later")
         sequences: set[tuple[str, int]] = set()
@@ -497,8 +508,10 @@ class Repository:
             project = next((record for record in records.values() if isinstance(record, Project)), None)
             if project is None:
                 raise ResearchError("Project record required")
-            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7"]
-            schema = ("research-manifest-local/7" if any(record.schema_version == "research-local/7" for record in records.values())
+            schema: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7", "research-manifest-local/8"]
+            schema = ("research-manifest-local/8" if any(record.schema_version == "research-local/8" for record in records.values())
+                      or (current and current.manifest.schema_version == "research-manifest-local/8")
+                      else "research-manifest-local/7" if any(record.schema_version == "research-local/7" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/7")
                       else "research-manifest-local/6" if any(record.schema_version == "research-local/6" for record in records.values())
                       or (current and current.manifest.schema_version == "research-manifest-local/6")

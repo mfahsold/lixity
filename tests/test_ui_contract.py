@@ -339,6 +339,7 @@ class TestJsDomContract(unittest.TestCase):
         ids = set(re.findall(r'getElementById\("([^"]+)"\)', script))
         ids.discard("lixity-tooltip")  # created by the script itself
         ids.discard("research-evidence-draft")  # created beside the existing evidence form
+        ids.discard("r-dos-geography")  # mounted by the shared optional geography editor
         self.assertTrue(ids)
         # Onboarding controls exist only in the empty/research-only state.
         html = (

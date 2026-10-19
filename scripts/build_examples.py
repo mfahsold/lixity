@@ -8,7 +8,8 @@ Three single-file dashboards are published on the documentation site:
 * ``examples/pride-and-prejudice.html`` - the opening chapters of a public-domain novel.
 
 The two classic works also ship as complete analysis reports
-(``examples/<slug>-report.pdf``). Every page carries canonical and social
+(``examples/<slug>-report.pdf``). The Effi Briest excerpt additionally demonstrates
+the shared editorial, reading and submission PDF layouts. Every HTML page carries canonical and social
 metadata plus an explicit provenance notice; private manuscripts and local
 project configuration never enter these files. The script fails when an
 example grows beyond a size the site should ship.
@@ -30,7 +31,6 @@ from lixity.pdf_export import compose_pdf
 
 ROOT = Path(__file__).resolve().parents[1]
 SITE = "https://mfahsold.github.io/lixity"
-OG_IMAGE = f"{SITE}/screenshots/dashboard-light.png"
 OG_IMAGE_ALT = "Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"
 LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
 
@@ -101,10 +101,13 @@ def _head_metadata(
     description: str,
     language: str,
     about: tuple[str, str] | None = None,
+    preview_image: tuple[str, str] | None = None,
 ) -> str:
     escaped = html.escape(description, quote=True)
     escaped_title = html.escape(title, quote=True)
-    image_header = (ROOT / "docs/screenshots/dashboard-light.png").read_bytes()[:24]
+    image_path, image_alt = preview_image or ("screenshots/dashboard-light.png", OG_IMAGE_ALT)
+    image_url = f"{SITE}/{image_path}"
+    image_header = (ROOT / "docs" / image_path).read_bytes()[:24]
     _require(image_header[:8] == b"\x89PNG\r\n\x1a\n", "the preview image must be a PNG")
     width, height = struct.unpack(">II", image_header[16:24])
     structured: dict[str, object] = {
@@ -114,8 +117,8 @@ def _head_metadata(
         "description": description,
         "url": canonical,
         "mainEntityOfPage": canonical,
-        "image": {"@type": "ImageObject", "url": OG_IMAGE, "width": width, "height": height,
-                  "caption": OG_IMAGE_ALT},
+        "image": {"@type": "ImageObject", "url": image_url, "width": width, "height": height,
+                  "caption": image_alt},
         "inLanguage": language,
         "author": {
             "@type": "Person",
@@ -139,16 +142,15 @@ def _head_metadata(
         f'<meta property="og:title" content="{escaped_title}"/>\n'
         f'<meta property="og:description" content="{escaped}"/>\n'
         f'<meta property="og:url" content="{canonical}"/>\n'
-        f'<meta property="og:image" content="{OG_IMAGE}"/>\n'
+        f'<meta property="og:image" content="{image_url}"/>\n'
         f'<meta property="og:image:width" content="{width}"/>\n'
         f'<meta property="og:image:height" content="{height}"/>\n'
-        '<meta property="og:image:alt" content="Lixity manuscript overview with sentence '
-        'rhythm, vocabulary and dialogue measures"/>\n'
+        f'<meta property="og:image:alt" content="{html.escape(image_alt, quote=True)}"/>\n'
         '<meta name="twitter:card" content="summary_large_image"/>\n'
         f'<meta name="twitter:title" content="{escaped_title}"/>\n'
         f'<meta name="twitter:description" content="{escaped}"/>\n'
-        f'<meta name="twitter:image" content="{OG_IMAGE}"/>\n'
-        f'<meta name="twitter:image:alt" content="{OG_IMAGE_ALT}"/>\n'
+        f'<meta name="twitter:image" content="{image_url}"/>\n'
+        f'<meta name="twitter:image:alt" content="{html.escape(image_alt, quote=True)}"/>\n'
         '<script type="application/ld+json">\n'
         + json.dumps(structured, ensure_ascii=False)
         + "\n</script>\n"
@@ -156,9 +158,10 @@ def _head_metadata(
 
 
 def _replace_title(report: str, title: str) -> str:
-    match = re.search(r"<title>[^<]*</title>", report)
+    head = report.partition("</head>")[0]
+    match = re.search(r"<title>[^<]*</title>", head)
     _require(match is not None, "the dashboard must carry one title element")
-    _require(report.count("<title>") == 1, "the dashboard must carry exactly one title")
+    _require(head.count("<title>") == 1, "the dashboard head must carry exactly one title")
     return report.replace(match.group(0), f"<title>{html.escape(title)}</title>", 1)
 
 
@@ -316,6 +319,19 @@ def main() -> int:
         page, pdf = build_classic(ROOT, example)
         outputs.append((page, f"{page.stat().st_size:,} bytes"))
         outputs.append((pdf, f"{pdf.stat().st_size:,} bytes"))
+    example = EXAMPLES[0]
+    text = excerpt((ROOT / example.source).read_text(encoding="utf-8"), example.chapters)
+    first_chapter = re.search(r"(?m)^##\s+", text)
+    _require(first_chapter is not None, "the manuscript PDF example needs a chapter opening")
+    # This curated excerpt starts at chapter one; entered title/author supply its cover.
+    text = text[first_chapter.start():] if first_chapter is not None else text
+    for layout in ("editor", "book", "sheet"):
+        target = ROOT / f"docs/examples/{example.slug}-{layout}.pdf"
+        target.write_bytes(compose_pdf(
+            text, manuscript=example.source, layout=layout, language=example.language,
+            title=example.title, author=example.author, project_config={},
+        ))
+        outputs.append((target, f"{target.stat().st_size:,} bytes"))
     for path, size in outputs:
         if size:
             print(f"{path.relative_to(ROOT)}: {size}")

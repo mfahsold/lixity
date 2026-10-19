@@ -23,7 +23,7 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v0.6.0 release notes](docs/releases/v0.6.0.md)
+[v0.7.0 release notes](docs/releases/v0.7.0.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload. Documentation is English; you can read the
@@ -104,7 +104,9 @@ measurements unavailable. [Scene example](docs/screenshots/dashboard-scenes.png)
 Export an A5 reading copy, A4 analysis report or A4 submission sheet from
 **PDF export** in the project controls, or use `lixity pdf`. The composer uses
 your project's title, author and optional publication details. Empty fields
-supply no inferred information.
+supply no inferred information. Since v0.7.0, an A4 editorial copy provides
+line numbers and comment margins using the same composer
+([example](docs/examples/effi-briest-editor.pdf)).
 
 See the complete [Effi Briest report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf)
 or [Pride and Prejudice report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
@@ -212,6 +214,11 @@ describe what has and has not been established.
 Read the workflows: [Intentional registers](https://mfahsold.github.io/lixity/blog/intentional-registers.html) ·
 [Local word echoes](https://mfahsold.github.io/lixity/blog/local-word-echoes.html).
 
+The [research preview](docs/demo/research.html)
+uses attributed historical harbour images alongside fictional places and paths.
+Its geography editor and Zotero image capture are available **since v0.7.0**;
+[research usage](docs/research/USAGE.md) records compatibility.
+
 ## Supported languages
 
 German (`de`) and English (`en`) have the most extensive linguistic resources
@@ -239,13 +246,14 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 
 ## Current release
 
-The current release is **v0.6.0**, continuing the pre-1.0 development line;
+The current release is **v0.7.0**, continuing the pre-1.0 development line;
 historical v3.0.1 and earlier notes and tags remain available. Public JSON and
 research storage schema versions are independent; this release reads
-research archives through v7.
+research archives through v8. Ordinary dossier encodings stay unchanged until a
+geographic save opts into v8; older readers cannot open v8 archives.
 When upgrading from the historical numbering, install the pinned release wheel
 explicitly; PyPI upgrades continue normally afterwards.
-[Release notes](docs/releases/v0.6.0.md) describe compatibility and known limits;
+[Release notes](docs/releases/v0.7.0.md) describe compatibility and known limits;
 the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 ## Python API and automation

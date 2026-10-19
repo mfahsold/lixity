@@ -24,6 +24,11 @@ h1 {
 .project-header { margin-bottom: 0; }
 .project-header h1 { font-family: var(--font-title); font-size: clamp(1.8rem, 4vw, 2.7rem); font-weight: 500; line-height: 1.2; letter-spacing: -.025em; margin-bottom: .5rem; }
 .settings-form { margin: 0; }
+.settings-section { min-width: 0; margin: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); }
+.settings-section > legend { padding-inline: .35rem; font-weight: var(--weight-semibold); font-size: var(--text-control); }
+.settings-section > * + * { margin-top: var(--space-3); }
+.settings-section > .ctl-note { margin-top: 0; }
+.settings-section > .settings-advanced { margin-top: var(--space-3); }
 .settings-form h4 { font-size: var(--text-section-title); font-weight: var(--weight-strong); margin: .75rem 0 .3rem; }
 .settings-form .research-revision-readonly { font-size: var(--text-control); line-height: var(--line-compact); }
 .settings-form .research-revision-readonly dt { font-size: var(--text-small); font-weight: var(--weight-semibold); color: var(--fg); }
@@ -35,6 +40,7 @@ h1 {
 .setting-field p { margin: .35rem 0 0; }
 .settings-advanced { margin: 0; }
 .settings-advanced summary { cursor: pointer; font-weight: var(--weight-semibold); font-size: var(--text-control); padding-block: .4rem; }
+.settings-advanced[open] > summary { margin-bottom: .5rem; }
 .settings-actions, .matrix-tools { display: flex; flex-wrap: wrap; align-items: center; gap: .6rem 1rem; margin-top: .8rem; }
 .publication-field-multiline { grid-column: 1 / -1; }
 .publication-settings .settings-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }

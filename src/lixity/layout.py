@@ -129,7 +129,7 @@ class BookLayoutConfig:
                 page_width=595.28,  # 210 mm
                 page_height=841.89,  # 297 mm
                 margin_left=62.0,  # incl. 22 pt digit gutter for line numbers
-                margin_right=66.0,  # wide margin for handwritten lector notes
+                margin_right=96.0,  # 34 mm correction margin for handwritten lector notes
                 margin_top=56.0,
                 margin_bottom=56.0,
                 line_spacing=0.94,  # approx. 18.0 pt baseline distance at 12 pt (1.50x)

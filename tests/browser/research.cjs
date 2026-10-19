@@ -212,6 +212,8 @@ server.serve_forever()
         const item = {key: 'ABCDEFGH', version: 1,
           data: {itemType: 'book', title: '<img src=x onerror=alert(1)> Synthetic Zotero', tags: [{tag: 'SyntheticTag'}]}};
         const attachments = [{key:'JKLMNPQR', version: 1, data: {itemType:'attachment', title:'Synthetic text', contentType:'text/plain', linkMode:'imported_file'}},
+          {key:'STUVWXYZ', version:1, data:{itemType:'attachment', title:'Synthetic PNG', contentType:'image/png', linkMode:'linked_file'}},
+          {key:'34567890', version:1, data:{itemType:'attachment', title:'Synthetic JPEG', contentType:'image/jpeg', linkMode:'imported_file'}},
           {key:'23456789', version:1, data:{itemType:'attachment', title:'Synthetic audio', contentType:'audio/wav', linkMode:'imported_file'}}];
         await route.fulfill({json: {ok:true, server_id:'synthetic-instance', next_start:null, captures:[],
           ...(payload.item_key ? {item, attachments} : {items:[item]})}});
@@ -234,17 +236,22 @@ server.serve_forever()
     await expect(page.locator('#r-zotero-results')).toContainText('Synthetic Zotero');
     await page.locator('[data-zotero-item]').click();
     await expect(page.locator('#r-zotero-results')).toContainText('Synthetic audio');
-    assert.equal(await page.locator('[data-zotero-capture]').count(), 1);
-    await page.locator('[data-zotero-capture]').click();
+    assert.equal(await page.locator('[data-zotero-capture]').count(), 3);
+    await page.locator('[data-zotero-capture="0"]').click();
     assert.equal(zoteroCapture, null, 'Capture must require explicit retention');
     for (const width of [1440,390]) {
       await page.setViewportSize({width,height:1000});
       await page.locator('#zotero-box').scrollIntoViewIfNeeded();
+      for (const title of ['Synthetic PNG', 'Synthetic JPEG']) {
+        const card = page.locator('#r-zotero-results .research-card').filter({hasText:title});
+        await expect(card.locator('[data-zotero-capture]')).toBeVisible();
+      }
+      assert.equal(await page.locator('#r-zotero-results .research-card').filter({hasText:'Synthetic audio'}).locator('[data-zotero-capture]').count(), 0);
       await page.locator('#zotero-box').screenshot({path:path.join(artifacts, `zotero-${width}.png`)});
       assert.ok(await page.locator('#zotero-box').evaluate(e => e.getBoundingClientRect().right <= innerWidth));
     }
     await page.locator('#r-zotero-retention').check();
-    await page.locator('[data-zotero-capture]').click();
+    await page.locator('[data-zotero-capture="1"]').click();
     await expect(page.locator('#r-zotero-retention')).not.toBeChecked();
     await expect(page.locator('#research-status-bar.ok')).toContainText(zoteroWarning);
     assert.equal(await page.locator('#research-status-bar img').count(), 0, 'Warning markup must remain text');
@@ -253,7 +260,7 @@ server.serve_forever()
       await page.locator('#research-status-bar').screenshot({path: path.join(artifacts, `zotero-warning-${width}.png`)});
       assert.ok(await page.locator('#research-status-bar').evaluate(e => e.getBoundingClientRect().right <= innerWidth));
     }
-    assert.equal(zoteroCapture.attachment_key, 'JKLMNPQR');
+    assert.equal(zoteroCapture.attachment_key, 'STUVWXYZ');
     assert.equal(zoteroCapture.expected_server_id, 'synthetic-instance');
     assert.equal(zoteroCapture.allow_retention, true);
     await page.unroute('**/api/research-zotero*');

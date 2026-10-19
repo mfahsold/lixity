@@ -13,7 +13,6 @@ Usage:
 """
 
 import argparse
-import base64
 import html
 import io
 import json
@@ -22,7 +21,7 @@ import shutil
 import struct
 import subprocess
 import sys
-import zlib
+from hashlib import sha256
 from pathlib import Path
 from urllib.parse import quote
 
@@ -31,7 +30,7 @@ sys.path.insert(0, str(BASE_DIR / "src"))
 
 from rich.console import Console  # noqa: E402
 
-from lixity import ReportFormatter  # noqa: E402
+from lixity import ReportFormatter, __version__  # noqa: E402
 from lixity.characters import presence_report  # noqa: E402
 from lixity.config import resolve_thresholds  # noqa: E402
 from lixity.dialogue import dialogue_report  # noqa: E402
@@ -98,25 +97,425 @@ def _terminal_shot(title: str, content_html: str, target: Path, width: int, heig
     _queue_capture(_write_html(target.stem + ".html", document), target, width, height)
 
 
-def _synthetic_harbour_image() -> bytes:
-    """Create a small invented setting diagram; no external image is needed."""
-    width, height = 640, 240
-    rows = bytearray()
-    for y in range(height):
-        rows.append(0)
-        for x in range(width):
-            colour = (219, 232, 231) if y < 155 else (70, 120, 139)
-            if 36 <= y < 126 and any(start <= x < start + 100 for start in (45, 190, 335, 480)):
-                colour = (74, 95, 106)
-            elif 144 <= y < 155 or (x % 145 < 12 and 155 <= y < 206):
-                colour = (162, 180, 183)
-            rows.extend(colour)
+def reviewed_visual_sources(asset_dir: Path | None = None) -> list[tuple[dict, bytes]]:
+    """Fail closed unless the two reviewed visual references match their manifest."""
+    from lixity.research.images import validate_image
 
-    def chunk(kind: bytes, data: bytes) -> bytes:
-        return struct.pack(">I", len(data)) + kind + data + struct.pack(">I", zlib.crc32(kind + data))
+    asset_dir = asset_dir or BASE_DIR / "docs/assets/research"
+    manifest = json.loads((asset_dir / "sources.json").read_text(encoding="utf-8"))
+    expected = {"hamburg-free-port-1900.jpg", "hamburg-harbour-1890-1900.jpg"}
+    if {item["filename"] for item in manifest["sources"]} != expected or len(manifest["sources"]) != 2:
+        raise ValueError("The reviewed research visual manifest must identify the two approved JPEGs")
+    sources = []
+    for item in manifest["sources"]:
+        content = (asset_dir / item["filename"]).read_bytes()
+        if sha256(content).hexdigest() != item["sha256"]:
+            raise ValueError(f"Image differs from its reviewed SHA-256: {item['filename']}")
+        image = validate_image(content, filename=item["filename"])
+        if (image["width"], image["height"]) != (item["width"], item["height"]):
+            raise ValueError(f"Image differs from its reviewed dimensions: {item['filename']}")
+        sources.append((item, content))
+    return sources
 
-    return (b"\x89PNG\r\n\x1a\n" + chunk(b"IHDR", struct.pack(">IIBBBBB", width, height, 8, 2, 0, 0, 0))
-            + chunk(b"IDAT", zlib.compress(bytes(rows))) + chunk(b"IEND", b""))
+
+_PUBLIC_READ_ADAPTER = r"""(function () {
+  "use strict";
+  var nativeFetch = window.fetch.bind(window);
+  var base = new URL(document.baseURI);
+  var images = new Set([
+    new URL("../assets/research/hamburg-free-port-1900.jpg", base).href,
+    new URL("../assets/research/hamburg-harbour-1890-1900.jpg", base).href
+  ]);
+  var records = nativeFetch(new URL("research-data.json", base)).then(function (response) {
+    if (!response.ok) throw new Error("Read-only example data is unavailable");
+    return response.json();
+  });
+  window.fetch = async function (input, options) {
+    var request = typeof input === "string" || input instanceof URL ? null : input;
+    var url = new URL(request ? request.url : input, base);
+    var method = String(options && options.method || request && request.method || "GET").toUpperCase();
+    if (method !== "GET" || url.origin !== base.origin) throw new Error("Read-only example permits local fixture reads only");
+    if (images.has(url.href)) return nativeFetch(url);
+    var fixture = await records, key = url.pathname + url.search;
+    if (!Object.prototype.hasOwnProperty.call(fixture, key)) throw new Error("Read-only example has no fixture for this request");
+    return new Response(JSON.stringify(fixture[key]), {status: 200, headers: {"Content-Type": "application/json"}});
+  };
+})();"""
+
+
+def build_research_demo(root: Path, research_fixture: dict) -> Path:
+    """Publish the real dashboard with a bounded, GET-only local fixture adapter."""
+    from build_examples import SITE, _head_metadata, _insert_notice, _notice
+
+    resources = {url: "../" + value["asset_path"].removeprefix("docs/")
+                 for url, value in research_fixture.items() if "asset_path" in value}
+
+    def public_value(value):
+        if isinstance(value, str):
+            return resources.get(value, value)
+        if isinstance(value, dict):
+            return {key: public_value(item) for key, item in value.items()}
+        if isinstance(value, list):
+            return [public_value(item) for item in value]
+        return value
+
+    fixture = {url: public_value(value) for url, value in research_fixture.items()
+               if url.startswith("/api/research/") and url not in resources}
+    document = render_dashboard([], [], title="Hamburg harbour research example", controls=True, enabled_actions=[])
+    document = re.sub(r"<title>[^<]*</title>", "<title>Lixity research example — Hamburg harbour</title>", document, count=1)
+    head = _head_metadata(canonical=f"{SITE}/demo/research.html", title="Lixity research example — Hamburg harbour",
+                          description="Explore a read-only research dossier with credited historical imagery and fictional journey notes.",
+                          language="en", preview_image=("screenshots/dashboard-dossier-image.png",
+                              "Historical Hamburg map retained with source provenance in a research dossier"))
+    allowed = ("[data-rtab]:not([data-rtab=search]):not([data-rtab=grounding]), "
+               "[data-claim-view], #r-open-timeline, #r-review-refresh, [data-filter-tag], "
+               "[data-load-evidence], [data-research-history], [data-research-revision], #research-revision-history-tab, "
+               "[data-close-modal], [data-dossier-enlarge], #modal-dossier-image-enlarge button, [data-source-view], [data-source-toggle]")
+    hidden = ("#project-controls, .view-navigation, #view-pane-analysis, #view-pane-project, #welcome-hero, "
+              "#research-setup-guide, #research-init-box, #r-local-import, #zotero-box, #research-revision-batch-review, "
+              "[data-rtab=search], [data-rtab=grounding], #rtab-search, #rtab-grounding, #rtab-dossiers > .ctl-group, "
+              "#rtab-claims-list > .ctl-group:not(.research-timeline-entry):not(.research-relation-section), "
+              "#r-relation-form, #rtab-decisions > .ctl-group, #research-manuscript-review-section")
+    policy = f"""<style>
+{hidden} {{ display: none !important; }}
+button:not(:is({allowed})) {{ display: none !important; }}
+input[type=file], a[href^="zotero:"], a[href^="/api/"] {{ display: none !important; }}
+#example-context {{ margin-block: 1rem; }}
+</style>
+<script id="research-demo-adapter">{_PUBLIC_READ_ADAPTER}</script>
+<script id="research-demo-controls">
+document.addEventListener("DOMContentLoaded", function () {{
+  var allowed = {json.dumps(allowed)};
+  var imageResources = {json.dumps(resources)};
+  var restoreImages = window.LixityDossierImages.restoreMarkdown;
+  window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {{
+    var template = document.createElement("template");
+    template.innerHTML = restoreImages(rendered, prepared);
+    template.content.querySelectorAll("img").forEach(function (image) {{
+      var resource = imageResources[image.getAttribute("src")];
+      if (!resource) throw new Error("Read-only example image is absent from the reviewed fixture");
+      image.setAttribute("src", resource);
+    }});
+    return template.innerHTML;
+  }};
+  function disableWrites() {{
+    document.querySelectorAll("button, input[type=file], textarea").forEach(function (control) {{
+      if (!control.matches(allowed) && !control.disabled) control.disabled = true;
+    }});
+  }}
+  document.addEventListener("click", function (event) {{
+    var control = event.target.closest("button");
+    if (control && !control.matches(allowed)) {{ event.preventDefault(); event.stopImmediatePropagation(); }}
+  }}, true);
+  document.addEventListener("submit", function (event) {{ event.preventDefault(); event.stopImmediatePropagation(); }}, true);
+  disableWrites();
+  new MutationObserver(disableWrites).observe(document.body, {{childList: true, subtree: true}});
+  switchActiveView("research");
+  document.getElementById("research-hint").textContent = "Read-only public example: filter sources, open dossiers and images, inspect claims, timeline and saved versions.";
+}});
+</script>
+"""
+    restrictions = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
+                    'script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; img-src \'self\' data:; '
+                    'connect-src \'self\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
+    document = document.replace("</head>", restrictions + head + policy + "</head>", 1)
+    notice = _notice(f"Lixity {__version__} · read-only research example", [
+        "Explore Sources, Dossiers, Claims, Decisions and Review. Dossiers contain the historical map and photograph; select an image to enlarge it. "
+        "The coordinate sketch has no background tiles and does not calculate routes.",
+        "The customs log, weather notes, people, Warehouse 4 incident and journeys are fictional demonstration records. "
+        "The dated public-domain visuals provide setting references and do not verify events or conditions in 1923. "
+        "Coordinates are approximate author-entered examples, not surveyed places or historical route reconstructions.",
+        f"Generated with Lixity {__version__}. This page cannot import, edit or save records.",
+    ], [("../guides/research-pdf.html", "Research walkthrough"), ("../index.html", "Lixity home"), ("#research-source-credits", "Image source credits")])
+    fallback = ('<noscript><style>#research-manager {display:none !important;}</style>'
+                '<section class="panel"><p>This interactive read-only example requires JavaScript. '
+                'Source credits remain available below.</p></section></noscript>')
+    document = _insert_notice(document, notice + fallback)
+    credits = ['<section class="panel" id="research-source-credits"><h2>Image source credits</h2>']
+    for item, _content in reviewed_visual_sources():
+        credits.append(f'<h3>{html.escape(item["title"])}</h3><p>{html.escape(item["created_period"])}. '
+                       f'{html.escape(item["credit"])}. {html.escape(item["rights"])}</p>'
+                       f'<p>{html.escape(item["provenance_note"])}</p><p>'
+                       f'<a href="{html.escape(item["source_url"], quote=True)}">Source catalogue</a> · '
+                       f'<a href="{html.escape(item["origin_url"], quote=True)}">Wikimedia Commons record</a> · '
+                       f'<a href="{html.escape(item["rights_url"], quote=True)}">Public-domain rights statement</a></p>')
+    credits.append('<p><a href="../assets/research/sources.json">Reviewed image provenance manifest</a></p></section>')
+    document = document.replace("<footer>", "".join(credits) + "<footer>", 1)
+    destination = root / "docs/demo/research.html"
+    destination.parent.mkdir(parents=True, exist_ok=True)
+    destination.write_text(document, encoding="utf-8")
+    destination.with_name("research-data.json").write_text(json.dumps(fixture, ensure_ascii=False), encoding="utf-8")
+    return destination
+
+
+def build_research_fixture(work_dir: Path, *, language: str = "en",
+                           nda_project_name: str = "Synthetic archival research") -> dict:
+    """Create the disposable research example through the ordinary project API."""
+    work_dir.mkdir(parents=True, exist_ok=True)
+    research_proj = work_dir / "research-demo"
+    if research_proj.exists():
+        shutil.rmtree(research_proj)
+    from lixity.research import api as research_api
+
+    research_api.init(research_proj, title="Synthetic archival research example", language="en")
+    (research_proj / "lixity.toml").write_text('author_name = "Example Author"\n', encoding="utf-8")
+    source_text = """## Section 1: Port Authority Log – October 1923
+
+On the cold evening of October 14, 1923, customs officers on the night shift observed suspicious movements near Warehouse 4 in the Free Port zone.
+The autumn mist hung heavy over the Elbe river, obscuring the watercraft anchored along the quay.
+Two unidentified figures were seen attempting to force the secondary padlock on the eastern warehouse gate.
+
+When challenged by the night watchman, both individuals abandoned a wooden crate and fled along the cobblestone embankment toward Sandtorhafen.
+Officer Hansen inspected the abandoned crate and found forty bundles of untaxed Virginian tobacco leaves.
+The evidence was impounded and transferred to the central customs station at dawn.
+
+## Section 2: Witness Statement and Follow-up
+
+The night watchman reported that a small motor launch with muffled exhaust had been idling near the southern pier shortly before the incident.
+Inspection of the lock revealed fresh tool abrasions consistent with a heavy steel crowbar.
+No customs seals on the adjacent bonded storehouses had been broken during the encounter.
+"""
+    customs_file = work_dir / "customs_log_1923.txt"
+    customs_file.write_text(source_text, encoding="utf-8")
+    research_api.ingest(
+        research_proj,
+        customs_file,
+        title="Port Authority Customs Log (synthetic)",
+        context={
+            "genre": "Official Customs Register",
+            "created_period": "1923",
+            "depicted_period": "October 1923",
+            "place": "Hamburg Free Port Zone",
+            "perspective": "Third-Person Administrative",
+            "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
+            "tags": ["Customs", "Warehouse 4"],
+        },
+        allow_retention=True,
+    )
+    weather_file = work_dir / "harbor_weather_notes.txt"
+    weather_file.write_text(
+        "## Harbor Weather Notes\n\n"
+        "Mist covered the harbor before sunrise. A light wind carried drizzle "
+        "across the eastern pier, and the quay lamps remained lit.\n\n"
+        "## Setting Observations\n\n"
+        "The observer recorded wet cobblestones and distant bell signals. "
+        "These invented notes support a fictional scene; they are not historical evidence.\n",
+        encoding="utf-8",
+    )
+    weather_res = research_api.ingest(
+        research_proj,
+        weather_file,
+        title="Harbor Weather Notes (synthetic)",
+        context={
+            "genre": "Fictional setting notes",
+            "place": "Imaginary harbor",
+            "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
+            "tags": ["Weather", "Setting"],
+        },
+        allow_retention=True,
+    )
+    research_api.reindex(research_proj)
+    search_res = research_api.search(research_proj, "warehouse customs", limit=1)
+    matches = search_res["hits"]
+    if not matches:
+        raise RuntimeError("Synthetic research source must produce a real passage citation")
+    passage_id = matches[0]["passage_id"]
+
+    # Read-only browser responses below are serialized from this disposable,
+    # API-created archive. The dashboard itself is the real controls UI.
+    dossier_res = research_api.create_dossier(
+        research_proj,
+        title="Warehouse 4 case notes",
+        body="## Timeline\n\nCompare the night watchman's account with the synthetic customs log.\n\n"
+        "## Open Questions\n\nKeep source quotations separate from the author's fictional scene decisions.\n\n"
+        "## Historical map\n\nCirca-1900 reference; not evidence of the invented 1923 incident.\n\n"
+        "## Historical harbour view\n\n1890–1900 photochrom reference; not a photograph of the fictional event.",
+        tags=["Warehouse", "Timeline"],
+        evidence_ids=[passage_id],
+        geography=json.loads((BASE_DIR / "docs/research/examples/harbour-geography.json").read_text(encoding="utf-8")),
+    )
+    weather_passage = research_api.get_source(research_proj, weather_res["source_id"])["passages"][0]["id"]
+    research_api.create_dossier(
+        research_proj,
+        title="Harbor setting notes",
+        body="## Weather\n\nUse the synthetic notes to review the harbor scene's atmosphere.\n\n"
+        "## Scene Planning\n\nThe weather and setting are fictional examples, not verified historical claims.",
+        tags=["Weather", "Setting"],
+        evidence_ids=[weather_passage],
+    )
+    image_resources = {}
+    for item, visual_bytes in reviewed_visual_sources():
+        dossier_current = research_api.get_dossier(research_proj, dossier_res["dossier_id"])
+        caption_title = item["title"]
+        if item["created_period"].casefold() not in caption_title.casefold():
+            caption_title += f" ({item['created_period']})"
+        credit = item["creator"] or "Library of Congress, Photochrom Print Collection"
+        attached = research_api.attach_dossier_image(
+            research_proj, dossier_res["dossier_id"], visual_bytes, filename=item["filename"],
+            expected_snapshot=dossier_current["snapshot"], expected_revision=dossier_current["revision"],
+            allow_retention=True, alt=item["alt"], title=item["title"],
+            section="Historical map" if item["id"] == "hamburg-free-port-1900" else "Historical harbour view",
+            caption=f"{caption_title}. {credit}. Public domain.",
+            context={"genre": item["genre"], "created_period": item["created_period"], "place": item["place"],
+                     "origin_url": item["origin_url"], "tags": ["Historical visual reference"],
+                     "provenance_note": f"{item['provenance_note']}\nCredit: {item['credit']}\n"
+                                        f"Rights: {item['rights']}\nCatalogue: {item['source_url']}"},
+        )
+        captured_id = attached["capture"]["source_id"]
+        image = next(image for image in attached["images"] if image["source_id"] == captured_id)
+        image_resources[image["url"]] = {"media_type": "image/jpeg", "asset_path": "docs/assets/research/" + item["filename"]}
+    research_api.create_claim(
+        research_proj,
+        title="Reformed customs seal",
+        statement="The night watchman reports an unharmed seal on the bonded warehouses.",
+        confidence="hypothetical",
+        time_period="1922–1924",
+        place="Hamburg Free Port Zone",
+        dossier_id=dossier_res["dossier_id"],
+    )
+    research_api.create_claim(
+        research_proj,
+        title="Harbour tour research notes",
+        statement="Modern field notes describe the former free port as a museum quarter.",
+        confidence="hypothetical",
+        time_period="present day",
+        place="Hamburg",
+    )
+    claim_res = research_api.create_claim(
+        research_proj,
+        title="Attempted warehouse entry",
+        statement="The customs log describes an attempted entry at Warehouse 4 in October 1923.",
+        confidence="evidenced",
+        time_period="1923",
+        place="Hamburg Free Port Zone",
+        actors=["Night watchman", "Customs officers"],
+        dossier_id=dossier_res["dossier_id"],
+    )
+    research_api.link_evidence(
+        research_proj,
+        claim_id=claim_res["claim_id"],
+        passage_id=passage_id,
+        relation="supports",
+        rationale="The synthetic log describes the attempted entry.",
+    )
+    research_api.record_decision(
+        research_proj,
+        title="Keep the inspection at dawn",
+        rationale="The synthetic source places the transfer at dawn; preserve that sequence.",
+        claim_id=claim_res["claim_id"],
+        impact_on_plot="The crate reaches the customs station in the following scene.",
+    )
+    research_api.record_decision(
+        research_proj,
+        title="Move the discovery scene",
+        rationale="Bring the discovery forward to make the fictional chapter flow clearer.",
+        claim_id=claim_res["claim_id"],
+        deviation_from_fact=True,
+        impact_on_plot="The protagonist arrives before the night watchman calls for help.",
+    )
+    sources_data = research_api.list_sources(research_proj)
+    dossiers_data = research_api.list_dossiers(research_proj)
+    claims_data = research_api.list_claims(research_proj)
+    decisions_data = research_api.list_decisions(research_proj)
+    workspace_search = research_api.search(
+        research_proj, "warehouse customs", scope="sources", ensure_fresh=True,
+    )
+    from lixity.nda import draft_document
+
+    nda_fields = {
+        "name": "Example Reader", "address": "Example street 1",
+        "project_name": nda_project_name, "date": "2026-10-06", "place": "Example City",
+    }
+    research_fixture = {
+        **image_resources,
+        "/api/nda-draft": {
+            "fields": nda_fields,
+            "text": draft_document(research_proj, **nda_fields, language=language).text,
+        },
+        # Synthetic server-local paths demonstrate the chooser without exposing a user's home.
+        "/api/project-paths": {
+            "ok": True, "path": "/home/demo/my-novel", "parent": "/home/demo",
+            "entries": [
+                {"name": "research", "path": "/home/demo/my-novel/research", "kind": "directory"},
+                {"name": "manuscript.md", "path": "/home/demo/my-novel/manuscript.md", "kind": "manuscript"},
+            ],
+            "truncated": False,
+        },
+        "/api/research/status": {
+            "ok": True,
+            "initialized": True,
+            "project_root": "./research-demo",
+            "project_id": sources_data["project_id"],
+            "project_title": sources_data["project_title"],
+            "project_language": sources_data["project_language"],
+            "sources": sources_data["sources"],
+            "dossiers": dossiers_data["dossiers"],
+            "claims": claims_data["claims"],
+            "decisions": decisions_data["decisions"],
+            "sources_count": len(sources_data["sources"]),
+            "dossiers_count": len(dossiers_data["dossiers"]),
+            "claims_count": len(claims_data["claims"]),
+            "decisions_count": len(decisions_data["decisions"]),
+        },
+        "/api/research/sources": {"ok": True, **sources_data},
+        "/api/research/dossiers": {"ok": True, **dossiers_data},
+        "/api/research/claims": {"ok": True, **claims_data},
+        "/api/research/claims?claim_id=" + quote(claim_res["claim_id"], safe=""): {
+            "ok": True,
+            **research_api.list_evidence_links(research_proj, claim_id=claim_res["claim_id"]),
+        },
+        "/api/research/decisions": {"ok": True, **decisions_data},
+        "/api/research/review": {"ok": True, **research_api.editorial_review(research_proj)},
+        "/api/research/timeline": {"ok": True, **research_api.timeline(research_proj)},
+        "/api/research/claim-relations?include_retracted=false": {
+            "ok": True, **research_api.list_claim_relations(research_proj)},
+        "/api/research/claim-relations?include_retracted=true": {
+            "ok": True, **research_api.list_claim_relations(research_proj, include_retracted=True)},
+        "/api/research-search": {"ok": True, **workspace_search},
+    }
+    for source in sources_data["sources"]:
+        research_fixture["/api/research/sources?id=" + quote(source["id"], safe="")] = {
+            "ok": True, **research_api.get_source(research_proj, source["id"]),
+        }
+    for dossier in dossiers_data["dossiers"]:
+        research_fixture["/api/research/dossiers?id=" + quote(dossier["id"], safe="")] = {
+            "ok": True, **research_api.get_dossier(research_proj, dossier["id"]),
+        }
+    for kind, records in (("dossier", dossiers_data["dossiers"]), ("claim", claims_data["claims"]),
+                          ("decision", decisions_data["decisions"])):
+        for item in records:
+            identifier = quote(item["id"], safe="")
+            endpoint = "?kind=" + kind + "&id=" + identifier
+            research_fixture["/api/research/record" + endpoint] = {"ok": True, **research_api.get_record(research_proj, kind, item["id"])}
+            history = research_api.record_history(research_proj, kind, item["id"])
+            research_fixture["/api/research/history" + endpoint] = {"ok": True, **history}
+            for version in history["revisions"]:
+                research_fixture["/api/research/record" + endpoint + "&revision=" + str(version["revision"])] = {
+                    "ok": True, **research_api.get_record(research_proj, kind, item["id"], revision=version["revision"])}
+            if kind == "claim":
+                research_fixture["/api/research/claims?claim_id=" + identifier] = {
+                    "ok": True, **research_api.list_evidence_links(research_proj, claim_id=item["id"])}
+            if kind == "decision":
+                research_fixture["/api/research/decision-impact?id=" + identifier] = {
+                    "ok": True, **research_api.decision_impact(research_proj, item["id"])}
+    operations = []
+    revision_previews = {}
+    for dossier in dossiers_data["dossiers"]:
+        record = research_api.get_record(research_proj, "dossier", dossier["id"])
+        research_fixture["/api/research/record?kind=dossier&id=" + quote(dossier["id"], safe="")] = {"ok": True, **record}
+        operation = {
+            "kind": "dossier", "id": dossier["id"], "expected_revision": record["record"]["revision"],
+            "changes": {"title": record["record"]["title"] + " — reviewed notes"},
+            "change_kind": "correction", "reason": "Align these notes with the harbour scene.",
+        }
+        operations.append(operation)
+        revision_previews[dossier["id"]] = {"ok": True, **research_api.prepare_record_revision(
+            research_proj, "dossier", dossier["id"], base_revision=operation["expected_revision"],
+            changes=operation["changes"],
+        )}
+    research_fixture["/api/research-record-prepare"] = revision_previews
+    research_fixture["/api/research-revision-batch-prepare"] = {"ok": True, **research_api.prepare_record_revisions(research_proj, operations)}
+    return research_fixture
 
 
 def sync_embedded_image_sizes() -> int:
@@ -290,6 +689,8 @@ def main() -> int:
         ("dashboard-research-dossiers-dark.png", 1152, 1101),
         ("dashboard-project-settings-dark.png", 1152, 1005),
         ("dashboard-dossier-image-dark.png", 1082, 481),
+        ("dashboard-dossier-photo-dark.png", 1480, 1000),
+        ("dashboard-dossier-geography-dark.png", 1480, 1000),
         ("dashboard-scenes-dark.png", 1152, 1101),
     ):
         _queue_capture(dashboard_path, OUT_DIR / name, width, height)
@@ -402,248 +803,15 @@ def main() -> int:
         _queue_capture(welcome_path, OUT_DIR / f"dashboard-project-open{suffix}.png", width, 1000)
 
     # 9. Research Source Dashboard & CLI Citation (Research Pilot) ---------
-    research_proj = WORK_DIR / "research-demo"
-    if research_proj.exists():
-        shutil.rmtree(research_proj)
+    research_fixture = build_research_fixture(WORK_DIR, language=resolved.key, nda_project_name=title)
     from lixity.research import api as research_api
-
-    research_api.init(research_proj, title="Synthetic archival research example", language="en")
-    (research_proj / "lixity.toml").write_text('author_name = "Example Author"\n', encoding="utf-8")
-    source_text = """## Section 1: Port Authority Log – October 1923
-
-On the cold evening of October 14, 1923, customs officers on the night shift observed suspicious movements near Warehouse 4 in the Free Port zone.
-The autumn mist hung heavy over the Elbe river, obscuring the watercraft anchored along the quay.
-Two unidentified figures were seen attempting to force the secondary padlock on the eastern warehouse gate.
-
-When challenged by the night watchman, both individuals abandoned a wooden crate and fled along the cobblestone embankment toward Sandtorhafen.
-Officer Hansen inspected the abandoned crate and found forty bundles of untaxed Virginian tobacco leaves.
-The evidence was impounded and transferred to the central customs station at dawn.
-
-## Section 2: Witness Statement and Follow-up
-
-The night watchman reported that a small motor launch with muffled exhaust had been idling near the southern pier shortly before the incident.
-Inspection of the lock revealed fresh tool abrasions consistent with a heavy steel crowbar.
-No customs seals on the adjacent bonded storehouses had been broken during the encounter.
-"""
-    customs_file = WORK_DIR / "customs_log_1923.txt"
-    customs_file.write_text(source_text, encoding="utf-8")
-    ingest_res = research_api.ingest(
-        research_proj,
-        customs_file,
-        title="Port Authority Customs Log (synthetic)",
-        context={
-            "genre": "Official Customs Register",
-            "created_period": "1923",
-            "depicted_period": "October 1923",
-            "place": "Hamburg Free Port Zone",
-            "perspective": "Third-Person Administrative",
-            "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
-            "tags": ["Customs", "Warehouse 4"],
-        },
-        allow_retention=True,
-    )
-    weather_file = WORK_DIR / "harbor_weather_notes.txt"
-    weather_file.write_text(
-        "## Harbor Weather Notes\n\n"
-        "Mist covered the harbor before sunrise. A light wind carried drizzle "
-        "across the eastern pier, and the quay lamps remained lit.\n\n"
-        "## Setting Observations\n\n"
-        "The observer recorded wet cobblestones and distant bell signals. "
-        "These invented notes support a fictional scene; they are not historical evidence.\n",
-        encoding="utf-8",
-    )
-    weather_res = research_api.ingest(
-        research_proj,
-        weather_file,
-        title="Harbor Weather Notes (synthetic)",
-        context={
-            "genre": "Fictional setting notes",
-            "place": "Imaginary harbor",
-            "provenance_note": "Synthetic demonstration text; not an archival document or verified historical account.",
-            "tags": ["Weather", "Setting"],
-        },
-        allow_retention=True,
-    )
-    research_api.reindex(research_proj)
-    research_html = research_api.source_dashboard(research_proj, ingest_res["source_id"])
-    _queue_capture(
-        _write_html("dashboard-research.html", research_html),
-        OUT_DIR / "dashboard-research.png",
-        1480,
-        960,
-    )
-
+    research_proj = WORK_DIR / "research-demo"
     search_res = research_api.search(research_proj, "warehouse customs", limit=1)
-    matches = search_res["hits"]
-    if not matches:
-        raise RuntimeError("Synthetic research source must produce a real passage citation")
-    passage_id = matches[0]["passage_id"]
+    passage_id = search_res["hits"][0]["passage_id"]
     cite_res = research_api.cite(research_proj, passage_id)
-
-    # Read-only browser responses below are serialized from this disposable,
-    # API-created archive. The dashboard itself is the real controls UI.
-    dossier_res = research_api.create_dossier(
-        research_proj,
-        title="Warehouse 4 case notes",
-        body="## Timeline\n\nCompare the night watchman's account with the synthetic customs log.\n\n"
-        "## Open Questions\n\nKeep source quotations separate from the author's fictional scene decisions.",
-        tags=["Warehouse", "Timeline"],
-        evidence_ids=[passage_id],
-    )
-    weather_passage = research_api.get_source(research_proj, weather_res["source_id"])["passages"][0]["id"]
-    research_api.create_dossier(
-        research_proj,
-        title="Harbor setting notes",
-        body="## Weather\n\nUse the synthetic notes to review the harbor scene's atmosphere.\n\n"
-        "## Scene Planning\n\nThe weather and setting are fictional examples, not verified historical claims.",
-        tags=["Weather", "Setting"],
-        evidence_ids=[weather_passage],
-    )
-    visual_bytes = _synthetic_harbour_image()
-    dossier_current = research_api.get_dossier(research_proj, dossier_res["dossier_id"])
-    attached = research_api.attach_dossier_image(
-        research_proj, dossier_res["dossier_id"], visual_bytes, filename="invented-harbour.png",
-        expected_snapshot=dossier_current["snapshot"], expected_revision=dossier_current["revision"],
-        allow_retention=True, alt="Four invented warehouses beside a quay and water",
-        title="Synthetic harbour layout", section="Open Questions",
-        caption="Invented setting sketch; not a map or historical evidence.",
-        context={"provenance_note": "Generated from simple geometry for this UI example."},
-    )
-    visual_url = attached["images"][0]["url"]
-    research_api.create_claim(
-        research_proj,
-        title="Reformed customs seal",
-        statement="The night watchman reports an unharmed seal on the bonded warehouses.",
-        confidence="hypothetical",
-        time_period="1922–1924",
-        place="Hamburg Free Port Zone",
-        dossier_id=dossier_res["dossier_id"],
-    )
-    research_api.create_claim(
-        research_proj,
-        title="Harbour tour research notes",
-        statement="Modern field notes describe the former free port as a museum quarter.",
-        confidence="hypothetical",
-        time_period="present day",
-        place="Hamburg",
-    )
-    claim_res = research_api.create_claim(
-        research_proj,
-        title="Attempted warehouse entry",
-        statement="The customs log describes an attempted entry at Warehouse 4 in October 1923.",
-        confidence="evidenced",
-        time_period="1923",
-        place="Hamburg Free Port Zone",
-        actors=["Night watchman", "Customs officers"],
-        dossier_id=dossier_res["dossier_id"],
-    )
-    research_api.link_evidence(
-        research_proj,
-        claim_id=claim_res["claim_id"],
-        passage_id=passage_id,
-        relation="supports",
-        rationale="The synthetic log describes the attempted entry.",
-    )
-    research_api.record_decision(
-        research_proj,
-        title="Keep the inspection at dawn",
-        rationale="The synthetic source places the transfer at dawn; preserve that sequence.",
-        claim_id=claim_res["claim_id"],
-        impact_on_plot="The crate reaches the customs station in the following scene.",
-    )
-    research_api.record_decision(
-        research_proj,
-        title="Move the discovery scene",
-        rationale="Bring the discovery forward to make the fictional chapter flow clearer.",
-        claim_id=claim_res["claim_id"],
-        deviation_from_fact=True,
-        impact_on_plot="The protagonist arrives before the night watchman calls for help.",
-    )
-    sources_data = research_api.list_sources(research_proj)
-    dossiers_data = research_api.list_dossiers(research_proj)
-    claims_data = research_api.list_claims(research_proj)
-    decisions_data = research_api.list_decisions(research_proj)
-    workspace_search = research_api.search(
-        research_proj, "warehouse customs", scope="sources", ensure_fresh=True,
-    )
-    from lixity.nda import draft_document
-
-    nda_fields = {
-        "name": "Example Reader", "address": "Example street 1",
-        "project_name": title, "date": "2026-10-06", "place": "Example City",
-    }
-    research_fixture = {
-        visual_url: {"media_type": "image/png", "content_base64": base64.b64encode(visual_bytes).decode("ascii")},
-        "/api/nda-draft": {
-            "fields": nda_fields,
-            "text": draft_document(research_proj, **nda_fields, language=resolved.key).text,
-        },
-        # Synthetic server-local paths demonstrate the chooser without exposing a user's home.
-        "/api/project-paths": {
-            "ok": True, "path": "/home/demo/my-novel", "parent": "/home/demo",
-            "entries": [
-                {"name": "research", "path": "/home/demo/my-novel/research", "kind": "directory"},
-                {"name": "manuscript.md", "path": "/home/demo/my-novel/manuscript.md", "kind": "manuscript"},
-            ],
-            "truncated": False,
-        },
-        "/api/research/status": {
-            "ok": True,
-            "initialized": True,
-            "project_root": "./research-demo",
-            "project_id": sources_data["project_id"],
-            "project_title": sources_data["project_title"],
-            "project_language": sources_data["project_language"],
-            "sources": sources_data["sources"],
-            "dossiers": dossiers_data["dossiers"],
-            "claims": claims_data["claims"],
-            "decisions": decisions_data["decisions"],
-            "sources_count": len(sources_data["sources"]),
-            "dossiers_count": len(dossiers_data["dossiers"]),
-            "claims_count": len(claims_data["claims"]),
-            "decisions_count": len(decisions_data["decisions"]),
-        },
-        "/api/research/sources": {"ok": True, **sources_data},
-        "/api/research/dossiers": {"ok": True, **dossiers_data},
-        "/api/research/claims": {"ok": True, **claims_data},
-        "/api/research/claims?claim_id=" + quote(claim_res["claim_id"], safe=""): {
-            "ok": True,
-            **research_api.list_evidence_links(research_proj, claim_id=claim_res["claim_id"]),
-        },
-        "/api/research/decisions": {"ok": True, **decisions_data},
-        "/api/research/review": {"ok": True, **research_api.editorial_review(research_proj)},
-        "/api/research/timeline": {"ok": True, **research_api.timeline(research_proj)},
-        "/api/research/claim-relations?include_retracted=false": {
-            "ok": True, **research_api.list_claim_relations(research_proj)},
-        "/api/research/claim-relations?include_retracted=true": {
-            "ok": True, **research_api.list_claim_relations(research_proj, include_retracted=True)},
-        "/api/research-search": {"ok": True, **workspace_search},
-    }
-    for source in sources_data["sources"]:
-        research_fixture["/api/research/sources?id=" + quote(source["id"], safe="")] = {
-            "ok": True, **research_api.get_source(research_proj, source["id"]),
-        }
-    for dossier in dossiers_data["dossiers"]:
-        research_fixture["/api/research/dossiers?id=" + quote(dossier["id"], safe="")] = {
-            "ok": True, **research_api.get_dossier(research_proj, dossier["id"]),
-        }
-    operations = []
-    revision_previews = {}
-    for dossier in dossiers_data["dossiers"]:
-        record = research_api.get_record(research_proj, "dossier", dossier["id"])
-        research_fixture["/api/research/record?kind=dossier&id=" + quote(dossier["id"], safe="")] = {"ok": True, **record}
-        operation = {
-            "kind": "dossier", "id": dossier["id"], "expected_revision": record["record"]["revision"],
-            "changes": {"title": record["record"]["title"] + " — reviewed notes"},
-            "change_kind": "correction", "reason": "Align these notes with the harbour scene.",
-        }
-        operations.append(operation)
-        revision_previews[dossier["id"]] = {"ok": True, **research_api.prepare_record_revision(
-            research_proj, "dossier", dossier["id"], base_revision=operation["expected_revision"],
-            changes=operation["changes"],
-        )}
-    research_fixture["/api/research-record-prepare"] = revision_previews
-    research_fixture["/api/research-revision-batch-prepare"] = {"ok": True, **research_api.prepare_record_revisions(research_proj, operations)}
+    research_html = research_api.source_dashboard(research_proj, search_res["hits"][0]["source_id"])
+    _queue_capture(_write_html("dashboard-research.html", research_html), OUT_DIR / "dashboard-research.png", 1480, 960)
+    build_research_demo(BASE_DIR, research_fixture)
     _write_html("research-workspace-fixture.json", json.dumps(research_fixture, ensure_ascii=False))
     research_workspace = _write_html(
         "dashboard-research-workspace.html",
@@ -664,7 +832,8 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
                 height,
             )
     for suffix, width in (("", 1480), ("-mobile", 390)):
-        _queue_capture(research_workspace, OUT_DIR / f"dashboard-dossier-image{suffix}.png", width, 1000)
+        for visual in ("image", "photo", "geography"):
+            _queue_capture(research_workspace, OUT_DIR / f"dashboard-dossier-{visual}{suffix}.png", width, 1000)
 
     cli_research_text = (
         f"$ lixity research search --project ./novel-research --query \"warehouse customs\" --limit 1\n"

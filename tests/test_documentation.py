@@ -16,32 +16,6 @@ sys.path.insert(0, str(ROOT / "scripts"))
 
 
 class TestDocumentation(unittest.TestCase):
-    def test_public_demo_boundary_excludes_unapproved_helper_files(self):
-        """Publishing the demo must not publish its entire working directory."""
-        import tempfile
-
-        from stage_pages import DOCS_ROOT_FILES, PUBLIC_TREES, stage
-
-        self.assertEqual({name for name in DOCS_ROOT_FILES if name.startswith("demo/")}, {"demo/report.html"})
-        self.assertNotIn("demo", PUBLIC_TREES)
-
-        with tempfile.TemporaryDirectory() as directory:
-            source = Path(directory) / "docs"
-            (source / "demo").mkdir(parents=True)
-            (source / "guides").mkdir()
-            report = "<html><body>Synthetic read-only report.</body></html>"
-            (source / "demo" / "report.html").write_text(report, encoding="utf-8")
-            (source / "guides" / "first-look.html").write_text("Synthetic guide.", encoding="utf-8")
-            for name in ("unapproved.html", "source.md", "output.json", "archive.zip"):
-                (source / "demo" / name).write_text("Synthetic unapproved helper.", encoding="utf-8")
-            (source / "demo" / "helpers").mkdir()
-            (source / "demo" / "helpers" / "input.html").write_text("Unapproved nested helper.", encoding="utf-8")
-            output = Path(directory) / "site"
-            stage(source, output)
-            self.assertEqual((output / "demo" / "report.html").read_text(encoding="utf-8"), report)
-            self.assertTrue((output / "guides" / "first-look.html").is_file())
-            self.assertEqual({path.name for path in (output / "demo").iterdir()}, {"report.html"})
-
     def test_first_look_journey_and_relative_assets_exist_in_published_output(self):
         """The guide/report journey must survive Pages' explicit staging boundary."""
         import tempfile

@@ -18,7 +18,8 @@ a selected image. Use the links below for related views and full-size images.
 | Project settings | [Settings and file picker](dashboard-project-settings.png), [mobile](dashboard-project-settings-mobile.png), [expanded NDA panel](dashboard-nda.png), [mobile](dashboard-nda-mobile.png) |
 | Research sources | [Source report](dashboard-research.png), [source list](dashboard-research-sources.png), [mobile](dashboard-research-sources-mobile.png) |
 | Research dossiers | [Filtered notes with an exact-version image](dashboard-research-dossiers.png), [mobile](dashboard-research-dossiers-mobile.png) |
-| Visual references | [Dossier section](dashboard-dossier-image.png), [mobile](dashboard-dossier-image-mobile.png) |
+| Visual references | [Historical map](dashboard-dossier-image.png), [mobile map](dashboard-dossier-image-mobile.png), [photochrom](dashboard-dossier-photo.png), [mobile photochrom](dashboard-dossier-photo-mobile.png) |
+| Places and journeys | [Coordinate sketch](dashboard-dossier-geography.png), [mobile](dashboard-dossier-geography-mobile.png) |
 | Research search | [Passage results](dashboard-research-search.png), [mobile](dashboard-research-search-mobile.png) |
 | Claims and decisions | [Claims](dashboard-research-claims.png), [mobile](dashboard-research-claims-mobile.png), [decisions](dashboard-research-decisions.png), [mobile](dashboard-research-decisions-mobile.png) |
 | Claim chronology | [Timeline with axis, badges and placement hint](dashboard-research-timeline.png), [mobile](dashboard-research-timeline-mobile.png) |
@@ -30,10 +31,14 @@ a selected image. Use the links below for related views and full-size images.
 
 Analysis views use the public-domain Austen sample documented in
 [samples/README.md](https://github.com/mfahsold/lixity/blob/main/samples/README.md).
-Project paths, author settings, research sources, dossiers, claims and decisions are synthetic.
+Project paths, author settings, research prose, claims and decisions are synthetic.
 Marker notes exist only in an in-memory copy. The NDA view previews a synthetic
-five-field draft without storing agreements or recipient records. The dossier
-image is an invented geometric harbour sketch, not a historical map. These examples contain no private
+five-field draft without storing agreements or recipient records. Research visuals
+use a historical Hamburg map excerpt and a Photochrom Print Collection harbour
+view; [source metadata, credits and file hashes](../assets/research/sources.json)
+identify the reviewed public-domain originals. Geographic points and journeys
+are authored demonstration data, not positions derived from those images or
+verified historical routes. These examples contain no private
 manuscripts, archives, credentials or running user projects.
 
 Desktop/mobile overviews show a viewport; element captures are clamped to a

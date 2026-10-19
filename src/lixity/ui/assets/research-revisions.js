@@ -59,6 +59,7 @@ if (researchRevisionDialog) {
     dossier: [
       {name: "title", label: "research_dossier_title", required: true},
       {name: "body", label: "research_dossier_body", type: "textarea", required: true},
+      {name: "geography", label: "geography_title", type: "geography"},
       {name: "tags", label: "research_tags", type: "list"},
       {name: "evidence_ids", label: "research_evidence_ids", type: "list"}
     ],
@@ -111,6 +112,7 @@ if (researchRevisionDialog) {
   }
 
   function revisionFieldValue(record, name, pinned) {
+    if (name === "geography") return record.geography || null;
     if (name === "evidence_ids") return (record.evidence_refs || []).map(function(ref) { return revisionRefText(ref, pinned); });
     if (name === "dossier_ids") return (record.dossier_refs || []).map(function(ref) { return revisionRefText(ref, pinned); });
     if (name === "dossier_revisions") return Object.fromEntries((record.dossier_refs || []).map(function(ref) { return [ref.id, ref.revision]; }));
@@ -207,7 +209,10 @@ if (researchRevisionDialog) {
       var group = document.createElement("div");
       group.className = "form-group";
       var field;
-      if (spec.type === "checkbox") {
+      if (spec.type === "geography") {
+        field = window.LixityDossierGeography.mount(group, id, value);
+        revisionState.initial[spec.name] = field._geographyEditor.read();
+      } else if (spec.type === "checkbox") {
         var checkLabel = document.createElement("label");
         checkLabel.className = "form-checkbox";
         field = document.createElement("input");
@@ -254,7 +259,7 @@ if (researchRevisionDialog) {
       }
       field.id = id;
       field.name = spec.name;
-      var optional = !spec.required && !["confidence", "relation"].includes(spec.name);
+      var optional = !spec.required && spec.type !== "geography" && !["confidence", "relation"].includes(spec.name);
       if (optional) options.appendChild(group);
       else revisionFieldsHost.appendChild(group);
     });
@@ -287,7 +292,7 @@ if (researchRevisionDialog) {
         if (endpoint) value = endpoint.title + (endpoint.time_period ? " · " + endpoint.time_period : "") +
           " · " + uiFormat("research_revision_number", {revision: endpoint.revision});
       }
-      var valHtml = spec.name === "body" && value ?
+      var valHtml = spec.type === "geography" ? window.LixityDossierGeography.html(value) : spec.name === "body" && value ?
         researchDossierBodyHtml(value, envelope) :
         escapeHtml(value || "—");
       return '<dt>' + escapeHtml(uiLabel(spec.label)) + '</dt><dd>' + valHtml + '</dd>';
@@ -414,7 +419,7 @@ if (researchRevisionDialog) {
     var changes = {};
     revisionEditableSpecs().forEach(function(spec) {
       var input = document.getElementById("research-revision-field-" + spec.name);
-      var value = spec.type === "checkbox" ? input.checked : spec.type === "list" ?
+      var value = spec.type === "geography" ? input._geographyEditor.read() : spec.type === "checkbox" ? input.checked : spec.type === "list" ?
         input.value.split(",").map(function(item) { return item.trim(); }).filter(Boolean) :
         spec.type === "number" ? (input.value ? Number(input.value) : "") :
         spec.type === "textarea" ? input.value : input.value.trim();
@@ -451,7 +456,9 @@ if (researchRevisionDialog) {
       return null;
     }
     if (!revisionForm.reportValidity()) return null;
-    var changes = revisionChanges();
+    var changes;
+    try { changes = revisionChanges(); }
+    catch (error) { revisionStatus(error.message || uiLabel("geography_invalid"), true); return null; }
     if (!Object.keys(changes).length) {
       revisionStatus(uiLabel("research_revision_no_changes"), true);
       return null;
@@ -471,7 +478,8 @@ if (researchRevisionDialog) {
       var field = document.getElementById("research-revision-field-" + name);
       if (!field) return;
       var value = changes[name];
-      if (field.type === "checkbox") field.checked = Boolean(value);
+      if (field._geographyEditor) field._geographyEditor.set(value);
+      else if (field.type === "checkbox") field.checked = Boolean(value);
       else field.value = Array.isArray(value) ? value.join(", ") : value === null ? "" : String(value);
     });
     revisionReason.value = reason;
@@ -486,7 +494,7 @@ if (researchRevisionDialog) {
   function revisionPending(pending) {
     revisionState.pending = pending;
     revisionForm.setAttribute("aria-busy", String(pending));
-    revisionFieldsHost.querySelectorAll("input, textarea, select").forEach(function(input) { input.disabled = pending; });
+    revisionFieldsHost.querySelectorAll("input, textarea, select, button").forEach(function(input) { input.disabled = pending; });
     revisionForm.querySelectorAll('input[name="research_revision_change_kind"]').forEach(function(input) { input.disabled = pending; });
     revisionReason.disabled = pending;
     revisionSave.disabled = pending || !revisionState.current || Boolean(revisionState.merge);

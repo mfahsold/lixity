@@ -62,7 +62,7 @@
     return "/api/research/image?project_id=" + encodeURIComponent(context.project_id) +
       "&source_id=" + encodeURIComponent(pin[1]) + "&version_id=" + encodeURIComponent(pin[2]);
   }
-  function sourceContextHtml(image) {
+  function sourceContextHtml(image, collapsed) {
     if (!image || !image.context) return "";
     var note = image.context.provenance_note, origin = image.context.origin_url;
     var html = note ? '<p class="ctl-note">' + safe(note) + '</p>' : "";
@@ -70,10 +70,11 @@
       try {
         var parsed = new URL(origin);
         if (["http:", "https:"].includes(parsed.protocol)) html += '<p class="ctl-note"><a href="' + safe(origin) +
-          '" target="_blank" rel="noopener noreferrer nofollow">' + safe(uiLabel("ctx_origin_url")) + '</a></p>';
+          '" target="_blank" rel="noopener noreferrer nofollow">' + safe(label("source_link")) + '</a></p>';
       } catch (_) { /* Unverified metadata stays text and never initiates a fetch. */ }
     }
-    return html;
+    return html && collapsed ? '<details class="dossier-image-source-context"><summary>' +
+      safe(uiLabel("research_source_context")) + '</summary>' + html + '</details>' : html;
   }
   function figure(alt, pin, context) {
     var image = (context.images || []).find(function(item) {
@@ -92,7 +93,7 @@
     return '<figure class="dossier-image"><button type="button" class="dossier-image-enlarge" data-dossier-enlarge aria-label="' +
       safe(label("enlarge") + (alt ? ": " + alt : "")) + '"><img src="' + safe(url) + '" alt="' + safe(alt) +
       '" loading="lazy" decoding="async"></button><figcaption>' + safe(image.title || alt || label("attachment")) +
-      ' <span class="ctl-note">' + safe(label("retained")) + '</span></figcaption></figure>';
+      ' <span class="ctl-note">' + safe(label("retained")) + '</span>' + sourceContextHtml(image, true) + '</figcaption></figure>';
   }
   function prepareMarkdown(raw, context) {
     var text = String(raw || ""), html = [], masked = codeMask(text);

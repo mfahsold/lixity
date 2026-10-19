@@ -1,0 +1,70 @@
+{
+  "type": "FeatureCollection",
+  "features": [
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [9.9915, 53.541]},
+      "properties": {
+        "label": "Warehouse 4 — invented location",
+        "description": "An approximate author-selected setting point. The historical map does not identify this invented warehouse.",
+        "feature_type": "Fictional building",
+        "time_period": "1923 — fictional scene"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {"type": "Point", "coordinates": [10.002, 53.5385]},
+      "properties": {
+        "label": "Quay rendezvous — invented location",
+        "description": "A second approximate setting point for comparing two authored journey sketches. This is not a surveyed position.",
+        "feature_type": "Fictional meeting point",
+        "time_period": "1923 — fictional scene"
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[9.9915, 53.541], [9.994, 53.542], [9.998, 53.5405], [10.002, 53.5385]]
+      },
+      "properties": {
+        "label": "Night watchman's walk — fictional sketch",
+        "description": "Ordered author-supplied positions for a scene. The line does not establish a walkable or historically available route and is not aligned to the map image.",
+        "feature_type": "Authored journey",
+        "time_period": "1923-10-14 — fictional scene",
+        "actors": ["Night watchman"],
+        "transport": "walking",
+        "waypoint_labels": ["Warehouse gate", "First pause", "Quay turn", "Rendezvous"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [[9.9915, 53.541], [9.9945, 53.544], [10.002, 53.543], [10.002, 53.5385]]
+      },
+      "properties": {
+        "label": "Customs officer's drive — fictional alternative",
+        "description": "A contrasting author-supplied path, not a road-network result. No travel time or historical road access is asserted.",
+        "feature_type": "Authored journey",
+        "time_period": "1923-10-14 — fictional scene",
+        "actors": ["Customs officer"],
+        "transport": "driving",
+        "waypoint_labels": ["Warehouse gate", "Northern detour", "Eastern turn", "Rendezvous"]
+      }
+    },
+    {
+      "type": "Feature",
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [[[9.988, 53.536], [10.006, 53.536], [10.006, 53.546], [9.988, 53.546], [9.988, 53.536]]]
+      },
+      "properties": {
+        "label": "Scene-planning area — approximate extent",
+        "description": "An invented extent for organizing setting notes. It is not the historical free-port boundary, a cadastral parcel or a georeferenced map footprint.",
+        "feature_type": "Authored setting extent",
+        "time_period": "1923 — fictional scene"
+      }
+    }
+  ]
+}

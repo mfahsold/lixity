@@ -1,7 +1,6 @@
-# Read-only first-look report
+# Read-only public examples
 
-`report.html` is the only file from this directory published to GitHub Pages.
-It is a self-contained Lixity dashboard of
+`report.html` is a self-contained Lixity dashboard of
 [`samples/first-look.md`](../../samples/first-look.md): six entirely invented
 English chapters. It uses real paragraph, chapter, filter and 3D interactions
 from the existing renderer, with no server controls. The small example is not
@@ -14,7 +13,7 @@ The example's introductory notice and report header state the generating
 version. Regenerate it when the maintained UI or release version changes.
 
 From the repository root after [installation](../INSTALLATION.md), regenerate
-every published example with the maintained script:
+the analysis and manuscript PDF examples with the maintained script:
 
 ```bash
 make examples
@@ -30,5 +29,17 @@ an example page beyond its size budget.
 
 Review the regenerated HTML and run `make docs-check` plus the public documentation
 browser check described in [`tests/browser/README.md`](../../tests/browser/README.md).
-The Pages staging script includes `demo/report.html` and the `examples/**` pages;
-the source Markdown, JSON, archives and other adjacent files are not publications.
+`research.html` reuses the native research reader with a generated, GET-only
+`research-data.json` fixture. It has no editing, import or local-machine actions.
+The historical Hamburg map and photochrom are reviewed public-domain sources;
+[their manifest](../assets/research/sources.json) records credits and exact file
+hashes. Prose, claims, people and journeys are fictional demonstration material.
+The coordinate view is not georeferenced to the historical map.
+
+Regenerate the research fixture, page and screenshots with `make screenshots`.
+Both examples use the maintained application renderer; neither contacts Zotero
+or a user's running service. Research geography and this public research example
+are available since v0.7.0.
+
+The Pages boundary explicitly includes these three demo files and the reviewed
+visual assets. Other adjacent inputs, archives and local fixtures stay excluded.

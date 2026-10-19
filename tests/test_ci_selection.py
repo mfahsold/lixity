@@ -42,7 +42,8 @@ class TestNativePdfSelection(unittest.TestCase):
                 cwd=root, capture_output=True, text=True, timeout=60, check=False,
             )
         self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
-        collected = {line for line in result.stdout.splitlines() if line.startswith("tests/")}
+        collected = {line.partition("[")[0] for line in result.stdout.splitlines()
+                     if line.startswith("tests/")}
         self.assertEqual(collected, expected)
 
 class TestBrowserSuiteSelection(unittest.TestCase):

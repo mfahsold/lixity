@@ -6,6 +6,7 @@ import re
 import shutil
 import struct
 import subprocess
+from itertools import pairwise
 
 import pytest
 
@@ -225,3 +226,203 @@ def test_draft_notice_joins_running_header_in_every_layout(monkeypatch):
     )
     assert any(line.text == "Sheet · Author · Draft" for line in sheet_pages[0].lines)
 
+
+
+@pytest.mark.parametrize("renderer,content_argument", [(book_pdf, "chapters"), (report_pdf, "markdown")])
+def test_body_type_size_is_independent_of_manuscript_length(monkeypatch, renderer, content_argument):
+    sizes = []
+    for prose in ("Synthetic prose.", "Synthetic prose with ordinary readable words. " * 120):
+        content = [("Chapter", [prose])] if content_argument == "chapters" else "# Section\n\n" + prose
+        _, _, pages = captured_layout(monkeypatch, renderer, title="Title", choice=CHOSEN,
+                                      **{content_argument: content})
+        sizes.append(next(line.size for page in pages for line in page.lines
+                          if line.text.startswith("Synthetic prose")))
+    assert sizes[0] == sizes[1]
+    assert sizes[0] >= 9.0
+
+
+def test_editor_copy_has_annotation_margin_line_numbers_and_readable_leading(monkeypatch):
+    from lixity import pdf_layouts
+
+    _, doc, pages = captured_layout(
+        monkeypatch, pdf_layouts.editor_pdf, title="Synthetic editor copy", choice=CHOSEN,
+        chapters=[("Chapter", ["Readable manuscript paragraph for correction. " * 90])],
+    )
+    assert doc.width == pytest.approx(595.276)
+    assert doc.height == pytest.approx(841.89)
+    assert doc.right >= 96
+    body = [line for page in pages for line in page.lines if line.text.startswith("Readable")]
+    assert body and all(line.size == 12 for line in body)
+    for page in pages:
+        numbers = [line for line in page.lines if line.x < doc.left]
+        if not page.decorated:
+            assert not numbers
+            continue
+        assert numbers
+        assert [int(line.text) for line in numbers] == list(range(1, len(numbers) + 1))
+        for number in numbers:
+            assert number.x + text_width(number.text, doc.fonts.face(number.role), number.size) < doc.left
+        body_lines = [line for line in page.lines if doc.left <= line.x
+                      and doc.bottom <= line.y <= doc.height - doc.top]
+        assert all(line.word_spacing == 0 for line in body_lines)
+        assert all(line.x + text_width(line.text, doc.fonts.face(line.role), line.size)
+                   <= page.width - 96 + 0.01 for line in body_lines)
+        assert all(number.x >= 0 for number in numbers)
+        baselines = sorted({line.y for line in body_lines}, reverse=True)
+        assert all(a - b >= 17.9 for a, b in pairwise(baselines))
+
+
+def test_heading_stays_with_following_text_and_paragraphs_avoid_single_line_fragments():
+    fonts = FontSet({"text": str(SERIF)})
+    doc = Document(fonts, page_size=(250, 180), margins=(25, 25, 25, 25))
+    doc.add(Block("Opening\n" * 5, size=12, leading=1.5))
+    doc.add(Block("Subheading", size=14, keep_with_next=True))
+    doc.add(Block("Following body paragraph. " * 10, size=12, leading=1.5, min_split_lines=2))
+    pages = doc._compose()
+    heading_page = next(page for page in pages if any(line.text == "Subheading" for line in page.lines))
+    assert any(line.text.startswith("Following") for line in heading_page.lines)
+    for page in pages:
+        following = [line for line in page.lines if line.text and line.text != "Subheading"
+                     and line.text != "Opening"]
+        if following:
+            assert len(following) >= 2
+
+
+def test_inline_faces_use_actual_widths_and_preserve_words():
+    from lixity.pdf_document import JUSTIFIED
+    from tests.test_pdf_export import BOLD
+
+    fonts = FontSet({"text": str(SERIF), "heading": str(BOLD)})
+    doc = Document(fonts, page_size=(190, 230), margins=(25, 25, 25, 25))
+    runs = [("Ordinary ", "text"), ("WWWWWW bold words ", "heading"),
+            ("and ordinary prose repeated. " * 10, "text")]
+    text = "".join(part for part, _ in runs)
+    doc.add(Block(text, size=12, align=JUSTIFIED, runs=runs, min_split_lines=2))
+    assert doc.render().startswith(b"%PDF")
+    pages = doc._compose()
+    words = []
+    for page in pages:
+        rows = {}
+        for line in page.lines:
+            rows.setdefault(line.y, []).append(line)
+        for segments in rows.values():
+            segments.sort(key=lambda line: line.x)
+            words.extend("".join(line.text for line in segments).split())
+            for line in segments:
+                width = text_width(line.text, fonts.face(line.role), line.size)
+                width += line.text.count(" ") * line.word_spacing
+                assert line.x + width <= 165.01
+    assert words == text.split()
+    assert any(line.role == "heading" and "WWWW" in line.text for page in pages for line in page.lines)
+
+
+@pytest.mark.parametrize("mode", ["book", "editor", "sheet"])
+def test_semantic_manuscript_blocks_keep_structure_styles_and_explicit_breaks(monkeypatch, mode):
+    from lixity import pdf_layouts
+    from lixity.manuscript_document import ManuscriptBlock
+
+    renderer = {"book": book_pdf, "editor": pdf_layouts.editor_pdf, "sheet": manuscript_pdf}[mode]
+    chapters = [("Chapter", [
+        ManuscriptBlock("paragraph", "Plain *emphasized* **strong** ***both*** and `code` words."),
+        ManuscriptBlock("heading", "Subheading", level=3),
+        ManuscriptBlock("paragraph", "Following paragraph."),
+        ManuscriptBlock("quote", "Quoted words."),
+        ManuscriptBlock("list_item", "- First listed item."),
+        ManuscriptBlock("scene_break", "* * *"),
+        ManuscriptBlock("code", "value = **literal**"),
+        ManuscriptBlock("note", "[1] Endnote words."),
+        ManuscriptBlock("page_break"),
+        ManuscriptBlock("paragraph", "After explicit break."),
+    ])]
+    _, doc, pages = captured_layout(monkeypatch, renderer, title="Title", choice=CHOSEN,
+                                    chapters=chapters)
+    lines = [line for page in pages for line in page.lines]
+    for word in ("emphasized", "strong", "both", "code", "Quoted words.",
+                 "- First listed item.", "* * *", "value = **literal**", "[1] Endnote words."):
+        assert any(word in line.text for line in lines)
+    subhead_page = next(page for page in pages if any(line.text == "Subheading" for line in page.lines))
+    assert any(line.text == "Following paragraph." for line in subhead_page.lines)
+    before = next(i for i, page in enumerate(pages)
+                  if any("Endnote words." in line.text for line in page.lines))
+    after = next(i for i, page in enumerate(pages)
+                 if any(line.text == "After explicit break." for line in page.lines))
+    assert after > before
+    if mode == "sheet":
+        assert set(doc.fonts.paths) == {"mono"}
+        for page in pages:
+            body = [line for line in page.lines if doc.bottom <= line.y <= doc.height - doc.top]
+            assert len(body) <= 30
+            assert all(len(line.text) <= 60 for line in body)
+    else:
+        assert any(line.text == "emphasized" and line.role == "italic" for line in lines)
+        assert any(line.text == "strong" and line.role == "heading" for line in lines)
+        assert any(line.text == "both" and line.role == "bold_italic" for line in lines)
+        assert any(line.text == "code" and line.role == "mono" for line in lines)
+        assert any(line.text == "Quoted words." and line.x > doc.left for line in lines)
+
+
+def test_unneeded_inline_font_roles_are_not_resolved(monkeypatch):
+    from lixity import pdf_layouts
+
+    monkeypatch.setenv("LIXITY_PDF_FONT_ITALIC", "/missing/italic.ttf")
+    monkeypatch.setenv("LIXITY_PDF_FONT_BOLD_ITALIC", "/missing/bold-italic.ttf")
+    monkeypatch.setenv("LIXITY_PDF_FONT_MONO", "/missing/mono.ttf")
+    for renderer in (book_pdf, pdf_layouts.editor_pdf):
+        assert renderer(title="Title", chapters=[("Chapter", ["Plain readable prose."])],
+                        choice=FontChoice(serif=str(SERIF), serif_bold=str(SERIF))).startswith(b"%PDF")
+
+
+@pytest.mark.parametrize("mode", ["book", "editor", "sheet"])
+def test_chapter_labels_render_visible_inline_text_without_source_markers(monkeypatch, mode):
+    from lixity import pdf_layouts
+
+    renderer = {"book": book_pdf, "editor": pdf_layouts.editor_pdf, "sheet": manuscript_pdf}[mode]
+    data, _, pages = captured_layout(
+        monkeypatch, renderer, title="Title", choice=CHOSEN,
+        chapters=[(r"**Night** and \textit{water}", ["Readable synthetic body."])],
+    )
+    visible = "".join(line.text for page in pages for line in page.lines)
+    assert "Night and water" in visible
+    assert "**" not in visible and r"\textit" not in visible
+    if mode != "sheet":
+        assert b"/Title <FEFF004E006900670068007400200061006E0064002000770061007400650072>" in data
+
+
+def test_literal_code_blocks_preserve_indentation_and_explicit_lines(monkeypatch):
+    from lixity.manuscript_document import ManuscriptBlock
+    from lixity.pdf_layouts import editor_pdf
+
+    _, _, pages = captured_layout(
+        monkeypatch, editor_pdf, title="Title", choice=CHOSEN,
+        chapters=[("Chapter", [ManuscriptBlock("code", "if ready:\n    nested = **literal**\n\tsecond = 2")])],
+    )
+    code = [line.text for page in pages for line in page.lines if line.role == "mono"]
+    assert code == ["if ready:", "    nested = **literal**", "    second = 2"]
+
+
+def test_sheet_character_limit_also_bounds_literal_whitespace_only_code(monkeypatch):
+    from lixity.manuscript_document import ManuscriptBlock
+
+    _, doc, pages = captured_layout(
+        monkeypatch, manuscript_pdf, title="Title", choice=CHOSEN,
+        chapters=[("Chapter", [ManuscriptBlock("code", " " * 140 + "\n    literal")])],
+    )
+    body = [line for page in pages for line in page.lines
+            if doc.bottom <= line.y <= doc.height - doc.top]
+    assert all(len(line.text) <= 60 for line in body)
+
+
+def test_consecutive_headings_move_together_with_following_body():
+    fonts = FontSet({"text": str(SERIF)})
+    doc = Document(fonts, page_size=(200, 200), margins=(20, 20, 20, 20))
+    for _ in range(5):
+        doc.add(Block("Filler", size=12, leading=1.5))
+    for heading in ("First heading", "Second heading"):
+        doc.add(Block(heading, size=12, leading=1.5, space_after=4, keep_with_next=True))
+    doc.add(Block("Following body with ordinary words " * 3,
+                  size=12, leading=1.5, min_split_lines=2))
+    pages = doc._compose()
+    assert [line.text for line in pages[0].lines] == ["Filler"] * 5
+    assert [line.text for line in pages[1].lines[:2]] == ["First heading", "Second heading"]
+    assert pages[1].lines[2].text.startswith("Following body")
+    assert len(pages[1].lines[2:]) >= 2

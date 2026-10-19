@@ -56,6 +56,7 @@ def file_bytes(project):
 
 
 @pytest.mark.parametrize("layout,page_size", [
+    ("editor", b"595.276 841.890"),
     ("book", b"419.528 595.276"), ("sheet", b"595.276 841.890"),
     ("report", b"595.276 841.890"),
 ])

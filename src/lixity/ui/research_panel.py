@@ -153,6 +153,7 @@ def render_research_panel(labels: Mapping[str, str] | None = None, *, research_c
     parts.append(form_field("r-dos-body", "research_dossier_body",
                  f'<textarea class="ctl" id="r-dos-body" placeholder="{L("research_dossier_body")}" rows="4"></textarea>'))
     parts.append('</div>')
+    parts.append('<div id="r-dos-geography-host"></div>')
     parts.append('<div class="row">')
     parts.append(f'<button class="ctl primary" id="r-dos-create-btn">{L("research_dossier_action")}</button>')
     parts.append('</div>')

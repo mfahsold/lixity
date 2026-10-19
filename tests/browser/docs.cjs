@@ -22,7 +22,95 @@ function htmlRoutes(directory, prefix = '') {
 const routes = htmlRoutes(root).sort();
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
 const fullMatrixRoutes = new Set(['', 'guides/research-pdf.html', 'demo/report.html',
-  'examples/effi-briest.html', 'blog/whats-new-lixity.html']);
+  'demo/research.html', 'examples/effi-briest.html', 'blog/whats-new-lixity.html']);
+
+async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
+  const notice = page.locator('#example-context');
+  const credits = page.locator('#research-source-credits');
+  await expect(notice).toContainText('read-only research example');
+  await expect(notice).toContainText('Generated with Lixity');
+  await expect(notice).toContainText('fictional');
+  await expect(notice).toContainText('cannot import, edit or save');
+  await expect(credits).toContainText('Richard Krause');
+  await expect(credits).toContainText('Library of Congress');
+  await expect(credits.locator('a[href="../assets/research/sources.json"]')).toBeVisible();
+  function assertReadOnly() {
+    return expect(page.locator('input[type=file], textarea, [data-research-revise], [data-dossier-add-image], [data-geo-add], [data-geo-remove], [data-action], #research-revision-edit-tab, #research-revision-save, #research-revision-batch-add, #r-dos-create-btn, #r-claim-create-btn, #r-decision-create-btn, #r-ingest-btn, #r-zotero-browse, .view-navigation, #project-controls')
+      .locator('visible=true')).toHaveCount(0);
+  }
+  await assertReadOnly();
+  if (!javaScriptEnabled) {
+    await expect(page.getByText('This interactive read-only example requires JavaScript. Source credits remain available below.', {exact: true})).toBeVisible();
+    await notice.locator('a[href="#research-source-credits"]').click();
+    await expect(page).toHaveURL(/#research-source-credits$/);
+    await expect(credits.locator('h2')).toBeInViewport();
+    return;
+  }
+  await expect(page.locator('#research-sources-list .research-card')).toHaveCount(4);
+  await page.locator('#r-filter-sources').fill('Hamburg free-port');
+  await expect(page.locator('#research-sources-list .research-card').locator('visible=true')).toHaveCount(1);
+  const source = page.locator('#research-sources-list .research-card').filter({hasText: 'Hamburg free-port area, circa 1900'});
+  await source.locator('[data-research-detail=source]').click();
+  await expect(source.locator('.research-details-body')).toContainText('image/jpeg');
+  await expect(source.locator('.research-details-body')).toContainText('circa-1900');
+  await page.locator('#r-filter-sources').fill('');
+  await page.locator('[data-rtab=dossiers]').click();
+  await expect(page.locator('#research-dossiers-list .research-card')).toHaveCount(2);
+  const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
+  await dossier.locator('[data-research-detail=dossier]').click();
+  const detail = dossier.locator('.research-details-body');
+  await expect(detail.locator('.dossier-image img')).toHaveCount(2);
+  for (const image of await detail.locator('.dossier-image img').all()) {
+    await image.evaluate(element => { element.loading = 'eager'; return element.decode(); });
+    assert.ok(await image.evaluate(element => element.naturalWidth > 1000 && element.naturalHeight > 1000), 'Reviewed public images decode at their original resolution');
+    assert.match(await image.getAttribute('src'), /\.\.\/assets\/research\/hamburg-.+\.jpg$/);
+    await image.locator('..').click();
+    const enlarged = page.locator('#modal-dossier-image-enlarge');
+    await expect(enlarged).toBeVisible();
+    await expect(enlarged.locator('img')).toHaveAttribute('src', await image.getAttribute('src'));
+    await page.keyboard.press('Escape');
+    await expect(enlarged).not.toBeVisible();
+  }
+  const sourceContext = detail.locator('.dossier-image figcaption details').first();
+  await sourceContext.locator('summary').click();
+  await expect(sourceContext).toContainText('Richard Krause');
+  await expect(sourceContext.locator('a[href^="https://commons.wikimedia.org/"]')).toBeVisible();
+  await sourceContext.locator('summary').click();
+  const geography = detail.locator('.dossier-geography');
+  await expect(geography).toContainText("Night watchman's walk");
+  await expect(geography).toContainText("Customs officer's drive");
+  await expect(geography.locator('svg')).toBeVisible();
+  await expect(geography.locator('li')).toHaveCount(5);
+  const labels = await geography.locator('svg text').evaluateAll(nodes => nodes.map(node => [node.getAttribute('x'), node.getAttribute('y')].join(',')));
+  assert.equal(new Set(labels).size, labels.length, 'Canonical point and route number markers use distinct anchors');
+  await assertReadOnly();
+  await geography.scrollIntoViewIfNeeded();
+  await page.screenshot({path: path.join(artifacts, `research-geography-${width}-${colorScheme}.png`)});
+  await dossier.locator('[data-research-history=dossier]').click();
+  const history = page.locator('#research-revision-history-detail');
+  await expect(history.locator('.dossier-image img')).toHaveCount(2);
+  await expect(history.locator('.dossier-geography')).toContainText("Night watchman's walk");
+  await assertReadOnly();
+  await page.locator('#research-revision-history-list [data-research-revision="1"]').click();
+  await expect(history.locator('.dossier-image img')).toHaveCount(0);
+  await expect(history.locator('.dossier-geography')).toContainText("Night watchman's walk");
+  await page.keyboard.press('Escape');
+  await page.locator('[data-rtab=claims]').click();
+  await expect(page.locator('#research-claims-list .research-card')).toHaveCount(3);
+  const claim = page.locator('#research-claims-list .research-card').filter({hasText: 'Attempted warehouse entry'});
+  await claim.locator('[data-load-evidence]').click();
+  await expect(claim.locator('.claim-evidence-subpanel')).toContainText('synthetic');
+  await page.locator('#r-open-timeline').click();
+  await expect(page.locator('#research-claims-timeline .research-timeline-strip-row')).toHaveCount(2);
+  await expect(page.locator('#research-claims-timeline')).toContainText('present day');
+  await assertReadOnly();
+  await page.locator('[data-rtab=decisions]').click();
+  await expect(page.locator('#research-decisions-list .research-card')).toHaveCount(2);
+  await page.locator('[data-rtab=review]').click();
+  await expect(page.locator('#research-editorial-review')).not.toContainText('Loading');
+  await expect(page.locator('#research-editorial-review')).toContainText('Warehouse 4 case notes');
+  await assertReadOnly();
+}
 
 async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('.page').count(), 1, 'The example uses the generated report layout');
@@ -123,7 +211,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, 'index.html');
         assert.ok(file.startsWith(root + path.sep));
         assert.ok(fs.existsSync(file), `Missing public asset ${relative}`);
-        const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.png': 'image/png', '.svg': 'image/svg+xml'}[path.extname(file)];
+        const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml'}[path.extname(file)];
         await route.fulfill({contentType, body: fs.readFileSync(file)});
       });
       for (const width of [1440, 390, 320]) {
@@ -146,6 +234,8 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
           if (dashboard) {
             assert.ok(await page.locator('.chapter').count() > 0, `${route} renders chapters`);
             assert.ok(await page.locator('.chip').count() > 0, `${route} renders paragraph chips`);
+          } else if (route === 'demo/research.html') {
+            assert.ok((await page.locator('#research-source-credits').innerText()).length > 1000, 'The research example has readable source credits without scripting');
           } else {
             assert.ok((await page.locator('main').innerText()).length > 1000,
               `${route} has too little visible text`);
@@ -191,6 +281,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
           }
           await page.screenshot({path: path.join(artifacts, `${route ? path.basename(route, '.html') : 'home'}-${width}-${colorScheme}${javaScriptEnabled ? '' : '-js-off'}.png`), fullPage: route === '' || route === 'guides/first-look.html'});
           if (route === 'demo/report.html') await checkReport(page, javaScriptEnabled, width, colorScheme);
+          if (route === 'demo/research.html') await checkResearchDemo(page, javaScriptEnabled, width, colorScheme);
         }
         await page.goto('http://lixity.test/lixity/');
         await page.locator('.hero-cta a[href="guides/first-look.html"]').click();
@@ -237,6 +328,6 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only journey, report keyboard/filter/chart controls, assets, overflow and console passed. Screenshots: ${artifacts}`);
+    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only journey, report keyboard/filter/chart controls, read-only research source/image/geography/history/timeline journey, assets, overflow and console passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

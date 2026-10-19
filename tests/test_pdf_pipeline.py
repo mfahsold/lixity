@@ -1,9 +1,14 @@
 """Shared in-memory PDF composition and selected-workspace download tokens."""
 
+import re
+import shutil
+import subprocess
 import tempfile
 import unittest
 from dataclasses import replace
 from pathlib import Path
+
+import pytest
 
 from lixity.cli import main
 from lixity.config import load_project_config
@@ -12,6 +17,38 @@ from tests.test_pdf_export import CHOSEN, needs_fonts
 
 
 class PdfPipelineTest(unittest.TestCase):
+    @needs_fonts
+    @pytest.mark.native_pdf
+    @unittest.skipUnless(shutil.which("pdftotext"), "requires Poppler pdftotext")
+    def test_manuscript_layouts_preserve_visible_structure_and_endnotes(self):
+        from lixity.pdf_export import compose_pdf
+
+        text = (
+            "# Synthetic title\n\nA preserved preface.\n\n## First chapter\n\n"
+            "### A preserved subheading\n\nA *quiet* and \\textbf{firm} warning[^a].\n\n"
+            "> A preserved quotation.\n\n- A preserved list item.\n\n***\n\n"
+            "A new scene.\n\n[^a]: A preserved note.\n\n"
+            "## Anmerkungen und Literaturverzeichnis\n\nA preserved appendix.\n"
+        )
+        with tempfile.TemporaryDirectory() as directory:
+            for layout in ("editor", "book", "sheet"):
+                with self.subTest(layout=layout):
+                    target = Path(directory) / f"{layout}.pdf"
+                    target.write_bytes(compose_pdf(
+                        text, manuscript="synthetic.md", layout=layout, choice=CHOSEN,
+                    ))
+                    result = subprocess.run(  # noqa: S603 - Poppler and a synthetic PDF
+                        [shutil.which("pdftotext"), str(target), "-"],
+                        check=True, capture_output=True, text=True,
+                    )
+                    visible = " ".join(result.stdout.split())
+                    for fragment in ("preserved preface", "preserved subheading", "quiet",
+                                     "firm", "[a]", "preserved quotation", "preserved list item",
+                                     "preserved note", "preserved appendix"):
+                        self.assertIn(fragment, visible)
+                    self.assertRegex(visible, re.compile(r"\*\s*\*\s*\*"))
+                    self.assertNotIn("\\textbf", visible)
+
     @needs_fonts
     def test_composition_matches_existing_cli_layouts_without_writing_files(self):
         from lixity.pdf_export import compose_pdf
@@ -24,7 +61,7 @@ class PdfPipelineTest(unittest.TestCase):
                 encoding="utf-8",
             )
             (root / "lixity.toml").write_text('title = "Configured title"\nlanguage = "de"\n')
-            for layout in ("book", "sheet", "report"):
+            for layout in ("editor", "book", "sheet", "report"):
                 with self.subTest(layout=layout):
                     target = root / f"cli-{layout}.pdf"
                     self.assertEqual(main([

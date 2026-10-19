@@ -25,7 +25,7 @@ baseline = render_dashboard(result.chapters, result.paragraphs, metrics=result.m
 fixtures = {}
 for locale in ("en", "de", "fr", "es", "it", "pt", "nl"):
     labels = {**get_language_profile(locale).labels, **WORKSPACE_LABELS[locale]}
-    checks = {"title": {"status":"matched", "value":"Synthetic project", "source":"title_page"},
+    checks = {"title": {"status":"missing", "value":None, "source":None},
               "author_name": {"status":"mismatch", "value":'Other <img src=x onerror=alert(1)> Writer', "source":"front_matter"}}
     fixtures[locale] = {"labels": labels, "loaded": render_dashboard([], [], controls=True,
          language_key=locale, current_language=locale, labels=labels, title="Synthetic project",
@@ -48,14 +48,14 @@ from http.server import ThreadingHTTPServer
 from lixity.server import LixityServerHandler
 base = Path(sys.argv[1])
 projects = []
-for name in ('desktop', 'mobile'):
-    root = base / name
+for width in (1440, 320):
+    root = base / str(width)
     root.mkdir()
     source = root / 'manuscript.md'
     source.write_text('# Synthetic settings project\\n\\n## One\\n\\nA bird crosses the quiet garden.\\n', encoding='utf-8')
     config = root / 'lixity.toml'
     config.write_text('language = "en"\\nfdr_q = 0.05\\nmin_chapters = 7\\n', encoding='utf-8')
-    projects.append({'root': str(root), 'source': str(source), 'config': str(config)})
+    projects.append({'root': str(root), 'source': str(source), 'config': str(config), 'width':width})
 LixityServerHandler.workspace_root = projects[0]['root']
 LixityServerHandler.source_input = projects[0]['source']
 LixityServerHandler.exports_dir = str(base / 'exports')
@@ -65,8 +65,8 @@ print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'projects': p
 server.serve_forever()
 `,artifacts);
   try {
-    for(const [index,width] of [1440,320].entries()) {
-      const project=server.fixture.projects[index];
+    for(const project of server.fixture.projects) {
+      const {width}=project;
       const originals={config:fs.readFileSync(project.config),source:fs.readFileSync(project.source)};
       const page=await browser.newPage({viewport:{width,height:1000}});
       const errors=[];
@@ -76,7 +76,21 @@ server.serve_forever()
       assert.equal(opened.status(),200);
       await page.goto(server.fixture.url);
       await page.locator('#tab-view-project').click();
+      assert.equal(await page.locator('#set-language').inputValue(),'en');
+      const identitySummary=page.locator('#settings-identity > summary');
+      await identitySummary.focus();
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#project-identity-check').isVisible(),true);
+      assert.equal(await page.locator('[data-identity-status=matched]').textContent(),data.fixtures.en.labels.project_identity_matched);
+      assert.ok((await page.locator('#project-identity-check').textContent()).includes(data.fixtures.en.labels.project_identity_enter_author_name));
       await page.locator('#settings-thresholds > summary').click();
+      await page.locator('#set-fdr-q').fill('0.02');
+      await page.locator('#set-save-analysis-defaults').check();
+      await page.locator('#settings-reset').click();
+      assert.equal(await page.locator('#set-fdr-q').inputValue(),'0.05');
+      assert.equal(await page.locator('#set-save-analysis-defaults').isChecked(),true,'Reset does not change the explicit save preference');
+      assert.deepEqual(fs.readFileSync(project.config),originals.config,'Reset cannot save configuration');
+      await page.locator('#set-save-analysis-defaults').uncheck();
       await page.locator('#set-fdr-q').fill('0.02');
       async function apply() {
         const response=page.waitForResponse(response=>response.url().endsWith('/api/settings'));
@@ -115,7 +129,7 @@ server.serve_forever()
       assert.deepEqual(errors,[]);
       await page.close();
     }
-    console.log('Native settings defaults: unchecked byte preservation, explicit save/reopen, reset opt-in and unchanged manuscripts at both widths passed. '+artifacts);
+    console.log('Native settings defaults: keyboard disclosure, reset without save, unchecked byte preservation, explicit save/reopen and unchanged manuscripts at1440/320 passed. '+artifacts);
   } finally {await server.close();}
 }
 
@@ -203,6 +217,26 @@ server.serve_forever()
       assert.ok((await page.title()).includes('Synthetic project'));
       assert.equal(await page.locator('#settings-form h3').isVisible(),true);
       assert.equal(await page.locator('#settings-scope-help').isVisible(),true);
+      assert.equal(await page.locator('#settings-project-details > legend').textContent(),data.fixtures[language].labels.settings_project_details);
+      assert.equal(await page.locator('#settings-analysis > legend').textContent(),data.fixtures[language].labels.settings_analysis);
+      assert.equal(await page.locator('#settings-project-details #set-title').count(),1);
+      assert.equal(await page.locator('#settings-project-details #set-author-name').count(),1);
+      assert.equal(await page.locator('#settings-analysis #set-language').count(),1);
+      assert.equal(await page.locator('#settings-analysis #set-save-analysis-defaults').count(),1);
+      await page.locator('#set-title').focus();
+      await page.keyboard.press('Tab');
+      assert.equal(await page.locator('#set-author-name').evaluate(field=>document.activeElement===field),true);
+      await page.keyboard.press('Tab');
+      assert.equal(await page.locator('#settings-identity > summary').evaluate(field=>document.activeElement===field),true);
+      await page.keyboard.press('Enter');
+      assert.equal(await page.locator('#project-identity-check').isVisible(),true);
+      const comparisonSpacing=await page.locator('#settings-identity > summary').evaluate(summary=>({
+        previous:summary.getBoundingClientRect().top-summary.parentElement.previousElementSibling.getBoundingClientRect().bottom,
+        next:summary.nextElementSibling.getBoundingClientRect().top-summary.getBoundingClientRect().bottom,
+      }));
+      assert.ok(comparisonSpacing.previous>=6,'Keyboard focus outline must clear the preceding help text');
+      assert.ok(comparisonSpacing.next>=6,'Keyboard focus outline must clear the following help text');
+      await page.locator('#settings-form').screenshot({path:path.join(identityArtifacts,`${language}-${width}-comparison.png`)});
       assert.equal(await page.locator('#set-language-help').textContent(),data.fixtures[language].labels.settings_language_hint);
       assert.equal(await page.locator('#settings-project-save-help').textContent(),data.fixtures[language].labels.settings_project_save_hint);
       const languageDescription=await page.locator('#set-language').evaluate(field=>
@@ -224,13 +258,15 @@ server.serve_forever()
       assert.equal(await author.isDisabled(),false);
       assert.equal(await author.getAttribute('maxlength'),'500');
       assert.equal(await page.locator('label[for=set-author-name]').textContent(),data.fixtures[language].labels.project_author_name);
-      assert.equal(await page.locator('#project-identity-check [data-identity-status=matched]').textContent(),data.fixtures[language].labels.project_identity_matched);
+      assert.equal(await page.locator('#project-identity-check [data-identity-status=missing]').textContent(),data.fixtures[language].labels.project_identity_missing);
+      const titleComparison=page.locator('#project-identity-check dd').first();
+      assert.ok((await titleComparison.textContent()).includes(data.fixtures[language].labels.project_identity_saved+': Synthetic project'));
+      assert.ok((await titleComparison.textContent()).includes(data.fixtures[language].labels.project_identity_manuscript+': '+data.fixtures[language].labels.project_identity_missing));
       assert.equal(await page.locator('#project-identity-check [data-identity-status=mismatch]').textContent(),data.fixtures[language].labels.project_identity_mismatch);
       assert.equal(await page.locator('#project-identity-check img, #project-identity-check script').count(),0);
       assert.ok((await page.locator('#project-identity-check').textContent()).includes('Other <img src=x onerror=alert(1)> Writer'));
       const identityText=await page.locator('#project-identity-check').textContent();
       assert.ok(identityText.includes(data.fixtures[language].labels.project_identity_source_metadata));
-      assert.ok(identityText.includes(data.fixtures[language].labels.project_identity_source_title_page));
       assert.equal(identityText.includes('front_matter'),false);
       const draft='  Synthetic Élise  Writer <b>  ';
       await author.fill(draft);

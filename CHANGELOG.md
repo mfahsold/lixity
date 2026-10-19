@@ -7,6 +7,33 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-10-19
+
+### Added
+- A4 editorial PDF copies with line numbers and correction margins through the
+  existing CLI and native download composer.
+- Optional structured places, areas and character journeys within existing
+  dossiers, with a shared editor, offline coordinate view and GeoJSON import.
+  Geographic saves require record/manifest v8; ordinary dossier encodings remain unchanged.
+- Read-only research preview using attributed historical Hamburg map/photochrom
+  sources alongside explicitly fictional scene notes and journey coordinates.
+
+### Changed
+- Manuscript PDFs preserve document structure separately from statistical text
+  cleaning, with bounded embedded LaTeX text formatting, shared layout handling
+  and stable reading typography.
+- Zotero captures PNG/JPEG through the existing retained-image pipeline and
+  exports them with media-correct filenames. Image captions expose provenance
+  and source links in the ordinary dossier reader.
+- Settings group project details and analysis choices by purpose, explain
+  persistence beside the controls, and distinguish project values from values
+  that could not be automatically detected in the manuscript.
+
+### Fixed
+- Oversized research records are rejected before publication, preserving the
+  previous readable snapshot. Geography editing preserves Unicode and multiline
+  metadata and guards pending file imports against concurrent saves.
+
 ## [0.6.0] - 2026-10-19
 
 ### Changed
@@ -2230,7 +2257,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.6.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.0...HEAD
+[0.7.0]: https://github.com/mfahsold/lixity/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/mfahsold/lixity/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mfahsold/lixity/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/mfahsold/lixity/compare/v0.4.8...v0.4.9

@@ -35,7 +35,7 @@ def settings_form(
                               for field in PUBLICATION_FIELDS
                               for value in [(publication or {}).get(field.key, "")]})
     initial_publication = esc(json.dumps(publication_values, ensure_ascii=False, sort_keys=True))
-    project_save_hint = (f' <span id="settings-project-save-help">{translated("settings_project_save_hint")}</span>'
+    project_save_hint = (f'<p class="ctl-note" id="settings-project-save-help">{translated("settings_project_save_hint")}</p>'
                          if author_setting_enabled else "")
     parts = [
         f'<form id="settings-form" class="settings-form ctl-group" novalidate '
@@ -43,17 +43,11 @@ def settings_form(
         f'data-publication-editable="{str(author_setting_enabled).lower()}" '
         f'data-title-initial="{esc(title)}" data-author-initial="{esc(project_author)}">',
         f'<h3>{translated("settings")}</h3>',
-        f'<p class="panel-guide" id="settings-scope-help">{translated("settings_intro")}{project_save_hint}</p>',
+        f'<p class="panel-guide" id="settings-scope-help">{translated("settings_intro")}</p>',
+        '<fieldset class="settings-section" id="settings-project-details">',
+        f'<legend>{translated("settings_project_details")}</legend>',
+        project_save_hint,
         '<div class="settings-grid">',
-        f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("language"))}</label>',
-        '<select class="ctl" id="set-language" aria-describedby="set-language-help settings-scope-help">',
-    ]
-    for code, name in language_options:
-        selected = " selected" if code == current_language else ""
-        parts.append(f'<option value="{esc(code)}"{selected}>{esc(name)}</option>')
-    parts.extend([
-        '</select>',
-        f'<p id="set-language-help">{translated("settings_language_hint")}</p></div>',
         f'<div class="setting-field"><label for="set-title">{translated("title")}</label>',
         f'<input class="ctl" id="set-title" maxlength="{MAX_PROJECT_TITLE_CHARS}" value="{esc(title)}" '
         f'aria-describedby="set-title-help"/>',
@@ -64,13 +58,12 @@ def settings_form(
         f'data-author-setting-enabled="{str(author_setting_enabled).lower()}"'
         f'{" disabled" if not author_setting_enabled else ""}/>',
         f'<p id="set-author-name-help">{translated("project_author_hint" if author_setting_enabled else "project_author_unavailable")}</p></div></div>',
-    ])
+    ]
     if identity_check is not None:
         parts.extend([
             '<details class="settings-advanced" id="settings-identity">',
-            f'<summary>{translated("project_identity_title")}</summary>',
+            f'<summary id="project-identity-title">{translated("project_identity_title")}</summary>',
             '<section id="project-identity-check" aria-labelledby="project-identity-title">',
-            f'<h4 id="project-identity-title">{translated("project_identity_title")}</h4>',
             f'<p class="ctl-note">{translated("project_identity_hint")}</p>',
             '<dl class="research-revision-readonly">',
         ])
@@ -80,25 +73,54 @@ def settings_form(
             check = identity_check.get(key, {})
             if not isinstance(check, Mapping):
                 check = {}
-            status = check.get("status")
+            raw_status = check.get("status")
+            status = raw_status
             if not isinstance(status, str) or status not in statuses:
                 status = "unavailable"
+            manuscript_value = check.get("value")
+            status_html = (f'<strong data-identity-status="{status}">'
+                           f'{translated("project_identity_" + str(status))}</strong>')
+            if manuscript_value is not None:
+                manuscript_html = esc(str(manuscript_value))
+            elif status == "missing":
+                manuscript_html = status_html
+            elif raw_status == "unavailable" and project_value:
+                manuscript_html = translated("project_identity_text_unavailable")
+            else:
+                manuscript_html = translated("project_identity_value_unavailable")
             parts.extend([
                 f'<dt>{translated(title_key)}</dt><dd>',
-                f'<strong data-identity-status="{status}">{translated("project_identity_" + str(status))}</strong>',
-                f'<div>{translated("project_identity_saved")}: {esc(project_value) if project_value else translated("project_identity_not_set")}</div>',
+                f'<div>{translated("project_identity_saved")}: {esc(project_value) if project_value else translated("project_identity_not_set" if raw_status == "unavailable" else "project_identity_value_unavailable")}</div>',
+                f'<div>{translated("project_identity_manuscript")}: {manuscript_html}</div>',
             ])
-            if check.get("value") is not None:
-                parts.append(f'<div>{translated("project_identity_manuscript")}: {esc(str(check["value"]))}</div>')
+            if status != "missing" or manuscript_value is not None:
+                parts.append(status_html)
+            if raw_status == "unavailable" and not project_value:
+                parts.append(f'<p class="ctl-note">{translated("project_identity_enter_" + key)}</p>')
             source_key = {"front_matter": "project_identity_source_metadata",
                           "title_page": "project_identity_source_title_page"}.get(str(check.get("source")))
             if source_key:
                 parts.append(f'<div class="ctl-note">{translated("project_identity_source")}: {translated(source_key)}</div>')
             parts.append('</dd>')
         parts.append('</dl></section></details>')
+    parts.extend([
+        '</fieldset>',
+        '<fieldset class="settings-section" id="settings-analysis">',
+        f'<legend>{translated("settings_analysis")}</legend>',
+        '<div class="settings-grid">',
+        f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("language"))}</label>',
+        '<select class="ctl" id="set-language" aria-describedby="set-language-help settings-scope-help">',
+    ])
+    for code, name in language_options:
+        selected = " selected" if code == current_language else ""
+        parts.append(f'<option value="{esc(code)}"{selected}>{esc(name)}</option>')
+    parts.extend([
+        '</select>',
+        f'<p id="set-language-help">{translated("settings_language_hint")}</p></div></div>',
+    ])
     disabled = "" if author_setting_enabled else " disabled"
     checked = " checked" if publication_values["enabled"] else ""
-    parts.extend([
+    publication_parts = [
         '<details class="settings-advanced publication-settings" id="settings-publication">',
         f'<summary>{translated("publication_title")}</summary>',
         f'<p class="panel-guide">{translated("publication_hint" if author_setting_enabled else "publication_unavailable")}</p>',
@@ -109,29 +131,28 @@ def settings_form(
             f'data-publication-key="enabled"{checked}{disabled}/>',
             translated("publication_enabled"),
         ),
-    ])
+    ]
     if publication_error:
-        parts.append('<p class="ctl-status err" id="publication-settings-error" role="alert">'
+        publication_parts.append('<p class="ctl-status err" id="publication-settings-error" role="alert">'
                      f'{translated("publication_invalid")}: {esc(publication_error)}</p>')
-    parts.append('<div class="settings-grid">')
+    publication_parts.append('<div class="settings-grid">')
     for field in PUBLICATION_FIELDS:
         identifier = "set-publication-" + field.key
         value = esc(publication_values[field.key])
         attrs = (f'class="ctl" id="{identifier}" data-publication-key="{field.key}" '
                  f'maxlength="{field.max_chars}"{disabled}')
-        parts.append(f'<div class="setting-field publication-field-{field.kind} publication-field-{field.key}">'
+        publication_parts.append(f'<div class="setting-field publication-field-{field.kind} publication-field-{field.key}">'
                      f'<label for="{identifier}">{translated("publication_" + field.key)}</label>')
         if field.kind == "multiline":
-            parts.append(f'<textarea {attrs} rows="3">{value}</textarea>')
+            publication_parts.append(f'<textarea {attrs} rows="3">{value}</textarea>')
         else:
-            parts.append(f'<input type="text" {attrs} value="{value}"/>')
-        parts.append('</div>')
-    parts.append('</div></details>')
-    parts.append(register_editor(labels, register_settings or {}, editable=author_setting_enabled and bool(project_token)))
+            publication_parts.append(f'<input type="text" {attrs} value="{value}"/>')
+        publication_parts.append('</div>')
+    publication_parts.append('</div></details>')
     parts.extend([
         '<details class="settings-advanced settings-thresholds" id="settings-thresholds">',
-        f'<summary>{translated("settings_advanced")}</summary>',
-        f'<p class="panel-guide">{translated("settings_guidance")}</p>',
+        f'<summary>{translated("settings_thresholds_optional")}</summary>',
+        f'<p class="panel-guide">{translated("settings_thresholds_hint")}</p>',
         '<div class="settings-grid">',
     ])
     fields = (
@@ -202,6 +223,9 @@ def settings_form(
         ),
         '<p class="ctl-note" id="save-analysis-defaults-help">'
         f'{translated("settings_save_analysis_hint" if author_setting_enabled and project_token else "settings_save_analysis_unavailable")}</p>',
+        '</fieldset>',
+        *publication_parts,
+        register_editor(labels, register_settings or {}, editable=author_setting_enabled and bool(project_token)),
         '<div class="settings-actions">',
         f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings">{translated("apply")}</button>',
         f'<button type="button" class="ctl" id="settings-reset">{translated("reset_thresholds")}</button>',

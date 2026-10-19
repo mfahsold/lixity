@@ -34,7 +34,7 @@ KINDS: dict[str, type[Authored]] = {
     "manuscript_claim_link": ManuscriptClaimLink,
 }
 FIELDS = {
-    "dossier": {"title", "body", "language", "tags", "evidence_ids"},
+    "dossier": {"title", "body", "language", "tags", "evidence_ids", "geography"},
     "claim": {"title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"},
     "claim_relation": {"from_claim_id", "from_claim_revision", "to_claim_id", "to_claim_revision", "relation", "state", "rationale"},
     "manuscript_claim_link": {"claim_id", "claim_revision", "state", "note"},
@@ -192,7 +192,9 @@ def record_history(project: str | Path, kind: str, record_id: str) -> dict[str, 
         "latest_revision": latest.revision,
         "revisions": [{"revision": r.revision, "created_at": r.created_at,
                        "created_by": r.created_by, "change": r.model_dump(mode="json").get("change"),
-                       **({"images": resolve_dossier_images(snapshot, r.body)} if isinstance(r, Dossier) else {})}
+                       **({"images": resolve_dossier_images(snapshot, r.body),
+                           "geography_feature_count": len(r.geography.features) if r.geography else 0}
+                          if isinstance(r, Dossier) else {})}
                       for r in records],
     }
 
@@ -341,7 +343,10 @@ def _apply_changes(
             values["dossier_refs"] = [_association(snapshot, i, Dossier, retained.get(i), pins.get(i)) for i in dict.fromkeys(ids) if i]
         if isinstance(previous, EvidenceLink) and "passage_id" in changes:
             values["passage_ref"] = Reference(id=changes["passage_id"]).model_dump()
-        values.update(schema_version=previous.revision_schema_version, revision=previous.revision + 1,
+        schema_version = ("research-local/8" if isinstance(previous, Dossier)
+                          and (previous.schema_version == "research-local/8" or values.get("geography") is not None)
+                          else previous.revision_schema_version)
+        values.update(schema_version=schema_version, revision=previous.revision + 1,
                       created_at=datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
                       created_by=actor,
                       change={"change_kind": change_kind, "reason": reason.strip(), "previous_revision": previous.revision})
@@ -368,6 +373,8 @@ def _editable_values(record: Authored) -> dict[str, Any]:
             values[name] = record.passage_ref.id
         elif name in ("time_period", "place", "actors") and isinstance(record, Claim):
             values[name] = getattr(record.scope, name)
+        elif name == "geography" and isinstance(record, Dossier):
+            values[name] = record.geography.model_dump(mode="json") if record.geography else None
         else:
             values[name] = getattr(record, name)
     return values

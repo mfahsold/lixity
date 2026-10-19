@@ -1,0 +1,47 @@
+{
+  "schema_version": "lixity-demo-sources/1",
+  "reviewed_on": "2026-10-19",
+  "scope": "Public-domain visual references for the Hamburg research example. Fictional claims and journey coordinates are separate authored demonstration data.",
+  "sources": [
+    {
+      "id": "hamburg-free-port-1900",
+      "filename": "hamburg-free-port-1900.jpg",
+      "title": "Hamburg free-port area, circa 1900",
+      "creator": "Richard Krause",
+      "created_period": "circa 1900",
+      "genre": "Historical map excerpt",
+      "place": "Hamburg harbour, Germany",
+      "credit": "Richard Krause; Staats- und Universitaetsbibliothek Hamburg; excerpt via Wikimedia Commons",
+      "origin_url": "https://commons.wikimedia.org/wiki/File:Freihafengebiet_Hamburg_um_1900.jpg",
+      "source_url": "https://resolver.sub.uni-hamburg.de/goobi/PPN741222132",
+      "download_url": "https://upload.wikimedia.org/wikipedia/commons/8/83/Freihafengebiet_Hamburg_um_1900.jpg",
+      "rights": "Public domain; Wikimedia Commons marks PD-old-100 and PD-US-expired.",
+      "rights_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "provenance_note": "Unmodified published excerpt from Richard Krause's harbour plan, held by Hamburg State and University Library. The source catalogue identifies a circa-1900 map with later planned harbour alterations on the parent sheet. This raster excerpt is not georeferenced in Lixity and does not establish a fictional journey or conditions in 1923.",
+      "alt": "Historical coloured plan of Hamburg harbour with labelled basins, quays and the free-port boundary",
+      "width": 3321,
+      "height": 2491,
+      "sha256": "993e87b9b6552044cba4895ada00ac333d072bbc71ccc75297f54722a36b8b64"
+    },
+    {
+      "id": "hamburg-harbour-1890-1900",
+      "filename": "hamburg-harbour-1890-1900.jpg",
+      "title": "Ships in the Harbor, Hamburg, Germany",
+      "creator": null,
+      "created_period": "1890-1900",
+      "genre": "Historical photochrom print",
+      "place": "Hamburg harbour, Germany",
+      "credit": "Library of Congress, Prints and Photographs Division, Photochrom Print Collection, ppmsca.00419; via Wikimedia Commons",
+      "origin_url": "https://commons.wikimedia.org/wiki/File:Ships_in_the_Harbor,_Hamburg,_Germany-LCCN2002713695.jpg",
+      "source_url": "https://www.loc.gov/item/2002713695/",
+      "download_url": "https://upload.wikimedia.org/wikipedia/commons/1/16/Ships_in_the_Harbor%2C_Hamburg%2C_Germany-LCCN2002713695.jpg",
+      "rights": "Public domain; Wikimedia Commons marks PD-old-70-expired.",
+      "rights_url": "https://creativecommons.org/publicdomain/mark/1.0/",
+      "provenance_note": "Unmodified historical photochrom print dated 1890-1900 in the Library of Congress catalogue, print 1862, digital identifier ppmsca.00419. The colour process is part of the historical print. This visual reference does not document the invented Warehouse 4 incident or its weather and is not a 1923 photograph.",
+      "alt": "Historical coloured view of sailing ships and steamships at Hamburg's Hansahafen, with a quay and moored boats in the foreground",
+      "width": 3654,
+      "height": 2738,
+      "sha256": "2023397feff8b678e0bdf976a85e5a5b156e3a14bfa182421a9e85a23d8fa55d"
+    }
+  ]
+}

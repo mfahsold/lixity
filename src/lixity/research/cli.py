@@ -285,6 +285,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--file", help="Path to markdown body file or raw text")
             command.add_argument("--tags", help="Comma-separated tags")
             command.add_argument("--evidence", help="Comma-separated passage UUIDs")
+            command.add_argument("--geography", metavar="JSON_OR_FILE",
+                                 help="Dossier GeoJSON FeatureCollection: Point/LineString/Polygon or null geometry, "
+                                      "WGS84 [longitude, latitude], properties.label required; JSON null clears geography")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
             command.add_argument("--summary", action="store_true", help="Return metadata, section outline, and body excerpt without full text")
             command.add_argument("--section", help="Inspect or update only the named heading section")
@@ -446,12 +449,19 @@ def _reconcile_outcome(project: str, manuscript: str, row: dict[str, Any], sourc
             "snapshot": single["snapshot"]}
 
 
+def _json_payload(value: str) -> Any:
+    """Read inline JSON before probing paths, including values over filename limits."""
+    if value.lstrip().startswith(("{", "[", '"')) or value.strip() in ("null", "true", "false"):
+        return json.loads(value)
+    path = Path(value)
+    return json.loads(path.read_text(encoding="utf-8") if path.is_file() else value)
+
+
 def _json_object(value: str, what: str) -> dict[str, Any]:
     """Read a JSON object from an inline value or a local file."""
     from .repository import ResearchError
 
-    path = Path(value)
-    payload = json.loads(path.read_text(encoding="utf-8") if path.is_file() else value)
+    payload = _json_payload(value)
     if not isinstance(payload, dict):
         raise ResearchError(f"{what} must be a JSON object")
     return payload
@@ -462,6 +472,18 @@ def _source_context(value: str | None) -> dict[str, Any] | None:
     if value is None:
         return None
     return _json_object(value, "Source context")
+
+
+def _geography(value: str | None) -> dict[str, Any] | None:
+    """Read the optional structured geography object, with explicit null for clearing."""
+    from .repository import ResearchError
+
+    if value is None:
+        return None
+    payload = _json_payload(value)
+    if payload is not None and not isinstance(payload, dict):
+        raise ResearchError("Geography must be a GeoJSON FeatureCollection object or null")
+    return payload
 
 
 def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
@@ -497,6 +519,8 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
             changes["dossier_ids"] = list(dict.fromkeys(dossier_ids))
         if getattr(args, "dossier_revisions", None) is not None:
             changes["dossier_revisions"] = json.loads(args.dossier_revisions)
+    if kind == "dossier" and args.geography is not None:
+        changes["geography"] = _geography(args.geography)
     if kind == "dossier" and args.file is not None:
         body_path = Path(args.file)
         new_content = body_path.read_text(encoding="utf-8") if body_path.is_file() else args.file
@@ -711,7 +735,7 @@ def run(args: argparse.Namespace) -> int:
     try:
         command = args.research_command
         if getattr(args, "action", None) == "list":
-            creation = ("title", "statement", "rationale", "impact_on_plot", "file")
+            creation = ("title", "statement", "rationale", "impact_on_plot", "file", "geography")
             if any(getattr(args, name, None) for name in creation):
                 raise ResearchError("The list verb does not create records; drop the list verb or the creation fields")
         if (command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
@@ -1167,6 +1191,7 @@ def run(args: argparse.Namespace) -> int:
                     language=args.language or "en",
                     tags=tags,
                     evidence_ids=evidence,
+                    geography=_geography(args.geography),
                     actor=args.actor,
                 )
             else:

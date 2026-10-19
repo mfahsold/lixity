@@ -79,6 +79,7 @@ AREAS: dict[str, tuple[str, ...]] = {
     "research": (
         "decision-acknowledgement.cjs",
         "dossier-claims.cjs",
+        "dossier-geography.cjs",
         "dossier-images.cjs",
         "dossier-workflows.cjs",
         "list-filters.cjs",
@@ -101,6 +102,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/assets/research*", ("research",)),
     ("src/lixity/ui/assets/zotero-results.js", ("research",)),
     ("src/lixity/ui/assets/dossier-images.*", ("research",)),
+    ("src/lixity/ui/assets/dossier-geography.*", ("research",)),
     ("src/lixity/ui/assets/workspace-reader.*", ("research",)),
     ("src/lixity/ui/assets/manuscript-links.*", ("research",)),
     ("src/lixity/ui/research_panel.py", ("research",)),

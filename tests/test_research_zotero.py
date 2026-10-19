@@ -3,12 +3,18 @@
 import contextlib
 import io
 import json
+import struct
 import tempfile
 import unittest
+import zlib
 from pathlib import Path
 from unittest.mock import MagicMock, patch
 
+from test_research_images import JPEG, png
+from test_research_ocr import make_synthetic_pdf
+
 from lixity.research import api, zotero
+from lixity.research.ocr import OCRExtractionResult
 from lixity.research.repository import Repository, ResearchError
 
 
@@ -67,6 +73,91 @@ class TestZotero(unittest.TestCase):
                           source_id=result["source_id"], allow_retention=True)
         self.assertIn("1924", api.cite(self.project, passage)["verbatim"])
         self.assertTrue(api.audit(self.project)["ok"])
+
+    def test_image_capture_retains_exact_bytes_and_identity_without_text(self):
+        for index, (media_type, content) in enumerate((("image/png", png()), ("image/jpeg", JPEG))):
+            with self.subTest(media_type=media_type):
+                project = self.root / f"image-project-{index}"
+                project_id = api.init(project, title="Synthetic image capture")["project_id"]
+                self.file.write_bytes(content)
+                self.attachment["data"]["contentType"] = media_type
+                before = Repository(project).snapshot().digest
+                with patch.object(zotero, "_request", side_effect=self.response):
+                    preview = zotero.ingest(project, library="users/0", attachment_key="JKLMNPQR",
+                                            allow_retention=True, dry_run=True, expected_server_id="test-instance")
+                    self.assertEqual(preview["passages"], 0)
+                    self.assertEqual(Repository(project).snapshot().digest, before)
+                    captured = zotero.ingest(project, library="users/0", attachment_key="JKLMNPQR",
+                                             allow_retention=True, expected_server_id="test-instance")
+                    again = zotero.ingest(project, library="users/123", attachment_key="JKLMNPQR", allow_retention=True)
+                source = api.get_source(project, captured["source_id"])
+                self.assertEqual(source["media_type"], media_type)
+                self.assertEqual(source["passages"], [])
+                self.assertEqual(source["language"], "generic")
+                self.assertEqual(source["context"]["external_reference"]["attachment_key"], "JKLMNPQR")
+                self.assertEqual(source["context"]["origin_url"], "https://example.org/history")
+                self.assertIn("Mara Example", source["context"]["provenance_note"])
+                retained = api.read_image(project, project_id=project_id, source_id=captured["source_id"],
+                                          version_id=captured["source_version_id"])
+                self.assertEqual(retained["content"], content)
+                self.assertEqual(again["source_id"], captured["source_id"])
+                self.assertTrue(again["unchanged"])
+                self.assertTrue(api.audit(project)["ok"])
+
+    def test_image_refresh_requires_explicit_identity_and_preserves_source_criticism(self):
+        self.file = self.root / "scan.png"
+        self.file.write_bytes(png())
+        self.attachment["data"]["contentType"] = "image/png"
+        project_id = Repository(self.project).snapshot().project.id
+        with patch.object(zotero, "_request", side_effect=self.response):
+            first = zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR", allow_retention=True)
+            context = api.get_source(self.project, first["source_id"])["context"]
+            context.update(provenance_note="Author reviewed this scan; provenance remains uncertain.", tags=["reviewed"])
+            api.ingest(self.project, self.file, source_id=first["source_id"], context=context, allow_retention=True)
+            self.file.write_bytes(png(2, 1))
+            self.attachment["version"] = 3
+            before = Repository(self.project).snapshot().digest
+            with self.assertRaisesRegex(ResearchError, "source-id"):
+                zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR", allow_retention=True)
+            self.assertEqual(Repository(self.project).snapshot().digest, before)
+            refreshed = zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR",
+                                      source_id=first["source_id"], allow_retention=True)
+        source = api.get_source(self.project, first["source_id"])
+        self.assertEqual(source["context"]["provenance_note"], context["provenance_note"])
+        self.assertEqual(source["context"]["tags"], ["reviewed"])
+        self.assertEqual(source["context"]["external_reference"]["attachment_version"], 3)
+        self.assertNotEqual(refreshed["source_version_id"], first["source_version_id"])
+        self.assertEqual(api.read_image(self.project, project_id=project_id, source_id=first["source_id"],
+                                       version_id=first["source_version_id"])["content"], png())
+        self.assertTrue(api.audit(self.project)["ok"])
+
+    def test_image_capture_rejects_wrong_format_and_stale_guards_without_writing(self):
+        self.attachment["data"]["contentType"] = "image/png"
+        before = Repository(self.project).snapshot().digest
+        with patch.object(zotero, "_request", side_effect=self.response):
+            for content in (b"<svg></svg>", JPEG, png()[:-1], b"x" * (16 * 1024 * 1024 + 1)):
+                self.file.write_bytes(content)
+                with self.subTest(length=len(content)), self.assertRaises(ResearchError):
+                    zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR", allow_retention=True)
+            self.file.write_bytes(png())
+            with self.assertRaisesRegex(ResearchError, "instance"):
+                zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR",
+                              expected_server_id="other-instance", allow_retention=True)
+            with self.assertRaisesRegex(ResearchError, "snapshot"):
+                zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR",
+                              expected_snapshot="0" * 64, allow_retention=True)
+        self.assertEqual(Repository(self.project).snapshot().digest, before)
+
+    def test_image_capture_uses_image_size_limit_instead_of_text_limit(self):
+        payload = b"Synthetic comment\x00" + b"x" * (2 * 1024 * 1024)
+        chunk = struct.pack(">I", len(payload)) + b"tEXt" + payload + struct.pack(">I", zlib.crc32(b"tEXt" + payload))
+        content = png()[:-12] + chunk + png()[-12:]
+        self.file.write_bytes(content)
+        self.attachment["data"]["contentType"] = "image/png"
+        with patch.object(zotero, "_request", side_effect=self.response):
+            captured = zotero.ingest(self.project, library="users/0", attachment_key="JKLMNPQR", allow_retention=True)
+        version = Repository(self.project).snapshot().records[captured["source_version_id"]]
+        self.assertEqual(Repository(self.project).read_blob(version.blob), content)
 
     def test_retention_gate_and_dry_run(self):
         before = Repository(self.project).snapshot().digest
@@ -200,6 +291,37 @@ class TestZotero(unittest.TestCase):
         with self.assertRaises(ResearchError):
             zotero.export_library(self.project, destination, allow_retention=True)
 
+    def test_migration_export_preserves_media_extensions_exact_bytes_and_ris_attachment_types(self):
+        captures = []
+        for filename, content, suffix, field in (("scan.png", png(), ".png", "L4"),
+                                                ("scan.jpeg", JPEG, ".jpg", "L4"),
+                                                ("source.txt", b"Synthetic source text.", ".txt", "L4")):
+            path = self.root / filename
+            path.write_bytes(content)
+            captured = api.ingest(self.project, path, allow_retention=True,
+                                  context={"provenance_note": "Reviewed synthetic specimen", "tags": ["retained"]})
+            captures.append((captured, content, suffix, field))
+        pdf = self.root / "source.pdf"
+        pdf.write_bytes(make_synthetic_pdf("Synthetic PDF source."))
+        extraction = OCRExtractionResult(pages=[], full_text="Synthetic PDF source.", blocks=[],
+                                          spans=[(0, 21)], implementation_id="poppler-native/1")
+        with patch.object(api, "extract_pdf_document", return_value=extraction):
+            captures.append((api.ingest(self.project, pdf, allow_retention=True), pdf.read_bytes(), ".pdf", "L1"))
+        before = Repository(self.project).snapshot().digest
+        destination = self.root / "media-migration"
+        zotero.export_library(self.project, destination, allow_retention=True)
+        manifest = json.loads((destination / "migration.json").read_text())
+        entries = {entry["source_id"]: entry for entry in manifest["sources"]}
+        ris = (destination / "library.ris").read_text()
+        for captured, content, suffix, field in captures:
+            entry = entries[captured["source_id"]]
+            retained_file = destination / entry["file"]
+            self.assertEqual(retained_file.suffix, suffix)
+            self.assertEqual(retained_file.read_bytes(), content)
+            self.assertIn(f"{field}  - {retained_file.as_uri()}\n", ris)
+            self.assertEqual(entry["context"], api.get_source(self.project, captured["source_id"])["context"])
+        self.assertEqual(Repository(self.project).snapshot().digest, before)
+
     def test_structured_identity_deduplicates_and_requires_explicit_changed_refresh(self):
         with patch.object(zotero, '_request', side_effect=self.response):
             first = zotero.ingest(self.project, library='users/0', attachment_key='JKLMNPQR', allow_retention=True)
@@ -283,19 +405,31 @@ class TestZotero(unittest.TestCase):
         self.assertTrue(again['unchanged'])
 
     def test_ingest_item_captures_all_eligible_attachments(self):
-        file2 = self.root / "synthetic2.txt"
-        file2.write_text("Second archival document text.", encoding="utf-8")
+        file2 = self.root / "synthetic2.png"
+        file2.write_bytes(png())
         attachment2 = {"key": "STUVWXYZ", "version": 1, "data": {
             "itemType": "attachment", "parentItem": "ABCDEFGH", "title": "Second Scan",
-            "contentType": "text/plain", "linkMode": "linked_file"}}
+            "contentType": "image/png", "linkMode": "linked_file"}}
+        file3 = self.root / "synthetic3.jpg"
+        file3.write_bytes(JPEG)
+        attachment3 = {"key": "23456789", "version": 1, "data": {
+            "itemType": "attachment", "parentItem": "ABCDEFGH", "title": "Third Scan",
+            "contentType": "image/jpeg", "linkMode": "imported_file"}}
+        unsupported = {"key": "34567890", "version": 1, "data": {
+            "itemType": "attachment", "title": "Synthetic audio",
+            "contentType": "audio/wav", "linkMode": "imported_file"}}
 
         def multi_response(path):
             if "STUVWXYZ/file/view/url" in path:
                 return file2.as_uri().encode(), "test-instance"
             if path.endswith("/items/STUVWXYZ"):
                 return json.dumps(attachment2).encode(), "test-instance"
+            if "23456789/file/view/url" in path:
+                return file3.as_uri().encode(), "test-instance"
+            if path.endswith("/items/23456789"):
+                return json.dumps(attachment3).encode(), "test-instance"
             if "/children" in path:
-                return json.dumps([self.attachment, attachment2]).encode(), "test-instance"
+                return json.dumps([self.attachment, attachment2, attachment3, unsupported]).encode(), "test-instance"
             return self.response(path)
 
         with patch.object(zotero, "_request", side_effect=multi_response):
@@ -305,12 +439,12 @@ class TestZotero(unittest.TestCase):
             result = zotero.ingest_item(self.project, library="users/0", item_key="ABCDEFGH", allow_retention=True)
             self.assertEqual(result["schema_version"], "research-zotero-batch-ingest-local/1")
             self.assertEqual(result["parent_item_key"], "ABCDEFGH")
-            self.assertEqual(result["total"], 2)
-            self.assertEqual(result["succeeded"], 2)
+            self.assertEqual(result["total"], 3)
+            self.assertEqual(result["succeeded"], 3)
             self.assertEqual(result["failed"], 0)
-            self.assertEqual(len(result["items"]), 2)
-            self.assertTrue(result["items"][0]["ok"])
-            self.assertTrue(result["items"][1]["ok"])
+            self.assertEqual([item["passages"] for item in result["items"]], [1, 0, 0])
+            self.assertEqual({source["media_type"] for source in api.list_sources(self.project)["sources"]},
+                             {"text/plain", "image/png", "image/jpeg"})
 
         from lixity.cli import main
         with patch.object(zotero, "_request", side_effect=multi_response):

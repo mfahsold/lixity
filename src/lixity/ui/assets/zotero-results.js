@@ -47,7 +47,7 @@
   function ItemCard(props) {
     var data = props.item.data || {};
     var capture = props.item.capture;
-    var supported = ["application/pdf", "text/plain", "text/markdown"].includes(data.contentType) &&
+    var supported = ["application/pdf", "text/plain", "text/markdown", "image/png", "image/jpeg"].includes(data.contentType) &&
       ["imported_file", "imported_url", "linked_file"].includes(data.linkMode);
     var changed = capture && (capture.attachment_version !== props.item.version ||
       (props.parent && capture.item_version !== props.parent.version));

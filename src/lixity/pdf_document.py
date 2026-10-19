@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import hashlib
 import math
+import re
 import zlib
 from collections.abc import Mapping
 from dataclasses import dataclass, field
@@ -67,6 +68,67 @@ def text_width(text: str, face: EmbeddedFont, size: float) -> float:
     return sum(face.advance(ord(character)) / 1000 * size for character in text)
 
 
+@dataclass(frozen=True)
+class _MeasuredText:
+    """Text and cumulative glyph advances, shared by both line breakers."""
+
+    text: str
+    advances: list[float]
+
+    def width(self, start: int, end: int) -> float:
+        return self.advances[end] - self.advances[start]
+
+
+def _measured(text: str, face: EmbeddedFont, size: float,
+              advances: list[float] | None = None) -> _MeasuredText:
+    widths = advances if advances is not None else [
+        face.advance(ord(character)) / 1000 * size for character in text
+    ]
+    if len(widths) != len(text):
+        raise PdfError("Glyph advances must cover the complete block text")
+    cumulative = [0.0]
+    for width in widths:
+        cumulative.append(cumulative[-1] + width)
+    return _MeasuredText(text, cumulative)
+
+
+def _break_offsets(measured: _MeasuredText, measure: float, *, first_indent: float = 0.0,
+                   columns: int | None = None,
+                   preserve_whitespace: bool = False) -> list[tuple[int, int]]:
+    """Greedy fallback and fixed-grid breaker, using the same glyph measurements."""
+    result: list[tuple[int, int]] = []
+    offset = 0
+    for paragraph in measured.text.split("\n"):
+        words = list(re.finditer(r"[^ ]+", paragraph))
+        if preserve_whitespace and paragraph and not words:
+            words = list(re.finditer(r".+", paragraph))
+        if not words:
+            result.append((offset, offset + len(paragraph) if preserve_whitespace else offset))
+            offset += len(paragraph) + 1
+            continue
+        start = end = offset if preserve_whitespace else offset + words[0].start()
+        for word in words:
+            word_start, word_end = offset + word.start(), offset + word.end()
+            available = measure - (first_indent if not result else 0.0)
+            if end > start and (measured.width(start, word_end) > available
+                                or (columns is not None and word_end - start > columns)):
+                result.append((start, end))
+                start = word_start
+            end = word_end
+            available = measure - (first_indent if not result else 0.0)
+            while (measured.width(start, end) > available
+                   or (columns is not None and end - start > columns)) and end - start > 1:
+                cut = min(end - 1, start + (columns or end - start))
+                while cut - start > 1 and measured.width(start, cut) > available:
+                    cut -= 1
+                result.append((start, cut))
+                start = cut
+                available = measure
+        result.append((start, end))
+        offset += len(paragraph) + 1
+    return result
+
+
 def break_lines(
     text: str,
     face: EmbeddedFont,
@@ -77,36 +139,10 @@ def break_lines(
     columns: int | None = None,
 ) -> list[str]:
     """Split text into lines that fit ``measure``; explicit newlines always break."""
-    result: list[str] = []
-    for paragraph in text.split("\n"):
-        if not paragraph:
-            result.append("")
-            continue
-        current = ""
-        for word in paragraph.split(" "):
-            available = measure - (first_indent if not result else 0)
-            candidate = f"{current} {word}" if current else word
-            if not current or (
-                text_width(candidate, face, size) <= available
-                and (columns is None or len(candidate) <= columns)
-            ):
-                current = candidate
-            else:
-                result.append(current)
-                current = word
-            available = measure - (first_indent if not result else 0)
-            while (
-                text_width(current, face, size) > available
-                or (columns is not None and len(current) > columns)
-            ) and len(current) > 1:
-                cut = min(len(current) - 1, columns or len(current))
-                while cut > 1 and text_width(current[:cut], face, size) > available:
-                    cut -= 1
-                result.append(current[:cut])
-                current = current[cut:]
-                available = measure
-        result.append(current)
-    return result
+    measured = _measured(text, face, size)
+    return [text[start:end] for start, end in _break_offsets(
+        measured, measure, first_indent=first_indent, columns=columns,
+    )]
 
 
 def _subset_or_fail(path: str, codepoints: set[int]) -> EmbeddedFont:
@@ -120,10 +156,12 @@ def _subset_or_fail(path: str, codepoints: set[int]) -> EmbeddedFont:
 
 @dataclass(frozen=True)
 class FittedLine:
-    """One composed line: its text and the slack the margin has to absorb."""
+    """One composed line and its source range; slack is measured in points."""
 
     text: str
     slack: float
+    start: int = 0
+    end: int = 0
 
 
 def fit_paragraph(
@@ -134,107 +172,90 @@ def fit_paragraph(
     *,
     first_indent: float = 0.0,
     allow_tightening: bool = True,
+    advances: list[float] | None = None,
+    columns: int | None = None,
+    preserve_whitespace: bool = False,
 ) -> list[FittedLine]:
-    """Break a paragraph into lines, minimising the total badness of the page.
+    """Choose a low-badness chain of word breaks with actual glyph advances.
 
-    A greedy first-fit break fills each line to the brim and is the reason a
-    justified page without hyphenation develops rivers and loose lines: it
-    optimises the present line at the expense of the next one. This is Knuth's
-    approach reduced to its essentials - for every pair of break points the
-    adjustment ratio is scored, and the cheapest chain through them wins.
+    Optional per-character advances let inline font roles share the same
+    breaker as ordinary prose. Oversized words and character grids use the
+    common greedy fallback, preserving source ranges for styled fragments.
     """
+    measured = _measured(text, face, size, advances)
+
+    def fitted(start: int, end: int, indent: float = 0.0) -> FittedLine:
+        return FittedLine(text[start:end], measure - indent - measured.width(start, end), start, end)
+
+    if columns is not None or preserve_whitespace:
+        return [fitted(start, end, first_indent if index == 0 else 0.0)
+                for index, (start, end) in enumerate(_break_offsets(
+                    measured, measure, first_indent=first_indent, columns=columns,
+                    preserve_whitespace=preserve_whitespace,
+                ))]
     lines: list[FittedLine] = []
+    offset = 0
     for paragraph in text.split("\n"):
-        words = paragraph.split(" ")
-        if not any(words):
-            lines.append(FittedLine("", 0.0))
-            continue
-        widths = [text_width(word, face, size) for word in words]
+        words = [(offset + match.start(), offset + match.end())
+                 for match in re.finditer(r"[^ ]+", paragraph)]
         indent = first_indent if not lines else 0.0
-        if any(width > measure - indent for width in widths):
-            # A word wider than the page has no word-gap solution. Reuse the
-            # character breaker so URLs and compound words stay on the page.
-            pieces = break_lines(paragraph, face, size, measure, first_indent=indent)
-            lines.extend(
-                FittedLine(
-                    piece, measure - (indent if index == 0 else 0) - text_width(piece, face, size)
-                )
-                for index, piece in enumerate(pieces)
-            )
+        if not words:
+            lines.append(fitted(offset, offset, indent))
+            offset += len(paragraph) + 1
             continue
-        space = text_width(" ", face, size)
+        widths = [measured.width(start, end) for start, end in words]
         count = len(words)
         best = [float("inf")] * (count + 1)
         best[0] = 0.0
-        choice: list[int] = [0] * (count + 1)
-        for start in range(count):
-            if best[start] == float("inf"):
-                continue
-            natural = 0.0
-            available = measure - (indent if start == 0 else 0)
-            spaces = 0
-            for stop in range(start, count):
-                natural += widths[stop] + (space if stop > start else 0.0)
-                spaces = stop - start
-                slack = available - natural
-                if slack < 0 and not allow_tightening:
-                    break
-                final = stop + 1 == count
-                # The last line of a paragraph may end anywhere, so it is scored
-                # on nothing. Charging it for leftover space is what made a
-                # two-word heading break into two lines.
-                if final:
-                    if slack < 0:
-                        break
-                    cost = 0.0
-                elif natural < available * 0.5:
-                    # A line less than half full reads as a break, not as text.
-                    # Adding the next word is the only way to improve it, and
-                    # the paragraph's last line is exempt above.
+        choice = [0] * (count + 1)
+        if not any(width > measure - indent for width in widths):
+            for start in range(count):
+                if best[start] == float("inf"):
                     continue
-                else:
-                    ratio = slack / (space * spaces) if spaces and space else 0.0
-                    # A line may tighten by at most a third of an em per word
-                    # gap. Past that it only gets worse, so the search stops.
-                    if ratio < -0.34:
-                        if stop > start:
+                available = measure - (indent if start == 0 else 0.0)
+                for stop in range(start, count):
+                    natural = measured.width(words[start][0], words[stop][1])
+                    slack = available - natural
+                    if slack < 0 and not allow_tightening:
+                        break
+                    final = stop + 1 == count
+                    if final:
+                        if slack < 0:
                             break
+                        cost = 0.0
+                    elif natural < available * 0.5:
                         continue
-                    # A line that is merely too loose is expensive, not
-                    # forbidden: adding the next word may close it up. Ending
-                    # the search here is what left one word on every line.
-                    if ratio > 1.0:
-                        cost = (abs(ratio) ** 3) * 100.0 + 5000.0
                     else:
-                        cost = (abs(ratio) ** 3) * 100.0 + (slack**2) / 40.0 + 8.0
-                if best[start] + cost < best[stop + 1]:
-                    best[stop + 1] = best[start] + cost
-                    choice[stop + 1] = start
+                        spaces = sum(measured.width(words[i][1], words[i + 1][0])
+                                     for i in range(start, stop))
+                        ratio = slack / spaces if spaces else 0.0
+                        if ratio < -0.34:
+                            if stop > start:
+                                break
+                            continue
+                        cost = ((abs(ratio) ** 3) * 100.0 + 5000.0 if ratio > 1.0 else
+                                (abs(ratio) ** 3) * 100.0 + (slack**2) / 40.0 + 8.0)
+                    if best[start] + cost < best[stop + 1]:
+                        best[stop + 1] = best[start] + cost
+                        choice[stop + 1] = start
         if best[count] == float("inf"):
-            # No acceptable chain: fall back to the greedy break rather than
-            # emitting nothing, so the text is never silently dropped.
-            pieces = break_lines(paragraph, face, size, measure, first_indent=indent)
-            lines.extend(
-                FittedLine(
-                    piece, measure - (indent if index == 0 else 0) - text_width(piece, face, size)
-                )
-                for index, piece in enumerate(pieces)
-            )
-            continue
-        breaks: list[tuple[int, int]] = []
-        position = count
-        while position > 0:
-            start = choice[position]
-            breaks.append((start, position))
-            position = start
-        breaks.reverse()
-        for start, stop in breaks:
-            natural = sum(widths[start:stop]) + space * max(0, stop - start - 1)
-            lines.append(
-                FittedLine(
-                    " ".join(words[start:stop]), measure - (indent if start == 0 else 0) - natural
-                )
-            )
+            local_widths = [measured.width(i, i + 1) for i in range(offset, offset + len(paragraph))]
+            local = _measured(paragraph, face, size, local_widths)
+            lines.extend(fitted(offset + start, offset + end, indent if index == 0 else 0.0)
+                         for index, (start, end) in enumerate(_break_offsets(
+                             local, measure, first_indent=indent,
+                         )))
+        else:
+            breaks: list[tuple[int, int]] = []
+            position = count
+            while position > 0:
+                start = choice[position]
+                breaks.append((start, position))
+                position = start
+            for start, stop in reversed(breaks):
+                lines.append(fitted(words[start][0], words[stop - 1][1],
+                                    indent if start == 0 else 0.0))
+        offset += len(paragraph) + 1
     return lines
 
 
@@ -302,6 +323,12 @@ class Block:
     columns: int | None = None
     decorated: bool = True
     bookmark: str = ""
+    runs: list[tuple[str, str]] | None = None
+    inset: float = 0.0
+    keep_with_next: bool = False
+    min_split_lines: int = 1
+    numbered: bool = False
+    preserve_whitespace: bool = False
 
 
 @dataclass
@@ -367,6 +394,7 @@ class Document:
         self.blocks: list[Block | Table | Rule] = []
         self.furniture: dict[str, list[PageFurniture]] = {}
         self.omit_first: set[str] = set()
+        self.line_numbers: tuple[str, float, float] | None = None
 
     @property
     def measure(self) -> float:
@@ -379,7 +407,14 @@ class Document:
         return math.floor(cursor / self.baseline + 1e-9) * self.baseline
 
     def add(self, block: Block) -> None:
-        self.fonts.collect(block.role, block.text)
+        if block.runs is not None:
+            if "".join(text for text, _role in block.runs) != block.text:
+                raise PdfError("Inline runs must cover the complete block text")
+            for text, role in block.runs:
+                if text:
+                    self.fonts.collect(role, text)
+        else:
+            self.fonts.collect(block.role, block.text)
         self.blocks.append(block)
 
     def add_rule(
@@ -509,7 +544,40 @@ class Document:
                 draw_row(row, body_face, table.role, header=False)
                 cursor -= gap
 
-        for block in self.blocks:
+        def prepared(block: Block) -> tuple[list[FittedLine], EmbeddedFont, list[tuple[int, int, str]]]:
+            runs = block.runs or [(block.text, block.role)]
+            role = next((role for text, role in runs if text), block.role)
+            face = faces.get(role) or next(iter(faces.values()))
+            spans: list[tuple[int, int, str]] = []
+            advances: list[float] = []
+            offset = 0
+            for text, role in runs:
+                if not text:
+                    continue
+                spans.append((offset, offset + len(text), role))
+                advances.extend(faces[role].advance(ord(character)) / 1000 * block.size
+                                for character in text)
+                offset += len(text)
+            pieces = fit_paragraph(
+                block.text, face, block.size, self.measure - block.inset * 2,
+                first_indent=block.indent, allow_tightening=block.align == JUSTIFIED,
+                advances=advances if block.runs is not None else None,
+                columns=block.columns, preserve_whitespace=block.preserve_whitespace,
+            )
+            return pieces, face, spans
+
+        def capacity(block: Block, face: EmbeddedFont, start: float) -> int:
+            count = 0
+            descent = face.metrics.descent * block.size / face.metrics.units_per_em
+            while count < 10000:
+                baseline = self._snap(start - block.size)
+                if baseline + descent < self.bottom - 1e-6:
+                    break
+                count += 1
+                start = baseline + block.size - block.size * block.leading
+            return count
+
+        for block_index, block in enumerate(self.blocks):
             if block.new_page and page.lines:
                 new_page(block.decorated)
             if not page.lines:
@@ -525,67 +593,89 @@ class Document:
                 page.rules.append((origin, cursor, origin + self.measure, cursor, block.width))
                 cursor -= block.space_after
                 continue
-            face = faces[block.role]
+            pieces, face, spans = prepared(block)
             step = block.size * block.leading
-            # A submission sheet is a fixed character grid, not prose: it is
-            # broken at the measure and never spaced out, because the column
-            # count is the contract rather than a typographic preference.
-            if block.align == GRID or block.columns is not None:
-                pieces = [
-                    FittedLine(piece, 0.0)
-                    for piece in break_lines(
-                        block.text,
-                        face,
-                        block.size,
-                        self.measure,
-                        first_indent=block.indent,
-                        columns=block.columns,
-                    )
-                ]
-            else:
-                pieces = fit_paragraph(
-                    block.text,
-                    face,
-                    block.size,
-                    self.measure,
-                    first_indent=block.indent,
-                    allow_tightening=block.align == JUSTIFIED,
-                )
-            origin = self._origin(len(pages))
-            for index, piece in enumerate(pieces):
-                baseline = self._snap(cursor - block.size)
-                descent = face.metrics.descent * block.size / face.metrics.units_per_em
-                if baseline + descent < self.bottom - 1e-6:
+            if block.keep_with_next and page.lines:
+                # Reserve the whole heading chain and the first body fragment.
+                # Stop once it fits, the page fills, or an explicit boundary
+                # intervenes; a long manuscript does not widen this lookahead.
+                after = cursor
+                for following_index in range(block_index, len(self.blocks)):
+                    following = self.blocks[following_index]
+                    if not isinstance(following, Block) or (
+                        following_index > block_index and following.new_page
+                    ):
+                        break
+                    if following_index == block_index:
+                        following_pieces, following_face = pieces, face
+                    else:
+                        after -= following.space_before
+                        following_pieces, following_face, _ = prepared(following)
+                    required = (len(following_pieces) if following.keep_with_next else
+                                min(max(2, following.min_split_lines), len(following_pieces)))
+                    if capacity(following, following_face, after) < required:
+                        new_page(block.decorated)
+                        break
+                    if not following.keep_with_next:
+                        break
+                    for _piece in following_pieces:
+                        after = (self._snap(after - following.size) + following.size
+                                 - following.size * following.leading)
+                    after -= following.space_after
+            index = 0
+            while index < len(pieces):
+                available = capacity(block, face, cursor)
+                remaining = len(pieces) - index
+                minimum = min(block.min_split_lines, remaining)
+                if available < minimum and page.lines:
                     new_page(block.decorated)
-                    origin = self._origin(len(pages))
-                # Baselines sit on the grid, and the left edge follows the page
-                # number once mirrored margins are on.
-                baseline = self._snap(cursor - block.size)
-                line = Line(
-                    piece.text,
-                    origin + (block.indent if index == 0 else 0),
-                    baseline,
-                    block.size,
-                    block.role,
-                )
-                # The last line of a paragraph is not justified: stretching it
-                # to the margin is the classic give-away of amateur typesetting.
-                if block.align == JUSTIFIED and piece.text and index < len(pieces) - 1:
-                    line = self._justify(line, face, block.size, piece.slack)
-                elif block.align == CENTRE and piece.text:
-                    line = Line(
-                        piece.text,
-                        origin + (self.measure - text_width(piece.text, face, block.size)) / 2,
-                        baseline,
-                        block.size,
-                        block.role,
-                    )
-                page.lines.append(line)
-                if index == 0 and block.bookmark:
-                    page.bookmarks.append((block.bookmark, baseline + block.size))
-                # Advance from the drawn baseline, so quantization cannot make
-                # the following block reuse it at another point size.
-                cursor = baseline + block.size - step
+                    available = capacity(block, face, cursor)
+                count = min(max(1, available), remaining)
+                if 0 < remaining - count < block.min_split_lines:
+                    adjusted = remaining - block.min_split_lines
+                    if adjusted >= block.min_split_lines:
+                        count = adjusted
+                origin = self._origin(len(pages)) + block.inset
+                for piece in pieces[index:index + count]:
+                    baseline = self._snap(cursor - block.size)
+                    start_x = origin + (block.indent if index == 0 else 0.0)
+                    natural = self.measure - block.inset * 2 - piece.slack
+                    if index == 0:
+                        natural -= block.indent
+                    if block.align == CENTRE and piece.text:
+                        start_x = origin + (self.measure - block.inset * 2 - natural) / 2
+                    extra = 0.0
+                    if block.align == JUSTIFIED and piece.text and index < len(pieces) - 1:
+                        gaps = 0.0
+                        for start, stop, role in spans:
+                            fragment = block.text[max(piece.start, start):min(piece.end, stop)]
+                            gaps += fragment.count(" ") * text_width(" ", faces[role], block.size)
+                        if gaps and abs(piece.slack / gaps) <= 0.34:
+                            extra = piece.slack / piece.text.count(" ")
+                    if block.numbered and self.line_numbers is not None and piece.text:
+                        role, size, gutter = self.line_numbers
+                        # One number per baseline, independent of inline fragments.
+                        number = str(1 + sum(line.x < self._origin(len(pages))
+                                             for line in page.lines))
+                        x = self._origin(len(pages)) - gutter / 2 - text_width(number, faces[role], size)
+                        page.lines.append(Line(number, x, baseline, size, role))
+                    drawn = False
+                    for start, stop, role in spans:
+                        fragment = block.text[max(piece.start, start):min(piece.end, stop)]
+                        if not fragment:
+                            continue
+                        line = Line(fragment, start_x, baseline, block.size, role, extra)
+                        page.lines.append(line)
+                        start_x += text_width(fragment, faces[role], block.size) + fragment.count(" ") * extra
+                        drawn = True
+                    if not drawn:
+                        page.lines.append(Line("", start_x, baseline, block.size, block.role))
+                    if index == 0 and block.bookmark:
+                        page.bookmarks.append((block.bookmark, baseline + block.size))
+                    cursor = baseline + block.size - step
+                    index += 1
+                if index < len(pieces):
+                    new_page(block.decorated)
             cursor -= block.space_after
         pages.append(page)
         return [self._decorate(page, index, len(pages)) for index, page in enumerate(pages)]
@@ -595,27 +685,6 @@ class Document:
         if self.mirror and page_number % 2:
             return self.right
         return self.left
-
-    def _justify(self, line: Line, face: EmbeddedFont, size: float, slack: float) -> Line:
-        """Spread the line's slack over its word gaps.
-
-        The breaker has already chosen the breaks, so the slack is known and
-        only the gaps have to absorb it. A negative spacing tightens the line,
-        which is why lines no longer all fall short.
-        """
-        spaces = line.text.count(" ")
-        if not spaces:
-            return line
-        space = text_width(" ", face, size)
-        if space <= 0:
-            return line
-        extra = slack / (spaces * space)
-        if abs(extra) > 0.34:
-            # Beyond a third of an em in either direction the word spaces stop
-            # reading as spaces. The line stays ragged rather than opening a
-            # gap or crushing the words together.
-            return line
-        return Line(line.text, line.x, line.y, line.size, line.role, word_spacing=extra * space)
 
     def _decorate(self, page: Page, index: int, total: int) -> Page:
         if not page.decorated:

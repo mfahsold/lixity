@@ -6,6 +6,7 @@ from typing import Annotated, Any, ClassVar, Literal, get_args
 from urllib.parse import urlsplit
 
 from pydantic import (
+    AfterValidator,
     BaseModel,
     ConfigDict,
     Field,
@@ -30,7 +31,7 @@ CLAIM_CONFIDENCES: tuple[ClaimConfidence, ...] = get_args(ClaimConfidence)
 # subclasses, and the runtime contract is the serialized literal).
 SchemaVersion = Literal[
     "research-local/1", "research-local/2", "research-local/3", "research-local/4",
-    "research-local/5", "research-local/6", "research-local/7",
+    "research-local/5", "research-local/6", "research-local/7", "research-local/8",
 ]
 Kind = Literal[
     "project",
@@ -105,14 +106,17 @@ class AuthoredRecord(Record):
 
     @model_validator(mode="after")
     def valid_revision(self) -> "AuthoredRecord":
-        if self.revision == 1:
-            if self.schema_version != self.initial_schema_version or self.change is not None:
-                raise ValueError("Initial authored records retain the revision-1 contract")
-        elif (self.schema_version != self.revision_schema_version or self.change is None
-              or self.change.previous_revision != self.revision - 1):
-            version = self.revision_schema_version.rsplit("/", 1)[1]
-            raise ValueError(f"Authored revisions require version {version} and their immediate predecessor")
+        self._validate_revision_versions(self.initial_schema_version, self.revision_schema_version)
         return self
+
+    def _validate_revision_versions(self, initial_version: str, revision_version: str) -> None:
+        if self.revision == 1:
+            if self.schema_version != initial_version or self.change is not None:
+                raise ValueError("Initial authored records retain the revision-1 contract")
+        elif (self.schema_version != revision_version or self.change is None
+              or self.change.previous_revision != self.revision - 1):
+            version = revision_version.rsplit("/", 1)[1]
+            raise ValueError(f"Authored revisions require version {version} and their immediate predecessor")
 
 
 class Project(Record):
@@ -249,6 +253,96 @@ class Passage(Record):
         return self
 
 
+def _valid_geographic_position(value: list[float]) -> list[float]:
+    if not -180 <= value[0] <= 180 or not -90 <= value[1] <= 90:
+        raise ValueError("Geographic positions require WGS84 longitude/latitude bounds")
+    return value
+
+
+GeographicPosition = Annotated[
+    list[Annotated[float, Field(allow_inf_nan=False)]],
+    Field(min_length=2, max_length=2), AfterValidator(_valid_geographic_position),
+]
+
+
+class GeographicPoint(StrictModel):
+    type: Literal["Point"]
+    coordinates: GeographicPosition
+
+
+class GeographicLineString(StrictModel):
+    type: Literal["LineString"]
+    coordinates: Annotated[list[GeographicPosition], Field(min_length=2, max_length=10000)]
+
+
+class GeographicPolygon(StrictModel):
+    type: Literal["Polygon"]
+    coordinates: Annotated[list[Annotated[list[GeographicPosition], Field(min_length=4, max_length=10000)]],
+                           Field(min_length=1, max_length=2500)]
+
+    @model_validator(mode="after")
+    def closed_rings(self) -> "GeographicPolygon":
+        if any(ring[0] != ring[-1] for ring in self.coordinates):
+            raise ValueError("Polygon rings must close with their first position")
+        return self
+
+
+class GeographicProperties(StrictModel):
+    """Author-supplied labels and route context, not verified geographic facts."""
+
+    label: ContextLabel
+    description: Annotated[str, Field(min_length=1, max_length=4000)] | None = None
+    time_period: ContextLabel | None = None
+    actors: Annotated[list[Annotated[str, Field(min_length=1, max_length=100)]], Field(max_length=100)] = Field(default_factory=list)
+    transport: Literal["walking", "driving", "cycling", "rail", "boat", "other"] | None = None
+    feature_type: ContextLabel | None = None
+    waypoint_labels: Annotated[list[ContextLabel], Field(max_length=10000)] = Field(default_factory=list)
+
+    @field_validator("label", "description", "time_period", "feature_type")
+    @classmethod
+    def nonblank_labels(cls, value: str | None) -> str | None:
+        if value is not None and not value.strip():
+            raise ValueError("Geographic text must not be blank")
+        return value
+
+
+class GeographicFeature(StrictModel):
+    type: Literal["Feature"]
+    geometry: Annotated[GeographicPoint | GeographicLineString | GeographicPolygon,
+                        Field(discriminator="type")] | None
+    properties: GeographicProperties
+
+    @model_validator(mode="after")
+    def matching_waypoints(self) -> "GeographicFeature":
+        labels = self.properties.waypoint_labels
+        if labels and (not isinstance(self.geometry, GeographicLineString)
+                       or len(labels) != len(self.geometry.coordinates)):
+            raise ValueError("Waypoint labels require one label per LineString position")
+        return self
+
+
+class GeographicFeatureCollection(StrictModel):
+    """Bounded two-dimensional GeoJSON subset without remote map dependencies."""
+
+    type: Literal["FeatureCollection"]
+    features: Annotated[list[GeographicFeature], Field(max_length=200)]
+
+    @model_validator(mode="after")
+    def bounded_positions(self) -> "GeographicFeatureCollection":
+        count = 0
+        for feature in self.features:
+            geometry = feature.geometry
+            if isinstance(geometry, GeographicPoint):
+                count += 1
+            elif isinstance(geometry, GeographicLineString):
+                count += len(geometry.coordinates)
+            elif isinstance(geometry, GeographicPolygon):
+                count += sum(len(ring) for ring in geometry.coordinates)
+        if count > 10000:
+            raise ValueError("Geography permits at most 10000 positions in total")
+        return self
+
+
 class Dossier(AuthoredRecord):
     kind: Literal["dossier"] = "dossier"
     title: Annotated[str, Field(min_length=1, max_length=500)]
@@ -256,6 +350,24 @@ class Dossier(AuthoredRecord):
     tags: list[Annotated[str, Field(min_length=1, max_length=50)]] = Field(default_factory=list)
     body: Annotated[str, Field(min_length=1, max_length=2 * 1024 * 1024)]
     evidence_refs: list[Reference] = Field(default_factory=list)
+    geography: GeographicFeatureCollection | None = None
+
+    @model_validator(mode="after")
+    def valid_revision(self) -> "Dossier":
+        if self.schema_version == "research-local/8":
+            self._validate_revision_versions("research-local/8", "research-local/8")
+        else:
+            self._validate_revision_versions(self.initial_schema_version, self.revision_schema_version)
+            if self.geography is not None:
+                raise ValueError("Structured dossier geography requires version 8")
+        return self
+
+    @model_serializer(mode="wrap")
+    def serialize_dossier(self, handler: SerializerFunctionWrapHandler) -> dict[str, Any]:
+        result: dict[str, Any] = handler(self)
+        if self.schema_version != "research-local/8":
+            result.pop("geography", None)
+        return result
 
 
 class ClaimScope(StrictModel):
@@ -445,7 +557,7 @@ class Entry(StrictModel):
 
 
 class Manifest(StrictModel):
-    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7"] = "research-manifest-local/1"
+    schema_version: Literal["research-manifest-local/1", "research-manifest-local/2", "research-manifest-local/3", "research-manifest-local/4", "research-manifest-local/5", "research-manifest-local/6", "research-manifest-local/7", "research-manifest-local/8"] = "research-manifest-local/1"
     project_id: Identifier
     generation: Annotated[int, Field(ge=1)]
     parent: Digest | None

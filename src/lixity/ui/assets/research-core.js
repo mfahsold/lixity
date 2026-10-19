@@ -72,7 +72,8 @@ async function submitResearchForm(button, action, payload, fields, clearFields, 
       if (JSON.stringify(fieldSnapshot(fields)) === JSON.stringify(submitted)) {
         clearFields.forEach(function(identifier) {
           var field = document.getElementById(identifier);
-          if (field.type === "checkbox") field.checked = false;
+          if (field._geographyEditor) field._geographyEditor.reset();
+          else if (field.type === "checkbox") field.checked = false;
           else field.value = "";
         });
       }

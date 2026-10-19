@@ -63,7 +63,7 @@ class PdfCommandTest(unittest.TestCase):
         return directory, manuscript
 
     def test_each_layout_writes_a_pdf(self):
-        for layout in ("report", "book", "sheet"):
+        for layout in ("editor", "report", "book", "sheet"):
             with self.subTest(layout=layout):
                 directory, manuscript = self._workspace()
                 command = [
@@ -88,6 +88,18 @@ class PdfCommandTest(unittest.TestCase):
         stamp = produced.stat().st_mtime_ns
         self.assertEqual(main(command), 0)
         self.assertEqual(produced.stat().st_mtime_ns, stamp)
+
+    def test_unsupported_tex_keeps_manuscript_and_existing_copy_unchanged(self):
+        directory, manuscript = self._workspace()
+        source = "# Synthetic title\n\nA paragraph with \\input{external-file}.\n"
+        manuscript.write_text(source, encoding="utf-8")
+        target = Path(directory.name) / "editorial.pdf"
+        target.write_bytes(b"previous reviewed copy")
+        self.assertEqual(main([
+            "pdf", str(manuscript), "--layout", "editor", "-o", str(target), *_fonts(),
+        ]), 1)
+        self.assertEqual(target.read_bytes(), b"previous reviewed copy")
+        self.assertEqual(manuscript.read_text(encoding="utf-8"), source)
 
     def test_explicit_output_path_is_honoured(self):
         directory, manuscript = self._workspace()

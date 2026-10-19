@@ -76,6 +76,7 @@ _CSS_FILES = (
     "components.css",
     "dashboard.css",
     "dossier-images.css",
+    "dossier-geography.css",
     "workspace-reader.css",
     "manuscript-links.css",
 )
@@ -98,6 +99,7 @@ _JS_FILES = (
     "research-revisions.js",
     "project-ui.js",
     "dossier-images.js",
+    "dossier-geography.js",
     "style-space.js",
     "workspace-reader.js",
     "manuscript-links.js",

@@ -84,8 +84,11 @@ def test_title_detection_does_not_read_a_fenced_code_example():
     pdf = compose_pdf("```markdown\n# Code example title\n```\n\n# Real document title\n\n"
                       "## Opening\n\nA bird crosses the garden.\n",
                       manuscript="synthetic.md", layout="book")
-    assert "Real document title" in _pdf_text(pdf)
-    assert "Code example title" not in _pdf_text(pdf)
+    extracted = _pdf_text(pdf)
+    cover = extracted.split("\f", 1)[0]
+    assert "Real document title" in cover
+    assert "Code example title" not in cover
+    assert "Code example title" in extracted
 
 
 @pytest.mark.native_pdf

@@ -56,6 +56,30 @@ class PageHead(HTMLParser):
 
 
 class TestPagesStaging(unittest.TestCase):
+    def test_report_title_replacement_ignores_embedded_svg_script_literals(self):
+        from scripts.build_examples import _replace_title
+
+        report = '<html><head><title>Original</title></head><body><script>var svg = "<title>Feature</title>";</script></body></html>'
+        self.assertEqual(_replace_title(report, "Research & maps"), report.replace(
+            "<title>Original</title>", "<title>Research &amp; maps</title>",
+        ))
+
+    def test_generated_research_preview_uses_its_own_image(self):
+        from scripts.build_examples import _head_metadata
+
+        metadata = _head_metadata(
+            canonical=SITE + "demo/research.html", title="Research example",
+            description="Historical sources and fictional scene notes", language="en",
+            preview_image=("screenshots/dashboard-dossier-image.png", "Retained historical map"),
+        )
+        head = PageHead()
+        head.feed("<head>" + metadata + "</head>")
+        expected = SITE + "screenshots/dashboard-dossier-image.png"
+        self.assertEqual(head.meta["og:image"], [expected])
+        self.assertEqual(head.meta["twitter:image"], [expected])
+        self.assertEqual(head.structured[0]["image"]["url"], expected)
+        self.assertEqual(head.meta["og:image:alt"], ["Retained historical map"])
+
     def test_sitemap_covers_published_html_canonicals(self):
         class Canonicals(HTMLParser):
             def handle_starttag(self, tag, attrs):
@@ -100,6 +124,9 @@ class TestPagesStaging(unittest.TestCase):
             docs = root / "docs"
             public = ("index.html", "USAGE.md", "guides/install.html", "assets/site.css",
                       "blog/article.html", "blog/article.html.md",
+                      "assets/research/hamburg-free-port-1900.jpg",
+                      "assets/research/hamburg-harbour-1890-1900.jpg", "assets/research/sources.json",
+                      "demo/report.html", "demo/research.html", "demo/research-data.json",
                       "research/USAGE.md", "research/examples/synthetic-source.txt",
                       "screenshots/public.png", "sitemap.xml", ".nojekyll",
                       "examples/novel.html", "examples/novel-report.pdf")
@@ -108,18 +135,22 @@ class TestPagesStaging(unittest.TestCase):
                        ".planning/secret.md", "research/.scratch/session.md",
                        "screenshots/local.log", "private/source.txt")
             private += ("blog/session-notes.md",)
+            private += ("assets/research/unreviewed.jpg", "demo/local-source.json",)
+            private += ("demo/unapproved.html", "demo/source.md", "demo/output.json",
+                        "demo/archive.zip", "demo/helpers/input.html")
             for name in public + private:
                 path = docs / name
                 path.parent.mkdir(parents=True, exist_ok=True)
                 path.write_bytes(b"synthetic fixture")
             output = root / "site"
-            stage(docs, output)
+            count = stage(docs, output)
             published = {str(path.relative_to(output)).replace("\\", "/")
                          for path in output.rglob("*") if path.is_file()}
             self.assertEqual(
                 published,
                 set(public) | {"assets/design-tokens.css", "assets/components.css", "sitemap-alt.xml"},
             )
+            self.assertEqual(count, len(published))
             with self.assertRaises(FileExistsError):
                 stage(docs, output)
 

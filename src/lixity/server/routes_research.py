@@ -697,7 +697,8 @@ class ResearchRoutesMixin(ResponseMixin):
 
         try:
             res = research_api.create_dossier(
-                root, title=title, body=body, language=lang, tags=tags, evidence_ids=evidence_ids
+                root, title=title, body=body, language=lang, tags=tags, evidence_ids=evidence_ids,
+                geography=payload.get("geography"),
             )
             self._json({"ok": True, "message": f"Dossier '{title}' created", **res})
         except (ResearchError, OSError, ValueError) as exc:

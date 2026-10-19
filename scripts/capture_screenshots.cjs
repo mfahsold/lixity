@@ -16,9 +16,12 @@ async function main() {
     await target.route('http://lixity-screenshots.test/**', async route => {
       const url = new URL(route.request().url());
       const resource = researchFixture[url.pathname + url.search];
-      if (url.pathname === '/api/research/image' && resource && resource.content_base64) {
+      if (url.pathname === '/api/research/image' && resource && resource.asset_path) {
+        assert.equal(route.request().method(), 'GET');
+        assert.ok(['docs/assets/research/hamburg-free-port-1900.jpg',
+          'docs/assets/research/hamburg-harbour-1890-1900.jpg'].includes(resource.asset_path));
         await route.fulfill({status: 200, contentType: resource.media_type,
-          body: Buffer.from(resource.content_base64, 'base64')});
+          body: fs.readFileSync(path.join(__dirname, '..', resource.asset_path))});
         return;
       }
       const capture = captures.find(item => '/' + path.basename(item.source) === url.pathname);
@@ -316,7 +319,7 @@ async function main() {
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
         }
         await save(capture.target, '#research-manager');
-      } else if (name.startsWith('dashboard-research-sources') || name.startsWith('dashboard-research-dossiers') || name.startsWith('dashboard-dossier-image')) {
+      } else if (name.startsWith('dashboard-research-sources') || name.startsWith('dashboard-research-dossiers') || name.startsWith('dashboard-dossier-')) {
         await selectView('research');
         const sources = name.startsWith('dashboard-research-sources');
         const kind = sources ? 'sources' : 'dossiers';
@@ -330,12 +333,22 @@ async function main() {
         await card.locator('[data-research-detail]').click();
         await card.locator('.research-details-body .research-prose').first().waitFor();
         if (!sources) {
-          const image = card.locator('.dossier-image img');
-          await image.scrollIntoViewIfNeeded();
-          await image.evaluate(element => element.decode());
+          for (const image of await card.locator('.dossier-image img').all()) {
+            await image.scrollIntoViewIfNeeded();
+            await image.evaluate(element => element.decode());
+          }
         }
-        await save(capture.target, name.startsWith('dashboard-dossier-image') ?
-          '.research-dossier-section-block:has(.dossier-image)' : '#research-manager');
+        if (name.startsWith('dashboard-dossier-geography')) {
+          await card.locator('.dossier-geography .geography-sketch').waitFor();
+          await save(capture.target, '.research-details-body .dossier-geography');
+        } else if (name.startsWith('dashboard-dossier-image') || name.startsWith('dashboard-dossier-photo')) {
+          const alt = name.startsWith('dashboard-dossier-photo') ? "Hamburg's Hansahafen" : 'Historical coloured plan';
+          const section = card.locator('.research-dossier-section-block').filter({has: page.locator('.dossier-image img[alt*="' + alt + '"]')});
+          await section.scrollIntoViewIfNeeded();
+          await save(capture.target, '.research-dossier-section-block:has(.dossier-image img[alt*="' + alt + '"])');
+        } else {
+          await save(capture.target, '#research-manager');
+        }
       } else if (name.startsWith('dashboard-research-search')) {
         await selectView('research');
         await page.locator('[data-rtab="search"]').click();

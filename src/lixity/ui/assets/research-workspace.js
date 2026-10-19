@@ -634,13 +634,17 @@ function highlightSearchTerms(text, query) {
     if (!titleVal) { researchFormStatus(dosBtn, uiLabel("research_dossier_title_required"), "err"); return; }
     var tagsArr = (dTags && dTags.value) ? dTags.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
     var eidsArr = (dEids && dEids.value) ? dEids.value.split(",").map(function(t){ return t.trim(); }).filter(Boolean) : [];
+    var dGeography = document.getElementById("r-dos-geography"), geography = null;
+    try { if (dGeography && dGeography._geographyEditor) geography = dGeography._geographyEditor.read(); }
+    catch (error) { researchFormStatus(dosBtn, error.message || uiLabel("geography_invalid"), "err"); return; }
     await submitResearchForm(dosBtn, "research-dossier", {
       title: titleVal,
       body: dBody ? dBody.value : "",
       tags: tagsArr,
-      evidence_ids: eidsArr
-    }, ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body"],
-      ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body"], "research_dossier_complete",
+      evidence_ids: eidsArr,
+      geography: geography
+    }, ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body", "r-dos-geography"],
+      ["r-dos-title", "r-dos-tags", "r-dos-eids", "r-dos-body", "r-dos-geography"], "research_dossier_complete",
       function() { refreshResearchDossiers(null, null, true); });
     return;
   }

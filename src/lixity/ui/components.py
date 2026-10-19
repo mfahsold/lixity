@@ -128,6 +128,7 @@ def manuscript_pdf_controls(
         '<div class="manuscript-pdf-actions"><div class="setting-field">'
         f'<label for="manuscript-pdf-layout">{L("manuscript_pdf_layout")}</label>'
         f'<select class="ctl" id="manuscript-pdf-layout" name="layout"{disabled}>'
+        f'<option value="editor">{L("manuscript_pdf_editor")}</option>'
         f'<option value="book">{L("manuscript_pdf_book")}</option>'
         f'<option value="sheet">{L("manuscript_pdf_sheet")}</option>'
         f'<option value="report">{L("manuscript_pdf_report")}</option></select></div>'

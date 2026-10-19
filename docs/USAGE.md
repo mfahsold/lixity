@@ -82,8 +82,9 @@ writes nothing until confirmation; opening reconnects an existing project.
 
 ### Download a manuscript PDF
 
-Open **PDF export** above the workspace views, choose **A5 reading copy**,
-**A4 manuscript sheets** or **A4 analysis report**, then **Download PDF**.
+Open **PDF export** above the workspace views, choose a layout, then
+**Download PDF**. Since v0.7.0, **A4 editorial copy** is the initial choice;
+**A5 reading copy**, **A4 manuscript sheets** and **A4 analysis report** are also available.
 Changing the layout alone does not generate a file. The download uses the same
 composer and project metadata as [`lixity pdf`](#lixity-pdf), returning bytes
 directly without creating server export files. Reload after switching projects
@@ -156,7 +157,7 @@ select the relevant tab. All available panels remain readable without JavaScript
 
 ### Settings and interpretation
 
-In **Project & Settings**, expand **Detection thresholds** to inspect controls
+In **Project & Settings → Analysis**, expand **Adjust highlights** to inspect controls
 and explanations. **Apply** submits changes; restoring defaults only changes
 the form. Invalid numbers and a strong cutoff below the noticeable cutoff fail
 validation. [Configuration](#configuration-corpusconfig) explains persistent
@@ -415,10 +416,13 @@ Create a local reading copy without a browser or external converter:
 
 ```sh
 lixity pdf manuscript.md --layout book --author "Example Writer" -o reading.pdf
+# Since v0.7.0: an annotation copy with page and line numbers.
+lixity pdf manuscript.md --layout editor -o editorial.pdf
 ```
 
 | Layout | Page | Purpose |
 | :--- | :--- | :--- |
+| `editor` (since v0.7.0) | A4 | Editorial reading with line numbers and room for comments |
 | `report` | A4 | Analysis report with cover page and repeated table headers |
 | `book` | A5 | Continuous reading with serif text, mirrored margins and chapter openings |
 | `sheet` | A4 | Submission grid, at most 30 lines per page and 60 characters per line |
@@ -440,8 +444,8 @@ a running-header notice in every layout; an empty override clears it. See
 [publication settings](#publication-settings) for optional A5 imprint text.
 
 Fonts come from the host and can be pinned per role with CLI options listed by
-`lixity pdf --help`, or `LIXITY_PDF_FONT_TEXT`, `_HEADING`, `_MONO`, `_SANS` and
-`_SANS_BOLD`. Only used glyphs are embedded, with searchable/copyable text maps.
+`lixity pdf --help`, or `LIXITY_PDF_FONT_TEXT`, `_HEADING`, `_ITALIC`, `_BOLD_ITALIC`,
+`_MONO`, `_SANS` and `_SANS_BOLD`. Only used glyphs are embedded, with searchable/copyable text maps.
 Missing fonts, embedding restrictions or missing glyphs fail explicitly; a
 glyph error identifies its font role and Unicode codepoint. Each role requires
 a single-face TrueType outline font; collections and CFF outlines are
@@ -449,13 +453,22 @@ unsupported. There is no automatic mixed-script fallback, contextual shaping
 or bidirectional layout. Font coverage alone does not establish correct
 rendering for every script.
 
-The composer fits reading measures, breaks paragraphs across lines and splits
-overlong words at character boundaries. Markdown presentation syntax is removed.
-It does not hyphenate, place images, typeset mathematics, create page-numbered
-tables of contents or alternate recto/verso running heads. Shared composition
-boundaries are described in [Architecture](ARCHITECTURE.md).
+Since v0.7.0, manuscript structure is preserved independently of the analysis text:
+prefaces, subheadings, scene breaks, lists, quotations and notes survive export.
+Inline emphasis uses font styles; notes are collected as endnotes. Embedded
+LaTeX text formatting is a bounded subset, never executed as TeX. Unsupported
+TeX constructs report an error rather than silently changing the manuscript.
+Compare the same public-domain excerpt as an
+[editorial copy](examples/effi-briest-editor.pdf),
+[reading copy](examples/effi-briest-book.pdf) or
+[submission grid](examples/effi-briest-sheet.pdf).
 
-These fixed-layout PDFs are for analysis, reading and submission. There is no
+The composer wraps paragraphs and overlong words but does not hyphenate, place
+images, typeset mathematics, create page-numbered tables of contents or alternate
+recto/verso running heads. Image references remain labelled text. See
+[Architecture](ARCHITECTURE.md) for the shared composition boundary.
+
+These fixed-layout PDFs are for editing, analysis, reading and submission. There is no
 EPUB export, bleed/crop marks, print color management, printer preflight or
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
@@ -763,8 +776,10 @@ saved choice. The same transaction saves metadata and defaults together or neith
 The identity check compares configured title/author with explicit manuscript
 metadata: flat leading YAML strings or a leading Markdown title page with
 `by`, `von`, `Author:` or `Autor:`. It normalizes Unicode/whitespace and reports
-missing, unsupported and unavailable evidence separately from a mismatch. It
-does not infer authorship or edit the manuscript. A display byline does not
+missing, unsupported and unavailable evidence separately from a mismatch. A
+missing manuscript value means it was not automatically detected in these
+formats, not that the project setting is empty. The optional comparison does
+not infer authorship or edit the manuscript. A display byline does not
 identify a publisher or printer.
 
 An existing unreadable/malformed config emits a warning naming the file and
@@ -842,7 +857,7 @@ CLI flags or project configuration keys.
 
 ### Publication settings
 
-In the native workspace, open **Project → Settings → Publication**. The
+In the native workspace, open **Project → Settings → A5 book PDF details**. The
 disclosure is collapsed initially and disabled without an explicit project.
 The inclusion checkbox controls the A5 `book` layout; sheets and analysis
 reports omit the imprint. All text fields are optional and empty by default.

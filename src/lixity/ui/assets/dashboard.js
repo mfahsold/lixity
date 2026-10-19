@@ -503,7 +503,7 @@ if (welcomeHero && welcomeDismiss && welcomeShow) {
     event.preventDefault();
     if (busy || !available) return;
     var selected = layout.value;
-    if (["book", "sheet", "report"].indexOf(selected) === -1) return;
+    if (!Array.from(layout.options).some(function(option) { return option.value === selected && !option.disabled; })) return;
     pending(true);
     message("manuscript_pdf_busy", false);
     var reason = "";

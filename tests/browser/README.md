@@ -87,12 +87,13 @@ under `/tmp/lixity-project-controls-*`.
 
 The manuscript-pdf suite checks the native manuscript download controls in all
 seven locales at 1440 and 320 pixels. It verifies explicit project-bound requests,
-exact downloaded bytes for book, sheet and report layouts, pending controls,
+exact downloaded bytes for editorial, book, sheet and report layouts, pending controls,
 inert error messages, refused non-PDF responses and retry without losing the
 chosen layout. Empty projects keep a disabled action; standalone and embedding
 reports without the capability expose none, and disabled JavaScript prevents
-incomplete form submission. HTTP responses and PDF bytes are
-synthetic; real PDF composition is covered by the backend export tests. Screenshots
+incomplete form submission. Intercepted cases use synthetic responses; an additional
+disposable native server verifies real PDF composition, extracted text and
+unsupported-math rejection without changing the manuscript. Screenshots
 and downloaded fixtures stay under `/tmp/lixity-manuscript-pdf-*`.
 
 Run `node tests/browser/manuscript-links-native.cjs` for the real native quote–claim

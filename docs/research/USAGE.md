@@ -8,9 +8,11 @@ Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
 Product versions describe development maturity; response and archive schemas
-are independent. This release reads research records/manifests v1–v7, including
+are independent. Released v0.7.0 reads research records/manifests v1–v8, including
 historical v3.0.1 archives. Reading an archive does not upgrade it. See
 [compatibility and limits](#limits) before writing with an older application.
+Since v0.7.0, optional dossier geography uses v8. Ordinary dossier encodings stay
+unchanged until a geographic save; older readers cannot open v8 archives.
 
 Use `lixity research --help` to discover implemented commands and
 `lixity research COMMAND --help` for exact arguments and output formats.
@@ -530,6 +532,27 @@ native fallback is allowed. A synthetic probe checks execution, not recognition.
 New captures identify `tesseract-cli/1` or `poppler-native/1` and require storage
 v4. Earlier cached provenance/bytes remain unchanged.
 
+### Keep places and journeys in a dossier
+
+**Since v0.7.0.** Use **Places and routes** in the existing dossier
+editor to add named points, paths and areas, with descriptions, periods, actors
+and transport choices. Import supported GeoJSON or enter coordinates in the form.
+The [harbour example](examples/harbour-geography.json) contains deliberately
+fictional positions and walking/driving paths. CLI creation accepts `--geography`;
+ordinary dossier revision, history, search and backup retain the same data.
+Use command help and `research schema` for accepted fields and bounds.
+
+Coordinates are finite WGS84 longitude/latitude pairs. The offline view is a
+coordinate sketch: it provides no basemap, geocoding, road routing, travel times
+or historical verification. An attached map image is a separate source, not a
+georeferenced background. Keep supporting quotations and exact-version images
+in the dossier's existing evidence and body. Unknown geometry stays unplaced.
+
+Only a geographic save opts into record/manifest v8. Later revisions remain v8
+even after removing geography; reading ordinary dossiers preserves their older
+encoding. Older readers cannot open v8 archives. Section edits affect prose only,
+not the dossier's geographic data.
+
 <a id="zotero-desktop-bridge-since-v1190"></a>
 ## Zotero Desktop bridge
 
@@ -560,13 +583,16 @@ not a total count; a final full page may lead to an empty page. External metadat
 and notes remain untrusted evidence.
 
 Capture selects one locally available PDF, UTF-8 text or Markdown attachment.
+**Since v0.7.0,** capture also accepts PNG/JPEG through the existing image
+pipeline; these visual sources have no text passages or OCR.
 The existing ingestion pipeline retains stable bytes, the parent title and origin
 URL. `provenance_note` records a bounded summary of creators, date, parent and
 attachment versions. `context.external_reference` separately records provider,
 server identity, library, parent/attachment keys and versions. This is not a
 lossless bibliography export. Invalid URLs or overlong metadata fail without
 publishing a capture. Language comes from the flag or project, not Zotero metadata.
-Images, audio and video remain in Zotero; Lixity does not transcribe or index them.
+Audio, video and unsupported attachments remain in Zotero. Image capture does
+not interpret depicted places, extract map coordinates or establish authenticity.
 Scanned PDFs require locally installed Tesseract or a configured OCR worker.
 See [local OCR setup](#use-local-ocr-without-a-worker-service).
 
@@ -586,7 +612,7 @@ are unavailable. The browser requires a previewed server identity for capture.
 
 The research dashboard lets users choose a library and collection, search items,
 inspect attachments, open originals in Zotero and capture or refresh selected
-PDF/text attachments after confirming retention. It marks captured attachments
+eligible attachments after confirming retention. It marks captured attachments
 and metadata-version changes. This indication is not a comparison of file bytes.
 
 **Open in Zotero** uses the `zotero://` URL protocol: the Zotero installation
@@ -616,7 +642,7 @@ provenance, not the external library. Use the paired backup below for both store
 A saved reference is metadata, not a retained PDF. Download an attachment in
 Zotero, inspect it with `research zotero --item-key ITEM_KEY`, then capture the
 selected attachment with the preview's server identity and retention permission.
-`zotero-ingest --item-key ITEM_KEY` captures eligible PDF/text attachments as a
+`zotero-ingest --item-key ITEM_KEY` captures eligible attachments as a
 batch. Finally search the retained passages and cite/link the one you reviewed.
 Each step has a distinct result; a catalogue entry alone supplies no evidence.
 
@@ -1133,10 +1159,12 @@ Check installed support with `lixity about --json` and entity contracts with
 | Decision acknowledgement | v5 |
 | Causal claim relation | v6 |
 | Manuscript quote association | v7 |
+| Dossier geography (since v0.7.0) | v8 |
 
 Reading alone does not upgrade archives or rewrite old record bytes. Back up
 the complete store before opting in; use compatible readers/writers afterward.
-Historical v3.0.1 supports through v6, while this release supports through v7.
+Historical v3.0.1 supports through v6, v0.6.0 through v7, and v0.7.0 through v8.
+Older readers cannot open v8 archives.
 Rollback requires the complete pre-upgrade backup, never editing HEAD, schema
 labels or provenance by hand. Source identity metadata cannot be edited in place;
 refresh creates a new capture.

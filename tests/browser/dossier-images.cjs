@@ -148,6 +148,8 @@ server.serve_forever()
     await page.locator('#dossier-image-alt').fill('Synthetic [red] and \\green squares " onload="alert(1) <img src=x onerror=alert(1)>');
     await page.locator('#dossier-image-options > summary').click();
     await page.locator('#dossier-image-caption').fill('A synthetic caption <script>alert(1)</script>.');
+    await page.locator('#dossier-image-note').fill('Synthetic provenance <img src=x onerror=window.imageProvenanceInjected=true>');
+    await page.locator('#dossier-image-origin').fill('https://example.org/synthetic-source');
     await page.locator('#dossier-image-section').selectOption('Notes');
     await page.locator('#dossier-image-retention').check();
     // A valid preview does not override authoritative server validation.
@@ -187,6 +189,9 @@ server.serve_forever()
     finishDetail();
     await page.unroute('**/api/research-dossier-image');
     await expect(page.locator('.research-dossier-body-rendered .dossier-image img')).toBeVisible();
+    await expect(page.locator('.research-dossier-body-rendered .dossier-image figcaption')).toContainText('Synthetic provenance <img src=x onerror=window.imageProvenanceInjected=true>');
+    await expect(page.locator('.research-dossier-body-rendered .dossier-image figcaption a')).toHaveAttribute('href', 'https://example.org/synthetic-source');
+    assert.equal(await page.evaluate(() => Boolean(window.imageProvenanceInjected)), false);
     await expect(page.locator('#r-filter-dossiers')).toBeFocused();
     await page.unroute(dossierDetailURL);
     // A deliberate move through another control to nonfocusable content must

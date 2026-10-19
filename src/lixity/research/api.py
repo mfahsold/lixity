@@ -1036,6 +1036,7 @@ def create_dossier(
     language: str = "en",
     tags: list[str] | None = None,
     evidence_ids: list[str] | None = None,
+    geography: dict[str, Any] | None = None,
     actor: str = "local-author",
 ) -> dict[str, Any]:
     """Create and commit a new Dossier record."""
@@ -1051,14 +1052,14 @@ def create_dossier(
     for ref in evidence_refs:
         snapshot.get(ref, Passage)
 
-    dossier = Dossier(
-        **envelope(snapshot.project.id, actor),
-        title=title,
-        language=language,
-        tags=tags or [],
-        body=body,
-        evidence_refs=evidence_refs,
-    )
+    values = envelope(snapshot.project.id, actor)
+    if geography is not None:
+        values["schema_version"] = "research-local/8"
+    try:
+        dossier = Dossier.model_validate({**values, "title": title, "language": language, "tags": tags or [],
+                                          "body": body, "evidence_refs": evidence_refs, "geography": geography})
+    except ValidationError as error:
+        raise ResearchError(f"Invalid dossier fields: {error}") from None
     new_snapshot = repository.commit([dossier], {}, snapshot)
     return {
         "schema_version": "research-dossier-local/1",
@@ -1165,6 +1166,7 @@ def get_dossier(project: str | Path, dossier_id: str, *,
             "sections": list(sections.keys()),
             "editable_sections": editable_sections,
             "citation_count": len(dossier.evidence_refs),
+            "geography_feature_count": len(dossier.geography.features) if dossier.geography else 0,
             "excerpt": dossier.body[:500] + ("..." if len(dossier.body) > 500 else ""),
             "decision_reviews": decision_reviews,
             "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
@@ -1205,6 +1207,7 @@ def get_dossier(project: str | Path, dossier_id: str, *,
         "language": dossier.language,
         "tags": dossier.tags,
         "body": dossier.body,
+        "geography": dossier.geography.model_dump(mode="json") if dossier.geography else None,
         "sections": list(sections.keys()),
         "editable_sections": editable_sections,
         "section_map": sections,

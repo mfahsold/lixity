@@ -18,23 +18,28 @@ and
 
 ## Export a manuscript as PDF
 
-**Since v0.3.0:** open **PDF export** in the global project controls above the three workspace views. Choose **A5 reading copy** (default), **A4 manuscript sheets** or **A4 analysis report**, then select **Download PDF** to save it. The menu starts collapsed and stays available in all three views. The PDF goes directly to your browser without creating server export files or changing the manuscript or research archive. Standalone HTML has no download action. The NDA PDF in Project & Settings generates an agreement and is separate from manuscript export.
+Open **PDF export** above the workspace views, choose a purpose and select **Download PDF**. The same composer serves the browser and CLI; downloads create no server export files and change no manuscript. Standalone HTML has no download action.
 
-The terminal command introduced in v2.3.0 remains available:
+**Since v0.7.0:** the initial choice is an A4 editorial copy with line numbers and a correction margin. The same manuscript structure feeds the reading and submission layouts.
 
-Use `lixity pdf` to create an A4 analysis report, an A5 reading copy or an A4 submission sheet with at most 30 lines per page and 60 characters per line. This command reads a Markdown manuscript and composes its output locally; it does not import a research source, run OCR or modify the manuscript.
+- **Editorial copy:** A4, readable text and space for annotations. [Example PDF](../examples/effi-briest-editor.pdf).
+
+- **Reading copy:** A5, chapter openings and continuous reading. [Same excerpt](../examples/effi-briest-book.pdf).
+
+- **Submission sheets:** A4, at most 30 lines of 60 characters. [Same excerpt](../examples/effi-briest-sheet.pdf).
+
+- **Analysis report:** metric tables rather than the manuscript. [Complete report](../examples/effi-briest-report.pdf).
 
 ```
-lixity pdf manuscript.md --layout report -o analysis.pdf
-lixity pdf manuscript.md --layout book --author "Name" -o reading.pdf
-lixity pdf manuscript.md --layout sheet -o submission.pdf
+lixity pdf manuscript.md --layout editor -o editorial.pdf
+lixity pdf --help
 ```
 
-The renderer embeds host TrueType fonts and keeps supported text searchable and copyable. It needs no browser or external converter. Missing glyphs report their font role and Unicode codepoint; there is no automatic mixed-script fallback, contextual shaping or bidirectional layout. The layouts do not provide PDF/X production preflight. See [PDF options, font selection and limits](../USAGE.md#lixity-pdf).
+Manuscript copies retain subheadings, scene breaks, lists, quotations, inline emphasis and endnotes. A bounded set of embedded LaTeX text commands is supported without executing TeX. Unsupported TeX constructs fail explicitly; mathematics and image placement are unavailable. Host TrueType fonts keep supported text searchable and copyable. Missing glyphs identify the font role and Unicode codepoint; there is no mixed-script fallback, contextual shaping, bidirectional layout or PDF/X preflight. See [options and limits](../USAGE.md#lixity-pdf).
 
 ## Enter publication details
 
-**Since v0.3.0:** open **Project → Settings → Publication** in the native workspace. The disclosure starts collapsed and requires an explicit project. Title, author and optional publication data use the existing configuration and PDF composer. Select the inclusion checkbox to add entered imprint text after the A5 reading copy's title page. A4 sheets and reports omit it; all-empty fields add no blank imprint page. Long entries can continue across pages.
+Open **Project → Settings → A5 book PDF details** in the native workspace. This optional section starts collapsed and requires an explicit project. Title, author and publication data use the existing configuration and PDF composer. Select the inclusion checkbox to add entered imprint text after the A5 reading copy's title page. A4 editorial copies, submission sheets and reports omit it; all-empty fields add no blank imprint page. Long entries can continue across pages.
 
 Enter publisher/self-publisher name and address, printer name and address, edition, year, print and digital ISBNs, rights notice, credits or other information as needed. Every text field defaults to empty. Lixity checks syntax and bounds, not assigned ISBNs, rights or legal completeness, and supplies no inferred identity, address, copyright notice or DNB catalog claim. See the [complete configuration contract](../USAGE.md#publication-settings).
 
@@ -76,11 +81,21 @@ Matching URLs do not merge sources. Refreshing a named source with a new URL cre
 
 ## Use Zotero as the source and media catalogue
 
-Run Zotero on the same computer as Lixity and download the attachments you need. In Research → Sources → Zotero, choose a library and collection, inspect an item, select a PDF/text attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Images, audio and video remain in Zotero; they are not transcribed or analyzed.
+Run Zotero on the same computer as Lixity and download the attachments you need. In Research → Sources → Zotero, choose a library and collection, inspect an item, select an eligible attachment and confirm retention. Lixity reads the local API without changing the Zotero library. Since v0.7.0, eligible attachments include PNG/JPEG visual sources without text extraction, alongside PDF/text. Audio, video and unsupported attachments remain in Zotero.
 
 Captured evidence stays readable when Zotero is closed. Refresh linked sources explicitly when they change; old quotations stay intact. There is no background synchronization. Zotero captures need the v3 archive format, which older readers cannot open.
 
 To bring existing Lixity sources into Zotero, `research zotero-export` creates a RIS import bundle with retained files and their identifiers. Export preserves the Lixity archive. Follow the [setup, migration and compatibility reference](../research/USAGE.md#zotero-desktop-bridge-since-v1190), and verify imported files before relying on the new workflow.
+
+## Read a place alongside its sources
+
+**Since v0.7.0:** the [read-only research example](../demo/research.html) combines a historical Hamburg harbour plan, a photochrom print and fictional scene notes. Open its dossier to inspect the images, source links and an authored walking/driving sketch. The historical images do not establish the invented event or journey.
+
+![Retained historical map in the Hamburg research dossier, with its source and provenance](../screenshots/dashboard-dossier-image.png)
+
+*Historical visual references stay attached to exact source versions. [Mobile map view](../screenshots/dashboard-dossier-image-mobile.png) · [Harbour photochrom](../screenshots/dashboard-dossier-photo.png) · [Places and journeys](../screenshots/dashboard-dossier-geography.png) · [Credits and file hashes](../assets/research/sources.json).*
+
+In the native workspace, use **Places and routes** in the dossier editor for named points, paths and areas. The local coordinate view preserves descriptions, periods, actors and transport choices; it does not calculate roads or travel times. A map image remains separate from the sketch. See [editing, supported GeoJSON and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
 ## Search sources and current notes
 

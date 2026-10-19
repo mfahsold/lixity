@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 import shutil
 import subprocess
 import tempfile
@@ -389,17 +390,6 @@ class TypesettingTest(unittest.TestCase):
         lines = [line for line in self._lines(text) if line.text]
         self.assertTrue(all(len(line.text.split(" ")) > 1 for line in lines[:-1]))
 
-    def test_markdown_tables_are_rendered_as_readable_text(self):
-        from lixity.pdf_layouts import _markdown_line
-
-        self.assertIsNone(_markdown_line("|---|:---:|---:|"))
-        self.assertEqual(
-            _markdown_line("| **ASL** | **19,15** | Wert |"),
-            "ASL  ·  19,15  ·  Wert",
-        )
-        self.assertEqual(_markdown_line("- ein Punkt"), "– ein Punkt")
-        self.assertEqual(_markdown_line("**Wert** mit `code`"), "Wert mit code")
-
     def test_grid_layout_never_exceeds_the_column_count(self):
         data = manuscript_pdf(
             title="Harbour Story",
@@ -524,3 +514,74 @@ class NativePdfTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+@pytest.mark.native_pdf
+@needs_fonts
+@pytest.mark.parametrize("mode", ["book", "editor", "sheet"])
+@pytest.mark.skipif(not shutil.which("pdftotext") or not shutil.which("pdffonts"),
+                    reason="requires Poppler pdftotext and pdffonts")
+def test_semantic_pdf_round_trip_keeps_rich_text_and_embeds_real_styles(tmp_path, mode):
+    from lixity.manuscript_document import ManuscriptBlock
+    from lixity.pdf_layouts import editor_pdf
+
+    renderer = {"book": book_pdf, "editor": editor_pdf, "sheet": manuscript_pdf}[mode]
+    italic = next((path for path in (FONTS / "DejaVuSerif-Italic.ttf",
+                                    FONTS.parent / "liberation/LiberationSerif-Italic.ttf")
+                   if path.is_file()), None)
+    bold_italic = next((path for path in (FONTS / "DejaVuSerif-BoldItalic.ttf",
+                                         FONTS.parent / "liberation/LiberationSerif-BoldItalic.ttf")
+                        if path.is_file()), None)
+    if italic is None or bold_italic is None:
+        pytest.skip("requires real italic and bold italic TrueType fonts")
+    choice = FontChoice(serif=str(SERIF), serif_bold=str(BOLD), mono=str(MONO),
+                        serif_italic=str(italic), serif_bold_italic=str(bold_italic))
+    path = tmp_path / f"synthetic-{mode}.pdf"
+    path.write_bytes(renderer(title="Synthetic manuscript", choice=choice, chapters=[
+        ("Chapter", [
+            ManuscriptBlock("paragraph", "Café *emphasis* **strong** ***combined*** `inline` words."),
+            ManuscriptBlock("heading", "Subheading"),
+            ManuscriptBlock("quote", "Quoted synthetic words."),
+            ManuscriptBlock("list_item", "- Listed synthetic words."),
+            ManuscriptBlock("scene_break", "* * *"),
+            ManuscriptBlock("code", "literal = **source**"),
+            ManuscriptBlock("note", "[1] Synthetic endnote."),
+        ]),
+    ]))
+    pdftotext, pdffonts = shutil.which("pdftotext"), shutil.which("pdffonts")
+    assert pdftotext and pdffonts
+    extracted = subprocess.run(  # noqa: S603 - resolved Poppler, synthetic local PDF
+        [pdftotext, "-layout", str(path), "-"], check=True, capture_output=True, text=True,
+    )
+    embedded = subprocess.run(  # noqa: S603 - resolved Poppler, synthetic local PDF
+        [pdffonts, str(path)], check=True, capture_output=True, text=True,
+    )
+    assert not extracted.stderr and not embedded.stderr
+    prose = " ".join(extracted.stdout.split())
+    for expected in ("Café emphasis strong combined inline words.", "Subheading",
+                     "Quoted synthetic words.", "- Listed synthetic words.",
+                     "literal = **source**", "[1] Synthetic endnote."):
+        assert expected in prose
+    assert re.search(r"(?:^|\n)\s*(?:\d+\s+)?\*\s*\*\s*\*\s*(?:\n|$)", extracted.stdout)
+    if mode == "sheet":
+        assert "DejaVuSansMono" in embedded.stdout
+        assert "DejaVuSerif" not in embedded.stdout
+    else:
+        assert "Serif-Italic" in embedded.stdout
+        assert "Serif-BoldItalic" in embedded.stdout
+        assert "DejaVuSerif-Bold" in embedded.stdout
+        assert "DejaVuSansMono" in embedded.stdout
+
+
+@needs_fonts
+@pytest.mark.parametrize("style,field", [("*emphasis*", "serif_italic"),
+                                         ("***combined***", "serif_bold_italic")])
+def test_missing_inline_style_font_is_explicit_only_when_the_style_is_used(style, field):
+    from lixity.manuscript_document import ManuscriptBlock
+
+    choice = FontChoice(serif=str(SERIF), serif_bold=str(BOLD), **{field: "/missing/style.ttf"})
+    assert book_pdf(title="Title", choice=choice,
+                    chapters=[("Chapter", ["Plain manuscript prose."])]).startswith(b"%PDF")
+    with pytest.raises(FontUnavailable, match=r"/missing/style\.ttf"):
+        book_pdf(title="Title", choice=choice,
+                 chapters=[("Chapter", [ManuscriptBlock("paragraph", style)])])

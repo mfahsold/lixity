@@ -409,6 +409,14 @@ cover initialization/status, source capture/read/search/citation, authored recor
 revisions, images, acknowledgements, comparisons and matrix rendering. Retrieved
 text and source criticism metadata remain untrusted evidence.
 
+**Since v0.7.0:** `create_dossier(..., geography=...)` and ordinary
+dossier revisions accept an optional typed GeoJSON FeatureCollection. Full
+details and record history retain it; summaries expose bounded counts. The
+installed `research schema` owns fields and validation limits. Geography uses
+record/manifest v8 on its first save; subsequent edits never downgrade it.
+Legacy dossier encodings remain unchanged until a geographic save. Older readers
+cannot open v8 archives. [Workflow and coordinate semantics](research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+
 `research_api.compare_source()` returns a dictionary by default, or a string
 with `format="md"`. The implementation helper
 `lixity.research.analysis.compare_source_to_manuscript()` is data-only and
@@ -555,7 +563,8 @@ or manuscript path, not `--project` / `--manuscript` flags.
 
 `POST /api/manuscript-pdf` accepts
 `{"layout": "book", "project_token": "<opaque current-context token>"}`.
-Layouts are `book`, `sheet` and `report`. The token belongs to the selected
+Layouts are `book`, `sheet` and `report`; since v0.7.0 they also include
+`editor` for an A4 annotation copy. The token belongs to the selected
 manuscript context and must be passed unchanged; stale context is rejected
 instead of exporting another project's manuscript. The response is binary
 `application/pdf` with an attachment filename, not a JSON record envelope.
@@ -618,7 +627,7 @@ manuscript and does not run a successful dashboard refresh.
 
 - `POST /api/research-ingest`: `{"file": "...", "allow_retention": true, "title": "..."}`
 - `POST /api/research-search`: `{"query": "...", "limit": 10}`
-- `POST /api/research-dossier`: `{"title": "...", "body": "...", "evidence_ids": [...]}`
+- `POST /api/research-dossier`: `{"title": "...", "body": "...", "evidence_ids": [...]}`; since v0.7.0 it also accepts `geography` as a supported GeoJSON FeatureCollection or `null`.
 - `POST /api/research-compare`: `{"source_id": "...", "manuscript": "..."}`
 - `POST /api/research-init`: `{"title": "...", "language": "en"}`
 - `POST /api/research-claim-add`: `{"title": "...", "statement": "...", "confidence": "hypothetical", "dossier_id": "..."}`
@@ -893,8 +902,9 @@ cover scopes, lexical limits and verification boundaries.
 The optional loopback bridge exposes `lixity.research.zotero.collections`,
 `.browse` and `.ingest`. Pass explicit project/library and the previewed
 `expected_server_id` for capture; retention permission is mandatory. Structured
-identity, not titles or filenames, governs deduplication and refresh. Captures
-use record/manifest v3. [Zotero usage](research/USAGE.md#zotero-desktop-bridge-since-v1190)
+identity, not titles or filenames, governs deduplication and refresh. Since
+v0.7.0, captures also accept PNG/JPEG visual sources without text extraction.
+Captures use record/manifest v3. [Zotero usage](research/USAGE.md#zotero-desktop-bridge-since-v1190)
 owns setup, safe refresh, migration and paired backup limits.
 
 Native routes use the selected research root:

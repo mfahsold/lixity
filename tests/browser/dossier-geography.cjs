@@ -1,0 +1,290 @@
+// Editable geography round-trips through native dossier revisions; synthetic data only.
+const assert = require('node:assert/strict');
+const fs = require('node:fs');
+const os = require('node:os');
+const path = require('node:path');
+const {spawn} = require('node:child_process');
+const {once} = require('node:events');
+const {createInterface} = require('node:readline');
+const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
+const {expect} = require(path.join(playwrightModule, 'test'));
+const root = path.resolve(__dirname, '../..');
+const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-geography-'));
+
+(async () => {
+  const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
+import json, sys
+from pathlib import Path
+from http.server import ThreadingHTTPServer
+from lixity.research import api
+from lixity.server import LixityServerHandler
+base = Path(sys.argv[1]); project = base / 'synthetic-project'
+api.init(project, title='Synthetic geography')
+manuscript = project / 'manuscript.md'
+manuscript.write_text('# Synthetic manuscript\\n\\nA traveller crosses the invented harbour.\\n', encoding='utf-8')
+LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.research_dir = str(project)
+LixityServerHandler.source_input = str(manuscript)
+LixityServerHandler.exports_dir = str(base / 'exports')
+LixityServerHandler.language = 'en'; LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}'}), flush=True)
+server.serve_forever()
+`, artifacts], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, stdio: ['ignore', 'pipe', 'pipe']});
+  const lines = createInterface({input: server.stdout});
+  let stderr = '', browser;
+  server.stderr.on('data', data => { stderr = (stderr + data).slice(-5000); });
+  try {
+    const fixture = await new Promise((resolve, reject) => {
+      const timer = setTimeout(() => reject(new Error('Synthetic server startup timed out: ' + stderr)), 15000);
+      lines.once('line', line => { clearTimeout(timer); resolve(JSON.parse(line)); });
+      server.once('error', reject);
+      server.once('exit', code => reject(new Error(`Synthetic server exited ${code}: ${stderr}`)));
+    });
+    browser = await launchChromium();
+    const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
+    page.setDefaultTimeout(10000);
+    const errors = [], external = [], writes = [];
+    page.on('pageerror', error => errors.push(error.message));
+    page.on('request', request => {
+      if (!request.url().startsWith(fixture.url) && !request.url().startsWith('blob:')) external.push(request.url());
+      if (request.method() === 'POST') writes.push(request.postDataJSON());
+    });
+    await page.goto(fixture.url);
+    assert.equal(new URL(page.url()).origin, fixture.url);
+    assert.match(await page.title(), /Synthetic manuscript/);
+    await page.locator('#tab-view-research').click();
+    await page.locator('[data-rtab=dossiers]').click();
+    await page.locator('#r-dos-title').fill('Synthetic harbour journey');
+    await page.locator('#r-dos-body').fill('# Context\n\nSynthetic route notes.');
+    const create = page.locator('#r-dos-geography-editor');
+    await create.locator('summary').first().click();
+    await create.locator('[data-geo-add]').click();
+    let feature = create.locator('[data-geo-feature]').first();
+    await feature.locator('[data-geo-field=label]').fill('Harbour <img src=x onerror=window.geoInjected=true>');
+    await feature.locator('[data-geo-field=coordinates]').fill('999, 52.5');
+    await page.locator('#r-dos-create-btn').click();
+    await expect(page.locator('#r-dos-create-btn-status')).not.toBeEmpty();
+    assert.equal(writes.filter(write => write.title === 'Synthetic harbour journey').length, 0, 'Invalid coordinates are rejected before a write');
+    await feature.locator('[data-geo-field=coordinates]').fill('13.4, 52.5');
+    assert.ok(!(await create.locator('.geography-sketch').innerHTML()).match(/NaN|Infinity/), 'Single-point sketch has finite degenerate bounds');
+    await create.locator('[data-geo-add]').click();
+    feature = create.locator('[data-geo-feature]').nth(1);
+    await feature.locator('[data-geo-field=label]').fill('Mira’s journey');
+    await feature.locator('[data-geo-field=type]').selectOption('LineString');
+    await feature.locator('[data-geo-field=coordinates]').fill('13.4, 52.5\n13.6, 52.7');
+    await feature.locator('summary').click();
+    await feature.locator('[data-geo-field=actors]').fill('Mira\nEmil');
+    await feature.locator('[data-geo-field=transport]').selectOption('rail');
+    await feature.locator('[data-geo-field=time_period]').fill('1902');
+    await feature.locator('[data-geo-field=waypoint_labels]').fill('Harbour\nStation');
+    let releaseCreate, startedCreate;
+    const createGate = new Promise(resolve => { releaseCreate = resolve; });
+    const createReady = new Promise(resolve => { startedCreate = resolve; });
+    await page.route('**/api/research-dossier', async route => {
+      const response = await route.fetch(); startedCreate(); await createGate; await route.fulfill({response});
+    });
+    await page.locator('#r-dos-create-btn').click();
+    await createReady;
+    await expect(page.locator('#r-dos-create-btn')).toBeDisabled();
+    await page.evaluate(() => {
+      window.geoOriginalFileText = File.prototype.text;
+      File.prototype.text = function() {
+        return window.geoOriginalFileText.call(this).then(text => new Promise(resolve => { window.geoImportRelease = () => resolve(text); }));
+      };
+    });
+    const newerImport = {type: 'FeatureCollection', features: [{type: 'Feature', geometry: null, properties: {label: 'Newer imported geography'}}]};
+    await create.locator('[data-geo-import]').setInputFiles({name: 'newer.geojson', mimeType: 'application/geo+json', buffer: Buffer.from(JSON.stringify(newerImport))});
+    await page.waitForFunction(() => Boolean(window.geoImportRelease));
+    releaseCreate();
+    await expect(page.locator('#r-dos-create-btn')).toBeEnabled();
+    await page.unroute('**/api/research-dossier');
+    await expect(page.locator('#r-dos-title')).toHaveValue('Synthetic harbour journey');
+    await expect(create.locator('[data-geo-feature]')).toHaveCount(2, 'A pending import prevents an older save from clearing the draft');
+    const writesBeforePendingSave = writes.filter(write => write.title === 'Synthetic harbour journey').length;
+    await page.locator('#r-dos-create-btn').click();
+    assert.equal(writes.filter(write => write.title === 'Synthetic harbour journey').length, writesBeforePendingSave, 'Save waits for the selected file to finish importing');
+    await page.evaluate(() => { window.geoImportRelease(); File.prototype.text = window.geoOriginalFileText; delete window.geoImportRelease; });
+    await expect(create.locator('[data-geo-field=label]')).toHaveValue('Newer imported geography');
+    let listed = await (await page.request.get(fixture.url + '/api/research/dossiers')).json();
+    const id = listed.dossiers.find(item => item.title === 'Synthetic harbour journey').id;
+    const recordURL = fixture.url + '/api/research/record?kind=dossier&id=' + id;
+    const detailURL = fixture.url + '/api/research/dossiers?id=' + id;
+    let saved = await (await page.request.get(recordURL)).json();
+    assert.deepEqual(saved.record.geography.features[0].geometry, {type: 'Point', coordinates: [13.4, 52.5]});
+    assert.deepEqual(saved.record.geography.features[1].properties.actors, ['Mira', 'Emil']);
+    assert.equal(saved.record.geography.features[1].properties.transport, 'rail');
+    assert.deepEqual(saved.record.geography.features[1].properties.waypoint_labels, ['Harbour', 'Station']);
+    assert.equal(saved.record.geography.features[0].properties.label, 'Harbour <img src=x onerror=window.geoInjected=true>');
+    await create.locator('[data-geo-remove]').first().click();
+    await expect(create.locator('[data-geo-feature]')).toHaveCount(0);
+    await page.locator('#r-dos-title').fill('');
+    await page.locator('#r-dos-body').fill('');
+    async function openDetails() {
+      const summary = page.locator(`[data-research-detail=dossier][data-record-id="${id}"]`);
+      if (await summary.evaluate(node => node.parentElement.open)) await summary.click();
+      await summary.click();
+      await expect(page.locator('.research-details-body .dossier-geography')).toBeVisible();
+    }
+    await openDetails();
+    await expect(page.locator('.research-details-body .dossier-geography')).toContainText('Mira’s journey');
+    await expect(page.locator('.research-details-body .dossier-geography')).toContainText('1902');
+    assert.equal(await page.locator('.dossier-geography img').count(), 0, 'Feature metadata is inert text');
+    assert.equal(await page.evaluate(() => Boolean(window.geoInjected)), false);
+    await page.locator(`[data-research-revise=dossier][data-record-id="${id}"]:not([data-dossier-section])`).click();
+    const editor = page.locator('#research-revision-field-geography-editor');
+    await editor.locator('summary').first().click();
+    await expect(editor.locator('[data-geo-feature]')).toHaveCount(2);
+    const importFile = editor.locator('[data-geo-import]');
+    const unknownFeature = {type: 'Feature', geometry: null, properties: {label: 'Unknown'}};
+    const invalidProperties = [{actors: null}, {waypoint_labels: null}, {description: ' '}, {time_period: ''}, {feature_type: '\n'}];
+    const invalidImports = ['{bad', 'null', JSON.stringify({type: 'FeatureCollection', features: [], bbox: [0, 0, 1, 1]})].concat(
+      invalidProperties.map(properties => JSON.stringify({type: 'FeatureCollection', features: [{...unknownFeature, properties: {...unknownFeature.properties, ...properties}}]})));
+    for (const invalid of invalidImports) {
+      await importFile.setInputFiles({name: 'invalid.geojson', mimeType: 'application/json', buffer: Buffer.from(invalid)});
+      await expect(editor.locator('[data-geo-status]')).not.toBeEmpty();
+      await expect(editor.locator('[data-geo-feature]')).toHaveCount(2);
+    }
+    const unicodeProperties = {label: '😀'.repeat(300) + '\r\nNorth', description: '😀'.repeat(2001) + '\r\nNote', time_period: '😀'.repeat(300) + '\nPeriod',
+      feature_type: '😀'.repeat(300) + '\rCategory', actors: ['😀'.repeat(100), 'Name\r\nwith newline', ' '], waypoint_labels: ['North\r\nGate', '😀'.repeat(300)]};
+    const unicode = {type: 'FeatureCollection', features: [{type: 'Feature', geometry: {type: 'LineString', coordinates: [[1, 2], [3, 4]]}, properties: unicodeProperties}]};
+    await importFile.setInputFiles({name: 'unicode.geojson', mimeType: 'application/geo+json', buffer: Buffer.from(JSON.stringify(unicode))});
+    await expect(editor.locator('[data-geo-feature]')).toHaveCount(1);
+    await expect(editor.locator('[data-geo-field=label]')).toHaveValue('😀'.repeat(300) + 'North');
+    assert.deepEqual(await page.evaluate(() => document.getElementById('research-revision-field-geography')._geographyEditor.read()), unicode,
+      'Accepted Unicode and embedded-newline list values survive an unchanged editor roundtrip');
+    await editor.locator('[data-geo-field=label]').fill('Edited Unicode route');
+    const editedUnicode = await page.evaluate(() => document.getElementById('research-revision-field-geography')._geographyEditor.read());
+    assert.deepEqual(editedUnicode.features[0].properties.actors, unicodeProperties.actors, 'Editing another field preserves embedded newlines in actor names');
+    assert.deepEqual(editedUnicode.features[0].properties.waypoint_labels, unicodeProperties.waypoint_labels, 'Editing another field preserves embedded newlines in waypoint names');
+    for (const key of ['description', 'time_period', 'feature_type']) assert.equal(editedUnicode.features[0].properties[key], unicodeProperties[key], `Editing another field preserves ${key} line endings`);
+    assert.ok((await page.evaluate(value => window.LixityDossierGeography.html(value), unicode)).includes('dossier-geography'), 'Saved Unicode data remains viewable');
+    const overlong = structuredClone(unicode);
+    overlong.features[0].properties.actors[0] += 'x';
+    await importFile.setInputFiles({name: 'overlong.geojson', mimeType: 'application/geo+json', buffer: Buffer.from(JSON.stringify(overlong))});
+    await expect(editor.locator('[data-geo-status]')).not.toBeEmpty();
+    await expect(editor.locator('[data-geo-field=label]')).toHaveValue('Edited Unicode route');
+    const imported = {type: 'FeatureCollection', features: [
+      {type: 'Feature', geometry: {type: 'Polygon', coordinates: [[[179, 1], [-179, 1], [-179, 3], [179, 1]], [[179.6, 1.2], [179.8, 1.2], [179.7, 1.4], [179.6, 1.2]]]}, properties: {label: 'Dateline area', description: 'Synthetic polygon with a hole.', actors: ['Mira, narrator', 'Emil']}},
+      {type: 'Feature', geometry: null, properties: {label: 'Unknown destination'}}
+    ]};
+    await page.evaluate(() => {
+      window.geoOriginalFileText = File.prototype.text;
+      File.prototype.text = function() {
+        return window.geoOriginalFileText.call(this).then(text => new Promise(resolve => { window.geoImportRelease = () => resolve(text); }));
+      };
+    });
+    const importPayload = {name: 'synthetic.geojson', mimeType: 'application/geo+json', buffer: Buffer.from(JSON.stringify(imported))};
+    await page.locator('input[name=research_revision_change_kind][value=correction]').check();
+    await page.locator('#research-revision-reason').fill('Wait for the selected import.');
+    await importFile.setInputFiles(importPayload);
+    await page.waitForFunction(() => Boolean(window.geoImportRelease));
+    const writesBeforeRevisionImport = writes.filter(write => write.kind === 'dossier').length;
+    await page.locator('#research-revision-save').click();
+    await expect(page.locator('#research-revision-status')).toContainText('finish importing');
+    assert.equal(writes.filter(write => write.kind === 'dossier').length, writesBeforeRevisionImport, 'Revision Save also waits for the selected import');
+    await editor.locator('[data-geo-field=label]').first().fill('Draft entered after import began');
+    await page.evaluate(() => { window.geoImportRelease(); File.prototype.text = window.geoOriginalFileText; });
+    await expect(editor.locator('[data-geo-field=label]').first()).toHaveValue('Draft entered after import began');
+    await importFile.setInputFiles(importPayload);
+    await expect(editor.locator('[data-geo-field=label]').first()).toHaveValue('Dateline area');
+    await editor.locator('[data-geo-field=label]').first().fill('Reviewed dateline area');
+    await page.locator('input[name=research_revision_change_kind][value=correction]').check();
+    await page.locator('#research-revision-reason').fill('Synthetic geography revision.');
+    // A stale saved-version guard must retain this structured draft and require review.
+    saved = await (await page.request.get(recordURL)).json();
+    const concurrent = await page.request.post(fixture.url + '/api/research-record-revise', {data: {
+      kind: 'dossier', id, expected_snapshot: saved.snapshot, expected_revision: saved.record.revision,
+      changes: {body: '# Context\n\nConcurrent source notes.'}, change_kind: 'correction', reason: 'Synthetic concurrent body.'
+    }});
+    assert.equal(concurrent.ok(), true);
+    await page.locator('#research-revision-save').click();
+    await expect(page.locator('#research-revision-merge')).toBeVisible();
+    await expect(editor.locator('[data-geo-field=label]').first()).toHaveValue('Reviewed dateline area');
+    await page.locator('#research-revision-merge-apply').click();
+    await expect(page.locator('#research-revision-merge')).not.toBeVisible();
+    await page.locator('#research-revision-save').click();
+    await expect(page.locator('#modal-research-revision')).not.toBeVisible();
+    saved = await (await page.request.get(recordURL)).json();
+    assert.equal(saved.record.geography.features[0].properties.label, 'Reviewed dateline area');
+    assert.equal(saved.record.geography.features[0].geometry.coordinates.length, 2, 'Polygon holes survive editing');
+    assert.deepEqual(saved.record.geography.features[0].properties.actors, ['Mira, narrator', 'Emil'], 'Imported actor names remain intact when editing another field');
+    assert.equal(saved.record.geography.features[1].geometry, null);
+    assert.equal(saved.record.body, '# Context\n\nConcurrent source notes.');
+    await page.locator(`[data-research-revise=dossier][data-record-id="${id}"]:not([data-dossier-section])`).click();
+    await editor.locator('summary').first().click();
+    await editor.locator('[data-geo-feature]').first().locator('summary').click();
+    await editor.locator('[data-geo-field=time_period]').first().fill('1903');
+    await page.locator('input[name=research_revision_change_kind][value=correction]').check();
+    await page.locator('#research-revision-reason').fill('Synthetic overlapping geography review.');
+    const theirGeography = structuredClone(saved.record.geography);
+    theirGeography.features[0].properties.time_period = '1904';
+    assert.equal((await page.request.post(fixture.url + '/api/research-record-revise', {data: {
+      kind: 'dossier', id, expected_snapshot: saved.snapshot, expected_revision: saved.record.revision,
+      changes: {geography: theirGeography}, change_kind: 'correction', reason: 'Synthetic concurrent geography.'
+    }})).ok(), true);
+    await page.locator('#research-revision-save').click();
+    await expect(page.locator('#research-revision-merge')).toBeVisible();
+    await expect(editor.locator('[data-geo-field=time_period]').first()).toHaveValue('1903');
+    await page.locator('#research-revision-merge input[value=mine]').check();
+    await page.locator('#research-revision-merge-apply').click();
+    await expect(page.locator('#research-revision-merge')).not.toBeVisible();
+    await page.locator('#research-revision-save').click();
+    await expect(page.locator('#modal-research-revision')).not.toBeVisible();
+    saved = await (await page.request.get(recordURL)).json();
+    assert.equal(saved.record.geography.features[0].properties.time_period, '1903');
+    await openDetails();
+    await expect(page.locator('.research-details-body .dossier-geography')).toContainText('Unknown destination');
+    await expect(page.locator('.research-details-body .dossier-geography')).toContainText('Location unknown');
+    assert.ok(!(await page.locator('.research-details-body .dossier-geography svg').innerHTML()).match(/NaN|Infinity/));
+    assert.ok(await page.locator('.research-details-body .geography-sketch path').evaluate(node => node.getBBox().height > 100), 'Dateline area stays local instead of flattening across 358 degrees');
+    await page.locator('[data-dossier-section=Context]').click();
+    await expect(page.locator('#research-revision-field-geography')).toHaveCount(0, 'Section editor changes only body');
+    await page.keyboard.press('Escape');
+    await page.locator(`[data-research-history=dossier][data-record-id="${id}"]`).click();
+    await expect(page.locator('#research-revision-history-detail .dossier-geography')).toContainText('Reviewed dateline area');
+    await page.locator('[data-research-revision="1"]').click();
+    await expect(page.locator('#research-revision-history-detail .dossier-geography')).toContainText('Mira’s journey');
+    await expect(page.locator('#research-revision-history-detail .dossier-geography')).not.toContainText('Reviewed dateline');
+    await page.keyboard.press('Escape');
+    await page.locator('#tab-view-analysis').click();
+    await page.locator('#workspace-reader-toggle').click();
+    await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);
+    await page.locator('#workspace-reader-dossier').selectOption(id);
+    await expect(page.locator('#workspace-reader-body .dossier-geography')).toContainText('Reviewed dateline area');
+    assert.equal(await page.locator('#workspace-reader-body [data-geo-add]').count(), 0);
+    for (const language of ['en', 'de', 'fr', 'es', 'it', 'pt', 'nl']) {
+      assert.equal((await page.request.post(fixture.url + '/api/settings', {data: {language}})).ok(), true);
+      await page.reload();
+      await page.locator('#tab-view-research').click();
+      await page.locator('[data-rtab=dossiers]').click();
+      await openDetails();
+      for (const width of [1440, 320]) {
+        await page.setViewportSize({width, height: 950});
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${language}/${width}: dossier fits viewport`);
+        await page.locator(`[data-research-revise=dossier][data-record-id="${id}"]:not([data-dossier-section])`).click();
+        await page.locator('#research-revision-field-geography-editor > summary').click();
+        assert.ok(!(await editor.textContent()).includes('geography_'), `${language}: geography labels translated`);
+        assert.ok(await page.locator('#modal-research-revision').evaluate(node => node.scrollWidth <= node.clientWidth), `${language}/${width}: editor fits viewport`);
+        if (language === 'en') await page.locator('#modal-research-revision').screenshot({path: path.join(artifacts, `editor-${width}.png`)});
+        await editor.locator('[data-geo-feature]').first().locator('summary').click();
+        await editor.locator('[data-geo-field=transport]').first().scrollIntoViewIfNeeded();
+        await expect(editor.locator('[data-geo-field=transport]').first()).toBeVisible();
+        await page.locator('#research-revision-save').scrollIntoViewIfNeeded();
+        await expect(page.locator('#research-revision-save')).toBeVisible();
+        if (language === 'en') await page.locator('#modal-research-revision').screenshot({path: path.join(artifacts, `editor-bottom-${width}.png`)});
+        await page.keyboard.press('Escape');
+        if (language === 'en') await page.locator('.research-details-body .dossier-geography').screenshot({path: path.join(artifacts, `sketch-${width}.png`)});
+      }
+    }
+    assert.ok(writes.some(write => write.geography && write.research_token), 'Create uses selected research context');
+    assert.deepEqual(errors, []);
+    assert.deepEqual(external, [], 'Geography stays offline');
+    console.log(`Dossier geography: native create/edit/import/CAS/history/companion, seven languages at 1440/320 passed. Screenshots: ${artifacts}`);
+  } finally {
+    if (stderr.includes('Traceback')) console.error(stderr);
+    if (browser) await browser.close();
+    lines.close();
+    if (server.exitCode === null) { const exited = once(server, 'exit'); server.kill(); await exited; }
+  }
+})().catch(error => { console.error(error); process.exitCode = 1; });

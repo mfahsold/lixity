@@ -10,10 +10,18 @@ from typing import Any
 from urllib.parse import urlencode, urlsplit
 
 from . import api
+from .images import IMAGE_TYPES
 from .models import Source, SourceContext, SourceVersion, Tombstone
 from .repository import Repository, ResearchError, digest
 
 MAX_RESPONSE_BYTES = 2 * 1024 * 1024
+_CAPTURE_FORMATS = {
+    "application/pdf": (".pdf", "L1"),
+    "text/plain": (".txt", "L4"),
+    "text/markdown": (".txt", "L4"),
+    "image/png": (".png", "L4"),
+    "image/jpeg": (".jpg", "L4"),
+}
 
 
 def connection_status() -> dict[str, Any]:
@@ -158,9 +166,9 @@ def ingest(project: str | Path, *, library: str, attachment_key: str, allow_rete
         raise ResearchError("Zotero instance differs from the preview; reload the selection")
     data = attachment["data"]
     media_type = data.get("contentType")
-    if (data["itemType"] != "attachment" or media_type not in ("application/pdf", "text/plain", "text/markdown")
+    if (data["itemType"] != "attachment" or not isinstance(media_type, str) or media_type not in _CAPTURE_FORMATS
             or data.get("linkMode") not in ("imported_file", "imported_url", "linked_file")):
-        raise ResearchError("Select a locally available PDF or UTF-8 text attachment; other media stay in Zotero")
+        raise ResearchError("Select a locally available PDF or UTF-8 text attachment, or a PNG/JPEG image; other media stay in Zotero")
     parent_key = data.get("parentItem")
     parent = reader.item(library, parent_key) if parent_key else attachment
     metadata = parent["data"]
@@ -234,18 +242,18 @@ def ingest(project: str | Path, *, library: str, attachment_key: str, allow_rete
     if not path.is_absolute() or not path.is_file():
         raise ResearchError("Zotero attachment is not an available local regular file; download it in Zotero first")
     is_pdf = media_type == "application/pdf"
-    maximum = api.MAX_PDF_BYTES if is_pdf else api.MAX_SOURCE_BYTES
+    maximum = api.MAX_PDF_BYTES if is_pdf else api.MAX_IMAGE_BYTES if media_type in IMAGE_TYPES else api.MAX_SOURCE_BYTES
     if progress_callback:
         progress_callback("zotero-read", f"Reading attachment {path.name}...")
     with path.open("rb") as stream:
         content = stream.read(maximum + 1)
     if not content or len(content) > maximum:
-        raise ResearchError("Zotero attachment is empty or exceeds the PDF/text ingestion size limit")
+        raise ResearchError("Zotero attachment is empty or exceeds the PDF/text/image ingestion size limit")
     if migration and existing and digest(content) != existing["sha256"]:
         raise ResearchError("Migration binding requires exact original attachment bytes")
     # A stable temporary copy gives extraction and retained bytes the same input.
     with tempfile.TemporaryDirectory(prefix="lixity-zotero-") as directory:
-        target = Path(directory) / ("attachment.pdf" if is_pdf else "attachment.txt")
+        target = Path(directory) / ("attachment" + _CAPTURE_FORMATS[media_type][0])
         target.write_bytes(content)
         result = api.ingest(project, target, allow_retention=True, source_id=source_id,
                             title=None if source_id else title, language=language, context=context,
@@ -340,11 +348,12 @@ def ingest_item(
     attachments = [
         item for item in [_item(v) for v in values]
         if item["data"].get("itemType") == "attachment"
-        and item["data"].get("contentType") in ("application/pdf", "text/plain", "text/markdown")
+        and isinstance(item["data"].get("contentType"), str)
+        and item["data"]["contentType"] in _CAPTURE_FORMATS
         and item["data"].get("linkMode") in ("imported_file", "imported_url", "linked_file")
     ]
     if not attachments:
-        raise ResearchError(f"No eligible PDF or text attachments found under Zotero item '{item_key}'")
+        raise ResearchError(f"No eligible PDF, text or PNG/JPEG attachments found under Zotero item '{item_key}'")
 
     batch = ingest_attachments(
         project,
@@ -382,7 +391,7 @@ def export_library(project: str | Path, output: str | Path, *, allow_retention: 
         if not versions:
             continue
         version = max(versions, key=lambda r: r.sequence)
-        suffix = ".pdf" if version.blob.media_type == "application/pdf" else ".txt"
+        suffix, attachment_field = _CAPTURE_FORMATS[version.blob.media_type]
         relative = f"files/{source.id[9:]}{suffix}"
         content = repository.read_blob(version.blob)
         if not dry_run:
@@ -404,7 +413,7 @@ def export_library(project: str | Path, output: str | Path, *, allow_retention: 
         if version.context.provenance_note:
             line("N1", version.context.provenance_note)
         # Absolute file URIs allow the reviewed bundle to be imported by Zotero.
-        line("L1" if suffix == ".pdf" else "L4", (target / relative).as_uri())
+        line(attachment_field, (target / relative).as_uri())
         lines.extend(("ER  -", ""))
     manifest = {"schema_version": "research-zotero-export-local/1", "project_id": snapshot.project.id,
                 "snapshot": snapshot.digest, "sources": entries}

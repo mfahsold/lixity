@@ -1,0 +1,29 @@
+.dossier-geography, .geography-editor { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
+.dossier-geography { margin: 1.25rem 0; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); }
+.dossier-geography h4 { margin-top: 0; }
+.geography-sketch { display: block; width: 100%; max-height: 24rem; margin: .75rem auto; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--accent); }
+.geography-sketch circle { fill: currentColor; }
+.geography-sketch path { stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+.geography-sketch .geography-route { fill: none; stroke-dasharray: 6 4; }
+.geography-sketch .geography-area { fill: currentColor; fill-opacity: .12; }
+.geography-sketch text { fill: var(--fg); font-size: 15px; font-family: inherit; paint-order: stroke; stroke: var(--bg); stroke-width: 3px; }
+.geography-feature-list { padding-left: 1.5rem; }
+.geography-feature-list li { padding: .5rem 0; }
+.geography-feature-list li > p { margin: .3rem 0; }
+.geography-feature-list pre { white-space: pre-wrap; overflow-wrap: anywhere; }
+.geography-editor { margin: .75rem 0; }
+.geography-editor-feature { min-width: 0; margin: .8rem 0; padding: .8rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }
+.geography-editor-feature legend { padding: 0 .35rem; font-weight: 600; }
+.geography-editor .ctl:not(button) { box-sizing: border-box; width: 100%; min-width: 0; max-width: 100%; }
+.geography-editor .form-label { display: block; margin-top: .65rem; }
+.geography-editor .research-details { margin: .75rem 0; }
+.geography-editor-preview:empty { display: none; }
+@media (max-width: 600px) {
+  .dossier-geography, .geography-editor-feature { padding: .6rem; }
+  .geography-editor .row { flex-wrap: wrap; }
+  .geography-sketch text { font-size: 28px; }
+}
+@media (max-width: 400px) {
+  .geography-sketch text { font-size: 36px; }
+  .geography-sketch circle { r: 8; }
+}

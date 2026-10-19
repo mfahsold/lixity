@@ -6,6 +6,7 @@ import unittest
 
 from lixity.language import LANGUAGE_CHOICES, get_language_profile
 from lixity.pipeline import analyze_document, resolve_document_config
+from lixity.project_identity import manuscript_identity_check
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
 from lixity.ui.settings import settings_form
@@ -20,6 +21,68 @@ def settings_markup(locale="en", **options):
 
 
 class TestSettingsUi(unittest.TestCase):
+    def test_project_details_and_analysis_controls_have_separate_accessible_groups(self):
+        rendered = settings_markup(author_setting_enabled=True, project_token="a" * 64)
+        controls = HtmlControls(rendered)
+        for identifier in ("settings-project-details", "settings-analysis"):
+            self.assertEqual(controls.elements[identifier]["tag"], "fieldset")
+        project = rendered.split('id="settings-project-details"', 1)[1].split('</fieldset>', 1)[0]
+        analysis = rendered.split('id="settings-analysis"', 1)[1].split('</fieldset>', 1)[0]
+        self.assertIn('id="set-title"', project)
+        self.assertIn('id="set-author-name"', project)
+        self.assertNotIn('id="set-language"', project)
+        self.assertIn('id="set-language"', analysis)
+        self.assertIn('id="settings-thresholds"', analysis)
+        self.assertIn('id="set-save-analysis-defaults"', analysis)
+        self.assertIn('id="save-analysis-defaults-help"', analysis)
+
+    def test_missing_manuscript_values_are_explicit_beside_project_values(self):
+        checks = manuscript_identity_check("## One\n\nA bird crosses the garden.\n",
+                                           "Synthetic project", "Synthetic Writer")
+        for locale, missing in (("en", "Not automatically found in manuscript"),
+                                ("de", "Nicht automatisch im Manuskript gefunden")):
+            with self.subTest(locale=locale):
+                rendered = settings_markup(locale, project_author="Synthetic Writer", identity_check=checks)
+                identity = rendered.split('id="project-identity-check"', 1)[1].split('</section>', 1)[0]
+                self.assertEqual(identity.count(html.escape(missing)), 2)
+                self.assertIn('Project setting: Synthetic project' if locale == "en"
+                              else 'Projektangabe: Synthetic project', identity)
+                self.assertIn('Project setting: Synthetic Writer' if locale == "en"
+                              else 'Projektangabe: Synthetic Writer', identity)
+                self.assertEqual(identity.count(html.escape(labels_for(locale)["project_identity_manuscript"]) + ": "), 2)
+
+    def test_unavailable_comparisons_explain_the_missing_side_without_claiming_absence(self):
+        missing_project = manuscript_identity_check("# Synthetic project\nby Synthetic Writer\n", "Synthetic project", "")
+        rendered = settings_markup(project_author="", identity_check=missing_project)
+        identity = rendered.split('id="project-identity-check"', 1)[1].split('</section>', 1)[0]
+        self.assertIn("Enter an author name above to compare it with the manuscript.", identity)
+        self.assertIn("Manuscript value: Synthetic Writer", identity)
+        unloaded = manuscript_identity_check(None, "Synthetic project", "Synthetic Writer")
+        rendered = settings_markup(project_author="Synthetic Writer", identity_check=unloaded)
+        identity = rendered.split('id="project-identity-check"', 1)[1].split('</section>', 1)[0]
+        self.assertEqual(identity.count("Manuscript text is unavailable; comparison cannot run yet."), 2)
+        self.assertNotIn("Not automatically found", identity)
+
+    def test_unsupported_and_unknown_identity_values_do_not_look_missing(self):
+        for status, diagnosis in (("unsupported", "Not available for comparison"),
+                                  ("future-status", "Not available for comparison")):
+            with self.subTest(status=status):
+                checks = {"title": {"status": status, "value": None}}
+                rendered = settings_markup(identity_check=checks)
+                title = rendered.split('<dt>Title</dt><dd>', 1)[1].split('</dd>', 1)[0]
+                self.assertIn("Manuscript value: " + diagnosis, title)
+                self.assertNotIn("Not automatically found", title)
+
+    def test_malformed_project_author_does_not_blame_the_manuscript_or_claim_no_setting(self):
+        checks = manuscript_identity_check("## One\n\nA bird crosses the garden.\n",
+                                           "Synthetic project", ["Synthetic Writer"])
+        rendered = settings_markup(project_author="", identity_check=checks)
+        author = rendered.split('<dt>Author name</dt><dd>', 1)[1].split('</dd>', 1)[0]
+        self.assertIn("Project setting: Not available for comparison", author)
+        self.assertIn("Manuscript value: Not available for comparison", author)
+        self.assertNotIn("Not entered", author)
+        self.assertNotIn("Not automatically found", author)
+
     def test_analysis_controls_describe_their_scope_in_each_locale(self):
         for language in LOCALES:
             with self.subTest(language=language):

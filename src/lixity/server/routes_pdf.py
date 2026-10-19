@@ -22,7 +22,7 @@ class ManuscriptPdfRoutesMixin(ResponseMixin):
     def _handle_manuscript_pdf(self, payload: dict[str, Any]) -> None:
         layout, expected_token = payload.get("layout"), payload.get("project_token")
         if (set(payload) != {"layout", "project_token"}
-                or layout not in ("book", "sheet", "report")
+                or layout not in pdf_export.PDF_LAYOUTS
                 or not isinstance(expected_token, str)
                 or not re.fullmatch(r"[0-9a-f]{64}", expected_token)):
             self._json({"ok": False, "message": "A PDF layout and selected project token are required"}, 400)

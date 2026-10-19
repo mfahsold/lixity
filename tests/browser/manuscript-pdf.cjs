@@ -5,6 +5,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {spawnSync} = require('node:child_process');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
+const {startNativeServer} = require('./support/native-server.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-manuscript-pdf-'));
@@ -47,10 +48,108 @@ print(json.dumps({'fixtures': fixtures, 'gates': gates}))
 assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
 const {fixtures, gates} = JSON.parse(fixture.stdout);
 
-// The browser only transfers these synthetic bytes; native PDF validity and
-// manuscript content are tested through the real server/export pipeline.
+// Synthetic responses isolate download recovery; the final case exercises
+// actual PDF composition through the native server.
 const pdfBytes = Buffer.from('%PDF-1.4\n% Synthetic browser download fixture\n%%EOF\n');
 const hostileError = '<img src=x onerror="window.pdfInjected=true"> Synthetic project conflict';
+
+async function checkNativeEditorialPdf(browser) {
+  let textChecked = true;
+  const server = await startNativeServer(`
+import json, sys
+from pathlib import Path
+from http.server import ThreadingHTTPServer
+from lixity.server import LixityServerHandler
+project = Path(sys.argv[1]) / 'synthetic-editorial-project'
+project.mkdir()
+manuscript = project / 'editorial.md'
+manuscript.write_text(
+    '# Editorial fixture\\n\\n'
+    'A **synthetic editorial** paragraph with '
+    + chr(92) + 'emph{retained emphasis} and '
+    + chr(92) + 'textbf{retained weight}.\\n\\n'
+    '## Review section\\n\\n'
+    '- First retained list item.\\n- Second retained list item.\\n\\n'
+    '> A retained quotation.\\n', encoding='utf-8')
+(project / 'lixity.toml').write_text('title = "Synthetic editorial fixture"\\nlanguage = "en"\\n', encoding='utf-8')
+LixityServerHandler.workspace_root = str(project)
+LixityServerHandler.source_input = str(manuscript)
+LixityServerHandler.exports_dir = str(project / 'exports')
+LixityServerHandler.language = 'en'
+LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'manuscript': str(manuscript)}), flush=True)
+server.serve_forever()
+`, artifacts);
+  try {
+    const before = fs.readFileSync(server.fixture.manuscript);
+    for (const width of [1440, 320]) {
+      const page = await browser.newPage({viewport: {width, height: 900}, acceptDownloads: true});
+      const errors = [], requests = [];
+      let downloads = 0;
+      page.on('pageerror', error => errors.push(error.message));
+      page.on('download', () => { downloads++; });
+      page.on('request', request => {
+        if (new URL(request.url()).pathname === '/api/manuscript-pdf') requests.push(request.postDataJSON());
+      });
+      await page.goto(server.fixture.url);
+      await page.locator('#manuscript-pdf-title').click();
+      assert.equal(await page.locator('#manuscript-pdf-layout').inputValue(), 'editor');
+      const downloading = page.waitForEvent('download');
+      await page.locator('#manuscript-pdf-download').click();
+      const download = await downloading;
+      assert.equal(download.suggestedFilename(), 'manuscript-editor.pdf');
+      const downloaded = path.join(artifacts, `native-editor-${width}.pdf`);
+      await download.saveAs(downloaded);
+      const bytes = fs.readFileSync(downloaded);
+      assert.ok(bytes.subarray(0, 5).equals(Buffer.from('%PDF-')) && bytes.subarray(-20).toString().includes('%%EOF'), 'The native download is a complete PDF');
+      assert.ok((bytes.toString('latin1').match(/\/Type \/Page\b/g) || []).length >= 1, 'The native PDF contains actual pages');
+      assert.match(bytes.toString('latin1'), /\/MediaBox \[0 0 595\.\d+ 841\.\d+\]/, 'Editorial output uses A4 pages');
+      assert.equal(requests.length, 1);
+      assert.equal(requests[0].layout, 'editor');
+      assert.match(requests[0].project_token, /^[0-9a-f]{64}$/);
+      assert.deepEqual(fs.readFileSync(server.fixture.manuscript), before, 'Downloading preserves the selected manuscript bytes');
+      const extracted = spawnSync('pdftotext', [downloaded, '-'], {encoding: 'utf8'});
+      if (extracted.error && extracted.error.code === 'ENOENT') {
+        textChecked = false;
+        console.log('Native editorial PDF text inspection skipped: pdftotext is unavailable; bytes/A4/pages were checked.');
+      } else {
+        assert.equal(extracted.status, 0, extracted.stderr);
+        const text = extracted.stdout.replace(/\s+/g, ' ');
+        for (const expected of ['synthetic editorial', 'retained emphasis', 'retained weight', 'Review section', 'First retained list item', 'A retained quotation']) {
+          assert.ok(text.includes(expected), `Native editorial download retains ${expected}`);
+        }
+        assert.ok(!text.includes('\\emph{') && !text.includes('\\textbf{'), 'Supported TeX text commands are rendered instead of copied literally');
+      }
+      if (width === 1440) {
+        const invalid = Buffer.concat([before, Buffer.from('\nUnsupported math $x^2 + y^2$.\n')]);
+        const downloadsBefore = downloads;
+        const exportDirectory = path.join(path.dirname(server.fixture.manuscript), 'exports');
+        const exportsExisted = fs.existsSync(exportDirectory);
+        try {
+          fs.writeFileSync(server.fixture.manuscript, invalid);
+          const rejected = page.waitForResponse(response => new URL(response.url()).pathname === '/api/manuscript-pdf' && response.request().method() === 'POST');
+          await page.locator('#manuscript-pdf-download').click();
+          const response = await rejected;
+          assert.equal(response.status(), 400, 'Unsupported math produces a prompt HTTP error');
+          const result = await response.json();
+          assert.equal(result.ok, false);
+          assert.match(result.message, /Unsupported TeX math.*line \d+/);
+          await page.waitForFunction(() => !document.querySelector('#manuscript-pdf-download').disabled && document.querySelector('#manuscript-pdf-status').classList.contains('err'));
+          assert.ok((await page.locator('#manuscript-pdf-status').textContent()).includes('Unsupported TeX math'), 'The native PDF error is visible beside the download control');
+          assert.equal(downloads, downloadsBefore, 'Unsupported math cannot trigger a PDF download');
+          assert.equal(fs.existsSync(exportDirectory), exportsExisted, 'Rejected composition creates no export directory');
+          assert.deepEqual(fs.readFileSync(server.fixture.manuscript), invalid, 'The rejected request does not rewrite manuscript text');
+        } finally { fs.writeFileSync(server.fixture.manuscript, before); }
+      }
+      assert.deepEqual(errors, []);
+      assert.equal(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), true);
+      await page.locator('#manuscript-pdf').screenshot({path: path.join(artifacts, `native-editor-${width}.png`)});
+      await page.close();
+    }
+    return textChecked;
+  } finally { await server.close(); }
+}
 
 (async () => {
   const browser = await launchChromium();
@@ -101,19 +200,20 @@ const hostileError = '<img src=x onerror="window.pdfInjected=true"> Synthetic pr
       await page.locator('#manuscript-pdf-title').click();
       assert.equal(await form.isVisible(), true, 'A loaded native manuscript offers PDF export');
       assert.equal(await form.getAttribute('data-project-token'), 'synthetic-token');
-      assert.equal(await select.inputValue(), 'book', 'Reading layout is the initial choice');
+      assert.equal(await select.inputValue(), 'editor', 'Editorial A4 is the initial choice');
       assert.deepEqual(await select.locator('option').evaluateAll(options => options.map(option => option.value)),
-        ['book', 'sheet', 'report']);
+        ['editor', 'book', 'sheet', 'report']);
       assert.equal(await button.isDisabled(), false);
       assert.ok((await button.textContent()).trim().length > 0);
       assert.doesNotMatch(await form.textContent(), /manuscript_pdf_[a-z_]+/, 'Controls use translated labels');
+      assert.doesNotMatch(await page.locator('#manuscript-pdf-hint').textContent(), /manuscript_pdf_[a-z_]+/, 'The editorial hint is translated');
       assert.equal(requests.length, 0, 'Loading the dashboard never starts export');
       for (const view of ['research', 'project', 'analysis']) {
         await page.locator(`#tab-view-${view}`).click();
         assert.equal(await form.isVisible(), true, `Project export remains visible in ${view}`);
       }
 
-      for (const layout of ['book', 'sheet', 'report']) {
+      for (const layout of ['editor', 'book', 'sheet', 'report']) {
         await select.selectOption(layout);
         assert.equal(requests.length, downloads.length, 'Selecting a layout sends nothing');
         pending = new Promise(resolve => {release = resolve;});
@@ -200,6 +300,7 @@ const hostileError = '<img src=x onerror="window.pdfInjected=true"> Synthetic pr
       assert.equal(exports, 0);
       await page.close();
     }
-    console.log(`Manuscript PDF: capability/JavaScript gating, explicit project-bound downloads, exact bytes, pending state, inert errors and retry passed in seven desktop/mobile locales. Screenshots: ${artifacts}`);
+    const nativeTextChecked = await checkNativeEditorialPdf(browser);
+    console.log(`Manuscript PDF: editorial default and four layouts; capability/JavaScript gating, project-bound downloads, exact bytes, pending/errors/retry in seven desktop/mobile locales; real native Markdown/TeX-text PDF bytes/A4/pages at1440/320 and explicit math HTTP400 without a download passed; ${nativeTextChecked ? 'extracted content verified' : 'text inspection skipped (pdftotext unavailable)'}. Screenshots: ${artifacts}`);
   } finally {await browser.close();}
 })().catch(error => {console.error(error); process.exitCode = 1;});

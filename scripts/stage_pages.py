@@ -42,6 +42,12 @@ DOCS_ROOT_FILES = {
     "USAGE.md",
     # One reviewed, generated example; sibling inputs/build files stay private to the repo.
     "demo/report.html",
+    # One reviewed read-only research fixture and its attributed public-domain sources.
+    "demo/research.html",
+    "demo/research-data.json",
+    "assets/research/sources.json",
+    "assets/research/hamburg-free-port-1900.jpg",
+    "assets/research/hamburg-harbour-1890-1900.jpg",
 }
 
 #: Approved subtrees, keyed by their first path segment.
@@ -95,7 +101,7 @@ def stage(source: Path, output: Path) -> int:
         target = output / "assets" / canonical.name
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copyfile(canonical, target)
-    extra = 1
+    extra = 2
     # Byte-identical fallback for a Search Console entry whose canonical path
     # stays stuck on a fetch failure; generated here so it cannot drift.
     sitemap = output / "sitemap.xml"

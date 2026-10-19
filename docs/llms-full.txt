@@ -2,7 +2,7 @@
 
 > Generated file for AI agents and offline reading. Do not edit it by hand:
 > run `python scripts/build_llms_full.py` after changing a bundled document.
-> The individually published files remain authoritative. Product version 0.6.0.
+> The individually published files remain authoritative. Product version 0.7.0.
 
 Lixity is open source under AGPL-3.0-or-later; writing for any purpose is
 covered. A separate written commercial license exists only for closed-source
@@ -41,7 +41,7 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v0.6.0 release notes](docs/releases/v0.6.0.md)
+[v0.7.0 release notes](docs/releases/v0.7.0.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload. Documentation is English; you can read the
@@ -122,7 +122,9 @@ measurements unavailable. [Scene example](docs/screenshots/dashboard-scenes.png)
 Export an A5 reading copy, A4 analysis report or A4 submission sheet from
 **PDF export** in the project controls, or use `lixity pdf`. The composer uses
 your project's title, author and optional publication details. Empty fields
-supply no inferred information.
+supply no inferred information. Since v0.7.0, an A4 editorial copy provides
+line numbers and comment margins using the same composer
+([example](docs/examples/effi-briest-editor.pdf)).
 
 See the complete [Effi Briest report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf)
 or [Pride and Prejudice report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
@@ -230,6 +232,11 @@ describe what has and has not been established.
 Read the workflows: [Intentional registers](https://mfahsold.github.io/lixity/blog/intentional-registers.html) ·
 [Local word echoes](https://mfahsold.github.io/lixity/blog/local-word-echoes.html).
 
+The [research preview](docs/demo/research.html)
+uses attributed historical harbour images alongside fictional places and paths.
+Its geography editor and Zotero image capture are available **since v0.7.0**;
+[research usage](docs/research/USAGE.md) records compatibility.
+
 ## Supported languages
 
 German (`de`) and English (`en`) have the most extensive linguistic resources
@@ -257,13 +264,14 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 
 ## Current release
 
-The current release is **v0.6.0**, continuing the pre-1.0 development line;
+The current release is **v0.7.0**, continuing the pre-1.0 development line;
 historical v3.0.1 and earlier notes and tags remain available. Public JSON and
 research storage schema versions are independent; this release reads
-research archives through v7.
+research archives through v8. Ordinary dossier encodings stay unchanged until a
+geographic save opts into v8; older readers cannot open v8 archives.
 When upgrading from the historical numbering, install the pinned release wheel
 explicitly; PyPI upgrades continue normally afterwards.
-[Release notes](docs/releases/v0.6.0.md) describe compatibility and known limits;
+[Release notes](docs/releases/v0.7.0.md) describe compatibility and known limits;
 the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 ## Python API and automation
@@ -329,7 +337,7 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/llms.txt
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.6.0; release tag: v0.6.0.
+Current release: 0.7.0; release tag: v0.7.0.
 
 This discovery index links maintained references. Published guides may describe
 newer behavior than an installed tool. The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
@@ -367,20 +375,22 @@ Use active result metadata when interpreting thresholds and unavailable values.
 - [First look](https://mfahsold.github.io/lixity/guides/first-look.html): read a report and choose a starting point.
 - [Installation and service lifecycle](https://mfahsold.github.io/lixity/guides/installation.html): install, select a project, start, stop and upgrade.
 - [Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html): measurements, review signals and uncertainty.
-- [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, project settings, registers and PDF export.
+- [Usage and configuration](https://mfahsold.github.io/lixity/USAGE.md): analysis workflows, settings, registers and PDF export; since v0.7.0, A4 editorial copies include line numbers and comment margins.
 - [Automation contracts](https://mfahsold.github.io/lixity/AGENTS.md): JSON versions, Python entrypoints, HTTP requests and context guards.
 - [Implemented research](https://mfahsold.github.io/lixity/research/USAGE.md): retention, citations, claims, revisions, manuscript associations and recovery.
 - [Research and PDF guide](https://mfahsold.github.io/lixity/guides/research-pdf.html): source capture, OCR, Zotero and PDF workflows.
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.6.0.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.0.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
 URL. The [research RFC](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md)
 includes unimplemented proposals; use the implemented reference for available operations.
 Product, response and archive versions are independent. Inspect installed schema
 capabilities before sharing an archive with another version.
+v0.7.0 reads research records/manifests v1–v8. Ordinary dossiers keep their older
+encoding until a geographic save; older readers cannot open v8 archives.
 
 ## Data boundaries
 
@@ -404,11 +414,14 @@ and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 ## Reviewed public examples
 
 - [Synthetic report](https://mfahsold.github.io/lixity/demo/report.html).
+- [Research preview](https://mfahsold.github.io/lixity/demo/research.html): attributed historical harbour images and fictional geography; available since v0.7.0.
 - [Effi Briest opening chapters](https://mfahsold.github.io/lixity/examples/effi-briest.html) and [PDF report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf).
 - [Pride and Prejudice opening chapters](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html) and [PDF report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
 
 The Fontane (Gutenberg #5323) and Austen (#1342) source texts are public domain,
 separate from the software license. Examples need no upload or account.
+The research preview's [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)
+records the public-domain image provenance; authored routes are illustrative.
 
 ===============================================================================
 ## docs/ONBOARDING.md
@@ -591,13 +604,13 @@ lixity --version
 lixity service start --open
 ```
 
-The current release is **v0.6.0**. Read the [release notes](releases/v0.6.0.md)
+The current release is **v0.7.0**. Read the [release notes](releases/v0.7.0.md)
 for changes and compatibility information. For a reproducible, checksum-verified
 setup, install the pinned release wheel instead (the release page also carries
 `SHA256SUMS`):
 
 ```sh
-uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.6.0/lixity-0.6.0-py3-none-any.whl"
+uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.0/lixity-0.7.0-py3-none-any.whl"
 ```
 
 `uv tool update-shell` configures shell integration once; it does not change an
@@ -972,7 +985,7 @@ Linux/macOS:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.6.0"
+.venv/bin/python -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.0"
 .venv/bin/python -m pip check
 .venv/bin/python -c "import lixity; print(lixity.__version__)"
 ```
@@ -981,7 +994,7 @@ Windows PowerShell (no activation or execution-policy change needed):
 
 ```powershell
 py -3.12 -m venv .venv
-.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.6.0"
+.\.venv\Scripts\python.exe -m pip install "git+https://github.com/mfahsold/lixity.git@v0.7.0"
 .\.venv\Scripts\python.exe -m pip check
 .\.venv\Scripts\python.exe -c "import lixity; print(lixity.__version__)"
 ```
@@ -1154,8 +1167,9 @@ writes nothing until confirmation; opening reconnects an existing project.
 
 ### Download a manuscript PDF
 
-Open **PDF export** above the workspace views, choose **A5 reading copy**,
-**A4 manuscript sheets** or **A4 analysis report**, then **Download PDF**.
+Open **PDF export** above the workspace views, choose a layout, then
+**Download PDF**. Since v0.7.0, **A4 editorial copy** is the initial choice;
+**A5 reading copy**, **A4 manuscript sheets** and **A4 analysis report** are also available.
 Changing the layout alone does not generate a file. The download uses the same
 composer and project metadata as [`lixity pdf`](#lixity-pdf), returning bytes
 directly without creating server export files. Reload after switching projects
@@ -1228,7 +1242,7 @@ select the relevant tab. All available panels remain readable without JavaScript
 
 ### Settings and interpretation
 
-In **Project & Settings**, expand **Detection thresholds** to inspect controls
+In **Project & Settings → Analysis**, expand **Adjust highlights** to inspect controls
 and explanations. **Apply** submits changes; restoring defaults only changes
 the form. Invalid numbers and a strong cutoff below the noticeable cutoff fail
 validation. [Configuration](#configuration-corpusconfig) explains persistent
@@ -1487,10 +1501,13 @@ Create a local reading copy without a browser or external converter:
 
 ```sh
 lixity pdf manuscript.md --layout book --author "Example Writer" -o reading.pdf
+# Since v0.7.0: an annotation copy with page and line numbers.
+lixity pdf manuscript.md --layout editor -o editorial.pdf
 ```
 
 | Layout | Page | Purpose |
 | :--- | :--- | :--- |
+| `editor` (since v0.7.0) | A4 | Editorial reading with line numbers and room for comments |
 | `report` | A4 | Analysis report with cover page and repeated table headers |
 | `book` | A5 | Continuous reading with serif text, mirrored margins and chapter openings |
 | `sheet` | A4 | Submission grid, at most 30 lines per page and 60 characters per line |
@@ -1512,8 +1529,8 @@ a running-header notice in every layout; an empty override clears it. See
 [publication settings](#publication-settings) for optional A5 imprint text.
 
 Fonts come from the host and can be pinned per role with CLI options listed by
-`lixity pdf --help`, or `LIXITY_PDF_FONT_TEXT`, `_HEADING`, `_MONO`, `_SANS` and
-`_SANS_BOLD`. Only used glyphs are embedded, with searchable/copyable text maps.
+`lixity pdf --help`, or `LIXITY_PDF_FONT_TEXT`, `_HEADING`, `_ITALIC`, `_BOLD_ITALIC`,
+`_MONO`, `_SANS` and `_SANS_BOLD`. Only used glyphs are embedded, with searchable/copyable text maps.
 Missing fonts, embedding restrictions or missing glyphs fail explicitly; a
 glyph error identifies its font role and Unicode codepoint. Each role requires
 a single-face TrueType outline font; collections and CFF outlines are
@@ -1521,13 +1538,22 @@ unsupported. There is no automatic mixed-script fallback, contextual shaping
 or bidirectional layout. Font coverage alone does not establish correct
 rendering for every script.
 
-The composer fits reading measures, breaks paragraphs across lines and splits
-overlong words at character boundaries. Markdown presentation syntax is removed.
-It does not hyphenate, place images, typeset mathematics, create page-numbered
-tables of contents or alternate recto/verso running heads. Shared composition
-boundaries are described in [Architecture](ARCHITECTURE.md).
+Since v0.7.0, manuscript structure is preserved independently of the analysis text:
+prefaces, subheadings, scene breaks, lists, quotations and notes survive export.
+Inline emphasis uses font styles; notes are collected as endnotes. Embedded
+LaTeX text formatting is a bounded subset, never executed as TeX. Unsupported
+TeX constructs report an error rather than silently changing the manuscript.
+Compare the same public-domain excerpt as an
+[editorial copy](examples/effi-briest-editor.pdf),
+[reading copy](examples/effi-briest-book.pdf) or
+[submission grid](examples/effi-briest-sheet.pdf).
 
-These fixed-layout PDFs are for analysis, reading and submission. There is no
+The composer wraps paragraphs and overlong words but does not hyphenate, place
+images, typeset mathematics, create page-numbered tables of contents or alternate
+recto/verso running heads. Image references remain labelled text. See
+[Architecture](ARCHITECTURE.md) for the shared composition boundary.
+
+These fixed-layout PDFs are for editing, analysis, reading and submission. There is no
 EPUB export, bleed/crop marks, print color management, printer preflight or
 PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
@@ -1835,8 +1861,10 @@ saved choice. The same transaction saves metadata and defaults together or neith
 The identity check compares configured title/author with explicit manuscript
 metadata: flat leading YAML strings or a leading Markdown title page with
 `by`, `von`, `Author:` or `Autor:`. It normalizes Unicode/whitespace and reports
-missing, unsupported and unavailable evidence separately from a mismatch. It
-does not infer authorship or edit the manuscript. A display byline does not
+missing, unsupported and unavailable evidence separately from a mismatch. A
+missing manuscript value means it was not automatically detected in these
+formats, not that the project setting is empty. The optional comparison does
+not infer authorship or edit the manuscript. A display byline does not
 identify a publisher or printer.
 
 An existing unreadable/malformed config emits a warning naming the file and
@@ -1914,7 +1942,7 @@ CLI flags or project configuration keys.
 
 ### Publication settings
 
-In the native workspace, open **Project → Settings → Publication**. The
+In the native workspace, open **Project → Settings → A5 book PDF details**. The
 disclosure is collapsed initially and disabled without an explicit project.
 The inclusion checkbox controls the A5 `book` layout; sheets and analysis
 reports omit the imprint. All text fields are optional and empty by default.
@@ -2092,9 +2120,11 @@ Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
 Product versions describe development maturity; response and archive schemas
-are independent. This release reads research records/manifests v1–v7, including
+are independent. Released v0.7.0 reads research records/manifests v1–v8, including
 historical v3.0.1 archives. Reading an archive does not upgrade it. See
 [compatibility and limits](#limits) before writing with an older application.
+Since v0.7.0, optional dossier geography uses v8. Ordinary dossier encodings stay
+unchanged until a geographic save; older readers cannot open v8 archives.
 
 Use `lixity research --help` to discover implemented commands and
 `lixity research COMMAND --help` for exact arguments and output formats.
@@ -2614,6 +2644,27 @@ native fallback is allowed. A synthetic probe checks execution, not recognition.
 New captures identify `tesseract-cli/1` or `poppler-native/1` and require storage
 v4. Earlier cached provenance/bytes remain unchanged.
 
+### Keep places and journeys in a dossier
+
+**Since v0.7.0.** Use **Places and routes** in the existing dossier
+editor to add named points, paths and areas, with descriptions, periods, actors
+and transport choices. Import supported GeoJSON or enter coordinates in the form.
+The [harbour example](examples/harbour-geography.json) contains deliberately
+fictional positions and walking/driving paths. CLI creation accepts `--geography`;
+ordinary dossier revision, history, search and backup retain the same data.
+Use command help and `research schema` for accepted fields and bounds.
+
+Coordinates are finite WGS84 longitude/latitude pairs. The offline view is a
+coordinate sketch: it provides no basemap, geocoding, road routing, travel times
+or historical verification. An attached map image is a separate source, not a
+georeferenced background. Keep supporting quotations and exact-version images
+in the dossier's existing evidence and body. Unknown geometry stays unplaced.
+
+Only a geographic save opts into record/manifest v8. Later revisions remain v8
+even after removing geography; reading ordinary dossiers preserves their older
+encoding. Older readers cannot open v8 archives. Section edits affect prose only,
+not the dossier's geographic data.
+
 <a id="zotero-desktop-bridge-since-v1190"></a>
 ## Zotero Desktop bridge
 
@@ -2644,13 +2695,16 @@ not a total count; a final full page may lead to an empty page. External metadat
 and notes remain untrusted evidence.
 
 Capture selects one locally available PDF, UTF-8 text or Markdown attachment.
+**Since v0.7.0,** capture also accepts PNG/JPEG through the existing image
+pipeline; these visual sources have no text passages or OCR.
 The existing ingestion pipeline retains stable bytes, the parent title and origin
 URL. `provenance_note` records a bounded summary of creators, date, parent and
 attachment versions. `context.external_reference` separately records provider,
 server identity, library, parent/attachment keys and versions. This is not a
 lossless bibliography export. Invalid URLs or overlong metadata fail without
 publishing a capture. Language comes from the flag or project, not Zotero metadata.
-Images, audio and video remain in Zotero; Lixity does not transcribe or index them.
+Audio, video and unsupported attachments remain in Zotero. Image capture does
+not interpret depicted places, extract map coordinates or establish authenticity.
 Scanned PDFs require locally installed Tesseract or a configured OCR worker.
 See [local OCR setup](#use-local-ocr-without-a-worker-service).
 
@@ -2670,7 +2724,7 @@ are unavailable. The browser requires a previewed server identity for capture.
 
 The research dashboard lets users choose a library and collection, search items,
 inspect attachments, open originals in Zotero and capture or refresh selected
-PDF/text attachments after confirming retention. It marks captured attachments
+eligible attachments after confirming retention. It marks captured attachments
 and metadata-version changes. This indication is not a comparison of file bytes.
 
 **Open in Zotero** uses the `zotero://` URL protocol: the Zotero installation
@@ -2700,7 +2754,7 @@ provenance, not the external library. Use the paired backup below for both store
 A saved reference is metadata, not a retained PDF. Download an attachment in
 Zotero, inspect it with `research zotero --item-key ITEM_KEY`, then capture the
 selected attachment with the preview's server identity and retention permission.
-`zotero-ingest --item-key ITEM_KEY` captures eligible PDF/text attachments as a
+`zotero-ingest --item-key ITEM_KEY` captures eligible attachments as a
 batch. Finally search the retained passages and cite/link the one you reviewed.
 Each step has a distinct result; a catalogue entry alone supplies no evidence.
 
@@ -3217,10 +3271,12 @@ Check installed support with `lixity about --json` and entity contracts with
 | Decision acknowledgement | v5 |
 | Causal claim relation | v6 |
 | Manuscript quote association | v7 |
+| Dossier geography (since v0.7.0) | v8 |
 
 Reading alone does not upgrade archives or rewrite old record bytes. Back up
 the complete store before opting in; use compatible readers/writers afterward.
-Historical v3.0.1 supports through v6, while this release supports through v7.
+Historical v3.0.1 supports through v6, v0.6.0 through v7, and v0.7.0 through v8.
+Older readers cannot open v8 archives.
 Rollback requires the complete pre-upgrade backup, never editing HEAD, schema
 labels or provenance by hand. Source identity metadata cannot be edited in place;
 refresh creates a new capture.
@@ -4309,6 +4365,13 @@ settings and PDF composition. `pdf_export.compose_pdf` composes bytes for CLI an
 HTTP; callers own output writes. Front matter uses entered data, and syntax checks
 do not establish publication compliance.
 
+Since v0.7.0, manuscript PDFs use one presentation projection
+(`manuscript_document`) of the shared Markdown blocks. It retains structure and readable
+inline styles rather than using the statistical prose filter. Book, editorial
+and submission layouts share block placement and the same PDF document engine;
+the analysis report retains its metric tables. Editorial geometry reuses
+`BookLayoutConfig`, which also remains available to embedding adapters.
+
 `config.prepare_project_settings` validates one settings candidate while
 preserving unrelated TOML values. The route renders that candidate,
 commits through `PreparedProjectSettings`, then publishes session/cache state.
@@ -4522,7 +4585,7 @@ manuscript is required. See [contributor checks](https://github.com/mfahsold/lix
 ## External research libraries (since v1.19.0)
 
 The optional `research.zotero` adapter uses Zotero Desktop's local HTTP API for
-bibliographic browsing and explicitly selected PDF/text capture. Lixity owns
+bibliographic browsing and explicitly selected evidence capture. Lixity owns
 retained evidence, analysis, claims, dossiers and decisions; it never reads or
 writes Zotero's database. Captured evidence remains usable without Zotero.
 
@@ -4545,10 +4608,19 @@ external identity. Evidence captures and references remain in Lixity backups;
 Zotero's library and unselected media require their own backup.
 
 Zotero is optional for existing analysis and retained evidence. There is no
-automatic background or cloud synchronization. Images, audio and video can be
-managed in Zotero, but are not made searchable evidence by the PDF/text bridge.
+automatic background or cloud synchronization. Since v0.7.0 it also captures
+PNG/JPEG through the shared image pipeline; visual sources have no text passages.
+Audio/video and other unsupported media remain managed in Zotero.
 See [research usage](research/USAGE.md#zotero-desktop-bridge-since-v1190)
 for implemented behavior and portability limits.
+
+Since v0.7.0, optional, bounded GeoJSON is stored within existing Dossier revisions
+(record/manifest v8). The same revision, conflict, search and backup paths apply;
+ordinary dossiers retain their older encoding until a geographic save. Older
+readers cannot open v8 archives. A shared offline coordinate view
+serves dossier, history and manuscript-companion readers. Images remain separate
+versioned sources; neither their presence nor a route line establishes geographic
+calibration, navigability or historical accuracy.
 
 ===============================================================================
 ## docs/AGENTS.md
@@ -4966,6 +5038,14 @@ cover initialization/status, source capture/read/search/citation, authored recor
 revisions, images, acknowledgements, comparisons and matrix rendering. Retrieved
 text and source criticism metadata remain untrusted evidence.
 
+**Since v0.7.0:** `create_dossier(..., geography=...)` and ordinary
+dossier revisions accept an optional typed GeoJSON FeatureCollection. Full
+details and record history retain it; summaries expose bounded counts. The
+installed `research schema` owns fields and validation limits. Geography uses
+record/manifest v8 on its first save; subsequent edits never downgrade it.
+Legacy dossier encodings remain unchanged until a geographic save. Older readers
+cannot open v8 archives. [Workflow and coordinate semantics](research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+
 `research_api.compare_source()` returns a dictionary by default, or a string
 with `format="md"`. The implementation helper
 `lixity.research.analysis.compare_source_to_manuscript()` is data-only and
@@ -5112,7 +5192,8 @@ or manuscript path, not `--project` / `--manuscript` flags.
 
 `POST /api/manuscript-pdf` accepts
 `{"layout": "book", "project_token": "<opaque current-context token>"}`.
-Layouts are `book`, `sheet` and `report`. The token belongs to the selected
+Layouts are `book`, `sheet` and `report`; since v0.7.0 they also include
+`editor` for an A4 annotation copy. The token belongs to the selected
 manuscript context and must be passed unchanged; stale context is rejected
 instead of exporting another project's manuscript. The response is binary
 `application/pdf` with an attachment filename, not a JSON record envelope.
@@ -5175,7 +5256,7 @@ manuscript and does not run a successful dashboard refresh.
 
 - `POST /api/research-ingest`: `{"file": "...", "allow_retention": true, "title": "..."}`
 - `POST /api/research-search`: `{"query": "...", "limit": 10}`
-- `POST /api/research-dossier`: `{"title": "...", "body": "...", "evidence_ids": [...]}`
+- `POST /api/research-dossier`: `{"title": "...", "body": "...", "evidence_ids": [...]}`; since v0.7.0 it also accepts `geography` as a supported GeoJSON FeatureCollection or `null`.
 - `POST /api/research-compare`: `{"source_id": "...", "manuscript": "..."}`
 - `POST /api/research-init`: `{"title": "...", "language": "en"}`
 - `POST /api/research-claim-add`: `{"title": "...", "statement": "...", "confidence": "hypothetical", "dossier_id": "..."}`
@@ -5450,8 +5531,9 @@ cover scopes, lexical limits and verification boundaries.
 The optional loopback bridge exposes `lixity.research.zotero.collections`,
 `.browse` and `.ingest`. Pass explicit project/library and the previewed
 `expected_server_id` for capture; retention permission is mandatory. Structured
-identity, not titles or filenames, governs deduplication and refresh. Captures
-use record/manifest v3. [Zotero usage](research/USAGE.md#zotero-desktop-bridge-since-v1190)
+identity, not titles or filenames, governs deduplication and refresh. Since
+v0.7.0, captures also accept PNG/JPEG visual sources without text extraction.
+Captures use record/manifest v3. [Zotero usage](research/USAGE.md#zotero-desktop-bridge-since-v1190)
 owns setup, safe refresh, migration and paired backup limits.
 
 Native routes use the selected research root:
