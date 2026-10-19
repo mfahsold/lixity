@@ -184,6 +184,12 @@ chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
 
+**Current main, after v0.7.1:** the chapter selector keeps the chosen chapter's
+scores beside the plot. Choose a flat axis pair in **View** when points overlap;
+return to 3D to rotate the same data. The line follows chapter order, including
+gaps where a chapter has no measured position. **Reset** restores the view,
+without changing chapter scores or analysis settings.
+
 The box represents independent axis cutoffs, not a confidence ellipsoid.
 Canvas points are pointer-operated; native controls and chapter-score links
 provide keyboard/touch navigation and remain usable without JavaScript.

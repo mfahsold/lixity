@@ -68,7 +68,9 @@ Open a new terminal, verify `lixity --version`, then run
 `lixity service start --open`. Choose **Open Project** or **Analyze a manuscript**.
 The [first-project guide](docs/ONBOARDING.md) explains the workflow;
 [installation and updates](docs/INSTALLATION.md) covers launchers, pinned wheels,
-service management and removal. Restart the workspace after upgrading.
+service management and removal. After upgrading, use `lixity service restart --open`
+to reuse recorded launch settings, then reload the browser. Installing a package
+does not update an already running service.
 
 ## What you can do
 
@@ -103,9 +105,16 @@ changes against the archive and apply the prepared revision explicitly. Images
 and diagrams share a zoom viewer. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
 keep name counts separate from author-declared perspective.
 
-**On current main:** guided map and style-space views explain their measurements
+**On current main:** the interactive app uses a desktop-style project sidebar
+on wide screens, with manuscript and analysis first, research alongside and
+settings separate. On smaller screens the same navigation becomes horizontal.
+Guided map and style-space views explain their measurements
 where you use them, with the same context available in the CLI. Maps open with
 OpenStreetMap; local vectors and the numbered sketch remain available offline.
+Select a map number to inspect a place or route. Style-space chapter details stay
+beside the plot; wide Mermaid diagrams scroll at a readable scale and can be
+enlarged. The public demo follows `main`; the PyPI release may not include these
+changes yet.
 
 ## How to read the results
 
@@ -226,7 +235,11 @@ lixity research COMMAND --help
 lixity service start --open
 ```
 
-Installation does not start a service or enable login startup. `about --json`
+Installation does not start a service or enable login startup. After upgrading,
+`service restart` reuses recorded launch settings; plain `service start` opens
+an empty workspace unless given a project. Reload browser tabs after restarting.
+Unreleased commits can share a release version; a version string alone does not
+establish that the installed package or running service matches `main`. `about --json`
 (also `schema`) reports commands, formats, features, language profiles and default
 thresholds; it is not an analysis-result JSON Schema. `research schema` describes
 research entities. A native server lists registered operations at `GET /api`.
@@ -239,6 +252,11 @@ generated settings metadata; see the [usage reference](https://mfahsold.github.i
 English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
+
+Current-main interactive UI: manuscript/analysis first, research second, settings
+third; a fixed project sidebar on desktop becomes horizontal navigation on
+narrow screens. The companion dossier reader supplies context beside a passage.
+These views share the existing analysis and explicit-project research APIs.
 
 ## Choose a reference
 
@@ -389,6 +407,27 @@ deciding whether a difference matters. Settings explain saved versus session-onl
 choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
 require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
 
+### Choose a view
+
+**Current main, after v0.7.1:** the project sidebar stays available while you
+read on a wide screen. On mobile, use the same views above the workspace.
+**Manuscript & Analysis** is the starting point for your text; open a dossier
+alongside it when you need context, and use **Research** to work on the source
+archive. Analysis guides your attention; the manuscript remains the reference.
+
+| What you want to do | Where to start |
+| --- | --- |
+| Read a difference in context | **Analysis**: open a passage, then expand **Values** if needed. |
+| Compare chapter positions | **Style dimensions**: select a chapter; on current main, use a flat axis view to inspect overlaps. |
+| Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
+| Change the manuscript or analysis setup | **Project & Settings**: check the active project and whether a setting is saved or session-only. |
+
+**Current main, after v0.7.1:** maps open with OpenStreetMap. Select a numbered
+place or route to read its details; switch off the background for local vectors
+or choose the sketch. The map background uses the network. Mermaid diagrams
+render locally: scroll a wide diagram or enlarge it to inspect the whole view.
+The public demo shows current-main behavior; an installed release may differ.
+
 ## Work through review notes
 
 Read a passage before adding a marker. **Save marker** explicitly writes a
@@ -529,7 +568,10 @@ uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+h
 `main` changes over time. Review
 [release notes](https://github.com/mfahsold/lixity/releases) before switching.
 Stop the managed service before replacing its installation, verify the new
-version, then start it again. This does not alter manuscript files.
+version, then run `lixity service restart --open` to reuse the recorded launch
+settings. A checkout, installed package and running service can contain different
+code even when `--version` matches: unreleased commits retain the release number.
+Reload browser tabs after the restart.
 
 </details>
 
@@ -552,7 +594,7 @@ command, and the new controller deliberately does not adopt its process.
 lixity service stop
 uv tool upgrade lixity
 lixity --version
-lixity service start --open
+lixity service restart --open
 ```
 
 `uv tool upgrade lixity` selects the newest published release when the tool came
@@ -561,7 +603,10 @@ with `uv tool install --reinstall-package lixity` and the new wheel URL.
 `--reinstall-package lixity` refreshes that package without forcing ownership
 of another installer's entrypoint. See the official
 [tool update reference](https://docs.astral.sh/uv/reference/cli/#uv-tool-install).
-If you start with an explicit project, pass that path again after updating.
+`restart` reuses recorded launch settings even after `stop`. Plain `start` opens
+an empty workspace unless you provide a project; it does not reuse those settings.
+A project selected later in the browser is not the recorded startup project. Pass
+that project explicitly to `restart` when you want it to become the launch default.
 
 Before updates or removal, stop each managed instance using its port, for example
 `lixity service stop --port 9000` for a custom-port instance. Before removal,
@@ -1102,6 +1147,12 @@ zoom/rotate, and select chapter points or **Chapter scores** links to read a
 chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
 Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
 loadings; the table gives the same measured chapter scores and flags.
+
+**Current main, after v0.7.1:** the chapter selector keeps the chosen chapter's
+scores beside the plot. Choose a flat axis pair in **View** when points overlap;
+return to 3D to rotate the same data. The line follows chapter order, including
+gaps where a chapter has no measured position. **Reset** restores the view,
+without changing chapter scores or analysis settings.
 
 The box represents independent axis cutoffs, not a confidence ellipsoid.
 Canvas points are pointer-operated; native controls and chapter-score links
@@ -3206,6 +3257,12 @@ or invalid diagrams keep their inspectable source. Rendered SVGs share the local
 PhotoSwipe 5.4.4 zoom viewer with images. Neither renderer loads a CDN or uploads
 the diagram; map tiles have the separate network boundary above.
 
+**Current main, after v0.7.1:** a small diagram uses a compact frame. Wide diagrams
+keep their label size and scroll horizontally within the reader; focus the
+viewport and use the arrow keys, or choose **Enlarge diagram**. The source remains
+available below it. The renderer preserves the direction and relationships in
+your Mermaid source; visual proximity does not establish evidence or causality.
+
 ## Limits
 
 Research uses operation-specific `*-local/N` response envelopes and versioned
@@ -4363,6 +4420,31 @@ and [text-spacing overrides](https://www.w3.org/WAI/WCAG22/Understanding/text-sp
 inform the checks; defaults are product choices, not universal typographic optima.
 Exact tokens and dimensions belong to CSS and executable checks rather than a
 second prose specification.
+
+The manuscript is the primary workspace. Analysis supports passage selection
+and interpretation; retained evidence and authored dossiers provide context.
+These are connected views over the same project, not independent products.
+
+**Current main, after v0.7.1:** interactive dashboards use a fixed project sidebar
+on wide screens, with manuscript/analysis first, research second and settings
+third. Narrow screens keep a horizontal switcher. Tab orientation and keyboard
+navigation change together; the sidebar scrolls independently if its controls
+exceed the viewport. Plain exported reports retain their document layout.
+Both presentations use the same renderer, labels, data and action handlers.
+
+The interface follows a reading-first hierarchy: a passage or visual comes
+before its detailed measurements; advanced explanations stay near the control
+that needs them. Diagram frames follow content width within the reader, and
+wide diagrams retain their label scale in a scrollable viewport. Style-space
+navigation groups paired actions at responsive widths. Pages uses the shared
+tokens and stylesheet, with direct demo and installation entry points and
+screenshots of the same native components rather than a parallel product UI.
+
+Publication and execution are separate boundaries. The Pages demo follows the
+reviewed source checkout; the release badge names the published package. A local
+installation replaces package files, while the managed service must restart to
+load them. Unreleased builds can have the same product version, so parity checks
+compare relevant asset bytes rather than relying on a version string alone.
 
 Desktop/mobile rendering, keyboard focus, text-spacing overrides, reduced motion
 and both themes are checked with synthetic content. Automated checks and the

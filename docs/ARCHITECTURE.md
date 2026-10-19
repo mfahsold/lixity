@@ -209,6 +209,31 @@ inform the checks; defaults are product choices, not universal typographic optim
 Exact tokens and dimensions belong to CSS and executable checks rather than a
 second prose specification.
 
+The manuscript is the primary workspace. Analysis supports passage selection
+and interpretation; retained evidence and authored dossiers provide context.
+These are connected views over the same project, not independent products.
+
+**Current main, after v0.7.1:** interactive dashboards use a fixed project sidebar
+on wide screens, with manuscript/analysis first, research second and settings
+third. Narrow screens keep a horizontal switcher. Tab orientation and keyboard
+navigation change together; the sidebar scrolls independently if its controls
+exceed the viewport. Plain exported reports retain their document layout.
+Both presentations use the same renderer, labels, data and action handlers.
+
+The interface follows a reading-first hierarchy: a passage or visual comes
+before its detailed measurements; advanced explanations stay near the control
+that needs them. Diagram frames follow content width within the reader, and
+wide diagrams retain their label scale in a scrollable viewport. Style-space
+navigation groups paired actions at responsive widths. Pages uses the shared
+tokens and stylesheet, with direct demo and installation entry points and
+screenshots of the same native components rather than a parallel product UI.
+
+Publication and execution are separate boundaries. The Pages demo follows the
+reviewed source checkout; the release badge names the published package. A local
+installation replaces package files, while the managed service must restart to
+load them. Unreleased builds can have the same product version, so parity checks
+compare relevant asset bytes rather than relying on a version string alone.
+
 Desktop/mobile rendering, keyboard focus, text-spacing overrides, reduced motion
 and both themes are checked with synthetic content. Automated checks and the
 selected contrast audits do not constitute a complete accessibility certification

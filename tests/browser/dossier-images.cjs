@@ -56,6 +56,7 @@ async function checkDiagramReadability(page) {
         assert.ok(Number.isFinite(metrics.minimumFont) && metrics.minimumFont >= 12, `${name} ${theme} ${width}px readable labels: ${JSON.stringify(metrics)}`);
         assert.ok(metrics.width >= metrics.intrinsicWidth * .98, `${name} retains Mermaid's intrinsic layout`);
         assert.ok(metrics.diagramStart >= 0, 'The start of an overflowing diagram remains reachable');
+        if (name === 'vertical' && width === 1440) assert.ok(metrics.right - metrics.left < width / 2, 'A small diagram keeps a compact frame');
         assert.ok(metrics.left >= 0 && metrics.right <= width && metrics.pageWidth <= width, `${name} must not widen the page`);
         if (name === 'wide' && width === 320) {
           assert.ok(metrics.contentWidth > metrics.viewportWidth, 'Wide diagrams scroll within their own viewport');

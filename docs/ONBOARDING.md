@@ -56,6 +56,27 @@ deciding whether a difference matters. Settings explain saved versus session-onl
 choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
 require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
 
+### Choose a view
+
+**Current main, after v0.7.1:** the project sidebar stays available while you
+read on a wide screen. On mobile, use the same views above the workspace.
+**Manuscript & Analysis** is the starting point for your text; open a dossier
+alongside it when you need context, and use **Research** to work on the source
+archive. Analysis guides your attention; the manuscript remains the reference.
+
+| What you want to do | Where to start |
+| --- | --- |
+| Read a difference in context | **Analysis**: open a passage, then expand **Values** if needed. |
+| Compare chapter positions | **Style dimensions**: select a chapter; on current main, use a flat axis view to inspect overlaps. |
+| Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
+| Change the manuscript or analysis setup | **Project & Settings**: check the active project and whether a setting is saved or session-only. |
+
+**Current main, after v0.7.1:** maps open with OpenStreetMap. Select a numbered
+place or route to read its details; switch off the background for local vectors
+or choose the sketch. The map background uses the network. Mermaid diagrams
+render locally: scroll a wide diagram or enlarge it to inspect the whole view.
+The public demo shows current-main behavior; an installed release may differ.
+
 ## Work through review notes
 
 Read a passage before adding a marker. **Save marker** explicitly writes a

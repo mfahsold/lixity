@@ -30,6 +30,24 @@ assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.
       assert.ok(page.url().endsWith('#license-terms'));
       assert.equal(await page.locator('.license-links a').count(), 2);
       await page.locator('.project-header').screenshot({path: `/tmp/lixity-license-${width}.png`});
+      if (width === 1440) {
+        const sidebar = await page.locator('.workspace-shell').boundingBox();
+        const work = await page.locator('.view-pane.active').boundingBox();
+        assert.ok(sidebar.x + sidebar.width <= work.x, 'Desktop project navigation sits beside the workspace');
+        await page.locator('#tab-view-analysis').focus();
+        await page.keyboard.press('ArrowDown');
+        assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true');
+        await page.keyboard.press('ArrowUp');
+        await page.locator('#chapters').scrollIntoViewIfNeeded();
+        assert.ok(await page.locator('#tab-view-project').isVisible());
+        assert.ok((await page.locator('.workspace-shell').boundingBox()).y >= 0, 'Project navigation stays reachable while reading');
+        await page.evaluate(() => window.scrollTo(0, 1800));
+        const readingPosition = await page.evaluate(() => window.scrollY);
+        await page.locator('#tab-view-project').click();
+        assert.ok((await page.locator('#view-pane-project').boundingBox()).y >= 0, 'A newly selected view opens at its beginning');
+        await page.locator('#tab-view-analysis').click();
+        assert.ok(Math.abs(await page.evaluate(() => window.scrollY) - readingPosition) < 2, 'Returning to the manuscript restores the reading position');
+      }
       await page.locator('#tab-view-project').click();
       assert.equal(await page.locator('#nda-manager, #nda-table, #nda-passphrase').count(), 0);
       assert.equal(await page.locator('#nda-draft-form').count(), 0, 'No implicit NDA capability in an embedding fixture');

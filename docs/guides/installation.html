@@ -106,7 +106,7 @@ lixity service start --open</code></pre>
 <details><summary>Development builds instead</summary>
 <p>For unreleased development work, install Git, stop the managed service and replace the installation with:</p>
 <pre><code>uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"</code></pre>
-<p><code>main</code> changes over time. Verify the version before starting again. Most users should stay on the current release. See the <a href="../INSTALLATION.md#updates-and-removal">update instructions</a>.</p>
+<p><code>main</code> changes over time and unreleased commits can share the release version. After installation, run <code>lixity service restart --open</code> and reload your browser. This reuses recorded launch settings; a project opened later in the browser is a separate choice. See the <a href="../INSTALLATION.md#updates-and-removal">update instructions</a>.</p>
 </details>
 
 <h2 id="first-dashboard">Start the workspace</h2>

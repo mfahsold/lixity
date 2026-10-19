@@ -95,7 +95,10 @@ uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+h
 `main` changes over time. Review
 [release notes](https://github.com/mfahsold/lixity/releases) before switching.
 Stop the managed service before replacing its installation, verify the new
-version, then start it again. This does not alter manuscript files.
+version, then run `lixity service restart --open` to reuse the recorded launch
+settings. A checkout, installed package and running service can contain different
+code even when `--version` matches: unreleased commits retain the release number.
+Reload browser tabs after the restart.
 
 </details>
 
@@ -118,7 +121,7 @@ command, and the new controller deliberately does not adopt its process.
 lixity service stop
 uv tool upgrade lixity
 lixity --version
-lixity service start --open
+lixity service restart --open
 ```
 
 `uv tool upgrade lixity` selects the newest published release when the tool came
@@ -127,7 +130,10 @@ with `uv tool install --reinstall-package lixity` and the new wheel URL.
 `--reinstall-package lixity` refreshes that package without forcing ownership
 of another installer's entrypoint. See the official
 [tool update reference](https://docs.astral.sh/uv/reference/cli/#uv-tool-install).
-If you start with an explicit project, pass that path again after updating.
+`restart` reuses recorded launch settings even after `stop`. Plain `start` opens
+an empty workspace unless you provide a project; it does not reuse those settings.
+A project selected later in the browser is not the recorded startup project. Pass
+that project explicitly to `restart` when you want it to become the launch default.
 
 Before updates or removal, stop each managed instance using its port, for example
 `lixity service stop --port 9000` for a custom-port instance. Before removal,

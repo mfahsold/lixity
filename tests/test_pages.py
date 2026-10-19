@@ -56,6 +56,24 @@ class PageHead(HTMLParser):
 
 
 class TestPagesStaging(unittest.TestCase):
+    def test_public_navigation_preserves_workspace_and_report_classes(self):
+        from scripts.build_examples import _insert_notice, _site_navigation
+
+        for mode in ("lixity-workspace", "lixity-report"):
+            with self.subTest(mode=mode):
+                page = _site_navigation(
+                    f'<html><head></head><body id="top" class="{mode}">'
+                    '<div class="page"><div class="workspace-shell"><header>Example</header>'
+                    '<nav class="view-navigation"></nav></div></div></body></html>', "Example",
+                )
+                body = page.split("<body", 1)[1].split(">", 1)[0]
+                self.assertEqual(body.count('class="'), 1)
+                self.assertIn(f'class="{mode} site-page"', body)
+                self.assertIn('tabindex="-1"', body)
+                self.assertLess(page.index('class="site-return"'), page.index('class="workspace-shell"'))
+                page = _insert_notice(page, '<section id="demo-notice">About</section>')
+                self.assertIn('</nav></div><section id="demo-notice">', page)
+
     def test_report_title_replacement_ignores_embedded_svg_script_literals(self):
         from scripts.build_examples import _replace_title
 

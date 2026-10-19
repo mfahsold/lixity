@@ -8,6 +8,15 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [Unreleased]
 
 ### Changed
+- The interactive workspace puts manuscript and analysis first in a fixed desktop
+  project sidebar, with research and settings alongside. Narrow screens retain
+  horizontal navigation, with keyboard orientation matched to the layout. Plain
+  exported reports keep their document layout.
+- Public entry points distinguish the read-only demo from local installation,
+  with simpler page framing and clearer open/import guidance. Compact diagram
+  frames and grouped style-space controls reduce empty space and uneven wrapping.
+- Upgrade guidance uses restart to retain recorded launch settings and explains
+  the distinction between released, installed and running code.
 - One public Warehouse 4 demo combines the same manuscript, analysis, research,
   images, geography and PDF exports. Former research links open that project;
   public-domain novel analyses remain secondary case studies.

@@ -34,6 +34,8 @@ Choose one contrast that makes you curious. You do not need to inspect every mea
 
 Select a paragraph block in the action chapter to open its text and source lines. You can also use Tab to focus a block, then press Enter or Space. Read the paragraph alongside the opening description.
 
+**Current development:** the wide-screen demo keeps the project and workspace views in a fixed sidebar. On mobile, the views sit above the text. Manuscript and analysis come first; a dossier can accompany the passage when you need research context.
+
 The passage appears first; expand **Values** when you need its measurements. Select a chapter in the style dimensions to inspect its scores and return to its passage; nearby help explains how to read the view. Keep the scene's purpose in mind before treating a difference as something to change.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. Measurements cannot answer that question without the passage.

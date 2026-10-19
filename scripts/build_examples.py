@@ -169,6 +169,14 @@ def _replace_title(report: str, title: str) -> str:
 
 def _insert_notice(report: str, notice: str) -> str:
     _require(report.count("</header>") == 1, "the dashboard must carry exactly one header")
+    # Public explanation belongs to the document, outside the native project rail.
+    shell = '<div class="workspace-shell">'
+    if shell in report:
+        navigation = report.index('<nav class="view-navigation"', report.index(shell))
+        navigation_end = report.index("</nav>", navigation) + len("</nav>")
+        shell_end = report.index("</div>", navigation_end) + len("</div>")
+        _require(report[navigation_end:shell_end].strip() == "</div>", "the workspace navigation must close the shell")
+        return report[:shell_end] + notice + report[shell_end:]
     return report.replace("</header>", "</header>" + notice, 1)
 
 
@@ -203,8 +211,14 @@ def _site_navigation(report: str, title: str, *, demo: bool = False) -> str:
         f'<li><span aria-current="page">{html.escape(title)}</span></li></ol></nav>'
     )
     _require(report.count('<body id="top"') == 1, "the report must have one top target")
-    report = report.replace('<body id="top"', '<body id="top" tabindex="-1" class="site-page"', 1)
-    report = report.replace('<header', navigation + '<header', 1)
+    report = report.replace('<body id="top"', '<body id="top" tabindex="-1"', 1)
+    report, class_count = re.subn(
+        r'(<body\b[^>]*\bclass=")([^"]*)"',
+        lambda match: match[1] + match[2] + ' site-page"', report, count=1,
+    )
+    _require(class_count == 1, "the report must retain its native body class")
+    _require(report.count('<div class="page">') == 1, "the report must have one page container")
+    report = report.replace('<div class="page">', '<div class="page">' + navigation, 1)
     report = report.replace('</head>', '<style>' + styles + '</style></head>', 1)
     return report.replace('</body>', '<a class="site-back-top" href="#top">Back to top ↑</a></body>', 1)
 

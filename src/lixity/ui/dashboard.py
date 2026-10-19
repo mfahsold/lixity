@@ -352,7 +352,7 @@ def render_dashboard(
         f"<title>{esc(title)} – {L('app_suffix')}</title>",
         f"<style>{_bundle(_CSS_FILES)}</style>",
         "</head>",
-        f'<body id="top" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
+        f'<body id="top" class="{"lixity-workspace" if controls else "lixity-report"}" data-api="{esc(api_base)}" data-ui-labels="{workspace_labels_json}" '
         f'data-manuscript-source-sha256="{esc(manuscript_source_sha256)}" '
         f'data-manuscript-project-token="{esc(manuscript_pdf_token)}" '
         f'data-manuscript-links="{manuscript_links_mode}" '
@@ -375,10 +375,10 @@ def render_dashboard(
         )
         parts.append('<div class="row">')
         parts.append(
-            f'<button type="button" class="ctl primary" id="btn-modal-new-project">+ {L("new_project")}</button>'
+            f'<button type="button" class="ctl{"" if has_chapters else " primary"}" id="btn-modal-new-project">{L("new_project")}</button>'
         )
         parts.append(
-            f'<button type="button" class="ctl" id="btn-modal-open-project">📂 {L("open_project")}</button>'
+            f'<button type="button" class="ctl" id="btn-modal-open-project">{L("open_project")}</button>'
         )
         show_guidance_hidden = "" if chapters else " hidden"
         parts.append(
@@ -397,16 +397,13 @@ def render_dashboard(
         parts.append("</nav>")
         parts.append(
             '<nav class="view-navigation" role="tablist" aria-label="' + L("workspace") + '">'
-            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
-            f'<span class="view-nav-icon" aria-hidden="true">📚</span> '
-            f"<span>{L('workspace_research')}</span>"
-            "</button>"
             f'<button type="button" class="view-nav-tab{" active" if default_view == "analysis" else ""}" data-view="analysis" role="tab" id="tab-view-analysis" aria-controls="view-pane-analysis" aria-selected="{"true" if default_view == "analysis" else "false"}">'
-            f'<span class="view-nav-icon" aria-hidden="true">📊</span> '
             f"<span>{L('workspace_analysis')}</span>"
             "</button>"
+            f'<button type="button" class="view-nav-tab{" active" if default_view == "research" else ""}" data-view="research" role="tab" id="tab-view-research" aria-controls="view-pane-research" aria-selected="{"true" if default_view == "research" else "false"}">'
+            f"<span>{L('workspace_research')}</span>"
+            "</button>"
             f'<button type="button" class="view-nav-tab" data-view="project" role="tab" id="tab-view-project" aria-controls="view-pane-project" aria-selected="false">'
-            f'<span class="view-nav-icon" aria-hidden="true">⚙️</span> '
             f"<span>{L('workspace_project')}</span>"
             "</button>"
             "</nav>"
@@ -464,7 +461,7 @@ def render_dashboard(
                 f'      <button type="button" class="ctl primary welcome-btn" id="hero-btn-new-project">{L("welcome_import_action")}</button>'
             )
             parts.append(
-                f'      <button type="button" class="ctl welcome-btn" id="hero-btn-open-project">📂 {L("open_project")}</button>'
+                f'      <button type="button" class="ctl welcome-btn" id="hero-btn-open-project">{L("open_project")}</button>'
             )
             parts.append(
                 f'      <button type="button" class="ctl welcome-btn" id="hero-btn-browse-project">{L("wizard_choose_action")}</button>'

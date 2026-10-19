@@ -635,11 +635,16 @@ if (formOpen) {
 }
 
 // Workspace Navigation (3 Main Views)
-function switchActiveView(viewName) {
+var workspaceScrollPositions = Object.create(null);
+function switchActiveView(viewName, restorePosition) {
   if (!viewName) return;
   var tabs = document.querySelectorAll(".view-nav-tab");
   var panes = document.querySelectorAll(".view-pane");
-  if (!panes.length) return;
+  if (!panes.length || !Array.from(panes).some(function(pane) { return pane.dataset.viewPane === viewName; })) return;
+  var previous = document.querySelector(".view-pane.active");
+  if (previous && previous.dataset.viewPane !== viewName) {
+    workspaceScrollPositions[previous.dataset.viewPane] = window.scrollY;
+  }
   tabs.forEach(function(tab) {
     var isActive = tab.dataset.view === viewName;
     tab.classList.toggle("active", isActive);
@@ -654,6 +659,11 @@ function switchActiveView(viewName) {
   } catch (e) {}
   if (viewName === "analysis") {
     window.dispatchEvent(new Event("resize"));
+  }
+  // Explicit workspace navigation resumes its own reading position. Hash and
+  // evidence jumps keep control of their more specific destination.
+  if (restorePosition && previous && previous.dataset.viewPane !== viewName) {
+    window.scrollTo({top: workspaceScrollPositions[viewName] || 0, behavior: "instant"});
   }
 }
 
@@ -684,7 +694,7 @@ function checkUrlHashView() {
 document.addEventListener("click", function(event) {
   var viewTab = event.target.closest(".view-nav-tab[data-view]");
   if (viewTab) {
-    switchActiveView(viewTab.dataset.view);
+    switchActiveView(viewTab.dataset.view, true);
     return;
   }
   var switchBtn = event.target.closest("[data-switch-view]");
@@ -717,7 +727,15 @@ window.LixityWorkspaceReader = {
   contextToken: researchContextToken, enhanceDossier: enhanceResearchDossierClaims,
   renderDossier: function(detail) { return researchDossierDetailHtml(detail, true); }
 };
-initKeyboardTabs(document.querySelector(".view-navigation"), "[data-view]", false);
+(function () {
+  var navigation = document.querySelector(".view-navigation");
+  if (!navigation) return;
+  var desktop = window.matchMedia("(min-width: 1100px)");
+  function orientation() { navigation.setAttribute("aria-orientation", desktop.matches ? "vertical" : "horizontal"); }
+  orientation();
+  desktop.addEventListener("change", orientation);
+  initKeyboardTabs(navigation, "[data-view]", false);
+})();
 initKeyboardTabs(document.getElementById("research-tabs"), "[data-rtab]", true);
 document.querySelectorAll(".modal-tabs").forEach(function(container) {
   initKeyboardTabs(container, '[role="tab"]', container.closest("#modal-research-revision") !== null);

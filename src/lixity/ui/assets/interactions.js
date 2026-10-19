@@ -242,8 +242,9 @@ function initKeyboardTabs(container, selector, manual) {
     var tabs = Array.from(container.querySelectorAll(selector)).filter(function(tab) { return !tab.disabled; });
     var index = tabs.indexOf(event.target);
     if (index < 0 || !tabs.length) return;
-    if (event.key === "ArrowRight") index = (index + 1) % tabs.length;
-    else if (event.key === "ArrowLeft") index = (index + tabs.length - 1) % tabs.length;
+    var vertical = container.getAttribute("aria-orientation") === "vertical";
+    if (event.key === (vertical ? "ArrowDown" : "ArrowRight")) index = (index + 1) % tabs.length;
+    else if (event.key === (vertical ? "ArrowUp" : "ArrowLeft")) index = (index + tabs.length - 1) % tabs.length;
     else if (event.key === "Home") index = 0;
     else if (event.key === "End") index = tabs.length - 1;
     else return;

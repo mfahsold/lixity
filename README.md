@@ -50,7 +50,9 @@ Open a new terminal, verify `lixity --version`, then run
 `lixity service start --open`. Choose **Open Project** or **Analyze a manuscript**.
 The [first-project guide](docs/ONBOARDING.md) explains the workflow;
 [installation and updates](docs/INSTALLATION.md) covers launchers, pinned wheels,
-service management and removal. Restart the workspace after upgrading.
+service management and removal. After upgrading, use `lixity service restart --open`
+to reuse recorded launch settings, then reload the browser. Installing a package
+does not update an already running service.
 
 ## What you can do
 
@@ -85,9 +87,16 @@ changes against the archive and apply the prepared revision explicitly. Images
 and diagrams share a zoom viewer. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
 keep name counts separate from author-declared perspective.
 
-**On current main:** guided map and style-space views explain their measurements
+**On current main:** the interactive app uses a desktop-style project sidebar
+on wide screens, with manuscript and analysis first, research alongside and
+settings separate. On smaller screens the same navigation becomes horizontal.
+Guided map and style-space views explain their measurements
 where you use them, with the same context available in the CLI. Maps open with
 OpenStreetMap; local vectors and the numbered sketch remain available offline.
+Select a map number to inspect a place or route. Style-space chapter details stay
+beside the plot; wide Mermaid diagrams scroll at a readable scale and can be
+enlarged. The public demo follows `main`; the PyPI release may not include these
+changes yet.
 
 ## How to read the results
 

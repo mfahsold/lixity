@@ -165,7 +165,7 @@ server.serve_forever()
     page.on('request',request=>{if(new URL(request.url()).pathname==='/api/research/matrix')exported=new URL(request.url());});
     const download=page.waitForEvent('download');await page.locator('#r-claim-matrix-btn').click();await download;
     assert.equal(exported.searchParams.get('research_token'),token,'Matrix reuses guarded research read');
-    await page.locator('[data-view=research]').focus();await page.keyboard.press('ArrowRight');
+    await page.locator('[data-view=research]').focus();await page.keyboard.press(width >= 1100 ? 'ArrowUp' : 'ArrowLeft');
     await expect(page.locator('[data-view=analysis]')).toBeFocused();
     await expect(page.locator('[data-view=research]')).toHaveAttribute('tabindex','-1');
     await page.locator('[data-view=research]').click();

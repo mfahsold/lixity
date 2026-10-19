@@ -1238,6 +1238,12 @@ or invalid diagrams keep their inspectable source. Rendered SVGs share the local
 PhotoSwipe 5.4.4 zoom viewer with images. Neither renderer loads a CDN or uploads
 the diagram; map tiles have the separate network boundary above.
 
+**Current main, after v0.7.1:** a small diagram uses a compact frame. Wide diagrams
+keep their label size and scroll horizontally within the reader; focus the
+viewport and use the arrow keys, or choose **Enlarge diagram**. The source remains
+available below it. The renderer preserves the direction and relationships in
+your Mermaid source; visual proximity does not establish evidence or causality.
+
 ## Limits
 
 Research uses operation-specific `*-local/N` response envelopes and versioned

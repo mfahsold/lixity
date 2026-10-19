@@ -40,7 +40,11 @@ For unreleased development work, install Git, stop the managed service and repla
 
 `main`
 
-changes over time. Verify the version before starting again. Most users should stay on the current release. See the
+changes over time and unreleased commits can share the release version. After installation, run
+
+`lixity service restart --open`
+
+and reload your browser. This reuses recorded launch settings; a project opened later in the browser is a separate choice. See the
 
 [update instructions](../INSTALLATION.md#updates-and-removal)
 

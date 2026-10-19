@@ -89,11 +89,15 @@ async function checkReturnNavigation(page, route, exercise) {
     message: `${route || 'home'} leaves the document top before returning`,
   }).toBeGreaterThan(50);
   await returnToTop(page, route);
-  assert.equal(await page.locator('h1').evaluate(heading => {
+  const headingView = await page.locator('h1').evaluate(heading => {
     const box = heading.getBoundingClientRect();
     const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
-    return box.top >= 0 && box.bottom <= innerHeight && heading.contains(hit);
-  }), true, `${route} returns to an unobscured heading`);
+    const shell = heading.closest('.workspace-shell');
+    return {visible: box.top >= 0 && box.bottom <= innerHeight && heading.contains(hit),
+      top: box.top, bottom: box.bottom, width: innerWidth, height: innerHeight,
+      shellScroll: shell && shell.scrollTop, hit: hit && hit.outerHTML.slice(0, 150)};
+  });
+  assert.equal(headingView.visible, true, `${route} returns to an unobscured heading: ${JSON.stringify(headingView)}`);
   const menuAfter = await navigation.boundingBox();
   for (const dimension of ['x', 'y', 'width', 'height']) {
     assert.ok(Math.abs(menuBefore[dimension] - menuAfter[dimension]) < 1, `${route} keeps its navigation geometry after returning`);
@@ -599,6 +603,11 @@ async function checkDemoCapabilities(page, width) {
 }
 
 async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
+  if (width >= 1100 && javaScriptEnabled) {
+    const sidebar = await page.locator('.workspace-shell').boundingBox();
+    const work = await page.locator('.view-pane.active').boundingBox();
+    assert.ok(sidebar.x + sidebar.width <= work.x, 'The public demo retains the native desktop sidebar');
+  }
   await expect(page.locator('h1')).toHaveText(demoTitle);
   if (javaScriptEnabled) {
     await expect(page.locator('#tab-view-project'), 'The public demo keeps the native Project & Settings workspace discoverable').toBeVisible();
@@ -647,10 +656,10 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#manuscript-link-dialog, [data-manuscript-link-selection]')).toHaveCount(0);
   await page.evaluate(() => getSelection().removeAllRanges());
   await page.locator('#tab-view-analysis').focus();
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press('End');
   await expect(page.locator('#tab-view-project')).toBeFocused();
   await expect(page.locator('#tab-view-project')).toHaveAttribute('aria-selected', 'true');
-  await page.keyboard.press('ArrowRight');
+  await page.keyboard.press(width >= 1100 ? 'ArrowUp' : 'ArrowLeft');
   await expect(page.locator('#tab-view-research')).toBeFocused();
   await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');
   await checkResearchDemo(page, true, width, colorScheme);
@@ -793,7 +802,10 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
           if (route === 'demo/report.html') await checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme);
         }
         await page.goto('http://lixity.test/lixity/');
-        await page.locator('.hero-cta a[href="guides/first-look.html"]').click();
+        await page.locator('.hero-cta a[href="guides/installation.html"]').click();
+        assert.ok(page.url().endsWith('/guides/installation.html'), 'The secondary CTA opens local installation');
+        await page.goto('http://lixity.test/lixity/');
+        await page.locator('.release-note a[href="guides/first-look.html"]').click();
         assert.ok(page.url().endsWith('/guides/first-look.html'));
         await page.locator('.ctl[href="../demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'));

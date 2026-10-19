@@ -15,9 +15,9 @@
 @media (prefers-reduced-motion: reduce) { .research-media-dialog * { transition: none !important; } }
 /* Mermaid keeps its intrinsic layout inside a keyboard-scrollable viewport. */
 .research-diagram-wrap {
-  margin: 1rem 0; min-width: 0; max-width: 100%; text-align: center;
-  background: var(--bg); border: 1px solid var(--line);
-  border-radius: var(--radius); padding: 1rem .5rem;
+  margin: 1rem 0; width: fit-content; min-width: min(100%, 18rem); max-width: 100%; text-align: start;
+  border: 1px solid var(--line);
+  border-radius: var(--radius); padding: .75rem .5rem;
 }
 .research-diagram-canvas { max-width: 100%; overflow-x: auto; }
 .research-diagram-canvas:not(:empty) { background: #fff; color: #222; border-radius: var(--radius-sm); padding: .5rem; margin-bottom: .5rem; }

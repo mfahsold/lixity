@@ -24,7 +24,11 @@ lixity research COMMAND --help
 lixity service start --open
 ```
 
-Installation does not start a service or enable login startup. `about --json`
+Installation does not start a service or enable login startup. After upgrading,
+`service restart` reuses recorded launch settings; plain `service start` opens
+an empty workspace unless given a project. Reload browser tabs after restarting.
+Unreleased commits can share a release version; a version string alone does not
+establish that the installed package or running service matches `main`. `about --json`
 (also `schema`) reports commands, formats, features, language profiles and default
 thresholds; it is not an analysis-result JSON Schema. `research schema` describes
 research entities. A native server lists registered operations at `GET /api`.
@@ -37,6 +41,11 @@ generated settings metadata; see the [usage reference](https://mfahsold.github.i
 English is the default analysis language; detection requires `--language auto`.
 Language-neutral JSON identifiers and units differ from translated display keys.
 Use active result metadata when interpreting thresholds and unavailable values.
+
+Current-main interactive UI: manuscript/analysis first, research second, settings
+third; a fixed project sidebar on desktop becomes horizontal navigation on
+narrow screens. The companion dossier reader supplies context beside a passage.
+These views share the existing analysis and explicit-project research APIs.
 
 ## Choose a reference
 

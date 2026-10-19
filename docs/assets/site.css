@@ -134,8 +134,7 @@ main { max-width: 76rem; margin: auto; padding: 0 1.5rem 3rem; }
 
 /* --- Pillars, steps, cards -------------------------------------------- */
 .tiles { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 15rem), 1fr)); gap: 1rem; margin: 1.6rem 0 0; }
-.tile { border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); padding: 1.1rem 1.2rem; display: grid; gap: .35rem; align-content: start; }
-.tile .tile-icon { font-size: 1.35rem; line-height: 1; }
+.tile { border-top: 2px solid var(--line); padding: 1rem 0; display: grid; gap: .5rem; align-content: start; }
 .tile h3 { margin: 0; font-size: var(--text-section-title); }
 .tile p { margin: 0; color: var(--muted); font-size: var(--text-small); line-height: 1.5; }
 

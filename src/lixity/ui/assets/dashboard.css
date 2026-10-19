@@ -622,8 +622,8 @@ td.flag-excerpt {
   align-items: center;
 }
 .dim-ctl { min-width: 24px; min-height: 24px; user-select: none; }
-.dim-navigation { padding: .5rem .85rem; border-top: 1px solid var(--line); }
-.dim-navigation .dim-ctl { flex: 1 0 auto; justify-content: center; }
+.dim-navigation { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .35rem; padding: .5rem .85rem; border-top: 1px solid var(--line); }
+.dim-navigation .dim-ctl { min-width: 0; justify-content: center; white-space: normal; text-align: center; }
 .dim-score-wrap { max-height: 20rem; margin-top: 1rem; border: 1px solid var(--line); border-radius: var(--radius); }
 .dim-score-wrap table { min-width: 32rem; }
 .dim-score-wrap caption { padding: .6rem; text-align: left; font-weight: var(--weight-strong); color: var(--fg); }
@@ -1912,6 +1912,42 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 @keyframes fadeInPane {
   from { opacity: 0; transform: translateY(2px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* The interactive workspace has application chrome; exported reports keep
+   their document layout. The same native shell is used by the public demo. */
+.lixity-workspace .workspace-shell .project-header h1 { font-size: 1.4rem; line-height: 1.3; }
+.lixity-workspace .workspace-shell .sub { font-size: var(--text-small); }
+.lixity-workspace .kpi:hover { transform: none; box-shadow: none; }
+.lixity-workspace .toolbar { gap: .65rem 1rem; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
+@media screen and (min-width: 1100px) {
+  body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
+  .lixity-workspace > .page { max-width: 96rem; }
+  .lixity-workspace .workspace-shell {
+    position: fixed; inset: 0 auto 0 0; width: 15.5rem; z-index: 20;
+    padding: 1.25rem 1rem; overflow-y: auto; overscroll-behavior: contain;
+    align-content: start; gap: 1.5rem; background: var(--surface);
+    border-right: 1px solid var(--line);
+  }
+  .lixity-workspace .workspace-shell .project-header { order: 0; }
+  .lixity-workspace .workspace-shell .product-meta { gap: .35rem .6rem; }
+  .lixity-workspace .workspace-shell .project-meta { overflow-wrap: anywhere; }
+  .lixity-workspace .view-navigation {
+    order: 1; display: grid; grid-template-columns: minmax(0, 1fr);
+    padding: 0; border: 0; overflow: visible; gap: .35rem;
+  }
+  .lixity-workspace .view-nav-tab { justify-content: flex-start; text-align: start; }
+  .lixity-workspace .view-nav-tab:not(.active) { border-color: transparent; background: transparent; }
+  .lixity-workspace .workspace-bar {
+    order: 2; display: grid; grid-template-columns: minmax(0, 1fr);
+    padding: 1rem 0 0; border: 0; border-top: 1px solid var(--line);
+    border-radius: 0; gap: 1rem;
+  }
+  .lixity-workspace .workspace-bar > .row { display: grid; grid-template-columns: minmax(0, 1fr); gap: .4rem; }
+  .lixity-workspace .workspace-bar .ctl { max-width: 100%; white-space: normal; }
+  .lixity-workspace .workspace-bar .manuscript-pdf { min-width: 0; width: 100%; }
+  .lixity-workspace .workspace-bar select { min-width: 0; width: 100%; }
+  .lixity-workspace .panel { border-radius: var(--radius-sm); box-shadow: none; }
 }
 
 /* Empty Analysis State */
