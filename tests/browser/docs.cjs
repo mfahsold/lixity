@@ -163,6 +163,20 @@ async function checkGeographyInsights(page, geography) {
   const labels = await geography.locator('.geography-sketch text').evaluateAll(nodes => nodes.map(node => [node.getAttribute('x'), node.getAttribute('y')].join(',')));
   assert.equal(new Set(labels).size, labels.length, 'Canonical point and route number markers use distinct anchors');
   await withoutRequests(page, 'Map selection, context and framing stay local without tiles or writes', async () => {
+    for (let index = 0; index < 5; index++) {
+      await map.scrollIntoViewIfNeeded();
+      const number = map.locator('.geography-map-number button[data-geo-select="' + index + '"]');
+      if (await page.evaluate(() => navigator.maxTouchPoints > 0)) await number.tap();
+      else await number.click();
+      await expect(geography.locator('li').nth(index)).toHaveClass(/is-selected/);
+    }
+    for (const index of [0, 1]) {
+      await map.scrollIntoViewIfNeeded();
+      const point = map.locator('svg [data-geo-select="' + index + '"]');
+      if (await page.evaluate(() => navigator.maxTouchPoints > 0)) await point.tap();
+      else await point.click();
+      await expect(geography.locator('li').nth(index)).toHaveClass(/is-selected/);
+    }
     const route = geography.locator('.geography-feature-list [data-geo-feature-index="2"]');
     await route.locator('button[data-geo-select]').click();
     const selected = geography.locator('.geography-selected');
@@ -172,7 +186,7 @@ async function checkGeographyInsights(page, geography) {
     await expect(geography.locator('[data-geo-frame]')).toBeEnabled();
     await geography.locator('[data-geo-frame]').click();
     await expect(map).toBeVisible();
-    await expect(map.locator('[data-geo-select="2"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(map.locator('svg [data-geo-select="2"]')).toHaveAttribute('aria-pressed', 'true');
     const focusedZoom = await map.evaluate(element => element._geographyMap.getZoom());
     await geography.locator('[data-geo-fit]').click();
     assert.ok(await map.evaluate(element => element._geographyMap.getZoom()) <= focusedZoom,
@@ -678,8 +692,8 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
 (async () => {
   const browser = await launchChromium();
   try {
-    for (const [javaScriptEnabled, colorScheme] of [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark']]) {
-      const context = await browser.newContext({javaScriptEnabled, colorScheme});
+    for (const [javaScriptEnabled, colorScheme, hasTouch = false] of [[true, 'light'], [false, 'light'], [true, 'dark'], [false, 'dark'], [true, 'light', true]]) {
+      const context = await browser.newContext({javaScriptEnabled, colorScheme, hasTouch});
       const page = await context.newPage();
       const errors = [];
       page.on('pageerror', error => errors.push(error.message));
@@ -705,9 +719,10 @@ async function checkLegacyResearchURL(page, javaScriptEnabled) {
         const contentType = {'.html': 'text/html', '.css': 'text/css', '.js': 'text/javascript', '.json': 'application/json', '.png': 'image/png', '.jpg': 'image/jpeg', '.svg': 'image/svg+xml', '.pdf': 'application/pdf'}[path.extname(file)];
         await route.fulfill({contentType, body: fs.readFileSync(file)});
       });
-      for (const width of [1440, 390, 320]) {
+      for (const width of hasTouch ? [320] : [1440, 390, 320]) {
         await page.setViewportSize({width, height: 900});
         for (const route of routes) {
+          if (hasTouch && route !== 'demo/report.html') continue;
           if (!(javaScriptEnabled && colorScheme === 'light') && !fullMatrixRoutes.has(route)) continue;
           await page.goto('http://lixity.test/lixity/' + route);
           assert.equal(await page.locator('h1').count(), 1);

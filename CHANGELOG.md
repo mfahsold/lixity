@@ -25,6 +25,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
+- Numbered map labels select their own feature with mouse, touch or keyboard;
+  authored label anchors and geometry stacking keep routes and points reachable.
 - Escape in research dialogs preserves open paragraphs in the hidden Analysis view.
 - Style-axis descriptions use actual positive/negative loadings and distinguish
   an absent pole or zero-variance axis from an opposing stylistic tendency.

@@ -277,7 +277,7 @@
     try {
       if (!window.L || !visible(root)) throw invalid();
       var value = validate({type: "FeatureCollection", features: JSON.parse(root.dataset.geoGeometries).map(function(geometry, index) {
-        return {type: "Feature", geometry: geometry, properties: {label: root.querySelector('button[data-geo-select="' + index + '"]').textContent}};
+        return {type: "Feature", geometry: geometry, properties: {label: root.querySelector('.geography-feature-list button[data-geo-select="' + index + '"]').textContent}};
       })});
       var frame = coordinateFrame(value);
       if (!frame) throw invalid();
@@ -305,9 +305,28 @@
         layer.on("click", function() { selectFeature(node); });
         var title = document.createElementNS("http://www.w3.org/2000/svg", "title"); title.textContent = layer.feature.properties.label;
         node.prepend(title);
-        layer.bindTooltip(String(index + 1), {permanent: true, direction: "top", className: "geography-map-number"});
-        if (layer.feature.geometry.type === "Point") layer.bringToFront();
+        var button = document.createElement("button"); button.type = "button";
+        button.textContent = String(index + 1); button.dataset.geoSelect = String(index);
+        button.setAttribute("aria-label", node.getAttribute("aria-label")); button.setAttribute("aria-pressed", "false");
+        window.L.DomEvent.disableClickPropagation(button);
+        button.addEventListener("click", function(event) { event.stopPropagation(); selectFeature(button); });
+        var geometry = layer.feature.geometry;
+        layer.bindTooltip(button, {permanent: true, interactive: true,
+          direction: geometry.type === "Polygon" ? "auto" : "top", className: "geography-map-number"});
+        var tooltip = layer.getTooltip(); tooltip.getElement().removeAttribute("role");
+        // Keep route controls clear of nearby point controls. Area labels face
+        // inward; spacing follows the actual mouse/touch button footprint.
+        if (geometry.type === "LineString") tooltip.options.offset = window.L.point(0, -Math.ceil(button.offsetHeight / 2));
+        // Match the sketch's authored anchors, rather than putting route and
+        // area numbers at the same computed centre. Map navigation keeps them.
+        var anchor = geometry.type === "Point" ? geometry.coordinates : geometry.type === "LineString" ?
+          geometry.coordinates[Math.floor(geometry.coordinates.length / 2)] : geometry.coordinates[0][0];
+        tooltip.setLatLng(window.L.latLng(anchor[1], frame.longitude(anchor[0])));
       });
+      // Areas must not intercept clicks intended for their routes or points.
+      state.layers.getLayers().sort(function(a, b) {
+        return types.indexOf(b.feature.geometry.type) - types.indexOf(a.feature.geometry.type);
+      }).forEach(function(layer) { layer.bringToFront(); });
       var drawing = host.querySelector(".leaflet-overlay-pane > svg");
       if (drawing) { drawing.setAttribute("role", "group"); drawing.setAttribute("aria-label", label("map_label")); }
       fit(state);
@@ -316,7 +335,7 @@
       var toggle = root.querySelector("[data-geo-map]");
       toggle.setAttribute("aria-expanded", "true"); toggle.textContent = label("show_sketch");
       if (preference(root).tiles) status.textContent = "";
-      var selected = root.querySelector('button[data-geo-select][aria-pressed="true"]');
+      var selected = root.querySelector('.geography-feature-list button[data-geo-select][aria-pressed="true"]');
       if (selected) selectFeature(selected);
       startTiles(state);
     } catch (_) {
@@ -329,7 +348,7 @@
   document.addEventListener("click", function(event) {
     var action = event.target.closest("[data-geo-frame], [data-geo-details], [data-geo-clear]");
     if (action) {
-      var owner = action.closest(".dossier-geography"), selected = owner.querySelector('button[data-geo-select][aria-pressed="true"]');
+      var owner = action.closest(".dossier-geography"), selected = owner.querySelector('.geography-feature-list button[data-geo-select][aria-pressed="true"]');
       if (action.hasAttribute("data-geo-clear")) { clearSelection(owner); return; }
       if (!selected) return;
       if (action.hasAttribute("data-geo-details")) {

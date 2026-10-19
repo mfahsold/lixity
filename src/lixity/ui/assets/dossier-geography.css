@@ -47,10 +47,14 @@
 .geography-map .leaflet-tooltip { max-width: 16rem; white-space: normal; overflow-wrap: anywhere; }
 .geography-map .leaflet-interactive.is-selected { stroke-width: 5; }
 .geography-map .leaflet-interactive:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
-.geography-map-number { pointer-events: none; }
+.geography-map-number { padding: 0; }
+.geography-map-number button { min-width: 32px; min-height: 32px; padding: .3rem; border: 0; border-radius: inherit; color: inherit; background: transparent; font: inherit; cursor: pointer; }
+.geography-map-number button.is-selected { font-weight: var(--weight-strong); background: var(--accent-light); }
+.geography-map-number button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 .geography-map-status:empty { display: none; }
 @media (pointer: coarse) {
   .geography-map .leaflet-control-zoom a { width: 44px; height: 44px; line-height: 44px; }
+  .geography-map-number button { min-width: 44px; min-height: 44px; }
 }
 .geography-feature-list li > p { margin: .3rem 0; }
 .geography-feature-list pre { white-space: pre-wrap; overflow-wrap: anywhere; }

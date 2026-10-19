@@ -42,7 +42,7 @@ server.serve_forever()
       server.once('exit', code => reject(new Error(`Synthetic server exited ${code}: ${stderr}`)));
     });
     browser = await launchChromium();
-    const page = await browser.newPage({viewport: {width: 1440, height: 1000}});
+    const page = await browser.newPage({viewport: {width: 1440, height: 1000}, hasTouch: true});
     page.setDefaultTimeout(10000);
     const errors = [], external = [], writes = [], requests = [], tileRequests = [];
     let failTiles = false;
@@ -209,6 +209,63 @@ server.serve_forever()
     await expect(lifecycleMap).toHaveCount(0);
     assert.equal(tileRequests.length, beforeUnplaced, 'Unknown geometry never invents a map or requests tiles');
     await page.locator('#geo-default-lifecycle').evaluate(node => node.remove());
+    // Number labels are controls, not transparent decorations over another
+    // feature. Exercise actual pointer hits with overlapping points/line/area.
+    await page.evaluate(() => {
+      const host = document.createElement('div'); host.id = 'geo-pointer-regression';
+      host.innerHTML = LixityDossierGeography.html({type: 'FeatureCollection', features: [
+        {type: 'Feature', geometry: {type: 'Point', coordinates: [11, 46]}, properties: {label: 'Synthetic point'}},
+        {type: 'Feature', geometry: {type: 'LineString', coordinates: [[11, 46], [11.002, 46.002], [11.004, 46.002]]}, properties: {label: 'Synthetic route'}},
+        {type: 'Feature', geometry: {type: 'Polygon', coordinates: [[[10.999, 45.999], [11.005, 45.999], [11.005, 46.003], [10.999, 46.003], [10.999, 45.999]]]}, properties: {label: 'Synthetic area'}},
+      ]});
+      document.getElementById('research-manager').appendChild(host);
+    });
+    const pointerView = page.locator('#geo-pointer-regression .dossier-geography');
+    const pointerMap = pointerView.locator('.geography-map');
+    const beforePointerWrites = writes.length;
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({width, height: 1000});
+      await pointerView.scrollIntoViewIfNeeded();
+      await expect(pointerMap.locator('svg .leaflet-interactive').first()).toBeVisible();
+      await pointerView.locator('[data-geo-basemap]').uncheck();
+      await pointerView.locator('[data-geo-fit]').click();
+      const selectionZoom = await pointerMap.evaluate(node => node._geographyMap.getZoom());
+      for (const index of [0, 1, 2]) {
+        await pointerMap.scrollIntoViewIfNeeded();
+        const number = pointerMap.locator('.geography-map-number').filter({hasText: new RegExp('^' + (index + 1) + '$')});
+        const box = await number.boundingBox();
+        const hit = await page.evaluate(box => {
+          const node = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+          return node && {tag: node.tagName, class: node.getAttribute('class'), feature: node.dataset.geoSelect};
+        }, box);
+        if (width === 320) await page.touchscreen.tap(box.x + box.width / 2, box.y + box.height / 2);
+        else await page.mouse.click(box.x + box.width / 2, box.y + box.height / 2);
+        await expect(pointerView.locator('li').nth(index), JSON.stringify({width, index, box, hit})).toHaveClass(/is-selected/);
+        assert.equal(await pointerMap.evaluate(node => node._geographyMap.getZoom()), selectionZoom,
+          'Rapid number taps select features without becoming a map double-tap zoom gesture');
+      }
+      // The area's fill must not intercept the point or route beneath a label.
+      for (const index of [0, 1]) {
+        await pointerMap.scrollIntoViewIfNeeded();
+        const hit = await pointerMap.locator('svg [data-geo-select="' + index + '"]').evaluate(node => {
+          const point = node.getPointAtLength(node.getTotalLength() * .25);
+          const screen = new DOMPoint(point.x, point.y).matrixTransform(node.getScreenCTM());
+          return {x: screen.x, y: screen.y};
+        });
+        await page.mouse.click(hit.x, hit.y);
+        await expect(pointerView.locator('li').nth(index)).toHaveClass(/is-selected/);
+      }
+      const firstNumber = pointerMap.locator('.geography-map-number').getByRole('button', {name: '1. Synthetic point', exact: true});
+      await firstNumber.focus(); await page.keyboard.press('Enter');
+      await expect(pointerView.locator('li').nth(0)).toHaveClass(/is-selected/);
+      await pointerView.locator('[data-geo-clear]').click();
+      await firstNumber.focus(); await page.keyboard.press('Space');
+      await expect(firstNumber).toHaveAttribute('aria-pressed', 'true');
+      await pointerMap.screenshot({path: path.join(artifacts, `number-controls-${width}.png`)});
+    }
+    assert.equal(writes.length, beforePointerWrites, 'Map pointer and keyboard selection never writes research records');
+    await page.locator('#geo-pointer-regression').evaluate(node => node.remove());
+    await page.setViewportSize({width: 1440, height: 1000});
     await page.locator('#r-dos-title').fill('Synthetic harbour journey');
     await page.locator('#r-dos-body').fill('# Context\n\nSynthetic route notes.');
     const create = page.locator('#r-dos-geography-editor');
@@ -356,7 +413,7 @@ server.serve_forever()
     }, saved.record.geography);
     await showSketch(secondGeography);
     await expect(secondGeography.locator('[aria-pressed="true"]')).toHaveCount(0);
-    await secondGeography.locator('button[data-geo-select="0"]').click();
+    await secondGeography.locator('.geography-feature-list button[data-geo-select="0"]').click();
     await expect(secondGeography.locator('svg [data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
     await secondGeography.locator('[data-geo-map]').click();
     await geography.locator('[data-geo-map]').click();
@@ -367,7 +424,7 @@ server.serve_forever()
     assert.ok(await geography.locator('.geography-map').evaluate(node => node._geographyMap.getBounds().contains(window.L.latLng(52.5, 13.4))),
       'The selected point can be framed independently of the other rendered map');
     await secondGeography.locator('[data-geo-fit]').click();
-    await expect(geography.locator('button[data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(geography.locator('.geography-feature-list button[data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
     await geography.locator('[data-geo-map]').click();
     assert.equal(requests.length, requestCount, 'Feature navigation and rerendering never request data');
     assert.equal(writes.length, writeCount, 'Feature navigation never writes');
@@ -383,7 +440,7 @@ server.serve_forever()
     await polar.scrollIntoViewIfNeeded();
     await expect(polar.locator('.geography-map')).toBeVisible();
     await expect(polar.locator('.geography-projection-hint')).toContainText('85.05');
-    await polar.locator('button[data-geo-select="0"]').click();
+    await polar.locator('.geography-feature-list button[data-geo-select="0"]').click();
     await expect(polar.locator('pre')).toHaveText('25, 90');
     await polar.locator('[data-geo-clear]').click();
     await expect(polar.locator('[aria-pressed="true"]')).toHaveCount(0);
@@ -392,7 +449,7 @@ server.serve_forever()
     const mapToggle = geography.locator('[data-geo-map]'), map = geography.locator('.geography-map');
     await mapToggle.click();
     await expect(map).toBeVisible();
-    await expect(map.locator('.leaflet-interactive')).toHaveCount(2);
+    await expect(map.locator('svg .leaflet-interactive')).toHaveCount(2);
     await expect(map.locator('.leaflet-overlay-pane > svg')).toHaveAttribute('role', 'group');
     await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
     const offlineTiles = tileRequests.length;
@@ -405,18 +462,18 @@ server.serve_forever()
     await expect.poll(() => map.evaluate(node => node._geographyMap.getCenter().lng)).not.toBe(initialMap.center.lng);
     await geography.locator('[data-geo-fit]').click();
     assert.ok(await map.evaluate(node => node._geographyMap.getBounds().contains(window.L.latLng(52.5, 13.4))), 'Fit restores the authored feature bounds');
-    await map.locator('[data-geo-select="0"]').click();
+    await map.locator('svg [data-geo-select="0"]').click();
     await expect(listButton(0)).not.toBeFocused();
-    await map.locator('[data-geo-select="1"]').click();
+    await map.locator('svg [data-geo-select="1"]').click();
     await expect(listButton(1)).not.toBeFocused();
     await expect(map).toBeInViewport();
     await expect(geography.locator('.geography-selected')).toBeInViewport();
-    await expect(map.locator('[data-geo-select="1"]')).toHaveAttribute('aria-pressed', 'true');
-    await map.locator('[data-geo-select="0"]').focus();
+    await expect(map.locator('svg [data-geo-select="1"]')).toHaveAttribute('aria-pressed', 'true');
+    await map.locator('svg [data-geo-select="0"]').focus();
     await page.keyboard.press('Enter');
     await expect(listButton(0)).toBeFocused();
     await listButton(0).click();
-    await expect(map.locator('[data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
+    await expect(map.locator('svg [data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
     assert.equal(tileRequests.length, offlineTiles, 'Explicit offline vector navigation never restarts tiles');
     await expect(geography.locator('.geography-basemap-hint')).toContainText('OpenStreetMap');
     await geography.locator('[data-geo-basemap]').check();
@@ -457,7 +514,7 @@ server.serve_forever()
       errors, tileCount: tileRequests.length})).toMatchObject({message: expect.stringContaining('could not be loaded')});
     await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
     await expect(map.locator('.leaflet-tile')).toHaveCount(0);
-    await expect(map.locator('.leaflet-interactive')).toHaveCount(2);
+    await expect(map.locator('svg .leaflet-interactive')).toHaveCount(2);
     const failedTiles = tileRequests.length;
     await map.locator('.leaflet-control-zoom-in').click();
     await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
@@ -612,7 +669,7 @@ server.serve_forever()
         await view.locator('svg [data-geo-select="0"]').focus();
         await page.keyboard.press('Enter');
         await expect(view.locator('li').nth(0).locator('pre')).toBeVisible();
-        await view.locator('button[data-geo-select="1"]').focus();
+        await view.locator('.geography-feature-list button[data-geo-select="1"]').focus();
         await page.keyboard.press('Space');
         await expect(view.locator('li').nth(1)).toHaveClass(/is-selected/);
         await expect(view.locator('.geography-selected')).toContainText('Unknown destination');
