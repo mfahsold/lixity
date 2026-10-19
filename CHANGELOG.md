@@ -15,9 +15,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - The public demo keeps the native workspace views and marks local-only actions
   with installation links. Dossier reading, prepared PDF downloads and the
   claim-evidence matrix use the existing application controls.
+- Geography reads share placement coverage, authored route context and approximate
+  vertex-chain distances across the API, CLI and map/companion views. Maps add
+  selected-feature framing, a legend and a metric scale without online requests.
+- Style-space views and CLI output explain projection support, retained variation,
+  active cutoffs and chapter scores, with persistent selection, planar inspection
+  and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
 - Escape in research dialogs preserves open paragraphs in the hidden Analysis view.
+- Style-axis descriptions use actual positive/negative loadings and distinguish
+  an absent pole or zero-variance axis from an opposing stylistic tendency.
 
 ## [0.7.1] - 2026-10-19
 

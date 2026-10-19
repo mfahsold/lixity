@@ -30,6 +30,7 @@ from .dossier_edit import (
 from .dossier_edit import (
     prepare_dossier_edit as prepare_dossier_edit,
 )
+from .geography import summarize_geography
 from .images import (
     IMAGE_SUFFIXES,
     IMAGE_TYPES,
@@ -1224,6 +1225,7 @@ def get_dossier(project: str | Path, dossier_id: str, *,
             "editable_sections": editable_sections,
             "citation_count": len(dossier.evidence_refs),
             "geography_feature_count": len(dossier.geography.features) if dossier.geography else 0,
+            "geography_summary": summarize_geography(dossier.geography),
             "excerpt": dossier.body[:500] + ("..." if len(dossier.body) > 500 else ""),
             "decision_reviews": decision_reviews,
             "review_needed": any(r["status"] == "review_needed" for r in decision_reviews),
@@ -1267,6 +1269,7 @@ def get_dossier(project: str | Path, dossier_id: str, *,
         "tags": dossier.tags,
         "body": dossier.body,
         "geography": dossier.geography.model_dump(mode="json") if dossier.geography else None,
+        "geography_summary": summarize_geography(dossier.geography),
         "sections": list(sections.keys()),
         "editable_sections": editable_sections,
         "section_map": sections,

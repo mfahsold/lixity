@@ -36,6 +36,80 @@ def geography():
     ]}
 
 
+def test_geography_summary_is_derived_from_the_exact_dossier_revision(project):
+    identifier = api.create_dossier(project, "Synthetic places", "# Places\n\nNotes.", geography=geography())["dossier_id"]
+    before = retained_files(project)
+    summary = api.get_dossier(project, identifier)["geography_summary"]
+    assert summary["schema_version"] == "research-geography-summary-local/1"
+    assert summary["feature_count"] == 4
+    assert summary["located_feature_count"] == 3
+    assert summary["unlocated_feature_count"] == 1
+    assert summary["geometry_counts"] == {"Point": 1, "LineString": 1, "Polygon": 1, "unknown": 1}
+    assert summary["distance_method"] == "haversine_sphere"
+    assert summary["earth_radius_km"] == 6371.0088
+    assert summary["limitations"] == ["authored_coordinates", "shortest_great_circle_segments",
+        "not_road_routing", "not_travel_time", "not_historical_verification", "no_elevation"]
+    route = summary["features"][1]
+    assert route == {"index": 1, "geometry_type": "LineString", "position_count": 2,
+        "segment_count": 1, "named_waypoint_count": 2, "route_length_km": pytest.approx(1.3018, abs=.001),
+        "label": "Canal journey", "time_period": None, "actors": ["Mira"],
+        "transport": "walking", "feature_type": None, "waypoint_labels": ["Departure", "Arrival"]}
+    assert summary["route_length_km"] == route["route_length_km"]
+    assert summary["features"][2]["position_count"] == 4  # Includes the polygon's closing coordinate.
+    assert summary["features"][2]["route_length_km"] is None
+    assert summary["features"][2]["segment_count"] is None
+    assert "description" not in summary["features"][0]
+    assert summary["features"][3]["geometry_type"] == "unknown"
+    assert summary["features"][3]["position_count"] == 0
+    assert api.get_dossier(project, identifier, summary=True)["geography_summary"] == summary
+    assert api.get_record(project, "dossier", identifier)["geography_summary"] == summary
+    assert "geography_summary" not in api.get_dossier(project, identifier, section="Places")
+    assert "geography_summary" not in api.get_record(project, "dossier", identifier)["record"]
+    assert retained_files(project) == before
+    revise_record(project, "dossier", identifier, {"geography": None})
+    assert api.get_dossier(project, identifier)["geography_summary"] is None
+    assert api.get_dossier(project, identifier, revision=1)["geography_summary"] == summary
+    assert api.get_record(project, "dossier", identifier, revision=1)["geography_summary"] == summary
+
+
+@pytest.mark.parametrize(("coordinates", "expected"), [
+    ([[0, 0], [1, 0], [1, 1]], 222.390160467),
+    ([[179, 0], [-179, 0]], 222.390160467),
+    ([[13, 52], [13, 52]], 0),
+    ([[180, 42], [-180, 42]], 0),
+    ([[0, 0], [180, 0]], 20015.114442),
+    ([[0, 90], [180, 90]], 0),
+])
+def test_geography_route_length_measures_authored_spherical_segments(project, coordinates, expected):
+    value = {"type": "FeatureCollection", "features": [{"type": "Feature", "properties": {"label": "Synthetic path"},
+        "geometry": {"type": "LineString", "coordinates": coordinates}}]}
+    identifier = api.create_dossier(project, "Route", "Synthetic.", geography=value)["dossier_id"]
+    summary = api.get_dossier(project, identifier, summary=True)["geography_summary"]
+    if expected == 0:
+        assert summary["route_length_km"] == 0
+    else:
+        assert summary["route_length_km"] == pytest.approx(expected, abs=.000001)
+    assert summary["features"][0]["route_length_km"] == summary["route_length_km"]
+    assert summary["features"][0]["named_waypoint_count"] == 0
+    json.dumps(summary, allow_nan=False)
+
+
+def test_geography_summary_distinguishes_absent_empty_and_unlocated(project):
+    absent = api.create_dossier(project, "No geography", "Synthetic.")["dossier_id"]
+    empty = api.create_dossier(project, "Empty geography", "Synthetic.",
+        geography={"type": "FeatureCollection", "features": []})["dossier_id"]
+    unlocated = api.create_dossier(project, "Unplaced", "Synthetic.", geography={"type": "FeatureCollection", "features": [
+        {"type": "Feature", "geometry": None, "properties": {"label": "Unknown <place>"}}]})["dossier_id"]
+    assert api.get_dossier(project, absent, summary=True)["geography_summary"] is None
+    empty_summary = api.get_dossier(project, empty)["geography_summary"]
+    assert empty_summary["feature_count"] == 0 and empty_summary["features"] == []
+    assert empty_summary["route_length_km"] is None
+    unknown = api.get_dossier(project, unlocated)["geography_summary"]
+    assert unknown["located_feature_count"] == 0 and unknown["unlocated_feature_count"] == 1
+    assert unknown["features"][0]["label"] == "Unknown <place>"
+    assert unknown["route_length_km"] is None
+
+
 def test_first_geography_write_opts_in_and_legacy_reencoding_stays_unchanged(project):
     identifier = api.create_dossier(project, "Synthetic dossier", "# Places\n\nOriginal notes.")["dossier_id"]
     repository = Repository(project)

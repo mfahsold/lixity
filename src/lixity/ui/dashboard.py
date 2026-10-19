@@ -1308,7 +1308,9 @@ def render_dashboard(
             + L("style_unavailable_note")
             .replace("{min_chapters}", str(min_chapters))
             .replace("{min_words}", str(MIN_COMPARABLE_WORDS))
-            + "</p></section>"
+            + "</p>"
+            + style_dimensions(chapters, fingerprint, labels, language_key)
+            + "</section>"
         )
 
     # --- Work markers (editor-visible, set from the dashboard) -------

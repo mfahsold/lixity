@@ -559,6 +559,29 @@ td.flag-excerpt {
   white-space: nowrap;
 }
 /* --- Style dimensions (3D trajectory & layout) ------------------------- */
+.dim-guide { max-width: 85ch; margin: .5rem 0; }
+.dim-coverage { font-weight: var(--weight-semibold); margin: .5rem 0; }
+.dim-unavailable { padding: .8rem; border-left: 3px solid var(--accent); background: var(--surface); }
+.dim-cutoff { max-width: 95ch; padding: .5rem .85rem; font-size: var(--text-small); }
+.dim-cutoff > summary { cursor: pointer; }
+.dim-cutoff > p { color: var(--muted); line-height: var(--line-body); }
+.dim-view-control { display: flex; align-items: center; gap: .75rem; padding: .5rem .85rem; }
+.dim-view-control select { min-width: 0; max-width: 100%; }
+.dim-selection-panel { padding: .85rem; border-top: 1px solid var(--line); }
+.dim-selection-panel label { display: block; font-weight: var(--weight-semibold); margin-bottom: .35rem; }
+.dim-selection-panel select { display: block; width: 100%; min-width: 0; max-width: 100%; }
+#dim-selection { overflow-wrap: anywhere; }
+#dim-selection > p { margin: .35rem 0; }
+#dim-read-chapter { display: inline-flex; align-items: center; max-width: 100%; margin-top: .5rem; }
+.dim-selected-scores { display: grid; gap: .55rem; margin: .65rem 0; }
+.dim-selected-scores > div { display: flex; gap: .8rem; justify-content: space-between; align-items: baseline; }
+.dim-selected-scores dt { color: var(--muted); }
+.dim-axis-meaning { display: block; color: var(--fg-secondary); font-size: var(--text-small); }
+.dim-selected-scores dd { margin: 0; white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: var(--weight-semibold); }
+#dim-expert { margin-top: 1rem; }
+#dim-expert > summary { cursor: pointer; font-weight: var(--weight-semibold); padding: .5rem 0; }
+#dim-expert p { max-width: 90ch; }
+#dim-expert .table-wrap { max-height: 20rem; }
 .dim-layout {
   display: grid;
   grid-template-columns: minmax(min(100%, 340px), 1.15fr) minmax(min(100%, 300px), 1fr);

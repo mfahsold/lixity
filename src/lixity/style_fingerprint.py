@@ -20,7 +20,9 @@ from typing import Any, ClassVar
 
 from .diversity import MIN_TOKENS_LD
 from .format import num as format_num
+from .format import precise_num
 from .language import compile_word_pattern, resolve_language
+from .language_data import METRIC_LABELS
 from .markdown_parser import prose_text, split_chapters
 from .math_core import (
     CLIFF_BANDS,
@@ -315,6 +317,17 @@ class FingerprintThresholds:
 # Robust primitives live in lixity.math_core; re-exported for callers
 # and tests that imported them from this module.
 normal_tail_probability = normal_two_sided_p
+
+
+def dimension_loading_poles(
+    loadings: Mapping[str, float], limit: int = 3,
+) -> tuple[list[tuple[str, float]], list[tuple[str, float]]]:
+    """Describe actual signed coefficients without inventing an opposite pole."""
+    positive = sorted(((name, value) for name, value in loadings.items() if value > 0),
+                      key=lambda item: item[1], reverse=True)[:limit]
+    negative = sorted(((name, value) for name, value in loadings.items() if value < 0),
+                      key=lambda item: item[1])[:limit]
+    return positive, negative
 
 
 def benjamini_hochberg(
@@ -1040,6 +1053,7 @@ class StyleFingerprint:
     register_profiles: dict[str, dict[str, list[float | None]]] = field(default_factory=dict)
     register_targets: dict[int, dict[str, dict[str, Any]]] = field(default_factory=dict)
     dimensions: list[dict[str, Any]] = field(default_factory=list)
+    dimension_diagnostics: dict[str, Any] = field(default_factory=dict)
     redundant_features: list[dict[str, Any]] = field(default_factory=list)
     baseline_diagnostics: dict[str, Any] = field(default_factory=dict)
     structural_diagnostics: dict[str, Any] = field(default_factory=dict)
@@ -1315,13 +1329,26 @@ class StyleFingerprint:
         statistical reliability. Jacobi rotations and signs are deterministic.
         """
         fields = self._usable_features()
+        chapter_ids = sorted({ch for column in self.values.values() for ch in column})
+        common = [ch for ch in chapter_ids if fields and all(
+            self.values[field_name].get(ch) is not None for field_name in fields)]
+        diagnostics: dict[str, Any] = {
+            "method": "standardized_midranks", "status": "insufficient_features",
+            "min_chapters": MIN_DIMENSION_CHAPTERS, "min_features": MIN_DIMENSION_FEATURES,
+            "total_chapters": self.n_chapters, "candidate_features": list(fields),
+            "complete_chapters": common, "scored_chapters": [], "features": [],
+            "omitted_chapters": [
+                {"chapter": ch, "missing_features": [name for name in fields
+                                                       if self.values[name].get(ch) is None]}
+                for ch in chapter_ids if fields and ch not in common
+            ],
+            "retained_variance": None, "score_threshold": self.thresholds.dim_score_threshold,
+        }
+        self.dimension_diagnostics = diagnostics
         if len(fields) < MIN_DIMENSION_FEATURES:
             return []
-        common = sorted(
-            ch for ch in self.values[fields[0]]
-            if all(self.values[field_name].get(ch) is not None for field_name in fields)
-        )
         if len(common) < MIN_DIMENSION_CHAPTERS:
+            diagnostics["status"] = "insufficient_complete_chapters"
             return []
         columns: dict[str, list[float]] = {}
         for field_name in fields:
@@ -1335,7 +1362,9 @@ class StyleFingerprint:
             scale = math.sqrt(squared / (len(common) - 1))
             columns[field_name] = [(value - centre) / scale for value in ranks]
         fields = list(columns)
+        diagnostics["features"] = fields
         if len(fields) < MIN_DIMENSION_FEATURES:
+            diagnostics["status"] = "insufficient_varying_features"
             return []
         matrix = [
             [math.fsum(a * b for a, b in zip(columns[x], columns[y], strict=True))
@@ -1370,6 +1399,8 @@ class StyleFingerprint:
                     "flagged": flagged,
                 }
             )
+        diagnostics.update(status="available", scored_chapters=list(common),
+                           retained_variance=round(math.fsum(dim["variance"] for dim in dims), 4))
         return dims
 
     def _derive_redundancies(self) -> list[dict[str, Any]]:
@@ -1468,6 +1499,7 @@ class StyleFingerprint:
             "register_profiles": self.register_profiles,
             "register_targets": {str(ch): targets for ch, targets in sorted(self.register_targets.items())},
             "dimensions": self.dimensions,
+            "dimension_diagnostics": self.dimension_diagnostics,
             "redundant_features": self.redundant_features,
         }
 
@@ -1481,7 +1513,7 @@ class StyleFingerprint:
         def t(key: str, default: str = "") -> str:
             if labels and key in labels:
                 return labels[key]
-            return pack.get(key, default or key)
+            return pack.get(key, METRIC_LABELS.get(language_key, METRIC_LABELS["en"]).get(key, default or key))
 
         lines = [
             f"{t('style_passport')} – "
@@ -1550,19 +1582,38 @@ class StyleFingerprint:
                 bits.append(f"{len(shift)} {t(PASSPORT_LABEL_SHIFTED)}")
             if bits:
                 lines.append(f"{t(PASSPORT_LABEL_STRUCTURAL)}: {' · '.join(bits)}")
+        diagnostics = self.dimension_diagnostics
+        if diagnostics:
+            lines.append("-" * 72)
+            lines.append(t("dim_coverage").format(
+                scored=len(diagnostics["scored_chapters"]), total=diagnostics["total_chapters"],
+                features=len(diagnostics["features"])))
+            if diagnostics["status"] != "available":
+                lines.append(t("dim_" + diagnostics["status"]).format(
+                    chapters=diagnostics["min_chapters"], features=diagnostics["min_features"]))
+            else:
+                lines.append(t("dim_method"))
+                lines.append(t("dim_retained").format(
+                    variance=format_num(diagnostics["retained_variance"] * 100, language_key, 1)))
+            lines.append(t("dim_cutoff").format(
+                threshold=precise_num(diagnostics["score_threshold"], language_key)))
+            if diagnostics["omitted_chapters"]:
+                omitted = ", ".join(str(item["chapter"]) for item in diagnostics["omitted_chapters"])
+                lines.append(f"{t('dim_omitted')}: {omitted}")
         if self.dimensions:
             lines.append("-" * 72)
             field_labels = {f: label_key for f, label_key, _u in FEATURES}
             for dim in self.dimensions:
                 loadings = dim["loadings"]
-                top_pos = sorted(loadings.items(), key=lambda kv: kv[1], reverse=True)[:3]
-                top_neg = sorted(loadings.items(), key=lambda kv: kv[1])[:3]
+                top_pos, top_neg = dimension_loading_poles(loadings)
                 pos_text = ", ".join(
-                    f"+{labels.get(field_labels.get(f) or f, f)}" for f, _v in top_pos
-                )
+                    f"{labels.get(field_labels.get(f) or f, f)} {format_num(v, language_key, 3, signed=True)}"
+                    for f, v in top_pos
+                ) or t("dim_no_positive")
                 neg_text = ", ".join(
-                    f"{labels.get(field_labels.get(f) or f, f)}" for f, _v in top_neg
-                )
+                    f"{labels.get(field_labels.get(f) or f, f)} {format_num(v, language_key, 3, signed=True)}"
+                    for f, v in top_neg
+                ) or t("dim_no_negative")
                 flagged = dim.get("flagged", [])
                 lines.append(
                     f"{t('dimension')} {dim['index']} "
@@ -1573,6 +1624,15 @@ class StyleFingerprint:
                     lines.append(
                         f"    {t('flagged')}: {t('chapter')} {', '.join(map(str, flagged))}"
                     )
+                if dim["variance"] == 0:
+                    lines.append(f"    {t('dim_zero_variance')}")
+            for chapter in sorted(self.dimensions[0]["scores"]):
+                scores = ", ".join(
+                    f"D{dim['index']} {format_num(dim['scores'][chapter] or 0.0, language_key, 2, signed=bool(dim['scores'][chapter]))}"
+                    for dim in self.dimensions if chapter in dim["scores"])
+                flagged = any(chapter in dim["flagged"] for dim in self.dimensions)
+                lines.append(f"{t('chapter')} {chapter}: {scores} · "
+                             f"{t('flagged') if flagged else t('dim_not_flagged')}")
         if self.redundant_features:
             field_labels = {f: label_key for f, label_key, _u in FEATURES}
             redundant = ", ".join(

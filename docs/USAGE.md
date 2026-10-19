@@ -383,22 +383,15 @@ lixity style manuscript.md --json
 Inspect active thresholds in the JSON `meta` or dashboard legend rather than
 assuming defaults. `lixity style --help` lists available overrides.
 
-The 16 chapter features cover sentence length and variation, short sentences
-(≤6 words), long sentences (>25 words), quotation share, lexical patterns,
-sentence starts and vocabulary diversity. Marker counts for passive, modality
-and nominal style are heuristics, not a grammatical parse. Chapter medians
-and MAD define the baseline; approximate standard errors reduce some noise in
-`z* = (x − median) / √(σ² + SE²)`.
+The reference describes sentence patterns, vocabulary and heuristic markers
+against this manuscript's own baseline. Raw deviations, nominal FDR selections
+and exploratory dimensions answer different questions; none establishes literary
+quality or a guaranteed false-discovery rate. [Methods](METHODS.md) owns the
+mathematical definitions; [Stability](STABILITY.md) describes inference limits.
 
-Raw deviations and the **FDR-selected set** (BH or BY) are separate outputs.
-Their normal-tail probabilities are not calibrated for the same-sample
-baseline: nominal q does not guarantee manuscript false-discovery control.
-Cliff's δ adds an ordinal contrast; runs tests and lag-1 correlation expose
-some baseline dependence. Exploratory dimensions, redundant feature pairs
-and `structural_diagnostics` provide further pointers for review. Dimension
-scores and variance share standardized ranks on complete measured chapters;
-the plot shows its coverage. Segmentation, estimator conventions and remaining
-inference limits are documented in [Methods](METHODS.md) and [Stability](STABILITY.md).
+**Current main, after v0.7.1:** select a chapter in the style space, inspect its
+values and open its passage. The view and CLI explain their coverage, axes,
+cutoffs and unavailable values in place; JSON exposes `dimension_diagnostics`.
 
 Compare scenes within their intended register and read the passages. A
 deliberate change of voice can explain a deviation; the style reference does

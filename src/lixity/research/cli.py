@@ -324,6 +324,12 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--offset", type=_non_negative, default=0,
                                  help="Zero-based human-output page offset (default: 0)")
         elif name == "dossier":
+            command.epilog = (
+                "Inspect an ID with --format text to read saved places, route context and approximate distances; "
+                "--summary keeps the body excerpt short. JSON geography_summary describes the selected revision "
+                "without changing stored records. Distances join supplied coordinates on a sphere, "
+                "not road routing, elevation or travel time; coordinate digits do not establish accuracy."
+            )
             command.add_argument("--dossier-id", help="Dossier UUID to inspect")
             command.add_argument("--title", help="Title for new dossier")
             content = command.add_mutually_exclusive_group()
@@ -338,7 +344,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                  help="Dossier GeoJSON FeatureCollection: Point/LineString/Polygon or null geometry, "
                                       "WGS84 [longitude, latitude], properties.label required; JSON null clears geography")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
-            command.add_argument("--summary", action="store_true", help="Return metadata, section outline, and body excerpt without full text")
+            command.add_argument("--summary", action="store_true",
+                                 help="Return metadata, geography coverage and route distances, section outline, "
+                                      "and body excerpt without full text; distances are not road routing or travel time")
             command.add_argument("--section", help="Inspect or update only the named heading section")
             command.add_argument("--omit-citations", action="store_true", help="Omit resolved citations from output")
         elif name == "dossier-image":
@@ -861,7 +869,7 @@ def _current_project() -> str:
 
 def _record_text(result: dict[str, Any]) -> str:
     """Render a record, immutable revision history, or an explicit diff preview."""
-    from .presentation import safe_text
+    from .presentation import geography_report, safe_text
 
     def prose(value: Any) -> str:
         return "\n".join(safe_text(line) for line in str(value).split("\n"))
@@ -887,12 +895,14 @@ def _record_text(result: dict[str, Any]) -> str:
     lines = [f"# {safe_text(title)}", ""]
     if revision is not None:
         lines.append(f"Revision {revision}")
-    body = record.get("body") or record.get("statement") or record.get("rationale")
+    body = record.get("body") or record.get("excerpt") or record.get("statement") or record.get("rationale")
     if body:
         lines.extend(["", prose(body)])
     impact = record.get("impact_on_plot")
     if impact:
         lines.extend(["", f"Impact on plot: {prose(impact)}"])
+    if isinstance(summary := result.get("geography_summary"), dict):
+        lines.extend(["", geography_report(summary)])
     return "\n".join(lines).rstrip() + "\n"
 
 

@@ -9,6 +9,7 @@ const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-ui-'));
 const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
 const fixture = spawnSync(python, ['-c', `
 from lixity.api import dashboard
+import json
 # Three varying chapters above the diversity floor expose optional style axes.
 text = "## First chapter\\n\\n" + (
     "I see the rain. I walk to the window. I drink my coffee. "
@@ -22,8 +23,9 @@ text += "\\n\\n## Third chapter\\n\\n" + (
 ) * 10
 text += "\\n\\nI walk home." * 100
 text = text.replace("First chapter", '<img src=x onerror="window.tooltipInjected=true">', 1)
-print(dashboard(text, language="en", title="Browser regression"))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding:'utf8',maxBuffer:8*1024*1024});
+print(json.dumps({language: dashboard(text, language=language, title="Browser regression")
+                  for language in ("en", "de", "fr", "es", "it", "pt", "nl")}))
+`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding:'utf8',maxBuffer:32*1024*1024});
 assert.equal(fixture.status,0,fixture.stderr);
 
 (async () => {
@@ -33,8 +35,9 @@ assert.equal(fixture.status,0,fixture.stderr);
   const errors = [];
   const results = [];
   page.on('pageerror', error => errors.push(error.message));
-  const original = fixture.stdout;
-  const payload = {threshold:2.5,axes:[],points:[{ch:1,title:'<img src=x onerror="window.tooltipInjected=true">',x:0,y:0,z:0,flagged:false},{ch:2,title:'Second chapter',x:3,y:0,z:0,flagged:true}]};
+  const locales = JSON.parse(fixture.stdout);
+  const original = locales.en;
+  const payload = {threshold:2.5,axes:[{idx:1},{idx:2},{idx:3}],labels:{status_flagged:'flagged',not_flagged:'Not flagged'},points:[{ch:1,title:'<img src=x onerror="window.tooltipInjected=true">',x:0,y:0,z:0,flagged:false},{ch:2,title:'Second chapter',x:3,y:0,z:0,flagged:true}]};
   const encoded = JSON.stringify(payload).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
   const html = original.replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${encoded}"`);
   await page.addInitScript(() => {
@@ -51,6 +54,27 @@ assert.equal(fixture.status,0,fixture.stderr);
     try { await run(); results.push({name, passed: true}); }
     catch (error) { results.push({name, passed: false, error: error.message}); }
   }
+  async function settledScreenshot(target, name) {
+    await target.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    await target.screenshot({path:path.join(artifacts,name), animations:'disabled'});
+  }
+  await check('chapter selection persists independently of hover and reading', async () => {
+    const selector = page.locator('#dim-chapter-select');
+    await selector.selectOption('2');
+    assert.equal(await page.locator('#dim-selection').getAttribute('data-chapter'), '2');
+    assert.equal(await page.locator('#dim-read-chapter').getAttribute('href'), '#ch-2');
+    await page.mouse.move(0, 0);
+    assert.equal(await selector.inputValue(), '2');
+    await page.locator('#dim-read-chapter').click();
+    await page.waitForFunction(() => document.querySelector('#ch-2').classList.contains('flash'));
+  });
+  await check('planar projection retains scores and exposes its state', async () => {
+    await page.locator('#dim-projection').selectOption('d1-d2');
+    assert.equal(await page.locator('#dim-3d-canvas').getAttribute('data-projection'), 'd1-d2');
+    assert.equal(await page.locator('#dim-ctl-spin').isDisabled(), true);
+    await page.locator('#dim-projection').selectOption('3d');
+    assert.equal(await page.locator('#dim-ctl-spin').isDisabled(), false);
+  });
   await check('idle canvas does not animate', async () => {
     await page.waitForTimeout(150);
     const before = await page.evaluate(() => window.frameCount);
@@ -172,13 +196,133 @@ assert.equal(fixture.status,0,fixture.stderr);
     assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
     await page.locator('#ch-3').screenshot({path: path.join(artifacts, 'paragraph-touch.png')});
   });
+  await check('only supplied axes are described as measured scores', async () => {
+    const limited = {...payload, axes: payload.axes.slice(0, 1)};
+    const encoded = JSON.stringify(limited).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+    const limitedHtml = original.replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${encoded}"`);
+    const single = await browser.newPage({viewport: {width: 1440, height: 1000}});
+    try {
+      await single.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:limitedHtml}));
+      await single.goto('http://lixity.test/');
+      await single.locator('#style-tab-dimensions').click();
+      await single.locator('#dim-3d-canvas').scrollIntoViewIfNeeded();
+      const box = await single.locator('#dim-3d-canvas').boundingBox();
+      await single.mouse.move(box.x + box.width / 2, box.y + box.height / 2);
+      assert.equal(await single.locator('.dim-tt-row').count(), 1);
+      assert.equal(await single.locator('#dim-selection dd').count(), 1);
+    } finally { await single.close(); }
+  });
+  await check('cutoff tooltips preserve precise localized configuration', async () => {
+    for (const [language, threshold, expected] of [
+      ['en',2.00014,'2.00014'], ['de',2.00014,'2,00014'], ['en',0.004,'0.004'],
+      ['en',1e-100,'1e-100']
+    ]) {
+      const precise = {...payload, language, threshold, points:[{...payload.points[0],flagged:true}]};
+      if (threshold === 1e-100) precise.threshold_label = expected;
+      const encoded = JSON.stringify(precise).replaceAll('&','&amp;').replaceAll('"','&quot;').replaceAll('<','&lt;').replaceAll('>','&gt;');
+      const content = original.replace(/data-dim3d="[^"]*"/, () => `data-dim3d="${encoded}"`);
+      const precisePage = await browser.newPage({viewport:{width:1440,height:1000}});
+      try {
+        await precisePage.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:content}));
+        await precisePage.goto('http://lixity.test/');
+        await precisePage.locator('#style-tab-dimensions').click();
+        await precisePage.locator('#dim-3d-canvas').scrollIntoViewIfNeeded();
+        const box = await precisePage.locator('#dim-3d-canvas').boundingBox();
+        await precisePage.mouse.move(box.x+box.width/2,box.y+box.height/2);
+        assert.ok((await precisePage.locator('.dim-tt-flag').textContent()).includes(expected));
+      } finally { await precisePage.close(); }
+    }
+  });
+  await check('canvas resolves readable palette through manual and system theme changes', async () => {
+    const themePage = await browser.newPage({viewport:{width:1440,height:1000},colorScheme:'light'});
+    try {
+      await themePage.addInitScript(() => {
+        window.axisPaints = [];
+        const paint = CanvasRenderingContext2D.prototype.fillText;
+        CanvasRenderingContext2D.prototype.fillText = function(text,...args) {
+          if (String(text).includes('+D1')) window.axisPaints.push(this.fillStyle);
+          return paint.call(this,text,...args);
+        };
+      });
+      await themePage.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:original}));
+      await themePage.goto('http://lixity.test/');
+      await themePage.locator('#style-tab-dimensions').click();
+      for (const [system,manual] of [['light','light'],['light','dark'],['dark','light'],['dark','dark']]) {
+        await themePage.emulateMedia({colorScheme:system});
+        const before = await themePage.evaluate(() => window.axisPaints.length);
+        await themePage.evaluate(theme => document.documentElement.setAttribute('data-theme',theme),manual);
+        await themePage.waitForFunction(count => window.axisPaints.length>count,before);
+        const expected = await themePage.evaluate(() => {
+          const probe=document.createElement('span');probe.style.color='var(--muted)';document.body.appendChild(probe);
+          const color=getComputedStyle(probe).color;probe.remove();
+          const context=document.createElement('canvas').getContext('2d');context.fillStyle=color;return context.fillStyle;
+        });
+        const painted = await themePage.evaluate(() => window.axisPaints.at(-1));
+        assert.ok(await themePage.evaluate(count => window.axisPaints.length>count,before));
+        assert.equal(painted,expected,system+' OS / '+manual+' manual');
+        await themePage.locator('#dimensions').evaluate(element => window.scrollTo({top:scrollY+element.getBoundingClientRect().top-(document.querySelector('.toolbar')?.offsetHeight||0)-12,behavior:'instant'}));
+        await settledScreenshot(themePage,`theme-${system}-${manual}.png`);
+      }
+    } finally { await themePage.close(); }
+  });
+  for (const [language, localized] of Object.entries(locales)) {
+    for (const width of [1440, 320]) {
+      await check(`${language} style help and chapter selection at ${width}px`, async () => {
+        const localizedPage = await browser.newPage({viewport:{width,height:1000}, hasTouch:width===320});
+        try {
+          localizedPage.on('pageerror', error => errors.push(error.message));
+          await localizedPage.route('http://lixity.test/**', route => route.fulfill({contentType:'text/html', body:localized}));
+          await localizedPage.goto('http://lixity.test/');
+          await localizedPage.locator('#style-tab-dimensions').click();
+          const dimensions = localizedPage.locator('#dimensions');
+          assert.ok((await dimensions.locator('.dim-guide').textContent()).length > 50);
+          assert.ok((await dimensions.locator('.dim-coverage').textContent()).includes('3 / 3'));
+          await localizedPage.locator('#dim-chapter-select').selectOption('2');
+          assert.equal(await localizedPage.locator('#dim-selection').getAttribute('data-chapter'), '2');
+          const row = localizedPage.locator('#dim-scores tbody tr').nth(1);
+          assert.deepEqual(await localizedPage.locator('#dim-selection dd').allTextContents(), await row.locator('td.num').allTextContents());
+          const measuredAxes = await localizedPage.locator('#dim-3d-canvas').evaluate(element => JSON.parse(element.getAttribute('data-dim3d')).axes);
+          const meanings = await localizedPage.locator('#dim-selection .dim-axis-meaning').allTextContents();
+          measuredAxes.forEach((axis, index) => {
+            if (axis.pos) assert.ok(meanings[index].includes('+ ' + axis.pos));
+            if (axis.neg) assert.ok(meanings[index].includes('− ' + axis.neg));
+          });
+          assert.ok((await localizedPage.locator('#dim-selection').textContent()).includes(await row.locator('td').last().textContent()));
+          const spatial = await localizedPage.locator('#dim-3d-canvas').evaluate(element => element.toDataURL());
+          await localizedPage.locator('#dim-projection').selectOption('d1-d2');
+          assert.notEqual(await localizedPage.locator('#dim-3d-canvas').evaluate(element => element.toDataURL()), spatial);
+          assert.equal(await localizedPage.locator('#dim-ctl-left').isDisabled(), true);
+          await localizedPage.locator('#dim-expert summary').click();
+          const coefficients = await localizedPage.locator('#dim-expert td.num').allTextContents();
+          assert.ok(coefficients.length > 0 && coefficients.every(value => /^[+-]?\d+[.,]\d{3}$/.test(value)));
+          assert.equal(await localizedPage.locator('#dim-expert').evaluate(element => element.textContent.includes('dim_')), false);
+          await localizedPage.locator('#dim-expert summary').click();
+          assert.ok(await localizedPage.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+          await dimensions.evaluate(element => {
+            const toolbar = document.querySelector('.toolbar');
+            window.scrollTo({top:scrollY+element.getBoundingClientRect().top-(toolbar?.offsetHeight||0)-12, behavior:'instant'});
+          });
+          await settledScreenshot(localizedPage, `${language}-${width}-overview.png`);
+          if (width === 320) {
+            await localizedPage.locator('.dim-selection-panel').evaluate(element => {
+              const toolbar = document.querySelector('.toolbar');
+              window.scrollTo({top:scrollY+element.getBoundingClientRect().top-(toolbar?.offsetHeight||0)-12, behavior:'instant'});
+            });
+            await settledScreenshot(localizedPage, `${language}-${width}-selection.png`);
+          }
+        } finally { await localizedPage.close(); }
+      });
+    }
+  }
   // Final visual evidence uses the unmodified chart and matching score table.
   await page.route('http://lixity.test/**', route => route.fulfill({contentType: 'text/html', body: original}));
   await page.goto('http://lixity.test/');
   await page.locator('#style-tab-dimensions').click();
-  await page.locator('#dimensions').screenshot({path:path.join(artifacts,'mobile.png')});
+  await page.locator('#dimensions').evaluate(element => window.scrollTo({top:scrollY+element.getBoundingClientRect().top-(document.querySelector('.toolbar')?.offsetHeight||0)-12,behavior:'instant'}));
+  await settledScreenshot(page, 'mobile.png');
   await page.setViewportSize({width:1280,height:900});
-  await page.locator('#dimensions').screenshot({path:path.join(artifacts,'desktop.png')});
+  await page.locator('#dimensions').evaluate(element => window.scrollTo({top:scrollY+element.getBoundingClientRect().top-(document.querySelector('.toolbar')?.offsetHeight||0)-12,behavior:'instant'}));
+  await settledScreenshot(page, 'desktop.png');
   await check('console has no runtime errors', () => assert.deepEqual(errors, []));
   console.log(JSON.stringify({results,artifacts}, null, 2));
   process.exitCode = results.some(result => !result.passed) ? 1 : 0;

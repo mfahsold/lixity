@@ -292,7 +292,7 @@ if (researchRevisionDialog) {
         if (endpoint) value = endpoint.title + (endpoint.time_period ? " · " + endpoint.time_period : "") +
           " · " + uiFormat("research_revision_number", {revision: endpoint.revision});
       }
-      var valHtml = spec.type === "geography" ? window.LixityDossierGeography.html(value) : spec.name === "body" && value ?
+      var valHtml = spec.type === "geography" ? window.LixityDossierGeography.html(value, envelope.geography_summary) : spec.name === "body" && value ?
         researchDossierBodyHtml(value, envelope) :
         escapeHtml(value || "—");
       return '<dt>' + escapeHtml(uiLabel(spec.label)) + '</dt><dd>' + valHtml + '</dd>';

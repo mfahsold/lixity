@@ -17,6 +17,40 @@ def _safe(value: Any, *, markdown: bool) -> str:
     return text
 
 
+def geography_report(summary: dict[str, Any]) -> str:
+    """Present the shared read-time geography summary without measuring geometry."""
+    def distance_text(value: float) -> str:
+        return "<0.01 km" if 0 < value < .01 else f"{value:.2f} km"
+
+    lines = ["Places and routes: "
+             f"{summary['located_feature_count']} located / {summary['feature_count']}; "
+             f"{summary['unlocated_feature_count']} unplaced."]
+    kinds = {"Point": "Point", "LineString": "Route", "Polygon": "Area", "unknown": "Unplaced"}
+    for feature in summary["features"]:
+        kind = kinds.get(feature["geometry_type"], "Unplaced")
+        lines.append(f"- {feature['index'] + 1}. {safe_text(feature['label'])} — {kind}")
+        context = []
+        for key, title in (("feature_type", "Type"), ("time_period", "Period"), ("transport", "Transport")):
+            if feature.get(key):
+                context.append(f"{title}: {safe_text(feature[key])}")
+        if feature.get("actors"):
+            context.append("Actors: " + ", ".join(safe_text(actor) for actor in feature["actors"]))
+        if context:
+            lines.append("  " + "; ".join(context))
+        if feature.get("waypoint_labels"):
+            lines.append("  Waypoints: " + " → ".join(safe_text(item) for item in feature["waypoint_labels"]))
+        distance = feature.get("route_length_km")
+        if distance is not None:
+            lines.append(f"  Positions: {feature['position_count']}; segments: {feature['segment_count']}; "
+                         f"approximate vertex-chain distance: {distance_text(distance)}")
+    if summary.get("route_length_km") is not None:
+        lines.append(f"Total approximate vertex-chain distance: {distance_text(summary['route_length_km'])}.")
+        lines.append("Method: shortest great-circle segments on a sphere between supplied coordinates; "
+                     "not road routing or travel time; elevation is excluded.")
+    lines.append("Authored locations and context; not geographic or historical verification.")
+    return "\n".join(lines)
+
+
 def manuscript_report(command: str, result: dict[str, Any], *, table: bool) -> str:
     """Render manuscript operations with the same safe terminal text boundary."""
     headers: tuple[str, ...]

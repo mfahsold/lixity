@@ -284,7 +284,7 @@ def test_count_labels_carry_singular_forms():
     """Every count-noun template has a `_one` row for exactly one item."""
     # Parenthetical counters ("({count})") and count-free adjectives keep one row.
     parenthetical = re.compile(r"\(\{count\}\)")
-    invariant = {"status_markers_open"}
+    invariant = {"status_markers_open", "geography_overview"}
     for key, english in WORKSPACE_LABELS["en"].items():
         if "{count}" not in english or key.endswith("_one") or key in invariant:
             continue

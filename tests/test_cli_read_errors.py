@@ -40,6 +40,17 @@ def test_threshold_help_explains_numeric_domain(command, capsys):
     assert "finite" in help_text and "default: 0.05" in help_text
 
 
+def test_style_help_explains_dimension_units_and_available_details(capsys):
+    with pytest.raises(SystemExit) as error:
+        main(["style", "--help"])
+    assert error.value.code == 0
+    help_text = " ".join(capsys.readouterr().out.split())
+    assert "standardized midranks" in help_text
+    assert "complete chapters" in help_text
+    assert "dimension_diagnostics" in help_text
+    assert "not a confidence region" in help_text
+
+
 def test_pdf_rejects_json_before_processing_or_replacing_output(tmp_path, capsys):
     source = tmp_path / "synthetic.md"
     source.write_text("## One\n\nA synthetic scene.\n", encoding="utf-8")

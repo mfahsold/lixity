@@ -86,6 +86,9 @@ and diagrams share a zoom viewer; geography starts offline, with optional
 OpenStreetMap tiles. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
 keep name counts separate from author-declared perspective.
 
+**On current main:** guided map and style-space views explain their measurements
+where you use them, with the same context available in the CLI.
+
 ## How to read the results
 
 Measurements describe patterns, not literary quality. A deliberate change of

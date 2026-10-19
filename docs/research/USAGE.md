@@ -608,9 +608,9 @@ v4. Earlier cached provenance/bytes remain unchanged.
 editor to add named points, paths and areas, with descriptions, periods, actors
 and transport choices. Import supported GeoJSON or enter coordinates in the form.
 The [harbour example](examples/harbour-geography.json) contains deliberately
-fictional positions and walking/driving paths. CLI creation accepts `--geography`;
-ordinary dossier revision, history, search and backup retain the same data.
-Use command help and `research schema` for accepted fields and bounds.
+fictional positions and journeys. Field help, `research dossier --help` and
+`research schema` describe the supported inputs; ordinary revisions and backups
+retain them with the dossier.
 
 Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:**
 the numbered sketch and interactive Leaflet vector view work offline. Optional
@@ -618,13 +618,18 @@ OpenStreetMap tiles require explicit permission; requests disclose the visible
 map area and client IP to the provider. Permission is not persisted and resets
 when the map/project context closes. There is no geocoding, road routing, travel
 time calculation or historical verification. An attached map image is a separate source, not a
-georeferenced background. Keep supporting quotations and exact-version images
-in the dossier's existing evidence and body. Unknown geometry stays unplaced.
+georeferenced background. Supporting quotations and images remain dossier evidence;
+unknown geometry stays unplaced.
 
 Only a geographic save opts into record/manifest v8. Later revisions remain v8
 even after removing geography; reading ordinary dossiers preserves their older
 encoding. Older readers cannot open v8 archives. Section edits affect prose only,
 not the dossier's geographic data.
+
+**Current main, after v0.7.1:** select an object in the map or its list to read
+its context and frame it. UI help and CLI `--format text` explain the measurements.
+Response-only `geography_summary` (`research-geography-summary-local/1`) is
+derived from the selected revision, separate from retained v8 records.
 
 <a id="zotero-desktop-bridge-since-v1190"></a>
 ## Zotero Desktop bridge

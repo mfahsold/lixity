@@ -115,29 +115,71 @@
     }).join("");
     return '<svg class="geography-sketch" viewBox="0 0 600 310" role="' + (interactive ? 'group' : 'img') + '" aria-label="' + safe(label("sketch")) + '"><title>' + safe(label("sketch")) + '</title>' + shapes + '</svg>';
   }
-  function html(value) {
+  function number(value, digits) {
+    return Number(value).toLocaleString(document.documentElement.lang || "en", {maximumFractionDigits: digits || 0});
+  }
+  function distance(value) {
+    // Values come from the backend summary. Do not remeasure geography here.
+    return value > 0 && value < .01 ? "< " + number(.01, 2) : number(value, 2);
+  }
+  function routeFacts(summary) {
+    if (!summary || summary.geometry_type !== "LineString" || !Number.isFinite(summary.route_length_km)) return "";
+    return '<p class="ctl-note geography-route-facts">' + safe(uiFormat("geography_route_facts", {
+      positions: number(summary.position_count), segments: number(summary.segment_count), distance: distance(summary.route_length_km)
+    })) + '</p>';
+  }
+  function featureContext(feature, summary) {
+    var props = feature.properties, geometry = feature.geometry;
+    var meta = [label(geometry ? geometry.type : "unknown"),
+      props.time_period ? label("period") + ": " + props.time_period : "",
+      (props.actors || []).length ? label("people") + ": " + props.actors.join(", ") : "",
+      props.transport ? label("transport") + ": " + label(props.transport) : "", props.feature_type].filter(Boolean);
+    return '<div class="geography-feature-context"><p class="ctl-note">' + meta.map(safe).join(" · ") + '</p>' +
+      (geometry && geometry.type === "Point" ? '<p class="ctl-note">' + safe(uiFormat("geography_position", {
+        longitude: geometry.coordinates[0], latitude: geometry.coordinates[1]
+      })) + '</p>' : '') +
+      routeFacts(summary) + (props.description ? '<p>' + safe(props.description) + '</p>' : '') +
+      (props.waypoint_labels && props.waypoint_labels.length ? '<p>' + props.waypoint_labels.map(safe).join(" → ") + '</p>' : '') + '</div>';
+  }
+  function html(value, summary) {
     if (!value) return "";
     try { value = validate(value); } catch (_) { return '<p class="ctl-note">' + safe(label("invalid")) + '</p>'; }
-    if (!value.features.length) return "";
-    var canMap = Boolean(coordinateFrame(value));
+    if (!value.features.length) return '<section class="dossier-geography"><h4>' + safe(label("title")) + '</h4><p class="ctl-note">' + safe(label("empty")) + '</p></section>';
+    if (!summary || summary.schema_version !== "research-geography-summary-local/1" || !Array.isArray(summary.features) ||
+        summary.features.length !== value.features.length || summary.features.some(function(row, index) {
+          var feature = value.features[index];
+          return !row || row.index !== index || row.label !== feature.properties.label || row.geometry_type !== (feature.geometry ? feature.geometry.type : "unknown");
+        })) summary = null;
+    var overview = summary ? '<p class="geography-overview">' + safe(uiFormat("geography_overview", {
+      located: number(summary.located_feature_count), unlocated: number(summary.unlocated_feature_count), count: number(summary.feature_count)
+    })) + (Number.isFinite(summary.route_length_km) ? '<br><span class="ctl-note">' + safe(uiFormat("geography_route_total", {distance: distance(summary.route_length_km)})) + '</span>' : '') + '</p>' : '';
+    var legend = '<div class="geography-legend" aria-label="' + safe(label("legend")) + '">' + types.map(function(type) {
+      return '<span><i class="geography-symbol geography-symbol-' + type + '" aria-hidden="true"></i>' + safe(label(type)) + '</span>';
+    }).join("") + '</div>';
+    var frame = coordinateFrame(value), canMap = Boolean(frame);
+    var projectionHint = frame && frame.points.some(function(point) { return Math.abs(point[1]) > 85.0511287798066; }) ?
+      '<p class="ctl-note geography-projection-hint">' + safe(label("projection_hint")) + '</p>' : '';
     var mapControls = canMap ? '<button type="button" class="ctl ctl-sm" data-geo-map aria-expanded="false">' + safe(label("map")) + '</button>' +
       '<div class="geography-map-tools" hidden><button type="button" class="ctl ctl-sm" data-geo-fit>' + safe(label("fit")) + '</button>' +
       '<label class="form-checkbox"><input type="checkbox" data-geo-basemap/><span>' + safe(label("basemap")) + '</span></label>' +
       '<p class="ctl-note geography-basemap-hint">' + safe(label("basemap_hint")) + '</p></div>' +
       '<div class="geography-map" hidden role="group" aria-label="' + safe(label("map_label")) + '"></div><p class="ctl-status geography-map-status" role="status"></p>' : '';
     return '<section class="dossier-geography" data-geo-geometries="' + safe(JSON.stringify(value.features.map(function(feature) { return feature.geometry; }))) + '"><h4>' + safe(label("title")) + '</h4><p class="ctl-note">' + safe(label("hint")) + '</p>' +
-      '<p class="ctl-note geography-navigation-hint">' + safe(label("navigation_hint")) + '</p>' + mapControls + sketch(value, true) +
+      overview + legend + '<p class="ctl-note geography-navigation-hint">' + safe(label("navigation_hint")) + '</p>' +
+      '<div class="geography-selected" role="status" aria-live="polite"><p class="ctl-note">' + safe(label("selected_empty")) + '</p></div>' +
+      '<div class="row geography-selection-actions">' + (canMap ? '<button type="button" class="ctl ctl-sm" data-geo-frame disabled>' + safe(label("frame")) + '</button>' : '') +
+      '<button type="button" class="ctl ctl-sm" data-geo-details disabled>' + safe(label("details")) + '</button>' +
+      '<button type="button" class="ctl ctl-sm" data-geo-clear disabled>' + safe(label("clear")) + '</button></div>' +
+      mapControls + projectionHint + '<p class="ctl-note geography-sketch-hint">' + safe(label("sketch_hint")) + '</p>' + sketch(value, true) +
+      (summary ? '<details class="geography-method"><summary>' + safe(label("method_title")) + '</summary><p class="ctl-note">' + safe(label("vertex_hint")) + '</p><p class="ctl-note">' + safe(label("method")) + '</p><p class="ctl-note">' +
+        safe(uiFormat("geography_radius", {radius: number(summary.earth_radius_km, 4)})) + '</p></details>' : '') +
       '<ol class="geography-feature-list">' + value.features.map(function(feature, index) {
         var props = feature.properties, geometry = feature.geometry;
-        var meta = [label(geometry ? geometry.type : "unknown"), props.time_period, (props.actors || []).join(", "),
-          props.transport ? label(props.transport) : "", props.feature_type].filter(Boolean);
-        return '<li data-geo-feature-index="' + index + '"><button type="button" class="ctl ctl-link geography-feature-select" data-geo-select="' + index + '" aria-pressed="false"><strong>' + safe(props.label) + '</strong></button><p class="ctl-note">' + meta.map(safe).join(" · ") + '</p>' +
-          (props.description ? '<p>' + safe(props.description) + '</p>' : '') +
-          (props.waypoint_labels && props.waypoint_labels.length ? '<p>' + props.waypoint_labels.map(safe).join(" → ") + '</p>' : '') +
-          (geometry ? '<details><summary>' + safe(label("coordinates")) + '</summary><pre>' + safe(coordinateText(geometry)) + '</pre></details>' : '') + '</li>';
+        return '<li data-geo-feature-index="' + index + '"><button type="button" class="ctl ctl-link geography-feature-select" data-geo-select="' + index + '" aria-pressed="false"><strong>' + safe(props.label) + '</strong></button>' + featureContext(feature, summary && summary.features[index]) +
+          (geometry ? '<details><summary>' + safe(label("coordinates")) + '</summary><p class="ctl-note">' + safe(label("coordinate_order")) + '</p><pre>' + safe(coordinateText(geometry)) + '</pre></details>' : '') + '</li>';
       }).join("") + '</ol></section>';
   }
-  function selectFeature(control) {
+  function selectFeature(control, keyboardActivation) {
     var root = control.closest(".dossier-geography");
     if (!root) return;
     var index = control.dataset.geoSelect;
@@ -154,12 +196,32 @@
     root.querySelectorAll("li[data-geo-feature-index]").forEach(function(node) {
       node.classList.toggle("is-selected", node === entry);
     });
+    var caption = root.querySelector(".geography-selected");
+    var heading = document.createElement("strong"); heading.textContent = label("selected_title") + ': ' + entry.querySelector("button[data-geo-select]").textContent;
+    var context = entry.querySelector(".geography-feature-context").cloneNode(true);
+    context.querySelectorAll("p").forEach(function(paragraph) {
+      var characters = Array.from(paragraph.textContent);
+      if (characters.length > 280) paragraph.textContent = characters.slice(0, 280).join("") + "…";
+    });
+    caption.replaceChildren(heading, context);
+    var frame = root.querySelector("[data-geo-frame]");
+    if (frame) frame.disabled = !JSON.parse(root.dataset.geoGeometries)[Number(index)];
+    root.querySelector("[data-geo-details]").disabled = false;
+    root.querySelector("[data-geo-clear]").disabled = false;
     var coordinates = entry.querySelector("details");
     if (coordinates) coordinates.open = true;
-    if (control.closest("svg")) {
+    // Browser focus can also follow a pointer click. Only explicit keyboard
+    // activation moves into the list; pointer selection keeps the map in view.
+    if (keyboardActivation) {
       entry.querySelector("button[data-geo-select]").focus({preventScroll: true});
       entry.scrollIntoView({block: "nearest"});
     }
+  }
+  function clearSelection(root) {
+    root.querySelectorAll(".is-selected").forEach(function(node) { node.classList.remove("is-selected"); });
+    root.querySelectorAll("[data-geo-select]").forEach(function(node) { node.setAttribute("aria-pressed", "false"); });
+    root.querySelector(".geography-selected").innerHTML = '<p class="ctl-note">' + safe(label("selected_empty")) + '</p>';
+    root.querySelectorAll("[data-geo-frame], [data-geo-details], [data-geo-clear]").forEach(function(node) { node.disabled = true; });
   }
   var maps = new Map();
   function mapContext() {
@@ -208,10 +270,12 @@
       maps.set(root, state);
       map.setView([frame.points[0][1], frame.longitude(frame.points[0][0])], 5, {animate: false});
       window.L.control.zoom({zoomInTitle: label("zoom_in"), zoomOutTitle: label("zoom_out")}).addTo(map);
+      window.L.control.scale({metric: true, imperial: false}).addTo(map);
       state.layers = window.L.geoJSON(value, {
         coordsToLatLng: function(coords) { return window.L.latLng(coords[1], frame.longitude(coords[0])); },
         pointToLayer: function(feature, point) { return window.L.circleMarker(point, {radius: 7}); },
-        style: {color: "var(--accent)", weight: 3, fillOpacity: .12},
+        style: function(feature) { return {color: "var(--accent)", weight: 3, fillOpacity: .12,
+          dashArray: feature.geometry.type === "LineString" ? "6 4" : null}; },
       }).addTo(map);
       state.layers.eachLayer(function(layer) {
         var index = value.features.indexOf(layer.feature), node = layer.getElement();
@@ -219,6 +283,8 @@
         node.setAttribute("role", "button"); node.setAttribute("aria-pressed", "false");
         node.setAttribute("aria-label", (index + 1) + ". " + layer.feature.properties.label);
         layer.on("click", function() { selectFeature(node); });
+        var title = document.createElementNS("http://www.w3.org/2000/svg", "title"); title.textContent = layer.feature.properties.label;
+        node.prepend(title);
         layer.bindTooltip(String(index + 1), {permanent: true, direction: "top", className: "geography-map-number"});
         if (layer.feature.geometry.type === "Point") layer.bringToFront();
       });
@@ -238,6 +304,24 @@
     }
   }
   document.addEventListener("click", function(event) {
+    var action = event.target.closest("[data-geo-frame], [data-geo-details], [data-geo-clear]");
+    if (action) {
+      var owner = action.closest(".dossier-geography"), selected = owner.querySelector('button[data-geo-select][aria-pressed="true"]');
+      if (action.hasAttribute("data-geo-clear")) { clearSelection(owner); return; }
+      if (!selected) return;
+      if (action.hasAttribute("data-geo-details")) {
+        selected.focus({preventScroll: true}); selected.scrollIntoView({block: "nearest"});
+      } else {
+        if (!maps.has(owner)) startMap(owner);
+        var selectedState = maps.get(owner);
+        if (selectedState) selectedState.layers.eachLayer(function(layer) {
+          if (layer.getElement().dataset.geoSelect !== selected.dataset.geoSelect) return;
+          var bounds = layer.getBounds ? layer.getBounds() : window.L.latLngBounds([layer.getLatLng()]);
+          selectedState.map.fitBounds(bounds, {padding: [24, 24], maxZoom: 15, animate: false});
+        });
+      }
+      return;
+    }
     var toggle = event.target.closest("[data-geo-map], [data-geo-fit]");
     if (toggle) {
       var root = toggle.closest(".dossier-geography"), state = maps.get(root);
@@ -254,7 +338,7 @@
     var control = event.target.closest("svg [data-geo-select]");
     if (!control || !["Enter", " "].includes(event.key)) return;
     event.preventDefault();
-    selectFeature(control);
+    selectFeature(control, true);
   });
   document.addEventListener("change", function(event) {
     if (!event.target.matches("[data-geo-basemap]")) return;

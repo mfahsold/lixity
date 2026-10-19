@@ -150,6 +150,60 @@ class TestResearchCliOutput(unittest.TestCase):
                     self.assertIn("Synthetic history correction.", output)
                     self.assertIn("local-author", output)
 
+    def test_dossier_text_explains_geography_in_full_summary_and_historical_reads(self):
+        geography = {"type": "FeatureCollection", "features": [
+            {"type": "Feature", "geometry": {"type": "Point", "coordinates": [0, 0]},
+             "properties": {"label": "Harbour"}},
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[0, 0], [0, 1]]},
+             "properties": {"label": "Mira's journey\x1b[2J", "time_period": "1902", "actors": ["Mira"],
+                            "transport": "walking", "waypoint_labels": ["Harbour", "Station"]}},
+            {"type": "Feature", "geometry": None, "properties": {"label": "Unplaced meeting"}},
+        ]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic geography output")
+            identifier = api.create_dossier(root, "Journey notes", "Authored context.",
+                                            geography=geography)["dossier_id"]
+            before = retained_files(root)
+            for selector in (("show", identifier), (identifier, "--summary"),
+                             (identifier, "--revision", "1")):
+                with self.subTest(selector=selector):
+                    status, output, errors = self.capture("dossier", *selector, "--project", str(root),
+                                                          "--format", "text")
+                    self.assertEqual((status, errors), (0, ""), errors)
+                    self.assertIn("Authored context.", output)
+                    self.assertIn("Places and routes", output)
+                    self.assertIn("2 located / 3", output)
+                    self.assertIn("1 unplaced", output)
+                    for authored in ("Harbour", "Unplaced meeting", "Mira", "1902", "walking", "Station"):
+                        self.assertIn(authored, output)
+                    self.assertIn("111.20 km", output)
+                    self.assertIn("great-circle", output)
+                    self.assertIn("not road routing", output)
+                    self.assertIn("travel time", output)
+                    self.assertIn(r"\x1b[2J", output)
+                    self.assertNotIn("\x1b", output)
+            self.assertEqual(retained_files(root), before)
+
+    def test_dossier_text_keeps_unknown_location_distinct_from_a_zero_length_route(self):
+        geography = {"type": "FeatureCollection", "features": [
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[1, 1], [1, 1]]},
+             "properties": {"label": "Recorded stationary path"}},
+            {"type": "Feature", "geometry": {"type": "LineString", "coordinates": [[1, 1], [1.00001, 1]]},
+             "properties": {"label": "Short crossing"}},
+            {"type": "Feature", "geometry": None, "properties": {"label": "Unknown location"}},
+        ]}
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic route bounds")
+            identifier = api.create_dossier(root, "Known and unknown", "Notes.", geography=geography)["dossier_id"]
+            status, output, errors = self.capture("dossier", identifier, "--project", str(root), "--format", "text")
+            self.assertEqual((status, errors), (0, ""))
+            self.assertIn("Recorded stationary path", output)
+            self.assertIn("0.00 km", output)
+            self.assertIn("<0.01 km", output)
+            self.assertRegex(output, r"Unknown location[^\n]*[Uu]nplaced")
+
     def test_authored_diff_and_empty_drafts_explain_supported_inputs_without_writing(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

@@ -98,8 +98,9 @@ def fingerprint(
     (median ± 2 sigma) per feature, noise-adjusted deviations (z*), nominal
     Benjamini-Hochberg/Yekutieli selections, normal-reference expected hits,
     effect bands (Cliff's δ), baseline dependence diagnostics, exploratory
-    style dimensions (standardized midrank PCA on complete chapters) and
-    redundant feature pairs.
+    style dimensions (standardized midrank PCA on complete chapters), their
+    ``dimension_diagnostics`` support/availability metadata and redundant
+    feature pairs.
 
     Thresholds (z_mild=2.5, z_strong=3.5, fdr_q=0.05, fdr_method='bh',
     dim_score_threshold=2.5, min_chapters=2) are injectable. ``None`` resolves

@@ -7,6 +7,11 @@
   var btnCorr = document.getElementById("dim-ctl-corr");
   var btnSpin = document.getElementById("dim-ctl-spin");
   var btnReset = document.getElementById("dim-ctl-reset");
+  var chapterSelect = document.getElementById("dim-chapter-select");
+  var selection = document.getElementById("dim-selection");
+  var readChapter = document.getElementById("dim-read-chapter");
+  var projectionSelect = document.getElementById("dim-projection");
+  var retained = document.getElementById("dim-retained");
 
   var raw = canvas.getAttribute("data-dim3d");
   if (!raw) return;
@@ -27,7 +32,11 @@
   var scoreFormat = new Intl.NumberFormat(data.language || "en", {
     minimumFractionDigits: 2, maximumFractionDigits: 2, signDisplay: "exceptZero"
   });
-  var thresholdFormat = new Intl.NumberFormat(data.language || "en");
+  var thresholdFormat = new Intl.NumberFormat(data.language || "en", {maximumSignificantDigits:21});
+  var thresholdLabel = typeof data.threshold_label === "string" ? data.threshold_label : thresholdFormat.format(threshold);
+  var varianceFormat = new Intl.NumberFormat(data.language || "en", {
+    minimumFractionDigits: 1, maximumFractionDigits: 1
+  });
   if (!points.length) {
     if (window.LixityLog) window.LixityLog.debug("style-space: no 3D points to render");
     return;
@@ -55,6 +64,99 @@
   var animationFrame = null;
   var dragDistance = 0;
   var projectedPoints = [];
+  var selectedPoint = points[0];
+  var projection = "3d";
+  var palette = null;
+  var colorProbe = document.createElement("span");
+  colorProbe.hidden = true;
+  document.body.appendChild(colorProbe);
+
+  function canvasPalette() {
+    if (palette) return palette;
+    palette = {};
+    // Resolve light-dark() and other CSS color functions to canvas-ready values.
+    // Cache them: drag/spin frames must not repeat DOM writes and style reads.
+    ["fg", "line", "muted", "accent", "surface"].forEach(function(role) {
+      colorProbe.style.color = "var(--" + role + ")";
+      palette[role] = getComputedStyle(colorProbe).color;
+    });
+    var scheme = getComputedStyle(document.documentElement).colorScheme;
+    palette.dark = scheme === "dark" || (scheme !== "light" && window.matchMedia("(prefers-color-scheme: dark)").matches);
+    return palette;
+  }
+
+  function refreshPalette() {
+    palette = null;
+    draw();
+  }
+
+  function displayedAxes() {
+    if (projection === "3d") return axes.map(function(_, index) { return index; });
+    return projection.split("-").map(function(axis) { return Number(axis.slice(1)) - 1; });
+  }
+
+  function renderSelection() {
+    if (!selection || !selectedPoint) return;
+    selection.replaceChildren();
+    selection.setAttribute("data-chapter", String(selectedPoint.ch));
+    appendText(selection, "strong", "", selectedPoint.ch + ". " + selectedPoint.title);
+    var scores = appendText(selection, "dl", "dim-selected-scores", "");
+    axes.forEach(function(axis, index) {
+      var row = appendText(scores, "div", "", "");
+      var name = appendText(row, "dt", "", "D" + axis.idx);
+      var meaning = [];
+      if (axis.pos) meaning.push("+ " + axis.pos);
+      if (axis.neg) meaning.push("− " + axis.neg);
+      appendText(name, "span", "dim-axis-meaning", meaning.join(" / "));
+      appendText(row, "dd", "", scoreFormat.format(selectedPoint[["x", "y", "z"][index]]));
+    });
+    appendText(selection, "p", "", selectedPoint.flagged ? labels.status_flagged : labels.not_flagged);
+    if (chapterSelect) chapterSelect.value = String(selectedPoint.ch);
+    if (readChapter) {
+      readChapter.setAttribute("href", "#ch-" + selectedPoint.ch);
+      readChapter.setAttribute("data-jump", "#ch-" + selectedPoint.ch);
+    }
+  }
+
+  function selectChapter(point) {
+    selectedPoint = point;
+    renderSelection();
+    draw();
+  }
+
+  if (chapterSelect) {
+    chapterSelect.disabled = false;
+    chapterSelect.addEventListener("change", function() {
+      var point = points.find(function(candidate) { return String(candidate.ch) === chapterSelect.value; });
+      if (point) selectChapter(point);
+    });
+  }
+
+  function setProjection(value) {
+    projection = value;
+    canvas.setAttribute("data-projection", projection);
+    if (projectionSelect) projectionSelect.value = value;
+    if (retained && labels.retained) {
+      var share = displayedAxes().reduce(function(total, index) { return total + axes[index].variance; }, 0);
+      retained.textContent = labels.retained.replace("{variance}", varianceFormat.format(share * 100));
+    }
+    [btnSpin, document.getElementById("dim-ctl-left"), document.getElementById("dim-ctl-right"),
+      document.getElementById("dim-ctl-up"), document.getElementById("dim-ctl-down")].forEach(function(button) {
+      if (button) button.disabled = projection !== "3d";
+    });
+    if (projection !== "3d") {
+      spin = false;
+      setPressed(btnSpin, false);
+    }
+    clearHover();
+    scheduleAnimation();
+    draw();
+  }
+
+  if (projectionSelect) {
+    projectionSelect.disabled = false;
+    projectionSelect.addEventListener("change", function() { setProjection(projectionSelect.value); });
+  }
 
   function setPressed(button, pressed) {
     if (!button) return;
@@ -90,6 +192,12 @@
   }
 
   function project(x, y, z, cx, cy, radius) {
+    if (projection !== "3d") {
+      var indices = displayedAxes();
+      var values = [x, y, z];
+      return { x: cx + values[indices[0]] / maxCoord * radius * zoom,
+        y: cy - values[indices[1]] / maxCoord * radius * zoom, depth: 0, scale: 1 };
+    }
     var normX = x / maxCoord;
     var normY = y / maxCoord;
     var normZ = z / maxCoord;
@@ -130,34 +238,42 @@
     var cy = h / 2;
     var radius = Math.min(w, h) * 0.40;
 
-    var cs = getComputedStyle(document.documentElement);
-    var fg = cs.getPropertyValue("--fg").trim() || "#1d2129";
-    var line = cs.getPropertyValue("--line").trim() || "#e6e9ee";
-    var muted = cs.getPropertyValue("--muted").trim() || "#656d78";
-    var accent = cs.getPropertyValue("--accent").trim() || "#2b5c8f";
-    var surface = cs.getPropertyValue("--surface").trim() || "#ffffff";
-    var isDark = cs.getPropertyValue("--bg").trim().includes("0e1013") ||
-                 window.matchMedia("(prefers-color-scheme: dark)").matches;
+    var colors = canvasPalette();
+    var fg = colors.fg, line = colors.line, muted = colors.muted;
+    var accent = colors.accent, surface = colors.surface, isDark = colors.dark;
 
     var flagColor = isDark ? "#f59e0b" : "#d97706";
     var gridColor = isDark ? "rgba(255, 255, 255, 0.08)" : "rgba(0, 0, 0, 0.06)";
 
-    // 1. Median house style plane (Y = 0)
-    var gridStep = threshold;
+    // Rank-space reference grid; planar views use their selected axes.
+    var gridStep = Math.max(threshold, maxCoord / 4);
+    var gridLines = Math.min(8, Math.floor(2 * (maxCoord / gridStep)));
     ctx.save();
     ctx.strokeStyle = gridColor;
     ctx.lineWidth = 1;
-    for (var gx = -maxCoord; gx <= maxCoord + 0.01; gx += gridStep) {
-      var pA = project(gx, 0, -maxCoord, cx, cy, radius);
-      var pB = project(gx, 0, maxCoord, cx, cy, radius);
+    for (var gridX = 0; gridX <= gridLines; gridX++) {
+      var gx = -maxCoord + gridX * gridStep;
+      var gridAxes = projection === "3d" ? [0, 2] : displayedAxes();
+      var start = [0, 0, 0], end = [0, 0, 0];
+      start[gridAxes[0]] = end[gridAxes[0]] = gx;
+      start[gridAxes[1]] = -maxCoord;
+      end[gridAxes[1]] = maxCoord;
+      var pA = project(start[0], start[1], start[2], cx, cy, radius);
+      var pB = project(end[0], end[1], end[2], cx, cy, radius);
       ctx.beginPath();
       ctx.moveTo(pA.x, pA.y);
       ctx.lineTo(pB.x, pB.y);
       ctx.stroke();
     }
-    for (var gz = -maxCoord; gz <= maxCoord + 0.01; gz += gridStep) {
-      var pC = project(-maxCoord, 0, gz, cx, cy, radius);
-      var pD = project(maxCoord, 0, gz, cx, cy, radius);
+    for (var gridZ = 0; gridZ <= gridLines; gridZ++) {
+      var gz = -maxCoord + gridZ * gridStep;
+      var gridIndices = projection === "3d" ? [0, 2] : displayedAxes();
+      var gridStart = [0, 0, 0], gridEnd = [0, 0, 0];
+      gridStart[gridIndices[0]] = -maxCoord;
+      gridEnd[gridIndices[0]] = maxCoord;
+      gridStart[gridIndices[1]] = gridEnd[gridIndices[1]] = gz;
+      var pC = project(gridStart[0], gridStart[1], gridStart[2], cx, cy, radius);
+      var pD = project(gridEnd[0], gridEnd[1], gridEnd[2], cx, cy, radius);
       ctx.beginPath();
       ctx.moveTo(pC.x, pC.y);
       ctx.lineTo(pD.x, pD.y);
@@ -171,7 +287,7 @@
       { name: "D1", endPos: project(axisLength, 0, 0, cx, cy, radius), endNeg: project(-axisLength, 0, 0, cx, cy, radius), info: axes[0] },
       { name: "D2", endPos: project(0, axisLength, 0, cx, cy, radius), endNeg: project(0, -axisLength, 0, cx, cy, radius), info: axes[1] },
       { name: "D3", endPos: project(0, 0, axisLength, cx, cy, radius), endNeg: project(0, 0, -axisLength, cx, cy, radius), info: axes[2] }
-    ];
+    ].filter(function(_, index) { return displayedAxes().includes(index); });
 
     ctx.save();
     ctx.lineWidth = 1;
@@ -205,16 +321,17 @@
       ctx.lineWidth = 1.2;
       ctx.setLineDash([3, 4]);
       var corners = [];
-      for (var corner = 0; corner < 8; corner++) {
-        corners.push(project(
-          corner & 1 ? threshold : -threshold,
-          corner & 2 ? threshold : -threshold,
-          corner & 4 ? threshold : -threshold, cx, cy, radius
-        ));
+      var corridorAxes = displayedAxes();
+      for (var corner = 0; corner < Math.pow(2, corridorAxes.length); corner++) {
+        var coordinates = [0, 0, 0];
+        corridorAxes.forEach(function(axis, index) {
+          coordinates[axis] = corner & Math.pow(2, index) ? threshold : -threshold;
+        });
+        corners.push(project(coordinates[0], coordinates[1], coordinates[2], cx, cy, radius));
       }
       ctx.beginPath();
       for (var vertex = 0; vertex < corners.length; vertex++) {
-        for (var axisBit = 1; axisBit <= 4; axisBit *= 2) {
+        for (var axisBit = 1; axisBit < corners.length; axisBit *= 2) {
           var neighbor = vertex ^ axisBit;
           if (neighbor > vertex) {
             ctx.moveTo(corners[vertex].x, corners[vertex].y);
@@ -237,7 +354,8 @@
         y: pr.y,
         depth: pr.depth,
         scale: pr.scale,
-        isHovered: (hoveredPoint && hoveredPoint.ch === pt.ch)
+        isHovered: (hoveredPoint && hoveredPoint.ch === pt.ch),
+        isSelected: selectedPoint && selectedPoint.ch === pt.ch
       });
     }
 
@@ -266,6 +384,7 @@
       var orig = spt.orig;
       var nodeR = (orig.flagged ? 6.5 : 4.5) * (0.8 + spt.scale * 0.35);
       if (spt.isHovered) nodeR *= 1.4;
+      else if (spt.isSelected) nodeR *= 1.2;
 
       if (spt.isHovered) {
         var floorProj = project(orig.x, 0, orig.z, cx, cy, radius);
@@ -301,7 +420,7 @@
         ctx.strokeStyle = flagColor;
         ctx.lineWidth = 1;
         ctx.stroke();
-      } else if (spt.isHovered) {
+      } else if (spt.isHovered || spt.isSelected) {
         ctx.fillStyle = accent;
         ctx.fill();
         ctx.lineWidth = 2;
@@ -334,6 +453,7 @@
   }
 
   function rotate(deltaYaw, deltaPitch) {
+    if (projection !== "3d") return;
     yaw += deltaYaw;
     pitch = Math.max(-Math.PI / 2.2, Math.min(Math.PI / 2.2, pitch + deltaPitch));
     clearHover();
@@ -365,6 +485,8 @@
 
   canvas.addEventListener("pointerdown", function(e) {
     if (e.button !== 0) return;
+    dragDistance = 0;
+    if (projection !== "3d") return;
     isDragging = true;
     dragDistance = 0;
     lastX = e.clientX;
@@ -423,13 +545,14 @@
   function renderTooltip(point) {
     tooltip.replaceChildren();
     appendText(tooltip, "div", "dim-tt-title", point.title || String(point.ch));
-    [point.x, point.y, point.z].forEach(function(value, index) {
+    axes.forEach(function(axis, index) {
+      var value = point[["x", "y", "z"][index]];
       var row = appendText(tooltip, "div", "dim-tt-row", "");
-      appendText(row, "span", "", (labels.dimension || "Dimension") + " " + (index + 1));
+      appendText(row, "span", "", "D" + axis.idx);
       appendText(row, "b", "", scoreFormat.format(value));
     });
     if (point.flagged) {
-      appendText(tooltip, "div", "dim-tt-flag", (labels.flagged || "Flagged") + " (|score| ≥ " + thresholdFormat.format(threshold) + ")");
+      appendText(tooltip, "div", "dim-tt-flag", (labels.flagged || "Flagged") + " (|score| ≥ " + thresholdLabel + ")");
     }
   }
 
@@ -481,12 +604,7 @@
   canvas.addEventListener("click", function(e) {
     if (dragDistance > 4) return;
     var point = findPoint(e).point;
-    if (point) {
-      var chTarget = document.getElementById("ch-" + point.ch);
-      if (chTarget) {
-        scrollAndFlash(chTarget);
-      }
-    }
+    if (point) selectChapter(point);
   });
 
   if (btnTraj) {
@@ -519,8 +637,7 @@
       spin = false;
       setPressed(btnSpin, spin);
       clearHover();
-      scheduleAnimation();
-      draw();
+      setProjection("3d");
     });
   }
 
@@ -540,11 +657,16 @@
   }
 
   document.addEventListener("visibilitychange", scheduleAnimation);
-  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", refreshPalette);
+  new MutationObserver(refreshPalette).observe(document.documentElement, {
+    attributes:true, attributeFilter:["data-theme", "class", "style"]
+  });
   window.addEventListener("resize", function() {
     clearHover();
     draw();
     scheduleAnimation();
   });
+  canvas.setAttribute("data-projection", projection);
+  renderSelection();
   draw();
 })();

@@ -163,6 +163,10 @@ The response carries `meta`, `features`, `deviations`, `fdr_flagged`,
 diagnostics. Use `features[].feature` to join the feature rows to chapter-keyed
 deviation/FDR maps; localized `feat_*` strings are display keys.
 
+**Current main, after v0.7.1:** additive `dimension_diagnostics` explains support
+and availability without changing schema v4 scores. Use `dimensions[].flagged`,
+not rounded scores, for cutoff status; unavailable positions are not zero.
+
 `structural_diagnostics` is empty when no feature is measurable. Changepoint
 indices are 0-based positions of the first element after each break;
 `trends[field]` is `null` when $n < 3$; `tail_index[field]` is omitted
@@ -337,14 +341,9 @@ workflows, not authorization to edit the manuscript.
   contrasts (`effect_magnitudes`, Cliff’s δ labels). Baseline diagnostics
   (`baseline_diagnostics`) expose some dependence, not inferential validity.
   Formal methods: [`METHODS.md`](METHODS.md).
-- **Dimensions**: exploratory PCA of standardized tied midranks on one complete
-  chapter set (Jacobi eigendecomposition, deterministic sign). Scores and
-  `dimensions[].variance` use this same rank space. At least three complete
-  chapters and three varying features are required; missing chapters are omitted,
-  not assigned zero. `meta.dimension_space` declares `standardized_midranks` and
-  `meta.dimension_chapters` lists the covered chapters. Read the active flag
-  threshold and `dimension_min_chapters` / `dimension_min_features` from `meta`;
-  axes are not established registers or quality scores.
+- **Dimensions**: exploratory PCA in standardized midrank space on complete
+  chapters. Read support, coverage and active cutoffs from the response metadata;
+  axes are manuscript-relative, not established registers or quality scores.
 - **Redundant features**: pairs with |Spearman ρ| ≥ 0.8 have related chapter
   patterns, not necessarily the same linguistic meaning. Account for that
   relationship when summarising deviations.

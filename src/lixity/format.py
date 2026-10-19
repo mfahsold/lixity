@@ -38,6 +38,19 @@ def num(value: float, language_key: str = "en", decimals: int = 1, signed: bool 
     return text.replace(",", "\x00").replace(".", decimal).replace("\x00", thousands)
 
 
+def precise_num(value: float, language_key: str = "en", minimum_decimals: int = 2) -> str:
+    """Display configured precision, keeping very small/large values scientific.
+
+    Python's shortest round-trip representation determines the required decimal
+    places. Ordinary values retain the report's minimum precision and grouping.
+    """
+    text = str(value)
+    if "e" in text.lower():
+        _thousands, decimal = NUMBER_STYLES.get(language_key, NUMBER_STYLES["generic"])
+        return text.replace(".", decimal)
+    return num(value, language_key, max(minimum_decimals, len(text.partition(".")[2])))
+
+
 def pct(value: float, language_key: str = "en", decimals: int = 1) -> str:
     """Percentage with typographic spacing (space before % outside English)."""
     suffix = "%" if language_key in ("en", "generic") else " %"

@@ -189,22 +189,47 @@ server.serve_forever()
     assert.equal(await page.locator('.dossier-geography img').count(), 0, 'Feature metadata is inert text');
     assert.equal(await page.evaluate(() => Boolean(window.geoInjected)), false);
     const geography = page.locator('.research-details-body .dossier-geography');
+    await expect(geography.locator('.geography-overview')).toContainText('2 located');
+    await expect(geography.locator('.geography-legend')).toContainText(/point/i);
+    await expect(geography.locator('.geography-method')).toContainText('spherical');
+    await expect(geography.locator('li').nth(1).locator('.geography-route-facts')).toContainText('km');
+    await expect(geography.locator('[data-geo-frame]')).toBeDisabled();
     assert.equal(await geography.locator('svg [data-geo-select]').count(), 2,
       'Each saved point and route is a keyboard-reachable feature control');
     await expect(geography.locator('svg')).toHaveAttribute('role', 'group');
     await expect(geography.locator('svg [data-geo-select="0"]')).toHaveAttribute('role', 'button');
     await expect(geography.locator('svg [data-geo-select="0"]')).toHaveAttribute('aria-label', /Harbour <img/);
     const listButton = index => geography.locator(`.geography-feature-list button[data-geo-select="${index}"]`);
+    await geography.locator('.geography-sketch').scrollIntoViewIfNeeded();
     await geography.locator('svg [data-geo-select="0"] circle').click();
-    await expect(listButton(0)).toBeFocused();
+    await expect(listButton(0)).not.toBeFocused();
+    await expect(geography.locator('.geography-selected')).toBeInViewport();
+    await expect(geography.locator('.geography-sketch')).toBeInViewport();
     await expect(listButton(0)).toHaveAttribute('aria-pressed', 'true');
     await expect(geography.locator('li').nth(0).locator('details')).toHaveAttribute('open', '');
     await expect(geography.locator('li').nth(0).locator('pre')).toHaveText('13.4, 52.5');
+    await expect(geography.locator('.geography-selected')).toContainText('Longitude');
+    await expect(geography.locator('.geography-selected')).toContainText('Latitude');
+    await geography.locator('[data-geo-details]').click();
+    await expect(listButton(0)).toBeFocused();
     await geography.locator('svg [data-geo-select="1"]').focus();
     assert.notEqual(await geography.locator('svg [data-geo-select="1"]').evaluate(node => getComputedStyle(node).outlineStyle), 'none',
       'Keyboard focus on a route remains visible');
     await page.keyboard.press('Space');
     await expect(listButton(1)).toBeFocused();
+    await expect(geography.locator('.geography-selected')).toContainText('Mira’s journey');
+    await expect(geography.locator('.geography-selected')).toContainText('1902');
+    await expect(geography.locator('.geography-selected')).toContainText('Harbour → Station');
+    await expect(geography.locator('[data-geo-frame]')).toBeEnabled();
+    await geography.locator('[data-geo-frame]').click();
+    await geography.locator('.geography-method > summary').click();
+    await expect(geography.locator('.geography-method')).toContainText('6,371.0088');
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({width, height: 1000});
+      await geography.screenshot({path: path.join(artifacts, `route-information-${width}.png`)});
+    }
+    await page.setViewportSize({width: 1440, height: 1000});
+    await geography.locator('[data-geo-map]').click();
     await expect(geography.locator('svg [data-geo-select="1"]')).toHaveClass(/is-selected/);
     await expect(listButton(0)).toHaveAttribute('aria-pressed', 'false');
     await listButton(0).focus();
@@ -231,6 +256,11 @@ server.serve_forever()
     await secondGeography.locator('[data-geo-map]').click();
     await geography.locator('[data-geo-map]').click();
     await expect(page.locator('.geography-map .leaflet-map-pane')).toHaveCount(2);
+    await expect(geography.locator('.geography-map-number')).toHaveCount(2);
+    await expect(geography.locator('.leaflet-control-scale')).toBeVisible();
+    await geography.locator('[data-geo-frame]').click();
+    assert.ok(await geography.locator('.geography-map').evaluate(node => node._geographyMap.getBounds().contains(window.L.latLng(52.5, 13.4))),
+      'The selected point can be framed independently of the other rendered map');
     await secondGeography.locator('[data-geo-fit]').click();
     await expect(geography.locator('button[data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
     await geography.locator('[data-geo-map]').click();
@@ -238,6 +268,21 @@ server.serve_forever()
     assert.equal(writes.length, writeCount, 'Feature navigation never writes');
     assert.equal((await (await page.request.get(recordURL)).json()).snapshot, saved.snapshot, 'Feature selection is not stored');
     await page.locator('#geo-navigation-copy').evaluate(node => node.remove());
+    await page.evaluate(() => {
+      const host = document.createElement('div'); host.id = 'geo-polar-copy';
+      host.innerHTML = window.LixityDossierGeography.html({type: 'FeatureCollection', features: [{type: 'Feature',
+        geometry: {type: 'Point', coordinates: [25, 90]}, properties: {label: 'Synthetic pole'}}]});
+      document.getElementById('research-manager').appendChild(host);
+    });
+    const polar = page.locator('#geo-polar-copy .dossier-geography');
+    await polar.locator('[data-geo-map]').click();
+    await expect(polar.locator('.geography-projection-hint')).toContainText('85.05');
+    await polar.locator('button[data-geo-select="0"]').click();
+    await expect(polar.locator('pre')).toHaveText('25, 90');
+    await polar.locator('[data-geo-clear]').click();
+    await expect(polar.locator('[aria-pressed="true"]')).toHaveCount(0);
+    await expect(polar.locator('[data-geo-frame]')).toBeDisabled();
+    await page.locator('#geo-polar-copy').evaluate(node => node.remove());
     await page.route('https://tile.openstreetmap.org/**', route => route.fulfill(failTiles ? {status: 503, body: 'Synthetic provider unavailable'} :
       {contentType: 'image/svg+xml', body: '<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256"><rect width="256" height="256" fill="#edf2ef"/></svg>'}));
     const mapToggle = geography.locator('[data-geo-map]'), map = geography.locator('.geography-map');
@@ -257,10 +302,15 @@ server.serve_forever()
     await geography.locator('[data-geo-fit]').click();
     assert.ok(await map.evaluate(node => node._geographyMap.getBounds().contains(window.L.latLng(52.5, 13.4))), 'Fit restores the authored feature bounds');
     await map.locator('[data-geo-select="0"]').click();
-    await expect(listButton(0)).toBeFocused();
+    await expect(listButton(0)).not.toBeFocused();
     await map.locator('[data-geo-select="1"]').click();
-    await expect(listButton(1)).toBeFocused();
+    await expect(listButton(1)).not.toBeFocused();
+    await expect(map).toBeInViewport();
+    await expect(geography.locator('.geography-selected')).toBeInViewport();
     await expect(map.locator('[data-geo-select="1"]')).toHaveAttribute('aria-pressed', 'true');
+    await map.locator('[data-geo-select="0"]').focus();
+    await page.keyboard.press('Enter');
+    await expect(listButton(0)).toBeFocused();
     await listButton(0).click();
     await expect(map.locator('[data-geo-select="0"]')).toHaveAttribute('aria-pressed', 'true');
     assert.equal(tileRequests.length, 0, 'Vector navigation never opts into a provider');
@@ -425,6 +475,7 @@ server.serve_forever()
     await expect(page.locator('#research-revision-history-detail .dossier-geography')).toContainText('Reviewed dateline area');
     await page.locator('[data-research-revision="1"]').click();
     await expect(page.locator('#research-revision-history-detail .dossier-geography')).toContainText('Mira’s journey');
+    await expect(page.locator('#research-revision-history-detail .geography-route-facts')).toContainText('km');
     await expect(page.locator('#research-revision-history-detail .dossier-geography')).not.toContainText('Reviewed dateline');
     await page.keyboard.press('Escape');
     await page.locator('#tab-view-analysis').click();
@@ -443,6 +494,7 @@ server.serve_forever()
         await page.setViewportSize({width, height: 950});
         assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), `${language}/${width}: dossier fits viewport`);
         const view = page.locator('.research-details-body .dossier-geography');
+        assert.ok(!(await view.locator('.geography-overview').textContent()).includes('geography_'), `${language}: overview translated`);
         assert.ok(!(await view.locator('.geography-navigation-hint').textContent()).includes('geography_'), `${language}: navigation guidance translated`);
         const beforeNavigation = requests.length;
         await view.locator('svg [data-geo-select="0"]').focus();
@@ -451,10 +503,13 @@ server.serve_forever()
         await view.locator('button[data-geo-select="1"]').focus();
         await page.keyboard.press('Space');
         await expect(view.locator('li').nth(1)).toHaveClass(/is-selected/);
+        await expect(view.locator('.geography-selected')).toContainText('Unknown destination');
+        await expect(view.locator('[data-geo-frame]')).toBeDisabled();
         await expect(view.locator('svg .is-selected')).toHaveCount(0, 'Unknown locations have list details without an invented shape');
         assert.equal(requests.length, beforeNavigation, `${language}/${width}: navigation stays offline`);
         await view.locator('[data-geo-map]').click();
         await expect(view.locator('.geography-map')).toBeVisible();
+        await expect(view.locator('.leaflet-control-scale')).toBeVisible();
         assert.ok(!(await view.locator('.geography-map-tools').textContent()).includes('geography_'), `${language}: map controls translated`);
         await view.locator('[data-geo-fit]').click();
         assert.ok(await view.locator('.geography-map').evaluate(node => Number.isFinite(node._geographyMap.getCenter().lng)), 'Dateline map has a finite center');
@@ -481,14 +536,15 @@ server.serve_forever()
         if (language === 'en') await page.locator('.research-details-body .dossier-geography').screenshot({path: path.join(artifacts, `sketch-${width}.png`)});
       }
     }
-    const staticDocument = await page.evaluate(value => '<!doctype html><html><head>' +
+    const staticDocument = await page.evaluate(([value, summary]) => '<!doctype html><html><head>' +
       Array.from(document.querySelectorAll('style')).map(node => node.outerHTML).join('') +
-      '</head><body>' + window.LixityDossierGeography.html(value) + '</body></html>', saved.record.geography);
+      '</head><body>' + window.LixityDossierGeography.html(value, summary) + '</body></html>', [saved.record.geography, saved.geography_summary]);
     const staticPage = await browser.newPage({javaScriptEnabled: false});
     await staticPage.setContent(staticDocument);
     for (const width of [1440, 320]) {
       await staticPage.setViewportSize({width, height: 950});
       await expect(staticPage.locator('li')).toHaveCount(2);
+      await expect(staticPage.locator('.geography-overview')).toHaveText(/^1 .+ · 1 .+ · 2 .+$/);
       await expect(staticPage.locator('li').nth(0)).toContainText('Reviewed dateline area');
       await expect(staticPage.locator('li').nth(1)).toContainText('Unknown destination');
       const coordinates = staticPage.locator('li').nth(0).locator('details');

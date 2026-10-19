@@ -928,7 +928,7 @@ def main() -> int:
     passport = html.escape(fingerprint.passport_text(labels=resolved.labels, language_key=resolved.key))
     _terminal_shot(
         f"lixity style {args.manuscript}",
-        f"<pre>{passport}</pre>",
+        f'<pre style="white-space:pre-wrap;overflow-wrap:anywhere">{passport}</pre>',
         OUT_DIR / "cli-style.png",
         1320,
         860,

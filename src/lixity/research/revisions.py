@@ -8,6 +8,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from .geography import summarize_geography
 from .models import (
     Claim,
     ClaimRelation,
@@ -190,7 +191,8 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
         "latest_revision": latest.revision, "is_latest": latest.revision == record.revision,
         "citations": citations, "citation_scope": citation_scope,
         "source_updates": source_updates(citations), "reference_updates": reference_updates,
-        **({"images": resolve_dossier_images(snapshot, record.body)} if isinstance(record, Dossier) else {}),
+        **({"images": resolve_dossier_images(snapshot, record.body),
+            "geography_summary": summarize_geography(record.geography)} if isinstance(record, Dossier) else {}),
         **(dossier_withdrawal(snapshot, record.id) if isinstance(record, Dossier) else {}),
         **({key: relation_view[key] for key in ("from_claim", "to_claim", "review_needed")} if relation_view else {}),
     }

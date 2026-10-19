@@ -1,6 +1,22 @@
 .dossier-geography, .geography-editor { min-width: 0; max-width: 100%; overflow-wrap: anywhere; }
 .dossier-geography { margin: 1.25rem 0; padding: 1rem; border: 1px solid var(--line); border-radius: var(--radius); }
 .dossier-geography h4 { margin-top: 0; }
+.geography-overview { font-weight: var(--weight-strong); }
+.geography-legend { display: flex; flex-wrap: wrap; gap: .5rem 1rem; margin: .8rem 0; font-size: .85rem; color: var(--fg-secondary); }
+.geography-legend > span { display: inline-flex; align-items: center; gap: .4rem; }
+.geography-symbol { display: inline-block; flex: 0 0 auto; width: 1.1rem; height: .8rem; color: var(--accent); }
+.geography-symbol-Point { width: .6rem; height: .6rem; margin-inline: .25rem; border-radius: 50%; background: currentColor; }
+.geography-symbol-LineString { height: 0; border-top: 2px dashed currentColor; }
+.geography-symbol-Polygon { border: 1px solid currentColor; background: var(--accent-light); }
+.geography-symbol-unknown { text-align: center; line-height: .8rem; }
+.geography-symbol-unknown::before { content: "?"; }
+.geography-selected { padding: .7rem .8rem; margin: .75rem 0; border-inline-start: 3px solid var(--accent); background: var(--bg); }
+.geography-selected p { margin: .35rem 0; }
+.geography-selected .geography-feature-context { max-height: 12rem; overflow-y: auto; }
+.geography-selection-actions { flex-wrap: wrap; margin-bottom: .75rem; }
+.geography-method { margin: .75rem 0; }
+.geography-method summary { cursor: pointer; }
+.geography-feature-context p { margin: .3rem 0; }
 .geography-sketch { display: block; width: 100%; max-height: 24rem; margin: .75rem auto; background: var(--bg); border: 1px solid var(--line); border-radius: var(--radius-sm); color: var(--accent); }
 .geography-sketch circle { fill: currentColor; }
 .geography-sketch path { stroke: currentColor; stroke-width: 2; stroke-linejoin: round; stroke-linecap: round; vector-effect: non-scaling-stroke; }
@@ -18,12 +34,17 @@
 .geography-feature-select { text-align: start; white-space: normal; overflow-wrap: anywhere; max-width: 100%; }
 .geography-map { height: 20rem; max-width: 100%; margin: .75rem 0; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--bg); font-family: inherit; }
 .geography-map-active > .geography-sketch { display: none; }
+.geography-map-active > .geography-sketch-hint { display: none; }
+.geography-projection-hint { display: none; }
+.geography-map-active > .geography-projection-hint { display: block; }
 .geography-map-tools { margin-top: .65rem; }
 .geography-map-tools > * + * { margin-top: .5rem; }
 .geography-map .leaflet-control-zoom a { color: var(--fg); background: var(--surface); }
 .geography-map .leaflet-control-zoom a:hover { color: var(--accent); background: var(--accent-light); }
 .geography-map .leaflet-control-attribution, .geography-map .leaflet-tooltip { font-family: inherit; color: var(--fg); background: var(--surface); }
 .geography-map .leaflet-control-attribution a { color: var(--accent); }
+.geography-map .leaflet-control-scale-line { color: var(--fg); background: var(--surface); border-color: var(--fg-secondary); text-shadow: none; }
+.geography-map .leaflet-tooltip { max-width: 16rem; white-space: normal; overflow-wrap: anywhere; }
 .geography-map .leaflet-interactive.is-selected { stroke-width: 5; }
 .geography-map .leaflet-interactive:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; }
 .geography-map-number { pointer-events: none; }

@@ -1025,7 +1025,7 @@ def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
         ("z_mild", "--z-mild", "Notable |z*| threshold"),
         ("z_strong", "--z-strong", "Strong |z*| threshold"),
         ("fdr_q", "--fdr-q", "Nominal q for the selected FDR method"),
-        ("dim_score_threshold", "--dim-threshold", "|dimension score| threshold"),
+        ("dim_score_threshold", "--dim-threshold", "Per-axis |score| cutoff in standardized midrank PCA space"),
     ):
         policy = FingerprintThresholds.numeric_inputs[key]
         bounds = f"{'>' if policy.minimum_exclusive else '>='} {policy.minimum:g}"
@@ -1074,6 +1074,13 @@ def main(argv: list[str] | None = None) -> int:
             configure_service(sub.add_parser(name, help=help_text))
             continue
         p = sub.add_parser(name, help=help_text, description=help_text)
+        if name == "style":
+            p.epilog = (
+                "Dimensions compare complete chapters using standardized midranks. "
+                "Text output explains coverage, chapter scores and signed loadings; "
+                "JSON dimension_diagnostics reports support and unavailable-data reasons. "
+                "The per-axis cutoff box is not a confidence region or a literary-quality target."
+            )
         if name == "completion":
             p.add_argument(
                 "shell",

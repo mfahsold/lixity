@@ -34,13 +34,15 @@ Choose one contrast that makes you curious. You do not need to inspect every mea
 
 Select a paragraph block in the action chapter to open its text and source lines. You can also use Tab to focus a block, then press Enter or Space. Read the paragraph alongside the opening description.
 
-The passage appears first; expand **Values** when you need its measurements. Chapter comparisons, reference bands, dimensions and structural diagnostics share the style area. Keep the scene's purpose in mind before treating a difference as something to change.
+The passage appears first; expand **Values** when you need its measurements. Select a chapter in the style dimensions to inspect its scores and return to its passage; nearby help explains how to read the view. Keep the scene's purpose in mind before treating a difference as something to change.
 
 Ask what changed: the kind of scene, what the character is doing, or how the sentences are arranged. Measurements cannot answer that question without the passage.
 
 ## 3. Follow the passage to its research
 
 Switch to [**Research**](../demo/report.html#research-manager) and open **Warehouse 4 case notes**. Inspect its historical map and harbour view, then open the linked **Attempted warehouse entry** claim and retained customs-log passage.
+
+In its geography view, select a place or route to read its context and frame it on the offline map. The view explains its coordinates, distances and limits.
 
 Open **Review** to find the saved quote: “Someone had tried the eastern gate of Warehouse 4.” The source passage, authored claim and manuscript quotation are separate records connected by an explicit author association. The log, people and incident are invented; the credited historical images do not verify them.
 

@@ -649,6 +649,163 @@ class TestStyleDimensions(unittest.TestCase):
         self.assertIn("normal-model reference hits", text)
 
 
+class TestDimensionInformation(unittest.TestCase):
+    def fingerprint(self, values):
+        fp = StyleFingerprint(
+            values=values,
+            baseline={name: {"n": len(column), "median": 0.0, "sigma": 1.0}
+                      for name, column in values.items()},
+            n_chapters=len(next(iter(values.values()))),
+        )
+        fp.dimensions = fp._derive_dimensions()
+        return fp
+
+    def test_diagnostics_explain_each_unavailable_population(self):
+        cases = (
+            ({"asl": {1: 1.0, 2: 2.0, 3: 3.0}}, "insufficient_features"),
+            ({name: {1: 1.0, 2: 2.0, 3: None} for name in
+              ("asl", "staccato_pct", "hd_d")}, "insufficient_complete_chapters"),
+            ({name: {1: 1.0, 2: 1.0, 3: 1.0} for name in
+              ("asl", "staccato_pct", "hd_d")}, "insufficient_varying_features"),
+        )
+        for values, status in cases:
+            with self.subTest(status=status):
+                fp = self.fingerprint(values)
+                self.assertEqual(fp.dimensions, [])
+                summary = fp.passport()["dimension_diagnostics"]
+                self.assertEqual(summary["status"], status)
+                self.assertEqual(summary["scored_chapters"], [])
+                self.assertEqual(summary["min_chapters"], 3)
+                self.assertEqual(summary["min_features"], 3)
+                self.assertIsNone(summary["retained_variance"])
+
+    def test_summary_preserves_complete_cases_and_dropped_constant_features(self):
+        fp = self.fingerprint({
+            "asl": {1: None, 2: 1.0, 3: 2.0, 4: 3.0},
+            "staccato_pct": {1: 9.0, 2: 3.0, 3: 2.0, 4: 1.0},
+            "hd_d": {1: 0.4, 2: 0.5, 3: 0.7, 4: 0.6},
+            "dialog_pct": {1: 9.0, 2: 1.0, 3: 1.0, 4: 1.0},
+        })
+        summary = fp.passport()["dimension_diagnostics"]
+        self.assertEqual(summary["method"], "standardized_midranks")
+        self.assertEqual(summary["status"], "available")
+        self.assertEqual(summary["total_chapters"], 4)
+        self.assertEqual(summary["complete_chapters"], [2, 3, 4])
+        self.assertEqual(summary["scored_chapters"], [2, 3, 4])
+        self.assertIn("dialog_pct", summary["candidate_features"])
+        self.assertEqual(summary["features"], ["asl", "staccato_pct", "hd_d"])
+        self.assertEqual(summary["omitted_chapters"], [{"chapter": 1, "missing_features": ["asl"]}])
+        self.assertAlmostEqual(summary["retained_variance"], 1.0, places=3)
+        self.assertEqual(summary["score_threshold"], 2.5)
+        self.assertEqual(fp.passport()["meta"]["schema_version"], 4)
+
+    def test_rounding_does_not_decide_dimension_flags(self):
+        values = {name: dict(enumerate([1.0, 2.0, 3.0, 4.0], 1))
+                  for name in ("asl", "staccato_pct", "hd_d")}
+        fp = self.fingerprint(values)
+        # The endpoint score is sqrt(3) * 1.5 / sqrt(5/3) = 2.012461...
+        fp.thresholds = FingerprintThresholds(dim_score_threshold=2.014)
+        unflagged = fp._derive_dimensions()
+        fp.thresholds = FingerprintThresholds(dim_score_threshold=2.01)
+        flagged = fp._derive_dimensions()
+        self.assertEqual(unflagged[0]["scores"], {1: -2.01, 2: -0.67, 3: 0.67, 4: 2.01})
+        self.assertEqual(flagged[0]["scores"], unflagged[0]["scores"])
+        self.assertEqual(unflagged[0]["flagged"], [])
+        self.assertEqual(flagged[0]["flagged"], [1, 4])
+
+    def test_text_does_not_assign_a_direction_to_rounded_zero(self):
+        fp = StyleFingerprint(dimensions=[{
+            "index": 1, "variance": 0.0, "loadings": {"asl": 1.0},
+            "scores": {1: -0.0}, "flagged": [],
+        }])
+        text = fp.passport_text()
+        self.assertIn("D1 0.00", text)
+        self.assertNotIn("D1 -0.00", text)
+
+    def test_cutoff_help_preserves_configuration_precision_in_text_and_ui(self):
+        from lixity.language import get_language_profile
+        from lixity.ui.dimensions import style_dimensions
+
+        _, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE))
+        fp = self.fingerprint({name: {1: 1.0, 2: 2.0, 3: 3.0}
+                               for name in ("asl", "staccato_pct", "hd_d")})
+        for threshold, english in ((0.004, "0.004"), (2.014, "2.014"),
+                                   (2.00014, "2.00014"), (1e-100, "1e-100")):
+            fp.thresholds = FingerprintThresholds(dim_score_threshold=threshold)
+            fp.dimensions = fp._derive_dimensions()
+            for language in ("en", "de"):
+                expected = english if language == "en" else english.replace(".", ",")
+                labels = get_language_profile(language).labels
+                with self.subTest(threshold=threshold, language=language, consumer="text"):
+                    self.assertIn("|score| ≥ " + expected, fp.passport_text(labels, language))
+                with self.subTest(threshold=threshold, language=language, consumer="ui"):
+                    rendered = style_dimensions(chapters, fp, labels, language)
+                    self.assertTrue("|score| ≥ " + expected in html_module.unescape(rendered))
+                    match = re.search(r'data-dim3d="([^"]*)"', rendered)
+                    payload = json.loads(html_module.unescape(match.group(1)))
+                    self.assertEqual(payload["threshold"], threshold)
+                    self.assertEqual(payload["threshold_label"], expected)
+
+    def test_text_and_canvas_do_not_invent_loading_poles(self):
+        from lixity.ui.dimensions import style_dimensions
+
+        _, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE))
+        for sign, absent in ((1, "No negative loadings"), (-1, "No positive loadings")):
+            with self.subTest(sign=sign):
+                fp = StyleFingerprint(dimensions=[{
+                    "index": 1, "variance": 1.0,
+                    "loadings": {"asl": sign * 0.8, "hd_d": sign * 0.6},
+                    "scores": {1: 2.5}, "flagged": [],
+                }])
+                rendered = style_dimensions(chapters, fp)
+                match = re.search(r'data-dim3d="([^"]*)"', rendered)
+                payload = json.loads(html_module.unescape(match.group(1)))
+                self.assertEqual(payload["axes"][0]["neg" if sign == 1 else "pos"], "")
+                self.assertIn(absent, rendered)
+                text = fp.passport_text()
+                self.assertIn(absent, text)
+                self.assertIn("+0.800" if sign == 1 else "-0.800", text)
+
+    def test_panel_explains_unavailable_dimensions_and_keeps_real_flags(self):
+        from lixity.ui.dimensions import style_dimensions
+
+        _, chapters = ParagraphProfiler(CorpusConfig(language="en")).profile_blocks(
+            parse_markdown_blocks(DIMENSION_SAMPLE))
+        fp = self.fingerprint({"asl": {1: 1.0, 2: 2.0, 3: 3.0}})
+        unavailable = style_dimensions(chapters, fp)
+        self.assertIn('id="dimensions"', unavailable)
+        self.assertIn("At least 3 usable features", unavailable)
+        fp = StyleFingerprint(dimensions=[{"index": 1, "variance": 1.0, "loadings": {"asl": 1.0},
+                                          "scores": {1: 2.5}, "flagged": []}])
+        rendered = style_dimensions(chapters, fp)
+        self.assertIn('id="dim-chapter-select"', rendered)
+        self.assertIn('id="dim-selection"', rendered)
+        self.assertIn('id="dim-read-chapter"', rendered)
+        self.assertIn('id="dim-expert"', rendered)
+        self.assertIn("Not flagged", rendered)
+        self.assertNotIn('"flagged": true', html_module.unescape(rendered))
+
+    def test_missing_diagnostics_do_not_invent_an_unavailability_reason(self):
+        from lixity.ui.dimensions import style_dimensions
+
+        rendered = style_dimensions([], StyleFingerprint())
+        self.assertIn("Projection information is unavailable", rendered)
+        self.assertNotIn("At least 3 usable features", rendered)
+        self.assertNotIn('class="dim-coverage"', rendered)
+
+    def test_short_dashboard_explains_missing_projection_without_dangling_navigation(self):
+        rendered = api.dashboard("## A\n\nRain falls.\n\n## B\n\nA bird flies.", language="en")
+        self.assertTrue("A style reference needs comparable chapters" in rendered)
+        self.assertTrue('id="dimensions"' in rendered, "unavailable projections need a visible explanation")
+        self.assertIn("At least 3 usable features", rendered)
+        self.assertNotIn('id="dim-3d-canvas"', rendered)
+        self.assertIn('href="#style"', rendered)
+        empty = api.dashboard("", language="en")
+        self.assertNotIn('href="#style"', empty)
+
+
 # ---------------------------------------------------------------------------
 #  Structural diagnostics tests
 # ---------------------------------------------------------------------------

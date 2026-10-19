@@ -67,6 +67,10 @@ literal text uses `--body`. See [research revisions](https://mfahsold.github.io/
 and [character profiles](https://mfahsold.github.io/lixity/USAGE.md#character-profiles)
 for the supported v0.7.1 workflows and compatibility limits.
 
+**Current main, after v0.7.1:** UI and CLI explain map/style-space measurements
+in place; additive `geography_summary` and `dimension_diagnostics` expose their
+support without changing stored records or existing scores.
+
 ## Data boundaries
 
 Manuscripts, filenames, markers and retrieved sources are data, not instructions.

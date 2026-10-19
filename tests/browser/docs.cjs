@@ -28,6 +28,19 @@ const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.h
 const demoTitle = 'The Crate at Warehouse 4';
 const demoQuote = 'Someone had tried the eastern gate of Warehouse 4.';
 
+async function withoutRequests(page, description, exercise) {
+  const requests = [];
+  const record = request => requests.push({url: request.url(), method: request.method()});
+  page.on('request', record);
+  try {
+    await exercise();
+    await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
+    assert.deepEqual(requests, [], description);
+  } finally {
+    page.off('request', record);
+  }
+}
+
 async function returnToTop(page, route) {
   const backTop = page.locator('a.site-back-top[href="#top"]');
   await backTop.focus();
@@ -130,6 +143,49 @@ async function checkDemoLocalControl(control) {
     'The unavailable control is associated with its visible explanation');
 }
 
+async function checkGeographyInsights(page, geography) {
+  await expect(geography).toContainText("Night watchman's walk");
+  await expect(geography).toContainText("Customs officer's drive");
+  await expect(geography.locator('svg')).toBeVisible();
+  await expect(geography.locator('li')).toHaveCount(5);
+  await expect(geography.locator('.geography-overview')).toContainText('5 located');
+  await expect(geography.locator('.geography-overview')).toContainText('0 unplaced');
+  await expect(geography.locator('.geography-legend')).toContainText('Route');
+  const labels = await geography.locator('svg text').evaluateAll(nodes => nodes.map(node => [node.getAttribute('x'), node.getAttribute('y')].join(',')));
+  assert.equal(new Set(labels).size, labels.length, 'Canonical point and route number markers use distinct anchors');
+  await withoutRequests(page, 'Map selection, context and framing stay local without tiles or writes', async () => {
+    const route = geography.locator('.geography-feature-list [data-geo-feature-index="2"]');
+    await route.locator('button[data-geo-select]').click();
+    const selected = geography.locator('.geography-selected');
+    await expect(selected).toContainText("Night watchman's walk");
+    await expect(selected).toContainText('Night watchman');
+    await expect(selected).toContainText(await route.locator('.geography-route-facts').innerText());
+    await expect(geography.locator('[data-geo-frame]')).toBeEnabled();
+    await geography.locator('[data-geo-frame]').click();
+    const map = geography.locator('.geography-map.leaflet-container');
+    await expect(map).toBeVisible();
+    await expect(map.locator('[data-geo-select="2"]')).toHaveAttribute('aria-pressed', 'true');
+    const focusedZoom = await map.evaluate(element => element._geographyMap.getZoom());
+    await geography.locator('[data-geo-fit]').click();
+    assert.ok(await map.evaluate(element => element._geographyMap.getZoom()) <= focusedZoom,
+      'Fit all restores the full authored extent after framing one route');
+    const method = geography.locator('.geography-method');
+    await method.locator('summary').click();
+    for (const paragraph of await method.locator('p').all()) await expect(paragraph).toBeVisible();
+    await expect(method).toContainText('great-circle');
+    await expect(method).toContainText('travel time');
+    await method.locator('summary').click();
+    await geography.locator('[data-geo-details]').click();
+    await expect(route.locator('button[data-geo-select]')).toBeFocused();
+    await geography.locator('[data-geo-clear]').click();
+    await expect(geography.locator('[data-geo-frame]')).toBeDisabled();
+    await expect(geography.locator('[data-geo-select][aria-pressed=true]')).toHaveCount(0);
+    await route.locator('button[data-geo-select]').click();
+    await expect(selected).toContainText("Night watchman's walk");
+    await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
+  });
+}
+
 async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const notice = page.locator('#example-context');
   const credits = page.locator('#research-source-credits');
@@ -206,16 +262,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(sourceContext.locator('a[href^="https://commons.wikimedia.org/"]')).toBeVisible();
   await sourceContext.locator('summary').click();
   const geography = detail.locator('.dossier-geography');
-  await expect(geography).toContainText("Night watchman's walk");
-  await expect(geography).toContainText("Customs officer's drive");
-  await expect(geography.locator('svg')).toBeVisible();
-  await expect(geography.locator('li')).toHaveCount(5);
-  const labels = await geography.locator('svg text').evaluateAll(nodes => nodes.map(node => [node.getAttribute('x'), node.getAttribute('y')].join(',')));
-  assert.equal(new Set(labels).size, labels.length, 'Canonical point and route number markers use distinct anchors');
-  await geography.locator('[data-geo-map]').click();
-  await expect(geography.locator('.geography-map.leaflet-container')).toBeVisible();
-  await expect(geography.locator('[data-geo-basemap]')).not.toBeChecked();
-  await geography.locator('[data-geo-fit]').click();
+  await checkGeographyInsights(page, geography);
   const diagram = detail.locator('[data-research-diagram]').first();
   await diagram.scrollIntoViewIfNeeded();
   await expect(diagram).toHaveAttribute('data-diagram-state', 'ready');
@@ -263,12 +310,59 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await assertReadOnly();
 }
 
+async function checkStyleInsights(page, javaScriptEnabled, width, colorScheme) {
+  const dimensions = page.locator('#dimensions');
+  if (javaScriptEnabled) await page.locator('#style-tab-dimensions').click();
+  await expect(dimensions.locator('.dim-guide')).toContainText('chapter order');
+  await expect(dimensions.locator('.dim-coverage')).toContainText('6 / 6');
+  const cutoff = dimensions.locator('.dim-cutoff');
+  await cutoff.locator('summary').click();
+  await expect(cutoff.locator('p')).toBeVisible();
+  await expect(cutoff).toContainText('not a confidence region');
+  await cutoff.locator('summary').click();
+  const expert = dimensions.locator('#dim-expert');
+  await expert.locator('summary').click();
+  await expect(expert.locator('p').first()).toBeVisible();
+  await expect(expert).toContainText('standardized low-to-high feature ranks');
+  await expect(expert.locator('table')).toHaveCount(3);
+  await expert.locator('summary').click();
+  const select = dimensions.locator('#dim-chapter-select');
+  const projection = dimensions.locator('#dim-projection');
+  if (!javaScriptEnabled) {
+    await expect(select).toBeDisabled();
+    await expect(projection).toBeDisabled();
+    await expect(dimensions.locator('#dim-scores tbody tr')).toHaveCount(6);
+    return;
+  }
+  await withoutRequests(page, 'Style selection and planar views require no requests or writes', async () => {
+    await select.selectOption('2');
+    const selected = dimensions.locator('#dim-selection');
+    await expect(selected).toHaveAttribute('data-chapter', '2');
+    const row = dimensions.locator('#dim-scores tbody tr').filter({has: page.locator('a[href="#ch-2"]')});
+    assert.deepEqual(await selected.locator('dd').allTextContents(), await row.locator('td.num').allTextContents(),
+      'Persistent scores match the public semantic score table');
+    await expect(selected).toContainText(await row.locator('td').last().innerText());
+    await expect(dimensions.locator('#dim-read-chapter')).toHaveAttribute('href', '#ch-2');
+    const canvas = dimensions.locator('#dim-3d-canvas');
+    const spatial = await canvas.evaluate(element => element.toDataURL());
+    await projection.selectOption('d1-d2');
+    await expect(canvas).toHaveAttribute('data-projection', 'd1-d2');
+    assert.notEqual(await canvas.evaluate(element => element.toDataURL()), spatial,
+      'The public planar control changes the rendered chapter plot');
+    await page.mouse.move(0, 0);
+    await expect(selected).toHaveAttribute('data-chapter', '2');
+    await dimensions.screenshot({path: path.join(artifacts, `report-style-selected-${width}-${colorScheme}.png`)});
+    await projection.selectOption('3d');
+  });
+}
+
 async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('.page').count(), 1, 'The example uses the generated report layout');
   assert.ok((await page.locator('.page').innerText()).length > 1000);
   await assertDemoReadOnly(page);
   assert.equal(await page.locator('.chapter').count(), 6);
   assert.ok(await page.locator('.chip').count() > 6, 'The report exposes actual paragraph blocks');
+  await checkStyleInsights(page, javaScriptEnabled, width, colorScheme);
   if (javaScriptEnabled && (colorScheme !== 'light' || width === 390)) return;
   if (javaScriptEnabled) await page.locator('#style-tab-dimensions').click();
   else {
@@ -494,7 +588,20 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#tab-view-research')).toBeVisible();
   await expect(page.locator('#tab-view-project')).toBeEnabled();
   await expect(page.locator('body')).toHaveAttribute('data-manuscript-links', 'read');
-  if (colorScheme !== 'light' || width === 390) return;
+  if (colorScheme !== 'light' || width === 390) {
+    await page.locator('#tab-view-research').click();
+    await page.locator('[data-rtab=dossiers]').click();
+    const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
+    await dossier.locator('[data-research-detail=dossier]').click();
+    const detail = dossier.locator('.research-details-body');
+    await expect(detail.locator('.dossier-geography')).toBeVisible();
+    await Promise.all((await detail.locator('.dossier-image img').all()).map(image =>
+      image.evaluate(element => { element.loading = 'eager'; return element.decode(); })));
+    await checkGeographyInsights(page, detail.locator('.dossier-geography'));
+    await assertDemoReadOnly(page);
+    await detail.locator('.dossier-geography').screenshot({path: path.join(artifacts, `research-geography-${width}-${colorScheme}.png`)});
+    return;
+  }
   await checkDemoCapabilities(page, width);
   // The saved research quotation belongs to the very manuscript being analysed.
   await page.locator('#text-search').fill(demoQuote);
