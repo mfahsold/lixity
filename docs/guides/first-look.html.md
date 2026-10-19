@@ -14,7 +14,7 @@ Matthias Fahsold developed Lixity as an architect and developer at ROST Services
 
 [Open the demo project](../demo/report.html)
 
-The demo uses the existing Lixity workspace with editing, imports and local-machine actions disabled. You can explore it without installing software, uploading a manuscript or signing up; its header states the generating version.
+The demo uses all three native workspace views. Explore manuscript analysis and retained research, keep a **Dossier alongside** the manuscript, download the claim-evidence matrix or choose a prepared PDF layout. Actions marked **Local app**, including Search and Compare, are disabled previews with an [installation link](installation.html). The demo cannot import, edit or save; no installation, upload or account is needed.
 
 Enable JavaScript for paragraph expansion, view switching, research and charts. Paragraph text, chapter tables, source credits and PDF links remain readable without it.
 

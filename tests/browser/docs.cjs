@@ -93,6 +93,43 @@ async function checkReturnNavigation(page, route, exercise) {
   }
 }
 
+async function assertDemoReadOnly(page) {
+  const writers = 'input[type=file], textarea, [data-research-revise], [data-dossier-add-image], ' +
+    '[data-dossier-claim], [data-dossier-decision], [data-use-passage], ' +
+    '[data-geo-add], [data-geo-remove], [data-action], [data-manuscript-link-selection], ' +
+    '[data-manuscript-link-accept], #research-revision-edit-tab, #research-revision-save, ' +
+    '#research-revision-batch-add, #r-dos-create-btn, #r-claim-create-btn, #r-decision-create-btn, ' +
+    '#r-ingest-btn, #r-zotero-browse';
+  await expect(page.locator(`:is(${writers}):visible:not(:disabled)`)).toHaveCount(0);
+  await expect(page.locator('a[href^="zotero:"]')).toHaveCount(0);
+  for (const control of await page.locator('[data-demo-local]').all()) await expect(control).toBeDisabled();
+  await expect(page.locator('[contenteditable=true]:visible')).toHaveCount(0);
+}
+
+async function checkDemoLocalControl(control) {
+  // Native authoring sections may start compact, but remain inspectable.
+  for (let depth = 0; depth < 8; depth++) {
+    const closed = control.locator('xpath=ancestor::details[not(@open)][last()]');
+    if (!await closed.count()) break;
+    await closed.locator(':scope > summary').click();
+  }
+  await expect(control).toBeVisible();
+  await expect(control).toBeDisabled();
+  await expect(control).toHaveAttribute('data-demo-local', 'true');
+  const note = control.locator('xpath=ancestor::*[.//*[contains(concat(" ",normalize-space(@class)," ")," demo-local-note ")]][1]')
+    .locator('.demo-local-note').first();
+  await expect(note).toBeVisible();
+  await expect(note).toContainText(/Local app/i);
+  const installation = note.locator('a[href="../guides/installation.html"]');
+  await expect(installation).toBeVisible();
+  assert.ok((await installation.innerText()).trim(), 'Local-only guidance includes a named installation link');
+  await installation.focus();
+  await expect(installation).toBeFocused();
+  const description = await control.getAttribute('aria-describedby');
+  assert.ok(description && description.split(/\s+/).includes(await note.getAttribute('id')),
+    'The unavailable control is associated with its visible explanation');
+}
+
 async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const notice = page.locator('#example-context');
   const credits = page.locator('#research-source-credits');
@@ -106,8 +143,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await expect(credits).toContainText('Library of Congress');
   await expect(credits.locator('a[href="../assets/research/sources.json"]')).toBeVisible();
   function assertReadOnly() {
-    return expect(page.locator('input[type=file], textarea, [data-research-revise], [data-dossier-add-image], [data-geo-add], [data-geo-remove], [data-action], [data-manuscript-link-selection], [data-manuscript-link-accept], a[href^="zotero:"], #research-revision-edit-tab, #research-revision-save, #research-revision-batch-add, #r-dos-create-btn, #r-claim-create-btn, #r-decision-create-btn, #r-ingest-btn, #r-zotero-browse, #tab-view-project, #project-controls')
-      .locator('visible=true')).toHaveCount(0);
+    return assertDemoReadOnly(page);
   }
   await assertReadOnly();
   if (!javaScriptEnabled) {
@@ -120,8 +156,10 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('[data-rtab=sources]').click();
   await expect(page.locator('#research-sources-list .research-card')).toHaveCount(4);
   await expect(page.locator('#zotero-box')).not.toHaveAttribute('open', '');
-  const zoteroReturn = page.locator('#research-sources-list a[href^="zotero:"]');
+  const zoteroReturn = page.locator('#research-sources-list .research-zotero-link');
   await expect(zoteroReturn).toHaveCount(1);
+  await expect(zoteroReturn).toHaveAttribute('aria-disabled', 'true');
+  await expect(zoteroReturn).not.toHaveAttribute('href', /.+/);
   assert.equal(await zoteroReturn.evaluate(link =>
     link.dispatchEvent(new MouseEvent('click', {bubbles: true, cancelable: true}))), false,
   'Offline fixture source-return links cannot activate the Zotero protocol');
@@ -137,6 +175,8 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
   await dossier.locator('[data-research-detail=dossier]').click();
   const detail = dossier.locator('.research-details-body');
+  await checkDemoLocalControl(detail.locator('[data-dossier-claim]'));
+  await checkDemoLocalControl(detail.locator('[data-dossier-decision]'));
   const authoredClaim = detail.locator('.research-dossier-claims-list li').filter({hasText: 'Attempted warehouse entry'});
   await expect(authoredClaim.locator('[data-manuscript-link-count="1"]')).toBeVisible();
   await expect(authoredClaim.locator('[data-claim-revision="1"]')).toBeVisible();
@@ -226,8 +266,7 @@ async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
 async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('.page').count(), 1, 'The example uses the generated report layout');
   assert.ok((await page.locator('.page').innerText()).length > 1000);
-  assert.equal(await page.locator('input[type=file], textarea, [contenteditable=true], #controls, #nda-draft, #view-pane-project, [data-marker-kind]')
-    .locator('visible=true').count(), 0, 'The example exposes no upload, writer, settings, NDA or editing controls');
+  await assertDemoReadOnly(page);
   assert.equal(await page.locator('.chapter').count(), 6);
   assert.ok(await page.locator('.chip').count() > 6, 'The report exposes actual paragraph blocks');
   if (javaScriptEnabled && (colorScheme !== 'light' || width === 390)) return;
@@ -257,10 +296,10 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await chip.getAttribute('aria-expanded'), 'true');
   await expect(passage).toBeVisible();
   await expect(passage).toHaveCSS('opacity', '1');
-  assert.ok((await passage.locator('p').innerText()).length > 50, 'Opening a block exposes the synthetic source paragraph');
+  assert.ok((await passage.locator('.ptext-inner > p').innerText()).length > 50, 'Opening a block exposes the synthetic source paragraph');
   await passage.locator('.paragraph-values > summary').click();
   assert.ok((await passage.locator('.anchor').innerText()).length > 5, 'The passage includes source lines');
-  await passage.locator('p').click();
+  await passage.locator('.ptext-inner > p').click();
   await page.screenshot({path: path.join(artifacts, `report-passage-${width}-${colorScheme}.png`)});
   await chip.focus();
   await page.keyboard.press('Space');
@@ -304,8 +343,145 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await page.locator('#dimensions').screenshot({path: path.join(artifacts, `report-style-${width}-${colorScheme}.png`)});
 }
 
+async function checkDemoCapabilities(page, width) {
+  for (const id of ['btn-modal-new-project', 'btn-modal-open-project']) {
+    await checkDemoLocalControl(page.locator('#' + id));
+  }
+  await page.locator('#btn-modal-new-project').evaluate(control => {
+    control.disabled = false;
+    control.click();
+  });
+  await expect(page.locator('#modal-project-create')).not.toBeVisible();
+  await expect(page.locator('#btn-modal-new-project')).toBeDisabled();
+  assert.equal(await page.evaluate(async () => {
+    try {
+      await fetch('/api/research-dossier', {method: 'POST', body: '{}'});
+      return false;
+    } catch (_) { return true; }
+  }), true, 'The public adapter rejects a write even when called outside a disabled form');
+  await page.locator('#tab-view-project').click();
+  await expect(page.locator('#view-pane-project')).toBeVisible();
+  await checkDemoLocalControl(page.locator('[data-action=settings]'));
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    `Inspectable local settings stay within ${width}px`);
+  await expect(page.locator('#view-pane-project')).toHaveCSS('opacity', '1');
+  await page.locator('#controls').scrollIntoViewIfNeeded();
+  await page.screenshot({path: path.join(artifacts, `demo-local-settings-${width}.png`)});
+  await page.locator('#tab-view-analysis').click();
+
+  // The native form downloads a reviewed copy without running PDF generation.
+  await page.locator('#manuscript-pdf-title').click();
+  await expect(page.locator('#manuscript-pdf')).toContainText(/prepared copies/i);
+  await page.locator('#manuscript-pdf-layout').selectOption('book');
+  const pdfDownload = page.waitForEvent('download');
+  await page.locator('#manuscript-pdf-download').click();
+  const pdf = await pdfDownload;
+  assert.equal(pdf.suggestedFilename(), 'manuscript-book.pdf');
+  const pdfPath = path.join(artifacts, `demo-book-${width}.pdf`);
+  await pdf.saveAs(pdfPath);
+  assert.deepEqual(fs.readFileSync(pdfPath), fs.readFileSync(path.join(root, 'demo/warehouse-4-book.pdf')),
+    'The native PDF picker downloads the exact prepared book PDF');
+  await expect(page.locator('#manuscript-pdf-layout')).toHaveValue('book');
+  await page.locator('#manuscript-pdf-title').click();
+
+  for (const id of ['heatmap', 'bands', 'dimensions', 'structural']) {
+    const tab = page.locator(`[data-style-view="${id}"]`);
+    await tab.click();
+    await expect(tab).toHaveAttribute('aria-selected', 'true');
+    await expect(page.locator('#' + id)).toBeVisible();
+    await expect(page.locator('#style-panels > .panel:visible')).toHaveCount(1);
+  }
+  for (const link of await page.locator('#analysis-sections [data-section-link]').all()) {
+    await link.click();
+    const target = await link.getAttribute('data-section-link');
+    await expect(page).toHaveURL(new RegExp('#' + target + '$'));
+    await expect(page.locator('#' + target)).toBeVisible();
+    await expect(page.locator('#' + target)).toBeInViewport();
+  }
+
+  await page.locator('[data-review-passage]').click();
+  const passage = page.locator('#chapters .ptext.open').first();
+  const passageId = await passage.getAttribute('id');
+  const originalText = await passage.locator('p').first().innerText();
+  await expect(passage.locator('[data-marker-kind]')).toHaveCount(4);
+  await checkDemoLocalControl(passage.locator('[data-marker-kind]').first());
+
+  const toggle = page.locator('#workspace-reader-toggle');
+  await expect(toggle).toBeVisible();
+  await toggle.click();
+  await expect(page.locator('#workspace-reader-panel')).toBeVisible();
+  const select = page.locator('#workspace-reader-dossier');
+  await expect(select).toBeEnabled();
+  await select.selectOption({label: 'Warehouse 4 case notes'});
+  const reader = page.locator('#workspace-reader-body');
+  await expect(reader.locator('h3').first()).toHaveText('Warehouse 4 case notes');
+  await expect(reader.locator('.dossier-image img')).toHaveCount(2);
+  await expect(reader.locator('[data-research-revise], [data-dossier-add-image], [data-use-passage]')).toHaveCount(0);
+  await page.locator('#workspace-reader-close').click();
+  await expect(page.locator('#workspace-reader-panel')).not.toBeVisible();
+  await expect(toggle).toBeFocused();
+  await expect(page.locator('#analysis-review')).toBeVisible();
+  await expect(page.locator('#' + passageId + ' p').first()).toHaveText(originalText);
+
+  await page.locator('#tab-view-research').click();
+  await page.locator('[data-rtab=dossiers]').click();
+  await checkDemoLocalControl(page.locator('#r-dos-create-btn'));
+  const dossier = page.locator('#research-dossiers-list .research-card').filter({hasText: 'Warehouse 4 case notes'});
+  await checkDemoLocalControl(dossier.locator('[data-research-revise=dossier]'));
+  await dossier.locator('[data-workspace-dossier]').click();
+  await expect(page.locator('#tab-view-analysis')).toHaveAttribute('aria-selected', 'true');
+  await expect(reader.locator('h3').first()).toHaveText('Warehouse 4 case notes');
+  await reader.locator('[data-dossier-enlarge]').first().click();
+  const enlarged = page.locator('#modal-dossier-image-enlarge');
+  await expect(enlarged).toBeVisible();
+  const enlargedImage = enlarged.locator('.pswp__item[aria-hidden=false] img.pswp__img');
+  await expect(enlargedImage).toBeVisible();
+  await expect.poll(() => enlargedImage.evaluate(image => image.naturalWidth)).toBeGreaterThan(0);
+  await page.keyboard.press('Escape');
+  await expect(enlarged).not.toBeVisible();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+    `The native companion reader stays within ${width}px`);
+  await page.locator('#workspace-reader').scrollIntoViewIfNeeded();
+  await page.screenshot({path: path.join(artifacts, `demo-companion-${width}.png`)});
+  await select.press('Escape');
+  await expect(page.locator('#workspace-reader-panel')).not.toBeVisible();
+  await expect(toggle).toBeFocused();
+  await expect(page.locator('#' + passageId + ' p').first()).toHaveText(originalText);
+
+  await page.locator('#tab-view-research').click();
+  for (const [tab, submit] of [['search', 'r-search-btn'], ['grounding', 'r-ground-btn']]) {
+    await page.locator(`[data-rtab=${tab}]`).click();
+    await expect(page.locator('#rtab-' + tab)).toBeVisible();
+    await checkDemoLocalControl(page.locator('#' + submit));
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),
+      `Local-only ${tab} guidance stays within ${width}px`);
+  }
+  await page.locator('[data-rtab=claims]').click();
+  const matrixButton = page.locator('#r-claim-matrix-btn');
+  await expect(matrixButton).toBeVisible();
+  await expect(matrixButton).toBeEnabled();
+  const matrixDownload = page.waitForEvent('download');
+  await matrixButton.click();
+  const matrix = await matrixDownload;
+  assert.equal(matrix.suggestedFilename(), 'claim-evidence-matrix.md');
+  const matrixPath = path.join(artifacts, `demo-claim-matrix-${width}.md`);
+  await matrix.saveAs(matrixPath);
+  const markdown = fs.readFileSync(matrixPath, 'utf8');
+  assert.match(markdown, /^# Research Claim-Evidence Matrix: The Crate at Warehouse 4/m);
+  assert.match(markdown, /Attempted warehouse entry/);
+  assert.match(markdown, /\*\*Total Evidence Citations:\*\* 1/);
+  assert.match(markdown, /Warehouse 4 case notes/);
+  await expect(matrixButton).toBeEnabled();
+  await assertDemoReadOnly(page);
+  await page.locator('[data-rtab=dossiers]').click();
+  await page.locator('#tab-view-analysis').click();
+}
+
 async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('h1')).toHaveText(demoTitle);
+  if (javaScriptEnabled) {
+    await expect(page.locator('#tab-view-project'), 'The public demo keeps the native Project & Settings workspace discoverable').toBeVisible();
+  }
   for (const layout of ['editor', 'book', 'sheet', 'report']) {
     await expect(page.locator(`a[href="warehouse-4-${layout}.pdf"]`).first()).toBeVisible();
   }
@@ -316,9 +492,10 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   }
   await expect(page.locator('#tab-view-analysis')).toBeVisible();
   await expect(page.locator('#tab-view-research')).toBeVisible();
-  await expect(page.locator('#tab-view-project')).not.toBeVisible();
+  await expect(page.locator('#tab-view-project')).toBeEnabled();
   await expect(page.locator('body')).toHaveAttribute('data-manuscript-links', 'read');
   if (colorScheme !== 'light' || width === 390) return;
+  await checkDemoCapabilities(page, width);
   // The saved research quotation belongs to the very manuscript being analysed.
   await page.locator('#text-search').fill(demoQuote);
   const passage = page.locator('#chapters .ptext.open').filter({hasText: demoQuote}).first();
@@ -336,6 +513,9 @@ async function checkDemoWorkspace(page, javaScriptEnabled, width, colorScheme) {
   await expect(page.locator('#manuscript-link-dialog, [data-manuscript-link-selection]')).toHaveCount(0);
   await page.evaluate(() => getSelection().removeAllRanges());
   await page.locator('#tab-view-analysis').focus();
+  await page.keyboard.press('ArrowRight');
+  await expect(page.locator('#tab-view-project')).toBeFocused();
+  await expect(page.locator('#tab-view-project')).toHaveAttribute('aria-selected', 'true');
   await page.keyboard.press('ArrowRight');
   await expect(page.locator('#tab-view-research')).toBeFocused();
   await expect(page.locator('#tab-view-research')).toHaveAttribute('aria-selected', 'true');

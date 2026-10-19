@@ -136,6 +136,18 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
         assert hashlib.sha256(source_bytes).hexdigest() == item["sha256"]
 
 
+def test_demo_read_fixtures_match_native_companion_and_matrix(tmp_path, research_fixture):
+    project = tmp_path / "research-demo"
+    reader = "/api/research/dossiers?project_token=synthetic-harbour-manuscript"
+    assert research_fixture[reader] == {"ok": True, **api.list_dossiers(project)}
+    for dossier in api.list_dossiers(project)["dossiers"]:
+        endpoint = reader + "&id=" + dossier["id"].replace(":", "%3A")
+        assert research_fixture[endpoint] == {"ok": True, **api.get_dossier(project, dossier["id"])}
+        assert research_fixture[endpoint + "&research_token=synthetic-research-example"] == research_fixture[endpoint]
+    matrix = api.render_claim_matrix(api.claim_matrix_data(project), format="md")
+    assert research_fixture["/api/research/matrix?format=md"] == {"text": matrix}
+
+
 @pytest.mark.skipif(shutil.which("node") is None, reason="Node.js is needed to exercise the public read adapter")
 def test_public_read_adapter_rejects_writes_external_urls_and_unknown_local_reads(tmp_path, research_fixture):
     target = make_screenshots.build_research_demo(tmp_path, research_fixture)
@@ -146,8 +158,14 @@ def test_public_read_adapter_rejects_writes_external_urls_and_unknown_local_read
 const assert = require('node:assert/strict'), vm = require('node:vm'), fs = require('node:fs');
 const {adapter, fixture} = JSON.parse(fs.readFileSync(0, 'utf8'));
 const calls = [];
+const preparedFiles = ['https://demo.invalid/demo/warehouse-4-editor.pdf',
+  'https://demo.invalid/demo/warehouse-4-book.pdf', 'https://demo.invalid/demo/warehouse-4-sheet.pdf',
+  'https://demo.invalid/demo/warehouse-4-report.pdf'];
 const window = {fetch: async url => {
   calls.push(String(url));
+  if (preparedFiles.includes(String(url))) {
+    return new Response('%PDF-synthetic-transport-check', {headers: {'Content-Type': 'application/pdf'}});
+  }
   if (String(url) !== 'https://demo.invalid/demo/research-data.json') throw Error('Unexpected native fetch');
   return new Response(JSON.stringify(fixture), {headers: {'Content-Type': 'application/json'}});
 }};
@@ -159,6 +177,22 @@ vm.runInNewContext(adapter, {window, document: {baseURI: 'https://demo.invalid/d
   assert.equal(links.links.length, 1);
   const review = await (await window.fetch('/api/research/manuscript-review?project_token=synthetic-harbour-manuscript&research_token=synthetic-research-example')).json();
   assert.equal(review.links[0].anchor.quote, 'Someone had tried the eastern gate of Warehouse 4.');
+  const reader = await (await window.fetch('/api/research/dossiers?project_token=synthetic-harbour-manuscript&research_token=synthetic-research-example')).json();
+  assert.equal(reader.dossiers.length, 2);
+  const matrix = await window.fetch('/api/research/matrix?format=md&research_token=synthetic-research-example');
+  assert.ok(matrix.headers.get('Content-Type').startsWith('text/markdown'));
+  assert.match(await matrix.text(), /Attempted warehouse entry/);
+  for (const layout of ['editor', 'book', 'sheet', 'report']) {
+    const prepared = await window.fetch('/api/manuscript-pdf', {method: 'POST', body: JSON.stringify({
+      layout, project_token: 'synthetic-harbour-manuscript'})});
+    assert.equal(prepared.headers.get('Content-Type'), 'application/pdf');
+    assert.equal(await prepared.text(), '%PDF-synthetic-transport-check');
+  }
+  for (const body of [{layout: '../secret', project_token: 'synthetic-harbour-manuscript'},
+    {layout: 'book', project_token: 'another-project'},
+    {layout: 'book', project_token: 'synthetic-harbour-manuscript', manuscript: 'private bytes'}]) {
+    await assert.rejects(() => window.fetch('/api/manuscript-pdf', {method: 'POST', body: JSON.stringify(body)}), /read.only/i);
+  }
   await assert.rejects(() => window.fetch('/api/research/sources', {method: 'POST'}), /read.only/i);
   await assert.rejects(() => window.fetch('/api/research-manuscript-link', {method: 'POST'}), /read.only/i);
   await assert.rejects(() => window.fetch('zotero://select/library/items/DEMOLOG1'), /read.only/i);
@@ -166,7 +200,8 @@ vm.runInNewContext(adapter, {window, document: {baseURI: 'https://demo.invalid/d
   await assert.rejects(() => window.fetch('/api/project-paths'), /read.only/i);
   await assert.rejects(() => window.fetch('/api/research/unknown'), /read.only/i);
   await assert.rejects(() => window.fetch('/api/research/manuscript-links?research_token=unrecognized'), /read.only/i);
-  assert.deepEqual(calls, ['https://demo.invalid/demo/research-data.json']);
+  await assert.rejects(() => window.fetch('/api/research/dossiers?project_token=unrecognized&research_token=synthetic-research-example'), /read.only/i);
+  assert.deepEqual(calls, ['https://demo.invalid/demo/research-data.json', ...preparedFiles]);
 })().catch(error => {console.error(error); process.exitCode = 1;});
 """
     completed = subprocess.run([shutil.which("node"), "-e", script], input=json.dumps(payload),  # noqa: S603

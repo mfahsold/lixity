@@ -12,6 +12,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   images, geography and PDF exports. Former research links open that project;
   public-domain novel analyses remain secondary case studies.
 - Embedding adapters can enable manuscript review without association editing.
+- The public demo keeps the native workspace views and marks local-only actions
+  with installation links. Dossier reading, prepared PDF downloads and the
+  claim-evidence matrix use the existing application controls.
 
 ### Fixed
 - Escape in research dialogs preserves open paragraphs in the hidden Analysis view.

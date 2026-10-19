@@ -15,14 +15,20 @@ them, and coordinates are not georeferenced to the map image.
 
 ## Public artifacts
 
-- `report.html`: the existing application renderer with Analysis and Research
-  views, a GET-only `research-data.json` adapter and reviewed visual assets.
-  Editing, imports and local-machine actions are disabled; there is no live
-  Zotero connection or access to a user's running service.
+- `report.html`: the existing application renderer with all three workspace
+  views, a bounded `research-data.json` fixture and reviewed visual assets.
+  There is no live Zotero connection or access to a user's running service.
 - `research.html`: compatibility entry to `report.html#research-manager`.
 - The same six chapters as an [editorial copy](warehouse-4-editor.pdf),
   [reading copy](warehouse-4-book.pdf), [submission sheets](warehouse-4-sheet.pdf)
   and [analysis report](warehouse-4-report.pdf).
+
+Browser controls support exploring manuscript analysis, retained research, a dossier
+alongside the manuscript, prepared PDF downloads and a claim-evidence matrix.
+Actions marked **Local app**, including Search and Compare, remain visible as
+disabled previews with an [installation link](../guides/installation.html).
+The public demo cannot import, edit or save; generating new analysis or PDFs
+requires the local app.
 
 The generating version, provenance notice and unchanged distribution-license
 appendix stay outside the analyzed manuscript. The short text is a demonstration,

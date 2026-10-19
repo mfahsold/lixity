@@ -470,17 +470,10 @@ def render_dashboard(
                 f'      <button type="button" class="ctl welcome-btn" id="hero-btn-browse-project">{L("wizard_choose_action")}</button>'
             )
             parts.append("    </div>")
-            # The public examples lower the barrier of the first step: they show a
-            # finished report without importing a manuscript. The analysis
-            # language selects the matching public-domain book.
-            example = (
-                "examples/effi-briest.html"
-                if language_key == "de"
-                else "examples/pride-and-prejudice.html"
-            )
+            # Every entry point follows the same synthetic project across views.
             parts.append(
                 '    <p class="welcome-example"><a href='
-                f'"{docs_url(example)}" target="_blank" rel="noopener">'
+                f'"{docs_url("demo/report.html")}" target="_blank" rel="noopener">'
                 f"{L('welcome_example')} ↗</a></p>"
             )
             parts.append(

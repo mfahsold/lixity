@@ -27,8 +27,11 @@ Open [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.
 one read-only project with six invented English chapters. Compare the opening
 setting with chapter 2's action, then open a paragraph. Switch to **Research**
 to follow the same story through a dossier, retained sources, a claim and its
-saved manuscript quote. Compare the project's four PDF layouts from the demo.
-No install, account or upload is needed.
+saved manuscript quote. Keep a dossier alongside the manuscript, download the
+claim-evidence matrix or choose one of four prepared PDF layouts. The three
+native workspace views stay visible; actions marked **Local app** are disabled
+previews with an [installation link](https://mfahsold.github.io/lixity/guides/installation.html).
+The demo cannot import, edit or save. No install, account or upload is needed.
 
 <a id="start-here"></a>
 Built-in analysis runs on your computer. Optional external OCR workers have

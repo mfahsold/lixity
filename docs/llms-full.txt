@@ -45,8 +45,11 @@ Open [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.
 one read-only project with six invented English chapters. Compare the opening
 setting with chapter 2's action, then open a paragraph. Switch to **Research**
 to follow the same story through a dossier, retained sources, a claim and its
-saved manuscript quote. Compare the project's four PDF layouts from the demo.
-No install, account or upload is needed.
+saved manuscript quote. Keep a dossier alongside the manuscript, download the
+claim-evidence matrix or choose one of four prepared PDF layouts. The three
+native workspace views stay visible; actions marked **Local app** are disabled
+previews with an [installation link](https://mfahsold.github.io/lixity/guides/installation.html).
+The demo cannot import, edit or save. No install, account or upload is needed.
 
 <a id="start-here"></a>
 Built-in analysis runs on your computer. Optional external OCR workers have
@@ -293,7 +296,7 @@ and [security](https://github.com/mfahsold/lixity/blob/main/SECURITY.md).
 
 [The Crate at Warehouse 4](https://mfahsold.github.io/lixity/demo/report.html)
 is the default read-only product walkthrough: six synthetic English chapters,
-Analysis and Research views, retained sources, authored claims and a saved
+all three native workspace views, retained sources, authored claims and a saved
 manuscript quote in one project. Its [manuscript](https://mfahsold.github.io/lixity/research/examples/harbour-manuscript.md)
 also supplies all four PDFs: [editorial](https://mfahsold.github.io/lixity/demo/warehouse-4-editor.pdf),
 [reading](https://mfahsold.github.io/lixity/demo/warehouse-4-book.pdf),
@@ -301,6 +304,12 @@ also supplies all four PDFs: [editorial](https://mfahsold.github.io/lixity/demo/
 [analysis report](https://mfahsold.github.io/lixity/demo/warehouse-4-report.pdf).
 No upload or account is required. The old research-demo URL is a compatibility
 entry into this same project, not a second dataset.
+
+Browser controls include a dossier alongside the manuscript, prepared PDF
+downloads and the claim-evidence matrix. Actions marked Local app, including
+Search and Compare, stay visible as disabled previews with an
+[installation link](https://mfahsold.github.io/lixity/guides/installation.html).
+The demo cannot import, edit or save, or generate new analysis or PDFs.
 
 The [source catalogue](https://mfahsold.github.io/lixity/assets/research/sources.json)
 records the public-domain map/photo provenance; people, events and routes are fictional.

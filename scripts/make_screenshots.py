@@ -144,13 +144,141 @@ _PUBLIC_READ_ADAPTER = r"""(function () {
     var request = typeof input === "string" || input instanceof URL ? null : input;
     var url = new URL(request ? request.url : input, base);
     var method = String(options && options.method || request && request.method || "GET").toUpperCase();
+    // Reuse the native PDF downloader; its bounded request selects an existing
+    // reviewed file here, never a generation service or an outgoing POST.
+    if (method === "POST" && url.origin === base.origin && url.pathname === "/api/manuscript-pdf" && !url.search) {
+      var payload;
+      try { payload = JSON.parse(options && options.body || request && await request.text() || ""); } catch (_) { payload = null; }
+      if (!payload || payload.project_token !== "synthetic-harbour-manuscript" ||
+          ["editor", "book", "sheet", "report"].indexOf(payload.layout) < 0 ||
+          Object.keys(payload).some(function (key) { return key !== "layout" && key !== "project_token"; })) {
+        throw new Error("Read-only example permits prepared demo PDF downloads only");
+      }
+      return nativeFetch(new URL("warehouse-4-" + payload.layout + ".pdf", base));
+    }
     if (method !== "GET" || url.origin !== base.origin) throw new Error("Read-only example permits local fixture reads only");
     if (images.has(url.href)) return nativeFetch(url);
     var fixture = await records, key = url.pathname + url.search;
     if (!Object.prototype.hasOwnProperty.call(fixture, key)) throw new Error("Read-only example has no fixture for this request");
+    if (url.pathname === "/api/research/matrix") return new Response(fixture[key].text,
+      {status: 200, headers: {"Content-Type": "text/markdown; charset=utf-8"}});
     return new Response(JSON.stringify(fixture[key]), {status: 200, headers: {"Content-Type": "application/json"}});
   };
 })();"""
+
+
+_PUBLIC_DEMO_CONTROLS = r"""document.addEventListener("DOMContentLoaded", function () {
+  "use strict";
+  var imageResources = __REVIEWED_IMAGES__;
+  var restoreImages = window.LixityDossierImages.restoreMarkdown;
+  window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {
+    var template = document.createElement("template");
+    template.innerHTML = restoreImages(rendered, prepared);
+    template.content.querySelectorAll("img").forEach(function (image) {
+      var resource = imageResources[image.getAttribute("src")];
+      if (!resource) throw new Error("Read-only example image is absent from the reviewed fixture");
+      image.setAttribute("src", resource);
+    });
+    return template.innerHTML;
+  };
+  var noteSerial = 0;
+  function localNote(host, reason) {
+    var note = host.querySelector(":scope > .demo-local-note");
+    if (note) return note;
+    note = document.createElement("p"); note.className = "ctl-note demo-local-note";
+    note.id = "demo-local-note-" + (++noteSerial);
+    var badge = document.createElement("strong"); badge.textContent = "Local app";
+    var link = document.createElement("a"); link.href = "../guides/installation.html";
+    link.textContent = "Install Lixity";
+    note.append(badge, document.createTextNode(" · " + reason + " "), link);
+    var summary = host.tagName === "DETAILS" && host.querySelector(":scope > summary");
+    if (summary) summary.after(note); else host.prepend(note);
+    return note;
+  }
+  function unavailable(control, note) {
+    if ("disabled" in control && !control.disabled) control.disabled = true;
+    if (control.tagName === "A") { control.removeAttribute("href"); control.setAttribute("role", "link"); }
+    if (!control.dataset.demoLocal) {
+      control.dataset.demoLocal = "true";
+      control.setAttribute("aria-disabled", "true");
+    }
+    var described = (control.getAttribute("aria-describedby") || "").split(/\s+/).filter(Boolean);
+    if (described.indexOf(note.id) < 0) control.setAttribute("aria-describedby",
+      described.filter(function (id) { return id.indexOf("demo-local-note-") !== 0; }).concat(note.id).join(" "));
+  }
+  // Native browser controls stay available by default. Only operations that
+  // require the local engine or project files are marked unavailable.
+  [
+    ["#controls", "Applying project settings, registers and analysis requires the local engine."],
+    ["#nda-draft", "Creating an agreement from your details requires the local app."],
+    ["#rtab-search", "Archive search uses the local research index. List filters remain available in this demo."],
+    ["#rtab-grounding", "Comparing sources with your manuscript requires the local analysis engine."],
+    ["#research-setup-guide", "OCR and Zotero diagnostics run on your computer."],
+    ["#zotero-box", "Connecting Zotero and capturing selected attachments requires the local app."],
+    ["#r-local-import", "Importing files and OCR require the local app."],
+    ["#research-init-box", "Creating a research archive requires a local project."],
+    ["#modal-project-create, #modal-project-open", "Creating or opening your project requires the local app."],
+    ["#rtab-dossiers > .ctl-group", "Creating and saving dossiers requires a local project.", true],
+    ["#rtab-claims-list > .ctl-group:not(.research-timeline-entry):not(.research-relation-section)", "Creating claims and linking evidence requires a local project.", true],
+    ["#r-relation-form", "Saving relationships between claims requires a local project.", true],
+    ["#rtab-decisions > .ctl-group", "Recording author decisions requires a local project.", true]
+  ].forEach(function (spec) {
+    document.querySelectorAll(spec[0]).forEach(function (host) {
+      host.dataset.demoLocalScope = "true";
+      if (spec[2]) {
+        var details = document.createElement("details"); details.className = "demo-local-feature";
+        var summary = document.createElement("summary");
+        var heading = host.querySelector(".ctl-label, legend, h3");
+        summary.textContent = (heading ? heading.textContent.trim() : "Authoring") + " · Local app";
+        host.before(details); details.append(summary, host);
+      }
+      localNote(host, spec[1]);
+    });
+  });
+  ["#tab-view-project", "[data-rtab=search]", "[data-rtab=grounding]"].forEach(function (selector) {
+    var tab = document.querySelector(selector), badge = document.createElement("small");
+    badge.className = "demo-local-badge"; badge.textContent = "Local app"; tab.appendChild(badge);
+  });
+  var localActions = ["#btn-modal-new-project", "#btn-modal-open-project", "#hero-btn-new-project", "#hero-btn-open-project", "#hero-btn-browse-project",
+    "[data-action]", "[data-marker-kind]", "[data-marker-resolve]", "[data-research-revise]", "[data-decision-ack-status]",
+    "[data-use-passage]", ".selection-use", "[data-dossier-claim]", "[data-dossier-decision]", "[data-dossier-add-image]",
+    "[data-manuscript-link-selection]", "[data-manuscript-link-accept]",
+    "#research-revision-edit-tab", "#research-revision-save", "#research-revision-batch-add", "#research-revision-batch-review",
+    "#research-revision-batch-apply", "#research-revision-merge-apply", "[data-relation-retract]",
+    "a[href^='zotero:']", "a[href^='/api/']"].join(", ");
+  function markLocalActions() {
+    document.querySelectorAll("[data-demo-local-scope]").forEach(function (host) {
+      var note = host.querySelector(":scope > .demo-local-note");
+      host.querySelectorAll("button, input, select, textarea").forEach(function (control) { unavailable(control, note); });
+    });
+    document.querySelectorAll(localActions).forEach(function (control) {
+      var scope = control.closest("[data-demo-local-scope]");
+      var host = scope || control.closest(".marker-row, .research-record-actions, .research-passage-actions, .selection-toolbar, .dossier-image-actions, .research-decision-acknowledgement") || control.parentElement;
+      var note = scope ? scope.querySelector(":scope > .demo-local-note") : localNote(host, "This operation needs your local project or files.");
+      unavailable(control, note);
+    });
+    document.querySelectorAll(".manuscript-link-review, #research-manuscript-review-section").forEach(function (host) {
+      localNote(host, "Linking selected text and accepting changed anchors requires a local project.");
+    });
+  }
+  document.addEventListener("click", function (event) {
+    if (event.target.closest("[data-demo-local]")) { event.preventDefault(); event.stopImmediatePropagation(); }
+  }, true);
+  document.addEventListener("submit", function (event) {
+    if (event.target.id === "manuscript-pdf-form") return;
+    event.preventDefault(); event.stopImmediatePropagation();
+  }, true);
+  ["dragover", "drop"].forEach(function (name) {
+    document.addEventListener(name, function (event) { event.preventDefault(); event.stopImmediatePropagation(); }, true);
+  });
+  var pdf = document.getElementById("manuscript-pdf-form");
+  var pdfNote = document.createElement("p"); pdfNote.className = "ctl-note";
+  pdfNote.textContent = "Downloads prepared copies of this demo manuscript. Generating your own PDFs requires the local app.";
+  pdf.appendChild(pdfNote);
+  markLocalActions();
+  new MutationObserver(markLocalActions).observe(document.body, {childList: true, subtree: true, attributes: true, attributeFilter: ["disabled", "href"]});
+  if (location.hash && location.hash !== "#top") checkUrlHashView(); else switchActiveView("analysis");
+});"""
 
 
 def build_research_demo(root: Path, research_fixture: dict) -> Path:
@@ -188,68 +316,30 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
 
     fixture = {url: public_value(value) for url, value in research_fixture.items()
                if url.startswith("/api/research/") and url not in resources}
-    document = render_research_workspace(research_fixture, enabled_actions=["research-manuscript-review"])
+    document = render_research_workspace(research_fixture, enabled_actions=[
+        action for action in NATIVE_UI_ACTIONS
+        if action not in ("research-manuscript-link", "research-manuscript-reanchor")
+    ] + ["research-manuscript-review"], project_author="Example Author",
+        author_setting_enabled=True, project_token="a" * 64, nda_project_name=title,
+        identity_check=manuscript_identity_check(text, title, "Example Author"))
     page_title = "Lixity project demo — " + title
     document = _replace_title(document, page_title)
     head = _head_metadata(canonical=f"{SITE}/demo/report.html", title=page_title,
                           description="Explore one fictional harbour project: compare six manuscript chapters, then follow a dossier through retained evidence to an authored claim and the same manuscript passage.",
                           language="en", preview_image=("screenshots/dashboard-dossier-image.png",
                               "Historical Hamburg map retained with source provenance in a research dossier"))
-    allowed = (".view-nav-tab[data-view=analysis], .view-nav-tab[data-view=research], "
-               ".chip[data-target], [data-chapter-toggle], [data-style-view], .dim-ctl, [data-review-passage], "
-               "#paragraph-filter-reset, #layer-next, #text-search-prev, #text-search-next, #text-search-clear, "
-               "[data-rtab]:not([data-rtab=search]):not([data-rtab=grounding]), "
-               "[data-claim-view], #r-open-timeline, #r-review-refresh, [data-filter-tag], "
-               "[data-load-evidence], [data-research-history], [data-research-revision], #research-revision-history-tab, "
-               "[data-close-modal], [data-dossier-enlarge], #modal-dossier-image-enlarge button, "
-               "[data-geo-select], [data-geo-map], [data-geo-fit], .leaflet-control-zoom a, [data-diagram-enlarge], "
-               "[data-source-view], [data-source-toggle]")
-    hidden = ("#project-controls, #tab-view-project, #view-pane-project, #welcome-hero, "
-              ".marker-row, .manuscript-link-controls, [data-marker-kind], [data-manuscript-link-selection], "
-              "#research-setup-guide, #research-init-box, #r-local-import, #zotero-box, #research-revision-batch-review, "
-              "[data-rtab=search], [data-rtab=grounding], #rtab-search, #rtab-grounding, #rtab-dossiers > .ctl-group, "
-              "#rtab-claims-list > .ctl-group:not(.research-timeline-entry):not(.research-relation-section), "
-              "#r-relation-form, #rtab-decisions > .ctl-group")
     policy = f"""<style>
-{hidden} {{ display: none !important; }}
-button:not(:is({allowed})) {{ display: none !important; }}
-input[type=file], a[href^="zotero:"], a[href^="/api/"] {{ display: none !important; }}
 #example-context {{ margin-block: 1rem; }}
+.demo-local-note {{ display: flex; flex-wrap: wrap; gap: .25em; align-items: baseline; margin-block: .5rem; }}
+.demo-local-note strong {{ color: var(--muted); font-size: var(--text-note); }}
+.demo-local-badge {{ color: inherit; font-size: var(--text-note); margin-inline-start: .4em; }}
+.demo-local-feature {{ margin-block: .75rem; padding: .65rem; border: 1px solid var(--line); border-radius: var(--radius-sm); }}
+.demo-local-feature > summary {{ cursor: pointer; }}
+[data-demo-local] {{ cursor: default; }}
+a[data-demo-local] {{ opacity: .65; }}
 </style>
 <script id="research-demo-adapter">{_PUBLIC_READ_ADAPTER}</script>
-<script id="research-demo-controls">
-document.addEventListener("DOMContentLoaded", function () {{
-  var allowed = {json.dumps(allowed)};
-  var imageResources = {json.dumps(resources)};
-  var restoreImages = window.LixityDossierImages.restoreMarkdown;
-  window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {{
-    var template = document.createElement("template");
-    template.innerHTML = restoreImages(rendered, prepared);
-    template.content.querySelectorAll("img").forEach(function (image) {{
-      var resource = imageResources[image.getAttribute("src")];
-      if (!resource) throw new Error("Read-only example image is absent from the reviewed fixture");
-      image.setAttribute("src", resource);
-    }});
-    return template.innerHTML;
-  }};
-  function disableWrites() {{
-    document.querySelectorAll("button, input[type=file], textarea").forEach(function (control) {{
-      if (!control.matches(allowed) && !control.disabled) control.disabled = true;
-    }});
-  }}
-  document.addEventListener("click", function (event) {{
-    var control = event.target.closest("button, a[href^='zotero:']");
-    if (control && !control.matches(allowed)) {{ event.preventDefault(); event.stopImmediatePropagation(); }}
-  }}, true);
-  document.addEventListener("submit", function (event) {{ event.preventDefault(); event.stopImmediatePropagation(); }}, true);
-  disableWrites();
-  new MutationObserver(disableWrites).observe(document.body, {{childList: true, subtree: true}});
-  if (location.hash && location.hash !== "#top") checkUrlHashView();
-  else switchActiveView("analysis");
-  if (document.getElementById("tab-view-project").getAttribute("aria-selected") === "true") switchActiveView("analysis");
-  document.getElementById("research-hint").textContent = "Read-only public example: open a dossier, inspect its linked claim and retained evidence, then find the saved manuscript quote in Review.";
-}});
-</script>
+<script id="research-demo-controls">{_PUBLIC_DEMO_CONTROLS.replace("__REVIEWED_IMAGES__", json.dumps(resources))}</script>
 """
     restrictions = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
                     'script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; '
@@ -279,14 +369,16 @@ document.addEventListener("DOMContentLoaded", function () {{
         "Explore six fictional chapters in Analysis, then switch to Research for the same project's dossiers, "
         "retained sources, claims and saved manuscript quote. This read-only demo cannot import, edit or save; "
         "the people and incident are invented.",
-    ], [("../guides/first-look.html", "Follow the walkthrough"), ("#demo-downloads", "Download PDFs")])
+    ], [("../guides/first-look.html", "Follow the walkthrough"), ("#demo-downloads", "Download PDFs"),
+        ("../guides/installation.html", "Install the full local app")])
     about = ('<details><summary>About this demo</summary>' +
              "".join("<p>" + paragraph + "</p>" for paragraph in about_paragraphs) + '</details>')
     notice = notice.replace('<div class="license-links">', about + '<div class="license-links">', 1)
-    fallback = ('<noscript><style>.view-navigation,#view-pane-research {display:none !important;}'
+    fallback = ('<noscript><style>.view-navigation,#project-controls,#view-pane-research,#view-pane-project,.reader-controls,.marker-row {display:none !important;}'
                 '#view-pane-analysis {display:block !important;}</style>'
                 '<section class="panel"><p>Interactive research requires JavaScript. '
-                'The complete manuscript analysis, PDF downloads and source credits remain available below.</p></section></noscript>')
+                'The complete manuscript analysis, PDF downloads and source credits remain available below. '
+                '<a href="../guides/installation.html">Install the full local app</a>.</p></section></noscript>')
     document = _insert_notice(document, notice + fallback)
     credits = ['<section class="panel" id="research-source-credits"><h2>Image source credits</h2>']
     for item, _content in reviewed_visual_sources():
@@ -601,6 +693,8 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         "/api/research/manuscript-review?project_token=" + RESEARCH_DEMO_MANUSCRIPT_CONTEXT: {
             "ok": True, **research_api.review_manuscript_links(research_proj, manuscript)},
         "/api/research/timeline": {"ok": True, **research_api.timeline(research_proj)},
+        "/api/research/matrix?format=md": {
+            "text": research_api.render_claim_matrix(research_api.claim_matrix_data(research_proj), format="md")},
         "/api/research/claim-relations?include_retracted=false": {
             "ok": True, **research_api.list_claim_relations(research_proj)},
         "/api/research/claim-relations?include_retracted=true": {
@@ -652,6 +746,11 @@ No customs seals on the adjacent bonded storehouses had been broken during the e
         )}
     research_fixture["/api/research-record-prepare"] = revision_previews
     research_fixture["/api/research-revision-batch-prepare"] = {"ok": True, **research_api.prepare_record_revisions(research_proj, operations)}
+    # The native companion binds dossier reads to the selected manuscript.
+    for url, value in list(research_fixture.items()):
+        if url == "/api/research/dossiers" or url.startswith("/api/research/dossiers?id="):
+            extra = "&" + url.partition("?")[2] if "?" in url else ""
+            research_fixture["/api/research/dossiers?project_token=" + RESEARCH_DEMO_MANUSCRIPT_CONTEXT + extra] = value
     # Exact aliases preserve the native context-bound GET URLs without making
     # the public adapter strip arbitrary parameters or emulate a live server.
     research_fixture.update({
