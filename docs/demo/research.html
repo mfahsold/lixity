@@ -2291,7 +2291,7 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   justify-content: center;
   line-height: var(--line-control);
 }
-.view-nav-tab:hover {
+.view-nav-tab:hover:not(.active) {
   border-color: var(--accent);
   color: var(--accent);
 }
@@ -2616,7 +2616,7 @@ input[type=file], a[href^="zotero:"], a[href^="/api/"] { display: none !importan
 <script id="research-demo-controls">
 document.addEventListener("DOMContentLoaded", function () {
   var allowed = "[data-rtab]:not([data-rtab=search]):not([data-rtab=grounding]), [data-claim-view], #r-open-timeline, #r-review-refresh, [data-filter-tag], [data-load-evidence], [data-research-history], [data-research-revision], #research-revision-history-tab, [data-close-modal], [data-dossier-enlarge], #modal-dossier-image-enlarge button, [data-source-view], [data-source-toggle]";
-  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3A5dbc552a-c28f-4ecf-9911-d1d4383af772&source_id=urn%3Auuid%3A940856ca-466b-43b3-bb4d-fca5f3515f0c&version_id=urn%3Auuid%3A71902d4c-4fb4-4ff3-a993-74c8f8456cd4": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3A5dbc552a-c28f-4ecf-9911-d1d4383af772&source_id=urn%3Auuid%3A5c578698-0956-475b-883e-f9618ea858ca&version_id=urn%3Auuid%3A1911bc36-4345-4b29-8590-7f8ce663f5ef": "../assets/research/hamburg-harbour-1890-1900.jpg"};
+  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3Ae6bd49b1-24de-450f-b39c-a22af683fce0&source_id=urn%3Auuid%3A1539494a-6fd8-4919-96e6-d5a56962d1e1&version_id=urn%3Auuid%3Aebb7b23a-c9bf-4105-861c-49d0eac668fe": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3Ae6bd49b1-24de-450f-b39c-a22af683fce0&source_id=urn%3Auuid%3A02158808-faf5-4dbc-9a2c-5e6deb0e2ebe&version_id=urn%3Auuid%3A3d82e8c6-81d8-47dc-83dd-cbc6494514f8": "../assets/research/hamburg-harbour-1890-1900.jpg"};
   var restoreImages = window.LixityDossierImages.restoreMarkdown;
   window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {
     var template = document.createElement("template");

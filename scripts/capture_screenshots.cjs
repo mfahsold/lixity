@@ -151,11 +151,21 @@ async function main() {
       if (selector && allowCrop && job.maxHeight) {
         const naturalHeight = await page.locator(selector).evaluate(element => element.scrollHeight);
         if (naturalHeight > job.maxHeight) {
-          clamp = await page.addStyleTag({content: `${selector} { max-height: ${job.maxHeight}px !important; overflow: hidden !important; }`});
+          // Crop the panel without compressing its scrollable navigation.
+          clamp = await page.addStyleTag({content: `${selector} { max-height: ${job.maxHeight}px !important; overflow: hidden !important; }
+            ${selector} > * { flex-shrink: 0 !important; }`});
         }
       }
       const options = {path: target, animations: 'disabled'};
       try {
+        if (selector === '#research-manager') {
+          assert.ok(await page.locator('#research-tabs').evaluate(row => {
+            const selected = row.querySelector('[aria-selected="true"]');
+            if (!selected) return false;
+            const bounds = row.getBoundingClientRect(), tab = selected.getBoundingClientRect();
+            return tab.top >= bounds.top && tab.bottom <= bounds.bottom;
+          }), 'Cropped research navigation must preserve the selected tab height');
+        }
         if (selector) await page.locator(selector).screenshot(options);
         else await page.screenshot(options);
       } finally {

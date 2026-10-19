@@ -12,6 +12,10 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   source-library and reading interface; capture selection and alternative local
   imports use compact disclosures. Retained evidence and archive contracts stay intact.
 
+### Fixed
+- Selected workspace tabs keep readable text when hovered in light and dark themes.
+- Cropped documentation captures preserve the full research navigation height.
+
 ## [0.7.0] - 2026-10-19
 
 ### Added

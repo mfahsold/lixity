@@ -35,6 +35,27 @@ const textRole = locator => locator.evaluate(element => {
   return {family: css.fontFamily, size: css.fontSize, weight: css.fontWeight,
     lineHeight: css.lineHeight, color: css.color};
 });
+async function checkSelectedHover(page, selector, label) {
+  const control = page.locator(selector);
+  await page.mouse.move(0, 0);
+  const colors = () => control.evaluate(element => {
+    const color = getComputedStyle(element).color;
+    let background = 'rgba(0, 0, 0, 0)';
+    for (let node = element; node && background === 'rgba(0, 0, 0, 0)'; node = node.parentElement) {
+      background = getComputedStyle(node).backgroundColor;
+    }
+    return {color, background};
+  });
+  const normal = await colors();
+  await control.hover();
+  const hovered = await colors();
+  assert.ok(contrast(normal.color, normal.background) >= 4.5,
+    `${label} selected contrast: ${JSON.stringify(normal)}`);
+  assert.ok(contrast(hovered.color, hovered.background) >= 4.5,
+    `${label} selected hover contrast: ${JSON.stringify({normal, hovered})}`);
+  assert.equal(hovered.color, normal.color,
+    `${label} hovering keeps the selected foreground`);
+}
 async function checkTypography(page, label) {
   const body = await textRole(page.locator('body'));
   const controlFamilies = await page.locator('button, select, textarea, input.ctl:not(.ctl-code)').evaluateAll(elements =>
@@ -144,6 +165,14 @@ async function checkScale(page, label) {
           return colors;
         });
         assert.deepEqual(await roles(app), await roles(site), `palette mismatch: ${theme}`);
+        if (!hasTouch) for (const view of ['research', 'analysis', 'project']) {
+          await app.locator(`#tab-view-${view}`).click();
+          assert.equal(await app.locator(`#tab-view-${view}`).getAttribute('aria-selected'), 'true');
+          await checkSelectedHover(app, `#tab-view-${view}`,
+            `${view}-${theme}-${width}`);
+          if (view === 'research') await app.locator('.view-navigation').screenshot({
+            path: path.join(artifacts, `selected-hover-research-${theme}-${width}.png`)});
+        }
         await checkTypography(app, `${theme} ${width}px`);
         await checkScale(app, `${theme} ${width}px app`);
         await checkScale(site, `${theme} ${width}px site`);

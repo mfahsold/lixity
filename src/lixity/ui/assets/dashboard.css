@@ -1879,7 +1879,7 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   justify-content: center;
   line-height: var(--line-control);
 }
-.view-nav-tab:hover {
+.view-nav-tab:hover:not(.active) {
   border-color: var(--accent);
   color: var(--accent);
 }
