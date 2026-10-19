@@ -74,8 +74,8 @@ does not verify it. Review changed anchors and linked revisions explicitly.
 
 ### First Zotero capture
 
-Enable Zotero's local API and download the needed attachments. **Current main
-(unreleased):** choose **Research → Evidence captures → Capture from Zotero**,
+Enable Zotero's local API and download the needed attachments. **Since v0.7.1:**
+choose **Research → Evidence captures → Capture from Zotero**,
 then preview a library, collection and attachment before permitting retention.
 PDF/text and PNG/JPEG captures are supported; audio/video remain in Zotero. Scans
 need an OCR backend. The [Zotero reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)

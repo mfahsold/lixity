@@ -27,6 +27,14 @@ class TestResearchCliOutput(unittest.TestCase):
             self.assertIn(group + ":", help_text)
         dossier = next(command for command in cli.command_metadata() if command["name"] == "dossier")
         self.assertEqual(dossier["aliases"], ["dossiers"])
+        commands = next(action for action in parser._actions if isinstance(action, argparse._SubParsersAction))
+        reconcile_help = " ".join(commands.choices["reconcile-manuscript"].format_help().split())
+        for scope in ("unchanged quotes", "separate commits", "accepted", "skipped"):
+            self.assertIn(scope, reconcile_help)
+        anchor_help = " ".join(commands.choices["find-anchor"].format_help().split())
+        self.assertIn("case-sensitive", anchor_help)
+        self.assertIn("Unicode is not normalized", anchor_help)
+        self.assertIn("link/code syntax remains", anchor_help)
 
     def test_shell_completions_follow_the_registered_research_commands(self):
         from lixity.cli import main
@@ -142,9 +150,7 @@ class TestResearchCliOutput(unittest.TestCase):
                     self.assertIn("Synthetic history correction.", output)
                     self.assertIn("local-author", output)
 
-    def test_authored_diff_text_shows_changes_without_writing(self):
-        from lixity.research.repository import Repository
-
+    def test_authored_diff_and_empty_drafts_explain_supported_inputs_without_writing(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)
             api.init(root, title="Synthetic diff output")
@@ -156,9 +162,30 @@ class TestResearchCliOutput(unittest.TestCase):
                 ("decision", api.record_decision(root, title="Decision", rationale="Decision rationale.")["decision_id"],
                  "--rationale", "Decision rationale.", "Revised decision rationale."),
             )
-            before = Repository(root).snapshot().digest
+            before = retained_files(root)
             for kind, identifier, flag, original, replacement in records:
                 with self.subTest(kind=kind):
+                    for mode in (("--diff",), ("--prepare", "--base-revision", "1"),
+                                 ("--update", "--expected-revision", "1", "--change-kind", "correction",
+                                  "--reason", "Synthetic reviewed update")):
+                        with self.subTest(mode=mode):
+                            status, output, errors = self.capture(kind, identifier, "--project", str(root), *mode)
+                            self.assertEqual((status, output), (1, ""))
+                            self.assertIn(kind, errors)
+                            self.assertIn(flag, errors)
+                            self.assertIn("--inspect", errors)
+                            if kind == "dossier":
+                                for supported in ("--title", "--file", "--body", "--tags", "--evidence", "--geography", "--language"):
+                                    self.assertIn(supported, errors)
+                                self.assertNotIn("--evidence-ids", errors)
+                                self.assertNotIn("--statement", errors)
+                            else:
+                                self.assertNotIn("--file", errors)
+                                self.assertNotIn("--body", errors)
+                            if kind == "decision":
+                                self.assertIn("--no-deviation-from-fact", errors)
+                                self.assertIn("--dossiers", errors)
+                            self.assertEqual(retained_files(root), before)
                     status, output, errors = self.capture(kind, identifier, "--project", str(root),
                                                           "--diff", "--format", "text", flag, replacement)
                     self.assertEqual((status, errors), (0, ""), errors)
@@ -169,7 +196,7 @@ class TestResearchCliOutput(unittest.TestCase):
                     self.assertIn(replacement.encode("unicode_escape").decode("ascii"), output)
                     self.assertNotIn("\x1b", output)
                     self.assertNotIn("\x07", output)
-                    self.assertEqual(Repository(root).snapshot().digest, before)
+                    self.assertEqual(retained_files(root), before)
 
     def test_diff_reports_nested_scope_and_reference_pins(self):
         with tempfile.TemporaryDirectory() as directory:

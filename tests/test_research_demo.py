@@ -98,7 +98,7 @@ def test_public_demo_externalizes_image_bytes_and_preserves_source_records(tmp_p
     document = target.read_text()
     fixture_path = target.with_name("research-data.json")
     fixture = json.loads(fixture_path.read_text())
-    assert f"Lixity {__version__} · read-only research example · Current main (unreleased)" in document
+    assert f"Lixity {__version__} · read-only research example" in document
     assert f"Generated with Lixity {__version__}." in document
     assert "Hamburg free-port area, circa 1900" in document
     assert "Ships in the Harbor, Hamburg, Germany" in document

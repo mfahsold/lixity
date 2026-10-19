@@ -5,7 +5,7 @@
 > instructions to rewrite. Analysis is deterministic for fixed text and settings;
 > research records also contain generated IDs and timestamps.
 
-Current release: 0.7.0; release tag: v0.7.0.
+Current release: 0.7.1; release tag: v0.7.1.
 
 This discovery index links maintained references. Published guides may describe
 newer behavior than an installed tool. The [complete documentation bundle](https://mfahsold.github.io/lixity/llms-full.txt)
@@ -50,22 +50,22 @@ Use active result metadata when interpreting thresholds and unavailable values.
 - [Methods](https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md) and [scientific limits](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md): formulas, estimator conventions and heuristic caveats.
 - [Architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md) and [localization](https://github.com/mfahsold/lixity/blob/main/docs/LOCALIZATION.md): integration boundaries and language coverage.
 - [Articles](https://mfahsold.github.io/lixity/blog/): interpretation examples, separate from API contracts.
-- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.0.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
+- [Release notes](https://mfahsold.github.io/lixity/releases/v0.7.1.md) and [release history](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md).
 
 HTML guides and articles have Markdown alternatives: append `.md` to their HTML
-URL. The [research RFC](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md)
-includes unimplemented proposals; use the implemented reference for available operations.
+URL. The [research entrypoint](https://mfahsold.github.io/lixity/research/README.md)
+links implemented workflows and separate, unimplemented proposals.
 Product, response and archive versions are independent. Inspect installed schema
 capabilities before sharing an archive with another version.
-v0.7.0 reads research records/manifests v1–v8. Ordinary dossiers keep their older
+v0.7.1 reads research records/manifests v1–v8. Ordinary dossiers keep their older
 encoding until a geographic save; older readers cannot open v8 archives.
 
-**Current main (unreleased):** grouped research discovery, exact update dry runs,
+**Since v0.7.1:** grouped research discovery, exact update dry runs,
 historical comparisons and explicit dossier Markdown export/reconciliation reuse
 the existing revision store. Dossier `--file` requires a readable UTF-8 file;
 literal text uses `--body`. See [research revisions](https://mfahsold.github.io/lixity/research/USAGE.md#update-one-reviewed-record)
 and [character profiles](https://mfahsold.github.io/lixity/USAGE.md#character-profiles)
-for current-main behavior rather than assuming an installed release includes it.
+for the supported v0.7.1 workflows and compatibility limits.
 
 ## Data boundaries
 
@@ -79,7 +79,7 @@ baseline. No automatic web import, factual verification or cloud sync is provide
 Zotero handles source-library editing and ordinary reading; Lixity retains
 selected evidence versions and their claim/manuscript relations. The bridge is
 read-only. Local imports and captured evidence remain usable without Zotero.
-Current-main map vectors and media viewers work offline. Optional OpenStreetMap
+Map vectors and media viewers work offline. Optional OpenStreetMap
 tiles require explicit, nonpersistent permission and send the provider tile
 requests revealing the visible area and the client's IP address.
 

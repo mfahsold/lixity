@@ -46,13 +46,13 @@
 }
 </script>
 </head>
-<body>
+<body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to article</a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides">Guides</a><a href="index.html" aria-current="location">Articles</a><a href="../#examples">Examples</a></nav>
 <main class="guide" id="content">
-<a href="../">Lixity · Documentation</a>
+<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="index.html">Articles</a></li><li><span aria-current="page">Local word echoes</span></li></ol></nav>
 <h1>Finding repeated phrases close together</h1>
 <p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-10-19">19 October 2026</time> · 4 minutes</p>
-<nav class="guide-nav" aria-label="Blog"><a href="index.html">Blog</a><a href="../guides/first-look.html">First look</a><a href="../guides/interpretation.html">Interpret results</a><a href="../examples/effi-briest.html">Example analysis</a></nav>
 
 <p>A phrase used four times across a novel may be unobtrusive. The same phrase used three times in one short passage may catch the ear. Lixity's <strong>local repetition echoes</strong> locate this second pattern: repeated word sequences inside a bounded span of chapter prose. The result is a place to listen again, with a count you can check.</p>
 <p>Repetition can make a refrain, sustain a character's vocabulary or give a sentence its rhythm. An echo supplies no instruction to replace words. Read the passage aloud and ask whether hearing that phrase again produces the effect you intended.</p>
@@ -107,7 +107,8 @@ Red metal door. Opens. Red metal door.</code></pre>
 <p>The detector matches literal token sequences. It does not recognize every paraphrase, infer thematic significance or judge rhetorical intention. One row describes the strongest local cluster for that term in that chapter; it is not an inventory of every cluster. The report also caps the returned list. A missing row therefore does not establish that the prose is free of repetition.</p>
 <p>Try the short Bell fixture first, then inspect one result in your own draft. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#local-repetition-echoes">local echo reference</a> explains the returned fields and lower-level parameters when you need more detail.</p>
 
-<footer><a href="../">Lixity home</a> · <a href="index.html">Blog</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
+<footer><a href="../">Lixity home</a> · <a href="index.html">All articles</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
 </main>
+<a class="site-back-top" href="#top">Back to top ↑</a>
 </body>
 </html>

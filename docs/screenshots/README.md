@@ -3,7 +3,7 @@
 Browser captures of the maintained dashboard. The
 [project page](https://mfahsold.github.io/lixity/) introduces each feature with
 a selected image. Use the links below for related views and full-size images.
-Research captures reflect current main (unreleased): dossiers are the starting
+Research captures reflect v0.7.1: dossiers are the starting
 point, with compact source capture and a synthetic manuscript association.
 
 ## Browse by feature

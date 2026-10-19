@@ -7,6 +7,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.1] - 2026-10-19
+
 ### Added
 - Exact authored-update dry runs and historical revision comparisons through the
   existing research revision API and CLI.
@@ -30,6 +32,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   literal text; this intentionally replaces the former missing-path-as-text fallback.
 - Consolidated current documentation and retired duplicated status checklists;
   earlier design and implementation notes remain available through fixed Git links.
+- Pages use consistent site and parent navigation, reading paths and accessible
+  back-to-top links, including the standalone public examples.
 
 ### Fixed
 - Selected workspace tabs keep readable text when hovered in light and dark themes.
@@ -43,6 +47,12 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Positional and verb-based dossier reads now honor section, summary and citation
   bounds through the same exact-version reader as named IDs.
 - Image galleries include lazy images and fit their exact dimensions after loading.
+- Dossier Markdown emphasis preserves link destinations and generated markup,
+  preventing formatting from leaking into the geography view.
+- Scene overview tables keep numeric values readable on narrow screens;
+  documentation captures show the intended first three scenes.
+- Research help names supported draft inputs and distinguishes exact quote matching
+  from prose counting, explicit claim acceptance and per-association commits.
 
 ## [0.7.0] - 2026-10-19
 
@@ -2294,7 +2304,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.7.1...HEAD
+[0.7.1]: https://github.com/mfahsold/lixity/compare/v0.7.0...v0.7.1
 [0.7.0]: https://github.com/mfahsold/lixity/compare/v0.6.0...v0.7.0
 [0.6.0]: https://github.com/mfahsold/lixity/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mfahsold/lixity/compare/v0.4.9...v0.5.0

@@ -60,6 +60,58 @@ server.serve_forever()
     assert.equal(await page.evaluate(() => window.L && window.L.version), '1.9.4', 'The interactive renderer is pinned and bundled offline');
     await page.locator('#tab-view-research').click();
     await page.locator('[data-rtab=dossiers]').click();
+    const collision = await page.evaluate(() => {
+      const literal = '@@@LIXITYINLINE0END0@@@ @@@LIXITYINLINE1END0@@@ @@@LIXITYINLINE' + 'X'.repeat(32768);
+      const code = '@@@LIXITYINLINE2END0@@@ code_*_ $&';
+      const host = document.createElement('div');
+      host.innerHTML = renderSafeMarkdown(literal + ' `' + code + '` [**token label**](https://example.org/token_suffix)');
+      return {preserved: host.textContent === literal + ' ' + code + ' token label',
+        code: host.querySelector('code').textContent, href: host.querySelector('a').getAttribute('href'),
+        label: host.querySelector('a strong').textContent};
+    });
+    assert.equal(collision.preserved, true, 'Authored token-like text and long literal prefix runs remain exact data');
+    assert.equal(collision.code, '@@@LIXITYINLINE2END0@@@ code_*_ $&');
+    assert.equal(collision.href, 'https://example.org/token_suffix');
+    assert.equal(collision.label, 'token label');
+    // Inline formatting must not cross generated link attributes or leak into
+    // the following geography, where it can reparent the SVG fallback.
+    for (const width of [1440, 320]) {
+      await page.setViewportSize({width, height: 1000});
+      await page.evaluate(() => {
+        const host = document.createElement('div'); host.id = 'markdown-geography-boundary';
+        const body = 'Prefix_name [Link](https://example.org/target_suffix)\n\n' +
+          '[Suffix link](https://example.org/prefix_target) suffix_name.\n\n' +
+          '*Intended emphasis* and [**bold link**](https://example.org/a_b).\n\n' +
+          '`code_*_ $&` and $x_y$ and [internal_label](lixity:dossier/id_suffix).\n\n' +
+          '![Image_name](lixity:image/urn:uuid:11111111-1111-4111-8111-111111111111/urn:uuid:22222222-2222-4222-8222-222222222222)';
+        host.innerHTML = researchDossierBodyHtml(body, {project_id: 'synthetic', images: []}) +
+          LixityDossierGeography.html({type: 'FeatureCollection', features: [
+            {type: 'Feature', geometry: {type: 'Point', coordinates: [10, 46]}, properties: {label: 'Synthetic place'}},
+          ]});
+        document.body.appendChild(host);
+      });
+      const boundary = page.locator('#markdown-geography-boundary');
+      const mapBoundary = boundary.locator('.dossier-geography');
+      await mapBoundary.locator('[data-geo-map]').click();
+      await expect(mapBoundary.locator('.geography-map')).toBeVisible();
+      await expect(mapBoundary.locator('.geography-sketch')).toBeHidden();
+      assert.equal(await mapBoundary.locator('em').count(), 0, 'Prose emphasis must not wrap geographic controls');
+      assert.equal(await mapBoundary.locator('h4').evaluate(node => getComputedStyle(node).fontStyle), 'normal');
+      await expect(boundary.getByRole('link', {name: 'Link', exact: true})).toHaveAttribute('href', 'https://example.org/target_suffix');
+      await expect(boundary.getByRole('link', {name: 'Suffix link', exact: true})).toHaveAttribute('href', 'https://example.org/prefix_target');
+      await expect(boundary.locator('a strong')).toHaveText('bold link');
+      await expect(boundary.locator('a:has(strong)')).toHaveAttribute('href', 'https://example.org/a_b');
+      await expect(boundary.locator('p > em')).toHaveText('Intended emphasis');
+      await expect(boundary.locator('code:not(.lixity-ref)')).toHaveText('code_*_ $&');
+      await expect(boundary.locator('.math-inline')).toHaveText('x_y');
+      await expect(boundary.locator('.lixity-ref')).toHaveText('internal_label (dossier/id_suffix)');
+      await expect(boundary.locator('.dossier-image-unavailable strong')).toHaveText('Image_name');
+      assert.equal(await boundary.locator('.research-dossier-body-rendered').evaluate(node =>
+        node.querySelectorAll('p a em').length), 0, 'URL data must never become link-label emphasis');
+      await boundary.screenshot({path: path.join(artifacts, `markdown-geography-boundary-${width}.png`)});
+      await boundary.evaluate(node => node.remove());
+    }
+    await page.setViewportSize({width: 1440, height: 1000});
     await page.locator('#r-dos-title').fill('Synthetic harbour journey');
     await page.locator('#r-dos-body').fill('# Context\n\nSynthetic route notes.');
     const create = page.locator('#r-dos-geography-editor');

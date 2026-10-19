@@ -21,14 +21,76 @@ function htmlRoutes(directory, prefix = '') {
 }
 const routes = htmlRoutes(root).sort();
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
-const fullMatrixRoutes = new Set(['', 'guides/research-pdf.html', 'demo/report.html',
-  'demo/research.html', 'examples/effi-briest.html', 'blog/whats-new-lixity.html']);
+const fullMatrixRoutes = new Set(['', 'guides/first-look.html', 'guides/research-pdf.html', 'demo/report.html',
+  'demo/research.html', 'examples/effi-briest.html', 'blog/index.html', 'blog/whats-new-lixity.html']);
+const returnJourneyRoutes = new Set(['', 'guides/first-look.html', 'blog/index.html',
+  'blog/whats-new-lixity.html', 'demo/report.html', 'demo/research.html', 'examples/effi-briest.html']);
+
+async function returnToTop(page, route) {
+  const backTop = page.locator('a.site-back-top[href="#top"]');
+  await backTop.focus();
+  await expect(backTop).toBeFocused();
+  await page.keyboard.press('Enter');
+  await expect(page).toHaveURL(/#top$/);
+  await expect(page.locator('body#top')).toBeFocused();
+  await expect.poll(() => page.evaluate(() => scrollY), {
+    message: `${route || 'home'} returns to the document top after keyboard activation`,
+  }).toBeLessThan(2);
+}
+
+async function checkReturnNavigation(page, route, exercise) {
+  const top = page.locator('body#top.site-page');
+  await expect(top).toHaveAttribute('tabindex', '-1');
+  const navigation = page.locator('nav.site-return[aria-label="Lixity navigation"]');
+  await expect(navigation).toBeVisible();
+  const home = navigation.locator(`a[href="${route ? '../' : './'}"]`);
+  await expect(home).toBeVisible();
+  const breadcrumbs = page.locator('.site-breadcrumbs');
+  if (!route) {
+    await expect(home).toHaveAttribute('aria-current', 'page');
+  } else {
+    await expect(breadcrumbs).toBeVisible();
+    await expect(breadcrumbs.locator('[aria-current=page]')).toHaveCount(1);
+    const parent = route.startsWith('guides/') ? '../#guides'
+      : route === 'blog/index.html' ? '../'
+        : route.startsWith('blog/') ? 'index.html' : '../#examples';
+    await expect(breadcrumbs.locator('a').last()).toHaveAttribute('href', parent);
+  }
+  const backTop = page.locator('a.site-back-top[href="#top"]');
+  await expect(backTop).toBeVisible();
+  if (!exercise) return;
+  const menuBefore = await navigation.boundingBox();
+  const disclosure = page.locator('details:visible').filter({has: page.locator('summary:visible')}).first();
+  const hasDisclosure = await disclosure.count();
+  const initiallyOpen = hasDisclosure ? await disclosure.getAttribute('open') !== null : false;
+  if (hasDisclosure) await disclosure.locator('summary').first().click();
+  await page.evaluate(() => window.scrollTo({top: document.scrollingElement.scrollHeight, behavior: 'instant'}));
+  const maxScroll = await page.evaluate(() => document.documentElement.scrollHeight - innerHeight);
+  if (maxScroll > 50) await expect.poll(() => page.evaluate(() => scrollY), {
+    message: `${route || 'home'} leaves the document top before returning`,
+  }).toBeGreaterThan(50);
+  await returnToTop(page, route);
+  assert.equal(await page.locator('h1').evaluate(heading => {
+    const box = heading.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.left + box.width / 2, box.top + box.height / 2);
+    return box.top >= 0 && box.bottom <= innerHeight && heading.contains(hit);
+  }), true, `${route} returns to an unobscured heading`);
+  const menuAfter = await navigation.boundingBox();
+  for (const dimension of ['x', 'y', 'width', 'height']) {
+    assert.ok(Math.abs(menuBefore[dimension] - menuAfter[dimension]) < 1, `${route} keeps its navigation geometry after returning`);
+  }
+  if (hasDisclosure) {
+    assert.equal(await disclosure.getAttribute('open') !== null, !initiallyOpen,
+      `${route} keeps the user's native disclosure state when returning to the top`);
+    await disclosure.locator('summary').first().click();
+    await returnToTop(page, route);
+  }
+}
 
 async function checkResearchDemo(page, javaScriptEnabled, width, colorScheme) {
   const notice = page.locator('#example-context');
   const credits = page.locator('#research-source-credits');
   await expect(notice).toContainText('read-only research example');
-  await expect(notice).toContainText('Current main (unreleased)');
   await expect(notice).toContainText('Generated with Lixity');
   await expect(notice).toContainText('fictional');
   await expect(notice).toContainText('no live Zotero connection');
@@ -287,6 +349,12 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
           }
           assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), 'https://mfahsold.github.io/lixity/' + route);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${route} overflows at ${width}px`);
+          await checkReturnNavigation(page, route,
+            colorScheme === 'light' && width !== 390 && returnJourneyRoutes.has(route));
+          if (javaScriptEnabled && colorScheme === 'light' && width !== 390 &&
+              (route === '' || route === 'guides/first-look.html' || (route === 'demo/report.html' && width === 320))) {
+            await page.screenshot({path: path.join(artifacts, `navigation-${route ? path.basename(route, '.html') : 'home'}-${width}-light.png`)});
+          }
           if (width === 320 && ['guides/interpretation.html', 'guides/research-pdf.html', 'guides/manuscript-analysis-tools.html'].includes(route)) {
             for (const table of await page.locator('.feature-table-wrapper').all()) {
               assert.ok(await table.evaluate(element => element.scrollWidth > element.clientWidth), 'Wide reference tables scroll inside the page');
@@ -335,10 +403,20 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         assert.ok(page.url().endsWith('/demo/report.html'));
         await page.locator('a[href="../guides/first-look.html"]').first().click();
         assert.ok(page.url().endsWith('/guides/first-look.html'), 'The report returns to the walkthrough');
-        await page.goto('http://lixity.test/lixity/');
+        await page.locator('.site-breadcrumbs a[href="../#guides"]').click();
+        await expect(page).toHaveURL('http://lixity.test/lixity/#guides');
+        await expect(page.locator('#guides h2')).toBeInViewport();
+        await returnToTop(page, 'Guides parent');
+        await page.locator('.site-return a[href="./"]').click();
+        await expect(page).toHaveURL('http://lixity.test/lixity/');
         await page.locator('.hero-cta a.primary[href="demo/report.html"]').click();
         assert.ok(page.url().endsWith('/demo/report.html'), 'The primary CTA opens the report directly');
-        await page.goto('http://lixity.test/lixity/');
+        await page.locator('.site-breadcrumbs a[href="../#examples"]').click();
+        await expect(page).toHaveURL('http://lixity.test/lixity/#examples');
+        await expect(page.locator('#examples h2')).toBeInViewport();
+        await returnToTop(page, 'Examples parent');
+        await page.locator('.site-return a[href="./"]').click();
+        await expect(page).toHaveURL('http://lixity.test/lixity/');
         if (javaScriptEnabled) {
           await page.locator('#themeToggle').click();
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
@@ -354,7 +432,8 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         assert.ok(page.url().endsWith('/guides/interpretation.html'));
         if (javaScriptEnabled) {
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-          await page.goto('http://lixity.test/lixity/');
+          await page.locator('.site-return a[href="../"]').click();
+          await expect(page).toHaveURL('http://lixity.test/lixity/');
           await page.locator('#themeToggle').click();
           await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
           await page.locator('#themeToggle').click();
@@ -369,10 +448,15 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         assert.equal(page.url(), articleURL.href);
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),
           'https://mfahsold.github.io' + articleURL.pathname, 'Canonical URL matches the published page');
+        await page.locator('.site-breadcrumbs a[href="index.html"]').click();
+        await expect(page).toHaveURL('http://lixity.test/lixity/blog/index.html');
+        await expect(page.locator('article h2 a').first()).toHaveAttribute('href', path.basename(articleURL.pathname));
+        await page.locator('.site-return a[href="../"]').click();
+        await expect(page).toHaveURL('http://lixity.test/lixity/');
       }
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only journey, report keyboard/filter/chart controls, read-only research source/image/geography/history/timeline/manuscript-quote journey, assets, overflow and console passed. Screenshots: ${artifacts}`);
+    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, keyboard return/focus and stable disclosures, breadcrumb/Home destination journeys, static GET-only journey, report keyboard/filter/chart controls, read-only research source/image/geography/history/timeline/manuscript-quote journey, assets, overflow and console passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

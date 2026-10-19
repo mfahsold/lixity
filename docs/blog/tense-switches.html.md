@@ -1,6 +1,6 @@
 # Finding tense switches in a novel — and deciding which ones matter
 
-Posted 15 October 2026 · 6 minutes · [Blog](index.html)
+Posted 15 October 2026 · 6 minutes · [All articles](index.html)
 
 ## A tense break is rarely a typo
 
@@ -54,4 +54,4 @@ Verb-form patterns miss irony, ellipsis and unusual syntax. Dialogue and reporte
 
 The [demo report](../demo/report.html) is made from invented text and opens in your browser. The interactive [Effi Briest](../examples/effi-briest.html) and [Pride and Prejudice](../examples/pride-and-prejudice.html) dashboards show the opening three chapters. Each example links to a PDF analysis of the complete public-domain novel. For your own manuscript, install, open the project and review one chapter.
 
-[Lixity home](../) · [Blog](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)
+[Lixity home](../) · [All articles](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)

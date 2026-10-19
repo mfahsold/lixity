@@ -54,4 +54,4 @@ Use the assignment to record a reviewed intention, then read the result. A forma
 
 Start with a single chapter whose different voice you can explain in words. A label alone may be sufficient. The [chapter register reference](https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#chapter-register-settings) gives the supported range forms and chapter matching rules when you are ready to configure it. The public demo is read-only; saving register settings requires the native local workspace.
 
-[Lixity home](../) · [Blog](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)
+[Lixity home](../) · [All articles](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)

@@ -2027,6 +2027,8 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   .view-pane { display: block !important; }
 }
 .scene-overview { margin: .4rem 0 .9rem; }
+.scene-overview table { min-width: 36rem; }
+.scene-overview thead th, .scene-overview td { white-space: nowrap; }
 /* Scene details are the one genuinely heavy list (16-row tables each); defer
    their off-screen rendering once they are open. A closed <details> must keep
    its natural summary height: the intrinsic placeholder would otherwise

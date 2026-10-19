@@ -8,7 +8,7 @@ Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
 Product versions describe development maturity; response and archive schemas
-are independent. Released v0.7.0 reads research records/manifests v1–v8, including
+are independent. v0.7.1 reads research records/manifests v1–v8, including
 historical v3.0.1 archives. Reading an archive does not upgrade it. See
 [compatibility and limits](#limits) before writing with an older application.
 Since v0.7.0, optional dossier geography uses v8. Ordinary dossier encodings stay
@@ -36,7 +36,7 @@ claims, decisions, dossiers and manuscript quotations. Historical maps and
 photographs remain source material; character journeys and their scene context
 are authored project records.
 
-**Current main (unreleased):** the research view starts with dossiers. The saved
+**Since v0.7.1:** the research view starts with dossiers. The saved
 evidence area keeps Zotero selection and optional local import behind compact
 disclosures. Revision previews, historical comparisons and explicit Markdown
 editing reuse the existing archive. Dossier `--file` now reads an existing UTF-8
@@ -59,7 +59,7 @@ lixity research search --query "reading room"
 lixity research link PASSAGE_ID CLAIM_ID --relation contextualizes
 ```
 
-Use returned IDs. Current main also accepts complete bare UUIDv4 selectors in the
+Use returned IDs. v0.7.1 also accepts complete bare UUIDv4 selectors in the
 CLI and canonicalizes them to `urn:uuid:…`; API and stored identifiers stay strict.
 Grouped help and discovery expose command aliases, including `dossiers`, `claims`
 and `decisions`, without separate command implementations.
@@ -101,10 +101,14 @@ plus an optional note and ordinary record metadata. The archive stores no full
 manuscript blob. Quotes are nonblank and limited to 10,000 codepoints; notes to
 2,000 characters. Offsets refer to the displayed `ParagraphProfile.text`, with an
 exclusive `end`, rather than UTF-8 bytes or JavaScript UTF-16 units. The paragraph
-hash is SHA-256 of that displayed text encoded as UTF-8. Because that text
-removes inline Markdown (`*emphasis*`, links, inline code), quotes copied from
-the `.md` file must be stripped of formatting before saving; the raw-source
-SHA-256 still binds the file bytes. Cross-paragraph, ambiguous or stale
+hash is SHA-256 of that displayed text encoded as UTF-8. This established anchor
+projection removes supported emphasis markers, comments and footnote anchors;
+link and inline-code syntax remain as text. Soft-wrapped lines are joined and
+source line endings normalized, while the raw-source SHA-256 binds the original
+bytes. `find-anchor` matches the query exactly, case-sensitively, without fuzzy
+matching or Unicode normalization. Use `word` for `*word*`, but retain link/code
+syntax present in the paragraph text. Prose counting uses a separate projection
+that excludes destinations, images and code. Cross-paragraph, ambiguous or stale
 selections fail. Paths escaping the project, including through
 symlinks, are rejected. Source bytes are checked again before publication; this
 optimistic guard does not lock an external editor.
@@ -148,8 +152,14 @@ Use each command's `--help` for flags and output formats. After editing prose,
 run `review-manuscript`, preview `reconcile-manuscript`, then explicitly accept
 the reviewed change. `--accept-moved` accepts uniquely resolved moved/adjusted
 anchors. `--accept-claim-updates` independently re-pins newer claim versions;
-combine them to accept both in one revision. Neither accepts the other kind of
-change. `claim_changed` remains until a link is repinned or superseded.
+combine them to accept both in one revision **per association** when its quote
+resolves uniquely. Neither flag accepts the other kind of change. An ambiguous,
+changed or unavailable anchor is not repaired by accepting a claim revision;
+an edited quote needs the explicit replacement below. Without `--link-id`,
+eligible associations use separate commits, so a run can partially succeed.
+Inspect `accepted`/`skipped`, then run `review-manuscript` again; the command
+does not guarantee that every association is resolved. `claim_changed` remains
+until its claim pin is explicitly updated or the association is superseded.
 `unlink-manuscript` retracts an association while retaining history and works
 when the scoped manuscript is deleted or unreadable. Optional snapshot/revision
 guards make retraction strict.
@@ -381,7 +391,7 @@ lixity research claim --project ./novel --claim-id CLAIM_ID --update \
   --statement "A revised author assertion"
 ```
 
-**Current main (unreleased):** `--update --dry-run` validates the exact proposed
+**Since v0.7.1:** `--update --dry-run` validates the exact proposed
 write, including revision, reason, association pins and optional snapshot, without
 taking the writer lock or publishing records. It does not merge drafts or promise
 that a later commit will succeed. `--diff` instead compares supplied fields with
@@ -401,7 +411,7 @@ the corresponding pin options. Historical comparisons never repin. Python shares
 these semantics; HTTP, images, acknowledgements and batches keep explicit guards.
 
 For dossier body input, use `--file existing.md` or `--body "Literal text"`, never
-both. Current main rejects missing, unreadable or non-UTF-8 files before a write;
+both. v0.7.1 rejects missing, unreadable or non-UTF-8 files before a write;
 it no longer interprets a missing filename as body text. This applies equally to
 creation, updates, preparation and prospective comparison.
 
@@ -427,7 +437,7 @@ restored draft link retains the revision you inspected.
 
 ### Work on one dossier section
 
-Current-main bounded reads accept named IDs, positional IDs and `show`/`inspect`
+Bounded reads accept named IDs, positional IDs and `show`/`inspect`
 with the same section/summary/citation controls, including `--revision N`.
 Section and summary are distinct modes; summary and citation omission apply only
 to reads. Unbounded inspection keeps its record envelope. Section edits still use
@@ -452,7 +462,7 @@ result contracts are in the [automation reference](../AGENTS.md#51-research-api-
 
 ### Edit an exported Markdown dossier
 
-**Current main (unreleased):** the archive remains authoritative. Export an
+**Since v0.7.1:** the archive remains authoritative. Export an
 existing dossier, edit the file, preview reconciliation, then apply the reviewed
 packet explicitly:
 
@@ -487,10 +497,14 @@ Choose **Add image**, select a local PNG/JPEG, describe it, and confirm retentio
 permission before saving. Caption, source title/URL, provenance note and section
 are optional. Browser preview writes nothing; image capture and dossier revision
 commit together or accept neither. A stale save requires refresh and review.
+Saving a UTF-8 dossier body does not ingest its images: ordinary relative,
+`file:` and HTTP(S) Markdown image paths are neither loaded as images nor retained.
+Use **Add image**/`dossier-image` to capture and attach a local image, or reference
+an already retained exact version with `lixity:image/SOURCE_ID/VERSION_ID`.
 
 Earlier dossier revisions retain exact image versions. Withdrawn/purged/missing
 images show unavailable placeholders. Source-page URLs are metadata, never fetched.
-Click an image to enlarge it; Escape closes it. Current main uses a shared
+Click an image to enlarge it; Escape closes it. v0.7.1 uses a shared
 PhotoSwipe zoom viewer for retained images and rendered diagrams. Images create no text passages,
 linguistic scores, OCR or factual verification. Label generated/reconstructed
 references in the caption and `context.provenance_note`; retain the actual source
@@ -598,7 +612,7 @@ fictional positions and walking/driving paths. CLI creation accepts `--geography
 ordinary dossier revision, history, search and backup retain the same data.
 Use command help and `research schema` for accepted fields and bounds.
 
-Coordinates are finite WGS84 longitude/latitude pairs. **Current main (unreleased):**
+Coordinates are finite WGS84 longitude/latitude pairs. **Since v0.7.1:**
 the numbered sketch and interactive Leaflet vector view work offline. Optional
 OpenStreetMap tiles require explicit permission; requests disclose the visible
 map area and client IP to the provider. Permission is not persisted and resets
@@ -936,7 +950,7 @@ entire archive at an earlier date.
   links remain for their audit trail, but their purged citations are marked
   `availability: "purged"` and expose no deleted quotation text.
 
-**Current main (unreleased):** `withdraw` also retires a dossier through the same
+**Since v0.7.1:** `withdraw` also retires a dossier through the same
 tombstone mechanism. Inspect its revision and snapshot, preview, then repeat the
 command without `--dry-run` to accept the retirement:
 
@@ -1012,7 +1026,7 @@ Uncommitted objects left after interruption are ignored, not selected by date.
 Locks release when the process exits. A stale expected HEAD fails rather than
 overwriting another ingestion. Interrupted initialization may leave an incomplete
 directory: preserve it for inspection; `init` refuses to overwrite it.
-Current-main diagnostics distinguish a busy writer from read-only, permission and
+Writer diagnostics distinguish a busy writer from read-only, permission and
 other I/O failures at the canonical project lock. A lock file's existence does
 not prove contention; no alternate `/tmp` lock or unlocked fallback is used.
 
@@ -1211,7 +1225,7 @@ behavior belongs to its deployment's privacy boundary.
 ## Safe Markdown and offline diagram rendering
 
 Dossier bodies support headings, emphasis, quotations, lists, code and tables;
-raw HTML stays escaped. **Current main (unreleased):** bundled Mermaid tiny 12.2.0
+raw HTML stays escaped. **Since v0.7.1:** bundled Mermaid tiny 12.2.0
 renders supported `mermaid` fences offline instead of the former partial renderer.
 The library initializes when a diagram first becomes visible. Image/resource
 syntax, click actions and configuration/style directives are disabled; unsupported
@@ -1239,7 +1253,7 @@ Check installed support with `lixity about --json` and entity contracts with
 
 Reading alone does not upgrade archives or rewrite old record bytes. Back up
 the complete store before opting in; use compatible readers/writers afterward.
-Historical v3.0.1 supports through v6, v0.6.0 through v7, and v0.7.0 through v8.
+Historical v3.0.1 supports through v6, v0.6.0 through v7, and v0.7.0/v0.7.1 through v8.
 Older readers cannot open v8 archives.
 Rollback requires the complete pre-upgrade backup, never editing HEAD, schema
 labels or provenance by hand. Source identity metadata cannot be edited in place;

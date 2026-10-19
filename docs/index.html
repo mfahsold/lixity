@@ -38,7 +38,7 @@
   "name": "Lixity",
   "applicationCategory": "WritingApplication",
   "operatingSystem": "Windows, macOS, Linux",
-  "softwareVersion": "0.7.0",
+  "softwareVersion": "0.7.1",
   "description": "Local manuscript analysis for authors and editors. Compare sentence rhythm, vocabulary, dialogue and tense across chapters, then read paragraphs in context.",
   "url": "https://mfahsold.github.io/lixity/",
   "codeRepository": "https://github.com/mfahsold/lixity",
@@ -128,19 +128,17 @@
 }
 </script>
 </head>
-<body>
+<body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to content</a>
 <header class="site-header">
   <div class="header-inner">
     <a class="brand" href="./"><span class="brand-logo" aria-hidden="true">L</span><span class="brand-name">Lixity</span></a>
-    <span class="brand-badge">v0.7.0</span>
-    <nav class="site-nav" aria-label="Main">
-      <a href="#features">Features</a>
-      <a href="#examples">Examples</a>
+    <span class="brand-badge">v0.7.1</span>
+    <nav class="site-return" aria-label="Lixity navigation">
+      <a href="./" aria-current="page">Home</a>
       <a href="#guides">Guides</a>
-      <a href="blog/index.html">Blog</a>
-      <a href="#methods">Methods</a>
-      <a href="https://github.com/mfahsold/lixity">GitHub</a>
+      <a href="blog/index.html">Articles</a>
+      <a href="#examples">Examples</a>
     </nav>
     <button class="ctl theme-btn" id="themeToggle" type="button">Theme: system</button>
   </div>
@@ -156,7 +154,7 @@
         <a class="ctl primary" href="demo/report.html">Try the example</a>
         <a class="ctl" href="guides/first-look.html">Three-minute first look</a>
       </div>
-      <p class="release-note">Current release: <a href="releases/v0.7.0.md">v0.7.0</a> · <a href="blog/index.html">Articles</a>. Explore the read-only example without installation or uploading a manuscript.</p>
+      <p class="release-note">Current release: <a href="releases/v0.7.1.md">v0.7.1</a> · <a href="blog/index.html">Articles</a>. Explore the read-only example without installation or uploading a manuscript.</p>
     </div>
     <figure class="frame">
       <div class="frame-window">
@@ -384,5 +382,6 @@ html = api.dashboard(text, language="de", project_config={})</pre>
     <nav aria-label="Social"><a rel="me" href="https://mastodon.social/@lixity">Mastodon</a><a rel="me" href="https://bsky.app/profile/lixity.bsky.social">Bluesky</a><a href="https://dev.to/mfahsold">dev.to</a></nav>
   </footer>
 </main>
+<a class="site-back-top" href="#top">Back to top ↑</a>
 </body>
 </html>

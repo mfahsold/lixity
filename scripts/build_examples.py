@@ -182,6 +182,28 @@ def _notice(heading: str, paragraphs: list[str], links: list[tuple[str, str]]) -
 """
 
 
+def _site_navigation(report: str, title: str) -> str:
+    """Keep public examples connected without adding external report assets."""
+    stylesheet = (ROOT / "docs/assets/site.css").read_text(encoding="utf-8")
+    start, end = "/* Public navigation start */", "/* Public navigation end */"
+    _require(stylesheet.count(start) == stylesheet.count(end) == 1,
+             "the shared public navigation stylesheet must have one bounded block")
+    styles = stylesheet.partition(start)[2].partition(end)[0]
+    navigation = (
+        '<nav class="site-return" aria-label="Lixity navigation">'
+        '<a href="../">Home</a><a href="../#guides">Guides</a>'
+        '<a href="../blog/index.html">Articles</a><a href="../#examples" aria-current="location">Examples</a>'
+        '</nav><nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol>'
+        '<li><a href="../">Home</a></li><li><a href="../#examples">Examples</a></li>'
+        f'<li><span aria-current="page">{html.escape(title)}</span></li></ol></nav>'
+    )
+    _require(report.count('<body id="top"') == 1, "the report must have one top target")
+    report = report.replace('<body id="top"', '<body id="top" tabindex="-1" class="site-page"', 1)
+    report = report.replace('<header', navigation + '<header', 1)
+    report = report.replace('</head>', '<style>' + styles + '</style></head>', 1)
+    return report.replace('</body>', '<a class="site-back-top" href="#top">Back to top ↑</a></body>', 1)
+
+
 def build_demo(root: Path) -> Path:
     """The synthetic first-look example, exactly as documented in docs/demo/README.md."""
     text = (root / "samples/first-look.md").read_text(encoding="utf-8")
@@ -231,6 +253,7 @@ below; it is an appendix, not part of the analyzed text.</p>
     boundary = "\n</div>\n<footer>"
     _require(report.count(boundary) == 1, "the demo footer boundary is missing")
     report = report.replace(boundary, appendix + boundary, 1)
+    report = _site_navigation(report, "Invented night shift")
     target = root / "docs/demo/report.html"
     target.write_text(_finalize(report), encoding="utf-8")
     return target
@@ -290,6 +313,7 @@ def build_classic(root: Path, example: ClassicExample) -> tuple[Path, Path]:
         ],
     )
     report = _insert_notice(report, notice)
+    report = _site_navigation(report, example.title)
     page = root / f"docs/examples/{example.slug}.html"
     page.parent.mkdir(parents=True, exist_ok=True)
     page.write_text(_finalize(report), encoding="utf-8")

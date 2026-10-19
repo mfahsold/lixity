@@ -30,7 +30,7 @@ lixity --version
 lixity service start --open
 ```
 
-This installs the current release from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). For a pinned, checksum-verified setup, install the release wheel instead — `uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.0/lixity-0.7.0-py3-none-any.whl"` — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.7.0.md) for changes and compatibility.
+This installs the current release from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). For a pinned, checksum-verified setup, install the release wheel instead — `uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.1/lixity-0.7.1-py3-none-any.whl"` — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.7.1.md) for changes and compatibility.
 
 **Development builds instead**
 
@@ -159,4 +159,4 @@ Install Lixity in your Python project's own environment. The isolated command-li
 
 Continue with the [full installation reference](https://github.com/mfahsold/lixity/blob/main/docs/INSTALLATION.md), [shared pipeline architecture](https://github.com/mfahsold/lixity/blob/main/docs/ARCHITECTURE.md), or [research source workflow](research-pdf.html).
 
-[Lixity home](../) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)
+[All guides](../#guides) · [Lixity home](../) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)

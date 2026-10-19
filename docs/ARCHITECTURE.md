@@ -73,14 +73,14 @@ nonuse. Rendering preserves exact resolved quote spans and complete text search.
 Ordinary authored CLI updates require a reviewed revision, change kind and reason;
 when the archive snapshot is omitted, the backend's current read guards the same
 strict writer. Changed associations require reviewed pins; races fail without retry.
-Current-main `research.revisions` shares candidate validation across exact writes,
+`research.revisions` shares candidate validation across exact writes,
 dry runs and batch preparation. Prospective comparison uses one snapshot for both
 values; historical comparison resolves saved revisions without repinning. Section
 reconciliation changes only the selected body subtree while ordinary field changes
 use the same candidate. HTTP, images, acknowledgements and batches retain their
 explicit guards. No preview establishes that a future write will succeed.
 
-Current-main `research.dossier_edit` encodes an explicit leading JSON comment and
+`research.dossier_edit` encodes an explicit leading JSON comment and
 the exact body as a Markdown draft. It validates identity/base and delegates to
 existing three-way preparation; ready changes become ordinary batch operations.
 Versioned reviewed packets bind project and snapshot through the shared backend.
@@ -92,7 +92,7 @@ distinguish contention, read-only/permission failures and other I/O errors.
 ## Configuration and multiple projects
 
 Explicit root settings own author identity, publication, chapter registers and
-current-main character profiles; user/ancestor defaults cannot supply them.
+project-local character profiles; user/ancestor defaults cannot supply them.
 `project_identity` compares only bounded
 manuscript metadata syntax, without rewriting text or affecting measurements.
 `PublicationSettings`/`PUBLICATION_FIELDS` supply field validation to configuration,
@@ -139,7 +139,7 @@ Use `analyze_document(text, config, thresholds)` when several outputs need the s
 measurements. Project adapters own their characters, motifs, paths and artifacts.
 
 The shared Markdown parser defines measurement prose and chapter numbering.
-Current-main inline counting retains visible link labels and excludes link targets,
+Inline counting retains visible link labels and excludes link targets,
 images and code. It stays separate from displayed paragraph text and quote identity;
 zero-token chapters retain their source numbering. `characters.CharacterProfile`
 owns literal alias/declared-POV validation and its discoverable schema; one resolver
@@ -166,7 +166,7 @@ is scheduled only while rotation is enabled and the page is visible. The live
 shell applies a per-response script nonce and default-deny CSP; bundled components
 require no `unsafe-eval`.
 
-Current-main research media reuse bundled PhotoSwipe 5.4.4 for retained images and
+Research media reuse bundled PhotoSwipe 5.4.4 for retained images and
 generated diagrams. Mermaid tiny 12.2.0 owns diagram syntax/layout and initializes
 only when a diagram first becomes visible; restrictions disable resource loading,
 click actions and configuration directives, with source retained on failure.

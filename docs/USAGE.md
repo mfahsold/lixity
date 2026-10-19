@@ -6,6 +6,8 @@ For a first session, follow [Onboarding](ONBOARDING.md). The separate
 Zotero, backups and OCR; [automation contracts](AGENTS.md) own JSON envelopes
 and HTTP requests.
 
+<!-- Legacy fragment IDs below preserve incoming links; current headings define version-neutral links. -->
+
 - [Choose a command](#which-command-for-which-question)
 - [Review a dashboard](#dashboard-workflow)
 - [Command workflows](#command-reference)
@@ -112,7 +114,7 @@ or instructions to revise.
 Choose **Dossier alongside** to read a saved dossier while retaining manuscript
 search and open paragraphs. Closing restores the other analysis panels; refresh
 explicitly for the latest revision. Narrow screens stack the readers. The
-[research workflow](research/USAGE.md#reading-and-cli-workflows-since-v240) owns
+[research workflow](research/USAGE.md#reading-and-cli-workflows) owns
 selection, evidence and retention semantics.
 
 <a id="link-a-manuscript-quote-to-a-claim-v030"></a>
@@ -267,7 +269,7 @@ lixity characters manuscript.md --name "Alex|Alexander" --name Morgan --json
 
 Matching is whole-word and case-insensitive, excludes appendix/front matter,
 and reports mentions, mention-based chapter span and longest gap. A match does
-not establish physical presence, speaker identity or viewpoint. Current main
+not establish physical presence, speaker identity or viewpoint. v0.7.1
 can use [project-local literal profiles](#character-profiles) when explicit names
 are omitted. Explicit names replace configured selections, including an empty
 selection; the standalone command rejects empty names rather than discovering entities.
@@ -558,10 +560,10 @@ Use `lixity research COMMAND --help` for installed arguments/formats and `GET /a
 for a running server's operations. Confirm permission to retain source bytes
 before ingesting. Retrieved passages are evidence to review, not accepted claims.
 
-Useful entrypoints: [source/current-record search](research/USAGE.md#search-current-authored-records-since-v1190),
-[chronology and causal interpretations](research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300),
-[keyword citations](research/USAGE.md#choose-citations-by-keywords-since-v300),
-[Zotero capture and recovery](research/USAGE.md#zotero-desktop-bridge-since-v1190),
+Useful entrypoints: [source/current-record search](research/USAGE.md#search-current-authored-records),
+[chronology and causal interpretations](research/USAGE.md#claim-chronology-and-causeeffect-links),
+[keyword citations](research/USAGE.md#choose-citations-by-keywords),
+[Zotero capture and recovery](research/USAGE.md#zotero-desktop-bridge),
 [author revisions and acknowledgements](research/USAGE.md#research-workflows).
 Use the same supported application version for every archive writer; product
 release numbers, archive versions and response schemas are independent.
@@ -684,7 +686,7 @@ value as an editing instruction.
 
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
-**Current main (unreleased):** shared counting excludes inline code, images and
+**Since v0.7.1:** shared counting excludes inline code, images and
 Markdown link destinations while retaining visible link labels. This measurement
 projection does not change displayed paragraph text, saved quote identities or
 chapter numbering; a chapter without countable prose still retains its number.
@@ -806,7 +808,7 @@ lixity schema --section configuration
 
 The `configuration` object (`lixity-configuration/1`) reports accepted keys,
 project-only keys, uninterpreted keys, native-settings persistence/session scope,
-and component schemas for corpus, threshold and publication settings. Current main
+and component schemas for corpus, threshold and publication settings. v0.7.1
 also exposes the owning character-profile schema. Defaults
 are annotations, not active project/server values. Scene and NDA settings retain
 their owning component's validation; this is not a
@@ -820,7 +822,7 @@ callers can inspect `CorpusConfig.model_json_schema()` for corpus fields. Option
 
 ### Character profiles
 
-**Current main (unreleased):** define literal aliases and optional author-declared
+**Since v0.7.1:** define literal aliases and optional author-declared
 viewpoint chapters in the selected project's configuration:
 
 ```toml

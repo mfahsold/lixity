@@ -19,7 +19,7 @@ serves the scene before deciding what to keep or revise.
 [Try the report](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
-[v0.7.0 release notes](docs/releases/v0.7.0.md)
+[v0.7.1 release notes](docs/releases/v0.7.1.md)
 
 ## Try it in 30 seconds
 
@@ -77,7 +77,7 @@ does not change an already retained quotation. An integrity check is not a fact 
 [Workflows and compatibility](docs/research/USAGE.md) ·
 [Places and journeys](docs/screenshots/dashboard-dossier-geography.png)
 
-**Current main (unreleased):** edit an exported dossier in Markdown, review its
+**Since v0.7.1:** edit an exported dossier in Markdown, review its
 changes against the archive and apply the prepared revision explicitly. Images
 and diagrams share a zoom viewer; geography starts offline, with optional
 OpenStreetMap tiles. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
@@ -116,10 +116,10 @@ and terminal presentation are separate. [Language settings and limits](docs/LOCA
 
 ## Current release
 
-The current release is **v0.7.0**, continuing the pre-1.0 development line;
+The current release is **v0.7.1**, continuing the pre-1.0 development line;
 historical v3.0.1 and earlier tags remain available. Product and schema versions
 are independent. This release reads research archives through v8; geographic
-saves opt into v8, which older readers cannot open. See [Release notes](docs/releases/v0.7.0.md)
+saves opt into v8, which older readers cannot open. See [Release notes](docs/releases/v0.7.1.md)
 for compatibility and upgrading from historical numbering, and the
 [changelog](CHANGELOG.md) for subsequent work on `main`.
 

@@ -22,7 +22,7 @@ from lixity.server import LixityServerHandler
 project=Path(sys.argv[1])/'synthetic-project'
 api.init(project,title='Synthetic usability project')
 manuscript=project/'manuscript.md'
-manuscript.write_text('## One\\n\\nMara waits.\\n\\n## Two\\n\\nShe opens the door.\\n',encoding='utf-8')
+manuscript.write_text('## One\\n\\nMara waits. '+('Measured prose. '*1234)+'\\n\\n## Two\\n\\nShe opens the door.\\n',encoding='utf-8')
 (project/'lixity.toml').write_text('[characters.Mara]\\npov_in_chapters = [2]\\n',encoding='utf-8')
 LixityServerHandler.workspace_root=str(project)
 LixityServerHandler.research_dir=str(project)
@@ -49,7 +49,20 @@ server.serve_forever()
     await expect(figure.locator('td').nth(1)).toHaveText('1');
     await expect(figure.locator('td').nth(2)).toHaveText('1 / 2');
     await expect(figure.locator('td').last()).toHaveText('2');
+    const overview=page.locator('#scenes .scene-overview');
+    await expect(overview.locator('tbody tr')).toHaveCount(2);
+    await overview.screenshot({path:path.join(artifacts,`scenes-${width}.png`)});
+    const numericCells=await overview.locator('tbody td').evaluateAll(cells=>cells.map(cell=>{
+      const range=document.createRange();range.selectNodeContents(cell);
+      return {text:cell.textContent,lines:new Set(Array.from(range.getClientRects(),rect=>Math.round(rect.top))).size};
+    }));
+    assert.equal(numericCells.length,8,'Both scenes expose all four measured values');
+    assert.ok(numericCells.every(cell=>cell.lines===1),
+      'Scene numbers and their units remain on one line: '+JSON.stringify(numericCells));
     if(width===320) {
+      await overview.focus();await page.keyboard.press('ArrowRight');
+      await expect.poll(()=>overview.evaluate(element=>element.scrollLeft)).toBeGreaterThan(0);
+      await overview.evaluate(element=>{element.scrollLeft=0;});
       const table=page.locator('#characters .table-wrap');
       assert.ok((await page.locator('#characters th').first().boundingBox()).width>=50,
         'Character headers must remain readable instead of wrapping into single letters');

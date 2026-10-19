@@ -52,4 +52,4 @@ To analyze your own manuscript or keep research notes and decisions, [install Li
 
 Lixity is open source under AGPL-3.0-or-later: any writing purpose — private, research or commercial, including a book intended for sale or self-publishing — needs no extra permission. A separate written commercial license exists only for closed-source integrations. [Read the licensing guide](../LICENSING.md) before starting.
 
-[Lixity home](../) · [Example report](../demo/report.html) · [Legal notice](../#impressum)
+[All guides](../#guides) · [Lixity home](../) · [Example report](../demo/report.html) · [Legal notice](../#impressum)

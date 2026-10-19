@@ -2,7 +2,7 @@
 
 Collect sources, read and annotate in Zotero. Use Lixity's experimental research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.
 
-**Current main (unreleased):** research opens with dossiers and compact source-capture options. Existing archives remain readable. Dossier `--file` now requires an existing UTF-8 file; use `--body` for literal text. Installed help describes available commands.
+**Since v0.7.1:** research opens with dossiers and compact source-capture options. Existing archives remain readable. Dossier `--file` now requires an existing UTF-8 file; use `--body` for literal text. Installed help describes available commands.
 
 Maintained by the Lixity project · Updated 19 October 2026
 
@@ -99,9 +99,9 @@ To bring existing Lixity sources into Zotero, `research zotero-export` creates a
 
 *Historical visual references stay attached to exact source versions. [Mobile map view](../screenshots/dashboard-dossier-image-mobile.png) · [Harbour photochrom](../screenshots/dashboard-dossier-photo.png) · [Places and journeys](../screenshots/dashboard-dossier-geography.png) · [Credits and file hashes](../assets/research/sources.json).*
 
-Use **Places and routes** in the dossier editor for named points, paths and areas, with descriptions, periods, actors and transport choices. **Current main:** interactive vectors work offline; optional OpenStreetMap tiles need explicit, nonpersistent permission and disclose the viewed area and client IP to the provider. There is no road routing or travel-time calculation. Historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+Use **Places and routes** in the dossier editor for named points, paths and areas, with descriptions, periods, actors and transport choices. **Since v0.7.1:** interactive vectors work offline; optional OpenStreetMap tiles need explicit, nonpersistent permission and disclose the viewed area and client IP to the provider. There is no road routing or travel-time calculation. Historical map images remain separate evidence. See [geography and v8 compatibility](../research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
-Current-main images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.png). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
+Images and rendered diagrams share a [local zoom viewer](../screenshots/dashboard-dossier-image-zoom.png). [Mermaid diagrams](../screenshots/dashboard-dossier-diagram.png) retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.
 
 ## Search sources and current notes
 
@@ -173,7 +173,7 @@ lixity research search --query "reading room"
 lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relation contextualizes
 ```
 
-Use returned IDs, passage first and claim second. Current main also accepts complete bare UUIDv4 selectors and exposes plural aliases in grouped help. The short command creates an evidence link; `link-evidence` retains inspection and revision operations. See [scope and compatibility](../research/USAGE.md#reading-and-cli-workflows-since-v240).
+Use returned IDs, passage first and claim second. v0.7.1 also accepts complete bare UUIDv4 selectors and exposes plural aliases in grouped help. The short command creates an evidence link; `link-evidence` retains inspection and revision operations. See [scope and compatibility](../research/USAGE.md#reading-and-cli-workflows-since-v240).
 
 ## Associate manuscript text with a claim
 
@@ -238,7 +238,7 @@ Restore into a new, empty target. Restoration checks paths, checksums and record
 
 ## Command-line example: sources to decisions
 
-**Current main (unreleased):** for authored notes, use the explicit [Markdown export → edit → preview → apply workflow](../research/USAGE.md#edit-an-exported-markdown-dossier). The archive stays authoritative; a reviewed packet binds its project and snapshot. Exact update dry runs validate a proposed write, historical diffs compare saved revisions, and three-way preparation reconciles a draft. Source ingest is separate and does not create authored notes from Markdown exports.
+**Since v0.7.1:** for authored notes, use the explicit [Markdown export → edit → preview → apply workflow](../research/USAGE.md#edit-an-exported-markdown-dossier). The archive stays authoritative; a reviewed packet binds its project and snapshot. Exact update dry runs validate a proposed write, historical diffs compare saved revisions, and three-way preparation reconciles a draft. Source ingest is separate and does not create authored notes from Markdown exports.
 
 This optional example uses authorized local source files. Replace paths and UUID placeholders with the files and identifiers returned by earlier commands. Initialize the archive only once, and prepare `./sources/harbor-dossier.md` before importing that dossier.
 
@@ -266,4 +266,4 @@ Text inputs must be nonempty UTF-8 without NUL bytes, up to 2 MiB; PDFs can be u
 
 See the [implemented research reference](https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md) for CLI/API details. The broader [research RFC](https://github.com/mfahsold/lixity/blob/main/docs/research/README.md) includes unimplemented interfaces. Read [metric interpretation](interpretation.html) before comparing a source with a manuscript.
 
-[Lixity home](../) · [License and commercial use](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md) · [Legal notice](../#impressum)
+[All guides](../#guides) · [Lixity home](../) · [License and commercial use](https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md) · [Legal notice](../#impressum)

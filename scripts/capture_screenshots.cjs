@@ -157,6 +157,18 @@ async function main() {
         }
       }
       const options = {path: target, animations: 'disabled'};
+      // Scrolling an element into view can pin an unrelated toolbar over its
+      // heading. Keep those external elements in normal flow for this capture.
+      const externalSticky = selector ? await page.evaluateHandle(selector => {
+        const target = document.querySelector(selector);
+        return Array.from(document.querySelectorAll('body *'))
+          .filter(node => !target.contains(node) && getComputedStyle(node).position === 'sticky')
+          .map(node => {
+            const saved = {node, style: node.getAttribute('style')};
+            node.style.setProperty('position', 'static', 'important');
+            return saved;
+          });
+      }, selector) : null;
       try {
         if (selector === '#research-manager') {
           assert.ok(await page.locator('#research-tabs').evaluate(row => {
@@ -166,9 +178,37 @@ async function main() {
             return tab.top >= bounds.top && tab.bottom <= bounds.bottom;
           }), 'Cropped research navigation must preserve the selected tab height');
         }
-        if (selector) await page.locator(selector).screenshot(options);
-        else await page.screenshot(options);
+        if (selector) {
+          const element = page.locator(selector);
+          const bounds = () => element.evaluate(node => {
+            const rect = node.getBoundingClientRect();
+            return {x: rect.x + scrollX, y: rect.y + scrollY, width: rect.width, height: rect.height};
+          });
+          const before = await bounds();
+          await element.screenshot(options);
+          const after = await bounds();
+          assert.ok(await element.evaluate(node => {
+            const heading = node.querySelector(':scope > h2');
+            if (!heading) return true;
+            const rect = heading.getBoundingClientRect();
+            const x = rect.x + rect.width / 2, y = rect.y + rect.height / 2;
+            // A tall element capture may extend beyond the restored viewport.
+            if (x < 0 || x >= innerWidth || y < 0 || y >= innerHeight) return true;
+            return heading.contains(document.elementFromPoint(x, y));
+          }), `Capture heading ${selector} must not be covered by another element`);
+          for (const key of Object.keys(before)) {
+            assert.ok(Math.abs(after[key] - before[key]) <= 1,
+              `Capture target ${selector} changed ${key} during rendering: ${before[key]} → ${after[key]}`);
+          }
+        } else await page.screenshot(options);
       } finally {
+        if (externalSticky) {
+          await externalSticky.evaluate(entries => entries.forEach(({node, style}) => {
+            if (style === null) node.removeAttribute('style');
+            else node.setAttribute('style', style);
+          }));
+          await externalSticky.dispose();
+        }
         if (clamp) await clamp.evaluate(node => node.remove());
       }
       assert.deepEqual(errors, [], 'Screenshots must be free of runtime and console errors');
@@ -275,6 +315,9 @@ async function main() {
         await page.locator('#scenes summary').first().click();
         // Show a readable excerpt; the full sample contains many chapters.
         await page.evaluate(() => {
+          document.querySelectorAll('#scenes .scene-overview tbody tr').forEach((row, index) => {
+            if (index >= 3) row.remove();
+          });
           document.querySelectorAll('#scenes .scene-detail').forEach((detail, index) => {
             if (index >= 3) detail.remove();
           });

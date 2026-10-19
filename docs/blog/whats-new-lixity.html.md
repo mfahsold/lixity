@@ -1,6 +1,6 @@
 # What's new in Lixity: numbers you can compare, evidence that survives edits
 
-Posted 16 October 2026 · 7 minutes · [Blog](index.html)
+Posted 16 October 2026 · 7 minutes · [All articles](index.html)
 
 Lixity analyses a manuscript on your own computer. Chapter summaries describe rhythm, vocabulary and dialogue; paragraph views let you inspect local measurements and tense flags. A separate research workspace keeps sources and authored decisions. This article describes the 0.4.8 release line: changes to comparison floors, manuscript associations and the local interface.
 
@@ -74,4 +74,4 @@ Built-in analysis and dashboard generation run on your computer without cloud ca
 
 If you try it: tell me which passage surprised you — that is the feedback that shapes the next release.
 
-[Lixity home](../) · [Blog](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)
+[Lixity home](../) · [All articles](index.html) · [Report a reproducible issue](https://github.com/mfahsold/lixity/issues) · [Legal notice](../#impressum)

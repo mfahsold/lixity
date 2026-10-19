@@ -147,7 +147,7 @@ _PUBLIC_READ_ADAPTER = r"""(function () {
 
 def build_research_demo(root: Path, research_fixture: dict) -> Path:
     """Publish the real dashboard with a bounded, GET-only local fixture adapter."""
-    from build_examples import SITE, _head_metadata, _insert_notice, _notice
+    from build_examples import SITE, _head_metadata, _insert_notice, _notice, _site_navigation
 
     resources = {url: "../" + value["asset_path"].removeprefix("docs/")
                  for url, value in research_fixture.items() if "asset_path" in value}
@@ -225,7 +225,7 @@ document.addEventListener("DOMContentLoaded", function () {{
                     'img-src \'self\' data: blob: https://tile.openstreetmap.org; '
                     'connect-src \'self\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
     document = document.replace("</head>", restrictions + head + policy + "</head>", 1)
-    notice = _notice(f"Lixity {__version__} · read-only research example · Current main (unreleased)", [
+    notice = _notice(f"Lixity {__version__} · read-only research example", [
         "Start with Dossiers: Warehouse 4 case notes links to an authored claim and one saved manuscript quote. "
         "Claims exposes the retained supporting passage; Review shows the exact saved quote and its claim-version pin. "
         "Decisions records the author's fictional choices. These links are explicit associations, not automatic fact checks.",
@@ -254,6 +254,7 @@ document.addEventListener("DOMContentLoaded", function () {{
                        f'<a href="{html.escape(item["rights_url"], quote=True)}">Public-domain rights statement</a></p>')
     credits.append('<p><a href="../assets/research/sources.json">Reviewed image provenance manifest</a></p></section>')
     document = document.replace("<footer>", "".join(credits) + "<footer>", 1)
+    document = _site_navigation(document, "Harbour research")
     destination = root / "docs/demo/research.html"
     destination.parent.mkdir(parents=True, exist_ok=True)
     destination.write_text(document, encoding="utf-8")

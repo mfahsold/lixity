@@ -126,30 +126,35 @@ function renderSafeMarkdown(rawText, dossierContext) {
   var blocks = text.split(/\n\s*\n/);
   var htmlBlocks = [];
 
-  function parseInline(str) {
-    var inlineCodes = [];
-    str = str.replace(/`([^`]+)`/g, function(m, c) {
-      var p = "@@@INLINE_CODE_" + inlineCodes.length + "@@@";
-      inlineCodes.push('<code>' + c + '</code>');
-      return p;
-    });
-
-    // Graceful Math notation
-    str = str.replace(/\$\$([\s\S]+?)\$\$/g, '<div class="math-display">$1</div>');
-    str = str.replace(/\$([^$\n]+?)\$/g, '<span class="math-inline">$1</span>');
-
-    str = str.replace(/\[([^\]]+)\]\(([^)]+)\)/g, function(m, label, url) {
+  function parseInline(str, noLinks) {
+    // Keep generated tags, attributes and literal code/math out of emphasis
+    // substitutions. Tokens contain no markup delimiters and cannot match data.
+    var protectedHtml = [], usedPrefixes = new Set(str.match(/@@@LIXITYINLINE[0-9]+END/g) || []);
+    var serial = 0;
+    while (usedPrefixes.has("@@@LIXITYINLINE" + serial + "END")) serial++;
+    var prefix = "@@@LIXITYINLINE" + serial + "END";
+    function protect(html) {
+      var token = prefix + protectedHtml.length + "@@@";
+      protectedHtml.push(html);
+      return token;
+    }
+    str = str.replace(/`([^`]+)`|\$\$([\s\S]+?)\$\$|\$([^$\n]+?)\$|\[([^\]]+)\]\(([^)]+)\)/g, function(m, code, displayMath, math, label, url) {
+      if (code !== undefined) return protect('<code>' + code + '</code>');
+      if (displayMath !== undefined) return protect('<div class="math-display">' + displayMath + '</div>');
+      if (math !== undefined) return protect('<span class="math-inline">' + math + '</span>');
+      if (noLinks) return m;
       var cleanUrl = url.trim();
       if (/^lixity:/i.test(cleanUrl)) {
-        return '<code class="lixity-ref" title="Internal reference: ' + cleanUrl.replace(/"/g, "&quot;") + '">' + label + ' (' + cleanUrl.replace(/^lixity:/i, "") + ')</code>';
+        return protect('<code class="lixity-ref" title="Internal reference: ' + cleanUrl.replace(/"/g, "&quot;") + '">' + label + ' (' + cleanUrl.replace(/^lixity:/i, "") + ')</code>');
       }
+      var visibleLabel = parseInline(label, true);
       if (/^(javascript|data|vbscript):/i.test(cleanUrl)) {
-        return label + ' (' + cleanUrl + ')';
+        return protect(visibleLabel + ' (' + cleanUrl + ')');
       }
       if (/^(https?:\/\/|\/|#)/i.test(cleanUrl)) {
-        return '<a href="' + cleanUrl.replace(/"/g, "&quot;") + '" target="_blank" rel="noopener noreferrer nofollow">' + label + '</a>';
+        return protect('<a href="' + cleanUrl.replace(/"/g, "&quot;") + '" target="_blank" rel="noopener noreferrer nofollow">' + visibleLabel + '</a>');
       }
-      return label + ' (' + cleanUrl + ')';
+      return protect(visibleLabel + ' (' + cleanUrl + ')');
     });
 
     str = str.replace(/~~(.+?)~~/g, '<del>$1</del>');
@@ -160,8 +165,8 @@ function renderSafeMarkdown(rawText, dossierContext) {
     str = str.replace(/\*([^*]+)\*/g, '<em>$1</em>');
     str = str.replace(/_([^_]+)_/g, '<em>$1</em>');
 
-    inlineCodes.forEach(function(codeHtml, i) {
-      str = str.replace("@@@INLINE_CODE_" + i + "@@@", codeHtml);
+    str = str.replace(new RegExp(prefix + "([0-9]+)@@@", "g"), function(_, i) {
+      return protectedHtml[Number(i)];
     });
 
     return str;

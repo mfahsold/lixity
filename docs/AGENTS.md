@@ -55,7 +55,7 @@ explicitly where supported and inspect the installed default before parsing.
 section as JSON. The additive `configuration` object has independent schema
 `lixity-configuration/1`: accepted/project-only/uninterpreted keys, corpus,
 threshold and publication component schemas, and native-settings persistence/session scope.
-Current main adds `characters_schema` from the owning character-profile model.
+v0.7.1 adds `characters_schema` from the owning character-profile model.
 It describes installed defaults and validation vocabulary, never effective project
 values or a complete schema for every project setting. Discovery commands read no
 project configuration. Older releases use unfiltered `about --json` and command
@@ -248,7 +248,7 @@ deterministic proxies, with the following scope and availability rules.
   without mention), `presence_ratio`, `per_chapter`. Appendix and front matter
   are excluded, so chapter numbers match the metrics. **No NER** — the caller
   supplies the names; an empty name list is an error (not a silent empty
-  report). Current-main project profiles escape literal aliases and add
+  report). Project profiles escape literal aliases and add
   `declared_pov_chapters` separately when configured. These author declarations
   never alter lexical counts or imply inferred perspective. See
   [configuration and precedence](USAGE.md#character-profiles).
@@ -404,7 +404,7 @@ updated_text = api.resolve_marker(new_text, m["id"])
 info = api.about()                                    # languages, features, heuristics
 ```
 
-Current main accepts omitted `names` in `api.characters(..., project_config=...)`
+v0.7.1 accepts omitted `names` in `api.characters(..., project_config=...)`
 to resolve that explicit mapping's profiles/legacy names; it does not discover
 character configuration implicitly. An explicit empty selection suppresses fallback
 and fails the standalone character request. Shared prose counting excludes link
@@ -428,7 +428,7 @@ record/manifest v8 on its first save; subsequent edits never downgrade it.
 Legacy dossier encodings remain unchanged until a geographic save. Older readers
 cannot open v8 archives. [Workflow and coordinate semantics](research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
-**Current main:** `withdraw(project, dossier_id=..., expected_snapshot=...,
+**Since v0.7.1:** `withdraw(project, dossier_id=..., expected_snapshot=...,
 expected_revision=..., dry_run=...)` requires the reviewed digest and exact
 positive revision. `research-dossier-withdraw-preview-local/1` returns
 `{operation, project_id, target_id, target_revision, snapshot, reason, ready: true,
@@ -477,7 +477,7 @@ are shared across CLI, Python and HTTP.
 `expected_claim_revision`. Supplied guards reject changed reviewed context or
 withdrawn evidence while preserving full-paragraph citation semantics.
 
-**Current main (unreleased), revision API:**
+**Since v0.7.1, revision API:**
 
 - `preview_record_changes(project, kind, id, changes=..., section=None)` compares
   current and draft values from one snapshot. `compare_record_revisions(project,
@@ -523,6 +523,10 @@ when `allow_retention is True`. `selection` must contain exactly
 The raw-source SHA-256 and SHA-256 of UTF-8 displayed `ParagraphProfile.text`
 bind the source and paragraph. Offsets are Unicode codepoints with exclusive end;
 quotes are nonblank, at most 10,000 codepoints, and notes at most 2,000 characters.
+The anchor projection removes supported emphasis, comments and footnote anchors,
+but retains link/code syntax. `find-anchor` matches a query exactly and
+case-sensitively without Unicode normalization; it does not use the separate
+prose-counting projection to identify quotes.
 Manuscript paths must stay inside the explicit project, including symlink
 resolution. Expected project, snapshot, source bytes and current claim revision
 must match; save rejects withdrawn claims and stale or ambiguous selections.
@@ -545,6 +549,12 @@ revision with the resolved line span, refreshed paragraph hash and offsets for
 adjusted paragraphs, and the current file digest; the earlier anchor stays in
 history. Ambiguous quotes are not re-pinned; edited quotes require an explicitly
 reviewed, uniquely resolvable replacement through `--new-quote`.
+`--accept-claim-updates` explicitly accepts newer current claim revisions while
+preserving anchors. Combined with `--accept-moved`, both changes share one
+association revision when the quote resolves uniquely. Multi-association CLI
+reconciliation commits each eligible association separately, reporting
+`accepted`/`skipped`; earlier commits remain if a later operation fails. Claim
+acceptance can leave an unresolved anchor, so review again after writing.
 
 The research **Review** tab lists the saved associations with anchor state,
 flags and pinned quote. It loads when the tab is opened, with the shared review
@@ -842,7 +852,7 @@ all operations before one commit; errors and races accept none. It returns
 record references, without duplicating full dossier bodies/citation graphs.
 Duplicate IDs and references to future revisions inside the same batch are
 rejected. See [research workflows](research/USAGE.md#research-workflows).
-Current main accepts the full ready preparation envelope as well as a raw list in
+v0.7.1 accepts the full ready preparation envelope as well as a raw list in
 both Python batch functions. A versioned envelope must match the selected project
 and reviewed snapshot; replacing its guard with a newer snapshot cannot rebase it.
 

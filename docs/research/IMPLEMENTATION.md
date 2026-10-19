@@ -15,7 +15,7 @@ Zotero capture is read-only; source editing and ordinary library work stay in
 Zotero. Audio/video are unsupported. PDF extraction uses optional local tools or
 an explicitly configured worker, not a bundled inference runtime.
 
-**Current main (unreleased):** exact update dry runs, saved-revision comparisons
+**Since v0.7.1:** exact update dry runs, saved-revision comparisons
 and explicit Markdown dossier export/reconciliation reuse the same revision path.
 Guarded dossier retirement reuses source withdrawal's tombstone storage.
 Interactive geography works offline; optional map tiles require separate network

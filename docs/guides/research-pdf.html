@@ -97,13 +97,14 @@
 }
 </script>
 </head>
-<body>
+<body id="top" tabindex="-1" class="site-page">
 <a class="skip-link" href="#content">Skip to guide</a>
+<nav class="site-return" aria-label="Lixity navigation"><a href="../">Home</a><a href="../#guides" aria-current="location">Guides</a><a href="../blog/index.html">Articles</a><a href="../#examples">Examples</a></nav>
 <main class="guide" id="content">
-<a href="../">Lixity · Documentation</a>
+<nav class="site-breadcrumbs" aria-label="Breadcrumb"><ol><li><a href="../">Home</a></li><li><a href="../#guides">Guides</a></li><li><span aria-current="page">Research and PDF/OCR</span></li></ol></nav>
 <h1>Connect research to your manuscript</h1>
 <p>Collect sources, read and annotate in Zotero. Use Lixity's experimental research workspace to connect selected evidence with claims, authorial decisions and exact manuscript quotations. A capture preserves the source version you used; it does not establish that a claim is true.</p>
-<p><strong>Current main (unreleased):</strong> research opens with dossiers and compact source-capture options. Existing archives remain readable. Dossier <code>--file</code> now requires an existing UTF-8 file; use <code>--body</code> for literal text. Installed help describes available commands.</p>
+<p><strong>Since v0.7.1:</strong> research opens with dossiers and compact source-capture options. Existing archives remain readable. Dossier <code>--file</code> now requires an existing UTF-8 file; use <code>--body</code> for literal text. Installed help describes available commands.</p>
 <p class="updated">Maintained by the Lixity project · Updated <time datetime="2026-10-19">19 October 2026</time></p>
 <nav class="guide-nav" aria-label="Guides"><a href="first-look.html">First look</a><a href="installation.html">Installation</a><a href="interpretation.html">Interpret results</a><a href="manuscript-analysis-tools.html">Compare tools</a><a href="research-pdf.html" aria-current="page">Sources and PDF/OCR</a></nav>
 <div class="notice-box"><strong>Before importing:</strong> Choose the intended project and confirm that you may keep the source bytes. Text PDFs need Poppler; image-only scans need local Tesseract or a configured OCR worker. See <a href="installation.html#install">installation</a> and <a href="#ocr">PDF requirements</a>.</div>
@@ -151,11 +152,11 @@ lixity research search --project ./sample-project --query "reading room"</code><
 <h2 id="places-and-routes">Read a place alongside its sources</h2>
 <p><strong>Since v0.7.0:</strong> the <a href="../demo/research.html">read-only research example</a> combines a historical Hamburg harbour plan, a photochrom print and fictional scene notes. Open its dossier to inspect the images, source links and an authored walking/driving sketch. The historical images do not establish the invented event or journey.</p>
 <figure class="frame">
-  <a href="../screenshots/dashboard-dossier-image.png"><img src="../screenshots/dashboard-dossier-image.png" width="2164" height="1544" alt="Retained historical map in the Hamburg research dossier, with its source and provenance" loading="lazy" decoding="async"/></a>
+  <a href="../screenshots/dashboard-dossier-image.png"><img src="../screenshots/dashboard-dossier-image.png" width="2164" height="1546" alt="Retained historical map in the Hamburg research dossier, with its source and provenance" loading="lazy" decoding="async"/></a>
   <figcaption>Historical visual references stay attached to exact source versions. <a href="../screenshots/dashboard-dossier-image-mobile.png">Mobile map view</a> · <a href="../screenshots/dashboard-dossier-photo.png">Harbour photochrom</a> · <a href="../screenshots/dashboard-dossier-geography.png">Places and journeys</a> · <a href="../assets/research/sources.json">Credits and file hashes</a>.</figcaption>
 </figure>
-<p>Use <strong>Places and routes</strong> in the dossier editor for named points, paths and areas, with descriptions, periods, actors and transport choices. <strong>Current main:</strong> interactive vectors work offline; optional OpenStreetMap tiles need explicit, nonpersistent permission and disclose the viewed area and client IP to the provider. There is no road routing or travel-time calculation. Historical map images remain separate evidence. See <a href="../research/USAGE.md#keep-places-and-journeys-in-a-dossier">geography and v8 compatibility</a>.</p>
-<p>Current-main images and rendered diagrams share a <a href="../screenshots/dashboard-dossier-image-zoom.png">local zoom viewer</a>. <a href="../screenshots/dashboard-dossier-diagram.png">Mermaid diagrams</a> retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.</p>
+<p>Use <strong>Places and routes</strong> in the dossier editor for named points, paths and areas, with descriptions, periods, actors and transport choices. <strong>Since v0.7.1:</strong> interactive vectors work offline; optional OpenStreetMap tiles need explicit, nonpersistent permission and disclose the viewed area and client IP to the provider. There is no road routing or travel-time calculation. Historical map images remain separate evidence. See <a href="../research/USAGE.md#keep-places-and-journeys-in-a-dossier">geography and v8 compatibility</a>.</p>
+<p>Images and rendered diagrams share a <a href="../screenshots/dashboard-dossier-image-zoom.png">local zoom viewer</a>. <a href="../screenshots/dashboard-dossier-diagram.png">Mermaid diagrams</a> retain their source; restricted or unsupported syntax stays readable as source. No CDN or diagram upload is required.</p>
 
 <h2 id="search">Search sources and current notes</h2>
 <p>The dashboard Search tab includes sources and current dossiers, claims and decisions. Choose a narrower scope when needed, then use <strong>View details</strong> to read a result. Search refreshes an outdated index automatically; <code>--strict</code> reports an error instead. Only source passages can be cited as evidence.</p>
@@ -203,7 +204,7 @@ lixity research relate --project ./sample-project FROM_CLAIM TO_CLAIM \
 <pre><code>cd ./sample-project
 lixity research search --query "reading room"
 lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID --relation contextualizes</code></pre>
-<p>Use returned IDs, passage first and claim second. Current main also accepts complete bare UUIDv4 selectors and exposes plural aliases in grouped help. The short command creates an evidence link; <code>link-evidence</code> retains inspection and revision operations. See <a href="../research/USAGE.md#reading-and-cli-workflows-since-v240">scope and compatibility</a>.</p>
+<p>Use returned IDs, passage first and claim second. v0.7.1 also accepts complete bare UUIDv4 selectors and exposes plural aliases in grouped help. The short command creates an evidence link; <code>link-evidence</code> retains inspection and revision operations. See <a href="../research/USAGE.md#reading-and-cli-workflows-since-v240">scope and compatibility</a>.</p>
 
 <h2 id="manuscript-claims">Associate manuscript text with a claim</h2>
 <p><strong>Since v0.3.0:</strong> select text within one opened manuscript paragraph, choose <strong>Link selection to claim</strong>, choose a current claim, permit local retention of the quote and select <strong>Save association</strong>. Previewing writes nothing. Saving keeps a manual association to the exact claim version, with the quote and paragraph anchor; it does not import the complete manuscript or edit prose.</p>
@@ -239,7 +240,7 @@ lixity research search --project ./restored-sample --query "reading room"</code>
 <p><code>research zotero-backup</code> pairs the archive with a selected Zotero data folder; you must close Zotero first. <code>research zotero-restore</code> verifies and restores both into a new directory without replacing a working library. Manuscripts, application profiles and external linked attachments need separate backups. Test a restored citation and follow the <a href="../research/USAGE.md">backup reference</a> before relying on the pair.</p>
 
 <h2 id="cli-workflow">Command-line example: sources to decisions</h2>
-<p><strong>Current main (unreleased):</strong> for authored notes, use the explicit <a href="../research/USAGE.md#edit-an-exported-markdown-dossier">Markdown export → edit → preview → apply workflow</a>. The archive stays authoritative; a reviewed packet binds its project and snapshot. Exact update dry runs validate a proposed write, historical diffs compare saved revisions, and three-way preparation reconciles a draft. Source ingest is separate and does not create authored notes from Markdown exports.</p>
+<p><strong>Since v0.7.1:</strong> for authored notes, use the explicit <a href="../research/USAGE.md#edit-an-exported-markdown-dossier">Markdown export → edit → preview → apply workflow</a>. The archive stays authoritative; a reviewed packet binds its project and snapshot. Exact update dry runs validate a proposed write, historical diffs compare saved revisions, and three-way preparation reconciles a draft. Source ingest is separate and does not create authored notes from Markdown exports.</p>
 <p>This optional example uses authorized local source files. Replace paths and UUID placeholders with the files and identifiers returned by earlier commands. Initialize the archive only once, and prepare <code>./sources/harbor-dossier.md</code> before importing that dossier.</p>
 <details>
 <summary>Show the complete command-line example</summary>
@@ -284,7 +285,8 @@ lixity research audit --project ./novel-research</code></pre>
 <h2 id="limits">Input and research limits</h2>
 <p>Text inputs must be nonempty UTF-8 without NUL bytes, up to 2 MiB; PDFs can be up to 50 MiB. Imports allow at most 5,000 nonempty passages. Search matches words using SQLite FTS5/BM25; it does not translate text or search by meaning. Refreshing a source does not automatically update your claims or decisions.</p>
 <p>See the <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/USAGE.md">implemented research reference</a> for CLI/API details. The broader <a href="https://github.com/mfahsold/lixity/blob/main/docs/research/README.md">research RFC</a> includes unimplemented interfaces. Read <a href="interpretation.html">metric interpretation</a> before comparing a source with a manuscript.</p>
-<footer><a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a> · <a href="../#impressum">Legal notice</a></footer>
+<footer><a href="../#guides">All guides</a> · <a href="../">Lixity home</a> · <a href="https://github.com/mfahsold/lixity/blob/main/docs/LICENSING.md">License and commercial use</a> · <a href="../#impressum">Legal notice</a></footer>
 </main>
+<a class="site-back-top" href="#top">Back to top ↑</a>
 </body>
 </html>

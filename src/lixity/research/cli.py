@@ -32,6 +32,15 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "unlink-manuscript": (("json", "table", "text"), "json"),
 }
 
+_REVISION_FIELDS = {
+    "dossier": ("title", "language", "tags", "evidence", "file", "body", "geography"),
+    "claim": ("title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"),
+    "link-evidence": ("claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"),
+    "decision": ("title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot",
+                 "dossier_id", "dossiers", "dossier_revisions"),
+    "relate": ("from_claim_id", "to_claim_id", "from_claim_revision", "to_claim_revision", "relation", "state", "rationale"),
+}
+
 
 def _non_negative(value: str) -> int:
     number = int(value)
@@ -227,13 +236,17 @@ def configure(parser: argparse.ArgumentParser) -> None:
         if name == "find-anchor":
             _add_manuscript_argument(command)
             command.add_argument("--query", required=True,
-                                 help="Exact displayed-text quote (inline Markdown markers removed)")
+                                 help="Exact case-sensitive paragraph quote after supported emphasis cleanup; "
+                                      "link/code syntax remains and Unicode is not normalized")
             command.add_argument("--line", type=int,
                                  help="Restrict the search to the paragraph containing this source line")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "reconcile-manuscript":
             _add_manuscript_argument(command)
-            command.add_argument("--link-id", help="Only this association (default: every uniquely resolvable association)")
+            command.epilog = ("Combined anchor and claim acceptance creates one revision per association. "
+                              "Multiple associations use separate commits and may partially succeed; inspect accepted/skipped "
+                              "and run review-manuscript again. Claim acceptance does not resolve changed, ambiguous or unavailable anchors.")
+            command.add_argument("--link-id", help="Limit preview or acceptance to this association; otherwise process eligible associations separately")
             command.add_argument("--new-quote",
                                  help="Explicitly replace a changed association's quote with the revised displayed-text quote (requires --link-id)")
             command.add_argument("--line", type=int,
@@ -241,13 +254,14 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--reason",
                                  help="Optional revision reason when updating a quote")
             command.add_argument("--accept-moved", action="store_true",
-                                 help="Accept uniquely resolvable anchors (or apply --new-quote); "
+                                 help="Re-pin uniquely moved/adjusted anchors with unchanged quotes, or apply explicit --new-quote; "
                                       "without an acceptance flag the command only previews")
             command.add_argument("--accept-claim-updates", action="store_true",
-                                 help="Re-pin associations whose claim advanced to a newer revision "
-                                      "(anchor unchanged); add --accept-moved to update anchors too")
+                                 help="Explicitly accept newer current claim revisions; preserve anchors unless "
+                                      "--accept-moved also resolves them")
             command.add_argument("--update-sha", action="store_true",
-                                 help="Accepted for compatibility; the current file digest is always re-pinned")
+                                 help="Accepted for compatibility; anchor re-pins already refresh the source digest, "
+                                      "while claim-only updates preserve anchors")
             command.add_argument("--expected-snapshot",
                                  help="Optional strict archive digest for the initial review")
             command.add_argument("--expected-source-sha256",
@@ -439,6 +453,11 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--to", dest="target_dir", required=True, help="Target project directory")
         elif name == "matrix":
             command.add_argument("--output", help="Optional output file destination")
+        if name in _REVISION_FIELDS:
+            command.set_defaults(cli_draft_arguments=tuple(
+                " / ".join(action.option_strings) or action.metavar or action.dest.upper()
+                for action in command._actions if action.dest in _REVISION_FIELDS[name]
+            ))
 
 
 def command_metadata() -> list[dict[str, Any]]:
@@ -555,15 +574,13 @@ def _dossier_content(*, file: str | None, body: str | None) -> str | None:
 def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
     """Collect only flags supplied for an authored-record update."""
     kind = args.research_command
-    fields = {
-        "dossier": ("title", "language", "tags", "evidence"),
-        "claim": ("title", "statement", "confidence", "time_period", "place", "actors", "dossier_id", "dossier_revision", "tags"),
-        "link-evidence": ("claim_id", "claim_revision", "passage_id", "relation", "rationale", "reviewer"),
-        "decision": ("title", "rationale", "claim_id", "claim_revision", "deviation_from_fact", "impact_on_plot"),
-        "relate": ("from_claim_id", "to_claim_id", "from_claim_revision", "to_claim_revision", "relation", "state", "rationale"),
-    }[kind]
     changes: dict[str, Any] = {}
-    for field in fields:
+    for field in _REVISION_FIELDS[kind]:
+        # These inputs retain their existing body/geography/association loaders.
+        if (kind == "dossier" and field in ("file", "body", "geography")) or (
+            kind == "decision" and field in ("dossier_id", "dossiers", "dossier_revisions")
+        ):
+            continue
         value = getattr(args, field)
         if value is None:
             continue
@@ -595,6 +612,12 @@ def _revision_changes(args: argparse.Namespace) -> dict[str, Any]:
         from .repository import ResearchError
         raise ResearchError("Updating a dossier section requires --file PATH or --body TEXT with new content")
     return changes
+
+
+def _missing_draft_message(args: argparse.Namespace) -> str:
+    """Derive actionable input names from the owning fields and actual parser."""
+    return (f"Supply at least one draft field for {args.research_command}: {', '.join(args.cli_draft_arguments)}. "
+            "Use --inspect to read the record or --history to list saved revisions")
 
 
 def _revision_diff_text(comparison: dict[str, Any]) -> str:
@@ -765,7 +788,7 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         resolutions = _revision_resolutions(args.resolve)
         changes = _revision_changes(args)
         if not changes:
-            raise ResearchError("Supply at least one draft field; use --inspect to read the record or --history to list saved revisions")
+            raise ResearchError(_missing_draft_message(args))
         return api.prepare_record_revision(args.project, kind, record_id,
                                            base_revision=args.base_revision, changes=changes, resolutions=resolutions,
                                            **({"section": args.section} if getattr(args, "section", None) else {}))
@@ -777,7 +800,7 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
             comparison = api.compare_record_revisions(args.project, kind, record_id,
                                                        from_revision=args.from_revision, to_revision=args.to_revision)
         elif not changes:
-            raise ResearchError("Supply at least one draft field; use --inspect to read the record or --history to list saved revisions")
+            raise ResearchError(_missing_draft_message(args))
         else:
             comparison = api.preview_record_changes(args.project, kind, record_id, changes=changes,
                                                     **({"section": args.section} if getattr(args, "section", None) else {}))
@@ -795,7 +818,7 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         try:
             changes = _revision_changes(args)
             if not changes:
-                raise ResearchError("Supply at least one draft field; use --inspect to read the record or --history to list saved revisions")
+                raise ResearchError(_missing_draft_message(args))
             options: dict[str, Any] = {}
             if getattr(args, "section", None):
                 options["section"] = args.section
