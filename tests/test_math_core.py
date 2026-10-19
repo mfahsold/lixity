@@ -4,7 +4,8 @@ tests/test_math_core.py
 Known-value and property tests for the mathematical core: readability
 formulas, LIX threshold, syllable rules, robust statistics (median/MAD/z*),
 normal tail probabilities, Benjamini-Hochberg FDR, Spearman correlation,
-Jacobi eigendecomposition and lexical-diversity indices.
+and Jacobi eigendecomposition. Exact lexical-diversity references live in
+test_diversity.py; fingerprint/pipeline integration lives in test_style_fingerprint.py.
 """
 
 from __future__ import annotations
@@ -22,9 +23,7 @@ if BASE_DIR not in sys.path:
 
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
 from lixity.config import resolve_thresholds  # noqa: E402
-from lixity.diversity import hd_d, maas_a2, mattr, mtld, yules_k  # noqa: E402
 from lixity.math_core import (  # noqa: E402
-    CLIFF_BANDS,
     MAD_TO_SIGMA,
     binomial_se_percent,
     per_mille,
@@ -208,23 +207,27 @@ class TestSyllableRules(unittest.TestCase):
 
 class TestRobustStatistics(unittest.TestCase):
     def test_median_and_mad(self):
-        values = [1.0, 2.0, 3.0, 4.0, 5.0]
-        centre = median(values)
-        self.assertEqual(centre, 3.0)
-        self.assertEqual(mad(values, centre), 1.0)  # median of |x - 3|
-
-    def test_mad_scaling_constant(self):
-        # sigma = 1.4826 * MAD is the consistency constant for the normal distribution
-        self.assertAlmostEqual(1.4826 * 1.0, 1.4826, places=4)
+        cases = (([1.0, 2.0, 3.0], 2.0, 1.0),
+                 ([1.0, 2.0, 3.0, 4.0], 2.5, 1.0),
+                 ([1.0, 2.0, 3.0, 4.0, 5.0], 3.0, 1.0),
+                 ([5.0], 5.0, 0.0))
+        for values, centre, spread in cases:
+            with self.subTest(values=values):
+                self.assertEqual(median(values), centre)
+                self.assertEqual(mad(values, centre), spread)
+        self.assertEqual(mad([], 0.0), 0.0)
 
     def test_robust_z_and_significance_z(self):
         # Modified z-score (Iglewicz & Hoaglin): the exact inverse of the
         # MAD->sigma factor 1.4826, i.e. 0.674490759... (not a pinned 0.6745).
         self.assertAlmostEqual(robust_z(4.0, 2.0, 1.0), (1.0 / 1.4826) * 2.0, places=9)
+        self.assertAlmostEqual(robust_z(1.0, 2.0, 1.0), -1.0 / 1.4826, places=9)
         self.assertEqual(robust_z(4.0, 2.0, 0.0), 0.0)  # no spread -> no statement
         # z* shrinks noisy observations: sigma=1, se=1 -> denominator sqrt(2)
         self.assertAlmostEqual(significance_z(3.0, 1.0, 1.0, 1.0), 2.0 / math.sqrt(2.0), places=9)
         self.assertEqual(significance_z(3.0, 1.0, 0.0, 0.0), 0.0)
+        self.assertAlmostEqual(significance_z(5.0, 0.0, 2.0, 0.0), 2.5)
+        self.assertLess(abs(significance_z(5.0, 0.0, 2.0, 1.5)), 2.5)
 
     def test_normal_tail_probability(self):
         self.assertAlmostEqual(normal_tail_probability(0.0), 1.0, places=9)
@@ -266,7 +269,6 @@ class TestPublishedEffectAndFdrReferences(unittest.TestCase):
         self.assertEqual(cliff_delta([2.0, 3.0], [1.0]), 1.0)
         self.assertEqual(cliff_delta([1.0], [2.0, 3.0]), -1.0)
         self.assertEqual(cliff_delta([1.0, 2.0], [2.0, 1.0]), 0.0)
-        self.assertEqual(CLIFF_BANDS, (0.147, 0.33, 0.474))
         labels = [effect_label(value) for value in (0.1469, 0.147, 0.3299, 0.33, 0.4739, 0.474)]
         self.assertEqual(labels, ["negligible", "small", "small", "medium", "medium", "large"])
 
@@ -318,6 +320,8 @@ class TestBenjaminiHochberg(unittest.TestCase):
         rejected = benjamini_hochberg(cells, q=0.05)
         self.assertEqual(len(rejected), 4)
         self.assertEqual([ch for ch, _ in rejected], [0, 1, 2, 3])
+        sparse = [(1, "asl", 0.001), (2, "asl", 0.03), (3, "asl", 0.04), (4, "asl", 0.5)]
+        self.assertEqual(benjamini_hochberg(sparse, q=0.05), [(1, "asl")])
 
     def test_q_zero_rejects_nothing(self):
         cells = [(i, f"f{i}", p) for i, p in enumerate(self.P_VALUES)]
@@ -341,9 +345,11 @@ class TestSpearman(unittest.TestCase):
         self.assertAlmostEqual(spearman_rho(x, [10.0, 8.0, 6.0, 4.0, 2.0]), -1.0, places=9)
 
     def test_ties_use_average_ranks(self):
-        rho = spearman_rho([1.0, 1.0, 2.0, 3.0], [1.0, 2.0, 3.0, 4.0])
-        self.assertGreater(rho, 0.8)
-        self.assertLess(rho, 1.0)
+        cases = (([1.0, 1.0, 2.0, 3.0], [1.0, 2.0, 3.0, 4.0], 3 / math.sqrt(10)),
+                 ([1.0, 1.0, 2.0], [1.0, 2.0, 2.0], 0.5))
+        for left, right, expected in cases:
+            with self.subTest(left=left, right=right):
+                self.assertAlmostEqual(spearman_rho(left, right), expected, places=12)
 
     def test_short_series_returns_zero(self):
         self.assertEqual(spearman_rho([1.0, 2.0], [2.0, 1.0]), 0.0)
@@ -357,72 +363,39 @@ class TestJacobiEigendecomposition(unittest.TestCase):
         eigenvalues, eigenvectors = jacobi_eigh([[2.0, 1.0], [1.0, 2.0]])
         self.assertAlmostEqual(eigenvalues[0], 3.0, places=9)
         self.assertAlmostEqual(eigenvalues[1], 1.0, places=9)
+        diagonal, _ = jacobi_eigh([[2.0, 0.0], [0.0, 3.0]])
+        self.assertEqual(diagonal, [3.0, 2.0])
         # eigenvectors[i] belongs to eigenvalues[i] (sorted descending)
         self.assertAlmostEqual(abs(eigenvectors[0][0]), 1.0 / math.sqrt(2.0), places=9)
 
-    def test_properties_on_a_symmetric_matrix(self):
-        matrix = [
-            [4.0, 1.0, 2.0],
-            [1.0, 3.0, 0.5],
-            [2.0, 0.5, 2.0],
-        ]
-        eigenvalues, eigenvectors = jacobi_eigh(matrix)
-        n = len(matrix)
-        # trace and determinant identities
-        self.assertAlmostEqual(sum(eigenvalues), sum(matrix[i][i] for i in range(n)), places=8)
-        det = (
-            matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1])
-            - matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0])
-            + matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0])
+    def test_eigenpairs_orthogonality_and_determinism_on_symmetric_matrices(self):
+        matrices = (
+            [[4.0, 1.0, 2.0], [1.0, 3.0, 0.5], [2.0, 0.5, 2.0]],
+            [[1.0, 0.4, 0.1, -0.2], [0.4, 1.0, 0.3, 0.1],
+             [0.1, 0.3, 1.0, -0.4], [-0.2, 0.1, -0.4, 1.0]],
         )
-        self.assertAlmostEqual(math.prod(eigenvalues), det, places=8)
-        # A v = lambda v for every pair
-        for index, lam in enumerate(eigenvalues):
-            vector = eigenvectors[index]
-            for row in range(n):
-                ax = sum(matrix[row][col] * vector[col] for col in range(n))
-                self.assertAlmostEqual(ax, lam * vector[row], places=8)
-        # eigenvectors are orthonormal
-        for i in range(n):
-            vi = eigenvectors[i]
-            self.assertAlmostEqual(sum(c * c for c in vi), 1.0, places=9)
-            for j in range(i + 1, n):
-                vj = eigenvectors[j]
-                self.assertAlmostEqual(
-                    sum(a * b for a, b in zip(vi, vj, strict=True)), 0.0, places=9
-                )
-
-
-class TestLexicalDiversityProperties(unittest.TestCase):
-    def test_yule_and_maas_of_all_unique_tokens(self):
-        tokens = [f"w{i}" for i in range(150)]
-        self.assertAlmostEqual(yules_k(tokens), 0.0, places=12)
-        self.assertAlmostEqual(maas_a2(len(tokens), len(set(tokens))), 0.0, places=12)
-
-    def test_mattr_window_properties(self):
-        tokens = [f"w{i}" for i in range(100)]
-        unique_mattr = mattr(tokens, window=50)
-        self.assertIsNotNone(unique_mattr)
-        self.assertAlmostEqual(float(unique_mattr), 1.0, places=12)
-        repeated = mattr(["a"] * 100, window=50)
-        self.assertIsNotNone(repeated)
-        self.assertAlmostEqual(float(repeated), 0.02, places=12)
-
-    def test_mtld_short_text_returns_none(self):
-        self.assertIsNone(mtld(["a"] * 50))
-
-    def test_mtld_all_unique_returns_none(self):
-        self.assertIsNone(mtld([f"w{i}" for i in range(200)]))
-
-    def test_hd_d_is_deterministic_and_bounded(self):
-        tokens = ([f"w{i}" for i in range(80)] * 5)[:400]
-        first = hd_d(tokens)
-        second = hd_d(tokens)
-        self.assertEqual(first, second)
-        if first is None:
-            self.fail("hd_d returned None for a measured token list")
-        self.assertGreaterEqual(first, 0.0)
-        self.assertLessEqual(first, 1.0)
+        for matrix in matrices:
+            with self.subTest(size=len(matrix)):
+                eigenvalues, eigenvectors = jacobi_eigh(matrix)
+                self.assertEqual(jacobi_eigh(matrix), (eigenvalues, eigenvectors))
+                n = len(matrix)
+                self.assertAlmostEqual(sum(eigenvalues), sum(matrix[i][i] for i in range(n)), places=8)
+                if n == 3:
+                    det = (
+                        matrix[0][0] * (matrix[1][1] * matrix[2][2] - matrix[1][2] * matrix[2][1])
+                        - matrix[0][1] * (matrix[1][0] * matrix[2][2] - matrix[1][2] * matrix[2][0])
+                        + matrix[0][2] * (matrix[1][0] * matrix[2][1] - matrix[1][1] * matrix[2][0])
+                    )
+                    self.assertAlmostEqual(math.prod(eigenvalues), det, places=8)
+                for index, lam in enumerate(eigenvalues):
+                    vector = eigenvectors[index]
+                    for row in range(n):
+                        ax = sum(matrix[row][col] * vector[col] for col in range(n))
+                        self.assertAlmostEqual(ax, lam * vector[row], places=8)
+                for i, left in enumerate(eigenvectors):
+                    for j, right in enumerate(eigenvectors):
+                        self.assertAlmostEqual(sum(a * b for a, b in zip(left, right, strict=True)),
+                                               1.0 if i == j else 0.0, places=9)
 
 
 if __name__ == "__main__":

@@ -80,8 +80,8 @@ function scrollAndFlash(target) {
 var paragraphContentNode = document.getElementById("paragraph-content");
 var paragraphContent = paragraphContentNode ? JSON.parse(paragraphContentNode.textContent) : {};
 if (paragraphContentNode) paragraphContentNode.remove();
-document.querySelectorAll("#chapters .ptext-inner").forEach(function(inner) {
-  inner.replaceChildren();
+document.querySelectorAll("#chapters .ptext > noscript").forEach(function(fallback) {
+  fallback.remove();
 });
 var paragraphChips = Object.create(null);
 document.querySelectorAll(".chip[data-target]").forEach(function(chip) {
@@ -125,10 +125,14 @@ function renderParagraphText(paragraph, query) {
 
 function renderParagraph(panel) {
   var inner = panel.querySelector(".ptext-inner");
-  if (!inner || inner.querySelector("p")) return;
+  if (inner && inner.querySelector("p")) return;
   var content = paragraphContent[panel.id];
   if (!content) return;
-  inner.replaceChildren();
+  if (!inner) {
+    inner = document.createElement("div");
+    inner.className = "ptext-inner";
+    panel.appendChild(inner);
+  } else inner.replaceChildren();
   var text = document.createElement("p");
   text.textContent = content[0];
   inner.appendChild(text);
@@ -197,7 +201,8 @@ function toggleParagraph(chip, forceOpen, instant) {
       requestAnimationFrame(function () { panel.classList.remove("no-anim"); });
     });
   } else if (!panel.querySelector(".marker-note")) {
-    panel.querySelector(".ptext-inner").replaceChildren();
+    var inner = panel.querySelector(".ptext-inner");
+    if (inner) inner.remove();
   }
 }
 

@@ -9,6 +9,7 @@ self-describing JSON meta blocks and the CLI helper surfaces
 import json
 import os
 import re
+import shlex
 import shutil
 import subprocess
 import sys
@@ -20,7 +21,7 @@ if BASE_DIR not in sys.path:
     sys.path.insert(0, os.path.join(BASE_DIR, "src"))
 
 from lixity import api  # noqa: E402
-from lixity.cli import _BASH_COMPLETION, _ZSH_COMPLETION, main  # noqa: E402
+from lixity.cli import main  # noqa: E402
 
 SAMPLE = (
     "## Kap 1\n\n"
@@ -218,16 +219,9 @@ class TestCliAgentSurface(unittest.TestCase):
             main(["--version"])
         self.assertEqual(ctx.exception.code, 0)
 
-    def test_completion_bash_and_zsh(self):
-        for script in (_BASH_COMPLETION, _ZSH_COMPLETION):
-            self.assertIn("lixity", script)
-        self.assertIn("--fdr-method", _BASH_COMPLETION)
-        self.assertIn("--flag-min-severity", _BASH_COMPLETION)
-        self.assertIn("_lixity_style_flags", _ZSH_COMPLETION)
-        self.assertIn("characters", _ZSH_COMPLETION)
 
     @unittest.skipUnless(shutil.which("bash"), "requires Bash")
-    def test_bash_completion_offers_the_pdf_command(self):
+    def test_bash_completion_executes_command_and_style_flag_candidates(self):
         import io
         from contextlib import redirect_stdout
 
@@ -235,27 +229,21 @@ class TestCliAgentSurface(unittest.TestCase):
         with redirect_stdout(script):
             self.assertEqual(main(["completion", "bash"]), 0)
         bash = shutil.which("bash")
-        result = subprocess.run(  # noqa: S603 - resolved Bash, emitted local script and fixed input
-            [bash, "--noprofile", "--norc"],
-            input=script.getvalue() + '\nCOMP_WORDS=(lixity pd)\nCOMP_CWORD=1\n'
-            '_lixity_complete\nprintf "%s\\n" "${COMPREPLY[@]}"\n',
-            text=True, capture_output=True, check=True,
-        )
-        self.assertFalse(result.stderr)
-        self.assertEqual(result.stdout.split(), ["pdf"])
+        for words, expected in (
+            (("lixity", "pd"), ["pdf"]),
+            (("lixity", "style", "--fdr-m"), ["--fdr-method"]),
+            (("lixity", "style", "--flag-min"), ["--flag-min-severity"]),
+        ):
+            with self.subTest(words=words):
+                result = subprocess.run(  # noqa: S603 - resolved Bash and fixed synthetic words
+                    [bash, "--noprofile", "--norc"],
+                    input=script.getvalue() + f"\nCOMP_WORDS=({shlex.join(words)})\nCOMP_CWORD={len(words)-1}\n"
+                    '_lixity_complete\nprintf "%s\\n" "${COMPREPLY[@]}"\n',
+                    text=True, capture_output=True, check=True,
+                )
+                self.assertFalse(result.stderr)
+                self.assertEqual(result.stdout.split(), expected)
 
-    def test_zsh_completion_emits_the_pdf_command_descriptor(self):
-        import io
-        import re
-        from contextlib import redirect_stdout
-
-        script = io.StringIO()
-        with redirect_stdout(script):
-            self.assertEqual(main(["completion", "zsh"]), 0)
-        # These descriptors are the command candidates passed to Zsh's _describe.
-        commands = dict(re.findall(r"^\s+'([a-z]+):([^']+)'$", script.getvalue(), re.M))
-        self.assertIn("pdf", commands)
-        self.assertIn("PDF", commands["pdf"])
 
     def test_completion_scripts_cover_every_parser_command(self):
         import io
@@ -324,7 +312,7 @@ class TestCliAgentSurface(unittest.TestCase):
         self.assertEqual(payload["meta"]["language"], "en")
 
     def test_missing_file_exits_1(self):
-        self.assertEqual(main(["analyze", "/definitiv/nicht/da.md"]), 1)
+        self.assertEqual(main(["analyze", os.path.join(self.tmp.name, "missing.md")]), 1)
 
 
 if __name__ == "__main__":

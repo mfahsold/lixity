@@ -88,6 +88,7 @@ packages' Python modules, typing marker and UI assets against source filenames
 and bytes, and checks exact version metadata. Only after validation does it
 replace managed `dist/` artifacts and write `SHA256SUMS`. Unrelated files or
 directories in `dist/` cause an error and are preserved. CI uses the same checker.
+The source archive also includes and verifies shared Python test fixtures.
 
 Native PDF tests need Poppler (`pdftotext` and `pdftoppm`) and report an explicit
 skip if it is missing. Select them locally with `pytest -m native_pdf`.
@@ -95,6 +96,32 @@ Synthetic worker and Tesseract protocol tests need no model or installed OCR eng
 Optional hooks are installed with `pre-commit install`; see
 [`.pre-commit-config.yaml`](.pre-commit-config.yaml). Tags matching `v*` build
 release packages; authorized documentation pushes to `main` deploy Pages.
+
+### Test architecture
+
+Keep numerical reference cases close to the primitive they verify, with expected
+values derived independently of the implementation. Pipeline tests should check
+composition: selected chapters, register exemptions, emitted diagnostics and
+preserved contracts. Use enough varied chapters to exercise a diagnostic; an
+assertion loop over an empty result does not verify its values.
+
+Test settings markup directly for component contracts, HTTP handlers for saved
+state and conflicts, and browsers for rendered interactions. Shared mechanics
+belong in `tests/support.py`, `tests/research_support.py` or the browser support
+directory; test modules should not import fixtures from one another. Cached
+fixtures must be immutable or return fresh mutable state.
+
+Render every supported locale at desktop and mobile widths when labels or
+layout vary. Run language-independent interaction and failure scenarios once
+per relevant viewport unless localization affects their behavior. Preserve
+native HTTP workflows separately from intercepted browser scenarios.
+
+Consolidate repeated setup and parameterize equivalent cases before removing
+coverage. Remove a test only when retained assertions cover its failure mode
+more precisely. For subtle regressions, verify that the assertion detects a
+small representative fault in an isolated copy; never mutate the shared source
+tree while other tests or agents are using it. Test counts and single-run
+timings alone do not establish coverage or performance.
 
 ### Preparing a release
 

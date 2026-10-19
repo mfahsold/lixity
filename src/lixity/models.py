@@ -4,7 +4,9 @@ Defines strict, validated models for corpus configuration, sentence distribution
 chapter metrics, tense profiles, and synchronization reports.
 """
 
-from pydantic import BaseModel, Field
+from typing import Any
+
+from pydantic import BaseModel, Field, model_validator
 
 from .status import SCHEMA_VERSION_ANALYZE
 
@@ -46,6 +48,32 @@ class CorpusConfig(BaseModel):
             "Counted per chapter (ChapterMetrics.motif_counts)."
         ),
     )
+    register_profiles: dict[str, dict[str, Any]] = Field(
+        default_factory=dict,
+        description=(
+            "Named register profiles (e.g. 'kanzlei_historisch', 'kinderstimme') mapping "
+            "metric name to a target range or exact value. Target comparisons are descriptive; "
+            "book-relative z-scores are retained and assigned chapters are exempt from FDR."
+        ),
+    )
+    chapter_registers: dict[str, str] = Field(
+        default_factory=dict,
+        description=(
+            "Mapping of chapter title (or number as string) to a register profile name. "
+            "Chapters listed here are treated as intentional stylistic registers and are "
+            "exempt from FDR outlier flagging."
+        ),
+    )
+
+    @model_validator(mode="after")
+    def validate_registers(self) -> "CorpusConfig":
+        """Reject invalid author targets and unknown register assignments."""
+        from .registers import validate_register_settings
+
+        profiles, assignments = validate_register_settings(self.register_profiles, self.chapter_registers)
+        self.register_profiles = dict(profiles)
+        self.chapter_registers = assignments
+        return self
 
     # Optional language overrides (None = language profile default)
     signal_keywords: dict[str, str] | None = Field(

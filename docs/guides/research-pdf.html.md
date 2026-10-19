@@ -2,7 +2,7 @@
 
 Keep permitted source copies, cite exact passages and connect them with research notes, claims and writing decisions. Lixity's research workspace is experimental. An import or citation helps you review evidence; it does not establish that a claim is true.
 
-Maintained by the Lixity project · Updated 14 October 2026
+Maintained by the Lixity project · Updated 19 October 2026
 
 **Before importing:**
 
@@ -116,6 +116,8 @@ The timeline sorts claims by the calendar value in their period and shows how th
 
 *Short walkthrough: open **Claims**, switch to **Timeline**, follow a row to its claim and read the placement hint ([also as GIF](../videos/research-timeline.gif)).*
 
+![Claims timeline with a shared axis, placed period badges and a placement hint for free-text periods](../screenshots/dashboard-research-timeline.png)
+
 *The chronology strip, placed cards and the placement hint in one view.*
 
 Under **Cause and effect claims**, choose a proposed cause and effect, review their saved versions and save your interpretation explicitly. A later claim edit leaves the link pinned to its earlier versions and marks it for review. Edit or retract through the shared revision editor; earlier interpretations remain in history. Self-links are rejected, cycles are allowed, and no causal truth or additional links are inferred.
@@ -174,6 +176,15 @@ A PDF with selectable text can use local Poppler tools. An image-only scan needs
 lixity research ocr-status
 lixity research ingest --project ./sample-project --file ./document.pdf --allow-retention
 ```
+
+| Diagnostic status | Meaning and next action |
+| --- | --- |
+| `native_only` | Poppler tools are available. Text-layer PDFs can be extracted; select Tesseract or a configured worker for scans. |
+| `ready` | The selected engine and required page rendering are available. This is a configuration check, not a recognition-quality test. |
+| `partial` | Page rendering is unavailable. Native text extraction may still work; install pdftoppm to use OCR on scans. |
+| `misconfigured_worker` | The configured executable was not found or is not executable, or its timeout setting is invalid. Check its path, permissions and `LIXITY_OCR_TIMEOUT` in the server environment. |
+| `misconfigured_backend` | Check the selected backend, local Tesseract, installed language data and timeout. Run `lixity research ocr-status` for details. |
+| `missing_dependencies` | Install Poppler for local PDF extraction; select Tesseract or a configured worker for scans. |
 
 Install `poppler-utils` on Debian/Ubuntu or `poppler` with Homebrew on macOS. The server must be able to find `pdftotext` and `pdftoppm`. Check extracted quotations against the original PDF; configuration checks do not measure recognition accuracy.
 

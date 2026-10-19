@@ -7,119 +7,66 @@ the author's choices. The workspace preserves saved versions and exact quotation
 Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
-Product version v0.3.0 describes development maturity before 1.0;
-it retains the features introduced under the historical v1.x–v3.x releases.
-Product, response and archive schema versions are independent. v0.3.0 reads
-research records/manifests v1–v7, including archives written by v3.0.1. A first
-manual manuscript-link save opts into v7; use v0.3.0 for those archives. Reading
-older archives alone does not upgrade them. Historical release notes describe
-the capabilities of those historical builds, not a numeric minimum for v0.3.0.
+Product versions describe development maturity; response and archive schemas
+are independent. This release reads research records/manifests v1–v7, including
+historical v3.0.1 archives. Reading an archive does not upgrade it. See
+[compatibility and limits](#limits) before writing with an older application.
 
-| Implemented locally | Outside the current scope |
-| --- | --- |
-| Explicit project, immutable captures, paragraph citations | Embeddings, dense hybrid search, Qdrant, Haystack |
-| SQLite/FTS5 lexical search over passages and current authored records; auto-fresh transparent cache refresh | Remote web imports |
-| Local text / Markdown input, original bytes retained | Multi-tenant team services, cloud hosting |
-| Multi-file batch ingestion with `--progress` phase notifications | External web scrapers |
-| Section-bounded dossier reads (`--section`) | Audio/video transcription or image understanding |
-| Local PNG/JPEG captures and exact-version images in dossiers | Remote image downloads, image OCR or visual AI |
-| Decision-dossier review tracking (`review_needed`) | Automatic bidirectional Zotero synchronization |
-| Native PDF extraction with Poppler; scan OCR with local Tesseract or a configured worker | Automated factual proof or rewriting prose |
-| Safe Markdown & offline SVG diagram rendering (flowcharts, sequence) | Ambient configuration discovery |
-| BagIt-style archive export and restore with cryptographic verification | Ambient manuscript detection |
-| Native revisions, conflict reconciliation and atomic related-record change sets | |
-| Versioned source criticism context & core analysis adapter | |
-| Optional local Zotero catalogue browsing and selected PDF/text captures | |
-| Additive Zotero migration export and paired research/Zotero backup | |
-| Controlled withdrawal & physical purge with dry-run preview | |
-| Read-only HTML source dashboard with localized context | |
-| Integrity audit and snapshot conflict detection | |
-| Source listing/tagging, dossiers, scoped claims, evidence relations and authorial decisions | |
-| Structural decision-impact and editorial-review reports | |
-| Claim-evidence matrix export (`lixity research matrix`) | |
-| Claim timelines, authored causal links and keyword citation selection (historically v3.0.0; retained in v0.3.0) | |
-| Explicit manuscript quote–claim associations and structural anchor review (v0.3.0) | |
-| Cross-corpus linguistic grounding (`lixity research compare`) | |
-| Interactive web research panel in `lixity serve`: source/dossier details, search-to-evidence actions, dossier-linked claims, decisions | |
+Use `lixity research --help` to discover implemented commands and
+`lixity research COMMAND --help` for exact arguments and output formats.
+`lixity about --json` reports supported schema versions and command metadata;
+`lixity research schema` exports the entity JSON schema. This guide covers
+workflows, retained data and semantics that command help cannot establish.
 
-The server dashboard offers interface text for seven languages. English and
-German have the deepest linguistic analysis heuristics; language selection
-does not translate archived quotations or turn lexical search into semantic
-search. The research CLI's help and errors are English.
+The implementation provides local captures, lexical search, exact citations,
+versioned dossiers/claims/decisions, explicit manuscript associations, review,
+OCR integration and verified backup/restore. It does not provide remote web
+imports, embeddings/semantic search, automatic factual verification, prose
+rewriting or automatic Zotero synchronization. Interface text supports seven
+languages; research CLI help/errors are English. Labels do not translate sources
+or extend language-specific linguistic validation.
 
 ## Research workflows
 
-### Reading and CLI workflows (since v2.4.0)
+<a id="reading-and-cli-workflows-since-v240"></a>
+### Reading and CLI workflows
 
-The v2.3.0 research CLI uses explicit `--project` arguments. Since v2.4.0,
-commands using an existing archive have a bounded shortcut: omit
-`--project` only when the current working directory is itself a validated,
-initialized research project. It does not search parent directories or use
-environment, global configuration or the last project opened in the browser.
-An explicit `--project` remains authoritative. `research init` still requires
-`--project`; restore commands keep their explicit `--to` destination. `schema`
-and `ocr-status` keep their existing behavior. Python and HTTP research APIs
-remain explicitly project-scoped.
+Existing-archive commands may omit `--project` only when the current directory
+itself is a validated initialized research project. No parent directory,
+environment, global configuration or last-opened browser project is consulted.
+Explicit `--project` wins; `init` requires it and restores require `--to`.
+Python/HTTP project selection remains explicit.
 
 ```sh
 cd ./novel
 lixity research sources --format text
 lixity research search --query "reading room"
-lixity research link urn:uuid:YOUR-PASSAGE-UUID urn:uuid:YOUR-CLAIM-UUID \
-  --relation contextualizes --rationale "Background context for review"
+lixity research link PASSAGE_ID CLAIM_ID --relation contextualizes
 ```
 
-`research link PASSAGE_ID CLAIM_ID` creates an evidence link through the existing
-writer. Pass the full IDs returned by source search and claim listing, in that
-order; abbreviations and reversed arguments are not inferred. The default
-relation is `supports`; alternatives are `contradicts`, `qualifies` and
-`contextualizes`. Optional `--rationale`, `--reviewer` and `--actor` record your
-interpretation and authorship. `link-evidence` remains available for creation,
-inspection and revisions, with its existing output and validation contracts.
+Use full returned IDs. `link` creates evidence; `link-evidence` also supports
+inspection and revisions. In the source reader, selecting text within one
+uniquely resolved retained paragraph prepares an evidence draft. Review its
+quote and full paragraph context, choose a claim/relation and save separately.
+The citation still identifies the whole paragraph, not a sentence-level selector.
+Ambiguous or cross-paragraph selections fail; whole-passage actions remain
+available for touch use. Preparing a draft writes nothing.
 
-In an opened source reader, select text within one uniquely resolved retained
-paragraph to prepare the existing claim evidence-link form. Review the selected
-quote and complete paragraph context, choose a claim and relation, and save
-separately. The reference still identifies the complete retained source paragraph;
-it does not create a sentence-level passage ID or narrower citation selector.
-Cross-paragraph or ambiguous selections are rejected. The Passages view retains
-whole-passage actions for claims and dossiers, including as a touch fallback.
-Selecting text or preparing the draft writes no record and establishes no claim.
+In **Manuscript & Analysis**, **Dossier alongside** opens a chosen dossier in a
+read-only companion. It starts closed with no automatic selection. While open,
+other analysis panels are hidden; closing restores them and preserves manuscript
+search and paragraph expansion. Refresh explicitly for the latest dossier.
+Desktop areas scroll separately; narrow screens stack them. Reading changes
+neither document, evidence links nor the statistical baseline.
 
-In **Manuscript & Analysis**, open **Dossier alongside**, then choose a dossier.
-The view starts closed and does not select a dossier automatically. A dossier
-card can also open that chosen dossier beside the manuscript. The companion
-reader is read-only and does not edit either text, link evidence automatically
-or change the manuscript's statistical baseline. While open, it focuses the
-manuscript chapters, search and filters; other analysis panels are temporarily
-hidden. Closing it restores those panels and preserves the
-manuscript's search and open paragraphs. Its state lasts for the current page;
-refresh explicitly to read the latest saved dossier revision. Desktop reading
-areas sit beside one another with independent scrolling; screens at or below
-900 pixels stack the dossier above the manuscript.
-
-The **Author review state** field describes your assessment of a claim's support:
-
-| English interface label | Stored value |
-| --- | --- |
-| Author assumption | `hypothetical` |
-| With evidence | `evidenced` |
-| Disputed | `disputed` |
-
-Stored values remain unchanged; neither the labels nor an evidence link establish
-historical certainty or a calculated probability. A chosen **With evidence** state
-does not require an evidence link or verify the source. Archive formats,
-immutable paragraph citations and existing JSON
-contracts remain unchanged by these workflow additions.
-
-The revision and scene workflows began in v1.24.1. New checkpoint imports and
-explicit author acknowledgements are available since 2.0.0; select
-that release explicitly. Upgrading a fixed tag does not choose
-a newer release.
+Claims' **Author review state** labels map to stored `hypothetical` (**Author
+assumption**), `evidenced` (**With evidence**) and `disputed` (**Disputed**).
+These are author assessments, not probabilities. `evidenced` does not require an
+evidence link or verify a source.
 
 ### Associate a manuscript quote with a claim
 
-**Since v0.3.0:** in an opened manuscript paragraph, select text within that
+In an opened manuscript paragraph, select text within that
 one paragraph and choose **Link selection to claim** (or press `Alt+L`). Review the exact quote, choose a
 current claim, explicitly permit local retention of the quote, then **Save association**.
 Selection, choosing a claim and previewing the form write nothing. Saving creates
@@ -147,8 +94,9 @@ Saved quotes mark only exact resolved anchors, including paragraphs rendered
 later on opening. Manuscript search still checks complete text. Review reports
 changed source bytes, newer/withdrawn claims, unique moved paragraphs, adjusted
 paragraphs whose quote is unchanged, and ambiguous matches. Moved or adjusted
-candidates remain unresolved (and highlighted at their current position) until
-an explicit re-pin; ambiguous or edited quotes are never re-pinned. These flags
+candidates have resolved coordinates but remain pending review until an explicit
+re-pin. Ambiguous quotes are not re-pinned; an edited quote requires an explicitly
+reviewed, uniquely resolvable replacement through `--new-quote`. These flags
 request a human review, not a semantic contradiction check or factual verdict.
 Retraction and note/claim revisions use the existing record history and strict
 revision API. A uniquely resolvable anchor is re-pinned explicitly: `lixity
@@ -157,7 +105,7 @@ writes a new link revision with the resolved line span, refreshed paragraph hash
 and offsets for adjusted paragraphs, and the current file digest; the earlier
 anchor stays in revision history.
 
-**Since v0.4.6:** the same flow is scriptable from the CLI.
+The same flow is scriptable from the CLI.
 `--selection` takes the JSON selection object above (literal or a local file);
 `--expected-snapshot` / `--expected-source-sha256` default to one initial read
 and still fail when the bytes or the archive change before saving.
@@ -168,62 +116,45 @@ lixity research link-manuscript --project ./novel novel.md \
   --claim-id CLAIM_ID --claim-revision 2 --quote "exact quote" --allow-retention
 lixity research manuscript-links --project ./novel
 lixity research review-manuscript --project ./novel novel.md
-lixity research reconcile-manuscript --project ./novel novel.md            # Vorschau
+lixity research reconcile-manuscript --project ./novel novel.md            # preview
 lixity research reconcile-manuscript --project ./novel novel.md --accept-moved
 ```
 
 The manuscript path is accepted positionally (like `analyze`, `scenes`, `showing`)
 or as `--manuscript PATH`; pass exactly one of the two forms.
 
+<a id="compact-manuscript-link-command-reference"></a>
+<a id="end-to-end-manuscript-link-lifecycle"></a>
+Use each command's `--help` for flags and output formats. After editing prose,
+run `review-manuscript`, preview `reconcile-manuscript`, then explicitly accept
+the reviewed change. `--accept-moved` accepts uniquely resolved moved/adjusted
+anchors. `--accept-claim-updates` independently re-pins newer claim versions;
+combine them to accept both in one revision. Neither accepts the other kind of
+change. `claim_changed` remains until a link is repinned or superseded.
+`unlink-manuscript` retracts an association while retaining history and works
+when the scoped manuscript is deleted or unreadable. Optional snapshot/revision
+guards make retraction strict.
+
 A changed source-file digest (`source_changed`, for example after an edit in an
 unrelated chapter) is informational and does not mark an association for review
 while its paragraph hash, line span and quote still match exactly. An edit inside
 the paragraph but outside the quote reports `anchor_adjusted` and can be accepted
-with one command or click; editing the quote itself reports `anchor_changed` and
-requires a fresh association.
+with one command or click. Editing the quote itself reports `anchor_changed`;
+the CLI can explicitly re-pin a uniquely resolvable replacement with
+`reconcile-manuscript --accept-moved --link-id ID --new-quote "…"`, preserving
+the earlier quote in history. Creating a fresh association is also possible.
 
-Python integrations use the same API:
+Python uses `link_manuscript_claim`, `list_manuscript_links` and
+`review_manuscript_links`; exact arguments and guarded native payloads are in
+the [automation contract](../AGENTS.md#manual-manuscript-associations).
+The native **Review** tab lists associations, anchor states and flags without
+writing. Reading/listing/reviewing never opts into a newer storage schema.
 
-```python
-from lixity.research import api as research_api
-
-research_api.link_manuscript_claim(
-    project, manuscript, claim_id, claim_revision=reviewed_claim_revision,
-    selection={
-        "start_line": start_line, "end_line": end_line,
-        "paragraph_sha256": paragraph_sha256,
-        "start": start_codepoint, "end": end_codepoint, "quote": selected_quote,
-    },
-    expected_project_id=project_id, expected_snapshot=snapshot,
-    expected_source_sha256=source_sha256, allow_retention=True,
-    note="Author's association for review", language="en", project_config=settings,
-)
-research_api.list_manuscript_links(project, claim_id=claim_id)
-research_api.review_manuscript_links(project, manuscript,
-                                     expected_project_id=project_id,
-                                     language="en", project_config=settings)
-```
-
-The create/list/review envelopes are `research-manuscript-link-local/1`,
-`research-manuscript-links-local/1` and `research-manuscript-review-local/1`.
-Lists omit retracted links unless `include_retracted=True`. Review rows preserve
-exact/current claim revisions and the pinned claim's dossier association, with
-`flags`, `anchor_state`, `candidate_lines` and nullable resolved line fields.
-A compatible native server provides guarded manuscript review/list reads and
-an explicit save route; see the [HTTP contract](../AGENTS.md#manual-manuscript-associations).
-The native research Review tab lists the saved associations with their anchor
-state and flags; its section stays hidden without a selected manuscript.
-There is no new manuscript-link CLI command.
-
-The first successful, retention-confirmed save uses `research-local/7` and
-promotes the manifest to `research-manifest-local/7`. v0.3.0 reads v1–v7; historical
-v3.0.1 cannot read v7. Back up before opting in and use v0.3.0 for every reader
-and writer afterward. Reading/listing/reviewing an older archive does not change
-its bytes. Audit, history and export/restore preserve accepted link records;
-exported quotes remain private manuscript material, while the manuscript itself
-is not included as a source blob. Restoring links without the manuscript leaves
-their anchors unavailable until the source exists at the saved project-relative
-path.
+The first successful permitted save uses record/manifest v7. Historical v3.0.1
+cannot read v7; every reader/writer must explicitly support it. Audit, history
+and export/restore preserve accepted link records. Exported quotes remain
+private manuscript material; there is no full manuscript blob. Restored links
+remain unavailable until the manuscript exists at its saved project-relative path.
 
 ### Claims linked to a dossier
 
@@ -241,10 +172,8 @@ Newer claim/dossier revisions do not silently change an older link's association
 Counts include links pinned to other saved versions of the same logical dossier;
 the reader marks that version difference explicitly.
 
-### Claim chronology and cause/effect links (since v3.0.0)
-
-These additions were introduced in historical v3.0.0 and are retained in
-v0.3.0; they are not part of historical v2.4.0.
+<a id="claim-chronology-and-causeeffect-links-since-v300"></a>
+### Claim chronology and cause/effect links
 
 In **Claims**, choose **Timeline** to organize the current claim revisions by
 their recorded `time_period`. **List** returns to the ordinary claim cards.
@@ -256,7 +185,7 @@ or filtering the timeline changes no archive records or index.
 The chronology places valid four-digit CE years (`0001`–`9999`), ISO months
 (`YYYY-MM`), ISO calendar dates (`YYYY-MM-DD`) and ranges whose endpoints have the
 same precision, for example `1912`, `1912-03`, `1912–1914`, `1912-05-01` and
-`1912-05-01 / 1912-05-03`. Ranges accept `–`, `—`, `/`, `..` and, since v0.4.7, a
+`1912-05-01 / 1912-05-03`. Ranges accept `–`, `—`, `/`, `..` and a
 plain hyphen between two four-digit years (`1924-1926`, spaces optional); ISO
 month/day hyphens are never split. Missing periods, invalid
 dates/reversed ranges and labels such as `autumn 1912` or `44 BCE` remain visible
@@ -272,12 +201,10 @@ lixity research timeline --project ./sample-project --format text
 lixity research timeline --project ./sample-project --format md --dossier-id DOSSIER_ID
 ```
 
-JSON uses `research-timeline-local/1` with `project_id`, `snapshot`, `dated` and
-`unplaced`. Entries retain claim ID/revision, title, statement, confidence,
-original period, place, actors and any dossier association. Placed entries add
-`period: {start, end, precision}`; unplaced entries add
-`reason: missing|unrecognized|invalid`. This is a projection of current claims,
-not a reconstruction of earlier timelines or a factual score.
+`research-timeline-local/1` includes coherent project/snapshot metadata, `dated`
+and `unplaced` entries. Original periods and claim revisions remain visible;
+placed entries add their parsed range and precision, unplaced entries a reason.
+This projects current claims, not earlier archive timelines.
 
 Under **Cause and effect claims**, choose the proposed cause and effect by their
 displayed claim labels, review the saved versions and optionally explain your
@@ -307,35 +234,16 @@ Creation returns `research-claim-relation-local/1`; listing returns
 exact endpoint/current revision information. Retracted links are omitted unless
 `--include-retracted` is supplied.
 
-Use the existing **Edit**/**Saved versions** controls or generic revision commands to
-correct endpoints, change rationale or retract an interpretation. For example:
+Use **Edit**/**Saved versions** or the ordinary revision workflow to correct
+endpoints, change rationale or retract a relation. Unchanged endpoints keep their
+pins; repinning requires explicit revisions. Three-way previews and atomic batches
+accept `kind: "claim_relation"`. Retraction appends history. Archive integrity and
+linked evidence do not verify causality. A first causal write opts into storage
+schema v6; reads do not. See [compatibility](#limits).
 
-```sh
-lixity research relate --project ./sample-project --relation-id RELATION_ID --update \
-  --expected-snapshot SNAPSHOT_SHA256 --expected-revision 1 \
-  --change-kind supersession --reason "Author withdrew this interpretation" \
-  --state retracted
-```
+<a id="choose-citations-by-keywords-since-v300"></a>
 
-Read `snapshot` and `record.revision` from `--inspect` immediately before preparing
-an update. Retraction appends a revision; earlier active links remain in history.
-An unchanged endpoint keeps its existing pin; repinning requires an explicit
-endpoint revision. Three-way previews and atomic revision batches accept
-`kind: "claim_relation"` through the same revision machinery as other authored
-records. Archive integrity and linked evidence do not verify causality.
-
-**Archive compatibility:** the first successful explicit causal-link write uses
-`research-local/6` and promotes the manifest to `research-manifest-local/6`.
-It preserves existing source, claim, citation and revision bytes. Merely reading
-the timeline or relations does not upgrade an archive. Historical readers before
-v3.0.0 reject a v6 manifest; v0.3.0 supports it. Back up the complete archive
-before opting in and use a build that explicitly supports schema v6 for every
-reader/writer afterward. Existing v1–v5 archives remain
-readable without conversion. `research export`/`restore` retain their existing
-bundle format and preserve the complete causal-link history. Do not edit HEAD
-or manifest files to downgrade.
-
-### Choose citations by keywords (since v3.0.0)
+### Choose citations by keywords
 
 In the evidence-link form, select a claim and choose **Find source passage**.
 This opens the existing Search view with **Sources** selected and keeps your
@@ -378,17 +286,11 @@ and `expected_claim_revision`. Supplied guards reject changed reviewed context;
 guarded links also reject withdrawn evidence. Source withdrawal does not erase
 historical citations.
 
-**API change in v3.0.0:** `list_claims`, CLI `research claim` lists and HTTP
-`GET /api/research/claims` consistently return `research-claims-local/2` with
-`claims`, `project_id` and `snapshot` from one snapshot. Consumers of the earlier
-`research-claims-local/1` envelope must update; there is no alternate list shape.
-The stored claim records and their revision history are unchanged. Source-only
-and unified search retain their existing v1/v2 envelopes.
+Claim lists consistently return `research-claims-local/2` with `claims`,
+`project_id` and `snapshot` from one accepted snapshot. Consumers of the earlier
+v1 envelope must update; stored claims/history are unchanged.
 
 ### Continue an interrupted source import
-
-For a larger collection, opt into a checkpoint through the existing ingest
-command. Ordinary single- and multi-file ingestion keep their earlier output.
 
 ```sh
 lixity research ingest --project ./novel --file source-a.pdf source-b.txt \
@@ -397,67 +299,54 @@ lixity research ingest --project ./novel --checkpoint library.json \
   --resume --allow-retention --progress
 ```
 
-The checkpoint remembers the ordered files and capture settings. Resume checks
-their bytes, the project, OCR configuration and source identity, then skips
-verified completed captures. Complete prepared extraction is reused after an
-interruption or failed publication; interrupted or unrecorded extraction may
-still run again. Changed files, order or settings require a fresh checkpoint.
+A checkpoint remembers ordered files and capture settings. Resume verifies bytes,
+project, OCR configuration and source identity, skipping verified completed captures.
+Complete prepared extraction can survive interruption/failed publication; interrupted
+or unrecorded extraction may run again. Changed files/order/settings need a fresh
+checkpoint. Lost completion receipts are recovered from exact accepted identities.
 
-If another writer changed the research snapshot, inspect the current archive
-and explicitly acknowledge its current digest with `--expected-snapshot DIGEST`
-when resuming. This permits the reviewed retry; it does not rebase authored
-decisions or accept a changed/purged source version. A lost completion receipt
-is recovered from exact accepted record identities, avoiding duplicate captures.
+After another archive write, inspect the current archive and acknowledge its digest
+with `--expected-snapshot DIGEST` when resuming. This authorizes that retry, without
+rebasing decisions or restoring changed/purged captures. Original files must remain
+present and unchanged.
 
-Relative names resolve inside `<project>/.lixity/research/imports/`; absolute
-paths must remain there and end in `.json`. One checkpoint accepts 1–1,000 files
-and at most 64 MiB of JSON preparation/metadata. One large or heavily escaped
-capture can exceed that budget; smaller batches do not always resolve it.
-Oversized preparation is rejected before publication and preserves the prior
-readable checkpoint. Original source files must remain present and unchanged.
-`--dry-run` is unavailable for checkpoints; ordinary ingest previews write none.
+Checkpoints are `.json` files under `<project>/.lixity/research/imports/`, including
+when absolute paths are supplied. Limits are 1–1,000 files and 64 MiB of JSON
+preparation/metadata; even one large or heavily escaped capture can exceed the
+budget. Rejection preserves the previous readable checkpoint. Checkpoint imports
+do not support `--dry-run`.
 
-Pending preparation contains private source text and is outside the accepted
-research archive and its export bundles. Remove it explicitly when unnecessary:
-
-```sh
-lixity research ingest --project ./novel --discard-checkpoint library.json
-```
-
-Discard removes checkpoint preparation and receipts, not accepted research
-records. Completed payloads are cleaned up after publication. Purge coordinates
-with matching checkpoints; a busy checkpoint blocks that purge. Checkpoints
-are loaded before source matching, so any unreadable or malformed checkpoint
-can block purge until explicit discard. Deleted captures cannot be restored
-silently through resume. Progress phases go to stderr; final JSON uses
-`research-checkpoint-ingest-local/1`, or `research-checkpoint-discard-local/1`
-for discard. CLI exit status is zero only for a complete checkpoint import.
+Preparation contains private source text outside accepted archive/export bundles.
+`ingest --discard-checkpoint library.json` removes preparation/receipts, leaving
+accepted records intact. Completed payloads are cleaned after publication.
+Purge coordinates with matching checkpoints: busy, unreadable or malformed ones
+can block it until explicit discard. Resume never silently restores deleted captures.
+Progress phases use stderr; final envelopes are `research-checkpoint-ingest-local/1`
+and `research-checkpoint-discard-local/1`. Import exits zero only when complete.
 
 ### Read reports in the terminal
 
 ```sh
 lixity research sources --project ./novel --format text
-lixity research sources --project ./novel --format md --limit 25 --offset 25
 lixity research audit --project ./novel --format text
+lixity research review --project ./novel --json
 ```
 
-Sources and audit retain their complete JSON output by default. Human source
-lists show 50 entries unless you set `--limit` (1–100) and `--offset`; full IDs
-remain visible. Audit summaries explain their scope and bound long findings;
-use JSON for the full findings. `--pager` opens a pager only when explicitly
-requested with a human format and both input/output are interactive terminals.
-Piped output does not start one. Imported titles and values remain inert text.
-
-For automation, request JSON explicitly with `--format json` or `--json` on
-sources, audit, review, decision-impact, compare and matrix. Human-facing defaults
-remain command-specific; `lixity about --json` reports the parser's supported
-formats and defaults. The local HTTP server exposes its supported route registry
-at `GET /api`, even before a project is loaded. HTTP research responses are JSON;
-the NDA draft endpoint explicitly downloads PDF or UTF-8 text. Since v2.4.0, the
-manuscript PDF endpoint is also a binary attachment workflow, separate from
-research source import and OCR; see [manuscript PDF downloads](../USAGE.md#download-a-manuscript-pdf-since-v240).
+Human reports bound long lists/findings; request JSON for the complete payload.
+Output formats/defaults are command-specific: inspect `--help` or
+`lixity about --json`. `--pager` requires explicit use with a human format and
+interactive input/output; pipes never start one. Progress phases use stderr,
+leaving stdout for the result. Imported values remain inert text.
+The running server exposes registered routes at `GET /api`; research responses
+are JSON. Manuscript PDF and confidentiality-agreement downloads are separate
+binary/text attachment workflows.
 
 ### Update one reviewed record
+
+`dossier`, `claim` and `decision` accept `list`, `show ID`, `inspect ID` or a
+positional ID; explicit update/history modes still work with that ID. Their
+`--latest` convenience option uses record revision and snapshot from one read;
+subsequent changes fail. Explicit snapshots stay strict.
 
 Ordinary `dossier`, `claim`, `link-evidence`, `decision` and `relate` commands
 with `--update` require `--expected-revision`, `--change-kind` and `--reason`.
@@ -492,8 +381,8 @@ snapshot, adding/changing an association requires its explicit reviewed revision
 `--to-claim-revision`, or a `--dossier-revisions` JSON mapping for added decision
 dossiers. Nonexistent pins fail. Immutable passage IDs need no separate revision
 flag. Explicit-snapshot updates retain their existing association behavior.
-Python/HTTP revision APIs, image attachments, acknowledgements and batch writes
-still require their documented exact snapshot/revision guards. Use the preview
+Python `revise_record` supports the same optional-snapshot convenience. HTTP
+revisions, image attachments, acknowledgements and batches retain explicit guards. Use the preview
 workflow below when a conflict requires reconciliation.
 
 ### Resolve conflicting drafts
@@ -539,95 +428,54 @@ excluding code and the generated preamble label.
 
 ### Keep a visual reference in a dossier
 
-Choose **Add image**, select a local PNG or JPEG and describe what the image
-shows. Previewing stays in the browser. Optional details include a caption, source
-title, original source-page link, provenance note and an existing section. Confirm
-that you may retain the file, then save. The image and dossier revision are saved
-together; a rejected or stale save accepts neither. Cancel discards the preview.
+Choose **Add image**, select a local PNG/JPEG, describe it, and confirm retention
+permission before saving. Caption, source title/URL, provenance note and section
+are optional. Browser preview writes nothing; image capture and dossier revision
+commit together or accept neither. A stale save requires refresh and review.
 
-Click an embedded image to enlarge it; Escape closes the view. Earlier dossier
-versions keep their exact image version even after a source is replaced. Withdrawn,
-purged or missing images show an unavailable placeholder instead of changing to a
-different image. Source-page links remain links: Lixity never fetches them as images.
+Earlier dossier revisions retain exact image versions. Withdrawn/purged/missing
+images show unavailable placeholders. Source-page URLs are metadata, never fetched.
+Click an image to enlarge it; Escape closes it. Images create no text passages,
+linguistic scores, OCR or factual verification. Label generated/reconstructed
+references in the caption and `context.provenance_note`; retain the actual source
+of documentary photographs.
 
-Images have no extracted text, passages or linguistic scores. Retain an authorized
-local file yourself; a Wikimedia category or file-description page is not an image
-file. Text/PDF imports and OCR remain separate workflows.
+Limits are 16 MiB/image, 64 million pixels and 32 MiB for image-specific HTTP JSON.
+Static PNG and supported 8-bit Huffman JPEG containers undergo signature,
+structure and dimension checks, not full pixel decoding or authenticity checks.
+Animated PNG, SVG and raw HTML images are unsupported; browser decoding can still
+reject damaged pixels. Original bytes enter the ordinary audit/backup lifecycle.
 
-Generated images are imaginative visual references, not documentary evidence of
-how a real place looked. Identify generation or reconstruction in the caption
-and `provenance_note`, and retain the actual source of documentary photographs.
-A saved image, evidence link or author-selected claim status does not verify a
-historical, legal or biographical assertion. Character choices and stylistic
-intentions remain author decisions; external factual claims need suitable evidence.
-
-Limits are 16 MiB per image and 64 million pixels; image-specific HTTP JSON is
-limited to 32 MiB. Static PNG and supported 8-bit Huffman JPEG containers are
-checked for signatures, structure and dimensions. These checks are not a complete
-pixel decode or evidence of factual authenticity. Animated PNG, SVG and raw HTML
-images are outside this feature. The browser's decoder can still reject damaged
-pixel data. Original bytes, rather than a recompressed copy, enter the existing
-archive and its backup/audit lifecycle.
-
-CLI capture uses the ordinary import command:
+For a joint capture/attachment, inspect the dossier and pass its exact tokens:
 
 ```sh
-lixity research ingest --project ./novel --file ./reference.png --allow-retention
-```
-
-Programmatic capture is `ingest_image(project, bytes, filename="reference.png",
-allow_retention=True)`. `attach_dossier_image` additionally requires the dossier
-ID and exact `expected_snapshot` / `expected_revision`; it performs the joint
-save. Its Markdown image destination is `lixity:image/SOURCE_ID/VERSION_ID`,
-with canonical UUID URNs.
-
-For a joint capture and attachment, inspect the current dossier first and use
-its returned snapshot and revision:
-
-```sh
-lixity research dossier --project ./novel --dossier-id ID --summary
+lixity research dossier inspect ID --project ./novel
 lixity research dossier-image --project ./novel --dossier-id ID \
   --file ./reference.jpg --expected-snapshot DIGEST --expected-revision N \
   --allow-retention --alt "Describe the reference" --section "Location" \
   --context '{"provenance_note":"Generated visual reference; not a documentary photograph."}'
 ```
 
-Omit `--section` to append at the end. Optional caption, source title, original
-source-page URL, change reason/kind and actor match the Python API. `--context`
-accepts a JSON object or a local JSON-object file, using the ordinary import
-convention. It creates no text passages and invokes no OCR. Success is the API's
-JSON receipt; errors go to stderr with a nonzero exit status. Stale edits fail
-without an accepted image or dossier revision; refresh and review before retrying.
-
-Image version purge records retain the exact source identity
-under `research-local/2`; older 2.0.0 writers reject that record. Existing v1 records
-stay unchanged. Back up before writing with a newer release, and keep compatible
-writers for that archive. Unprovable old associations remain missing.
+Omit `--section` to append. `--context` accepts a JSON object or local JSON-object
+file. Ordinary `ingest --file reference.png --allow-retention` captures without
+attachment. Python `ingest_image` does the same; `attach_dossier_image` requires
+exact dossier snapshot/revision guards. Canonical destinations are
+`lixity:image/SOURCE_ID/VERSION_ID` with UUID URNs. Purge identity metadata uses
+record schema v2; unprovable older image associations remain missing.
 
 ### Review decisions and save related revisions together
 
-**Review** lists structural maintenance candidates. A decision's **Affected
-dossiers** disclosure shows its explicit direct or claim-based links, section
-outlines and pinned/current revision numbers. CLI equivalents:
+**Review** lists structural candidates: dated/unlinked decisions, old pins and
+withdrawn references. **Affected dossiers** shows explicit direct/claim-based
+links, section outlines and pinned/current revisions. CLI equivalents are
+`research decision-impact --decision-id ID` and `research review`.
+These reports do not find every affected passage, infer contradictions, verify
+history or rewrite documents. Old pins may be intentional; audit is separate.
 
-```sh
-lixity research decision-impact --project ./novel --decision-id ID
-lixity research review --project ./novel --format md
-```
-
-These reports flag dated decisions, old pins, withdrawn links and unlinked
-decisions for human inspection. They do not detect semantic contradictions,
-establish historical truth, find every affected passage, or rewrite documents.
-Old pins can be intentional. The integrity audit remains a separate check.
-
-In the revision editor, choose **Add to change set**, then close the editor to
-select another record. **Review change set** shows every queued draft, its base
-values and reason. You can edit or remove individual drafts, then check and save
-the whole set. A failed or stale save keeps the drafts for explicit review.
-Drafts live only in that browser tab: reloading removes unsaved changes. If a
-network failure leaves the result uncertain, inspect history before retrying.
-
-CLI users can prepare the same group in a JSON file, then inspect it:
+Choose **Add to change set** in the editor, then **Review change set** to inspect,
+edit or remove queued drafts and reasons before saving together. Failed/stale
+saves preserve drafts for review. Drafts exist only in that browser tab and are
+lost on reload. After an uncertain network result, inspect history before retrying.
 
 ```sh
 lixity research revise-batch --project ./novel --file changes.json
@@ -635,52 +483,36 @@ lixity research revise-batch --project ./novel --file preview.json \
   --apply --expected-snapshot DIGEST
 ```
 
-The file contains an operations list, or the saved preparation envelope
-`research-revision-batch-local/1`. Each operation has `kind`, `id`,
-`expected_revision`, `changes`, `change_kind` and `reason`. Preparation writes
-nothing. Apply validates every operation and publishes one archive commit;
-an invalid operation or stale snapshot accepts none. Duplicate record IDs and
-references to revisions that would be created by that same batch are rejected.
-Existing evidence and explicitly pinned references stay intact.
+Input is an operations list or `research-revision-batch-local/1` preparation
+envelope; each operation has `kind`, `id`, `expected_revision`, `changes`,
+`change_kind` and `reason`. Preparation writes nothing. Apply validates all
+operations before one commit; invalid inputs/races accept none. Duplicate IDs
+and references to revisions created by that same batch fail. Existing evidence
+and explicitly pinned references stay intact.
 
 ### Mark a decision as applied to a reviewed dossier
 
-After reviewing the decision and its linked dossier, choose **Mark as applied**
-for that pair. This records your assessment for the exact saved versions; it
-does not inspect a manuscript or establish semantic consistency. Later changes
-to either record make the acknowledgement stale and request review again.
-**Needs another check** explicitly reopens the same pair.
-
-After your own successful acknowledgement, the UI updates matching review controls
-and counts so you can continue with the next pair. An intervening external change
-still requires an explicit refresh; it is never silently accepted on your behalf.
-
-The first acknowledgement adds a `decision_acknowledgement` record under
-`research-local/5` and a `research-manifest-local/5` snapshot. Earlier source,
-claim, dossier, decision and citation bytes remain unchanged. Older applications
-reject that upgraded snapshot; back up the archive and use compatible writers.
-Reading an old archive alone does not upgrade it.
-
-CLI equivalents require the current snapshot and both current version numbers:
+**Mark as applied** records your assessment for exact linked decision/dossier
+revisions; **Needs another check** reopens the pair. Neither inspects prose nor
+establishes semantic consistency. Later changes make the acknowledgement stale.
+The UI updates your matching controls/counts after success; external changes
+still require explicit refresh. Outdated pins/withdrawal warnings remain.
 
 ```sh
 lixity research mark-applied --project ./novel --decision-id DECISION \
   --dossier-id DOSSIER --expected-snapshot DIGEST \
   --expected-decision-revision 2 --expected-dossier-revision 4
-lixity research reopen --project ./novel --decision-id DECISION \
-  --dossier-id DOSSIER --expected-snapshot DIGEST \
-  --expected-decision-revision 2 --expected-dossier-revision 4
 ```
 
-Both commands accept an optional short `--note`. A stale snapshot/version or
-foreign target writes nothing. Events form an explicit supersedes chain rather
-than relying on wall-clock ordering. Acknowledgement can clear its matching dated
-review request; outdated pins and withdrawn-source warnings remain visible.
+`reopen` takes the same guards; both accept `--note`. Stale/foreign targets write
+nothing. Events form an explicit supersedes chain, not wall-clock ordering.
+The first acknowledgement opts into record/manifest v5; accepted earlier bytes
+remain intact. See [archive compatibility](#limits).
 
 ### Use local OCR without a worker service
 
-Install Poppler, Tesseract and the language data you need on the server computer.
-Select the backend explicitly in that service's environment, then restart it:
+Install Poppler, Tesseract and required language data on the server computer.
+Select the backend in that service's environment and restart it:
 
 ```sh
 export LIXITY_OCR_BACKEND=tesseract
@@ -688,32 +520,24 @@ export LIXITY_OCR_LANGUAGES=deu+eng
 lixity research ocr-status --probe
 ```
 
-`LIXITY_OCR_BACKEND` accepts `native`, `worker` or `tesseract`. If unset,
-the existing configured worker takes precedence; otherwise native Poppler
-remains the default. Explicit `worker_cmd`/`--worker-cmd` takes precedence over
-the environment. Tesseract's default language is `eng`; extra languages need
-installed language data. Diagnostics report requested, available and missing
-languages. Nothing is downloaded or started automatically.
+Backends are `native`, `worker` or `tesseract`. When unset, a configured worker
+wins, otherwise native Poppler is default. Explicit `worker_cmd`/`--worker-cmd`
+wins over environment. Tesseract defaults to `eng`; requested languages must be
+installed. Diagnostics report requested/available/missing data; nothing downloads
+or starts automatically. Tesseract renders at 300 dpi with a bounded invocation
+deadline; workers retain their 150 dpi protocol. Failures reject unless explicit
+native fallback is allowed. A synthetic probe checks execution, not recognition.
+New captures identify `tesseract-cli/1` or `poppler-native/1` and require storage
+v4. Earlier cached provenance/bytes remain unchanged.
 
-Local Tesseract uses 300 dpi page images and a bounded invocation deadline;
-the external worker keeps its existing 150 dpi protocol. Failures reject the
-capture unless native fallback is explicitly allowed; inspect all returned
-warnings and compare quotations with the scan. A synthetic probe confirms
-execution, not recognition accuracy. New Tesseract captures identify
-`tesseract-cli/1`. Every new native Poppler capture, including an explicitly
-allowed fallback, identifies `poppler-native/1`. Both require `research-local/4`
-and a v4 manifest. Older readers reject that archive; use compatible readers
-and keep a backup. Existing v1–v3 records and cached extraction provenance stay
-unchanged. The external worker retains its existing implementation identifiers.
+<a id="zotero-desktop-bridge-since-v1190"></a>
+## Zotero Desktop bridge
 
-## Zotero Desktop bridge (since v1.19.0)
-
-Zotero can manage the library, bibliographic metadata and media; Lixity retains
-selected evidence captures and manages analysis, dossiers, claims and decisions.
-This optional CLI/Python/dashboard integration is available since v1.19.0. It adds no Python dependencies. Start Zotero on the same computer
-and enable **Settings → Advanced → Allow other applications on this computer to
-communicate with Zotero**. No account, cloud API key or plugin is required.
-The bridge reads the local API; it never writes Zotero's database or library.
+Zotero owns library metadata and media; Lixity retains selected evidence captures
+and authored research records. Enable Zotero's **Settings → Advanced → Allow
+other applications on this computer to communicate with Zotero**. No account,
+cloud API key, plugin or additional Python dependency is required. The bridge
+reads the local API and never writes Zotero's database or library.
 
 ```bash
 # Preview pages; use the returned next_start as --start for further pages.
@@ -786,33 +610,15 @@ Python entrypoints are `lixity.research.zotero.collections`, `.browse` and
 of manuscript analysis. Standard research export includes retained captures and
 provenance, not the external library. Use the paired backup below for both stores.
 
-### Literature Acquisition Workflow (URL → Zotero Reference → Attachment → Evidence)
+<a id="literature-acquisition-workflow-url--zotero-reference--attachment--evidence"></a>
+### Literature acquisition
 
-Literature moves through four distinct, verifiable states:
-
-1. **Reference saved**: Register the bibliographic reference in Zotero (via browser connector, DOI translator, or manual entry). Metadata exists in Zotero, but this does not imply a local PDF or retained copy.
-2. **Attachment available**: Download the PDF/full text inside Zotero (`contentType: application/pdf`, `linkMode: imported_file`). Verify attachment availability in Lixity with `lixity research zotero --library users/0 --item-key <KEY>`.
-3. **Evidence captured**: Ingest the local attachment into the Lixity research store with `lixity research zotero-ingest --attachment-key <KEY> --expected-server-id <SERVER_ID> --allow-retention [--progress]`. Lixity retains the PDF bytes, extracts passages, and establishes an immutable source version.
-4. **Passage cited / Claim linked**: Search passages (`lixity research search --query "..."`) and cite verified passages into dossiers (`--evidence <UUID>`) or claims (`lixity research link-evidence`).
-
-```bash
-# 1 & 2. Find saved reference in Zotero and inspect available local attachments
-lixity research zotero --project ./novel --library users/0 --query "customs ledger"
-lixity research zotero --project ./novel --library users/0 --item-key <ITEM_KEY>
-
-# 3. Ingest selected attachment into Lixity with visible progress
-lixity research zotero-ingest --project ./novel --library users/0 \
-  --attachment-key <ATTACHMENT_KEY> --expected-server-id <SERVER_ID> --allow-retention --progress
-
-# Or batch-ingest all eligible PDF/text attachments of a parent item:
-lixity research zotero-ingest --project ./novel --library users/0 \
-  --item-key <ITEM_KEY> --expected-server-id <SERVER_ID> --allow-retention
-
-# 4. Search refreshed index and cite verified passage into a dossier
-lixity research search --project ./novel --query "port authority"
-lixity research dossier --project ./novel --title "Harbor Authority" \
-  --file ./notes.md --evidence <PASSAGE_UUID>
-```
+A saved reference is metadata, not a retained PDF. Download an attachment in
+Zotero, inspect it with `research zotero --item-key ITEM_KEY`, then capture the
+selected attachment with the preview's server identity and retention permission.
+`zotero-ingest --item-key ITEM_KEY` captures eligible PDF/text attachments as a
+batch. Finally search the retained passages and cite/link the one you reviewed.
+Each step has a distinct result; a catalogue entry alone supplies no evidence.
 
 ### Additive migration to Zotero
 
@@ -844,6 +650,8 @@ finished. Preserve the pre-migration backup until restoration has been tested.
 
 ### Paired Zotero/research backup and restore
 
+<a id="backup-scope-comparison"></a>
+
 Close Zotero before starting; `--confirm-zotero-closed` is the caller's explicit
 confirmation, not automatic process detection. Specify the **data directory**
 containing `zotero.sqlite`, not the application profile.
@@ -870,96 +678,42 @@ back up excluded project material separately. Verify restored Zotero data in a
 separate instance before adopting it; byte verification alone does not establish
 application-level usability or that an external attachment was included.
 
-#### Backup Scope Comparison
-
-| Scope / Content | `research export` | `research zotero-backup` |
-|---|---|---|
-| Retained source bytes & extracted passages | Yes | Yes |
-| Authored claims, evidence links, dossiers, decisions | Yes | Yes |
-| Full research revision history & snapshot digests | Yes | Yes |
-| Zotero database (`zotero.sqlite`) & metadata | No | Yes |
-| Zotero stored PDF/text originals (`storage/`) | No | Yes |
-| Zotero external linked files (outside data dir) | No | No (store as internal attachment to include) |
-| Manuscript prose & application browser profiles | No | No (maintain project/profile backup separately) |
-
 ## Try it
 
-Follow [installation](../INSTALLATION.md#cli-current-release) or use a
-development checkout (`make install-dev`), then
-activate `.venv` if applicable.
-Requires SQLite with FTS5; no additional Python dependencies or models.
-PDF extraction has separate prerequisites described below.
+Install using the [installation guide](../INSTALLATION.md#cli-current-release)
+or a development checkout (`make install-dev`). SQLite must include FTS5;
+PDF extraction has the [separate prerequisites](#native-pdfs-versus-scans).
 
-```bash
+```sh
 lixity research init --project ./novel --title "Novel research" --language en
 lixity research ingest --project ./novel --file ./notes.txt --allow-retention --dry-run
-lixity research ingest --project ./novel --file ./notes.txt --context ./context.json --allow-retention
-lixity research reindex --project ./novel
-lixity research sources --project ./novel
-lixity research search --project ./novel --query "reading room" --limit 5
+lixity research ingest --project ./novel --file ./notes.txt --allow-retention
+lixity research search --project ./novel --query "reading room"
+lixity research cite --project ./novel --passage PASSAGE_ID
+lixity research dossier --project ./novel --title "Reading room" --file ./notes.md --evidence PASSAGE_ID
 lixity research audit --project ./novel
 ```
 
-The listing command is `sources`. Output choices are described in
-[Read reports in the terminal](#read-reports-in-the-terminal).
-`ocr-status` always returns JSON and does not accept `--json` or `--language`;
-its CLI guidance is English, while the browser localizes it in seven languages.
-Use named `--project` and `--file` arguments as shown above.
+Replace `PASSAGE_ID` with a full returned ID. Open the project from the managed
+app, or run `lixity serve --research-project ./novel --no-project` in the foreground.
+Commands do not switch a running server's project. [Project onboarding](../ONBOARDING.md)
+explains the existing-project and new-import paths.
 
-Use a `passage_id` from search and a `source_id` from ingestion:
+Search selects current captures; old passage IDs still cite original bytes.
+Refreshing unchanged bytes/context is a no-op. Native ingestion without
+`--source-id` creates a distinct source; identical text does not prove identity.
+Zotero uses its structured external identity instead.
 
-```bash
-lixity research cite --project ./novel --passage urn:uuid:YOUR-PASSAGE-UUID
-lixity research analyze --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID
-lixity research dashboard --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID > source.html
-lixity research compare --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --manuscript ./novel.md
-lixity research dossier --project ./novel --title "Reading Room Notes" --file "Notes about a possible 1924 opening." --evidence urn:uuid:YOUR-PASSAGE-UUID
-lixity research dossier list --project ./novel
-lixity research dossier list --project ./novel --format table   # ID, title, revision, date
-lixity research claim --project ./novel --title "Archive Founding" --statement "Founded in 1924." --confidence evidenced
-lixity research claim list --project ./novel
-lixity research link-evidence --project ./novel --claim-id urn:uuid:YOUR-CLAIM-UUID --passage-id urn:uuid:YOUR-PASSAGE-UUID --relation supports
-lixity research decision --project ./novel --title "Move date to 1914" --rationale "Plot tension" --claim-id urn:uuid:YOUR-CLAIM-UUID --deviation-from-fact
-lixity research decision --project ./novel
-lixity research matrix --project ./novel --format md
-lixity research matrix --project ./novel --format csv --output ./claim-matrix.csv
-lixity research withdraw --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "License revoked"
-lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --dry-run
-lixity research purge --project ./novel --source-id urn:uuid:YOUR-SOURCE-UUID --reason "GDPR deletion"
-lixity research ingest --project ./novel --file ./revised-notes.txt \
-  --source-id urn:uuid:YOUR-SOURCE-UUID --allow-retention
-lixity research reindex --project ./novel
-lixity research schema
+`--allow-retention` permits a local copy, not redistribution or factual acceptance.
+Passages stay `unreviewed`; evidence relations and author-selected claim states
+require human assessment. Decisions are separate authorial records. An unmarked
+`deviation_from_fact` does not certify factual accuracy. Exit codes are `0`
+success, `1` operational/integrity failure and `2` usage error. Failed audits emit
+`ok: false` and exit `1`; other errors use stderr without source contents.
 
-# Or launch a foreground research server (stop with Ctrl+C):
-lixity serve --research-project ./novel --no-project
-```
+<a id="search-current-authored-records-since-v1190"></a>
 
-Replace the uppercase placeholders with returned IDs. Search uses the newest
-capture of each source. Earlier passage IDs still cite their original bytes.
-For the managed app, use `lixity service start --open` and **Open Project** to
-select the initialized archive; see the [lifecycle reference](../INSTALLATION.md#running-the-server).
-Repeating a refresh with unchanged bytes and context is a no-op. For native `ingest`, omitting `--source-id` creates a distinct source; identical
-text is not proof of identity. Zotero capture instead uses its structured external
-identity to recognize an already captured attachment.
-
-`hypothetical`, `evidenced` and `disputed` are user-selected claim labels, not
-computed probabilities or factual verdicts. A claim can exist without an
-evidence link. Links record a `supports`, `contradicts`, `qualifies` or
-`contextualizes` relation to a specific passage; the source and relation still
-need human review. Decisions are separate authorial records, optionally tied
-to a claim. An absent `--deviation-from-fact` flag means no deviation was
-marked, not that the decision was verified as factually faithful.
-
-`--allow-retention` confirms that you may keep a local copy. It does **not** grant
-copyright permission, authorize redistribution or accept a factual claim.
-Passages remain `unreviewed`. Commands normally emit JSON; `dashboard` emits
-HTML, `matrix` defaults to Markdown with CSV/JSON options, and `compare`
-can emit Markdown with `--format md`.
-Exit codes are `0` success, `1` operational/integrity failure and `2` CLI usage error.
-A failed audit returns `ok: false` and exit code `1`. Other errors go to stderr without source contents.
-
-## Search current authored records (since v1.19.0)
+## Search current authored records
 
 The default CLI/Python/HTTP search still searches source passages and returns
 `research-search-local/1`. Select `--scope all`, `dossiers`, `claims` or
@@ -1008,31 +762,15 @@ response warnings suggest trying `--scope all` to search authored records.
   These are phase-boundary notifications, not periodic heartbeats, JSONL events
   or a per-page stream during worker inference.
 
-### Section-bounded dossier inspection and revision
-
-Large dossiers can be inspected and updated incrementally without transferring oversized JSON payloads:
-
-- `lixity research dossier --project ./p --dossier-id <ID> --summary`: returns metadata, section heading outline, citation count, and a text excerpt.
-- `lixity research dossier --project ./p --dossier-id <ID> --section "Timeline"`: returns only the named section.
-- `lixity research dossier --project ./p --dossier-id <ID> --update --section "Timeline" --file ./new_timeline.md ...`: updates only that section in the latest dossier body.
-- Decisions can explicitly link affected dossiers with `--dossier-id <ID>` or `--dossiers <ID1,ID2>`. If a linked decision is revised after the dossier, inspecting the dossier reports `review_needed: true` with `decision_reviews`, allowing authors to track plot and historical decisions without speculative auto-rewriting.
+<a id="section-bounded-dossier-inspection-and-revision"></a>
+For bounded dossier reads/edits use the [section workflow](#work-on-one-dossier-section).
 
 ### Claim-evidence matrix export
 
-Authors can export a consolidated overview matrix connecting user claims, supporting and contradicting evidence citations, associated dossiers, and decisions:
-
-```bash
-# Markdown table summary to stdout:
-lixity research matrix --project ./novel --format md
-
-# CSV export for spreadsheet review:
-lixity research matrix --project ./novel --format csv --output ./claim-matrix.csv
-
-# Machine-readable JSON:
-lixity research matrix --project ./novel --format json
-```
-
-The matrix highlights deliberate narrative deviations from fact (`deviation_from_fact: true`), aggregates evidence support counts (`+N / -N`), and is accessible via the web API (`GET /api/research/matrix?format=json|md|csv`) and the dashboard export button.
+`research matrix --format md|csv|json` connects claims, evidence, dossiers and
+decisions. The dashboard and HTTP export use the same report. Support counts
+summarize authored links, and `deviation_from_fact` records an author's explicit
+choice; neither is a factual truth score.
 
 ## Python API
 
@@ -1040,98 +778,26 @@ The matrix highlights deliberate narrative deviations from fact (`deviation_from
 from lixity.research import api
 
 api.init("./novel", title="Novel research", language="en")
-capture = api.ingest("./novel", "notes.txt", allow_retention=True, context={"genre": "diary", "tags": ["archive"]})
-api.reindex("./novel")
-sources = api.list_sources("./novel")
+capture = api.ingest("./novel", "notes.txt", allow_retention=True)
 results = api.search("./novel", "reading room", limit=5)
-if results["hits"]:
-    citation = api.cite("./novel", results["hits"][0]["passage_id"])
-    dossier = api.create_dossier(
-        "./novel",
-        title="Reading Room Record",
-        body="Notes about a possible 1924 opening.",
-        evidence_ids=[results["hits"][0]["passage_id"]],
-        tags=["milestone"],
-    )
-    claim = api.create_claim(
-        "./novel",
-        title="Reading Room 1924",
-        statement="The reading room was opened in 1924.",
-        confidence="evidenced",
-    )
-    link = api.link_evidence(
-        "./novel",
-        claim_id=claim["claim_id"],
-        passage_id=results["hits"][0]["passage_id"],
-        relation="supports",
-    )
-    decision = api.record_decision(
-        "./novel",
-        title="Shift date to 1914",
-        rationale="Dramatic tension before war.",
-        claim_id=claim["claim_id"],
-        deviation_from_fact=True,
-    )
-dossiers = api.list_dossiers("./novel")
-claims = api.list_claims("./novel")
-decisions = api.list_decisions("./novel")
-analysis = api.analyze_source("./novel", capture["source_id"])
-html = api.source_dashboard("./novel", capture["source_id"])
-comparison = api.compare_source("./novel", capture["source_id"], "novel.md")
-api.withdraw("./novel", capture["source_id"], reason="License revoked")
-preview = api.purge("./novel", capture["source_id"], dry_run=True)
-report = api.audit("./novel")
+# Inspect a returned passage before using api.cite or linking it to a claim.
 ```
 
-The project argument is mandatory. Research never discovers a project from a
-manuscript or reads analysis thresholds. `lixity build` remains unchanged and
-never imports sources or refreshes research indexes.
+The project argument is mandatory; research discovers no manuscript and reads no
+analysis thresholds. `lixity build` neither imports sources nor refreshes research
+indexes. The [automation reference](../AGENTS.md#51-research-api-lixityresearchapi)
+covers public entrypoints and envelopes.
 
-Source analysis uses the shared engine on the selected archived source version,
-with its recorded language and explicit threshold overrides. Its interpretation
-is `source_internal`, with `context_status: user_supplied_unverified`.
-Manuscript project thresholds and corpus settings are not silently inherited.
-Genre, period, place, translation and original-language metadata supply context;
-they do not validate the source or turn historical travel accounts and
-monographs into the manuscript's stylistic baseline. Retaining or searching a
-source does not change manuscript analysis.
-
-In the local server, **Open Project** takes a path to an existing workspace
-folder or manuscript file on the server's filesystem and attaches that
-workspace's `research/` archive when present. **Browse files and folders** lets
-you browse the server computer's paths from its home directory, move with
-**Home** or **Parent folder**, select a manuscript or the current folder, and then
-confirm with **Open**; a typed path remains available. This is not a native OS
-file dialog or a browser upload. An initialized research-only folder opens
-without a manuscript. Source and record management remain available there;
-manuscript comparison needs a loaded manuscript. **New Project → Import
-Manuscript** accepts selected or dropped `.md`/`.txt` bytes and creates a
-separate project. Use Open Project when returning to an existing research
-archive. Source ingestion in the research panel has its own explicit local
-retention confirmation.
-Select a source or dossier for full details and verified citations. Search
-results can feed a selected passage into **Use for claim** or **Use for dossier**;
-the claim form can also associate an existing dossier. A dossier's **Add claim**
-and **Add decision** actions select that dossier by title in the existing forms;
-other unsaved text stays intact. Optional scope and technical fields are collapsed
-until needed. These actions record
-the author's links and notes, not a factual verdict.
-
-**Since v1.23.0:** Research & Dossiers is a separate dashboard view;
-New Project, Open Project and optional guidance remain accessible from every
-view. Local source and dossier filters match case-insensitive substrings in
-loaded titles, tags and IDs; dossiers also match excerpts and section names.
-These filters send no request while typing and do not search retained source
-text. Use the Search tab for full-text archive search. Filtering keeps loaded
-details and leaves association dropdowns complete. Selecting a manuscript under
-Project & Settings sends no request; **Continue to import…** opens the existing
-import dialog, and confirmation creates a separate project. Use Open Project
-when returning to this archive.
+Source analysis uses the shared engine, selected archived version/language and
+explicit overrides. Its interpretation is `source_internal`, with
+`context_status: user_supplied_unverified`; manuscript settings are not inherited.
+Period, place, genre, translation and language context do not validate a source or
+make it a manuscript style baseline. Local title/tag filters search only loaded
+metadata; use archive search for retained text.
 
 ## Native editing and history
 
-Version 1.17.0 adds explicit revisions to the research workflow. In the
-dashboard, choose **Edit** on a dossier, claim, evidence link or decision.
+In the dashboard, choose **Edit** on a dossier, claim, evidence link or decision.
 Change the fields, select **Correction** for a transcription/wording correction
 or **Supersession** for a changed interpretation or authorial choice, and give
 a reason. Save keeps the record's ID and adds one immutable revision. **History**
@@ -1152,40 +818,13 @@ conflict. **Reload current** explicitly discards the draft and loads the current
 record; nothing is silently merged or retried. Cancel closes the editor without
 writing.
 
-The same operations extend the existing commands:
-
-```sh
-lixity research dossier --project ./novel --dossier-id DOSSIER_ID --inspect
-lixity research dossier --project ./novel --dossier-id DOSSIER_ID --update \
-  --expected-snapshot SNAPSHOT_SHA256 --expected-revision 1 \
-  --change-kind correction --reason "Correct a transcription" \
-  --title "Revised reading room notes" --file "The corrected working note."
-lixity research dossier --project ./novel --dossier-id DOSSIER_ID --history
-lixity research dossier --project ./novel --dossier-id DOSSIER_ID --revision 1
-```
-
-Use the `snapshot` and `record.revision` returned by `--inspect`. The equivalent
-commands are `claim --claim-id`, `link-evidence --evidence-link-id` and
-`decision --decision-id`, with the same update/history flags and their existing
-content flags. Omitted update fields stay unchanged. An empty optional value
-clears it; empty comma-separated tags/actors/evidence clear those lists.
-`--no-deviation-from-fact` explicitly clears the decision flag.
-Use `--claim-revision N` on evidence links or decisions, or
-`--dossier-revision N` on claims, to select an exact associated revision during
-an update. Leaving that option out preserves an unchanged association's pin.
-
-```python
-current = api.get_record("./novel", "dossier", dossier_id)
-updated = api.revise_record(
-    "./novel", "dossier", dossier_id,
-    changes={"body": "The corrected working note."},
-    expected_snapshot=current["snapshot"],
-    expected_revision=current["record"]["revision"],
-    change_kind="correction", reason="Correct a transcription",
-)
-history = api.record_history("./novel", "dossier", dossier_id)
-original = api.get_record("./novel", "dossier", dossier_id, revision=1)
-```
+Use the [ordinary update workflow](#update-one-reviewed-record), then inspect
+history or an exact revision through the same record command. Omitted fields
+stay unchanged; empty optional values clear them, and empty comma-separated
+lists clear the corresponding list. `--no-deviation-from-fact` clears that flag.
+Python uses `get_record`, `revise_record` and `record_history`; HTTP keeps its
+explicit snapshot/revision guards. See [automation](../AGENTS.md#52-http-server-endpoints-for-web-ui-and-interactive-agent-loops)
+for payloads and versioned envelopes.
 
 Source refresh never rewrites authored records. A newer-capture notice compares
 explicit passage citations with the source's latest available capture; the
@@ -1222,83 +861,52 @@ entire archive at an earlier date.
 
 ### Cross-corpus comparison and evidence grounding
 
-- **Linguistic comparison (`compare`)**: Connects an archived research source with a literary
-  manuscript without modifying either document. Computes:
-  1. Lexical overlap and alignment (Jaccard similarity, Szymkiewicz–Simpson overlap coefficient,
-     top shared terms, exclusive source terms). The term lists are capped by
-     `--top-n` (default 20; 1–100), which changes how much of the table is
-     reported.
-  2. Signed keyness differential using a full term/nonterm $2\times2$ Dunning
-     $G^2$ log-likelihood table; values can change from development builds.
-  3. Register and stylistic contrast (sentence length ASL delta, dialogue ratio delta,
-     lexical diversity Guiraud's $R$ and Yule's $K$ deltas, staccato and kaskade deltas).
-  4. Per-chapter evidence grounding (mapping occurrences of source vocabulary and top key
-     terms across individual manuscript chapters, reporting grounding density per 1,000 words).
+`compare` requires an explicit source and manuscript, or the deliberate Grounding
+action for the loaded manuscript. It returns a separate report without modifying
+either text or recalibrating fingerprints. It measures lexical Jaccard/overlap,
+shared/exclusive terms, signed full $2\times2$ Dunning $G^2$ keyness, register
+contrasts and per-chapter occurrences per 1,000 words. Grounding means vocabulary
+occurrence, not entailment, validated chronology or factual support. Term-list
+limits affect reported rows, not the comparison's meaning.
 
-Comparison requires an explicit source and manuscript, or a deliberate Grounding
-action for the currently loaded manuscript. It returns a separate report and
-does not recalibrate either text's fingerprint. Grounding here means vocabulary
-occurrence, not semantic entailment, chronology validation or proof that a claim
-is supported. Source integrity and exact quotations establish what was retained,
-not its factual truth.
-
-Reports can be emitted as JSON (default) or formatted Markdown:
-
-```bash
-# Output structured Markdown report to terminal or file
-lixity research compare --project ./novel --source-id <UUID> --manuscript ./novel.md --format md
-lixity research compare --project ./novel --source-id <UUID> --manuscript ./novel.md --format md --output ./grounding-report.md
+```sh
+lixity research compare --project ./novel --source-id SOURCE_ID \
+  --manuscript ./novel.md --format md --output ./grounding-report.md
 ```
 
-Comparison counts, register contrasts and chapter grounding share the core prose
-scope: body paragraphs, list items and blockquotes; code, comments and footnote
-definitions are excluded. When chapters exist, only their bodies contribute,
-excluding headings, front matter and the configured appendix. Otherwise the
-remaining document prose is used with the same exclusions. A cross-language
-comparison still returns numeric overlap but sets `meta.lexical_comparable: false` and includes
-`"cross_language_lexical_comparison"` in `comparison_limits`; its lexical
-scores should not be interpreted as directly comparable vocabulary coverage.
-Comparison uses the source's language and the explicit manuscript language
-(English by default), with code-default corpus parsing. It does not inherit a
-manuscript project's custom `chapter_regex` or `appendix_marker`; inspect its
-chapter trace before comparing it with a differently configured dashboard.
-Guiraud and register deltas remain sensitive to length, language and discourse
-mode; matching a source's values is not a writing-quality objective.
+Counts share core prose scope: body paragraphs, lists and blockquotes, excluding
+code/comments/footnote definitions. With chapters, headings/front matter/appendix
+are excluded; otherwise remaining document prose is used. Comparison uses code-
+default parsing, source language and the explicit manuscript language (English by
+default); it does not inherit custom project `chapter_regex`/`appendix_marker`.
+Inspect the chapter trace before comparing with a differently configured dashboard.
 
-Back up the **entire `research/` directory**, preferably while no writer is
-running. Restore it to an explicit project root, run `audit`, then `reindex`.
-Never restore only SQLite. Do not commit private source text to a public
-repository: both blobs and passage records contain it.
+Cross-language comparisons retain numbers but set `meta.lexical_comparable: false`
+and `cross_language_lexical_comparison` in `comparison_limits`; do not read lexical
+scores as comparable coverage. Guiraud/register contrasts depend on length,
+language and discourse mode. Matching a source is not a writing-quality objective.
+
+Back up the entire `research/` directory, preferably without active writers.
+Restore to an explicit root, audit, then reindex. SQLite alone is insufficient;
+blobs and passage records contain private source text.
 
 ## Export and restoration
-
-Lixity provides explicit commands to package and restore authoritative research stores
-with cryptographic checksum verification:
 
 ```sh
 lixity research export --project ./novel --output ./backup-novel.tar.gz
 lixity research restore --from ./backup-novel.tar.gz --to ./restored-novel
-```
-
-The archive packages all accepted records, revisions, snapshot manifests,
-original source blobs, and project configuration into a gzip-compressed tar archive.
-It includes an explicit `EXPORT_MANIFEST.json` with SHA-256 digests and byte
-lengths for every file. Disposable search indexes (`catalogue.sqlite3`) and lock
-files are excluded.
-
-Restoration requires a clean target directory (it refuses to overwrite an
-existing research store or non-empty project directory). Before placing the store,
-restoration verifies:
-1. Member path safety (rejects path traversal, absolute paths, symlinks, and device nodes).
-2. SHA-256 checksum and byte length of every extracted file against `EXPORT_MANIFEST.json`.
-3. Snapshot rules, contiguous revision histories, and project identities.
-4. Moves the verified store into place atomically.
-
-After restoring, audit and rebuild the search index:
-```sh
 lixity research audit --project ./restored-novel
 lixity research reindex --project ./restored-novel
 ```
+
+Export packages accepted records/history, manifests, original blobs and project
+configuration. `EXPORT_MANIFEST.json` records SHA-256 and byte lengths. Search
+indexes and locks are excluded. Restore refuses an existing store or nonempty
+project destination, validates safe regular-file paths, checksums/sizes, snapshots,
+contiguous history and project identities, then publishes atomically. Symlinks,
+devices, absolute paths and traversal fail. This backup excludes manuscripts,
+Zotero and application profiles; [paired backup](#paired-zoteroresearch-backup-and-restore)
+adds the Zotero data directory.
 
 Writes use an OS lock, immutable publication and atomic HEAD replacement.
 Uncommitted objects left after interruption are ignored, not selected by date.
@@ -1314,29 +922,17 @@ recovery artifact, not an accepted revision or an automatic merge. Accepted
 history is never replaced; malformed or foreign files stop the save.
 ## Origin URL and capture provenance
 
-Version 1.18.0 adds an optional **Origin URL** field to the browser source import,
-`--origin-url` to the CLI and `origin_url=` to `api.ingest`. The value is retained
-as `SourceVersion.context.origin_url`, independently of title, tags and
-`provenance_note`. Source details, source listings and citation context expose it.
-In the `research sources` JSON response, the first source's current URL is at
-`.sources[0].context.origin_url`.
-
-Since v1.19.0, refreshing identical PDF bytes reuses the retained
-extraction after verifying the original blob, extracted text and passage spans.
-Changing only context, including the origin URL or Zotero binding, creates a new
-capture and passage records without rerunning OCR. Identical bytes and context
-remain a no-op. Earlier citations remain valid. Version 1.18.0 reruns extraction
-for this operation; changed PDF bytes still require extraction in v1.19.0.
+Optional `--origin-url` / `origin_url=` is retained as
+`SourceVersion.context.origin_url`, independently of title, tags and
+`provenance_note`. Source details, lists and citation context expose it.
+Refreshing identical PDF bytes verifies and reuses retained original/extracted
+blobs and passage spans. Metadata-only changes create a new capture without
+rerunning OCR; identical bytes/context remain a no-op. Earlier citations keep
+their original capture.
 
 ```sh
 lixity research ingest --project ./novel --file ./notes.txt --allow-retention \
   --origin-url https://example.org/archive/notes
-```
-
-```python
-api.ingest("./novel", "notes.txt", allow_retention=True,
-           origin_url="https://example.org/archive/notes",
-           context={"tags": ["archive"], "provenance_note": "Author-supplied context."})
 ```
 
 The URL must be absolute HTTP(S), at most 2,000 characters, without credentials,
@@ -1353,16 +949,9 @@ context mapping with `origin_url: null` (and any other metadata to retain).
 Earlier citations resolve their own capture and retain the original URL. URLs,
 filenames and titles never establish source identity automatically.
 
-**Compatibility:** source versions carrying a URL without a structured external
-reference use `research-local/2`, still at record revision 1, with a v2-or-later
-manifest. Zotero bindings in v1.19.0 require record and manifest v3. Their sequence
-counts source captures; it is separate from authored-record revision history.
-URL-free v1 records omit the new field entirely and retain their old encoding.
-Reading an old archive does not migrate it. Lixity 1.17.0 and earlier reject
-URL-bearing source records, including when they already support authored v2
-revisions. Back up before this write, use compatible builds for every writer,
-and restore the complete pre-upgrade backup to roll back. Do not edit schemas
-or delete provenance fields by hand.
+URL-bearing captures require schema v2, or v3 when carrying structured Zotero
+identity. Capture sequence is distinct from authored-record revision history.
+Earlier URL-free records retain their encoding. See [compatibility](#limits).
 
 ## Self-hosted PDF and OCR extraction
 
@@ -1373,8 +962,7 @@ separate content-addressed blobs:
 lixity research ingest --project ./novel --file ./document.pdf --allow-retention
 ```
 
-Version 1.18.0 also accepts native binary PDF upload through the browser file
-input. It reads the selected file as base64 for transport and passes the decoded
+The browser file input also accepts binary PDFs. It reads the selected file as base64 for transport and passes the decoded
 bytes through the same import API as text and server-local files. The browser
 shows reading/extraction/completion states and prevents duplicate submits while
 waiting. This is not a streamed per-page progress feed.
@@ -1455,16 +1043,16 @@ The temporary request JSON contains:
 
 ```json
 {
-  "model_snapshot": "07dea832e22aefee32ad281d4b80551282e1c168",
-  "recipe_revision": "d49ff64afffc1f47ab563dc1c589bc2f78808fa4",
+  "model_snapshot": "<requested model snapshot>",
+  "recipe_revision": "<requested recipe revision>",
   "pdf_path": "/absolute/path/to/input.pdf",
   "pages": [{"page_number": 1, "sha256": "<rendered PNG SHA-256>"}]
 }
 ```
 
-Those are the implementation's Baidu Unlimited-OCR integration pins (recipe date
-2026-07-29). The worker must arrange its own runtime and model provisioning;
-this interface does not prove that an arbitrary executable uses those weights.
+The [deployment reference](OCR_INTEGRATION.md) records the integration pins.
+The worker provisions its own runtime/models; request identifiers do not attest
+that an executable used those weights.
 The request includes PDF access and page checksums, not image paths or image
 bytes. A worker that needs raster images must obtain them from the local PDF.
 
@@ -1474,7 +1062,7 @@ Return JSON on stdout; send logs to stderr:
 {"blocks": [{"page_number": 1, "text": "Synthetic reading room note."}], "warnings": []}
 ```
 
-Since v1.19.0, worker responses are validated before accepting a capture.
+Worker responses are validated before accepting a capture.
 Every block needs a nonempty string `text` and an integer `page_number` from the
 rendered request pages; at most 5,000 blocks are accepted. Optional `box` contains
 four finite numbers. Optional `confidence` must be a finite number from 0 to 1;
@@ -1510,22 +1098,17 @@ experiment is recorded in [deployment boundaries](OCR_INTEGRATION.md#historical-
 
 ### What is actually retained
 
-`SourceVersion.blob` points to original PDF bytes; `Extraction.text_blob` points
-to extracted UTF-8 text. Passages cite exact character spans in that text.
-The extraction boundary computes page images, boxes and warnings, but the current
-archive does **not** persist those as audited page/coordinate/confidence records.
-The `research-ingest-local/1` response now includes runtime `warnings: list[str]`
-for committed, dry-run and unchanged results. Clean native/text extraction and
-reused retained extraction return `[]`; an unchanged response does not recover
-warnings from an earlier import. Successful `research-batch-ingest-local/1`
-items preserve warnings, as do Zotero single/batch captures alongside the
-existing explicit-capture notice. Existing keys, types and schema identifiers
-are unchanged. Save diagnostics separately if needed: these warnings are not
-persisted in source or extraction records.
-Likewise, it does not persist an attestation of which model ran. Inspect the
-original PDF for visual verification and retain operational diagnostics separately
-when needed. Core import is local; a user-configured worker has its own network
-behavior and must be deployed according to the project's privacy requirements.
+`SourceVersion.blob` identifies original PDF bytes; `Extraction.text_blob` holds
+extracted UTF-8. Passages cite exact character spans in that text. Page images,
+boxes, confidence and runtime warnings are not retained as audited coordinate or
+accuracy records, nor is there an attestation of which model ran.
+
+`research-ingest-local/1` returns `warnings: list[str]` for committed, preview
+and unchanged results. Successful local/Zotero batch items preserve them. Clean
+or reused extraction returns `[]`; an unchanged response does not recover earlier
+warnings. Save needed operational diagnostics separately and verify quotations
+against the original scan. Core import is local; a configured worker's network
+behavior belongs to its deployment's privacy boundary.
 
 ## Safe Markdown and offline diagram rendering
 
@@ -1536,25 +1119,28 @@ Dossier body text supports a safe Markdown subset and offline SVG diagram render
 
 ## Limits
 
-The local archive uses versioned `research-local/*` records and
-operation-specific envelopes, not the RFC's illustrative `research/1` bundle.
-Do not assume every command or stored record has the same schema version.
-Structured Zotero captures require `research-local/3` and v3 manifests; unified
-search uses `research-search-local/2`, while source-only search retains v1.
+Research uses operation-specific `*-local/N` response envelopes and versioned
+records/manifests, independently of the product version. It does not implement
+the RFC's illustrative `research/1` bundle. Unknown fields/versions fail closed.
+Check installed support with `lixity about --json` and entity contracts with
+`lixity research schema`.
 
-Since v3.0.0, causal claim relations add `research-local/6` and an opt-in v6
-manifest; historical readers before v3.0.0 reject it, while v0.3.0 supports it. See [chronology and causal-link compatibility](#claim-chronology-and-causeeffect-links-since-v300).
-Timeline reads, citation selection and the claims-list API change do not rewrite
-existing v1–v5 archives.
+| First accepted write | Required record/manifest version |
+| --- | --- |
+| Authored revision or origin URL | v2 |
+| Structured Zotero capture | v3 |
+| New Poppler/Tesseract provenance | v4 |
+| Decision acknowledgement | v5 |
+| Causal claim relation | v6 |
+| Manuscript quote association | v7 |
 
-Native editing in version 1.17.0 adds `research-local/2` for authored revisions and
-`research-manifest-local/2` for snapshots containing them. The first accepted edit
-upgrades that snapshot; reading a revision-1 archive does not rewrite any files.
-Older Lixity versions reject the new snapshot. Back up the whole archive before
-upgrading, use the same supported version for all writers, and restore the full
-backup if reverting to 1.16.0. Never edit HEAD or revision files to downgrade.
-Unknown fields and versions are rejected. Source identity metadata cannot yet
-be edited; refresh creates a new source version, not a changed old record.
+Reading alone does not upgrade archives or rewrite old record bytes. Back up
+the complete store before opting in; use compatible readers/writers afterward.
+Historical v3.0.1 supports through v6, while this release supports through v7.
+Rollback requires the complete pre-upgrade backup, never editing HEAD, schema
+labels or provenance by hand. Source identity metadata cannot be edited in place;
+refresh creates a new capture.
+
 The 25,000-entry snapshot limit includes retained revisions. Status counts show
 current logical records; the audit's `records` count includes their history.
 
@@ -1562,8 +1148,8 @@ Text inputs are at most 2 MiB and must be valid UTF-8 without NUL bytes.
 PDF inputs are at most 50 MiB. Both routes allow at most 5,000 nonempty extracted
 passages. Search uses literal Unicode words joined with AND; it is
 not stemming, translation or semantic search. BM25 scores are ranks, not truth
-probabilities. Language tags do not translate quotations. Empty queries, stale
-indexes and missing FTS5 support produce errors, not silent fallbacks.
+probabilities. Language tags do not translate quotations. Empty queries and missing FTS5 support produce errors. Stale indexes refresh
+automatically unless strict validation is requested.
 Source analysis emits `original_language_supplied` when source context names
 an original language; that free-text field alone does not establish historical
 language variety. This replaces the earlier experimental

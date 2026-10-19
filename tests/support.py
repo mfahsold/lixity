@@ -13,6 +13,7 @@ import json
 import threading
 from collections.abc import Iterator
 from dataclasses import dataclass
+from html.parser import HTMLParser
 from pathlib import Path
 from typing import Any
 
@@ -42,6 +43,30 @@ HANDLER_STATE = (
 )
 
 _NO_PAYLOAD = object()
+
+
+class HtmlControls(HTMLParser):
+    """Parse rendered control attributes without depending on HTML quoting/order."""
+
+    def __init__(self, markup: str = "") -> None:
+        super().__init__()
+        self.elements: dict[str, dict[str, str | None]] = {}
+        self.inputs: dict[str, dict[str, str | None]] = {}
+        self.numbers: list[dict[str, str | None]] = []
+        self.labels: set[str] = set()
+        self.feed(markup)
+
+    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
+        values = dict(attrs)
+        identifier = values.get("id")
+        if identifier:
+            self.elements[identifier] = {**values, "tag": tag}
+            if tag == "input":
+                self.inputs[identifier] = values
+                if values.get("type") == "number":
+                    self.numbers.append(values)
+        if tag == "label" and values.get("for"):
+            self.labels.add(str(values["for"]))
 
 
 def labels_for(locale: str) -> dict[str, str]:
@@ -112,6 +137,15 @@ def make_handler(
     for name, value in defaults.items():
         setattr(handler, name, value)
     return handler
+
+
+def recording_handler(workspace_root: str | Path, **attributes: Any) -> LixityServerHandler:
+    """Run route methods directly with isolated class state and captured JSON."""
+    def respond(self: Any, payload: Any, code: int = 200) -> None:
+        self.response = code, payload
+
+    handler = make_handler(workspace_root, _json=respond, **attributes)
+    return object.__new__(handler)
 
 
 @dataclass(frozen=True)

@@ -81,7 +81,8 @@ def stage(source: Path, output: Path) -> int:
         approved = str(relative) in DOCS_ROOT_FILES or (
             len(relative.parts) > 1
             and not any(part.startswith(".") for part in relative.parts)
-            and path.suffix in PUBLIC_TREES.get(relative.parts[0], set())
+            and (path.suffix in PUBLIC_TREES.get(relative.parts[0], set())
+                 or (relative.parts[0] == "blog" and path.name.endswith(".html.md")))
         )
         if approved:
             selected.append(path)

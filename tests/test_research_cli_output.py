@@ -1,6 +1,5 @@
 """Human research output preserves machine contracts and treats metadata as data."""
 
-import argparse
 import contextlib
 import io
 import json
@@ -11,6 +10,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from lixity.research import api, cli
+from tests.research_support import capture_research, parse_research_args
 
 
 class TestResearchCliOutput(unittest.TestCase):
@@ -72,16 +72,90 @@ class TestResearchCliOutput(unittest.TestCase):
             self.assertEqual((status, err), (0, ""), err)
             self.assertIn("sources", json.loads(out))
 
-    def parse(self, *arguments: str) -> argparse.Namespace:
-        parser = argparse.ArgumentParser()
-        cli.configure(parser)
-        return parser.parse_args(arguments)
+    def test_authored_text_detail_escapes_controls_and_preserves_prose_lines(self):
+        title = "Synthetic \x1b[2J title"
+        body = "First paragraph.\n\nSecond \x1b]52;c;synthetic\x07 paragraph. \u202e"
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic safe output")
+            records = (
+                ("dossier", api.create_dossier(root, title, body)["dossier_id"]),
+                ("claim", api.create_claim(root, title=title, statement=body)["claim_id"]),
+                ("decision", api.record_decision(root, title=title, rationale=body,
+                                                impact_on_plot=body)["decision_id"]),
+            )
+            for kind, identifier in records:
+                with self.subTest(kind=kind):
+                    status, output, errors = self.capture(kind, "show", identifier, "--project", str(root),
+                                                          "--format", "text")
+                    self.assertEqual((status, errors), (0, ""))
+                    self.assertNotIn("\x1b", output)
+                    self.assertNotIn("\x07", output)
+                    self.assertNotIn("\u202e", output)
+                    self.assertIn(r"\x1b[2J", output)
+                    self.assertIn(r"\x1b]52;c;synthetic\x07", output)
+                    self.assertIn("First paragraph.\n\nSecond", output)
+                    # JSON preserves the original data instead of rewriting the archive.
+                    record = json.loads(self.capture(kind, "show", identifier, "--project", str(root))[1])["record"]
+                    self.assertEqual(record["title"], title)
 
-    def capture(self, *arguments: str) -> tuple[int, str, str]:
-        output, errors = io.StringIO(), io.StringIO()
-        with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-            status = cli.run(self.parse(*arguments))
-        return status, output.getvalue(), errors.getvalue()
+    def test_authored_history_text_preserves_revision_details(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic history output")
+            records = (
+                ("dossier", api.create_dossier(root, "Dossier", "Dossier body.")["dossier_id"]),
+                ("claim", api.create_claim(root, title="Claim", statement="Claim statement.")["claim_id"]),
+                ("decision", api.record_decision(root, title="Decision", rationale="Decision rationale.")["decision_id"]),
+            )
+            for kind, identifier in records:
+                with self.subTest(kind=kind):
+                    current = api.get_record(root, kind, identifier)
+                    api.revise_record(root, kind, identifier, changes={"title": "Revised title"},
+                                      expected_snapshot=current["snapshot"], expected_revision=1,
+                                      change_kind="correction", reason="Synthetic history correction.")
+                    status, output, errors = self.capture(kind, identifier, "--project", str(root),
+                                                          "--history", "--format", "text")
+                    self.assertEqual((status, errors), (0, ""), errors)
+                    self.assertIn(identifier, output)
+                    self.assertIn("Revision 2", output)
+                    self.assertIn("Revision 1", output)
+                    self.assertLess(output.index("Revision 2"), output.index("Revision 1"))
+                    self.assertIn("correction", output)
+                    self.assertIn("Synthetic history correction.", output)
+                    self.assertIn("local-author", output)
+
+    def test_authored_diff_text_shows_changes_without_writing(self):
+        from lixity.research.repository import Repository
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            api.init(root, title="Synthetic diff output")
+            records = (
+                ("dossier", api.create_dossier(root, "Dossier", "Dossier body.\x1b[2J")["dossier_id"],
+                 "--file", "Dossier body.", "Revised dossier body.\x1b]52;c;synthetic\x07"),
+                ("claim", api.create_claim(root, title="Claim", statement="Claim statement.")["claim_id"],
+                 "--statement", "Claim statement.", "Revised claim statement."),
+                ("decision", api.record_decision(root, title="Decision", rationale="Decision rationale.")["decision_id"],
+                 "--rationale", "Decision rationale.", "Revised decision rationale."),
+            )
+            before = Repository(root).snapshot().digest
+            for kind, identifier, flag, original, replacement in records:
+                with self.subTest(kind=kind):
+                    status, output, errors = self.capture(kind, identifier, "--project", str(root),
+                                                          "--diff", "--format", "text", flag, replacement)
+                    self.assertEqual((status, errors), (0, ""), errors)
+                    self.assertIn("preview only", output)
+                    self.assertIn(identifier, output)
+                    self.assertIn("-", output)
+                    self.assertIn(original, output)
+                    self.assertIn(replacement.encode("unicode_escape").decode("ascii"), output)
+                    self.assertNotIn("\x1b", output)
+                    self.assertNotIn("\x07", output)
+                    self.assertEqual(Repository(root).snapshot().digest, before)
+
+    parse = staticmethod(parse_research_args)
+    capture = staticmethod(capture_research)
 
     def source(self, number: int = 0) -> dict:
         return {

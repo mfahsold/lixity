@@ -7,10 +7,9 @@ const assert = require('node:assert/strict');
 const root = path.resolve(__dirname, '../..');
 const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
 import json
-import runpy
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
-render = runpy.run_path('tests/test_ui_contract.py')['_full_dashboard']
+from dashboard_fixtures import full_dashboard as render
 original = render.__globals__['render_dashboard']
 fixtures = {}
 for language in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
@@ -25,7 +24,7 @@ def standalone(*args, **kwargs):
                     enabled_actions=['analyze', 'rebuild'])
 render.__globals__['render_dashboard'] = standalone
 print(json.dumps({'fixtures': fixtures, 'standalone': render()}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 32*1024*1024});
+`], {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, encoding: 'utf8', maxBuffer: 32*1024*1024});
 assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
 const {fixtures, standalone} = JSON.parse(fixture.stdout);
 const screenshotDir = fs.mkdtempSync('/tmp/lixity-project-controls-');

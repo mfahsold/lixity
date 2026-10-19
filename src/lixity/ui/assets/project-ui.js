@@ -780,5 +780,19 @@ window.LixityManuscriptLinks = {
     if (!link) return;
     entries.forEach(function(entry) { if (entry.link === link) activate(entry); });
   });
+  nav.addEventListener("keydown", function(event) {
+    if (event.key !== "ArrowRight" && event.key !== "ArrowLeft") return;
+    var focused = document.activeElement;
+    var idx = -1;
+    entries.forEach(function(entry, i) { if (entry.link === focused) idx = i; });
+    if (idx < 0) return;
+    var next = event.key === "ArrowRight" ? idx + 1 : idx - 1;
+    if (next < 0 || next >= entries.length) return;
+    event.preventDefault();
+    entries[next].link.click();
+    // Native fragment activation focuses the destination. Keep keyboard focus
+    // in this navigation so another arrow press can select the next section.
+    entries[next].link.focus({preventScroll: true});
+  });
   update();
 })();

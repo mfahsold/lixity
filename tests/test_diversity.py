@@ -32,21 +32,9 @@ def _directional_mtld_reference(tokens: list[str], threshold: Fraction) -> Fract
 
 
 class HypergeometricHDDTests(unittest.TestCase):
-    def test_exact_frequency_fixtures(self) -> None:
-        self.assertAlmostEqual(hd_d(["same"] * 100), 1 / 42, places=14)
-        self.assertAlmostEqual(hd_d([f"w{i}" for i in range(100)]), 1.0, places=14)
-
-        tokens = ["a"] * 100 + ["b"] * 100
-        absence = math.comb(100, 42) / math.comb(200, 42)
-        expected = 2 * (1 - absence) / 42
-        value, se = hd_d_stats(tokens)
-        self.assertIsNotNone(value)
-        self.assertAlmostEqual(value, expected, places=14)
-        self.assertEqual(se, 0.0)
-
     def test_mixed_frequencies_match_exact_combinatorial_expectation(self) -> None:
         fixtures = (
-            (100,), (1,) * 100, (60, 25, 10, 4, 1), (59, 25, 10, 4, 2),
+            (100,), (1,) * 100, (100, 100), (60, 25, 10, 4, 1), (59, 25, 10, 4, 2),
             (95, 2, 2, 1), (70, 70, 42, 7, 7, 2),
         )
         for frequencies in fixtures:
@@ -58,23 +46,11 @@ class HypergeometricHDDTests(unittest.TestCase):
                 start=Fraction(0),
             ) / 42)
             tokens = [f"type{i}" for i, count in enumerate(frequencies) for _ in range(count)]
-            for sequence in (tokens, tokens[::-1]):
+            for sequence in (tokens, tokens[::-1], tokens[::2] + tokens[1::2]):
                 with self.subTest(frequencies=frequencies, reversed=sequence is not tokens):
                     value, se = hd_d_stats(sequence)
                     self.assertAlmostEqual(value, expected, places=14)
                     self.assertEqual(se, 0.0)
-
-    def test_token_order_and_legacy_sampling_arguments_do_not_change_result(self) -> None:
-        grouped = ["a"] * 100 + ["b"] * 100
-        alternating = [token for _ in range(100) for token in ("a", "b")]
-        self.assertEqual(hd_d(grouped), hd_d(alternating))
-        # The legacy sampling arguments are still accepted and still ignored,
-        # but they now announce that they do nothing.
-        with self.assertWarns(DeprecationWarning) as caught:
-            self.assertEqual(hd_d(grouped), hd_d(grouped, seed=123, min_samples=99))
-        self.assertIn("seed/min_samples", str(caught.warning))
-        self.assertIn("performs no sampling", str(caught.warning))
-        self.assertIn("without sampling arguments", str(caught.warning))
 
     def test_each_legacy_sampling_argument_warns_for_both_entrypoints(self) -> None:
         tokens = ["a"] * 100
@@ -90,12 +66,6 @@ class HypergeometricHDDTests(unittest.TestCase):
                 ):
                     self.assertEqual(function(tokens, **kwargs), expected)
 
-    def test_hd_d_is_silent_without_legacy_arguments(self) -> None:
-        """The whole suite runs under -W error, so the normal call must not warn."""
-        tokens = [f"w{i}" for i in range(200)]
-        self.assertIsNotNone(hd_d(tokens))
-        self.assertIsNotNone(hd_d_stats(tokens)[0])
-
     def test_short_text_guard_is_shared_lexical_diversity_floor(self) -> None:
         self.assertEqual(hd_d_stats(["a"] * 99), (None, 0.0))
         self.assertAlmostEqual(hd_d(["a"] * 100), 1 / 42, places=14)
@@ -107,6 +77,12 @@ class HypergeometricHDDTests(unittest.TestCase):
 
 
 class MaasTests(unittest.TestCase):
+    def test_invalid_or_inconsistent_counts_raise_value_error(self) -> None:
+        for n, v in ((-1, 0), (100, -1), (100, 101), (0, 1), (99, 100),
+                     (100.0, 20), (100, 20.5), (True, 1), (100, False)):
+            with self.subTest(tokens=n, types=v), self.assertRaises(ValueError):
+                maas_a2(n, v)
+
     def test_single_type_has_a_defined_value_above_the_existing_token_floor(self) -> None:
         self.assertEqual(maas_a2(100, 1), 0.5)
         self.assertEqual(maas_a2(100, 100), 0.0)
@@ -124,6 +100,12 @@ class MaasTests(unittest.TestCase):
 
 
 class MATTRTests(unittest.TestCase):
+    def test_invalid_windows_raise_value_error_even_for_empty_input(self) -> None:
+        for tokens in ([], ["a"] * 100):
+            for window in (0, -1, 0.5, True, False, float("nan"), float("inf"), "50", None):
+                with self.subTest(tokens=len(tokens), window=window), self.assertRaises(ValueError):
+                    mattr(tokens, window=window)
+
     def test_incremental_windows_match_direct_overlapping_type_sets(self) -> None:
         fixtures = (
             [], ["a"] * 49, ["a"] * 50, ["a"] * 51,
@@ -158,6 +140,12 @@ class YuleTests(unittest.TestCase):
 
 
 class MTLDTests(unittest.TestCase):
+    def test_invalid_thresholds_raise_value_error_even_below_token_floor(self) -> None:
+        for tokens in ([], ["a"] * 100):
+            for threshold in (0, 1, -0.2, 1.1, float("nan"), float("inf"), -float("inf"), True, False, "0.72", None):
+                with self.subTest(tokens=len(tokens), threshold=threshold), self.assertRaises(ValueError):
+                    mtld(tokens, threshold=threshold)
+
     def test_asymmetric_directions_are_averaged_as_lengths(self) -> None:
         tokens = ["a"] * 50 + [f"unique{i}" for i in range(50)]
         # Forward: 25 two-token factors, then a zero-weight unique remainder.

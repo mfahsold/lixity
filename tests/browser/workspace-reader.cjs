@@ -8,10 +8,10 @@ const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-workspace-reader-'));
 const generated = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
-import json, runpy
+import json
 from lixity.language import get_language_profile
 from lixity.workspace_labels import WORKSPACE_LABELS
-render = runpy.run_path('tests/test_ui_contract.py')['_full_dashboard']
+from dashboard_fixtures import full_dashboard as render
 original = render.__globals__['render_dashboard']
 fixtures = {}
 for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
@@ -22,7 +22,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
     render.__globals__['render_dashboard'] = localized
     fixtures[locale] = render()
 print(json.dumps(fixtures))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024});
+`], {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, encoding: 'utf8', maxBuffer: 16 * 1024 * 1024});
 assert.equal(generated.status, 0, generated.stderr || String(generated.error));
 const fixtures = JSON.parse(generated.stdout);
 const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title: 'Synthetic dossier', revision: 2,

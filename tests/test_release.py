@@ -39,8 +39,9 @@ def release_tree(tmp_path):
 
 
 def write_artifacts(tree, *, wheel_version="0.3.0", sdist_version="0.3.0",
-                    changed=None, duplicate=False, sdist_changed=None, root_directory=False):
-    _, dist, files = tree
+                    changed=None, duplicate=False, sdist_changed=None, root_directory=False,
+                    test_mutation=None):
+    root, dist, files = tree
     wheel = dist / "lixity-0.3.0-py3-none-any.whl"
     with zipfile.ZipFile(wheel, "w") as archive:
         for name, contents in files.items():
@@ -56,6 +57,12 @@ def write_artifacts(tree, *, wheel_version="0.3.0", sdist_version="0.3.0",
             directory.type = tarfile.DIRTYPE
             archive.addfile(directory)
         members = {f"src/lixity/{name}": contents for name, contents in files.items()}
+        members.update({path.relative_to(root).as_posix(): path.read_bytes()
+                        for path in (root / "tests").rglob("*.py")})
+        if test_mutation == "missing":
+            members.pop("tests/support.py")
+        elif test_mutation == "changed":
+            members["tests/support.py"] = b"stale helper"
         members["PKG-INFO"] = f"Name: lixity\nVersion: {sdist_version}\n".encode()
         for name, contents in members.items():
             shipped = b"stale" if name == f"src/lixity/{sdist_changed}" else contents
@@ -113,6 +120,18 @@ def test_sdist_source_mismatch_is_rejected(release_script, release_tree):
     (root / "src/lixity/_version.py").write_text('__version__ = "3.0.1"\n')
     with pytest.raises(ValueError):
         release_script.validate(root, dist)
+
+
+@pytest.mark.parametrize("mutation", ["missing", "changed"])
+def test_sdist_preserves_shared_test_modules(release_script, release_tree, mutation):
+    root, dist, _ = release_tree
+    (root / "tests").mkdir()
+    (root / "tests/support.py").write_text("SYNTHETIC_FIXTURE = 'shared'\n")
+    write_artifacts(release_tree, test_mutation=mutation)
+    with pytest.raises(ValueError, match="sdist tests differs from source"):
+        release_script.validate(root, dist)
+    write_artifacts(release_tree)
+    assert release_script.validate(root, dist) == "0.3.0"
 
 
 def test_standard_sdist_root_directory_is_accepted(release_script, release_tree):

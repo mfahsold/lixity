@@ -1004,7 +1004,7 @@ def main(argv: list[str] | None = None) -> int:
         if name == "service":
             configure_service(sub.add_parser(name, help=help_text))
             continue
-        p = sub.add_parser(name, help=help_text)
+        p = sub.add_parser(name, help=help_text, description=help_text)
         if name == "completion":
             p.add_argument(
                 "shell",
@@ -1018,7 +1018,7 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "schema":
-            p.add_argument("--json", action="store_true", help="JSON schema/contract metadata")
+            p.add_argument("--json", action="store_true", help="Tool metadata as JSON (default; same as about --json)")
             continue
         if name == "scenes":
             p.add_argument("file", help="Markdown manuscript")
@@ -1047,7 +1047,7 @@ def main(argv: list[str] | None = None) -> int:
                 "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
             )
             p.add_argument(
-                "--fdr-q", type=float, default=None, help="Benjamini-Hochberg q (default 0.05)"
+                "--fdr-q", type=float, default=None, help="Nominal q for the selected FDR method (default 0.05)"
             )
             p.add_argument(
                 "--fdr-method",
@@ -1098,6 +1098,7 @@ def main(argv: list[str] | None = None) -> int:
             p.add_argument("--json", action="store_true", help="JSON output")
             continue
         if name == "dashboard":
+            p.description = "Generate a self-contained offline HTML report containing manuscript text, measurements and work-marker notes."
             p.add_argument("file", help="Markdown manuscript")
             p.add_argument(
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
@@ -1111,7 +1112,7 @@ def main(argv: list[str] | None = None) -> int:
                 "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
             )
             p.add_argument(
-                "--fdr-q", type=float, default=None, help="Benjamini-Hochberg q (default 0.05)"
+                "--fdr-q", type=float, default=None, help="Nominal q for the selected FDR method (default 0.05)"
             )
             p.add_argument(
                 "--fdr-method",
@@ -1173,7 +1174,7 @@ def main(argv: list[str] | None = None) -> int:
                 "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
             )
             p.add_argument(
-                "--fdr-q", type=float, default=None, help="Benjamini-Hochberg q (default 0.05)"
+                "--fdr-q", type=float, default=None, help="Nominal q for the selected FDR method (default 0.05)"
             )
             p.add_argument(
                 "--fdr-method",
@@ -1205,7 +1206,7 @@ def main(argv: list[str] | None = None) -> int:
             "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
         )
         p.add_argument(
-            "--json", action="store_true", help="JSON output (analyze/profile/style/dialogue)"
+            "--json", action="store_true", help=argparse.SUPPRESS if name == "pdf" else "JSON output"
         )
         p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
         p.add_argument(
@@ -1215,7 +1216,7 @@ def main(argv: list[str] | None = None) -> int:
             "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
         )
         p.add_argument(
-            "--fdr-q", type=float, default=None, help="Benjamini-Hochberg q (default 0.05)"
+            "--fdr-q", type=float, default=None, help="Nominal q for the selected FDR method (default 0.05)"
         )
         p.add_argument(
             "--fdr-method",
@@ -1273,6 +1274,8 @@ def main(argv: list[str] | None = None) -> int:
         return run_research(args)
     if getattr(args, "min_chapters", None) is not None and args.min_chapters < 2:
         parser.error("--min-chapters must be at least 2")
+    if args.command == "pdf" and args.json:
+        parser.error("--json is not supported for PDF output; use analyze or style --json for measurements")
     if args.command == "serve":
         project_config = {} if args.no_project else load_project_config(args.path)
     else:

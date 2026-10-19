@@ -1,3 +1,4 @@
+const {startNativeServer} = require('./support/native-server.cjs');
 // Clicking a paragraph strip chip must show the paragraph: an off-screen block
 // scrolls into view and flashes instead of silently toggling (the reported
 // "clicks do not get through" behaviour).
@@ -5,15 +6,11 @@ const assert = require('node:assert/strict');
 const path = require('node:path');
 const fs = require('node:fs');
 const os = require('node:os');
-const {spawn} = require('node:child_process');
-const {createInterface} = require('node:readline');
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
-const root = path.resolve(__dirname, '../..');
-const python = process.env.PYTHON_BIN || path.join(root, '.venv/bin/python');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-paragraph-feedback-'));
 
 (async () => {
-  const server = spawn(python, ['-u', '-c', `
+  const server = await startNativeServer(`
 import json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
@@ -34,17 +31,9 @@ LixityServerHandler.refresh()
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}'}), flush=True)
 server.serve_forever()
-`, artifacts], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, stdio: ['ignore', 'pipe', 'pipe']});
-  const lines = createInterface({input: server.stdout});
-  let stderr = '';
-  server.stderr.on('data', data => {stderr = (stderr + data).slice(-4000);});
+`, artifacts);
   try {
-    const fixture = await new Promise((resolve, reject) => {
-      const timer = setTimeout(() => reject(new Error('Synthetic server startup timed out: ' + stderr)), 15000);
-      lines.once('line', line => {clearTimeout(timer); resolve(JSON.parse(line));});
-      server.once('error', error => {clearTimeout(timer); reject(error);});
-      server.once('exit', code => {clearTimeout(timer); reject(new Error(`Synthetic server exited ${code}: ${stderr}`));});
-    });
+    const fixture = server.fixture;
     const browser = await launchChromium();
     try {
       for (const width of [1280, 360]) {
@@ -100,5 +89,5 @@ server.serve_forever()
       }
     } finally {await browser.close();}
     console.log(`Paragraph feedback: click-open scrolls and flashes the off-screen paragraph at 1280/360. Screenshots: ${artifacts}`);
-  } finally {server.kill();}
+  } finally {await server.close();}
 })().catch(error => {console.error(error);process.exitCode = 1;});

@@ -5,12 +5,11 @@ const assert = require('node:assert/strict');
 
 const root = path.resolve(__dirname, '../..');
 const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
-import runpy
-render = runpy.run_path('tests/test_ui_contract.py')['_full_dashboard']
+from dashboard_fixtures import full_dashboard as render
 render.__globals__['SAMPLE'] += '\\n\\n## Dialog\\n\\n»Ich gehe zum Haus und sehe den Regen«, sagte sie.\\n' + '\\n\\nIch gehe zum Haus.\\n' * 100
 print(render())
 `],
-  {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 8*1024*1024});
+  {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, encoding: 'utf8', maxBuffer: 8*1024*1024});
 assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
 
 (async () => {

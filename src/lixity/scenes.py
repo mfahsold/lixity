@@ -1,6 +1,5 @@
 """Descriptive scene measurements and explicit manuscript register references."""
 
-import math
 import re
 from collections.abc import Mapping, Sequence
 from typing import Any
@@ -10,6 +9,7 @@ from .diversity import MIN_TOKENS_LD
 from .markdown_parser import split_chapters, split_scenes
 from .math_core import mad, median
 from .models import ChapterMetrics, CorpusConfig
+from .registers import validate_target_ranges
 from .style_fingerprint import FEATURES
 
 
@@ -44,29 +44,7 @@ def _settings(settings: Any) -> tuple[dict[str, str], dict[str, dict[str, list[f
             raise ValueError("Register names must contain 1–100 characters")
         if not isinstance(group, Mapping) or set(group) - {"targets"}:
             raise ValueError("Each scene group accepts only a targets table")
-        values = group.get("targets", {})
-        if not isinstance(values, Mapping):
-            raise ValueError("Register targets must be a table of feature ranges")
-        targets[name] = {}
-        for feature, target_range in values.items():
-            if feature not in fields:
-                raise ValueError(f"Unknown scene feature: {feature}")
-            if isinstance(target_range, Mapping):
-                if set(target_range) - {"lower", "upper"}:
-                    raise ValueError(f"{feature}: range tables accept lower and upper only")
-                bounds = [target_range.get("lower"), target_range.get("upper")]
-            else:
-                bounds = target_range
-            if not isinstance(bounds, list) or len(bounds) != 2 or bounds == [None, None]:
-                raise ValueError(f"{feature}: provide [lower, upper], using null for one open bound")
-            maximum = 1 if feature == "hd_d" else 100 if feature.endswith("_pct") or feature == "first_person_start_rate" else None
-            for bound in bounds:
-                if bound is not None and (type(bound) not in (int, float) or not math.isfinite(bound)
-                                          or bound < 0 or (maximum is not None and bound > maximum)):
-                    raise ValueError(f"Invalid target range for {feature}")
-            if all(b is not None for b in bounds) and bounds[0] > bounds[1]:
-                raise ValueError(f"Reversed target range for {feature}")
-            targets[name][feature] = bounds
+        targets[name] = validate_target_ranges(group.get("targets", {}), fields)
     for identifier, group_name in assignments.items():
         if not isinstance(identifier, str) or not re.fullmatch(r"[1-9]\d*:[1-9]\d*", identifier):
             raise ValueError("Scene assignment keys must be chapter:scene numbers, for example 1:2")

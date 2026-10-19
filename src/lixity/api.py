@@ -240,7 +240,8 @@ def motifs(
 
     ``motifs`` maps a display name to a regular expression
     (``{"Wut": r"\b(Wut|wütend\w*)\b"}``). Returns ``{"meta", "motifs", "top_words",
-    "repeated_phrases", "chapters"}``.
+    "repeated_phrases", "echoes", "chapters"}``. Echoes use the default local
+    window; configurable echo controls belong to ``motifs.motif_report``.
     """
     config, resolved = resolve_document_config(text, language, **config_overrides)
     from .motifs import motif_report

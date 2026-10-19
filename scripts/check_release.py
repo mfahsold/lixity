@@ -90,6 +90,7 @@ def validate(root: Path, dist: Path, tag: str | None = None) -> str:
             raise ValueError("sdist is missing PKG-INFO")
         check_metadata(metadata_file.read(), version)
         actual = {}
+        actual_tests = {}
         for member in members:
             if member.name.startswith(prefix + "src/lixity/") and not member.isdir():
                 if not member.isfile():
@@ -98,7 +99,17 @@ def validate(root: Path, dist: Path, tag: str | None = None) -> str:
                 if contents is None:
                     raise ValueError(f"unreadable sdist member: {member.name}")
                 actual[member.name.removeprefix(prefix + "src/")] = contents.read()
+            elif member.name.startswith(prefix + "tests/") and member.name.endswith(".py"):
+                if not member.isfile():
+                    raise ValueError("sdist test modules must be regular files")
+                contents = archive.extractfile(member)
+                if contents is None:
+                    raise ValueError(f"unreadable sdist member: {member.name}")
+                actual_tests[member.name.removeprefix(prefix)] = contents.read()
         check_package(actual, expected, "sdist")
+        expected_tests = {path.relative_to(root).as_posix(): path.read_bytes()
+                          for path in (root / "tests").rglob("*.py")}
+        check_package(actual_tests, expected_tests, "sdist tests")
     return version
 
 

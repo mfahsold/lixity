@@ -17,6 +17,16 @@ to the affected areas (falling back to the full set when a shared foundation
 changed), `--jobs N` runs independent suites in parallel, `--only NAME`
 selects suites and `--start NAME` resumes after a failure.
 
+Before starting suites, the runner executes the support directory's Node tests.
+These check disposable-server startup, malformed readiness data, early exits,
+timeouts and cleanup. `--list` only lists suites. Native-server helpers keep
+readiness and termination handling shared without replacing the real HTTP flows.
+
+Localized suites retain all seven languages at desktop and mobile widths for
+rendering, labels and submitted machine values. Language-independent interaction
+and conflict scenarios run once per relevant viewport. Native server saves and
+intercepted responses cover different boundaries and remain separate.
+
 `scripts/browser_tools.cjs` probes common local Playwright and Chromium
 locations automatically; `PLAYWRIGHT_MODULE` and
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` remain optional overrides.
@@ -146,9 +156,11 @@ Zotero controls at desktop and mobile widths. These
 fixtures do not establish compatibility with a running Zotero installation or
 validate a real library migration.
 
-The docs suite stages the Pages publication set and loads six HTML pages through
-intercepted local routes at 1440, 390 and 320 pixels, in light and dark themes,
-with JavaScript enabled and disabled. It checks canonical URLs, assets, console
+The docs suite stages the Pages publication set and loads the homepage, all
+guides and articles, blog index and public reports through intercepted local
+routes at 1440, 390 and 320 pixels. Representative homepage, guide, article and
+report surfaces also cover light/dark themes with JavaScript enabled and
+disabled. It checks canonical URLs, assets, console
 errors, overflow, navigation, heading order and explicit content-image dimensions.
 The read-only example also exercises keyboard paragraph expansion, filters,
 chapter links and chart controls, with no API or external requests. Screenshots
@@ -170,6 +182,12 @@ under `/tmp/lixity-scenes-ui-*`.
 The settings test intercepts all requests to a synthetic host. It verifies
 locale-safe values, validation before submission, reset without saving, FDR
 row filtering, mobile layout and the serif font being limited to the title.
+
+The register-settings suite uses a disposable native project to verify register
+and chapter-assignment saves, target validation, duplicate removal, inert names,
+unchanged manuscript bytes and preservation of newer rows during pending saves.
+It renders seven locales at 1440 and 320 pixels; screenshots stay under
+`/tmp/lixity-register-settings-*`.
 
 The layout test covers every panel at 1440, 768, 390 and 320 pixels, including
 long chapter strips, consistent panel spacing, readable scrolling tables,

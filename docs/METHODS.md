@@ -177,6 +177,16 @@ Deterministic tie-break by $(\text{chapter}, \text{feature})$. The rejected
 set is `fdr_flagged`. This records selection under the implemented model,
 not confirmed errors or validated statistical significance in prose.
 
+**Since v0.5.0:** chapters explicitly assigned through
+`chapter_registers` retain their measured values, z-scores and membership in
+the manuscript baseline, but are excluded from `deviations` and the FDR input
+family. Here $m$ is the number of eligible cells after that exclusion.
+`measured_cells`, descriptive consistency and the nominal
+`expected_false_positives` reference still count all measured cells. Author
+`register_profiles` ranges produce separate `register_targets` comparisons;
+they supply neither a sampling distribution nor statistical significance.
+See [Chapter register settings](USAGE.md#chapter-register-settings).
+
 - **BH** ($c = 1$): controls FDR for valid null probabilities under
   independence or the specified positive-dependence conditions.
 - **BY** ($c = \sum_{i=1}^{m} 1/i$): accommodates arbitrary dependence

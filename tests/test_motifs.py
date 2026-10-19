@@ -42,12 +42,7 @@ class TestMotifs(unittest.TestCase):
         self.assertEqual(motif.first_chapter, 1)
         self.assertEqual(motif.last_chapter, 3)
         self.assertEqual(motif.longest_gap, 1)
-
-    def test_density_per_1000(self):
-        report = motif_report(TEXT, {"Regen": r"\bRegen\b"}, DE)
-        motif = report.motifs[0]
-        self.assertGreater(motif.density_per_1000, 0.0)
-        self.assertLessEqual(motif.density_per_1000, 1000.0)
+        self.assertEqual(motif.density_per_1000, 200.0)
 
     def test_motifs_sorted_by_mentions(self):
         report = motif_report(TEXT, {"Regen": r"\bRegen\b", "Wort": r"\bWort\b"}, DE)
@@ -100,6 +95,61 @@ class TestRepetition(unittest.TestCase):
         self.assertEqual(report.chapters, 0)
         self.assertEqual(report.motifs[0].mentions, 0)
         self.assertEqual(report.top_words, [])
+
+    def test_echo_detector_finds_nearby_repetition(self):
+        text = (
+            "## Eins\n\nDer Hund lief. Der Hund lief schnell. "
+            "Der Hund lief sehr schnell.\n"
+        )
+        report = motif_report(text, None, DE, echo_window=300)
+        terms = [e.term for e in report.echoes]
+        self.assertIn("der hund lief", terms)
+
+    def test_echo_detector_empty_for_no_repetition(self):
+        text = "## Eins\n\nDer Hund lief. Die Katze sprang. Der Vogel flog.\n"
+        report = motif_report(text, None, DE, echo_window=300)
+        self.assertEqual(report.echoes, [])
+
+    def test_echoes_keep_independent_phrases_with_shared_words(self):
+        text = (
+            "## One\n\nred wooden door. appears. red wooden door. closes. "
+            "red metal door. opens. red metal door."
+        )
+        report = motif_report(text, config=CorpusConfig(language="en"))
+        self.assertEqual(
+            {echo.term for echo in report.echoes},
+            {"red wooden door", "red metal door"},
+        )
+
+    def test_echo_count_and_locations_describe_only_the_local_window(self):
+        text = (
+            "## One\n\nsilver lantern shines. blue river flows. silver lantern shines. "
+            + "other " * 20 + "silver lantern shines."
+        )
+        report = motif_report(text, config=CorpusConfig(language="en"), echo_window=12)
+        echo = next(echo for echo in report.echoes if echo.term == "silver lantern shines")
+        self.assertEqual((echo.count, echo.first_word, echo.last_word), (2, 1, 9))
+        strict = motif_report(
+            text, config=CorpusConfig(language="en"), echo_window=12, echo_min_count=3,
+        )
+        self.assertNotIn("silver lantern shines", {echo.term for echo in strict.echoes})
+
+    def test_echo_window_uses_the_densest_cluster(self):
+        text = "## One\n\nbright copper bell. " + "other " * 20 + "bright copper bell. " * 3
+        report = motif_report(text, config=CorpusConfig(language="en"), echo_window=10)
+        echo = next(echo for echo in report.echoes if echo.term == "bright copper bell")
+        self.assertEqual((echo.count, echo.first_word, echo.last_word), (3, 24, 32))
+
+    def test_echo_window_contains_the_complete_repeated_phrases(self):
+        text = "## One\n\nbright copper bell. blue river flows. bright copper bell."
+        report = motif_report(text, config=CorpusConfig(language="en"), echo_window=8)
+        self.assertEqual(report.echoes, [])
+
+    def test_echo_dedup_collapses_shifted_ngrams_of_the_same_passage(self):
+        text = "## One\n\nthe bright silver lantern. the bright silver lantern."
+        report = motif_report(text, config=CorpusConfig(language="en"))
+        self.assertEqual(len(report.echoes), 1)
+        self.assertEqual(report.echoes[0].term, "the bright silver")
 
 
 if __name__ == "__main__":

@@ -84,6 +84,45 @@
 }
 .chapter, .ptext, .panel, section[id] { scroll-margin-top: 4.5rem; }
 
+/* --- Skip link (keyboard accessibility) ------------------------------- */
+.skip-link {
+  position: absolute;
+  left: -9999px;
+  top: 0;
+  z-index: 1000;
+  padding: 0.5rem 1rem;
+  background: var(--accent);
+  color: var(--bg);
+  border-radius: var(--radius-sm);
+  font-weight: var(--weight-bold);
+}
+.skip-link:focus {
+  left: 1rem;
+  top: 1rem;
+}
+
+/* --- Register badge (intentional style register) ----------------------- */
+.badge-register {
+  display: inline-block;
+  margin-left: 0.4rem;
+  padding: 0.1rem 0.4rem;
+  font-size: var(--text-micro);
+  border-radius: var(--radius-xs);
+  background: var(--accent-light);
+  color: var(--accent);
+  vertical-align: middle;
+}
+.register-editor { border: 0; padding: 0; margin: 1rem 0; min-width: 0; }
+.register-editor > legend { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
+.register-profile { border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 1rem; margin-bottom: 1rem; }
+.register-range, .register-assignment { display: grid; grid-template-columns: minmax(8rem, 2fr) repeat(2, minmax(5rem, 1fr)) auto; gap: .5rem; align-items: end; margin: .75rem 0; }
+.register-assignment { grid-template-columns: minmax(8rem, 1fr) minmax(8rem, 1fr) auto; }
+.register-editor .setting-field { min-width: 0; }
+.register-editor .ctl { max-width: 100%; }
+@media (max-width: 600px) {
+  .register-range, .register-assignment { grid-template-columns: minmax(0, 1fr); }
+}
+
 /* --- Tables ----------------------------------------------------------- */
 .table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
 .table-wrap table { width: 100%; }

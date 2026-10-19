@@ -2,6 +2,7 @@
 
 import warnings
 from collections.abc import Mapping, Sequence
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Literal
 
@@ -349,6 +350,7 @@ def reanchor_manuscript_link(
     new_quote: str | None = None,
     line: int | None = None,
     reason: str | None = None,
+    new_claim_revision: int | None = None,
 ) -> dict[str, Any]:
     """Re-pin one uniquely resolvable anchor; the earlier position stays in history.
 
@@ -356,6 +358,8 @@ def reanchor_manuscript_link(
     outside the quote, so the re-pin also refreshes hash and offsets. When
     ``new_quote`` is supplied explicitly, a ``changed`` anchor is re-pinned to
     the revised displayed-text quote while the earlier quote remains in history.
+    ``new_claim_revision`` explicitly accepts the current claim revision in the
+    same association revision as the anchor update.
     """
     repository = Repository(project)
     snapshot = repository.snapshot()
@@ -371,6 +375,8 @@ def reanchor_manuscript_link(
         raise ResearchError("Retracted associations cannot be re-pinned")
     if type(expected_revision) is not int or record.revision != expected_revision:
         raise ResearchConflictError("Manuscript link revision changed; review it before re-pinning")
+    claim = (_reviewed_claim_revision(snapshot, record, new_claim_revision)
+             if new_claim_revision is not None else None)
     path, relative = _source_path(repository, manuscript)
     if record.anchor.source_path != relative:
         raise ResearchError("The association belongs to a different manuscript path")
@@ -411,19 +417,20 @@ def reanchor_manuscript_link(
     identity = paragraph_identity(target)
     unchanged_identity = identity["paragraph_sha256"] == record.anchor.paragraph_sha256
     quote_changed = quote_to_pin != record.anchor.quote
-    if (
+    anchor_unchanged = (
         not quote_changed
         and unchanged_identity
         and target.start_line == record.anchor.start_line
         and target.end_line == record.anchor.end_line
         and start == record.anchor.start
         and end == record.anchor.end
-    ):
+    )
+    if anchor_unchanged and claim is None:
         raise ResearchError("The anchor still resolves at its recorded lines; nothing to re-pin")
     change_kind: Literal["correction", "supersession"] = (
         "supersession" if quote_changed else "correction"
     )
-    default_reason = (
+    default_reason = "Accept current claim revision" if anchor_unchanged else (
         "Update quote to the revised manuscript text"
         if quote_changed
         else (
@@ -454,12 +461,15 @@ def reanchor_manuscript_link(
     revised = record.model_copy(
         update={
             "revision": record.revision + 1,
+            "created_by": actor,
+            "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
             "change": RevisionChange(
                 change_kind=change_kind,
                 reason=revision_reason,
                 previous_revision=record.revision,
             ),
             "anchor": updated_anchor,
+            "claim_ref": Reference(id=claim.id, revision=claim.revision) if claim else record.claim_ref,
         }
     )
     # Recheck bytes immediately before publication; this never writes the manuscript.
@@ -473,7 +483,161 @@ def reanchor_manuscript_link(
         "archive_schema_version": accepted.manifest.schema_version,
         "link_id": record.id,
         "claim_id": record.claim_ref.id,
-        "claim_revision": record.claim_ref.revision,
+        "claim_revision": revised.claim_ref.revision,
+        "record": revised.model_dump(mode="json"),
+    }
+
+
+def retract_manuscript_link(
+    project: str | Path,
+    manuscript: str | Path,
+    link_id: str,
+    *,
+    expected_project_id: str,
+    expected_snapshot: str,
+    expected_revision: int,
+    reason: str = "Withdrawn by user",
+    actor: str = "local-author",
+) -> dict[str, Any]:
+    """Retract one manuscript association; the earlier revision stays in history."""
+    reason = reason.strip() if isinstance(reason, str) else "Withdrawn by user"
+    if not (1 <= len(reason) <= 500):
+        raise ResearchError("Withdrawal reason must be between 1 and 500 characters")
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if expected_project_id != snapshot.project.id:
+        raise ResearchConflictError("Research project changed; reopen the intended project")
+    if expected_snapshot != snapshot.digest:
+        raise ResearchConflictError("Research snapshot changed; reload before saving")
+    try:
+        record = snapshot.latest(Reference(id=link_id).id, ManuscriptClaimLink)
+    except ValidationError:
+        raise ResearchError("Invalid manuscript link identifier") from None
+    if record.state != "active":
+        raise ResearchError("Association has already been retracted")
+    if type(expected_revision) is not int or record.revision != expected_revision:
+        raise ResearchConflictError("Manuscript link revision changed; review it before retracting")
+    _path, relative = _source_path(repository, manuscript)
+    if record.anchor.source_path != relative:
+        raise ResearchError("The association belongs to a different manuscript path")
+    revised = record.model_copy(
+        update={
+            "revision": record.revision + 1,
+            "created_by": actor,
+            "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "state": "retracted",
+            "change": RevisionChange(
+                change_kind="supersession",
+                reason=reason,
+                previous_revision=record.revision,
+            ),
+        }
+    )
+    accepted = repository.commit([revised], {}, snapshot)
+    return {
+        "schema_version": "research-manuscript-link-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": accepted.digest,
+        "archive_schema_version": accepted.manifest.schema_version,
+        "link_id": record.id,
+        "claim_id": record.claim_ref.id,
+        "revision": revised.revision,
+        "record": revised.model_dump(mode="json"),
+    }
+
+
+def _reviewed_claim_revision(snapshot: Snapshot, record: ManuscriptClaimLink, revision: int) -> Claim:
+    """Require the reviewed, current claim revision to advance the saved pin."""
+    try:
+        Reference(id=record.claim_ref.id, revision=revision)
+    except ValidationError:
+        raise ResearchError("Invalid claim identifier or revision") from None
+    claim = snapshot.latest(record.claim_ref.id, Claim)
+    if claim.revision != revision:
+        raise ResearchConflictError("Claim revision changed; review its current version before saving")
+    if revision <= record.claim_ref.revision:
+        raise ResearchError("The association already pins this claim revision")
+    if any(
+        isinstance(r, Tombstone) and r.target_kind == "claim" and r.target_ref.id == claim.id
+        for r in snapshot.records.values()
+    ):
+        raise ResearchError("Claim has been withdrawn")
+    return claim
+
+
+def reanchor_manuscript_claim_revision(
+    project: str | Path,
+    manuscript: str | Path,
+    link_id: str,
+    *,
+    expected_project_id: str,
+    expected_snapshot: str,
+    expected_revision: int,
+    expected_source_sha256: str,
+    new_claim_revision: int,
+    actor: str = "local-author",
+    reason: str | None = None,
+) -> dict[str, Any]:
+    """Re-pin one association to a newer claim revision (anchor unchanged).
+
+    Used when a claim advanced and the manuscript link still points at the
+    earlier revision. The quote, paragraph identity and offsets are preserved;
+    only the pinned claim revision changes. Returns a new link revision.
+    """
+    repository = Repository(project)
+    snapshot = repository.snapshot()
+    if expected_project_id != snapshot.project.id:
+        raise ResearchConflictError("Research project changed; reopen the intended project")
+    if expected_snapshot != snapshot.digest:
+        raise ResearchConflictError("Research snapshot changed; reload before saving")
+    try:
+        record = snapshot.latest(Reference(id=link_id).id, ManuscriptClaimLink)
+    except ValidationError:
+        raise ResearchError("Invalid manuscript link identifier") from None
+    if record.state != "active":
+        raise ResearchError("Retracted associations cannot be re-pinned")
+    if type(expected_revision) is not int or record.revision != expected_revision:
+        raise ResearchConflictError("Manuscript link revision changed; review it before re-pinning")
+    path, relative = _source_path(repository, manuscript)
+    if record.anchor.source_path != relative:
+        raise ResearchError("The association belongs to a different manuscript path")
+    try:
+        _text, source_sha256 = FileUtils.read_source_snapshot(str(path))
+    except (OSError, UnicodeError) as exc:
+        raise ResearchError("Manuscript source is missing or unreadable") from exc
+    if source_sha256 != expected_source_sha256:
+        raise ResearchConflictError(
+            "Manuscript source bytes changed; review the current text before saving"
+        )
+    claim = _reviewed_claim_revision(snapshot, record, new_claim_revision)
+    revision_reason = (
+        reason.strip() if isinstance(reason, str) and reason.strip() else "Accept current claim revision"
+    )
+    revised = record.model_copy(
+        update={
+            "revision": record.revision + 1,
+            "created_by": actor,
+            "created_at": datetime.now(timezone.utc).strftime("%Y-%m-%dT%H:%M:%S.%fZ"),
+            "claim_ref": Reference(id=claim.id, revision=claim.revision),
+            "change": RevisionChange(
+                change_kind="correction",
+                reason=revision_reason,
+                previous_revision=record.revision,
+            ),
+        }
+    )
+    if FileUtils.read_source_snapshot(str(path))[1] != source_sha256:
+        raise ResearchConflictError("Manuscript source bytes changed before saving")
+    accepted = repository.commit([revised], {}, snapshot)
+    return {
+        "schema_version": "research-manuscript-link-local/1",
+        "project_id": snapshot.project.id,
+        "snapshot": accepted.digest,
+        "archive_schema_version": accepted.manifest.schema_version,
+        "link_id": record.id,
+        "claim_id": claim.id,
+        "claim_revision": claim.revision,
+        "revision": revised.revision,
         "record": revised.model_dump(mode="json"),
     }
 

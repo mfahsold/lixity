@@ -1,8 +1,21 @@
-"""CLI adapters report invalid input encoding without publishing artifacts."""
+"""CLI adapters reject invalid inputs and output modes without publishing artifacts."""
 
 import pytest
 
 from lixity.cli import main
+
+
+def test_pdf_rejects_json_before_processing_or_replacing_output(tmp_path, capsys):
+    source = tmp_path / "synthetic.md"
+    source.write_text("## One\n\nA synthetic scene.\n", encoding="utf-8")
+    output = tmp_path / "report.pdf"
+    output.write_bytes(b"Previous synthetic PDF")
+    with pytest.raises(SystemExit) as error:
+        main(["pdf", str(source), "--json", "--output", str(output)])
+    assert error.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == "" and "--json" in captured.err and "PDF" in captured.err
+    assert output.read_bytes() == b"Previous synthetic PDF"
 
 
 @pytest.mark.parametrize("command", ["pdf", "build", "analyze"])

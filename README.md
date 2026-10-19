@@ -2,6 +2,7 @@
 
 [![tests](https://github.com/mfahsold/lixity/actions/workflows/tests.yml/badge.svg)](https://github.com/mfahsold/lixity/actions)
 [![PyPI](https://img.shields.io/pypi/v/lixity)](https://pypi.org/project/lixity/)
+[![Downloads](https://img.shields.io/pypi/dm/lixity)](https://pypistats.org/packages/lixity)
 [![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.23390297.svg)](https://doi.org/10.5281/zenodo.23390297)
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
@@ -10,9 +11,11 @@
 
 Lixity helps authors, editors and researchers see how a manuscript changes from
 chapter to chapter. It measures sentence lengths, word use, dialogue and tense,
-then lets you read the passages behind each result. Its research workspace keeps
-source quotations and writing decisions connected. Your literary judgment guides
+with chapter comparisons and paragraph views for reading the measured text.
+Its research workspace keeps source quotations and writing decisions connected. Your literary judgment guides
 what you keep or revise.
+
+![Lixity dashboard — chapter comparison, sentence rhythm and passage drill-down](docs/screenshots/dashboard-dark.png)
 
 Matthias Fahsold developed Lixity as an architect and developer at ROST Services
 GmbH and used it while writing his own debut novel.
@@ -21,66 +24,44 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v0.4.9 release notes](docs/releases/v0.4.9.md)
+[v0.5.0 release notes](docs/releases/v0.5.0.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload. Documentation is English; you can read the
 results in German, English, French, Spanish, Italian, Portuguese or Dutch.
 
-## Start here
+## Try it in 30 seconds
 
-No statistics background is needed, and nothing is uploaded: analysis runs on
-your computer.
+Open the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
+(invented text), [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html)
+or [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html).
+Explore a chapter comparison, then open a paragraph to read its measurements.
+No install, account or upload is needed. The
+[three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
+explains the results without requiring statistics background.
 
-1. **Look at an example.** The [read-only synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
-   opens directly in the browser and is made from invented text. For real books,
-   the [Effi Briest example](https://mfahsold.github.io/lixity/examples/effi-briest.html)
-   (German) and the [Pride and Prejudice example](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
-   (English) show an interactive excerpt of a public-domain novel next to its
-   complete PDF report.
-2. **See what the numbers mean.** The [three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
-   walks through chapter comparison, a passage and its measurements.
-3. **Install Lixity** when you want to analyze your own manuscript (next section).
+<a id="start-here"></a>
+Built-in analysis runs on your computer. Optional external OCR workers have
+separate [data boundaries](docs/research/OCR_INTEGRATION.md).
 
 ## Install and start
 
-Lixity runs on Windows, macOS and Linux. You never have to touch a terminal
-after the first setup:
+Install [uv](https://docs.astral.sh/uv/), then run on Windows, macOS or Linux:
 
-1. **Try it first** — open the
-   [synthetic report](https://mfahsold.github.io/lixity/demo/report.html) or the
-   [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html) /
-   [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
-   examples. No install, no account, no upload.
-2. **Install once** (one command, takes about a minute):
-   ```bash
-   uv tool install --python 3.12 --managed-python lixity
-   uv tool update-shell
-   ```
-   [uv](https://docs.astral.sh/uv/) supplies the managed Python environment and
-   installs the published package from [PyPI](https://pypi.org/project/lixity/);
-   the [installation guide](docs/INSTALLATION.md) covers Windows, macOS and Linux,
-   the pinned release wheel with `SHA256SUMS`, updates and removal.
-3. **Open a new terminal once**, then run `lixity --version` and
-   `lixity service start --open`. From then on, Lixity lives in your menu:
-   double-click the `lixity-start.sh` / `lixity-start.ps1` launcher that ships
-   with the package, or use the managed service (`lixity service start --open`).
-   No daily terminal needed.
+```bash
+uv tool install --python 3.12 --managed-python lixity
+uv tool update-shell
+```
 
-The service starts an empty local workspace; choose **Open Project** or
-**Analyze a manuscript**. The [first-project guide](docs/ONBOARDING.md) walks
-through both choices. For later upgrades, run `uv tool upgrade lixity` (or
-reinstall a pinned release wheel) and restart the local workspace; see the
-[update instructions](docs/INSTALLATION.md#updates-and-removal).
+Open a new terminal, verify `lixity --version`, then start the local workspace
+with `lixity service start --open`. Choose **Open Project** or **Analyze a
+manuscript**; the [first-project guide](docs/ONBOARDING.md) explains both.
+For later visits, use the packaged `lixity-start.sh` / `lixity-start.ps1` launcher
+or the same service command.
 
-Use `lixity service status`, `lixity service restart` or `lixity service stop`
-for the managed instance. `status` prints the service log path; diagnostics use
-one UTC log format with levels (`--debug`, `LIXITY_DEBUG`, `LIXITY_LOG_LEVEL`)
-and an oversized log is rotated at start. See
-[logs](docs/INSTALLATION.md#logs). Before uninstalling, stop managed instances and
-disable any login startup you configured, then run `uv tool uninstall lixity`.
-Manuscripts and research archives remain in their project folders.
-[Lifecycle reference](docs/INSTALLATION.md#running-the-server).
+The [installation guide](docs/INSTALLATION.md) covers platform setup, pinned
+release wheels with `SHA256SUMS`, service status and logs, updates and removal.
+After an upgrade, restart the workspace to load the installed version.
 
 ## What you can do
 
@@ -121,27 +102,15 @@ measurements unavailable. [Scene example](docs/screenshots/dashboard-scenes.png)
 
 ### Print what the analysis found
 
-`lixity pdf` composes a PDF from the manuscript and its measurements: an A4
-analysis report, an A5 reading layout, or a submission sheet of 30 lines of 60
-characters. Fonts are embedded as subsets, with searchable text for Unicode
-characters covered by the selected fonts. No converter, no upload, no added
-runtime dependency. The A4 report opens with a cover page and sets its figures
-as aligned tables with a repeated header row. These are reading and review
-layouts; PDF/X production preflight and automatic fallback between fonts are
-not provided. [Command reference](docs/USAGE.md#lixity-pdf).
+Export an A5 reading copy, A4 analysis report or A4 submission sheet from
+**PDF export** in the project controls, or use `lixity pdf`. The composer uses
+your project's title, author and optional publication details. Empty fields
+supply no inferred information.
 
-See the complete output: [Effi Briest report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf) ·
-[Pride and Prejudice report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
-
-In the app, **PDF export** in the global project controls offers **A5 reading
-copy** (default), **A4 manuscript sheets** or **A4 analysis report**; the menu
-starts collapsed and generation returns the PDF through the browser without
-writing server export files. The same composer reads the selected project's
-title, author and optional publication details from **Project → Settings →
-Publication**; empty fields add no inferred information. PDF metadata, chapter
-bookmarks and running headers help readers navigate. These remain fixed-layout
-PDFs, without EPUB, PDF/UA or PDF/X certification. See
-[publication settings and Germany print/digital guidance](docs/USAGE.md#publication-settings).
+See the complete [Effi Briest report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf)
+or [Pride and Prejudice report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
+[PDF layouts and font limits](docs/USAGE.md#lixity-pdf) ·
+[Publication settings](docs/USAGE.md#publication-settings).
 
 ### Keep review notes beside the text
 
@@ -169,38 +138,17 @@ records what a source says; its accuracy still needs review.
 
 <a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Local visual reference inside a dossier section, with a description and an explicit synthetic-source caption" width="900" /></a>
 
-Bring sources from local files or the optional Zotero Desktop bridge. Zotero
-stays a catalogue: cards link back quietly, the type line explains the item, and
-tags filter the list. PDF scans
-can use locally installed Tesseract or a configured OCR worker. Import warnings
-explain when extraction is incomplete or a requested fallback was used. Select
-text within an opened source paragraph to prepare an evidence-link draft, with
-the selected quote and full citation context shown before saving; citations
-retain the whole paragraph. An optional read-only dossier view lets you read
-chosen notes beside the manuscript.
+Import authorized local files or selected Zotero Desktop attachments.
+Scans can use local Tesseract or a configured OCR worker; inspect extraction
+warnings and quotations. Evidence links pin source paragraphs, while manuscript
+quote associations connect reviewed prose to exact claim revisions.
 
-**Review** shows the records explicitly linked to a decision and whether those
-links refer to an older version. You can inspect the earlier and current
-versions before deciding to update a link. Saved manuscript associations—a
-selected quote linked to a claim—appear in the same tab with their anchor state
-and review flags. An edit outside the quote resolves as *adjusted* and can be
-re-pinned explicitly (review tab or
-`reconcile-manuscript --accept-moved`); editing the quote itself stays
-unresolved. Nothing is repinned silently. Related dossier edits can be
-previewed and saved together; if another edit conflicts, the preview helps you
-resolve it while preserving your draft.
-
-Add a local PNG/JPEG to a dossier with a description and optional source note.
-Earlier dossier versions keep their original image; no remote picture is fetched
-and images receive no text scores. **Edit section**, **Add claim** and **Add
-decision** keep a large topic manageable without copying whole documents or IDs.
-
-**Chronology:** the **Timeline** view inside *Claims & evidence* sorts every
-claim with an explicit
-calendar period (`1926`, `1926-03`, `1926-03-15`, `1924–1926`, `1929-1933`) on a shared axis and links
-each bar to its claim card. Free-text periods such as "present day" stay visibly
-unplaced with a reason and a formatting hint; placement never verifies a
-historical fact.
+**Review** identifies older linked versions and changed manuscript anchors for
+your assessment. Related revisions can be previewed and saved together;
+conflicts preserve your draft. Nothing is repinned silently. Add local images
+as visual references, or use **Timeline** to organize claims with explicit
+calendar periods. These links and views record your interpretation; they do
+not establish factual truth. [Research workflows and limits](docs/research/USAGE.md).
 
 <img src="docs/videos/research-timeline.gif" alt="Walkthrough: the claims timeline places dated claims on a shared axis and jumps from a bar to its claim card" width="900" />
 
@@ -214,13 +162,9 @@ historical fact.
 
 ### Choose a project and its settings
 
-Project actions remain available from each workspace view. Preview a manuscript
-before importing it, select its analysis language, and adjust which differences
-you want to examine. The NDA form has just name, optional address, project name,
-date and place. Preview the agreement and download a PDF or editable text in the
-project language: the recipient can sign or consent in text form, and the
-sending project representative needs no separate handwritten signature. Set
-**Author name** under **Project → Settings** to fill the representative's name.
+Preview a manuscript before importing it, select its analysis language and
+adjust which differences you want to examine. Project settings also hold the
+author name, publication details and optional confidentiality-agreement controls.
 
 <a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" width="900" /></a>
 
@@ -281,45 +225,25 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 
 ## Documentation map
 
-**If you are new to Lixity (no technical background):**
-
-- [Read-only example report](https://mfahsold.github.io/lixity/demo/report.html) —
-  the features in a browser, with invented text.
-- [Public-domain examples](https://mfahsold.github.io/lixity/examples/effi-briest.html) —
-  Effi Briest (German) and Pride and Prejudice (English), each with a complete PDF report.
-- [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
-  — chapter comparison, one passage and its measurements.
-- [Install and open a project](https://mfahsold.github.io/lixity/guides/installation.html)
-  — setup, first report and returning to a project.
-- [Understand the results](https://mfahsold.github.io/lixity/guides/interpretation.html)
-  — language signals with their requirements and limits.
-- [Keep sources and citations](https://mfahsold.github.io/lixity/guides/research-pdf.html)
-  — evidence, PDF scans and backups.
-- [Compare analysis tools](https://mfahsold.github.io/lixity/guides/manuscript-analysis-tools.html)
-  — grammar checkers, corpus tools, stylometry packages and Lixity.
-- [First-project walkthrough](docs/ONBOARDING.md) — the two ways to start in the app.
-
-**For technical readers:**
-
-- [Command reference](docs/USAGE.md) — every CLI command, option and output limit.
-- [Interface contracts](docs/AGENTS.md) — JSON schemas, Python API and HTTP routes.
-- [Research commands](docs/research/USAGE.md) — archive workflows and compatibility.
-- [Architecture](docs/ARCHITECTURE.md) · [Methods](docs/METHODS.md) ·
-  [Stability and validation](docs/STABILITY.md) ·
-  [Localization](docs/LOCALIZATION.md) · [Licensing](docs/LICENSING.md).
-- [AI and automation summary](docs/llms.txt) — the maintained entrypoint for
-  agents, with the full-text bundle in [llms-full.txt](docs/llms-full.txt).
-- [Changelog](CHANGELOG.md) · [Release notes](docs/releases/v0.4.9.md).
+- [Practical guides](https://mfahsold.github.io/lixity/#guides) — installation,
+  interpretation, research and comparisons with other tools.
+- [First project](docs/ONBOARDING.md) · [Installation and updates](docs/INSTALLATION.md).
+- [CLI workflows](docs/USAGE.md) — use `lixity --help` and
+  `lixity COMMAND --help` for the installed commands and options.
+- [Automation contracts](docs/AGENTS.md) · [Research workflows](docs/research/USAGE.md).
+- [Methods](docs/METHODS.md) · [Stability](docs/STABILITY.md) ·
+  [Architecture](docs/ARCHITECTURE.md) · [Localization](docs/LOCALIZATION.md).
+- [Agent index](docs/llms.txt) · [Full documentation bundle](docs/llms-full.txt).
 
 ## Current release
 
-The current release is **v0.4.9**, continuing the pre-1.0 development line;
+The current release is **v0.5.0**, continuing the pre-1.0 development line;
 historical v3.0.1 and earlier notes and tags remain available. Public JSON and
-research storage schema versions are independent; the 0.3.x/0.4.x line reads
-existing research archives through v7.
+research storage schema versions are independent; this release reads
+research archives through v7.
 When upgrading from the historical numbering, install the pinned release wheel
 explicitly; PyPI upgrades continue normally afterwards.
-[Release notes](docs/releases/v0.4.9.md) describe compatibility and known limits;
+[Release notes](docs/releases/v0.5.0.md) describe compatibility and known limits;
 the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 ## Python API and automation

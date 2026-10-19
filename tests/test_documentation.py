@@ -90,7 +90,9 @@ class TestDocumentation(unittest.TestCase):
         appendix = re.search(r'<pre\b[^>]*\bid="demo-license-text"[^>]*>(.*?)</pre>', report, re.DOTALL)
         self.assertIsNotNone(appendix)
         self.assertEqual(unescape(appendix[1]), (ROOT / "LICENSE").read_text(encoding="utf-8"))
-        self.assertNotIn("GNU AFFERO GENERAL PUBLIC LICENSE", report.split('<main id="chapters">')[1].split("</main>")[0])
+        manuscript = re.search(r'<main\b[^>]*\bid="chapters"[^>]*>(.*?)</main>', report, re.DOTALL)
+        self.assertIsNotNone(manuscript)
+        self.assertNotIn("GNU AFFERO GENERAL PUBLIC LICENSE", manuscript[1])
 
     def test_math_avoids_macros_rejected_by_github(self):
         for path in (ROOT / "docs").glob("*.md"):
@@ -112,7 +114,7 @@ class TestDocumentation(unittest.TestCase):
     def test_public_entrypoints_explain_book_sales(self):
         for name in ("README.md", "docs/index.html", "docs/llms.txt"):
             with self.subTest(path=name):
-                content = (ROOT / name).read_text(encoding="utf-8").lower()
+                content = " ".join((ROOT / name).read_text(encoding="utf-8").lower().split())
                 self.assertIn("self-publishing", content)
                 self.assertIn("commercial license", content)
 
@@ -175,12 +177,14 @@ class TestDocumentation(unittest.TestCase):
             "README.md": (ROOT / "README.md").read_text(encoding="utf-8"),
             "docs/index.html": (ROOT / "docs/index.html").read_text(encoding="utf-8"),
             "docs/INSTALLATION.md": (ROOT / "docs/INSTALLATION.md").read_text(encoding="utf-8"),
+            "docs/llms.txt": (ROOT / "docs/llms.txt").read_text(encoding="utf-8"),
             "docs/guides/installation.html": (ROOT / "docs/guides/installation.html").read_text(encoding="utf-8"),
         }
         historical = {
             "README.md": "\nSince v1.16.0: [HD-D release](docs/releases/v1.16.0.md).\n",
             "docs/index.html": '\n<p>Since v1.16.0: <a href="releases/v1.16.0.md">HD-D release</a>.</p>\n',
             "docs/INSTALLATION.md": "\nSince v1.16.0: [HD-D release](releases/v1.16.0.md).\n",
+            "docs/llms.txt": "\nSince v1.16.0: [HD-D release](https://mfahsold.github.io/lixity/releases/v1.16.0.md).\n",
             "docs/guides/installation.html": '\n<p>Since v1.16.0: <a href="../releases/v1.16.0.md">release history</a>.</p>\n',
         }
         with tempfile.TemporaryDirectory() as td:
@@ -206,7 +210,7 @@ class TestDocumentation(unittest.TestCase):
                         encoding="utf-8",
                     )
                 findings = find_version_drift(next_version)
-                self.assertEqual(len(findings), 4)
+                self.assertEqual(len(findings), len(originals))
                 self.assertTrue(all("current release-note target" in finding for finding in findings))
 
     def test_zenodo_metadata_matches_citation_and_license(self):
@@ -297,9 +301,9 @@ class TestDocumentation(unittest.TestCase):
 
             def anchors(target: Path) -> set[str]:
                 text = target.read_text(encoding="utf-8")
+                found = set(re.findall(r'''\bid=["']([^"']+)["']''', text))
                 if target.suffix == ".html":
-                    return set(re.findall(r'id="([^"]+)"', text))
-                found = set()
+                    return found
                 for line in text.splitlines():
                     if line.startswith("#"):
                         slug = re.sub(r"[^\w\s-]", "", line.lstrip("#").strip().lower())

@@ -3,31 +3,20 @@
 import html
 import re
 import unittest
-from html.parser import HTMLParser
 
-from lixity.language import get_language_profile
+from lixity.language import LANGUAGE_CHOICES, get_language_profile
 from lixity.pipeline import analyze_document, resolve_document_config
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui import render_dashboard
+from lixity.ui.settings import settings_form
 from lixity.workspace_labels import WORKSPACE_LABELS
-from tests.support import LOCALES
+from tests.support import LOCALES, HtmlControls, labels_for
 
 
-class Controls(HTMLParser):
-    def __init__(self):
-        super().__init__()
-        self.numbers = []
-        self.inputs = {}
-        self.labels = set()
-
-    def handle_starttag(self, tag, attrs):
-        attributes = dict(attrs)
-        if tag == "input" and attributes.get("id"):
-            self.inputs[attributes["id"]] = attributes
-        if tag == "input" and attributes.get("type") == "number":
-            self.numbers.append(attributes)
-        if tag == "label" and "for" in attributes:
-            self.labels.add(attributes["for"])
+def settings_markup(locale="en", **options):
+    return settings_form(labels_for(locale), "Synthetic project", locale,
+                         [(code, code) for code in LANGUAGE_CHOICES],
+                         FingerprintThresholds(), **options)
 
 
 class TestSettingsUi(unittest.TestCase):
@@ -35,9 +24,8 @@ class TestSettingsUi(unittest.TestCase):
         author = 'Synthetic Writer "<img src=x onerror=alert(1)>"'
         for enabled in (False, True):
             with self.subTest(enabled=enabled):
-                rendered = render_dashboard([], [], controls=True, project_author=author,
-                                            author_setting_enabled=enabled)
-                controls = Controls()
+                rendered = settings_markup(project_author=author, author_setting_enabled=enabled)
+                controls = HtmlControls()
                 controls.feed(rendered)
                 field = controls.inputs["set-author-name"]
                 self.assertEqual(field["value"], author)
@@ -54,9 +42,8 @@ class TestSettingsUi(unittest.TestCase):
                     checks = {key: {"status": status, "value": '<script>synthetic()</script>',
                                     "source": 'metadata "<img src=x>"'}
                               for key in ("title", "author_name")}
-                    rendered = render_dashboard([], [], controls=True, labels=labels,
-                                                project_author="Synthetic Writer",
-                                                identity_check=checks, author_setting_enabled=True)
+                    rendered = settings_markup(language, project_author="Synthetic Writer",
+                                               identity_check=checks, author_setting_enabled=True)
                     self.assertIn(f'data-identity-status="{status}"', rendered)
                     self.assertIn(html.escape(labels["project_identity_" + status]), rendered)
                     self.assertNotIn('<script>synthetic()</script>', rendered)
@@ -105,9 +92,8 @@ class TestSettingsUi(unittest.TestCase):
     def test_localized_settings_keep_machine_readable_number_values(self):
         for language in LOCALES:
             with self.subTest(language=language):
-                rendered = render_dashboard([], [], controls=True, language_key=language,
-                                            labels=get_language_profile(language).labels)
-                controls = Controls()
+                rendered = settings_markup(language)
+                controls = HtmlControls()
                 controls.feed(rendered)
                 self.assertEqual(len(controls.numbers), 4)
                 for field in controls.numbers:

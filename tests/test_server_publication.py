@@ -1,33 +1,19 @@
 """Settings prepare their complete view before publishing root metadata/state."""
 
 from pathlib import Path
-from typing import ClassVar
 from unittest.mock import patch
 
 import pytest
 
 from lixity.config import load_project_config, prepare_project_settings
-from lixity.server.handler import LixityServerHandler
 from lixity.server.pdf_context import project_settings_token
 from lixity.server.views import build_server_dashboard
+from tests.support import recording_handler
 
 
 def handler_for(root: Path):
-    class Handler(LixityServerHandler):
-        workspace_root = str(root)
-        source_input = str(root / "manuscript.md")
-        exports_dir = str(root / "exports")
-        research_dir = None
-        title = None
-        title_custom = False
-        language = "en"
-        dashboard_html = "Old HTML"
-        dashboard_info: ClassVar[dict] = {"old": True}
-
-        def _json(self, payload, code=200):
-            self.response = code, payload
-
-    return object.__new__(Handler)
+    return recording_handler(root, source_input=root / "manuscript.md",
+                             dashboard_html="Old HTML", dashboard_info={"old": True})
 
 
 def test_settings_save_prepares_complete_metadata_and_returns_fresh_context(tmp_path: Path):

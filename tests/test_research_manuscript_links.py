@@ -1,12 +1,14 @@
 """Explicit manuscript selections retain only reviewed quotes and exact claim pins."""
 
 import hashlib
+import json
+from datetime import datetime, timezone
 from uuid import uuid4
 
 import pytest
 
 from lixity.pipeline import profile_document, resolve_document_config
-from lixity.research import api
+from lixity.research import api, cli
 from lixity.research.models import Head, Manifest, Reference, Tombstone
 from lixity.research.repository import (
     Repository,
@@ -16,6 +18,8 @@ from lixity.research.repository import (
     encode,
 )
 from lixity.style_fingerprint import FingerprintThresholds
+from tests.research_support import research_parser
+from tests.research_support import revise_record as revise
 
 
 @pytest.fixture
@@ -49,20 +53,9 @@ def save_link(archive, **overrides):
     return api.link_manuscript_claim(project, manuscript, claim, **values)
 
 
-def revise(project, kind, identifier, changes):
-    current = api.get_record(project, kind, identifier)
-    return api.revise_record(project, kind, identifier, changes=changes,
-                             expected_snapshot=current["snapshot"], expected_revision=current["record"]["revision"],
-                             change_kind="correction", reason="Explicit synthetic author review.")
-
-
 def accepted_bytes(project):
     return {path.relative_to(project).as_posix(): path.read_bytes()
             for path in (project / "research").rglob("*") if path.is_file()}
-
-
-def test_manual_link_api_exists():
-    assert callable(getattr(api, "link_manuscript_claim", None)), "Explicit manual manuscript-link writer is missing"
 
 
 def test_save_preserves_old_records_and_retains_only_selected_quote(manuscript_archive):
@@ -390,14 +383,8 @@ def test_unrelated_source_edit_stays_informational(manuscript_archive):
 
 
 def test_cli_link_list_and_review_round_trip(manuscript_archive, capsys):
-    import argparse
-    import json
-
-    from lixity.research import cli
-
     project, _, claim, _ = manuscript_archive
-    parser = argparse.ArgumentParser()
-    cli.configure(parser)
+    parser = research_parser()
     link_args = parser.parse_args([
         "link-manuscript", "--project", str(project), "--manuscript", "draft.md",
         "--claim-id", claim, "--claim-revision", "1",
@@ -532,41 +519,36 @@ def test_edited_quote_still_requires_review(manuscript_archive):
     assert accepted_bytes(project) == before
 
 
-def test_cli_reconcile_previews_and_accepts_adjusted(manuscript_archive, capsys):
-    import argparse
-    import json
-
-    from lixity.research import cli
-
+@pytest.mark.parametrize("anchor_state,content,line", [
+    ("adjusted", "## Chapter One\n\nThe **reading room** was open until midnight. 🦉 A visitor arrived.\n", 3),
+    ("moved", "## Chapter One\n\nA new note.\n\nThe **reading room** was open. 🦉 A visitor arrived.\n", 5),
+], ids=["adjusted", "moved"])
+def test_cli_reconcile_previews_then_accepts_unique_anchor(manuscript_archive, capsys, anchor_state, content, line):
     project, manuscript, _, _ = manuscript_archive
-    save_link(manuscript_archive)
-    manuscript.write_text(
-        "## Chapter One\n\nThe **reading room** was open until midnight. 🦉 A visitor arrived.\n",
-        encoding="utf-8")
-    parser = argparse.ArgumentParser()
-    cli.configure(parser)
-    preview = parser.parse_args(["reconcile-manuscript", "--project", str(project),
-                                 "--manuscript", "draft.md"])
-    assert cli.run(preview) == 0
+    saved = save_link(manuscript_archive)
+    manuscript.write_bytes(content.encode("utf-8"))
+    before = accepted_bytes(project)
+    parser = research_parser()
+    argv = ["reconcile-manuscript", "--project", str(project), "--manuscript", "draft.md"]
+    assert cli.run(parser.parse_args(argv)) == 0
     planned = json.loads(capsys.readouterr().out)
     assert planned["dry_run"] is True
-    assert planned["candidates"][0]["anchor_state"] == "adjusted"
-    assert planned["candidates"][0]["candidate_lines"] == [3]
-    accept = parser.parse_args(["reconcile-manuscript", "--project", str(project),
-                                "--manuscript", "draft.md", "--accept-moved"])
-    assert cli.run(accept) == 0
+    assert len(planned["candidates"]) == 1
+    assert planned["candidates"][0]["link_id"] == saved["link_id"]
+    assert planned["candidates"][0]["anchor_state"] == anchor_state
+    assert planned["candidates"][0]["candidate_lines"] == [line]
+    assert accepted_bytes(project) == before
+    assert cli.run(parser.parse_args([*argv, "--accept-moved"])) == 0
     done = json.loads(capsys.readouterr().out)
     assert done["dry_run"] is False and done["skipped"] == []
-    assert done["accepted"][0]["revision"] == 2
-    assert api.review_manuscript_links(project, manuscript)["review_needed_count"] == 0
+    assert done["accepted"] == [{"link_id": saved["link_id"], "revision": 2}]
+    reviewed = api.review_manuscript_links(project, manuscript)
+    assert reviewed["review_needed_count"] == 0
+    assert reviewed["links"][0]["anchor_state"] == "resolved"
+    assert reviewed["links"][0]["anchor"]["start_line"] == line
 
 
 def test_cli_reconcile_previews_and_repins_changed_quote_explicitly(manuscript_archive, capsys):
-    import argparse
-    import json
-
-    from lixity.research import cli
-
     project, manuscript, _, _ = manuscript_archive
     saved = save_link(manuscript_archive)
     link_id = saved["link_id"]
@@ -575,8 +557,7 @@ def test_cli_reconcile_previews_and_repins_changed_quote_explicitly(manuscript_a
         encoding="utf-8",
     )
     assert api.review_manuscript_links(project, manuscript)["links"][0]["anchor_state"] == "changed"
-    parser = argparse.ArgumentParser()
-    cli.configure(parser)
+    parser = research_parser()
     preview = parser.parse_args([
         "reconcile-manuscript", "--project", str(project), "draft.md",
         "--link-id", link_id, "--new-quote", "The study room was open",
@@ -605,37 +586,17 @@ def test_cli_reconcile_previews_and_repins_changed_quote_explicitly(manuscript_a
     assert len(history["revisions"]) == 2
 
 
-def test_cli_manuscript_path_works_positionally(manuscript_archive, capsys):
-    import argparse
-    import json
-
-    from lixity.research import cli
-
-    project, _, _, _ = manuscript_archive
-    parser = argparse.ArgumentParser()
-    cli.configure(parser)
-    positional = parser.parse_args(["review-manuscript", "--project", str(project), "draft.md"])
-    assert positional.manuscript == "draft.md"
-    flag = parser.parse_args(["review-manuscript", "--project", str(project), "--manuscript", "draft.md"])
-    assert flag.manuscript == "draft.md"
-    assert cli.run(positional) == 0
-    assert "links" in json.loads(capsys.readouterr().out)
-    with pytest.raises(SystemExit):
-        parser.parse_args(["review-manuscript", "--project", str(project)])
-    with pytest.raises(SystemExit):
-        parser.parse_args(["review-manuscript", "--project", str(project), "draft.md",
-                           "--manuscript", "draft.md"])
+def test_cli_requires_exactly_one_manuscript_path():
+    parser = research_parser()
+    for paths in ([], ["draft.md", "--manuscript", "draft.md"]):
+        with pytest.raises(SystemExit) as error:
+            parser.parse_args(["review-manuscript", "--project", "/synthetic", *paths])
+        assert error.value.code == 2
 
 
 def test_cli_find_anchor_and_quote_convenience(manuscript_archive, capsys):
-    import argparse
-    import json
-
-    from lixity.research import cli
-
     project, _, claim, _ = manuscript_archive
-    parser = argparse.ArgumentParser()
-    cli.configure(parser)
+    parser = research_parser()
     find_args = parser.parse_args(["find-anchor", "--project", str(project),
                                    "--manuscript", "draft.md", "--query", "\U0001F989 A visitor arrived."])
     assert cli.run(find_args) == 0
@@ -650,28 +611,317 @@ def test_cli_find_anchor_and_quote_convenience(manuscript_archive, capsys):
     assert linked["record"]["anchor"]["start_line"] == 3
 
 
-def test_cli_reconcile_previews_and_accepts_moved(manuscript_archive, capsys):
-    import argparse
-    import json
+@pytest.mark.parametrize("source_missing", [False, True], ids=["existing-source", "missing-source"])
+def test_unlink_manuscript_retracts_link_and_preserves_history(manuscript_archive, capsys, source_missing):
+    project, manuscript, _, _ = manuscript_archive
+    link = save_link(manuscript_archive)
+    link_id = link["link_id"]
+    if source_missing:
+        manuscript.unlink()
+    parser = research_parser()
+    args = parser.parse_args(["unlink-manuscript", "--project", str(project),
+                              "--manuscript", "draft.md", "--link-id", link_id])
+    assert cli.run(args) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["link_id"] == link_id
+    # Link should no longer appear in default list.
+    listing = api.list_manuscript_links(project)
+    assert listing["links"] == []
+    # But should appear with include_retracted.
+    listing2 = api.list_manuscript_links(project, include_retracted=True)
+    assert len(listing2["links"]) == 1
+    assert listing2["links"][0]["state"] == "retracted"
+    assert result["record"]["revision"] == 2
+    original = api.get_record(project, "manuscript_claim_link", link_id, revision=1)
+    assert original["record"] == link["record"]
 
-    from lixity.research import cli
+
+@pytest.mark.parametrize("moved,selected,accept_moved", [
+    (False, False, False), (False, False, True), (False, True, False), (False, True, True),
+    (True, False, True), (True, True, True),
+])
+def test_cli_accepts_claim_updates_once(manuscript_archive, capsys, moved, selected, accept_moved):
+    project, manuscript, claim, _ = manuscript_archive
+    saved = save_link(manuscript_archive)
+    revise(project, "claim", claim, {"statement": "The room was closed."})
+    if moved:
+        manuscript.write_text("Extra paragraph.\n\n" + manuscript.read_text(encoding="utf-8"), encoding="utf-8")
+    parser = research_parser()
+    argv = ["reconcile-manuscript", "--project", str(project), "draft.md", "--accept-claim-updates"]
+    if accept_moved:
+        argv.append("--accept-moved")
+    if selected:
+        argv.extend(["--link-id", saved["link_id"]])
+    assert cli.run(parser.parse_args(argv)) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result.get("dry_run") is not True
+    if not selected:
+        assert result["accepted"] == [{"link_id": saved["link_id"], "revision": 2}]
+        assert result["skipped"] == []
+    reviewed = api.review_manuscript_links(project, manuscript)["links"][0]
+    assert reviewed["claim_revision"] == 2
+    assert reviewed["revision"] == 2  # Moving and accepting the claim share one revision.
+    assert reviewed["review_needed"] is False
+    snapshot = Repository(project).snapshot()
+    assert snapshot.revisions[(saved["link_id"], 1)].claim_ref.revision == 1
+    if not moved:
+        assert snapshot.records[saved["link_id"]].change.reason == "Accept current claim revision"
+
+
+@pytest.mark.parametrize("output_format", ["text", "table"])
+@pytest.mark.parametrize("command", ["find-anchor", "link-manuscript", "manuscript-links",
+                                     "review-manuscript", "reconcile-manuscript", "unlink-manuscript"])
+def test_manuscript_commands_render_requested_format(manuscript_archive, capsys, command, output_format):
+    project, _, claim, _ = manuscript_archive
+    saved = save_link(manuscript_archive)
+    argv = [command, "--project", str(project), "--format", output_format]
+    if command != "manuscript-links":
+        argv.append("draft.md")
+    if command == "find-anchor":
+        argv.extend(["--query", "A visitor arrived."])
+    elif command == "link-manuscript":
+        argv.extend(["--claim-id", claim, "--claim-revision", "1", "--quote", "reading room",
+                     "--allow-retention"])
+    elif command == "unlink-manuscript":
+        argv.extend(["--link-id", saved["link_id"]])
+    parser = research_parser()
+    assert cli.run(parser.parse_args(argv)) == 0
+    output = capsys.readouterr().out
+    assert output.strip() and not output.lstrip().startswith("{")
+    if command == "find-anchor":
+        assert "A visitor arrived." in output and "3" in output
+    elif command in ("manuscript-links", "review-manuscript"):
+        assert "Room" in output and "3" in output
+    elif command == "unlink-manuscript":
+        assert "retracted" in output
+    elif command == "link-manuscript":
+        assert "reading room" in output
+    else:
+        assert "preview" in output.lower()
+
+
+@pytest.mark.parametrize("id_form", ["named", "positional"])
+def test_latest_update_accepts_named_or_positional_record_id(manuscript_archive, capsys, id_form):
+    project, _, claim, _ = manuscript_archive
+    parser = research_parser()
+    selector = ["--claim-id", claim] if id_form == "named" else [claim]
+    args = parser.parse_args(["claim", *selector, "--project", str(project), "--update", "--latest",
+                              "--statement", "The room was closed.", "--change-kind", "correction",
+                              "--reason", "Synthetic correction."])
+    assert cli.run(args) == 0
+    record = json.loads(capsys.readouterr().out)["record"]
+    assert record["revision"] == 2 and record["statement"] == "The room was closed."
+
+
+def test_record_grammar_rejects_unknown_action(manuscript_archive, capsys):
+    project, _, _, dossier = manuscript_archive
+    parser = research_parser()
+    assert cli.run(parser.parse_args(["dossier", "typo", dossier, "--project", str(project)])) != 0
+    assert capsys.readouterr().out == ""
+
+
+@pytest.mark.parametrize("selectors", [("show",), ("list", "unused-id")])
+def test_sources_grammar_rejects_missing_or_extra_id(manuscript_archive, capsys, selectors):
+    project, _, _, _ = manuscript_archive
+    parser = research_parser()
+    assert cli.run(parser.parse_args(["sources", *selectors, "--project", str(project)])) != 0
+    assert capsys.readouterr().out == ""
+
+
+def test_reconcile_quote_preview_text_shows_replacement(manuscript_archive, capsys):
+    project, _, _, _ = manuscript_archive
+    saved = save_link(manuscript_archive)
+    parser = research_parser()
+    args = parser.parse_args(["reconcile-manuscript", "--project", str(project), "draft.md",
+                              "--link-id", saved["link_id"], "--new-quote", "reading room", "--format", "text"])
+    assert cli.run(args) == 0
+    output = capsys.readouterr().out
+    assert "preview" in output.lower()
+    assert "🦉 A visitor arrived." in output and "reading room" in output
+    assert "ManuscriptState" not in output
+
+
+def test_latest_uses_one_reviewed_snapshot(manuscript_archive, monkeypatch, capsys):
+    project, _, claim, dossier = manuscript_archive
+    get_record = api.get_record
+    changed = False
+
+    def concurrent_change(*args, **kwargs):
+        nonlocal changed
+        reviewed = get_record(*args, **kwargs)
+        if not changed:
+            changed = True
+            revise(project, "dossier", dossier, {"title": "Concurrent notes"})
+        return reviewed
+
+    monkeypatch.setattr(api, "get_record", concurrent_change)
+    parser = research_parser()
+    args = parser.parse_args(["claim", "--claim-id", claim, "--project", str(project), "--update",
+                              "--latest", "--statement", "The room was closed.",
+                              "--change-kind", "correction", "--reason", "Synthetic correction."])
+    assert cli.run(args) == 1
+    assert "snapshot" in capsys.readouterr().err.lower()
+    assert get_record(project, "claim", claim)["record"]["revision"] == 1
+
+
+@pytest.mark.parametrize("failure_point", [
+    "source_read", "head_publication", "head_read", "nested_head_read", "lock_io", "lock_busy", "unsafe_lock",
+])
+def test_reconcile_system_failures_exit_nonzero(manuscript_archive, monkeypatch, capsys, failure_point):
+    from lixity.io import FileUtils
+    from lixity.research import repository as storage
 
     project, manuscript, _, _ = manuscript_archive
-    save_link(manuscript_archive)
-    manuscript.write_bytes(
-        "## Chapter One\n\nA new note.\n\nThe **reading room** was open. \U0001F989 A visitor arrived.\n".encode("utf-8"))
-    parser = argparse.ArgumentParser()
-    cli.configure(parser)
-    preview = parser.parse_args(["reconcile-manuscript", "--project", str(project),
-                                 "--manuscript", "draft.md"])
-    assert cli.run(preview) == 0
-    planned = json.loads(capsys.readouterr().out)
-    assert planned["dry_run"] is True
-    assert planned["candidates"][0]["candidate_lines"] == [5]
-    accept = parser.parse_args(["reconcile-manuscript", "--project", str(project),
-                                "--manuscript", "draft.md", "--accept-moved"])
-    assert cli.run(accept) == 0
-    done = json.loads(capsys.readouterr().out)
-    assert done["dry_run"] is False and done["skipped"] == []
-    assert done["accepted"][0]["revision"] == 2
-    assert api.review_manuscript_links(project, manuscript)["review_needed_count"] == 0
+    saved = save_link(manuscript_archive)
+    manuscript.write_text("Extra paragraph.\n\n" + manuscript.read_text(encoding="utf-8"), encoding="utf-8")
+    before = Repository(project).snapshot().digest
+    if failure_point == "source_read":
+        read = FileUtils.read_source_snapshot
+        reads = 0
+
+        def unavailable_source(path):
+            nonlocal reads
+            reads += 1
+            if reads == 3:  # The source becomes unreadable after the command's initial review.
+                raise PermissionError(13, "Permission denied", str(manuscript))
+            return read(path)
+
+        monkeypatch.setattr(FileUtils, "read_source_snapshot", unavailable_source)
+    elif failure_point == "head_publication":
+        publish = storage.publish
+
+        def readonly_head(path, content, **kwargs):
+            if path.name == "HEAD.json":
+                raise OSError(30, "Read-only file system", str(path))
+            return publish(path, content, **kwargs)
+
+        monkeypatch.setattr(storage, "publish", readonly_head)
+    elif failure_point in ("head_read", "nested_head_read"):
+        read = Repository.read
+        review = api.review_manuscript_links
+        remaining_reads = None
+
+        def reviewed(*args, **kwargs):
+            nonlocal remaining_reads
+            result = review(*args, **kwargs)
+            remaining_reads = 1 if failure_point == "head_read" else 2
+            return result
+
+        def unavailable_head(self, path, **kwargs):
+            nonlocal remaining_reads
+            if path.name == "HEAD.json" and remaining_reads:
+                remaining_reads -= 1
+                if remaining_reads == 0:
+                    raise FileNotFoundError(2, "Synthetic HEAD unavailable", str(path))
+            return read(self, path, **kwargs)
+
+        monkeypatch.setattr(api, "review_manuscript_links", reviewed)
+        monkeypatch.setattr(Repository, "read", unavailable_head)
+    elif failure_point == "unsafe_lock":
+        lock = Repository(project).cache / "writer.lock"
+        lock.unlink(missing_ok=True)
+        try:
+            lock.symlink_to(project / "synthetic-lock-target")
+        except (OSError, NotImplementedError):
+            pytest.skip("Symlinks unavailable")
+    else:
+        import errno
+        import sys
+
+        def failed_lock(*args):
+            code = errno.EIO if failure_point == "lock_io" else errno.EAGAIN
+            raise OSError(code, "Synthetic lock failure")
+
+        if sys.platform == "win32":
+            import msvcrt
+            monkeypatch.setattr(msvcrt, "locking", failed_lock)
+        else:
+            import fcntl
+            monkeypatch.setattr(fcntl, "flock", failed_lock)
+    parser = research_parser()
+    args = parser.parse_args(["reconcile-manuscript", "--project", str(project), "draft.md", "--accept-moved"])
+    assert cli.run(args) == 1
+    output = capsys.readouterr()
+    assert output.out == ""
+    assert any(detail in output.err for detail in (
+        "Permission denied", "Read-only file system", "Synthetic HEAD unavailable", "Synthetic lock failure",
+        "Symlinks are not allowed",
+    ))
+    after = Repository(project).snapshot()
+    assert after.digest == before
+    assert after.records[saved["link_id"]].revision == 1
+
+
+@pytest.mark.parametrize("operation", ["reanchor", "claim_revision", "retract"])
+def test_manuscript_revision_records_current_actor_and_timestamp(manuscript_archive, operation):
+    project, manuscript, claim, _ = manuscript_archive
+    saved = save_link(manuscript_archive)
+    if operation == "reanchor":
+        manuscript.write_text("Extra paragraph.\n\n" + manuscript.read_text(encoding="utf-8"), encoding="utf-8")
+    elif operation == "claim_revision":
+        revise(project, "claim", claim, {"statement": "The room was closed."})
+    snapshot = Repository(project).snapshot()
+    values = {"expected_project_id": snapshot.project.id, "expected_snapshot": snapshot.digest,
+              "expected_revision": 1, "actor": "synthetic-reviewer"}
+    before = datetime.now(timezone.utc)
+    if operation == "retract":
+        result = api.retract_manuscript_link(project, manuscript, saved["link_id"], **values)
+    elif operation == "claim_revision":
+        result = api.reanchor_manuscript_claim_revision(
+            project, manuscript, saved["link_id"], **values,
+            expected_source_sha256=digest(manuscript.read_bytes()), new_claim_revision=2)
+    else:
+        result = api.reanchor_manuscript_link(
+            project, manuscript, saved["link_id"], **values,
+            expected_source_sha256=digest(manuscript.read_bytes()))
+    after = datetime.now(timezone.utc)
+    record = result["record"]
+    assert record["created_by"] == "synthetic-reviewer"
+    timestamp = datetime.strptime(record["created_at"], "%Y-%m-%dT%H:%M:%S.%f%z")
+    assert before <= timestamp <= after
+    original = api.get_record(project, "manuscript_claim_link", saved["link_id"], revision=1)["record"]
+    assert original == saved["record"]
+    assert original["created_by"] == "local-author" and original["created_at"] != record["created_at"]
+
+
+@pytest.mark.parametrize("strict", [False, True])
+def test_reconcile_explicit_snapshot_rejects_late_external_edit(manuscript_archive, monkeypatch, capsys, strict):
+    project, manuscript, _, dossier = manuscript_archive
+    saved = save_link(manuscript_archive)
+    manuscript.write_text("Extra paragraph.\n\n" + manuscript.read_text(encoding="utf-8"), encoding="utf-8")
+    expected = Repository(project).snapshot().digest
+    review = api.review_manuscript_links
+
+    def concurrent_edit(*args, **kwargs):
+        reviewed = review(*args, **kwargs)
+        revise(project, "dossier", dossier, {"title": "Concurrent unrelated change"})
+        return reviewed
+
+    monkeypatch.setattr(api, "review_manuscript_links", concurrent_edit)
+    parser = research_parser()
+    argv = ["reconcile-manuscript", "--project", str(project), "draft.md", "--accept-moved"]
+    if strict:
+        argv.extend(["--expected-snapshot", expected])
+    assert cli.run(parser.parse_args(argv)) == (1 if strict else 0)
+    output = capsys.readouterr()
+    if strict:
+        assert output.out == "" and "snapshot" in output.err.lower()
+    snapshot = Repository(project).snapshot()
+    assert snapshot.records[saved["link_id"]].revision == (1 if strict else 2)
+    assert snapshot.records[dossier].revision == 2
+
+
+def test_reconcile_strict_snapshot_allows_own_prior_commits(manuscript_archive, capsys):
+    project, manuscript, _, _ = manuscript_archive
+    first = save_link(manuscript_archive)
+    second = save_link(manuscript_archive, selection=selection("reading room"))
+    manuscript.write_text("Extra paragraph.\n\n" + manuscript.read_text(encoding="utf-8"), encoding="utf-8")
+    expected = Repository(project).snapshot().digest
+    parser = research_parser()
+    args = parser.parse_args(["reconcile-manuscript", "--project", str(project), "draft.md",
+                              "--accept-moved", "--expected-snapshot", expected])
+    assert cli.run(args) == 0
+    result = json.loads(capsys.readouterr().out)
+    assert result["skipped"] == []
+    assert {row["link_id"] for row in result["accepted"]} == {first["link_id"], second["link_id"]}
+    assert [row["revision"] for row in result["accepted"]] == [2, 2]

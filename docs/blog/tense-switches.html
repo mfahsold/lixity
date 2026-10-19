@@ -14,12 +14,15 @@
 <meta property="og:url" content="https://mfahsold.github.io/lixity/blog/tense-switches.html"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<meta property="og:image:width" content="1480"/>
-<meta property="og:image:height" content="945"/>
+<meta property="og:image:width" content="2960"/>
+<meta property="og:image:height" content="1890"/>
+<meta property="og:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="Finding tense switches in a novel"/>
 <meta name="twitter:description" content="Paragraph-level profiles and a flagged-passage list turn vague tense discomfort into passages you can review one by one."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta name="twitter:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
+<link rel="alternate" type="text/markdown" href="tense-switches.html.md" title="Markdown version of this page"/>
 <link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
 <link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
 <script type="application/ld+json">
@@ -31,9 +34,25 @@
   "url": "https://mfahsold.github.io/lixity/blog/tense-switches.html",
   "inLanguage": "en",
   "datePublished": "2026-10-15",
-  "dateModified": "2026-10-15",
-  "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"},
-  "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}
+  "dateModified": "2026-10-19",
+  "author": {
+    "@type": "Person",
+    "name": "Matthias Fahsold",
+    "url": "https://github.com/mfahsold"
+  },
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Lixity",
+    "url": "https://mfahsold.github.io/lixity/"
+  },
+  "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/tense-switches.html",
+  "image": {
+    "@type": "ImageObject",
+    "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
+    "width": 2960,
+    "height": 1890,
+    "caption": "Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"
+  }
 }
 </script>
 </head>
@@ -46,18 +65,19 @@
 <nav class="guide-nav" aria-label="Blog"><a href="index.html" aria-current="page">Blog</a><a href="../guides/first-look.html">First look</a><a href="../guides/interpretation.html">Interpret results</a><a href="../examples/effi-briest.html">Example analysis</a></nav>
 
 <h2 id="why">A tense break is rarely a typo</h2>
-<p>The base tense of a novel is a choice. Past tense gives you a narrator looking back. Present tense puts the reader right inside the scene. The historical present adds pressure. A break between them is not a grammar mistake — it is a <em>signal</em> to the reader. The question is only whether you meant to send it, and whether it arrives at the right moment. Reading an entire manuscript just to find those moments is slow, which is why editors work with passages instead of impressions.</p>
+<p>The base tense of a novel is a choice. Past tense can suggest a narrator looking back; present tense can bring a scene closer. A shift between them may be deliberate, accidental or part of quoted speech. The useful question is whether the shift does what you intended in this passage. A list of candidate passages can give that review a starting point.</p>
 
 <h2 id="what">What Lixity shows you</h2>
-<p>Lixity reads your manuscript on your own computer and gives every paragraph a simple tense reading: <strong>present</strong>, <strong>past</strong>, <strong>mixed</strong> or <strong>neutral</strong>. Paragraphs that switch or noticeably mix tenses also get a small strength rating from 0 to 3.</p>
+<p>Lixity reads your manuscript on your own computer and assigns supported body paragraphs and list items a heuristic tense reading: <strong>present</strong>, <strong>past</strong>, <strong>mixed</strong> or <strong>neutral</strong>. It also assigns a tense-friction rating from 0 to 3. These paragraph profiles omit blockquotes, code and headings; they do not parse every grammatical construction.</p>
 <p>Out of that come two lists, and they answer different questions:</p>
 <ul>
-<li><strong>Flagged passages</strong> (rating 2 or higher) are your short list: the paragraphs worth a second look.</li>
-<li><strong>The chapter line</strong> tells you the surrounding norm — the tense a reader experiences as the “base” of the scene. Without it, a single switch has nothing to stand out from.</li>
+<li><strong>Flagged passages</strong> (rating 2 or higher by default) are candidates for a second look.</li>
+<li><strong>The chapter line</strong> summarizes the chapter's dominant tense markers. It supplies a comparison for the paragraph, rather than determining how a reader experiences the scene.</li>
 </ul>
 <p>One honest sentence: these readings come from verb forms and markers, not from a grammar parse. Dialogue, nested clauses and reported speech all shape the counts. That is exactly why the last step is always a person reading the passage — not a number.</p>
 
 <h2 id="workflow">The review loop, step by step</h2>
+<p>Start with the <a href="../demo/report.html">read-only synthetic demo</a> if you want to see the controls before installing. For your own manuscript, use the local project workflow:</p>
 <ol>
 <li><strong>Install and open.</strong> <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code> and choose <strong>Open Project</strong> for your manuscript folder. (Windows, macOS and Linux are covered in the <a href="../guides/installation.html">installation guide</a>.) If you just want to see the loop first: the <a href="../demo/report.html">demo report</a> opens in your browser, no install.</li>
 <li><strong>Start with the review panel.</strong> <strong>Start your review</strong> offers <strong>Open passage</strong> (the first paragraph above your threshold, in reading order), <strong>Explore chapters</strong> and <strong>Open sentence rhythm</strong>.</li>
@@ -74,13 +94,13 @@
 <li><strong>Free indirect speech.</strong> A character’s inner voice can pull the tense along — effective, but easy to overuse.</li>
 <li><strong>A scene turn.</strong> One present-tense paragraph at the end of a past-tense chapter can be a strong, deliberate accent.</li>
 </ul>
-<p>The flagged list decides none of this. It makes sure no unintended break hides in a long manuscript — and that the intended ones are visible enough to be a choice.</p>
+<p>The flagged list decides none of this. It can bring a pattern to your attention, but it can also miss tense changes or flag an intentional passage. Read the surrounding prose before making a decision.</p>
 
 <h2 id="limits">What this can and cannot do</h2>
-<p>Verb-form patterns miss irony, ellipsis and unusual syntax. Very short chapters give noisy estimates, which is why Lixity now marks them “not comparable” instead of ranking them. Dialogue-heavy scenes reflect speaker turns, not narrative tense. The <code>flag_min_severity</code> setting (1–3) controls how strict your short list is; start at 2. Lixity never rewrites anything — it is a flashlight, not a judge. The <a href="../guides/interpretation.html">interpretation guide</a> and the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">methods document</a> explain the details.</p>
+<p>Verb-form patterns miss irony, ellipsis and unusual syntax. Dialogue and reported speech affect the counts. Chapters below 100 words are excluded from the manuscript's chapter-style comparisons; that separate size floor does not validate a paragraph's tense flag. The <code>flag_min_severity</code> setting (1–3) controls which paragraph ratings appear in the list; its default is 2. Lixity does not automatically rewrite prose. Saving a work marker is an explicit write of a Markdown comment in the native project; the published examples are read-only. The <a href="../guides/interpretation.html">interpretation guide</a> and the <a href="https://github.com/mfahsold/lixity/blob/main/docs/METHODS.md">methods document</a> explain the details.</p>
 
 <h2 id="try">Try it without installing</h2>
-<p>The <a href="../demo/report.html">demo report</a> is made from invented text and opens in your browser. The <a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> examples are complete analyses of public-domain novels. For your own manuscript: install, open the project, and review one chapter — the loop is the same at any length.</p>
+<p>The <a href="../demo/report.html">demo report</a> is made from invented text and opens in your browser. The interactive <a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> dashboards show the opening three chapters. Each example links to a PDF analysis of the complete public-domain novel. For your own manuscript, install, open the project and review one chapter.</p>
 
 <footer><a href="../">Lixity home</a> · <a href="index.html">Blog</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
 </main>

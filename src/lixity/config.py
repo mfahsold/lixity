@@ -145,10 +145,7 @@ def _edit_project_setting(content: str, key: str, value: Any) -> str:
     if key in settings and _same_toml(settings[key], value):
         return content
     newline = "\r\n" if "\r\n" in content else "\n"
-    if isinstance(value, dict):
-        encoded = "{ " + ", ".join(f"{name} = {_toml_literal(item)}" for name, item in value.items()) + " }"
-    else:
-        encoded = _toml_literal(value)
+    encoded = _toml_literal(value)
     candidates: list[str] = []
 
     def candidate(updated: str) -> None:
@@ -160,7 +157,7 @@ def _edit_project_setting(content: str, key: str, value: Any) -> str:
 
     if key not in settings:
         if isinstance(value, dict):
-            block = newline.join(f"{name} = {_toml_literal(item)}" for name, item in value.items())
+            block = newline.join(f"{json.dumps(name, ensure_ascii=False)} = {_toml_literal(item)}" for name, item in value.items())
             candidate(content + (newline if content and not content.endswith("\n") else "")
                       + f"[{key}]" + newline + block + newline)
         else:
@@ -181,23 +178,49 @@ def _edit_project_setting(content: str, key: str, value: Any) -> str:
                 # Parsed equality identifies real boundaries even if a multiline
                 # string elsewhere happens to contain something like a header.
                 for end in [match.start() for match in headers if match.start() > header.start()] + [len(content)]:
-                    block = newline.join(f"{name} = {_toml_literal(item)}" for name, item in value.items())
+                    block = newline.join(f"{json.dumps(name, ensure_ascii=False)} = {_toml_literal(item)}" for name, item in value.items())
                     comments = "".join(line for line in content[header.end():end].splitlines(keepends=True)
                                        if line.lstrip().startswith("#"))
                     candidate(content[:header.end()] + comments + block + newline + content[end:])
+            # Nested project tables may omit the parent header entirely. Replace
+            # only their own sections; parsed equality guards unrelated data and
+            # header-like lines inside multiline strings.
+            spans: list[tuple[int, int]] = []
+            for index, header in enumerate(headers):
+                try:
+                    roots = _parse_project_toml(header[0])
+                except ValueError:
+                    continue
+                if set(roots) == {key}:
+                    spans.append((header.start(), headers[index + 1].start() if index + 1 < len(headers) else len(content)))
+            if spans and not candidates:
+                block = f"[{key}]" + newline + newline.join(
+                    f"{json.dumps(name, ensure_ascii=False)} = {_toml_literal(item)}" for name, item in value.items()) + newline
+                updated = content
+                for index in range(len(spans) - 1, -1, -1):
+                    start, end = spans[index]
+                    comments = "".join(line for line in content[start:end].splitlines(keepends=True)
+                                       if line.lstrip().startswith("#"))
+                    updated = updated[:start] + (block if index == 0 else "") + comments + updated[end:]
+                candidate(updated)
     if len(set(candidates)) != 1:
         raise ValueError(f"Project {key} assignment cannot be safely updated; nothing was changed")
     return candidates[0]
 
 
 def _toml_literal(value: Any) -> str:
+    if isinstance(value, Mapping):
+        return "{ " + ", ".join(f"{json.dumps(name, ensure_ascii=False)} = {_toml_literal(item)}"
+                                 for name, item in value.items()) + " }"
+    if isinstance(value, list):
+        return "[" + ", ".join(_toml_literal(item) for item in value) + "]"
     return ("true" if value else "false") if isinstance(value, bool) else json.dumps(value, ensure_ascii=False)
 
 
 def prepare_project_settings(
     project_root: str | Path | None, changes: Mapping[str, Any],
 ) -> PreparedProjectSettings:
-    """Prepare one root-only identity/publication update, preserving other data.
+    """Prepare one root-only project update, preserving other data.
 
     Unsupported assignment syntax fails closed. Optimistic stat/byte checks are
     protection against observed external edits, not a cross-process file lock.
@@ -222,6 +245,17 @@ def prepare_project_settings(
             value = validate_project_title(raw)
         elif key == "publication":
             value = PublicationSettings.model_validate(raw).model_dump()
+        elif key in {"register_profiles", "chapter_registers"}:
+            from .registers import validate_register_settings
+
+            current = load_project_config(root)
+            profiles, assignments = validate_register_settings(
+                changes.get("register_profiles", current.get("register_profiles", {})),
+                changes.get("chapter_registers", current.get("chapter_registers", {})),
+            )
+            value = ({name: {feature: {bound: number for bound, number in zip(("lower", "upper"), bounds, strict=True)
+                                      if number is not None} for feature, bounds in targets.items()}
+                      for name, targets in profiles.items()} if key == "register_profiles" else assignments)
         else:
             raise ValueError(f"Unsupported project metadata: {key}")
         content = _edit_project_setting(content, key, value)
@@ -293,39 +327,37 @@ def read_project_config(directory: str | Path) -> dict[str, Any]:
 def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
     """
     Merge user config under project config under nothing else.
-    Returns only known scalar/list keys present in either file. Author identity
-    is project data: it is read only at an explicitly supplied project root,
-    never inherited from user settings, ancestor folders or an implicit cwd.
+    Returns only known keys present in either file. Identity, publication and
+    chapter registers are explicit project data, never inherited from user
+    settings, ancestor folders or an implicit cwd.
     """
     here = Path(start).resolve() if start else Path.cwd()
     if here.is_file():
         here = here.parent
 
     merged: dict[str, Any] = {}
+    project_only = ("author_name", "draft_notice", "publication", "register_profiles", "chapter_registers")
 
     user = Path(os.path.expanduser("~/.config/lixity.toml"))
     if user.is_file():
         merged.update(_load_toml(user))
-        merged.pop("author_name", None)
-        merged.pop("draft_notice", None)
-        merged.pop("publication", None)
+        for key in project_only:
+            merged.pop(key, None)
 
     project = _walk_up(here, "pyproject.toml")
     if project is not None:
         settings = _load_toml(project)
         if start is None or project.parent != here:
-            settings.pop("author_name", None)
-            settings.pop("draft_notice", None)
-            settings.pop("publication", None)
+            for key in project_only:
+                settings.pop(key, None)
         merged.update(settings)
 
     local = _walk_up(here, "lixity.toml")
     if local is not None and local != project:
         settings = _load_toml(local)
         if start is None or local.parent != here:
-            settings.pop("author_name", None)
-            settings.pop("draft_notice", None)
-            settings.pop("publication", None)
+            for key in project_only:
+                settings.pop(key, None)
         merged.update(settings)
 
     return {k: v for k, v in merged.items() if k in TOOL_KEYS}

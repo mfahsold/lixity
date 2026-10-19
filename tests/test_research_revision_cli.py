@@ -1,6 +1,5 @@
 """Native research CLI revision modes preserve the existing entity commands."""
 
-import argparse
 import contextlib
 import io
 import json
@@ -10,13 +9,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 from lixity.research import api, cli
+from tests.research_support import parse_research_args
 
 
 class TestResearchRevisionCli(unittest.TestCase):
-    def parse(self, *args: str) -> argparse.Namespace:
-        parser = argparse.ArgumentParser()
-        cli.configure(parser)
-        return parser.parse_args(args)
+    parse = staticmethod(parse_research_args)
 
     def run_json(self, *args: str) -> tuple[int, dict]:
         output = io.StringIO()
@@ -470,10 +467,7 @@ class TestResearchRevisionCli(unittest.TestCase):
 class TestResearchRevisionDiffPreview(unittest.TestCase):
     """``--diff`` renders a prepared change for the terminal and never writes."""
 
-    def parse(self, *args: str) -> argparse.Namespace:
-        parser = argparse.ArgumentParser()
-        cli.configure(parser)
-        return parser.parse_args(args)
+    parse = staticmethod(parse_research_args)
 
     def run_diff(self, *args: str) -> tuple[int, str]:
         output = io.StringIO()

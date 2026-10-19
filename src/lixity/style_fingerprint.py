@@ -34,6 +34,7 @@ from .math_core import (
     significance_z,
 )
 from .models import CorpusConfig
+from .registers import resolve_chapter_registers, validate_register_settings
 from .status import (
     PASSPORT_LABEL_SEGMENTED,
     PASSPORT_LABEL_SHIFTED,
@@ -1031,6 +1032,9 @@ class StyleFingerprint:
     expected_false_positives: float = 0.0
     consistency: float = 1.0
     n_chapters: int = 0
+    chapter_registers: dict[int, str] = field(default_factory=dict)
+    register_profiles: dict[str, dict[str, list[float | None]]] = field(default_factory=dict)
+    register_targets: dict[int, dict[str, dict[str, Any]]] = field(default_factory=dict)
     dimensions: list[dict[str, Any]] = field(default_factory=list)
     redundant_features: list[dict[str, Any]] = field(default_factory=list)
     baseline_diagnostics: dict[str, Any] = field(default_factory=dict)
@@ -1044,11 +1048,19 @@ class StyleFingerprint:
 
     @classmethod
     def from_metrics(
-        cls, metrics: Any, thresholds: FingerprintThresholds | None = None
+        cls, metrics: Any, thresholds: FingerprintThresholds | None = None,
+        config: CorpusConfig | None = None,
     ) -> "StyleFingerprint":
         """Derives the fingerprint from a CorpusMetrics object (self-calibration)."""
         thresholds = thresholds or FingerprintThresholds()
         chapters = getattr(metrics, "chapters", []) or []
+        profiles, assignments = validate_register_settings(
+            config.register_profiles if config is not None else {},
+            config.chapter_registers if config is not None else {},
+        )
+        # Empty workspaces retain configured profiles for Settings, but have
+        # no chapter assignments or target measurements to resolve yet.
+        chapter_registers = resolve_chapter_registers(chapters, assignments) if chapters else {}
         values: dict[str, dict[int, float | None]] = {}
         ses: dict[str, dict[int, float]] = {}
         for field_name, _label, _unit in FEATURES:
@@ -1109,7 +1121,8 @@ class StyleFingerprint:
                 measured_cells += 1
                 if abs(z_sig) < thresholds.z_mild:
                     in_band += 1
-                p_cells.append((chapter.num, field_name, normal_tail_probability(z_sig)))
+                if chapter.num not in chapter_registers:
+                    p_cells.append((chapter.num, field_name, normal_tail_probability(z_sig)))
 
         deviations: dict[int, dict[str, float]] = {}
         for chapter in chapters:
@@ -1118,7 +1131,7 @@ class StyleFingerprint:
                 for feat, z in z_scores.get(chapter.num, {}).items()
                 if abs(z) >= thresholds.z_mild
             }
-            if flagged:
+            if flagged and chapter.num not in chapter_registers:
                 deviations[chapter.num] = flagged
 
         fdr_cells = fdr_rejects(p_cells, q=thresholds.fdr_q, method=thresholds.fdr_method)
@@ -1130,6 +1143,17 @@ class StyleFingerprint:
             measured_cells * normal_tail_probability(thresholds.z_mild) if measured_cells else 0.0
         )
         consistency = (in_band / measured_cells) if measured_cells else 1.0
+        register_targets: dict[int, dict[str, dict[str, Any]]] = {}
+        for chapter_num, name in chapter_registers.items():
+            comparisons: dict[str, dict[str, Any]] = {}
+            for feature, (lower, upper) in profiles[name].items():
+                value = values[feature].get(chapter_num)
+                position = ("unavailable" if value is None else
+                            "below" if lower is not None and value < lower else
+                            "above" if upper is not None and value > upper else "within")
+                comparisons[feature] = {"lower": lower, "upper": upper,
+                                        "value": value, "position": position}
+            register_targets[chapter_num] = comparisons
         fingerprint = cls(
             values=values,
             baseline=baseline,
@@ -1142,6 +1166,9 @@ class StyleFingerprint:
             consistency=consistency,
             n_chapters=len(chapters),
             thresholds=thresholds,
+            chapter_registers=chapter_registers,
+            register_profiles=profiles,
+            register_targets=register_targets,
         )
         fingerprint.dimensions = fingerprint._derive_dimensions()
         fingerprint.redundant_features = fingerprint._derive_redundancies()
@@ -1406,6 +1433,7 @@ class StyleFingerprint:
                 "tool": "lixity",
                 "schema_version": SCHEMA_VERSION_STYLE,
                 "n_chapters": self.n_chapters,
+                "chapter_registers": {str(k): v for k, v in sorted(self.chapter_registers.items())},
                 "n_features": len(FEATURES),
                 "z_mild": self.thresholds.z_mild,
                 "z_strong": self.thresholds.z_strong,
@@ -1433,6 +1461,8 @@ class StyleFingerprint:
                 str(chapter_num): fields for chapter_num, fields in sorted(self.fdr_flagged.items())
             },
             "effect_magnitudes": effect_magnitudes,
+            "register_profiles": self.register_profiles,
+            "register_targets": {str(ch): targets for ch, targets in sorted(self.register_targets.items())},
             "dimensions": self.dimensions,
             "redundant_features": self.redundant_features,
         }

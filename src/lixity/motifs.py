@@ -67,6 +67,26 @@ class RepeatedPhrase:
 
 
 @dataclass(frozen=True)
+class Echo:
+    """An n-gram's densest local cluster, with 1-based inclusive word bounds."""
+
+    term: str
+    chapter: int
+    count: int
+    first_word: int
+    last_word: int
+
+    def to_dict(self) -> dict[str, Any]:
+        return {
+            "term": self.term,
+            "chapter": self.chapter,
+            "count": self.count,
+            "first_word": self.first_word,
+            "last_word": self.last_word,
+        }
+
+
+@dataclass(frozen=True)
 class MotifReport:
     """Motif tracking plus generic repetition signals."""
 
@@ -75,6 +95,7 @@ class MotifReport:
     motifs: list[MotifPresence] = field(default_factory=list)
     top_words: list[tuple[str, int]] = field(default_factory=list)
     repeated_phrases: list[RepeatedPhrase] = field(default_factory=list)
+    echoes: list[Echo] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -83,6 +104,7 @@ class MotifReport:
             "motifs": [motif.to_dict() for motif in self.motifs],
             "top_words": [{"word": word, "count": count} for word, count in self.top_words],
             "repeated_phrases": [phrase.to_dict() for phrase in self.repeated_phrases],
+            "echoes": [echo.to_dict() for echo in self.echoes],
         }
 
 
@@ -100,6 +122,9 @@ def motif_report(
     phrase_size: int = 3,
     top_words: int = 15,
     top_phrases: int = 10,
+    echo_window: int = 300,
+    echo_min_count: int = 2,
+    top_echoes: int = 20,
 ) -> MotifReport:
     """Motif presence and repetition signals (deterministic, offline)."""
     config = config or CorpusConfig(language="auto")
@@ -159,10 +184,89 @@ def motif_report(
         if count >= MIN_PHRASE_COUNT
     ]
 
+    # Echo counts and locations refer to one bounded local cluster, not to
+    # unrelated occurrences elsewhere in the chapter. Equal counts use the
+    # earliest cluster; the complete final n-gram must fit inside the window.
+    echo_items: list[Echo] = []
+    local_positions: dict[tuple[str, int], list[int]] = {}
+    for number, body in chapter_bodies.items():
+        tokens = [token.lower() for token in word_re.findall(body)]
+        if len(tokens) < phrase_size:
+            continue
+        # Collect all n-gram occurrences.
+        occurrences: dict[str, list[int]] = {}
+        for index in range(len(tokens) - phrase_size + 1):
+            gram = tokens[index : index + phrase_size]
+            if all(token in content_blacklist for token in gram):
+                continue
+            phrase = " ".join(gram)
+            occurrences.setdefault(phrase, []).append(index)
+        for phrase, positions in occurrences.items():
+            if len(positions) < echo_min_count:
+                continue
+            left = 0
+            best_start = 0
+            best_end = 0
+            for right, position in enumerate(positions):
+                while left <= right and position - positions[left] + phrase_size > echo_window:
+                    left += 1
+                if right - left + 1 > best_end - best_start:
+                    best_start, best_end = left, right + 1
+            cluster = positions[best_start:best_end]
+            if len(cluster) < max(2, echo_min_count):
+                continue
+            local_positions[(phrase, number)] = cluster
+            echo_items.append(
+                Echo(
+                    term=phrase,
+                    chapter=number,
+                    count=len(cluster),
+                    first_word=cluster[0] + 1,
+                    last_word=cluster[-1] + phrase_size,
+                )
+            )
+
+    # Deduplicate shifted n-grams only when their actual occurrences overlap
+    # in the same repeated passage. Shared vocabulary alone is insufficient:
+    # "red wooden door" and "red metal door" are independent echo candidates.
+    echo_items.sort(key=lambda e: (-e.count, e.chapter, e.first_word, e.term))
+    deduped: list[Echo] = []
+    kept_positions: dict[tuple[int, int], Echo] = {}
+    for echo in echo_items:
+        words = echo.term.split()
+        positions = local_positions[(echo.term, echo.chapter)]
+        duplicate = False
+        for shift in range(1, phrase_size - 1):
+            for offset in (shift, -shift):
+                existing = kept_positions.get((echo.chapter, positions[0] + offset))
+                if existing is None:
+                    continue
+                existing_words = existing.term.split()
+                overlap = (words[offset:] == existing_words[:-offset] if offset > 0 else
+                           words[:offset] == existing_words[-offset:])
+                if overlap and all(
+                    kept_positions.get((echo.chapter, position + offset)) == existing
+                    for position in positions
+                ):
+                    duplicate = True
+                    break
+            if duplicate:
+                break
+        if not duplicate:
+            deduped.append(echo)
+            for position in positions:
+                kept_positions[(echo.chapter, position)] = echo
+    echo_items = deduped
+
+    # Keep the most frequent echoes, capped.
+    echo_items.sort(key=lambda e: (-e.count, e.chapter, e.term))
+    echo_items = echo_items[:top_echoes]
+
     return MotifReport(
         language=resolved.key,
         chapters=len(chapters),
         motifs=motif_items,
         top_words=word_counts.most_common(top_words),
         repeated_phrases=repeated,
+        echoes=echo_items,
     )

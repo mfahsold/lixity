@@ -17,6 +17,60 @@ def _safe(value: Any, *, markdown: bool) -> str:
     return text
 
 
+def manuscript_report(command: str, result: dict[str, Any], *, table: bool) -> str:
+    """Render manuscript operations with the same safe terminal text boundary."""
+    headers: tuple[str, ...]
+    rows: list[list[Any]]
+    if command == "find-anchor":
+        heading = f"Manuscript anchor: {result['source_path']}"
+        headers = ("Line", "Quote")
+        rows = [[result["start_line"], result["quote"]]]
+    elif command == "reconcile-manuscript" and "record" not in result:
+        heading = "Manuscript reconciliation: " + ("preview" if result["dry_run"] else "applied")
+        headers = ("Link ID", "Revision", "State", "Details")
+        rows = [[r["link_id"], r["revision"], r["anchor_state"],
+                 f"{r['old_quote']} → {r['new_quote']}" if "new_quote" in r else r.get("candidate_lines", [])]
+                for r in result.get("candidates", [])]
+        rows.extend([r["link_id"], r["revision"], "accepted", ""] for r in result.get("accepted", []))
+        rows.extend([r["link_id"], "-", "skipped", r["reason"]] for r in result.get("skipped", []))
+    else:
+        if "record" in result:
+            record = result["record"]
+            links = [{"link_id": result["link_id"], "revision": record["revision"],
+                      "anchor": record["anchor"], "state": record["state"],
+                      "claim_id": record["claim_ref"]["id"]}]
+        else:
+            links = result["links"]
+        if command == "review-manuscript":
+            heading = f"Manuscript review: {result['source_path']} ({result['review_needed_count']} review-needed)"
+        else:
+            heading = "Manuscript associations"
+        headers = ("Link ID", "Revision", "Line", "State", "Review", "Flags", "Claim", "Quote")
+        rows = []
+        for link in links:
+            anchor = link.get("anchor") or {}
+            state = link.get("anchor_state", link["state"])
+            rows.append([link["link_id"], link["revision"],
+                         link.get("resolved_start_line") or anchor.get("start_line", "-"),
+                         getattr(state, "value", state),
+                         "[REVIEW NEEDED]" if link.get("review_needed") else "-",
+                         ", ".join(link.get("flags") or []) or "-",
+                         link.get("claim_title") or link.get("claim_id", "-"), anchor.get("quote", "")])
+    lines = [_safe(heading, markdown=False), ""]
+    cells = [[_safe(getattr(value, "value", value), markdown=False) for value in row] for row in rows]
+    if table:
+        widths = [max([len(header), *(len(row[i]) for row in cells)]) for i, header in enumerate(headers)]
+        lines.append("  ".join(header.ljust(width) for header, width in zip(headers, widths, strict=True)))
+        lines.append("  ".join("-" * width for width in widths))
+        lines.extend("  ".join(value.ljust(width) for value, width in zip(row, widths, strict=True)).rstrip()
+                     for row in cells)
+    else:
+        lines.extend("- " + "; ".join(f"{header}: {value}" for header, value in zip(headers, row, strict=True))
+                     for row in cells)
+    lines.append(f"{len(rows)} item(s).")
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def source_report(result: dict[str, Any], *, markdown: bool, limit: int, offset: int) -> str:
     """Summarize an active-source list or detail without exposing retained text."""
     lines: list[str] = []

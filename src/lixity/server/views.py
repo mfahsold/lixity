@@ -125,8 +125,15 @@ def build_server_dashboard(
             identity_settings = load_project_config(project_root)
     elif source_input and not source_is_file:
         identity_settings = load_project_config(Path(source_input).parent)
+    if project_root is not None or not source_is_file:
+        # Chapter assignments belong to the explicitly selected workspace,
+        # including manuscripts imported beneath its exports directory.
+        settings = {**settings, **{key: identity_settings.get(key, {})
+                                  for key in ("register_profiles", "chapter_registers")}}
     if identity_settings_override is not None:
         identity_settings = {**identity_settings, **identity_settings_override}
+        settings = {**settings, **{key: value for key, value in identity_settings_override.items()
+                                  if key in {"register_profiles", "chapter_registers"}}}
     config, resolved = resolve_document_config(text, language, project_config=settings)
     status_labels = resolved.labels
 
@@ -222,6 +229,7 @@ def build_server_dashboard(
         author_setting_enabled=bool(source_input or project_root is not None),
         publication=publication_values,
         publication_error=publication_error,
+        register_settings=settings,
         project_token=project_settings_token(
             project_root or (Path(source_input).parent if source_input else None), source_input,
             config_bytes=project_config_bytes,

@@ -7,7 +7,7 @@ from typing import Any
 from ..config import MAX_AUTHOR_NAME_CHARS, MAX_PROJECT_TITLE_CHARS
 from ..publication import PUBLICATION_FIELDS
 from ..site import docs_url
-from ..style_fingerprint import FingerprintThresholds
+from ..style_fingerprint import FEATURES, FingerprintThresholds
 from .components import checkbox_field, esc, help_term, label
 
 
@@ -24,6 +24,7 @@ def settings_form(
     publication: Mapping[str, Any] | None = None,
     publication_error: str = "",
     project_token: str = "",
+    register_settings: Mapping[str, Any] | None = None,
 ) -> str:
     def translated(key: str) -> str:
         return esc(label(labels, key))
@@ -123,6 +124,7 @@ def settings_form(
             parts.append(f'<input type="text" {attrs} value="{value}"/>')
         parts.append('</div>')
     parts.append('</div></details>')
+    parts.append(register_editor(labels, register_settings or {}, editable=author_setting_enabled and bool(project_token)))
     parts.extend([
         '<details class="settings-advanced settings-thresholds" id="settings-thresholds">',
         f'<summary>{translated("settings_advanced")}</summary>',
@@ -195,3 +197,29 @@ def settings_form(
         '</div></form>',
     ])
     return "".join(parts)
+
+
+def register_editor(labels: Mapping[str, str] | None, settings: Mapping[str, Any], *, editable: bool) -> str:
+    """Use the shared settings save for explicit chapter registers and ranges."""
+    initial = {key: settings.get(key, {}) for key in ("register_profiles", "chapter_registers")}
+    terms = {key: label(labels, key) for key in (
+        "register_name", "register_target", "register_lower", "register_upper", "register_add_target",
+        "register_selector", "register_invalid", "remove_recent_project")}
+    features = [(name, label(labels, key)) for name, key, _ in FEATURES]
+    return (
+        '<details class="settings-advanced" id="settings-registers">'
+        f'<summary>{esc(label(labels, "register_title"))}</summary>'
+        f'<p class="panel-guide">{esc(label(labels, "register_hint"))}</p>'
+        + ("" if editable else f'<p class="ctl-note">{esc(label(labels, "register_unavailable"))}</p>')
+        + f'<fieldset class="register-editor" id="register-editor" data-initial="{esc(json.dumps(initial, ensure_ascii=False))}" '
+        f'data-labels="{esc(json.dumps(terms, ensure_ascii=False))}" data-features="{esc(json.dumps(features, ensure_ascii=False))}"'
+        f'{"" if editable else " disabled"}>'
+        f'<legend>{esc(label(labels, "register_title"))}</legend>'
+        '<div data-register-profiles></div>'
+        f'<button type="button" class="ctl" data-register-add-profile>{esc(label(labels, "register_add_profile"))}</button>'
+        f'<h4>{esc(label(labels, "register_assignments"))}</h4>'
+        f'<p class="ctl-note">{esc(label(labels, "register_selector_hint"))}</p>'
+        '<div data-register-assignments></div>'
+        f'<button type="button" class="ctl" data-register-add-assignment>{esc(label(labels, "register_add_assignment"))}</button>'
+        '</fieldset></details>'
+    )

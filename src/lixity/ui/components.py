@@ -373,7 +373,7 @@ def loading_state(text: str, element_id: str | None = None, role: str = "status"
     """Centralised accessible loading indicator with animated spinner."""
     id_attr = f' id="{esc(element_id, quote=True)}"' if element_id else ""
     return (
-        f'<div class="loading-state"{id_attr} role="{esc(role)}">'
+        f'<div class="loading-state"{id_attr} role="{esc(role)}" aria-busy="true" aria-live="polite">'
         f'<span class="loading-spinner" aria-hidden="true"></span>'
         f'<span class="loading-text">{esc(text)}</span>'
         f"</div>"

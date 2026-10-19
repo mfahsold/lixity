@@ -1,21 +1,9 @@
 """Publication controls use explicit project data and the shared Settings form."""
 
-from html.parser import HTMLParser
 from pathlib import Path
 
 from lixity.ui import render_dashboard
-
-
-class Controls(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.elements: dict[str, dict[str, str | None]] = {}
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        values = dict(attrs)
-        identifier = values.get("id")
-        if identifier:
-            self.elements[identifier] = {**values, "tag": tag}
+from tests.support import HtmlControls
 
 
 def test_publication_fields_are_collapsed_escaped_and_context_bound() -> None:
@@ -33,7 +21,7 @@ def test_publication_fields_are_collapsed_escaped_and_context_bound() -> None:
         publication_error='<img src=x onerror="alert(1)">',
         project_token="a" * 64,
     )
-    parsed = Controls()
+    parsed = HtmlControls()
     parsed.feed(html)
     assert "open" not in parsed.elements["settings-publication"]
     assert parsed.elements["settings-form"]["data-project-token"] == "a" * 64
@@ -51,7 +39,7 @@ def test_publication_fields_are_collapsed_escaped_and_context_bound() -> None:
 
 def test_publication_without_explicit_root_is_disabled_with_no_inferred_data() -> None:
     html = render_dashboard([], [], controls=True)
-    parsed = Controls()
+    parsed = HtmlControls()
     parsed.feed(html)
     fields = {
         key: value for key, value in parsed.elements.items() if key.startswith("set-publication-")

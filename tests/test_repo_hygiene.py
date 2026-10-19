@@ -45,6 +45,8 @@ LOCAL_PATH_PATTERNS = (
     re.compile(r"/home/(?!demo\b)[A-Za-z0-9._-]+/"),
     re.compile(r"/Users/(?!you/|Shared/)[A-Za-z0-9._-]+/"),
 )
+#: Raw assistant serialization belongs to neither documentation nor product data.
+TRANSCRIPT_PATTERNS = (re.compile(r"<\|(?:start|end|message)\|>"),)
 
 
 def tracked_files() -> list[str]:
@@ -81,7 +83,7 @@ def test_no_credentials_or_private_keys_are_tracked() -> None:
     assert offenders == [], f"Credentials or private keys must not be tracked: {offenders}"
 
 
-def test_tracked_text_files_carry_no_secrets_or_local_paths() -> None:
+def test_tracked_text_files_carry_no_secrets_local_paths_or_transcripts() -> None:
     offenders = []
     for name in tracked_files():
         path = Path(name)
@@ -91,8 +93,11 @@ def test_tracked_text_files_carry_no_secrets_or_local_paths() -> None:
             text = (ROOT / name).read_text(encoding="utf-8")
         except (UnicodeDecodeError, OSError):
             continue
-        for pattern in (*SECRET_PATTERNS, *LOCAL_PATH_PATTERNS):
+        patterns = (*SECRET_PATTERNS, *LOCAL_PATH_PATTERNS)
+        if name.startswith("docs/") or name in ("README.md", "CONTRIBUTING.md", "AGENTS.md", "AGENT_PROFILE.md"):
+            patterns += TRANSCRIPT_PATTERNS
+        for pattern in patterns:
             match = pattern.search(text)
             if match:
                 offenders.append(f"{name}: {pattern.pattern}")
-    assert offenders == [], f"Secret-like values or machine-local paths found: {offenders}"
+    assert offenders == [], f"Secrets, local paths or assistant transcripts found: {offenders}"

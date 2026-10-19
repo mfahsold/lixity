@@ -12,7 +12,10 @@ const root = path.join(artifacts, 'site');
 const python = process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python');
 const staged = spawnSync(python, ['scripts/stage_pages.py', '--output', root], {cwd: repository, encoding: 'utf8'});
 assert.equal(staged.status, 0, staged.stderr);
-const routes = ['', 'guides/installation.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'guides/first-look.html', 'demo/report.html', 'examples/effi-briest.html', 'examples/pride-and-prejudice.html', 'blog/index.html', 'blog/whats-new-lixity.html'];
+const routes = ['', 'guides/installation.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'guides/first-look.html', 'guides/manuscript-analysis-tools.html', 'demo/report.html', 'examples/effi-briest.html', 'examples/pride-and-prejudice.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/tense-switches.html', 'blog/effi-briest-case-study.html'];
+// Every content page gets all widths. Shared surface types cover theme/JS variants.
+const fullMatrixRoutes = new Set(['', 'guides/research-pdf.html', 'demo/report.html',
+  'examples/effi-briest.html', 'blog/whats-new-lixity.html']);
 
 async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   assert.equal(await page.locator('.page').count(), 1, 'The example uses the generated report layout');
@@ -119,6 +122,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
       for (const width of [1440, 390, 320]) {
         await page.setViewportSize({width, height: 900});
         for (const route of routes) {
+          if (!(javaScriptEnabled && colorScheme === 'light') && !fullMatrixRoutes.has(route)) continue;
           await page.goto('http://lixity.test/lixity/' + route);
           assert.equal(await page.locator('h1').count(), 1);
           const headings = await page.locator('h1,h2,h3,h4,h5,h6').evaluateAll(nodes => nodes.map(node => Number(node.tagName[1])));
@@ -141,7 +145,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
           }
           assert.equal(await page.locator('link[rel=canonical]').getAttribute('href'), 'https://mfahsold.github.io/lixity/' + route);
           assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth), `${route} overflows at ${width}px`);
-          if (width === 320 && ['guides/interpretation.html', 'guides/research-pdf.html'].includes(route)) {
+          if (width === 320 && ['guides/interpretation.html', 'guides/research-pdf.html', 'guides/manuscript-analysis-tools.html'].includes(route)) {
             for (const table of await page.locator('.feature-table-wrapper').all()) {
               assert.ok(await table.evaluate(element => element.scrollWidth > element.clientWidth), 'Wide reference tables scroll inside the page');
               assert.ok(await table.locator('th').first().evaluate(element => element.getBoundingClientRect().width >= 120), 'Table columns remain readable on mobile');
@@ -226,6 +230,6 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
       assert.deepEqual(errors, []);
       await context.close();
     }
-    console.log(`Public docs: every staged page, desktop/390/320, light/dark, JS on/off, static GET-only journey, report keyboard/filter/chart controls, assets, overflow and console passed. Screenshots: ${artifacts}`);
+    console.log(`Public docs: ${routes.length} selected HTML pages at desktop/390/320, representative surfaces in light/dark and JS on/off, static GET-only journey, report keyboard/filter/chart controls, assets, overflow and console passed. Screenshots: ${artifacts}`);
   } finally { await browser.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

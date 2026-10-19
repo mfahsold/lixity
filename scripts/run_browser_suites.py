@@ -70,6 +70,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "project-history.cjs",
         "project-switch-native.cjs",
         "publication-settings.cjs",
+        "register-settings.cjs",
         "settings.cjs",
         "setup-guide.cjs",
         "ui-usability.cjs",
@@ -109,6 +110,7 @@ PATH_RULES: tuple[tuple[str, tuple[str, ...]], ...] = (
     ("src/lixity/ui/assets/project-ui.js", ("project",)),
     ("src/lixity/ui/modals.py", ("project",)),
     ("src/lixity/ui/settings.py", ("project",)),
+    ("src/lixity/ui/assets/register-settings.js", ("project",)),
     ("src/lixity/server/routes_project.py", ("project",)),
     ("src/lixity/server/routes_nda.py", ("project",)),
     ("src/lixity/ui/assets/interactions.js", ("analysis",)),
@@ -307,6 +309,15 @@ def main() -> int:
     if node is None:
         print("Node.js is required for the browser suites.", file=sys.stderr)
         return 2
+
+    support_tests = sorted((SUITE_DIR / "support").glob("*.test.cjs"))
+    if support_tests:
+        result = subprocess.run(  # noqa: S603 - fixed node binary and local harness tests
+            [node, "--test", *(str(path) for path in support_tests)], cwd=ROOT, check=False,
+        )
+        if result.returncode:
+            print("Browser harness checks failed; UI suites were not started.", file=sys.stderr)
+            return result.returncode
 
     if arguments.jobs > 1:
         jobs = min(arguments.jobs, len(names))

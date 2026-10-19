@@ -1,5 +1,6 @@
 """Immutable local objects and snapshots with a single atomic publication point."""
 
+import errno
 import hashlib
 import json
 import os
@@ -50,6 +51,10 @@ class ResearchError(ValueError):
 
 class ResearchConflictError(ResearchError):
     """The caller's accepted snapshot or revision has changed."""
+
+
+class ResearchStorageError(ResearchError):
+    """The archive cannot be safely read or written; an item cannot be skipped."""
 
 
 def encode(value: StrictModel) -> bytes:
@@ -168,14 +173,14 @@ class Repository:
         """
         root, text = self._root_text, os.fspath(path)
         if text != root and not text.startswith(root + os.sep):
-            raise ResearchError("Research path escapes the project")
+            raise ResearchStorageError("Research path escapes the project")
         current = root
         for part in text[len(root):].split(os.sep):
             if not part:
                 continue
             current = os.path.join(current, part)
             if os.path.islink(current):
-                raise ResearchError("Symlinks are not allowed inside the research store")
+                raise ResearchStorageError("Symlinks are not allowed inside the research store")
         return path
 
     @contextmanager
@@ -196,8 +201,13 @@ class Repository:
                     import fcntl
 
                     fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
-            except OSError:
-                raise ResearchError("Research writer is busy; retry after it finishes") from None
+            except OSError as exc:
+                busy = exc.errno == errno.EAGAIN or (
+                    sys.platform == "win32" and exc.errno in (errno.EACCES, errno.EDEADLK)
+                )
+                if not busy:
+                    raise
+                raise ResearchStorageError("Research writer is busy; retry after it finishes") from exc
             try:
                 yield
             finally:
@@ -211,13 +221,13 @@ class Repository:
         with self.safe(path).open("rb") as stream:
             content = stream.read(maximum + 1)
         if len(content) > maximum:
-            raise ResearchError("Research object exceeds the supported size")
+            raise ResearchStorageError("Research object exceeds the supported size")
         return content
 
     def verified(self, path: Path, expected: str, *, maximum: int = MAX_RESEARCH_OBJECT_BYTES) -> bytes:
         content = self.read(path, maximum=maximum)
         if digest(content) != expected:
-            raise ResearchError("Research object checksum mismatch")
+            raise ResearchStorageError("Research object checksum mismatch")
         return content
 
     def record_path(self, entry: Entry) -> Path:
@@ -263,9 +273,13 @@ class Repository:
                 self._snapshot = snapshot
             return snapshot
         except (ValidationError, json.JSONDecodeError):
-            raise ResearchError("Invalid or unsupported research schema") from None
-        except FileNotFoundError:
-            raise ResearchError("Research store is missing or incomplete; initialize or restore it") from None
+            raise ResearchStorageError("Invalid or unsupported research schema") from None
+        except FileNotFoundError as exc:
+            raise ResearchStorageError("Research store is missing or incomplete; initialize or restore it") from exc
+        except ResearchStorageError:
+            raise
+        except ResearchError as exc:
+            raise ResearchStorageError(str(exc)) from exc
 
     def validate(self, snapshot: Snapshot, *, kinds: frozenset[str] | None = None) -> None:
         """Archive invariants for the loaded records.
@@ -434,6 +448,21 @@ class Repository:
         expected: Snapshot | None,
         removals: set[str] | None = None,
         delete_blobs: set[str] | None = None,
+    ) -> Snapshot:
+        try:
+            return self._commit(additions, blobs, expected, removals, delete_blobs)
+        except (ResearchConflictError, ResearchStorageError):
+            raise
+        except ResearchError as exc:
+            raise ResearchStorageError(str(exc)) from exc
+
+    def _commit(
+        self,
+        additions: list[Entity],
+        blobs: dict[str, bytes],
+        expected: Snapshot | None,
+        removals: set[str] | None,
+        delete_blobs: set[str] | None,
     ) -> Snapshot:
         with self.locked():
             current = self.snapshot() if self.safe(self.data / "HEAD.json").exists() else None

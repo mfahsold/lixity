@@ -111,7 +111,12 @@ def mtld(tokens: list[str], threshold: float = 0.72) -> float | None:
     but its minimum-run, strict-threshold and trailing-factor rules differ.
     The full McCarthy & Jarvis (2010) paper was not available for this
     implementation review; complete equivalence to TAALED is not claimed.
+
+    Raise ValueError unless threshold is a finite number strictly between 0
+    and 1. Boolean values are not accepted as numeric parameters.
     """
+    if type(threshold) not in (int, float) or not 0.0 < threshold < 1.0:
+        raise ValueError("MTLD threshold must be a finite number strictly between 0 and 1")
     n = len(tokens)
     if n < MIN_TOKENS_LD:
         return None
@@ -145,7 +150,11 @@ def mattr(tokens: list[str], window: int = 50) -> float | None:
     Mean TTR over sliding windows of ``window`` tokens. None if text is shorter
     than the window. O(N) via an incremental type counter. Comparisons require
     the same window and tokenization; the result is not independent of these choices.
+
+    Raise ValueError unless window is a positive integer (not a boolean).
     """
+    if type(window) is not int or window <= 0:
+        raise ValueError("MATTR window must be a positive integer")
     n = len(tokens)
     if n < window:
         return None
@@ -181,7 +190,13 @@ def maas_a2(n_tokens: int, v_types: int) -> float | None:
 
     Lower values mean greater diversity. This local base-10 convention requires
     ``MIN_TOKENS_LD`` tokens; shorter texts return None.
+
+    Raise ValueError unless both counts are integers with 0 <= v_types <=
+    n_tokens. Boolean counts are rejected. Consistent empty/short inputs and
+    zero types retain their unavailable (None) result.
     """
+    if type(n_tokens) is not int or type(v_types) is not int or not 0 <= v_types <= n_tokens:
+        raise ValueError("Maas counts must be integers with 0 <= v_types <= n_tokens")
     if n_tokens < MIN_TOKENS_LD or v_types <= 0:
         return None
     log_n = math.log10(n_tokens)

@@ -1,16 +1,15 @@
+const {startNativeServer} = require('./support/native-server.cjs');
 // Explicit metadata, fresh save tokens and drafts against a synthetic local API.
 const {launchChromium,playwrightModule}=require('../../scripts/browser_tools.cjs');
 const fs=require('node:fs'),os=require('node:os'),path=require('node:path');
-const {spawn}=require('node:child_process'),{once}=require('node:events'),{createInterface}=require('node:readline');
 const assert=require('node:assert/strict');
 const {expect}=require(path.join(playwrightModule,'test'));
-const root=path.resolve(__dirname,'../..');
 const artifacts=fs.mkdtempSync(path.join(os.tmpdir(),'lixity-publication-settings-'));
 function bounded(promise,label){let timer;return Promise.race([promise,new Promise((_,reject)=>{
   timer=setTimeout(()=>reject(new Error('Timed out: '+label)),10000);
 })]).finally(()=>clearTimeout(timer));}
 (async()=>{
-  const server=spawn(process.env.PYTHON_BIN||path.join(root,'.venv/bin/python'),['-u','-c',`
+  const server=await startNativeServer(`
 import json,sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
@@ -27,14 +26,10 @@ LixityServerHandler.refresh()
 server=ThreadingHTTPServer(('127.0.0.1',0),LixityServerHandler)
 print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}','project':str(project),'other':str(other)}),flush=True)
 server.serve_forever()
-`,artifacts],{cwd:root,env:{...process.env,PYTHONPATH:path.join(root,'src')},stdio:['ignore','pipe','pipe']});
-  const lines=createInterface({input:server.stdout});let stderr='',browser,release;
-  server.stderr.on('data',data=>{stderr+=data;});
+`,artifacts);
+  let browser,release;
   try{
-    const fixture=await bounded(new Promise((resolve,reject)=>{
-      lines.once('line',line=>resolve(JSON.parse(line)));server.once('error',reject);
-      server.once('exit',code=>reject(new Error('Synthetic fixture exited '+code+': '+stderr)));
-    }),'fixture');
+    const fixture=server.fixture;
     browser=await launchChromium();const page=await browser.newPage({viewport:{width:1440,height:1000}});
     page.setDefaultTimeout(10000);
     await page.addInitScript(()=>{
@@ -145,6 +140,8 @@ server.serve_forever()
       }
     }
     console.log('Publication settings: explicit fields, held real saves at1440/320, identity/unchanged publication omission, newer drafts/fresh tokens/stale tokens/roots/responses and seven locales1440/390/320 passed. '+artifacts);
-  }finally{if(release)release();if(browser)await browser.close();lines.close();
-    if(server.exitCode===null&&server.signalCode===null){const exited=once(server,'exit');server.kill();await bounded(exited,'fixture cleanup');}}
+  }finally{
+    if(release)release();
+    try{if(browser)await browser.close();}finally{await server.close();}
+  }
 })().catch(error=>{console.error(error);process.exitCode=1;});

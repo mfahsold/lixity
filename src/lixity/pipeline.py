@@ -60,7 +60,7 @@ def fingerprint_document(
 ) -> StyleFingerprint:
     if metrics is None:
         metrics = CorpusAnalyzer(config, sample_text=text).analyze_text(text)
-    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds)
+    fingerprint = StyleFingerprint.from_metrics(metrics, thresholds=thresholds, config=config)
     fingerprint.structural_diagnostics.update(lexical_structural_diagnostics(text, config))
     return fingerprint
 

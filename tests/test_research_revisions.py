@@ -8,6 +8,7 @@ from unittest.mock import patch
 from lixity.research import api
 from lixity.research.models import Claim, Decision, Reference
 from lixity.research.repository import Repository, ResearchConflictError, ResearchError
+from tests.research_support import revise_record
 
 
 class TestResearchRevisions(unittest.TestCase):
@@ -26,12 +27,8 @@ class TestResearchRevisions(unittest.TestCase):
         self.decision = api.record_decision(self.project, title="Keep date", rationale="Follow the cited date.", claim_id=self.claim)["decision_id"]
 
     def revise(self, kind, identifier, changes, change_kind="correction"):
-        loaded = api.get_record(self.project, kind, identifier)
-        return api.revise_record(
-            self.project, kind, identifier, changes=changes,
-            expected_snapshot=loaded["snapshot"], expected_revision=loaded["record"]["revision"],
-            change_kind=change_kind, reason="Author reviewed this change.", actor="test-author",
-        )
+        return revise_record(self.project, kind, identifier, changes, change_kind=change_kind,
+                             reason="Author reviewed this change.", actor="test-author")
 
     def test_prepare_revision_reconciles_unrelated_changes_without_writing(self):
         self.revise("claim", self.claim, {"place": "Reading room"})

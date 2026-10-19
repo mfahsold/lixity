@@ -19,6 +19,7 @@ from __future__ import annotations
 import html
 import json
 import re
+import struct
 import sys
 from dataclasses import dataclass
 from pathlib import Path
@@ -30,6 +31,7 @@ from lixity.pdf_export import compose_pdf
 ROOT = Path(__file__).resolve().parents[1]
 SITE = "https://mfahsold.github.io/lixity"
 OG_IMAGE = f"{SITE}/screenshots/dashboard-light.png"
+OG_IMAGE_ALT = "Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"
 LICENSE_URL = "https://github.com/mfahsold/lixity/blob/main/LICENSE"
 
 #: A published example stays a quick page load; past this size the excerpt is
@@ -102,12 +104,18 @@ def _head_metadata(
 ) -> str:
     escaped = html.escape(description, quote=True)
     escaped_title = html.escape(title, quote=True)
+    image_header = (ROOT / "docs/screenshots/dashboard-light.png").read_bytes()[:24]
+    _require(image_header[:8] == b"\x89PNG\r\n\x1a\n", "the preview image must be a PNG")
+    width, height = struct.unpack(">II", image_header[16:24])
     structured: dict[str, object] = {
         "@context": "https://schema.org",
         "@type": "TechArticle",
         "headline": title,
         "description": description,
         "url": canonical,
+        "mainEntityOfPage": canonical,
+        "image": {"@type": "ImageObject", "url": OG_IMAGE, "width": width, "height": height,
+                  "caption": OG_IMAGE_ALT},
         "inLanguage": language,
         "author": {
             "@type": "Person",
@@ -132,14 +140,15 @@ def _head_metadata(
         f'<meta property="og:description" content="{escaped}"/>\n'
         f'<meta property="og:url" content="{canonical}"/>\n'
         f'<meta property="og:image" content="{OG_IMAGE}"/>\n'
-        '<meta property="og:image:width" content="1480"/>\n'
-        '<meta property="og:image:height" content="945"/>\n'
+        f'<meta property="og:image:width" content="{width}"/>\n'
+        f'<meta property="og:image:height" content="{height}"/>\n'
         '<meta property="og:image:alt" content="Lixity manuscript overview with sentence '
         'rhythm, vocabulary and dialogue measures"/>\n'
         '<meta name="twitter:card" content="summary_large_image"/>\n'
         f'<meta name="twitter:title" content="{escaped_title}"/>\n'
         f'<meta name="twitter:description" content="{escaped}"/>\n'
         f'<meta name="twitter:image" content="{OG_IMAGE}"/>\n'
+        f'<meta name="twitter:image:alt" content="{OG_IMAGE_ALT}"/>\n'
         '<script type="application/ld+json">\n'
         + json.dumps(structured, ensure_ascii=False)
         + "\n</script>\n"
@@ -175,25 +184,13 @@ def build_demo(root: Path) -> Path:
     text = (root / "samples/first-look.md").read_text(encoding="utf-8")
     report = dashboard(text, language="en", project_config={}, title="An invented night shift")
     _require(report.count("</head>") == 1, "the dashboard must carry exactly one head")
-    head = """<link rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"/>
-<meta name="description" content="A read-only Lixity example: compare six invented chapters, open a paragraph and read its measured values and source lines. No installation."/>
-<meta property="og:type" content="article"/>
-<meta property="og:site_name" content="Lixity"/>
-<meta property="og:title" content="Lixity example report — an invented night shift"/>
-<meta property="og:description" content="Compare six invented chapters, open a paragraph and read its values in a read-only Lixity report."/>
-<meta property="og:url" content="https://mfahsold.github.io/lixity/demo/report.html"/>
-<meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<meta property="og:image:width" content="1480"/>
-<meta property="og:image:height" content="945"/>
-<meta property="og:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
-<meta name="twitter:card" content="summary_large_image"/>
-<meta name="twitter:title" content="Lixity example report — an invented night shift"/>
-<meta name="twitter:description" content="Compare six invented chapters, open a paragraph and read its values in a read-only Lixity report."/>
-<meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<script type="application/ld+json">
-{"@context": "https://schema.org", "@type": "TechArticle", "headline": "Lixity example report — an invented night shift", "description": "A read-only Lixity example: compare six invented chapters, open a paragraph and read its measured values and source lines. No installation.", "url": "https://mfahsold.github.io/lixity/demo/report.html", "inLanguage": "en", "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"}, "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}, "license": "https://github.com/mfahsold/lixity/blob/main/LICENSE"}
-</script>
-"""
+    head = _head_metadata(
+        canonical=f"{SITE}/demo/report.html",
+        title="Lixity example report — an invented night shift",
+        description=("A read-only Lixity example: compare six invented chapters, open a paragraph "
+                     "and read its measured values and source lines. No installation."),
+        language="en",
+    )
     report = report.replace("</head>", head + "</head>", 1)
     _require(report.count("<title>An invented night shift – Style &amp; Tense Analysis</title>") == 1,
              "the demo title is missing")

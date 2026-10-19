@@ -2,7 +2,7 @@
 
 Follow a chapter contrast back to the text, then make your own editorial decision. This short walkthrough is for authors and editors who want to see what Lixity can help them notice.
 
-Maintained by the Lixity project · Updated 14 October 2026
+Maintained by the Lixity project · Updated 19 October 2026
 
 ## Used while writing a debut novel
 

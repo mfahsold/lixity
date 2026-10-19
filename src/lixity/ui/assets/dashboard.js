@@ -712,6 +712,7 @@ async function submitSettings() {
   });
   strong.setCustomValidity(strong.valueAsNumber < mild.valueAsNumber
     ? document.getElementById("settings-order-error").textContent : "");
+  if (window.LixityRegisterSettings) Object.assign(payload, window.LixityRegisterSettings.readChanges());
   if (!settings.checkValidity()) {
     var invalid = settings.querySelector(":invalid");
     var disclosure = invalid && invalid.closest("details");
@@ -753,7 +754,11 @@ async function submitSettings() {
   var identifiers = Array.from(settings.querySelectorAll("input, textarea, select")).map(function(field) { return field.id; });
   var submitted = fieldSnapshot(identifiers);
   function sameContext() { return settings.isConnected && settings.dataset.projectToken === acceptedToken; }
-  function unchanged() { return sameContext() && JSON.stringify(fieldSnapshot(identifiers)) === JSON.stringify(submitted); }
+  function unchanged() {
+    var currentIds = Array.from(settings.querySelectorAll("input, textarea, select")).map(function(field) { return field.id; });
+    return sameContext() && JSON.stringify(currentIds) === JSON.stringify(identifiers) &&
+      JSON.stringify(fieldSnapshot(identifiers)) === JSON.stringify(submitted);
+  }
   try {
     var result = await runAction("settings", payload, button, unchanged, sameContext);
     if (result.ok && sameContext()) {
@@ -764,6 +769,9 @@ async function submitSettings() {
       if (Object.prototype.hasOwnProperty.call(payload, "title")) settings.dataset.titleInitial = payload.title;
       if (Object.prototype.hasOwnProperty.call(payload, "author_name")) settings.dataset.authorInitial = payload.author_name;
       if (payload.publication) settings.dataset.publicationInitial = JSON.stringify(payload.publication);
+      if (payload.register_profiles && window.LixityRegisterSettings) window.LixityRegisterSettings.accepted({
+        register_profiles: payload.register_profiles, chapter_registers: payload.chapter_registers
+      });
     }
     return result;
   }

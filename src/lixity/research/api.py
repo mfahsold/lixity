@@ -49,10 +49,16 @@ from .manuscript import (
     list_manuscript_links as list_manuscript_links,
 )
 from .manuscript import (
+    reanchor_manuscript_claim_revision as reanchor_manuscript_claim_revision,
+)
+from .manuscript import (
     reanchor_manuscript_link as reanchor_manuscript_link,
 )
 from .manuscript import (
     resolve_manuscript_anchor as resolve_manuscript_anchor,
+)
+from .manuscript import (
+    retract_manuscript_link as retract_manuscript_link,
 )
 from .manuscript import (
     review_manuscript_links as review_manuscript_links,

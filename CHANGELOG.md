@@ -7,6 +7,69 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-10-19
+
+### Added
+- Research record inspection and all six manuscript-association commands support
+  readable text output alongside JSON and table views.
+- `unlink-manuscript` retracts one manuscript association (history retained).
+- `reconcile-manuscript --accept-claim-updates` re-pins associations whose
+  claim advanced to a newer revision without creating a parallel link.
+- `--latest` flag for `--update` on dossier/claim/decision records: uses the
+  current HEAD revision automatically (single-author convenience).
+- Authored research records accept `list`, `show ID`, `inspect ID` and implicit
+  inspection by ID, alongside their existing named ID options.
+- Motifs: echo detector lists n-grams repeating within a short text span
+  (`echo_window`, default 300 words) so local word echoes surface for review.
+- Style: `chapter_registers` and `register_profiles` in `CorpusConfig` mark
+  chapters as intentional registers (e.g. historical notary, child voice); such
+  chapters are exempt from deviation/FDR flagging. Validated author target
+  ranges are descriptive comparisons alongside the unchanged book baseline.
+- Native Settings editor for named chapter registers, feature ranges and chapter
+  assignments, with guarded project-local persistence and seven-language labels.
+- UI: skip-to-content link, `role="main"` on the chapter pane, `aria-busy` on
+  loading states (accessibility).
+
+### Changed
+- Research filesystem diagnostics identify the actual failure and affected path.
+- Closed paragraphs create their inner layout subtree only when opened and
+  release it on close unless retaining a marker draft. Full offline text,
+  manuscript search and saved quotation links remain available.
+- Regression tests share isolated handler, research command and browser server
+  fixtures. Repeated browser workflows are separated from seven-language
+  desktop/mobile rendering checks; numerical and structural assertions use
+  independent expected values and nonempty measured results.
+- Pages and articles expose generated Markdown alternatives through the existing
+  guide converter. Canonical URLs, image dimensions, structured metadata and
+  meaningful modification dates are checked against the staged publication.
+- Documentation and agent guidance focus on workflows and durable contracts;
+  exact options come from CLI help and runtime discovery. Repeated feature
+  histories, command catalogues and implementation detail are consolidated.
+
+### Fixed
+- Reconciliation exits 1 on archive read/write, lock or safety failures instead
+  of treating them as skipped associations. Storage causes remain distinguishable
+  from ordinary record review conflicts.
+- Human research reports render the requested format without losing list rows,
+  and escape stored terminal controls in detail and diff output.
+- CLI help accurately describes metadata, supported source formats and FDR
+  settings. `pdf --json` rejects the unsupported mode before writing a PDF.
+- Combined anchor/claim updates now save one association revision;
+  `--accept-claim-updates` works alone and with an explicit selected link.
+- Explicit batch snapshot guards reject intervening external archive writes;
+  manuscript association revisions record their current actor and UTC timestamp.
+- Numeric register selectors match chapter numbers exactly, and register names,
+  feature bounds and explicit project scope are validated.
+- Echo counts require the configured minimum within the local span; independent
+  repeated phrases sharing words are no longer discarded by deduplication.
+- Low-level MATTR/MTLD/Maas helpers reject invalid window sizes, thresholds and
+  impossible token/type counts with `ValueError`; valid/default arithmetic is unchanged.
+- USAGE.md: corrected manuscript path requirements, claim re-pin examples and
+  format documentation; removed the stale "no manuscript-link CLI command" sentence.
+- Pages: comparison tables survive Markdown conversion; article examples and
+  evidence-link descriptions reflect their implemented scope. Removed an
+  accidentally appended assistant transcript from the v0.4.9 release notes.
+
 ## [0.4.9] - 2026-10-16
 
 ### Added
@@ -31,16 +94,6 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   reordered feature blocks. The staged site now shares `assets/components.css`;
   controls use the shared `.ctl` vocabulary, and the docs suite checks the
   frames and captures the landing page full page.
-
-
-### Changed
-- Documentation site: the landing page is rebuilt as a product page - framed
-  app screenshots (analysis, chapter map, review loop, research workspace,
-  project settings, terminal), a "what makes it different" tile row, a
-  three-step start, and reordered feature blocks. The staged site now shares
-  `assets/components.css` with the app (staging boundary extended), controls
-  use the shared `.ctl` vocabulary, and the docs suite checks the frames and
-  captures the landing page full-page.
 
 ## [0.4.8] - 2026-10-16
 
@@ -2159,7 +2212,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.4.9...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.5.0...HEAD
+[0.5.0]: https://github.com/mfahsold/lixity/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/mfahsold/lixity/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/mfahsold/lixity/compare/v0.4.7...v0.4.8
 [0.4.7]: https://github.com/mfahsold/lixity/compare/v0.4.6...v0.4.7

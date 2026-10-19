@@ -2,7 +2,7 @@
 
 Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.
 
-Maintained by the Lixity project · Updated 14 October 2026
+Maintained by the Lixity project · Updated 19 October 2026
 
 ## What do I need?
 
@@ -30,7 +30,7 @@ lixity --version
 lixity service start --open
 ```
 
-This installs the current release from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). For a pinned, checksum-verified setup, install the release wheel instead — `uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.4.9/lixity-0.4.9-py3-none-any.whl"` — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.4.9.md) for changes and compatibility.
+This installs the current release from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). For a pinned, checksum-verified setup, install the release wheel instead — `uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.5.0/lixity-0.5.0-py3-none-any.whl"` — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.5.0.md) for changes and compatibility.
 
 **Development builds instead**
 

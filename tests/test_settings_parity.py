@@ -2,7 +2,6 @@
 
 from collections.abc import Iterator
 from dataclasses import asdict
-from html.parser import HTMLParser
 from typing import Any
 
 import pytest
@@ -10,20 +9,7 @@ import pytest
 from lixity.config import resolve_thresholds
 from lixity.style_fingerprint import FingerprintThresholds
 from lixity.ui.settings import settings_form
-from tests.support import LoopbackServer, make_handler
-
-
-class NumberControls(HTMLParser):
-    def __init__(self) -> None:
-        super().__init__()
-        self.inputs: dict[str, dict[str, str | None]] = {}
-
-    def handle_starttag(self, tag: str, attrs: list[tuple[str, str | None]]) -> None:
-        attributes = dict(attrs)
-        if tag == "input" and attributes.get("type") == "number":
-            control_id = attributes["id"]
-            assert control_id is not None
-            self.inputs[control_id] = attributes
+from tests.support import HtmlControls, LoopbackServer, make_handler
 
 
 @pytest.fixture
@@ -112,7 +98,7 @@ def test_rendered_values_round_trip_exact_floats_and_allow_the_core_domain():
         z_mild=8.123456789012345, z_strong=9.876543210987654,
         fdr_q=0.013000000000003, dim_score_threshold=0.123456789012345,
     )
-    controls = NumberControls()
+    controls = HtmlControls()
     controls.feed(settings_form(None, "Synthetic project", "en", [("en", "English")], thresholds))
     for control_id, value in (
         ("set-z-mild", 8.123456789012345), ("set-z-strong", 9.876543210987654),
@@ -140,7 +126,7 @@ def test_rendered_settings_submit_without_rounding_thresholds(settings_server):
     )
     original = asdict(handler.thresholds)
     handler.refresh()
-    controls = NumberControls()
+    controls = HtmlControls()
     controls.feed(handler.dashboard_html)
     payload = {name: float(controls.inputs[control_id]["value"]) for name, control_id in (
         ("z_mild", "set-z-mild"), ("z_strong", "set-z-strong"),

@@ -19,9 +19,15 @@ OUTPUT_FORMATS: dict[str, tuple[tuple[str, ...], str]] = {
     "compare": (("json", "md"), "json"),
     "matrix": (("md", "csv", "json"), "md"),
     "timeline": (("text", "md", "json"), "json"),
-    "dossier": (("json", "table"), "json"),
-    "claim": (("json", "table"), "json"),
-    "decision": (("json", "table"), "json"),
+    "dossier": (("json", "table", "text"), "json"),
+    "claim": (("json", "table", "text"), "json"),
+    "decision": (("json", "table", "text"), "json"),
+    "review-manuscript": (("json", "table", "text"), "json"),
+    "manuscript-links": (("json", "table", "text"), "json"),
+    "link-manuscript": (("json", "table", "text"), "json"),
+    "find-anchor": (("json", "table", "text"), "json"),
+    "reconcile-manuscript": (("json", "table", "text"), "json"),
+    "unlink-manuscript": (("json", "table", "text"), "json"),
 }
 
 
@@ -67,6 +73,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("link-manuscript", "Associate one reviewed manuscript quote with an exact claim revision (retention explicit)"),
         ("manuscript-links", "List saved manuscript quote-claim associations (read-only)"),
         ("review-manuscript", "Review saved associations against the current manuscript (read-only)"),
+        ("unlink-manuscript", "Retract one saved manuscript association (history retained)"),
         ("find-anchor", "Resolve one displayed-text quote to exact anchor fields (read-only)"),
         ("reconcile-manuscript", "Preview or write re-pins for uniquely moved or adjusted manuscript anchors"),
         ("decision", "Create, list or revise author decisions and fact deviations"),
@@ -87,7 +94,7 @@ def configure(parser: argparse.ArgumentParser) -> None:
         ("ocr-status", "Inspect runtime diagnostic status for OCR and PDF extraction"),
         ("matrix", "Export a structured claim-evidence-decision matrix (markdown, CSV, or JSON)"),
     ):
-        command = commands.add_parser(name, help=help_text)
+        command = commands.add_parser(name, help=help_text, description=help_text)
         formats, default_format = OUTPUT_FORMATS.get(name, (("html",), "html") if name == "dashboard"
                                                     else (("json",), "json"))
         command.set_defaults(cli_output_formats=formats, cli_default_output=default_format,
@@ -154,6 +161,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--revision", type=int, help="Inspect one historical revision")
             command.add_argument("--expected-snapshot", help="Optional strict archive digest; if omitted, update checks --expected-revision against the current record")
             command.add_argument("--expected-revision", type=int, help="Reviewed record revision required for an update; changed associations need explicit pins when snapshot is omitted")
+            command.add_argument("--latest", action="store_true",
+                                 help="Use the current HEAD revision of the record as --expected-revision "
+                                      "(single-author convenience; implies --expected-snapshot from the same read)")
             command.add_argument("--change-kind", choices=("correction", "supersession"), help="Reason category for an update (required with --update)")
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
@@ -202,7 +212,10 @@ def configure(parser: argparse.ArgumentParser) -> None:
                                  help="Optional revision reason when updating a quote")
             command.add_argument("--accept-moved", action="store_true",
                                  help="Accept uniquely resolvable anchors (or apply --new-quote); "
-                                      "without this flag the command only previews")
+                                      "without an acceptance flag the command only previews")
+            command.add_argument("--accept-claim-updates", action="store_true",
+                                 help="Re-pin associations whose claim advanced to a newer revision "
+                                      "(anchor unchanged); add --accept-moved to update anchors too")
             command.add_argument("--update-sha", action="store_true",
                                  help="Accepted for compatibility; the current file digest is always re-pinned")
             command.add_argument("--expected-snapshot",
@@ -212,14 +225,16 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--actor", default="local-author")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name in ("dossier", "claim", "decision", "sources"):
-            command.add_argument("action", nargs="?", choices=("list",), metavar="list",
-                                 help="Explicit list verb; listing is also the default without a record ID")
+            command.add_argument("action", nargs="?", metavar="list|show|inspect|RECORD_ID",
+                                 help="list (default), show/inspect <ID>, or a record UUID to inspect")
+            command.add_argument("record_id", nargs="?", metavar="RECORD_ID",
+                                 help="Record UUID to show/inspect (alias for the command's named ID option)")
         if name == "init":
             command.add_argument("--title", required=True)
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"), default="en")
             command.add_argument("--actor", default="local-author")
         elif name == "ingest":
-            command.add_argument("--file", nargs="+", help="Path(s) to local UTF-8 text or PDF file(s); required unless resuming or discarding")
+            command.add_argument("--file", nargs="+", help="Path(s) to local UTF-8 text, PDF, PNG or JPEG file(s); required unless resuming or discarding")
             command.add_argument("--title")
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
             command.add_argument("--source-id", help="Refresh this source without invalidating old citations")
@@ -330,6 +345,13 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--rationale", help="Reviewer rationale for link")
             command.add_argument("--reviewer", help="Reviewer identifier (default: author)")
             command.add_argument("--actor", default="local-author")
+        if name == "unlink-manuscript":
+            _add_manuscript_argument(command)
+            command.add_argument("--link-id", required=True, help="Association to retract")
+            command.add_argument("--reason", default="Withdrawn by user", help="Reason for retraction")
+            command.add_argument("--expected-snapshot", help="Optional strict archive digest")
+            command.add_argument("--expected-revision", type=int, help="Reviewed link revision required")
+            command.add_argument("--actor", default="local-author")
         elif name == "decision":
             command.add_argument("--decision-id", help="Decision UUID to inspect or revise")
             command.add_argument("--title", help="Title for new author decision")
@@ -386,21 +408,42 @@ def command_metadata() -> list[dict[str, Any]]:
 
 
 def _reconcile_outcome(project: str, manuscript: str, row: dict[str, Any], source_sha256: str,
-                       actor: str, language: str | None) -> dict[str, Any]:
-    """Re-pin one moved row, reporting a conflict instead of aborting the batch."""
+                       actor: str, language: str | None, *, accept_moved: bool,
+                       accept_claim_updates: bool, reason: str | None,
+                       expected_project_id: str | None = None,
+                       expected_snapshot: str | None = None) -> dict[str, Any]:
+    """Apply accepted changes once per row; storage failures abort the batch."""
     from . import api
-    from .repository import Repository, ResearchConflictError, ResearchError
+    from .repository import Repository, ResearchConflictError, ResearchError, ResearchStorageError
 
     try:
         current = Repository(project).snapshot()
-        single = api.reanchor_manuscript_link(
-            project, manuscript, row["link_id"],
-            expected_project_id=current.project.id, expected_snapshot=current.digest,
-            expected_revision=row["revision"], expected_source_sha256=source_sha256,
-            actor=actor, language=language)
-    except (ResearchError, ResearchConflictError, OSError, ValueError) as error:
+        claim_revision = row["claim_current_revision"] if accept_claim_updates and row["claim_changed"] else None
+        values: dict[str, Any] = {"expected_project_id": expected_project_id or current.project.id,
+                                  "expected_snapshot": expected_snapshot or current.digest,
+                                  "expected_revision": row["revision"], "expected_source_sha256": source_sha256,
+                                  "actor": actor, "reason": reason}
+        if accept_moved and row["anchor_state"] in ("moved", "adjusted"):
+            single = api.reanchor_manuscript_link(
+                project, manuscript, row["link_id"], **values,
+                language=language, new_claim_revision=claim_revision)
+        else:
+            if claim_revision is None:
+                raise ResearchError("No accepted changes for this association")
+            single = api.reanchor_manuscript_claim_revision(
+                project, manuscript, row["link_id"], **values, new_claim_revision=claim_revision)
+    except (ResearchError, ResearchConflictError, ValueError) as error:
+        if expected_snapshot is not None and isinstance(error, ResearchConflictError):
+            raise
+        if isinstance(error.__cause__, OSError):
+            raise error.__cause__ from None
+        if isinstance(error, ResearchStorageError):
+            raise
         return {"ok": False, "link_id": row["link_id"], "reason": str(error)}
-    return {"ok": True, "link_id": single["link_id"], "revision": single["record"]["revision"]}
+    # OSError / PermissionError / Read-only file system are hard system failures,
+    # not per-link skips: let them propagate so the command exits non-zero.
+    return {"ok": True, "link_id": single["link_id"], "revision": single["record"]["revision"],
+            "snapshot": single["snapshot"]}
 
 
 def _json_object(value: str, what: str) -> dict[str, Any]:
@@ -481,11 +524,14 @@ def _revision_diff_text(kind: str, record_id: str, record: dict[str, Any], previ
     """Render a prepared update as a human unified diff; nothing is written."""
     import difflib
 
+    from .presentation import safe_text
+
     color = sys.stdout.isatty()
     paints = (("+++", "\x1b[1m"), ("---", "\x1b[1m"), ("@@", "\x1b[36m"),
               ("+", "\x1b[32m"), ("-", "\x1b[31m"))
 
     def paint(line: str) -> str:
+        line = safe_text(line)
         if not color:
             return line
         for prefix, code in paints:
@@ -570,8 +616,13 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         return {"schema_version": "research-revision-diff-local/1",
                 "diff": _revision_diff_text(kind, record_id, current["record"], preview)}
     if args.update:
+        if getattr(args, "latest", False) and args.expected_revision is None:
+            current = api.get_record(args.project, kind, record_id)
+            args.expected_revision = current["record"]["revision"]
+            if args.expected_snapshot is None:
+                args.expected_snapshot = current["snapshot"]
         if args.expected_revision is None or not args.change_kind or not args.reason:
-            raise ResearchError("Updates require --expected-revision, --change-kind and --reason; run --inspect first to read the current revision")
+            raise ResearchError("Updates require --expected-revision (or --latest), --change-kind and --reason; run --inspect first to read the current revision")
         if args.expected_revision < 1:
             raise ResearchError("Expected revision must be positive")
         try:
@@ -616,6 +667,41 @@ def _current_project() -> str:
     return str(root)
 
 
+def _record_text(result: dict[str, Any]) -> str:
+    """Render a record, immutable revision history, or an explicit diff preview."""
+    from .presentation import safe_text
+
+    def prose(value: Any) -> str:
+        return "\n".join(safe_text(line) for line in str(value).split("\n"))
+
+    if result.get("schema_version") == "research-revision-diff-local/1":
+        return str(result["diff"]).rstrip() + "\n"
+    if result.get("schema_version") == "research-history-local/1":
+        lines = [f"# {safe_text(result['kind'])} {safe_text(result['record_id'])} history", "",
+                 f"Latest revision: {result['latest_revision']}"]
+        for revision in result["revisions"]:
+            lines.extend(["", f"Revision {revision['revision']}",
+                          f"Created: {safe_text(revision['created_at'])}",
+                          f"Actor: {safe_text(revision['created_by'])}"])
+            change = revision.get("change")
+            if change:
+                lines.append(f"{safe_text(change['change_kind'])}: {safe_text(change['reason'])}")
+        return "\n".join(lines) + "\n"
+    record = result.get("record") or result
+    title = record.get("title") or record.get("id") or "record"
+    revision = record.get("revision")
+    lines = [f"# {safe_text(title)}", ""]
+    if revision is not None:
+        lines.append(f"Revision {revision}")
+    body = record.get("body") or record.get("statement") or record.get("rationale")
+    if body:
+        lines.extend(["", prose(body)])
+    impact = record.get("impact_on_plot")
+    if impact:
+        lines.extend(["", f"Impact on plot: {prose(impact)}"])
+    return "\n".join(lines).rstrip() + "\n"
+
+
 def run(args: argparse.Namespace) -> int:
     import sqlite3
 
@@ -631,6 +717,31 @@ def run(args: argparse.Namespace) -> int:
         if (command not in ("schema", "init", "restore", "zotero-restore", "ocr-status")
                 and args.project is None):
             args.project = _current_project()
+        # Normalize positional selectors without overriding an explicit revision mode.
+        if command in ("dossier", "claim", "decision", "sources"):
+            action = getattr(args, "action", None)
+            rid = getattr(args, "record_id", None)
+            flag = {"dossier": "dossier_id", "claim": "claim_id",
+                    "decision": "decision_id", "sources": "source_id"}[command]
+            if action == "list" and (rid is not None or getattr(args, flag, None) is not None):
+                raise ResearchError("The list verb takes no record ID")
+            # If action is a verb, keep it; if it looks like a record ID, shift.
+            if action in ("show", "inspect"):
+                if rid is None and getattr(args, flag, None) is None:
+                    raise ResearchError("show/inspect requires a record ID")
+                args.inspect = True
+            elif action is not None and action != "list":
+                if rid is not None:
+                    raise ResearchError("Choose list, show/inspect RECORD_ID, or one positional record ID")
+                rid = action
+                args.action = None
+                if not any(getattr(args, mode, None) for mode in
+                           ("update", "prepare", "diff", "history", "inspect", "revision")):
+                    args.inspect = True
+            if rid is not None:
+                if getattr(args, flag, None) not in (None, rid):
+                    raise ResearchError("Positional record ID conflicts with the named record ID")
+                setattr(args, flag, rid)
         if command == "ingest":
             if (args.resume and not args.checkpoint) or (not args.file and not args.resume and not args.discard_checkpoint):
                 print("[error] Supply --file, or --checkpoint PATH --resume, or --discard-checkpoint PATH", file=sys.stderr)
@@ -814,6 +925,22 @@ def run(args: argparse.Namespace) -> int:
                                                include_retracted=args.include_retracted)
         elif command == "review-manuscript":
             result = api.review_manuscript_links(args.project, args.manuscript, language=args.language)
+        elif command == "unlink-manuscript":
+            from .repository import ResearchConflictError
+
+            link_review = api.review_manuscript_links(args.project, args.manuscript)
+            if args.expected_snapshot is not None and link_review["snapshot"] != args.expected_snapshot:
+                raise ResearchConflictError("Research snapshot changed; reload before retracting")
+            row = next((item for item in link_review["links"] if item["link_id"] == args.link_id), None)
+            if row is None:
+                raise ResearchError("Unknown manuscript association for this manuscript")
+            expected_revision = args.expected_revision if args.expected_revision is not None else row["revision"]
+            result = api.retract_manuscript_link(
+                args.project, args.manuscript, args.link_id,
+                expected_project_id=link_review["project_id"],
+                expected_snapshot=link_review["snapshot"],
+                expected_revision=expected_revision,
+                reason=args.reason, actor=args.actor)
         elif command == "link-manuscript":
             if not args.allow_retention:
                 raise ResearchError("Explicit local retention permission is required (--allow-retention)")
@@ -874,7 +1001,7 @@ def run(args: argparse.Namespace) -> int:
                                           "old_quote": row["anchor"]["quote"],
                                           "new_quote": resolved["quote"],
                                           "candidate_lines": [resolved["start_line"]]}]}
-            elif not args.accept_moved:
+            elif not (args.accept_moved or args.accept_claim_updates):
                 movable = [row for row in link_review["links"]
                            if row["anchor_state"] in ("moved", "adjusted")
                            and (args.link_id is None or row["link_id"] == args.link_id)]
@@ -890,22 +1017,39 @@ def run(args: argparse.Namespace) -> int:
                 row = next((item for item in link_review["links"] if item["link_id"] == args.link_id), None)
                 if row is None:
                     raise ResearchError("Unknown manuscript association for this manuscript")
-                result = api.reanchor_manuscript_link(
-                    args.project, args.manuscript, args.link_id,
-                    expected_project_id=link_review["project_id"], expected_snapshot=link_review["snapshot"],
-                    expected_revision=row["revision"], expected_source_sha256=source_sha256,
-                    actor=args.actor, language=args.language,
-                    new_quote=args.new_quote, line=args.line, reason=args.reason)
+                claim_revision = row["claim_current_revision"] if args.accept_claim_updates and row["claim_changed"] else None
+                if args.accept_moved:
+                    result = api.reanchor_manuscript_link(
+                        args.project, args.manuscript, args.link_id,
+                        expected_project_id=link_review["project_id"], expected_snapshot=link_review["snapshot"],
+                        expected_revision=row["revision"], expected_source_sha256=source_sha256,
+                        actor=args.actor, language=args.language, new_claim_revision=claim_revision,
+                        new_quote=args.new_quote, line=args.line, reason=args.reason)
+                else:
+                    if claim_revision is None:
+                        raise ResearchError("No changed claim revision to accept for this association")
+                    result = api.reanchor_manuscript_claim_revision(
+                        args.project, args.manuscript, args.link_id,
+                        expected_project_id=link_review["project_id"], expected_snapshot=link_review["snapshot"],
+                        expected_revision=row["revision"], expected_source_sha256=source_sha256,
+                        new_claim_revision=claim_revision, actor=args.actor, reason=args.reason)
             else:
-                movable = [row for row in link_review["links"]
-                           if row["anchor_state"] in ("moved", "adjusted")]
+                candidates = [row for row in link_review["links"]
+                              if (args.accept_moved and row["anchor_state"] in ("moved", "adjusted"))
+                              or (args.accept_claim_updates and row["claim_changed"])]
                 accepted: list[dict[str, Any]] = []
                 skipped: list[dict[str, str]] = []
-                for row in movable:
+                batch_snapshot = link_review["snapshot"] if args.expected_snapshot is not None else None
+                for row in candidates:
                     outcome = _reconcile_outcome(args.project, args.manuscript, row, source_sha256,
-                                                 args.actor, args.language)
+                                                 args.actor, args.language, accept_moved=args.accept_moved,
+                                                 accept_claim_updates=args.accept_claim_updates, reason=args.reason,
+                                                 expected_project_id=link_review["project_id"] if batch_snapshot else None,
+                                                 expected_snapshot=batch_snapshot)
                     if outcome["ok"]:
                         accepted.append({"link_id": outcome["link_id"], "revision": outcome["revision"]})
+                        if batch_snapshot is not None:
+                            batch_snapshot = outcome["snapshot"]
                     else:
                         skipped.append({"link_id": outcome["link_id"], "reason": outcome["reason"]})
                 result = {"schema_version": "research-manuscript-reconcile-local/1",
@@ -1129,6 +1273,12 @@ def run(args: argparse.Namespace) -> int:
                 result = matrix
         else:
             result = api.audit(args.project)
+        if command in ("find-anchor", "link-manuscript", "manuscript-links", "review-manuscript",
+                       "reconcile-manuscript", "unlink-manuscript") and args.format != "json":
+            from .presentation import manuscript_report
+
+            print(manuscript_report(command, result, table=args.format == "table"), end="")
+            return 0
         if command in ("decision-impact", "review") and args.format != "json":
             from .presentation import editorial_report, print_report
 
@@ -1149,6 +1299,17 @@ def run(args: argparse.Namespace) -> int:
                 report = audit_report(result, markdown=markdown)
             print_report(report, pager=args.pager)
             return 1 if result.get("ok") is False else 0
+        if command in ("dossier", "claim", "decision") and getattr(args, "format", "json") == "text":
+            list_keys = ("dossiers", "claims", "decisions")
+            if isinstance(result, dict) and any(k in result for k in list_keys):
+                from .presentation import record_list_report
+
+                table = record_list_report(command, result)
+                if table is not None:
+                    print(table)
+                    return 0
+            print(_record_text(result))
+            return 0
         if command in ("dossier", "claim", "decision") and getattr(args, "format", "json") == "table":
             from .presentation import record_list_report
 
@@ -1166,6 +1327,12 @@ def run(args: argparse.Namespace) -> int:
         return 1 if result.get("ok") is False else 0
     except ResearchError as error:
         print(f"[error] {error}", file=sys.stderr)
-    except (OSError, ValidationError, UnicodeError, sqlite3.Error, ValueError):
-        print("[error] Research operation failed; check paths, permissions, schema and storage integrity", file=sys.stderr)
+    except OSError as error:
+        detail = f"{error.strerror or error}" if getattr(error, "strerror", None) else str(error)
+        path_hint = f" ({error.filename})" if getattr(error, "filename", None) else ""
+        print(f"[error] Research operation failed: {detail}{path_hint}", file=sys.stderr)
+        print("[error] Check paths, permissions, schema and storage integrity", file=sys.stderr)
+    except (ValidationError, UnicodeError, sqlite3.Error, ValueError) as error:
+        print(f"[error] Research operation failed: {error}", file=sys.stderr)
+        print("[error] Check paths, permissions, schema and storage integrity", file=sys.stderr)
     return 1

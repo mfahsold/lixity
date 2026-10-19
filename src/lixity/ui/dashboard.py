@@ -54,7 +54,7 @@ from .components import (
 )
 from .dimensions import style_dimensions
 from .dossier_images import image_limits_attribute
-from .heatmap import render_heatmap_panel, render_style_passport_panel
+from .heatmap import render_heatmap_panel, render_register_targets, render_style_passport_panel
 from .markers_panel import render_markers_panel
 from .modals import render_project_modals
 from .narration import (
@@ -85,6 +85,7 @@ _JS_FILES = (
     "component-layer.js",
     "tooltips.js",
     "interactions.js",
+    "register-settings.js",
     "dashboard.js",
     "zotero-results.js",
     "research-cards.js",
@@ -176,6 +177,7 @@ def render_dashboard(
     publication_error: str = "",
     project_token: str = "",
     manuscript_source_sha256: str = "",
+    register_settings: Mapping[str, Any] | None = None,
 ) -> str:
     """Renders the complete, deterministic single-file dashboard.
 
@@ -334,6 +336,7 @@ def render_dashboard(
         f'data-manuscript-links="{int(allowed_actions is not None and "research-manuscript-link" in allowed_actions)}" '
         f'data-image-limits="{image_limits_attribute()}" '
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
+        f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',
         '<div class="page">',
         *(('<div class="workspace-shell">',) if controls else ()),
         project_header(
@@ -564,6 +567,7 @@ def render_dashboard(
                 publication=publication,
                 publication_error=publication_error,
                 project_token=project_token,
+                register_settings=register_settings,
             )
         )
 
@@ -903,7 +907,7 @@ def render_dashboard(
     for idx, p in enumerate(paragraphs):
         by_chapter.setdefault(p.chapter_num, []).append((idx, p))
 
-    parts.append('<main id="chapters">')
+    parts.append('<main id="chapters" role="main" tabindex="-1">')
     for chapter in chapters:
         chapter_paras = by_chapter.get(chapter.num, [])
         has_flags = any(p.is_flagged for _, p in chapter_paras)
@@ -970,7 +974,7 @@ def render_dashboard(
                 parts.append(
                     f'<div class="ptext" id="p-{idx}" data-start="{p.start_line}" '
                     f'data-end="{p.end_line}" data-paragraph-sha256="{paragraph_identity(p)["paragraph_sha256"]}" '
-                    f'data-markers="{int(controls)}"><div class="ptext-inner">'
+                    f'data-markers="{int(controls)}">'
                 )
                 anchor = f"{line_label(labels, p)} · {dom_label} · {sev_label}"
                 stats = (
@@ -985,7 +989,7 @@ def render_dashboard(
                 # The fallback preserves the full offline report without JavaScript.
                 # JavaScript removes the inert fallback before lazy rendering.
                 parts.append(
-                    f'<noscript><p>{esc(p.text)}</p><details class="paragraph-values">'
+                    f'<noscript><div class="ptext-inner"><p>{esc(p.text)}</p><details class="paragraph-values">'
                     f"<summary>{L('paragraph_values')}</summary>"
                     f'<div class="anchor">{esc(anchor)}</div><div class="stats">{esc(stats)}</div></details>'
                 )
@@ -1001,8 +1005,7 @@ def render_dashboard(
                         f'data-placeholder="{esc(label(labels, "marker_note"), quote=True)}"></span>'
                         f"</div>"
                     )
-                parts.append("</noscript>")
-                parts.append("</div></div>")
+                parts.append("</div></noscript></div>")
         parts.append("</section>")
     parts.append("</main>")
     content_json = json.dumps(paragraph_content, ensure_ascii=False, separators=(",", ":"))
@@ -1299,6 +1302,7 @@ def render_dashboard(
         )
 
     # --- Work markers (editor-visible, set from the dashboard) -------
+    parts.append(render_register_targets(fingerprint, metrics, labels, language_key))
     parts.append(render_markers_panel(markers, chapters, labels, controls))
 
     # --- Chapter matrix ---------------------------------------------------

@@ -1,11 +1,10 @@
-"""Generate Markdown alternates for the HTML guides (``<page>.html.md``).
+"""Generate Markdown alternates for HTML guides and blog pages.
 
-Agents increasingly fetch Markdown directly instead of parsing HTML; appending
-``.md`` to a published URL is the convention documented by Snowflake and
-Mintlify. This script converts the ``<main class="guide">`` content of every
-guide into clean Markdown, deterministically and without new dependencies.
+The linked ``<page>.html.md`` alternates provide the same maintained content
+for readers and tools that consume Markdown. Convert the main content of each
+guide or blog page deterministically and without new dependencies.
 
-Run it after changing a guide; ``tests/test_guide_markdown.py`` fails while the
+Run it after changing a page; ``tests/test_guide_markdown.py`` fails while the
 committed files are outdated.
 """
 
@@ -19,6 +18,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GUIDES = ROOT / "docs" / "guides"
+BLOG = ROOT / "docs" / "blog"
 
 VOID_TAGS = {
     "area",
@@ -155,11 +155,11 @@ def _render_blocks(node: Node, out: list[str]) -> None:
             out.append("```\n" + code.strip("\n") + "\n```")
         elif child.tag == "table":
             rows: list[list[str]] = []
-            for row in child.children:
-                if not isinstance(row, Node) or row.tag != "tr":
+            for row in _walk(child):
+                if row.tag != "tr":
                     continue
                 cells = [
-                    _clean(_inline(cell))
+                    _clean(_inline(cell)).replace("|", r"\|")
                     for cell in row.children
                     if isinstance(cell, Node) and cell.tag in {"th", "td"}
                 ]
@@ -167,9 +167,10 @@ def _render_blocks(node: Node, out: list[str]) -> None:
                     rows.append(cells)
             if rows:
                 width = max(len(row) for row in rows)
-                out.append("| " + " | ".join(rows[0] + [""] * (width - len(rows[0]))) + " |")
-                out.append("| " + " | ".join(["---"] * width) + " |")
-                out.extend("| " + " | ".join(row + [""] * (width - len(row))) + " |" for row in rows[1:])
+                lines = ["| " + " | ".join(rows[0] + [""] * (width - len(rows[0]))) + " |",
+                         "| " + " | ".join(["---"] * width) + " |"]
+                lines.extend("| " + " | ".join(row + [""] * (width - len(row))) + " |" for row in rows[1:])
+                out.append("\n".join(lines))
         elif child.tag == "details":
             for part in child.children:
                 if isinstance(part, Node) and part.tag == "summary":
@@ -177,6 +178,7 @@ def _render_blocks(node: Node, out: list[str]) -> None:
                 elif isinstance(part, Node):
                     _render_blocks(part, out)
         elif child.tag == "figure":
+            out.extend(_inline(part) for part in _walk(child) if part.tag == "img")
             sources = [
                 grand.attrs.get("src", "")
                 for part in child.children
@@ -198,7 +200,7 @@ def _render_blocks(node: Node, out: list[str]) -> None:
 
 
 def guide_markdown(path: Path) -> str:
-    """Return the Markdown alternate for one guide page."""
+    """Return the main content of one guide or blog page as Markdown."""
     builder = _Builder()
     builder.feed(path.read_text(encoding="utf-8"))
     main = next((node for node in _walk(builder.root) if node.tag == "main"), None)
@@ -223,12 +225,12 @@ def _walk(node: Node):
 def build(check_only: bool = False) -> list[str]:
     """Generate all alternates; return outdated file names in check mode."""
     outdated: list[str] = []
-    for path in sorted(GUIDES.glob("*.html")):
+    for path in sorted([*GUIDES.glob("*.html"), *BLOG.glob("*.html")]):
         target = path.with_suffix(path.suffix + ".md")
         content = guide_markdown(path)
         current = target.read_text(encoding="utf-8") if target.is_file() else ""
         if current != content:
-            outdated.append(target.name)
+            outdated.append(str(target.relative_to(ROOT / "docs")))
             if not check_only:
                 target.write_text(content, encoding="utf-8")
     return outdated

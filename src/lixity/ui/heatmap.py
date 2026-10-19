@@ -40,6 +40,36 @@ FEATURE_HELP_KEYS: dict[str, str] = {
 }
 
 
+def render_register_targets(
+    fingerprint: StyleFingerprint | None, metrics: Any | None,
+    labels: Mapping[str, str] | None, language_key: str,
+) -> str:
+    """Author ranges are descriptive comparisons, independent of statistical z."""
+    if fingerprint is None or not fingerprint.register_targets or metrics is None:
+        return ""
+    titles = {chapter.num: chapter.title for chapter in metrics.chapters}
+    features = {name: label(labels, key) for name, key, _ in FEATURES}
+    parts = ['<section class="panel" id="register-targets">',
+             f'<h2>{esc(label(labels, "register_title"))}</h2>',
+             f'<p class="panel-guide">{esc(label(labels, "register_hint"))}</p>',
+             '<div class="table-wrap"><table><thead><tr>']
+    parts.extend(f'<th scope="col">{esc(label(labels, key))}</th>' for key in (
+        "chapter", "register_name", "register_target", "register_lower", "register_upper", "scene_value", "status"))
+    parts.append('</tr></thead><tbody>')
+    for number, targets in sorted(fingerprint.register_targets.items()):
+        register = fingerprint.chapter_registers[number]
+        for feature, comparison in targets.items():
+            parts.append(f'<tr data-register="{esc(register)}">'
+                         f'<th scope="row">{number}. {esc(titles.get(number, ""))}</th>'
+                         f'<td>{esc(register)}</td><td>{esc(features.get(feature, feature))}</td>')
+            for key in ("lower", "upper", "value"):
+                value = comparison[key]
+                parts.append(f'<td>{format_num(value, language_key, 2) if value is not None else "–"}</td>')
+            parts.append(f'<td>{esc(label(labels, "scene_" + comparison["position"]))}</td></tr>')
+    parts.append('</tbody></table></div></section>')
+    return "".join(parts)
+
+
 def render_heatmap_panel(
     fingerprint: StyleFingerprint | None,
     metrics: Any | None,
@@ -105,7 +135,13 @@ def render_heatmap_panel(
         if chapter.num not in fingerprint.z_scores:
             continue
         confirmed = set(fingerprint.fdr_flagged.get(chapter.num, []))
-        parts.append(f'<tr data-fdr-count="{len(confirmed)}"><td class="ch">{chapter.num}. {esc(chapter.title)}</td>')
+        register = fingerprint.chapter_registers.get(chapter.num)
+        register_badge = (
+            f' <span class="badge badge-register" title="{esc(register)}">{esc(register)}</span>'
+            if register else ""
+        )
+        parts.append(f'<tr data-fdr-count="{len(confirmed)}" data-register="{esc(register or "")}">'
+                     f'<td class="ch">{chapter.num}. {esc(chapter.title)}{register_badge}</td>')
         for field_name, label_key, _unit in FEATURES:
             z = fingerprint.z_scores[chapter.num].get(field_name)
             if z is None:

@@ -143,14 +143,15 @@ class ProjectRoutesMixin(ResponseMixin):
         try:
             root = self.get_author_project_root()
             current_token = project_settings_token(root, self.source_input)
-            if ("publication" in payload or "project_token" in payload) and (
+            if any(key in payload for key in ("publication", "register_profiles", "chapter_registers", "project_token")) and (
                     not current_token or payload.get("project_token") != current_token):
                 self._json({"ok": False, "message": "The selected project or its settings changed; reload before saving"}, 409)
                 return
             title = validate_project_title(payload["title"]) or None if "title" in payload else self.title
             title_custom = title is not None if "title" in payload else self.title_custom
             thresholds = replace(self.thresholds, **apply_config_to_thresholds(payload))
-            changes: dict[str, Any] = {key: payload[key] for key in ("title", "author_name", "publication") if key in payload}
+            changes: dict[str, Any] = {key: payload[key] for key in (
+                "title", "author_name", "publication", "register_profiles", "chapter_registers") if key in payload}
             if root is None:
                 changes.pop("title", None)
             prepared = prepare_project_settings(root, changes) if changes else None

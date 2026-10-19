@@ -1,13 +1,58 @@
 """Public Pages staging excludes local planning and private working material."""
 
 import json
+import struct
 import tempfile
 import unittest
 import xml.etree.ElementTree as ET
+from datetime import date, datetime, timezone
 from html.parser import HTMLParser
 from pathlib import Path
+from urllib.parse import urljoin
 
 from scripts.stage_pages import stage
+
+SITE = "https://mfahsold.github.io/lixity/"
+
+
+class PageHead(HTMLParser):
+    """Inspect actual head declarations, excluding text in dashboard examples."""
+
+    def __init__(self):
+        super().__init__(convert_charrefs=True)
+        self.in_head = False
+        self.in_json = False
+        self.links = []
+        self.meta = {}
+        self.structured = []
+        self.json_parts = []
+
+    def handle_starttag(self, tag, attrs):
+        values = dict(attrs)
+        if tag == "head":
+            self.in_head = True
+        if not self.in_head:
+            return
+        if tag == "link":
+            self.links.append(values)
+        elif tag == "meta":
+            key = values.get("property") or values.get("name")
+            if key:
+                self.meta.setdefault(key, []).append(values.get("content", ""))
+        elif tag == "script" and values.get("type") == "application/ld+json":
+            self.in_json = True
+            self.json_parts = []
+
+    def handle_data(self, data):
+        if self.in_json:
+            self.json_parts.append(data)
+
+    def handle_endtag(self, tag):
+        if tag == "script" and self.in_json:
+            self.structured.append(json.loads("".join(self.json_parts)))
+            self.in_json = False
+        elif tag == "head":
+            self.in_head = False
 
 
 class TestPagesStaging(unittest.TestCase):
@@ -54,6 +99,7 @@ class TestPagesStaging(unittest.TestCase):
             root = Path(directory)
             docs = root / "docs"
             public = ("index.html", "USAGE.md", "guides/install.html", "assets/site.css",
+                      "blog/article.html", "blog/article.html.md",
                       "research/USAGE.md", "research/examples/synthetic-source.txt",
                       "screenshots/public.png", "sitemap.xml", ".nojekyll",
                       "examples/novel.html", "examples/novel-report.pdf")
@@ -61,6 +107,7 @@ class TestPagesStaging(unittest.TestCase):
                        "GROWTH_REVIEW.md", "SECURITY_REVIEW.md",
                        ".planning/secret.md", "research/.scratch/session.md",
                        "screenshots/local.log", "private/source.txt")
+            private += ("blog/session-notes.md",)
             for name in public + private:
                 path = docs / name
                 path.parent.mkdir(parents=True, exist_ok=True)
@@ -91,45 +138,62 @@ class TestPagesStaging(unittest.TestCase):
                 stage(docs, root / "site")
 
     def test_published_html_head_contract(self):
-        import re as _re
-
         docs = Path(__file__).resolve().parents[1] / "docs"
         with tempfile.TemporaryDirectory() as directory:
             output = Path(directory) / "site"
             stage(docs, output)
             pages = sorted(output.rglob("*.html"))
             self.assertTrue(pages, "Staged pages expected")
+            sitemap = {node.find("{*}loc").text: node.find("{*}lastmod").text
+                       for node in ET.parse(output / "sitemap.xml").getroot()}  # noqa: S314
             for page in pages:
-                text = page.read_text(encoding="utf-8")
                 relative = page.relative_to(output).as_posix()
-                for pattern, label in (
-                    (r'<meta name="description" content="[^"]+"/>', "description"),
-                    (r'<link rel="canonical" href="https://[^"]+"/>', "canonical"),
-                    (r'<meta property="og:title" content="[^"]+"/>', "og:title"),
-                    (r'<meta property="og:description" content="[^"]+"/>', "og:description"),
-                    (r'<meta property="og:url" content="https://[^"]+"/>', "og:url"),
-                    (r'<meta property="og:image" content="https://[^"]+"/>', "og:image"),
-                    (r'<meta name="twitter:card" content="summary_large_image"/>', "twitter:card"),
-                    (r'<meta name="twitter:image" content="https://[^"]+"/>', "twitter:image"),
-                ):
-                    self.assertRegex(text, pattern, f"{relative}: {label}")
-                blocks = _re.findall(
-                    r'<script type="application/ld\+json">\s*(\{.*?\})\s*</script>', text, _re.DOTALL
+                head = PageHead()
+                head.feed(page.read_text(encoding="utf-8"))
+                canonical = SITE + ("" if relative == "index.html" else relative)
+                self.assertEqual([item["href"] for item in head.links if item.get("rel") == "canonical"], [canonical])
+                for key in ("description", "og:title", "og:description", "og:url", "og:image",
+                            "og:image:width", "og:image:height", "og:image:alt", "twitter:title",
+                            "twitter:description", "twitter:image", "twitter:image:alt", "twitter:card"):
+                    self.assertEqual(len(head.meta.get(key, [])), 1, f"{relative}: one {key}")
+                    self.assertTrue(head.meta[key][0].strip(), f"{relative}: nonempty {key}")
+                self.assertEqual(head.meta["og:url"], [canonical])
+                self.assertEqual(head.meta["twitter:card"], ["summary_large_image"])
+                image = head.meta["og:image"][0]
+                self.assertTrue(image.startswith(SITE), f"{relative}: hosted preview image")
+                self.assertEqual(head.meta["twitter:image"], [image])
+                image_bytes = (output / image.removeprefix(SITE)).read_bytes()
+                self.assertEqual(image_bytes[:8], b"\x89PNG\r\n\x1a\n")
+                self.assertEqual(
+                    (int(head.meta["og:image:width"][0]), int(head.meta["og:image:height"][0])),
+                    struct.unpack(">II", image_bytes[16:24]), f"{relative}: preview dimensions",
                 )
-                self.assertTrue(blocks, f"{relative}: JSON-LD")
-                types = [json.loads(block).get("@type") for block in blocks]
-                # The site root presents the software; the blog index is a
-                # collection and every guide or article page is an article.
                 expected = {
                     "index.html": "SoftwareApplication",
                     "blog/index.html": "Blog",
                 }.get(relative, "TechArticle")
-                self.assertTrue(
-                    any(
-                        expected == item or (isinstance(item, list) and expected in item)
-                        for item in types
-                    ),
-                    f"{relative}: JSON-LD {expected}",
-                )
-            sitemap_text = (output / "sitemap.xml").read_text(encoding="utf-8")
-            self.assertNotRegex(sitemap_text, r"<lastmod>(?!\d{4}-\d{2}-\d{2})")
+                entities = [item for item in head.structured
+                            if expected in ([item.get("@type")] if isinstance(item.get("@type"), str) else item.get("@type", []))]
+                self.assertEqual(len(entities), 1, f"{relative}: one primary {expected}")
+                entity = entities[0]
+                self.assertEqual(entity["@context"], "https://schema.org")
+                self.assertEqual(entity["url"], canonical)
+                self.assertTrue(entity.get("headline") or entity.get("name"))
+                if expected == "TechArticle":
+                    self.assertEqual(entity["mainEntityOfPage"], canonical)
+                    self.assertEqual(entity["image"]["url"], image)
+                    self.assertEqual((entity["image"]["width"], entity["image"]["height"]),
+                                     struct.unpack(">II", image_bytes[16:24]))
+                modified = entity.get("dateModified")
+                if modified:
+                    self.assertEqual(sitemap[canonical], modified)
+                    self.assertLessEqual(date.fromisoformat(modified), datetime.now(timezone.utc).date())
+                if entity.get("datePublished"):
+                    self.assertLessEqual(date.fromisoformat(entity["datePublished"]), date.fromisoformat(modified))
+                self.assertLessEqual(date.fromisoformat(sitemap[canonical]), datetime.now(timezone.utc).date())
+                if relative.startswith(("guides/", "blog/")):
+                    alternates = [link["href"] for link in head.links
+                                  if link.get("rel") == "alternate" and link.get("type") == "text/markdown"]
+                    self.assertEqual(alternates, [page.name + ".md"])
+                    self.assertTrue((page.parent / alternates[0]).is_file())
+                    self.assertEqual(urljoin(canonical, alternates[0]), canonical + ".md")

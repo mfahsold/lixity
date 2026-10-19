@@ -2,7 +2,7 @@
 
 Lixity describes patterns in the manuscript you provide. Its style reference compares chapters with that manuscript's own baseline. A signal is a reason to inspect a passage in context; it is not an objective quality score or an instruction to rewrite it.
 
-Maintained by the Lixity project · Updated 10 October 2026
+Maintained by the Lixity project · Updated 19 October 2026
 
 ## What does consistency measure?
 
@@ -23,6 +23,14 @@ For API compatibility, style JSON schema version 4 retains the historical numeri
 The Scenes & style registers view measures scenes separately. Assign registers and target ranges in project settings; each register has its own manuscript-only median. Counts and approximate standard errors show the data behind the values. Targets are your choices, not automatic writing rules. [Set up scene comparisons](../USAGE.md#scene-registers-and-project-targets).
 
 ## How much text is enough?
+
+| Signal | Implementation guard | Interpretation |
+| --- | --- | --- |
+| Style reference | At least the configured measurable chapter count; default 2 | A technical floor, not proof of statistical reliability. Several substantive chapters are more informative. |
+| HD-D, MTLD, Maas a² | At least 100 tokens | Shorter inputs return unavailable results. Length robustness does not eliminate every sample effect. |
+| MATTR | A 50-token window | Compare results only with consistent tokenization and settings. |
+| Showing/telling ranking | At least three chapters with distinguishable balance scores | Otherwise the ranking lists are empty; numeric zero fallback scores do not establish artistic equivalence. |
+| Readability | Language-specific formula and count heuristics | Formula estimates describe surface structure; they do not determine an individual reader's understanding. |
 
 A token floor is an implementation policy, not a quality threshold. Maas remains defined for repetition: 100 repetitions of one token give `maas_a2 = 0.5`. Guiraud `V/√N` still depends on length and corpus composition. Flesch-family values can fall outside 0–100; they estimate surface structure, not reader understanding.
 
@@ -51,6 +59,16 @@ For a scene or narrative-voice comparison, choose passages with comparable langu
 ## Signals and questions for review
 
 Use this reference to connect a measurement with a question to investigate. None of these signals establishes a writing defect.
+
+| Linguistic Feature | Calculation & Signal | Editorial Role & Application | Context to Check |
+| --- | --- | --- | --- |
+| **Sentence Rhythm & Length Tiers** | ASL, rhythm CV, staccato (≤6w), very long (>25w) | **Pacing:** Sentence-length variation can draw attention to shifts between action, dialogue and reflection. | Low or high CV and changes in long-sentence frequency invite a read of the passage; neither implies good or bad prose. |
+| **Lexical Diversity** | Hypergeometric HD-D (McCarthy & Jarvis), MTLD, Yule's K | **Vocabulary Pattern:** These measures reduce some length sensitivity compared with raw TTR, subject to token floors and corpus context. | A later change may prompt a look at repetition, dialogue mix or topic shifts; it does not identify author fatigue or a quality problem. |
+| **Tense Continuity & Friction** | Present, past, friction rating 0–3 | **Timeline & Perspective:** Heuristic labels help locate tense changes at paragraph scale. | Higher friction may merit a check of quotation, dialogue, flashback or deliberate perspective shifts before treating it as an error. |
+| **Perception & Exposition Patterns** | Perception verbs, passive voice, nominal style | **Register:** Word-pattern counts highlight possible changes in viewpoint or exposition. | Read passages in context; these constructions can be deliberate and their counts do not measure immersion. Densities count matches per 1,000 words, not percentages; a few hits in a very short paragraph can produce a large value. Default nominal-suffix counts exclude known function words. |
+| **FDR Heatmap** | Noise-aware z* shrinkage, Benjamini-Hochberg (●), Cliff's δ | **Statistical Review:** A dot marks a cell selected by the configured FDR procedure. Its probability model has not been calibrated for manuscript comparisons; effect size adds context. | Read flagged passages in context; a flag neither proves a defect nor calls for a rewrite. Unflagged passages can still matter artistically. |
+| **Structural & Drift Diagnostics** | Guarded-cost changepoints, Mann-Kendall τ, Wasserstein-KS | **Structure Review:** These exploratory outputs suggest passages to inspect. They do not establish narrative boundaries or statistically confirmed shifts; see the [stability notes](https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md#structural-diagnostics). | A change point can prompt review of scene, character or chapter context; it does not identify an author handover or its cause. Structural trends need at least three chapters. Show/tell comparison also needs three chapters with differing signals; an unavailable comparison does not mean the app has failed. |
+| **Persistent Work Markers** | <!-- LIXITY-MARKER id="..." kind="pruefen" --> | **Traceable Editorial Annotations:** Notes remain anchored near the target paragraph in Markdown. Export treatment is controlled by the project adapter. | Content hashes identify the originally marked paragraph; review anchors after manuscript edits. |
 
 ## Does FDR make a flagged passage objectively wrong?
 

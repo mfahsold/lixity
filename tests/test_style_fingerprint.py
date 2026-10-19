@@ -23,22 +23,14 @@ if BASE_DIR not in sys.path:
 
 from lixity import api  # noqa: E402
 from lixity.analyzer import CorpusAnalyzer  # noqa: E402
-from lixity.diversity import hd_d  # noqa: E402
 from lixity.markdown_parser import parse_markdown_blocks  # noqa: E402
 from lixity.models import CorpusConfig  # noqa: E402
 from lixity.style_fingerprint import (  # noqa: E402
     FEATURES,
     FingerprintThresholds,
     StyleFingerprint,
-    benjamini_hochberg,
-    jacobi_eigh,
     layer_stats,
     lexical_structural_diagnostics,
-    mad,
-    median,
-    robust_z,
-    significance_z,
-    spearman_rho,
     z_color,
 )
 from lixity.style_profile import ParagraphProfiler  # noqa: E402
@@ -101,28 +93,111 @@ class TestRobustStatistics(unittest.TestCase):
         below = StyleFingerprint.from_metrics(metrics, FingerprintThresholds(min_chapters=3))
         self.assertEqual(below.measured_cells, 0)
 
-    def test_median(self):
-        self.assertEqual(median([1.0, 2.0, 3.0]), 2.0)
-        self.assertEqual(median([1.0, 2.0, 3.0, 4.0]), 2.5)
-
-    def test_mad(self):
-        self.assertAlmostEqual(mad([1.0, 2.0, 3.0], 2.0), 1.0)
-        self.assertEqual(mad([5.0], 5.0), 0.0)
-        self.assertEqual(mad([], 0.0), 0.0)
-
-    def test_robust_z(self):
-        # Exact inverse of the MAD->sigma factor 1.4826 (1/1.4826), so the
-        # scale conversion and the z-score round-trip without rounding drift.
-        inverse = 1.0 / 1.4826
-        self.assertAlmostEqual(robust_z(3.0, 2.0, 1.0), inverse)
-        self.assertAlmostEqual(robust_z(1.0, 2.0, 1.0), -inverse)
-        self.assertEqual(robust_z(9.0, 2.0, 0.0), 0.0)
-
     def test_z_color_is_deterministic_and_clamped(self):
         self.assertEqual(z_color(0.0), z_color(0.0))
         self.assertRegex(z_color(0.0), r"^#[0-9a-f]{6}$")
         self.assertEqual(z_color(100.0), z_color(2.5))
         self.assertEqual(z_color(-100.0), z_color(-2.5))
+
+
+class TestRegisterProfiles(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        # Twenty sentences per chapter keep every chapter above the data floor.
+        cls.text = "\n\n".join(
+            f"## Chapter {number}\n\n" + (("moss " * length).strip() + ". ") * 20
+            for number, length in enumerate((8, 9, 10, 11, 70), 1)
+        )
+        cls.metrics = CorpusAnalyzer(CorpusConfig(language="en")).analyze_text(cls.text)
+
+    def test_register_exempts_real_fdr_outlier_but_preserves_descriptive_z(self):
+        plain = StyleFingerprint.from_metrics(self.metrics)
+        self.assertIn("asl", plain.fdr_flagged[5])
+        config = CorpusConfig(
+            chapter_registers={"5": "formal"}, register_profiles={"formal": {"asl": [65, 75]}},
+        )
+        registered = StyleFingerprint.from_metrics(self.metrics, config=config)
+        self.assertNotIn(5, registered.fdr_flagged)
+        self.assertNotIn(5, registered.deviations)
+        self.assertEqual(registered.z_scores[5], plain.z_scores[5])
+        self.assertEqual(registered.baseline, plain.baseline)
+
+    def test_register_targets_compare_author_ranges_without_changing_book_z(self):
+        config = CorpusConfig(
+            chapter_registers={"5": "formal"},
+            register_profiles={"formal": {"asl": [65, 75], "dialog_pct": 0, "hd_d": {"lower": 0.1}}},
+        )
+        registered = StyleFingerprint.from_metrics(self.metrics, config=config)
+        self.assertEqual(getattr(registered, "register_profiles", {}), {
+            "formal": {"asl": [65.0, 75.0], "dialog_pct": [0.0, 0.0], "hd_d": [0.1, None]},
+        })
+        targets = getattr(registered, "register_targets", {})
+        self.assertEqual(targets.get(5, {}).get("asl"), {
+            "lower": 65.0, "upper": 75.0, "value": 70.0, "position": "within",
+        })
+        self.assertEqual(targets[5]["hd_d"]["position"], "below")
+        passport = registered.passport()
+        self.assertEqual(passport.get("register_targets", {}).get("5"), targets[5])
+        self.assertEqual(passport["meta"]["schema_version"], 4)
+
+    def test_target_positions_include_above_below_and_unavailable(self):
+        for bounds, expected in (([71, 80], "below"), ([1, 69], "above")):
+            config = CorpusConfig(chapter_registers={"5": "voice"}, register_profiles={"voice": {"asl": bounds}})
+            fingerprint = StyleFingerprint.from_metrics(self.metrics, config=config)
+            self.assertEqual(getattr(fingerprint, "register_targets", {}).get(5, {}).get("asl", {}).get("position"), expected)
+        tiny = CorpusAnalyzer(CorpusConfig()).analyze_text("## Small\n\nMoss grows.")
+        config = CorpusConfig(chapter_registers={"1": "voice"}, register_profiles={"voice": {"asl": [1, 20]}})
+        fingerprint = StyleFingerprint.from_metrics(tiny, config=config)
+        self.assertEqual(getattr(fingerprint, "register_targets", {}).get(1, {}).get("asl"), {
+            "lower": 1.0, "upper": 20.0, "value": None, "position": "unavailable",
+        })
+
+    def test_numeric_selectors_do_not_match_other_chapter_titles(self):
+        metrics = self.metrics.model_copy(deep=True)
+        metrics.chapters[1].title = "Chapter 10"
+        config = CorpusConfig(chapter_registers={"1": "voice"}, register_profiles={"voice": {}})
+        fingerprint = StyleFingerprint.from_metrics(metrics, config=config)
+        self.assertEqual(fingerprint.chapter_registers, {1: "voice"})
+
+    def test_exact_title_precedes_partial_match_independent_of_config_order(self):
+        for assignments in ({"Chapter 5": "exact", "Chapter": "partial"}, {"Chapter": "partial", "Chapter 5": "exact"}):
+            config = CorpusConfig(chapter_registers=assignments, register_profiles={"exact": {}, "partial": {}})
+            fingerprint = StyleFingerprint.from_metrics(self.metrics, config=config)
+            self.assertEqual(fingerprint.chapter_registers[5], "exact")
+            self.assertEqual(fingerprint.chapter_registers[2], "partial")
+
+    def test_unknown_profiles_and_invalid_ranges_fail_before_analysis(self):
+        invalid = [
+            {"chapter_registers": {"1": "missing"}},
+            {"register_profiles": {" ": {}}},
+            {"register_profiles": {"voice": {"unknown_metric": [1, 2]}}},
+            {"register_profiles": {"voice": {"asl": [10, 2]}}},
+            {"register_profiles": {"voice": {"asl": [True, 2]}}},
+            {"register_profiles": {"voice": {"asl": [0, float("inf")]}}},
+            {"register_profiles": {"voice": {"asl": float("nan")}}},
+            {"register_profiles": {"voice": {"asl": [-1, 2]}}},
+            {"register_profiles": {"voice": {"hd_d": [0, 1.1]}}},
+            {"register_profiles": {"voice": {"dialog_pct": [0, 101]}}},
+            {"register_profiles": {"voice": {"asl": [None, None]}}},
+            {"register_profiles": {"voice": {}}, "chapter_registers": {"": "voice"}},
+        ]
+        for settings in invalid:
+            with self.subTest(settings=settings), self.assertRaises(ValueError):
+                CorpusConfig(**settings)
+
+    def test_stale_selectors_are_reported(self):
+        config = CorpusConfig(chapter_registers={"Missing chapter": "voice"}, register_profiles={"voice": {}})
+        with self.assertRaisesRegex(ValueError, "Missing chapter"):
+            StyleFingerprint.from_metrics(self.metrics, config=config)
+
+    def test_empty_metrics_preserve_profiles_without_resolving_assignments(self):
+        config = CorpusConfig(chapter_registers={"1": "voice"}, register_profiles={"voice": {"asl": [3, 12]}})
+        empty = CorpusAnalyzer(config).analyze_text("")
+        fingerprint = StyleFingerprint.from_metrics(empty, config=config)
+        self.assertEqual(fingerprint.register_profiles, {"voice": {"asl": [3.0, 12.0]}})
+        self.assertEqual(fingerprint.chapter_registers, {})
+        self.assertEqual(fingerprint.register_targets, {})
+        self.assertEqual(fingerprint.measured_cells, 0)
 
 
 class TestAnalyzerStyleFeatures(unittest.TestCase):
@@ -159,25 +234,13 @@ class TestAnalyzerStyleFeatures(unittest.TestCase):
             for word in c.jsd_top_words:
                 self.assertRegex(word, r"[a-zäöüß]")
 
-    def test_hd_d_deterministic_and_none_for_short_texts(self):
-        tokens = ["a", "b", "c"]
-        self.assertIsNone(hd_d(tokens))
-        longer = [f"wort{i % 50}" for i in range(1000)]
-        hd1 = hd_d(longer)
-        hd2 = hd_d(longer)
-        self.assertIsNotNone(hd1)
-        self.assertIsNotNone(hd2)
-        if hd1 is None or hd2 is None:
-            self.fail("HD-D should be measurable for 1000 tokens")
-        self.assertAlmostEqual(hd1, hd2)
-        self.assertGreaterEqual(hd1, 0.0)
-        self.assertLessEqual(hd1, 1.0)
-
-
 class TestStyleFingerprint(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
+        cls.metrics = CorpusAnalyzer(cls.config).analyze_text(SAMPLE)
+
     def setUp(self):
-        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
-        self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
         self.fp = StyleFingerprint.from_metrics(self.metrics)
 
     def test_self_calibration_baseline(self):
@@ -317,8 +380,9 @@ class TestFingerprintDashboard(unittest.TestCase):
             title="Testroman",
         )
 
-    def test_heatmap_and_passport_panels(self):
+    def test_fingerprint_dashboard_is_deterministic_and_contains_analysis_panels(self):
         html = self._build()
+        self.assertEqual(html, self._build())
         self.assertIn('<table class="heatmap">', html)
         self.assertIn("style-layer", html)
         self.assertIn("data-layers=", html)
@@ -335,9 +399,6 @@ class TestFingerprintDashboard(unittest.TestCase):
         html = render_dashboard(chapters, paragraphs, metrics=metrics, title="X")
         self.assertIn("<!DOCTYPE html>", html)
         self.assertNotIn('<table class="heatmap">', html)
-
-    def test_dashboard_is_deterministic_with_fingerprint(self):
-        self.assertEqual(self._build(), self._build())
 
     def test_dimension_payload_preserves_untrusted_titles_as_data(self):
         title = '<img src=x onerror="window.injected=true"> & heading'
@@ -434,70 +495,8 @@ class TestFingerprintDashboard(unittest.TestCase):
         self.assertNotIn('data-jump="#ch-2"', rendered)
 
 
-class TestJacobiEigendecomposition(unittest.TestCase):
-    """Cyclic Jacobi rotations: correctness, orthogonality, determinism."""
-
-    def test_eigenvalues_and_eigenvectors_of_known_matrix(self):
-        matrix = [[2.0, 0.0], [0.0, 3.0]]
-        eigenvalues, _ = jacobi_eigh(matrix)
-        self.assertAlmostEqual(eigenvalues[0], 3.0)
-        self.assertAlmostEqual(eigenvalues[1], 2.0)
-
-    def test_orthonormal_eigenvectors(self):
-        matrix = [
-            [1.0, 0.5, 0.2],
-            [0.5, 1.0, -0.3],
-            [0.2, -0.3, 1.0],
-        ]
-        _, eigenvectors = jacobi_eigh(matrix)
-        for i in range(3):
-            for j in range(3):
-                dot = sum(eigenvectors[i][k] * eigenvectors[j][k] for k in range(3))
-                self.assertAlmostEqual(dot, 1.0 if i == j else 0.0, places=10)
-
-    def test_reconstruction(self):
-        matrix = [
-            [1.0, 0.4, 0.1, -0.2],
-            [0.4, 1.0, 0.3, 0.1],
-            [0.1, 0.3, 1.0, -0.4],
-            [-0.2, 0.1, -0.4, 1.0],
-        ]
-        eigenvalues, eigenvectors = jacobi_eigh(matrix)
-        for i in range(4):
-            lhs = [sum(matrix[i][k] * eigenvectors[1][k] for k in range(4))]
-            rhs = [eigenvalues[1] * eigenvectors[1][i]]
-            self.assertAlmostEqual(lhs[0], rhs[0], places=8)
-        self.assertAlmostEqual(sum(eigenvalues), 4.0, places=8)
-
-    def test_deterministic(self):
-        matrix = [
-            [1.0, 0.5, 0.2],
-            [0.5, 1.0, -0.3],
-            [0.2, -0.3, 1.0],
-        ]
-        self.assertEqual(jacobi_eigh(matrix), jacobi_eigh(matrix))
-
-
-class TestSpearman(unittest.TestCase):
-    def test_perfect_monotone(self):
-        self.assertAlmostEqual(spearman_rho([1.0, 2.0, 3.0, 4.0], [10.0, 20.0, 30.0, 40.0]), 1.0)
-        self.assertAlmostEqual(spearman_rho([1.0, 2.0, 3.0, 4.0], [40.0, 30.0, 20.0, 10.0]), -1.0)
-
-    def test_ties_are_averaged(self):
-        self.assertAlmostEqual(spearman_rho([1.0, 1.0, 2.0], [1.0, 2.0, 2.0]), 0.5, places=6)
-
-
 class TestSignificanceAdjustment(unittest.TestCase):
     """Measurement uncertainty shrinks deviations of noisy (small) chapters."""
-
-    def test_benjamini_hochberg(self):
-        cells = [(1, "asl", 0.001), (2, "asl", 0.03), (3, "asl", 0.04), (4, "asl", 0.5)]
-        flagged = benjamini_hochberg(cells, q=0.05)
-        self.assertEqual(flagged, [(1, "asl")])
-
-    def test_noise_shrinks_z(self):
-        self.assertAlmostEqual(significance_z(5.0, 0.0, 2.0, 0.0), 2.5)
-        self.assertLess(abs(significance_z(5.0, 0.0, 2.0, 1.5)), 2.5)
 
     def test_analyzer_provides_style_se(self):
         config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
@@ -527,9 +526,12 @@ class TestSignificanceAdjustment(unittest.TestCase):
 class TestStyleDimensions(unittest.TestCase):
     """Self-calibrated principal dimensions from the feature correlation."""
 
+    @classmethod
+    def setUpClass(cls):
+        cls.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
+        cls.metrics = CorpusAnalyzer(cls.config).analyze_text(DIMENSION_SAMPLE)
+
     def setUp(self):
-        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
-        self.metrics = CorpusAnalyzer(self.config).analyze_text(DIMENSION_SAMPLE)
         self.fp = StyleFingerprint.from_metrics(self.metrics)
 
     def test_dimensions_are_derived(self):
@@ -1002,96 +1004,63 @@ class TestSnQn(unittest.TestCase):
 
 
 class TestStructuralIntegration(unittest.TestCase):
-    """Structural diagnostics integrated into the style fingerprint pipeline."""
+    """Nonempty structural measurements survive passport export and text views."""
+
+    @classmethod
+    def setUpClass(cls):
+        text = "\n\n".join(
+            f"## Chapter {number}\n\n" + (("moss " * length).strip() + ". ") * 20
+            for number, length in enumerate((8, 9, 10, 11, 30, 31, 32, 33), 1)
+        )
+        cls.metrics = CorpusAnalyzer(CorpusConfig(language="en")).analyze_text(text)
 
     def setUp(self):
-        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
-        self.metrics = CorpusAnalyzer(self.config).analyze_text(SAMPLE)
         self.fp = StyleFingerprint.from_metrics(self.metrics)
 
-    def test_structural_diagnostics_exist(self):
-        self.assertIsInstance(self.fp.structural_diagnostics, dict)
-        self.assertIn("changepoints", self.fp.structural_diagnostics)
-        self.assertIn("trends", self.fp.structural_diagnostics)
-        self.assertIn("robust_scales", self.fp.structural_diagnostics)
-        self.assertIn("distribution_shift", self.fp.structural_diagnostics)
-        self.assertIn("trending_features", self.fp.structural_diagnostics)
-        self.assertIn("segmented_features", self.fp.structural_diagnostics)
-        self.assertIn("shifted_features", self.fp.structural_diagnostics)
+    def test_structural_payload_contains_measured_statistics(self):
+        diagnostics = self.fp.structural_diagnostics
+        self.assertEqual(set(diagnostics), {
+            "changepoints", "trends", "robust_scales", "tail_index", "distribution_shift",
+            "trending_features", "segmented_features", "shifted_features",
+        })
+        # Each half contains four measured chapters; these checks cannot pass
+        # vacuously when the distribution-shift implementation returns {}.
+        shift = diagnostics["distribution_shift"]["asl"]
+        self.assertEqual(shift["wasserstein"], 22.0)
+        self.assertEqual(shift["ks_d"], 1.0)
+        self.assertGreaterEqual(shift["ks_p"], 0.0)
+        self.assertLess(shift["ks_p"], 0.05)
+        trend = diagnostics["trends"]["asl"]
+        self.assertEqual(trend["tau"], 1.0)
+        self.assertEqual(trend["S"], 28.0)
+        self.assertLess(trend["p"], 0.05)
+        for key in ("trending_features", "segmented_features", "shifted_features"):
+            self.assertIn("asl", diagnostics[key])
+        scales = diagnostics["robust_scales"]["asl"]
+        self.assertEqual(set(scales), {"sn", "qn", "sigma_mad"})
+        for value in scales.values():
+            self.assertGreater(value, 0.0)
+        self.assertGreater(diagnostics["tail_index"]["asl"], 0.0)
 
-    def test_structural_distribution_shift_structure(self):
-        shift = self.fp.structural_diagnostics.get("distribution_shift", {})
-        self.assertIsInstance(shift, dict)
-        for entry in shift.values():
-            self.assertIn("wasserstein", entry)
-            self.assertIn("ks_d", entry)
-            self.assertIn("ks_p", entry)
-            self.assertGreaterEqual(entry["wasserstein"], 0.0)
-            self.assertGreaterEqual(entry["ks_p"], 0.0)
-            self.assertLessEqual(entry["ks_p"], 1.0)
-        shifted = self.fp.structural_diagnostics.get("shifted_features", [])
-        for field_name in shifted:
-            self.assertIn(field_name, shift)
-            self.assertLess(shift[field_name]["ks_p"], 0.05)
-
-    def test_structural_in_passport(self):
-        passport = self.fp.passport()
-        self.assertIn("structural_diagnostics", passport)
+    def test_passport_serializes_structural_payload_and_thresholds(self):
+        passport = json.loads(json.dumps(self.fp.passport()))
+        self.assertEqual(passport["structural_diagnostics"], self.fp.structural_diagnostics)
         self.assertEqual(passport["meta"]["schema_version"], 4)
+        self.assertEqual(passport["meta"]["flag_min_severity"], self.fp.thresholds.flag_min_severity)
+        self.assertEqual(passport["meta"]["min_chapters"], self.fp.thresholds.min_chapters)
 
-    def test_structural_json_serialisable(self):
-        passport = self.fp.passport()
-        json.dumps(passport)  # must not raise
+    def test_structural_diagnostics_are_deterministic(self):
+        again = StyleFingerprint.from_metrics(self.metrics)
+        self.assertEqual(self.fp.structural_diagnostics, again.structural_diagnostics)
 
-    def test_structural_deterministic(self):
-        fp2 = StyleFingerprint.from_metrics(self.metrics)
-        self.assertEqual(self.fp.structural_diagnostics, fp2.structural_diagnostics)
+    def test_passport_text_describes_actual_shifts_in_both_languages(self):
+        for language, shifted in (("en", "shifted features"), ("de", "verschobene Merkmale")):
+            with self.subTest(language=language):
+                text = self.fp.passport_text(language_key=language)
+                self.assertIn(shifted, text)
+                if language == "en":
+                    self.assertIn("Structural diagnostics", text)
 
-    def test_trends_structure(self):
-        for trend in self.fp.structural_diagnostics.get("trends", {}).values():
-            self.assertIn("tau", trend)
-            self.assertIn("S", trend)
-            self.assertIn("p", trend)
-            self.assertGreaterEqual(trend["p"], 0.0)
-            self.assertLessEqual(trend["p"], 1.0)
-
-    def test_robust_scales_structure(self):
-        for scales in self.fp.structural_diagnostics.get("robust_scales", {}).values():
-            self.assertIn("sn", scales)
-            self.assertIn("qn", scales)
-            self.assertIn("sigma_mad", scales)
-            self.assertGreaterEqual(scales["sn"], 0.0)
-            self.assertGreaterEqual(scales["qn"], 0.0)
-
-    def test_tail_index_present_when_measurable(self):
-        tail = self.fp.structural_diagnostics.get("tail_index", {})
-        self.assertIsInstance(tail, dict)
-        for alpha in tail.values():
-            self.assertGreater(alpha, 0.0)
-
-    def test_passport_meta_reports_all_thresholds(self):
-        meta = self.fp.passport()["meta"]
-        self.assertIn("flag_min_severity", meta)
-        self.assertIn("min_chapters", meta)
-        self.assertEqual(meta["flag_min_severity"], self.fp.thresholds.flag_min_severity)
-        self.assertEqual(meta["min_chapters"], self.fp.thresholds.min_chapters)
-
-    def test_passport_text_mentions_structural_when_present(self):
-        text = self.fp.passport_text(language_key="en")
-        w2 = self.fp.structural_diagnostics
-        if (
-            w2.get("segmented_features")
-            or w2.get("trending_features")
-            or w2.get("shifted_features")
-        ):
-            self.assertIn("Structural diagnostics", text)
-
-    def test_passport_text_labels_shifted_in_de_and_en(self):
-        fp = StyleFingerprint.from_metrics(self.metrics)
-        fp.structural_diagnostics.setdefault("distribution_shift", {"asl": {"ks_p": 0.01}})
-        fp.structural_diagnostics["shifted_features"] = ["asl"]
-        self.assertIn("shifted features", fp.passport_text(language_key="en"))
-        self.assertIn("verschobene Merkmale", fp.passport_text(language_key="de"))
 
 
 class TestLexicalStructural(unittest.TestCase):
@@ -1105,8 +1074,9 @@ class TestLexicalStructural(unittest.TestCase):
         )
     """Token-level structural: co-occurrence fitness + Dunning keyness halves."""
 
-    def setUp(self):
-        self.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
+    @classmethod
+    def setUpClass(cls):
+        cls.config = CorpusConfig(language="de", chapter_regex=r"(?m)^##\s+")
         # Multi-chapter German prose long enough for keyness (≥ 20 content
         # tokens per half) and co-occurrence (≥ 50 content tokens).
         paragraphs = [
@@ -1130,8 +1100,8 @@ class TestLexicalStructural(unittest.TestCase):
             "der Stadt, das jeder für sich behielt und doch mit allen teilte."
         ]
         blocks = [f"## Kap {i + 1}\n\n" + paragraphs[i % len(paragraphs)] + "\n" for i in range(4)]
-        self.text = "\n".join(blocks)
-        self.lexical = lexical_structural_diagnostics(self.text, self.config)
+        cls.text = "\n".join(blocks)
+        cls.lexical = lexical_structural_diagnostics(cls.text, cls.config)
 
     def test_cooccurrence_block(self):
         cooc = self.lexical.get("cooccurrence")

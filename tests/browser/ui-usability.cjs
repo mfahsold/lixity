@@ -1,3 +1,4 @@
+const {startNativeServer} = require('./support/native-server.cjs');
 // Real held HTTP responses against a disposable synthetic research project.
 const {launchChromium, playwrightModule} = require('../../scripts/browser_tools.cjs');
 const {expect} = require(require('node:path').join(playwrightModule,'test'));
@@ -5,10 +6,6 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
-const {spawn} = require('node:child_process');
-const {once} = require('node:events');
-const {createInterface} = require('node:readline');
-const root=path.resolve(__dirname,'../..');
 const artifacts=fs.mkdtempSync(path.join(os.tmpdir(),'lixity-ui-usability-'));
 function bounded(promise,label) {
   let timer;return Promise.race([promise,new Promise((_,reject)=>{
@@ -16,7 +13,7 @@ function bounded(promise,label) {
   })]).finally(()=>clearTimeout(timer));
 }
 (async()=>{
-  const server=spawn(process.env.PYTHON_BIN||path.join(root,'.venv/bin/python'),['-u','-c',`
+  const server=await startNativeServer(`
 import json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
@@ -31,15 +28,11 @@ LixityServerHandler.refresh()
 server=ThreadingHTTPServer(('127.0.0.1',0),LixityServerHandler)
 print(json.dumps({'url':f'http://127.0.0.1:{server.server_port}'}),flush=True)
 server.serve_forever()
-`,artifacts],{cwd:root,env:{...process.env,PYTHONPATH:path.join(root,'src')},stdio:['ignore','pipe','pipe']});
-  let stderr='',browser;const lines=createInterface({input:server.stdout});
-  server.stderr.on('data',data=>{stderr+=data;});
+`,artifacts);
+  let browser;
   const releases=[];
   try {
-    const fixture=await bounded(new Promise((resolve,reject)=>{
-      lines.once('line',line=>resolve(JSON.parse(line)));
-      server.once('error',reject);server.once('exit',code=>reject(new Error('Synthetic server exited '+code+': '+stderr)));
-    }),'fixture startup');
+    const fixture=server.fixture;
     browser=await launchChromium();
     for(const width of [1440,320]) {
     const page=await browser.newPage({viewport:{width,height:1000}});
@@ -113,7 +106,7 @@ server.serve_forever()
     }
     console.log('UI usability: real held create responses preserve newer drafts, single busy save/local inert feedback, guarded matrix and shared keyboard tabs passed at1440/320. '+artifacts);
   }finally{
-    releases.forEach(release=>release());if(browser)await browser.close();lines.close();
-    if(server.exitCode===null&&server.signalCode===null){const exited=once(server,'exit');server.kill();await bounded(exited,'server cleanup');}
+    releases.forEach(release=>release());
+    try{if(browser)await browser.close();}finally{await server.close();}
   }
 })().catch(error=>{console.error(error);process.exitCode=1;});

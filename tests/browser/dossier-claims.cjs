@@ -13,7 +13,7 @@ const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-dossier-claims-'
 
 (async () => {
   const server = spawn(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-u', '-c', `
-import hashlib, json, runpy, sys
+import hashlib, json, sys
 from pathlib import Path
 from http.server import ThreadingHTTPServer
 from lixity.research import api
@@ -53,7 +53,7 @@ LixityServerHandler.exports_dir = str(base / 'exports')
 LixityServerHandler.language = 'en'
 LixityServerHandler.refresh()
 token = manuscript_pdf_token(str(manuscript), project_root=project, language='en', title=None, thresholds=LixityServerHandler.thresholds)
-render = runpy.run_path('tests/test_ui_contract.py')['_full_dashboard']
+from dashboard_fixtures import full_dashboard as render
 original = render.__globals__['render_dashboard']
 fixtures = {}
 for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
@@ -68,7 +68,7 @@ for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
 server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
 print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'dossier': dossier['dossier_id'], 'empty': empty['dossier_id'], 'claim': claim['claim_id']}), flush=True)
 server.serve_forever()
-`, artifacts], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, stdio: ['ignore', 'pipe', 'pipe']});
+`, artifacts], {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, stdio: ['ignore', 'pipe', 'pipe']});
   const lines = createInterface({input: server.stdout});
   let stderr = '', browser;
   server.stderr.on('data', data => {stderr = (stderr + data).slice(-5000);});

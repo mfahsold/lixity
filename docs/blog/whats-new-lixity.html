@@ -14,12 +14,15 @@
 <meta property="og:url" content="https://mfahsold.github.io/lixity/blog/whats-new-lixity.html"/>
 <meta property="og:site_name" content="Lixity"/>
 <meta property="og:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
-<meta property="og:image:width" content="1480"/>
-<meta property="og:image:height" content="945"/>
+<meta property="og:image:width" content="2960"/>
+<meta property="og:image:height" content="1890"/>
+<meta property="og:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <meta name="twitter:title" content="What's new in Lixity: numbers you can compare, evidence that survives edits"/>
 <meta name="twitter:description" content="Documented comparability floors, evidence anchors that tolerate edits outside the quote, a quieter research workspace and one consistent interface."/>
 <meta name="twitter:image" content="https://mfahsold.github.io/lixity/screenshots/dashboard-light.png"/>
+<meta name="twitter:image:alt" content="Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"/>
+<link rel="alternate" type="text/markdown" href="whats-new-lixity.html.md" title="Markdown version of this page"/>
 <link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
 <link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
 <script type="application/ld+json">
@@ -31,9 +34,25 @@
   "url": "https://mfahsold.github.io/lixity/blog/whats-new-lixity.html",
   "inLanguage": "en",
   "datePublished": "2026-10-16",
-  "dateModified": "2026-10-16",
-  "author": {"@type": "Person", "name": "Matthias Fahsold", "url": "https://github.com/mfahsold"},
-  "isPartOf": {"@type": "WebSite", "name": "Lixity", "url": "https://mfahsold.github.io/lixity/"}
+  "dateModified": "2026-10-19",
+  "author": {
+    "@type": "Person",
+    "name": "Matthias Fahsold",
+    "url": "https://github.com/mfahsold"
+  },
+  "isPartOf": {
+    "@type": "WebSite",
+    "name": "Lixity",
+    "url": "https://mfahsold.github.io/lixity/"
+  },
+  "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/whats-new-lixity.html",
+  "image": {
+    "@type": "ImageObject",
+    "url": "https://mfahsold.github.io/lixity/screenshots/dashboard-light.png",
+    "width": 2960,
+    "height": 1890,
+    "caption": "Lixity manuscript overview with sentence rhythm, vocabulary and dialogue measures"
+  }
 }
 </script>
 </head>
@@ -45,7 +64,7 @@
 <p class="updated">Posted <time datetime="2026-10-16">16 October 2026</time> · 7 minutes · <a href="index.html">Blog</a></p>
 <nav class="guide-nav" aria-label="Blog"><a href="index.html" aria-current="page">Blog</a><a href="../guides/first-look.html">First look</a><a href="../guides/interpretation.html">Interpret results</a><a href="../examples/effi-briest.html">Example analysis</a></nav>
 
-<p>Lixity is a local-first manuscript analysis tool: it reads a novel on your own computer, shows the rhythm, vocabulary, dialogue and tense behind every result — and keeps the research behind your decisions in one workspace. This release line is about two kinds of trust: <strong>numbers you can actually compare</strong>, and <strong>evidence that does not silently rot</strong> while you edit.</p>
+<p>Lixity analyses a manuscript on your own computer. Chapter summaries describe rhythm, vocabulary and dialogue; paragraph views let you inspect local measurements and tense flags. A separate research workspace keeps sources and authored decisions. This article describes the 0.4.8 release line: changes to comparison floors, manuscript associations and the local interface.</p>
 
 <h2 id="floors">Small chapters no longer shout</h2>
 <p>Short texts are noisy. A three-sentence stage note can look extreme in a z-score table — not because the writing is extreme, but because three sentences are simply not much to measure. So comparisons now have a floor, and they tell you when they cannot say something useful:</p>
@@ -54,16 +73,16 @@
 <li>Features about sentence variety (staccato, cascade, sentence length variation) need at least <strong>five sentences</strong>.</li>
 <li>Showing/telling comparisons use the same 100-word floor and mark short chapters “not comparable” instead of giving them a ranking.</li>
 </ul>
-<p>Where a value is withheld, the interface explains why — in all seven supported languages. If you have older reports, rebuild them once before comparing; the new numbers are honest, the old ones were optimistic.</p>
+<p>Unavailable chapter comparisons appear as a dash or “not comparable”. Rebuild older reports before comparing them with newer outputs, because the counting and withholding rules changed. These floors limit comparisons; they do not make the remaining measurements reliable by themselves.</p>
 <p>On the same theme: sentence counting now respects blank-line boundaries. A salutation, a stage note or a sign-off stays one unit, and chapter rhythm, scene units and the corpus statistics finally agree with each other.</p>
 
 <h2 id="digest">The dashboard notices when your manuscript changed</h2>
 <p>The local dashboard checks your manuscript when the page loads. If the file changed on disk since the last build, it rebuilds itself instead of showing yesterday’s numbers with today’s confidence.</p>
 
-<h2 id="anchors">Quotes that survive your edits</h2>
-<p>Research links between a source quote and a claim are stored as exact anchors — the quote, the paragraph, the line range. Editing is normal, so the review view now tells two cases apart:</p>
+<h2 id="anchors">Review manuscript associations after edits</h2>
+<p>A manuscript association connects a quote you explicitly select in your draft to an exact saved revision of a research claim. Its anchor records the quote, paragraph identity and source lines. Citations to retained research-source passages are a separate kind of evidence link. When you edit the manuscript, review distinguishes these cases:</p>
 <ul>
-<li><strong>Changed outside the quote</strong> (the quote is still there, the paragraph moved or grew): the link is marked <em>adjusted</em> and can be re-pinned in one step — in the review tab or with <code>lixity research reconcile-manuscript --accept-moved</code>.</li>
+<li><strong>An unchanged paragraph moved</strong>: a uniquely located anchor is marked <em>moved</em>. <strong>A paragraph changed outside the quote</strong>: one remaining exact occurrence of the quote is marked <em>adjusted</em>. Both require your explicit acceptance before saving a new anchor revision. Use the review tab or <code>lixity research reconcile-manuscript --project ./novel draft.md --accept-moved</code>.</li>
 <li><strong>Changed inside the quote</strong>: the link stays in review. Lixity never re-pins it on its own, because only you can decide whether the meaning survived.</li>
 </ul>
 <p>Small thing, same spirit: you can now type a plain hyphen between years (<code>1929-1933</code>). Lixity reads it as the range you meant.</p>
@@ -77,12 +96,12 @@
 </ul>
 
 <h2 id="interface">One look, everywhere</h2>
-<p>The interface had collected a decade of small decisions: ten border radii, fifteen font sizes between 0.72 and 0.84 rem, three different spinners, two kinds of tabs. That is now one small system:</p>
+<p>The interface had accumulated separate choices for corners, text sizes, spacing and loading states. Shared styles and components now give those controls a more consistent presentation:</p>
 <ul>
 <li><strong>One scale</strong> for corners, text sizes and spacing — shared by the app and the documentation site.</li>
-<li><strong>One control language</strong>: the workspace switch and the research tabs are the same control, badges and tags are one family, and touch devices get 44-pixel targets everywhere.</li>
+<li><strong>Shared controls</strong>: the workspace switch and research tabs use the same control family. Badges, tags and touch spacing follow shared styles.</li>
 <li><strong>A component layer</strong> now renders the list panels (plain vendored JavaScript, no build step). It also fixed a real annoyance: the “Loading…” placeholder no longer lingers next to the loaded list.</li>
-<li>A test suite now fails the build if a new one-off value sneaks in — the system cannot quietly drift back.</li>
+<li>Regression checks cover selected shared styles and loading states to help catch inconsistent changes.</li>
 </ul>
 
 <h2 id="logging">Logs you can actually find</h2>
@@ -94,7 +113,7 @@
 <h2 id="try">Try it</h2>
 <ul>
 <li><a href="../demo/report.html">Demo report</a> — invented text, opens in your browser, no install.</li>
-<li><a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> — complete analyses of public-domain novels.</li>
+<li><a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> — interactive dashboards of the opening three chapters, each with a linked PDF analysis of the complete public-domain novel.</li>
 <li><a href="../guides/first-look.html">First look</a> — from chapter comparison to the passage behind a number, in three minutes.</li>
 <li>For your own manuscript: <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code>.</li>
 </ul>

@@ -1,13 +1,12 @@
 """Record-scoped CLI convenience preserves explicit revisions and backend CAS."""
 
-import argparse
-import contextlib
-import io
 import json
 
 import pytest
 
-from lixity.research import api, cli
+from lixity.research import api
+from tests.research_support import capture_research
+from tests.research_support import revise_record as revise
 
 
 @pytest.fixture
@@ -20,12 +19,8 @@ def archive(tmp_path):
 
 
 def run(*arguments):
-    parser = argparse.ArgumentParser()
-    cli.configure(parser)
-    output, errors = io.StringIO(), io.StringIO()
-    with contextlib.redirect_stdout(output), contextlib.redirect_stderr(errors):
-        status = cli.run(parser.parse_args(arguments))
-    return status, json.loads(output.getvalue()) if output.getvalue() else None, errors.getvalue()
+    status, output, errors = capture_research(*arguments)
+    return status, json.loads(output) if output else None, errors
 
 
 def update(project, claim, *flags, expected_revision=1):
@@ -33,12 +28,6 @@ def update(project, claim, *flags, expected_revision=1):
                "--expected-revision", str(expected_revision), "--change-kind", "correction",
                "--reason", "Synthetic author update", *flags)
 
-
-def revise(project, kind, identifier, changes):
-    read = api.get_record(project, kind, identifier)
-    return api.revise_record(project, kind, identifier, changes=changes,
-                             expected_snapshot=read["snapshot"], expected_revision=read["record"]["revision"],
-                             change_kind="correction", reason="Synthetic concurrent author update")
 
 
 def test_omitted_snapshot_allows_unrelated_archive_write(archive):
@@ -133,14 +122,6 @@ def test_new_decision_dossier_requires_pin_map_and_keeps_old_dossier_pin(archive
     assert status == 0, errors
     assert result["record"]["dossier_refs"] == [{"id": dossier, "revision": 1}, {"id": added, "revision": 1}]
 
-
-def test_revision_help_explains_optional_strict_snapshot():
-    parser = argparse.ArgumentParser()
-    cli.configure(parser)
-    with contextlib.redirect_stdout(io.StringIO()) as output, pytest.raises(SystemExit):
-        parser.parse_args(["claim", "--help"])
-    assert "strict" in output.getvalue().lower()
-    assert "omitted" in output.getvalue().lower()
 
 
 def test_explicit_snapshot_keeps_existing_association_behavior(archive, monkeypatch):

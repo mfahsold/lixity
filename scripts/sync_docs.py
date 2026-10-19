@@ -79,6 +79,8 @@ def check_or_sync_files(version: str, *, check_only: bool = False) -> list[str]:
                  f"Current release: {version}; release tag: v{version}"),
                 (r"release history \(current: \d+\.\d+\.\d+\)",
                  f"release history (current: {version})"),
+                (r"\[Release notes\]\(https://mfahsold\.github\.io/lixity/releases/v\d+\.\d+\.\d+\.md\)",
+                 f"[Release notes](https://mfahsold.github.io/lixity/releases/v{version}.md)"),
             ],
         ),
         (
@@ -198,6 +200,10 @@ CURRENT_NOTE_CLAIMS: dict[Path, tuple[tuple[str, re.Pattern[str]], ...]] = {
     Path("docs/INSTALLATION.md"): (
         ("current release-note target",
          re.compile(r"\[release notes\]\(releases/v(\d+\.\d+\.\d+)\.md\)")),
+    ),
+    Path("docs/llms.txt"): (
+        ("current release-note target",
+         re.compile(r"\[Release notes\]\(https://mfahsold\.github\.io/lixity/releases/v(\d+\.\d+\.\d+)\.md\)")),
     ),
     Path("docs/guides/installation.html"): (
         ("current release-note target",

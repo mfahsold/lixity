@@ -9,11 +9,11 @@ const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const root = path.resolve(__dirname, '../..');
 const artifacts = fs.mkdtempSync(path.join(os.tmpdir(), 'lixity-manuscript-pdf-'));
 const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
-import json, runpy
+import json
 from lixity.language import get_language_profile
 from lixity.ui import render_dashboard
 from lixity.workspace_labels import WORKSPACE_LABELS
-render = runpy.run_path('tests/test_ui_contract.py')['_full_dashboard']
+from dashboard_fixtures import full_dashboard as render
 original = render.__globals__['render_dashboard']
 fixtures = {}
 for locale in ('en', 'de', 'fr', 'es', 'it', 'pt', 'nl'):
@@ -43,7 +43,7 @@ gates['no_paragraphs'] = render()
 gates['empty'] = render_dashboard([], [], controls=True,
     enabled_actions=['manuscript-pdf'], manuscript_pdf_token='')
 print(json.dumps({'fixtures': fixtures, 'gates': gates}))
-`], {cwd: root, env: {...process.env, PYTHONPATH: path.join(root, 'src')}, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
+`], {cwd: root, env: {...process.env, PYTHONPATH: [path.join(root, 'src'), path.join(root, 'tests')].join(path.delimiter)}, encoding: 'utf8', maxBuffer: 32 * 1024 * 1024});
 assert.equal(fixture.status, 0, fixture.error ? fixture.error.message : fixture.stderr);
 const {fixtures, gates} = JSON.parse(fixture.stdout);
 

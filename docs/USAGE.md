@@ -1,69 +1,46 @@
 # Lixity – Usage & Reference
 
-For the experimental research workspace, including Zotero capture, current-record
-search, citations, backups and OCR, see [Research usage](research/USAGE.md). For interactive project workflows, see
-[Onboarding](ONBOARDING.md).
+Use this guide to choose an analysis, read its results and configure a project.
+For a first session, follow [Onboarding](ONBOARDING.md). The separate
+[research guide](research/USAGE.md) owns retained sources, citations, dossiers,
+Zotero, backups and OCR; [automation contracts](AGENTS.md) own JSON envelopes
+and HTTP requests.
 
-Complete command-line and library reference for Lixity. If you are new to the
-project, start with the [README](https://github.com/mfahsold/lixity/blob/main/README.md); this document goes into detail.
-
-**Contents**
-
-1. [Installation](#installation)
-2. [Quick start](#quick-start)
-3. [Command reference](#command-reference)
-4. [Understanding the metrics](#understanding-the-metrics)
-5. [Manuscript format & operation](#manuscript-format--how-to-operate-lixity)
-6. [Known limitations & stability](#known-limitations--stability)
-7. [Library](#library)
-8. [Configuration (`CorpusConfig`)](#configuration-corpusconfig)
-9. [Troubleshooting](#troubleshooting)
-10. [Development](#development)
-11. [License](#license)
-12. [Unavailable consistency and empty manuscripts](#unavailable-consistency-and-empty-manuscripts-since-v1180)
-13. [Debug logging](#debug-logging-since-v1190)
-14. [Research search scopes](#research-search-scopes-since-v1190)
-15. [Zotero integration](#zotero-integration-since-v1190)
-16. [NDA agreements](#nda-agreements)
-17. [Research batch workflow and index ergonomics](#research-batch-workflow-and-index-ergonomics-since-v1200)
+- [Choose a command](#which-command-for-which-question)
+- [Review a dashboard](#dashboard-workflow)
+- [Command workflows](#command-reference)
+- [Interpret results](#understanding-the-metrics)
+- [Prepare a manuscript](#manuscript-format--how-to-operate-lixity)
+- [Use the library](#library)
+- [Configure a project](#configuration-corpusconfig)
+- [Troubleshoot](#troubleshooting)
 
 ## Installation
 
-Install Lixity with the [installation guide](INSTALLATION.md); it covers
-Windows/macOS/Linux, the PyPI/uv setup, updates and removal, pipx, Python API
-environments and troubleshooting, and carries the pinned release wheel with
-`SHA256SUMS`. Lixity is open source under AGPL-3.0-or-later: private, research
-and commercial writing, including self-publishing, needs no extra permission; a
-separate written commercial license exists only for closed-source integrations.
-See [licensing examples](LICENSING.md). The engine and TOML project
-configuration support Python 3.10+.
-
-The commands below assume `lixity` is on your `PATH`; [Development](#development)
-covers running from a checkout. See
-[shell completion](INSTALLATION.md#optional-shell-completion) for safe Bash/Zsh
-setup and user-writable destinations.
+The [installation guide](INSTALLATION.md) covers supported systems, isolated
+CLI/Python environments, updates, removal and shell completion. Commands here
+assume `lixity` is on your `PATH`. For a source checkout, use
+[CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
 
 ## Report language
 
-Reports and CLI messages are **English by default**; set `LIXITY_LANG=de` for
-German (the Rich report, the Markdown report, the style-reference text and the
-build/dashboard messages follow it). Metric labels and feature units are
-localised for `de` and `en`; other languages fall back to English. Project
-texts (reference corridors, assessments) are supplied by the calling project
-via the `texts` parameter and override single keys.
+Reports and CLI messages use English by default; `LIXITY_LANG=de` selects
+German presentation. Other presentation languages fall back to English. This
+is separate from the manuscript's analysis language: use `--language de`,
+for example, or explicit `--language auto` for detection. Weak or ambiguous
+evidence selects the generic profile. See [Localization](LOCALIZATION.md) for
+coverage and project-supplied report text.
 
 ## Quick start
 
 ```bash
-lixity analyze   manuscript.md               # terminal report
-lixity analyze   manuscript.md --json        # machine-readable metrics
-lixity profile   manuscript.md               # tense profiles per paragraph
-lixity style     manuscript.md               # self-calibrated style reference
-lixity dashboard manuscript.md -o ui.html    # HTML dashboard
+lixity analyze manuscript.md --language en
+lixity dashboard manuscript.md --language en -o dashboard.html
 ```
 
-The commands in this quick start read a Markdown manuscript and write to stdout, except `dashboard`,
-which writes a single HTML file.
+`analyze` prints a terminal report; `dashboard` writes a browsable HTML file.
+[Choose another command](#which-command-for-which-question) for focused analysis
+or a different output.
 
 ## Which command for which question?
 
@@ -84,369 +61,239 @@ which writes a single HTML file.
 | I want a printable report or reading copy | `lixity pdf` | A4 report, A5 book layout, 30×60 sheet |
 | I want a reproducible artifact set | `lixity build` | `exports/`, archive rotation |
 | What can the engine do? | `lixity about --json` | languages, features, thresholds, commands |
+| What does the installed tool expose? | `lixity schema` | capability metadata, equivalent to `about --json`; not an analysis-result JSON Schema |
 
 ## Dashboard workflow
 
-The current release uses the shared analysis pipeline for CLI, HTML exports and
-the local server. A generated dashboard supports analysis navigation offline;
-project and research actions require the local server.
-
-**Since v1.23.0:** The server dashboard has three views:
-**Research & Dossiers**, **Manuscript & Analysis**, and **Project & Settings**.
-New Project, Open Project and optional guidance remain accessible in every view.
-**Since v0.3.0:** PDF export joins these global project controls.
-The manuscript search, paragraph navigation and chapters precede diagnostic
-panels; optional measurements stay behind the existing **Values** disclosure.
-
-Under Project & Settings, choose or drop a Markdown/plain-text manuscript to see
-its filename. Selection alone sends no request. In the native server,
-Selecting or dropping a file opens the existing **Import Manuscript** preview with that
-selection. Confirming the dialog creates a separate project; use **Open Project**
-to reconnect an existing folder and its research archive. Embedding hosts that
-advertise the load capability instead show **Analyze manuscript now →**, retaining
-their existing load action and payload.
-
-Source and dossier list filters match case-insensitive substrings in loaded
-titles, tags and IDs; dossiers also match excerpts and section names. Typing
-does not request the server or search source text. Use Research → Search for
-full-text archive search. Filters keep loaded details and leave association
-dropdowns complete, including records hidden from the list. The NDA generator is shown only when the live host advertises `nda-draft`;
-its five-field form has explicit preview and download actions.
-
 ```bash
 lixity dashboard manuscript.md --language en -o dashboard.html
-lixity dashboard roman.md --language de -o roman.html
-lixity dashboard unknown-language.md --language auto -o detected.html
 ```
 
-Open the generated file in a browser; no server is needed for analysis views.
+Open the file in a browser for offline analysis navigation. It embeds manuscript
+text and measurements, so treat it as manuscript material when sharing. Project
+settings, manuscript writes and research actions require a compatible local
+server; start the installed workspace with `lixity service start --open`.
 
-### Download a manuscript PDF (since v2.4.0)
+The live workspace has **Research & Dossiers**, **Manuscript & Analysis**, and
+**Project & Settings** views. **New Project** imports a manuscript into a separate
+project after confirmation; **Open Project** reconnects an existing folder and
+its archive. Selecting or dropping a file opens a preview and writes nothing
+until confirmation. See [open or import](ONBOARDING.md#open-or-import) for the
+complete project workflow. Embedding hosts may provide their own load action.
 
-**Since v0.3.0:** open **PDF export** in the global project controls
-above the three workspace views. Choose **A5 reading copy** (default),
-**A4 manuscript sheets** or **A4 analysis report**, then select **Download PDF**
-to save it. The menu starts collapsed
-and remains available in all three views. Changing the layout alone does not
-generate a document.
+<a id="download-a-manuscript-pdf-since-v240"></a>
 
-The form uses the same composer as [`lixity pdf`](#lixity-pdf) and the currently
-selected manuscript. The response goes directly to your browser as a PDF
-response; generation creates no server export files and does not modify the
-manuscript or research archive. A context token prevents an old tab from silently
-exporting a different project after the server's selected context changes.
+### Download a manuscript PDF
 
-**Since v0.3.0:** CLI and native exports share configured project
-title/author and [optional publication data](#publication-settings).
-The A5 layout can include entered imprint text after its title page. PDF title,
-author and language metadata, chapter bookmarks and page headers come from the
-same composition path.
-Changes to either selected-root configuration file invalidate an older PDF
-context token; reload the form before downloading after an external metadata edit.
+Open **PDF export** above the workspace views, choose **A5 reading copy**,
+**A4 manuscript sheets** or **A4 analysis report**, then **Download PDF**.
+Changing the layout alone does not generate a file. The download uses the same
+composer and project metadata as [`lixity pdf`](#lixity-pdf), returning bytes
+directly without creating server export files. Reload after switching projects
+or externally changing root configuration; stale export context is rejected.
+JavaScript and a compatible native server are required.
 
-This form requires JavaScript and an explicitly compatible live native server.
-Standalone HTML reports do not provide the download action. The NDA PDF under
-**Project & Settings** generates a
-confidentiality agreement and is a separate workflow.
+<a id="start-a-review-since-v230"></a>
 
-### Start a review (since v2.3.0)
+### Start a review
 
-The local workspace's welcome guidance starts with choosing a manuscript,
-confirming its language in the import preview, and reading a passage. **Analyze a
-manuscript** opens the existing import dialog; the empty analysis view offers the
-same action. Opening the dialog does not submit a manuscript. Optional research
-and further-analysis guidance starts collapsed in a native disclosure.
+**Start your review → Open passage** opens the first paragraph meeting the
+selected tense-flag threshold, or the opening paragraph when none does. It
+clears search and paragraph filters so the passage is visible and receives
+keyboard focus. **Explore chapters** opens the style heatmap when comparison is
+available, otherwise the chapter map with a limitation hint. **Open sentence
+rhythm** appears when its measurements are available.
 
-In a loaded manuscript, **Start your review** appears before the KPIs.
-**Open passage** opens the first paragraph in source order meeting the selected
-tense-flag threshold, or the opening paragraph when none does. It clears
-manuscript search and paragraph filters to reveal the passage and moves keyboard
-focus to it. **Explore chapters** opens the style heatmap when comparison is
-available, or the chapter map with a limitation hint when it is not.
-**Open sentence rhythm** is available when measurements are supplied. These
-routes reuse existing signals and panels; they do not compute a quality score
-or prescribe a revision.
+Follow a signal to the passage and read it in context. Flagged-passage rows,
+heatmap cells, band rows, chapter-score links and marker rows navigate to their
+underlying chapters or paragraphs. These are review locations, not quality
+rankings or instructions to revise.
 
-### Read a dossier beside the manuscript (since v2.4.0)
+<a id="read-a-dossier-beside-the-manuscript-since-v240"></a>
 
-Open **Dossier alongside** in **Manuscript & Analysis**, then choose a dossier.
-A dossier card can open the same view with that dossier selected. The view starts
-closed; opening it does not choose a dossier automatically. The companion reader
-is read-only. While it is open, other analysis panels are temporarily hidden so
-you can focus on manuscript chapters, search and filters beside the dossier.
-Closing it restores those panels and preserves manuscript search and open paragraphs.
-Refresh explicitly to read the latest saved dossier revision. The choice lasts
-for the current page. On screens at or below 900 pixels, the dossier appears
-above the manuscript rather than beside it.
+### Read a dossier beside the manuscript
 
-For source evidence, selection in an opened research source prepares the existing
-claim evidence-link form. The preview shows the selected quote and the full
-retained paragraph that will be cited. It creates no sentence-level citation and
-saves nothing until the existing form is submitted. See the [research workflow
-limits](research/USAGE.md#reading-and-cli-workflows-since-v240).
+Choose **Dossier alongside** in **Manuscript & Analysis**, then a dossier, or
+open it from a dossier card. The read-only companion temporarily hides other
+analysis panels while preserving manuscript search and open paragraphs; closing
+it restores them. Refresh explicitly for the latest saved dossier revision.
+The selection lasts for the current page. On narrow screens, the dossier is
+above the manuscript. See [research reading workflows](research/USAGE.md#reading-and-cli-workflows-since-v240)
+for evidence selections and their retention limits.
 
-### Link a manuscript quote to a claim (v0.3.0)
+<a id="link-a-manuscript-quote-to-a-claim-v030"></a>
 
-**Since v0.3.0:** in an opened manuscript paragraph, select text within that
-paragraph, choose **Link selection to claim** (or `Alt+L`), choose a claim and explicitly permit local retention of the selected quote before
-**Save association**. The native workspace records a manual association to that exact claim
-revision; selecting or previewing writes nothing. It retains the quote and an
-exact paragraph anchor, without importing the complete manuscript or editing
-prose. Changed text/claim versions request review; moved or ambiguous paragraphs
-are not automatically relocated. Exact resolved quotes are marked when their
-paragraph opens, and manuscript search continues to cover the complete text.
+### Link a manuscript quote to a claim
 
-Dossier readers in Research and **Dossier alongside** list currently linked
-claims with the existing claim viewer and history. Active saved quote counts
-report explicit links against their pinned dossier association, never whether a
-claim is used in prose. See [retention, anchoring and archive v7 compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
+Select text within an opened paragraph, choose **Link selection to claim**
+(or `Alt+L`), choose a claim and explicitly permit local quote retention before
+**Save association**. Selection and preview save nothing. The association pins
+the exact claim revision and paragraph anchor; changed or ambiguous text needs
+review. Dossier readers expose linked claims and saved quote counts, which
+count explicit associations rather than infer use in prose. See
+[retention, anchoring and archive compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
-### Reading paragraphs (since v2.3.0)
+<a id="reading-paragraphs-since-v230"></a>
 
-Open a paragraph to read its manuscript text first. Expand the native **Values**
-disclosure (**Werte** in German) for source lines, tense, dialogue and style
-measurements. In a compatible local server, marker actions follow the passage
-and its values.
+### Reading paragraphs
 
-With JavaScript enabled, initially closed paragraphs contain no rendered passage
-or metric controls; their contents are created when opened. The complete paragraph
-text and measurements remain embedded in the file, so this reduces initial DOM work but
-does not eliminate growth in the self-contained HTML's size. Search checks the
-complete paragraph text, including paragraphs that have never been opened.
-With JavaScript disabled, the complete paragraph text remains readable through
-the static fallback.
+Open a paragraph to read its text, then expand **Values** for source lines,
+tense and style measurements. Marker actions follow in a compatible server.
+Closed paragraphs are rendered on demand, with their inner layout released on
+close unless a marker draft remains. Complete text and measurements stay
+embedded, including text never opened; this reduces initial browser work but
+not the self-contained file's size. With JavaScript disabled, a static fallback
+keeps manuscript text readable.
 
 ### Searching the manuscript
 
-Manuscript search and the chapter reader appear before statistical diagnostics.
-The analysis toolbar carries a search field for the manuscript itself. Typing
-filters the chapter list down to the paragraphs that contain the phrase:
-chapters without a match collapse away, every hit is marked, and the arrows step
-through the matches and open each one. `Enter` moves to the next match,
-`Shift+Enter` to the previous, `Escape` or **Clear search** restores the whole
-manuscript. The count reports how many paragraphs matched out of how many were
-searched.
-Since v2.3.0, active search takes priority over **Flagged only**;
-clearing search restores the selected flag filter.
+Type a phrase in the analysis toolbar to show matching paragraphs and mark
+hits. Arrows or `Enter`/`Shift+Enter` move between matches; `Escape` or
+**Clear search** restores the manuscript. The count is matching paragraphs out
+of paragraphs searched. Search takes priority over **Flagged only**; clearing
+it restores that filter.
 
-Matching is a case-insensitive substring test on the paragraph text, not a
-linguistic query: it does not stem, ignore diacritics, or search across
-paragraph boundaries. Manuscript text is inserted as text nodes only, so a
-phrase that looks like markup stays a phrase.
+Matching is a case-insensitive substring test: it does not stem, ignore
+diacritics or cross paragraph boundaries. Text resembling markup remains text.
+Research list filters only match loaded record metadata; use
+**Research → Search** for retained source text.
 
-### Style area (since v2.3.0)
+<a id="style-area-since-v230"></a>
 
-The style heatmap, style reference, style dimensions and structural
-diagnostics share one area with tabs. Choosing a tab reveals its existing panel;
-links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
-select the appropriate tab before navigating. Use `ArrowLeft`/`ArrowRight` to
-move between tabs, or `Home`/`End` to select the first/last tab.
-With JavaScript disabled, all available style panels remain readable and their
-native links remain usable.
+### Style area
+
+Tabs group the heatmap, style reference, dimensions and structural diagnostics.
+`ArrowLeft`/`ArrowRight` moves between tabs; `Home`/`End` selects the first/last.
+Links to `#heatmap`, `#bands`, `#dimensions`, `#structural` and `#feat-<field>`
+select the relevant tab. All available panels remain readable without JavaScript.
 
 ### Settings and interpretation
 
-In a compatible local project server, settings show language and project title
-first. Expand **Detection thresholds** for labeled numeric controls and their
-explanations. Changes apply only after **Apply**; restoring defaults changes
-the form but does not save it. Invalid numbers and a strong-deviation cutoff
-below the noticeable cutoff are rejected before submission.
+In **Project & Settings**, expand **Detection thresholds** to inspect controls
+and explanations. **Apply** submits changes; restoring defaults only changes
+the form. Invalid numbers and a strong cutoff below the noticeable cutoff fail
+validation. [Configuration](#configuration-corpusconfig) explains persistent
+project metadata and session settings.
 
-**Since v0.3.0:** publication details stay in a collapsed
-**Publication** disclosure beside the existing title and author controls.
-They require an explicit open project. The entered fields and inclusion checkbox
-use the existing Settings submission; they do not create another settings store.
-
-The style matrix keeps its color scale fixed at z* = −2.5 to +2.5, independently
-of your detection threshold. A **●** identifies a cell selected by the engine's
-FDR correction. The optional filter shows only chapters with those results.
-Color alone is not a significance decision or an assessment of writing quality.
-Cell details include the raw value, z*, standardized effect and Cliff's δ.
-
-The style reference shows the manuscript median ± 2 robust standard deviations,
-with per-feature medians and sample counts. This is neither a confidence
-interval nor an external editorial target. Its counts denote deviation-cutoff
-hits; they are not interchangeable with the matrix's FDR decisions.
-
-Only the project title uses a classic serif font stack. Controls, tables,
-body text and all other headings use the existing modern system sans-serif.
-No font files are fetched from a third-party server.
+The matrix color scale stays fixed at z* = −2.5 to +2.5. A **●** marks an
+FDR-selected cell; color alone is not a significance decision. Cell details
+include raw values, z*, standardized effect and Cliff's δ. The style reference
+shows the manuscript median ± 2 robust standard deviations, with sample counts.
+Its cutoff-hit counts differ from FDR decisions; the bands are neither
+confidence intervals nor external editorial targets. Paragraph style layers
+show measured values and flag unusual values relative to the chapter.
 
 ### Style-space navigation
 
-In **Style dimensions**, drag to rotate, use the wheel to zoom, toggle the
-trajectory or threshold box, and reset the camera as needed. Select a chapter
-point to navigate to the underlying chapter. Automatic rotation is opt-in and
-pauses when the tab is hidden. Dimension cards show positive and negative loadings.
+In **Style dimensions**, drag to rotate, use the wheel or labeled buttons to
+zoom/rotate, and select chapter points or **Chapter scores** links to read a
+chapter. Toggle the trajectory or cutoff box and reset the camera as needed.
+Rotation is opt-in and pauses in a hidden tab. Cards show positive/negative
+loadings; the table gives the same measured chapter scores and flags.
 
-**Since 2.0.0:** labeled rotation and zoom buttons support
-keyboard and touch input. The **Chapter scores** table shows the same measured
-chapters, their actual dimension scores and flag status. Its native chapter links
-also work with JavaScript disabled. Focus the scrolling table region to reach
-columns that extend beyond a small screen. Paragraph chips and dimension controls
-have at least 24×24 CSS-pixel targets, increasing to 44×44 for coarse pointers;
-long paragraph strips retain their proportional widths and scroll horizontally.
-
-The box represents independent per-axis cutoffs, not a confidence ellipsoid.
-An outlying point means “inspect this chapter,” not “this writing is bad.”
-Individual canvas points remain pointer-operated. Use the native controls and
-chapter-score links for equivalent keyboard/touch navigation; these provisions
-do not establish complete accessibility conformance.
-
-Publication, marker-mutation and NDA controls require a compatible project
-server; a standalone HTML export does not provide those services itself.
-See [architecture](ARCHITECTURE.md) for adapter responsibilities and
-[localization](LOCALIZATION.md) for analysis versus presentation language.
+The box represents independent axis cutoffs, not a confidence ellipsoid.
+Canvas points are pointer-operated; native controls and chapter-score links
+provide keyboard/touch navigation and remain usable without JavaScript.
+These provisions do not establish complete accessibility conformance.
 
 ## Command reference
 
 ### Common options
 
-| Option | Applies to | Description |
-| :--- | :--- | :--- |
-| `--language CODE` | analysis commands | `en` (default), `de`, `fr`, `es`, `it`, `pt`, `nl`, `generic`, `auto`. Explicit flags override project language settings. `auto` detects the language from function words and falls back to `generic` when the signal is weak or ambiguous. |
-| `--json` | `analyze`, `profile`, `style` | Print machine-readable JSON instead of the Rich/text output. |
-| `--z-mild FLOAT` | `style`, `dashboard`, `build` | Notable \|z\*\| threshold (default `2.5`). Lower = more sensitive. Active values are reported in the passport `meta` and in the dashboard legend. |
-| `--z-strong FLOAT` | `style`, `dashboard`, `build` | Strong \|z\*\| threshold (default `3.5`). |
-| `--fdr-q FLOAT` | `style`, `dashboard`, `build` | False-discovery rate for `fdr_flagged` (default `0.05`). |
-| `--fdr-method {bh,by}` | `style`, `dashboard`, `build` | BH = Benjamini–Hochberg (default); BY = Benjamini–Yekutieli (arbitrary dependence). |
-| `--dim-threshold FLOAT` | `style`, `dashboard`, `build` | \|dimension score\| from which a chapter is flagged on that axis (default `2.5`). |
-| `--flag-min-severity {1,2,3}` | `style`, `dashboard`, `build` | Minimum paragraph severity for the flags panel (default `2`). |
-| `-o`, `--output PATH` | `dashboard` | Target HTML file (default: `lixity-dashboard.html`). |
-| `--dry-run` | `build` | Show planned artifacts without writing anything. |
-| `--version` | top-level | Print engine version and exit. |
+The installed CLI owns exact arguments, accepted values and defaults:
+
+```bash
+lixity --help
+lixity style --help
+```
+
+Use `lixity COMMAND --help` for any command below. Explicit analysis options
+override project settings. English is the default analysis language; automatic
+detection requires `--language auto`. `lixity about --json` lists installed
+commands, formats, feature identifiers, languages and thresholds. `lixity schema`
+emits the same capability metadata, not a JSON Schema for every result.
+[Automation contracts](AGENTS.md) describe versioned output envelopes and exit
+codes; a running server advertises registered operations at `GET /api`.
 
 ### `lixity analyze`
 
-Prints a colour-coded Rich report: corpus size, core metrics with reference
-corridors and plain-language assessments, the sentence-length architecture and
-punctuation densities.
+Use the terminal report for corpus size, sentence rhythm, vocabulary,
+readability, dialogue and chapter measurements:
 
 ```bash
-lixity analyze manuscript.md
-lixity analyze manuscript.md --json | jq '.asl, .ttr, .yules_k, .lix'
 lixity analyze manuscript.md --language en
 ```
 
-The JSON payload is the full `CorpusMetrics` schema:
-
-| Field | Meaning |
-| :--- | :--- |
-| `raw_words`, `raw_chars` | full text including appendix |
-| `clean_words`, `clean_chars` | prose only (appendix removed); `clean_words` retains its whitespace count |
-| `tokens`, `vocab_types` | token count (N) and distinct types (V) |
-| `ttr`, `guiraud_r`, `yules_k` | lexical diversity measures |
-| `total_sentences`, `asl`, `median_sl_exact`, `std_sl` | prose sentence metrics; exact median averages the middle pair |
-| `median_sl` | legacy integer upper median, preserved for compatibility |
-| `sentence_dist` | counts and shares of the four sentence classes |
-| `asw` | average syllables per word |
-| `flesch_de`, `flesch_variant`, `lix` | language-calibrated readability indices |
-| `mtld`, `mattr`, `maas_a2` | less length-sensitive lexical diversity (`null` when too short) |
-| `dialog_words`, `dialog_ratio` | quoted word tokens and their percentage of `tokens`, using the same configured `word_regex` |
-| `total_paragraphs`, `avg_paragraph_len`, `single_line_paragraphs` | paragraph economy |
-| `punctuation`, `signal_counts`, `filter_count` | punctuation (language-neutral keys), signal words, perception filters |
-| `chapters` | per-chapter metrics (words, sentences, ASL, TTR, dialogue, motifs, dominance) |
-
-Chapter `dialog_pct` likewise divides quoted tokens by chapter `words`.
-The corrected dialogue calculation can change older ratios and dependent style
-results; regenerate both sides of a comparison with the same analysis version.
-The JSON keys and legacy `clean_words` count remain unchanged.
+Add `--json` for the versioned metrics envelope. Counts distinguish full input,
+prose and regex tokens; `clean_words` retains its legacy whitespace count.
+`median_sl` retains the integer upper median; `median_sl_exact` averages the
+middle pair. Dialogue percentages divide quoted tokens by tokens under the
+same configured `word_regex`, including chapter `dialog_pct`. Regenerate both
+sides of a comparison with the same analysis version. See
+[metric definitions](#understanding-the-metrics) and
+[JSON contracts](AGENTS.md#3-json-contracts).
 
 ### `lixity profile`
 
-Emits paragraph-level tense and style profiles as JSON:
-
-- `language` – resolved language key,
-- `chapters[]` – `num`, `title`, `start_line`, `end_line`, `words`,
-  `paragraphs`, `present_hits`, `past_hits`, `dominant`, `flagged`, `asl`,
-  `dialog_pct`, `function_word_pct`,
-- `paragraphs[]` – the same fields per paragraph plus `severity`, `mixed`,
-  `switch`, `minority_ratio`, line anchors (`start_line`/`end_line`) and style
-  densities (`filter_density`, `modal_density`, `nominal_density`,
-  `passive_density` per 1,000 words). `dominant` is language-neutral:
-  `present`, `past`, `mixed` or `neutral`; the dashboard and reports map these
-  values to the display labels of the active language (Präsens, Present, …).
-
-A density is a count scaled to 1,000 words, not a percentage. A few matches in
-a very short paragraph can therefore produce a large value. The default
-nominalization heuristic excludes the language's curated function words;
-explicit project regex overrides retain their match-count semantics. These
-suffix cues are not a full grammatical analysis. Rebuild older reports before
-comparing their nominal-style results with 2.3.0.
-
-Tense classification is a transparent heuristic, not a black box: curated
-high-frequency verb forms are counted per paragraph. `mixed` requires at least
-two markers per tense **and** a minority tense share of ≥ 25 %; the share
-alone does not qualify a paragraph. A change of the dominant tense between
-consecutive paragraphs is a `switch`. Severity levels `0`–`3` (from
-*unremarkable* to *strong friction*) prioritise what is worth a second look;
-the exact truth table is documented in `docs/AGENTS.md` §3.5. Only
-`flag_min_severity` reaches the CLI/API/config surfaces; the other
-`ProfileThresholds` fields require direct `ParagraphProfiler` construction.
+Locate paragraph-level tense mixtures, switches and style densities with
+source line anchors:
 
 ```bash
 lixity profile manuscript.md > profile.json
 ```
 
+This command emits JSON. Language-neutral `dominant` values (`present`, `past`,
+`mixed`, `neutral`) become localized labels in reports. Tense classification
+counts curated verb forms: `mixed` requires at least two markers per tense and
+at least 25% minority share. `switch` compares consecutive dominant tenses;
+severity 0–3 prioritizes review. See the [classification contract](AGENTS.md)
+for the truth table and direct-library threshold controls.
+
+Densities are counts per 1,000 words, not percentages; short paragraphs can have
+large values from few matches. Nominalization suffix cues exclude curated
+function words unless a project regex override is supplied. They remain
+heuristics rather than a grammatical parse.
+
 ### `lixity dialogue`
 
-Dialogue and interaction structure: how often speech starts (turns), how long
-turns are and how dialogue is distributed. Heuristic: quoted speech via the
-language profile's dialogue pattern; no speaker attribution.
+Inspect quoted-speech segments, their lengths and chapter distribution:
 
 ```bash
-lixity dialogue manuscript.md          # Rich tables (summary + per chapter)
-lixity dialogue manuscript.md --json   # meta + dialogue report
+lixity dialogue manuscript.md
 ```
 
-JSON fields: `turns`, `turn_words`, `dialogue_words`, `dialogue_pct`,
-`avg_turn_words`, `median_turn_words`, `longest_turn_words`, `turns_per_1000`,
-`dialogue_paragraph_pct`, `chapters[]` (per chapter: `turns`, `dialogue_pct`,
-`avg_turn_words`, `longest_turn_words`, `dialogue_paragraphs`, `paragraphs`).
-A paragraph counts as dialogue paragraph when at least 50 % of its words sit
-inside quotation marks.
+A turn is a quotation segment, without speaker attribution. A dialogue paragraph
+has at least half its words inside detected quotations. `--json` returns these
+summary and per-chapter measurements for automation.
 
 ### `lixity characters`
 
-Character presence across chapters for curated names or alias patterns
-(`Matthias|Matze`). Whole-word, case-insensitive matching; appendix and front
-matter are excluded (chapter numbers match the metrics). **No NER** — the
-caller supplies the names; empty `--names` is an error (CLI exit 1,
-`ValueError` via the API).
+Find appearances and gaps for supplied names or alias patterns:
 
 ```bash
-lixity characters manuscript.md --names "Anna,Ralf"
-lixity characters manuscript.md --name "Matthias|Matze" --name Anna --json
+lixity characters manuscript.md --name "Alex|Alexander" --name Morgan --json
 ```
 
-JSON fields: `chapters` (total), `figures[]` with `mentions`,
-`chapters_present`, `first_chapter`, `last_chapter`, `longest_gap`,
-`presence_ratio` and `per_chapter`.
+Matching is whole-word and case-insensitive, excludes appendix/front matter,
+and reports mentions, chapter presence, span and longest gap. There is no named
+entity recognition: empty names fail rather than trigger automatic discovery.
+The [structure-result contract](AGENTS.md#35-structure-modules-dialogue-characters-pacing-motifs-showing)
+documents all dialogue, character, pacing, motif and showing result fields.
 
 ### `lixity pacing`
 
-Scene structure, pacing signals and chapter hooks. Scene breaks are explicit
-Markdown dividers (`---`, `- - -`, `***`, `* * *`, `___`, `_ _ _`, `•••`,
-`• • •`, `———`, `⁂`); scenes per chapter = breaks + 1. When the text has **no** explicit dividers, `explicit_scene_breaks`
-is 0 and `scenes_are_chapters` is true — each chapter is one scene, so scene
-structure is uninformative (the CLI prints a warning; do not read
-`scenes`/`avg_scene_words` as pacing evidence in that case). Per scene and
-chapter the report gives the observable tempo proxies (ASL, staccato share,
-dialogue share, scene length). The **hook score** (0–3, documented heuristic)
-adds one point each for a closing sentence of at most eight words, a terminal
-`?`/`!`/`…`, and a closing in dialogue.
+Inspect scene lengths, sentence-length curves and chapter-ending cues:
 
 ```bash
-lixity pacing manuscript.md          # Rich tables (summary + per chapter)
-lixity pacing manuscript.md --json   # meta + pacing report
+lixity pacing manuscript.md
 ```
 
-JSON fields: `chapters`, `scenes`, `explicit_scene_breaks`,
-`scenes_are_chapters`, `avg_scene_words`, `avg_chapter_scenes`,
-`hook_score_mean`, `fastest_chapter`, `slowest_chapter` and `chapter_list[]`
-with `scenes`, `asl`, `dialogue_pct`, `staccato_pct`,
-`closing_sentence_words`, `closing_terminal`, `closing_is_dialogue`,
-`hook_score` and the per-scene `scene_list[]`.
+Explicit Markdown dividers split scenes. With no dividers,
+`explicit_scene_breaks=0` and `scenes_are_chapters=true`: scene counts are chapter
+placeholders and give no independent pacing evidence. Tempo proxies are sentence
+length, staccato share, dialogue share and scene length. The hook score (0–3)
+adds one for each closing cue: at most eight words, terminal `?`/`!`/`…`, and
+closing dialogue. It measures these cues, not suspense or reader response.
 
 ### Scene registers and project targets
 
@@ -497,72 +344,49 @@ Existing analyze/profile (v2) and style (v4) envelopes remain unchanged.
 
 ### `lixity motifs`
 
-Motif tracking and repetition analysis. Motifs are curated regular
-expressions (`--motif NAME=REGEX`, repeatable); repetition is generic: the
-most frequent content words (function and stop words excluded) and repeated
-n-grams (default 3-grams, at least three occurrences) with their chapter
-spread. Repetition is a signal for macro editing — deliberate repetition is a
-stylistic device, so the report counts and locates, it does not judge.
+Track a curated regular-expression motif alongside frequent content words and
+repeated n-grams:
 
 ```bash
-lixity motifs manuscript.md --motif 'Wut=\b(Wut|wütend\w*)\b'
-lixity motifs manuscript.md --phrases 4 --json
+lixity motifs manuscript.md --motif 'door=\bdoor\w*\b' --json
 ```
 
-JSON fields: `chapters`, `motifs[]` (`mentions`, `density_per_1000`,
-`chapters_present`, `first_chapter`, `last_chapter`, `longest_gap`,
-`per_chapter`), `top_words[]` and `repeated_phrases[]` (`phrase`, `count`,
-`chapters`).
+The report counts and locates repetition across chapters; deliberate repetition
+is not an error. Function/stop words are excluded from top-word counts. See
+[local repetition echoes](#local-repetition-echoes) for nearby clusters and
+phrase-overlap handling.
 
 ### `lixity showing`
 
-Showing vs. telling balance — a **heuristic, self-calibrating** composite.
-Telling signals (per 1,000 words): perception filters, modals, passive
-constructions, nominalisations. Showing signals (shares in %): dialogue,
-staccato sentences. For each chapter the report computes robust z-scores
-(median/MAD, scaled) for the mean of each group against the manuscript's own
-chapter medians, and the balance `show_z − tell_z`.
-
-The comparison needs at least three chapters with differing signals. With too
-few chapters or no measurable contrast, the app explains the missing support
-instead of drawing empty score tiles. Individual measurements remain in the
-chapter matrix; this restriction is not a software failure.
-
-- **Positive balance:** the chapter shows more than this manuscript usually
-  does. **Negative balance:** it tells more.
-- Fallback (documented): when the median absolute deviation is zero (the
-  majority of chapters share the median — common for share features such as
-  dialogue), the standard deviation is used so the signal is not lost.
-- With fewer than three chapters, component z-scores fall back to zero. When
-  all chapter balances are identical, `most_telling` and `most_showing` are
-  empty lists, including this insufficient-data case. Empty ranks mean no
-  distinguishable ordering, not identical artistic effect.
-- The dashboard shows comparison values as `–` with an explanation when there
-  are fewer than three chapters or no nonzero comparative signals. Raw JSON
-  fallback scores remain numeric for compatibility.
-- Deliberate telling is a stylistic device — the report ranks and locates,
-  it does not judge. The underlying signals are also visible per chapter in
-  the dashboard's style heatmap and layer.
+Compare a heuristic chapter balance against this manuscript's own baseline:
 
 ```bash
-lixity showing manuscript.md          # summary + per-chapter table
-lixity showing manuscript.md --json   # meta + showing report
+lixity showing manuscript.md
 ```
 
-JSON fields: `chapters`, `tell_z_mean`, `show_z_mean`, `balance_mean`,
-`most_telling`, `most_showing` and `chapter_list[]` with `tell_z`, `show_z`,
-`balance` and the raw signals.
+Telling signals are perception filters, modals, passive constructions and
+nominalizations per 1,000 words; showing signals are dialogue and staccato
+percentages. Robust chapter z-scores yield `balance = show_z − tell_z`.
+A positive balance means more showing signals than usual for this manuscript;
+it does not establish a better scene. Zero MAD falls back to standard deviation.
+
+Comparison needs at least three chapters with differing signals. Otherwise the
+app shows `–` and explains the missing support while retaining raw measurements.
+For compatibility, JSON component z-scores fall back to zero with too few
+chapters; identical balances yield empty `most_telling`/`most_showing` ranks.
+Empty ranks mean no distinguishable ordering, not identical artistic effect.
 
 ### `lixity style`
 
-Prints the **style reference** – descriptive comparisons against the
-manuscript's own baseline. Defaults: \|z\*\| ≥ 2.5 notable, ≥ 3.5 strong,
-nominal FDR q = 0.05 (BH);
-override with `--z-mild`, `--z-strong`, `--fdr-q`, `--fdr-method`,
-`--dim-threshold`, `--flag-min-severity` (same flags on `dashboard`
-and `build`). Active values are always reported in the passport `meta`
-(`z_mild`, `z_strong`, `fdr_q`, `fdr_method`, `dim_score_threshold`) and in
-the dashboard legend / settings – re-read them, never assume the defaults.
+Compare chapter features with the manuscript's own style baseline:
+
+```bash
+lixity style manuscript.md --json
+```
+
+Inspect active thresholds in the JSON `meta` or dashboard legend rather than
+assuming defaults. `lixity style --help` lists available overrides.
+
 The 16 chapter features cover sentence length and variation, short sentences
 (≤6 words), long sentences (>25 words), quotation share, lexical patterns,
 sentence starts and vocabulary diversity. Marker counts for passive, modality
@@ -584,332 +408,180 @@ Compare scenes within their intended register and read the passages. A
 deliberate change of voice can explain a deviation; the style reference does
 not prescribe a writing target or decide whether to edit.
 
-```bash
-lixity style manuscript.md          # text block
-lixity style manuscript.md --json   # machine-readable (schema v4)
-lixity style manuscript.md --json --z-mild 1.5 --fdr-q 0.1 --fdr-method by
-```
-
 ### `lixity dashboard`
 
-Writes one self-contained HTML file — no CDN, no framework, no external
-requests. The output is deterministic: regenerating an unchanged manuscript
-produces an identical file. The file includes the manuscript text and its
-measurements.
-
-The dashboard contains:
-
-- a **Start your review** panel before the KPIs, with direct routes to a passage,
-  available chapter comparison and sentence rhythm,
-- a **status strip** at the top (when the embedding tool provides one, e.g.
-  the manuscript workspace UI): one dot per component (manuscript, analysis,
-  dossiers, exports, NDA, markers) with a one-word state, so the reader sees
-  at a glance what is current and what is stale,
-- corpus KPIs (words, chapters, paragraphs, sentences, ASL, TTR, Yule's K,
-  Flesch, LIX, dialogue, Guiraud R, HD-D, MTLD, MATTR, Maas a², staccato,
-  first-person starts, function words, flagged paragraphs) — **every KPI tile
-  is clickable** and jumps to the panel that shows it, preselecting the
-  matching filter where one exists (flags / deviations),
-- a **flagged passages** panel (`#flags`, directly under the KPIs): one row
-  per paragraph with severity ≥ 2, sorted by severity then line — severity
-  badge, chapter, line anchor and a short excerpt. Clicking a row **jumps
-  straight to that paragraph** (opens it, scrolls, flashes) with the
-  “flagged only” filter preselected; each row also has a quick **+ To-do**
-  button that writes the work marker inline (note field, `Enter` saves)
-  without leaving the list. This is the start of the editorial loop:
-  overview → passage → marker,
-- the sentence-length architecture as bars,
-- a **dialogue structure** panel (when dialogue data is supplied or computed by
-  the CLI): turns, dialogue share, average turn length, turns per 1,000 words
-  and the chapters with the most speech,
-- a **character presence** panel (when names are supplied): mentions, chapters
-  present, chapter span, longest gap and a presence bar per figure,
-- a **pacing curve** (when pacing data is supplied or computed by the CLI):
-  scenes, average scene length, hook mean and one bar per chapter (ASL, the
-  sentence-length proxy) with its hook score. When `scenes_are_chapters` is
-  true, the panel identifies scene counts as chapter placeholders,
-- a **motifs & repetition** panel (when data is supplied or computed by the
-  CLI): motif presence and the most repeated phrases with their chapters,
-- a **narrative distance** panel (when data is supplied or computed by the
-  CLI): tell/show mean z and the per-chapter balance bars (positive = showing),
-- the **style heatmap**: chapter × feature matrix of noise-adjusted
-  z* values with a diverging colour scale (blue = below, orange = above the
-  manuscript median), plus the expected-false-positive/FDR footnote; cells jump to
-  the chapter and activate the matching style layer,
-- the **style reference** panel (median, ±2σ band, outlier count per
-  feature): **each band row is clickable** and jumps to that feature's
-  column in the style heatmap (`#feat-<field>`), activating the matching
-  style layer and preselecting “deviations only” when outliers exist; the
-  red **outlier count** opens the strongest outlier chapter directly,
-- the **style dimensions** panel (exploratory rank-space axes with
-  loadings, flagged chapters and complete-measurement coverage),
-- a chapter map with a colour-coded paragraph strip (present / past / mixed /
-  neutral) and severity markers, plus a **style layer** overlay: choosing a
-  dimension (ASL, dialogue, function words, perception filters, modals,
-  nominalisations, passive) colours every paragraph by its deviation from the
-  chapter mean (blue = below, orange = above), with a legend, per-layer
-  guidance on what to look for, and the exact value in the tooltip; layer
-  colour encodes the absolute value span (min–max per dimension), while a
-  ring marks paragraphs that are *unusual for this chapter* (|z| ≥ 1.5) —
-  so the layer never hides low values in a narrow band,
-- clickable paragraphs revealing manuscript text and line anchors; since
-  v2.3.0, per-paragraph stats follow in a compact **Values** disclosure
-  (highlighted in the active layer colour),
-- the chapter comparison matrix with a deviation column; matrix rows and
-  marker rows navigate to their passage,
-- the **work markers** panel: setting a marker opens an inline note field
-  with Save/Cancel (`Enter` saves, `Esc` cancels) so the reason travels with the marker.
-
 ```bash
-lixity dashboard manuscript.md -o ui.html
+lixity dashboard manuscript.md -o dashboard.html
 ```
+
+The output is one self-contained HTML file with manuscript text, measurements
+and offline navigation; it needs no CDN or external requests. Identical input
+and settings produce identical output. The panels cover sentence rhythm,
+dialogue, curated character presence, scenes, motifs, narrative-distance cues,
+chapter style, paragraph profiles and work markers as data permits. See the
+[dashboard workflow](#dashboard-workflow) to move from measurements to passages.
+A compatible server provides explicit project actions and marker saves.
 
 ### `lixity pdf`
 
-Composes a PDF document directly, without a browser, converter or runtime font
-package. No new dependency is involved, and nothing is uploaded.
-This is the terminal interface shipped in v2.3.0. The native workspace's
-[download form](#download-a-manuscript-pdf-since-v240) is a
-v2.4.0 addition; its PDF response does not write the CLI's output path.
+Create a local reading copy without a browser or external converter:
 
 ```sh
-lixity pdf manuscript.md --layout report            # A4 analysis report
-lixity pdf manuscript.md --layout book --author "Name"   # A5 reading layout
-lixity pdf manuscript.md --layout sheet             # 30 lines x 60 characters
-lixity pdf manuscript.md --layout book -o reading.pdf
+lixity pdf manuscript.md --layout book --author "Example Writer" -o reading.pdf
 ```
 
 | Layout | Page | Purpose |
 | :--- | :--- | :--- |
-| `report` | A4 | The measured analysis report: an unnumbered cover page and aligned tables with a repeated header row, set in a sans face for screen reading |
-| `book` | A5 | Continuous reading: serif measure, mirrored margins, chapter openings, folios |
-| `sheet` | A4 | Submission grid: at most 30 lines per page, at most 60 characters per line |
+| `report` | A4 | Analysis report with cover page and repeated table headers |
+| `book` | A5 | Continuous reading with serif text, mirrored margins and chapter openings |
+| `sheet` | A4 | Submission grid, at most 30 lines per page and 60 characters per line |
 
-**Typography.** The layouts follow what print research and practice actually
-agree on, and where they disagree the guide says so:
+Output defaults beside the manuscript; `-o` selects another path. Unchanged input,
+settings and fonts produce identical output. The manuscript is not modified.
+The [native download form](#download-a-manuscript-pdf) uses the same composer
+without writing a CLI output path.
 
-- **Measure.** Lines are fitted to roughly 64 characters (`book`) and 78
-  (`report`) by choosing the type size from the real text, not the font alone.
-  Readable print measures are usually quoted as 45–75 characters; the often
-  cited "66 is ideal" is a craftsman's convention rather than a measured
-  result, so the size is fitted per document instead of assumed.
-- **Line breaking.** Paragraphs are broken by a shortest-cost search over all
-  break points, not greedily line by line. Greedy breaking is what produces
-  rivers and one-word lines in justified text. There is no hyphenation, so the
-  last resort is a ragged edge instead of an unbreakable line.
-  Since v2.3.0, an overlong word is split at character boundaries
-  to keep it within the page measure without dropping characters.
-- **Report tables.** Measured figures are set as tables, not as ``label · value``
-  prose: columns keep their longest word whole, numeric columns right-align,
-  a row stays on one page and the header row repeats after a page break. Wide
-  tables step their type down slightly instead of breaking headings.
-- **Justification.** Slack is spread over the word gaps, tightening as well as
-  stretching, and a line falls back to ragged rather than opening a gap beyond
-  a third of an em. The last line of a paragraph is never justified.
-- **Margins.** The foot is larger than the head, so the block does not read as
-  sinking off the page. The book mirrors its margins for double-sided printing;
-  the report uses symmetric margins for single-sided reading.
-- **Vertical grid.** Book and report baselines sit on a grid set by the body
-  leading, so headings and paragraph spacing land on the same rhythm.
-- **Grid sheet.** The submission sheet is a fixed character grid: it is broken
-  at the column count and never spaced out, because the count is the contract.
-- **Markdown.** Markdown emphasis, code and table syntax are rendered away, so
-  a report reads as a document rather than as its source.
+Title selection prefers an explicit override, the selected project's title,
+supported manuscript title metadata/heading, then the filename. Fenced code is
+not a title candidate. `--author` overrides project `author_name`; an explicitly
+empty value clears the byline. PDF metadata includes title/author when present
+and the resolved language. A5 has chapter bookmarks and body-page title/author
+headers; title/imprint pages omit decorations but count toward physical folios.
+A4 headers and current/total page footers sit outside the prose/grid area.
+The optional `draft_notice` project setting (or `--draft-notice` override) adds
+a running-header notice in every layout; an empty override clears it. See
+[publication settings](#publication-settings) for optional A5 imprint text.
 
-Output is written beside the manuscript unless `-o` names another path, and is
-deterministic: an unchanged manuscript produces an identical file.
+Fonts come from the host and can be pinned per role with CLI options listed by
+`lixity pdf --help`, or `LIXITY_PDF_FONT_TEXT`, `_HEADING`, `_MONO`, `_SANS` and
+`_SANS_BOLD`. Only used glyphs are embedded, with searchable/copyable text maps.
+Missing fonts, embedding restrictions or missing glyphs fail explicitly; a
+glyph error identifies its font role and Unicode codepoint. Each role requires
+a single-face TrueType outline font; collections and CFF outlines are
+unsupported. There is no automatic mixed-script fallback, contextual shaping
+or bidirectional layout. Font coverage alone does not establish correct
+rendering for every script.
 
-**Characters and fonts.** Text is addressed by glyph id, supporting Unicode
-characters covered by the chosen font, including marks outside Basic Latin.
-Fonts are looked up on the host and can be pinned per role with `--serif-font`,
-`--bold-font`, `--mono-font`, `--sans-font`, `--sans-bold-font` or
-`LIXITY_PDF_FONT_TEXT` / `_HEADING` / `_MONO` / `_SANS` / `_SANS_BOLD`. The
-book prefers a face set for reading — EB Garamond, Linux Libertine, Charis SIL,
-Gentium — and falls back through Times-metric faces to DejaVu Serif; the report
-uses a sans face. Only glyphs actually used are
-embedded, so a German manuscript stays a small file. A font whose licence
-forbids embedding is refused rather than producing blank pages; an unavailable
-font is reported with the file names searched. Exported text carries a
-`ToUnicode` map, so it can be searched, selected and copied in a reader.
-Each role uses one single-face TrueType outline font; TrueType collections and
-CFF outlines are unsupported. There is no automatic fallback between fonts for
-mixed-script text, contextual glyph shaping or bidirectional layout.
-Since v2.3.0, every drawn visible character is checked before
-the PDF is written; a missing glyph reports its font role and Unicode codepoint.
-Default report fonts prefer DejaVu Sans regular/bold for generated analysis
-symbols. Explicit font choices are retained.
+The composer fits reading measures, breaks paragraphs across lines and splits
+overlong words at character boundaries. Markdown presentation syntax is removed.
+It does not hyphenate, place images, typeset mathematics, create page-numbered
+tables of contents or alternate recto/verso running heads. Shared composition
+boundaries are described in [Architecture](ARCHITECTURE.md).
 
-**Since v0.3.0:** TrueType subsets preserve glyph metrics and
-composite outlines, Unicode aliases remain distinct when copied, and embedding
-permissions are checked against the font's declared table version. Font roles
-used by another layout do not constrain the chosen layout. Heading/body spacing
-and first-line paragraph indents are corrected without changing the manuscript.
-
-**Since v0.3.0: identity and navigation.** The composer prefers an
-explicit title override, then the selected project's title, then supported
-manuscript title metadata/heading, then the filename. Fenced code examples are
-not title candidates. `--author` overrides the project's `author_name`; an
-explicit empty value clears the PDF byline. PDF Info carries Title/Author when
-present; the catalog carries the resolved language and A5 chapter bookmarks.
-Book body pages have bounded title/author headers and physical page folios;
-title and imprint pages omit these decorations but count toward the folios.
-Sheets and reports use a bounded header and current/total page footer outside
-the prose area; the sheet's 30×60 body grid remains intact.
-
-**Limits.** This is a text and layout renderer. It does not hyphenate, place
-images, build tables of contents with page numbers, alternate running heads
-between recto and verso, or typeset mathematics. Line breaking minimises badness
-without Knuth–Plass hyphenation, so a narrow measure occasionally leaves a
-loose line. These documents are generated from a Markdown manuscript; the
-manuscript itself is never modified.
-
-The three layouts produce PDFs for analysis, continuous reading and submission.
-They do not add bleed or crop marks, manage print color profiles, generate PDF/X
-or perform printer preflight. Font coverage alone does not establish correct
-typesetting for every script. Output remains fixed-layout PDF; there is no EPUB
-export or PDF/UA accessibility certification. Metadata and bookmarks alone do
+These fixed-layout PDFs are for analysis, reading and submission. There is no
+EPUB export, bleed/crop marks, print color management, printer preflight or
+PDF/UA/PDF/X certification. Searchable text, metadata and bookmarks alone do
 not establish accessibility or production compliance.
 
 ### `lixity service`
 
-Since v2.4.0, manage the installed application without a source checkout:
+Start the installed workspace without keeping a terminal open:
 
 ```sh
 lixity service start --open
-lixity service status
-lixity service restart
-lixity service stop
 ```
 
-Start uses an empty workspace in an application-owned working directory unless
-you choose a project argument or `LIXITY_DIR`. It launches the same installed Python as
-the CLI. The controller manages its own instances; a foreground `lixity serve`
-process is stopped with Ctrl+C, and external startup units use their OS manager.
-`start` uses fresh launch settings; `restart` reuses saved startup settings with
-any explicit overrides, including after a stop. Neither restores a later project
-choice in the browser. Starting an already running instance reports its status;
-use stop/start or restart to change its launch settings.
-Since v0.3.0, an explicit restart into another project clears its predecessor's
-title unless `--title` supplies a replacement. Plain restart retains the saved
-title. Opening a different project in the UI uses that project's identity for
-the header and NDA form; language/analysis overrides remain session preferences.
+Use `status`, `restart` and `stop` to manage the owned instance. Start defaults
+to an empty workspace in an application-owned directory unless a project or
+`LIXITY_DIR` is specified. `start` takes fresh launch settings; `restart` reuses
+saved settings with explicit overrides, even after a stop. Neither restores a
+later browser project choice. An already running instance is reported without
+changing its settings. Restarting into a different project clears the prior
+title unless explicitly replaced; plain restart keeps the saved title.
 
-| Option | Purpose |
-| --- | --- |
-| `PATH` | Explicit manuscript or project for start/restart. |
-| `--port N` | Select the managed instance; defaults to `LIXITY_PORT` or 8765. |
-| `--host IP` | `127.0.0.1` or `localhost` only; defaults to `LIXITY_HOST` or `127.0.0.1`. |
-| `--no-project` | Clear the startup project, including on restart. |
-| `--open` | Open the browser for a ready owned instance. |
-| `--language`, `--title`, `--research-project`, `--debug` | Explicit startup choices, alongside the existing analysis threshold flags. |
-| `--min-chapters N` | Minimum usable chapters for a style baseline; integer at least 2 (default 2). Foreground and managed startup accept it since v3.0.1. |
-| `--backend auto\|process\|systemd` | Auto prefers an available Linux user systemd manager; process selects detached handling; explicit systemd fails when unavailable. |
-| `--json` | Return the `lixity-service-local/1` lifecycle result. |
+The controller manages its own instances. Stop foreground `lixity serve` with
+Ctrl+C and OS-managed startup units through their manager. A busy port never
+permits terminating an unrelated listener. Backend selection is per invocation;
+repeat an explicit backend on restart. `LIXITY_*` environment values, including
+OCR settings, are inherited on launch and are not saved as startup settings.
+Use `lixity service --help` for lifecycle arguments, or
+[installation and service setup](INSTALLATION.md#running-the-server).
 
-Startup options apply to start/restart. `stop` and `status` select the instance
-by port. Backend selection is per invocation, not saved; repeat an explicit
-`--backend` on restart to retain it. Stop retains saved launch settings and logs.
-App environment variables
-(`LIXITY_*`), including OCR configuration, are inherited at start/restart and are
-not saved in launch settings.
-
-For automation, use `lixity service status --json`. The result always has
-`schema_version`, `ok`, `state` and `message`. When the manager initializes,
-it also includes `url`, `pid`, `backend`, `installed_version`, `running_version`
-and `log`; unavailable values can be null. States are `running`, `starting`,
-`stopped`, `busy` (an unmanaged listener), and `unknown` (unverifiable/error).
-Exit 0 means `ok: true`; exit 1 means false. Status is successful only for a
-ready owned instance. Stopped status exits 1; stopping an already stopped
-instance succeeds. An occupied port is never treated as permission to stop
-its unrelated process.
-See [installation, updates and removal](INSTALLATION.md#running-the-server).
+For automation, `lixity service status --json` returns
+`lixity-service-local/1`: `schema_version`, `ok`, `state`, `message`, plus
+`url`, `pid`, `backend`, `installed_version`, `running_version` and `log` when
+the manager initializes (unavailable values may be null). States are `running`,
+`starting`, `stopped`, `busy` and `unknown`. Exit 0 means `ok: true`; exit 1
+means false. Status succeeds only for a ready owned instance; stopped status
+exits 1, while stopping an already stopped instance succeeds. Stop preserves
+saved launch settings and logs.
 
 ### `lixity build`
 
-Idempotent workspace build. Put a manuscript into a folder and run `lixity
-build` (or `lixity build path/to/manuscript.md`): lixity discovers the
-manuscript, creates the subfolders `exports/` (with `exports/archive/`) and
-publishes all analysis artifacts:
-
-- `exports/<slug>_metrics.json` – full corpus metrics (schema_version 2 meta),
-- `exports/<slug>_profile.json` – paragraph-level heuristic tense profiles with line anchors,
-- `exports/<slug>_style.json` – self-calibrated style reference (schema v4),
-- `exports/<slug>_style_passport.txt` – human-readable style reference (legacy file name),
-- `exports/<slug>_report.md` – Markdown dossier report,
-- `exports/<slug>_dashboard.html` – single-file HTML dashboard.
-
-**Idempotency:** identical input causes zero writes; changed input creates
-exactly one timestamped version, updates the stable file name (symlink with
-file-copy fallback) and rotates older versions into `exports/archive/`
-(last 10 kept per artifact family). `--dry-run` prints the plan without
-touching any file.
-
-**Since v0.3.0:** version names include seconds and microseconds,
-with a sequence suffix if the exact timestamp is reused. Changed artifacts
-within one minute retain their distinct contents; existing minute-based archive
-names remain recognized. Stable links or fallback copies are prepared before
-atomic replacement. A failed replacement preserves the previous stable artifact
-and reports an error before moving its older versions into the archive.
-
-**Manuscript discovery:** `<folder>.md`, then `manuscript.md`/`manuskript.md`,
-otherwise the only Markdown file in the folder (README/AGENTS/LICENSE/NDA are
-ignored); an explicit path always wins.
+Create the reproducible artifact set for a project:
 
 ```bash
-cd my-novel && lixity build          # discovers my-novel.md
 lixity build manuscript.md --dry-run
 ```
 
+Remove `--dry-run` to write `exports/<slug>_metrics.json` (v2), `_profile.json`
+(v2), `_style.json` (v4), `_style_passport.txt` (legacy filename), `_report.md`
+and `_dashboard.html`. Identical content causes zero writes. Changed artifacts
+get unique timestamped versions and atomically replace stable links or fallback
+copies; the last 10 versions per artifact family remain in `exports/archive/`.
+A failed replacement preserves the previous stable artifact and reports an error.
+
+An explicit manuscript path wins. Otherwise discovery tries `<folder>.md`,
+then `manuscript.md`/`manuskript.md`, then a sole Markdown file (ignoring
+README/AGENTS/LICENSE/NDA). `--dry-run` displays the plan without writing.
+
 ### `lixity about` and `lixity completion`
 
-```bash
-lixity about                 # languages, features, heuristics
-lixity about --json          # machine-readable capability discovery
-lixity completion bash       # bash completion script
-lixity completion zsh        # zsh completion script
-```
+`lixity about --json` describes installed capabilities and thresholds for
+programs; plain `about` gives a terminal summary. `lixity schema` is its metadata
+alias. For safe user-level Bash/Zsh setup, follow
+[shell completion](INSTALLATION.md#optional-shell-completion).
 
-Install completion (user-level):
+<a id="research-search-scopes-since-v1190"></a>
+<a id="research-search-scopes"></a>
+<a id="claim-chronology-causal-interpretations-and-keyword-citations-since-v300"></a>
+<a id="claim-chronology-causal-interpretations-and-keyword-citations"></a>
+<a id="zotero-integration-since-v1190"></a>
+<a id="zotero-integration"></a>
+<a id="research-batch-workflow-and-index-ergonomics-since-v1200"></a>
+<a id="research-workflows-and-index-ergonomics"></a>
 
-```bash
-lixity completion bash > ~/.local/share/bash-completion/completions/lixity
-lixity completion zsh  > "${fpath[1]}/_lixity"
-```
+### `lixity research`
+
+Research is a separate experimental, explicit-project workspace. Its
+[usage guide](research/USAGE.md) owns retained source capture, authored records,
+lexical search, chronology, citations, Zotero, OCR, backups and archive versions.
+Use `lixity research COMMAND --help` for installed arguments/formats and `GET /api`
+for a running server's operations. Confirm permission to retain source bytes
+before ingesting. Retrieved passages are evidence to review, not accepted claims.
+
+Useful entrypoints: [source/current-record search](research/USAGE.md#search-current-authored-records-since-v1190),
+[chronology and causal interpretations](research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300),
+[keyword citations](research/USAGE.md#choose-citations-by-keywords-since-v300),
+[Zotero capture and recovery](research/USAGE.md#zotero-desktop-bridge-since-v1190),
+[author revisions and acknowledgements](research/USAGE.md#research-workflows).
+Use the same supported application version for every archive writer; product
+release numbers, archive versions and response schemas are independent.
 
 ## Worked example: a sequel in the author's style
 
-The repository ships a complete, reproducible example in `samples/`:
-
-1. **Reference corpus** – Theodor Fontane, *Effi Briest* (Project Gutenberg
-   #5323, public domain), converted to Markdown: `samples/effi-briest.md`
-   (36 chapters, ~95,000 words).
-2. **Style corridor** – `lixity build samples/effi-briest.md --language de` publishes the
-   manuscript's own median ± 2σ band per feature
-   (`samples/exports/effi-briest_style.json`).
-3. **Draft** – `samples/effi-briest-folge/effi-briest-folge.md`: the first
-   chapter of a sequel about Annie, Effi's daughter.
-4. **Draft metrics** – Analyze the draft with the same language profile, then
-   compare its chapter features with the reference passport. `analyze` does not
-   automatically load a separate reference passport or decide what to revise.
+The public-domain `samples/effi-briest.md` (Fontane's *Effi Briest*, Project
+Gutenberg #5323) and the sample sequel in `samples/effi-briest-folge/` illustrate
+a manual reference comparison:
 
 ```sh
 lixity style samples/effi-briest.md --language de --json > /tmp/effi-reference.json
 lixity analyze samples/effi-briest-folge/effi-briest-folge.md --language de --json > /tmp/effi-draft.json
 ```
 
-Use newly generated values for both texts. Version 1.16.0 corrects HD-D and
-other numerical calculations, so older corridors and draft values are not a
-comparison baseline. Read changes in context: a departure can reflect dialogue,
-topic or a deliberate narrative choice, and matching the reference distribution
-is not evidence of literary quality.
+Generate both texts with the same analysis version and settings. `analyze` does
+not load a separate reference passport automatically. Topic, dialogue or an
+intentional voice change can explain differences; matching the reference
+distribution does not establish literary quality.
 
 ## Work markers (editor-visible)
 
 The dashboard (local control server) can set **work markers** directly into
 the manuscript: invisible HTML comment lines with stable IDs
 (`<!-- LIXITY-MARKER id="…" kind="…" note="…" -->`) placed above the target
-paragraph. They appear in the text editor, never render in any export, move
-with the paragraph when editing, and are idempotent (deterministic
+paragraph. The comments stay out of manuscript prose and PDF text, but exported
+HTML dashboards include the marker list and notes. Review those before sharing
+a dashboard. Markers move with the paragraph when editing and are idempotent (deterministic
 content-hash IDs). Kinds: `pruefen`, `sachcheck`, `todo`, `achtung`. In the
 dashboard, clicking a kind opens an inline note field. Type the reason and
 choose **Save** or press Enter to commit (the marker is written with `note="…"`);
@@ -921,17 +593,9 @@ source line. Programmatic access: `api.markers(text)`,
 `api.add_marker(text, kind, note, line)`, `api.resolve_marker(text,
 marker_id)`.
 
-**Since v0.3.0:** marker write or encoding failures return a clear
-HTTP 500 JSON error. Failed staged writes leave the original manuscript bytes
-and permissions intact; they do not fall back to direct overwriting or refresh
-the dashboard as if the save had succeeded.
-
-## AI agent interface
-
-Stable, deterministic facade for agents and automation – the full
-machine-facing contracts (JSON schemas with meta blocks, exit codes,
-interpretation heuristics) live in [`docs/AGENTS.md`](AGENTS.md); the API
-facade is described below under [Library](#library).
+Failed marker saves report an error and preserve the manuscript bytes and
+permissions. The interface retains the draft for correction; HTTP details are
+in the [automation contract](AGENTS.md).
 
 ## Understanding the metrics
 
@@ -972,13 +636,25 @@ The style passport stores these feature identifiers in `features[].feature`
 and its deviation/FDR entries. Display keys such as `feat_asl` and `feat_dialog`
 belong to localized labels, not callable API functions or result fields.
 
+<a id="unavailable-consistency-and-empty-manuscripts-since-v1180"></a>
+
+### Unavailable consistency and empty manuscripts
+
+Dashboard/text reports show `–` without measurable chapter–feature cells.
+Empty chapters contribute no measurements; one chapter or fewer than configured
+`min_chapters` is insufficient for a baseline. Style JSON v4 reports
+`measured_cells`: when zero, legacy `consistency: 1.0` is an unavailable sentinel,
+not 100%. Otherwise consistency counts cells with `abs(z*) < z_mild`, not whole
+chapters. See [interpretation](guides/interpretation.html) for short-text limits.
+
 ## Manuscript format & how to operate lixity
 
 **Format (Markdown, UTF-8):**
 
 - **Chapters** are level-2 headings: `## Title`. Everything before the first
-  `##` is front matter and is not analysed. Both are configurable
-  (`CorpusConfig.chapter_regex`).
+  `##` is front matter and is not analysed when chapter headings exist. Without
+  chapter headings, all prose is measured as one chapter. The boundary regex is
+  configurable (`CorpusConfig.chapter_regex`).
 - **Appendix** starts at `## Anmerkungen und Literaturverzeichnis`
   (`CorpusConfig.appendix_marker`); it is excluded from prose metrics.
 - **Paragraphs** are separated by blank lines. Hard line breaks inside a
@@ -987,249 +663,119 @@ belong to localized labels, not callable API functions or result fields.
   ratio.
 - **Work markers** are invisible HTML comments
   (`<!-- LIXITY-MARKER id="…" kind="…" note="…" -->`) placed directly above the
-  paragraph. They never appear in exports and move with the paragraph when
-  editing. Other HTML comments are ignored by the analysis.
-- Keep the file name stable: the dashboard derives its title from it.
+  paragraph. HTML dashboards include their notes; prose/PDF text omits the
+  comments. They move with the paragraph when editing. Other HTML comments are
+  ignored by the analysis.
+- Explicit project title/metadata can supply the title; filenames remain the
+  artifact naming basis.
 
-**Operating flow (dashboard):**
-
-1. `lixity dashboard manuscript.md -o exports/dashboard.html` (or `lixity build`
-   for the full artifact set), open the file in a browser.
-2. Read the KPI groups (Scope · Rhythm · Language · Vocabulary · Style), then
-   the heatmap: click a cell to jump to the chapter and activate the matching
-   style layer.
-3. Use the style layer (toolbar) to see *where* a dimension deviates: blue =
-   below, orange = above the chapter mean; the legend explains what to look
-   for, the tooltip gives the exact value.
-4. Click a paragraph strip to read the passage. Since v2.3.0,
-   expand **Values** for source lines, tense and style measurements;
-   with the control server, markers can be set right there.
+For a review, follow a heatmap cell or paragraph strip to the passage, then
+compare the measurement with the chapter's purpose. See
+[dashboard navigation](#dashboard-workflow) rather than treating a highlighted
+value as an editing instruction.
 
 Line anchors in reports and dashboards refer to lines in the source file, so
 findings stay navigable in the editor.
 
-For example, to review an ASL difference in a synthetic **Report** chapter,
-read its value and the manuscript reference, follow its chapter link, and open
-a paragraph strip to inspect the source lines. Compare the longer sentences
-with the chapter's purpose. Keep deliberate variation or record a review note;
-after an author makes an edit, rebuild and inspect the passage again. A flagged
-measurement supplies a review location, not a reason to rewrite automatically.
-
 ## Known limitations & stability
 
-What the numbers can and cannot do — the full register (research basis,
-evidence, every trade-off) lives in [`docs/STABILITY.md`](STABILITY.md):
+[Methods](METHODS.md) documents estimator conventions;
+[Stability](STABILITY.md) records evidence and inference limits.
 
-- **Short texts:** less length-sensitive lexical-diversity indices need minimum
-  sizes (HD-D/MTLD/Maas a² ≥ 100 tokens, MATTR ≥ window 50);
-  below that Lixity returns `null` and the dashboard shows `–`. These guards
-  do not establish reliability above the floor or assess prose quality.
-- **Heuristics:** syllables (error rate not established by a gold-standard corpus here), suffix-based densities and tense
-  patterns are comparable *within* one language, not across languages;
-  heuristics measure what is in the text, they are not ground truth.
-- **`signal_counts`:** empty (`{}`) unless the caller supplies
-  `CorpusConfig.signal_keywords` — language profiles default to no thematic
-  signal words. `filter_count` uses the language filter-verb regex (a curated
-  lemma list), which intentionally differs from broader editorial definitions
-  (e.g. German perception verbs: engine ≈ 94 vs a 120-verb dossier list);
-  do not swap the two numbers without restating the definition.
-- **Pacing without dividers:** no explicit `---`/`* * *` breaks means
-  `explicit_scene_breaks=0` and `scenes_are_chapters=true` (scenes ≡
-  chapters); scene counts are then structure placeholders, not pacing.
-- **`characters` / `dialogue`:** no NER and no speaker attribution — names
-  and alias patterns come from the caller; dialogue turns are quotation
-  segments, not speaker turns.
-- **No external Delta stylometry:** divergence metrics (JSD driver words)
-  are in-corpus diagnostics for *this* manuscript, not authorship
-  attribution against an external reference corpus.
-- **Research reference scope:** retained sources never become the manuscript's
-  baseline automatically. Source analysis is `source_internal`; explicit
-  source–manuscript comparison returns separate vocabulary/register contrasts.
-  Historical genre, period and place labels remain unverified context, not
-  stylistic norms or factual proof.
-- **Self-calibration needs several chapters** with measurable spread; a
-  single chapter hides the heatmap instead of showing noise.
-- **Determinism** is byte-identical on the same interpreter; across Python
-  versions the last floating-point bits may differ.
-- **Dashboard size** grows with the embedded manuscript text and paragraph
-  measurements by design: the file is self-contained and offline. Since
-  v2.3.0, paragraph contents are rendered when opened to reduce
-  initial DOM work; the complete data still occupies space in the file.
-- **Accessibility:** numeric labels and text details complement analytical colour
-  scales. Since 2.0.0, chapter-score links and native rotation/zoom
-  controls provide keyboard/touch equivalents to point navigation. Paragraph
-  chips and dimension controls use 24×24 targets, or 44×44 on coarse pointers.
-  Individual canvas points remain pointer-operated; automated checks do not
-  establish full accessibility conformance.
+- Minimum sizes (HD-D/MTLD/Maas ≥100 tokens; MATTR ≥50) are availability
+  floors, not reliability guarantees. Short inputs can yield unstable values.
+- Syllable, suffix and tense patterns are language-specific heuristics without
+  established gold-standard error rates here; cross-language comparisons need
+  separate justification. Curated filter-verb counts differ from broader
+  editorial definitions.
+- `signal_counts` is empty unless project `signal_keywords` supplies thematic
+  patterns. Vocabulary/JSD contrasts are in-corpus diagnostics, without external
+  Delta authorship attribution or automatic narrator-voice assessment.
+- Research source analysis is `source_internal`; explicit source–manuscript
+  comparisons remain separate. Retained sources never become the manuscript's
+  baseline automatically. Period/place/genre labels are unverified context.
+- Determinism is byte-identical on the same interpreter; Python versions may
+  differ in the final floating-point bits. Offline dashboard size grows with
+  embedded text/data even though paragraphs are rendered on demand.
+- Numeric details and keyboard/touch controls complement color scales, but
+  pointer-operated canvas points and automated checks do not establish full
+  accessibility conformance.
+
+<a id="ai-agent-interface"></a>
 
 ## Library
 
 ### High-Level API Facade (`lixity.api`)
 
-Choose the outputs your integration needs. Each convenience call performs its
-own analysis; [the shared pipeline](ARCHITECTURE.md#configuration-and-multiple-projects)
-can reuse one result for several outputs. Pass explicit project settings when
-working with multiple projects; `{}` selects code defaults for thresholds.
-
-For automation, AI agents, and straightforward scripting, use the deterministic facade:
+Use the deterministic facade for scripting. This example selects English and
+explicit code defaults instead of discovering unrelated project configuration:
 
 ```python
 from pathlib import Path
-
 from lixity import api
 
 text = Path("manuscript.md").read_text(encoding="utf-8")
-
-# 1. Analyze corpus KPIs
-res = api.analyze(text, language="auto")
-kpis = res["metrics"]
-print(f"ASL: {kpis['asl']:.2f}, LIX: {kpis['lix']:.1f}")
-
-# 2. Self-calibrated style reference (bands, z*, FDR, dimensions)
-reference = api.fingerprint(text, language="de", project_config={})
-
-# 2b. Structure modules (dialogue, characters, pacing, motifs, showing)
-turns = api.dialogue(text, language="de")
-cast = api.characters(text, ["Anna", "Ralf"], language="de")
-pace = api.pacing(text, language="de")
-motifs = api.motifs(text, {"Wut": r"\b(Wut|wütend\w*)\b"}, language="de")
-distance = api.showing(text, language="de")
-
-# 3. Paragraph-level tense & style profiling
-profiles = api.profile(text, language="de", project_config={})
-
-# 4. Generate standalone HTML dashboard
-html = api.dashboard(text, language="de", title="My Manuscript", project_config={})
-
-# 5. Work markers (editor-visible HTML comments)
-markers = api.markers(text)
-new_text, marker = api.add_marker(text, kind="pruefen", note="Tense check", line=42)
-updated_text = api.resolve_marker(new_text, marker["id"])
+metrics = api.analyze(text, language="en")["metrics"]
+reference = api.fingerprint(text, language="en", project_config={})
+html = api.dashboard(text, language="en", title="Example", project_config={})
+Path("dashboard.html").write_text(html, encoding="utf-8")
 ```
+
+Each convenience call analyzes independently. To reuse one analysis across
+several outputs or integrate multiple projects, use the
+[shared pipeline and configuration guidance](ARCHITECTURE.md#configuration-and-multiple-projects).
+[Automation contracts](AGENTS.md) describe facade inputs, envelopes and marker
+operations; `api.about()` returns runtime capability metadata.
 
 ### Low-Level Classes
 
-For fine-grained control, custom configuration, or direct object-model access:
-
-```python
-from lixity import CorpusAnalyzer, CorpusConfig, ReportFormatter
-from lixity.language import resolve_language
-
-text = open("manuscript.md", encoding="utf-8").read()
-resolved = resolve_language(CorpusConfig(language="auto"), sample_text=text)
-config = CorpusConfig(language=resolved.key)
-
-analyzer = CorpusAnalyzer(config)
-metrics = analyzer.analyze_text(text)
-
-print(metrics.asl, metrics.ttr, metrics.yules_k, metrics.lix)
-print(ReportFormatter.format_markdown_report(metrics))
-```
-
-> `language="auto"` resolves to `generic` without a text sample (the CLI passes
-> the manuscript automatically). Use `resolve_language(config,
-> sample_text=text)` in the library to get real detection.
-
-Profiling and dashboard rendering:
-
-```python
-from lixity import CorpusConfig
-from lixity.language import resolve_language
-from lixity.markdown_parser import parse_markdown_blocks
-from lixity.style_profile import ParagraphProfiler
-from lixity.ui import render_dashboard
-
-text = open("manuscript.md", encoding="utf-8").read()
-resolved = resolve_language(CorpusConfig(language="auto"), sample_text=text)
-config = CorpusConfig(language=resolved.key)
-
-blocks = parse_markdown_blocks(text)
-paragraphs, chapters = ParagraphProfiler(config).profile_blocks(blocks)
-
-html = render_dashboard(
-    chapters,
-    paragraphs,
-    metrics=CorpusAnalyzer(config).analyze_text(text),
-    title="manuscript.md",
-    labels=resolved.labels,
-    language_name=resolved.name,
-)
-```
-
-Idempotent file writes (atomic, only writes when the content changed):
-
-```python
-from lixity import FileUtils
-
-FileUtils.atomic_write_if_changed("ui.html", html)  # False if unchanged
-```
+Use `CorpusAnalyzer`, `CorpusConfig`, `ParagraphProfiler` and renderers for direct
+object-model control; the [architecture reference](ARCHITECTURE.md) explains
+these boundaries. Automatic language detection needs a text sample:
+`resolve_language(CorpusConfig(language="auto"), sample_text=text)`.
+Without a sample, `auto` resolves to `generic`; the CLI supplies its manuscript
+automatically. `FileUtils.atomic_write_if_changed(path, text)` provides atomic,
+idempotent output writes.
 
 ## Configuration (`CorpusConfig`)
 
-The style core's minimum calibration size is exposed through
-`lixity style manuscript.md --min-chapters 4 --json` (also `dashboard` and
-`build`) and `api.fingerprint(..., min_chapters=4)`. Since v3.0.1, foreground
-`serve` and managed `service start`/`restart` also accept `--min-chapters`;
-restart retains the saved threshold unless overridden. Values must be integers
-of at least 2. Fewer usable chapters produce unavailable baselines rather
-than evidence of a consistent style.
+CLI commands with an explicit manuscript path load settings relative to that
+manuscript; otherwise workspace discovery starts in the current directory.
+Project settings live in `lixity.toml` or `[tool.lixity]` in `pyproject.toml`.
+An explicit CLI option overrides its project value. Configured title affects
+dashboard/build presentation; artifact names still follow the manuscript name.
+
+Use `--min-chapters` on style/dashboard/build or server startup, or
+`api.fingerprint(..., min_chapters=4)`, to require more usable chapters before a
+style baseline is available. The minimum is 2; fewer usable chapters mean
+unavailable evidence, not a perfectly consistent style.
 
 For API project isolation, pass `project_config={}` to `profile`, `fingerprint`,
 `passport` or `dashboard` to avoid implicit threshold lookup. A supplied mapping
-supplies thresholds and known `CorpusConfig` settings; explicit options override
-the mapping. Language and title remain explicit API arguments. Project files accept those same corpus
-fields, without a separate list of supported analysis patterns. See [architecture](ARCHITECTURE.md).
+provides thresholds and known `CorpusConfig` fields; explicit options win.
+Language and title remain explicit API arguments. See
+[configuration precedence](ARCHITECTURE.md#configuration-and-multiple-projects).
 
-CLI commands with an explicit manuscript path load project settings relative to
-that manuscript, not the shell's working directory. Without an explicit path,
-workspace discovery starts in the current directory. The configured `title`
-is used by both `dashboard` and `build`; artifact filenames still follow the
-manuscript filename. An explicit `--language` overrides the project language.
+In the native workspace, **Apply** persists title, `author_name`, publication
+and chapter register settings in the selected project's `lixity.toml`; language
+and detection thresholds keep session behavior. Author/publication identity
+comes only from the explicit selected root, excluding user/ancestor defaults.
+Empty author clears it. Failed validation or saves keep previous metadata and
+the active view; failed submissions retain the draft. Reload after a project or
+root-config change instead of submitting stale values. An optimistic conflict
+guard rejects observed concurrent changes; it is not an external-editor lock.
 
-Historical v3.0.1 provides **Project → Settings → Author name**. Apply saves
-only `author_name` in that project's `lixity.toml`, so it survives a restart.
-Language, title overrides and analysis thresholds keep their existing session
-behavior. An empty author name clears it; no personal name is built into Lixity.
-The field is unavailable until a manuscript or research project is open. Author
-identity comes only from that project's root configuration, never user defaults
-or a parent folder.
+The identity check compares configured title/author with explicit manuscript
+metadata: flat leading YAML strings or a leading Markdown title page with
+`by`, `von`, `Author:` or `Autor:`. It normalizes Unicode/whitespace and reports
+missing, unsupported and unavailable evidence separately from a mismatch. It
+does not infer authorship or edit the manuscript. A display byline does not
+identify a publisher or printer.
 
-**Since v0.3.0:** title, `author_name` and `[publication]` share
-the explicit selected project's configuration. The CLI and native PDF composer
-consume the same identity and publication model. User defaults, ancestor
-folders and an implicit working directory do not supply author or publication
-data. A configured display byline does not identify a publisher or printer.
-With an explicit project, **Apply** saves title, author and publication together
-in `lixity.toml`; language and thresholds retain their session behavior.
-The server prepares the updated dashboard before committing those metadata
-bytes. Validation, decoding, rendering or replacement failures keep the previous
-stored metadata and session/dashboard state. An optimistic config identity/byte
-guard rejects observed concurrent edits; it is not an external-editor lock.
-The native form supplies its selected-project token and returns a fresh token
-after saving. Publication saves require that token; reload after a project or
-root-config change rather than resubmitting stale values. Failed submissions
-keep the draft. Editing while a save is pending preserves newer form values;
-an earlier response does not replace them or a newer selected context. Invalid
-stored publication fields remain visible for explicit correction while manuscript
-analysis stays available; they are not silently cleared or normalized by an
-unrelated title/threshold save.
-
-The nearby identity check compares the displayed project title and configured
-author with explicit manuscript metadata. Supported forms are flat leading YAML
-strings (`title` and `author`) or a leading Markdown title page with a `by`, `von`,
-`Author:` or `Autor:` line. Missing or unsupported metadata is reported separately
-from a mismatch; a missing or unreadable manuscript makes the check unavailable.
-Formatting comparisons normalize Unicode and whitespace; they
-do not guess authorship from prose or change the manuscript.
-
-A `lixity.toml`, `pyproject.toml` or `~/.config/lixity.toml` that exists but
-cannot be read or parsed emits a `UserWarning` naming the file, and its settings
-are ignored in favour of code defaults. No config file at all is silent. The
-distinction matters: a malformed file previously reverted the run to default
-language and thresholds while still exiting `0`, so the JSON looked authoritative
-and matched nothing the project had asked for. After any such warning, verify
-`meta.language` in the JSON and check applied thresholds in the server dashboard
-or pass explicit CLI flags to ensure your intended parameters applied.
+An existing unreadable/malformed config emits a warning naming the file and
+falls back to defaults; an absent file is silent. Check `meta.language` and
+active thresholds after a warning, or supply explicit options. Invalid stored
+publication fields remain visible for correction while analysis stays available.
 
 | Field | Default | Purpose |
 | :--- | :--- | :--- |
@@ -1238,6 +784,8 @@ or pass explicit CLI flags to ensure your intended parameters applied.
 | `appendix_marker` | `## Anmerkungen und Literaturverzeichnis` | Start of the non-prose appendix. |
 | `min_paragraph_length_for_oneliner` | `25` | Word threshold for one-liner classification. |
 | `motif_regexes` | `{}` | Project motifs as label → regex, counted per chapter. |
+| `register_profiles` | `{}` | Named registers mapping known style feature names to author ranges. Targets are descriptive comparisons alongside the book baseline; they do not define statistical z-scores. |
+| `chapter_registers` | `{}` | Chapter number/title → register name. Assigned chapters are excluded from chapter deviation/FDR flags. Book-relative values, baseline membership and consistency remain descriptive. |
 | `signal_keywords` | `None` | Thematic signal words (label → regex); `None` = language profile. |
 | `filter_verbs_regex` | `None` | Perception filters ("telling" indicators). |
 | `praesens_regex` / `praeteritum_regex` | `None` | Tense markers. |
@@ -1252,6 +800,54 @@ All `None` patterns fall back to the curated defaults of the selected language
 profile in `lixity.language_data` — adding a language is a data-layer entry,
 not a code change. `phrases` and `capabilities` are accepted for forward
 compatibility; the bundled engine does not interpret them.
+
+### Chapter register settings
+
+In the native workspace, **Project → Settings → Chapter registers** edits named
+registers, optional feature bounds and chapter assignments. **Apply** validates,
+rebuilds and saves both tables together in the selected project's `lixity.toml`.
+It requires the current project token and preserves newer browser drafts during
+pending saves. Resetting detection thresholds does not reset registers.
+
+```toml
+[register_profiles.formal]
+asl = [15, 35]
+passive_density = { lower = 5 }
+
+[chapter_registers]
+"2" = "formal"
+```
+
+A range may be `[lower, upper]`, a scalar exact target, or a table with `lower`
+and/or `upper`. Omit one table bound for an open interval (TOML has no `null`).
+Empty profiles label intentional registers without targets. Names must be
+nonempty single-line text of at most 100 characters; unknown profiles/features, invalid bounds
+and unmatched chapter selectors fail explicitly. Numeric selectors match exactly
+one chapter. Otherwise full titles take precedence, then the longest matching
+partial title, with lexical order breaking equal-length ties. Number assignments
+take precedence over title assignments.
+
+The report lists each target's measured value and `below`, `within`, `above` or
+`unavailable` position. The usual chapter measurement floors still apply.
+Register assignment expresses author intent; it is not evidence of a stylistic
+or factual defect. Scene registers remain separately configured through the
+existing `scene_analysis` settings.
+
+### Local repetition echoes
+
+`lixity motifs FILE --json` and `api.motifs` add `echoes` alongside repeated
+phrases and content-word counts. Each echo contains `term`, `chapter`, `count`,
+`first_word` and `last_word`. The detector retains the densest local cluster per
+term/chapter (earliest tie); its default span is 300 words and its default minimum
+is two occurrences. Word offsets are 1-based chapter-prose token positions,
+including the final token of the last occurrence. Shifted n-grams are deduplicated
+when their recorded occurrences overlap by at least two tokens in the same
+repeated passage; independent phrases sharing words remain separate.
+
+These are lexical review hints: punctuation is discarded during tokenization,
+and deliberate repetition is not an error. `echo_window`, `echo_min_count` and
+`top_echoes` are keyword arguments of `lixity.motifs.motif_report`; they are not
+CLI flags or project configuration keys.
 
 ### Publication settings
 
@@ -1337,8 +933,8 @@ an imprint, searchable text or bookmarks do not establish BFSG compliance.
 
 ### Project NDA configuration (`[nda]`)
 
-The five-field generator works without configuring a store. Optional project
-settings in **2.0.0** select a document language or text model:
+The [five-field generator](#nda-agreements) works without configuring a store.
+Optional project settings select a document language or text model:
 
 ```toml
 [nda]
@@ -1357,166 +953,6 @@ The project author comes from the project-wide `author_name` setting. Existing
 five-field models remain supported. Unknown fields are rejected;
 supplied values remain literal data. Generation and downloads are described
 [below](#nda-agreements).
-
-## Troubleshooting
-
-| Symptom | Cause and fix |
-| :--- | :--- |
-| `FileNotFoundError` / `No such file` | Path or working directory is wrong; quote paths containing spaces. |
-| All paragraphs are `Neutral`, no tense colours | The language profile does not match the text, or the text is too short. Force the language with `--language de` (or the correct code). |
-| Metrics look wrong / appendix counted as prose | Check the `appendix_marker`; the default expects `## Anmerkungen und Literaturverzeichnis`. |
-| Dashboard looks unchanged after editing | Expected when the prose did not change (idempotent writes). Check the file mtime, or compare with a fresh `-o` target. |
-| `lixity: command not found` | The install did not land on `PATH`; use `.venv/bin/lixity` or reinstall the package. |
-
-## Development
-
-One entry point (Makefile):
-
-```bash
-make help        # list targets
-make install-dev # .venv + pip install -e ".[dev]"
-make check       # ruff + mypy --strict + pytest -W error
-make build       # sdist + wheel into dist/
-make screenshots # regenerate docs/screenshots (headless Chromium)
-```
-
-Without make:
-
-```bash
-PYTHONPATH=src .venv/bin/python -m pytest -W error -q -p no:asyncio
-RUFF_CACHE_DIR=/tmp/ruff_cache .venv/bin/ruff check src tests scripts
-.venv/bin/mypy --strict src
-```
-
-Screenshots for README and project page are generated reproducibly from the
-bundled public-domain sample with headless Chromium:
-`python3 scripts/make_screenshots.py` (writes `docs/screenshots/`, including a
-demonstration status strip). CI runs the core tests on Python 3.10–3.13, research checks on macOS and Windows,
-browser checks, lint/type checks and wheel packaging checks. Contribution workflow:
-[`CONTRIBUTING.md`](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md).
-
-## License
-
-GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
-Commercial licensing on request: mfahsold@googlemail.com.
-
-## Unavailable consistency and empty manuscripts (since v1.18.0)
-
-The dashboard and text style report show “–” when there are no measurable
-chapter–feature cells. Empty chapters do not contribute measurements. A single
-chapter or a manuscript below the configured `min_chapters` can also be
-unavailable even when it contains words. Increasing that minimum deliberately
-requires more evidence before a ratio is shown.
-
-Style JSON v4 adds `measured_cells`. If it is zero, the legacy numeric
-`consistency: 1.0` is an unavailable-value sentinel retained for compatibility;
-do not present it as 100%. When measured, consistency counts cells with
-`abs(z*) < z_mild`, not whole chapters. A high result is not a quality verdict.
-The [interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
-explains a practical review loop and short-text limits.
-
-## Debug logging (since v1.19.0)
-
-Start the local server with `lixity serve /absolute/path/to/project --debug`,
-or set `LIXITY_DEBUG=1` in its environment (`true` and `yes` also enable it).
-This enables backend request logging and emits a debug meta tag in the dashboard.
-In the browser console, `setLixityDebug(true)` enables verbose API and runtime
-diagnostics. **Since 2.0.0:** it saves an explicit `1`,
-while `setLixityDebug(false)` saves `0`. These browser preferences take priority
-over `window.LIXITY_DEBUG` and the server's debug meta tag, so either choice
-survives reload when local storage is available. Remove `lixity_debug` from local
-storage to return to the window/server default. With blocked storage, the choice
-applies to the active page and reload uses those defaults again.
-
-The browser preference does not change backend logging. Start or restart the
-server with the intended CLI/environment setting. Browser warnings and errors
-continue to log; API diagnostics include method, URL, status and elapsed milliseconds.
-Since 2.3.0, they do not copy response contents into the console. In 2.0.0,
-backend requests and error details share
-one UTC writer and the prefix `[YYYY-MM-DD HH:MM:SS UTC] [server:debug]`.
-Browser API diagnostics have no explicit wall-clock timestamp. Logs may contain
-source content or paths; review them before sharing.
-
-## Research search scopes (since v1.19.0)
-
-`lixity research search --project ./novel --query "inspector" --scope all`
-searches source passages and current dossiers, claims and decisions together.
-Use `--scope dossiers`, `claims` or `decisions` to narrow the results; omitted
-scope retains the source-only CLI contract. Run `research reindex --project
-./novel` after changes. The dashboard's Search tab defaults to all record types.
-See the [research reference](research/USAGE.md#search-current-authored-records-since-v1190)
-for response versions and the distinction between authored records and citations.
-
-## Claim chronology, causal interpretations and keyword citations (since v3.0.0)
-
-These commands were introduced in historical v3.0.0 and are retained in
-v0.3.0; they are not in historical v2.4.0:
-
-```sh
-lixity research timeline --project ./sample-project --format text
-lixity research relate --project ./sample-project
-lixity research relate --project ./sample-project FROM_CLAIM TO_CLAIM \
-  --relation causes --rationale "Author interpretation for review"
-lixity research cite --project ./sample-project --query "reading room"
-```
-
-`timeline` is read-only, with JSON (default), text and Markdown formats and an
-optional `--dossier-id`. It places valid four-digit CE years, ISO dates and
-same-precision ranges (`1924–1926` and `1924-1926` are both recognized);
-original labels and unplaced/invalid periods remain visible. Record creation dates never stand in for historical periods.
-
-`relate FROM_CLAIM TO_CLAIM` records a proposed cause-to-effect connection.
-`results_in` is an alias for stored `causes` in the same direction. Both complete
-claim IDs are required for creation; omitting them lists relations. Exact
-endpoint revision and snapshot options bind a reviewed choice. Use
-`--relation-id` with inspection/history or the existing prepare/update flags
-for correction or `--state retracted`. Pins and earlier revisions remain;
-self-links fail, cycles are allowed, and no causal truth or additional links
-are inferred. The first explicit relation write opts the archive into v6,
-which historical readers before v3.0.0 reject; v0.3.0 supports v6; read-only views preserve v1–v5 archives.
-
-`cite --query` searches retained source paragraphs. One match resolves a full
-citation; zero/multiple matches return source-search JSON and exit `1` without
-creating records. Multiple matches print numbered choices on stderr. Repeat the
-same query with `--pick N --expected-snapshot DIGEST` to choose one of at most
-20 matches. Changed snapshots and unavailable sources fail. `--passage` remains
-exact historical citation retrieval; it is mutually exclusive with `--query`.
-
-In the app, **Claims → Timeline** opens chronology and **Cause and effect claims**
-provides explicit relationship saving. **Find source passage** in the evidence
-form reuses Search → Sources → **Use for claim**, keeping the reviewed claim
-choice and full-paragraph draft. Changed reviewed project/snapshot/claim versions
-are rejected on guarded save. These actions do not edit manuscript text.
-
-The claims-list JSON intentionally changes to `research-claims-local/2` with
-`claims`, `project_id` and `snapshot` from one snapshot. Update consumers of the
-old v1 envelope; stored claim bytes and source-search envelopes remain unchanged.
-See the [research reference](research/USAGE.md#claim-chronology-and-causeeffect-links-since-v300)
-for exact period grammar, archive compatibility, API guards and citation choices.
-
-## Zotero integration (since v1.19.0)
-
-Zotero can be the leading catalogue for literature, images, audio and video.
-Lixity captures selected PDF/text evidence and maintains dossiers, claims and
-author decisions. It remains usable without Zotero.
-
-In the server dashboard, open Research → Sources, select an explicit Zotero
-library and collection, browse items and inspect attachments. Confirm retention
-before capturing a supported file. Existing linked sources offer explicit refresh
-and an Open in Zotero link. Refresh preserves previous citations; it does not
-rewrite authored conclusions. Media files remain in Zotero without automatic
-transcription or visual analysis.
-
-The CLI offers `research zotero`, `zotero-ingest`, `zotero-export`,
-`zotero-backup` and `zotero-restore`. Export is additive: review and import the
-RIS bundle in Zotero, verify original attachment bytes and bind existing source
-identities before considering any retirement of an older workflow. The paired
-backup requires Zotero to be closed and does not include manuscripts, profiles
-or files linked outside its data directory.
-
-See the [Zotero bridge reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
-for setup, pagination, dry runs, v3 compatibility, identity matching and recovery.
-There is no automatic migration, bidirectional synchronization or archive deletion.
 
 ## NDA agreements
 
@@ -1555,21 +991,39 @@ For trade-secret rules and disclosure exceptions, see
 [WIPO's trade-secret overview](https://www.wipo.int/en/web/trade-secrets) provides
 broader background. These references do not validate a particular agreement.
 
-## Research workflows and index ergonomics
+## Troubleshooting
 
-The [research reference](research/USAGE.md) owns the implemented commands and
-their versioned contracts: selected file capture, resumable imports, dossier
-sections, author revisions, explicit acknowledgements, Zotero capture and backup.
-It also explains lexical source comparisons and their limits. Use the same
-supported application version for all archive writers.
+| Symptom | Cause and fix |
+| :--- | :--- |
+| `FileNotFoundError` / `No such file` | Path or working directory is wrong; quote paths containing spaces. |
+| All paragraphs are `Neutral`, no tense colours | The language profile does not match the text, or the text is too short. Force the language with `--language de` (or the correct code). |
+| Metrics look wrong / appendix counted as prose | Check the `appendix_marker`; the default expects `## Anmerkungen und Literaturverzeichnis`. |
+| Dashboard looks unchanged after editing | Expected when the prose did not change (idempotent writes). Check the file mtime, or compare with a fresh `-o` target. |
+| `lixity: command not found` | The install did not land on `PATH`; use `.venv/bin/lixity` or reinstall the package. |
 
-For a terminal report, choose `--format text` or `--format md` where supported.
-For automation, choose `--json` or `--format json`; `lixity about --json` lists
-command-specific formats. HTTP endpoints can be discovered at `GET /api` before
-opening a project. Research search refreshes a stale index by default; `--strict`
-rejects stale indexes instead. Progress describes real phases on stderr.
+<a id="debug-logging-since-v1190"></a>
 
-**Mark as applied** records an author's review of one decision and dossier at
-exact saved versions. Later changes ask for another review. This does not edit
-prose, clear unrelated warnings or verify literary consistency. The first such
-event upgrades the archive manifest to version 5; older writers reject it.
+### Debug logging
+
+Start with `lixity serve /absolute/path/to/project --debug` or `LIXITY_DEBUG=1`
+(`true`/`yes` also work). This enables backend request logging and a browser
+debug default. Browser-console `setLixityDebug(true)`/`false` saves an explicit
+choice across reloads when local storage works; remove `lixity_debug` to restore
+the server/window default. With blocked storage, the choice lasts for the page.
+It does not change backend logging; restart with the intended server setting.
+
+Warnings/errors still log. API diagnostics show method, URL, status and duration
+without copying response bodies. Backend debug lines carry UTC timestamps;
+browser diagnostics do not. Logs may contain source text or paths, so review
+before sharing.
+
+## Development
+
+Use [CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
+for checkout setup, supported checks, browser suites and documentation generation.
+`make help` lists the maintained entrypoints.
+
+## License
+
+GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later) – see [`LICENSE`](https://github.com/mfahsold/lixity/blob/main/LICENSE).
+Commercial licensing on request: mfahsold@googlemail.com.

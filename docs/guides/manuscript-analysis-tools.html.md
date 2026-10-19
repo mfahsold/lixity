@@ -2,11 +2,19 @@
 
 Four families of tools answer different questions about a manuscript. This page compares them by workflow: what each is good at, what it does not do, and where Lixity fits. None of them replaces an editor, and none of the descriptions below rank the tools against each other.
 
-Maintained by the Lixity project · Updated 14 October 2026
+Maintained by the Lixity project · Updated 19 October 2026
 
 ## The families at a glance
 
 **Grammar and style checkers** correct sentences and suggest phrasing. **Corpus and concordance tools** explore texts and collections quantitatively. **Stylometry and NLP packages** measure text through scripts. **Story and structure tools** work on plot, scenes and characters. Lixity adds a fifth job: measuring language patterns across one manuscript and always linking a number back to its passage.
+
+| Tool family | Primary focus | Runs locally | Account needed | Typical fit |
+| --- | --- | --- | --- | --- |
+| Grammar and style checkers | Sentence corrections, style suggestions | Partly (offline editions exist) | Usually yes | Line-level polishing |
+| Corpus and concordance tools | Concordances, frequencies, collections | Yes | No | Research on text collections |
+| Stylometry and NLP packages | Scriptable measurement and models | Yes | No | Academic and automated analysis |
+| Story and structure tools | Plot, scenes, characters, planning | Partly | Often yes | Developmental editing and outlining |
+| Lixity | Language patterns across one manuscript, linked to passages | Yes | No | Revision review with evidence |
 
 ## Choose a grammar or style checker if…
 
@@ -26,13 +34,13 @@ Maintained by the Lixity project · Updated 14 October 2026
 
 ## Or combine Lixity with an AI writing or editing assistant if…
 
-…you want suggestions, rewrites or developmental feedback and accept a subscription for it. In 2025/26 this family is led by ProWritingAid (grammar and style reports; full-manuscript analysis is metered as a paid add-on), AutoCrit (fiction-specific reports and beta-reader simulation), Sudowrite (generative prose and rewriting), Novelcrafter (a Codex-based writing environment that can also run local models for generation) and Marlowe (developmental feedback and comparisons that do not rewrite your prose). Independent field tests in 2025 show that these tools disagree with each other, depend heavily on whether they see a chapter or the whole book, and are genre-sensitive — one test had two market leaders miss the genre of the same manuscript entirely.
+…you want suggestions, rewrites or developmental feedback. Review the chosen service’s current features, costs and data-handling terms before supplying a manuscript. An assistant’s response depends on its model, instructions and the context you provide; read and assess its proposals yourself.
 
-These tools work on meaning and suggestion, usually in the cloud, and their answers vary with model and context. Lixity does not rewrite, grade or suggest phrasing; it measures your manuscript's own patterns locally, deterministically and reproducibly, and links every number to its passage. Many authors use both: an assistant for proposals, Lixity for reviewable evidence of what their own text does.
+Lixity’s built-in analysis computes documented statistics from your manuscript without generating prose or a quality score. Chapter comparisons help you choose where to read; paragraph disclosures provide local text, measurements and source lines. You can use those observations when reviewing an assistant’s suggestions.
 
 ## Choose Lixity if…
 
-…you want to see how *your* manuscript behaves over its chapters and keep the evidence next to your decisions: sentence rhythm, vocabulary, dialogue and tense; chapter comparisons against the book's own baseline; passages behind every signal; and a local research archive that ties sources and quotations to claims and writing decisions. Analysis runs on your computer, there is no account, and nothing is uploaded. German and English are the deepest language profiles.
+…you want to see how *your* manuscript behaves over its chapters and keep the evidence next to your decisions: sentence rhythm, vocabulary, dialogue and tense; comparisons against the book’s own baseline; paragraph text and measurements for review; and a local research archive connecting sources and quotations to claims and writing decisions. Built-in analysis runs on your computer without cloud calls or an account. German and English have the deepest language profiles.
 
 Start with the [read-only example report](../demo/report.html) or the [three-minute first look](first-look.html); no installation is needed for either. For a real book, the [Effi Briest](../examples/effi-briest.html) (German) and [Pride and Prejudice](../examples/pride-and-prejudice.html) (English) examples pair an interactive excerpt with the complete PDF report.
 
@@ -52,11 +60,11 @@ Start with the [read-only example report](../demo/report.html) or the [three-min
 
 **Is Lixity an alternative to Grammarly or ProWritingAid?**
 
-No. Grammar and style checkers correct sentences and suggest phrasing. Lixity measures patterns such as sentence rhythm, vocabulary, dialogue and tense across your manuscript and links every number to the passage it came from. It does not fix grammar or rewrite prose.
+Grammar and style checkers suggest sentence-level corrections. Lixity compares chapter patterns such as sentence rhythm, vocabulary, dialogue and tense, and provides paragraph-level text, measurements and source lines for review. It does not fix grammar or rewrite prose.
 
 **Does my manuscript leave my computer when I use Lixity?**
 
-No. Analysis, dashboards and PDF export run locally. There is no account and no cloud service; nothing is uploaded.
+Built-in analysis, dashboard generation and PDF export run locally without cloud calls or an account. Optional integrations and separately configured workers have their own setup and data handling.
 
 **Is Lixity free?**
 
