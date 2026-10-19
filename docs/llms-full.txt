@@ -34,28 +34,19 @@ serves the scene before deciding what to keep or revise.
 
 ![Lixity dashboard — chapter comparison, sentence rhythm and passage drill-down](docs/screenshots/dashboard-dark.png)
 
-Matthias Fahsold developed Lixity as an architect and developer at ROST Services
-GmbH and used it while writing his own debut novel.
-
-[Try the example](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Try the report](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
-[Practical guides](https://mfahsold.github.io/lixity/#guides) ·
 [v0.7.0 release notes](docs/releases/v0.7.0.md)
-
-The example is a read-only report made from invented text. It needs no
-installation or manuscript upload. Documentation is English; you can read the
-results in German, English, French, Spanish, Italian, Portuguese or Dutch.
 
 ## Try it in 30 seconds
 
-Open the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
-(invented text), [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html)
-or [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html).
-Explore a chapter comparison, then open a paragraph to read its measurements.
-No install, account or upload is needed. The
-[three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
-explains the results without requiring statistics background.
+Open the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html),
+select a chapter cell and open a paragraph. No install, account or upload is
+needed. Also explore [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html),
+[Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
+or the [read-only research workspace](https://mfahsold.github.io/lixity/demo/research.html).
+Examples use invented or public-domain text.
 
 <a id="start-here"></a>
 Built-in analysis runs on your computer. Optional external OCR workers have
@@ -70,184 +61,64 @@ uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
-Open a new terminal, verify `lixity --version`, then start the local workspace
-with `lixity service start --open`. Choose **Open Project** or **Analyze a
-manuscript**; the [first-project guide](docs/ONBOARDING.md) explains both.
-For later visits, use the packaged `lixity-start.sh` / `lixity-start.ps1` launcher
-or the same service command.
-
-The [installation guide](docs/INSTALLATION.md) covers platform setup, pinned
-release wheels with `SHA256SUMS`, service status and logs, updates and removal.
-After an upgrade, restart the workspace to load the installed version.
+Open a new terminal, verify `lixity --version`, then run
+`lixity service start --open`. Choose **Open Project** or **Analyze a manuscript**.
+The [first-project guide](docs/ONBOARDING.md) explains the workflow;
+[installation and updates](docs/INSTALLATION.md) covers launchers, pinned wheels,
+service management and removal. Restart the workspace after upgrading.
 
 ## What you can do
 
-### Understand your writing
+| Workflow | Result and next step |
+| :--- | :--- |
+| Compare chapters | Sentence rhythm, vocabulary, dialogue and tense against the manuscript's own reference. [Read the signals](https://mfahsold.github.io/lixity/guides/interpretation.html). |
+| Review passages | Open measured paragraphs and save work markers beside their source lines. [Review workflow](docs/USAGE.md#start-a-review). |
+| Compare intentional registers | Group scenes by purpose and set optional author targets. [Scene registers](docs/USAGE.md#scene-registers-and-project-targets). |
+| Export a manuscript | A4 editorial copy with line numbers and comment margins, A5 reading copy, submission sheet or analysis report. [PDF layouts and limits](docs/USAGE.md#lixity-pdf). |
+| Connect research | Retained sources, authored claims and decisions, dossiers, places, journeys and exact manuscript quotations. [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html). |
+| Work in a terminal or agent | Readable reports, versioned JSON and installed capability discovery. [CLI workflows](docs/USAGE.md) · [Automation contracts](docs/AGENTS.md). |
 
-See how sentence lengths, vocabulary, dialogue and tense vary throughout your
-manuscript. Open the passages behind a result before deciding whether to revise.
-Short or empty texts cannot support every comparison; unavailable results are
-shown explicitly.
+[More screenshots and short walkthroughs](docs/screenshots/README.md) show desktop
+and mobile views, paragraph notes, settings and the research timeline.
 
-<a href="docs/screenshots/dashboard-light.png"><img src="docs/screenshots/dashboard-light.png" alt="Manuscript overview showing sentence rhythm, vocabulary and dialogue measures" width="900" /></a>
-
-[Read the language signals](https://mfahsold.github.io/lixity/guides/interpretation.html) ·
-[Mobile view](docs/screenshots/dashboard-mobile.png) ·
-[Dark theme](docs/screenshots/dashboard-dark.png)
-
-<img src="docs/videos/analysis-review.gif" alt="Walkthrough: select a chapter cell, expand a paragraph's Values and switch to the style dimensions" width="900" />
-
-### Compare chapters in context
-
-The chapter map uses your manuscript's chapters as its reference. For example,
-a chapter with longer sentences than usual may reflect a new voice or a formal
-report. Select a coloured cell to inspect that chapter. The style axes bring
-together related measurements, helping you see which chapters share patterns
-and which features distinguish them.
-
-<a href="docs/screenshots/dashboard-heatmap.png"><img src="docs/screenshots/dashboard-heatmap.png" alt="Chapter comparison map showing differences from the manuscript's own style" width="900" /></a>
-
-[Understand chapter comparisons](https://mfahsold.github.io/lixity/guides/interpretation.html#consistency) ·
-[Style dimensions](docs/screenshots/dashboard-dimensions.png) ·
-[Reference bands](docs/screenshots/dashboard-reference.png)
-
-Assign scenes to registers—such as dialogue, action or a formal report—so you
-can compare scenes with a similar purpose. Each group has its own middle values
-(medians); you can also set optional targets. Small samples may leave
-measurements unavailable. [Scene example](docs/screenshots/dashboard-scenes.png) ·
-[Setup and limits](docs/USAGE.md#scene-registers-and-project-targets).
-
-### Print what the analysis found
-
-Export an A5 reading copy, A4 analysis report or A4 submission sheet from
-**PDF export** in the project controls, or use `lixity pdf`. The composer uses
-your project's title, author and optional publication details. Empty fields
-supply no inferred information. Since v0.7.0, an A4 editorial copy provides
-line numbers and comment margins using the same composer
-([example](docs/examples/effi-briest-editor.pdf)).
-
-See the complete [Effi Briest report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf)
-or [Pride and Prejudice report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
-[PDF layouts and font limits](docs/USAGE.md#lixity-pdf) ·
-[Publication settings](docs/USAGE.md#publication-settings).
-
-### Keep review notes beside the text
-
-Start from the flagged passages list, open a paragraph and read its measured
-values, source lines and tense labels. A note can be written directly on the
-passage; work markers keep it next to the relevant text in Markdown. Their
-visibility in a book export depends on the editor or converter you use.
-
-<img src="docs/videos/editorial-loop.gif" alt="Walkthrough: review flagged passages, open a paragraph, read its values and write a marker note on the passage" width="900" />
-
-<a href="docs/screenshots/dashboard-markers.png"><img src="docs/screenshots/dashboard-markers.png" alt="Review markers linked to passages, with statuses and an editable note" width="900" /></a>
-
-[Work-marker instructions](docs/USAGE.md#work-markers-editor-visible) ·
-[Flagged passages](docs/screenshots/dashboard-flags.png) ·
-[Note on a passage](docs/screenshots/dashboard-editorial.png) ·
-[Paragraph view](docs/screenshots/dashboard-layer.png)
-
-### Connect sources, claims and decisions
+### Research with Zotero
 
 Use Zotero for collecting sources, reading and general research notes. Lixity's
-experimental research workspace connects selected evidence to claims, authorial
-decisions and exact manuscript quotations. A dossier gathers the material for a
-topic or scene. Saved evidence records what a source says, not whether it is true.
+experimental workspace retains selected evidence and connects it to authored
+claims, decisions and manuscript quotes. A dossier gathers a topic or scene;
+images and structured geography can accompany it. Changing a Zotero attachment
+does not change an already retained quotation. An integrity check is not a fact check.
 
 <a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Historical Hamburg map in a fictional scene dossier, with source provenance" width="900" /></a>
 
-Capture selected Zotero Desktop attachments or import authorized local files.
-Retained versions keep earlier quotations usable independently of Zotero.
-Metadata editing and ordinary reading stay in Zotero; Lixity provides the
-passage view needed to select and review evidence. Scans can use local
-Tesseract or a configured OCR worker.
-
-**Review** identifies older linked versions and changed manuscript anchors for
-your assessment. Related revisions can be previewed and saved together;
-conflicts preserve your draft. Nothing is repinned silently. Images, structured
-places and character paths can accompany a dossier; **Timeline** organizes dated
-claims. [Research workflows and limits](docs/research/USAGE.md).
+[Try the research example](docs/demo/research.html) ·
+[Workflows and compatibility](docs/research/USAGE.md) ·
+[Places and journeys](docs/screenshots/dashboard-dossier-geography.png)
 
 **Current main (unreleased):** edit an exported dossier in Markdown, review its
 changes against the archive and apply the prepared revision explicitly. Images
-and diagrams share a zoom viewer; interactive geography works offline, with
-OpenStreetMap tiles available only after an explicit network opt-in.
-
-<img src="docs/videos/research-timeline.gif" alt="Walkthrough: the claims timeline places dated claims on a shared axis and jumps from a bar to its claim card" width="900" />
-
-[Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html) ·
-[Search and citations](docs/screenshots/dashboard-research-search.png) ·
-[Sources](docs/screenshots/dashboard-research-sources.png) ·
-[Claims](docs/screenshots/dashboard-research-claims.png) ·
-[Decisions](docs/screenshots/dashboard-research-decisions.png) ·
-[Decision review](docs/screenshots/dashboard-research-review.png) ·
-[Related revision preview](docs/screenshots/dashboard-research-change-set.png)
-
-### Choose a project and its settings
-
-Preview a manuscript before importing it, select its analysis language and
-adjust which differences you want to examine. Project settings also hold the
-author name, publication details and optional confidentiality-agreement controls.
-Current main also supports [literal character aliases and declared viewpoint
-chapters](docs/USAGE.md#character-profiles); name counts remain separate from
-author-declared perspective.
-
-<a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" width="900" /></a>
-
-[Project workflow](docs/USAGE.md#dashboard-workflow) ·
-[Import preview](docs/screenshots/dashboard-project-import.png) ·
-[Mobile settings](docs/screenshots/dashboard-project-settings-mobile.png)
-
-### Read a report in the terminal
-
-Use `lixity analyze manuscript.md --language de` for a readable report, or add
-`--json` for software integration. Chapter, paragraph, dialogue, pacing and
-research commands are covered in the [command reference](docs/USAGE.md).
-
-<a href="docs/screenshots/cli-analyze.png"><img src="docs/screenshots/cli-analyze.png" alt="Terminal report with sentence lengths, readability and vocabulary measures" width="900" /></a>
-
-These screenshots use public-domain literature or synthetic project records.
-[More views and capture details](docs/screenshots/README.md).
+and diagrams share a zoom viewer; geography starts offline, with optional
+OpenStreetMap tiles. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
+keep name counts separate from author-declared perspective.
 
 ## How to read the results
 
-Each measurement answers a specific question about the text:
-
-| Measurement | What it helps you notice |
-| :--- | :--- |
-| Sentence length and variation | Whether sentences stay similar in length or alternate between short and long. Suspense also depends on what happens in them. |
-| Vocabulary diversity | How varied word use is. Compare passages of similar length, language and purpose. |
-| Dialogue share | How much text falls inside recognized quotation marks. A high value may be expected in a conversation scene. |
-| Chapter differences and consistency | How closely measurable chapters follow the book's observed patterns. A deliberate change in voice can lower consistency. |
-
-Chapter comparisons use the manuscript's middle values and typical spread
-(median and MAD), with an adjustment for estimated sampling noise. Colours mark
-the direction of a difference, not its literary value. Optional statistical
-checks mark a selection for review; they cannot certify that a passage needs
-editing. An unavailable value can mean there is too little text or too few
-comparable chapters to calculate it.
-
-The mathematical core includes several vocabulary measures (HD-D, MTLD, MATTR,
-Guiraud R, Maas a² and Yule's K). They answer related questions using different
-models and sample sizes. Readability and grammatical-pattern indicators have
-language-specific limits. Formulas, citations and worked examples live in
-[Methods](docs/METHODS.md). The
-[interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
-explains how to read results; [stability and validation limits](docs/STABILITY.md)
-describe what has and has not been established.
+Measurements describe patterns, not literary quality. A deliberate change of
+voice may differ from the book's baseline. Read the passage before revising;
+short samples and missing measurements can leave comparisons unavailable.
+[Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html),
+[methods](docs/METHODS.md) and [validation limits](docs/STABILITY.md) explain the
+models and what their results can support.
 
 Read the workflows: [Intentional registers](https://mfahsold.github.io/lixity/blog/intentional-registers.html) ·
 [Local word echoes](https://mfahsold.github.io/lixity/blog/local-word-echoes.html).
 
-The [research preview](docs/demo/research.html) uses attributed historical harbour
-images and fictional journeys. [Research usage](docs/research/USAGE.md) records compatibility.
-
 ## Supported languages
 
-English and German have the deepest linguistic validation. French, Spanish,
-Italian, Portuguese and Dutch also have localized interfaces and analysis
-resources, with narrower heuristic coverage. Choose the manuscript language
-explicitly; terminal presentation is separate. [Language settings and limits](docs/LOCALIZATION.md).
+English and German have the broadest analysis resources. French, Spanish,
+Italian, Portuguese and Dutch also have localized interfaces and narrower
+heuristic coverage. Choose the manuscript language explicitly; documentation
+and terminal presentation are separate. [Language settings and limits](docs/LOCALIZATION.md).
 
 ## Documentation map
 
@@ -286,7 +157,9 @@ reusing one analysis result for several outputs.
 
 ## Research
 
-The methods and the tool's placement among stylometry and corpus tools are
+Matthias Fahsold developed Lixity as an architect and developer at ROST Services
+GmbH and used it while writing his own debut novel. The methods and the tool's
+placement among stylometry and corpus tools are
 described in the software paper draft under [`paper/`](paper/paper.md),
 prepared for the [Journal of Open Source Software](https://joss.theoj.org/).
 Released versions are archived on Zenodo: cite the concept DOI
@@ -435,11 +308,10 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md
 
 # Start using Lixity
 
-Lixity measures patterns in a manuscript for your own review. Start with the
-[read-only synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
-or the [illustrated first look](guides/first-look.html), then follow the path
-below for your own text. Installation and upgrades belong to the
-[installation guide](INSTALLATION.md).
+Try the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
+or [illustrated first look](guides/first-look.html), then use your own manuscript
+below. [Installation](INSTALLATION.md) owns setup, upgrades and service management;
+[interpretation](guides/interpretation.html) explains the measurements.
 
 <a id="the-journey-at-a-glance"></a>
 <a id="see-a-finished-example-first"></a>
@@ -447,31 +319,24 @@ below for your own text. Installation and upgrades belong to the
 
 | Your starting point | Action |
 | --- | --- |
-| An existing manuscript/project folder | Start the local app and choose **Open Project**. |
-| A file to copy into a new project | Choose **Analyze a manuscript**, review the import preview and confirm the destination. |
+| An existing manuscript/project folder | Start the app and choose **Open Project**. |
+| A file to copy into a new project | Choose **Analyze a manuscript**, review the preview and confirm the destination. |
 | A new manuscript | Choose **New Project → Start New Manuscript**. |
 | Sources without a manuscript | Open or initialize a [research project](research/USAGE.md#try-it). |
-
-The [Fontane](https://mfahsold.github.io/lixity/examples/effi-briest.html) and
-[Austen](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
-examples show opening chapters in HTML and complete novels in linked PDF reports.
-Public examples are read-only and need no manuscript upload.
 
 ## Start with a manuscript
 
 Use UTF-8 Markdown with `## Chapter title` headings and blank lines between
-paragraphs. For a terminal report and saved analysis exports:
+paragraphs. For terminal analysis and saved exports:
 
 ```sh
 lixity analyze manuscript.md --language en
 lixity build manuscript.md --language en
 ```
 
-Open `exports/manuscript_dashboard.html`. Use each command's `--help` for
-options. Select the manuscript's language explicitly; English is the default,
-and `auto` requests heuristic detection. [Language support](LOCALIZATION.md)
-explains unequal coverage across profiles. Short texts can leave measurements
-unavailable; a highlight is a reading prompt, not a quality verdict.
+Open `exports/manuscript_dashboard.html`. Choose the manuscript language explicitly;
+English is the default, and `auto` requests detection. Short texts can leave
+measurements unavailable. [Language support](LOCALIZATION.md) describes profile limits.
 
 ## Use the interactive workspace
 
@@ -479,88 +344,62 @@ unavailable; a highlight is a reading prompt, not a quality verdict.
 lixity service start --open
 ```
 
-The local workspace opens at `http://127.0.0.1:8765/`. Choose among
-**Manuscript & Analysis**, **Research & Dossiers** and **Project & Settings**.
-Welcome guidance and field explanations describe the next action in the app.
-Use **Show guidance** to reopen hidden welcome guidance.
+The default address is `http://127.0.0.1:8765/`. The app's welcome guidance and
+field explanations describe the next action; **Show guidance** reopens it.
 
 ### Open or import?
 
-**Open Project** reconnects an existing folder and its archive. The file chooser
-browses the computer running Lixity; browsing or cancelling does not switch
-projects. **Analyze a manuscript** imports a selected or dropped file into a
-separate project after you review its preview, language and destination. It does
-not reconnect the original folder's research archive.
-
-A research-only project can open without a manuscript. All tabs on one server
-share its active project, so check the displayed path before saving.
+**Open Project** reconnects the folder and research archive visible to the server.
+Browsing or cancelling does not switch projects. **Analyze a manuscript** copies
+a file into a separate project after preview; it does not reconnect the original
+folder's archive. A research project may open without a manuscript. All tabs on
+one server share its active project, so check the displayed path before saving.
 
 ### Read and explore
 
-Start with **Open passage** or **Explore chapters**. The first opens a tense-flag
-candidate in source order, or the opening paragraph when none qualifies; it is
-not a quality ranking. Chapter comparisons describe whole chapters. Open a
-paragraph and expand **Values** for its separate measurements and source lines.
-The [interpretation guide](guides/interpretation.html) explains their limits.
-
-Settings explain which changes last for the server session and which are saved
-in the project. **Apply** rebuilds the analysis. Saved HTML is an offline report;
-project writes and manuscript PDF downloads require the native local server.
-For output layouts and optional publication details, see the
-[PDF reference](USAGE.md#lixity-pdf). The optional
-[NDA generator](USAGE.md#nda-agreements) is a separate authored document action.
+Start with **Open passage** or **Explore chapters**, then expand a paragraph's
+**Values**. The opening candidate is not a quality ranking; read the text before
+deciding whether a difference matters. Settings explain saved versus session-only
+choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
+require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
 
 ## Work through review notes
 
 Read a passage before adding a marker. **Save marker** explicitly writes a
-Markdown comment above that paragraph; cancelling writes nothing. The analysis
-does not rewrite prose or resolve your notes. Exported dashboards include notes,
-so review them before sharing. See [work markers](USAGE.md#work-markers-editor-visible)
-for marker syntax and export behavior.
+Markdown comment; cancelling writes nothing. Dashboards include marker notes,
+so review them before sharing. [Marker usage](USAGE.md#work-markers-editor-visible)
+explains retention and exports. Analysis does not rewrite prose.
 
 ## Research workflow
 
-The experimental research workspace keeps retained sources and authored records
-separate from analysis. Import only sources you may retain; that permission does
-not grant redistribution rights or verify a claim. The
-[research workflow guide](research/USAGE.md) covers capture, exact citations,
-dossiers, claims, decisions, manuscript associations and recovery.
-
-Search and preview before saving an evidence link or manuscript association.
-Only source passages are citations; authored claims and causal relations remain
-interpretations. A changed anchor or reviewed revision requires an explicit
-review, never silent acceptance. The app shows retention and compatibility
-notices before the corresponding save.
+The [research guide](research/USAGE.md) owns capture, exact citations, authored
+records, manuscript associations and recovery. Retain only permitted source bytes.
+Claims and author decisions remain interpretations; saving or finding a passage
+does not verify it. Review changed anchors and linked revisions explicitly.
 
 <a id="use-zotero-for-sources-and-media-since-v1190"></a>
 ## Use Zotero for sources and media
 
 ### First Zotero capture
 
-Enable Zotero's local API, download the needed attachments, then choose the
-library, collection and attachment in **Research → Sources → Zotero**. Preview
-and permit retention before saving. Lixity captures selected PDF/text attachments;
-images, audio and video remain in Zotero. Scans need a configured OCR backend.
-The [Zotero reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
-owns prerequisites, refresh, migration and paired backups. Capture does not
-turn on automatic synchronization.
+Enable Zotero's local API and download the needed attachments. **Current main
+(unreleased):** choose **Research → Evidence captures → Capture from Zotero**,
+then preview a library, collection and attachment before permitting retention.
+PDF/text and PNG/JPEG captures are supported; audio/video remain in Zotero. Scans
+need an OCR backend. The [Zotero reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
+owns setup, refresh, migration and paired backup. Capture enables no background sync.
 
 ## Check your first session and return later
 
-Check the displayed project, language and a sample quotation against the source.
-Stop with `lixity service stop`; return with `lixity service start --open`, then
-open your project. To choose the startup project explicitly while the service
-is stopped, use `lixity service start --open ./my-novel`.
+Check the project, language and a sample quotation against its source. Stop with
+`lixity service stop`; return with `lixity service start --open` and open the project.
+For an explicit startup project, use `lixity service start --open ./my-novel` while
+stopped. Restart uses recorded launch settings, not a later browser selection;
+[restart after upgrades](INSTALLATION.md#running-the-server) to load new code.
 
-Restart uses recorded launch settings, not a later browser project selection.
-After upgrades or OCR environment changes, restart the intended instance; a
-browser reload does not load updated code. See
-[service lifecycle](INSTALLATION.md#running-the-server).
-
-Back up manuscripts separately from the research archive. Research/Zotero
-backups exclude manuscripts and external linked attachments. Use the
-[implemented research reference](research/USAGE.md), not the
-[proposal](research/README.md), to determine available operations.
+Back up manuscripts separately: research/Zotero backups exclude them and external
+linked attachments. Use [implemented research usage](research/USAGE.md), not
+[historical proposals](research/README.md), to determine available operations.
 
 ===============================================================================
 ## docs/INSTALLATION.md
@@ -671,16 +510,12 @@ version, then start it again. This does not alter manuscript files.
 ### Updates and removal
 
 Version 0.3.0 reset the product number to reflect development maturity before
-1.0 while retaining existing features and historical releases. Notes written
-before the renumbering may mention product versions such as 1.18.0 or
-3.0.1; they describe the same product. Historical tags
-such as 3.0.1 sort higher than the 0.4.x line in a numeric comparison; PyPI
-carries only the 0.4.x line, and `uv tool upgrade lixity` moves forward inside
-it. When choosing files on the release page, select the exact 0.4.x release.
-Do not rely on a product-number comparison for archive compatibility. The
-0.3.x/0.4.x line reads research schemas v1–v7; historical v3.0.1 cannot read
-opt-in manuscript-link v7 archives. Installing new files does not restart a
-running workspace; restart explicitly after the upgrade.
+1.0 while retaining historical tags and features. For a pinned installation,
+choose the wheel under [CLI: current release](#cli-current-release), not the
+numerically largest historical tag. Product and archive schema versions are
+independent: back up research before an upgrade and inspect the
+[reader/writer compatibility limits](research/USAGE.md#limits). Installing new
+files does not restart a running workspace.
 
 When upgrading from a historical build before v2.4.0, stop its instance through the
 original foreground terminal (Ctrl+C), checkout launcher or configured OS
@@ -736,49 +571,17 @@ remove its installation rather than overwriting its executable with uv.
 
 ## First useful result
 
-The installed app opens an empty workspace. Choose **Analyze a manuscript**,
-confirm its preview language and read the first linked passage. To return to a
-saved folder, choose **Open Project**. See [Onboarding](ONBOARDING.md).
-
-<details>
-<summary>Generate an offline report from the CLI</summary>
-
-Create a UTF-8 Markdown file named `manuscript.md` in your manuscript folder.
-Use `## Chapter title` headings and blank lines between paragraphs. Then run:
+The app starts with an empty workspace. Follow [Onboarding](ONBOARDING.md) to
+open an existing project, import a manuscript or start with research. For a
+terminal report from your own UTF-8 Markdown file:
 
 ```sh
 lixity analyze manuscript.md --language en
-lixity build manuscript.md --language en
 ```
 
-Open `exports/manuscript_dashboard.html` in your browser. The build also saves
-metrics and written reports. Very short texts cannot support a meaningful style
-reference; unavailable results are expected.
-
-Use `--language de` for German, or explicit `--language auto` for detection.
-English is the default. A local `lixity.toml` can hold:
-
-```toml
-language = "de"
-title = "My manuscript"
-```
-
-**Since v0.3.0:** selected-project title, `author_name` and an
-optional `[publication]` table feed the shared CLI/native PDF composer. No new
-renderer, runtime dependency or EPUB exporter is installed.
-See [publication configuration and limits](USAGE.md#publication-settings).
-
-For interactive project and research workflows, run `lixity service start --open`
-and choose your project in the workspace. The standalone HTML
-export remains read-only. The server's persistent workspace bar offers
-**Open Project** for an existing folder and its research archive, and
-**New Project → Import Manuscript** to create a separate project from uploaded text.
-See [Onboarding](ONBOARDING.md) for this workflow. Since 2.0.0, the workspace includes a five-field NDA generator with preview and PDF/editable-text
-downloads in the project language; see [NDA guidance](USAGE.md#nda-agreements).
-It creates no server files or recipient registry. For characters outside the
-native Windows-1252 PDF repertoire, download UTF-8 text for your local editor.
-
-</details>
+Select the manuscript language explicitly; English is the default and `auto`
+requests detection. Short text may leave measurements unavailable. The
+[usage reference](USAGE.md) owns exports, configuration, PDF and NDA behavior.
 
 ## Running the server
 
@@ -2577,6 +2380,12 @@ restored draft link retains the revision you inspected.
 
 ### Work on one dossier section
 
+Current-main bounded reads accept named IDs, positional IDs and `show`/`inspect`
+with the same section/summary/citation controls, including `--revision N`.
+Section and summary are distinct modes; summary and citation omission apply only
+to reads. Unbounded inspection keeps its record envelope. Section edits still use
+the ordinary revision workflow below.
+
 In a dossier, choose **Edit section** beside an unambiguous heading. The existing
 revision editor opens that section's content, including its subsections. It keeps
 your draft after a failed save. Concurrent changes in other sections remain intact;
@@ -3063,16 +2872,11 @@ entire archive at an earlier date.
 
 - `research/project.json`: immutable initial project configuration.
 - `research/revisions/`: immutable, schema-checked records.
-- `research/blobs/`: SHA-256-addressed original text/PDF bytes and extracted text; original bytes are not normalized.
+- `research/blobs/`: SHA-256-addressed original source bytes and extracted text; originals are not normalized.
 - `research/manifests/`: complete snapshots; `research/HEAD.json` selects one.
 - `.lixity/research/`: disposable catalogue and writer lock.
 
 ### Withdrawal vs. purge
-
-These operations concern sources. A dossier revision marked `supersession`
-records why that revision changed; it does not retire the dossier or establish
-a replacement link. Listing already respects stored dossier tombstones, but no
-public dossier-retirement, replacement-link or merge operation is provided.
 
 - **Withdrawal (`withdraw`)**: Preserves the audit trail and archived source text,
   records a tombstone in the manifest, excludes the source or version from default
@@ -3084,6 +2888,28 @@ public dossier-retirement, replacement-link or merge operation is provided.
   affected records and blobs before deletion. Authored dossiers and evidence
   links remain for their audit trail, but their purged citations are marked
   `availability: "purged"` and expose no deleted quotation text.
+
+**Current main (unreleased):** `withdraw` also retires a dossier through the same
+tombstone mechanism. Inspect its revision and snapshot, preview, then repeat the
+command without `--dry-run` to accept the retirement:
+
+```sh
+lixity research dossier inspect DOSSIER_ID --project ./novel
+lixity research withdraw --project ./novel --dossier-id DOSSIER_ID \
+  --expected-revision REVISION --expected-snapshot SNAPSHOT \
+  --reason "Consolidated into the reviewed dossier" --dry-run
+```
+
+Both guards must still match when saving. The dossier disappears from active
+lists and search; its bytes, evidence, associations and backups remain. Explicit
+revision reads, history and saved-revision comparisons remain available and
+identify the withdrawal. Current reads, edits, new associations/repins, image
+attachments and fresh acknowledgements reject retired dossiers. Existing pins
+survive unrelated revisions of linked records.
+
+`supersession` describes an ordinary revision's intent; it does not retire a
+dossier. Retirement does not create a replacement link or merge records. Source
+withdrawal and purge keep their existing contracts.
 
 ### Cross-corpus comparison and evidence grounding
 
@@ -3976,21 +3802,14 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/STABILITY.md
 # Stability & known limitations
 
 Use this page to judge what a result can support. Formula details live in
-[METHODS.md](METHODS.md); the register below tracks current calculation and
-interface limits. Statistical signals support a human review, not a prose grade.
-
-Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
-🟡 low (cosmetic or documented trade-off).
+[METHODS.md](METHODS.md); machine-readable thresholds and availability policies
+come from `lixity about --json`. This page keeps interpretation and integration
+limits that a passing check cannot resolve. Statistical signals support human
+review, not a prose grade.
 
 ## 1. Research findings (state of the art)
 
 ### Release verification and limits
-
-The 2.1.0 regression comparison used the checked-in public-domain *Effi Briest*
-(36 chapters) and *Pride and Prejudice* (61 chapters). Metrics, paragraph profiles
-and style-passport values matched 2.0.0 under explicit default settings after
-excluding the software-version label. This verifies preservation on these inputs,
-not empirical calibration, literary quality or agreement with an external study.
 
 The maintained suite checks English defaults, language resource-key coverage,
 readability-coefficient dispatch and locale formatting. These are software
@@ -3999,8 +3818,7 @@ languages. No language-wide accuracy percentage is established by this suite.
 
 The 3D chapter view is exploratory: its dimensions are corpus-specific, signs
 are fixed by convention, and per-axis thresholds are not simultaneous confidence
-regions. **Since 2.0.0:** native rotation/zoom buttons and
-a chapter-score table provide keyboard and touch access to the displayed scores,
+regions. Native rotation/zoom buttons and a chapter-score table provide keyboard and touch access to the displayed scores,
 flag status and chapter navigation. Individual canvas points remain pointer-operated.
 These targeted checks do not establish full assistive-technology coverage.
 
@@ -4010,54 +3828,38 @@ success is not a security certification for an arbitrary adapter.
 
 ### Manual manuscript association limits
 
-Since v0.3.0 retains manually selected quotes only with explicit local
-permission and exact source/paragraph/claim guards. Anchor review detects
-structural changes, not semantic contradictions or factual support. Moved or
-ambiguous candidates remain unresolved, and exact claim pins do not change
-without an explicit revision. A zero saved-link count does not establish that a
-claim is unused in prose. The source recheck before publication is optimistic;
-it does not lock manuscript editors. Archive backups/exports contain retained
-private quotes, but no full manuscript source blob from this workflow. The first
-save opts into research schema v7, unreadable by historical v3.0.1. See
-[retention and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
+Manually selected quotes require explicit retention and exact source/paragraph/claim
+pins. Anchor review detects structural changes, not semantic contradictions or
+factual support. Moved or ambiguous quotes require review; claim pins change only
+through an explicit revision. Zero saved links do not prove a claim is unused.
+The source recheck is optimistic and does not lock manuscript editors. Backups
+include retained private quotes; this workflow creates no full manuscript blob.
+See [retention and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
 ### Research and external-library limits
 
-Zotero can lead the source/media catalogue; Lixity retains immutable evidence
-and authored records. These stores have complementary responsibilities and
-separate backup requirements. Lixity's integrity audit checks retained bytes,
-references and citations, not factual truth, chronology or the completeness of
-an external library. Test fixtures and a successful audit do not establish that
-an entire private collection has been validated.
+Zotero owns bibliography and reading; Lixity retains selected evidence and authored
+records. Their backup requirements are separate. An integrity audit verifies
+retained bytes, references and citations; it cannot verify historical truth,
+chronology or the completeness of an external library. Native integration checks
+are bounded synthetic tests, not certification of every platform or collection.
 
-Research retention does not change the manuscript's style reference. Each
-source analysis is `source_internal`, with user-supplied context explicitly
-unverified. Historical travel accounts and monographs remain evidence selected
-for review, not an automatic stylistic norm. Source–manuscript comparison is an
-explicit, separate lexical/register report; shared words do not prove that a
-passage supports a claim or that its historical context is appropriate.
+Source analysis uses its own `source_internal` reference and unverified supplied
+context. Retaining a historical source does not make it a manuscript style norm;
+lexical overlap does not establish factual support or appropriate context.
+Search does not resolve contradictory prose or accept a hypothesis for the author.
 
-Synthetic native Zotero 10.0.3 tests on Linux ARM64 cover text/PDF imports and
-bridge text capture, refresh and search. This is a bounded integration check,
-not a general platform certification or a test of a user's complete collection.
-Automatic background/cloud synchronization and audio/video transcription are
-not implemented. PDF extraction and a configured OCR worker do not establish
-recognition accuracy; review text against scans when exact quotations matter.
+PNG/JPEG images retain exact source versions and stay outside text analysis.
+Header validation and browser preview do not establish complete codec validity or
+historical authenticity. Geographic coordinates and routes are authored data;
+rendering a map does not verify a journey or sightline. An unavailable image
+never silently resolves to a different version.
 
-Local PNG/JPEG dossier images retain exact original versions and share archive
-backup/audit and withdrawal/purge handling. They are excluded from text analysis.
-Container/header validation and a successful browser preview do not establish
-complete codec validity or historical authenticity. Remote downloads, image OCR
-and visual AI are not implemented. An unavailable or unprovable reference stays
-unavailable rather than resolving to a newer or unrelated image.
-
-RIS migration is additive. Preserve the original evidence archive and verify
-attachment identities, bytes, retained citations and restoration before retiring
-a prior workflow. Structured external references require `research-local/3` and
-`research-manifest-local/3`; older applications reject these snapshots. Current
-readers also accept v1/v2. Search across current authored records does not resolve
-contradictory prose or promote a hypothesis to an accepted author decision.
-See [Research usage](research/USAGE.md) for operational limits.
+RIS migration is additive; verify attachment identities, retained citations and
+restoration before retiring a workflow. Automatic background/cloud synchronization,
+audio/video transcription, image OCR and visual AI are not implemented. PDF
+extraction or an external OCR worker does not establish recognition accuracy.
+Current media, provider and schema boundaries live in [Research usage](research/USAGE.md).
 
 ### Robust comparisons and statistical claims
 
@@ -4079,9 +3881,7 @@ Style axes now use PCA of standardized tied midranks on one common complete
 chapter set. Covariance, explained variance and scores share that rank space;
 missing measurements are not imputed. At least three complete chapters and
 three varying baseline-usable features are required, with constant columns
-dropped on that set. Incomplete chapters have no dimension scores. This
-corrects the previous mixed raw/rank scoring population, but complete-case
-selection and small samples still limit interpretation. Score flags are
+dropped on that set. Incomplete chapters have no dimension scores. Complete-case selection and small samples still limit interpretation. Score flags are
 descriptive and do not validate prose quality or simultaneous confidence.
 See [METHODS §5](METHODS.md#5-exploratory-style-dimensions).
 
@@ -4098,26 +3898,20 @@ genre-wide reliability for the local 100-token policy. Guiraud remains sensitive
 to length; fixed-window MATTR and fixed-draw HD-D still depend on their parameters
 and the supplied vocabulary distribution.
 
-HD-D is exact expected TTR for a 42-token draw on 0–1. Before v1.16.0 the same
-key held a sampled-window Gini–Simpson measure: regenerate older measurements
-before comparison. Exact computation removes Monte Carlo error, not population
-uncertainty. The 1.25 MTLD correction averages forward/reverse $N/F$
-scores arithmetically. It preserves Lixity's inclusive threshold, trailing
-factor and availability rules; different external variants still need explicit
-parameter and segmentation alignment. Formula and guard details:
-[METHODS §6](METHODS.md#6-lexical-diversity-indices).
+HD-D is exact expected TTR for a fixed draw. Exact computation removes Monte Carlo
+error, not population uncertainty. MTLD variants also differ in direction
+averaging, threshold and trailing-factor rules. Compare measurements only after
+aligning formulas, parameters and segmentation; regenerate historical reports
+when those contracts changed. See [formula and guard details](METHODS.md#6-lexical-diversity-indices).
 
 ### Linguistic proxies and literary interpretation
 
-Analysis now shares the supported body/list/blockquote prose scope, stripping
-quote delimiters and inline emphasis while omitting YAML front matter, code,
-headings, comments and footnote definitions. Paragraph profiles intentionally
-retain their narrower body/list scope and source line anchors. Configured word
-regex flags are respected, English/German default tokens include accented
-Unicode letters, LF/CRLF paragraph boundaries agree, and the short-paragraph
-threshold is inclusive. Legacy whitespace counts are a separate unit. This
-bounded Markdown policy and language-rule coverage do not establish complete
-CommonMark support or linguistic token accuracy.
+Analysis shares a bounded Markdown prose projection. Link labels contribute;
+destinations, images, code, comments and excluded document regions do not.
+Paragraph profiles preserve displayed text and source anchors separately from
+counting. The configured token rules and narrower paragraph scope do not imply
+complete CommonMark support or linguistic token accuracy. See
+[analysis scope](METHODS.md) for the unit and denominator of each measurement.
 
 Passive, tense, adjective, nominalization and modality fields count lexical
 markers or suffixes. For example, German `werden` also marks future tense or
@@ -4148,13 +3942,18 @@ to rewrite. Scene/register targets are explicit author preferences, never
 hardcoded genre norms. [Underwood's expert discussion](https://tedunderwood.com/2024/01/05/can-language-models-predict-the-next-twist-in-a-story/)
 illustrates why surface predictability and narrative experience differ.
 
+Dialogue turns are quotation segments without speaker attribution. Character
+mentions depend on supplied names or literal project aliases; declared viewpoint
+chapters are separate metadata, not inferred first-person presence. There is no
+NER or coreference. Hook and repetition scores also locate surface patterns;
+deliberate calm endings and repeated motifs can be appropriate author choices.
+
 ### Structural diagnostics
 
-The 1.25 corrections retain structural field names, but require
-regenerating stored metrics/passports before numerical comparisons. Remaining
-model limits are separate from the corrected calculations:
+These diagnostics preserve their declared numerical definitions; an exact
+implementation does not validate the underlying model:
 
-- `pelt_changepoints` now uses exact unpruned dynamic programming: $O(n^2)$
+- `pelt_changepoints` uses exact unpruned dynamic programming: $O(n^2)$
   time and $O(n)$ storage. The retained singleton/zero-variance guard violates
   the PELT pruning premise, so no pruning or linear-time claim is made.
   Anchored variance updates reduce cancellation; exact optimization of this
@@ -4191,8 +3990,8 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
   Lixity chooses heatmap text from each cell’s luminance and
   tests the full blue/orange scale. This does not certify every canvas mark or
   every color-vision condition; numeric labels remain essential.
-- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. Since historical
-  2.0.0, paragraph chips and dimension controls use at least 24×24,
+- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. Paragraph
+  chips and dimension controls use at least 24×24,
   increasing to 44×44 for coarse pointers. Pressed chips retain their target
   size, and long strips scroll horizontally. These checks do not establish
   conformance for the entire interface or every canvas mark.
@@ -4201,73 +4000,25 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
 - See [visual design rationale](ARCHITECTURE.md#visual-consistency-and-evidence)
   for evidence, typography choices and the limits of automated UI checks.
 
-
 ## 2. Stability register
 
-| # | Component | Instability | Evidence | Mitigation |
-| :-- | :--- | :--- | :--- | :--- |
-| 1 | Dashboard JS | no automated JS test; DOM hooks (ids/classes) are an implicit contract | renaming a class breaks interactions silently | 🟠 → **fixed**: UI-contract test asserts every hook used by `dashboard.js` exists in the rendered HTML |
-| 2 | Label packs | missing translations fall back to English silently | untranslated UI goes unnoticed | 🟠 → **fixed**: completeness test over the 7 languages for a required key set |
-| 3 | LD indices on short texts | local guards do not establish reliability | length and parameter sensitivity depend on corpus and estimator | 🟡 **mitigated**: HD-D/MTLD/Maas ≥100 tokens; MATTR requires a full window; `null` is availability, not a validated reliability boundary |
-| 4 | Style fingerprint with few chapters | minimum observations do not establish calibration; missingness can shrink the complete-case set | single chapters have no comparative baseline | 🟡 **mitigated**: dimensions require ≥3 complete chapters and ≥3 varying usable features in one rank space; incomplete scores are omitted; availability is not reliability |
-| 5 | Heuristic syllable counting | language-specific rules; no validated aggregate error rate | no gold-standard corpus in-repo | 🟡 **documented**; used only as a relative signal, formula names shown |
-| 6 | Tense patterns | whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); perfect/pluperfect participles still count through the auxiliary pattern | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth. Measured effect of the whole-word fix (12 Oct): Effi Briest −72 wrongly-as-past tokens, Pride and Prejudice +7 true regular past forms, no losses |
-| 7 | Packaging | a wheel could miss `ui/assets/*` or `py.typed` | config exists, never verified in CI | 🟠 → **fixed**: CI job builds a wheel and asserts assets + typing marker are inside |
-| 8 | Project Python environments | an external launcher may select an environment without Lixity | core tests do not verify a project's launcher or installation | 🟡 **documented**: verify the interpreter and package version in the project's environment; project hooks belong to that project |
-| 9 | Publication PDF/EPUB adapters | optional project renderers have their own runtime dependencies | core checks do not verify arbitrary adapter output | 🟡 **documented**: the shared built-in manuscript PDF composer has synthetic integrity/layout tests; project adapters need their own export checks. Neither path provides EPUB/PDF/UA/PDF/X certification |
-| 10 | Dashboard size | ~2 MB HTML for 95k words, linear growth | per-paragraph payload | 🟡 **documented**; future option: JSON payload + client render |
-| 11 | Cross-machine determinism | float last bits may differ across platforms/Python versions | `math.log` summation and co-occurrence insertion order | 🟡 **documented**: byte-identical on the same interpreter; in-process determinism is tested |
-| 12 | NDA draft rendering and downloads | the native PDF cannot represent every Unicode script; downloaded agreements need user retention | generation returns bytes without server files or a recipient registry | 🟡 **documented**: download UTF-8 text for broader local rendering; keep reviewed/signed documents in project-owned storage |
-| 13 | Chip target size | targets must remain reachable in dense strips and pressed states | Chromium checks cover target geometry, keyboard/touch activation and horizontal scrolling | 🟡 **mitigated** since 2.0.0: 24×24 minimums, 44×44 for coarse pointers; targeted tests do not certify complete accessibility conformance |
-| 14 | UI labels architecture | label packs merged at runtime (base → guidance → scene → identity → labels → metric → help → group → layer → ui → workspace) | fallback chain is implicit | 🟠 → **fixed**: merge order documented in `docs/AGENTS.md` §3.3 + completeness test |
-| 15 | Status strip | states derive from file presence/mtime – a restored or clock-skewed file can read "stale" although it is current | no content hash in the status path | 🟡 **documented**: state is advisory; undeterminable components render `unknown`, not a fake `ok` |
-| 16 | Marker notes | notes live in an HTML-comment attribute: quotes/newlines must be escaped; very long notes bloat the comment line | `note="…"` in the marker line | 🟠 → **fixed**: escaping on write (round-trip test); **documented** guidance: one short sentence |
-| 17 | Drill-down filters | `data-flags` / `data-only` preselect a view filter; users may wonder why rows are hidden | UI state only, data untouched | 🟡 **documented**; the active filter is visible and one click clears it |
-| 18 | orjson serialisation | `orjson` rejects non-string dict keys by default – chapter keys are ints in `deviations` | `OPT_NON_STR_KEYS` required | 🟠 → **fixed**: one `_json()` helper used everywhere; round-trip test covers integer chapter keys |
-| 19 | Busy states | server actions have latency; without feedback users click twice | action buttons | 🟡 **mitigated**: buttons disable + spinner while running; server-side idempotence remains the actual guard |
-| 20 | Layer colour semantics | colour encodes the absolute value span (min–max per dimension), not deviation sign alone | narrow bands would wash out | 🟡 **documented** in the legend (min/max values) + `USAGE.md`; the ring (\|z\| ≥ 1.5) is the second, deviation-specific channel |
-| 21 | Sentence segmentation | abbreviation-aware splitter; unknown abbreviations, decimals and ellipses are still heuristic | naive splitting inflated ASL on `Mr.`/`z.B.` texts | 🟠 → **fixed**: shared `lixity.sentences` splitter (abbreviation/number/initial guards, closing marks stay with their sentence); **documented** as a heuristic |
-| 22 | Corpus vs. chapter metrics | two divergent sentence splitters and duplicated sentence statistics | chapter matrix was still on the naive regex | 🟠 → **fixed**: one splitter and one `SentenceStats` implementation for both levels |
-| 23 | Syllable heuristics | German double vowels and English silent-e/-le were mis-counted | `Kaffee`=3, `table`=3 | 🟡 → **fixed** for these fixtures: double vowels count as one nucleus, syllabic-l rule de-duplicated; language-wide accuracy remains unestablished |
-| 24 | LIX long-word threshold | per-language calibration (7/8 characters) deviated from the standard | Björnsson defines >6 characters | 🟠 → **fixed**: standard >6 characters for every language; LIX values rise accordingly (documented, breaking metric change) |
-| 25 | Readability formulas | coefficient dispatch and empirical validation are different | hand-computed tests cover declared constants | 🟡 **documented**: formula dispatch is tested; original Amstad calibration and language-wide syllable accuracy remain unverified |
-| 26 | UI interaction contract | some click targets were not keyboard reachable; one drill-down was lost | band rows lacked `role`/`tabindex` and the layer mapping | 🟠 → **fixed**: unified `[role="button"]` contract, one JS selector, focus ring for all; band rows jump to `#feat-<field>` (heatmap column) with optional layer + deviations-only |
-| 27 | Dialogue turns | "turn" = quoted segment; no speaker attribution, quotation patterns are curated per language | no reliable offline speaker ID | 🟡 **documented**: turn structure, not who speaks; patterns per language profile |
-| 28 | Character presence | whole-word matching on caller-supplied names/aliases; no NER, no coreference | nickname not in the list is invisible | 🟡 **documented**: alias patterns supported (`Matthias\|Matze`); appendix/front matter excluded so chapter numbers match the metrics |
-| 29 | Chapter hook score | 0–3 heuristic (short closing sentence, terminal ?/!/…, closing dialogue) | deliberate calm endings score 0 | 🟡 **documented**: ranks and locates chapter endings, no quality verdict |
-| 30 | Showing/telling balance | heuristic composite of telling vs. showing signals; robust z against the book's own medians | MAD can be zero for share features | 🟡 **documented**: MAD→SD fallback; not a quality verdict; underlying signals visible in the heatmap |
-| 31 | Repetition analysis | n-grams (default 3) with ≥ 3 occurrences; content words depend on the curated stop-word lists | deliberate repetition is a device | 🟡 **documented**: signal, not a verdict; pure function-word phrases excluded; stop lists de/en extended |
-| 32 | Type safety & warnings | untyped helpers and warning noise could hide defects | strict typing was off; `\w` in a docstring raised a SyntaxWarning | 🟠 → **fixed**: `mypy --strict` clean (0 errors) and enforced in CI; `python -W error` test run is clean |
-| 33 | Marker controls in jumpable rows | a click on “+ kind”/“Resolve” inside a `row-link` also fired the row jump (marker buttons carry `data-line`, which the INTERACTIVE selector matched) | double action: note field opened *and* the page scrolled | 🟠 → **fixed**: `isMarkerControl()` guard in click *and* keydown handlers; contract test asserts the guard |
-| 34 | Flagged list length | severity ≥ 2 rows grow linearly with manuscript size (100+ rows in a novel) | a flat list would push the dashboard top down | 🟡 **documented**: capped scroll area (sticky header, ~26 rem); severity-descending sort keeps the worst cases visible |
-| 35 | Structural changepoints | guarded singleton/constant cost remains a modelling choice; short series can over-segment | former pruning could miss the declared minimum | 🟡 **documented**: 1.25 correction uses exact unpruned $O(n^2)$ time/$O(n)$ storage; cuts are review signals, not validated narrative boundaries |
-| 36 | Mann–Kendall | tau-a is not tie-normalized tau-b; normal approximation needs assumptions | ties and serial dependence affect interpretation | 🟡 **documented**: tau-a naming is corrected; S and approximate p remain separate outputs; `trending_features` is model-dependent |
-| 37 | Hill tail index | $\hat\alpha$ biased for small $k$; undefined for non-positive values | $n \ge 5$, $k = \lfloor\sqrt n\rfloor$ | 🟡 **documented**: `tail_index` is diagnostic only; low $\alpha$ = occasional extreme chapters, not a quality problem |
-| 38 | Sn / Qn | asymptotic scaling does not remove finite-sample bias; pairwise work grows with chapter count | no finite-sample correction is applied | 🟡 **documented**: 1.25 correction uses original Sn low/high medians ×1.1926 and the same Qn rank ×2.21914; descriptive cross-checks alongside MAD |
-| 39 | Degree-sequence fit | approximate discrete exponent is combined with a different continuous CDF and ordinary fitted KS p | estimator attribution and goodness-of-fit assumptions differ | 🟠 **open**: label as exploratory; no calibrated fit probability or scale-free claim |
-| 40 | Parallel split paths | `dialogue` and `analyzer` once had divergent `split_chapters` implementations | chapter numbering could drift | 🟠 → **fixed**: single source in `markdown_parser.split_chapters` (re-export from `dialogue`); regression test asserts shared titles + sequential numbering |
-| 41 | Threshold resolution | three call sites built `FingerprintThresholds` independently (CLI / API / dashboard) | a new key could be wired on one path only | 🟠 → **fixed**: one builder `config.resolve_thresholds` (kwargs > project config > default); unit tests cover each precedence level |
-| 42 | `flag_min_severity` wiring | profile / dashboard / CLI each resolved the flags cut differently | raising the floor could leave stale counts in one surface | 🟠 → **fixed**: end-to-end plumbing (CLI `_thresholds_and_profile` → `ProfileThresholds` → `render_dashboard(flag_min_severity=…)`); contract tests for profile + dashboard select |
-| 43 | Structural early/late split | `distribution_shift` / `keyness` use a chapter-count midpoint, not a fitted breakpoint | changepoint optimization may place a break elsewhere | 🟡 **documented**: heuristic halves; cross-read with `changepoints` and `trends` |
-| 44 | Token-level structural only on text surfaces | `from_metrics` alone has no tokens, so `cooccurrence` / `keyness` appear only when built from source text | a metrics-only passport looks “incomplete” | 🟡 **documented** in METHODS §4c: merge via `lexical_structural_diagnostics`; metric-derived keys always present |
-| 45 | `signal_counts` empty by default | language profiles ship `"signal_keywords": {}`; without `CorpusConfig.signal_keywords` the field is always `{}` | empty looks like “no signal words found” rather than “not configured” | 🟡 **documented** in USAGE/AGENTS: field is opt-in via config; not a measurement failure |
-| 46 | Filter-verb count ≠ editorial lists | engine `de` filter regex is a curated lemma list (perception/filter verbs); broader editorial lists differ (≈94 vs 120 for German) | dossier tables use a different definition | 🟡 **documented**: never swap numbers without restating the definition; within-language only |
-| 47 | Pacing without explicit dividers | no `---`/`* * *` breaks → `explicit_scene_breaks=0`, `scenes_are_chapters=true` (scenes ≡ chapters) | scene counts look like real pacing | 🟠 → **fixed** (v1.12.0): report field + CLI warning; USAGE/AGENTS: scene structure uninformative when flag is set |
-| 48 | `characters` empty names | empty `--names` used to return `figures: []` silently | caller mistake looks like “no characters” | 🟠 → **fixed** (v1.12.0): CLI exit 1 (`err_no_names`); API `ValueError` (no NER — names come from the caller) |
-| 49 | No external Delta stylometry | JSD / driver words are in-corpus chapter-vs-rest diagnostics | misread as authorship attribution | 🟡 **documented**: METHODS Track B (not implemented); STABILITY §1 stylometry note |
-| 50 | Dialogue speaker attribution | turns = quotation segments; no speaker ID | “turn” misread as speaker turn | 🟡 **documented**: USAGE `dialogue` section; STABILITY row 27 (patterns per language) |
-| 51 | Research retention & citations | Pilot retains original UTF-8/PDF bytes and pins exact unicode codepoint offsets; SQLite/FTS5 provides rebuildable lexical search; withdrawn sources mark citations `withdrawn`; purged sources fail closed | citations do not imply factual truth; retention requires explicit permission | 🟡 **documented**: USAGE/AGENTS; research pilot is opt-in, explicit-project only; no ambient manuscript I/O |
-| 52 | PDF page-count detection | a page tree in a compressed object stream is not greppable, so a raw-scan fallback cannot measure the document | `get_pdf_page_count()` returned `1` when it could measure neither `pdfinfo` nor a raw scan, so a 3-page PDF measured as 1 | 🔴 → **fixed** (v1.22.0): the count is `int \| None`, and the native extractor refuses with an actionable error instead of retaining part of a document; undeterminable is never defaulted |
-| 53 | Project configuration files | a malformed TOML file is indistinguishable from an absent one unless the loader says so | one unclosed quote reverted language and thresholds to defaults and still exited `0`; `analyze --json` reported `"language": "en"` against a configured `de` | 🔴 → **fixed** (v1.22.0): a present-but-unreadable or unparseable file emits a `UserWarning` naming the path and the consequence; absent stays silent, and the suite runs under `-W error` so a valid config must stay quiet |
-| 54 | Project NDA text models | an invalid path or unknown field cannot produce the requested agreement | templates are explicit project-owned UTF-8 input with five literal fields | 🟡 **mitigated** since 2.0.0: outside paths, missing/empty templates and unknown fields are rejected; values remain data |
-| 55 | Native server request layer | one 1655-line module with two dispatch ladders made the route/handler mapping hard to review | `do_GET`/`do_POST` were 73/125-line `if` chains; adding a route meant editing a shared ladder | 🟡 **mitigated** (v1.22.0): split into a package with per-area route tables and focused request-validation helpers; behaviour verified against a live instance across 21 routes and guard conditions |
-| 56 | Composed PDF export | layout quality depends on fonts installed on the host, and text rendering is not Knuth-Plass | a host without the expected font families cannot produce a document; justification distributes slack across word spaces | 🟡 **documented**: per-role font overrides (`--serif-font`/`--bold-font`/`--mono-font`, `LIXITY_PDF_FONT_*`), missing and non-embeddable fonts are refused with the searched names, and USAGE states the typographic limits |
-| 57 | Sentence block boundaries | splitting whole chapters merged an unterminated block (stage note, salutation, sign) into the next sentence and inflated its measured length | chapter ASL and the sentence histogram disagreed with paragraph profiles (a letter chapter with a bracketed note) | 🟠 → **fixed** (v0.4.7): sentences never cross a blank line; a block without terminal punctuation stays one unit in chapters, scenes and pacing. Numbers change for affected manuscripts — recompute older reports (CHANGELOG, METHODS §11) |
-| 58 | Comparability floors | rates, variance and entropy from tiny samples produced extreme deviations and FDR marks (an 11-word chapter flagged three features) | numerically correct but statistically meaningless signals | 🟡 **documented policy** (v0.4.7): below 100 words a chapter receives no fingerprint z*/FDR values and sentence-distribution features need five sentences; showing/telling and its rankings use the same word floor and mark short chapters `comparable: false`. Dash/`null` means unavailable, baselines exclude such chapters; `about().heuristics` and METHODS §2 name the floors |
-| 59 | Manuscript anchor edits | any paragraph edit changed `paragraph_sha256` and marked the association for review, even when the retained quote was untouched | authors had to re-anchor by hand for edits outside the quote | 🟡 **documented** (v0.4.7): review reports `adjusted` when the quote still appears exactly once; `reconcile-manuscript --accept-moved` or the review-tab action re-pins the refreshed line span, hash and offsets as a new revision. Editing the quote itself stays `changed` and is never re-pinned automatically |
-| 60 | Chronology year ranges | `1929-1933` (plain hyphen) was not recognized although `1929–1933` and ISO dates were | the period stayed unplaced with a warning | 🟡 → **fixed** (v0.4.7): a plain hyphen between two four-digit years joins the typographic dashes; the claim-time hint and a localization test verify every documented example against the grammar |
-| 61 | Cached dashboard freshness | the served shell was rendered at startup or on project transitions; an edited manuscript left the page with old numbers until a manual re-analysis | displayed numbers stopped matching the file while the page stayed open | 🟡 → **fixed** (v0.4.7): serving the shell compares the manuscript digest with the rendered one and re-renders on change (`refresh_when_source_changed`); ARCHITECTURE documents it |
-| 62 | Local server hardening | inline scripts were unconstrained and debug/access logs recorded request query strings | an injected script from untrusted project text was the main remaining XSS class; context tokens could reach logs | 🟡 → **fixed** (v0.4.7): per-response nonce CSP (default-deny, inline styles only) plus COOP and Permissions-Policy; access and debug logs keep the route without its query string. SECURITY.md documents the baseline; server tests assert nonce freshness and log redaction |
+The current cross-cutting limits below replace the completed-bug checklist.
+Historical fixes and release-specific evidence remain in [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md),
+[release notes](https://github.com/mfahsold/lixity/tree/main/docs/releases) and the
+[archived register and verification snapshot](https://github.com/mfahsold/lixity/blob/123b198db2b3d276b4bba71664e4e6b989377247/docs/STABILITY.md#2-stability-register).
+
+| Surface | Remaining boundary | Maintained reference |
+| :--- | :--- | :--- |
+| Numerical reproducibility | Floating-point last bits can differ across interpreters/platforms. | [Methods](METHODS.md) |
+| Large dashboards | Bundled assets and full offline text increase document size; opening paragraph details lazily does not remove the retained text payload. | [Architecture](ARCHITECTURE.md) |
+| Workspace status | File-derived status is advisory; timestamps and restored files can be misleading. Unknown is not success. | [Workspace interfaces](AGENTS.md) |
+| Optional project adapters | Core checks do not verify a project's launcher, export tools or local runtime. | [Installation](INSTALLATION.md) |
+| Publication formats | Font coverage and layout limits remain; no EPUB, PDF/UA or PDF/X certification is claimed. | [PDF export](USAGE.md#download-a-manuscript-pdf) |
+| Agreement drafts | Built-in PDF fonts do not cover every script; download text for external rendering and retain reviewed documents in project storage. | [Project interface](AGENTS.md) |
+
+Empty optional signal fields, unavailable small-sample metrics and missing
+rankings must be interpreted using their configuration/availability metadata.
+They are not evidence of no signal or equal literary effect.
 
 ===============================================================================
 ## docs/LOCALIZATION.md
@@ -5146,6 +4897,19 @@ installed `research schema` owns fields and validation limits. Geography uses
 record/manifest v8 on its first save; subsequent edits never downgrade it.
 Legacy dossier encodings remain unchanged until a geographic save. Older readers
 cannot open v8 archives. [Workflow and coordinate semantics](research/USAGE.md#keep-places-and-journeys-in-a-dossier).
+
+**Current main:** `withdraw(project, dossier_id=..., expected_snapshot=...,
+expected_revision=..., dry_run=...)` requires the reviewed digest and exact
+positive revision. `research-dossier-withdraw-preview-local/1` returns
+`{operation, project_id, target_id, target_revision, snapshot, reason, ready: true,
+dry_run: true}` without locking or publishing. The accepted
+`research-dossier-withdraw-local/1` omits `ready`/`dry_run` and returns the committed
+snapshot. Source withdrawal retains `research-withdraw-local/1`; no archive
+schema changes. Explicit historical dossier reads/history/comparisons add
+`availability: "withdrawn"` and `withdrawal: {id, target_revision, reason,
+created_at, created_by}`; active response shapes stay unchanged. See
+[retirement semantics](research/USAGE.md#withdrawal-vs-purge) for preserved pins
+and rejected writes.
 
 `research_api.compare_source()` returns a dictionary by default, or a string
 with `format="md"`. The implementation helper

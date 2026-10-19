@@ -37,12 +37,16 @@ def excerpt(text: str, terms: list[str]) -> str:
     return ("…" if start else "") + text[start:start + 500] + ("…" if len(text) > start + 500 else "")
 
 
-def current_versions(snapshot: Snapshot) -> set[str]:
-    withdrawn_or_purged = {
+def _unavailable_ids(snapshot: Snapshot) -> set[str]:
+    return {
         record.target_ref.id
         for record in snapshot.records.values()
         if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
     }
+
+
+def current_versions(snapshot: Snapshot) -> set[str]:
+    withdrawn_or_purged = _unavailable_ids(snapshot)
     latest: dict[str, SourceVersion] = {}
     for record in snapshot.records.values():
         if isinstance(record, SourceVersion):
@@ -57,6 +61,7 @@ def current_versions(snapshot: Snapshot) -> set[str]:
 def reindex(repository: Repository) -> dict[str, Any]:
     with repository.locked():
         snapshot = repository.snapshot()
+        unavailable = _unavailable_ids(snapshot)
         selected = current_versions(snapshot)
         destination = repository.safe(repository.cache / "catalogue.sqlite3")
         descriptor, temporary = tempfile.mkstemp(dir=destination.parent, prefix=".index-")
@@ -79,7 +84,7 @@ def reindex(repository: Repository) -> dict[str, Any]:
                             connection.execute("INSERT INTO documents VALUES (?, ?, ?, ?, ?)",
                                                (record.id, record.revision, record.kind, source.title, record.verbatim))
                             count += 1
-                    elif isinstance(record, (Dossier, Claim, Decision)):
+                    elif isinstance(record, (Dossier, Claim, Decision)) and record.id not in unavailable:
                         connection.execute("INSERT INTO documents VALUES (?, ?, ?, ?, ?)",
                                            (record.id, record.revision, record.kind, record.title, authored_text(record)))
             with open(temporary, "r+b") as stream:
@@ -110,6 +115,7 @@ def search(
     if not isinstance(scope, str) or scope not in SEARCH_SCOPES:
         raise ResearchError("Search scope must be sources, dossiers, claims, decisions or all")
     snapshot = repository.snapshot()
+    unavailable = _unavailable_ids(snapshot)
     selected = current_versions(snapshot)
     path = repository.safe(repository.cache / "catalogue.sqlite3")
     if ensure_fresh:
@@ -160,7 +166,7 @@ def search(
                 for identifier, revision, kind, rank in rows:
                     record = snapshot.records.get(identifier)
                     if (not isinstance(record, (Passage, Dossier, Claim, Decision))
-                            or record.revision != revision or record.kind != kind):
+                            or record.revision != revision or record.kind != kind or record.id in unavailable):
                         raise ResearchError("Invalid index reference; run research reindex")
                     if isinstance(record, Passage):
                         extraction = snapshot.get(record.extraction_ref, Extraction)

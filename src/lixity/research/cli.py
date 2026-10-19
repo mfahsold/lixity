@@ -82,7 +82,7 @@ COMMAND_DEFINITIONS: tuple[tuple[str, str, str, tuple[str, ...]], ...] = (
     ('compare', 'Compare research source against manuscript (lexical overlap, keyness, register, chapter grounding)', 'Source analysis', ()),
     ('audit', 'Check retained records, hashes and citation positions', 'Archive and maintenance', ()),
     ('reindex', 'Rebuild the disposable SQLite/FTS5 search index', 'Archive and maintenance', ()),
-    ('withdraw', 'Withdraw an archived source or version, marking citations and excluding from search', 'Archive and maintenance', ()),
+    ('withdraw', 'Withdraw a source/version or retire a reviewed dossier without deleting retained bytes', 'Archive and maintenance', ()),
     ('purge', 'Physically delete archived source records, passages, and unshared blobs', 'Archive and maintenance', ()),
     ('export', 'Export research store to verified archive (.tar.gz)', 'Archive and maintenance', ()),
     ('restore', 'Restore research store from verified archive (.tar.gz)', 'Archive and maintenance', ()),
@@ -418,7 +418,15 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--expected-snapshot", help="Snapshot digest from the preview, required with --apply")
             command.add_argument("--actor", default="local-author")
         elif name in ("withdraw", "purge"):
-            command.add_argument("--source-id", required=True, help="Source UUID")
+            if name == "withdraw":
+                selection = command.add_mutually_exclusive_group(required=True)
+                selection.add_argument("--source-id", help="Source UUID")
+                selection.add_argument("--dossier-id", help="Dossier UUID to retire, preserving its history")
+                command.add_argument("--expected-snapshot", help="Reviewed archive SHA-256 digest; required for a dossier")
+                command.add_argument("--expected-revision", type=int, help="Reviewed current dossier revision; required for a dossier")
+                command.add_argument("--dry-run", action="store_true", help="Preview dossier withdrawal without locking or writing")
+            else:
+                command.add_argument("--source-id", required=True, help="Source UUID")
             command.add_argument("--version-id", help="Explicit source version UUID")
             command.add_argument("--reason", default="Withdrawn by user" if name == "withdraw" else "Purged by user", help="Reason for action")
             command.add_argument("--actor", default="local-author")
@@ -702,8 +710,21 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         "relate": "relation_id",
     }[command])
     prepare = getattr(args, "prepare", False)
+    bounded_dossier = command == "dossier" and (
+        args.section is not None or args.summary or args.omit_citations)
+    if bounded_dossier:
+        if not record_id:
+            raise ResearchError("Dossier --section, --summary and --omit-citations reads require a selected ID")
+        if args.section is not None and args.summary:
+            raise ResearchError("Choose --section or --summary for a bounded dossier read")
+        if args.section is not None and (args.history or (args.diff and args.from_revision is not None)):
+            raise ResearchError("--section selects dossier body reads or draft edits, not history or saved-revision comparisons")
+        read_flags = [flag for flag, selected in (("--summary", args.summary),
+                                                 ("--omit-citations", args.omit_citations)) if selected]
+        if read_flags and any((args.update, prepare, args.diff, args.history)):
+            raise ResearchError(f"{' and '.join(read_flags)} apply only to dossier reads, not revision or history modes")
     if args.dry_run and not args.update:
-        raise ResearchError("--dry-run requires --update; --prepare and --diff already write nothing")
+        raise ResearchError("--dry-run requires --update; --prepare and --diff already leave the archive unchanged")
     if ((args.from_revision is not None or args.to_revision is not None)
             and (not args.diff or args.from_revision is None)):
         raise ResearchError("Historical comparison requires --diff --from-revision N [--to-revision M]")
@@ -794,6 +815,9 @@ def _revision_action(args: argparse.Namespace) -> dict[str, Any] | None:
         return api.record_history(args.project, kind, record_id)
     if args.revision is not None and args.revision < 1:
         raise ResearchError("Revision must be positive")
+    if bounded_dossier:
+        # The ordinary dossier branch owns bounded details for every selector.
+        return None
     return api.get_record(args.project, kind, record_id, revision=args.revision)
 
 
@@ -909,7 +933,8 @@ def run(args: argparse.Namespace) -> int:
             if action in ("show", "inspect"):
                 if rid is None and getattr(args, flag, None) is None:
                     raise ResearchError("show/inspect requires a record ID")
-                args.inspect = True
+                if command != "dossier" or args.revision is None:
+                    args.inspect = True
             elif action is not None and action != "list":
                 if rid is not None:
                     raise ResearchError("Choose list, show/inspect RECORD_ID, or one positional record ID")
@@ -1328,6 +1353,7 @@ def run(args: argparse.Namespace) -> int:
                     args.project,
                     args.dossier_id,
                     section=getattr(args, "section", None),
+                    revision=args.revision,
                     summary=getattr(args, "summary", False),
                     include_citations=not getattr(args, "omit_citations", False),
                 )
@@ -1427,6 +1453,8 @@ def run(args: argparse.Namespace) -> int:
                 result = api.list_decisions(args.project)
         elif command == "withdraw":
             result = api.withdraw(args.project, args.source_id, version_id=args.version_id,
+                                  dossier_id=args.dossier_id, expected_snapshot=args.expected_snapshot,
+                                  expected_revision=args.expected_revision, dry_run=args.dry_run,
                                   reason=args.reason, actor=args.actor)
         elif command == "purge":
             result = api.purge(args.project, args.source_id, version_id=args.version_id,

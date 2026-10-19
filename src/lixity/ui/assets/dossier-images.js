@@ -312,9 +312,7 @@
     var source = button.querySelector("img");
     if (!source || !source.complete || !source.naturalWidth || !window.LixityResearchMedia) return;
     var group = button.closest(".research-dossier-body-rendered") || button.closest(".research-prose") || button.parentElement.parentElement;
-    var images = Array.from(group.querySelectorAll("[data-dossier-enlarge] img")).filter(function(image) {
-      return image.complete && image.naturalWidth && image.naturalHeight;
-    });
+    var images = Array.from(group.querySelectorAll("[data-dossier-enlarge] img"));
     var items = images.map(function(image) {
       var caption = image.closest("figure").querySelector("figcaption");
       var parts = [], text = caption && document.createTreeWalker(caption, NodeFilter.SHOW_TEXT);

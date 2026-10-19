@@ -30,6 +30,54 @@ class TestResearchRevisions(unittest.TestCase):
         return revise_record(self.project, kind, identifier, changes, change_kind=change_kind,
                              reason="Author reviewed this change.", actor="test-author")
 
+    def test_retired_dossier_retains_old_pins_but_rejects_new_associations_and_repins(self):
+        from tests.research_support import retained_files
+
+        direct = api.record_decision(self.project, title="Linked", rationale="Retain the reviewed pin.",
+                                     dossier_ids=[self.dossier])["decision_id"]
+        unlinked = api.create_claim(self.project, title="Unlinked", statement="No dossier yet.")["claim_id"]
+        self.revise("dossier", self.dossier, {"body": "A newer note."})
+        api.withdraw(self.project, dossier_id=self.dossier, expected_revision=2,
+                     expected_snapshot=Repository(self.project).snapshot().digest)
+        for operation in (
+            lambda: api.create_claim(self.project, title="New", statement="New association.", dossier_id=self.dossier),
+            lambda: api.record_decision(self.project, title="New", rationale="New association.", dossier_ids=[self.dossier]),
+            lambda: self.revise("claim", unlinked, {"dossier_id": self.dossier}),
+            lambda: self.revise("claim", self.claim, {"dossier_revision": 2}),
+            lambda: self.revise("decision", direct, {"dossier_revisions": {self.dossier: 2}}),
+        ):
+            before = retained_files(self.project)
+            with self.assertRaisesRegex(ResearchError, "withdrawn"):
+                operation()
+            self.assertEqual(retained_files(self.project), before)
+        claim = self.revise("claim", self.claim, {"title": "Reviewed claim", "dossier_id": self.dossier, "dossier_revision": 1})
+        decision = self.revise("decision", direct, {"title": "Reviewed decision", "dossier_ids": [self.dossier],
+                                                    "dossier_revisions": {self.dossier: 1}})
+        self.assertEqual(claim["record"]["dossier_ref"], {"id": self.dossier, "revision": 1})
+        self.assertEqual(decision["record"]["dossier_refs"], [{"id": self.dossier, "revision": 1}])
+
+    def test_retired_dossier_rejects_write_previews_and_revision_batches(self):
+        from tests.research_support import retained_files
+
+        api.withdraw(self.project, dossier_id=self.dossier, expected_revision=1,
+                     expected_snapshot=Repository(self.project).snapshot().digest)
+        snapshot = Repository(self.project).snapshot().digest
+        request = {"changes": {"title": "Changed"}, "expected_revision": 1,
+                   "change_kind": "correction", "reason": "Synthetic reviewed change"}
+        operations = [{"kind": "dossier", "id": self.dossier, **request}]
+        for operation in (
+            lambda: api.revise_record(self.project, "dossier", self.dossier, **request),
+            lambda: api.revise_record(self.project, "dossier", self.dossier, dry_run=True, **request),
+            lambda: api.prepare_record_revision(self.project, "dossier", self.dossier, base_revision=1, changes=request["changes"]),
+            lambda: api.preview_record_changes(self.project, "dossier", self.dossier, changes=request["changes"]),
+            lambda: api.prepare_record_revisions(self.project, operations),
+            lambda: api.apply_record_revisions(self.project, operations, expected_snapshot=snapshot),
+        ):
+            before = retained_files(self.project)
+            with self.assertRaisesRegex(ResearchError, "withdrawn"):
+                operation()
+            self.assertEqual(retained_files(self.project), before)
+
     def test_prepare_revision_reconciles_unrelated_changes_without_writing(self):
         self.revise("claim", self.claim, {"place": "Reading room"})
         before = {p: p.read_bytes() for p in self.project.rglob("*") if p.is_file()}

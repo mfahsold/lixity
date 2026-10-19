@@ -43,8 +43,31 @@ FIELDS = {
 }
 
 
+def dossier_withdrawal(snapshot: Snapshot, identifier: str) -> dict[str, Any]:
+    """Annotate explicit historical reads without making retired records active."""
+    tombstones = [record for record in snapshot.records.values()
+                  if isinstance(record, Tombstone) and record.target_ref.id == identifier]
+    if any(record.operation == "purge" for record in tombstones):
+        return {}
+    withdrawn = next((record for record in tombstones if record.target_kind == "dossier"
+                      and record.operation == "withdraw"), None)
+    if withdrawn is None:
+        return {}
+    return {"availability": "withdrawn", "withdrawal": {
+        "id": withdrawn.id, "target_revision": withdrawn.target_ref.revision,
+        "reason": withdrawn.reason, "created_at": withdrawn.created_at, "created_by": withdrawn.created_by}}
+
+
+def require_active_dossier_association(snapshot: Snapshot, selected: Reference,
+                                       existing: Reference | None = None) -> None:
+    """Retain old pins, but do not create or repin associations to retired notes."""
+    if selected != existing and any(isinstance(record, Tombstone) and record.target_ref.id == selected.id
+                                    for record in snapshot.records.values()):
+        raise ResearchError("A withdrawn or purged dossier cannot receive new associations or revision pins")
+
+
 def _record(snapshot: Snapshot, kind: str, identifier: str, revision: int | None = None, *,
-            unavailable: set[str] | None = None) -> Authored:
+            unavailable: set[str] | None = None, include_withdrawn: bool = False) -> Authored:
     if not isinstance(kind, str) or kind not in KINDS:
         raise ResearchError("Only dossiers, claims, claim relations, manuscript links, evidence links and decisions can be revised")
     if revision is not None and (type(revision) is not int or revision < 1):
@@ -57,7 +80,8 @@ def _record(snapshot: Snapshot, kind: str, identifier: str, revision: int | None
         raise ResearchError("Invalid record identifier") from None
     if unavailable is None:
         unavailable = {r.target_ref.id for r in snapshot.records.values() if isinstance(r, Tombstone)}
-    if identifier in unavailable:
+    if identifier in unavailable and not (include_withdrawn and kind == "dossier"
+                                          and dossier_withdrawal(snapshot, identifier)):
         raise ResearchError("Record has been withdrawn or purged")
     return record
 
@@ -167,6 +191,7 @@ def _view(repository: Repository, snapshot: Snapshot, record: Authored) -> dict[
         "citations": citations, "citation_scope": citation_scope,
         "source_updates": source_updates(citations), "reference_updates": reference_updates,
         **({"images": resolve_dossier_images(snapshot, record.body)} if isinstance(record, Dossier) else {}),
+        **(dossier_withdrawal(snapshot, record.id) if isinstance(record, Dossier) else {}),
         **({key: relation_view[key] for key in ("from_claim", "to_claim", "review_needed")} if relation_view else {}),
     }
 
@@ -175,14 +200,15 @@ def get_record(project: str | Path, kind: str, record_id: str, *, revision: int 
     """Read the current record or an explicitly pinned historical revision."""
     repository = Repository(project)
     snapshot = repository.snapshot()
-    return _view(repository, snapshot, _record(snapshot, kind, record_id, revision))
+    return _view(repository, snapshot, _record(snapshot, kind, record_id, revision,
+                                              include_withdrawn=revision is not None))
 
 
 def record_history(project: str | Path, kind: str, record_id: str) -> dict[str, Any]:
     """List accepted revisions, newest first, without copying their bodies."""
     repository = Repository(project)
     snapshot = repository.snapshot()
-    latest = _record(snapshot, kind, record_id)
+    latest = _record(snapshot, kind, record_id, include_withdrawn=True)
     records = sorted((r for r in snapshot.revisions.values() if r.id == record_id),
                      key=lambda r: r.revision, reverse=True)
     from .images import resolve_dossier_images
@@ -190,6 +216,7 @@ def record_history(project: str | Path, kind: str, record_id: str) -> dict[str, 
         "schema_version": "research-history-local/1", "project_id": snapshot.project.id,
         "snapshot": snapshot.digest, "record_id": record_id, "kind": kind,
         "latest_revision": latest.revision,
+        **(dossier_withdrawal(snapshot, record_id) if isinstance(latest, Dossier) else {}),
         "revisions": [{"revision": r.revision, "created_at": r.created_at,
                        "created_by": r.created_by, "change": r.model_dump(mode="json").get("change"),
                        **({"images": resolve_dossier_images(snapshot, r.body),
@@ -211,10 +238,14 @@ def _association(snapshot: Snapshot, identifier: Any, expected: type[Authored],
         raise ResearchError("Associated record ID must be a string or null")
     # Submitting an unchanged form must not repin its historical association.
     if revision is not None:
-        return reference(snapshot.get(Reference(id=identifier, revision=revision), expected)).model_dump()
-    if existing and existing.id == identifier:
-        return existing.model_dump()
-    return reference(snapshot.latest(identifier, expected)).model_dump()
+        selected = reference(snapshot.get(Reference(id=identifier, revision=revision), expected))
+    elif existing and existing.id == identifier:
+        selected = existing
+    else:
+        selected = reference(snapshot.latest(identifier, expected))
+    if expected is Dossier:
+        require_active_dossier_association(snapshot, selected, existing)
+    return selected.model_dump()
 
 
 def require_association_pins(record: Mapping[str, Any], changes: Mapping[str, Any]) -> None:
@@ -463,11 +494,12 @@ def compare_record_revisions(project: str | Path, kind: str, record_id: str, *,
         raise ResearchError("From revision must be a positive integer")
     repository = Repository(project)
     snapshot = repository.snapshot()
-    first = _record(snapshot, kind, record_id, from_revision)
-    last = _record(snapshot, kind, record_id, to_revision)
+    first = _record(snapshot, kind, record_id, from_revision, include_withdrawn=True)
+    last = _record(snapshot, kind, record_id, to_revision, include_withdrawn=True)
     return {"schema_version": "research-revision-comparison-local/1", "project_id": snapshot.project.id,
             "snapshot": snapshot.digest, "kind": kind, "record_id": record_id,
             "from_revision": first.revision, "to_revision": last.revision,
+            **(dossier_withdrawal(snapshot, record_id) if isinstance(last, Dossier) else {}),
             "fields": _comparison_fields(first, last)}
 
 

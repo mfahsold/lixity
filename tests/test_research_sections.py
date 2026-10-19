@@ -10,9 +10,109 @@ from pathlib import Path
 
 from lixity.research import api, cli
 from lixity.research.repository import ResearchError
+from tests.research_support import capture_research, retained_files
 
 
 class TestResearchSections(unittest.TestCase):
+    def test_cli_bounded_dossier_reads_share_selectors_and_saved_revisions(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory)
+            api.init(project, title="Synthetic bounded reads")
+            source_file = project / "source.txt"
+            source_file.write_text("Original synthetic source paragraph.", encoding="utf-8")
+            source = api.ingest(project, source_file, allow_retention=True)
+            passage = api.get_source(project, source["source_id"])["passages"][0]["id"]
+            target = "Chosen context. " * 40 + "\n\n### Child\n\nNested target."
+            body = "## Target\n\n" + target + "\n\n## Other\n\nUnrelated final context."
+            identifier = api.create_dossier(project, "Original dossier", body, evidence_ids=[passage])["dossier_id"]
+            current = api.get_record(project, "dossier", identifier)
+            api.revise_record(project, "dossier", identifier, expected_revision=1,
+                              expected_snapshot=current["snapshot"], changes={"title": "Current dossier"},
+                              change_kind="correction", reason="Synthetic saved comparison")
+            source_file.write_text("Changed synthetic source paragraph.", encoding="utf-8")
+            api.ingest(project, source_file, source_id=source["source_id"], allow_retention=True)
+            before = retained_files(project)
+            bounds = (("--section", "Target"), ("--summary",), ("--omit-citations",),
+                      ("--summary", "--omit-citations"))
+            for command in ("dossier", "dossiers"):
+                for selector in (("--dossier-id", identifier), (identifier,), ("show", identifier),
+                                 ("inspect", identifier)):
+                    for revision in (None, 1):
+                        flags = () if revision is None else ("--revision", str(revision))
+                        for bound in bounds:
+                            with self.subTest(command=command, selector=selector, revision=revision, bound=bound):
+                                status, output, errors = capture_research(command, *selector, "--project",
+                                                                          str(project), *flags, *bound)
+                                self.assertEqual((status, errors), (0, ""))
+                                view = json.loads(output)
+                                self.assertEqual(view["revision"], revision or 2)
+                                self.assertEqual(view["title"], "Original dossier" if revision else "Current dossier")
+                                self.assertNotIn("record", view)
+                                if "--section" in bound:
+                                    self.assertEqual(view["content"], target)
+                                    self.assertNotIn("body", view)
+                                    self.assertNotIn("Unrelated final context.", output)
+                                elif "--summary" in bound:
+                                    self.assertEqual(view["body_length"], len(body))
+                                    self.assertEqual(view["excerpt"], body[:500] + "...")
+                                    self.assertNotIn("body", view)
+                                    self.assertEqual(bool(view["source_updates"]), "--omit-citations" not in bound)
+                                else:
+                                    self.assertEqual(view["body"], body)
+                                    self.assertEqual(view["citations"], [])
+                                    self.assertEqual(view["source_updates"], [])
+                                self.assertEqual(retained_files(project), before)
+
+            status, output, errors = capture_research("dossier", "--dossier-id", identifier, "--inspect",
+                "--project", str(project), "--section", "Target", "--omit-citations")
+            self.assertEqual((status, errors), (0, ""))
+            self.assertEqual(json.loads(output)["content"], target)
+            # Explicit generic inspection keeps its existing versioned envelope.
+            for flags in (("--inspect",), ("--revision", "1")):
+                status, output, errors = capture_research("dossier", identifier, "--project", str(project), *flags)
+                self.assertEqual((status, errors), (0, ""))
+                view = json.loads(output)
+                self.assertEqual(view["schema_version"], "research-record-local/1")
+                self.assertEqual(view["record"]["revision"], 1 if "--revision" in flags else 2)
+                self.assertEqual(view["record"]["body"], body)
+                self.assertEqual(len(view["citations"]), 1)
+            status, output, errors = capture_research("dossiers", identifier, "--project", str(project),
+                                                      "--diff", "--from-revision", "1", "--to-revision", "2")
+            self.assertEqual((status, errors), (0, ""))
+            self.assertIn('- "Original dossier"', output)
+            self.assertIn('+ "Current dossier"', output)
+            self.assertEqual(retained_files(project), before)
+
+    def test_cli_dossier_read_bounds_reject_incompatible_modes_before_archive_access(self):
+        with tempfile.TemporaryDirectory() as directory:
+            project = Path(directory) / "not-initialized"
+            identifier = "urn:uuid:00000000-0000-4000-8000-000000000001"
+            for flags, diagnostic in (
+                (("--section", "Target", "--summary"), "--section"),
+                (("--history", "--section", "Target"), "--section"),
+                (("--history", "--summary"), "--summary"),
+                (("--history", "--omit-citations"), "--omit-citations"),
+                (("--diff", "--from-revision", "1", "--summary"), "--summary"),
+                (("--diff", "--from-revision", "1", "--section", "Target"), "--section"),
+                (("--diff", "--from-revision", "1", "--omit-citations"), "--omit-citations"),
+                (("--diff", "--body", "Draft.", "--summary"), "--summary"),
+                (("--update", "--latest", "--body", "Draft.", "--change-kind", "correction",
+                  "--reason", "Synthetic invalid bounds", "--summary"), "--summary"),
+                (("--prepare", "--base-revision", "1", "--body", "Draft.", "--omit-citations"), "--omit-citations"),
+            ):
+                with self.subTest(flags=flags):
+                    status, output, errors = capture_research("dossier", identifier, "--project", str(project), *flags)
+                    self.assertEqual((status, output), (1, ""))
+                    self.assertIn(diagnostic, errors)
+                    self.assertIn("read", errors.lower())
+                    self.assertFalse(project.exists())
+            for flags in (("--section", "Target"), ("--summary",), ("--omit-citations",)):
+                with self.subTest(missing_id=flags):
+                    status, output, errors = capture_research("dossier", "--project", str(project), *flags)
+                    self.assertEqual((status, output), (1, ""))
+                    self.assertIn("ID", errors)
+                    self.assertFalse(project.exists())
+
     def test_fenced_and_indented_headings_are_data_not_boundaries(self):
         body = (
             "Preamble.\n\n## Target\n\nBefore.\n```markdown\n## Fake\n```\n"

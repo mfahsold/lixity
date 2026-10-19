@@ -1,21 +1,14 @@
 # Stability & known limitations
 
 Use this page to judge what a result can support. Formula details live in
-[METHODS.md](METHODS.md); the register below tracks current calculation and
-interface limits. Statistical signals support a human review, not a prose grade.
-
-Severity: 🔴 high (can mislead users) · 🟠 medium (can break silently) ·
-🟡 low (cosmetic or documented trade-off).
+[METHODS.md](METHODS.md); machine-readable thresholds and availability policies
+come from `lixity about --json`. This page keeps interpretation and integration
+limits that a passing check cannot resolve. Statistical signals support human
+review, not a prose grade.
 
 ## 1. Research findings (state of the art)
 
 ### Release verification and limits
-
-The 2.1.0 regression comparison used the checked-in public-domain *Effi Briest*
-(36 chapters) and *Pride and Prejudice* (61 chapters). Metrics, paragraph profiles
-and style-passport values matched 2.0.0 under explicit default settings after
-excluding the software-version label. This verifies preservation on these inputs,
-not empirical calibration, literary quality or agreement with an external study.
 
 The maintained suite checks English defaults, language resource-key coverage,
 readability-coefficient dispatch and locale formatting. These are software
@@ -24,8 +17,7 @@ languages. No language-wide accuracy percentage is established by this suite.
 
 The 3D chapter view is exploratory: its dimensions are corpus-specific, signs
 are fixed by convention, and per-axis thresholds are not simultaneous confidence
-regions. **Since 2.0.0:** native rotation/zoom buttons and
-a chapter-score table provide keyboard and touch access to the displayed scores,
+regions. Native rotation/zoom buttons and a chapter-score table provide keyboard and touch access to the displayed scores,
 flag status and chapter navigation. Individual canvas points remain pointer-operated.
 These targeted checks do not establish full assistive-technology coverage.
 
@@ -35,54 +27,38 @@ success is not a security certification for an arbitrary adapter.
 
 ### Manual manuscript association limits
 
-Since v0.3.0 retains manually selected quotes only with explicit local
-permission and exact source/paragraph/claim guards. Anchor review detects
-structural changes, not semantic contradictions or factual support. Moved or
-ambiguous candidates remain unresolved, and exact claim pins do not change
-without an explicit revision. A zero saved-link count does not establish that a
-claim is unused in prose. The source recheck before publication is optimistic;
-it does not lock manuscript editors. Archive backups/exports contain retained
-private quotes, but no full manuscript source blob from this workflow. The first
-save opts into research schema v7, unreadable by historical v3.0.1. See
-[retention and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
+Manually selected quotes require explicit retention and exact source/paragraph/claim
+pins. Anchor review detects structural changes, not semantic contradictions or
+factual support. Moved or ambiguous quotes require review; claim pins change only
+through an explicit revision. Zero saved links do not prove a claim is unused.
+The source recheck is optimistic and does not lock manuscript editors. Backups
+include retained private quotes; this workflow creates no full manuscript blob.
+See [retention and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
 ### Research and external-library limits
 
-Zotero can lead the source/media catalogue; Lixity retains immutable evidence
-and authored records. These stores have complementary responsibilities and
-separate backup requirements. Lixity's integrity audit checks retained bytes,
-references and citations, not factual truth, chronology or the completeness of
-an external library. Test fixtures and a successful audit do not establish that
-an entire private collection has been validated.
+Zotero owns bibliography and reading; Lixity retains selected evidence and authored
+records. Their backup requirements are separate. An integrity audit verifies
+retained bytes, references and citations; it cannot verify historical truth,
+chronology or the completeness of an external library. Native integration checks
+are bounded synthetic tests, not certification of every platform or collection.
 
-Research retention does not change the manuscript's style reference. Each
-source analysis is `source_internal`, with user-supplied context explicitly
-unverified. Historical travel accounts and monographs remain evidence selected
-for review, not an automatic stylistic norm. Source–manuscript comparison is an
-explicit, separate lexical/register report; shared words do not prove that a
-passage supports a claim or that its historical context is appropriate.
+Source analysis uses its own `source_internal` reference and unverified supplied
+context. Retaining a historical source does not make it a manuscript style norm;
+lexical overlap does not establish factual support or appropriate context.
+Search does not resolve contradictory prose or accept a hypothesis for the author.
 
-Synthetic native Zotero 10.0.3 tests on Linux ARM64 cover text/PDF imports and
-bridge text capture, refresh and search. This is a bounded integration check,
-not a general platform certification or a test of a user's complete collection.
-Automatic background/cloud synchronization and audio/video transcription are
-not implemented. PDF extraction and a configured OCR worker do not establish
-recognition accuracy; review text against scans when exact quotations matter.
+PNG/JPEG images retain exact source versions and stay outside text analysis.
+Header validation and browser preview do not establish complete codec validity or
+historical authenticity. Geographic coordinates and routes are authored data;
+rendering a map does not verify a journey or sightline. An unavailable image
+never silently resolves to a different version.
 
-Local PNG/JPEG dossier images retain exact original versions and share archive
-backup/audit and withdrawal/purge handling. They are excluded from text analysis.
-Container/header validation and a successful browser preview do not establish
-complete codec validity or historical authenticity. Remote downloads, image OCR
-and visual AI are not implemented. An unavailable or unprovable reference stays
-unavailable rather than resolving to a newer or unrelated image.
-
-RIS migration is additive. Preserve the original evidence archive and verify
-attachment identities, bytes, retained citations and restoration before retiring
-a prior workflow. Structured external references require `research-local/3` and
-`research-manifest-local/3`; older applications reject these snapshots. Current
-readers also accept v1/v2. Search across current authored records does not resolve
-contradictory prose or promote a hypothesis to an accepted author decision.
-See [Research usage](research/USAGE.md) for operational limits.
+RIS migration is additive; verify attachment identities, retained citations and
+restoration before retiring a workflow. Automatic background/cloud synchronization,
+audio/video transcription, image OCR and visual AI are not implemented. PDF
+extraction or an external OCR worker does not establish recognition accuracy.
+Current media, provider and schema boundaries live in [Research usage](research/USAGE.md).
 
 ### Robust comparisons and statistical claims
 
@@ -104,9 +80,7 @@ Style axes now use PCA of standardized tied midranks on one common complete
 chapter set. Covariance, explained variance and scores share that rank space;
 missing measurements are not imputed. At least three complete chapters and
 three varying baseline-usable features are required, with constant columns
-dropped on that set. Incomplete chapters have no dimension scores. This
-corrects the previous mixed raw/rank scoring population, but complete-case
-selection and small samples still limit interpretation. Score flags are
+dropped on that set. Incomplete chapters have no dimension scores. Complete-case selection and small samples still limit interpretation. Score flags are
 descriptive and do not validate prose quality or simultaneous confidence.
 See [METHODS §5](METHODS.md#5-exploratory-style-dimensions).
 
@@ -123,26 +97,20 @@ genre-wide reliability for the local 100-token policy. Guiraud remains sensitive
 to length; fixed-window MATTR and fixed-draw HD-D still depend on their parameters
 and the supplied vocabulary distribution.
 
-HD-D is exact expected TTR for a 42-token draw on 0–1. Before v1.16.0 the same
-key held a sampled-window Gini–Simpson measure: regenerate older measurements
-before comparison. Exact computation removes Monte Carlo error, not population
-uncertainty. The 1.25 MTLD correction averages forward/reverse $N/F$
-scores arithmetically. It preserves Lixity's inclusive threshold, trailing
-factor and availability rules; different external variants still need explicit
-parameter and segmentation alignment. Formula and guard details:
-[METHODS §6](METHODS.md#6-lexical-diversity-indices).
+HD-D is exact expected TTR for a fixed draw. Exact computation removes Monte Carlo
+error, not population uncertainty. MTLD variants also differ in direction
+averaging, threshold and trailing-factor rules. Compare measurements only after
+aligning formulas, parameters and segmentation; regenerate historical reports
+when those contracts changed. See [formula and guard details](METHODS.md#6-lexical-diversity-indices).
 
 ### Linguistic proxies and literary interpretation
 
-Analysis now shares the supported body/list/blockquote prose scope, stripping
-quote delimiters and inline emphasis while omitting YAML front matter, code,
-headings, comments and footnote definitions. Paragraph profiles intentionally
-retain their narrower body/list scope and source line anchors. Configured word
-regex flags are respected, English/German default tokens include accented
-Unicode letters, LF/CRLF paragraph boundaries agree, and the short-paragraph
-threshold is inclusive. Legacy whitespace counts are a separate unit. This
-bounded Markdown policy and language-rule coverage do not establish complete
-CommonMark support or linguistic token accuracy.
+Analysis shares a bounded Markdown prose projection. Link labels contribute;
+destinations, images, code, comments and excluded document regions do not.
+Paragraph profiles preserve displayed text and source anchors separately from
+counting. The configured token rules and narrower paragraph scope do not imply
+complete CommonMark support or linguistic token accuracy. See
+[analysis scope](METHODS.md) for the unit and denominator of each measurement.
 
 Passive, tense, adjective, nominalization and modality fields count lexical
 markers or suffixes. For example, German `werden` also marks future tense or
@@ -173,13 +141,18 @@ to rewrite. Scene/register targets are explicit author preferences, never
 hardcoded genre norms. [Underwood's expert discussion](https://tedunderwood.com/2024/01/05/can-language-models-predict-the-next-twist-in-a-story/)
 illustrates why surface predictability and narrative experience differ.
 
+Dialogue turns are quotation segments without speaker attribution. Character
+mentions depend on supplied names or literal project aliases; declared viewpoint
+chapters are separate metadata, not inferred first-person presence. There is no
+NER or coreference. Hook and repetition scores also locate surface patterns;
+deliberate calm endings and repeated motifs can be appropriate author choices.
+
 ### Structural diagnostics
 
-The 1.25 corrections retain structural field names, but require
-regenerating stored metrics/passports before numerical comparisons. Remaining
-model limits are separate from the corrected calculations:
+These diagnostics preserve their declared numerical definitions; an exact
+implementation does not validate the underlying model:
 
-- `pelt_changepoints` now uses exact unpruned dynamic programming: $O(n^2)$
+- `pelt_changepoints` uses exact unpruned dynamic programming: $O(n^2)$
   time and $O(n)$ storage. The retained singleton/zero-variance guard violates
   the PELT pruning premise, so no pruning or linear-time claim is made.
   Anchored variance updates reduce cancellation; exact optimization of this
@@ -216,8 +189,8 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
   Lixity chooses heatmap text from each cell’s luminance and
   tests the full blue/orange scale. This does not certify every canvas mark or
   every color-vision condition; numeric labels remain essential.
-- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. Since historical
-  2.0.0, paragraph chips and dimension controls use at least 24×24,
+- WCAG 2.5.8 has a 24×24 CSS-pixel minimum with defined exceptions. Paragraph
+  chips and dimension controls use at least 24×24,
   increasing to 44×44 for coarse pointers. Pressed chips retain their target
   size, and long strips scroll horizontally. These checks do not establish
   conformance for the entire interface or every canvas mark.
@@ -226,70 +199,22 @@ details and unchanged field contracts: [METHODS §4c](METHODS.md#4c-structural-d
 - See [visual design rationale](ARCHITECTURE.md#visual-consistency-and-evidence)
   for evidence, typography choices and the limits of automated UI checks.
 
-
 ## 2. Stability register
 
-| # | Component | Instability | Evidence | Mitigation |
-| :-- | :--- | :--- | :--- | :--- |
-| 1 | Dashboard JS | no automated JS test; DOM hooks (ids/classes) are an implicit contract | renaming a class breaks interactions silently | 🟠 → **fixed**: UI-contract test asserts every hook used by `dashboard.js` exists in the rendered HTML |
-| 2 | Label packs | missing translations fall back to English silently | untranslated UI goes unnoticed | 🟠 → **fixed**: completeness test over the 7 languages for a required key set |
-| 3 | LD indices on short texts | local guards do not establish reliability | length and parameter sensitivity depend on corpus and estimator | 🟡 **mitigated**: HD-D/MTLD/Maas ≥100 tokens; MATTR requires a full window; `null` is availability, not a validated reliability boundary |
-| 4 | Style fingerprint with few chapters | minimum observations do not establish calibration; missingness can shrink the complete-case set | single chapters have no comparative baseline | 🟡 **mitigated**: dimensions require ≥3 complete chapters and ≥3 varying usable features in one rank space; incomplete scores are omitted; availability is not reliability |
-| 5 | Heuristic syllable counting | language-specific rules; no validated aggregate error rate | no gold-standard corpus in-repo | 🟡 **documented**; used only as a relative signal, formula names shown |
-| 6 | Tense patterns | whole-word stop lists and curated noun exclusions; German `-tet` intentionally omitted (present `arbeitet`, participle `abgewartet` vs rare past 2pl `machtet`); perfect/pluperfect participles still count through the auxiliary pattern | stoplists documented; `read` fix in v1.3.0 | 🟡 **documented**; dominance is a heuristic, not ground truth. Measured effect of the whole-word fix (12 Oct): Effi Briest −72 wrongly-as-past tokens, Pride and Prejudice +7 true regular past forms, no losses |
-| 7 | Packaging | a wheel could miss `ui/assets/*` or `py.typed` | config exists, never verified in CI | 🟠 → **fixed**: CI job builds a wheel and asserts assets + typing marker are inside |
-| 8 | Project Python environments | an external launcher may select an environment without Lixity | core tests do not verify a project's launcher or installation | 🟡 **documented**: verify the interpreter and package version in the project's environment; project hooks belong to that project |
-| 9 | Publication PDF/EPUB adapters | optional project renderers have their own runtime dependencies | core checks do not verify arbitrary adapter output | 🟡 **documented**: the shared built-in manuscript PDF composer has synthetic integrity/layout tests; project adapters need their own export checks. Neither path provides EPUB/PDF/UA/PDF/X certification |
-| 10 | Dashboard size | ~2 MB HTML for 95k words, linear growth | per-paragraph payload | 🟡 **documented**; future option: JSON payload + client render |
-| 11 | Cross-machine determinism | float last bits may differ across platforms/Python versions | `math.log` summation and co-occurrence insertion order | 🟡 **documented**: byte-identical on the same interpreter; in-process determinism is tested |
-| 12 | NDA draft rendering and downloads | the native PDF cannot represent every Unicode script; downloaded agreements need user retention | generation returns bytes without server files or a recipient registry | 🟡 **documented**: download UTF-8 text for broader local rendering; keep reviewed/signed documents in project-owned storage |
-| 13 | Chip target size | targets must remain reachable in dense strips and pressed states | Chromium checks cover target geometry, keyboard/touch activation and horizontal scrolling | 🟡 **mitigated** since 2.0.0: 24×24 minimums, 44×44 for coarse pointers; targeted tests do not certify complete accessibility conformance |
-| 14 | UI labels architecture | label packs merged at runtime (base → guidance → scene → identity → labels → metric → help → group → layer → ui → workspace) | fallback chain is implicit | 🟠 → **fixed**: merge order documented in `docs/AGENTS.md` §3.3 + completeness test |
-| 15 | Status strip | states derive from file presence/mtime – a restored or clock-skewed file can read "stale" although it is current | no content hash in the status path | 🟡 **documented**: state is advisory; undeterminable components render `unknown`, not a fake `ok` |
-| 16 | Marker notes | notes live in an HTML-comment attribute: quotes/newlines must be escaped; very long notes bloat the comment line | `note="…"` in the marker line | 🟠 → **fixed**: escaping on write (round-trip test); **documented** guidance: one short sentence |
-| 17 | Drill-down filters | `data-flags` / `data-only` preselect a view filter; users may wonder why rows are hidden | UI state only, data untouched | 🟡 **documented**; the active filter is visible and one click clears it |
-| 18 | orjson serialisation | `orjson` rejects non-string dict keys by default – chapter keys are ints in `deviations` | `OPT_NON_STR_KEYS` required | 🟠 → **fixed**: one `_json()` helper used everywhere; round-trip test covers integer chapter keys |
-| 19 | Busy states | server actions have latency; without feedback users click twice | action buttons | 🟡 **mitigated**: buttons disable + spinner while running; server-side idempotence remains the actual guard |
-| 20 | Layer colour semantics | colour encodes the absolute value span (min–max per dimension), not deviation sign alone | narrow bands would wash out | 🟡 **documented** in the legend (min/max values) + `USAGE.md`; the ring (\|z\| ≥ 1.5) is the second, deviation-specific channel |
-| 21 | Sentence segmentation | abbreviation-aware splitter; unknown abbreviations, decimals and ellipses are still heuristic | naive splitting inflated ASL on `Mr.`/`z.B.` texts | 🟠 → **fixed**: shared `lixity.sentences` splitter (abbreviation/number/initial guards, closing marks stay with their sentence); **documented** as a heuristic |
-| 22 | Corpus vs. chapter metrics | two divergent sentence splitters and duplicated sentence statistics | chapter matrix was still on the naive regex | 🟠 → **fixed**: one splitter and one `SentenceStats` implementation for both levels |
-| 23 | Syllable heuristics | German double vowels and English silent-e/-le were mis-counted | `Kaffee`=3, `table`=3 | 🟡 → **fixed** for these fixtures: double vowels count as one nucleus, syllabic-l rule de-duplicated; language-wide accuracy remains unestablished |
-| 24 | LIX long-word threshold | per-language calibration (7/8 characters) deviated from the standard | Björnsson defines >6 characters | 🟠 → **fixed**: standard >6 characters for every language; LIX values rise accordingly (documented, breaking metric change) |
-| 25 | Readability formulas | coefficient dispatch and empirical validation are different | hand-computed tests cover declared constants | 🟡 **documented**: formula dispatch is tested; original Amstad calibration and language-wide syllable accuracy remain unverified |
-| 26 | UI interaction contract | some click targets were not keyboard reachable; one drill-down was lost | band rows lacked `role`/`tabindex` and the layer mapping | 🟠 → **fixed**: unified `[role="button"]` contract, one JS selector, focus ring for all; band rows jump to `#feat-<field>` (heatmap column) with optional layer + deviations-only |
-| 27 | Dialogue turns | "turn" = quoted segment; no speaker attribution, quotation patterns are curated per language | no reliable offline speaker ID | 🟡 **documented**: turn structure, not who speaks; patterns per language profile |
-| 28 | Character presence | whole-word matching on caller-supplied names/aliases; no NER, no coreference | nickname not in the list is invisible | 🟡 **documented**: alias patterns supported (`Matthias\|Matze`); appendix/front matter excluded so chapter numbers match the metrics |
-| 29 | Chapter hook score | 0–3 heuristic (short closing sentence, terminal ?/!/…, closing dialogue) | deliberate calm endings score 0 | 🟡 **documented**: ranks and locates chapter endings, no quality verdict |
-| 30 | Showing/telling balance | heuristic composite of telling vs. showing signals; robust z against the book's own medians | MAD can be zero for share features | 🟡 **documented**: MAD→SD fallback; not a quality verdict; underlying signals visible in the heatmap |
-| 31 | Repetition analysis | n-grams (default 3) with ≥ 3 occurrences; content words depend on the curated stop-word lists | deliberate repetition is a device | 🟡 **documented**: signal, not a verdict; pure function-word phrases excluded; stop lists de/en extended |
-| 32 | Type safety & warnings | untyped helpers and warning noise could hide defects | strict typing was off; `\w` in a docstring raised a SyntaxWarning | 🟠 → **fixed**: `mypy --strict` clean (0 errors) and enforced in CI; `python -W error` test run is clean |
-| 33 | Marker controls in jumpable rows | a click on “+ kind”/“Resolve” inside a `row-link` also fired the row jump (marker buttons carry `data-line`, which the INTERACTIVE selector matched) | double action: note field opened *and* the page scrolled | 🟠 → **fixed**: `isMarkerControl()` guard in click *and* keydown handlers; contract test asserts the guard |
-| 34 | Flagged list length | severity ≥ 2 rows grow linearly with manuscript size (100+ rows in a novel) | a flat list would push the dashboard top down | 🟡 **documented**: capped scroll area (sticky header, ~26 rem); severity-descending sort keeps the worst cases visible |
-| 35 | Structural changepoints | guarded singleton/constant cost remains a modelling choice; short series can over-segment | former pruning could miss the declared minimum | 🟡 **documented**: 1.25 correction uses exact unpruned $O(n^2)$ time/$O(n)$ storage; cuts are review signals, not validated narrative boundaries |
-| 36 | Mann–Kendall | tau-a is not tie-normalized tau-b; normal approximation needs assumptions | ties and serial dependence affect interpretation | 🟡 **documented**: tau-a naming is corrected; S and approximate p remain separate outputs; `trending_features` is model-dependent |
-| 37 | Hill tail index | $\hat\alpha$ biased for small $k$; undefined for non-positive values | $n \ge 5$, $k = \lfloor\sqrt n\rfloor$ | 🟡 **documented**: `tail_index` is diagnostic only; low $\alpha$ = occasional extreme chapters, not a quality problem |
-| 38 | Sn / Qn | asymptotic scaling does not remove finite-sample bias; pairwise work grows with chapter count | no finite-sample correction is applied | 🟡 **documented**: 1.25 correction uses original Sn low/high medians ×1.1926 and the same Qn rank ×2.21914; descriptive cross-checks alongside MAD |
-| 39 | Degree-sequence fit | approximate discrete exponent is combined with a different continuous CDF and ordinary fitted KS p | estimator attribution and goodness-of-fit assumptions differ | 🟠 **open**: label as exploratory; no calibrated fit probability or scale-free claim |
-| 40 | Parallel split paths | `dialogue` and `analyzer` once had divergent `split_chapters` implementations | chapter numbering could drift | 🟠 → **fixed**: single source in `markdown_parser.split_chapters` (re-export from `dialogue`); regression test asserts shared titles + sequential numbering |
-| 41 | Threshold resolution | three call sites built `FingerprintThresholds` independently (CLI / API / dashboard) | a new key could be wired on one path only | 🟠 → **fixed**: one builder `config.resolve_thresholds` (kwargs > project config > default); unit tests cover each precedence level |
-| 42 | `flag_min_severity` wiring | profile / dashboard / CLI each resolved the flags cut differently | raising the floor could leave stale counts in one surface | 🟠 → **fixed**: end-to-end plumbing (CLI `_thresholds_and_profile` → `ProfileThresholds` → `render_dashboard(flag_min_severity=…)`); contract tests for profile + dashboard select |
-| 43 | Structural early/late split | `distribution_shift` / `keyness` use a chapter-count midpoint, not a fitted breakpoint | changepoint optimization may place a break elsewhere | 🟡 **documented**: heuristic halves; cross-read with `changepoints` and `trends` |
-| 44 | Token-level structural only on text surfaces | `from_metrics` alone has no tokens, so `cooccurrence` / `keyness` appear only when built from source text | a metrics-only passport looks “incomplete” | 🟡 **documented** in METHODS §4c: merge via `lexical_structural_diagnostics`; metric-derived keys always present |
-| 45 | `signal_counts` empty by default | language profiles ship `"signal_keywords": {}`; without `CorpusConfig.signal_keywords` the field is always `{}` | empty looks like “no signal words found” rather than “not configured” | 🟡 **documented** in USAGE/AGENTS: field is opt-in via config; not a measurement failure |
-| 46 | Filter-verb count ≠ editorial lists | engine `de` filter regex is a curated lemma list (perception/filter verbs); broader editorial lists differ (≈94 vs 120 for German) | dossier tables use a different definition | 🟡 **documented**: never swap numbers without restating the definition; within-language only |
-| 47 | Pacing without explicit dividers | no `---`/`* * *` breaks → `explicit_scene_breaks=0`, `scenes_are_chapters=true` (scenes ≡ chapters) | scene counts look like real pacing | 🟠 → **fixed** (v1.12.0): report field + CLI warning; USAGE/AGENTS: scene structure uninformative when flag is set |
-| 48 | `characters` empty names | empty `--names` used to return `figures: []` silently | caller mistake looks like “no characters” | 🟠 → **fixed** (v1.12.0): CLI exit 1 (`err_no_names`); API `ValueError` (no NER — names come from the caller) |
-| 49 | No external Delta stylometry | JSD / driver words are in-corpus chapter-vs-rest diagnostics | misread as authorship attribution | 🟡 **documented**: METHODS Track B (not implemented); STABILITY §1 stylometry note |
-| 50 | Dialogue speaker attribution | turns = quotation segments; no speaker ID | “turn” misread as speaker turn | 🟡 **documented**: USAGE `dialogue` section; STABILITY row 27 (patterns per language) |
-| 51 | Research retention & citations | Pilot retains original UTF-8/PDF bytes and pins exact unicode codepoint offsets; SQLite/FTS5 provides rebuildable lexical search; withdrawn sources mark citations `withdrawn`; purged sources fail closed | citations do not imply factual truth; retention requires explicit permission | 🟡 **documented**: USAGE/AGENTS; research pilot is opt-in, explicit-project only; no ambient manuscript I/O |
-| 52 | PDF page-count detection | a page tree in a compressed object stream is not greppable, so a raw-scan fallback cannot measure the document | `get_pdf_page_count()` returned `1` when it could measure neither `pdfinfo` nor a raw scan, so a 3-page PDF measured as 1 | 🔴 → **fixed** (v1.22.0): the count is `int \| None`, and the native extractor refuses with an actionable error instead of retaining part of a document; undeterminable is never defaulted |
-| 53 | Project configuration files | a malformed TOML file is indistinguishable from an absent one unless the loader says so | one unclosed quote reverted language and thresholds to defaults and still exited `0`; `analyze --json` reported `"language": "en"` against a configured `de` | 🔴 → **fixed** (v1.22.0): a present-but-unreadable or unparseable file emits a `UserWarning` naming the path and the consequence; absent stays silent, and the suite runs under `-W error` so a valid config must stay quiet |
-| 54 | Project NDA text models | an invalid path or unknown field cannot produce the requested agreement | templates are explicit project-owned UTF-8 input with five literal fields | 🟡 **mitigated** since 2.0.0: outside paths, missing/empty templates and unknown fields are rejected; values remain data |
-| 55 | Native server request layer | one 1655-line module with two dispatch ladders made the route/handler mapping hard to review | `do_GET`/`do_POST` were 73/125-line `if` chains; adding a route meant editing a shared ladder | 🟡 **mitigated** (v1.22.0): split into a package with per-area route tables and focused request-validation helpers; behaviour verified against a live instance across 21 routes and guard conditions |
-| 56 | Composed PDF export | layout quality depends on fonts installed on the host, and text rendering is not Knuth-Plass | a host without the expected font families cannot produce a document; justification distributes slack across word spaces | 🟡 **documented**: per-role font overrides (`--serif-font`/`--bold-font`/`--mono-font`, `LIXITY_PDF_FONT_*`), missing and non-embeddable fonts are refused with the searched names, and USAGE states the typographic limits |
-| 57 | Sentence block boundaries | splitting whole chapters merged an unterminated block (stage note, salutation, sign) into the next sentence and inflated its measured length | chapter ASL and the sentence histogram disagreed with paragraph profiles (a letter chapter with a bracketed note) | 🟠 → **fixed** (v0.4.7): sentences never cross a blank line; a block without terminal punctuation stays one unit in chapters, scenes and pacing. Numbers change for affected manuscripts — recompute older reports (CHANGELOG, METHODS §11) |
-| 58 | Comparability floors | rates, variance and entropy from tiny samples produced extreme deviations and FDR marks (an 11-word chapter flagged three features) | numerically correct but statistically meaningless signals | 🟡 **documented policy** (v0.4.7): below 100 words a chapter receives no fingerprint z*/FDR values and sentence-distribution features need five sentences; showing/telling and its rankings use the same word floor and mark short chapters `comparable: false`. Dash/`null` means unavailable, baselines exclude such chapters; `about().heuristics` and METHODS §2 name the floors |
-| 59 | Manuscript anchor edits | any paragraph edit changed `paragraph_sha256` and marked the association for review, even when the retained quote was untouched | authors had to re-anchor by hand for edits outside the quote | 🟡 **documented** (v0.4.7): review reports `adjusted` when the quote still appears exactly once; `reconcile-manuscript --accept-moved` or the review-tab action re-pins the refreshed line span, hash and offsets as a new revision. Editing the quote itself stays `changed` and is never re-pinned automatically |
-| 60 | Chronology year ranges | `1929-1933` (plain hyphen) was not recognized although `1929–1933` and ISO dates were | the period stayed unplaced with a warning | 🟡 → **fixed** (v0.4.7): a plain hyphen between two four-digit years joins the typographic dashes; the claim-time hint and a localization test verify every documented example against the grammar |
-| 61 | Cached dashboard freshness | the served shell was rendered at startup or on project transitions; an edited manuscript left the page with old numbers until a manual re-analysis | displayed numbers stopped matching the file while the page stayed open | 🟡 → **fixed** (v0.4.7): serving the shell compares the manuscript digest with the rendered one and re-renders on change (`refresh_when_source_changed`); ARCHITECTURE documents it |
-| 62 | Local server hardening | inline scripts were unconstrained and debug/access logs recorded request query strings | an injected script from untrusted project text was the main remaining XSS class; context tokens could reach logs | 🟡 → **fixed** (v0.4.7): per-response nonce CSP (default-deny, inline styles only) plus COOP and Permissions-Policy; access and debug logs keep the route without its query string. SECURITY.md documents the baseline; server tests assert nonce freshness and log redaction |
+The current cross-cutting limits below replace the completed-bug checklist.
+Historical fixes and release-specific evidence remain in [CHANGELOG](https://github.com/mfahsold/lixity/blob/main/CHANGELOG.md),
+[release notes](https://github.com/mfahsold/lixity/tree/main/docs/releases) and the
+[archived register and verification snapshot](https://github.com/mfahsold/lixity/blob/123b198db2b3d276b4bba71664e4e6b989377247/docs/STABILITY.md#2-stability-register).
+
+| Surface | Remaining boundary | Maintained reference |
+| :--- | :--- | :--- |
+| Numerical reproducibility | Floating-point last bits can differ across interpreters/platforms. | [Methods](METHODS.md) |
+| Large dashboards | Bundled assets and full offline text increase document size; opening paragraph details lazily does not remove the retained text payload. | [Architecture](ARCHITECTURE.md) |
+| Workspace status | File-derived status is advisory; timestamps and restored files can be misleading. Unknown is not success. | [Workspace interfaces](AGENTS.md) |
+| Optional project adapters | Core checks do not verify a project's launcher, export tools or local runtime. | [Installation](INSTALLATION.md) |
+| Publication formats | Font coverage and layout limits remain; no EPUB, PDF/UA or PDF/X certification is claimed. | [PDF export](USAGE.md#download-a-manuscript-pdf) |
+| Agreement drafts | Built-in PDF fonts do not cover every script; download text for external rendering and retain reviewed documents in project storage. | [Project interface](AGENTS.md) |
+
+Empty optional signal fields, unavailable small-sample metrics and missing
+rankings must be interpreted using their configuration/availability metadata.
+They are not evidence of no signal or equal literary effect.

@@ -78,8 +78,9 @@ manuscript under revision. Lixity fills the gap between these worlds: one
 manuscript, its own baseline, paragraph-level reading aids, and interfaces
 (CLI, API, dashboard, PDF) that a single author can use without a research
 environment. Lixity's JSON contracts (`analyze` schema 2, `style` schema 4)
-and its archived research records (schemas 1–7) are versioned so that
-measurements can be recomputed and compared across revisions.
+and its archived research records (schemas 1–8 in released v0.7.0) are versioned
+so that measurements can be recomputed and compared across revisions. These local
+storage contracts are separate from the proposed research interchange model.
 
 # Software design
 

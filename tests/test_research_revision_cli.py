@@ -509,7 +509,7 @@ class TestResearchRevisionCli(unittest.TestCase):
             self.assertNotEqual(status2, 0)
             self.assertIn("stale", err_buf.getvalue())
 
-    def test_cli_dossier_summary_section_and_section_update(self):
+    def test_cli_dossier_section_update_validates_heading_and_preserves_other_sections(self):
         from tests.research_support import capture_research, retained_files
 
         with tempfile.TemporaryDirectory() as td:
@@ -535,23 +535,6 @@ class TestResearchRevisionCli(unittest.TestCase):
                         self.assertIn("--section", errors)
                         self.assertIn("heading", errors)
                         self.assertEqual(retained_files(project), before)
-
-            # CLI --summary
-            status, summary = self.run_json(
-                "dossier", "--project", str(project),
-                "--dossier-id", did, "--summary",
-            )
-            self.assertEqual(status, 0)
-            self.assertEqual(summary["sections"], ["Overview", "Section A", "Section B"])
-            self.assertIn("Initial facts", summary["excerpt"])
-
-            # CLI --section
-            status, sec = self.run_json(
-                "dossier", "--project", str(project),
-                "--dossier-id", did, "--section", "Section A",
-            )
-            self.assertEqual(status, 0)
-            self.assertEqual(sec["content"], "Content of A.")
 
             # CLI --update --section
             new_sec = Path(td) / "new_sec.txt"

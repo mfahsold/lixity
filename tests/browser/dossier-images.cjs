@@ -259,6 +259,59 @@ server.serve_forever()
     await expect(page.locator('#modal-dossier-image-enlarge .pswp__caption')).toContainText('Source context Synthetic provenance');
     await page.keyboard.press('Escape');
     await expect(figure.locator('[data-dossier-enlarge]')).toBeFocused();
+    // Lazy images belong to the gallery before inline decode. A delayed image
+    // that completes outside the visible slides must fit when revisited.
+    const imageURL = await figure.locator('img').evaluate(image => image.src);
+    const lazyURLs = [1, 2, 3].map(index => imageURL + '&gallery_fixture=held' + index);
+    const lazyLoads = new Map();
+    for (const url of lazyURLs) {
+      await page.route(url, route => new Promise(resolve => {
+        lazyLoads.set(url, async () => {
+          await route.fulfill({contentType: 'image/png', body: file.buffer}); resolve();
+        });
+      }));
+    }
+    await figure.evaluate((element, urls) => {
+      for (const src of urls) {
+        const lazy = element.cloneNode(true);
+        lazy.classList.add('offscreen-gallery-image');
+        lazy.style.cssText = 'position:absolute;top:100000px;left:0';
+        const image = document.createElement('img');
+        image.loading = 'lazy'; image.src = src;
+        lazy.querySelector('img').replaceWith(image);
+        element.parentElement.appendChild(lazy);
+      }
+    }, lazyURLs);
+    assert.deepEqual(await page.locator('.offscreen-gallery-image img')
+      .evaluateAll(images => images.map(image => image.naturalWidth)), [0, 0, 0]);
+    await figure.first().locator('[data-dossier-enlarge]').click();
+    await expect(page.locator('#modal-dossier-image-enlarge .pswp__counter')).toHaveText('1 / 4');
+    await expect.poll(() => lazyLoads.size).toBe(2);
+    const next = page.locator('#modal-dossier-image-enlarge .pswp__button--arrow--next');
+    const previous = page.locator('#modal-dossier-image-enlarge .pswp__button--arrow--prev');
+    await next.click();
+    await expect(page.locator('#modal-dossier-image-enlarge .pswp__counter')).toHaveText('2 / 4');
+    const delayedImage = await page.locator('#modal-dossier-image-enlarge .pswp__item[aria-hidden=false] img.pswp__img').elementHandle();
+    await expect.poll(() => lazyLoads.size).toBe(3);
+    await Promise.all([...lazyLoads].filter(([url]) => url !== lazyURLs[0]).map(([, release]) => release()));
+    await next.click();
+    await next.click();
+    await expect(page.locator('#modal-dossier-image-enlarge .pswp__counter')).toHaveText('4 / 4');
+    await expect.poll(() => delayedImage.evaluate(image => image.isConnected)).toBe(false);
+    await lazyLoads.get(lazyURLs[0])();
+    await delayedImage.evaluate(image => image.decode());
+    await previous.click();
+    await previous.click();
+    await expect(page.locator('#modal-dossier-image-enlarge .pswp__counter')).toHaveText('2 / 4');
+    const currentImage = page.locator('#modal-dossier-image-enlarge .pswp__item[aria-hidden=false] img.pswp__img');
+    await expect.poll(() => currentImage.evaluate(image => {
+      const box = image.getBoundingClientRect();
+      return image.naturalWidth && box.height && box.width
+        ? Math.abs(box.width / box.height - image.naturalWidth / image.naturalHeight) : Infinity;
+    })).toBeLessThan(.01);
+    await page.keyboard.press('Escape');
+    await page.locator('.offscreen-gallery-image').evaluateAll(elements => elements.forEach(element => element.remove()));
+    for (const url of lazyURLs) await page.unroute(url);
     const detail = await (await page.request.get(fixture.url + '/api/research/dossiers?id=' + fixture.dossier)).json();
     assert.equal(detail.images.length, 1);
     const pin = detail.images[0];

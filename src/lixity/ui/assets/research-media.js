@@ -24,6 +24,17 @@
       arrowPrevTitle: uiLabel("media_previous"), arrowNextTitle: uiLabel("media_next"),
       errorMsg: uiLabel("image_unavailable"), returnFocus: false,
     });
+    var instance = viewer;
+    viewer.on("loadComplete", function(event) {
+      var content = event.content, item = items[content.index], element = content.element;
+      if (event.isError || !item || item.width || !element || !element.naturalWidth) return;
+      // Inline lazy images may not have dimensions yet. Let PhotoSwipe load its
+      // bounded neighbouring slides, then rebuild only that slide at exact size.
+      item.width = element.naturalWidth; item.height = element.naturalHeight;
+      queueMicrotask(function() {
+        if (viewer === instance && !instance.isDestroying && shell.open) instance.refreshSlideContent(content.index);
+      });
+    });
     viewer.on("uiRegister", function() {
       viewer.ui.registerElement({
         name: "caption", order: 9, isButton: false, appendTo: "root",

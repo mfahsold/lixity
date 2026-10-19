@@ -428,6 +428,19 @@ record/manifest v8 on its first save; subsequent edits never downgrade it.
 Legacy dossier encodings remain unchanged until a geographic save. Older readers
 cannot open v8 archives. [Workflow and coordinate semantics](research/USAGE.md#keep-places-and-journeys-in-a-dossier).
 
+**Current main:** `withdraw(project, dossier_id=..., expected_snapshot=...,
+expected_revision=..., dry_run=...)` requires the reviewed digest and exact
+positive revision. `research-dossier-withdraw-preview-local/1` returns
+`{operation, project_id, target_id, target_revision, snapshot, reason, ready: true,
+dry_run: true}` without locking or publishing. The accepted
+`research-dossier-withdraw-local/1` omits `ready`/`dry_run` and returns the committed
+snapshot. Source withdrawal retains `research-withdraw-local/1`; no archive
+schema changes. Explicit historical dossier reads/history/comparisons add
+`availability: "withdrawn"` and `withdrawal: {id, target_revision, reason,
+created_at, created_by}`; active response shapes stay unchanged. See
+[retirement semantics](research/USAGE.md#withdrawal-vs-purge) for preserved pins
+and rejected writes.
+
 `research_api.compare_source()` returns a dictionary by default, or a string
 with `format="md"`. The implementation helper
 `lixity.research.analysis.compare_source_to_manuscript()` is data-only and

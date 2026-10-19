@@ -131,16 +131,20 @@ def test_human_impact_report_labels_author_acknowledgement(records):
 def test_applied_status_keeps_stale_pins_and_withdrawal_candidates(records):
     project, _decision, first, _ = records
     revise(project, "dossier", first, {"body": "A newer synthetic dossier."})
+    acknowledge(records)
     snapshot = Repository(project).snapshot()
     tombstone = Tombstone(**api.envelope(snapshot.project.id, "synthetic-author"),
                           target_ref=Reference(id=first, revision=2), target_kind="dossier",
                           operation="withdraw", reason="Synthetic withdrawn dossier.")
     Repository(project).commit([tombstone], {}, snapshot)
-    acknowledge(records)
     candidate = next(candidate for candidate in api.editorial_review(project)["candidates"]
                      if candidate["dossier_id"] == first)
     assert "stale_dossier_pin" in candidate["flags"] and "withdrawn_dossier" in candidate["flags"]
     assert candidate["acknowledgement"]["status"] == "applied"
+    before = Repository(project).snapshot().digest
+    with pytest.raises(ResearchError, match="withdrawn"):
+        acknowledge(records)
+    assert Repository(project).snapshot().digest == before
 
 
 @pytest.mark.parametrize("stale", ["snapshot", "decision", "dossier"])

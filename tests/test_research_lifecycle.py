@@ -4,10 +4,12 @@ import shutil
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 from lixity.research import api
-from lixity.research.models import Tombstone
-from lixity.research.repository import Repository, ResearchError
+from lixity.research.models import Dossier, Tombstone
+from lixity.research.repository import Repository, ResearchConflictError, ResearchError
+from tests.research_support import retained_files, revise_record
 
 
 class TestResearchLifecycle(unittest.TestCase):
@@ -43,6 +45,9 @@ class TestResearchLifecycle(unittest.TestCase):
             reason="Lizenzrechte widerrufen",
         )
         self.assertEqual(withdraw_res["operation"], "withdraw")
+        self.assertEqual(set(withdraw_res), {"schema_version", "operation", "source_id", "target_id",
+                                           "target_kind", "reason", "snapshot"})
+        self.assertEqual(withdraw_res["schema_version"], "research-withdraw-local/1")
         self.assertTrue(api.audit(self.project)["ok"])
 
         # Search excludes withdrawn versions after reindex
@@ -74,6 +79,136 @@ class TestResearchLifecycle(unittest.TestCase):
         after_files = {p: p.read_bytes() for p in self.project.rglob("*") if p.is_file()}
         self.assertEqual(before_files, after_files)
         self.assertEqual(api.audit(self.project)["snapshot"], audit_before["snapshot"])
+
+    def test_dossier_withdrawal_preserves_pins_history_evidence_and_archive(self):
+        source = self.ingest()
+        passage = api.get_source(self.project, source["source_id"])["passages"][0]["id"]
+        identifier = api.create_dossier(self.project, "Notes", "Original notes.", evidence_ids=[passage])["dossier_id"]
+        claim = api.create_claim(self.project, title="Claim", statement="A reviewed assertion.", dossier_id=identifier)["claim_id"]
+        decision = api.record_decision(self.project, title="Choice", rationale="An author choice.", dossier_ids=[identifier])["decision_id"]
+        revise_record(self.project, "dossier", identifier, {"body": "Revised notes."})
+        repository = Repository(self.project)
+        snapshot = repository.snapshot()
+        before = retained_files(self.project)
+        arguments = {"dossier_id": identifier, "expected_snapshot": snapshot.digest,
+                     "expected_revision": 2, "reason": "Consolidated author notes"}
+        with (patch.object(Repository, "locked", side_effect=AssertionError("Preview must not lock")),
+              patch.object(Repository, "commit", side_effect=AssertionError("Preview must not write"))):
+            preview = api.withdraw(self.project, dry_run=True, **arguments)
+        self.assertEqual(preview["schema_version"], "research-dossier-withdraw-preview-local/1")
+        self.assertTrue(preview["ready"] and preview["dry_run"])
+        self.assertEqual((preview["target_id"], preview["target_revision"], preview["snapshot"]),
+                         (identifier, 2, snapshot.digest))
+        self.assertEqual(retained_files(self.project), before)
+        result = api.withdraw(self.project, **arguments)
+        self.assertEqual(result["schema_version"], "research-dossier-withdraw-local/1")
+        self.assertNotIn("source_id", result)
+        accepted = repository.snapshot()
+        self.assertEqual(accepted.manifest.schema_version, snapshot.manifest.schema_version)
+        tombstone = next(record for record in accepted.records.values()
+                         if isinstance(record, Tombstone) and record.target_ref.id == identifier)
+        self.assertEqual((tombstone.schema_version, tombstone.target_kind, tombstone.target_ref.revision),
+                         ("research-local/1", "dossier", 2))
+        self.assertEqual(api.list_dossiers(self.project)["dossiers"], [])
+        self.assertEqual(api.project_overview(self.project)["dossiers"], [])
+        for read in (lambda: api.get_dossier(self.project, identifier),
+                     lambda: api.get_record(self.project, "dossier", identifier)):
+            with self.assertRaisesRegex(ResearchError, "withdrawn"):
+                read()
+        for revision, body in ((1, "Original notes."), (2, "Revised notes.")):
+            historical = api.get_record(self.project, "dossier", identifier, revision=revision)
+            self.assertEqual(historical["record"]["body"], body)
+            self.assertEqual(historical["availability"], "withdrawn")
+            self.assertEqual(historical["withdrawal"]["reason"], arguments["reason"])
+            bounded = api.get_dossier(self.project, identifier, revision=revision, summary=True)
+            self.assertEqual(bounded["availability"], "withdrawn")
+            self.assertEqual(bounded["editable_sections"], [])
+        history = api.record_history(self.project, "dossier", identifier)
+        self.assertEqual([record["revision"] for record in history["revisions"]], [2, 1])
+        self.assertEqual(history["availability"], "withdrawn")
+        compared = api.compare_record_revisions(self.project, "dossier", identifier, from_revision=1)
+        self.assertEqual(compared["fields"], [{"field": "body", "before": "Original notes.", "after": "Revised notes."}])
+        self.assertEqual(compared["availability"], "withdrawn")
+        self.assertEqual(api.get_record(self.project, "claim", claim)["record"]["dossier_ref"], {"id": identifier, "revision": 1})
+        self.assertEqual(api.get_record(self.project, "decision", decision)["record"]["dossier_refs"], [{"id": identifier, "revision": 1}])
+        self.assertEqual(api.cite(self.project, passage)["availability"], "available")
+        for path, content in before.items():
+            if path != "research/HEAD.json":
+                self.assertEqual((self.project / path).read_bytes(), content)
+        archive, restored = self.root / "retired.tar.gz", self.root / "restored"
+        api.export_archive(self.project, archive)
+        api.restore_archive(archive, restored)
+        self.assertTrue(api.audit(restored)["ok"])
+        self.assertEqual(api.get_record(restored, "dossier", identifier, revision=1)["record"]["body"], "Original notes.")
+        self.assertEqual(accepted.latest(identifier, Dossier).revision, 2)
+
+    def test_dossier_withdrawal_requires_exact_reviewed_guards_and_rejects_races(self):
+        identifier = api.create_dossier(self.project, "Notes", "Synthetic notes.")["dossier_id"]
+        snapshot = Repository(self.project).snapshot()
+        arguments = {"dossier_id": identifier, "expected_snapshot": snapshot.digest, "expected_revision": 1}
+        for changes in ({"expected_snapshot": None}, {"expected_snapshot": "not a digest"},
+                        {"expected_snapshot": "0" * 64}, {"expected_revision": None},
+                        {"expected_revision": True}, {"expected_revision": 0}, {"expected_revision": 2},
+                        {"source_id": identifier}, {"version_id": identifier}, {"dry_run": 1}):
+            before = retained_files(self.project)
+            with self.subTest(changes=changes), self.assertRaises(ResearchError):
+                api.withdraw(self.project, **{**arguments, **changes})
+            self.assertEqual(retained_files(self.project), before)
+        commit = Repository.commit
+
+        def concurrent(repository, additions, blobs, expected, *args, **kwargs):
+            with patch.object(Repository, "commit", commit):
+                api.create_dossier(self.project, "Concurrent", "Another author's notes.")
+            return commit(repository, additions, blobs, expected, *args, **kwargs)
+
+        with patch.object(Repository, "commit", concurrent), self.assertRaises(ResearchConflictError):
+            api.withdraw(self.project, **arguments)
+        self.assertEqual(api.get_dossier(self.project, identifier)["revision"], 1)
+        current = Repository(self.project).snapshot()
+        api.withdraw(self.project, **{**arguments, "expected_snapshot": current.digest})
+        before = retained_files(self.project)
+        with self.assertRaisesRegex(ResearchError, "withdrawn"):
+            api.withdraw(self.project, **{**arguments, "expected_snapshot": Repository(self.project).snapshot().digest})
+        self.assertEqual(retained_files(self.project), before)
+
+    def test_dossier_withdrawal_excludes_retired_matches_before_search_limits(self):
+        retired = [api.create_dossier(self.project, "Needleword", "Needleword notes.")["dossier_id"]
+                   for _ in range(3)]
+        active = api.create_dossier(self.project, "Current needleword", "Active notes.")["dossier_id"]
+        for identifier in retired:
+            api.withdraw(self.project, dossier_id=identifier, expected_revision=1,
+                         expected_snapshot=Repository(self.project).snapshot().digest)
+        api.reindex(self.project)
+        for scope in ("dossiers", "all"):
+            for limit in (1, 100):
+                with self.subTest(scope=scope, limit=limit):
+                    hits = api.search(self.project, "Needleword", scope=scope, limit=limit)["hits"]
+                    self.assertEqual([hit["record_id"] for hit in hits], [active])
+
+    def test_cli_dossier_withdrawal_requires_guards_and_can_preview_without_writing(self):
+        import json
+
+        from tests.research_support import capture_research
+
+        identifier = api.create_dossier(self.project, "Notes", "Synthetic notes.")["dossier_id"]
+        before = retained_files(self.project)
+        status, output, errors = capture_research("withdraw", "--project", str(self.project),
+                                                  "--dossier-id", identifier)
+        self.assertEqual((status, output), (1, ""))
+        self.assertIn("snapshot", errors)
+        self.assertEqual(retained_files(self.project), before)
+        arguments = ("withdraw", "--project", str(self.project), "--dossier-id", identifier[9:],
+                     "--expected-snapshot", Repository(self.project).snapshot().digest, "--expected-revision", "1")
+        status, output, errors = capture_research(*arguments, "--dry-run")
+        self.assertEqual((status, errors), (0, ""))
+        self.assertTrue(json.loads(output)["dry_run"])
+        self.assertEqual(retained_files(self.project), before)
+        status, output, errors = capture_research(*arguments)
+        self.assertEqual((status, errors), (0, ""))
+        self.assertEqual(json.loads(output)["schema_version"], "research-dossier-withdraw-local/1")
+        status, output, errors = capture_research("dossier", identifier, "--project", str(self.project), "--history")
+        self.assertEqual((status, errors), (0, ""))
+        self.assertEqual(json.loads(output)["availability"], "withdrawn")
 
     def test_purge_deletes_bytes_and_invalidates_citations_and_search(self):
         source = self.ingest()

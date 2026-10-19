@@ -108,6 +108,8 @@ from .revisions import (
 )
 from .revisions import (
     claim_relation_view,
+    dossier_withdrawal,
+    require_active_dossier_association,
     resolve_evidence_citation,
     source_updates,
 )
@@ -443,7 +445,7 @@ def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *
                          origin_url: str | None = None, reason: str | None = None,
                          change_kind: str = "supersession", actor: str = "local-author") -> dict[str, Any]:
     """Publish one new image capture and dossier revision under exact CAS."""
-    from .revisions import _apply_changes, _view
+    from .revisions import _apply_changes, _record, _view
     if allow_retention is not True:
         raise ResearchError("Explicit local retention permission is required (allow_retention: true)")
     if not isinstance(alt, str) or len(alt) > MAX_IMAGE_ALT_CHARS or "\n" in alt or "\r" in alt:
@@ -456,7 +458,9 @@ def attach_dossier_image(project: str | Path, dossier_id: str, content: bytes, *
         raise ResearchError("Image attachment requires an expected snapshot and dossier revision")
     repository = Repository(project)
     snapshot = repository.snapshot()
-    previous = snapshot.latest(dossier_id, Dossier)
+    previous = _record(snapshot, "dossier", dossier_id)
+    if not isinstance(previous, Dossier):
+        raise ResearchError("Image attachment requires a dossier")
     if snapshot.digest != expected_snapshot or previous.revision != expected_revision:
         raise ResearchConflictError("Research snapshot or dossier revision changed; reload and retry attachment")
     validate_image(content, filename=filename)
@@ -669,37 +673,67 @@ def compare_source(
 
 def withdraw(
     project: str | Path,
-    source_id: str,
+    source_id: str | None = None,
     *,
     version_id: str | None = None,
+    dossier_id: str | None = None,
+    expected_snapshot: str | None = None,
+    expected_revision: int | None = None,
+    dry_run: bool = False,
     reason: str = "Withdrawn by user",
     actor: str = "local-author",
 ) -> dict[str, Any]:
-    """Withdraw a source or one exact version without deleting retained bytes.
+    """Withdraw a source/version or a reviewed dossier without deleting bytes.
 
-    History and citations keep pointing at the withdrawn record; returns
-    ``research-withdraw-local/1``.
+    The source response remains ``research-withdraw-local/1``. Dossiers require
+    exact snapshot/revision guards and have separate result/preview envelopes.
     """
+    from .revisions import _record
+
+    if type(dry_run) is not bool:
+        raise ResearchError("dry_run must be a boolean")
+    if (source_id is None) == (dossier_id is None):
+        raise ResearchError("Select exactly one source or dossier to withdraw")
+    if dossier_id is not None:
+        if version_id is not None:
+            raise ResearchError("A source version cannot select a dossier withdrawal")
+        if not isinstance(expected_snapshot, str) or not re.fullmatch(r"[0-9a-f]{64}", expected_snapshot):
+            raise ResearchError("Dossier withdrawal requires an expected snapshot SHA-256 digest")
+        if type(expected_revision) is not int or expected_revision < 1:
+            raise ResearchError("Dossier withdrawal requires an exact positive expected revision")
+    elif expected_snapshot is not None or expected_revision is not None or dry_run:
+        raise ResearchError("Reviewed revision guards and withdrawal dry-run apply only to dossiers")
     reason = reason.strip() if reason else "Withdrawn by user"
     if not (1 <= len(reason) <= 500):
         raise ResearchError("Withdrawal reason must be between 1 and 500 characters")
     repository = Repository(project)
     snapshot = repository.snapshot()
 
-    source = snapshot.get(Reference(id=source_id), Source)
-    target_kind: Literal["source", "source_version"]
-    if version_id is not None:
+    source = None
+    target_kind: Literal["source", "source_version", "dossier"]
+    if dossier_id is not None:
+        if snapshot.digest != expected_snapshot:
+            raise ResearchConflictError("Research snapshot changed; review the dossier before withdrawal")
+        dossier = _record(snapshot, "dossier", dossier_id)
+        if dossier.revision != expected_revision:
+            raise ResearchConflictError("Dossier revision changed; review it before withdrawal")
+        target_ref, target_kind = reference(dossier), "dossier"
+    else:
+        if source_id is None:
+            raise ResearchError("A source identifier is required")
+        source = snapshot.get(Reference(id=source_id), Source)
+    if source is not None and version_id is not None:
         version = snapshot.get(Reference(id=version_id), SourceVersion)
         if version.source_ref.id != source.id:
             raise ResearchError("Source version does not belong to the requested source")
         target_ref = reference(version)
         target_kind = "source_version"
-    else:
+    elif source is not None:
         target_ref = reference(source)
         target_kind = "source"
 
     already_tombstoned = any(
-        isinstance(rec, Tombstone) and rec.target_ref.id in (target_ref.id, source.id)
+        isinstance(rec, Tombstone) and rec.target_ref.id in (target_ref.id, source.id if source else target_ref.id)
         for rec in snapshot.records.values()
     )
     if already_tombstoned:
@@ -712,11 +746,20 @@ def withdraw(
         operation="withdraw",
         reason=reason,
     )
+    if dossier_id is not None and dry_run:
+        repository.prepare_commit([tombstone], snapshot)
+        return {"schema_version": "research-dossier-withdraw-preview-local/1", "operation": "withdraw",
+                "project_id": snapshot.project.id, "target_id": target_ref.id, "target_revision": target_ref.revision,
+                "snapshot": snapshot.digest, "reason": reason, "ready": True, "dry_run": True}
     new_snapshot = repository.commit([tombstone], {}, snapshot)
+    if dossier_id is not None:
+        return {"schema_version": "research-dossier-withdraw-local/1", "operation": "withdraw",
+                "project_id": snapshot.project.id, "target_id": target_ref.id, "target_revision": target_ref.revision,
+                "snapshot": new_snapshot.digest, "reason": reason}
     return {
         "schema_version": "research-withdraw-local/1",
         "operation": "withdraw",
-        "source_id": source.id,
+        "source_id": source_id,
         "target_id": target_ref.id,
         "target_kind": target_kind,
         "reason": reason,
@@ -1147,24 +1190,26 @@ def get_dossier(project: str | Path, dossier_id: str, *,
         raise ResearchError("Revision must be a positive integer")
     dossier = (snapshot.latest(dossier_id, Dossier) if revision is None
                else snapshot.get(Reference(id=dossier_id, revision=revision), Dossier))
+    availability = dossier_withdrawal(snapshot, dossier.id)
 
     withdrawn_or_purged = {
         record.target_ref.id
         for record in snapshot.records.values()
         if isinstance(record, Tombstone) and record.operation in ("withdraw", "purge")
     }
-    if dossier.id in withdrawn_or_purged:
+    if dossier.id in withdrawn_or_purged and not (revision is not None and availability):
         raise ResearchError("Dossier has been withdrawn or purged")
 
     decision_reviews = editorial.dossier_reviews(snapshot).get(dossier.id, [])
 
     spans = _section_spans(dossier.body)
     sections = _extract_sections(dossier.body, spans)
-    editable_sections = _editable_section_titles(spans)
+    editable_sections = [] if availability else _editable_section_titles(spans)
     if summary:
         resolved_citations = [_resolve_evidence_citation(repository, snapshot, ref) for ref in dossier.evidence_refs] if include_citations else []
         return {
             "id": dossier.id,
+            **availability,
             "project_id": snapshot.project.id,
             "images": resolve_dossier_images(snapshot, dossier.body[:500]),
             "title": dossier.title,
@@ -1197,6 +1242,7 @@ def get_dossier(project: str | Path, dossier_id: str, *,
             if matches else sections[matched])
         return {
             "id": dossier.id,
+            **availability,
             "project_id": snapshot.project.id,
             "images": resolve_dossier_images(snapshot, selected_content),
             "title": dossier.title,
@@ -1213,6 +1259,7 @@ def get_dossier(project: str | Path, dossier_id: str, *,
 
     return {
         "id": dossier.id,
+        **availability,
         "project_id": snapshot.project.id,
         "images": resolve_dossier_images(snapshot, dossier.body),
         "title": dossier.title,
@@ -1259,6 +1306,7 @@ def create_claim(
     if dossier_id:
         dossier = snapshot.latest(dossier_id, Dossier)
         dossier_ref = reference(dossier)
+        require_active_dossier_association(snapshot, dossier_ref)
 
     scope = ClaimScope(
         time_period=time_period.strip() if time_period else None,
@@ -1549,7 +1597,9 @@ def record_decision(
         for did in dict.fromkeys(dossier_ids):
             if did.strip():
                 dossier = snapshot.latest(did.strip(), Dossier)
-                dossier_refs.append(reference(dossier))
+                selected = reference(dossier)
+                require_active_dossier_association(snapshot, selected)
+                dossier_refs.append(selected)
 
     values = envelope(snapshot.project.id, actor)
     decision = Decision(
@@ -1597,6 +1647,7 @@ def acknowledge_decision(project: str | Path, decision_id: str, dossier_id: str,
         raise ResearchError("Invalid decision or dossier identifier") from None
     if decision.revision != expected_decision_revision or dossier.revision != expected_dossier_revision:
         raise ResearchConflictError("Decision or dossier revision changed; reload before acknowledging")
+    require_active_dossier_association(snapshot, reference(dossier))
     impact = editorial.decision_graph(snapshot, decision_id=decision_id).get(decision_id)
     if impact is None or dossier_id not in {entry["id"] for entry in impact["dossiers"]}:
         raise ResearchError("Acknowledge only a dossier explicitly associated with this decision")

@@ -16,28 +16,19 @@ serves the scene before deciding what to keep or revise.
 
 ![Lixity dashboard — chapter comparison, sentence rhythm and passage drill-down](docs/screenshots/dashboard-dark.png)
 
-Matthias Fahsold developed Lixity as an architect and developer at ROST Services
-GmbH and used it while writing his own debut novel.
-
-[Try the example](https://mfahsold.github.io/lixity/demo/report.html) ·
+[Try the report](https://mfahsold.github.io/lixity/demo/report.html) ·
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
-[Practical guides](https://mfahsold.github.io/lixity/#guides) ·
 [v0.7.0 release notes](docs/releases/v0.7.0.md)
-
-The example is a read-only report made from invented text. It needs no
-installation or manuscript upload. Documentation is English; you can read the
-results in German, English, French, Spanish, Italian, Portuguese or Dutch.
 
 ## Try it in 30 seconds
 
-Open the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
-(invented text), [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html)
-or [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html).
-Explore a chapter comparison, then open a paragraph to read its measurements.
-No install, account or upload is needed. The
-[three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html)
-explains the results without requiring statistics background.
+Open the [synthetic report](https://mfahsold.github.io/lixity/demo/report.html),
+select a chapter cell and open a paragraph. No install, account or upload is
+needed. Also explore [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html),
+[Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
+or the [read-only research workspace](https://mfahsold.github.io/lixity/demo/research.html).
+Examples use invented or public-domain text.
 
 <a id="start-here"></a>
 Built-in analysis runs on your computer. Optional external OCR workers have
@@ -52,184 +43,64 @@ uv tool install --python 3.12 --managed-python lixity
 uv tool update-shell
 ```
 
-Open a new terminal, verify `lixity --version`, then start the local workspace
-with `lixity service start --open`. Choose **Open Project** or **Analyze a
-manuscript**; the [first-project guide](docs/ONBOARDING.md) explains both.
-For later visits, use the packaged `lixity-start.sh` / `lixity-start.ps1` launcher
-or the same service command.
-
-The [installation guide](docs/INSTALLATION.md) covers platform setup, pinned
-release wheels with `SHA256SUMS`, service status and logs, updates and removal.
-After an upgrade, restart the workspace to load the installed version.
+Open a new terminal, verify `lixity --version`, then run
+`lixity service start --open`. Choose **Open Project** or **Analyze a manuscript**.
+The [first-project guide](docs/ONBOARDING.md) explains the workflow;
+[installation and updates](docs/INSTALLATION.md) covers launchers, pinned wheels,
+service management and removal. Restart the workspace after upgrading.
 
 ## What you can do
 
-### Understand your writing
+| Workflow | Result and next step |
+| :--- | :--- |
+| Compare chapters | Sentence rhythm, vocabulary, dialogue and tense against the manuscript's own reference. [Read the signals](https://mfahsold.github.io/lixity/guides/interpretation.html). |
+| Review passages | Open measured paragraphs and save work markers beside their source lines. [Review workflow](docs/USAGE.md#start-a-review). |
+| Compare intentional registers | Group scenes by purpose and set optional author targets. [Scene registers](docs/USAGE.md#scene-registers-and-project-targets). |
+| Export a manuscript | A4 editorial copy with line numbers and comment margins, A5 reading copy, submission sheet or analysis report. [PDF layouts and limits](docs/USAGE.md#lixity-pdf). |
+| Connect research | Retained sources, authored claims and decisions, dossiers, places, journeys and exact manuscript quotations. [Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html). |
+| Work in a terminal or agent | Readable reports, versioned JSON and installed capability discovery. [CLI workflows](docs/USAGE.md) · [Automation contracts](docs/AGENTS.md). |
 
-See how sentence lengths, vocabulary, dialogue and tense vary throughout your
-manuscript. Open the passages behind a result before deciding whether to revise.
-Short or empty texts cannot support every comparison; unavailable results are
-shown explicitly.
+[More screenshots and short walkthroughs](docs/screenshots/README.md) show desktop
+and mobile views, paragraph notes, settings and the research timeline.
 
-<a href="docs/screenshots/dashboard-light.png"><img src="docs/screenshots/dashboard-light.png" alt="Manuscript overview showing sentence rhythm, vocabulary and dialogue measures" width="900" /></a>
-
-[Read the language signals](https://mfahsold.github.io/lixity/guides/interpretation.html) ·
-[Mobile view](docs/screenshots/dashboard-mobile.png) ·
-[Dark theme](docs/screenshots/dashboard-dark.png)
-
-<img src="docs/videos/analysis-review.gif" alt="Walkthrough: select a chapter cell, expand a paragraph's Values and switch to the style dimensions" width="900" />
-
-### Compare chapters in context
-
-The chapter map uses your manuscript's chapters as its reference. For example,
-a chapter with longer sentences than usual may reflect a new voice or a formal
-report. Select a coloured cell to inspect that chapter. The style axes bring
-together related measurements, helping you see which chapters share patterns
-and which features distinguish them.
-
-<a href="docs/screenshots/dashboard-heatmap.png"><img src="docs/screenshots/dashboard-heatmap.png" alt="Chapter comparison map showing differences from the manuscript's own style" width="900" /></a>
-
-[Understand chapter comparisons](https://mfahsold.github.io/lixity/guides/interpretation.html#consistency) ·
-[Style dimensions](docs/screenshots/dashboard-dimensions.png) ·
-[Reference bands](docs/screenshots/dashboard-reference.png)
-
-Assign scenes to registers—such as dialogue, action or a formal report—so you
-can compare scenes with a similar purpose. Each group has its own middle values
-(medians); you can also set optional targets. Small samples may leave
-measurements unavailable. [Scene example](docs/screenshots/dashboard-scenes.png) ·
-[Setup and limits](docs/USAGE.md#scene-registers-and-project-targets).
-
-### Print what the analysis found
-
-Export an A5 reading copy, A4 analysis report or A4 submission sheet from
-**PDF export** in the project controls, or use `lixity pdf`. The composer uses
-your project's title, author and optional publication details. Empty fields
-supply no inferred information. Since v0.7.0, an A4 editorial copy provides
-line numbers and comment margins using the same composer
-([example](docs/examples/effi-briest-editor.pdf)).
-
-See the complete [Effi Briest report](https://mfahsold.github.io/lixity/examples/effi-briest-report.pdf)
-or [Pride and Prejudice report](https://mfahsold.github.io/lixity/examples/pride-and-prejudice-report.pdf).
-[PDF layouts and font limits](docs/USAGE.md#lixity-pdf) ·
-[Publication settings](docs/USAGE.md#publication-settings).
-
-### Keep review notes beside the text
-
-Start from the flagged passages list, open a paragraph and read its measured
-values, source lines and tense labels. A note can be written directly on the
-passage; work markers keep it next to the relevant text in Markdown. Their
-visibility in a book export depends on the editor or converter you use.
-
-<img src="docs/videos/editorial-loop.gif" alt="Walkthrough: review flagged passages, open a paragraph, read its values and write a marker note on the passage" width="900" />
-
-<a href="docs/screenshots/dashboard-markers.png"><img src="docs/screenshots/dashboard-markers.png" alt="Review markers linked to passages, with statuses and an editable note" width="900" /></a>
-
-[Work-marker instructions](docs/USAGE.md#work-markers-editor-visible) ·
-[Flagged passages](docs/screenshots/dashboard-flags.png) ·
-[Note on a passage](docs/screenshots/dashboard-editorial.png) ·
-[Paragraph view](docs/screenshots/dashboard-layer.png)
-
-### Connect sources, claims and decisions
+### Research with Zotero
 
 Use Zotero for collecting sources, reading and general research notes. Lixity's
-experimental research workspace connects selected evidence to claims, authorial
-decisions and exact manuscript quotations. A dossier gathers the material for a
-topic or scene. Saved evidence records what a source says, not whether it is true.
+experimental workspace retains selected evidence and connects it to authored
+claims, decisions and manuscript quotes. A dossier gathers a topic or scene;
+images and structured geography can accompany it. Changing a Zotero attachment
+does not change an already retained quotation. An integrity check is not a fact check.
 
 <a href="docs/screenshots/dashboard-dossier-image.png"><img src="docs/screenshots/dashboard-dossier-image.png" alt="Historical Hamburg map in a fictional scene dossier, with source provenance" width="900" /></a>
 
-Capture selected Zotero Desktop attachments or import authorized local files.
-Retained versions keep earlier quotations usable independently of Zotero.
-Metadata editing and ordinary reading stay in Zotero; Lixity provides the
-passage view needed to select and review evidence. Scans can use local
-Tesseract or a configured OCR worker.
-
-**Review** identifies older linked versions and changed manuscript anchors for
-your assessment. Related revisions can be previewed and saved together;
-conflicts preserve your draft. Nothing is repinned silently. Images, structured
-places and character paths can accompany a dossier; **Timeline** organizes dated
-claims. [Research workflows and limits](docs/research/USAGE.md).
+[Try the research example](docs/demo/research.html) ·
+[Workflows and compatibility](docs/research/USAGE.md) ·
+[Places and journeys](docs/screenshots/dashboard-dossier-geography.png)
 
 **Current main (unreleased):** edit an exported dossier in Markdown, review its
 changes against the archive and apply the prepared revision explicitly. Images
-and diagrams share a zoom viewer; interactive geography works offline, with
-OpenStreetMap tiles available only after an explicit network opt-in.
-
-<img src="docs/videos/research-timeline.gif" alt="Walkthrough: the claims timeline places dated claims on a shared axis and jumps from a bar to its claim card" width="900" />
-
-[Research guide](https://mfahsold.github.io/lixity/guides/research-pdf.html) ·
-[Search and citations](docs/screenshots/dashboard-research-search.png) ·
-[Sources](docs/screenshots/dashboard-research-sources.png) ·
-[Claims](docs/screenshots/dashboard-research-claims.png) ·
-[Decisions](docs/screenshots/dashboard-research-decisions.png) ·
-[Decision review](docs/screenshots/dashboard-research-review.png) ·
-[Related revision preview](docs/screenshots/dashboard-research-change-set.png)
-
-### Choose a project and its settings
-
-Preview a manuscript before importing it, select its analysis language and
-adjust which differences you want to examine. Project settings also hold the
-author name, publication details and optional confidentiality-agreement controls.
-Current main also supports [literal character aliases and declared viewpoint
-chapters](docs/USAGE.md#character-profiles); name counts remain separate from
-author-declared perspective.
-
-<a href="docs/screenshots/dashboard-project-settings.png"><img src="docs/screenshots/dashboard-project-settings.png" alt="Project settings with manuscript selection, analysis preferences and the five-field NDA generator" width="900" /></a>
-
-[Project workflow](docs/USAGE.md#dashboard-workflow) ·
-[Import preview](docs/screenshots/dashboard-project-import.png) ·
-[Mobile settings](docs/screenshots/dashboard-project-settings-mobile.png)
-
-### Read a report in the terminal
-
-Use `lixity analyze manuscript.md --language de` for a readable report, or add
-`--json` for software integration. Chapter, paragraph, dialogue, pacing and
-research commands are covered in the [command reference](docs/USAGE.md).
-
-<a href="docs/screenshots/cli-analyze.png"><img src="docs/screenshots/cli-analyze.png" alt="Terminal report with sentence lengths, readability and vocabulary measures" width="900" /></a>
-
-These screenshots use public-domain literature or synthetic project records.
-[More views and capture details](docs/screenshots/README.md).
+and diagrams share a zoom viewer; geography starts offline, with optional
+OpenStreetMap tiles. [Literal character aliases and declared viewpoint chapters](docs/USAGE.md#character-profiles)
+keep name counts separate from author-declared perspective.
 
 ## How to read the results
 
-Each measurement answers a specific question about the text:
-
-| Measurement | What it helps you notice |
-| :--- | :--- |
-| Sentence length and variation | Whether sentences stay similar in length or alternate between short and long. Suspense also depends on what happens in them. |
-| Vocabulary diversity | How varied word use is. Compare passages of similar length, language and purpose. |
-| Dialogue share | How much text falls inside recognized quotation marks. A high value may be expected in a conversation scene. |
-| Chapter differences and consistency | How closely measurable chapters follow the book's observed patterns. A deliberate change in voice can lower consistency. |
-
-Chapter comparisons use the manuscript's middle values and typical spread
-(median and MAD), with an adjustment for estimated sampling noise. Colours mark
-the direction of a difference, not its literary value. Optional statistical
-checks mark a selection for review; they cannot certify that a passage needs
-editing. An unavailable value can mean there is too little text or too few
-comparable chapters to calculate it.
-
-The mathematical core includes several vocabulary measures (HD-D, MTLD, MATTR,
-Guiraud R, Maas a² and Yule's K). They answer related questions using different
-models and sample sizes. Readability and grammatical-pattern indicators have
-language-specific limits. Formulas, citations and worked examples live in
-[Methods](docs/METHODS.md). The
-[interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
-explains how to read results; [stability and validation limits](docs/STABILITY.md)
-describe what has and has not been established.
+Measurements describe patterns, not literary quality. A deliberate change of
+voice may differ from the book's baseline. Read the passage before revising;
+short samples and missing measurements can leave comparisons unavailable.
+[Interpretation](https://mfahsold.github.io/lixity/guides/interpretation.html),
+[methods](docs/METHODS.md) and [validation limits](docs/STABILITY.md) explain the
+models and what their results can support.
 
 Read the workflows: [Intentional registers](https://mfahsold.github.io/lixity/blog/intentional-registers.html) ·
 [Local word echoes](https://mfahsold.github.io/lixity/blog/local-word-echoes.html).
 
-The [research preview](docs/demo/research.html) uses attributed historical harbour
-images and fictional journeys. [Research usage](docs/research/USAGE.md) records compatibility.
-
 ## Supported languages
 
-English and German have the deepest linguistic validation. French, Spanish,
-Italian, Portuguese and Dutch also have localized interfaces and analysis
-resources, with narrower heuristic coverage. Choose the manuscript language
-explicitly; terminal presentation is separate. [Language settings and limits](docs/LOCALIZATION.md).
+English and German have the broadest analysis resources. French, Spanish,
+Italian, Portuguese and Dutch also have localized interfaces and narrower
+heuristic coverage. Choose the manuscript language explicitly; documentation
+and terminal presentation are separate. [Language settings and limits](docs/LOCALIZATION.md).
 
 ## Documentation map
 
@@ -268,7 +139,9 @@ reusing one analysis result for several outputs.
 
 ## Research
 
-The methods and the tool's placement among stylometry and corpus tools are
+Matthias Fahsold developed Lixity as an architect and developer at ROST Services
+GmbH and used it while writing his own debut novel. The methods and the tool's
+placement among stylometry and corpus tools are
 described in the software paper draft under [`paper/`](paper/paper.md),
 prepared for the [Journal of Open Source Software](https://joss.theoj.org/).
 Released versions are archived on Zenodo: cite the concept DOI

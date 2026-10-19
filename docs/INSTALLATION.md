@@ -102,16 +102,12 @@ version, then start it again. This does not alter manuscript files.
 ### Updates and removal
 
 Version 0.3.0 reset the product number to reflect development maturity before
-1.0 while retaining existing features and historical releases. Notes written
-before the renumbering may mention product versions such as 1.18.0 or
-3.0.1; they describe the same product. Historical tags
-such as 3.0.1 sort higher than the 0.4.x line in a numeric comparison; PyPI
-carries only the 0.4.x line, and `uv tool upgrade lixity` moves forward inside
-it. When choosing files on the release page, select the exact 0.4.x release.
-Do not rely on a product-number comparison for archive compatibility. The
-0.3.x/0.4.x line reads research schemas v1–v7; historical v3.0.1 cannot read
-opt-in manuscript-link v7 archives. Installing new files does not restart a
-running workspace; restart explicitly after the upgrade.
+1.0 while retaining historical tags and features. For a pinned installation,
+choose the wheel under [CLI: current release](#cli-current-release), not the
+numerically largest historical tag. Product and archive schema versions are
+independent: back up research before an upgrade and inspect the
+[reader/writer compatibility limits](research/USAGE.md#limits). Installing new
+files does not restart a running workspace.
 
 When upgrading from a historical build before v2.4.0, stop its instance through the
 original foreground terminal (Ctrl+C), checkout launcher or configured OS
@@ -167,49 +163,17 @@ remove its installation rather than overwriting its executable with uv.
 
 ## First useful result
 
-The installed app opens an empty workspace. Choose **Analyze a manuscript**,
-confirm its preview language and read the first linked passage. To return to a
-saved folder, choose **Open Project**. See [Onboarding](ONBOARDING.md).
-
-<details>
-<summary>Generate an offline report from the CLI</summary>
-
-Create a UTF-8 Markdown file named `manuscript.md` in your manuscript folder.
-Use `## Chapter title` headings and blank lines between paragraphs. Then run:
+The app starts with an empty workspace. Follow [Onboarding](ONBOARDING.md) to
+open an existing project, import a manuscript or start with research. For a
+terminal report from your own UTF-8 Markdown file:
 
 ```sh
 lixity analyze manuscript.md --language en
-lixity build manuscript.md --language en
 ```
 
-Open `exports/manuscript_dashboard.html` in your browser. The build also saves
-metrics and written reports. Very short texts cannot support a meaningful style
-reference; unavailable results are expected.
-
-Use `--language de` for German, or explicit `--language auto` for detection.
-English is the default. A local `lixity.toml` can hold:
-
-```toml
-language = "de"
-title = "My manuscript"
-```
-
-**Since v0.3.0:** selected-project title, `author_name` and an
-optional `[publication]` table feed the shared CLI/native PDF composer. No new
-renderer, runtime dependency or EPUB exporter is installed.
-See [publication configuration and limits](USAGE.md#publication-settings).
-
-For interactive project and research workflows, run `lixity service start --open`
-and choose your project in the workspace. The standalone HTML
-export remains read-only. The server's persistent workspace bar offers
-**Open Project** for an existing folder and its research archive, and
-**New Project → Import Manuscript** to create a separate project from uploaded text.
-See [Onboarding](ONBOARDING.md) for this workflow. Since 2.0.0, the workspace includes a five-field NDA generator with preview and PDF/editable-text
-downloads in the project language; see [NDA guidance](USAGE.md#nda-agreements).
-It creates no server files or recipient registry. For characters outside the
-native Windows-1252 PDF repertoire, download UTF-8 text for your local editor.
-
-</details>
+Select the manuscript language explicitly; English is the default and `auto`
+requests detection. Short text may leave measurements unavailable. The
+[usage reference](USAGE.md) owns exports, configuration, PDF and NDA behavior.
 
 ## Running the server
 

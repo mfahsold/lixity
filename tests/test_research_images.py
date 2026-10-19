@@ -55,6 +55,18 @@ class TestResearchImages(unittest.TestCase):
         args.update(kwargs)
         return api.attach_dossier_image(self.project, self.dossier, png(), **args)
 
+    def test_retired_dossier_cannot_retain_another_image_or_revision(self):
+        from tests.research_support import retained_files
+
+        api.withdraw(self.project, dossier_id=self.dossier, expected_revision=1,
+                     expected_snapshot=Repository(self.project).snapshot().digest)
+        before = retained_files(self.project)
+        with self.assertRaisesRegex(ResearchError, "withdrawn"):
+            api.attach_dossier_image(self.project, self.dossier, png(), filename="picture.png",
+                expected_snapshot=Repository(self.project).snapshot().digest,
+                expected_revision=1, allow_retention=True, alt="Synthetic image")
+        self.assertEqual(retained_files(self.project), before)
+
     def test_png_capture_has_no_fictional_text_records(self):
         captured = self.capture(context={"provenance_note": "Synthetic specimen"})
         snapshot = Repository(self.project).snapshot()

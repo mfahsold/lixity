@@ -427,6 +427,12 @@ restored draft link retains the revision you inspected.
 
 ### Work on one dossier section
 
+Current-main bounded reads accept named IDs, positional IDs and `show`/`inspect`
+with the same section/summary/citation controls, including `--revision N`.
+Section and summary are distinct modes; summary and citation omission apply only
+to reads. Unbounded inspection keeps its record envelope. Section edits still use
+the ordinary revision workflow below.
+
 In a dossier, choose **Edit section** beside an unambiguous heading. The existing
 revision editor opens that section's content, including its subsections. It keeps
 your draft after a failed save. Concurrent changes in other sections remain intact;
@@ -913,16 +919,11 @@ entire archive at an earlier date.
 
 - `research/project.json`: immutable initial project configuration.
 - `research/revisions/`: immutable, schema-checked records.
-- `research/blobs/`: SHA-256-addressed original text/PDF bytes and extracted text; original bytes are not normalized.
+- `research/blobs/`: SHA-256-addressed original source bytes and extracted text; originals are not normalized.
 - `research/manifests/`: complete snapshots; `research/HEAD.json` selects one.
 - `.lixity/research/`: disposable catalogue and writer lock.
 
 ### Withdrawal vs. purge
-
-These operations concern sources. A dossier revision marked `supersession`
-records why that revision changed; it does not retire the dossier or establish
-a replacement link. Listing already respects stored dossier tombstones, but no
-public dossier-retirement, replacement-link or merge operation is provided.
 
 - **Withdrawal (`withdraw`)**: Preserves the audit trail and archived source text,
   records a tombstone in the manifest, excludes the source or version from default
@@ -934,6 +935,28 @@ public dossier-retirement, replacement-link or merge operation is provided.
   affected records and blobs before deletion. Authored dossiers and evidence
   links remain for their audit trail, but their purged citations are marked
   `availability: "purged"` and expose no deleted quotation text.
+
+**Current main (unreleased):** `withdraw` also retires a dossier through the same
+tombstone mechanism. Inspect its revision and snapshot, preview, then repeat the
+command without `--dry-run` to accept the retirement:
+
+```sh
+lixity research dossier inspect DOSSIER_ID --project ./novel
+lixity research withdraw --project ./novel --dossier-id DOSSIER_ID \
+  --expected-revision REVISION --expected-snapshot SNAPSHOT \
+  --reason "Consolidated into the reviewed dossier" --dry-run
+```
+
+Both guards must still match when saving. The dossier disappears from active
+lists and search; its bytes, evidence, associations and backups remain. Explicit
+revision reads, history and saved-revision comparisons remain available and
+identify the withdrawal. Current reads, edits, new associations/repins, image
+attachments and fresh acknowledgements reject retired dossiers. Existing pins
+survive unrelated revisions of linked records.
+
+`supersession` describes an ordinary revision's intent; it does not retire a
+dossier. Retirement does not create a replacement link or merge records. Source
+withdrawal and purge keep their existing contracts.
 
 ### Cross-corpus comparison and evidence grounding
 

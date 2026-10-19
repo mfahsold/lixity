@@ -14,6 +14,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   application remains bound to the reviewed project and archive snapshot.
 - Project-local character profiles with literal aliases and separately declared
   viewpoint chapters, exposed through the existing configuration discovery.
+- Guarded dossier retirement through the existing withdrawal/tombstone path,
+  with read-only previews and retained historical records and associations.
 - Bundled Leaflet geography interaction, offline by default, with explicit,
   nonpersistent OpenStreetMap tile permission; shared PhotoSwipe image/diagram
   zoom and Mermaid tiny rendering with inspectable source and restricted features.
@@ -26,6 +28,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   CLI selectors accept bare UUIDv4 identifiers; archive/API identifiers remain canonical.
 - Dossier `--file` now requires an existing readable UTF-8 file. Use `--body` for
   literal text; this intentionally replaces the former missing-path-as-text fallback.
+- Consolidated current documentation and retired duplicated status checklists;
+  earlier design and implementation notes remain available through fixed Git links.
 
 ### Fixed
 - Selected workspace tabs keep readable text when hovered in light and dark themes.
@@ -36,6 +40,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   preserving displayed paragraph anchors and manuscript chapter numbering.
 - Research writer diagnostics distinguish contention from read-only, permission
   and other I/O failures without changing the canonical lock location.
+- Positional and verb-based dossier reads now honor section, summary and citation
+  bounds through the same exact-version reader as named IDs.
+- Image galleries include lazy images and fit their exact dimensions after loading.
 
 ## [0.7.0] - 2026-10-19
 

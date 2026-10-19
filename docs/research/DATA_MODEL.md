@@ -4,12 +4,12 @@
 
 Status: target design specification for the complete RFC. The implemented local
 workspace supports immutable source captures/passages, authored revision history,
-origin URLs, Zotero references, decision acknowledgements and causal links.
-Upcoming product v0.3.0 additionally provides manual manuscript quote–claim
-associations. Local record/manifest schemas v1–v7 are independent of product
-versions; these are not the illustrative RFC schema below. Historical v3.0.1
-cannot read opt-in v7 archives. See [USAGE.md](USAGE.md) and
-[IMPLEMENTATION.md](IMPLEMENTATION.md) for current contracts.
+origin URLs, Zotero references, decision acknowledgements, causal links, manual
+manuscript quote–claim associations and optional dossier geography. Released
+v0.7.0 reads local record/manifest schemas v1–v8; geographic dossier saves require
+v8. Product releases, local storage versions and the illustrative RFC schema below
+are separate. See [USAGE.md](USAGE.md) and [IMPLEMENTATION.md](IMPLEMENTATION.md)
+for implemented contracts and older-reader compatibility.
 The broader interchange model below remains a proposal.
 [The synthetic interchange example](examples/evidence-chain.json) illustrates a
 complete source-to-decision chain; it is not a production database.
