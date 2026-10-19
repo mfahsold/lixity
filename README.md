@@ -7,13 +7,12 @@
 ![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)
 ![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue)
 
-**Read the patterns in your writing. Keep the evidence behind your decisions.**
+**See where your manuscript changes. Read before you revise.**
 
-Lixity helps authors, editors and researchers see how a manuscript changes from
-chapter to chapter. It measures sentence lengths, word use, dialogue and tense,
-with chapter comparisons and paragraph views for reading the measured text.
-Its research workspace keeps source quotations and writing decisions connected. Your literary judgment guides
-what you keep or revise.
+Lixity is a local manuscript analysis tool for authors, editors and researchers.
+Compare sentence rhythm, vocabulary, dialogue and tense across chapters, then
+open paragraphs to read the text and local measurements. Ask whether a change
+serves the scene before deciding what to keep or revise.
 
 ![Lixity dashboard — chapter comparison, sentence rhythm and passage drill-down](docs/screenshots/dashboard-dark.png)
 
@@ -24,7 +23,7 @@ GmbH and used it while writing his own debut novel.
 [Three-minute first look](https://mfahsold.github.io/lixity/guides/first-look.html) ·
 [Install](#install-and-start) · [What you can do](#what-you-can-do) ·
 [Practical guides](https://mfahsold.github.io/lixity/#guides) ·
-[v0.5.0 release notes](docs/releases/v0.5.0.md)
+[v0.6.0 release notes](docs/releases/v0.6.0.md)
 
 The example is a read-only report made from invented text. It needs no
 installation or manuscript upload. Documentation is English; you can read the
@@ -190,7 +189,7 @@ Each measurement answers a specific question about the text:
 | Measurement | What it helps you notice |
 | :--- | :--- |
 | Sentence length and variation | Whether sentences stay similar in length or alternate between short and long. Suspense also depends on what happens in them. |
-| Vocabulary diversity | How much words repeat. Compare passages of similar length, language and purpose. |
+| Vocabulary diversity | How varied word use is. Compare passages of similar length, language and purpose. |
 | Dialogue share | How much text falls inside recognized quotation marks. A high value may be expected in a conversation scene. |
 | Chapter differences and consistency | How closely measurable chapters follow the book's observed patterns. A deliberate change in voice can lower consistency. |
 
@@ -209,6 +208,9 @@ language-specific limits. Formulas, citations and worked examples live in
 [interpretation guide](https://mfahsold.github.io/lixity/guides/interpretation.html)
 explains how to read results; [stability and validation limits](docs/STABILITY.md)
 describe what has and has not been established.
+
+Read the workflows: [Intentional registers](https://mfahsold.github.io/lixity/blog/intentional-registers.html) ·
+[Local word echoes](https://mfahsold.github.io/lixity/blog/local-word-echoes.html).
 
 ## Supported languages
 
@@ -237,13 +239,13 @@ language. Mathematical identifiers and numeric JSON values are language-neutral.
 
 ## Current release
 
-The current release is **v0.5.0**, continuing the pre-1.0 development line;
+The current release is **v0.6.0**, continuing the pre-1.0 development line;
 historical v3.0.1 and earlier notes and tags remain available. Public JSON and
 research storage schema versions are independent; this release reads
 research archives through v7.
 When upgrading from the historical numbering, install the pinned release wheel
 explicitly; PyPI upgrades continue normally afterwards.
-[Release notes](docs/releases/v0.5.0.md) describe compatibility and known limits;
+[Release notes](docs/releases/v0.6.0.md) describe compatibility and known limits;
 the [changelog](CHANGELOG.md) records subsequent work on `main`.
 
 ## Python API and automation
@@ -256,11 +258,11 @@ html = api.dashboard(text, language="de", project_config={})
 
 CLI, Python and dashboard analysis share one pipeline. Analysis/profile JSON uses
 schema **v2**; style JSON uses **v4**. Integrations should pass explicit project
-settings when working with several projects.
+settings when working with several projects. Inspect installed capabilities with
+`lixity about --json` and `lixity COMMAND --help`.
 
 Choose `api.analyze` for numeric results or `api.fingerprint` for a style
-reference. Each convenience call performs its own analysis; integrations needing
-several outputs can [reuse the shared analysis result](docs/ARCHITECTURE.md#configuration-and-multiple-projects).
+reference. For several outputs, [reuse one analysis result](docs/ARCHITECTURE.md#configuration-and-multiple-projects).
 
 [Interface contracts](docs/AGENTS.md) · [Architecture](docs/ARCHITECTURE.md) ·
 [Research commands](docs/research/USAGE.md) · [Automation summary](docs/llms.txt)

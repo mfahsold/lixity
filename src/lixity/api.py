@@ -15,7 +15,7 @@ from typing import Any
 
 from . import __version__
 from .analyzer import CorpusAnalyzer
-from .config import resolve_thresholds
+from .config import configuration_metadata, resolve_thresholds
 from .language import LANGUAGE_PROFILES
 from .models import SCHEMA_VERSION
 from .pipeline import (
@@ -316,7 +316,7 @@ def dashboard(
 
 
 def about() -> dict[str, Any]:
-    """Tool metadata for agents: version, languages, features, thresholds."""
+    """Installed metadata and configuration schemas, without project values."""
     from .diversity import HD_D_DRAW_SIZE, MIN_TOKENS_LD
     from .research.cli import command_metadata
     from .research.models import ENTITY, Manifest
@@ -338,6 +338,7 @@ def about() -> dict[str, Any]:
     return {
         "meta": _meta("generic"),
         "languages": PROFILE_KEYS,
+        "configuration": configuration_metadata(),
         "features": [
             {"field": f, "label_key": label_key, "unit": u} for f, label_key, u in FEATURES
         ],
@@ -371,7 +372,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "profile",
-                "purpose": "paragraph-accurate tense and style profiles",
+                "purpose": "paragraph tense/style estimates for supported body/list blocks",
                 "output": "json",
                 "schema_version": SCHEMA_VERSION,
             },
@@ -395,7 +396,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "motifs",
-                "purpose": "motif presence and repetition (content words, n-grams)",
+                "purpose": "motif presence, repetition and local phrase echoes (content words, n-grams)",
                 "output": "text|json",
                 "schema_version": SCHEMA_VERSION,
             },
@@ -443,7 +444,7 @@ def about() -> dict[str, Any]:
             },
             {
                 "name": "about",
-                "purpose": "this metadata (languages, features, thresholds, commands)",
+                "purpose": "installed metadata (languages, features, thresholds, commands, configuration)",
                 "output": "text|json",
             },
             {

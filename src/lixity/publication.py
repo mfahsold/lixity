@@ -86,7 +86,17 @@ def _canonical_isbn(value: str) -> str:
 
 
 class PublicationSettings(BaseModel):
-    """One bounded, optional imprint configuration for an explicit project."""
+    """One bounded, optional imprint configuration for an explicit project.
+
+    Text must be valid Unicode without unsupported control characters or line
+    separators. Strings are stripped before length checks; multiline fields
+    allow newlines and normalize CRLF to LF. Nonempty years require four digits
+    from 0001 to 9999. Nonempty ISBNs require valid ISBN-10/ISBN-13 checksums;
+    print and digital identifiers must differ even when ISBN-10 and ISBN-13
+    spellings refer to the same edition. These custom checks are not all
+    encoded in JSON Schema. Validation does not establish legal completeness,
+    ownership, ISBN assignment or publication readiness.
+    """
 
     model_config = ConfigDict(extra="forbid", frozen=True, strict=True)
 
@@ -119,6 +129,21 @@ class PublicationSettings(BaseModel):
         if self.isbn_print and self.isbn_digital and _canonical_isbn(self.isbn_print) == _canonical_isbn(self.isbn_digital):
             raise ValueError("Print and digital editions require distinct ISBNs")
         return self
+
+
+def publication_configuration_schema() -> dict[str, Any]:
+    """Describe model defaults and the text policy used by its validators."""
+    schema = PublicationSettings.model_json_schema()
+    for key, field in _FIELDS.items():
+        schema["properties"][key]["x-lixity-text"] = {
+            "kind": field.kind, "max_chars": field.max_chars, "length_after": "strip",
+        }
+    schema["$comment"] = (
+        "x-lixity-text describes component validation, not JSON Schema keywords. "
+        "Text bounds apply after stripping whitespace; multiline text also normalizes CRLF. "
+        "Use PublicationSettings for full input validation."
+    )
+    return schema
 
 
 def load_publication(settings: Mapping[str, Any]) -> PublicationSettings:

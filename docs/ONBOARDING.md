@@ -1,72 +1,42 @@
 # Start using Lixity
 
-Lixity helps you explore sentence rhythm, vocabulary and style patterns in a
-Markdown manuscript on your computer. These signals point to passages worth
-reviewing; they do not measure literary quality or prescribe edits.
+Lixity measures patterns in a manuscript for your own review. Start with the
+[read-only synthetic report](https://mfahsold.github.io/lixity/demo/report.html)
+or the [illustrated first look](guides/first-look.html), then follow the path
+below for your own text. Installation and upgrades belong to the
+[installation guide](INSTALLATION.md).
 
-Install Lixity using the [installation guide](INSTALLATION.md). Lixity is open
-source under AGPL-3.0-or-later, so any writing purpose — private, research or
-commercial — needs no extra permission; see [Licensing](LICENSING.md).
-
-## The journey at a glance
-
-| Stage | Where it happens | Continue with |
-| --- | --- | --- |
-| See a finished example | Browser, no installation | [Read-only demo](https://mfahsold.github.io/lixity/demo/report.html) · [Effi Briest](https://mfahsold.github.io/lixity/examples/effi-briest.html) · [Pride and Prejudice](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html) |
-| Install and start | Terminal, then the local browser | [Installation guide](INSTALLATION.md) · [Use the interactive workspace](#use-the-interactive-workspace) |
-| Choose a project | Welcome screen or workspace bar | [Choose your starting point](#choose-your-starting-point) · [Open or import?](#open-or-import) |
-| First analysis | **Manuscript & Analysis** | [Read and explore](#read-and-explore) |
-| Review notes | Flagged passages and paragraphs | [Work through review notes](#work-through-review-notes) |
-| Research | **Research & Dossiers** | [Research workflow](#research-workflow) |
-| Export and return | PDF export, then restart later | [Check your first session and return later](#check-your-first-session-and-return-later) |
-
-## See a finished example first
-
-Two public-domain novels are published as finished analyses: the
-[Effi Briest example](https://mfahsold.github.io/lixity/examples/effi-briest.html)
-(German) and the
-[Pride and Prejudice example](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
-(English) each pair an interactive excerpt with a complete PDF report. Both run
-in the browser without installation; nothing is uploaded and nothing is saved
-there. The [read-only synthetic demo](https://mfahsold.github.io/lixity/demo/report.html)
-stays the smallest introduction. The local app's welcome screen links the
-example that matches its analysis language.
-
+<a id="the-journey-at-a-glance"></a>
+<a id="see-a-finished-example-first"></a>
 ## Choose your starting point
 
-| What you want to do | Start here |
+| Your starting point | Action |
 | --- | --- |
-| Explore a manuscript | Build a dashboard using the commands below. |
-| Return to an existing project | Start the app and choose **Open Project**. |
-| Start a project | Run `lixity service start --open` and choose **Analyze a manuscript** or **New Project**. |
-| Keep research sources | Open an initialized research project, or initialize one as shown below. |
-| Capture sources from Zotero | Follow the [Zotero setup](research/USAGE.md#zotero-desktop-bridge-since-v1190), then select attachments in the dashboard. |
+| An existing manuscript/project folder | Start the local app and choose **Open Project**. |
+| A file to copy into a new project | Choose **Analyze a manuscript**, review the import preview and confirm the destination. |
+| A new manuscript | Choose **New Project → Start New Manuscript**. |
+| Sources without a manuscript | Open or initialize a [research project](research/USAGE.md#try-it). |
+
+The [Fontane](https://mfahsold.github.io/lixity/examples/effi-briest.html) and
+[Austen](https://mfahsold.github.io/lixity/examples/pride-and-prejudice.html)
+examples show opening chapters in HTML and complete novels in linked PDF reports.
+Public examples are read-only and need no manuscript upload.
 
 ## Start with a manuscript
 
-Save your manuscript as a UTF-8 Markdown file. Use `## Chapter title` headings
-and blank lines between paragraphs. From its folder, run:
+Use UTF-8 Markdown with `## Chapter title` headings and blank lines between
+paragraphs. For a terminal report and saved analysis exports:
 
 ```sh
 lixity analyze manuscript.md --language en
 lixity build manuscript.md --language en
 ```
 
-Open `exports/manuscript_dashboard.html` in your browser. `analyze` gives a
-terminal report; `build` saves the dashboard and other analysis reports in
-`exports/`. The original manuscript stays in its project folder.
-
-Choose the language of your manuscript: use `--language de` for German or
-`--language en` for English. English is the default. Explicit
-`--language auto` requests detection; weak or ambiguous evidence uses the
-generic profile. German and English currently have the most extensive
-linguistic resources and tests; other supported profiles have more limited
-coverage. See [language support and limitations](LOCALIZATION.md).
-
-Start with a longer passage and several chapters when possible. Some results
-are unavailable for short texts or chapters without measurable variation. Read
-the [interpretation guide](guides/interpretation.html) before treating a
-highlight as a reason to revise.
+Open `exports/manuscript_dashboard.html`. Use each command's `--help` for
+options. Select the manuscript's language explicitly; English is the default,
+and `auto` requests heuristic detection. [Language support](LOCALIZATION.md)
+explains unequal coverage across profiles. Short texts can leave measurements
+unavailable; a highlight is a reading prompt, not a quality verdict.
 
 ## Use the interactive workspace
 
@@ -74,245 +44,85 @@ highlight as a reason to revise.
 lixity service start --open
 ```
 
-Open `http://127.0.0.1:8765/`. The workspace has three views:
-**Research & Dossiers**, **Manuscript & Analysis**, and **Project & Settings**.
-Since v2.3.0, the welcome guidance follows three steps: choose or open a
-manuscript, confirm its language in the import preview, then read a passage behind
-a signal. **Analyze a manuscript** opens the existing import dialog; analysis
-starts after you confirm the preview. **Research and further analysis** expands
-optional guidance. An empty manuscript view offers the same import action.
-**New Project**, **Open Project** and optional welcome guidance remain available
-in every view. Hide the guidance when you no longer need it; **Show guidance**
-reopens it. The browser remembers this preference when local storage is available.
-
-With the service stopped, `lixity service start --open ./my-novel` starts with
-an explicit project instead. The managed service does not need an open terminal.
-Its default startup is an empty workspace; it does not search your terminal's
-folder. Use `lixity service status`, `lixity service restart` and
-`lixity service stop` to manage the instance.
+The local workspace opens at `http://127.0.0.1:8765/`. Choose among
+**Manuscript & Analysis**, **Research & Dossiers** and **Project & Settings**.
+Welcome guidance and field explanations describe the next action in the app.
+Use **Show guidance** to reopen hidden welcome guidance.
 
 ### Open or import?
 
-**Open Project** reconnects an existing folder and its research archive. Enter
-a folder or manuscript path, or use **Browse files and folders**. The chooser
-shows files on the computer running Lixity. **Home** and **Parent folder** help
-you navigate; choose a manuscript or **Select this folder**, then **Open**.
-Browsing or cancelling does not switch projects.
+**Open Project** reconnects an existing folder and its archive. The file chooser
+browses the computer running Lixity; browsing or cancelling does not switch
+projects. **Analyze a manuscript** imports a selected or dropped file into a
+separate project after you review its preview, language and destination. It does
+not reconnect the original folder's research archive.
 
-**New Project → Import Manuscript** creates a separate project from a selected
-or dropped `.md`, `.markdown` or `.txt` file. It does not reopen the original
-folder or its research. Selecting a file opens its preview directly; the dialog
-explains the next step in one line and asks only for what it needs: the project
-title (prefilled from the first heading), the analysis language with its effect
-named, and an optional **Author name** used for PDF credits, the title page and
-the NDA. The project folder and the optional research archive stay under
-**Optional details** with sensible defaults. Nothing is uploaded or written
-outside the chosen folder. Confirm the new project in the import dialog.
-**Start New Manuscript** follows the same pattern: title, language, optional
-author, then the narrative template. The Research Novel template also
-initializes a research archive.
-
-An initialized research-only folder can be opened without a manuscript. Its
-sources and notes remain available; manuscript analysis and comparison need a
-loaded manuscript. All browser tabs connected to one server share its active
-project, so check the displayed path when switching.
+A research-only project can open without a manuscript. All tabs on one server
+share its active project, so check the displayed path before saving.
 
 ### Read and explore
 
-**Since v0.3.0:** the native workspace offers a collapsed manuscript PDF menu
-in the global project controls above all three views. Select
-**A5 reading copy** (the default), **A4 manuscript sheets** or **A4 analysis report**,
-then select **Download PDF** to save it. It generates a PDF from the currently selected
-manuscript and returns it through your browser; it creates no server export files
-and changes neither the manuscript nor the research archive. The form needs
-JavaScript and a compatible live native server; standalone HTML reports do not
-provide the download action.
-The [`lixity pdf`](USAGE.md#lixity-pdf) terminal command remains available.
+Start with **Open passage** or **Explore chapters**. The first opens a tense-flag
+candidate in source order, or the opening paragraph when none qualifies; it is
+not a quality ranking. Chapter comparisons describe whole chapters. Open a
+paragraph and expand **Values** for its separate measurements and source lines.
+The [interpretation guide](guides/interpretation.html) explains their limits.
 
-The **Start your review** panel appears before the measurements. **Open passage**
-opens the first paragraph in source order that meets the selected tense-flag
-threshold, or the opening paragraph when none does. It clears manuscript search
-and paragraph filters so the text is visible, and moves keyboard focus to the
-opened paragraph. This is a place to begin reading, not a quality ranking.
-
-**Explore chapters** opens the style comparison when it is available; otherwise
-it opens the chapter map with an explanation of the comparison's limits.
-**Open sentence rhythm** is offered when measurements are available. Read the
-passage before drawing conclusions from either view. Paragraph text appears
-first; expand **Values** for source lines and measurements.
-
-The manuscript view provides chapter and paragraph navigation, style signals
-and analysis controls. Dotted-underlined terms have explanations: hover, use
-keyboard focus, or tap. Press Escape or tap again to dismiss them. Statistical
-settings also show their explanations beside the fields.
-
-A saved HTML dashboard is a read-only analysis export. The local server adds
-project and research actions using the same analysis engine. It is not a full
-manuscript editor. The NDA generator downloads a friendly confidentiality agreement
-using the recipient's name,
-optional address, project, date and place; see the
-[NDA reference](USAGE.md#nda-agreements).
-Set **Author name** in the loaded project's Settings to prefill the project
-representative in the agreement. Apply stores that name in the project. The
-read-only manuscript identity check shows matching, missing or different metadata;
-it does not edit prose or establish who wrote the text.
-Book-specific publication and delivery integrations belong to project adapters;
-the shared manuscript PDF layouts are described in the [PDF reference](USAGE.md#lixity-pdf).
+Settings explain which changes last for the server session and which are saved
+in the project. **Apply** rebuilds the analysis. Saved HTML is an offline report;
+project writes and manuscript PDF downloads require the native local server.
+For output layouts and optional publication details, see the
+[PDF reference](USAGE.md#lixity-pdf). The optional
+[NDA generator](USAGE.md#nda-agreements) is a separate authored document action.
 
 ## Work through review notes
 
-The editorial loop starts where the measurements point and ends in the
-manuscript:
-
-1. Open the flagged passages list (or any paragraph) and read the excerpt it
-   shows.
-2. Open the paragraph. The text comes first; expand **Values** for source
-   lines, tense labels and the compact measurement line.
-3. Use the marker buttons (**Check**, **Fact-check**, **To-do**, **Attention**)
-   to write a note directly on the passage. Nothing is saved until you choose
-   **Save marker**; cancelling leaves the text unchanged.
-4. Saved markers live as Markdown comments above their paragraph and stay
-   visible in the marker list. Their visibility in a book export depends on the
-   editor or converter you use.
-
-Markers are your decisions: the analysis neither rewrites prose nor resolves a
-flagged passage. See [work markers](USAGE.md#work-markers-editor-visible) and the
-[editorial-loop walkthrough](https://mfahsold.github.io/lixity/#editorial-matrix).
+Read a passage before adding a marker. **Save marker** explicitly writes a
+Markdown comment above that paragraph; cancelling writes nothing. The analysis
+does not rewrite prose or resolve your notes. Exported dashboards include notes,
+so review them before sharing. See [work markers](USAGE.md#work-markers-editor-visible)
+for marker syntax and export behavior.
 
 ## Research workflow
 
-The research workspace is experimental. It keeps sources, quotations and authored
-notes separate from manuscript analysis. Import a source only when you are
-allowed to retain its original bytes. Retention does not grant redistribution
-rights or verify a historical claim.
+The experimental research workspace keeps retained sources and authored records
+separate from analysis. Import only sources you may retain; that permission does
+not grant redistribution rights or verify a claim. The
+[research workflow guide](research/USAGE.md) covers capture, exact citations,
+dossiers, claims, decisions, manuscript associations and recovery.
 
-To initialize a new research archive and retain an authorized text source:
+Search and preview before saving an evidence link or manuscript association.
+Only source passages are citations; authored claims and causal relations remain
+interpretations. A changed anchor or reviewed revision requires an explicit
+review, never silent acceptance. The app shows retention and compatibility
+notices before the corresponding save.
 
-```sh
-lixity research init --project ./my-novel --title "Novel research" --language en
-lixity research ingest --project ./my-novel --file ./source.txt \
-  --allow-retention --title "Library note"
-lixity research search --project ./my-novel --query "reading room"
-```
-
-Research commands stay project-scoped. Since v2.4.0, the CLI also
-accepts the validated initialized current directory for existing-archive commands;
-it searches no parent folders or last-opened projects. Use `--project` when
-working from elsewhere; it remains authoritative. See [CLI selection and the
-link shortcut](research/USAGE.md#reading-and-cli-workflows-since-v240).
-Search updates a stale search index
-automatically unless `--strict` is requested. CLI search defaults to source
-passages; `--scope all` also searches current dossiers, claims and decisions.
-The dashboard searches all these record types by default. Only source passages
-can be cited as evidence.
-
-In the dashboard, select a source or dossier to read its details and citations.
-Source and dossier filters narrow the loaded lists; **Search** looks through
-retained text. A source-passage search result offers **Use for claim** and
-**Use for dossier** actions.
-
-**Since v2.4.0:** select text inside one source paragraph to prepare
-a claim evidence-link draft. Read the selected quote and complete paragraph
-context in the preview, choose the claim and evidence relation, then save
-explicitly. The citation retains the whole source paragraph; selecting a
-sentence does not create a sentence-level citation. Cross-paragraph or ambiguous
-selections are unavailable; whole-passage actions remain in the Passages view.
-
-Open **Dossier alongside** in **Manuscript & Analysis** and choose a dossier,
-or use the matching action on a dossier card. Opening the optional view alone
-does not choose a dossier. It is read-only, and closing it preserves manuscript
-search and open paragraphs. Other analysis panels are temporarily hidden in this
-focused reading view and return when you close it. Refresh explicitly for the latest saved dossier
-revision; the selection lasts for the current page. The dossier appears above
-the manuscript on narrow screens. Evidence status labels express your own
-assessment; they do not certify historical facts.
-
-For a visual reference, open a dossier and choose **Add image**. Select an
-authorized local PNG/JPEG, add a short description, preview it and confirm
-retention before saving. Original bytes and the dossier version are saved together.
-Image sources have no searchable text or linguistic scores. Optional captions and
-source notes help you remember what the picture can—and cannot—support.
-
-Use **Add claim** or **Add decision** from that dossier to keep the topic selected
-in the existing form. **Edit section** limits a revision to one unique heading;
-you still review conflicts and explain the change before saving.
-
-The records have different purposes:
-
-- A **source** is retained evidence; its passages support exact quotations.
-- A **dossier** collects notes, sections and cited passages on a topic.
-- A **claim** records an assertion or hypothesis and an author-selected confidence
-  label. Evidence links describe whether a passage supports, contradicts,
-  qualifies or provides context for it.
-- A **decision** records an author's choice and rationale. A linked dossier is
-  marked for review when subsequent decisions are recorded.
-
-These links support review, not automated proof. An unmarked deviation from fact
-does not certify accuracy. If a source is purged, affected citations in retained
-authored records show as unavailable rather than revealing deleted text.
-**Since v3.0.0:** in **Claims**, switch from **List** to **Timeline**
-to organize the period labels you entered. Clear years, dates and supported
-ranges can be placed; unclear or invalid periods stay visible separately.
-Placement is an organizational aid, not a historical verification.
-
-Under **Cause and effect claims**, choose two reviewed claim versions and save
-your proposed cause/effect link explicitly. Later claim edits leave that link
-pinned to its earlier versions and mark it for review. Edit or retract it through
-the shared revision editor; history keeps the earlier interpretation. Before the
-first save, back up the archive and read the v6 compatibility notice: afterward
-every reader must support archive schema v6: v0.3.0 and the
-historical v3.0.x releases do. Product and archive versions are independent.
-
-To add evidence without copying an identifier, choose your claim in the evidence
-form and select **Find source passage**. Search, read a result, choose **Use for
-claim**, then review its full retained paragraph and save the evidence relation.
-A keyword match or causal interpretation does not verify a claim. A changed
-reviewed context requires another review before saving.
-
-Saved manuscript associations—a selected quote linked to a claim—are listed in
-the research **Review** tab with their anchor state and review flags. A moved,
-changed or ambiguous anchor stays unresolved and is never repinned silently;
-listing them never writes.
-
-See [Research usage](research/USAGE.md) for batch import, claim and decision
-commands, backups and archive limits.
-
-## Use Zotero for sources and media (since v1.19.0)
-
-Zotero can remain your catalogue for books, PDFs and other media. Lixity captures
-selected PDF/text attachments so that a later change in Zotero does not silently
-change an earlier quotation. Images, audio and video stay in Zotero; Lixity does
-not transcribe them. Scanned PDFs need local Tesseract or a configured OCR worker.
+<a id="use-zotero-for-sources-and-media-since-v1190"></a>
+## Use Zotero for sources and media
 
 ### First Zotero capture
 
-Install Zotero on the computer running Lixity, enable its local API and download
-the attachments you need. In **Research → Sources → Zotero**, choose the intended
-library and collection, inspect an item, select an attachment and confirm
-retention. Review its details and check a quotation against the original.
-
-Before using an existing archive with a newer capture format, back it up and keep
-all archive readers and writers on a compatible version. Follow the
-[Zotero setup, migration and backup reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
-for dry-run previews, explicit refresh and export. Capturing sources does not
-enable automatic synchronization.
+Enable Zotero's local API, download the needed attachments, then choose the
+library, collection and attachment in **Research → Sources → Zotero**. Preview
+and permit retention before saving. Lixity captures selected PDF/text attachments;
+images, audio and video remain in Zotero. Scans need a configured OCR backend.
+The [Zotero reference](research/USAGE.md#zotero-desktop-bridge-since-v1190)
+owns prerequisites, refresh, migration and paired backups. Capture does not
+turn on automatic synchronization.
 
 ## Check your first session and return later
 
-Before relying on a workspace, check its displayed project path, manuscript
-language and a sample quotation against the source. For Zotero captures, also
-check the original-item link and metadata. A successful search does not verify
-a claim.
+Check the displayed project, language and a sample quotation against the source.
+Stop with `lixity service stop`; return with `lixity service start --open`, then
+open your project. To choose the startup project explicitly while the service
+is stopped, use `lixity service start --open ./my-novel`.
 
-Stop the managed instance with `lixity service stop`. To return, run
-`lixity service start --open` and open the existing project, or pass an explicit
-project path when starting. Restart uses its recorded launch settings, so a
-different project selected in the live browser does not change its startup
-project. After updates or OCR setting changes, restart the intended instance;
-a browser reload alone does not load updated code. A foreground `lixity serve`
-still stops with Ctrl+C. See [server setup and restart](INSTALLATION.md#running-the-server).
+Restart uses recorded launch settings, not a later browser project selection.
+After upgrades or OCR environment changes, restart the intended instance; a
+browser reload does not load updated code. See
+[service lifecycle](INSTALLATION.md#running-the-server).
 
-Back up the manuscript separately from the research archive. Paired
-research/Zotero backups exclude manuscripts and external linked attachments.
-The [research command reference](research/USAGE.md) describes implemented
-behavior; the [research RFC](research/README.md) also contains future proposals.
+Back up manuscripts separately from the research archive. Research/Zotero
+backups exclude manuscripts and external linked attachments. Use the
+[implemented research reference](research/USAGE.md), not the
+[proposal](research/README.md), to determine available operations.

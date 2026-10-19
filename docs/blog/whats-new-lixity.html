@@ -108,13 +108,13 @@
 <p>Diagnostics now go through one logging setup: one line format, standard levels, and a log file that stays bounded (older entries are rotated, not deleted silently). <code>--debug</code>, <code>LIXITY_DEBUG</code> and <code>LIXITY_LOG_LEVEL</code> choose how much you see, and <code>lixity service status</code> prints the path. Request logs keep the route but never the query string, so research context and project tokens stay out of the file — and log records never contain manuscript text.</p>
 
 <h2 id="security">Your privacy, in plain words</h2>
-<p>Lixity runs on your computer. Nothing is uploaded, there is no account, and the browser page only runs the scripts that ship with it (that is what the strict Content Security Policy means). Loopback bind, host allow-list, payload limits and explicit non-goals are written down in the project’s <code>SECURITY.md</code>. The statistical signals support your review; they are not a quality score, and they are not an instruction to rewrite your prose.</p>
+<p>Built-in analysis and dashboard generation run on your computer without cloud calls or an account. Optional integrations and separately configured workers have their own setup and data handling. The browser page only runs the scripts that ship with it (that is what the strict Content Security Policy means). Loopback bind, host allow-list, payload limits and explicit non-goals are written down in the project’s <code>SECURITY.md</code>. The statistical signals support your review; they are not a quality score, and they are not an instruction to rewrite your prose.</p>
 
 <h2 id="try">Try it</h2>
 <ul>
 <li><a href="../demo/report.html">Demo report</a> — invented text, opens in your browser, no install.</li>
 <li><a href="../examples/effi-briest.html">Effi Briest</a> and <a href="../examples/pride-and-prejudice.html">Pride and Prejudice</a> — interactive dashboards of the opening three chapters, each with a linked PDF analysis of the complete public-domain novel.</li>
-<li><a href="../guides/first-look.html">First look</a> — from chapter comparison to the passage behind a number, in three minutes.</li>
+<li><a href="../guides/first-look.html">First look</a> — a three-minute tour of chapter comparisons and paragraphs with local measurements.</li>
 <li>For your own manuscript: <code>uv tool install --python 3.12 --managed-python lixity</code>, then <code>lixity service start --open</code>.</li>
 </ul>
 <p>If you try it: tell me which passage surprised you — that is the feedback that shapes the next release.</p>

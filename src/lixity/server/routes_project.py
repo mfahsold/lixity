@@ -14,6 +14,8 @@ from typing import Any
 from urllib.parse import parse_qs, urlparse
 
 from ..config import (
+    ANALYSIS_SETTINGS_KEYS,
+    PERSISTED_SETTINGS_KEYS,
     apply_config_to_thresholds,
     load_project_config,
     prepare_project_settings,
@@ -135,6 +137,14 @@ class ProjectRoutesMixin(ResponseMixin):
         })
 
     def _handle_settings(self, payload: dict[str, Any]) -> None:
+        save_defaults = payload.get("save_analysis_defaults", False)
+        if not isinstance(save_defaults, bool):
+            self._json({"ok": False, "message": "save_analysis_defaults must be a boolean"}, 400)
+            return
+        if save_defaults and "language" in payload and (
+                not isinstance(payload["language"], str) or not payload["language"].strip()):
+            self._json({"ok": False, "message": "language must be a supported language code"}, 400)
+            return
         lang = str(payload.get("language") or self.language).strip().lower()
         if lang not in LANGUAGE_CHOICES:
             self._json({"ok": False, "message": f"Unknown language: {lang}"}, 400)
@@ -143,15 +153,18 @@ class ProjectRoutesMixin(ResponseMixin):
         try:
             root = self.get_author_project_root()
             current_token = project_settings_token(root, self.source_input)
-            if any(key in payload for key in ("publication", "register_profiles", "chapter_registers", "project_token")) and (
+            if (save_defaults or any(key in payload for key in (
+                    "publication", "register_profiles", "chapter_registers", "project_token"))) and (
                     not current_token or payload.get("project_token") != current_token):
                 self._json({"ok": False, "message": "The selected project or its settings changed; reload before saving"}, 409)
                 return
             title = validate_project_title(payload["title"]) or None if "title" in payload else self.title
             title_custom = title is not None if "title" in payload else self.title_custom
             thresholds = replace(self.thresholds, **apply_config_to_thresholds(payload))
-            changes: dict[str, Any] = {key: payload[key] for key in (
-                "title", "author_name", "publication", "register_profiles", "chapter_registers") if key in payload}
+            changes: dict[str, Any] = {key: payload[key] for key in PERSISTED_SETTINGS_KEYS if key in payload}
+            if save_defaults:
+                changes.update({key: lang if key == "language" else payload[key]
+                                for key in ANALYSIS_SETTINGS_KEYS if key in payload})
             if root is None:
                 changes.pop("title", None)
             prepared = prepare_project_settings(root, changes) if changes else None

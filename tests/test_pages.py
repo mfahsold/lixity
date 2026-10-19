@@ -152,22 +152,32 @@ class TestPagesStaging(unittest.TestCase):
                 head.feed(page.read_text(encoding="utf-8"))
                 canonical = SITE + ("" if relative == "index.html" else relative)
                 self.assertEqual([item["href"] for item in head.links if item.get("rel") == "canonical"], [canonical])
-                for key in ("description", "og:title", "og:description", "og:url", "og:image",
-                            "og:image:width", "og:image:height", "og:image:alt", "twitter:title",
-                            "twitter:description", "twitter:image", "twitter:image:alt", "twitter:card"):
+                for key in ("description", "og:title", "og:description", "og:url", "twitter:title",
+                            "twitter:description", "twitter:card"):
                     self.assertEqual(len(head.meta.get(key, [])), 1, f"{relative}: one {key}")
                     self.assertTrue(head.meta[key][0].strip(), f"{relative}: nonempty {key}")
                 self.assertEqual(head.meta["og:url"], [canonical])
-                self.assertEqual(head.meta["twitter:card"], ["summary_large_image"])
-                image = head.meta["og:image"][0]
-                self.assertTrue(image.startswith(SITE), f"{relative}: hosted preview image")
-                self.assertEqual(head.meta["twitter:image"], [image])
-                image_bytes = (output / image.removeprefix(SITE)).read_bytes()
-                self.assertEqual(image_bytes[:8], b"\x89PNG\r\n\x1a\n")
-                self.assertEqual(
-                    (int(head.meta["og:image:width"][0]), int(head.meta["og:image:height"][0])),
-                    struct.unpack(">II", image_bytes[16:24]), f"{relative}: preview dimensions",
-                )
+                image_keys = ("og:image", "og:image:width", "og:image:height", "og:image:alt",
+                              "twitter:image", "twitter:image:alt")
+                image = None
+                if "og:image" in head.meta:
+                    for key in image_keys:
+                        self.assertEqual(len(head.meta.get(key, [])), 1, f"{relative}: one {key}")
+                        self.assertTrue(head.meta[key][0].strip(), f"{relative}: nonempty {key}")
+                    self.assertEqual(head.meta["twitter:card"], ["summary_large_image"])
+                    image = head.meta["og:image"][0]
+                    self.assertTrue(image.startswith(SITE), f"{relative}: hosted preview image")
+                    self.assertEqual(head.meta["twitter:image"], [image])
+                    image_bytes = (output / image.removeprefix(SITE)).read_bytes()
+                    self.assertEqual(image_bytes[:8], b"\x89PNG\r\n\x1a\n")
+                    self.assertEqual(
+                        (int(head.meta["og:image:width"][0]), int(head.meta["og:image:height"][0])),
+                        struct.unpack(">II", image_bytes[16:24]), f"{relative}: preview dimensions",
+                    )
+                else:
+                    self.assertEqual(head.meta["twitter:card"], ["summary"])
+                    for key in image_keys:
+                        self.assertNotIn(key, head.meta, f"{relative}: no orphaned image metadata")
                 expected = {
                     "index.html": "SoftwareApplication",
                     "blog/index.html": "Blog",
@@ -181,9 +191,12 @@ class TestPagesStaging(unittest.TestCase):
                 self.assertTrue(entity.get("headline") or entity.get("name"))
                 if expected == "TechArticle":
                     self.assertEqual(entity["mainEntityOfPage"], canonical)
-                    self.assertEqual(entity["image"]["url"], image)
-                    self.assertEqual((entity["image"]["width"], entity["image"]["height"]),
-                                     struct.unpack(">II", image_bytes[16:24]))
+                    if image:
+                        self.assertEqual(entity["image"]["url"], image)
+                        self.assertEqual((entity["image"]["width"], entity["image"]["height"]),
+                                         struct.unpack(">II", image_bytes[16:24]))
+                    else:
+                        self.assertNotIn("image", entity)
                 modified = entity.get("dateModified")
                 if modified:
                     self.assertEqual(sitemap[canonical], modified)

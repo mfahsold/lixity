@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="auto">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1"/>
+<title>Finding repeated phrases close together — Lixity blog</title>
+<meta name="description" content="Find local phrase repetition in a manuscript with Lixity. Worked examples explain echo counts, complete word windows and why overlapping phrases are deduplicated."/>
+<link rel="canonical" href="https://mfahsold.github.io/lixity/blog/local-word-echoes.html"/>
+<link rel="stylesheet" href="../assets/site.css"/>
+<script src="../assets/site.js" defer></script>
+<meta property="og:type" content="article"/>
+<meta property="og:title" content="Finding repeated phrases close together"/>
+<meta property="og:description" content="Count a local repetition example yourself, understand the reported span, then decide whether the echo serves the passage."/>
+<meta property="og:url" content="https://mfahsold.github.io/lixity/blog/local-word-echoes.html"/>
+<meta property="og:site_name" content="Lixity"/>
+<meta property="article:author" content="https://github.com/mfahsold"/>
+<meta property="article:published_time" content="2026-10-19"/>
+<meta property="article:modified_time" content="2026-10-19"/>
+<meta name="twitter:card" content="summary"/>
+<meta name="twitter:title" content="Finding repeated phrases close together"/>
+<meta name="twitter:description" content="Worked examples explain local repetition counts, word windows and overlapping phrase candidates in Lixity."/>
+<link rel="alternate" type="text/markdown" href="local-word-echoes.html.md" title="Markdown version of this page"/>
+<link rel="alternate" type="text/plain" href="../llms.txt" title="Automation summary"/>
+<link rel="help" href="../AGENTS.md" title="CLI, Python and HTTP interface contracts"/>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": ["BlogPosting", "TechArticle"],
+  "headline": "Finding repeated phrases close together",
+  "description": "Worked examples of local phrase repetition: counts, complete word windows, overlapping candidates and the limits of a lexical review hint.",
+  "url": "https://mfahsold.github.io/lixity/blog/local-word-echoes.html",
+  "mainEntityOfPage": "https://mfahsold.github.io/lixity/blog/local-word-echoes.html",
+  "inLanguage": "en",
+  "datePublished": "2026-10-19",
+  "dateModified": "2026-10-19",
+  "author": {
+    "@type": "Person",
+    "name": "Matthias Fahsold",
+    "url": "https://github.com/mfahsold"
+  },
+  "isPartOf": {
+    "@type": "Blog",
+    "name": "Lixity blog",
+    "url": "https://mfahsold.github.io/lixity/blog/index.html"
+  }
+}
+</script>
+</head>
+<body>
+<a class="skip-link" href="#content">Skip to article</a>
+<main class="guide" id="content">
+<a href="../">Lixity · Documentation</a>
+<h1>Finding repeated phrases close together</h1>
+<p class="updated">By <a href="https://github.com/mfahsold">Matthias Fahsold</a> · Published <time datetime="2026-10-19">19 October 2026</time> · 4 minutes</p>
+<nav class="guide-nav" aria-label="Blog"><a href="index.html">Blog</a><a href="../guides/first-look.html">First look</a><a href="../guides/interpretation.html">Interpret results</a><a href="../examples/effi-briest.html">Example analysis</a></nav>
+
+<p>A phrase used four times across a novel may be unobtrusive. The same phrase used three times in one short passage may catch the ear. Lixity's <strong>local repetition echoes</strong> locate this second pattern: repeated word sequences inside a bounded span of chapter prose. The result is a place to listen again, with a count you can check.</p>
+<p>Repetition can make a refrain, sustain a character's vocabulary or give a sentence its rhythm. An echo supplies no instruction to replace words. Read the passage aloud and ask whether hearing that phrase again produces the effect you intended.</p>
+
+<h2 id="first-result">Get an echo report</h2>
+<p>In Lixity 0.5.0, run the existing motif report against a Markdown manuscript:</p>
+<pre><code>lixity motifs manuscript.md --language en --json</code></pre>
+<p>Look for <code>echoes</code> in the JSON result. By default, it finds sequences of three words occurring at least twice within 300 words, separately for each chapter. Each row supplies the phrase, chapter number, local count and first and last word positions. The words are lowercased and punctuation is discarded; a sequence can cross a sentence boundary. Sequences consisting entirely of function words or stopwords are skipped.</p>
+
+<h2 id="worked-example">Count one example yourself</h2>
+<p>Save this literal synthetic text as <code>manuscript.md</code>. The fragments keep the counting easy; they are a demonstration, with no claim to be polished prose.</p>
+<pre><code>## Bell
+
+Bright copper bell.
+Beyond the valley a narrow footpath crossed quiet fields and led past empty cottages toward the dark and distant ridge.
+Bright copper bell. Bright copper bell. Bright copper bell.</code></pre>
+<p>The heading is outside the chapter's prose count. The first phrase occupies words 1–3; the following sentence has 20 words. The final three occurrences start at words 24, 27 and 30. Here is the result for <code>bright copper bell</code>:</p>
+<div class="feature-table-wrapper" role="region" aria-label="Worked echo results" tabindex="0">
+<table class="editorial-table">
+<thead><tr><th scope="col">Window</th><th scope="col">Local count</th><th scope="col">First word</th><th scope="col">Last word</th></tr></thead>
+<tbody>
+<tr><th scope="row">300 words (default)</th><td>4</td><td>1</td><td>32</td></tr>
+<tr><th scope="row">10 words (Python example)</th><td>3</td><td>24</td><td>32</td></tr>
+</tbody>
+</table>
+</div>
+<p>The shorter window retains the <strong>cluster containing the most occurrences</strong>, rather than the first pair it encounters. Its count excludes the distant opening occurrence. Equal counts use the earliest cluster. For this small-window demonstration, the lower-level Python call is:</p>
+<pre><code>from lixity.models import CorpusConfig
+from lixity.motifs import motif_report
+
+report = motif_report(
+    text, config=CorpusConfig(language="en"), echo_window=10,
+)</code></pre>
+<p>Here, <code>text</code> contains the exact Markdown above. The command-line report uses the 300-word default; <code>echo_window</code> is a Python argument, with no corresponding CLI flag or project setting.</p>
+<p>The complete last occurrence must fit inside the window. For <code>Bright copper bell. Blue river flows. Bright copper bell.</code>, both occurrences occupy words 1–9. A nine-word window admits the pair; an eight-word window does not. <code>last_word</code> is the last word of the final occurrence, with positions counted from 1.</p>
+
+<h2 id="overlap">One repeated passage can produce several phrases</h2>
+<p>Consider a second, separate synthetic chapter:</p>
+<pre><code>## Lantern
+
+The bright silver lantern. The bright silver lantern.</code></pre>
+<p>Both <code>the bright silver</code> and <code>bright silver lantern</code> repeat. Their actual occurrences overlap by two tokens in each copy of the same passage. Lixity keeps one representative: <code>the bright silver</code>, count 2, words 1–7. The reported bounds describe that representative, rather than the whole four-word expression.</p>
+<p>This deduplication requires at least two overlapping tokens in the recorded occurrences. Shared vocabulary alone is insufficient. In this third example:</p>
+<pre><code>## Doors
+
+Red wooden door. Appears. Red wooden door. Closes.
+Red metal door. Opens. Red metal door.</code></pre>
+<p><code>red wooden door</code> remains a separate echo from <code>red metal door</code>. Each occurs twice, at words 1–7 and 9–15 respectively. They share words, but their occurrences describe different passages.</p>
+
+<h2 id="review">Turn the count into a reading decision</h2>
+<p>Locate the reported chapter and read through the span, including its surrounding sentences. Ask whether the recurrence is audible, whether it belongs to the speaker and whether its spacing supports the scene. Sometimes the repeated noun is clearer than a synonym. Sometimes the third occurrence gives away an accidental habit.</p>
+<p>The detector matches literal token sequences. It does not recognize every paraphrase, infer thematic significance or judge rhetorical intention. One row describes the strongest local cluster for that term in that chapter; it is not an inventory of every cluster. The report also caps the returned list. A missing row therefore does not establish that the prose is free of repetition.</p>
+<p>Try the short Bell fixture first, then inspect one result in your own draft. The <a href="https://github.com/mfahsold/lixity/blob/main/docs/USAGE.md#local-repetition-echoes">local echo reference</a> explains the returned fields and lower-level parameters when you need more detail.</p>
+
+<footer><a href="../">Lixity home</a> · <a href="index.html">Blog</a> · <a href="https://github.com/mfahsold/lixity/issues">Report a reproducible issue</a> · <a href="../#impressum">Legal notice</a></footer>
+</main>
+</body>
+</html>

@@ -248,6 +248,7 @@ def main() -> int:
         nda_project_name=title,
         project_author="Example Author",
         author_setting_enabled=True,
+        project_token="a" * 64,
         identity_check=manuscript_identity_check(text, title, "Example Author"),
     )
     dashboard_path = _write_html("dashboard.html", dashboard)

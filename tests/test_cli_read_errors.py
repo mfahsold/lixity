@@ -5,6 +5,41 @@ import pytest
 from lixity.cli import main
 
 
+@pytest.mark.parametrize("command,option,value,message", [
+    ("style", "--fdr-q", "1", "less than 1"),
+    ("build", "--fdr-q", "0", "greater than 0"),
+    ("dashboard", "--z-mild", "-0.1", "at least 0"),
+    ("serve", "--dim-threshold", "0", "greater than 0"),
+    ("style", "--z-strong", "inf", "finite number"),
+    ("build", "--fdr-q", "nan", "finite number"),
+])
+def test_invalid_threshold_is_usage_error_before_configuration_or_output(
+    tmp_path, monkeypatch, capsys, command, option, value, message,
+):
+    monkeypatch.chdir(tmp_path)
+    config = tmp_path / "lixity.toml"
+    original = 'title = "Unclosed synthetic configuration\n'
+    config.write_text(original)
+    with pytest.raises(SystemExit) as error:
+        main([command, "missing-synthetic.md", option, value])
+    assert error.value.code == 2
+    captured = capsys.readouterr()
+    assert captured.out == ""
+    assert option in captured.err and message in captured.err
+    assert config.read_text() == original
+    assert list(tmp_path.iterdir()) == [config]
+
+
+@pytest.mark.parametrize("command", ["style", "build", "dashboard", "serve"])
+def test_threshold_help_explains_numeric_domain(command, capsys):
+    with pytest.raises(SystemExit) as error:
+        main([command, "--help"])
+    assert error.value.code == 0
+    help_text = " ".join(capsys.readouterr().out.split())
+    assert "> 0 and < 1" in help_text
+    assert "finite" in help_text and "default: 0.05" in help_text
+
+
 def test_pdf_rejects_json_before_processing_or_replacing_output(tmp_path, capsys):
     source = tmp_path / "synthetic.md"
     source.write_text("## One\n\nA synthetic scene.\n", encoding="utf-8")

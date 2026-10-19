@@ -288,6 +288,10 @@ class FingerprintThresholds:
     dim_score_threshold: float = DIM_SCORE_THRESHOLD  # |dimension score| from here: flagged
     flag_min_severity: int = 2  # paragraph severity floor for the flags panel (1|2|3)
 
+    fdr_methods: ClassVar[tuple[str, ...]] = ("bh", "by")
+    minimum_chapters: ClassVar[int] = 2
+    flag_severities: ClassVar[tuple[int, ...]] = (1, 2, 3)
+
     numeric_inputs: ClassVar[Mapping[str, ThresholdInputPolicy]] = MappingProxyType({
         "z_mild": ThresholdInputPolicy(0),
         "z_strong": ThresholdInputPolicy(0),
@@ -300,11 +304,11 @@ class FingerprintThresholds:
             policy.validate(name, getattr(self, name))
         if self.z_mild > self.z_strong:
             raise ValueError("Deviation thresholds must satisfy 0 <= z_mild <= z_strong")
-        if self.fdr_method not in ("bh", "by"):
+        if self.fdr_method not in self.fdr_methods:
             raise ValueError("FDR requires 0 < fdr_q < 1 and method bh or by")
-        if isinstance(self.min_chapters, bool) or not isinstance(self.min_chapters, int) or self.min_chapters < 2:
+        if isinstance(self.min_chapters, bool) or not isinstance(self.min_chapters, int) or self.min_chapters < self.minimum_chapters:
             raise ValueError("min_chapters must be an integer of at least 2")
-        if isinstance(self.flag_min_severity, bool) or not isinstance(self.flag_min_severity, int) or self.flag_min_severity not in (1, 2, 3):
+        if isinstance(self.flag_min_severity, bool) or not isinstance(self.flag_min_severity, int) or self.flag_min_severity not in self.flag_severities:
             raise ValueError("flag_min_severity must be 1, 2 or 3")
 
 

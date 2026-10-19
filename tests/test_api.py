@@ -233,6 +233,9 @@ class TestCliAgentSurface(unittest.TestCase):
             (("lixity", "pd"), ["pdf"]),
             (("lixity", "style", "--fdr-m"), ["--fdr-method"]),
             (("lixity", "style", "--flag-min"), ["--flag-min-severity"]),
+            (("lixity", "about", "--sec"), ["--section"]),
+            (("lixity", "schema", "--section", "conf"), ["configuration"]),
+            (("lixity", "research", "dossier", "--section", "conf"), []),
         ):
             with self.subTest(words=words):
                 result = subprocess.run(  # noqa: S603 - resolved Bash and fixed synthetic words

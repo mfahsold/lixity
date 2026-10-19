@@ -3,6 +3,7 @@
 import argparse
 import os
 import sys
+from collections.abc import Callable
 from typing import Any
 
 import orjson
@@ -265,12 +266,13 @@ def _completion_scripts() -> tuple[str, str]:
     research_actions = " ".join(command["name"] for command in command_metadata())
     names = " ".join(name for name, _help in _COMMANDS)
     descriptors = "\n".join(f"    '{name}:{help_text}'" for name, help_text in _COMMANDS)
+    sections = " ".join(_ABOUT_SECTIONS)
     bash = _BASH_COMPLETION.replace("__LIXITY_COMMANDS__", names).replace(
         "__LIXITY_RESEARCH_COMMANDS__", research_actions
-    )
+    ).replace("__LIXITY_ABOUT_SECTIONS__", sections)
     zsh = _ZSH_COMPLETION.replace("__LIXITY_ZSH_COMMANDS__", descriptors).replace(
         "__LIXITY_RESEARCH_COMMANDS__", research_actions
-    )
+    ).replace("__LIXITY_ABOUT_SECTIONS__", sections)
     return bash, zsh
 
 
@@ -280,22 +282,24 @@ _COMMANDS: tuple[tuple[str, str], ...] = (
     ("research", "Experimental local sources, citations and lexical search (JSON)"),
     ("service", "Manage an owned local dashboard process"),
     ("analyze", "Corpus metrics (text/JSON, self-describing meta block)"),
-    ("profile", "Paragraph-accurate tense/style profiles (JSON)"),
+    ("profile", "Paragraph tense/style estimates for supported body/list blocks (JSON)"),
     ("dialogue", "Dialogue turn structure (text/JSON)"),
     ("characters", "Character presence across chapters (text/JSON)"),
     ("pacing", "Scene structure, pacing and chapter hooks (text/JSON)"),
     ("scenes", "Scene features, register references and author targets (text/JSON)"),
-    ("motifs", "Motif tracking and repetition analysis (text/JSON)"),
+    ("motifs", "Motif tracking, repetition and local phrase echoes (text/JSON)"),
     ("showing", "Showing vs. telling balance (text/JSON)"),
     ("style", "Self-calibrated style reference of the manuscript (text/JSON, schema v4)"),
     ("dashboard", "Generate a single-file HTML dashboard"),
     ("pdf", "Compose a PDF document (analysis report, book layout or 30x60 sheet)"),
     ("serve", "Run local HTTP development server and interactive dashboard"),
     ("build", "Idempotent workspace build of analysis exports and artifact archive"),
-    ("about", "Tool metadata for agents: languages, features, heuristics"),
-    ("schema", "Tool metadata for agents: languages, features, heuristics"),
+    ("about", "Installed metadata: commands, configuration, languages, features and heuristics"),
+    ("schema", "Installed metadata: commands, configuration, languages, features and heuristics"),
     ("completion", "Shell completion script (bash or zsh)"),
 )
+
+_ABOUT_SECTIONS = ("languages", "features", "heuristics", "commands", "configuration")
 
 _BASH_COMPLETION = """# bash completion for lixity – source this file or add it to bash_completion.d/
 #   lixity completion bash > /etc/bash_completion.d/lixity   # system
@@ -333,6 +337,12 @@ _lixity_complete() {
             COMPREPLY=( $(compgen -W "auto de en fr es it pt nl generic" -- "$cur") )
             return 0
             ;;
+        --section)
+            if [[ ${COMP_WORDS[1]} == about || ${COMP_WORDS[1]} == schema ]]; then
+                COMPREPLY=( $(compgen -W "__LIXITY_ABOUT_SECTIONS__" -- "$cur") )
+                return 0
+            fi
+            ;;
         --fdr-method)
             COMPREPLY=( $(compgen -W "bh by" -- "$cur") )
             return 0
@@ -354,6 +364,10 @@ _lixity_complete() {
             return 0
             ;;
     esac
+    if [[ ${COMP_WORDS[1]} == about || ${COMP_WORDS[1]} == schema ]]; then
+        COMPREPLY=( $(compgen -W "--json --section --help" -- "$cur") )
+        return 0
+    fi
     if [[ ${COMP_WORDS[1]} == research ]]; then
         COMPREPLY=( $(compgen -W "--project --file --title --language --actor --source-id --version-id --reason --allow-retention --dry-run --context --thresholds --query --limit --passage --help" -- "$cur") )
         return 0
@@ -414,8 +428,9 @@ __LIXITY_ZSH_COMMANDS__
         completion)
           _values 'shell' bash zsh sh
           ;;
-        about)
-          _arguments '--json[JSON output]' '--help[Help]'
+        about|schema)
+          _arguments '--json[JSON output]' '--help[Help]' \
+            '--section[One metadata section as JSON]:section:(__LIXITY_ABOUT_SECTIONS__)'
           ;;
         serve)
           _arguments \
@@ -500,10 +515,13 @@ def _meta_payload(language_key: str, **body: Any) -> dict[str, Any]:
     return payload
 
 
-def _print_about_json() -> None:
+def _print_about_json(section: str | None = None) -> None:
     from .api import about
 
-    print(_json(about(), indent=True))
+    data = about()
+    if section is not None:
+        data = {"meta": data["meta"], section: data[section]}
+    print(_json(data, indent=True))
 
 
 def _print_about_text() -> None:
@@ -976,6 +994,45 @@ def _cmd_build(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _threshold_number(key: str) -> Callable[[str], float]:
+    def parse(raw: str) -> float:
+        try:
+            value = float(raw)
+            FingerprintThresholds.numeric_inputs[key].validate(key, value)
+        except ValueError as exc:
+            raise argparse.ArgumentTypeError(str(exc)) from exc
+        return value
+
+    return parse
+
+
+def _add_threshold_arguments(parser: argparse.ArgumentParser) -> None:
+    """Use the backend's defaults and bounds for CLI help and scalar validation."""
+    defaults = FingerprintThresholds()
+    for key, flag, description in (
+        ("z_mild", "--z-mild", "Notable |z*| threshold"),
+        ("z_strong", "--z-strong", "Strong |z*| threshold"),
+        ("fdr_q", "--fdr-q", "Nominal q for the selected FDR method"),
+        ("dim_score_threshold", "--dim-threshold", "|dimension score| threshold"),
+    ):
+        policy = FingerprintThresholds.numeric_inputs[key]
+        bounds = f"{'>' if policy.minimum_exclusive else '>='} {policy.minimum:g}"
+        if policy.maximum is not None:
+            bounds += f" and {'<' if policy.maximum_exclusive else '<='} {policy.maximum:g}"
+        parser.add_argument(
+            flag, type=_threshold_number(key), default=None,
+            help=f"{description}; finite, {bounds} (default: {getattr(defaults, key)})",
+        )
+    parser.add_argument(
+        "--fdr-method", choices=FingerprintThresholds.fdr_methods, default=None,
+        help=f"FDR method: bh (Benjamini-Hochberg) or by (Benjamini-Yekutieli); default: {defaults.fdr_method}",
+    )
+    parser.add_argument(
+        "--flag-min-severity", type=int, choices=FingerprintThresholds.flag_severities, default=None,
+        help=f"Minimum paragraph severity for flags panel (default: {defaults.flag_min_severity})",
+    )
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(
         prog="lixity",
@@ -1014,11 +1071,15 @@ def main(argv: list[str] | None = None) -> int:
                 help="Target shell (default: bash)",
             )
             continue
-        if name == "about":
-            p.add_argument("--json", action="store_true", help="JSON output")
-            continue
-        if name == "schema":
-            p.add_argument("--json", action="store_true", help="Tool metadata as JSON (default; same as about --json)")
+        if name in ("about", "schema"):
+            p.add_argument(
+                "--json", action="store_true",
+                help="JSON output" if name == "about" else "Tool metadata as JSON (default; same as about --json)",
+            )
+            p.add_argument(
+                "--section", choices=_ABOUT_SECTIONS,
+                help="Return one metadata section as JSON, retaining version metadata",
+            )
             continue
         if name == "scenes":
             p.add_argument("file", help="Markdown manuscript")
@@ -1034,40 +1095,14 @@ def main(argv: list[str] | None = None) -> int:
                 default=None,
                 help="Minimum chapters required for a style baseline (default: 2)",
             )
+        if name not in ("motifs", "characters"):
+            _add_threshold_arguments(p)
         if name == "build":
             p.add_argument("file", nargs="?", help="Markdown manuscript (default: auto-discovery)")
             p.add_argument(
                 "--language", default=None, help="de|en|fr|es|it|pt|nl|generic|auto (default: en)"
             )
             p.add_argument("--dry-run", action="store_true", help="Show planned artifacts only")
-            p.add_argument(
-                "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
-            )
-            p.add_argument(
-                "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
-            )
-            p.add_argument(
-                "--fdr-q", type=float, default=None, help="Nominal q for the selected FDR method (default 0.05)"
-            )
-            p.add_argument(
-                "--fdr-method",
-                choices=("bh", "by"),
-                default=None,
-                help="FDR method: bh (Benjamini-Hochberg) or by (Benjamini-Yekutieli)",
-            )
-            p.add_argument(
-                "--dim-threshold",
-                type=float,
-                default=None,
-                help="|dimension score| threshold (default 2.5)",
-            )
-            p.add_argument(
-                "--flag-min-severity",
-                type=int,
-                choices=(1, 2, 3),
-                default=None,
-                help="Minimum paragraph severity for flags panel (default 2)",
-            )
             continue
         if name == "motifs":
             p.add_argument("file", help="Markdown manuscript")
@@ -1105,34 +1140,6 @@ def main(argv: list[str] | None = None) -> int:
             )
             p.add_argument("--names", help="Comma-separated figure names (character panel)")
             p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
-            p.add_argument(
-                "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
-            )
-            p.add_argument(
-                "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
-            )
-            p.add_argument(
-                "--fdr-q", type=float, default=None, help="Nominal q for the selected FDR method (default 0.05)"
-            )
-            p.add_argument(
-                "--fdr-method",
-                choices=("bh", "by"),
-                default=None,
-                help="FDR method: bh or by",
-            )
-            p.add_argument(
-                "--dim-threshold",
-                type=float,
-                default=None,
-                help="|dimension score| threshold (default 2.5)",
-            )
-            p.add_argument(
-                "--flag-min-severity",
-                type=int,
-                choices=(1, 2, 3),
-                default=None,
-                help="Minimum paragraph severity for flags panel (default 2)",
-            )
             continue
         if name == "serve":
             p.add_argument("--_service-token", help=argparse.SUPPRESS)
@@ -1168,34 +1175,6 @@ def main(argv: list[str] | None = None) -> int:
                 help="Explicit research project root for evidence management",
             )
             p.add_argument(
-                "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
-            )
-            p.add_argument(
-                "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
-            )
-            p.add_argument(
-                "--fdr-q", type=float, default=None, help="Nominal q for the selected FDR method (default 0.05)"
-            )
-            p.add_argument(
-                "--fdr-method",
-                choices=("bh", "by"),
-                default=None,
-                help="FDR method: bh (Benjamini-Hochberg) or by (Benjamini-Yekutieli)",
-            )
-            p.add_argument(
-                "--dim-threshold",
-                type=float,
-                default=None,
-                help="|dimension score| threshold (default 2.5)",
-            )
-            p.add_argument(
-                "--flag-min-severity",
-                type=int,
-                choices=(1, 2, 3),
-                default=None,
-                help="Minimum paragraph severity for flags panel (default 2)",
-            )
-            p.add_argument(
                 "--debug",
                 action="store_true",
                 help="Enable verbose request logging, stack traces, and browser devtools debugging",
@@ -1209,34 +1188,6 @@ def main(argv: list[str] | None = None) -> int:
             "--json", action="store_true", help=argparse.SUPPRESS if name == "pdf" else "JSON output"
         )
         p.add_argument("-o", "--output", help="Target file (dashboard, pdf)")
-        p.add_argument(
-            "--z-mild", type=float, default=None, help="Notable |z*| threshold (default 2.5)"
-        )
-        p.add_argument(
-            "--z-strong", type=float, default=None, help="Strong |z*| threshold (default 3.5)"
-        )
-        p.add_argument(
-            "--fdr-q", type=float, default=None, help="Nominal q for the selected FDR method (default 0.05)"
-        )
-        p.add_argument(
-            "--fdr-method",
-            choices=("bh", "by"),
-            default=None,
-            help="FDR method: bh or by",
-        )
-        p.add_argument(
-            "--dim-threshold",
-            type=float,
-            default=None,
-            help="|dimension score| threshold (default 2.5)",
-        )
-        p.add_argument(
-            "--flag-min-severity",
-            type=int,
-            choices=(1, 2, 3),
-            default=None,
-            help="Minimum paragraph severity for flags panel (default 2)",
-        )
         if name == "pdf":
             p.add_argument(
                 "--layout",
@@ -1272,6 +1223,23 @@ def main(argv: list[str] | None = None) -> int:
         from .research.cli import run as run_research
 
         return run_research(args)
+    if args.command == "about":
+        _print_about_json(args.section) if args.json or args.section else _print_about_text()
+        return EXIT_OK
+    if args.command == "schema":
+        _print_about_json(args.section)
+        return EXIT_OK
+    if args.command == "completion":
+        shell = (args.shell or "bash").strip().lower()
+        if shell in ("bash", "sh"):
+            sys.stdout.write(_completion_scripts()[0])
+            return EXIT_OK
+        if shell == "zsh":
+            sys.stdout.write(_completion_scripts()[1])
+            return EXIT_OK
+        # argparse choices already rejected unknown shells; keep a defensive path
+        print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
+        return EXIT_ERROR
     if getattr(args, "min_chapters", None) is not None and args.min_chapters < 2:
         parser.error("--min-chapters must be at least 2")
     if args.command == "pdf" and args.json:
@@ -1284,26 +1252,6 @@ def main(argv: list[str] | None = None) -> int:
     explicit_language = getattr(args, "language", None)
     if hasattr(args, "language") and args.language is None:
         args.language = project_config.get("language", "en")
-
-    if args.command == "completion":
-        shell = (args.shell or "bash").strip().lower()
-        if shell in ("bash", "sh"):
-            sys.stdout.write(_completion_scripts()[0])
-            return EXIT_OK
-        if shell == "zsh":
-            sys.stdout.write(_completion_scripts()[1])
-            return EXIT_OK
-        # argparse choices already rejected unknown shells; keep a defensive path
-        print(f"{_m('err_prefix')} {_m('err_shell', shell=args.shell)}", file=sys.stderr)
-        return EXIT_ERROR
-
-    if args.command == "about":
-        _print_about_json() if args.json else _print_about_text()
-        return EXIT_OK
-
-    if args.command == "schema":
-        _print_about_json()
-        return EXIT_OK
 
     if args.command == "serve":
         from .server import run_server

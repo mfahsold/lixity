@@ -20,6 +20,44 @@ def settings_markup(locale="en", **options):
 
 
 class TestSettingsUi(unittest.TestCase):
+    def test_analysis_controls_describe_their_scope_in_each_locale(self):
+        for language in LOCALES:
+            with self.subTest(language=language):
+                rendered = settings_markup(language)
+                controls = HtmlControls(rendered)
+                self.assertIn("settings-scope-help", controls.elements)
+                self.assertIn("set-language-help", controls.elements)
+                for identifier in ("set-language", "set-z-mild", "set-z-strong", "set-fdr-q",
+                                   "set-fdr-method", "set-dim-threshold", "set-flag-min-sev"):
+                    described = controls.elements[identifier]["aria-describedby"].split()
+                    self.assertIn("settings-scope-help", described)
+                    self.assertTrue(all(reference in controls.elements for reference in described))
+                self.assertIn("set-language-help", controls.elements["set-language"]["aria-describedby"].split())
+                self.assertIn(html.escape(labels_for(language)["settings_language_hint"]), rendered)
+
+    def test_project_persistence_help_requires_the_save_capability(self):
+        for language in LOCALES:
+            for enabled in (False, True):
+                with self.subTest(language=language, enabled=enabled):
+                    rendered = settings_markup(language, author_setting_enabled=enabled)
+                    controls = HtmlControls(rendered)
+                    self.assertEqual("settings-project-save-help" in controls.elements, enabled)
+                    if enabled:
+                        self.assertIn(html.escape(labels_for(language)["settings_project_save_hint"]), rendered)
+
+    def test_saving_analysis_defaults_is_unchecked_and_requires_a_bound_project(self):
+        for language in LOCALES:
+            for enabled, token in ((False, ""), (True, ""), (False, "a" * 64), (True, "a" * 64)):
+                with self.subTest(language=language, enabled=enabled, token=bool(token)):
+                    controls = HtmlControls(settings_markup(
+                        language, author_setting_enabled=enabled, project_token=token,
+                    ))
+                    field = controls.inputs.get("set-save-analysis-defaults")
+                    self.assertIsNotNone(field)
+                    self.assertNotIn("checked", field)
+                    self.assertEqual("disabled" in field, not (enabled and token))
+                    self.assertIn("save-analysis-defaults-help", field["aria-describedby"].split())
+
     def test_author_setting_requires_an_explicit_active_project_capability(self):
         author = 'Synthetic Writer "<img src=x onerror=alert(1)>"'
         for enabled in (False, True):

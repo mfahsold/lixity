@@ -1,6 +1,18 @@
 # Notes on measurable manuscript revision
 
-Short, practical articles about reviewing novels with chapter comparisons and paragraph-level evidence: tense switches, sentence rhythm, dialogue share and a style reference built from the manuscript itself. All examples use public-domain or synthetic texts.
+Practical articles for the moment a draft gives you a question: is this change of voice deliberate, is this phrase repeating too close by, or did the chapter's tense drift? Each article connects a measurable signal to a reading decision. All examples use public-domain or synthetic texts.
+
+## [When a chapter is meant to sound different](intentional-registers.html)
+
+Published 19 October 2026 · 4 minutes
+
+A letter, a child's account or a formal record can differ on purpose. Record that intention with a named chapter register, add optional author ranges and understand which flags the assignment sets aside.
+
+## [Finding repeated phrases close together](local-word-echoes.html)
+
+Published 19 October 2026 · 4 minutes
+
+Repetition across a book and repetition inside one passage raise different questions. Count a synthetic example yourself, see how local windows and overlapping phrases affect the result, then read the echo in context.
 
 ## [What's new in Lixity: numbers you can compare, evidence that survives edits](whats-new-lixity.html)
 

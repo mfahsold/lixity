@@ -37,8 +37,126 @@ def test_settings_save_prepares_complete_metadata_and_returns_fresh_context(tmp_
     assert current in handler.dashboard_html
 
 
+@pytest.mark.parametrize("save_defaults", [None, False, True])
+def test_analysis_defaults_persist_only_with_explicit_opt_in(tmp_path: Path, save_defaults):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("# Synthetic\n\n## One\n\nA scene.\n")
+    path = tmp_path / "lixity.toml"
+    original = 'language = "de"\nfdr_q = 0.01\nmin_chapters = 7\n'
+    path.write_text(original)
+    handler = handler_for(tmp_path)
+    payload = {"language": "auto", "fdr_q": 0.013000000000003,
+               "project_token": project_settings_token(tmp_path, str(manuscript))}
+    if save_defaults is not None:
+        payload["save_analysis_defaults"] = save_defaults
+    handler._handle_settings(payload)
+    assert handler.response[0] == 200, handler.response
+    assert handler.language == "auto"
+    assert handler.thresholds.fdr_q == 0.013000000000003
+    if save_defaults:
+        saved = load_project_config(tmp_path)
+        assert saved["language"] == "auto"
+        assert saved["fdr_q"] == 0.013000000000003
+        assert saved["min_chapters"] == 7
+        assert "z_mild" not in saved, "Unposted active thresholds must not become project defaults"
+    else:
+        assert path.read_text() == original
+    assert manuscript.read_text() == "# Synthetic\n\n## One\n\nA scene.\n"
+
+
+@pytest.mark.parametrize("token", [None, "stale"])
+def test_saving_analysis_defaults_requires_current_project_context(tmp_path: Path, token):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("## One\n\nSynthetic prose.\n")
+    handler = handler_for(tmp_path)
+    payload = {"language": "fr", "save_analysis_defaults": True}
+    if token is not None:
+        payload["project_token"] = token
+    handler._handle_settings(payload)
+    assert handler.response[0] == 409
+    assert handler.language == "en"
+    assert handler.dashboard_html == "Old HTML"
+    assert not (tmp_path / "lixity.toml").exists()
+
+
+@pytest.mark.parametrize("change", ["lixity.toml", "pyproject.toml", "selected_project"])
+def test_analysis_defaults_reject_actual_changed_project_context(tmp_path: Path, change: str):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("## One\n\nSynthetic prose.\n")
+    handler = handler_for(tmp_path)
+    token = project_settings_token(tmp_path, str(manuscript))
+    if change == "selected_project":
+        other = tmp_path / "other"
+        other.mkdir()
+        other_source = other / "manuscript.md"
+        other_source.write_text("## One\n\nAnother synthetic scene.\n")
+        handler.__class__.workspace_root = str(other)
+        handler.__class__.source_input = str(other_source)
+    else:
+        (tmp_path / change).write_text('language = "de"\n' if change == "lixity.toml"
+                                      else '[tool.lixity]\nlanguage = "de"\n')
+    handler._handle_settings({"language": "fr", "save_analysis_defaults": True, "project_token": token})
+    assert handler.response[0] == 409
+    assert handler.language == "en"
+    assert handler.dashboard_html == "Old HTML"
+    assert load_project_config(tmp_path).get("language") == (None if change == "selected_project" else "de")
+    if change == "selected_project":
+        assert not (other / "lixity.toml").exists()
+
+
+def test_analysis_defaults_cannot_create_a_project_from_an_idle_workspace(tmp_path: Path):
+    handler = handler_for(tmp_path)
+    handler.__class__.source_input = None
+    handler._handle_settings({"language": "fr", "save_analysis_defaults": True})
+    assert handler.response[0] == 409
+    assert handler.language == "en"
+    assert not (tmp_path / "lixity.toml").exists()
+
+
+@pytest.mark.parametrize("invalid", ["true", 1, None, []])
+def test_analysis_defaults_opt_in_requires_a_boolean(tmp_path: Path, invalid):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("## One\n\nSynthetic prose.\n")
+    handler = handler_for(tmp_path)
+    handler._handle_settings({"language": "fr", "save_analysis_defaults": invalid,
+                              "project_token": project_settings_token(tmp_path, str(manuscript))})
+    assert handler.response[0] == 400
+    assert handler.language == "en"
+    assert not (tmp_path / "lixity.toml").exists()
+
+
+@pytest.mark.parametrize("invalid", [None, False, 0, "", [], {}])
+def test_saving_a_language_default_cannot_turn_invalid_input_into_the_active_language(tmp_path: Path, invalid):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("## One\n\nSynthetic prose.\n")
+    handler = handler_for(tmp_path)
+    handler._handle_settings({"language": invalid, "save_analysis_defaults": True,
+                              "project_token": project_settings_token(tmp_path, str(manuscript))})
+    assert handler.response[0] == 400
+    assert handler.language == "en"
+    assert not (tmp_path / "lixity.toml").exists()
+
+
+def test_saved_analysis_defaults_validate_project_values_and_keep_session_on_failure(tmp_path: Path):
+    manuscript = tmp_path / "manuscript.md"
+    manuscript.write_text("## One\n\nSynthetic prose.\n")
+    path = tmp_path / "lixity.toml"
+    original = 'z_mild = 5.0\nz_strong = 6.0\n'
+    path.write_text(original)
+    handler = handler_for(tmp_path)
+    handler._handle_settings({"z_strong": 4.0, "save_analysis_defaults": True,
+                              "project_token": project_settings_token(tmp_path, str(manuscript))})
+    assert handler.response[0] == 400
+    assert path.read_text() == original
+    assert handler.thresholds.z_strong == 3.5
+    assert handler.dashboard_html == "Old HTML"
+
+
 @pytest.mark.parametrize("failure", ["decode", "render", "write"])
-def test_failed_settings_preparation_or_commit_keeps_original_data_and_session(tmp_path: Path, failure: str):
+@pytest.mark.parametrize("save_defaults", [False, True])
+def test_failed_settings_preparation_or_commit_keeps_original_data_and_session(
+    tmp_path: Path, failure: str, save_defaults: bool,
+):
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_bytes(b"# Synthetic\n\n## One\n\nA scene.\n" if failure != "decode" else b"\xff\xfe")
     path = tmp_path / "lixity.toml"
@@ -46,6 +164,9 @@ def test_failed_settings_preparation_or_commit_keeps_original_data_and_session(t
     path.write_bytes(original)
     handler = handler_for(tmp_path)
     payload = {"author_name": "After", "language": "de"}
+    if save_defaults:
+        payload.update(save_analysis_defaults=True,
+                       project_token=project_settings_token(tmp_path, str(manuscript)))
     if failure == "render":
         context = patch("lixity.server.views.render_analysis", side_effect=ValueError("Synthetic render failure"))
     elif failure == "write":
@@ -106,7 +227,8 @@ def test_research_only_publication_save_does_not_persist_display_title(tmp_path:
     assert settings["publication"]["publisher_name"] == "Synthetic Publisher"
 
 
-def test_config_change_between_token_check_and_preparation_is_not_overwritten(tmp_path: Path):
+@pytest.mark.parametrize("save_defaults", [False, True])
+def test_config_change_between_token_check_and_preparation_is_not_overwritten(tmp_path: Path, save_defaults: bool):
     manuscript = tmp_path / "manuscript.md"
     manuscript.write_text("# Synthetic\n\n## One\n\nA scene.\n")
     path = tmp_path / "lixity.toml"
@@ -119,9 +241,10 @@ def test_config_change_between_token_check_and_preparation_is_not_overwritten(tm
         path.write_text(concurrent)
         return prepare_project_settings(root, changes)
 
+    changes = ({"save_analysis_defaults": True, "fdr_q": 0.02} if save_defaults
+               else {"publication": {"publisher_name": "Before", "year": "2026"}})
     with patch("lixity.server.routes_project.prepare_project_settings", side_effect=prepare_after_edit):
-        handler._handle_settings({"publication": {"publisher_name": "Before", "year": "2026"},
-                                  "project_token": token, "language": "de"})
+        handler._handle_settings({**changes, "project_token": token, "language": "de"})
     assert handler.response[0] == 409
     assert path.read_text() == concurrent
     assert handler.language == "en"

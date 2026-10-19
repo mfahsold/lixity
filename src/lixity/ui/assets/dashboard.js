@@ -751,6 +751,8 @@ async function submitSettings() {
   var submittedToken = settings.dataset.projectToken || "";
   var acceptedToken = submittedToken;
   if (submittedToken) payload.project_token = submittedToken;
+  var saveDefaults = document.getElementById("set-save-analysis-defaults");
+  if (saveDefaults && !saveDefaults.disabled && saveDefaults.checked) payload.save_analysis_defaults = true;
   var identifiers = Array.from(settings.querySelectorAll("input, textarea, select")).map(function(field) { return field.id; });
   var submitted = fieldSnapshot(identifiers);
   function sameContext() { return settings.isConnected && settings.dataset.projectToken === acceptedToken; }

@@ -3,14 +3,19 @@
 import contextlib
 import io
 import json
+import warnings
 
 import pytest
 
-from lixity import __version__, api
+from lixity import __version__, api, cli
 from lixity.cli import main
+from lixity.config import TOOL_KEYS
+from lixity.models import CorpusConfig
+from lixity.publication import PublicationSettings
 from lixity.research import api as research
 from lixity.research import cli as research_cli
 from lixity.research.repository import Repository
+from lixity.style_fingerprint import FingerprintThresholds
 from tests.support import LoopbackServer, make_handler
 
 
@@ -149,6 +154,152 @@ def test_about_reports_supported_research_record_and_manifest_versions():
     research_command = next(command for command in api.about()["commands"] if command["name"] == "research")
     assert "research-local/5" in research_command["record_schema_versions"]
     assert "research-manifest-local/5" in research_command["manifest_schema_versions"]
+
+
+@pytest.mark.parametrize("arguments", [["about", "--json"], ["schema"], ["completion", "bash"]])
+def test_installed_discovery_does_not_load_configuration(arguments, monkeypatch, capsys):
+    def forbidden(*args, **kwargs):
+        raise AssertionError("Installed discovery must not read project or user configuration")
+
+    monkeypatch.setattr(cli, "load_project_config", forbidden)
+    assert main(arguments) == 0
+    assert capsys.readouterr().out
+
+
+@pytest.mark.parametrize("arguments", [["about", "--json"], ["schema"], ["completion", "bash"]])
+def test_installed_discovery_works_beside_malformed_configuration(arguments, tmp_path, monkeypatch, capsys):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "synthetic-home"))
+    (tmp_path / "lixity.toml").write_text('title = "Synthetic unclosed title\n', encoding="utf-8")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert main(arguments) == 0
+    assert "Synthetic unclosed title" not in capsys.readouterr().out
+
+
+@pytest.mark.parametrize("command", ["about", "schema"])
+@pytest.mark.parametrize("section", ["languages", "features", "heuristics", "commands", "configuration"])
+def test_installed_discovery_can_select_one_versioned_section(command, section, capsys):
+    assert main([command, "--section", section]) == 0
+    data = json.loads(capsys.readouterr().out)
+    assert set(data) == {"meta", section}
+    assert data["meta"]["version"] == __version__
+    if section == "configuration":
+        assert data[section]["schema_version"] == "lixity-configuration/1"
+    else:
+        assert data[section]
+
+
+def test_configuration_discovery_describes_installed_models_and_threshold_domain():
+    settings = api.about()["configuration"]
+    assert settings["schema_version"] == "lixity-configuration/1"
+    assert set(settings["accepted_keys"]) == TOOL_KEYS
+    assert settings["uninterpreted_keys"] == ["capabilities", "phrases"]
+    corpus = settings["corpus_schema"]["properties"]
+    assert set(corpus) == set(CorpusConfig.model_fields)
+    assert corpus["chapter_regex"]["default"] == r"(?m)^##\s+"
+    assert corpus["language"]["default"] == "en"
+    assert corpus["word_regex"]["default"] is None
+    assert corpus["register_profiles"]["default"] == {}
+    thresholds = settings["threshold_schema"]["properties"]
+    assert thresholds["z_mild"] == {"type": "number", "default": 2.5, "minimum": 0}
+    assert thresholds["fdr_q"] == {"type": "number", "default": 0.05, "exclusiveMinimum": 0, "exclusiveMaximum": 1}
+    assert thresholds["min_chapters"] == {"type": "integer", "default": 2, "minimum": 2}
+    assert thresholds["flag_min_severity"]["enum"] == [1, 2, 3]
+    assert thresholds["fdr_method"]["enum"] == ["bh", "by"]
+    assert settings["threshold_schema"]["additionalProperties"] is False
+    assert "z_mild <= z_strong" in settings["threshold_schema"]["$comment"]
+    assert "author_name" in settings["project_only_keys"]
+    assert "title" not in settings["project_only_keys"]
+    assert settings["native_settings"]["persisted_keys"] == [
+        "title", "author_name", "publication", "register_profiles", "chapter_registers",
+    ]
+    assert set(settings["native_settings"]["session_keys"]) == {
+        "language", "z_mild", "z_strong", "fdr_q", "fdr_method", "min_chapters",
+        "dim_score_threshold", "flag_min_severity",
+    }
+    optional = settings["native_settings"]["optional_persistence"]
+    assert optional["flag"] == "save_analysis_defaults"
+    assert optional["default"] is False and optional["requires_project_token"] is True
+    assert set(optional["keys"]) == {
+        "language", "z_mild", "z_strong", "fdr_q", "fdr_method", "min_chapters",
+        "dim_score_threshold", "flag_min_severity",
+    }
+
+
+def test_configuration_discovery_tracks_shared_numeric_policy(monkeypatch):
+    policy = FingerprintThresholds.numeric_inputs["fdr_q"]
+    monkeypatch.setattr(FingerprintThresholds, "numeric_inputs", {
+        **FingerprintThresholds.numeric_inputs, "fdr_q": type(policy)(0.01, 0.9),
+    })
+    described = api.about()["configuration"]["threshold_schema"]["properties"]["fdr_q"]
+    assert described == {"type": "number", "default": 0.05, "minimum": 0.01, "maximum": 0.9}
+    assert FingerprintThresholds(fdr_q=0.01).fdr_q == 0.01
+    with pytest.raises(ValueError):
+        FingerprintThresholds(fdr_q=0.001)
+
+
+def test_publication_discovery_describes_defaults_and_normalized_text_limits():
+    schema = api.about()["configuration"]["publication_schema"]
+    assert schema["additionalProperties"] is False
+    fields = schema["properties"]
+    assert set(fields) == set(PublicationSettings.model_fields)
+    assert fields["enabled"] == {"default": False, "title": "Enabled", "type": "boolean"}
+    assert fields["publisher_name"]["default"] == ""
+    assert fields["publisher_name"]["x-lixity-text"] == {"kind": "text", "max_chars": 500, "length_after": "strip"}
+    assert fields["publisher_address"]["x-lixity-text"] == {"kind": "multiline", "max_chars": 2000, "length_after": "strip"}
+    assert fields["year"]["x-lixity-text"]["max_chars"] == 4
+    assert fields["isbn_print"]["x-lixity-text"]["max_chars"] == 32
+    assert "maxLength" not in fields["publisher_name"], "Bounds apply after normalization, not to raw JSON text"
+    assert "0001" in schema["description"] and "9999" in schema["description"]
+    assert "ISBN" in schema["description"]
+    assert PublicationSettings(publisher_name=" " * 1000 + "Synthetic publisher").publisher_name == "Synthetic publisher"
+
+
+@pytest.mark.parametrize("values", [
+    {"enabled": "yes"}, {"publisher_name": "x" * 501},
+    {"publisher_address": "x" * 2001}, {"year": "0000"}, {"year": "202X"},
+    {"isbn_print": "9781234567890"}, {"publisher_name": "Synthetic\x00publisher"},
+    {"isbn_print": "0-306-40615-2", "isbn_digital": "978-0-306-40615-7"},
+    {"unknown_field": "Synthetic value"},
+])
+def test_publication_discovery_preserves_component_validation(values):
+    assert api.about()["configuration"]["publication_schema"]["additionalProperties"] is False
+    with pytest.raises(ValueError):
+        PublicationSettings.model_validate(values)
+
+
+def test_publication_discovery_tracks_the_shared_text_policy(monkeypatch):
+    from dataclasses import replace
+
+    from lixity import publication
+
+    monkeypatch.setitem(publication._FIELDS, "publisher_name", replace(publication._FIELDS["publisher_name"], max_chars=5))
+    field = api.about()["configuration"]["publication_schema"]["properties"]["publisher_name"]
+    assert field["x-lixity-text"]["max_chars"] == 5
+    assert PublicationSettings(publisher_name="  Short  ").publisher_name == "Short"
+    with pytest.raises(ValueError):
+        PublicationSettings(publisher_name="Longer")
+
+
+def test_configuration_discovery_does_not_expose_or_share_project_values(tmp_path, monkeypatch):
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("HOME", str(tmp_path / "synthetic-home"))
+    (tmp_path / "lixity.toml").write_text(
+        'title = "Synthetic private sentinel"\nz_mild = 1.5\n'
+        '[publication]\npublisher_name = "Synthetic private publisher"\n', encoding="utf-8",
+    )
+    first = api.about()["configuration"]
+    assert "Synthetic private sentinel" not in json.dumps(first)
+    assert "Synthetic private publisher" not in json.dumps(first)
+    assert str(tmp_path) not in json.dumps(first)
+    assert first["threshold_schema"]["properties"]["z_mild"]["default"] == 2.5
+    first["accepted_keys"].append("synthetic_mutation")
+    first["corpus_schema"]["properties"]["language"]["default"] = "synthetic_mutation"
+    first["threshold_schema"]["properties"]["fdr_q"]["default"] = 0.8
+    first["publication_schema"]["properties"]["publisher_name"]["default"] = "synthetic_mutation"
+    assert "synthetic_mutation" not in json.dumps(api.about()["configuration"])
+    assert api.about()["configuration"]["threshold_schema"]["properties"]["fdr_q"]["default"] == 0.05
 
 
 @pytest.mark.parametrize("status", ["applied", "review_needed"])

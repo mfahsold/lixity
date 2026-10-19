@@ -35,7 +35,11 @@ class CorpusConfig(BaseModel):
     )
     language: str = Field(
         default="en",
-        description="Language code of the profile ('de', 'en', 'generic'; extensible).",
+        description=(
+            "Registered language profile key; English ('en') is the default. "
+            "Automatic detection requires explicit 'auto' and uses stop-word cues; "
+            "weak or ambiguous evidence falls back to 'generic'. Profile accuracy differs by language."
+        ),
     )
     min_paragraph_length_for_oneliner: int = Field(
         default=25,
@@ -52,16 +56,18 @@ class CorpusConfig(BaseModel):
         default_factory=dict,
         description=(
             "Named register profiles (e.g. 'kanzlei_historisch', 'kinderstimme') mapping "
-            "metric name to a target range or exact value. Target comparisons are descriptive; "
-            "book-relative z-scores are retained and assigned chapters are exempt from FDR."
+            "metric name to a target range or exact value. Targets are descriptive; "
+            "assigned chapters retain book-baseline membership and book-relative z-scores, "
+            "while whole-chapter deviation and FDR flags are suppressed."
         ),
     )
     chapter_registers: dict[str, str] = Field(
         default_factory=dict,
         description=(
             "Mapping of chapter title (or number as string) to a register profile name. "
-            "Chapters listed here are treated as intentional stylistic registers and are "
-            "exempt from FDR outlier flagging."
+            "Assignments declare intentional registers and suppress whole-chapter deviation "
+            "and FDR flags. Book-baseline membership and book-relative z-scores are retained; "
+            "target comparisons are descriptive."
         ),
     )
 

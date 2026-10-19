@@ -49,6 +49,17 @@ feature identifiers/units and default heuristics; it is not a complete JSON
 Schema for analysis results. Research entity schemas are available separately
 through `research schema`. Output formats differ by command: request JSON
 explicitly where supported and inspect the installed default before parsing.
+
+**Since v0.6.0:** `about`/`schema --section` selects `languages`,
+`features`, `heuristics`, `commands` or `configuration`, returning `meta` plus that
+section as JSON. The additive `configuration` object has independent schema
+`lixity-configuration/1`: accepted/project-only/uninterpreted keys, corpus,
+threshold and publication component schemas, and native-settings persistence/session scope.
+It describes installed defaults and validation vocabulary, never effective project
+values or a complete schema for every project setting. Discovery commands read no
+project configuration. Older releases use unfiltered `about --json` and command
+help; [configuration usage](USAGE.md#configuration-corpusconfig) explains the scope.
+
 CLI exits are `0` success, `1` processing failure and `2` usage error. Diagnostics
 use stderr; stdout carries the result. Research has its own documented exceptions,
 including failed audit/probe behavior, in [research usage](research/USAGE.md).
@@ -74,12 +85,9 @@ returns false/nonzero. Start uses new launch choices; restart uses saved choices
 plus explicit overrides. [Lifecycle details](INSTALLATION.md#running-the-server)
 include environment isolation and installed/running versions.
 
-Text/binary outputs use same-directory staged writes, preserving mode, fsyncing
-and atomically replacing without a direct-overwrite fallback. Failures propagate
-and temporary files are cleaned. Builds retain distinct same-minute content;
-a failed stable-artifact write stops before archive rotation. `FileUtils.read_file`
-reports decoding failures as `OSError`. PDF layout/font/publication semantics are
-in [PDF usage](USAGE.md#lixity-pdf).
+Outputs use the shared atomic writer; failures propagate without a direct-overwrite
+fallback. [Architecture](ARCHITECTURE.md#configuration-and-multiple-projects)
+defines publication guards and [PDF usage](USAGE.md#lixity-pdf) defines layout limits.
 
 ## 3. JSON contracts
 
@@ -181,28 +189,17 @@ Stable anchors and hooks are the automation surface; do not depend on incidental
 layout or localized text. All user text remains inert.
 
 Research, analysis and settings are separate views; project actions remain
-reachable from each. Loaded-project guidance and optional controls start
-collapsed. New manuscript selection opens an import preview; confirmation
-creates a separate project. **Open Project** selects an existing one.
+reachable from each. Import preview writes nothing until confirmation.
+[Dashboard usage](USAGE.md#dashboard-workflow) owns navigation workflows.
 
-Paragraph IDs and source offsets remain addressable while closed. JavaScript
-creates paragraph content on opening and removes the inner subtree on closing,
-except when retaining marker drafts. Search covers the complete embedded plain
-text, including unopened paragraphs. Never infer missing text from an empty DOM
-panel. Without JavaScript, paragraph text remains readable. Lazy DOM creation
-does not bound the standalone HTML payload size.
+Paragraph IDs and offsets remain addressable while closed. Lazy DOM creation
+retains complete embedded text/search and a readable no-JavaScript fallback;
+an empty closed panel does not mean absent text or a smaller HTML payload.
+Style jumps reveal their owning tabs; chapter/paragraph jumps expand folded
+chapters. Section navigation lists only rendered panels.
 
-Style tabs reveal the owning panel before stable `#heatmap`, `#bands`,
-`#dimensions`, `#structural` or `#feat-<field>` jumps. Arrow keys/Home/End navigate
-tabs; without JavaScript, available panels remain readable. Section navigation
-lists only rendered panels. Chapter/paragraph anchors remain reachable after
-folding chapters. Native paragraph **Values** disclosures separate prose from
-measurements.
-
-The optional dossier companion and source-selection drafts are read-only until
-an explicit save; their [workflow semantics](research/USAGE.md#reading-and-cli-workflows)
-remain independent of analysis. Manuscript PDF, companion-reader and research
-writes require their explicit capability/context tokens, described below.
+PDF export, the read-only dossier companion and research saves use the explicit
+capability/context guards below. Selection drafts save nothing by themselves.
 
 | Hook | Meaning |
 |---|---|
@@ -579,9 +576,31 @@ selection metadata; file edits alone do not create a content-version lock.
   different workspace uses its configuration/shared manuscript title resolution
   for the header and NDA defaults; explicit language/threshold preferences remain.
 - `POST /api/load`: `{"name": "manuscript.md", "content": "..."}`; legacy upload into `exports/manuscripts/`, not an existing-project opener. An existing saved filename returns HTTP 409 without replacing its bytes or switching the active manuscript.
-- `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`. Optional `author_name` needs an active manuscript/archive project and a single-line string of at most 500 characters (empty clears). Optional `title`, `author_name` and `publication` are prepared and saved together in the selected root's `lixity.toml`; language and analysis controls retain session semantics. `publication` uses the [shared field contract](USAGE.md#publication-settings) and requires a matching opaque `project_token` from `#settings-form`'s `data-project-token`. Any supplied token must match the selected root, source and both root configs; missing/stale required tokens return HTTP 409. Title/author and threshold-only requests remain accepted without a token. The native UI always sends it for an active context. The server prepares the view before committing; validation/read/render/write failures return HTTP 400 without publishing candidate metadata or session/cache state. Success returns `{ok, message, reload, project_token}` with a fresh token. Unposted threshold fields retain their active values. Numeric fields use JSON numbers, not strings; integers reject fractional values and booleans. The shared `FingerprintThresholds` policy requires finite nonnegative z values with strong ≥ mild, q strictly between 0 and 1, positive dimension threshold, `bh|by`, integer minimum chapters ≥ 2 and severity 1–3. No extra UI ceilings or decimal step rounding apply.
+- `POST /api/settings`: `{"language": "en", "z_mild": 2.5, "z_strong": 3.5, "fdr_q": 0.05}`.
+  Title, author and publication save to the selected root's `lixity.toml`;
+  language/thresholds are session-only by default. Optional `author_name` needs
+  an active project and single-line text up to 500 characters (empty clears).
+  Publication uses the [shared field contract](USAGE.md#publication-settings).
+  Numeric fields use JSON numbers; integer fields reject fractions and booleans.
+  The shared threshold policy owns bounds/cross-field validation; see installed
+  configuration discovery above. Unposted threshold fields retain active values.
+  Publication requires the opaque `project_token` from `#settings-form`.
+  Any supplied token must match the selected root, source and both root configs;
+  missing/stale required tokens return HTTP 409. Title/author and session-only
+  threshold requests remain accepted without one; the native UI sends it for
+  active contexts. The server validates and renders before committing settings
+  and publishing session/cache state. Failures return HTTP 400 without that
+  publication. Success returns `{ok, message, reload, project_token}`.
 - `POST /api/marker-add`: `{"kind": "todo", "line": 42, "note": "Check dialogue continuity"}`
 - `POST /api/marker-resolve`: `{"id": "m-abcd1234"}`
+
+**Since v0.6.0:** `save_analysis_defaults: true` also saves posted
+language/threshold fields through that same transaction. Omitted or false keeps
+session-only behavior. The value must be a JSON boolean (HTTP 400 otherwise);
+true requires an explicit project and current `project_token` (HTTP 409 if
+missing/stale). Unposted project defaults remain unchanged. See
+[settings usage](USAGE.md#configuration-corpusconfig) and discovery's
+`native_settings.optional_persistence` for the supported keys.
 
 **Settings addition since v0.5.0:** `POST /api/settings` accepts optional
 `register_profiles` and `chapter_registers` using the [chapter register
@@ -838,22 +857,18 @@ analysis result, rather than recalculating the corpus through multiple calls.
 
 ## 6. Constraints for editing workflows
 
-- Input is UTF-8 Markdown; chapters are `## ` headings (configurable);
-  the appendix starts at `## Anmerkungen und Literaturverzeichnis`
-  (configurable via `CorpusConfig.appendix_marker`).
-- HTML comments (`<!-- … -->`) are excluded from prose metrics. Work-marker
-  comments are deliberately shown as notes in the review dashboard; do not put
-  secrets in them or assume all downstream exporters remove them.
-- Never modify the manuscript when only reading metrics is required.
-  Lixity itself is read-only for `analyze`/`profile`/`style`.
+Analysis reads UTF-8 Markdown using the configured chapter/appendix boundaries.
+HTML comments are excluded from prose measurements, but work markers deliberately
+appear as dashboard notes; do not assume all exporters remove them.
+`analyze`/`profile`/`style` do not modify the manuscript. Apply the
+[operating boundaries](#operating-boundaries) before any write.
 
 ## 7. Best practices for LLM agent integration
 
-Apply the [operating boundaries](#operating-boundaries), read active result
-metadata and represent unavailable data explicitly. `build` is content-hashed
-and skips unchanged exports; a successful run does not imply editorial approval.
-Scientific interpretation belongs to [Methods](METHODS.md) and
-[Stability](STABILITY.md), with the interface-specific cautions above.
+Read active result metadata, preserve units and represent unavailable data
+explicitly. `build` skips unchanged exports; a successful artifact does not imply
+editorial approval. [Methods](METHODS.md) and [Stability](STABILITY.md) own scientific
+interpretation, with interface-specific caveats above.
 
 <a id="source-origin-urls-since-v1180"></a>
 ## Source origin URLs

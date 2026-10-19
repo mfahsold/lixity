@@ -35,22 +35,25 @@ def settings_form(
                               for field in PUBLICATION_FIELDS
                               for value in [(publication or {}).get(field.key, "")]})
     initial_publication = esc(json.dumps(publication_values, ensure_ascii=False, sort_keys=True))
+    project_save_hint = (f' <span id="settings-project-save-help">{translated("settings_project_save_hint")}</span>'
+                         if author_setting_enabled else "")
     parts = [
         f'<form id="settings-form" class="settings-form ctl-group" novalidate '
         f'data-project-token="{esc(project_token)}" data-publication-initial="{initial_publication}" '
         f'data-publication-editable="{str(author_setting_enabled).lower()}" '
         f'data-title-initial="{esc(title)}" data-author-initial="{esc(project_author)}">',
         f'<h3>{translated("settings")}</h3>',
-        f'<p class="panel-guide">{translated("settings_intro")}</p>',
+        f'<p class="panel-guide" id="settings-scope-help">{translated("settings_intro")}{project_save_hint}</p>',
         '<div class="settings-grid">',
         f'<div class="setting-field"><label for="set-language">{help_term(labels, "language", translated("language"))}</label>',
-        '<select class="ctl" id="set-language">',
+        '<select class="ctl" id="set-language" aria-describedby="set-language-help settings-scope-help">',
     ]
     for code, name in language_options:
         selected = " selected" if code == current_language else ""
         parts.append(f'<option value="{esc(code)}"{selected}>{esc(name)}</option>')
     parts.extend([
-        '</select></div>',
+        '</select>',
+        f'<p id="set-language-help">{translated("settings_language_hint")}</p></div>',
         f'<div class="setting-field"><label for="set-title">{translated("title")}</label>',
         f'<input class="ctl" id="set-title" maxlength="{MAX_PROJECT_TITLE_CHARS}" value="{esc(title)}" '
         f'aria-describedby="set-title-help"/>',
@@ -158,7 +161,7 @@ def settings_form(
             f'<div class="setting-field"><label for="{control_id}">{translated(key)}</label>'
             f'<input class="ctl" type="number" id="{control_id}" value="{value!r}" '
             f'{" ".join(constraints)} required '
-            f'data-default="{default!r}" aria-describedby="{control_id}-help"/>'
+            f'data-default="{default!r}" aria-describedby="{control_id}-help settings-scope-help"/>'
             f'<p id="{control_id}-help">{esc(help_text)} <span class="ctl-note">{default_note}</span></p></div>'
         )
         if key == "fdr_q":
@@ -169,7 +172,7 @@ def settings_form(
             parts.append(
                 f'<div class="setting-field"><label for="set-fdr-method">{translated("settings_fdr_method")}</label>'
                 f'<select class="ctl" id="set-fdr-method" data-default="{default_method}" '
-                f'aria-describedby="set-fdr-method-help">'
+                f'aria-describedby="set-fdr-method-help settings-scope-help">'
                 f'<option value="bh"{" selected" if method == "bh" else ""}>Benjamini–Hochberg</option>'
                 f'<option value="by"{" selected" if method == "by" else ""}>Benjamini–Yekutieli</option>'
                 f'</select><p id="set-fdr-method-help">{esc(label(labels, "help_fdr"))} '
@@ -178,7 +181,8 @@ def settings_form(
     parts.extend([
         '<div class="setting-field">',
         f'<label for="set-flag-min-sev">{translated("flag_min_severity")}</label>',
-        '<select class="ctl" id="set-flag-min-sev" data-default="2" aria-describedby="flag-severity-help">',
+        '<select class="ctl" id="set-flag-min-sev" data-default="2" '
+        'aria-describedby="flag-severity-help settings-scope-help">',
     ])
     for severity in (1, 2, 3):
         selected = " selected" if severity == thresholds.flag_min_severity else ""
@@ -189,7 +193,16 @@ def settings_form(
     parts.extend([
         '</select>',
         f'<p id="flag-severity-help">{translated("help_flag_min_severity")}</p></div>',
-        '</div></details><div class="settings-actions">',
+        '</div></details>',
+        checkbox_field(
+            '<input type="checkbox" id="set-save-analysis-defaults" '
+            'aria-describedby="save-analysis-defaults-help"'
+            f'{"" if author_setting_enabled and project_token else " disabled"}/>',
+            translated("settings_save_analysis_defaults"),
+        ),
+        '<p class="ctl-note" id="save-analysis-defaults-help">'
+        f'{translated("settings_save_analysis_hint" if author_setting_enabled and project_token else "settings_save_analysis_unavailable")}</p>',
+        '<div class="settings-actions">',
         f'<button type="submit" class="ctl primary" data-action="settings" data-payload="settings">{translated("apply")}</button>',
         f'<button type="button" class="ctl" id="settings-reset">{translated("reset_thresholds")}</button>',
         f'<span class="ctl-note">{translated("settings_apply_hint")}</span>',

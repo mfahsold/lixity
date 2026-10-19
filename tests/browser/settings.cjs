@@ -1,7 +1,9 @@
 const {launchChromium} = require('../../scripts/browser_tools.cjs');
 const {spawnSync} = require('node:child_process');
 const path = require('node:path');
+const fs = require('node:fs');
 const assert = require('node:assert/strict');
+const {startNativeServer} = require('./support/native-server.cjs');
 
 const root = path.resolve(__dirname, '../..');
 const fixture = spawnSync(process.env.PYTHON_BIN || path.join(root, '.venv/bin/python'), ['-c', `
@@ -27,7 +29,7 @@ for locale in ("en", "de", "fr", "es", "it", "pt", "nl"):
               "author_name": {"status":"mismatch", "value":'Other <img src=x onerror=alert(1)> Writer', "source":"front_matter"}}
     fixtures[locale] = {"labels": labels, "loaded": render_dashboard([], [], controls=True,
          language_key=locale, current_language=locale, labels=labels, title="Synthetic project",
-         project_author="Synthetic Writer", author_setting_enabled=True, identity_check=checks,
+         project_author="Synthetic Writer", author_setting_enabled=True, identity_check=checks, project_token="a" * 64,
          enabled_actions=("analyze","nda-draft"), nda_project_name="Synthetic project"),
          "empty": render_dashboard([], [], controls=True, language_key=locale, labels=labels,
          enabled_actions=("analyze","nda-draft"))}
@@ -36,6 +38,86 @@ print(json.dumps({"baseline":baseline,"fixtures":fixtures}))
 assert.equal(fixture.status, 0, fixture.stderr || fixture.error && fixture.error.message);
 const data=JSON.parse(fixture.stdout);
 const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-identity-settings-');
+
+async function verifyNativeDefaults(browser) {
+  const artifacts=fs.mkdtempSync('/tmp/lixity-settings-defaults-native-');
+  const server=await startNativeServer(`
+import json, sys
+from pathlib import Path
+from http.server import ThreadingHTTPServer
+from lixity.server import LixityServerHandler
+base = Path(sys.argv[1])
+projects = []
+for name in ('desktop', 'mobile'):
+    root = base / name
+    root.mkdir()
+    source = root / 'manuscript.md'
+    source.write_text('# Synthetic settings project\\n\\n## One\\n\\nA bird crosses the quiet garden.\\n', encoding='utf-8')
+    config = root / 'lixity.toml'
+    config.write_text('language = "en"\\nfdr_q = 0.05\\nmin_chapters = 7\\n', encoding='utf-8')
+    projects.append({'root': str(root), 'source': str(source), 'config': str(config)})
+LixityServerHandler.workspace_root = projects[0]['root']
+LixityServerHandler.source_input = projects[0]['source']
+LixityServerHandler.exports_dir = str(base / 'exports')
+LixityServerHandler.refresh()
+server = ThreadingHTTPServer(('127.0.0.1', 0), LixityServerHandler)
+print(json.dumps({'url': f'http://127.0.0.1:{server.server_port}', 'projects': projects}), flush=True)
+server.serve_forever()
+`,artifacts);
+  try {
+    for(const [index,width] of [1440,320].entries()) {
+      const project=server.fixture.projects[index];
+      const originals={config:fs.readFileSync(project.config),source:fs.readFileSync(project.source)};
+      const page=await browser.newPage({viewport:{width,height:1000}});
+      const errors=[];
+      page.on('pageerror',error=>errors.push(error.message));
+      page.on('console',message=>{if(['error','warning'].includes(message.type())) errors.push(message.text());});
+      const opened=await page.request.post(server.fixture.url+'/api/project-open',{data:{path:project.root}});
+      assert.equal(opened.status(),200);
+      await page.goto(server.fixture.url);
+      await page.locator('#tab-view-project').click();
+      await page.locator('#settings-thresholds > summary').click();
+      await page.locator('#set-fdr-q').fill('0.02');
+      async function apply() {
+        const response=page.waitForResponse(response=>response.url().endsWith('/api/settings'));
+        const reloaded=page.waitForEvent('load');
+        await page.locator('[data-action=settings]').click();
+        const result=await response;
+        assert.equal(result.status(),200,await result.text());
+        assert.equal((await result.json()).ok,true);
+        await reloaded;
+        await page.locator('#tab-view-project').click();
+      }
+      await apply();
+      assert.deepEqual(fs.readFileSync(project.config),originals.config,'Unchecked native Apply must not write defaults');
+      await page.locator('#settings-thresholds > summary').click();
+      assert.equal(await page.locator('#set-fdr-q').inputValue(),'0.02');
+      await page.locator('#set-save-analysis-defaults').check();
+      await page.locator('#set-language').selectOption('auto');
+      await page.locator('#set-fdr-q').fill('0.013000000000003');
+      await apply();
+      const saved=fs.readFileSync(project.config,'utf8');
+      assert.ok(saved.includes('language = "auto"'));
+      assert.ok(saved.includes('fdr_q = 0.013000000000003'));
+      assert.ok(saved.includes('min_chapters = 7'));
+      assert.deepEqual(fs.readFileSync(project.source),originals.source,'Saving defaults cannot modify manuscript bytes');
+      assert.equal(await page.locator('#set-save-analysis-defaults').isChecked(),false);
+      const reopened=await page.request.post(server.fixture.url+'/api/project-open',{data:{path:project.root}});
+      assert.equal(reopened.status(),200);
+      await page.reload();
+      await page.locator('#tab-view-project').click();
+      await page.locator('#settings-thresholds > summary').click();
+      assert.equal(await page.locator('#set-language').inputValue(),'auto');
+      assert.equal(await page.locator('#set-fdr-q').inputValue(),'0.013000000000003');
+      assert.equal(await page.locator('#set-save-analysis-defaults').isChecked(),false);
+      assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth));
+      await page.locator('#settings-form').screenshot({path:path.join(artifacts,`${width}.png`)});
+      assert.deepEqual(errors,[]);
+      await page.close();
+    }
+    console.log('Native settings defaults: unchecked byte preservation, explicit save/reopen, reset opt-in and unchanged manuscripts at both widths passed. '+artifacts);
+  } finally {await server.close();}
+}
 
 (async () => {
   const browser = await launchChromium();
@@ -117,6 +199,26 @@ const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-iden
       });
       await page.goto('http://lixity.test/');
       await page.locator('#tab-view-project').click();
+      assert.equal(page.url(),'http://lixity.test/');
+      assert.ok((await page.title()).includes('Synthetic project'));
+      assert.equal(await page.locator('#settings-form h3').isVisible(),true);
+      assert.equal(await page.locator('#settings-scope-help').isVisible(),true);
+      assert.equal(await page.locator('#set-language-help').textContent(),data.fixtures[language].labels.settings_language_hint);
+      assert.equal(await page.locator('#settings-project-save-help').textContent(),data.fixtures[language].labels.settings_project_save_hint);
+      const languageDescription=await page.locator('#set-language').evaluate(field=>
+        field.getAttribute('aria-describedby').split(/\s+/).map(id=>document.getElementById(id).textContent).join(' '));
+      assert.ok(languageDescription.includes(data.fixtures[language].labels.settings_language_hint));
+      assert.ok(languageDescription.includes(data.fixtures[language].labels.settings_intro));
+      const saveDefaults=page.locator('#set-save-analysis-defaults');
+      assert.equal(await saveDefaults.isChecked(),false,'Project defaults are always an explicit opt-in');
+      assert.equal(await saveDefaults.isDisabled(),false);
+      assert.ok((await saveDefaults.locator('..').textContent()).includes(data.fixtures[language].labels.settings_save_analysis_defaults));
+      await page.locator('#settings-thresholds > summary').click();
+      for(const id of ['set-z-mild','set-z-strong','set-fdr-q','set-fdr-method','set-dim-threshold','set-flag-min-sev']) {
+        const field=page.locator('#'+id);
+        assert.equal(await field.isVisible(),true);
+        assert.ok((await field.getAttribute('aria-describedby')).split(/\s+/).includes('settings-scope-help'));
+      }
       const author=page.locator('#set-author-name');
       assert.equal(await author.inputValue(),'Synthetic Writer');
       assert.equal(await author.isDisabled(),false);
@@ -149,10 +251,27 @@ const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-iden
       assert.equal(settingsPosts[0].author_name,draft.trim(),'Only outer whitespace is normalized');
       assert.equal(settingsPosts[0].title,undefined,'Changing the author does not persist the unchanged display title');
       assert.equal(settingsPosts[0].fdr_q,0.05);
+      assert.equal(Object.hasOwn(settingsPosts[0],'save_analysis_defaults'),false,'Unchecked Apply retains session behavior');
       assert.ok((await page.locator('#ctl-status').textContent()).includes('Synthetic settings failure'));
+      await saveDefaults.check();
+      await page.locator('#set-language').selectOption('auto');
+      await page.locator('#set-fdr-q').fill('0.013000000000003');
+      const optIn=page.waitForRequest(request=>request.url().endsWith('/api/settings'));
+      await page.locator('[data-action=settings]').click();
+      await optIn;
+      await page.waitForFunction(()=>!document.querySelector('[data-action=settings]').disabled);
+      assert.equal(settingsPosts.at(-1).save_analysis_defaults,true);
+      assert.equal(settingsPosts.at(-1).language,'auto','Persist the explicitly selected auto value, not the displayed locale');
+      assert.equal(settingsPosts.at(-1).fdr_q,0.013000000000003);
+      assert.equal(settingsPosts.at(-1).project_token,'a'.repeat(64));
+      assert.equal(await saveDefaults.isChecked(),true,'Failed saves retain the opt-in draft for retry');
       await page.locator('#settings-form').screenshot({path:path.join(identityArtifacts,`${language}-${width}.png`)});
       assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth),language+' '+width);
       loaded=false; await page.reload(); await page.locator('#tab-view-project').click();
+      assert.equal(await page.locator('#settings-scope-help').isVisible(),true);
+      assert.equal(await page.locator('#settings-project-save-help').count(),0,'No project save promise without the capability');
+      assert.equal(await saveDefaults.isDisabled(),true);
+      assert.equal(await saveDefaults.isChecked(),false);
       assert.equal(await author.isDisabled(),true,'Author setting requires an active project');
       assert.equal(await author.inputValue(),'','No product default author is supplied');
       assert.ok((await page.locator('#set-author-name-help').textContent()).includes(data.fixtures[language].labels.project_author_unavailable));
@@ -162,11 +281,13 @@ const identityArtifacts=require('node:fs').mkdtempSync('/tmp/lixity-project-iden
         await page.waitForFunction(()=>!document.querySelector('[data-action=settings]').disabled);
         assert.equal(settingsPosts.length,count+1);
         assert.equal(Object.hasOwn(settingsPosts.at(-1),'author_name'),false,'Disabled author capability cannot submit a project author');
+        assert.equal(Object.hasOwn(settingsPosts.at(-1),'save_analysis_defaults'),false,'An idle workspace cannot request project defaults');
       }
       await page.close();
     }
     assert.deepEqual(errors, []);
-    console.log('Project identity: seven desktop/mobile locales, inert data and failed primary saves; pending/capability cases at both widths passed. '+identityArtifacts);
+    await verifyNativeDefaults(browser);
+    console.log('Settings guidance and project identity: seven desktop/mobile locales, accessible scope/default hints, inert data and failed primary saves; pending/capability cases at both widths passed. '+identityArtifacts);
     console.log('Settings: localized values, validation, keyboard submission, reset, payload, FDR filter and mobile layout passed');
   } finally {
     await browser.close();

@@ -5,7 +5,7 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "lixity"
 dynamic = ["version"]
-description = "Quantitative text linguistics, length-robust stylometry, tense profiling, and self-calibrating style references for literary manuscripts. Pure Python, offline, deterministic."
+description = "Local manuscript analysis for authors and editors: chapter comparisons, sentence rhythm, vocabulary, dialogue and tense. Offline analysis with a CLI, Python API and local dashboard."
 readme = "README.md"
 requires-python = ">=3.10"
 license = "AGPL-3.0-or-later"

@@ -7,6 +7,24 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-10-19
+
+### Changed
+- Clearer product descriptions and worked articles on intentional chapter
+  registers and local phrase echoes, linked from the README and Pages.
+- Configuration discovery exposes corpus/publication model defaults, threshold
+  constraints and settings scope through `about --json`; `about` and `schema` accept `--section`
+  for a focused JSON response. Metadata and shell completion ignore ambient
+  configuration.
+- Settings explain analysis and persistence choices beside their controls in
+  all seven interface languages. An opt-in, unchecked by default, saves posted
+  language and thresholds as project defaults through the existing guarded transaction;
+  ordinary Apply keeps session-only analysis choices.
+- CLI threshold help, defaults and scalar validation reuse backend policies;
+  invalid values report usage errors before reading configuration or manuscripts.
+- Onboarding, architecture and automation references defer discoverable details
+  to command help and runtime metadata while retaining scientific and data contracts.
+
 ## [0.5.0] - 2026-10-19
 
 ### Added
@@ -2212,7 +2230,8 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   seven language profiles plus a neutral fallback, and idempotent publication
   helpers.
 
-[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.5.0...HEAD
+[Unreleased]: https://github.com/mfahsold/lixity/compare/v0.6.0...HEAD
+[0.6.0]: https://github.com/mfahsold/lixity/compare/v0.5.0...v0.6.0
 [0.5.0]: https://github.com/mfahsold/lixity/compare/v0.4.9...v0.5.0
 [0.4.9]: https://github.com/mfahsold/lixity/compare/v0.4.8...v0.4.9
 [0.4.8]: https://github.com/mfahsold/lixity/compare/v0.4.7...v0.4.8

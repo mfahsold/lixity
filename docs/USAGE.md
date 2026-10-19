@@ -74,12 +74,9 @@ text and measurements, so treat it as manuscript material when sharing. Project
 settings, manuscript writes and research actions require a compatible local
 server; start the installed workspace with `lixity service start --open`.
 
-The live workspace has **Research & Dossiers**, **Manuscript & Analysis**, and
-**Project & Settings** views. **New Project** imports a manuscript into a separate
-project after confirmation; **Open Project** reconnects an existing folder and
-its archive. Selecting or dropping a file opens a preview and writes nothing
-until confirmation. See [open or import](ONBOARDING.md#open-or-import) for the
-complete project workflow. Embedding hosts may provide their own load action.
+The live workspace separates research, analysis and project settings. Use
+[Onboarding](ONBOARDING.md#open-or-import) for create/import/open: a file preview
+writes nothing until confirmation; opening reconnects an existing project.
 
 <a id="download-a-manuscript-pdf-since-v240"></a>
 
@@ -98,40 +95,30 @@ JavaScript and a compatible native server are required.
 ### Start a review
 
 **Start your review → Open passage** opens the first paragraph meeting the
-selected tense-flag threshold, or the opening paragraph when none does. It
-clears search and paragraph filters so the passage is visible and receives
-keyboard focus. **Explore chapters** opens the style heatmap when comparison is
-available, otherwise the chapter map with a limitation hint. **Open sentence
-rhythm** appears when its measurements are available.
-
-Follow a signal to the passage and read it in context. Flagged-passage rows,
-heatmap cells, band rows, chapter-score links and marker rows navigate to their
-underlying chapters or paragraphs. These are review locations, not quality
-rankings or instructions to revise.
+selected tense threshold, otherwise the opening paragraph, clearing filters and
+focusing the passage. **Explore chapters** opens available chapter comparisons;
+**Open sentence rhythm** appears when measurable. Other passage/chapter links
+navigate to the corresponding prose. These are review locations, not rankings
+or instructions to revise.
 
 <a id="read-a-dossier-beside-the-manuscript-since-v240"></a>
 
 ### Read a dossier beside the manuscript
 
-Choose **Dossier alongside** in **Manuscript & Analysis**, then a dossier, or
-open it from a dossier card. The read-only companion temporarily hides other
-analysis panels while preserving manuscript search and open paragraphs; closing
-it restores them. Refresh explicitly for the latest saved dossier revision.
-The selection lasts for the current page. On narrow screens, the dossier is
-above the manuscript. See [research reading workflows](research/USAGE.md#reading-and-cli-workflows-since-v240)
-for evidence selections and their retention limits.
+Choose **Dossier alongside** to read a saved dossier while retaining manuscript
+search and open paragraphs. Closing restores the other analysis panels; refresh
+explicitly for the latest revision. Narrow screens stack the readers. The
+[research workflow](research/USAGE.md#reading-and-cli-workflows-since-v240) owns
+selection, evidence and retention semantics.
 
 <a id="link-a-manuscript-quote-to-a-claim-v030"></a>
 
 ### Link a manuscript quote to a claim
 
-Select text within an opened paragraph, choose **Link selection to claim**
-(or `Alt+L`), choose a claim and explicitly permit local quote retention before
-**Save association**. Selection and preview save nothing. The association pins
-the exact claim revision and paragraph anchor; changed or ambiguous text needs
-review. Dossier readers expose linked claims and saved quote counts, which
-count explicit associations rather than infer use in prose. See
-[retention, anchoring and archive compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
+Use **Link selection to claim** (`Alt+L`) on text in one open paragraph. Review
+the claim and quote, then permit retention before saving. Preview writes nothing;
+saved links pin exact claim/paragraph versions and need review after changes.
+See [retention, anchoring and compatibility](research/USAGE.md#associate-a-manuscript-quote-with-a-claim).
 
 <a id="reading-paragraphs-since-v230"></a>
 
@@ -527,9 +514,11 @@ README/AGENTS/LICENSE/NDA). `--dry-run` displays the plan without writing.
 
 ### `lixity about` and `lixity completion`
 
-`lixity about --json` describes installed capabilities and thresholds for
-programs; plain `about` gives a terminal summary. `lixity schema` is its metadata
-alias. For safe user-level Bash/Zsh setup, follow
+`lixity about --json` describes installed capabilities and thresholds;
+`lixity schema` is its JSON metadata alias. Plain `about` gives a terminal summary.
+**Since v0.6.0:** `--section languages|features|heuristics|commands|configuration`
+returns one section plus version metadata as JSON. See [configuration discovery](#configuration-corpusconfig)
+for scope and older-release alternatives. For Bash/Zsh setup, follow
 [shell completion](INSTALLATION.md#optional-shell-completion).
 
 <a id="research-search-scopes-since-v1190"></a>
@@ -758,12 +747,18 @@ Language and title remain explicit API arguments. See
 
 In the native workspace, **Apply** persists title, `author_name`, publication
 and chapter register settings in the selected project's `lixity.toml`; language
-and detection thresholds keep session behavior. Author/publication identity
+and detection thresholds keep session behavior by default. Author/publication identity
 comes only from the explicit selected root, excluding user/ancestor defaults.
 Empty author clears it. Failed validation or saves keep previous metadata and
 the active view; failed submissions retain the draft. Reload after a project or
 root-config change instead of submitting stale values. An optimistic conflict
 guard rejects observed concurrent changes; it is not an external-editor lock.
+
+**Since v0.6.0:** check **Save analysis defaults for this project**
+before **Apply** to persist the posted language and detection thresholds in that
+project's `lixity.toml`. It starts unchecked and requires the current selected
+project context. Unposted settings stay unchanged; `auto` remains an explicit
+saved choice. The same transaction saves metadata and defaults together or neither.
 
 The identity check compares configured title/author with explicit manuscript
 metadata: flat leading YAML strings or a leading Markdown title page with
@@ -777,29 +772,25 @@ falls back to defaults; an absent file is silent. Check `meta.language` and
 active thresholds after a warning, or supply explicit options. Invalid stored
 publication fields remain visible for correction while analysis stays available.
 
-| Field | Default | Purpose |
-| :--- | :--- | :--- |
-| `language` | `en` | Language profile key; automatic detection requires explicit `auto`. |
-| `chapter_regex` | `(?m)^##\s+` | Chapter boundary detection. Matches individual heading lines, supporting marker prefixes or complete headings without consuming following prose. |
-| `appendix_marker` | `## Anmerkungen und Literaturverzeichnis` | Start of the non-prose appendix. |
-| `min_paragraph_length_for_oneliner` | `25` | Word threshold for one-liner classification. |
-| `motif_regexes` | `{}` | Project motifs as label → regex, counted per chapter. |
-| `register_profiles` | `{}` | Named registers mapping known style feature names to author ranges. Targets are descriptive comparisons alongside the book baseline; they do not define statistical z-scores. |
-| `chapter_registers` | `{}` | Chapter number/title → register name. Assigned chapters are excluded from chapter deviation/FDR flags. Book-relative values, baseline membership and consistency remain descriptive. |
-| `signal_keywords` | `None` | Thematic signal words (label → regex); `None` = language profile. |
-| `filter_verbs_regex` | `None` | Perception filters ("telling" indicators). |
-| `praesens_regex` / `praeteritum_regex` | `None` | Tense markers. |
-| `dialogue_regex` | `None` | Quoted speech detection. |
-| `word_regex` | `None` | Tokenisation. |
-| `passive_regex` | `None` | Passive-voice markers; `None` = language profile. |
-| `nominal_regex` | `None` | Nominalisation cues; `None` = language profile. |
-| `adjective_regex` | `None` | Adjective cues; `None` = language profile. |
-| `first_person_starters` | `None` | First-person cue words; `None` = language profile. |
+**Since v0.6.0:** discover configuration keys, defaults and
+constraints with:
 
-All `None` patterns fall back to the curated defaults of the selected language
-profile in `lixity.language_data` — adding a language is a data-layer entry,
-not a code change. `phrases` and `capabilities` are accepted for forward
-compatibility; the bundled engine does not interpret them.
+```bash
+lixity schema --section configuration
+```
+
+The `configuration` object (`lixity-configuration/1`) reports accepted keys,
+project-only keys, uninterpreted keys, native-settings persistence/session scope,
+and component schemas for corpus, threshold and publication settings. Defaults
+are annotations, not active project/server values. Scene and NDA settings retain
+their owning component's validation; this is not a
+single complete project-file schema. Threshold comments also state finite-number
+requirements and `z_mild <= z_strong`, validated by the backend.
+
+Older releases provide `lixity about --json` and `lixity COMMAND --help`; Python
+callers can inspect `CorpusConfig.model_json_schema()` for corpus fields. Optional
+`None` linguistic patterns use the selected language profile's defaults.
+`phrases` and `capabilities` are accepted but uninterpreted by the bundled engine.
 
 ### Chapter register settings
 
@@ -874,28 +865,14 @@ publisher_address = "Example Street 1\nExample Town"
 These example identities are synthetic. Enter confirmed information for your
 own project; Lixity does not derive it from prose, a pen name or a project path.
 
-| Key in `[publication]` | Default | Entered information / maximum length |
-| --- | --- | --- |
-| `enabled` | `false` | Boolean inclusion control for A5 imprint text |
-| `publisher_name` | `""` | Publisher/self-publisher identity, 500 characters |
-| `publisher_address` | `""` | Multiline publisher address, 2,000 characters |
-| `printer_name` | `""` | Printer identity, 500 characters |
-| `printer_address` | `""` | Multiline printer address, 2,000 characters |
-| `edition` | `""` | Edition statement, 200 characters |
-| `year` | `""` | Four-digit CE year, `0001`–`9999` |
-| `isbn_print` | `""` | Print identifier, 32 characters |
-| `isbn_digital` | `""` | Digital identifier, 32 characters |
-| `rights_notice` | `""` | Multiline rights text, 3,000 characters |
-| `credits` | `""` | Multiline credits, 3,000 characters |
-| `extra_info` | `""` | Other entered imprint text, 4,000 characters |
+**Since v0.6.0:** `configuration.publication_schema` in the
+[installed configuration metadata](#configuration-corpusconfig) supplies keys,
+defaults, text bounds and validation notes from the shared model/field registry.
+Its extension annotations describe checks beyond ordinary JSON Schema.
 
-Validation checks text types, bounds and unsupported control characters, year
-syntax and ISBN-10/ISBN-13 checksums. Spaces and hyphens are accepted in ISBNs;
-nonempty print and digital identifiers must differ after canonical ISBN-13
-comparison, including equivalent ISBN-10/ISBN-13 forms. Unknown keys fail rather
-than silently disappearing. These checks do not verify assigned ISBNs,
-addresses, rights ownership or legal completeness. No copyright statement or
-Deutsche Nationalbibliothek catalog claim is generated automatically.
+Validation does not verify assigned ISBNs, addresses, rights ownership or legal
+completeness. No copyright statement or Deutsche Nationalbibliothek catalog claim
+is generated automatically.
 
 #### Germany: print and digital publication
 

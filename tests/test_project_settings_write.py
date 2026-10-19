@@ -32,6 +32,35 @@ def test_combined_metadata_write_preserves_other_tables_and_comments(tmp_path: P
     replace.assert_not_called()
 
 
+@pytest.mark.parametrize("existing_q", ["0.001", "1e-3", "+1.0E-3", "1_0.0e-4"])
+def test_analysis_defaults_use_the_existing_preserving_writer(tmp_path: Path, existing_q: str):
+    path = tmp_path / "lixity.toml"
+    path.write_text(f'# Preserve\nlanguage = "de"\nfdr_q = {existing_q} # Range\n'
+                    'min_chapters = 7\n[custom]\nvalue = "untouched"\n')
+    prepared = prepare_project_settings(tmp_path, {
+        "language": "auto", "fdr_q": 0.013000000000003,
+        "z_mild": 2.123456789012345, "z_strong": 4.0,
+    })
+    prepared.commit()
+    saved = load_project_config(tmp_path)
+    assert saved["language"] == "auto"
+    assert saved["fdr_q"] == 0.013000000000003
+    assert saved["z_mild"] == 2.123456789012345
+    assert saved["z_strong"] == 4.0
+    assert saved["min_chapters"] == 7
+    assert '# Preserve\nlanguage = "auto"\n' in path.read_text()
+    assert '# Range\nmin_chapters = 7\n[custom]\nvalue = "untouched"\n' in path.read_text()
+
+
+def test_partial_analysis_defaults_validate_the_resulting_project(tmp_path: Path):
+    path = tmp_path / "lixity.toml"
+    original = 'z_mild = 5.0\nz_strong = 6.0\n'
+    path.write_text(original)
+    with pytest.raises(ValueError, match=r"z_mild.*z_strong"):
+        prepare_project_settings(tmp_path, {"z_strong": 4.0})
+    assert path.read_text() == original
+
+
 @pytest.mark.parametrize("existing", [
     'publication = { enabled = false, publisher_name = "Old" } # Keep\n[custom]\nkeep = true\n',
     '[publication] # Keep\nenabled = false\npublisher_name = "Old" # Name\n[custom]\nkeep = true\n',

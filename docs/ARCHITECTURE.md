@@ -1,26 +1,15 @@
 # Architecture and integration boundaries
 
-This document describes the maintained shared architecture. Changes introduced in
-0.3.0 are labeled **Since v0.3.0**. Product version
-numbers describe development maturity; JSON and research storage schemas have
-their own independent versions. Historical release numbers remain unchanged.
-The shared pipeline and explicit API threshold mappings were introduced
-in 1.15.0; integrated local project/research workflows arrived in 1.16.0, followed
-by native editing, the self-hosted OCR boundary, offline diagrams and verified
-export/restoration in 1.17.0.
+This document records shared responsibilities and integration boundaries.
+Product maturity, response schemas and research storage versions are independent.
+[Usage](USAGE.md) owns workflows; [automation](AGENTS.md) owns request and result
+contracts; [research usage](research/USAGE.md) describes implemented archive behavior.
+The [research RFC](research/README.md) includes unimplemented proposals.
 
-Experimental extension: [local research workspace](research/USAGE.md).
-`lixity.research` owns explicit-project ingestion (UTF-8 text and PDFs), immutable snapshots,
-exact citations, BagIt-style export/restoration, and a rebuildable SQLite/FTS5 index. It does not import into
-`lixity.pipeline`. The reverse direction exists for presentation: `research.analysis`
-renders source dashboards through `lixity.ui`, and `ui.dossier_images` reads
-`research.limits`; the archive itself never becomes pipeline input.
-Existing analyze/profile v2 and style v4 remain unchanged.
-The workspace also stores dossiers, claims, evidence links and author decisions with full native revision history.
-The [research RFC](research/README.md) additionally proposes broader review workflows
-and hybrid vector search. The implemented manual manuscript associations are
-described below; the RFC is not an implementation reference. Section spans and
-section edits live in `research/sections.py`; `research.api` re-exports them.
+`lixity.research` owns explicit-project captures, immutable snapshots, citations,
+authored records and a rebuildable SQLite/FTS5 index. It does not import into
+`lixity.pipeline`. Source analysis may use the shared engine and UI, but research
+sources never join manuscript baselines automatically.
 
 ## Layers
 
@@ -33,7 +22,7 @@ section edits live in `research/sections.py`; `research.api` re-exports them.
 | UI | Render results using shared components and bundled assets | Recompute statistical decisions in JavaScript |
 | `publication` / `pdf_export` | Validate entered publication data; compose shared PDF bytes | Infer legal identities, establish rights or write output files |
 | `lixity.server` | Loopback transport, request guards, one shared dashboard assembly and selected-workspace transitions | A second renderer, a second analysis path or CLI/service lifecycles |
-| `config` / `io` / `workspace` | Explicit project metadata, atomic byte I/O and manuscript discovery | Implicit ancestor/user defaults or duplicate writers |
+| `config` / `io` / `workspace` | Explicit project metadata, atomic byte I/O and manuscript discovery | Implicit identity/publication defaults or duplicate writers |
 | `lixity.service` | Managed local process lifecycle (start/stop/restart/status) | Adopting externally managed units |
 | Project adapters | Manuscript access, publication actions and local services | Copies of the engine |
 
@@ -43,194 +32,113 @@ plug-in standard errors and published effect bands). Heuristics import it
 instead of restating formulas; `style_fingerprint` re-exports the historical
 names for callers.
 
-The native server is a package rather than one module, because it is the only
-place where transport, state and view assembly meet. `runtime` owns bind checks
-and startup; `views` composes the dashboard from the shared pipeline and domain
-reports and stays independent of HTTP; `_state` declares the selected-workspace
-state and the shared cache publication (`publish_dashboard`/`refresh`). Serving
-the dashboard shell re-renders when the manuscript digest changed since the last
-render (`refresh_when_source_changed`), so a cached view never presents stale
-numbers; workspace transitions are published by `runtime` and the project routes;
-`_base` owns response helpers and the Host/Origin guards; `routes_project`,
-`routes_research`, `routes_manuscript_research`, `routes_pdf`, `routes_nda` and
-`routes_markers` each own their handlers and are composed with `discovery` and
-`pdf_context` into one `BaseHTTPRequestHandler` in `handler`. Handlers parse and
-shape requests and then delegate; research handlers call `lixity.research.api`
-rather than touching the repository, and project handlers own explicit project
-transitions (open/create/settings/import) without duplicating analysis. Because
-each group is a plain class, a route module can be read and type-checked on its
-own.
+The server separates transport (`runtime`, `_base`, `handler`), selected-workspace
+state (`_state`), dashboard assembly (`views`) and domain route groups. Registered
+route tables drive dispatch and discovery. Handlers validate and shape requests,
+then delegate to the shared pipeline or `research.api`; they do not implement a
+second renderer, analysis algorithm or archive writer.
 
-Research overview requests use `research.api.project_overview` to collect the
-existing lists from one fully validated archive snapshot. Source versions are
-grouped once for that view rather than rescanning the archive for each source.
-The response contract is unchanged; there is no persistent cache.
+One process has one selected workspace. Opening selects an existing project;
+importing browser bytes creates one at an explicit destination. A browser filename
+does not identify its original parent directory. An archive may open without a
+manuscript. `workspace.resolve_project_target` resolves explicit selectors; API
+research calls stay explicitly scoped. An occupied port fails startup.
 
-The development server keeps one selected workspace per process. Opening a
-project selects its existing directory and research archive; importing browser
-file bytes creates a project at an explicit destination. A browser filename does
-not establish the original file's parent directory. An initialized research
-project can be opened before a manuscript exists. Research storage remains
-explicit in the API even when the server chooses it from an opened workspace.
-All surfaces resolve an explicit selector through
-`workspace.resolve_project_target`, and `run_server` raises on an occupied port
-while printing only when the CLI passes `announce=True`.
-
-`analyze_document(text, config, thresholds)` returns `DocumentAnalysis` with
-corpus metrics, chapter profiles, paragraph profiles and the fingerprint.
-The metrics are calculated once and reused during fingerprint construction.
-`profile_document` and `fingerprint_document` support narrower requests.
+`DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
+renderers. Narrower profile/fingerprint requests use the same pipeline. Dashboard
+refresh detects changed manuscript bytes before serving cached measurements.
+Research overviews reuse one validated archive snapshot without a persistent cache.
 
 ## Manual manuscript associations
 
-**Since v0.3.0:** `research.manuscript` owns `ManuscriptClaimLink`, separate
-from imported source passages/evidence. Creation retains only an explicitly
-permitted quote and an immutable `paragraph-profile-text/1` anchor: project-relative
-path, raw-source and displayed-paragraph hashes, source lines and Unicode
-codepoint offsets. It pins the exact reviewed claim revision and writes
-`research-local/7` with manifest v7 on the first opted-in save. Existing archives
-remain unchanged on reads. Product v0.3.0 supports schemas v1–v7 independently
-of the historical product numbering; historical v3.0.1 supports only v1–v6.
+`research.manuscript` owns `ManuscriptClaimLink`, separate from imported source
+evidence. Explicitly permitted quote retention pins a reviewed claim revision and
+an immutable `paragraph-profile-text/1` anchor: project-relative path, source and
+displayed-paragraph hashes, source lines and Unicode-codepoint offsets. The first
+opted-in save requires record/manifest v7; reads never upgrade existing archives.
+Historical v3.0.1 supports only v1–v6 despite its higher product number.
 
-`pipeline.paragraph_identity` supplies the same paragraph identity to rendering
-and the research API. `FileUtils.read_source_snapshot` binds raw bytes and decoded
-text in one read; manual creation checks source containment and bytes again
-before publication. `manuscript_review_data` accepts the existing validated
-repository snapshot and pipeline paragraphs, avoiding duplicate analysis or a
-second archive read. It derives structural change flags without mutating anchors,
-repinning claims or proving factual support. Unique moved/duplicate paragraph
-candidates remain unresolved. Missing and unreadable sources remain distinct.
+`pipeline.paragraph_identity` supplies the same identity to rendering and research.
+`FileUtils.read_source_snapshot` binds raw bytes and decoded text; creation checks
+source containment and bytes again before publication. Review uses the validated
+archive snapshot and existing pipeline paragraphs. It preserves anchors and claim
+pins, distinguishes missing from unreadable sources, and leaves ambiguous or moved
+candidates for explicit review. It does not infer factual support.
 
-`server.routes_manuscript_research` validates selected manuscript and archive
-tokens before delegating to the shared API. The native reader marks only exact
-resolved quote spans, supports lazy paragraph rendering and preserves complete
-text search. Dossier research/companion readers reuse the existing claim viewer
-and history for a reverse list of current claim associations. Saved quote counts
-join explicit links by their pinned dossier ID using one coherent snapshot;
-counts span saved dossier versions and disclose differing revision pins;
-zero counts do not establish manuscript nonuse. There is no automatic evidence
-linking, manuscript import or semantic analysis in this association workflow.
+Manuscript routes validate both selected manuscript and archive contexts before
+calling the API. Saved-quote counts join explicit associations from one coherent
+snapshot, disclose differing revision pins and do not establish manuscript use or
+nonuse. Rendering preserves exact resolved quote spans and complete text search.
 
-Ordinary authored CLI updates may omit the archive snapshot, while requiring
-the exact reviewed record revision, change kind and reason. The CLI forwards
-its current read's snapshot to the same strict backend writer; record changes
-and races fail without retry. Explicit snapshots and Python/HTTP/batch/image/
-acknowledgement writes retain their existing strict guards. Unchanged association
-pins remain; changed associations require explicit reviewed pins in convenience
-mode. This does not introduce another persistence or reconciliation path.
+Ordinary authored CLI updates require a reviewed revision, change kind and reason;
+when the archive snapshot is omitted, the current read's snapshot guards the same
+strict writer. Changed associations require explicit reviewed pins in this mode.
+Races fail without retry. Explicit snapshots and Python/HTTP/batch/image/
+acknowledgement writes keep their strict guards; there is one persistence path.
 
 ## Configuration and multiple projects
 
-Project author identity reuses `author_name` in the existing configuration loader,
-but only from an explicit project's root config; user/ancestor defaults are excluded.
-`save_project_author` updates only the explicit project's `lixity.toml` after
-validating the scalar and verifying that other parsed settings remain intact.
-An optimistic file-identity/content check precedes atomic replacement; it is not
-an external editor lock. The UI, NDA renderer and pure `project_identity` checker
-consume that same value. Identity comparisons read a bounded syntax subset and
-never rewrite manuscripts or affect linguistic measurements.
+Explicit root settings own author identity, publication and chapter registers;
+user/ancestor defaults cannot supply them. `project_identity` compares only bounded
+manuscript metadata syntax, without rewriting text or affecting measurements.
+`PublicationSettings`/`PUBLICATION_FIELDS` supply field validation to configuration,
+settings and PDF composition. `pdf_export.compose_pdf` composes bytes for CLI and
+HTTP; callers own output writes. Front matter uses entered data, and syntax checks
+do not establish publication compliance.
 
-**Since v0.3.0:** `publication.PublicationSettings` and
-`PUBLICATION_FIELDS` define the optional imprint data and field bounds once.
-The existing configuration loader excludes publication data from user/ancestor
-defaults; the settings renderer and PDF composer consume that same model.
-`project_identity.project_title` supplies one code-aware title resolver.
-`pdf_export.compose_pdf` remains the single in-memory entrypoint for CLI and
-native manuscript downloads, with explicit analysis configuration and project
-identity inputs. The CLI owns output-path writes; the native route returns
-bytes after checking selected context. A5 front matter uses only entered data;
-A4 sheet/report composition keeps its existing purpose and body constraints.
-PDF Info/Lang, chapter outlines and page furniture reuse `pdf_document` rather
-than a second writer. Syntax validation is not a publication-compliance check.
+`config.prepare_project_settings` validates one settings candidate while
+preserving unrelated TOML values. The route renders that candidate,
+commits through `PreparedProjectSettings`, then publishes session/cache state.
+Decode, validation, render or replacement failures publish none of the candidate.
+Selected-context tokens bind source/root and both root config digests. Publication/
+register saves and manuscript PDF downloads reject stale required context. Config
+reads accept regular nonsymlink files and verify the opened descriptor's identity.
+The optimistic commit guard checks observed identity and bytes immediately before
+replacement; it is neither an external-editor lock nor a manuscript content pin.
 
-`config.prepare_project_settings` constructs one validated candidate for title,
-author and publication while checking that other TOML values remain intact.
-The settings route renders the complete candidate dashboard first, commits
-through `PreparedProjectSettings`, then publishes session/cache state. Decode,
-validation, render or replacement failures do not publish the candidate.
-Selected-context tokens include source/root and digests of both root configs;
-publication saves require one, and PDF downloads reject stale metadata tokens.
-The commit guard checks observed config identity and bytes before replacement;
-it does not lock other processes or turn a manuscript path into a content pin.
-Root configuration snapshots accept regular nonsymlink files and verify the
-opened descriptor's identity; special files fail before a blocking read.
+**Since v0.6.0:** explicitly requested language/threshold defaults
+reuse this transaction and its project token. Session-only Apply remains the
+default. Installed configuration metadata derives publication bounds from the
+same model/field registry used by rendering and validation.
 
-**Since v0.3.0:** text and binary output share
-`FileUtils.atomic_write_bytes_if_changed`: a same-directory stage, complete
-write, flush, original-mode preservation, fsync and atomic replacement. The
-optional `before_replace` guard runs immediately before a changed replacement;
-unchanged bytes skip it. Errors propagate, staging is cleaned and there is no
-system-temporary or direct-overwrite fallback. Settings consumers can supply
-their optimistic identity/content guard through this same entrypoint.
-`Workspace.publish` uses finer timestamps plus a repeated-instant sequence,
-recognizes historical minute names and prepares its stable link/copy before
-replacement. Failed stable publication raises before archive rotation.
+`FileUtils.atomic_write_bytes_if_changed` is the shared text/binary writer:
+same-directory staging, complete write, flush, mode preservation, fsync and atomic
+replacement. Unchanged bytes skip replacement and its optional guard. Errors
+propagate, temporary stages are cleaned, and no direct-overwrite fallback exists.
+`Workspace.publish` preserves distinct same-minute artifacts, recognizes historical
+archive names and prepares the stable artifact before replacement. Failure stops
+before archive rotation.
 
-```python
-from pathlib import Path
-from lixity.config import load_project_config, resolve_thresholds
-from lixity.pipeline import analyze_document, resolve_document_config
+`load_project_config(path)` searches from its supplied path and merges supported
+project/user settings. Pass the intended mapping to `resolve_document_config` and
+`resolve_thresholds`; explicit options win. An empty mapping selects code defaults
+without discovery. The facade's `profile`, `fingerprint`/`passport` and `dashboard`
+accept that mapping; `None` retains threshold discovery for compatibility.
+Use `analyze_document(text, config, thresholds)` when several outputs need the same
+measurements. Project adapters own their characters, motifs, paths and artifacts.
 
-manuscript = Path("/projects/example/manuscript.md")
-text = manuscript.read_text(encoding="utf-8")
-settings = load_project_config(manuscript)
-config, language = resolve_document_config(
-    text,
-    settings.get("language", "en"),
-    project_config=settings,
-)
-thresholds = resolve_thresholds(project_config=settings)
-analysis = analyze_document(text, config, thresholds)
-```
+The shared Markdown parser defines measurement prose and chapter numbering.
+Paragraph profiles cover body/list blocks; legacy whitespace counts remain
+separate. Token regex flags are preserved, while linguistic cue patterns have a
+case-insensitive compiler. [Methods](METHODS.md) defines exact scopes and numerical
+conventions. Scene groups compare only explicitly assigned manuscript observations.
 
-The loader searches from the supplied path and merges supported project and
-user settings. A supplied threshold mapping prevents implicit configuration
-discovery inside `resolve_thresholds`; `{}` selects code defaults only.
-Explicit threshold arguments take precedence over the mapping.
-
-`resolve_document_config` applies known corpus settings from
-an explicit mapping. Explicit arguments take precedence; language remains an
-explicit choice. The convenience API's `profile`, `fingerprint`/`passport` and
-`dashboard` accept this mapping as well as thresholds: `{}` avoids implicit
-discovery, while `None` retains threshold discovery for compatibility. Chapter,
-paragraph and scene numbering use the same configured, nonempty chapter units.
-The existing Markdown parser defines supported measurement prose: paragraphs,
-list items and quoted prose, omitting metadata, headings, comments, code and
-footnote definitions. Paragraph profiles intentionally cover body/list blocks
-only; legacy whitespace counts remain separate. Token regex flags are preserved,
-while linguistic cue patterns have their own case-insensitive compiler. See
-[Methods](METHODS.md) for exact scopes and numerical conventions.
-Scene reports reuse the chapter measurement engine and compare only explicit
-register groups within the manuscript. They do not read research sources or
-provide quality scores. Adapters should pass the intended configuration and
-keep manuscript-specific characters, motifs and artifacts within that project.
-
-Lixity provides read-only three-way revision preparation and atomic
-revision groups. These reuse the strict revision validator and one repository
-commit. Decision impact and editorial review follow recorded links, dates and
-revision pins; they do not infer semantic contradictions or rewrite documents.
-Section preparation uses the same code-aware ATX heading parser as dossier reads
-and image placement. It reconciles the selected subtree while preserving unrelated
-current text. The UI receives canonical unambiguous heading choices from the API.
-See [implemented workflows and limits](research/USAGE.md#research-workflows).
-
-Local images reuse `Source`, immutable `SourceVersion` and content-addressed
-`Blob` records. They have no fabricated extraction or passages and are rejected
-by textual analysis. A shared image-reference resolver feeds dossier reads,
-history, validation and audit. An attachment publishes its capture and dossier
-revision in one repository commit with exact concurrency tokens. Purge retains
-the source/version identity needed for honest unavailable placeholders, not the
-removed image bytes. Limits live in `research/limits.py`; the UI receives them
-from those constants. Rendering and local preview belong to `ui/assets/dossier-images.js`,
-while thin server routes perform project-bound input and binary-response handling.
+Research revision preparation, section edits and grouped saves reuse strict
+validation and one repository commit. Section reads, preparation and image placement
+share the code-aware ATX heading parser. Review follows recorded links and revision
+pins, without inferring contradictions. Images reuse immutable source/version/blob
+records, never fabricated text passages; textual analysis rejects them. Attachment
+and dossier revision publish atomically. Purge retains identity for honest unavailable
+placeholders, not image bytes. Shared limits come from `research.limits`.
 
 ## Presentation and trust boundaries
 
-The dashboard is a self-contained HTML file. Python bundles CSS and the
-dashboard/style-space scripts; no CDN, JavaScript framework or frontend build
-is required. Chapter-title tooltips are created as text nodes, not executable
-markup. Rendering and point picking share projected coordinates. Animation
-is scheduled only while rotation is enabled and the page is visible.
+The dashboard is a self-contained HTML file. Python bundles CSS and scripts; no
+CDN or frontend build step is required. Chapter-title tooltips use text nodes,
+not executable markup. Rendering and point picking share projected coordinates. Animation
+is scheduled only while rotation is enabled and the page is visible. The live
+shell applies a per-response script nonce and default-deny CSP; bundled components
+require no `unsafe-eval`.
 
 ### Logging
 
@@ -248,12 +156,10 @@ so `redirect_stderr`, the captured service descriptor and tests all see the
 same stream. Request logs never contain query strings — context tokens and
 selectors travel there — and log records never contain manuscript text.
 
-**Since 2.0.0:** `ui/dimensions.py` renders a semantic score
-table from the same measured points as the canvas payload. It exposes chapter
-titles, actual dimension scores and descriptive flag text with native chapter
-links, including when JavaScript is disabled. Native rotation/zoom buttons call
-the existing projection renderer. No second renderer or frontend dependency is
-introduced. The table omits unmeasured chapters and columns for absent axes.
+`ui/dimensions.py` renders a semantic score table from the same measured points
+as the canvas. It keeps chapter titles, available scores and native chapter links
+usable without JavaScript; native rotation/zoom controls call the same projection
+renderer. Unmeasured chapters and absent axes are omitted.
 
 ### Visual consistency and evidence
 
@@ -337,189 +243,65 @@ operate on language-dependent heuristic inputs.
 
 ### Component vocabulary and markup rules
 
-New markup reuses the documented vocabulary instead of introducing parallel
-controls:
+`ui.components` and `assets/components.css` own shared panels, controls, fields,
+status messages, badges and layout primitives. Views reuse them and the stable
+[data hooks](AGENTS.md#34-dashboard-interaction-contract-for-embedding-and-ui-automation).
+Visible strings come from the seven-language packs; mathematical identifiers stay
+language-neutral. Prefer native elements and one primary action per form.
 
-- Surfaces: `.panel` for a bordered region, `.ctl-group` for a labelled form
-  block, `.research-card`/`.research-timeline` for authored-record lists, and
-  `.notice-box` for boundary notes.
-- Controls: `.ctl` for neutral buttons and inputs, `.ctl.primary` for the one
-  primary action per form, `.chip` for compact filter or shortcut targets, and
-  `.ctl-status` for live success and error messages. Help terms come from
-  `help_term`; they stay dotted-underlined, keyboard reachable and localized.
-- Structure: shared heading styles for `h2`/`h3`, `.section-heading` for a
-  research sub-block, and `.ctl-note` for secondary prose such as empty states,
-  limits and measurement notes.
-- Measurements use tabular numbers (`font-variant-numeric: tabular-nums`) and
-  keep their unit in the label, not in the value.
-
-Rules for changes:
-
-- Every visible string comes from the seven-language label packs; no hardcoded
-  English in markup.
-- Prefer native elements (`button`, `select`, `details`, `dialog`) and the
-  existing `data-*` interaction hooks over new custom widgets.
-- Keep one primary action per form; secondary actions stay neutral.
-- Avoid new inline styles for spacing or sizing. Layout uses the utility
-  classes in `dashboard.css`: a tenth-rem margin scale (`.mt-N`, `.mb-N`,
-  `.my-N`, `.ml-N`, where N is the value in tenths, so `.mb-5` is
-  `margin-bottom: .5rem`), `.w-full`, `.grow`, `.form-col`/`.form-col-wide`,
-  `.field-wide`/`.field-narrow`, `.num-left`/`.num-right`, `.text-note`,
-  `.text-small`, `.gap-sm` and `.select-code`. Repeated component shapes
-  (`.research-dossier-outline`, `.research-subpanel`, `.research-passage-card`,
-  `.research-warning-box`, `.research-block-heading`, `.badge-sm`,
-  `.ctl-compact`) live next to the research styles.
-- Inline `style` remains reserved for measured or dynamic values: bar and
-  track widths, positions, heatmap background colours and data-driven
-  alignments, plus the functional `display:none` toggle on tab panes.
-  `tests/test_inline_styles.py` fails when a forbidden spacing or typography
-  pattern reappears in rendered markup or in the assets.
-- Responsive stacking is a CSS decision (single column at 640 px), not a second
-  markup tree; new panels must survive 320 px without horizontal overflow.
+Inline styles are reserved for measured/dynamic values. Layout and responsive
+stacking belong in shared CSS; `tests/test_inline_styles.py` checks forbidden
+spacing/typography patterns. New panels must remain usable at 320 px.
 
 ### Design system: one scale, one control language
 
-`src/lixity/ui/assets/design-tokens.css` is the single source for colour,
-radius, type, spacing and elevation, and it is shared with the staged public
-site (`stage_pages.py` copies it; `docs/assets/site.css` imports it). The
-layers are explicit and inlined in this order: **tokens → components → views**.
-`assets/components.css` holds the shared vocabulary (panels, status, focus,
-tables, badges, controls, layout primitives, renderer utilities) with one
-recipe per family; `assets/dashboard.css` holds the view-specific rules.
-`tests/test_ui_publication.py` asserts the layer order for the standalone
-output. The ladders are deliberately short:
-
-- Radius: `--radius-xs` (inline bits), `--radius-sm` (every control),
-  `--radius` (cards, panels), `--radius-lg` (modals), `--radius-pill`
-  (badges, tags, tracks). Rules never hard-code a radius.
-- Type: `--text-micro`, `--text-note`, `--text-small`, `--text-control`,
-  `--text-section-title`, `--text-body`. Display headings (project title,
-  welcome hero, markdown h1-h3) are the documented exception; every other
-  rule uses a token.
-- Component families: `.ctl` (with `.primary`, `.ctl-sm`/`.ctl-compact`,
-  `.ctl-link`), one tab recipe (`.view-navigation`/`.view-nav-tab` and
-  `.research-tabs` are the same control with a filled active state), one
-  selected state (`aria-pressed`/`.active`), one badge family
-  (`.badge`/`.research-badge` plus `.badge-success/-warning/-neutral/-warn`
-  tones, pills), `.research-tag` pills, one field pattern (`.setting-field`,
-  `.form-label`, help text via `.ctl-note`) and one spinner recipe for busy
-  buttons, inline status and loading placeholders. Dense clusters such as the
-  dimension controls (`.dim-ctl`) are compact variants of the same control.
-
-`tests/browser/visual-consistency.cjs` enforces the discipline: control
-radii, badge pills and sampled text sizes must come from the ladders, so a
-new one-off value fails the suite instead of quietly drifting.
+`assets/design-tokens.css` owns shared color, radius, type, spacing and elevation.
+CSS is bundled in token → component → view order. Pages stages the canonical
+packaged design assets. Controls, badges and ordinary text use the short token
+ladders; display headings are the documented exception. The visual-consistency
+browser suite checks sampled token use, focus, contrast and text spacing.
 
 ### Stateful panels: the component layer (vendored Preact + HTM)
 
-The shell, static exports and most panels stay server-rendered: one Python
-renderer feeds the live dashboard, the single-file export and the tests. For
-stateful panels, new work uses a small client component layer instead of ad-hoc
-string building:
-
-- `src/lixity/ui/assets/vendor/` vendors **Preact 10** (MIT) and **htm**
-  (Apache-2.0) as pinned UMD/IIFE files. No package manager or build step is
-  involved; `_JS_FILES` inlines them into the single dashboard script, so the
-  page stays self-contained, works offline and needs no `unsafe-eval` under the
-  nonce CSP (htm is pure string parsing, not `new Function`).
-- `assets/component-layer.js` is the one entry point: panels render through
-  `LixityComponents.mount(host, vnode)`, which clears the host on the first
-  mount so a server-rendered loading placeholder cannot survive beside the
-  rendered tree, and unmounts through `LixityComponents.unmount`.
-- Components render into an existing host element and own only their subtree.
-  The Zotero catalogue results (`assets/zotero-results.js`) and the four
-  research record lists - sources, dossiers, claims, decisions
-  (`assets/research-cards.js`, `LixityResearchCards`) - run on this layer.
-  Components call the shared `uiLabel`/`uiCountFormat` helpers, so
-  localization keeps one source.
-- Keep the DOM contract stable: class names and `data-*` hooks used by the
-  delegated click handlers and the browser suites are part of a component's
-  output. Actions stay in the plain event handlers; components render.
-- Never write `textContent`/`innerHTML` into a component host: unmount first
-  (`LixityZoteroResults.clear`) or render the message through the component;
-  preact patches against its own vnode tree.
-- Async content that belongs to a card is model state, not DOM state: the
-  claims evidence panel renders `item.evidenceHtml` from the list model and
-  the loader re-renders after the fetch. Containers that keep a manual fill
-  contract (`.research-details-body` for source/dossier/decision details) are
-  rendered childless so preact diffs them as no-ops.
-- Components receive plain data; business rules (pagination, capture matching,
-  context tokens) stay in the panel script. A cache of the current list model
-  lets loaders (evidence, details) re-render after async updates.
-- Card re-renders replace the previous hand-rolled identity diffing: source,
-  dossier and claim cards are keyed by the serialized record, so an unchanged
-  record governs the same DOM element (open details and loaded content survive
-  a refresh) and a changed record gets a fresh card (stale details content is
-  dropped). Decision cards are keyed per refresh instead, because their impact
-  panel loads on demand and could otherwise keep stale acknowledgement state -
-  matching the previous renderer, which replaced the whole list. Lists render
-  fully on every refresh and `filterResearchList` still toggles `hidden` on
-  the component output. Vendor updates follow `vendor/README.md` (registry
-  tarball, integrity check, browser suites).
-- New stateful panels start as components; the remaining hand-built renderers
-  (claim relations, editorial review, revision dialogs) migrate incrementally.
-
-The research workspace script is split by topic: `research-core.js` (API,
-form plumbing, escaping), `research-content.js` (markdown, mermaid, dossiers),
-`research-evidence.js` (selection, evidence drafts, citations, Zotero),
-`research-lists.js` (filters and the four record lists), `research-review.js`
-(editorial review), `research-workspace.js` (project info, initialization,
-delegated interactions) and `research-revisions.js` (revision dialogs).
-`_JS_FILES` concatenates them in that order into the single inlined script;
-the split keeps the original statement order, so load-time behaviour is
-identical.
+The Python renderer feeds both the live workspace and standalone exports.
+Stateful research lists use vendored Preact/HTM through `LixityComponents`;
+`vendor/README.md` owns the update procedure. Components own only their mounted
+subtree, receive plain data and use shared localization helpers. Unmount before
+imperative writes to their hosts; async card content belongs in the list model.
+Stable class/data hooks remain part of component output. Domain actions, context
+guards and pagination stay in panel scripts. Record keys preserve current details
+or invalidate stale card state according to each renderer's refresh contract. Other panels migrate only
+when their state requires it; a new component is not a second business-rule layer.
 
 ## First-run journey (server contract)
 
-An empty workspace renders the welcome hero with three actions, the quickstart
-steps and one optional link to the published public-domain examples. That link
-points at the documentation site, opens in a new browser tab and is
-presentation only: the app itself stays usable offline.
-
-After `project-create`, `project-open` or `load`, the server answers with
-`reload: true`. A fresh render chooses its default view from the content: a
-manuscript with chapters opens **Manuscript & Analysis**, while a research-only
-archive opens **Research & Dossiers**. Recent projects are browser-local (local
-storage); the server keeps no journey state. Standalone read-only reports
-(`controls=False`) render no welcome hero, no example link and no project
-actions. The example link and the quickstart copy come from the same seven
-language packs as the rest of the workspace, so the journey is localized like
-every other control.
+Empty workspaces offer create/open/import actions. After a successful workspace
+transition, a fresh render opens manuscript analysis when chapters exist, otherwise
+research. Recent projects live only in browser storage. Standalone read-only
+reports expose no project actions or welcome journey. Shared language packs own
+the copy; the optional public-example link does not affect offline operation.
 
 ## Repository tooling
 
-Maintained developer tooling lives in `scripts/` and is intentionally not
-packaged. `check_release.py` builds, verifies and smoke-installs release
-archives for the tag workflow; `sync_docs.py` owns release pins and the
-current-version claim scan; `stage_pages.py` owns the public Pages boundary;
-`make_screenshots.py` with `capture_screenshots.cjs` regenerates reviewed
-public imagery; `run_browser_suites.py` with `browser_tools.cjs` runs the local
-and manually dispatched browser checks; the `lixity-start.sh`/`.ps1`,
-`lixity.service` and `lixity.plist` files are compatibility entrypoints that
-delegate to `lixity service`. Workflow contracts are documented in
-`CONTRIBUTING.md`; no script is a second implementation of engine behavior.
+Developer tools in `scripts/` operate releases, documentation staging, public
+examples and browser checks; they are not packaged engine behavior. Existing
+platform startup scripts delegate to `lixity service`. [CONTRIBUTING.md](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md)
+owns workflows and checks; `make help` lists entrypoints.
 
 ## Verification
 
-- Python tests cover orchestration, configuration precedence, language resources
-  and final-score dimension flagging.
-- `tests/browser/style-space.cjs` checks synthetic dashboard interactions,
-  tooltip escaping, idle rendering and mobile layout using optional Playwright.
-- `tests/browser/research.cjs` uses a disposable loopback server and synthetic
-  source archive to check project opening, record creation, evidence lifecycle
-  states and responsive research controls.
-- The wheel includes the bundled UI assets (five stylesheets and five scripts), Python modules and the typing marker.
-- Adapter tests belong with their projects; no private manuscript is needed
-  for the engine's regression suite.
+Python checks cover domain behavior, orchestration, language resources, transport
+and versioned contracts. Optional browser suites inspect synthetic desktop/mobile
+workflows. Release verification compares packaged modules, UI assets and typing
+metadata against source bytes. Adapter tests belong with their project; no private
+manuscript is required. See [contributor checks](https://github.com/mfahsold/lixity/blob/main/CONTRIBUTING.md#development-setup).
 
 ## External research libraries (since v1.19.0)
 
-The optional `research.zotero` adapter lets Zotero Desktop lead media
-and bibliographic cataloguing. Lixity owns selected immutable evidence captures,
-analysis, claims, dossiers and author decisions. It calls the documented local
-HTTP API, rather than reading Zotero's database or incorporating its application
-code. This boundary avoids maintaining another general media manager and keeps
-existing projects independent of Zotero availability after capture.
+The optional `research.zotero` adapter uses Zotero Desktop's local HTTP API for
+bibliographic browsing and explicitly selected PDF/text capture. Lixity owns
+retained evidence, analysis, claims, dossiers and decisions; it never reads or
+writes Zotero's database. Captured evidence remains usable without Zotero.
 
 This follows the separation used by [Zettlr's reference-manager integration](https://docs.zettlr.com/en/editor/citations.html),
 though Zettlr primarily reads exported bibliographies and Lixity captures evidence
@@ -527,19 +309,11 @@ through the [Zotero local API](https://www.zotero.org/support/dev/web_api/v3/loc
 [novelWriter's tags and references](https://novelwriter.io/docs/usage/tags_and_references.html)
 illustrate the complementary authoring concern: connecting story notes and scenes.
 
-The intended commercial value is the path from source to evidence, linguistic
-analysis and an explicit author decision. The expected maintenance benefit is an
-engineering judgment, not measured sales ROI. The adapter is optional, adds no
-runtime dependency and leaves Lixity's license unchanged. Zotero is a separately
-installed product; no bundled distribution or license compatibility claim is made.
-
-The adapter also exports active source captures as an additive RIS bundle with
-original files and a mapping manifest. Import happens through Zotero's supported
-import workflow. The export does not delete local sources, alter citations or
-write Zotero's database. The bridge uses stable external attachment identities
-to distinguish a repeated capture from an explicit refresh. A migration source
-tag and matching original-byte checksum allow an existing evidence source to be
-associated with its imported Zotero attachment. Titles alone never establish identity.
+The adapter adds no runtime dependency and bundles no Zotero application code.
+Its additive RIS export preserves sources/citations and delegates import to
+Zotero's supported workflow. Stable external attachment identities distinguish
+repeated captures from refreshes; migration tags plus original-byte checksums can
+associate an existing evidence source. Titles never establish identity.
 
 Source versions with `external_reference` use `research-local/3`; their snapshots
 use `research-manifest-local/3`. Readers support prior v1/v2 records without

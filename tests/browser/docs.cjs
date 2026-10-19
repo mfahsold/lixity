@@ -12,7 +12,14 @@ const root = path.join(artifacts, 'site');
 const python = process.env.PYTHON_BIN || path.join(repository, '.venv/bin/python');
 const staged = spawnSync(python, ['scripts/stage_pages.py', '--output', root], {cwd: repository, encoding: 'utf8'});
 assert.equal(staged.status, 0, staged.stderr);
-const routes = ['', 'guides/installation.html', 'guides/interpretation.html', 'guides/research-pdf.html', 'guides/first-look.html', 'guides/manuscript-analysis-tools.html', 'demo/report.html', 'examples/effi-briest.html', 'examples/pride-and-prejudice.html', 'blog/index.html', 'blog/whats-new-lixity.html', 'blog/tense-switches.html', 'blog/effi-briest-case-study.html'];
+function htmlRoutes(directory, prefix = '') {
+  return fs.readdirSync(directory, {withFileTypes: true}).flatMap(entry => {
+    const relative = prefix + entry.name;
+    return entry.isDirectory() ? htmlRoutes(path.join(directory, entry.name), relative + '/')
+      : entry.name.endsWith('.html') ? [relative === 'index.html' ? '' : relative] : [];
+  });
+}
+const routes = htmlRoutes(root).sort();
 // Every content page gets all widths. Shared surface types cover theme/JS variants.
 const fullMatrixRoutes = new Set(['', 'guides/research-pdf.html', 'demo/report.html',
   'examples/effi-briest.html', 'blog/whats-new-lixity.html']);
@@ -34,7 +41,7 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
   await chapterLink.focus();
   await page.keyboard.press('Enter');
   if (!javaScriptEnabled) {
-    assert.ok(page.url().endsWith('#ch-2'), 'Chapter anchors work without JavaScript');
+    await expect(page, 'Chapter anchors work without JavaScript').toHaveURL(/#ch-2$/);
     return;
   }
   // The flash lands after the smooth scroll settles (see flashOnArrival).
@@ -220,12 +227,12 @@ async function checkReport(page, javaScriptEnabled, width, colorScheme) {
         }
         // The blog index lists the newest article; its page renders standalone.
         await page.goto('http://lixity.test/lixity/blog/');
-        const newestArticle = page.locator('article h2 a[href="whats-new-lixity.html"]');
-        assert.equal(await newestArticle.count(), 1, 'The blog index links the newest article');
+        const newestArticle = page.locator('article h2 a').first();
+        const articleURL = new URL(await newestArticle.getAttribute('href'), page.url());
         await newestArticle.click();
-        assert.ok(page.url().endsWith('/blog/whats-new-lixity.html'));
+        assert.equal(page.url(), articleURL.href);
         assert.equal(await page.locator('link[rel="canonical"]').getAttribute('href'),
-          'https://mfahsold.github.io/lixity/blog/whats-new-lixity.html', 'Canonical URL matches the published page');
+          'https://mfahsold.github.io' + articleURL.pathname, 'Canonical URL matches the published page');
       }
       assert.deepEqual(errors, []);
       await context.close();

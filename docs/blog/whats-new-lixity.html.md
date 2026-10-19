@@ -60,7 +60,7 @@ Diagnostics now go through one logging setup: one line format, standard levels, 
 
 ## Your privacy, in plain words
 
-Lixity runs on your computer. Nothing is uploaded, there is no account, and the browser page only runs the scripts that ship with it (that is what the strict Content Security Policy means). Loopback bind, host allow-list, payload limits and explicit non-goals are written down in the project’s `SECURITY.md`. The statistical signals support your review; they are not a quality score, and they are not an instruction to rewrite your prose.
+Built-in analysis and dashboard generation run on your computer without cloud calls or an account. Optional integrations and separately configured workers have their own setup and data handling. The browser page only runs the scripts that ship with it (that is what the strict Content Security Policy means). Loopback bind, host allow-list, payload limits and explicit non-goals are written down in the project’s `SECURITY.md`. The statistical signals support your review; they are not a quality score, and they are not an instruction to rewrite your prose.
 
 ## Try it
 
@@ -68,7 +68,7 @@ Lixity runs on your computer. Nothing is uploaded, there is no account, and the 
 
 - [Effi Briest](../examples/effi-briest.html) and [Pride and Prejudice](../examples/pride-and-prejudice.html) — interactive dashboards of the opening three chapters, each with a linked PDF analysis of the complete public-domain novel.
 
-- [First look](../guides/first-look.html) — from chapter comparison to the passage behind a number, in three minutes.
+- [First look](../guides/first-look.html) — a three-minute tour of chapter comparisons and paragraphs with local measurements.
 
 - For your own manuscript: `uv tool install --python 3.12 --managed-python lixity`, then `lixity service start --open`.
 

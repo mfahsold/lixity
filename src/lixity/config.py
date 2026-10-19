@@ -17,13 +17,17 @@ import re
 import stat
 import warnings
 from collections.abc import Mapping
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from .io import FileUtils
 from .models import CorpusConfig
-from .publication import PublicationSettings, validate_metadata_text
+from .publication import (
+    PublicationSettings,
+    publication_configuration_schema,
+    validate_metadata_text,
+)
 
 if TYPE_CHECKING:
     from .style_fingerprint import FingerprintThresholds
@@ -34,6 +38,10 @@ if TYPE_CHECKING:
 #: to know its own default.
 DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
+
+UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
+PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "register_profiles", "chapter_registers")
+PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "register_profiles", "chapter_registers")
 
 # Keys that may appear in [tool.lixity] (documented schema).
 TOOL_KEYS = frozenset(
@@ -51,12 +59,10 @@ TOOL_KEYS = frozenset(
         "min_chapters",
         "names",
         "motifs",
-        "phrases",
         "nda",
-        "capabilities",
         "scene_analysis",
     }
-) | frozenset(CorpusConfig.model_fields)
+) | frozenset(CorpusConfig.model_fields) | UNINTERPRETED_KEYS
 
 
 MAX_AUTHOR_NAME_CHARS = 500
@@ -163,7 +169,8 @@ def _edit_project_setting(content: str, key: str, value: Any) -> str:
         else:
             candidate(f"{key} = {encoded}" + newline + content)
     else:
-        scalar = r'(?:"(?:[^"\\\r\n]|\\.)*"|\'[^\'\r\n]*\'|true|false|[+-]?[\d_]+(?:\.[\d_]+)?)'
+        scalar = (r'(?:"(?:[^"\\\r\n]|\\.)*"|\'[^\'\r\n]*\'|true|false|'
+                  r'[+-]?(?:[\d_]+(?:\.[\d_]+)?(?:[eE][+-]?[\d_]+)?|inf|nan))')
         value_pattern = r"\{[^\r\n]*\}" if isinstance(value, dict) else scalar
         assignments = re.compile(
             rf"^([ \t]*(?:{key}|\"{key}\"|'{key}')[ \t]*=[ \t]*){value_pattern}"
@@ -238,6 +245,14 @@ def prepare_project_settings(
     except UnicodeError as exc:
         raise ValueError("Project config could not be parsed; nothing was changed") from exc
     _parse_project_toml(content)
+    analysis_changes = {key: raw for key, raw in changes.items() if key in ANALYSIS_SETTINGS_KEYS}
+    if "language" in analysis_changes:
+        from .language import LANGUAGE_CHOICES
+
+        if analysis_changes["language"] not in LANGUAGE_CHOICES:
+            raise ValueError(f"Unknown language: {analysis_changes['language']}")
+    candidate_thresholds = (resolve_thresholds(project_config={**load_project_config(root), **analysis_changes})
+                            if any(key in analysis_changes for key in THRESHOLD_KEYS) else None)
     for key, raw in changes.items():
         if key == "author_name":
             value: Any = validate_author_name(raw)
@@ -245,6 +260,10 @@ def prepare_project_settings(
             value = validate_project_title(raw)
         elif key == "publication":
             value = PublicationSettings.model_validate(raw).model_dump()
+        elif key == "language":
+            value = raw
+        elif key in THRESHOLD_KEYS:
+            value = getattr(candidate_thresholds, key)
         elif key in {"register_profiles", "chapter_registers"}:
             from .registers import validate_register_settings
 
@@ -336,19 +355,17 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
         here = here.parent
 
     merged: dict[str, Any] = {}
-    project_only = ("author_name", "draft_notice", "publication", "register_profiles", "chapter_registers")
-
     user = Path(os.path.expanduser("~/.config/lixity.toml"))
     if user.is_file():
         merged.update(_load_toml(user))
-        for key in project_only:
+        for key in PROJECT_ONLY_KEYS:
             merged.pop(key, None)
 
     project = _walk_up(here, "pyproject.toml")
     if project is not None:
         settings = _load_toml(project)
         if start is None or project.parent != here:
-            for key in project_only:
+            for key in PROJECT_ONLY_KEYS:
                 settings.pop(key, None)
         merged.update(settings)
 
@@ -356,7 +373,7 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
     if local is not None and local != project:
         settings = _load_toml(local)
         if start is None or local.parent != here:
-            for key in project_only:
+            for key in PROJECT_ONLY_KEYS:
                 settings.pop(key, None)
         merged.update(settings)
 
@@ -390,6 +407,80 @@ THRESHOLD_KEYS: tuple[str, ...] = (
     "dim_score_threshold",
     "flag_min_severity",
 )
+
+ANALYSIS_SETTINGS_KEYS = ("language", *THRESHOLD_KEYS)
+
+
+def configuration_metadata() -> dict[str, Any]:
+    """Describe installed configuration without discovering any project values.
+
+    The component schemas expose defaults and local field constraints. They do
+    not replace the existing validators or model the entire project file.
+    """
+    from .style_fingerprint import FingerprintThresholds
+
+    corpus_schema = CorpusConfig.model_json_schema()
+    for key, value in CorpusConfig().model_dump().items():
+        corpus_schema["properties"][key].setdefault("default", value)
+    properties: dict[str, dict[str, Any]] = {}
+    defaults = asdict(FingerprintThresholds())
+    for key in THRESHOLD_KEYS:
+        value = defaults[key]
+        kind = "number" if key in FingerprintThresholds.numeric_inputs else "integer" if isinstance(value, int) else "string"
+        field: dict[str, Any] = {"type": kind, "default": value}
+        if key in FingerprintThresholds.numeric_inputs:
+            policy = FingerprintThresholds.numeric_inputs[key]
+            field["exclusiveMinimum" if policy.minimum_exclusive else "minimum"] = policy.minimum
+            if policy.maximum is not None:
+                field["exclusiveMaximum" if policy.maximum_exclusive else "maximum"] = policy.maximum
+        properties[key] = field
+    properties["min_chapters"]["minimum"] = FingerprintThresholds.minimum_chapters
+    properties["flag_min_severity"]["enum"] = list(FingerprintThresholds.flag_severities)
+    properties["fdr_method"]["enum"] = list(FingerprintThresholds.fdr_methods)
+    return {
+        "schema_version": "lixity-configuration/1",
+        "accepted_keys": sorted(TOOL_KEYS),
+        "uninterpreted_keys": sorted(UNINTERPRETED_KEYS),
+        "project_only_keys": list(PROJECT_ONLY_KEYS),
+        "scope": (
+            "Accepted keys describe the project loader, not one validation schema. "
+            "The component schemas cover CorpusConfig, FingerprintThresholds and PublicationSettings; "
+            "component validators also enforce rules such as valid register assignments. "
+            "Other keys use their owning component's validation. Defaults are annotations, "
+            "not effective project or server-session values. Project-only keys require an "
+            "explicit root selection and exclude user or ancestor defaults."
+        ),
+        "corpus_schema": corpus_schema,
+        "publication_schema": publication_configuration_schema(),
+        "threshold_schema": {
+            "type": "object", "properties": properties, "additionalProperties": False,
+            "$comment": (
+                "Numeric thresholds must be finite. Defaults are annotations. "
+                "FingerprintThresholds also validates z_mild <= z_strong after applying "
+                "defaults; this cross-field rule is not encoded in JSON Schema."
+            ),
+        },
+        "native_settings": {
+            "persisted_keys": list(PERSISTED_SETTINGS_KEYS),
+            "session_keys": list(ANALYSIS_SETTINGS_KEYS),
+            "optional_persistence": {
+                "flag": "save_analysis_defaults", "default": False,
+                "keys": list(ANALYSIS_SETTINGS_KEYS), "requires_project_token": True,
+                "scope": (
+                    "When explicitly true, saves only posted language and threshold fields "
+                    "to the selected project's lixity.toml in the existing settings transaction. "
+                    "Requires an explicit project and its current project_token; absent or "
+                    "false preserves session-only analysis settings."
+                ),
+            },
+            "scope": (
+                "Editable POST /api/settings fields, not a list of rendered controls. "
+                "Persistence requires the selected project; publication and chapter registers "
+                "also require its current project token. Language and thresholds remain in the "
+                "session unless optional persistence is explicitly requested."
+            ),
+        },
+    }
 
 
 def apply_config_to_thresholds(config: dict[str, Any]) -> dict[str, Any]:
