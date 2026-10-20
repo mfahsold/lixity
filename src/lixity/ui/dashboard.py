@@ -376,15 +376,20 @@ def render_dashboard(
         f'data-dossier-image-capable="{str(controls and allowed_actions is not None and action_enabled("research-dossier-image")).lower()}">',
         f'<a class="skip-link" href="#chapters">{L("skip_main")}</a>',
         '<div class="page">',
-        *(('<div class="workspace-shell">',
-           toggle_button(L('navigation_collapse'), 'workspace-navigation-toggle', False, 'ctl workspace-navigation-toggle'),
-           '<div id="workspace-navigation-content">') if controls else ()),
+        *(('<div class="workspace-shell"><div class="workspace-shell-header">',
+           f'<button type="button" class="ctl workspace-navigation-toggle" id="workspace-navigation-toggle" '
+           f'aria-label="{L("navigation_collapse")}" aria-controls="workspace-navigation-content" aria-expanded="true" '
+           f'title="{L("navigation_collapse")}">'
+           '<svg width="20" height="20" viewBox="0 0 20 20" fill="none" stroke="currentColor" '
+           'stroke-width="1.5" aria-hidden="true" focusable="false">'
+           '<rect x="2.5" y="3.5" width="15" height="13" rx="2"/><path d="M7.5 3.5v13"/></svg></button>') if controls else ()),
         project_header(
             title, labels, language_name, engine_name, compact=controls, meta=project_meta
         ),
     ]
 
     if controls:
+        parts.append('</div><div id="workspace-navigation-content">')
         parts.append(
             f'<nav class="workspace-bar" id="project-controls" aria-label="{L("controls")}">'
         )

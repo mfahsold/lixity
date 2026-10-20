@@ -10,13 +10,18 @@
 .reader-size-controls { display: inline-flex; align-items: center; gap: .35rem; }
 .reader-size-controls output { min-width: 2ch; text-align: center; font-size: var(--text-small); }
 .reader-settings { position: relative; }
-.reader-settings > summary { cursor: pointer; list-style: none; }
+.reader-settings > summary {
+  display: flex; align-items: center; cursor: pointer; list-style: none;
+  min-height: 2.5rem; padding: .45rem .65rem;
+  border: 1px solid transparent; border-radius: var(--radius-sm);
+}
 .reader-settings > summary::-webkit-details-marker { display: none; }
 .reader-settings-body {
   position: fixed; z-index: 15;
   display: grid; gap: .55rem; width: 16rem; max-width: calc(100vw - 2rem);
   padding: 1rem; border: 1px solid var(--line-strong); border-radius: var(--radius-sm);
   background: var(--surface); box-shadow: var(--shadow-modal); font-size: var(--text-small);
+  max-height: calc(100dvh - 1rem); overflow: auto; overscroll-behavior: contain;
 }
 .reader-settings-body select { width: 100%; }
 .reader-settings:not([open]) > .reader-settings-body { display: none; }
@@ -43,8 +48,9 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
   margin: 1.5rem auto 4rem;
 }
 .manuscript-reading .chapter {
+  --reader-action-gutter: 2.75rem;
   background: transparent; box-shadow: none; border: 0; border-radius: 0;
-  padding: 1rem 1.5rem 2.25rem; margin: 0;
+  padding: 1rem calc(var(--reader-action-gutter) + .5rem) 2.25rem 1.5rem; margin: 0;
 }
 .manuscript-reading .chapter + .chapter { border-top: 1px solid var(--line); padding-top: 2.5rem; }
 .manuscript-reading .chapter-head { display: block; margin-bottom: 1.5rem; }
@@ -77,7 +83,7 @@ body.manuscript-reading.only-flags:not(.text-search-active) .chapter { display: 
 .manuscript-reading .ptext-inner > .manuscript-link-feedback:not(:empty) { display: block; }
 .manuscript-reading .marker-row > button { display: none; }
 .manuscript-reading .reader-paragraph-actions {
-  display: inline-flex; position: absolute; top: .1rem; right: -2.6rem;
+  display: inline-flex; position: absolute; top: .1rem; right: calc(-1 * var(--reader-action-gutter));
   min-width: 2.5rem; padding: .2rem .45rem;
   color: var(--muted); background: var(--bg); border-color: transparent; opacity: .2;
 }
@@ -110,12 +116,15 @@ body.lixity-workspace.reader-focus { padding-left: 1.5rem; }
   .reader-mode-label { display: none; }
   .reader-chapter { flex-basis: calc(100% - 8rem); max-width: none; }
   .reader-size-controls { margin-left: auto; }
-  .manuscript-reading .chapter { padding: 1rem 2.7rem 2rem .15rem; }
+  .manuscript-reading .chapter { padding: 1rem calc(var(--reader-action-gutter) + .5rem) 2rem .15rem; }
   .manuscript-reading #chapters { margin-top: .75rem; }
-  .manuscript-reading .reader-paragraph-actions { right: -2.7rem; padding: .1rem; opacity: .65; }
+  .manuscript-reading .reader-paragraph-actions { padding: .1rem; opacity: .65; }
   body.lixity-workspace.reader-focus { padding-left: 1rem; }
 }
 @media (hover: none) { .manuscript-reading .reader-paragraph-actions { opacity: .7; } }
+@media (pointer: coarse) {
+  .manuscript-reader-controls > button.ctl, .reader-settings > summary { min-height: 2.75rem; }
+}
 @media print {
   .manuscript-reader-controls, .reader-paragraph-actions, .manuscript-context-menu,
   .manuscript-selection-tools, .reader-inspector { display: none !important; }

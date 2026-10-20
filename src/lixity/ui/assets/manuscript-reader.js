@@ -253,11 +253,12 @@
     }
   }
   controls.hidden = false; appearance();
-  settings.addEventListener("toggle", function() {
+  function placeSettings() {
     if (!settings.open) return;
     var summary = settings.querySelector("summary").getBoundingClientRect();
     place(settings.querySelector(".reader-settings-body"), summary.left, summary.bottom + 6);
-  });
+  }
+  settings.addEventListener("toggle", placeSettings);
   mode.addEventListener("change", function() { setMode(mode.value); });
   analysisToggle.addEventListener("click", function() {
     var previous = workbench.state();
@@ -363,6 +364,7 @@
   }, true);
   document.addEventListener("lixity:viewchange", function() {
     closeMenu(false); selectionTools.hidden = true;
+    settings.open = false;
     var pane = document.getElementById("view-pane-analysis");
     if (pane && !pane.classList.contains("active") && document.body.classList.contains("reader-focus")) setFocus(false);
   });
@@ -375,7 +377,13 @@
       }
     });
   }, {passive: true});
-  window.addEventListener("resize", function() { closeMenu(false); selectionTools.hidden = true; });
+  window.addEventListener("resize", function() { closeMenu(false); selectionTools.hidden = true; placeSettings(); });
+  document.addEventListener("scroll", function(event) {
+    if (!settings.open || settings.contains(event.target)) return;
+    var summary = settings.querySelector("summary"), box = summary.getBoundingClientRect();
+    if (!summary.getClientRects().length || box.bottom <= 0 || box.top >= innerHeight) settings.open = false;
+    else placeSettings();
+  }, {passive: true, capture: true});
   var returnButton = document.getElementById("workbench-return");
   var shell = document.querySelector(".workspace-shell");
   if (shell) shell.appendChild(returnButton);

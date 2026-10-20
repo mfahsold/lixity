@@ -487,6 +487,8 @@ dialog.lixity-modal::backdrop {
 }
 
 .modal-tab-pane > .modal-body { overflow: visible; }
+.modal-scroll { min-height: 0; min-width: 0; overflow: auto; overscroll-behavior: contain; scroll-padding-block: var(--space-3); }
+.modal-scroll > .modal-body { overflow: visible; }
 .modal-body > * { flex-shrink: 0; min-width: 0; }
 .modal-header h3 { overflow-wrap: anywhere; }
 

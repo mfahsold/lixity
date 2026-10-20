@@ -852,6 +852,8 @@ window.LixityManuscriptLinks = {
   if (destinations) content.parentElement.appendChild(destinations);
   var desktop = window.matchMedia("(min-width: 1100px)");
   var manualCollapsed = false, companionOpen = false, companionOverride = null;
+  var toggleFocused = false;
+  document.addEventListener("focusin", function(event) { toggleFocused = event.target === toggle; });
   document.body.classList.add("has-workspace-navigation");
   toggle.setAttribute("aria-controls", content.id);
   function companionActive() {
@@ -865,12 +867,12 @@ window.LixityManuscriptLinks = {
     content.hidden = collapsed;
     document.body.classList.toggle("navigation-collapsed", collapsed);
     toggle.setAttribute("aria-expanded", String(!collapsed));
-    toggle.setAttribute("aria-pressed", String(collapsed));
     var text = uiLabel(collapsed ? "navigation_expand" : "navigation_collapse");
     toggle.setAttribute("aria-label", text); toggle.title = text;
-    toggle.textContent = collapsed ? "☰" : "‹ " + text;
-    if (!desktop.matches && document.activeElement === toggle) {
-      var selected = content.querySelector('[data-view][aria-selected="true"]');
+    // A CSS breakpoint may blur the disappearing control before matchMedia's
+    // change callback runs. Retain its last explicit focus until another target.
+    if (!desktop.matches && toggleFocused) {
+      var selected = destinations && destinations.querySelector('[data-view][aria-selected="true"]');
       if (selected) selected.focus({preventScroll: true});
     }
     window.dispatchEvent(new Event("resize"));

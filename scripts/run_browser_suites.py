@@ -33,6 +33,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
         "workbench.cjs",
         "workbench-transitions.cjs",
         "tooltips.cjs",
+        "overlay-layout.cjs",
         "minimal-workflows.cjs",
         "project-controls.cjs",
         "research.cjs",
@@ -53,10 +54,12 @@ AREAS: dict[str, tuple[str, ...]] = {
     "tokens": (
         "docs.cjs",
         "layout.cjs",
+        "overlay-layout.cjs",
         "visual-consistency.cjs",
     ),
     "analysis": (
         "layout.cjs",
+        "overlay-layout.cjs",
         "manuscript-pdf.cjs",
         "manuscript-reader.cjs",
         "reader-document.cjs",
@@ -74,6 +77,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "project": (
+        "overlay-layout.cjs",
         "debug.cjs",
         "nda-draft.cjs",
         "project-controls.cjs",
@@ -87,6 +91,7 @@ AREAS: dict[str, tuple[str, ...]] = {
         "visual-consistency.cjs",
     ),
     "research": (
+        "overlay-layout.cjs",
         "research-navigation.cjs",
         "decision-acknowledgement.cjs",
         "dossier-claims.cjs",

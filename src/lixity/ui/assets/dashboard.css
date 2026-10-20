@@ -992,7 +992,7 @@ mark.search-hit {
 .research-details summary { cursor: pointer; color: var(--accent); }
 .research-details-body { margin-top: .5rem; }
 .research-details-body dt { font-weight: var(--weight-semibold); }
-.research-details-body dd { margin: 0 0 .4rem; }
+.research-details-body dd { margin: 0 0 .4rem; overflow-wrap: anywhere; }
 .research-passage-actions { margin-top: .5rem; }
 .research-claim-views { margin-top: .8rem; }
 
@@ -1730,7 +1730,21 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
 .lixity-workspace .toolbar { gap: .65rem 1rem; background: var(--bg); backdrop-filter: none; -webkit-backdrop-filter: none; }
 #workspace-navigation-content { display: contents; }
 #workspace-navigation-content[hidden] { display: none; }
+.workspace-shell-header { min-width: 0; }
 .workspace-navigation-toggle { display: none; }
+/* Window and reading commands keep their targets while yielding emphasis to
+   selected destinations, display state and explicit primary save actions. */
+.workspace-shell .workspace-bar button.ctl:not(.primary),
+.manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]),
+.manuscript-reader-controls .reader-settings > summary {
+  background: transparent; border-color: transparent; color: var(--fg-secondary);
+}
+.workspace-shell .workspace-bar button.ctl:not(.primary) { text-align: start; }
+.workspace-shell .workspace-bar button.ctl:not(.primary):enabled:hover,
+.manuscript-reader-controls > button.ctl:not(.analysis-toggle):not([aria-pressed="true"]):enabled:hover,
+.manuscript-reader-controls .reader-settings > summary:hover {
+  background: var(--neutral); border-color: var(--line); color: var(--fg);
+}
 @media screen and (min-width: 1100px) {
   body.lixity-workspace { padding: 1.5rem 1.5rem 3rem 17rem; }
   .lixity-workspace > .page { max-width: 96rem; }
@@ -1741,6 +1755,12 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
     border-right: 1px solid var(--line);
   }
   .lixity-workspace .workspace-shell .project-header { order: 0; }
+  .has-workspace-navigation .workspace-shell-header {
+    position: relative; padding-top: 0;
+  }
+  .has-workspace-navigation .workspace-shell-header .product-meta {
+    min-height: 2.75rem; padding-left: 3.25rem;
+  }
   .lixity-workspace .workspace-shell .product-meta { gap: .35rem .6rem; }
   .lixity-workspace .workspace-shell .project-meta { overflow-wrap: anywhere; }
   .lixity-workspace .view-navigation {
@@ -1760,14 +1780,21 @@ button.research-tag:hover, button.research-tag:focus-visible { border-color: var
   .lixity-workspace .workspace-bar select { min-width: 0; width: 100%; }
   .lixity-workspace .panel { border-radius: var(--radius-sm); box-shadow: none; }
   .has-workspace-navigation .workspace-navigation-toggle {
-    display: inline-flex; order: -1;
-    justify-content: center; white-space: normal;
+    display: inline-flex; position: absolute; top: 0; left: 0;
+    width: 2.75rem; height: 2.75rem; min-width: 2.75rem; padding: 0;
+    align-items: center; justify-content: center; border-color: transparent;
+    background: transparent; color: var(--fg-secondary);
   }
+  .has-workspace-navigation .workspace-navigation-toggle:hover { background: var(--neutral); border-color: var(--line); color: var(--fg); }
   body.lixity-workspace.navigation-collapsed { padding-left: 8rem; }
   .lixity-workspace.navigation-collapsed .workspace-shell {
     width: 7rem; padding: 1.25rem .5rem;
   }
-  .navigation-collapsed .workspace-navigation-toggle { width: 2.75rem; padding: .5rem; }
+  .navigation-collapsed .workspace-shell-header .project-header > :not(.product-meta),
+  .navigation-collapsed .workspace-shell-header .product-meta > :not(.product-name) { display: none; }
+  .navigation-collapsed.has-workspace-navigation .workspace-shell-header .product-meta {
+    padding-left: 2.75rem; justify-content: center;
+  }
 }
 
 /* Empty Analysis State */
