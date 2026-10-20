@@ -46,8 +46,12 @@ research calls stay explicitly scoped. An occupied port fails startup.
 
 `DocumentAnalysis` reuses corpus/chapter measurements for the fingerprint and
 renderers. Narrower profile/fingerprint requests use the same pipeline. Dashboard
-refresh detects changed manuscript bytes before serving cached measurements.
-Research overviews reuse one validated archive snapshot without a persistent cache.
+refresh checks manuscript bytes before serving cached measurements and rebuilds
+when a readable changed source can be rendered. Currently, missing/unreadable
+sources and rebuild failures retain the last successful dashboard without a
+freshness indication. Retaining that view is distinct from establishing that its
+measurements remain current. Research overviews reuse one validated archive
+snapshot without a persistent cache.
 
 ## Manual manuscript associations
 
@@ -297,6 +301,60 @@ Desktop/mobile rendering, keyboard focus, text-spacing overrides, reduced motion
 and both themes are checked with synthetic content. Automated checks and the
 selected contrast audits do not constitute a complete accessibility certification
 or replace testing with readers and assistive technologies.
+
+### Interaction ownership and evidence
+
+The shared CSS vocabulary does not itself coordinate application state. Currently
+`project-ui.js` owns workspace navigation, `manuscript-reader.js` owns Read/Inspect
+and its tools, `workspace-reader.js` owns the companion, and native disclosures
+retain their own field DOM. The Preact component layer owns mounted research
+subtrees, not the entire manuscript or these independent controllers.
+
+Visibility is currently derived from both controller state and layout CSS. In
+particular, the companion layout suppresses broad analysis panels even in Inspect;
+the mode select alone does not determine their visibility. The reader's retained
+inspector/settings state also has its own dismissal handler rather than a shared
+active-view dismissal owner. These boundaries matter when testing navigation,
+selection, disclosure and return as one journey. Shared styles and separately
+working controls do not establish that their transitions compose correctly.
+
+The following evidence informs interaction design; it does not establish an
+optimal Lixity layout:
+
+- [Sellen, Kurtenbach and Buxton (1992)](https://www.billbuxton.com/ModeErrorsHCI.pdf)
+  studied mode feedback in restricted editor tasks. The transferable concern is
+  visible state and predictable input, rather than a universal ban on modes.
+- [McGrenere, Baecker and Booth (2002)](https://www.cs.ubc.ca/~joanna/papers/CHI2002_McGrenere.pdf)
+  evaluated user-controlled simplification with 20 Word users. Simpler defaults
+  need an accessible path to the full capability; customization has costs too.
+- [Iqbal and Horvitz (2007)](https://www.erichorvitz.com/CHI_2007_Iqbal_Horvitz.pdf)
+  observed task interruption and resumption. Preserving a passage, selection and
+  return route is a design inference; their timings are not Lixity switching costs.
+- [Heer and Robertson (2007)](https://idl.cs.washington.edu/files/2007-AnimatedTransitions-InfoVis.pdf)
+  evaluated chart transitions, including unfavorable staging tradeoffs. Motion
+  can explain continuity; it does not justify animating every panel or a fixed
+  universal duration.
+- [Apple's context-menu guidance](https://developer.apple.com/design/human-interface-guidelines/context-menus)
+  treats contextual commands as additional access routes. Core operations need
+  discoverable controls without relying on right-click or hover.
+- [Fluent's drawer guidance](https://fluent2.microsoft.design/components/web/react/core/drawer/usage)
+  distinguishes adjacent context from intrusive overlays. Dense comparisons may
+  need more space than a narrow inspector. [Carbon's color roles](https://www.carbondesignsystem.com/building-blocks/foundations/color/tokens)
+  distinguish surfaces, selected states and semantic feedback; color must also
+  have a [non-color cue](https://www.w3.org/WAI/WCAG22/Understanding/use-of-color.html).
+
+Display preferences belong to the browser, not an additional server session
+store. Selected-context tokens bind source/root/configuration; they establish
+neither freshness nor authentication. Source digests, archive snapshots and
+reviewed revisions provide separate checks. An exposed tool cannot bypass those
+checks, and closing a view does not undo an already committed domain operation.
+
+The canonical paragraph text and Unicode offsets remain authoritative for saved
+research anchors. The PDF presentation and analysis profiles have different block
+boundaries; a future richer reader cannot safely join them by text equality or
+position. UI work alone does not authorize an anchor migration, a new analytical
+scope, automatic retention, or manuscript edits. Designs and local audit evidence
+under review remain outside maintained product documentation.
 
 Pages publishes `sitemap.xml` containing the canonical landing page and HTML
 guides. Submit its public URL in Google Search Console; a sitemap aids discovery

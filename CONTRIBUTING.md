@@ -203,6 +203,25 @@ The visual-consistency browser check covers palette, contrast, focus and enlarge
 text spacing; it is not a full accessibility audit. Ground design claims in
 [documented evidence](docs/ARCHITECTURE.md#visual-consistency-and-evidence).
 
+For shared interaction changes, define the user journey before choosing suites.
+Cover entry, visible state, action scope, dismissal and return to the same task.
+Exercise transitions between already working components: a correct inspector and
+a correct research form can still interact incorrectly after a view change.
+Use synthetic content to check that the requested destination is actually visible,
+the reverse control remains reachable after scrolling, and Escape affects only
+the active visible surface. Verify both pointer and keyboard routes.
+
+Retain manuscript text/selection, exact research anchors and unsaved field values
+where the flow promises them. Include pending, unavailable, stale and failed states
+when their owners change; an empty result is not evidence of a successful read.
+Backend freshness changes need disappearance/failure/recovery cases as well as
+successful source edits. Keep assertions about user-visible behavior rather than
+mirroring implementation classes or treating a larger test count as usability.
+
+Publish the same verified workflow in README, the relevant Pages guide and the
+generated demo. Check labels, screenshots, capability limits and release versus
+current-main claims together; defer descriptions of a candidate UI until it exists.
+
 ## Pull requests
 
 1. Branch from `main`.
