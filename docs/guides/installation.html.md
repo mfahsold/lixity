@@ -2,7 +2,7 @@
 
 Explore sentence rhythm, vocabulary and style patterns in your Markdown manuscript. Lixity runs its analysis on your computer and saves a dashboard you can open in a browser. No account or manuscript upload is required.
 
-Maintained by the Lixity project · Updated 19 October 2026
+Maintained by the Lixity project · Updated 20 October 2026
 
 ## What do I need?
 
@@ -32,15 +32,17 @@ lixity service start --open
 
 This installs the current release from PyPI in uv's [isolated tool environment](https://docs.astral.sh/uv/concepts/tools/). For a pinned, checksum-verified setup, install the release wheel instead — `uv tool install --python 3.12 --managed-python --reinstall-package lixity "https://github.com/mfahsold/lixity/releases/download/v0.7.1/lixity-0.7.1-py3-none-any.whl"` — and verify it against the SHA256SUMS file on the release page. Shell integration configures new terminals; it does not change an already open one. See the [release notes](../releases/v0.7.1.md) for changes and compatibility.
 
+The published release is **v0.7.1**. The [public demo](../demo/report.html) shows **current main (unreleased)**, including its continuous manuscript reader. Installing the release does not provide those newer controls. Use the development route below if you want to follow main.
+
 **Development builds instead**
 
-For unreleased development work, install Git, stop the managed service and replace the installation with:
+To follow unreleased changes shown in the demo, install Git, stop the managed service and replace the installation with:
 
 `uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"`
 
 `main`
 
-changes over time and unreleased commits can share the release version. After installation, run
+changes over time; the demo represents one build, not a pinned release or a guarantee that the latest checkout is identical. Unreleased commits can share the release version. After installation, run
 
 `lixity service restart --open`
 
@@ -54,6 +56,8 @@ and reload your browser. This reuses recorded launch settings; a project opened 
 
 The managed app opens `http://127.0.0.1:8765/`. Its default is an empty workspace; it does not search your terminal's current folder. Choose **Open Project** for an existing folder or **Analyze a manuscript** for an import preview. Confirm the language and read a passage before interpreting its measurements.
 
+In **v0.7.1**:
+
 1. Choose **Analyze a manuscript** (or **New Project**) and confirm the preview: title, analysis language and optional author name.
 
 2. Read the **Start your review** panel first: **Open passage**, **Explore chapters** or **Open sentence rhythm**.
@@ -62,7 +66,9 @@ The managed app opens `http://127.0.0.1:8765/`. Its default is an empty workspac
 
 4. Export the result with **PDF export**: A4 editorial copy, A5 reading copy, A4 manuscript sheets or the A4 analysis report.
 
-The [first-session guide](../ONBOARDING.md) describes every stage. Explore [*The Crate at Warehouse 4*](../demo/report.html) to see the same six-chapter project across Analysis, Research and prepared PDF layouts without installation.
+On **current main**, begin in **Manuscript**. Turn **Analysis** On for diagnostics in place; choose a paragraph's **… → Values** to open its inspector. The toggle alone does not open the dock or collapse navigation. **Analysis overview** opens chapter comparisons; **Back to passage** restores your place and previous Analysis On/Off choice. A dossier can be opened independently with **Dossier alongside**.
+
+The [first-session guide](../ONBOARDING.md) describes every stage. Explore [*The Crate at Warehouse 4*](../demo/report.html) to see the same six-chapter project across Manuscript, Research and prepared PDF layouts without installation. The public demo is read-only; saving markers, associations or research records requires the native app.
 
 **Generate an offline HTML report instead**
 
@@ -98,7 +104,7 @@ for detection.
 
 ## Optional Zotero Desktop
 
-For source capture, install Zotero 10 or later on the same computer and enable its local API in Settings → Advanced. Download the attachments you need. Lixity can browse collections and retain selected PDF/text attachments with your permission. No cloud account is needed. See [Zotero capture and migration](research-pdf.html#zotero); images, audio and video remain in Zotero.
+For source capture, install Zotero 10 or later on the same computer and enable its local API in Settings → Advanced. Download the attachments you need. Lixity can browse collections and retain selected PDF/text and PNG/JPEG attachments with your permission. Retention permits a local copy, not redistribution or factual acceptance. No cloud account is needed. See [Zotero capture and migration](research-pdf.html#zotero); audio and video remain in Zotero.
 
 ## Open an existing project and research archive
 
@@ -142,10 +148,10 @@ Stop each managed instance before replacing the package. Use the published wheel
 lixity service stop
 uv tool upgrade lixity
 lixity --version
-lixity service start --open
+lixity service restart --open
 ```
 
-For a custom port, use `lixity service stop --port 9000` with that instance's port before updating. Pass an explicit project again if you want one at startup. `uv tool upgrade lixity` selects the newest PyPI release; a pinned wheel keeps its fixed URL and is replaced explicitly.
+Restart restores recorded launch settings even after stopping; a project selected later in the browser is not a startup setting. For a custom port, use `--port 9000` with both stop and restart. Pass an explicit project to override the recorded startup choice. `uv tool upgrade lixity` selects the newest PyPI release; a pinned wheel keeps its fixed URL and is replaced explicitly.
 
 For removal, stop all managed instances and disable any login-startup entry you configured, then run `uv tool uninstall lixity`. Manuscript folders and research archives remain. See the [complete update/removal reference](../INSTALLATION.md#updates-and-removal).
 

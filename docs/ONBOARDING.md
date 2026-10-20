@@ -3,7 +3,11 @@
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
 the shared demo project for manuscript analysis, research and PDF layouts.
 The [illustrated first look](guides/first-look.html) follows that same project;
-then use your own manuscript below. [Installation](INSTALLATION.md) owns setup, upgrades and service management;
+then use your own manuscript below. The read-only demo shows **current main
+(unreleased)**; the published **v0.7.1** has earlier reading controls. Use the
+[release installation](INSTALLATION.md#cli-current-release) for v0.7.1 or the
+[development installation](INSTALLATION.md#development-builds-instead) to follow main.
+[Installation](INSTALLATION.md) owns setup, upgrades and service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
 <a id="the-journey-at-a-glance"></a>
@@ -50,8 +54,13 @@ one server share its active project, so check the displayed path before saving.
 
 ### Read and explore
 
-Start with **Open passage** or **Explore chapters**, then expand a paragraph's
-**Values**. The opening candidate is not a quality ranking; read the text before
+On **current main**, start in **Manuscript** and read a passage. Turn **Analysis**
+On to show diagnostics in place; this does not open a tool or narrow the prose.
+Choose a paragraph's **… → Values** for its measurements. **Analysis overview**
+opens chapter comparisons; **Back to passage** restores your place and prior
+Analysis On/Off choice. On **v0.7.1**, start with **Open passage** or
+**Explore chapters** and expand the paragraph's **Values**.
+The opening candidate is not a quality ranking; read the text before
 deciding whether a difference matters. Settings explain saved versus session-only
 choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
 require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
@@ -72,8 +81,8 @@ returns focus to its opener.
 
 | What you want to do | Where to start |
 | --- | --- |
-| Read a difference in context | **Analysis**: open a passage, then expand **Values** if needed. |
-| Compare chapter positions | **Style dimensions**: select a chapter; on current main, use a flat axis view to inspect overlaps. |
+| Read a difference in context | **Manuscript**: turn **Analysis** On, then choose **… → Values** on a paragraph if needed. |
+| Compare chapter positions | **Analysis overview → Style dimensions**: select a chapter or use a flat axis view to inspect overlaps. |
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |
 
@@ -96,6 +105,15 @@ The [research guide](research/USAGE.md) owns capture, exact citations, authored
 records, manuscript associations and recovery. Retain only permitted source bytes.
 Claims and author decisions remain interpretations; saving or finding a passage
 does not verify it. Review changed anchors and linked revisions explicitly.
+
+On current main, a paragraph's saved associations lead through **Open claim**
+to the linked claim version, its linked dossier versions and cited source passages.
+Close the record viewer, then use **Back to passage** to return to the requesting
+manuscript text. To create an
+association locally, select text in one paragraph, choose **Link selection to
+claim**, review the claim and quote, and explicitly permit quote retention before
+**Save association**. This saves the quote, not a full manuscript capture or source
+evidence. The public demo lets you explore saved records without writing them.
 
 <a id="use-zotero-for-sources-and-media-since-v1190"></a>
 ## Use Zotero for sources and media

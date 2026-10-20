@@ -41,7 +41,11 @@ lixity service start --open
 ```
 
 The current release is **v0.7.1**. Read the [release notes](releases/v0.7.1.md)
-for changes and compatibility information. For a reproducible, checksum-verified
+for changes and compatibility information. The [public demo](demo/report.html)
+shows **current main (unreleased)**, including its continuous manuscript reader;
+installing v0.7.1 does not provide those newer controls. To follow that development
+line, use [Development builds instead](#development-builds-instead).
+For a reproducible, checksum-verified
 setup, install the pinned release wheel instead (the release page also carries
 `SHA256SUMS`):
 
@@ -85,14 +89,15 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 <details>
 <summary>Follow unreleased source changes</summary>
 
-To follow unreleased changes, install [Git](https://git-scm.com/downloads), then
-use this **instead**:
+To follow unreleased changes shown in the public demo, install
+[Git](https://git-scm.com/downloads), then use this **instead**:
 
 ```sh
 uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"
 ```
 
-`main` changes over time. Review
+`main` changes over time; the published demo represents one build, not a pinned
+release or a guarantee that the latest checkout is identical. Review
 [release notes](https://github.com/mfahsold/lixity/releases) before switching.
 Stop the managed service before replacing its installation, verify the new
 version, then run `lixity service restart --open` to reuse the recorded launch

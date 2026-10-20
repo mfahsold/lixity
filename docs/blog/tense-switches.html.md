@@ -22,17 +22,17 @@ One honest sentence: these readings come from verb forms and markers, not from a
 
 Start with the [read-only synthetic demo](../demo/report.html) if you want to see the controls before installing. For your own manuscript, use the local project workflow:
 
-**Current development:** the interactive workspace initially opens in **Read**. Choose **Inspect** to follow the analysis-panel workflow below. Read keeps the prose continuous and offers paragraph tools through its **…** menu. The [reading-workbench walkthrough](manuscript-reading-workbench.html) explains both views; an installed release may have an earlier interface.
+**Current development:** the interactive workspace opens as continuous prose with **Analysis Off**. Choose **Analysis overview** for the comparison panels below, or use a paragraph's **…** menu for its tools. **Back to passage** returns from the overview. The [reading-workbench walkthrough](manuscript-reading-workbench.html) explains these controls; an installed release may have an earlier interface.
 
 1. **Install and open.** `uv tool install --python 3.12 --managed-python lixity`, then `lixity service start --open` and choose **Open Project** for your manuscript folder. (Windows, macOS and Linux are covered in the [installation guide](../guides/installation.html).) If you just want to see the loop first: the [demo report](../demo/report.html) opens in your browser, no install.
 
-2. **Start with the review panel.** **Start your review** offers **Open passage** (the first paragraph above your threshold, in reading order), **Explore chapters** and **Open sentence rhythm**.
+2. **Start with the review panel.** Open **Analysis overview**. **Start your review** offers **Open passage** (the first paragraph above your threshold, in reading order), **Explore chapters** and **Open sentence rhythm**.
 
-3. **Work the flagged list.** The **Flagged passages** panel lists every paragraph at or above your threshold, sorted by strength and line. Click a row and the paragraph opens, the page scrolls, the passage flashes — with the “flagged only” filter set, so the rest of the page gets out of your way.
+3. **Work the flagged list.** The **Flagged passages** panel lists every paragraph at or above your threshold, sorted by strength and line. Choose a row to return to that passage in the continuous manuscript, with its surrounding text available for review.
 
-4. **Read the context before you judge.** Inside the opened paragraph, **Values** shows the source lines and the measurements. Then look at the scene: is the switch carried by a letter, a memory, an interior monologue? The chapter line in the header shows you the norm you are comparing against.
+4. **Read the context before you judge.** Open the paragraph's **…** menu and choose **Values** for source lines and measurements. Then look at the scene: is the switch carried by a letter, a memory, an interior monologue? The chapter line supplies the comparison; it does not decide whether the passage works.
 
-5. **Write your decision where you read it.** The marker buttons (**+ To-do**, **+ Check**, **+ Attention**) leave a review note in the manuscript as a Markdown comment. It stays invisible while you read and shows up later in the **Work markers** panel.
+5. **Write your decision where you read it.** In a configured local project, the paragraph's **…** menu offers work markers such as **To-do**, **Check** and **Attention**. Saving a marker writes a review note into the manuscript as a Markdown comment. It stays invisible while you read and shows up later in the **Work markers** panel.
 
 ## When a switch is on purpose
 

@@ -33,6 +33,9 @@ claim-evidence matrix or choose one of four prepared PDF layouts. The three
 native workspace views stay visible; actions marked **Local app** are disabled
 previews with an [installation link](https://mfahsold.github.io/lixity/guides/installation.html).
 The demo cannot import, edit or save. No install, account or upload is needed.
+It shows **current main (unreleased)**. The packaged **v0.7.1** has earlier
+reading controls; [development installation](docs/INSTALLATION.md#development-builds-instead)
+explains how to follow main locally.
 
 <a id="start-here"></a>
 Built-in analysis runs on your computer. Optional external OCR workers have

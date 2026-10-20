@@ -51,6 +51,9 @@ claim-evidence matrix or choose one of four prepared PDF layouts. The three
 native workspace views stay visible; actions marked **Local app** are disabled
 previews with an [installation link](https://mfahsold.github.io/lixity/guides/installation.html).
 The demo cannot import, edit or save. No install, account or upload is needed.
+It shows **current main (unreleased)**. The packaged **v0.7.1** has earlier
+reading controls; [development installation](docs/INSTALLATION.md#development-builds-instead)
+explains how to follow main locally.
 
 <a id="start-here"></a>
 Built-in analysis runs on your computer. Optional external OCR workers have
@@ -290,9 +293,12 @@ Use active result metadata when interpreting thresholds and unavailable values.
 
 Current-main interactive UI: Manuscript, Research and Project share a desktop
 sidebar and compact narrow-screen navigation. Continuous manuscript prose opens
-with Analysis Off. Its native toggle has an explicit On/Off state; Analysis and
-Dossier are alternative context tools. Hiding analysis leaves an active dossier.
-Analysis overview provides dense comparisons and Back to passage restores context.
+with Analysis Off. Its native toggle has an explicit On/Off state and reveals
+diagnostics without opening a dock or collapsing navigation. Paragraph Values
+explicitly opens the analysis inspector and enables diagnostics. Values and
+Dossier alongside are alternative dock tools; hiding diagnostics leaves an active
+dossier. Analysis overview provides dense comparisons; Back to passage restores
+the prior analysis choice, eligible tool and passage.
 One paragraph tree keeps source text, hashes, search and exact anchors. Browser-local
 reading preferences adjust size, width and spacing; focus is reversible. Paragraph
 ellipsis, right-click and keyboard context menus share values, marker and claim
@@ -309,6 +315,9 @@ keeps it reachable and closing restores the prior manual choice. Its desktop
 divider supports pointer and keyboard width adjustment; narrow screens stack
 the readers. The paragraph inspector and companion replace one another. Saved exact
 manuscript associations provide a context-checked return to the passage.
+On narrow screens, an explicit passage tool request reveals the stacked tool
+heading; close or Escape returns to its requesting passage and control. Optional
+brief feedback respects live reduced-motion changes.
 Current-main research forms start collapsed; headings and Collapse controls
 retain in-memory drafts. Escape closes the innermost disclosure. Contextual
 actions reveal the relevant form. Catalogue previews omit Markdown formatting
@@ -415,7 +424,11 @@ Source: https://github.com/mfahsold/lixity/blob/main/docs/ONBOARDING.md
 Explore [*The Crate at Warehouse 4*](https://mfahsold.github.io/lixity/demo/report.html),
 the shared demo project for manuscript analysis, research and PDF layouts.
 The [illustrated first look](guides/first-look.html) follows that same project;
-then use your own manuscript below. [Installation](INSTALLATION.md) owns setup, upgrades and service management;
+then use your own manuscript below. The read-only demo shows **current main
+(unreleased)**; the published **v0.7.1** has earlier reading controls. Use the
+[release installation](INSTALLATION.md#cli-current-release) for v0.7.1 or the
+[development installation](INSTALLATION.md#development-builds-instead) to follow main.
+[Installation](INSTALLATION.md) owns setup, upgrades and service management;
 [interpretation](guides/interpretation.html) explains the measurements.
 
 <a id="the-journey-at-a-glance"></a>
@@ -462,8 +475,13 @@ one server share its active project, so check the displayed path before saving.
 
 ### Read and explore
 
-Start with **Open passage** or **Explore chapters**, then expand a paragraph's
-**Values**. The opening candidate is not a quality ranking; read the text before
+On **current main**, start in **Manuscript** and read a passage. Turn **Analysis**
+On to show diagnostics in place; this does not open a tool or narrow the prose.
+Choose a paragraph's **… → Values** for its measurements. **Analysis overview**
+opens chapter comparisons; **Back to passage** restores your place and prior
+Analysis On/Off choice. On **v0.7.1**, start with **Open passage** or
+**Explore chapters** and expand the paragraph's **Values**.
+The opening candidate is not a quality ranking; read the text before
 deciding whether a difference matters. Settings explain saved versus session-only
 choices. Standalone HTML is read-only; project writes and manuscript PDF downloads
 require the native server. See [PDF layouts](USAGE.md#lixity-pdf).
@@ -484,8 +502,8 @@ returns focus to its opener.
 
 | What you want to do | Where to start |
 | --- | --- |
-| Read a difference in context | **Analysis**: open a passage, then expand **Values** if needed. |
-| Compare chapter positions | **Style dimensions**: select a chapter; on current main, use a flat axis view to inspect overlaps. |
+| Read a difference in context | **Manuscript**: turn **Analysis** On, then choose **… → Values** on a paragraph if needed. |
+| Compare chapter positions | **Analysis overview → Style dimensions**: select a chapter or use a flat axis view to inspect overlaps. |
 | Follow a source into an argument | **Research**: open a dossier, inspect its evidence and follow a saved manuscript quotation. |
 | Change the manuscript or analysis setup | **Project**: check the active project and whether a setting is saved or session-only. |
 
@@ -508,6 +526,15 @@ The [research guide](research/USAGE.md) owns capture, exact citations, authored
 records, manuscript associations and recovery. Retain only permitted source bytes.
 Claims and author decisions remain interpretations; saving or finding a passage
 does not verify it. Review changed anchors and linked revisions explicitly.
+
+On current main, a paragraph's saved associations lead through **Open claim**
+to the linked claim version, its linked dossier versions and cited source passages.
+Close the record viewer, then use **Back to passage** to return to the requesting
+manuscript text. To create an
+association locally, select text in one paragraph, choose **Link selection to
+claim**, review the claim and quote, and explicitly permit quote retention before
+**Save association**. This saves the quote, not a full manuscript capture or source
+evidence. The public demo lets you explore saved records without writing them.
 
 <a id="use-zotero-for-sources-and-media-since-v1190"></a>
 ## Use Zotero for sources and media
@@ -581,7 +608,11 @@ lixity service start --open
 ```
 
 The current release is **v0.7.1**. Read the [release notes](releases/v0.7.1.md)
-for changes and compatibility information. For a reproducible, checksum-verified
+for changes and compatibility information. The [public demo](demo/report.html)
+shows **current main (unreleased)**, including its continuous manuscript reader;
+installing v0.7.1 does not provide those newer controls. To follow that development
+line, use [Development builds instead](#development-builds-instead).
+For a reproducible, checksum-verified
 setup, install the pinned release wheel instead (the release page also carries
 `SHA256SUMS`):
 
@@ -625,14 +656,15 @@ for all readers and writers. Installing Lixity does not download an OCR model.
 <details>
 <summary>Follow unreleased source changes</summary>
 
-To follow unreleased changes, install [Git](https://git-scm.com/downloads), then
-use this **instead**:
+To follow unreleased changes shown in the public demo, install
+[Git](https://git-scm.com/downloads), then use this **instead**:
 
 ```sh
 uv tool install --python 3.12 --managed-python --reinstall-package lixity "git+https://github.com/mfahsold/lixity.git@main"
 ```
 
-`main` changes over time. Review
+`main` changes over time; the published demo represents one build, not a pinned
+release or a guarantee that the latest checkout is identical. Review
 [release notes](https://github.com/mfahsold/lixity/releases) before switching.
 Stop the managed service before replacing its installation, verify the new
 version, then run `lixity service restart --open` to reuse the recorded launch
@@ -2294,9 +2326,12 @@ available for touch use. Preparing a draft writes nothing.
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a
 read-only companion. It starts closed with no automatic selection. **Current main
 (unreleased):** the manuscript stays continuous and the **Analysis** button has an
-explicit On/Off state. A dossier and analysis are alternative context tools;
-hiding analysis leaves an active dossier. **Analysis overview** opens dense
-comparisons with **Back to passage**, restoring the prior context tool. Refresh
+explicit On/Off state for diagnostics in place. Toggling it does not open the dock
+or collapse navigation. A paragraph's **… → Values** explicitly opens the analysis
+inspector and enables the layer; **Dossier alongside** opens a dossier independently.
+The inspector and dossier are alternative dock tools; hiding diagnostics leaves
+an active dossier. **Analysis overview** opens dense comparisons with **Back to
+passage**, restoring the prior context tool and Analysis On/Off choice. Refresh
 explicitly for the latest dossier.
 On desktop, opening the companion temporarily collapses project navigation into
 a narrow rail. Use **Show navigation** to access its controls; closing the companion
@@ -2310,6 +2345,9 @@ the divider. Reading changes neither document, evidence links nor the statistica
 baseline. **Focus reading** temporarily hides the companion and navigation;
 the same control restores the workspace. A paragraph's **Values** inspector and
 the companion replace one another rather than competing for horizontal space.
+On narrow screens, explicitly opening a tool from a passage scrolls its heading
+into view; closing it or pressing Escape returns to the requesting passage and
+restores focus. On desktop the tool remains adjacent to the manuscript.
 
 To connect the manuscript to research, select a nonempty text range within one
 paragraph and choose **Link selection to claim** (or Alt+L). The
@@ -2327,6 +2365,19 @@ current paragraph hash, line range and exact quotation match the resolved anchor
 Moved, adjusted, ambiguous or unavailable anchors remain review tasks, with no
 silently inferred jump or re-pin. The manuscript's saved-associations disclosure
 provides the same actions while reading.
+
+For a first read-only journey on **current main**, open a paragraph's saved
+associations and choose **Open claim**. Read the linked claim version, follow a
+linked dossier version, then inspect its cited source passage. The pinned version
+is the record the association actually used; opening a newer version does not
+replace that pin. Close the record viewer, then choose **Back to passage** to
+return to the requesting manuscript text. When starting in Research's **Review**
+view instead, **Go to manuscript passage** opens the saved quotation directly;
+that route does not create a manuscript-origin return context.
+The [public demo](../demo/report.html) includes saved associations for this route;
+it cannot retain a new quote or source. To save your own association, use the
+native project workflow below. Source capture separately requires permission to
+retain the source bytes.
 
 
 Claims' **Author review state** labels map to stored `hypothetical` (**Author
@@ -4878,6 +4929,19 @@ optimal Lixity layout:
 - [Apple's context-menu guidance](https://developer.apple.com/design/human-interface-guidelines/context-menus)
   treats contextual commands as additional access routes. Core operations need
   discoverable controls without relying on right-click or hover.
+- [Scarr, Cockburn and Gutwin's spatial-memory review](https://hci.usask.ca/wp-content/cache/mendeley-file-cache/1723ad47-9012-384f-885d-e1c35c62d2ec.pdf)
+  explains how stable control locations support learned retrieval. For Lixity,
+  predictable navigation and return controls are a design inference; rearranging
+  commands by recent use would need separate evidence.
+- [GNOME's header-bar guidance](https://developer.gnome.org/hig/patterns/containers/header-bars.html)
+  groups a few relevant commands through placement and spacing, while
+  [Fluent's button guidance](https://fluent2.microsoft.design/components/web/react/core/button/usage)
+  distinguishes primary from minor actions. These inform control hierarchy,
+  rather than requiring a platform framework or an icon-only interface.
+  [NN/G's signifier experiment](https://www.nngroup.com/articles/flat-ui-less-attention-cause-uncertainty/)
+  found greater effort with weak clickability cues in targeted web-page tasks.
+  Quiet styling must retain recognizable controls, labels and focus feedback;
+  the study does not establish an optimal Lixity button style or performance gain.
 - [Fluent's drawer guidance](https://fluent2.microsoft.design/components/web/react/core/drawer/usage)
   distinguishes adjacent context from intrusive overlays. Dense comparisons may
   need more space than a narrow inspector. [Carbon's color roles](https://www.carbondesignsystem.com/building-blocks/foundations/color/tokens)
@@ -5263,8 +5327,11 @@ not acquire statistical values or claim-save capability. Profile-only callers
 keep their fallback. Deferred interaction retains complete embedded text/search
 and a readable no-JavaScript fallback; an empty closed report panel does not mean
 absent text or a smaller HTML payload.
-Style jumps reveal their owning tabs; chapter/paragraph jumps expand folded
-chapters. Section navigation lists only rendered panels.
+Style jumps reveal their owning tabs. In standalone reports, chapter/paragraph
+jumps expand folded chapters; the current-main interactive reader keeps chapters
+and prose continuous and hides chapter-fold controls. Its paragraph menu opens
+Values in the contextual inspector instead of an inline disclosure. Section
+navigation lists only rendered panels.
 
 PDF export, the read-only dossier companion and research saves use the explicit
 capability/context guards below. Selection drafts save nothing by themselves.
@@ -5285,10 +5352,12 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `data-flags="1"` | additionally preselect "flagged only" |
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
-| `[data-chapter-toggle]` | fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter |
+| `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the current-main continuous interactive reader |
 | `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
-| `.paragraph-values > summary` | native disclosure for source lines and measurements in an opened paragraph |
+| `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the current-main interactive reader |
+| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | current-main interactive reader: open the paragraph action menu, then explicitly open Values and enable analysis |
+| `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | current-main contextual Values inspector, its source lines/measurements and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |

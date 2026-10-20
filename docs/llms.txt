@@ -44,9 +44,12 @@ Use active result metadata when interpreting thresholds and unavailable values.
 
 Current-main interactive UI: Manuscript, Research and Project share a desktop
 sidebar and compact narrow-screen navigation. Continuous manuscript prose opens
-with Analysis Off. Its native toggle has an explicit On/Off state; Analysis and
-Dossier are alternative context tools. Hiding analysis leaves an active dossier.
-Analysis overview provides dense comparisons and Back to passage restores context.
+with Analysis Off. Its native toggle has an explicit On/Off state and reveals
+diagnostics without opening a dock or collapsing navigation. Paragraph Values
+explicitly opens the analysis inspector and enables diagnostics. Values and
+Dossier alongside are alternative dock tools; hiding diagnostics leaves an active
+dossier. Analysis overview provides dense comparisons; Back to passage restores
+the prior analysis choice, eligible tool and passage.
 One paragraph tree keeps source text, hashes, search and exact anchors. Browser-local
 reading preferences adjust size, width and spacing; focus is reversible. Paragraph
 ellipsis, right-click and keyboard context menus share values, marker and claim
@@ -63,6 +66,9 @@ keeps it reachable and closing restores the prior manual choice. Its desktop
 divider supports pointer and keyboard width adjustment; narrow screens stack
 the readers. The paragraph inspector and companion replace one another. Saved exact
 manuscript associations provide a context-checked return to the passage.
+On narrow screens, an explicit passage tool request reveals the stacked tool
+heading; close or Escape returns to its requesting passage and control. Optional
+brief feedback respects live reduced-motion changes.
 Current-main research forms start collapsed; headings and Collapse controls
 retain in-memory drafts. Escape closes the innermost disclosure. Contextual
 actions reveal the relevant form. Catalogue previews omit Markdown formatting

@@ -20,7 +20,7 @@ The aim is a usable reading surface with tools nearby. Manuscript text reflows w
 
 ## Ask one question of a paragraph
 
-Suppose an action passage feels slower than you expected. Open its **…** menu and choose **Values**. A closable inspector shows that paragraph's source lines and available tense and style measurements. Read the surrounding sentences while deciding whether those measurements explain anything useful.
+Suppose an action passage feels slower than you expected. Open its **…** menu and choose **Values**. A closable inspector shows that paragraph's source lines and available tense and style measurements, and enables the analysis layer. The **Analysis** switch alone reveals diagnostics without opening a side tool or narrowing the prose. Read the surrounding sentences while deciding whether those measurements explain anything useful.
 
 The same contextual menu opens with a right-click. With the paragraph or its button focused, **Shift+F10** opens it from the keyboard; arrow keys move between actions and Escape closes it. Shift+right-click still reaches the browser's native menu. Selecting text within one paragraph offers a small toolbar when an applicable action is available.
 
@@ -32,15 +32,15 @@ The Warehouse 4 story includes this sentence:
 
 Someone had tried the eastern gate of Warehouse 4.
 
-Open **Research**, then **Warehouse 4 case notes**. The dossier brings together a claim about attempted warehouse entry, a retained customs-log passage and visual references. The incident, people and log are invented. The credited historical images provide visual context and do not verify the fictional incident.
+Open **Research → Dossiers**, then **View details** on **Warehouse 4 case notes**. The dossier brings together a claim about attempted warehouse entry, a retained customs-log passage and visual references. The incident, people and log are invented. The credited historical images provide visual context and do not verify the fictional incident.
 
 Use **Dossier alongside** to consult a saved dossier while reading the manuscript. On desktop, the project navigation folds down to make room; you can reopen it, and closing the dossier restores the previous choice. Drag the divider to adjust the two reading areas. You can also focus the divider with Tab and use Left/Right; Home/End reach its limits. Narrow screens stack the documents.
 
-Paragraph Values and the dossier replace one another as the active side tool. Each has a direct closing route. Display and companion changes try to retain the visible paragraph's position, so consulting context need not mean finding the sentence again.
+Paragraph Values and the dossier replace one another as the active side tool. Each has a direct closing route. Display and companion changes try to retain the visible paragraph's position, so consulting context need not mean finding the sentence again. On narrow screens, opening a tool from a passage reveals its heading; closing it or pressing Escape returns to that passage and its control. Brief feedback marks reveals and returns without moving the manuscript surface; reduced-motion preferences disable the optional effects.
 
 ## Make the return route explicit
 
-In Research's **Review** view, find the saved eastern-gate quotation. **Open claim** opens the authored claim; **Go to manuscript passage** returns to the exact matching text. The manuscript quotation, authored claim and retained source passage remain separate records.
+In Research's **Review** view, find the saved eastern-gate quotation. **Open claim** opens the authored claim; **Go to manuscript passage** returns to the exact matching text. The manuscript quotation, authored claim and retained source passage remain separate records. **Open claim** shows the linked claim revision and its dossier and source references; opening a newer version does not silently change those saved pins. When you begin through a manuscript paragraph's saved association instead, close the record viewer and choose **Back to passage** to resume that requesting manuscript text.
 
 In a configured local project, you can select text within one manuscript paragraph and choose **Link selection to claim**. Review the quotation, choose an existing claim, explicitly permit local retention and save the association. Selecting text or previewing that form writes nothing. The saved connection records what you associated; it does not establish factual support or turn the manuscript into source evidence.
 

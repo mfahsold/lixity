@@ -96,9 +96,12 @@ available for touch use. Preparing a draft writes nothing.
 In **Manuscript**, **Dossier alongside** opens a chosen dossier in a
 read-only companion. It starts closed with no automatic selection. **Current main
 (unreleased):** the manuscript stays continuous and the **Analysis** button has an
-explicit On/Off state. A dossier and analysis are alternative context tools;
-hiding analysis leaves an active dossier. **Analysis overview** opens dense
-comparisons with **Back to passage**, restoring the prior context tool. Refresh
+explicit On/Off state for diagnostics in place. Toggling it does not open the dock
+or collapse navigation. A paragraph's **… → Values** explicitly opens the analysis
+inspector and enables the layer; **Dossier alongside** opens a dossier independently.
+The inspector and dossier are alternative dock tools; hiding diagnostics leaves
+an active dossier. **Analysis overview** opens dense comparisons with **Back to
+passage**, restoring the prior context tool and Analysis On/Off choice. Refresh
 explicitly for the latest dossier.
 On desktop, opening the companion temporarily collapses project navigation into
 a narrow rail. Use **Show navigation** to access its controls; closing the companion
@@ -112,6 +115,9 @@ the divider. Reading changes neither document, evidence links nor the statistica
 baseline. **Focus reading** temporarily hides the companion and navigation;
 the same control restores the workspace. A paragraph's **Values** inspector and
 the companion replace one another rather than competing for horizontal space.
+On narrow screens, explicitly opening a tool from a passage scrolls its heading
+into view; closing it or pressing Escape returns to the requesting passage and
+restores focus. On desktop the tool remains adjacent to the manuscript.
 
 To connect the manuscript to research, select a nonempty text range within one
 paragraph and choose **Link selection to claim** (or Alt+L). The
@@ -129,6 +135,19 @@ current paragraph hash, line range and exact quotation match the resolved anchor
 Moved, adjusted, ambiguous or unavailable anchors remain review tasks, with no
 silently inferred jump or re-pin. The manuscript's saved-associations disclosure
 provides the same actions while reading.
+
+For a first read-only journey on **current main**, open a paragraph's saved
+associations and choose **Open claim**. Read the linked claim version, follow a
+linked dossier version, then inspect its cited source passage. The pinned version
+is the record the association actually used; opening a newer version does not
+replace that pin. Close the record viewer, then choose **Back to passage** to
+return to the requesting manuscript text. When starting in Research's **Review**
+view instead, **Go to manuscript passage** opens the saved quotation directly;
+that route does not create a manuscript-origin return context.
+The [public demo](../demo/report.html) includes saved associations for this route;
+it cannot retain a new quote or source. To save your own association, use the
+native project workflow below. Source capture separately requires permission to
+retain the source bytes.
 
 
 Claims' **Author review state** labels map to stored `hypothetical` (**Author

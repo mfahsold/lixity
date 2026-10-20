@@ -399,6 +399,19 @@ optimal Lixity layout:
 - [Apple's context-menu guidance](https://developer.apple.com/design/human-interface-guidelines/context-menus)
   treats contextual commands as additional access routes. Core operations need
   discoverable controls without relying on right-click or hover.
+- [Scarr, Cockburn and Gutwin's spatial-memory review](https://hci.usask.ca/wp-content/cache/mendeley-file-cache/1723ad47-9012-384f-885d-e1c35c62d2ec.pdf)
+  explains how stable control locations support learned retrieval. For Lixity,
+  predictable navigation and return controls are a design inference; rearranging
+  commands by recent use would need separate evidence.
+- [GNOME's header-bar guidance](https://developer.gnome.org/hig/patterns/containers/header-bars.html)
+  groups a few relevant commands through placement and spacing, while
+  [Fluent's button guidance](https://fluent2.microsoft.design/components/web/react/core/button/usage)
+  distinguishes primary from minor actions. These inform control hierarchy,
+  rather than requiring a platform framework or an icon-only interface.
+  [NN/G's signifier experiment](https://www.nngroup.com/articles/flat-ui-less-attention-cause-uncertainty/)
+  found greater effort with weak clickability cues in targeted web-page tasks.
+  Quiet styling must retain recognizable controls, labels and focus feedback;
+  the study does not establish an optimal Lixity button style or performance gain.
 - [Fluent's drawer guidance](https://fluent2.microsoft.design/components/web/react/core/drawer/usage)
   distinguishes adjacent context from intrusive overlays. Dense comparisons may
   need more space than a narrow inspector. [Carbon's color roles](https://www.carbondesignsystem.com/building-blocks/foundations/color/tokens)

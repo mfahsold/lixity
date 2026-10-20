@@ -48,13 +48,15 @@ Ask what changed: the kind of scene, what the character is doing, or how the sen
 
 ## 3. Follow the passage to its research
 
-Switch to [**Research**](../demo/report.html#research-manager) and open **Warehouse 4 case notes**. Inspect its historical map and harbour view, then open the linked **Attempted warehouse entry** claim and retained customs-log passage.
+Switch to [**Research**](../demo/report.html#research-manager), choose **Dossiers** and expand **View details** on **Warehouse 4 case notes**. Inspect its historical map and harbour view. **Dossier alongside** opens this dossier beside the manuscript; its close control returns you to the document.
 
 In its geography view, select a place or route to read its context and frame it on the map. The view explains its coordinates, distances and limits.
 
 Open **Review** to find the saved quote: “Someone had tried the eastern gate of Warehouse 4.” The source passage, authored claim and manuscript quotation are separate records connected by an explicit author association. The log, people and incident are invented; the credited historical images do not verify them.
 
 Saved exact associations offer **Go to manuscript passage** and **Open claim**. The passage action returns to matching text without rewriting it. Changed or ambiguous quotations require review before an exact return is offered. In the local workspace, select a quotation to connect it to an existing claim, then review retention and save explicitly.
+
+For the reverse route, first go to the manuscript quotation, open its paragraph's saved association and choose **Open claim**. It shows the linked claim revision, its linked dossier revisions and cited source passages. Those pinned revisions describe the saved association; opening a newer record does not replace them. Close the record viewer, then choose **Back to passage** to resume the requesting manuscript text. Reading a record, retaining a quotation and accepting a claim are separate actions.
 
 Research creation forms start collapsed. Select a heading to open it and select it again to collapse it; long forms also offer **Collapse** beside Save. Unsaved fields remain across tab switches and collapse, but reloads are not draft storage. Escape closes the innermost disclosure and returns focus to its heading. Dossier previews show readable text; open the full dossier for formatting, diagrams and provenance. Brief disclosure motion respects reduced-motion preferences.
 

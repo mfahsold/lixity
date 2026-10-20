@@ -209,8 +209,11 @@ not acquire statistical values or claim-save capability. Profile-only callers
 keep their fallback. Deferred interaction retains complete embedded text/search
 and a readable no-JavaScript fallback; an empty closed report panel does not mean
 absent text or a smaller HTML payload.
-Style jumps reveal their owning tabs; chapter/paragraph jumps expand folded
-chapters. Section navigation lists only rendered panels.
+Style jumps reveal their owning tabs. In standalone reports, chapter/paragraph
+jumps expand folded chapters; the current-main interactive reader keeps chapters
+and prose continuous and hides chapter-fold controls. Its paragraph menu opens
+Values in the contextual inspector instead of an inline disclosure. Section
+navigation lists only rendered panels.
 
 PDF export, the read-only dossier companion and research saves use the explicit
 capability/context guards below. Selection drafts save nothing by themselves.
@@ -231,10 +234,12 @@ capability/context guards below. Selection drafts save nothing by themselves.
 | `data-flags="1"` | additionally preselect "flagged only" |
 | `data-line="<n>"` | jump to the paragraph containing that source line (opens it); falls back to the chapter |
 | `data-target="p-<idx>"` | exact paragraph panel to open on jump (flagged-list rows) |
-| `[data-chapter-toggle]` | fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter |
+| `[data-chapter-toggle]` | standalone report: fold or unfold a chapter body (strip and paragraphs); jumps and search steps expand a collapsed chapter; hidden in the current-main continuous interactive reader |
 | `data-chapter="<n>"` | heatmap cell: open that chapter (with its layer) |
 | `#style-tab-<panel-id>` / `data-style-view="<panel-id>"` | native style tab for `heatmap`, `bands`, `dimensions` or `structural`; its `aria-controls` points to that existing panel |
-| `.paragraph-values > summary` | native disclosure for source lines and measurements in an opened paragraph |
+| `.paragraph-values > summary` | standalone report and no-JavaScript fallback: native disclosure for source lines and measurements; inline Values is hidden in the current-main interactive reader |
+| `.reader-paragraph-actions[data-reader-paragraph]` / `#manuscript-context-menu [data-reader-action="values"]` | current-main interactive reader: open the paragraph action menu, then explicitly open Values and enable analysis |
+| `#reader-inspector` / `#reader-inspector-body` / `#reader-inspector-close` | current-main contextual Values inspector, its source lines/measurements and close action; the manuscript text remains in its original DOM |
 | `#hero-btn-new-project` / `#analysis-empty-import` | native **Analyze a manuscript** action; opens the existing import dialog without submitting it |
 | `#analysis-review [data-review-passage]` | native passage link; clears search/paragraph filters, opens its `data-target` and focuses the paragraph panel |
 | `#analysis-sections a[data-section-link]` | section navigation; highlights the panel in view (scrollspy); only rendered panels are offered |

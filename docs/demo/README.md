@@ -6,9 +6,15 @@ Its six synthetic English chapters come from
 [manuscript](../research/examples/harbour-manuscript.md) contains identical bytes.
 Analysis, research, screenshots and PDF layouts use that same project.
 
-Start with chapter 1's setting and chapter 2's action, then switch to Research.
-Follow **Warehouse 4 case notes** to a claim, its retained source passage and
-the saved manuscript quote in Review. Historical map/photo sources have
+Start with chapter 1's setting and chapter 2's action, then choose **Research →
+Dossiers → View details** on **Warehouse 4 case notes**. **Dossier alongside**
+opens its reading companion. In **Review**, follow the saved eastern-gate quote
+through **Open claim** to its pinned claim, dossier and source references, or use
+**Go to manuscript passage** to read the quote. Starting from a manuscript
+paragraph's saved association preserves an origin: close the record viewer and
+choose **Back to passage** to return there. This demo follows
+current main (unreleased), rather than the packaged v0.7.1 reader.
+Historical map/photo sources have
 [reviewed credits and file hashes](../assets/research/sources.json). People,
 customs records, incidents and journeys are invented; the visuals do not verify
 them, and coordinates are not georeferenced to the map image.
