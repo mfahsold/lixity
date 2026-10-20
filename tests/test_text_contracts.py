@@ -5,6 +5,7 @@ from unittest.mock import patch
 
 from lixity.analyzer import CorpusAnalyzer
 from lixity.dialogue import dialogue_report
+from lixity.language import compile_word_pattern, get_language_profile
 from lixity.markdown_parser import parse_markdown_blocks, split_chapters
 from lixity.models import CorpusConfig
 from lixity.motifs import motif_report
@@ -17,6 +18,60 @@ SCENE_DIVIDERS = ("---", "***", "___", "•••", "# # #", "###", "* * *")
 
 
 class TestWordContract(unittest.TestCase):
+    def test_five_profiles_keep_either_apostrophe_inside_words(self):
+        cases = (
+            ("l'homme", ["l'homme"]),
+            ("l’homme", ["l’homme"]),
+            ("l'’homme", ["l", "homme"]),
+            ("l’'homme", ["l", "homme"]),
+            ("porte-monnaie 42 café", ["porte", "monnaie", "café"]),
+        )
+        for language in ("fr", "es", "it", "pt", "nl"):
+            words = compile_word_pattern(get_language_profile(language).word_regex)
+            for text, expected in cases:
+                with self.subTest(language=language, text=text):
+                    self.assertEqual(words.findall(text), expected)
+
+    def test_apostrophe_token_counts_agree_across_analysis_surfaces(self):
+        for language in ("fr", "es", "it", "pt", "nl"):
+            for apostrophe in ("'", "’"):
+                body = f"L{apostrophe}homme arrive. L{apostrophe}homme part."
+                text = f"## Main\n\n{body}"
+                with self.subTest(language=language, apostrophe=apostrophe):
+                    config = CorpusConfig(language=language)
+                    metrics = CorpusAnalyzer(config).analyze_text(text)
+                    paragraphs, chapters = ParagraphProfiler(config).profile_blocks(
+                        parse_markdown_blocks(text, config)
+                    )
+                    self.assertEqual(metrics.tokens, 4)
+                    self.assertEqual(metrics.asl, 2.0)
+                    self.assertEqual(metrics.chapters[0].words, 4)
+                    self.assertEqual(paragraphs[0].words, 4)
+                    self.assertEqual(chapters[0].words, 4)
+                    self.assertEqual(paragraphs[0].text, body)
+                    self.assertEqual(paragraphs[0].start_line, 3)
+                    self.assertEqual(dialogue_report(text, config).words, 4)
+                    self.assertEqual(pacing_report(text, config).chapter_list[0].words, 4)
+                    self.assertEqual(scene_report(text, config)["items"][0]["words"], 4)
+                    self.assertEqual(sum(n for _, n in motif_report(text, config=config).top_words), 4)
+
+    def test_first_person_elisions_accept_both_apostrophes_without_merging_starters(self):
+        for language, straight in (
+            ("en", "I'm here. I'm here."),
+            ("fr", "J'aime marcher. J'aime marcher."),
+        ):
+            cases = ((straight, 0.0), (straight.replace("'", "’"), 0.0),
+                     (straight.replace("'", "’", 1), 1.0))
+            for body, entropy in cases:
+                with self.subTest(language=language, body=body):
+                    metrics = CorpusAnalyzer(CorpusConfig(language=language)).analyze_text(
+                        f"## Main\n\n{body}"
+                    )
+                    self.assertEqual(metrics.first_person_start_rate, 100.0)
+                    self.assertEqual(metrics.chapters[0].first_person_start_rate, 100.0)
+                    self.assertEqual(metrics.start_entropy, entropy)
+                    self.assertEqual(metrics.chapters[0].start_entropy, entropy)
+
     def test_configured_word_flags_agree_across_analysis_surfaces(self):
         text = '## Main\n\nDoor door. "Window window."'
         for pattern, expected in ((r"\b[A-Z][a-z]+\b", 2),
@@ -111,6 +166,28 @@ class TestParagraphContract(unittest.TestCase):
 
 
 class TestProseScope(unittest.TestCase):
+    def test_inline_prose_preserves_unicode_and_literal_punctuation_around_markup(self):
+        from lixity.markdown_parser import counting_inline_text
+
+        cases = (
+            ("  Café naïve façade — 😀.  ", "Café naïve façade — 😀."),
+            ("e\u0301lan 日本語 العربية", "e\u0301lan 日本語 العربية"),
+            ("An (aside), a closing ] and ! remain.", "An (aside), a closing ] and ! remain."),
+            ("snake_case and _bright_ **words**.", "snake_case and bright words."),
+            ("Before <!-- hidden --> after.", "Before  after."),
+            ("First line.\r\nSecond line.", "First line.\r\nSecond line."),
+            (" \t\n", ""),
+            (r"Literal \[bracket] and \! remain.", "Literal [bracket] and ! remain."),
+            ("Read [the *letter*](https://example.org/hidden).", "Read the letter."),
+            ("Before ![portrait](image.png) after.", "Before   after."),
+            ("Before `hidden words` after.", "Before   after."),
+            ("Words[^note] remain.", "Words remain."),
+            ("An [unclosed label stays literal.", "An [unclosed label stays literal."),
+        )
+        for text, expected in cases:
+            with self.subTest(text=text):
+                self.assertEqual(counting_inline_text(text), expected)
+
     def test_malformed_inline_syntax_has_bounded_scan_work_and_stays_literal(self):
         from lixity import markdown_parser
 

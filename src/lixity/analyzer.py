@@ -131,7 +131,7 @@ class CorpusAnalyzer:
                 continue
             # Elision-aware match (fr: "J'aime" -> "je"/"j", en: "I'm" -> "i")
             first = tokens[0].lower()
-            stem = first.split("'", 1)[0]
+            stem = first.replace("’", "'").split("'", 1)[0]
             starters[first] += 1
             if first in self._starters or stem in self._starters:
                 first_person += 1

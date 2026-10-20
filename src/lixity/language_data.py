@@ -850,7 +850,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "fr": {
         "name": "Français",
-        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
         "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
         "praesens_regex": (
             r"\b("
@@ -967,7 +967,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "es": {
         "name": "Español",
-        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
         "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
         "praesens_regex": (
             r"\b("
@@ -1089,7 +1089,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "it": {
         "name": "Italiano",
-        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
         "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
         "praesens_regex": (
             r"\b("
@@ -1203,7 +1203,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "pt": {
         "name": "Português",
-        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
         "dialogue_regex": r"[«\"“]([^»\"”]+)[»\"”]",
         "praesens_regex": (
             r"\b("
@@ -1321,7 +1321,7 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
     },
     "nl": {
         "name": "Nederlands",
-        "word_regex": r"\b[^\W\d_]+(?:\'’[^\W\d_]+)*\b",
+        "word_regex": r"\b[^\W\d_]+(?:['’][^\W\d_]+)*\b",
         "dialogue_regex": r"[„\"]([^”\"]+)[”\"]",
         "praesens_regex": (
             r"\b("

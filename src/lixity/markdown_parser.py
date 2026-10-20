@@ -373,6 +373,8 @@ def counting_inline_text(text: str) -> str:
     is shared with manuscript presentation but never interprets or rejects TeX.
     Iterative label traversal avoids a recursion limit or silently lost text.
     """
+    if not any(marker in text for marker in ("\\", "`", "[")):
+        return strip_inline_markup(text)
     text = _LINK_DEFINITION.sub(" ", text)
     delimiters = _InlineDelimiters(text)
     pending = [(0, len(text))]
