@@ -52,6 +52,12 @@ and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
 
+Root-only `manuscript` selects a contained relative default for workspace folders,
+`scenes` and read-only Research manuscript review. Explicit paths win; invalid
+settings fail without choosing another file. Scene chapter/scene/latest output
+filters retain full references and declare their selection. Explicit planned IDs
+have no measurements and remain outside comparisons. See Usage for exact rules.
+
 ## Choose a reference
 
 - [First look](https://mfahsold.github.io/lixity/guides/first-look.html): follow the Warehouse 4 demo from chapter comparison to research and PDF layouts.
@@ -86,6 +92,11 @@ for the supported v0.7.1 workflows and compatibility limits.
 **Since v0.7.2:** UI and CLI explain map/style-space measurements
 in place; additive `geography_summary` and `dimension_diagnostics` expose their
 support without changing stored records or existing scores.
+
+Public-site measurement is separate from the product: production Pages and its
+reviewed examples use GoatCounter for page paths and named links. Browser privacy
+signals disable it; query/hash, forms, selections and local project data are
+excluded. Local app and exported reports contain no marketing measurement.
 
 ## Data boundaries
 

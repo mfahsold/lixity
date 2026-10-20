@@ -96,6 +96,22 @@ def _require(condition: bool, message: str) -> None:
         raise SystemExit(message)
 
 
+def _analytics_endpoint(root: Path) -> str | None:
+    """Derive the demo's narrow image policy from its reviewed public config."""
+    try:
+        config = json.loads((root / "docs/assets/analytics.json").read_text(encoding="utf-8"))
+    except FileNotFoundError:
+        return None
+    if not isinstance(config, dict) or "site_code" not in config:
+        raise ValueError("Public analytics configuration must declare site_code")
+    code = config["site_code"]
+    if code is None:
+        return None
+    if not isinstance(code, str) or not re.fullmatch(r"[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?", code):
+        raise ValueError("Public analytics site_code must be a hosted GoatCounter subdomain")
+    return f"https://{code}.goatcounter.com/count"
+
+
 def _head_metadata(
     *,
     canonical: str,
@@ -138,6 +154,7 @@ def _head_metadata(
         }
     return (
         f'<link rel="canonical" href="{canonical}"/>\n'
+        '<script defer src="../assets/analytics.js"></script>\n'
         f'<meta name="description" content="{escaped}"/>\n'
         '<meta property="og:type" content="article"/>\n'
         '<meta property="og:site_name" content="Lixity"/>\n'

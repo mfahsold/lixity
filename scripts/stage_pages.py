@@ -50,6 +50,7 @@ DOCS_ROOT_FILES = {
     "demo/warehouse-4-sheet.pdf",
     "demo/warehouse-4-report.pdf",
     "assets/research/sources.json",
+    "assets/analytics.json",
     "assets/research/hamburg-free-port-1900.jpg",
     "assets/research/hamburg-harbour-1890-1900.jpg",
 }
@@ -82,13 +83,13 @@ def stage(source: Path, output: Path) -> int:
             raise ValueError("Canonical design assets must be regular packaged files")
     for path in sorted(source.rglob("*")):
         relative = path.relative_to(source)
-        if str(relative) in ("assets/design-tokens.css", "assets/components.css"):
+        if relative.as_posix() in ("assets/design-tokens.css", "assets/components.css"):
             raise ValueError("Pages must use the packaged canonical design assets")
         if path.is_symlink():
             raise ValueError(f"Symlink in documentation source: {relative}")
         if not path.is_file():
             continue
-        approved = str(relative) in DOCS_ROOT_FILES or (
+        approved = relative.as_posix() in DOCS_ROOT_FILES or (
             len(relative.parts) > 1
             and not any(part.startswith(".") for part in relative.parts)
             and (path.suffix in PUBLIC_TREES.get(relative.parts[0], set())

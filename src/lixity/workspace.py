@@ -16,11 +16,13 @@ from __future__ import annotations
 import contextlib
 import os
 import re
+import stat
 import unicodedata
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 
+from .config import read_explicit_project_config
 from .io import FileUtils
 from .publishing import TIMESTAMP_PATTERN, archive_timestamped, prune_archive, update_stable_link
 
@@ -125,10 +127,38 @@ class Workspace:
         return True
 
 
+class AmbiguousManuscriptError(ValueError):
+    """A folder contains several possible manuscripts and needs a selector."""
+
+
+def configured_manuscript(root: str | Path) -> str | None:
+    """Resolve one root-local manuscript setting without requiring source bytes.
+
+    Missing/unreadable source state belongs to the caller (notably Research
+    review). Invalid settings and paths escaping this project always fail.
+    """
+    base = Path(root).expanduser().resolve()
+    settings = read_explicit_project_config(base)
+    if "manuscript" not in settings:
+        return None
+    value = settings["manuscript"]
+    if not isinstance(value, str) or not value.strip():
+        raise ValueError("Configured manuscript must be a nonblank relative path")
+    relative = Path(value)
+    if relative.is_absolute() or relative.anchor or ".." in relative.parts or relative == Path(".") or "\0" in value:
+        raise ValueError("Configured manuscript must be a relative file path without parent traversal")
+    try:
+        path = base / relative
+        path.resolve().relative_to(base)
+    except (OSError, RuntimeError, ValueError) as exc:
+        raise ValueError(f"Configured manuscript must remain inside the selected project: {exc}") from exc
+    return str(path)
+
+
 def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
     """Resolves the manuscript of a workspace.
 
-    Order: explicit path, ``<foldername>.md``, ``manuscript.md``/``manuskript.md``,
+    Order: explicit path, root-local configured manuscript, ``<foldername>.md``, ``manuscript.md``/``manuskript.md``,
     then the only remaining Markdown file. Raises ``FileNotFoundError`` when no
     manuscript exists and ``ValueError`` when the choice is ambiguous.
     """
@@ -139,6 +169,15 @@ def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
         return Workspace(root=os.path.dirname(path), manuscript=path)
 
     base = os.path.abspath(root or os.getcwd())
+    configured = configured_manuscript(base)
+    if configured is not None:
+        try:
+            info = os.stat(configured)
+        except FileNotFoundError as exc:
+            raise ValueError(f"Configured manuscript not found: {configured}") from exc
+        if not stat.S_ISREG(info.st_mode):
+            raise ValueError(f"Configured manuscript must be a regular file: {configured}")
+        return Workspace(root=base, manuscript=configured)
     for candidate in (f"{os.path.basename(base)}.md", *MANUSCRIPT_FILENAMES):
         path = os.path.join(base, candidate)
         if os.path.isfile(path):
@@ -159,7 +198,7 @@ def discover(root: str | None = None, explicit: str | None = None) -> Workspace:
             f"{os.path.basename(base)}.md, manuscript.md or exactly one .md file)."
         )
     names = ", ".join(os.path.basename(path) for path in markdown)
-    raise ValueError(f"Multiple manuscripts in {base}: {names} – please specify explicitly.")
+    raise AmbiguousManuscriptError(f"Multiple manuscripts in {base}: {names} – please specify explicitly.")
 
 
 @dataclass(frozen=True)
@@ -197,7 +236,7 @@ def resolve_project_target(selector: str | Path, *, empty: str = "error") -> Pro
         if empty == "allow":
             return ProjectTarget(root=str(path))
         raise
-    except ValueError:
+    except AmbiguousManuscriptError:
         if empty == "allow":
             return ProjectTarget(root=str(path))
         raise

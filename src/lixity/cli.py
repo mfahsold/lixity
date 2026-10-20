@@ -2,6 +2,7 @@
 
 import argparse
 import os
+import re
 import sys
 from collections.abc import Callable
 from typing import Any
@@ -376,6 +377,11 @@ _lixity_complete() {
         COMPREPLY=( $(compgen -W "--project --file --title --language --actor --source-id --version-id --reason --allow-retention --dry-run --context --thresholds --query --limit --passage --help" -- "$cur") )
         return 0
     fi
+    if [[ ${COMP_WORDS[1]} == scenes ]]; then
+        COMPREPLY=( $(compgen -W "--help --language --json --chapter --scene --latest" -- "$cur") )
+        COMPREPLY+=( $(compgen -f -- "$cur") )
+        return 0
+    fi
     COMPREPLY=( $(compgen -W "$opts $style_opts" -- "$cur") )
     COMPREPLY+=( $(compgen -f -- "$cur") )
 }
@@ -435,6 +441,16 @@ __LIXITY_ZSH_COMMANDS__
         about|schema)
           _arguments '--json[JSON output]' '--help[Help]' \
             '--section[One metadata section as JSON]:section:(__LIXITY_ABOUT_SECTIONS__)'
+          ;;
+        scenes)
+          _arguments \
+            '1:manuscript:_files' \
+            '--help[Help]' \
+            '--language[Language profile]:profile:(auto de en fr es it pt nl generic)' \
+            '--json[Scene JSON with selection scope]' \
+            '--chapter[Canonical chapter number]:chapter:' \
+            '(--latest)--scene[Exact measured or planned scene ID]:scene:' \
+            '(--scene)--latest[Last measured scene in document order]'
           ;;
         serve)
           _arguments \
@@ -1004,6 +1020,50 @@ def _cmd_build(args: argparse.Namespace) -> int:
     return EXIT_OK
 
 
+def _positive_chapter(raw: str) -> int:
+    value = int(raw)
+    if value < 1:
+        raise argparse.ArgumentTypeError("Chapter must be a positive number")
+    return value
+
+
+def _scene_identifier(raw: str) -> str:
+    if not re.fullmatch(r"[1-9][0-9]*:[1-9][0-9]*", raw):
+        raise argparse.ArgumentTypeError("Scene must be a chapter:scene ID, for example 1:2")
+    return raw
+
+
+def _select_scenes(report: dict[str, Any], args: argparse.Namespace) -> dict[str, Any]:
+    """Select output after validation, retaining full-manuscript comparisons."""
+    if args.chapter is None and args.scene is None and not args.latest:
+        return report
+    if args.chapter is not None and args.scene is not None and int(args.scene.split(":")[0]) != args.chapter:
+        raise ValueError("--chapter must match the chapter in --scene")
+
+    def matches(item: dict[str, Any]) -> bool:
+        return ((args.chapter is None or item["chapter"] == args.chapter)
+                and (args.scene is None or item["id"] == args.scene))
+
+    items = [item for item in report["items"] if matches(item)]
+    planned = [item for item in report.get("planned_items", []) if matches(item)]
+    if args.latest:
+        items = items[-1:]
+        planned = []
+    if not items and not planned:
+        kind = "measured scene" if args.latest else "measured or planned scene"
+        raise ValueError(f"No {kind} matches the requested selection; use the chapter:scene IDs from scenes")
+    selection = {
+        "chapter": args.chapter, "scene": args.scene, "latest": args.latest,
+        "selected_count": len(items), "total_count": len(report["items"]),
+        "reference_scope": "full_manuscript",
+    }
+    selected = {**report, "items": items, "selection": selection}
+    if "planned_items" in report:
+        selected["planned_items"] = planned
+        selection.update(selected_planned_count=len(planned), total_planned_count=len(report["planned_items"]))
+    return selected
+
+
 def _threshold_number(key: str) -> Callable[[str], float]:
     def parse(raw: str) -> float:
         try:
@@ -1099,11 +1159,18 @@ def main(argv: list[str] | None = None) -> int:
             )
             continue
         if name == "scenes":
-            p.add_argument("file", help="Markdown manuscript")
+            p.add_argument("file", nargs="?", help="Markdown manuscript (default: current workspace manuscript)")
             p.add_argument(
                 "--language", default=None, help="Language profile (default: project setting or en)"
             )
             p.add_argument("--json", action="store_true", help="JSON output (scene schema v1)")
+            p.add_argument("--chapter", type=_positive_chapter, metavar="N",
+                           help="Select a canonical chapter number; comparisons retain the full manuscript")
+            scene_selector = p.add_mutually_exclusive_group()
+            scene_selector.add_argument("--scene", type=_scene_identifier, metavar="CHAPTER:SCENE",
+                                        help="Select an exact measured or planned scene ID; --chapter must agree when supplied")
+            scene_selector.add_argument("--latest", action="store_true",
+                                        help="Last measured scene in document order, optionally within --chapter (not modification time)")
             continue
         if name in ("style", "dashboard", "serve", "build"):
             p.add_argument(
@@ -1290,10 +1357,19 @@ def main(argv: list[str] | None = None) -> int:
         parser.error("--min-chapters must be at least 2")
     if args.command == "pdf" and args.json:
         parser.error("--json is not supported for PDF output; use analyze or style --json for measurements")
+    scenes_root = None
+    if args.command == "scenes" and args.file is None:
+        try:
+            workspace = discover(root=os.getcwd())
+            args.file = workspace.manuscript
+            scenes_root = workspace.root
+        except (OSError, ValueError) as exc:
+            print(f"Error: {exc}", file=sys.stderr)
+            return EXIT_ERROR
     if args.command == "serve":
         project_config = {} if args.no_project else load_project_config(args.path)
     else:
-        project_config = load_project_config(getattr(args, "file", None))
+        project_config = load_project_config(scenes_root or getattr(args, "file", None))
     args._project_config = project_config
     explicit_language = getattr(args, "language", None)
     if hasattr(args, "language") and args.language is None:
@@ -1382,6 +1458,7 @@ def main(argv: list[str] | None = None) -> int:
 
         try:
             report = scenes(text, resolved.key, project_config=project_config)
+            report["scenes"] = _select_scenes(report["scenes"], args)
         except ValueError as exc:
             print(f"Error: {exc}", file=sys.stderr)
             return EXIT_ERROR
@@ -1422,6 +1499,12 @@ def main(argv: list[str] | None = None) -> int:
                     print(
                         f"  {labels.get(label_key, field)}: {rendered} {units.get(field, unit)}{detail}"
                     )
+            planned_items = report["scenes"].get("planned_items", [])
+            if planned_items:
+                print(labels["scene_planned"])
+                for item in planned_items:
+                    print(safe_text(f"  {item['id']} · {item['group']}"))
+                print(labels["scene_planned_note"])
             print(labels["scene_guidance"])
             print(labels["scene_support"].replace("{min_tokens}", str(MIN_TOKENS_LD)))
         return EXIT_OK

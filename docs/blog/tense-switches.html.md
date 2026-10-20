@@ -22,7 +22,7 @@ One honest sentence: these readings come from verb forms and markers, not from a
 
 Start with the [read-only synthetic demo](../demo/report.html) if you want to see the controls before installing. For your own manuscript, use the local project workflow:
 
-**Current development:** the interactive workspace opens as continuous prose with **Analysis Off**. Choose **Analysis overview** for the comparison panels below, or use a paragraph's **…** menu for its tools. **Back to passage** returns from the overview. The [reading-workbench walkthrough](manuscript-reading-workbench.html) explains these controls; an installed release may have an earlier interface.
+**Since v0.7.2:** the interactive workspace opens as continuous prose with **Analysis Off**. Choose **Analysis overview** for the comparison panels below, or use a paragraph's **…** menu for its tools. **Back to passage** returns from the overview. The [reading-workbench walkthrough](manuscript-reading-workbench.html) explains these controls. Check `lixity --version` if an older installation shows different controls.
 
 1. **Install and open.** `uv tool install --python 3.12 --managed-python lixity`, then `lixity service start --open` and choose **Open Project** for your manuscript folder. (Windows, macOS and Linux are covered in the [installation guide](../guides/installation.html).) If you just want to see the loop first: the [demo report](../demo/report.html) opens in your browser, no install.
 

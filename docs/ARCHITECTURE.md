@@ -175,6 +175,17 @@ distinguish contention, read-only/permission failures and other I/O errors.
 
 Explicit root settings own author identity, publication, chapter registers and
 project-local character profiles; user/ancestor defaults cannot supply them.
+The optional root `manuscript` setting follows the same project-only boundary.
+`config.read_explicit_project_config` reuses the existing TOML parser but reads
+only root pyproject/lixity files and promotes failed reads to errors.
+`workspace.configured_manuscript` owns contained relative-path resolution without
+reading source bytes. `discover` applies explicit → configured → conventional
+selection and validates configured regular files. The read-only Research CLI
+uses the same path owner after validating its archive, then preserves its domain
+review of missing/unreadable source bytes. Python text-analysis APIs stay explicit.
+Output scene filters run after complete measurement; explicitly planned IDs remain
+separate from measured rows and never influence descriptive baselines.
+
 `project_identity` compares only bounded
 manuscript metadata syntax, without rewriting text or affecting measurements.
 `PublicationSettings`/`PUBLICATION_FIELDS` supply field validation to configuration,

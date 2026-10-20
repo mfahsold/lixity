@@ -40,7 +40,7 @@ DEFAULT_HOST = "127.0.0.1"
 DEFAULT_PORT = 8765
 
 UNINTERPRETED_KEYS = frozenset({"phrases", "capabilities"})
-PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "register_profiles", "chapter_registers", "characters")
+PROJECT_ONLY_KEYS = ("author_name", "draft_notice", "publication", "register_profiles", "chapter_registers", "characters", "manuscript")
 PERSISTED_SETTINGS_KEYS = ("title", "author_name", "publication", "register_profiles", "chapter_registers")
 
 # Keys that may appear in [tool.lixity] (documented schema).
@@ -62,6 +62,7 @@ TOOL_KEYS = frozenset(
         "motifs",
         "nda",
         "scene_analysis",
+        "manuscript",
     }
 ) | frozenset(CorpusConfig.model_fields) | UNINTERPRETED_KEYS
 
@@ -287,14 +288,17 @@ def save_project_author(project_root: str | Path | None, author_name: object) ->
     prepare_project_settings(project_root, {"author_name": author_name}).commit()
 
 
-def _load_toml(path: Path) -> dict[str, Any]:
+def _load_toml(path: Path, *, text: str | None = None) -> dict[str, Any]:
     try:
         import tomllib
     except ModuleNotFoundError:  # pragma: no cover - exercised on Python 3.10 in CI
         import tomli as tomllib
     try:
-        with path.open("rb") as fh:
-            data = tomllib.load(fh)
+        if text is None:
+            with path.open("rb") as fh:
+                data = tomllib.load(fh)
+        else:
+            data = tomllib.loads(text)
     except OSError as exc:
         warnings.warn(
             f"Could not read {path}: {exc}. Its settings are ignored.",
@@ -364,6 +368,32 @@ def read_project_config(directory: str | Path) -> dict[str, Any]:
     if info is not None and info.st_size <= 65536:
         return _load_toml(path)
     return {}
+
+
+def read_explicit_project_config(directory: str | Path) -> dict[str, Any]:
+    """Read only this root's settings; selection must not ignore invalid config.
+
+    Unlike ordinary analysis loading, this strict read never consults user or
+    ancestor files. Existing TOML/stat warnings become actionable errors.
+    """
+    settings: dict[str, Any] = {}
+    try:
+        with warnings.catch_warnings():
+            warnings.simplefilter("error", UserWarning)
+            for name in ("pyproject.toml", "lixity.toml"):
+                path = Path(directory) / name
+                try:
+                    info = path.lstat()
+                except FileNotFoundError:
+                    continue
+                if stat.S_ISLNK(info.st_mode):
+                    info = path.stat()
+                if not stat.S_ISREG(info.st_mode):
+                    raise ValueError(f"Project configuration must be a regular file: {path}")
+                settings.update(_load_toml(path, text=FileUtils.read_file(str(path))))
+    except (UserWarning, OSError) as exc:
+        raise ValueError(f"Could not resolve project configuration: {exc}") from exc
+    return {key: value for key, value in settings.items() if key in TOOL_KEYS}
 
 
 def load_project_config(start: str | Path | None = None) -> dict[str, Any]:

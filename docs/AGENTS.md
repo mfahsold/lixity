@@ -1017,6 +1017,20 @@ discover a project. It returns `{meta: {schema_version: 1, ...}, scenes}` with
 `items`, `baselines`, `explicit_scene_breaks` and `scenes_are_chapters`.
 Each item contains `id` (chapter:scene), `group`, sample counts, the existing
 16 `features`, approximate `standard_errors`, `targets` and `data_support`.
+Opt-in `scene_analysis.planned` lists assigned IDs that may lack measurable text.
+Only explicitly listed missing IDs appear in additive `planned_items` with
+`id`, `chapter`, `scene`, `group`, `state: "planned"`; there are no fabricated
+metrics. Measured rows and baselines exclude plans. Unlisted missing assignments
+still fail, and a listed ID becomes measured normally when text is available.
+Without a nonempty planned list the response is unchanged.
+
+CLI `scenes` accepts optional file, `--chapter N`, `--scene C:S` and `--latest`.
+Filtering follows complete validation/measurement; the Python API stays text-based
+and unfiltered. Filtered CLI v1 adds `scenes.selection` with chapter/scene/latest,
+measured selected/total counts and `reference_scope: "full_manuscript"`; configured
+plans add selected/total planned counts. Latest selects the last measured row in
+source order, never a plan or modification time. Original IDs, full baselines
+and global divider metadata remain unchanged.
 See [scene settings and limits](USAGE.md#scene-registers-and-project-targets).
 `min_chapters` must be an integer of at least 2 and is also exposed
 as `--min-chapters` on `style`, `dashboard` and `build`. Since v3.0.1, foreground

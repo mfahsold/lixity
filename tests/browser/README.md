@@ -35,6 +35,14 @@ rendering, labels and submitted machine values. Language-independent interaction
 and conflict scenarios run once per relevant viewport. Native server saves and
 intercepted responses cover different boundaries and remain separate.
 
+The pages-analytics suite intercepts the public origin and GoatCounter pixel
+endpoint; no real counts are sent. It checks page paths and fixed link events,
+privacy preferences, disabled configuration, failures and untrusted query data.
+The actual generated demo runs with its unchanged CSP at desktop and mobile
+widths, including prepared PDF download, installation navigation and read-only
+controls. A download event records a successful prepared-file request, not proof
+that the user saved the file. Local reports and other hosts remain unmeasured.
+
 `scripts/browser_tools.cjs` probes common local Playwright and Chromium
 locations automatically; `PLAYWRIGHT_MODULE` and
 `PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH` remain optional overrides.

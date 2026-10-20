@@ -76,6 +76,12 @@ These are orthographic counting conventions, not grammatical segmentation of
 clitics. Recompute affected token-based and sentence-start results before
 comparing reports from earlier versions.
 
+The German v0.7.2 perception/filter list also adds finite indicative present and
+simple-past forms of *hören* and *riechen*. Neutral positive and negative fixtures
+cover shared corpus/chapter/paragraph/scene counting and explicit overrides.
+This does not validate perception, grammatical roles or all German inflections;
+see [the cue-list limits](METHODS.md#perceptionfilter-word-cues).
+
 ## Acceptance criteria for language work
 
 Prioritize German linguistic resources and scientific explanations, then English,

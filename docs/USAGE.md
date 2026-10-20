@@ -418,9 +418,35 @@ Without chapter headings, a draft is measured as one chapter and keeps all its
 prose. A leading `# Title` supplies its title; scene dividers still split the draft.
 
 Use `lixity scenes manuscript.md --language de` to inspect each scene separately;
-add `--json` for the complete scene envelope (schema version 1). The dashboard
+add `--json` for the scene envelope (schema version 1). The dashboard
 shows the same observations in **Scenes & style registers**. Chapters serve as
 scenes when there are no explicit dividers.
+
+For everyday checks in a selected project:
+
+```bash
+lixity scenes --chapter 2
+lixity scenes --scene 2:1 --json
+lixity scenes --latest
+lixity scenes --chapter 2 --latest
+```
+
+The optional file defaults to the current workspace's manuscript; configure it
+explicitly as described [below](#default-manuscript). Chapter numbers and
+`chapter:scene` IDs are the numbers printed by Lixity, not numbers embedded in
+heading titles. `--latest` means the last **measurable scene in document order**,
+not the most recently edited scene. It excludes plans. `--scene` and `--latest`
+are mutually exclusive; a supplied `--chapter` must agree with `--scene`.
+Unknown selections fail rather than return an empty success.
+
+Filters reduce output after the entire manuscript is validated and measured.
+They preserve scene IDs, measurements and full-manuscript register references;
+they do not speed up analysis or hide invalid assignments elsewhere. Filtered
+JSON adds `scenes.selection` with `chapter`, `scene`, `latest`, `selected_count`,
+`total_count` and `reference_scope: "full_manuscript"`. Counts refer to measured
+rows; when plans are configured, `selected_planned_count` and
+`total_planned_count` describe those separately. Unfiltered JSON has no selection
+object and retains its existing shape.
 
 Register assignments and targets belong to your project. For example:
 
@@ -445,6 +471,32 @@ scenes. Invalid assignments are reported instead of silently moving a register.
 Each group gets its own manuscript-only median and MAD, with at least two
 available observations per feature. Unassigned scenes have no register baseline.
 Research sources never enter these references.
+
+To plan an unwritten scene without disabling stale-assignment checks, explicitly
+list its assigned ID:
+
+```toml
+[scene_analysis]
+planned = ["3:1"]
+
+[scene_analysis.assignments]
+"1:1" = "voice"
+"3:1" = "voice"
+
+[scene_analysis.groups.voice.targets]
+asl = [8, 15]
+```
+
+`planned` must be a unique list of valid assignment IDs. Missing assignments not
+listed there still fail. A plan has no analyzable text, measurements or baseline
+membership. CLI output labels it separately; the analysis panel has an expandable
+**Planned scenes** section. Once its text is measurable, the same ID appears as an
+ordinary measured scene. Review positional IDs after inserting/removing scenes.
+JSON adds `planned_items` only when a nonempty `planned` list is configured; its
+rows contain `id`, `chapter`, `scene`, `group` and `state: "planned"`. It becomes
+empty once all listed IDs are measurable. No plans are inferred from headings,
+blank lines or missing assignments. A completely empty workspace still opens its
+existing setup view; the CLI can inspect its plans without inventing measurements.
 
 Targets use the fields reported by `lixity about --json`, such as `asl`,
 `filter_density`, `modal_density`, `nominalization_density`, `passive_density`,
@@ -647,7 +699,8 @@ get unique timestamped versions and atomically replace stable links or fallback
 copies; the last 10 versions per artifact family remain in `exports/archive/`.
 A failed replacement preserves the previous stable artifact and reports an error.
 
-An explicit manuscript path wins. Otherwise discovery tries `<folder>.md`,
+An explicit manuscript path wins. Otherwise discovery uses the selected root's
+[configured manuscript](#default-manuscript), then tries `<folder>.md`,
 then `manuscript.md`/`manuskript.md`, then a sole Markdown file (ignoring
 README/AGENTS/LICENSE/NDA). `--dry-run` displays the plan without writing.
 
@@ -933,6 +986,37 @@ Older releases provide `lixity about --json` and `lixity COMMAND --help`; Python
 callers can inspect `CorpusConfig.model_json_schema()` for corpus fields. Optional
 `None` linguistic patterns use the selected language profile's defaults.
 `phrases` and `capabilities` are accepted but uninterpreted by the bundled engine.
+
+### Default manuscript
+
+In the selected project's root `lixity.toml`, set an optional relative path:
+
+```toml
+manuscript = "drafts/manuscript.md"
+```
+
+The equivalent is `manuscript` under `[tool.lixity]` in the root
+`pyproject.toml`; root `lixity.toml` takes precedence. This is project data, never
+inherited from user settings or an ancestor directory. Paths are relative to the
+selected root, may contain spaces and must remain inside it, including symlinks.
+Absolute paths and parent traversal are rejected. An explicit manuscript argument
+wins. When selecting a configured default, an invalid/unreadable configuration
+or missing/nonregular configured file fails selection instead of choosing another
+manuscript. Explicit-file analysis retains its existing configuration warnings.
+
+This setting participates in existing folder selection (Open Project, service
+startup and `build`) and omitted input for `scenes`. Commands that still require
+an explicit file keep that requirement; text-taking Python APIs do not discover
+files. In a validated Research project it also supports:
+
+```bash
+lixity research review-manuscript --project ./novel
+```
+
+Research review uses only that project's configured path; it never guesses from
+other Markdown files or changes the archive. Its existing `missing`/`unreadable`
+source states remain informative review results. Other manuscript-link commands
+still require an explicit path. See the [research reference](research/USAGE.md).
 
 ### Character profiles
 

@@ -81,7 +81,7 @@ explain coverage, short-sample limits and unavailable measurements.
 
 | Looking for | Start here |
 | :--- | :--- |
-| Everyday workflows | [Usage and CLI reference](https://mfahsold.github.io/lixity/USAGE.md) · [Practical guides](https://mfahsold.github.io/lixity/#guides) |
+| Daily checks, project defaults and CLI | [Usage and CLI reference](https://mfahsold.github.io/lixity/USAGE.md) · [Practical guides](https://mfahsold.github.io/lixity/#guides) |
 | Research and Zotero | [Research workflows and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md) · [Data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md) |
 | Measurements and limits | [Methods](https://mfahsold.github.io/lixity/METHODS.md) · [Validation](https://mfahsold.github.io/lixity/STABILITY.md) |
 | Integrations | [Python, CLI and HTTP contracts](https://mfahsold.github.io/lixity/AGENTS.md) · [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md) · [Agent index](https://mfahsold.github.io/lixity/llms.txt) |

@@ -4138,7 +4138,8 @@ button.analysis-toggle { font-weight: var(--weight-strong); }
 .workbench-analysis.reader-inspector-open .ptext.reader-inspector-target::before,
 .manuscript-reading .reader-return-target::before { background: var(--accent); width: 3px; }
 </style>
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org; connect-src 'self'; font-src data:; base-uri 'none'; form-action 'none'"/><link rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'self' 'unsafe-inline'; style-src 'unsafe-inline'; img-src 'self' data: blob: https://tile.openstreetmap.org https://mfahsold.goatcounter.com/count; connect-src 'self'; font-src data:; base-uri 'none'; form-action 'none'"/><link rel="canonical" href="https://mfahsold.github.io/lixity/demo/report.html"/>
+<script defer src="../assets/analytics.js"></script>
 <meta name="description" content="Explore one fictional harbour project: compare six manuscript chapters, then follow a dossier through retained evidence to an authored claim and the same manuscript passage."/>
 <meta property="og:type" content="article"/>
 <meta property="og:site_name" content="Lixity"/>
@@ -4169,6 +4170,7 @@ a[data-demo-local] { opacity: .65; }
   "use strict";
   var nativeFetch = window.fetch.bind(window);
   var base = new URL(document.baseURI);
+  var analyticsConfig = new URL("../assets/analytics.json", base).href;
   var images = new Set([
     new URL("../assets/research/hamburg-free-port-1900.jpg", base).href,
     new URL("../assets/research/hamburg-harbour-1890-1900.jpg", base).href
@@ -4191,9 +4193,12 @@ a[data-demo-local] { opacity: .65; }
           Object.keys(payload).some(function (key) { return key !== "layout" && key !== "project_token"; })) {
         throw new Error("Read-only example permits prepared demo PDF downloads only");
       }
-      return nativeFetch(new URL("warehouse-4-" + payload.layout + ".pdf", base));
+      var prepared = await nativeFetch(new URL("warehouse-4-" + payload.layout + ".pdf", base));
+      if (prepared.ok) document.dispatchEvent(new CustomEvent("lixity:public-pdf-download"));
+      return prepared;
     }
     if (method !== "GET" || url.origin !== base.origin) throw new Error("Read-only example permits local fixture reads only");
+    if (url.href === analyticsConfig) return nativeFetch(input, options);
     if (images.has(url.href)) return nativeFetch(url);
     var fixture = await records, key = url.pathname + url.search;
     if (!Object.prototype.hasOwnProperty.call(fixture, key)) throw new Error("Read-only example has no fixture for this request");
@@ -4204,7 +4209,7 @@ a[data-demo-local] { opacity: .65; }
 })();</script>
 <script id="research-demo-controls">document.addEventListener("DOMContentLoaded", function () {
   "use strict";
-  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3Af32107cb-f2d4-49c2-a5f5-3fe9782018a1&source_id=urn%3Auuid%3Aec997375-9371-4d96-abab-c7ecd96520f5&version_id=urn%3Auuid%3A5d0d72a6-3722-4bce-b90b-22ff02f52be1": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3Af32107cb-f2d4-49c2-a5f5-3fe9782018a1&source_id=urn%3Auuid%3A91d20b57-cbc2-4c7c-a316-a030a75ab7c3&version_id=urn%3Auuid%3A26286982-5a29-43f3-aa38-35dba93dc956": "../assets/research/hamburg-harbour-1890-1900.jpg"};
+  var imageResources = {"/api/research/image?project_id=urn%3Auuid%3Aef61e787-5e98-4f8d-811e-2958a805997d&source_id=urn%3Auuid%3Aee73366d-73a7-454a-917e-d825395c16cf&version_id=urn%3Auuid%3A038d3adc-7a52-4f5d-985b-c47009c24ce9": "../assets/research/hamburg-free-port-1900.jpg", "/api/research/image?project_id=urn%3Auuid%3Aef61e787-5e98-4f8d-811e-2958a805997d&source_id=urn%3Auuid%3A4e639b42-b66b-491a-a31f-ee03e9b9b62f&version_id=urn%3Auuid%3A5df6a8bc-4e92-451b-b673-07f18e6fc0bf": "../assets/research/hamburg-harbour-1890-1900.jpg"};
   var restoreImages = window.LixityDossierImages.restoreMarkdown;
   window.LixityDossierImages.restoreMarkdown = function (rendered, prepared) {
     var template = document.createElement("template");

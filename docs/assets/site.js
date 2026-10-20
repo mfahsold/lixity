@@ -1,3 +1,11 @@
+// The public-site adapter does not run in the local application or its exports.
+if (location.origin === 'https://mfahsold.github.io' && location.pathname.startsWith('/lixity/')) {
+  const analytics = document.createElement('script');
+  analytics.src = new URL('analytics.js', document.currentScript.src).href;
+  analytics.defer = true;
+  document.head.appendChild(analytics);
+}
+
 // Share the chosen theme between the overview and reading guides.
 const root = document.documentElement;
 const themeButton = document.getElementById('themeToggle');

@@ -95,6 +95,16 @@ server.serve_forever()
       await page.goto(fixture.url);
       await page.locator('#tab-view-research').click();
       await expect(page.locator('#tab-view-research'), `${locale}/${width}: Research navigation switches the active view; errors: ${errors.join('; ')}`).toHaveAttribute('aria-selected', 'true');
+      await page.locator('[data-rtab=claims]').click();
+      await page.locator('#r-claim-composer > summary').click();
+      await page.locator('#r-claim-title').fill('Retained unsubmitted draft');
+      await page.locator('[data-rtab=decisions]').click();
+      await page.locator('#r-decision-composer > summary').click();
+      await page.locator('#r-decision-title').fill('Retained unsubmitted decision');
+      await page.locator('#r-decision-rationale').fill('Synthetic authored decision rationale.');
+      await page.locator('#r-decision-options > summary').click();
+      await page.locator('#r-decision-claim-select').selectOption(fixture.claim);
+      await page.locator('#r-decision-dossier-select').selectOption(fixture.empty);
       await page.locator('[data-rtab=dossiers]').click();
       const summary = page.locator(`[data-research-detail=dossier][data-record-id="${fixture.dossier}"]`);
       await summary.click();
@@ -132,13 +142,23 @@ server.serve_forever()
       await detail.scrollIntoViewIfNeeded();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Dossier list fits the viewport');
       if (locale === 'de') await detail.screenshot({path: path.join(artifacts, `dossier-${width}.png`)});
-      if (locale === 'en') {
-        await page.locator('#r-claim-title').evaluate(input => { input.value = 'Retained unsubmitted draft'; });
-        await detail.locator('[data-research-global=claims]').click();
-        await expect(page.locator('#rtab-claims')).toBeVisible();
-        await expect(page.locator('#research-claims-list')).toContainText('Unlinked claim');
-        await expect(page.locator('#r-claim-title')).toHaveValue('Retained unsubmitted draft');
-      }
+      await detail.locator('[data-research-global=claims]').click();
+      await expect(page.locator('#rtab-claims')).toBeVisible();
+      await expect(page.locator('#research-claims-list')).toContainText('Unlinked claim');
+      await expect(page.locator('#r-claim-title')).toHaveValue('Retained unsubmitted draft');
+      await page.locator('[data-rtab=dossiers]').click();
+      if (!await summary.evaluate(button => button.parentElement.open)) await summary.click();
+      await detail.locator('[data-research-global=decisions]').click();
+      await expect(page.locator('#rtab-decisions[role=tabpanel]')).toBeVisible();
+      await expect(page.locator('[data-rtab=decisions]')).toHaveAttribute('aria-selected', 'true');
+      await expect(page.locator('[data-rtab=decisions]')).toBeFocused();
+      await expect(page.locator('#rtab-dossiers')).not.toBeVisible();
+      await expect(page.locator('#r-decision-title')).toHaveValue('Retained unsubmitted decision');
+      await expect(page.locator('#r-decision-rationale')).toHaveValue('Synthetic authored decision rationale.');
+      await expect(page.locator('#r-decision-claim-select')).toHaveValue(fixture.claim);
+      await expect(page.locator('#r-decision-dossier-select')).toHaveValue(fixture.empty);
+      assert.deepEqual(writes, [], 'Global record routes preserve drafts without publishing them');
+      if (locale === 'en') await page.locator('#rtab-decisions').screenshot({path: path.join(artifacts, `global-decisions-${width}.png`)});
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workspace-reader-toggle').click();
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);

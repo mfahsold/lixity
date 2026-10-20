@@ -88,7 +88,7 @@ class CorpusConfig(BaseModel):
     )
     filter_verbs_regex: str | None = Field(
         default=None,
-        description="Regex for perception filters ('telling' indicators; None = language profile default).",
+        description="Regex for perception/filter word cues (lexical matches, not grammatical roles; None = language profile default).",
     )
     praesens_regex: str | None = Field(
         default=None,

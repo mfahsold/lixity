@@ -131,6 +131,7 @@ _PUBLIC_READ_ADAPTER = r"""(function () {
   "use strict";
   var nativeFetch = window.fetch.bind(window);
   var base = new URL(document.baseURI);
+  var analyticsConfig = new URL("../assets/analytics.json", base).href;
   var images = new Set([
     new URL("../assets/research/hamburg-free-port-1900.jpg", base).href,
     new URL("../assets/research/hamburg-harbour-1890-1900.jpg", base).href
@@ -153,9 +154,12 @@ _PUBLIC_READ_ADAPTER = r"""(function () {
           Object.keys(payload).some(function (key) { return key !== "layout" && key !== "project_token"; })) {
         throw new Error("Read-only example permits prepared demo PDF downloads only");
       }
-      return nativeFetch(new URL("warehouse-4-" + payload.layout + ".pdf", base));
+      var prepared = await nativeFetch(new URL("warehouse-4-" + payload.layout + ".pdf", base));
+      if (prepared.ok) document.dispatchEvent(new CustomEvent("lixity:public-pdf-download"));
+      return prepared;
     }
     if (method !== "GET" || url.origin !== base.origin) throw new Error("Read-only example permits local fixture reads only");
+    if (url.href === analyticsConfig) return nativeFetch(input, options);
     if (images.has(url.href)) return nativeFetch(url);
     var fixture = await records, key = url.pathname + url.search;
     if (!Object.prototype.hasOwnProperty.call(fixture, key)) throw new Error("Read-only example has no fixture for this request");
@@ -278,6 +282,7 @@ def build_research_demo(root: Path, research_fixture: dict) -> Path:
     """Publish one native analysis/research project with bounded fixture reads."""
     from build_examples import (
         SITE,
+        _analytics_endpoint,
         _finalize,
         _head_metadata,
         _insert_notice,
@@ -333,9 +338,11 @@ a[data-demo-local] {{ opacity: .65; }}
 <script id="research-demo-adapter">{_PUBLIC_READ_ADAPTER}</script>
 <script id="research-demo-controls">{_PUBLIC_DEMO_CONTROLS.replace("__REVIEWED_IMAGES__", json.dumps(resources))}</script>
 """
+    counter = _analytics_endpoint(root)
+    counter_source = f" {counter}" if counter else ""
     restrictions = ('<meta http-equiv="Content-Security-Policy" content="default-src \'none\'; '
-                    'script-src \'unsafe-inline\'; style-src \'unsafe-inline\'; '
-                    'img-src \'self\' data: blob: https://tile.openstreetmap.org; '
+                    'script-src \'self\' \'unsafe-inline\'; style-src \'unsafe-inline\'; '
+                    f'img-src \'self\' data: blob: https://tile.openstreetmap.org{counter_source}; '
                     'connect-src \'self\'; font-src data:; base-uri \'none\'; form-action \'none\'"/>')
     document = document.replace("</head>", restrictions + head + policy + "</head>", 1)
     pdf_links = [(f"warehouse-4-{layout}.pdf", label) for layout, label in (

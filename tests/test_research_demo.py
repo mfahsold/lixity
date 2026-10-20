@@ -193,20 +193,38 @@ def test_public_read_adapter_rejects_writes_external_urls_and_unknown_local_read
     script = """
 const assert = require('node:assert/strict'), vm = require('node:vm'), fs = require('node:fs');
 const {adapter, fixture} = JSON.parse(fs.readFileSync(0, 'utf8'));
-const calls = [];
+const calls = [], events = [];
+const configUrl = 'https://demo.invalid/assets/analytics.json';
+let preparedOK = true, lastNative;
 const preparedFiles = ['https://demo.invalid/demo/warehouse-4-editor.pdf',
   'https://demo.invalid/demo/warehouse-4-book.pdf', 'https://demo.invalid/demo/warehouse-4-sheet.pdf',
   'https://demo.invalid/demo/warehouse-4-report.pdf'];
-const window = {fetch: async url => {
-  calls.push(String(url));
-  if (preparedFiles.includes(String(url))) {
-    return new Response('%PDF-synthetic-transport-check', {headers: {'Content-Type': 'application/pdf'}});
+const window = {fetch: async (input, options) => {
+  lastNative = {input, options};
+  const url = input instanceof Request ? input.url : String(input);
+  calls.push(url);
+  if (url === configUrl) return new Response(JSON.stringify({site_code: 'synthetic'}));
+  if (preparedFiles.includes(url)) {
+    return new Response('%PDF-synthetic-transport-check', {
+      status: preparedOK ? 200 : 404, headers: {'Content-Type': 'application/pdf'}});
   }
-  if (String(url) !== 'https://demo.invalid/demo/research-data.json') throw Error('Unexpected native fetch');
+  if (url !== 'https://demo.invalid/demo/research-data.json') throw Error('Unexpected native fetch');
   return new Response(JSON.stringify(fixture), {headers: {'Content-Type': 'application/json'}});
 }};
-vm.runInNewContext(adapter, {window, document: {baseURI: 'https://demo.invalid/demo/research.html'}, URL, Request, Response, Set});
+class CustomEvent {
+  constructor(type, options) { this.type = type; this.detail = options?.detail ?? null; }
+}
+const document = {baseURI: 'https://demo.invalid/demo/research.html',
+  dispatchEvent(event) { events.push({type: event.type, detail: event.detail}); return true; }};
+vm.runInNewContext(adapter, {window, document, CustomEvent, URL, Request, Response, Set});
 (async () => {
+  const configRequest = new Request(configUrl);
+  const configOptions = {credentials: 'omit', redirect: 'error', referrerPolicy: 'no-referrer', cache: 'no-cache'};
+  assert.deepEqual(await (await window.fetch(configRequest, configOptions)).json(), {site_code: 'synthetic'});
+  assert.equal(lastNative.input, configRequest);
+  assert.equal(lastNative.options, configOptions);
+  await assert.rejects(() => window.fetch(configUrl + '?unexpected=1'), /read.only/i);
+  await assert.rejects(() => window.fetch(configUrl, {method: 'POST'}), /read.only/i);
   const response = await window.fetch('/api/research/sources');
   assert.equal((await response.json()).sources.length, 4);
   const links = await (await window.fetch('/api/research/manuscript-links')).json();
@@ -224,6 +242,12 @@ vm.runInNewContext(adapter, {window, document: {baseURI: 'https://demo.invalid/d
     assert.equal(prepared.headers.get('Content-Type'), 'application/pdf');
     assert.equal(await prepared.text(), '%PDF-synthetic-transport-check');
   }
+  assert.deepEqual(events, Array.from({length: 4}, () => ({type: 'lixity:public-pdf-download', detail: null})));
+  preparedOK = false;
+  const missingPDF = await window.fetch('/api/manuscript-pdf', {method: 'POST', body: JSON.stringify({
+    layout: 'book', project_token: 'synthetic-harbour-manuscript'})});
+  assert.equal(missingPDF.status, 404);
+  assert.equal(events.length, 4);
   for (const body of [{layout: '../secret', project_token: 'synthetic-harbour-manuscript'},
     {layout: 'book', project_token: 'another-project'},
     {layout: 'book', project_token: 'synthetic-harbour-manuscript', manuscript: 'private bytes'}]) {
@@ -237,7 +261,8 @@ vm.runInNewContext(adapter, {window, document: {baseURI: 'https://demo.invalid/d
   await assert.rejects(() => window.fetch('/api/research/unknown'), /read.only/i);
   await assert.rejects(() => window.fetch('/api/research/manuscript-links?research_token=unrecognized'), /read.only/i);
   await assert.rejects(() => window.fetch('/api/research/dossiers?project_token=unrecognized&research_token=synthetic-research-example'), /read.only/i);
-  assert.deepEqual(calls, ['https://demo.invalid/demo/research-data.json', ...preparedFiles]);
+  assert.equal(events.length, 4);
+  assert.deepEqual(calls, ['https://demo.invalid/demo/research-data.json', configUrl, ...preparedFiles, preparedFiles[1]]);
 })().catch(error => {console.error(error); process.exitCode = 1;});
 """
     completed = subprocess.run([shutil.which("node"), "-e", script], input=json.dumps(payload),  # noqa: S603

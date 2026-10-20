@@ -29,10 +29,10 @@ def scene_report_for_display(
         return {"error": str(exc)}
 
 
-def _settings(settings: Any) -> tuple[dict[str, str], dict[str, dict[str, list[float | None]]]]:
+def _settings(settings: Any) -> tuple[dict[str, str], dict[str, dict[str, list[float | None]]], set[str]]:
     """Validate author-supplied targets; no genre prescriptions are built in."""
-    if not isinstance(settings, Mapping) or set(settings) - {"assignments", "groups"}:
-        raise ValueError("scene_analysis accepts only assignments and groups")
+    if not isinstance(settings, Mapping) or set(settings) - {"assignments", "groups", "planned"}:
+        raise ValueError("scene_analysis accepts only assignments, groups and planned")
     assignments = settings.get("assignments", {})
     groups = settings.get("groups", {})
     if not isinstance(assignments, Mapping) or not isinstance(groups, Mapping):
@@ -46,11 +46,16 @@ def _settings(settings: Any) -> tuple[dict[str, str], dict[str, dict[str, list[f
             raise ValueError("Each scene group accepts only a targets table")
         targets[name] = validate_target_ranges(group.get("targets", {}), fields)
     for identifier, group_name in assignments.items():
-        if not isinstance(identifier, str) or not re.fullmatch(r"[1-9]\d*:[1-9]\d*", identifier):
+        if not isinstance(identifier, str) or not re.fullmatch(r"[1-9][0-9]*:[1-9][0-9]*", identifier):
             raise ValueError("Scene assignment keys must be chapter:scene numbers, for example 1:2")
         if not isinstance(group_name, str) or group_name not in targets:
             raise ValueError(f"Unknown register for scene {identifier}")
-    return dict(assignments), targets
+    planned = settings.get("planned", [])
+    if (not isinstance(planned, list)
+            or any(not isinstance(identifier, str) or identifier not in assignments for identifier in planned)
+            or len(set(planned)) != len(planned)):
+        raise ValueError("Planned scenes must be a unique list of scene assignment IDs")
+    return dict(assignments), targets, set(planned)
 
 
 def scene_report(
@@ -65,7 +70,7 @@ def scene_report(
     no population uncertainty is estimated for it. Group medians and MAD are
     descriptive and include the measured scene, not external quality baselines.
     """
-    assignments, targets = _settings({} if settings is None else settings)
+    assignments, targets, planned = _settings({} if settings is None else settings)
     analyzer = CorpusAnalyzer(config, sample_text=text)
     measured_chapters = {chapter.num: chapter for chapter in (_premeasured_chapters or ())}
     items: list[dict[str, Any]] = []
@@ -103,8 +108,9 @@ def scene_report(
                                  "diversity_available": measured.words >= MIN_TOKENS_LD},
             })
     missing = assignments.keys() - {item["id"] for item in items}
-    if missing:
-        raise ValueError("Scene assignments no longer match this manuscript: " + ", ".join(sorted(missing)))
+    unplanned = missing - planned
+    if unplanned:
+        raise ValueError("Scene assignments no longer match this manuscript: " + ", ".join(sorted(unplanned)))
     baselines: dict[str, dict[str, Any]] = {}
     for group in targets:
         members = [item for item in items if item["group"] == group]
@@ -116,7 +122,14 @@ def scene_report(
                 "n": len(values), "median": centre,
                 "mad": mad(values, centre) if centre is not None else None,
             }
-    return {"items": items, "baselines": baselines, "explicit_scene_breaks": breaks,
-            "scenes_are_chapters": breaks == 0,
-            "baseline_scope": "explicit register assignments within this manuscript only",
-            "uncertainty_scope": "approximate core standard errors; no validated reliability or quality score"}
+    report: dict[str, Any] = {"items": items, "baselines": baselines, "explicit_scene_breaks": breaks,
+              "scenes_are_chapters": breaks == 0,
+              "baseline_scope": "explicit register assignments within this manuscript only",
+              "uncertainty_scope": "approximate core standard errors; no validated reliability or quality score"}
+    if planned:
+        report["planned_items"] = [
+            {"id": identifier, "chapter": int(identifier.split(":")[0]),
+             "scene": int(identifier.split(":")[1]), "group": assignments[identifier], "state": "planned"}
+            for identifier in sorted(missing & planned, key=lambda value: tuple(map(int, value.split(":"))))
+        ]
+    return report

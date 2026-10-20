@@ -49,9 +49,9 @@ def _non_negative(value: str) -> int:
     return number
 
 
-def _add_manuscript_argument(command: argparse.ArgumentParser) -> None:
+def _add_manuscript_argument(command: argparse.ArgumentParser, *, required: bool = True) -> None:
     """Accept the manuscript path positionally (like analyze/scenes) or via --manuscript."""
-    selector = command.add_mutually_exclusive_group(required=True)
+    selector = command.add_mutually_exclusive_group(required=required)
     selector.add_argument("manuscript", nargs="?", default=argparse.SUPPRESS,
                           help="Manuscript path inside the explicit project")
     selector.add_argument("--manuscript", dest="manuscript",
@@ -207,7 +207,9 @@ def configure(parser: argparse.ArgumentParser) -> None:
             command.add_argument("--reason", help="Why this authored record is being revised")
             command.add_argument("--actor", default="local-author")
         if name in ("link-manuscript", "review-manuscript"):
-            _add_manuscript_argument(command)
+            _add_manuscript_argument(command, required=name != "review-manuscript")
+            if name == "review-manuscript":
+                command.epilog = "Omit the manuscript path only when the selected project's config sets manuscript."
             command.add_argument("--language", choices=("en", "de", "fr", "es", "it", "pt", "nl", "generic"))
         if name == "link-manuscript":
             command.add_argument("--claim-id", required=True)
@@ -1162,6 +1164,15 @@ def run(args: argparse.Namespace) -> int:
             result = api.list_manuscript_links(args.project, claim_id=args.claim_id,
                                                include_retracted=args.include_retracted)
         elif command == "review-manuscript":
+            if getattr(args, "manuscript", None) is None:
+                from ..workspace import configured_manuscript
+                from .repository import Repository
+
+                repository = Repository(args.project)
+                repository.snapshot()
+                args.manuscript = configured_manuscript(repository.root)
+                if args.manuscript is None:
+                    raise ResearchError("Supply a manuscript path or --manuscript PATH, or set manuscript in the selected project's config")
             result = api.review_manuscript_links(args.project, args.manuscript, language=args.language)
         elif command == "unlink-manuscript":
             from .repository import ResearchConflictError

@@ -195,6 +195,27 @@ a lower version number requires explicit version selection by installations
 already using a higher version; this workflow does not change package-manager
 ordering.
 
+### Public website measurement
+
+Pages-only `docs/assets/analytics.js` uses GoatCounter's documented
+[pixel endpoint](https://www.goatcounter.com/help/pixel). The public site code
+lives in the explicitly staged `docs/assets/analytics.json`; `null` disables it.
+Only the production HTTPS origin and `/lixity/` path are eligible. Respect browser
+Do Not Track / Global Privacy Control. Send only public pathname, public title,
+origin-only referrer and fixed CTA names; exclude URL query/hash, form inputs,
+selection, manuscript/research data, local paths and persistent identifiers.
+The local app and generated user exports must never acquire this adapter.
+
+The shared site script loads it for normal Pages; public example metadata adds
+it to the reviewed synthetic/public-domain examples. Do not add the provider's
+ordinary auto-tracking snippet alongside it: that would double-count and include
+its default data. A pixel request is transmission evidence, not proof of a
+processed dashboard count. Verify pageviews and each named CTA after deployment
+against the actual statistics. Existing visits cannot be backfilled. API read
+credentials and outreach snapshots belong outside this repository; the site
+code is public, an API token is not. See the
+[visitor notice](https://mfahsold.github.io/lixity/#website-measurement).
+
 ### Updating documentation and Pages
 
 Update the canonical reference, changelog, README and relevant guides together.

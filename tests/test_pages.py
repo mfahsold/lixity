@@ -291,3 +291,48 @@ class TestPagesStaging(unittest.TestCase):
                     self.assertEqual(alternates, [page.name + ".md"])
                     self.assertTrue((page.parent / alternates[0]).is_file())
                     self.assertEqual(urljoin(canonical, alternates[0]), canonical + ".md")
+
+
+class TestPublicAnalyticsBoundary(unittest.TestCase):
+    def test_pages_publishes_reviewed_config_without_other_json_assets(self):
+        with tempfile.TemporaryDirectory() as directory:
+            source = Path(directory) / "docs"
+            assets = source / "assets"
+            assets.mkdir(parents=True)
+            content = '{"site_code": "synthetic-site"}\n'
+            (assets / "analytics.json").write_text(content, encoding="utf-8")
+            (assets / "unreviewed.json").write_text('{"synthetic": true}', encoding="utf-8")
+            output = Path(directory) / "public"
+            stage(source, output)
+            self.assertEqual((output / "assets" / "analytics.json").read_text(encoding="utf-8"), content)
+            self.assertFalse((output / "assets" / "unreviewed.json").exists())
+
+    def test_public_example_head_loads_analytics_without_instrumenting_exports(self):
+        from lixity import api
+        from scripts.build_examples import _head_metadata
+
+        head = _head_metadata(canonical=SITE + "demo/report.html", title="Synthetic demo",
+                              description="Synthetic public example", language="en")
+        self.assertIn('<script defer src="../assets/analytics.js"></script>', head)
+        local = api.dashboard("## Sample\n\nA synthetic reader opens a door.")
+        self.assertNotIn("analytics.js", local)
+        self.assertNotIn("goatcounter", local)
+
+    def test_demo_counter_policy_uses_validated_public_configuration(self):
+        from scripts.build_examples import _analytics_endpoint
+
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            assets = root / "docs" / "assets"
+            assets.mkdir(parents=True)
+            config = assets / "analytics.json"
+            self.assertIsNone(_analytics_endpoint(root))
+            config.write_text('{"site_code": "mfahsold"}', encoding="utf-8")
+            self.assertEqual(_analytics_endpoint(root), "https://mfahsold.goatcounter.com/count")
+            config.write_text('{"site_code": null}', encoding="utf-8")
+            self.assertIsNone(_analytics_endpoint(root))
+            for value in (False, 42, "../other", "x;script-src *", "UPPER", "", "-start", "end-"):
+                with self.subTest(value=value):
+                    config.write_text(json.dumps({"site_code": value}), encoding="utf-8")
+                    with self.assertRaises(ValueError):
+                        _analytics_endpoint(root)

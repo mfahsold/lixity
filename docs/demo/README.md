@@ -35,6 +35,13 @@ disabled previews with an [installation link](../guides/installation.html).
 The public demo cannot import, edit or save; generating new analysis or PDFs
 requires the local app.
 
+Only the published website and demo use the configured GoatCounter counter for
+page paths and named links. A PDF event records a successful prepared-file
+request, not a completed filesystem save. The public adapter permits only the
+reviewed analytics configuration read in addition to its existing fixtures and
+prepared downloads. Local application views and exported reports carry no
+counter. See the [website measurement notice](../index.html#website-measurement).
+
 The generating version, provenance notice and unchanged distribution-license
 appendix stay outside the analyzed manuscript. The short text is a demonstration,
 not a calibration corpus, benchmark or literary-quality score. Public pages use

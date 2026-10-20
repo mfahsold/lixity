@@ -10,6 +10,17 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ## [0.7.2] - 2026-10-20
 
 ### Changed
+- Public Pages and the read-only demo can count page visits and named CTA events
+  through the explicitly configured hosted GoatCounter instance. The Pages-only
+  adapter excludes query/hash, forms and selections, respects browser privacy
+  signals and stays out of the local app and exported manuscript reports.
+- An optional project-only `manuscript` setting supplies existing workspace folder
+  selection and omitted input for `scenes` / read-only `research review-manuscript`.
+  Explicit paths win; invalid root settings never select an alternate manuscript.
+- Scenes output supports canonical chapter/scene filters and the last measured
+  scene in document order, preserving full-manuscript references and declaring
+  filtered JSON scope. Explicit `scene_analysis.planned` IDs remain visible without
+  fabricated measurements; unlisted stale assignments still fail.
 - The research data-model reference now documents the implemented entities,
   revision pins, publication process, schema evolution and disposable SQLite
   index, with current architecture/process diagrams. The broader interchange
@@ -102,6 +113,9 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
+- German perception/filter cues include finite present and simple-past forms of
+  hören and riechen across shared analysis surfaces. Counts remain lexical,
+  context-dependent signals; no full grammar/perception detector is implied.
 - Purge accounts for original and extracted-text blob references together,
   preserving shared retained evidence and removing unshared extraction bytes.
   Decision-to-dossier pins are validated at the storage/restore boundary.

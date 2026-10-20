@@ -586,12 +586,13 @@ def test_cli_reconcile_previews_and_repins_changed_quote_explicitly(manuscript_a
     assert len(history["revisions"]) == 2
 
 
-def test_cli_requires_exactly_one_manuscript_path():
+def test_cli_review_allows_configured_default_but_rejects_two_explicit_paths():
     parser = research_parser()
-    for paths in ([], ["draft.md", "--manuscript", "draft.md"]):
-        with pytest.raises(SystemExit) as error:
-            parser.parse_args(["review-manuscript", "--project", "/synthetic", *paths])
-        assert error.value.code == 2
+    args = parser.parse_args(["review-manuscript", "--project", "/synthetic"])
+    assert getattr(args, "manuscript", None) is None
+    with pytest.raises(SystemExit) as error:
+        parser.parse_args(["review-manuscript", "--project", "/synthetic", "draft.md", "--manuscript", "draft.md"])
+    assert error.value.code == 2
 
 
 def test_cli_find_anchor_and_quote_convenience(manuscript_archive, capsys):

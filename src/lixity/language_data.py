@@ -8,6 +8,8 @@ from typing import Any, TypedDict
 
 SCENE_LABELS = {
     "de": {
+        "scene_planned": "Geplante Szenen",
+        "scene_planned_note": "Ausdrücklich geplante Zuordnungen haben noch keinen analysierbaren Text. Sie erhalten keine Messwerte und gehen nicht in Registervergleiche ein.",
         "panel_scenes": "Szenen & Stilregister", "scene_unit": "Szene",
         "scene_guidance": "Jede Szene wird einzeln gemessen. Register und Zielbereiche sind Vorgaben des Projekts, keine Qualitätsurteile. Ohne Szenentrenner dienen Kapitel als Szenen. Zuordnungen und Ziele werden in lixity.toml festgelegt.",
         "scene_support": "Wort- und Satzzahlen zeigen die Datenbasis. HD-D fehlt unter {min_tokens} Wörtern; Satzvariation fehlt bei nur einem Satz. Standardfehler sind Näherungen, keine validierten Konfidenzintervalle. Ein Strich bedeutet nicht verfügbar; auch ein beobachteter Nullwert belegt keine Sicherheit.",
@@ -17,6 +19,8 @@ SCENE_LABELS = {
         "scene_within": "im Bereich", "scene_above": "darüber", "scene_unavailable": "nicht verfügbar",
     },
     "en": {
+        "scene_planned": "Planned scenes",
+        "scene_planned_note": "Explicitly planned assignments have no analyzable text yet. They receive no measurements and do not enter register comparisons.",
         "panel_scenes": "Scenes & style registers", "scene_unit": "Scene",
         "scene_guidance": "Each scene is measured separately. Registers and target ranges are project choices, not quality judgments. Chapters serve as scenes when no dividers are present. Set assignments and targets in lixity.toml.",
         "scene_support": "Word and sentence counts show the sample size. HD-D is unavailable below {min_tokens} words; sentence variation needs at least two sentences. Standard errors are approximations, not validated confidence intervals. A dash means unavailable; even an observed zero does not establish certainty.",
@@ -26,6 +30,8 @@ SCENE_LABELS = {
         "scene_within": "within range", "scene_above": "above", "scene_unavailable": "unavailable",
     },
     "fr": {
+        "scene_planned": "Scènes prévues",
+        "scene_planned_note": "Les affectations explicitement prévues ne contiennent pas encore de texte analysable. Elles ne reçoivent aucune mesure et sont exclues des comparaisons de registre.",
         "panel_scenes": "Scènes & registres de style", "scene_unit": "Scène",
         "scene_guidance": "Chaque scène est mesurée séparément. Les registres et plages cibles sont des choix du projet, pas des jugements de qualité. Sans séparateurs, les chapitres servent de scènes. Définissez les affectations et cibles dans lixity.toml.",
         "scene_support": "Les nombres de mots et phrases indiquent la taille de l’échantillon. HD-D nécessite {min_tokens} mots ; la variation des phrases en nécessite au moins deux. Les erreurs types sont des approximations, pas des intervalles de confiance validés. Un tiret signifie indisponible ; un zéro observé ne prouve pas la certitude.",
@@ -34,6 +40,8 @@ SCENE_LABELS = {
         "scene_below": "en dessous", "scene_within": "dans la plage", "scene_above": "au-dessus", "scene_unavailable": "indisponible",
     },
     "es": {
+        "scene_planned": "Escenas planificadas",
+        "scene_planned_note": "Las asignaciones planificadas explícitamente aún no tienen texto analizable. No reciben mediciones ni forman parte de las comparaciones de registro.",
         "panel_scenes": "Escenas y registros de estilo", "scene_unit": "Escena",
         "scene_guidance": "Cada escena se mide por separado. Los registros y rangos objetivo son decisiones del proyecto, no juicios de calidad. Sin separadores, los capítulos sirven como escenas. Configure las asignaciones y objetivos en lixity.toml.",
         "scene_support": "Los recuentos de palabras y oraciones indican el tamaño de la muestra. HD-D requiere {min_tokens} palabras; la variación requiere dos oraciones. Los errores estándar son aproximaciones, no intervalos de confianza validados. Un guion significa no disponible; un cero observado no demuestra certeza.",
@@ -42,6 +50,8 @@ SCENE_LABELS = {
         "scene_below": "por debajo", "scene_within": "dentro del rango", "scene_above": "por encima", "scene_unavailable": "no disponible",
     },
     "it": {
+        "scene_planned": "Scene pianificate",
+        "scene_planned_note": "Le assegnazioni esplicitamente pianificate non hanno ancora testo analizzabile. Non ricevono misurazioni e non rientrano nei confronti di registro.",
         "panel_scenes": "Scene e registri di stile", "scene_unit": "Scena",
         "scene_guidance": "Ogni scena viene misurata separatamente. Registri e intervalli obiettivo sono scelte del progetto, non giudizi di qualità. Senza separatori, i capitoli fungono da scene. Impostate assegnazioni e obiettivi in lixity.toml.",
         "scene_support": "I conteggi di parole e frasi mostrano la dimensione del campione. HD-D richiede {min_tokens} parole; la variazione richiede almeno due frasi. Gli errori standard sono approssimazioni, non intervalli di confidenza validati. Un trattino indica indisponibilità; uno zero osservato non dimostra certezza.",
@@ -50,6 +60,8 @@ SCENE_LABELS = {
         "scene_below": "sotto", "scene_within": "nell’intervallo", "scene_above": "sopra", "scene_unavailable": "non disponibile",
     },
     "pt": {
+        "scene_planned": "Cenas planejadas",
+        "scene_planned_note": "As atribuições explicitamente planejadas ainda não têm texto analisável. Não recebem medições e não entram nas comparações de registro.",
         "panel_scenes": "Cenas e registros de estilo", "scene_unit": "Cena",
         "scene_guidance": "Cada cena é medida separadamente. Registros e faixas-alvo são escolhas do projeto, não avaliações de qualidade. Sem separadores, os capítulos servem como cenas. Defina atribuições e metas em lixity.toml.",
         "scene_support": "As contagens de palavras e frases indicam o tamanho da amostra. HD-D requer {min_tokens} palavras; a variação requer duas frases. Erros padrão são aproximações, não intervalos de confiança validados. Um traço indica indisponibilidade; um zero observado não demonstra certeza.",
@@ -58,6 +70,8 @@ SCENE_LABELS = {
         "scene_below": "abaixo", "scene_within": "na faixa", "scene_above": "acima", "scene_unavailable": "indisponível",
     },
     "nl": {
+        "scene_planned": "Geplande scènes",
+        "scene_planned_note": "Expliciet geplande toewijzingen hebben nog geen analyseerbare tekst. Ze krijgen geen meetwaarden en tellen niet mee in registervergelijkingen.",
         "panel_scenes": "Scènes en stijlregisters", "scene_unit": "Scène",
         "scene_guidance": "Elke scène wordt afzonderlijk gemeten. Registers en doelbereiken zijn projectkeuzes, geen kwaliteitsoordelen. Zonder scheidingen dienen hoofdstukken als scènes. Stel toewijzingen en doelen in lixity.toml in.",
         "scene_support": "Woord- en zinsaantallen tonen de steekproefgrootte. HD-D vereist {min_tokens} woorden; zinsvariatie vereist twee zinnen. Standaardfouten zijn benaderingen, geen gevalideerde betrouwbaarheidsintervallen. Een streepje betekent niet beschikbaar; een waargenomen nul bewijst geen zekerheid.",
@@ -510,7 +524,12 @@ PROFILE_DATA: dict[str, dict[str, Any]] = {
             "kochte|kochten|träumte|träumten"
             r")\b"
         ),
-        "filter_verbs_regex": r"\b(spüre|spürte|fühle|fühlte|merke|merkte|glaube|glaubte)\b",
+        # Listed finite forms are lexical cues, not a syntactic perception parse.
+        "filter_verbs_regex": (
+            r"\b(spüre|spürte|fühle|fühlte|merke|merkte|glaube|glaubte|"
+            r"höre|hörst|hört|hören|hörte|hörtest|hörtet|hörten|"
+            r"rieche|riechst|riecht|riechen|roch|rochst|rocht|rochen)\b"
+        ),
         # Signal keywords are deliberately project-neutral: authors configure
         # their own leitmotifs and signal words via CorpusConfig.signal_keywords.
         "signal_keywords": {},

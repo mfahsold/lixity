@@ -49,6 +49,7 @@ GROUPS: dict[str, tuple[str, ...]] = {
 AREAS: dict[str, tuple[str, ...]] = {
     "docs": (
         "docs.cjs",
+        "pages-analytics.cjs",
         "visual-consistency.cjs",
     ),
     "tokens": (

@@ -8,7 +8,7 @@ Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
 Product versions describe development maturity; response and archive schemas
-are independent. v0.7.1 reads research records/manifests v1–v8, including
+are independent. v0.7.2 reads research records/manifests v1–v8, including
 historical v3.0.1 archives. Reading an archive does not upgrade it. See
 [compatibility and limits](#limits) before writing with an older application.
 Since v0.7.0, optional dossier geography uses v8. Ordinary dossier encodings stay
@@ -198,7 +198,19 @@ lixity research reconcile-manuscript --project ./novel novel.md --accept-moved
 ```
 
 The manuscript path is accepted positionally (like `analyze`, `scenes`, `showing`)
-or as `--manuscript PATH`; pass exactly one of the two forms.
+or as `--manuscript PATH`; pass exactly one of the two forms. Since v0.7.2,
+read-only `review-manuscript` alone also permits omission when the selected
+project's root config explicitly sets `manuscript = "drafts/manuscript.md"`.
+The root `lixity.toml` takes precedence over root `[tool.lixity]`; user and
+ancestor settings are excluded. Explicit input wins. No other manuscript command
+becomes optional, and the Python API still requires its manuscript argument.
+
+The default is resolved inside the already validated explicit/working-directory
+project, never inferred from a filename or another project. Invalid config or
+escaping paths fail; no fallback selects another source. Review of a configured
+or explicit file that is missing/unreadable retains the existing informative
+`source_state` result, rather than pretending there are no saved associations.
+See [default manuscript settings](../USAGE.md#default-manuscript).
 
 <a id="compact-manuscript-link-command-reference"></a>
 <a id="end-to-end-manuscript-link-lifecycle"></a>

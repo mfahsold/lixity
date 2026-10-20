@@ -24,7 +24,7 @@ def render_scenes_panel(
     if scenes.get("error"):
         return (panel_start("scenes", labels, "panel_scenes") +
                 f'<p role="status">{esc(scenes["error"])}</p></section>')
-    if not scenes.get("items"):
+    if not scenes.get("items") and not scenes.get("planned_items"):
         return ""
 
     def L(key: str) -> str:
@@ -40,10 +40,11 @@ def render_scenes_panel(
     # under it: the per-scene feature tables stay collapsed below.
     asl_key = next(label_key for field, label_key, _unit in FEATURES if field == "asl")
     dialog_key = next(label_key for field, label_key, _unit in FEATURES if field == "dialog_pct")
-    parts.append('<div class="table-wrap scene-overview" tabindex="0" role="region" '
-                 f'aria-label="{L("panel_scenes")}"><table><thead><tr>'
-                 f'<th>{L("panel_scenes")}</th><th>{L("words")}</th><th>{L("sentences")}</th>'
-                 f'<th>{L(asl_key)}</th><th>{L(dialog_key)}</th></tr></thead><tbody>')
+    if scenes["items"]:
+        parts.append('<div class="table-wrap scene-overview" tabindex="0" role="region" '
+                     f'aria-label="{L("panel_scenes")}"><table><thead><tr>'
+                     f'<th>{L("panel_scenes")}</th><th>{L("words")}</th><th>{L("sentences")}</th>'
+                     f'<th>{L(asl_key)}</th><th>{L(dialog_key)}</th></tr></thead><tbody>')
     for item in scenes["items"]:
         group = esc(item["group"]) if item["group"] else L("scene_unassigned")
         dialog = item["features"].get("dialog_pct")
@@ -54,7 +55,8 @@ def render_scenes_panel(
             f'<td>{item["words"]}</td><td>{item["sentences"]}</td>'
             f'<td>{N(item["features"].get("asl"))}</td><td>{dialog_text}</td></tr>'
         )
-    parts.append('</tbody></table></div>')
+    if scenes["items"]:
+        parts.append('</tbody></table></div>')
     # Comparison columns only appear when the project actually defines targets
     # or register medians; otherwise every cell would repeat a dash.
     has_targets = any(
@@ -98,6 +100,11 @@ def render_scenes_panel(
                 row += f'<td>{N(reference.get("median"))} (n={reference.get("n", 0)})</td>'
             parts.append(row + "</tr>")
         parts.append('</tbody></table></div></details>')
+    if scenes.get("planned_items"):
+        parts.append(f'<details class="scene-planned"><summary>{L("scene_planned")} '
+                     f'({len(scenes["planned_items"])})</summary><p>{L("scene_planned_note")}</p><ul>')
+        parts.extend(f'<li>{esc(item["id"])} · {esc(item["group"])}</li>' for item in scenes["planned_items"])
+        parts.append('</ul></details>')
     parts.append('</section>')
     return "".join(parts)
 

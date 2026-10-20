@@ -79,9 +79,13 @@ server.serve_forever()
     for (const [locale, html] of Object.entries(fixtures)) for (const width of [1440, 320]) {
       const page = await browser.newPage({viewport: {width, height: 950}, hasTouch: true});
       page.setDefaultTimeout(10000);
-      const posts = [], errors = [];
+      const posts = [], searches = [], errors = [];
       page.on('pageerror', error => errors.push(error.message));
-      page.on('request', request => {if (request.method() === 'POST') posts.push({path: new URL(request.url()).pathname, payload: request.postDataJSON()});});
+      page.on('request', request => {
+        if (request.method() !== 'POST') return;
+        const entry = {path: new URL(request.url()).pathname, payload: request.postDataJSON()};
+        (entry.path === '/api/research-search' ? searches : posts).push(entry);
+      });
       await page.route(fixture.url + '/', route => route.fulfill({contentType: 'text/html', body: html}));
       await page.goto(fixture.url);
       await page.locator('[data-rtab=sources]').click();
@@ -108,6 +112,33 @@ server.serve_forever()
       await page.locator('#r-link-claim-select').selectOption(fixture.claim);
       await page.locator('#r-link-relation').selectOption('qualifies');
       await page.locator('#r-link-rationale').fill('Synthetic author review.');
+      await page.locator('#r-find-passage').click();
+      assert.equal(await page.locator('#rtab-search[role=tabpanel]').isVisible(), true);
+      assert.equal(await page.locator('[data-rtab=search]').getAttribute('aria-selected'), 'true');
+      assert.equal(await page.locator('#r-search-query').evaluate(input => input === document.activeElement), true,
+        'Finding another passage focuses the native Search query');
+      await page.locator('#r-search-query').fill('archive');
+      await page.locator('#r-search-btn').click();
+      const searchPassage = page.locator(`#research-search-results [data-use-passage=claim][data-passage-id="${fixture.passage}"]`);
+      await searchPassage.waitFor({state: 'visible'});
+      const searchCard = page.locator('#research-search-results .research-passage-card').filter({
+        has: page.locator(`[data-use-passage=claim][data-passage-id="${fixture.passage}"]`)});
+      assert.ok((await searchCard.locator('.research-passage-quote').textContent()).includes('The archive opened in 1924.'),
+        'Search reads the real retained source while the evidence draft remains unsaved');
+      if (locale === 'en') await page.locator('#rtab-search').screenshot({path: path.join(artifacts, `claims-search-${width}.png`)});
+      await page.locator('[data-rtab=claims]').click();
+      assert.equal(await page.locator('#rtab-claims[role=tabpanel]').isVisible(), true);
+      assert.equal(await page.locator('[data-rtab=claims]').getAttribute('aria-selected'), 'true');
+      assert.equal(await page.locator('#research-evidence-draft .selection-quote').textContent(), 'The archive opened in 1924.',
+        'Claims → Search → Claims preserves the selected quotation');
+      assert.equal(await page.locator('#research-evidence-draft .selection-context').textContent(), firstPassage);
+      assert.equal(await page.locator('#r-link-passage-id').inputValue(), fixture.passage);
+      assert.equal(await page.locator('#r-link-claim-select').inputValue(), fixture.claim);
+      assert.equal(await page.locator('#r-link-relation').inputValue(), 'qualifies');
+      assert.equal(await page.locator('#r-link-rationale').inputValue(), 'Synthetic author review.');
+      assert.deepEqual(searches, [{path: '/api/research-search', payload: {query: 'archive', scope: 'sources'}}]);
+      assert.equal(posts.length, 0, 'Searching and returning never submit the evidence draft');
+      if (locale === 'en') await page.locator('#r-link-composer').screenshot({path: path.join(artifacts, `claims-search-return-${width}.png`)});
       await page.locator('#r-link-evidence-btn').click();
       await page.waitForFunction(() => document.querySelector('#r-link-passage-id').value === '');
       assert.deepEqual(posts, [{path: '/api/research-evidence-link', payload: {

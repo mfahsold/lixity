@@ -99,7 +99,7 @@ explain coverage, short-sample limits and unavailable measurements.
 
 | Looking for | Start here |
 | :--- | :--- |
-| Everyday workflows | [Usage and CLI reference](https://mfahsold.github.io/lixity/USAGE.md) · [Practical guides](https://mfahsold.github.io/lixity/#guides) |
+| Daily checks, project defaults and CLI | [Usage and CLI reference](https://mfahsold.github.io/lixity/USAGE.md) · [Practical guides](https://mfahsold.github.io/lixity/#guides) |
 | Research and Zotero | [Research workflows and compatibility](https://mfahsold.github.io/lixity/research/USAGE.md) · [Data model](https://mfahsold.github.io/lixity/research/DATA_MODEL.md) |
 | Measurements and limits | [Methods](https://mfahsold.github.io/lixity/METHODS.md) · [Validation](https://mfahsold.github.io/lixity/STABILITY.md) |
 | Integrations | [Python, CLI and HTTP contracts](https://mfahsold.github.io/lixity/AGENTS.md) · [Architecture](https://mfahsold.github.io/lixity/ARCHITECTURE.md) · [Agent index](https://mfahsold.github.io/lixity/llms.txt) |
@@ -192,6 +192,12 @@ and [research workflows](https://mfahsold.github.io/lixity/research/USAGE.md).
 Only profiled paragraphs have measurements and claim anchors. Plain reports
 keep their inspection layout; the bounded reader is not a Markdown editor.
 
+Root-only `manuscript` selects a contained relative default for workspace folders,
+`scenes` and read-only Research manuscript review. Explicit paths win; invalid
+settings fail without choosing another file. Scene chapter/scene/latest output
+filters retain full references and declare their selection. Explicit planned IDs
+have no measurements and remain outside comparisons. See Usage for exact rules.
+
 ## Choose a reference
 
 - [First look](https://mfahsold.github.io/lixity/guides/first-look.html): follow the Warehouse 4 demo from chapter comparison to research and PDF layouts.
@@ -226,6 +232,11 @@ for the supported v0.7.1 workflows and compatibility limits.
 **Since v0.7.2:** UI and CLI explain map/style-space measurements
 in place; additive `geography_summary` and `dimension_diagnostics` expose their
 support without changing stored records or existing scores.
+
+Public-site measurement is separate from the product: production Pages and its
+reviewed examples use GoatCounter for page paths and named links. Browser privacy
+signals disable it; query/hash, forms, selections and local project data are
+excluded. Local app and exported reports contain no marketing measurement.
 
 ## Data boundaries
 
@@ -1385,9 +1396,35 @@ Without chapter headings, a draft is measured as one chapter and keeps all its
 prose. A leading `# Title` supplies its title; scene dividers still split the draft.
 
 Use `lixity scenes manuscript.md --language de` to inspect each scene separately;
-add `--json` for the complete scene envelope (schema version 1). The dashboard
+add `--json` for the scene envelope (schema version 1). The dashboard
 shows the same observations in **Scenes & style registers**. Chapters serve as
 scenes when there are no explicit dividers.
+
+For everyday checks in a selected project:
+
+```bash
+lixity scenes --chapter 2
+lixity scenes --scene 2:1 --json
+lixity scenes --latest
+lixity scenes --chapter 2 --latest
+```
+
+The optional file defaults to the current workspace's manuscript; configure it
+explicitly as described [below](#default-manuscript). Chapter numbers and
+`chapter:scene` IDs are the numbers printed by Lixity, not numbers embedded in
+heading titles. `--latest` means the last **measurable scene in document order**,
+not the most recently edited scene. It excludes plans. `--scene` and `--latest`
+are mutually exclusive; a supplied `--chapter` must agree with `--scene`.
+Unknown selections fail rather than return an empty success.
+
+Filters reduce output after the entire manuscript is validated and measured.
+They preserve scene IDs, measurements and full-manuscript register references;
+they do not speed up analysis or hide invalid assignments elsewhere. Filtered
+JSON adds `scenes.selection` with `chapter`, `scene`, `latest`, `selected_count`,
+`total_count` and `reference_scope: "full_manuscript"`. Counts refer to measured
+rows; when plans are configured, `selected_planned_count` and
+`total_planned_count` describe those separately. Unfiltered JSON has no selection
+object and retains its existing shape.
 
 Register assignments and targets belong to your project. For example:
 
@@ -1412,6 +1449,32 @@ scenes. Invalid assignments are reported instead of silently moving a register.
 Each group gets its own manuscript-only median and MAD, with at least two
 available observations per feature. Unassigned scenes have no register baseline.
 Research sources never enter these references.
+
+To plan an unwritten scene without disabling stale-assignment checks, explicitly
+list its assigned ID:
+
+```toml
+[scene_analysis]
+planned = ["3:1"]
+
+[scene_analysis.assignments]
+"1:1" = "voice"
+"3:1" = "voice"
+
+[scene_analysis.groups.voice.targets]
+asl = [8, 15]
+```
+
+`planned` must be a unique list of valid assignment IDs. Missing assignments not
+listed there still fail. A plan has no analyzable text, measurements or baseline
+membership. CLI output labels it separately; the analysis panel has an expandable
+**Planned scenes** section. Once its text is measurable, the same ID appears as an
+ordinary measured scene. Review positional IDs after inserting/removing scenes.
+JSON adds `planned_items` only when a nonempty `planned` list is configured; its
+rows contain `id`, `chapter`, `scene`, `group` and `state: "planned"`. It becomes
+empty once all listed IDs are measurable. No plans are inferred from headings,
+blank lines or missing assignments. A completely empty workspace still opens its
+existing setup view; the CLI can inspect its plans without inventing measurements.
 
 Targets use the fields reported by `lixity about --json`, such as `asl`,
 `filter_density`, `modal_density`, `nominalization_density`, `passive_density`,
@@ -1614,7 +1677,8 @@ get unique timestamped versions and atomically replace stable links or fallback
 copies; the last 10 versions per artifact family remain in `exports/archive/`.
 A failed replacement preserves the previous stable artifact and reports an error.
 
-An explicit manuscript path wins. Otherwise discovery tries `<folder>.md`,
+An explicit manuscript path wins. Otherwise discovery uses the selected root's
+[configured manuscript](#default-manuscript), then tries `<folder>.md`,
 then `manuscript.md`/`manuskript.md`, then a sole Markdown file (ignoring
 README/AGENTS/LICENSE/NDA). `--dry-run` displays the plan without writing.
 
@@ -1901,6 +1965,37 @@ callers can inspect `CorpusConfig.model_json_schema()` for corpus fields. Option
 `None` linguistic patterns use the selected language profile's defaults.
 `phrases` and `capabilities` are accepted but uninterpreted by the bundled engine.
 
+### Default manuscript
+
+In the selected project's root `lixity.toml`, set an optional relative path:
+
+```toml
+manuscript = "drafts/manuscript.md"
+```
+
+The equivalent is `manuscript` under `[tool.lixity]` in the root
+`pyproject.toml`; root `lixity.toml` takes precedence. This is project data, never
+inherited from user settings or an ancestor directory. Paths are relative to the
+selected root, may contain spaces and must remain inside it, including symlinks.
+Absolute paths and parent traversal are rejected. An explicit manuscript argument
+wins. When selecting a configured default, an invalid/unreadable configuration
+or missing/nonregular configured file fails selection instead of choosing another
+manuscript. Explicit-file analysis retains its existing configuration warnings.
+
+This setting participates in existing folder selection (Open Project, service
+startup and `build`) and omitted input for `scenes`. Commands that still require
+an explicit file keep that requirement; text-taking Python APIs do not discover
+files. In a validated Research project it also supports:
+
+```bash
+lixity research review-manuscript --project ./novel
+```
+
+Research review uses only that project's configured path; it never guesses from
+other Markdown files or changes the archive. Its existing `missing`/`unreadable`
+source states remain informative review results. Other manuscript-link commands
+still require an explicit path. See the [research reference](research/USAGE.md).
+
 ### Character profiles
 
 **Since v0.7.1:** define literal aliases and optional author-declared
@@ -2151,7 +2246,7 @@ Text sources can be analysed separately or compared with a manuscript.
 It does not implement the entire [RFC](README.md).
 
 Product versions describe development maturity; response and archive schemas
-are independent. v0.7.1 reads research records/manifests v1–v8, including
+are independent. v0.7.2 reads research records/manifests v1–v8, including
 historical v3.0.1 archives. Reading an archive does not upgrade it. See
 [compatibility and limits](#limits) before writing with an older application.
 Since v0.7.0, optional dossier geography uses v8. Ordinary dossier encodings stay
@@ -2341,7 +2436,19 @@ lixity research reconcile-manuscript --project ./novel novel.md --accept-moved
 ```
 
 The manuscript path is accepted positionally (like `analyze`, `scenes`, `showing`)
-or as `--manuscript PATH`; pass exactly one of the two forms.
+or as `--manuscript PATH`; pass exactly one of the two forms. Since v0.7.2,
+read-only `review-manuscript` alone also permits omission when the selected
+project's root config explicitly sets `manuscript = "drafts/manuscript.md"`.
+The root `lixity.toml` takes precedence over root `[tool.lixity]`; user and
+ancestor settings are excluded. Explicit input wins. No other manuscript command
+becomes optional, and the Python API still requires its manuscript argument.
+
+The default is resolved inside the already validated explicit/working-directory
+project, never inferred from a filename or another project. Invalid config or
+escaping paths fail; no fallback selects another source. Review of a configured
+or explicit file that is missing/unreadable retains the existing informative
+`source_state` result, rather than pretending there are no saved associations.
+See [default manuscript settings](../USAGE.md#default-manuscript).
 
 <a id="compact-manuscript-link-command-reference"></a>
 <a id="end-to-end-manuscript-link-lifecycle"></a>
@@ -3794,6 +3901,8 @@ outside detected quotations. The legacy whitespace count `clean_words` is
 unchanged and is not the dialogue-ratio denominator. Recompute older dialogue
 reports and dependent style results before comparing across this correction.
 
+### Perception/filter word cues
+
 Density features (`filter_density`, modal, passive, nominalisation) are counts
 over the whole prose scope including detected quotations: a perception verb in
 direct speech contributes like one in the narrating voice. The reports do not
@@ -3801,6 +3910,21 @@ attribute speakers. Treat a high density together with the chapter's
 `dialog_pct` — a value carried by dialogue is characterisation, not narration.
 A narrative-only variant of these densities is a documented candidate for a
 future schema, not part of the current contract.
+
+Since v0.7.2 the German cue list includes the indicative present and simple-past
+forms of **hören** and **riechen**, alongside the existing listed forms. Their
+spellings follow Duden's [hören](https://www.duden.de/konjugation/hoeren) and
+[riechen](https://www.duden.de/konjugation/riechen) tables. This is a bounded lexical
+extension, not a lemmatizer or a test of narrative distance. For example, a room
+that *riecht nach Farbe* contributes a match even without a perceiving narrator;
+a somatic description without a listed verb can contribute none. Compounds,
+all tenses, subjunctives and participles are not exhaustively covered; ambiguous
+*gehört* is not added as a standalone cue. Project `filter_verbs_regex` replaces
+the list, including an explicitly empty pattern. Zero means no listed matches,
+not an ideal style. Regenerate German filter densities and dependent comparisons
+before comparing reports across this change.
+
+### Dimension cutoffs and robust baselines
 
 The 3D dashboard displays up to three derived dimension scores. A point is
 flagged when a completed dimension score reaches the configured absolute
@@ -4651,6 +4775,12 @@ These are orthographic counting conventions, not grammatical segmentation of
 clitics. Recompute affected token-based and sentence-start results before
 comparing reports from earlier versions.
 
+The German v0.7.2 perception/filter list also adds finite indicative present and
+simple-past forms of *hören* and *riechen*. Neutral positive and negative fixtures
+cover shared corpus/chapter/paragraph/scene counting and explicit overrides.
+This does not validate perception, grammatical roles or all German inflections;
+see [the cue-list limits](METHODS.md#perceptionfilter-word-cues).
+
 ## Acceptance criteria for language work
 
 Prioritize German linguistic resources and scientific explanations, then English,
@@ -4851,6 +4981,17 @@ distinguish contention, read-only/permission failures and other I/O errors.
 
 Explicit root settings own author identity, publication, chapter registers and
 project-local character profiles; user/ancestor defaults cannot supply them.
+The optional root `manuscript` setting follows the same project-only boundary.
+`config.read_explicit_project_config` reuses the existing TOML parser but reads
+only root pyproject/lixity files and promotes failed reads to errors.
+`workspace.configured_manuscript` owns contained relative-path resolution without
+reading source bytes. `discover` applies explicit → configured → conventional
+selection and validates configured regular files. The read-only Research CLI
+uses the same path owner after validating its archive, then preserves its domain
+review of missing/unreadable source bytes. Python text-analysis APIs stay explicit.
+Output scene filters run after complete measurement; explicitly planned IDs remain
+separate from measured rows and never influence descriptive baselines.
+
 `project_identity` compares only bounded
 manuscript metadata syntax, without rewriting text or affecting measurements.
 `PublicationSettings`/`PUBLICATION_FIELDS` supply field validation to configuration,
@@ -6382,6 +6523,20 @@ discover a project. It returns `{meta: {schema_version: 1, ...}, scenes}` with
 `items`, `baselines`, `explicit_scene_breaks` and `scenes_are_chapters`.
 Each item contains `id` (chapter:scene), `group`, sample counts, the existing
 16 `features`, approximate `standard_errors`, `targets` and `data_support`.
+Opt-in `scene_analysis.planned` lists assigned IDs that may lack measurable text.
+Only explicitly listed missing IDs appear in additive `planned_items` with
+`id`, `chapter`, `scene`, `group`, `state: "planned"`; there are no fabricated
+metrics. Measured rows and baselines exclude plans. Unlisted missing assignments
+still fail, and a listed ID becomes measured normally when text is available.
+Without a nonempty planned list the response is unchanged.
+
+CLI `scenes` accepts optional file, `--chapter N`, `--scene C:S` and `--latest`.
+Filtering follows complete validation/measurement; the Python API stays text-based
+and unfiltered. Filtered CLI v1 adds `scenes.selection` with chapter/scene/latest,
+measured selected/total counts and `reference_scope: "full_manuscript"`; configured
+plans add selected/total planned counts. Latest selects the last measured row in
+source order, never a plan or modification time. Original IDs, full baselines
+and global divider metadata remain unchanged.
 See [scene settings and limits](USAGE.md#scene-registers-and-project-targets).
 `min_chapters` must be an integer of at least 2 and is also exposed
 as `--min-chapters` on `style`, `dashboard` and `build`. Since v3.0.1, foreground
