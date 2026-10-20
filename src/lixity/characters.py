@@ -146,7 +146,7 @@ def character_presence(
     mapping ``pattern -> display name`` for aliases, e.g.
     ``{"Matthias|Matze": "Matthias"}``.
     """
-    config = config or CorpusConfig(language="auto")
+    config = config or CorpusConfig()
     names = resolve_character_settings(names, {}).names
     patterns: dict[str, list[re.Pattern[str]]] = {}
     entries = names.items() if isinstance(names, Mapping) else ((name, name) for name in names)
@@ -206,7 +206,7 @@ def presence_report(
 
     Raises ``ValueError`` when ``names`` is empty — there is no NER.
     """
-    config = config or CorpusConfig(language="auto")
+    config = config or CorpusConfig()
     chapters = split_chapters(text, config)
     figures = character_presence(text, names, config)
     declared = declared_pov or {}

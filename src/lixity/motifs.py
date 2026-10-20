@@ -127,7 +127,7 @@ def motif_report(
     top_echoes: int = 20,
 ) -> MotifReport:
     """Motif presence and repetition signals (deterministic, offline)."""
-    config = config or CorpusConfig(language="auto")
+    config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
     content_blacklist = resolved.function_words | resolved.stopwords

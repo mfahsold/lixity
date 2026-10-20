@@ -560,8 +560,7 @@ def _print_about_text() -> None:
 def _cmd_dialogue(args: argparse.Namespace) -> int:
     """Dialogue turn structure as a Rich table or JSON."""
     try:
-        with open(args.file, encoding="utf-8") as f:
-            text = f.read()
+        text = FileUtils.read_file(args.file)
     except OSError as exc:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
@@ -676,8 +675,7 @@ def _cmd_characters(args: argparse.Namespace) -> int:
 def _cmd_pacing(args: argparse.Namespace) -> int:
     """Scene structure, pacing signals and chapter hooks (Rich table or JSON)."""
     try:
-        with open(args.file, encoding="utf-8") as f:
-            text = f.read()
+        text = FileUtils.read_file(args.file)
     except OSError as exc:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
@@ -741,8 +739,7 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
             return EXIT_ERROR
         motifs[name.strip()] = pattern.strip()
     try:
-        with open(args.file, encoding="utf-8") as f:
-            text = f.read()
+        text = FileUtils.read_file(args.file)
     except OSError as exc:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR
@@ -795,8 +792,7 @@ def _cmd_motifs(args: argparse.Namespace) -> int:
 def _cmd_showing(args: argparse.Namespace) -> int:
     """Showing vs. telling balance (Rich table or JSON)."""
     try:
-        with open(args.file, encoding="utf-8") as f:
-            text = f.read()
+        text = FileUtils.read_file(args.file)
     except OSError as exc:
         print(f"{_m('err_prefix')} {_m('err_file', file=args.file, exc=exc)}", file=sys.stderr)
         return EXIT_ERROR

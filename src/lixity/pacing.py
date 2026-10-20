@@ -179,7 +179,7 @@ def _hook_score(closing: str, is_dialogue: bool, word_re: re.Pattern[str]) -> tu
 
 def pacing_report(text: str, config: CorpusConfig | None = None) -> PacingReport:
     """Scene structure, pacing signals and chapter hooks (deterministic)."""
-    config = config or CorpusConfig(language="auto")
+    config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
     dialogue_re = compile_pattern(resolved.dialogue_regex)

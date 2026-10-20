@@ -314,16 +314,40 @@ def _load_toml(path: Path) -> dict[str, Any]:
         )
         return {}
     if path.name == "pyproject.toml":
-        tool = data.get("tool") or {}
-        section = tool.get("lixity") or {}
-        return dict(section) if isinstance(section, dict) else {}
+        section = data
+        for key in ("tool", "lixity"):
+            section = section.get(key, {})
+            if not isinstance(section, dict):
+                name = "tool" if key == "tool" else "tool.lixity"
+                warnings.warn(
+                    f"Could not read {path}: {name} must be a table. Its settings "
+                    "are ignored and code defaults apply.",
+                    stacklevel=2,
+                )
+                return {}
+        return dict(section)
     return dict(data) if isinstance(data, dict) else {}
+
+
+def _config_file_stat(path: Path) -> os.stat_result | None:
+    """Probe configuration files without treating failed metadata reads as absence."""
+    try:
+        info = path.stat()
+    except (FileNotFoundError, NotADirectoryError):
+        return None
+    except OSError as exc:
+        warnings.warn(
+            f"Could not read {path}: {exc}. Its settings are ignored.",
+            stacklevel=2,
+        )
+        return None
+    return info if stat.S_ISREG(info.st_mode) else None
 
 
 def _walk_up(start: Path, name: str) -> Path | None:
     for directory in [start, *start.parents]:
         candidate = directory / name
-        if candidate.is_file():
+        if _config_file_stat(candidate) is not None:
             return candidate
     return None
 
@@ -336,11 +360,9 @@ def read_project_config(directory: str | Path) -> dict[str, Any]:
     Oversized files are ignored instead of parsed.
     """
     path = Path(directory) / "lixity.toml"
-    try:
-        if path.is_file() and path.stat().st_size <= 65536:
-            return _load_toml(path)
-    except OSError:
-        pass
+    info = _config_file_stat(path)
+    if info is not None and info.st_size <= 65536:
+        return _load_toml(path)
     return {}
 
 
@@ -357,7 +379,7 @@ def load_project_config(start: str | Path | None = None) -> dict[str, Any]:
 
     merged: dict[str, Any] = {}
     user = Path(os.path.expanduser("~/.config/lixity.toml"))
-    if user.is_file():
+    if _config_file_stat(user) is not None:
         merged.update(_load_toml(user))
         for key in PROJECT_ONLY_KEYS:
             merged.pop(key, None)

@@ -135,7 +135,7 @@ def showing_report(
     ``metrics`` allows callers that already analysed the text (CLI dashboard,
     book adapter) to reuse the result instead of re-running the analyzer.
     """
-    config = config or CorpusConfig(language="auto")
+    config = config or CorpusConfig()
     language = resolve_language(config, sample_text=text).key
     resolved_metrics = (metrics if metrics is not None
                         else CorpusAnalyzer(config, sample_text=text).analyze_text(text))

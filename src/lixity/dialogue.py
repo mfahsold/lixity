@@ -122,7 +122,7 @@ def _turn_stats(
 
 def dialogue_report(text: str, config: CorpusConfig | None = None) -> DialogueReport:
     """Dialogue turn structure of a manuscript (deterministic, heuristic)."""
-    config = config or CorpusConfig(language="auto")
+    config = config or CorpusConfig()
     resolved = resolve_language(config, sample_text=text)
     word_re = compile_word_pattern(resolved.word_regex)
     dialogue_re = compile_pattern(resolved.dialogue_regex)

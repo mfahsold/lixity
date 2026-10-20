@@ -1069,7 +1069,7 @@ class StyleFingerprint:
         cls, metrics: Any, thresholds: FingerprintThresholds | None = None,
         config: CorpusConfig | None = None,
     ) -> "StyleFingerprint":
-        """Derives the fingerprint from a CorpusMetrics object (self-calibration)."""
+        """Derive the fingerprint, rejecting non-finite measurements and invalid SEs."""
         thresholds = thresholds or FingerprintThresholds()
         chapters = getattr(metrics, "chapters", []) or []
         profiles, assignments = validate_register_settings(
@@ -1086,6 +1086,13 @@ class StyleFingerprint:
             se_col: dict[int, float] = {}
             for chapter in chapters:
                 raw = getattr(chapter, field_name, None)
+                if isinstance(raw, int | float):
+                    try:
+                        finite = math.isfinite(raw)
+                    except OverflowError:
+                        finite = False
+                    if not finite:
+                        raise ValueError(f"Chapter {chapter.num} {field_name} must be finite")
                 # Comparability floors: tiny chapters and sentence-distribution
                 # features with few sentences stay unavailable instead of
                 # producing unstable deviations and FDR flags.
@@ -1099,6 +1106,16 @@ class StyleFingerprint:
                         float(raw) if isinstance(raw, int | float) and chapter.words > 0 else None
                     )
                 se_raw = getattr(chapter, "style_se", {}).get(field_name)
+                if se_raw is not None:
+                    try:
+                        valid_se = (not isinstance(se_raw, bool) and isinstance(se_raw, int | float)
+                                    and math.isfinite(se_raw) and se_raw >= 0)
+                    except OverflowError:
+                        valid_se = False
+                    if not valid_se:
+                        raise ValueError(
+                            f"Chapter {chapter.num} {field_name} standard error must be finite and nonnegative"
+                        )
                 se_col[chapter.num] = float(se_raw) if isinstance(se_raw, int | float) else 0.0
             values[field_name] = col
             ses[field_name] = se_col

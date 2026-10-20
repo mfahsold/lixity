@@ -76,6 +76,49 @@ DIMENSION_SAMPLE = (
 
 
 class TestRobustStatistics(unittest.TestCase):
+    def test_nonfinite_measurements_are_rejected_before_scoring(self):
+        text = "\n\n".join(
+            f"## Chapter {number}\n\n" + "A synthetic door stays closed. " * 30
+            for number in range(1, 4)
+        )
+        for value in (math.nan, math.inf, -math.inf):
+            for words in (99, 150):
+                with self.subTest(value=value, words=words):
+                    metrics = CorpusAnalyzer().analyze_text(text)
+                    metrics.chapters[0].asl = value
+                    metrics.chapters[0].words = words
+                    with self.assertRaisesRegex(ValueError, r"Chapter 1.*asl.*finite"):
+                        StyleFingerprint.from_metrics(metrics)
+
+    def test_invalid_standard_errors_are_rejected_before_scoring(self):
+        metrics = CorpusAnalyzer().analyze_text(
+            "## One\n\n" + "A synthetic door stays closed. " * 30
+        )
+        for value in (math.nan, math.inf, -math.inf, -0.1, "invalid", True):
+            with self.subTest(value=value):
+                metrics.chapters[0].style_se["asl"] = value
+                with self.assertRaisesRegex(ValueError, r"Chapter 1.*asl.*standard error"):
+                    StyleFingerprint.from_metrics(metrics)
+
+    def test_unavailable_values_and_errors_keep_their_existing_support_rules(self):
+        text = "\n\n".join(
+            f"## Chapter {number}\n\n" + "A synthetic door stays closed. " * 30
+            for number in range(1, 4)
+        )
+        metrics = CorpusAnalyzer().analyze_text(text)
+        metrics.chapters[0].words = 99
+        metrics.chapters[1].style_se = {}
+        metrics.chapters[2].style_se["asl"] = None
+        fingerprint = StyleFingerprint.from_metrics(metrics)
+        self.assertIsNone(fingerprint.values["asl"][1])
+        self.assertNotIn("asl", fingerprint.z_scores[1])
+        self.assertEqual(fingerprint.baseline["asl"]["n"], 2)
+        self.assertEqual(fingerprint.baseline["asl"]["median"], 5.0)
+        self.assertEqual(fingerprint.z_scores[2]["asl"], 0.0)
+        self.assertEqual(fingerprint.z_scores[3]["asl"], 0.0)
+        metrics.chapters[2] = metrics.chapters[2].model_copy(update={"asl": None})
+        self.assertIsNone(StyleFingerprint.from_metrics(metrics).values["asl"][3])
+
     def test_unmeasured_consistency_is_explicit(self):
         for text in ("", "## One\n\n## Two\n", "## One\n\nThe rain fell."):
             with self.subTest(text=text):

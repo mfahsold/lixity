@@ -1,5 +1,10 @@
 """CLI adapters reject invalid inputs and output modes without publishing artifacts."""
 
+import os
+import subprocess
+import sys
+from pathlib import Path
+
 import pytest
 
 from lixity.cli import main
@@ -64,7 +69,7 @@ def test_pdf_rejects_json_before_processing_or_replacing_output(tmp_path, capsys
     assert output.read_bytes() == b"Previous synthetic PDF"
 
 
-@pytest.mark.parametrize("command", ["pdf", "build", "analyze"])
+@pytest.mark.parametrize("command", ["pdf", "build", "analyze", "dialogue", "pacing", "motifs", "showing"])
 def test_invalid_utf8_returns_error_without_traceback_or_outputs(tmp_path, capsys, command):
     source = tmp_path / "synthetic.md"
     original = b"# Invalid synthetic source\n\xff\n"
@@ -80,6 +85,23 @@ def test_invalid_utf8_returns_error_without_traceback_or_outputs(tmp_path, capsy
     output = capsys.readouterr()
     assert output.err and "Traceback" not in output.err
     assert source.read_bytes() == original
+    assert list(tmp_path.iterdir()) == [source]
+
+
+@pytest.mark.skipif(not hasattr(os, "mkfifo"), reason="FIFO inputs require POSIX")
+@pytest.mark.parametrize("command", ["dialogue", "pacing", "motifs", "showing"])
+def test_structure_cli_rejects_fifo_without_waiting_for_a_writer(tmp_path, command):
+    source = tmp_path / "synthetic.md"
+    os.mkfifo(source)
+    package_source = str(Path(__file__).resolve().parents[1] / "src")
+    result = subprocess.run(  # noqa: S603 - current interpreter and fixed synthetic CLI arguments
+        [sys.executable, "-m", "lixity", command, str(source), "--json"],
+        env={**os.environ, "PYTHONPATH": package_source, "PYTHONWARNINGS": "error"},
+        capture_output=True, text=True, timeout=3, check=False,
+    )
+    assert result.returncode == 1
+    assert result.stdout == ""
+    assert "regular file" in result.stderr and "Traceback" not in result.stderr
     assert list(tmp_path.iterdir()) == [source]
 
 
