@@ -1,7 +1,9 @@
 """Tests for research archive export, restoration, integrity checks, and security."""
 
+import hashlib
 import io
 import json
+import shutil
 import tarfile
 import tempfile
 import unittest
@@ -10,7 +12,8 @@ from pathlib import Path
 from lixity.cli import main
 from lixity.research import api
 from lixity.research.archive import export_archive, restore_archive
-from lixity.research.repository import ResearchError
+from lixity.research.models import Head
+from lixity.research.repository import Repository, ResearchError, digest, encode
 
 
 class TestResearchArchive(unittest.TestCase):
@@ -76,6 +79,91 @@ class TestResearchArchive(unittest.TestCase):
             claim_id=self.claim_id,
             deviation_from_fact=False,
         )
+
+    def replace_parent(self, project: Path, changes: dict) -> None:
+        """Keep the current snapshot valid while replacing its ancestor fixture."""
+        repository = Repository(project)
+        snapshot = repository.snapshot()
+        parent_path = repository.data / "manifests" / f"{snapshot.manifest.parent}.json"
+        parent = json.loads(parent_path.read_bytes())
+        parent.update(changes)
+        parent_bytes = json.dumps(parent).encode("utf-8")
+        parent_digest = digest(parent_bytes)
+        (repository.data / "manifests" / f"{parent_digest}.json").write_bytes(parent_bytes)
+        current = snapshot.manifest.model_copy(update={"parent": parent_digest})
+        current_bytes = encode(current)
+        current_digest = digest(current_bytes)
+        (repository.data / "manifests" / f"{current_digest}.json").write_bytes(current_bytes)
+        (repository.data / "HEAD.json").write_bytes(encode(Head(sha256=current_digest)))
+        self.assertEqual(Repository(project).snapshot().digest, current_digest)
+
+    def test_export_rejects_invalid_ancestor_contracts_without_replacing_output(self) -> None:
+        changes = (
+            {"parent": "../invalid-selector"},
+            {"schema_version": "research-manifest-local/99"},
+            {"project_id": "urn:uuid:00000000-0000-4000-8000-000000000000"},
+            {"generation": 1},
+            {"parent": None},
+        )
+        for index, change in enumerate(changes):
+            with self.subTest(change=change):
+                project = self.root / f"invalid-{index}"
+                shutil.copytree(self.project, project)
+                self.replace_parent(project, change)
+                output = self.root / f"existing-{index}.tar.gz"
+                output.write_bytes(b"existing backup")
+                with self.assertRaises(ResearchError):
+                    export_archive(project, output)
+                self.assertEqual(output.read_bytes(), b"existing backup")
+
+    def test_export_rejects_missing_or_checksum_damaged_ancestors(self) -> None:
+        for missing in (True, False):
+            with self.subTest(missing=missing):
+                project = self.root / f"damaged-{missing}"
+                shutil.copytree(self.project, project)
+                repository = Repository(project)
+                snapshot = repository.snapshot()
+                ancestor = repository.data / "manifests" / f"{snapshot.manifest.parent}.json"
+                if missing:
+                    ancestor.unlink()
+                else:
+                    ancestor.write_bytes(ancestor.read_bytes() + b" ")
+                output = self.root / f"damaged-{missing}.tar.gz"
+                with self.assertRaises(ResearchError):
+                    export_archive(project, output)
+                self.assertFalse(output.exists())
+
+    def test_restore_rejects_invalid_history_even_with_matching_inventory(self) -> None:
+        valid = self.root / "valid.tar.gz"
+        export_archive(self.project, valid)
+        with tarfile.open(valid, "r:gz") as archive:
+            member = archive.extractfile("EXPORT_MANIFEST.json")
+            assert member is not None
+            inventory = json.loads(member.read())
+        self.replace_parent(self.project, {"parent": "../invalid-selector"})
+        payloads = {}
+        for path in (self.project / "research").rglob("*"):
+            relative = path.relative_to(self.project).as_posix()
+            if path.is_file() and not relative.startswith("research/.cache/"):
+                payloads[relative] = path.read_bytes()
+        inventory["snapshot"] = Repository(self.project).snapshot().digest
+        inventory["files"] = {
+            name: {"sha256": hashlib.sha256(content).hexdigest(), "byte_length": len(content)}
+            for name, content in payloads.items()
+        }
+        inventory["file_count"] = len(payloads)
+        payloads["EXPORT_MANIFEST.json"] = json.dumps(inventory).encode("utf-8")
+        invalid = self.root / "invalid-history.tar.gz"
+        with tarfile.open(invalid, "w:gz") as archive:
+            for name, content in payloads.items():
+                member = tarfile.TarInfo(name=name)
+                member.size = len(content)
+                archive.addfile(member, io.BytesIO(content))
+        target = self.root / "invalid-history-target"
+        with self.assertRaises(ResearchError):
+            restore_archive(invalid, target)
+        self.assertFalse((target / "research").exists())
+        self.assertEqual(list(target.iterdir()), [])
 
     def test_export_and_restore_full_roundtrip(self) -> None:
         archive_path = self.root / "backup.tar.gz"
@@ -192,6 +280,34 @@ class TestResearchArchive(unittest.TestCase):
         with self.assertRaises(ResearchError) as cm:
             restore_archive(malicious_archive, target_dir)
         self.assertIn("Dangerous archive entry", str(cm.exception))
+
+    def test_restore_rejects_parent_paths_in_inventory_before_reading_files(self) -> None:
+        archive_path = self.root / "valid-inventory.tar.gz"
+        export_archive(self.project, archive_path)
+        payloads = {}
+        with tarfile.open(archive_path, "r:gz") as archive:
+            for member in archive.getmembers():
+                stream = archive.extractfile(member)
+                assert stream is not None
+                payloads[member.name] = stream.read()
+        inventory = json.loads(payloads["EXPORT_MANIFEST.json"])
+        outside = self.root / "outside-inventory.json"
+        outside.write_bytes(b"synthetic inventory boundary")
+        inventory["files"]["../../outside-inventory.json"] = {
+            "sha256": hashlib.sha256(outside.read_bytes()).hexdigest(),
+            "byte_length": outside.stat().st_size,
+        }
+        payloads["EXPORT_MANIFEST.json"] = json.dumps(inventory).encode("utf-8")
+        invalid = self.root / "invalid-inventory.tar.gz"
+        with tarfile.open(invalid, "w:gz") as archive:
+            for name, content in payloads.items():
+                member = tarfile.TarInfo(name=name)
+                member.size = len(content)
+                archive.addfile(member, io.BytesIO(content))
+        target = self.root / "invalid-inventory-target"
+        with self.assertRaisesRegex(ResearchError, "traversal"):
+            restore_archive(invalid, target)
+        self.assertFalse((target / "research").exists())
 
     def test_cli_export_and_restore(self) -> None:
         archive_path = self.root / "cli_backup.tar.gz"

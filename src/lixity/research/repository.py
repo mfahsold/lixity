@@ -197,6 +197,8 @@ class Repository:
         for part in text[len(root):].split(os.sep):
             if not part:
                 continue
+            if part == os.pardir:
+                raise ResearchStorageError("Parent traversal is not allowed inside the research store")
             current = os.path.join(current, part)
             if os.path.islink(current):
                 raise ResearchStorageError("Symlinks are not allowed inside the research store")

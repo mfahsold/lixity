@@ -369,6 +369,13 @@ class TestResearch(unittest.TestCase):
         with self.assertRaises(ResearchError):
             api.cite(self.project, entry.ref.id)
 
+    def test_parent_components_in_research_paths_are_rejected(self):
+        repository = Repository(self.project)
+        for path in (repository.data / ".." / "project.json",
+                     repository.data / ".." / ".." / "outside.json"):
+            with self.subTest(path=path), self.assertRaises(ResearchStorageError):
+                repository.safe(path)
+
     def test_symlinked_internal_directories_are_rejected(self):
         target = self.root / "outside"
         target.mkdir()

@@ -19,11 +19,14 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
-from .models import Extraction, SourceVersion
-from .repository import Repository, ResearchError, sync_directory
+from pydantic import TypeAdapter, ValidationError
+
+from .models import Digest, Extraction, Manifest, SourceVersion
+from .repository import Repository, ResearchError, Snapshot, sync_directory
 
 EXPORT_SCHEMA_VERSION = "research-export-local/1"
 MAX_UNCOMPRESSED_BYTES = 10 * 1024 * 1024 * 1024  # 10 GiB ceiling
+_MANIFEST_DIGEST = TypeAdapter(Digest)
 
 
 def _file_digest_and_size(path: Path) -> tuple[str, int]:
@@ -34,6 +37,37 @@ def _file_digest_and_size(path: Path) -> tuple[str, int]:
             hasher.update(chunk)
             size += len(chunk)
     return hasher.hexdigest(), size
+
+
+def _manifest_history(repository: Repository, snapshot: Snapshot) -> list[tuple[str, Path]]:
+    """Verify the whole accepted ancestry before reading or publishing a backup."""
+    checksum: str | None = snapshot.digest
+    generation = snapshot.manifest.generation
+    seen: set[str] = set()
+    history: list[tuple[str, Path]] = []
+    while checksum is not None:
+        try:
+            checksum = _MANIFEST_DIGEST.validate_python(checksum)
+        except ValidationError as exc:
+            raise ResearchError("Invalid manifest history selector") from exc
+        if checksum in seen:
+            raise ResearchError("Repeated manifest in research history")
+        seen.add(checksum)
+        path = repository.safe(repository.data / "manifests" / f"{checksum}.json")
+        try:
+            manifest = Manifest.model_validate_json(repository.verified(path, checksum))
+        except (OSError, ValidationError) as exc:
+            raise ResearchError("Missing, damaged or unsupported manifest history") from exc
+        if manifest.project_id != snapshot.manifest.project_id:
+            raise ResearchError("Manifest history belongs to another project")
+        if manifest.generation != generation:
+            raise ResearchError("Manifest history generations are not contiguous")
+        history.append((checksum, path))
+        generation -= 1
+        checksum = manifest.parent
+        if (checksum is None) != (generation == 0):
+            raise ResearchError("Manifest history is incomplete or has an invalid root")
+    return history
 
 
 def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
@@ -58,19 +92,8 @@ def export_archive(project: str | Path, output: str | Path) -> dict[str, Any]:
     files_to_pack["research/project.json"] = project_path
 
     # Active manifest and any ancestor manifests in the chain
-    manifest_digest: str | None = snapshot.digest
-    while manifest_digest:
-        m_path = repository.safe(repository.data / "manifests" / f"{manifest_digest}.json")
-        if m_path.is_file():
-            files_to_pack[f"research/manifests/{manifest_digest}.json"] = m_path
-        else:
-            break
-        # Read parent if available
-        try:
-            m_data = json.loads(m_path.read_text(encoding="utf-8"))
-            manifest_digest = m_data.get("parent")
-        except (OSError, json.JSONDecodeError):
-            break
+    for manifest_digest, m_path in _manifest_history(repository, snapshot):
+        files_to_pack[f"research/manifests/{manifest_digest}.json"] = m_path
 
     # 2. Record revision files
     for entry in snapshot.manifest.entries:
@@ -219,10 +242,11 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
             raise ResearchError("EXPORT_MANIFEST.json contains no file entries")
 
         # 3. Verify all file checksums
+        staged_repo = Repository(temp_stage)
         for rel_path, expected in files_manifest.items():
             if not isinstance(expected, dict) or "sha256" not in expected:
                 raise ResearchError(f"Invalid manifest metadata for {rel_path}")
-            extracted_file = temp_stage / rel_path
+            extracted_file = staged_repo.safe(temp_stage / rel_path)
             if not extracted_file.is_file():
                 raise ResearchError(f"Archive missing expected file: {rel_path}")
             actual_sha, actual_size = _file_digest_and_size(extracted_file)
@@ -236,13 +260,13 @@ def restore_archive(archive_path: str | Path, target_dir: str | Path) -> dict[st
         if not staged_research.is_dir():
             raise ResearchError("Archive did not extract a valid research directory")
 
-        staged_repo = Repository(temp_stage)
         snapshot = staged_repo.snapshot()
 
         if snapshot.digest != manifest_data.get("snapshot"):
             raise ResearchError("Restored snapshot digest does not match export manifest")
         if snapshot.project.id != manifest_data.get("project_id"):
             raise ResearchError("Restored project ID does not match export manifest")
+        _manifest_history(staged_repo, snapshot)
 
         # 5. Atomically move staged research directory to target
         os.replace(staged_research, target_research)
