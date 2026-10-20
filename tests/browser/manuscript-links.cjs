@@ -60,6 +60,7 @@ async function selectText(page, text) {
       page.setDefaultTimeout(10000);
       const errors = [], writes = [], recordReads = []; let anchorState = 'moved', holdHistorical = false, historicalHeld, releaseHistorical;
       let holdCurrent = false, currentHeld, releaseCurrent, failCurrent = false;
+      let holdHistoryList = false, historyListHeld = false, releaseHistoryList;
       let holdEditorial = false, editorialHeld = 0, releaseEditorial;
       page.on('pageerror', error => errors.push(error.message));
       await page.route('http://lixity.test/**', async route => {
@@ -76,8 +77,14 @@ async function selectText(page, text) {
             links: [{link_id: 'link', revision: 1, claim_id: 'claim', claim_revision: 1, claim_title: 'Synthetic claim',
               anchor, anchor_state: anchorState, flags: [], resolved_start_line: anchor.start_line, resolved_end_line: anchor.end_line}]}});
         }
-        if (url.pathname === '/api/research/history') return route.fulfill({json: {ok: true,
-          project_id: 'project', latest_revision: 2, revisions: [{revision: 2}, {revision: 1}]}});
+        if (url.pathname === '/api/research/history') {
+          if (holdHistoryList) {
+            historyListHeld = true;
+            await new Promise(resolve => { releaseHistoryList = resolve; });
+          }
+          return route.fulfill({json: {ok: true,
+            project_id: 'project', latest_revision: 2, revisions: [{revision: 2}, {revision: 1}]}});
+        }
         if (url.pathname === '/api/research/review') {
           let candidates = [];
           if (holdEditorial) {
@@ -225,8 +232,35 @@ async function selectText(page, text) {
       await page.waitForFunction(() => document.querySelector('#research-revision-field-title').value === 'Latest changed claim'
         && !document.querySelector('#research-revision-field-title').disabled);
       assert.match(await thread.textContent(), /Latest changed claim.*Version 2.*current/i);
+      holdHistoryList = true;
+      await page.locator('#research-revision-history-tab').click();
+      await waitUntil(() => historyListHeld);
+      await page.locator('#research-revision-edit-tab').click();
+      await editTitle.fill('Unsaved draft while history loads');
+      const currentMeta = await page.locator('#research-revision-kind').textContent();
+      const currentThread = await thread.textContent();
+      assert.match(currentMeta, /Version 2/i);
+      assert.match(currentThread, /Latest changed claim.*Version 2.*current/i);
+      holdHistorical = true; historicalHeld = false;
+      holdHistoryList = false; releaseHistoryList();
+      await waitUntil(() => historicalHeld);
+      assert.equal(await page.locator('#research-revision-kind').textContent(), currentMeta,
+        'A delayed History list cannot clear active Edit metadata while its hidden record loads');
+      assert.equal(await thread.textContent(), currentThread,
+        'A hidden history read cannot clear the active viewed current version');
+      holdHistorical = false; releaseHistorical();
+      await page.waitForFunction(() => document.querySelector('#research-revision-history-detail').textContent.includes('Pinned original claim'));
+      assert.equal(await page.locator('#research-revision-edit-tab').getAttribute('aria-selected'), 'true');
+      assert.equal(await page.locator('#research-revision-kind').textContent(), currentMeta,
+        'Completing the hidden History cache preserves active Edit metadata');
+      assert.equal(await thread.textContent(), currentThread);
+      assert.equal(await editTitle.inputValue(), 'Unsaved draft while history loads',
+        'Hidden history loading preserves the unsaved current-record draft');
+      historicalHeld = false;
+      const readsAfterHiddenHistory = recordReads.length;
       await page.locator('#research-revision-history-tab').click();
       await claimHistory.getByText('Pinned original claim', {exact: true}).waitFor();
+      assert.equal(recordReads.length, readsAfterHiddenHistory, 'Returning to History uses its completed hidden cache');
       assert.match(await thread.textContent(), /Pinned original claim.*Version 1.*Pinned version/i,
         'Returning from Edit to an already loaded historical view restores its viewed identity');
       await page.locator('#research-revision-history-list [data-research-revision="2"]').click();

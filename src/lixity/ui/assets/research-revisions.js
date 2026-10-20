@@ -400,7 +400,7 @@ if (researchRevisionDialog) {
     var session = revisionState.session;
     revisionState.historyView = null;
     revisionHistoryDetail.textContent = uiLabel("research_revision_loading");
-    revisionShowMeta(null);
+    if (revisionState.mode === "history") revisionShowMeta(null);
     revisionHistoryList.querySelectorAll("button[data-research-revision]").forEach(function(button) {
       button.setAttribute("aria-current", String(Number(button.dataset.researchRevision) === Number(number)));
     });
