@@ -98,6 +98,16 @@ this project uses [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
   and numeric loadings. Additive diagnostics preserve existing scores and formats.
 
 ### Fixed
+- Research backup import and export validate the complete manifest ancestry before
+  accepting or packaging it. Invalid selectors, damaged or incomplete history and
+  project/generation mismatches fail explicitly; archive paths reject parent
+  traversal. Valid archive formats and record bytes are unchanged.
+- French, Spanish, Italian, Portuguese and Dutch word patterns retain straight
+  and curly internal apostrophes as documented. First-person sentence starts
+  recognize typographic contractions consistently. Token-based measurements can
+  change; regenerate affected reports before comparing versions.
+- Plain-prose counting avoids unnecessary delimiter scanning while retaining
+  the existing Markdown projection and exact source/display identities.
 - Downloadable Markdown guides preserve paragraphs and fenced commands inside
   expandable sections. Example generation uses the active checkout's source.
 - Heatmap chapter cells reveal their manuscript destination through the shared

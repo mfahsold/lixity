@@ -59,6 +59,21 @@ source is unavailable. No versioned JSON fields or automatic configuration
 watcher are added. Research overviews reuse one validated archive snapshot without
 a persistent cache.
 
+Plain inline prose uses the existing markup cleaner directly when it contains
+none of the escape, code or link openers. Syntax-bearing input retains the same
+delimiter recognizer; the optimization changes neither the counting projection
+nor exact source/display identities. Language profiles own word boundaries;
+first-person matching normalizes apostrophe variants only in its comparison key,
+leaving source text and starter-diversity tokens intact.
+
+Research backup export and restoration share complete manifest-chain validation
+in `research.archive`: bounded, checksum-verified objects must satisfy the
+versioned manifest model, project identity, consecutive generations and root
+termination. Invalid or incomplete history fails before output replacement or
+restored-store publication. Inventory paths use the repository's existing
+containment/symlink boundary, which also rejects parent components. This is
+validation of the existing format, with no schema migration or alternate store.
+
 ## Manual manuscript associations
 
 `research.manuscript` owns `ManuscriptClaimLink`, separate from imported source

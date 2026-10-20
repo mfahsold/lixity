@@ -69,6 +69,13 @@ apostrophes remain word-internal there. Syllable calculation reuses word
 frequencies within a request, preserving the same heuristic values without a
 global cache.
 
+v0.7.2 corrects the five profiles' internal-apostrophe patterns for both `'` and
+`’`. First-person sentence-start matching treats these two forms alike without
+changing the original token used for starter diversity or the manuscript text.
+These are orthographic counting conventions, not grammatical segmentation of
+clitics. Recompute affected token-based and sentence-start results before
+comparing reports from earlier versions.
+
 ## Acceptance criteria for language work
 
 Prioritize German linguistic resources and scientific explanations, then English,

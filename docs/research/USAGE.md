@@ -1093,6 +1093,14 @@ devices, absolute paths and traversal fail. This backup excludes manuscripts,
 Zotero and application profiles; [paired backup](#paired-zoteroresearch-backup-and-restore)
 adds the Zotero data directory.
 
+Since v0.7.2, import and export validate every manifest in the accepted ancestry,
+including its content hash, supported schema, project identity, consecutive
+generation and root termination. Missing or damaged ancestors fail explicitly;
+they are not silently omitted from a backup. Inventory paths use the same
+containment checks as repository objects. An invalid backup is rejected before
+publishing the restored store; rejected history leaves an existing export untouched.
+Valid archives keep their existing format and immutable bytes.
+
 Writes use an OS lock, immutable publication and atomic HEAD replacement.
 Uncommitted objects left after interruption are ignored, not selected by date.
 Locks release when the process exits. A stale expected HEAD fails rather than

@@ -49,6 +49,13 @@ semantic paragraph boundaries. Short-paragraph counting uses paragraph
 whitespace words and the inclusive configured threshold, including eight-word
 paragraphs. Legacy whitespace counts remain distinct from regex token counts.
 
+v0.7.2 corrects internal straight (`'`) and curly (`’`) apostrophes in the French,
+Spanish, Italian, Portuguese and Dutch default word patterns. These orthographic
+tokens follow the existing profile convention, not grammatical clitic analysis.
+First-person starter matching recognizes both forms while preserving the exact
+original starter for diversity and entropy. Recompute affected token counts,
+derived measurements and first-person start rates before comparing older outputs.
+
 Chapter labels remain available for navigation; changing a title does not
 change its prose readability. For even sentence counts, `median_sl_exact`
 averages the two middle lengths. The older integer `median_sl` retains its upper

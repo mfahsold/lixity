@@ -3219,6 +3219,14 @@ devices, absolute paths and traversal fail. This backup excludes manuscripts,
 Zotero and application profiles; [paired backup](#paired-zoteroresearch-backup-and-restore)
 adds the Zotero data directory.
 
+Since v0.7.2, import and export validate every manifest in the accepted ancestry,
+including its content hash, supported schema, project identity, consecutive
+generation and root termination. Missing or damaged ancestors fail explicitly;
+they are not silently omitted from a backup. Inventory paths use the same
+containment checks as repository objects. An invalid backup is rejected before
+publishing the restored store; rejected history leaves an existing export untouched.
+Valid archives keep their existing format and immutable bytes.
+
 Writes use an OS lock, immutable publication and atomic HEAD replacement.
 Uncommitted objects left after interruption are ignored, not selected by date.
 Locks release when the process exits. A stale expected HEAD fails rather than
@@ -3540,6 +3548,13 @@ default word patterns include Unicode accented letters. LF and CRLF share
 semantic paragraph boundaries. Short-paragraph counting uses paragraph
 whitespace words and the inclusive configured threshold, including eight-word
 paragraphs. Legacy whitespace counts remain distinct from regex token counts.
+
+v0.7.2 corrects internal straight (`'`) and curly (`’`) apostrophes in the French,
+Spanish, Italian, Portuguese and Dutch default word patterns. These orthographic
+tokens follow the existing profile convention, not grammatical clitic analysis.
+First-person starter matching recognizes both forms while preserving the exact
+original starter for diversity and entropy. Recompute affected token counts,
+derived measurements and first-person start rates before comparing older outputs.
 
 Chapter labels remain available for navigation; changing a title does not
 change its prose readability. For even sentence counts, `median_sl_exact`
@@ -4396,6 +4411,13 @@ apostrophes remain word-internal there. Syllable calculation reuses word
 frequencies within a request, preserving the same heuristic values without a
 global cache.
 
+v0.7.2 corrects the five profiles' internal-apostrophe patterns for both `'` and
+`’`. First-person sentence-start matching treats these two forms alike without
+changing the original token used for starter diversity or the manuscript text.
+These are orthographic counting conventions, not grammatical segmentation of
+clitics. Recompute affected token-based and sentence-start results before
+comparing reports from earlier versions.
+
 ## Acceptance criteria for language work
 
 Prioritize German linguistic resources and scientific explanations, then English,
@@ -4479,6 +4501,21 @@ without recomputing. Explicit analyze/rebuild requests fail when the selected
 source is unavailable. No versioned JSON fields or automatic configuration
 watcher are added. Research overviews reuse one validated archive snapshot without
 a persistent cache.
+
+Plain inline prose uses the existing markup cleaner directly when it contains
+none of the escape, code or link openers. Syntax-bearing input retains the same
+delimiter recognizer; the optimization changes neither the counting projection
+nor exact source/display identities. Language profiles own word boundaries;
+first-person matching normalizes apostrophe variants only in its comparison key,
+leaving source text and starter-diversity tokens intact.
+
+Research backup export and restoration share complete manifest-chain validation
+in `research.archive`: bounded, checksum-verified objects must satisfy the
+versioned manifest model, project identity, consecutive generations and root
+termination. Invalid or incomplete history fails before output replacement or
+restored-store publication. Inventory paths use the repository's existing
+containment/symlink boundary, which also rejects parent components. This is
+validation of the existing format, with no schema migration or alternate store.
 
 ## Manual manuscript associations
 
