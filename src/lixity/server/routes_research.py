@@ -735,7 +735,6 @@ class ResearchRoutesMixin(ResponseMixin):
         if not title or not statement:
             self._json({"ok": False, "message": "Claim title and statement are required"}, 400)
             return
-        confidence = research_api.claim_confidence(payload.get("confidence"))
         time_period = str(payload.get("time_period") or "").strip() or None
         place = str(payload.get("place") or "").strip() or None
         raw_actors = payload.get("actors")
@@ -752,6 +751,7 @@ class ResearchRoutesMixin(ResponseMixin):
         elif isinstance(raw_tags, list):
             tags = [str(t).strip() for t in raw_tags if str(t).strip()]
         try:
+            confidence = research_api.claim_confidence(payload.get("confidence", "hypothetical"))
             res = research_api.create_claim(
                 root,
                 title=title,
@@ -777,10 +777,10 @@ class ResearchRoutesMixin(ResponseMixin):
         if not claim_id or not passage_id:
             self._json({"ok": False, "message": "claim_id and passage_id are required"}, 400)
             return
-        relation = research_api.evidence_relation(payload.get("relation"))
         rationale = str(payload.get("rationale") or "").strip() or None
         reviewer = str(payload.get("reviewer") or "author").strip()
         try:
+            relation = research_api.evidence_relation(payload.get("relation", "supports"))
             res = research_api.link_evidence(
                 root,
                 claim_id=claim_id,

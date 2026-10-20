@@ -12,7 +12,7 @@ from typing import Any
 
 from ..log import configure as configure_logging
 from ..style_fingerprint import FingerprintThresholds
-from ..workspace import ProjectTarget, resolve_project_target
+from ..workspace import resolve_project_target
 from .constants import DEFAULT_HOST, DEFAULT_PORT
 from .handler import LixityServerHandler
 
@@ -68,10 +68,7 @@ def run_server(
 
     if not no_project:
         selector = target_path if target_path else workspace_root
-        try:
-            target = resolve_project_target(selector, empty="allow")
-        except (FileNotFoundError, ValueError):
-            target = ProjectTarget(root=os.getcwd())
+        target = resolve_project_target(selector, empty="allow")
         source_input = target.manuscript
         workspace_root = target.root
         exports_dir = os.path.join(workspace_root, "exports")

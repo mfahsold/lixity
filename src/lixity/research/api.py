@@ -1058,21 +1058,23 @@ def get_source(project: str | Path, source_id: str) -> dict[str, Any]:
 
 
 def claim_confidence(value: object) -> ClaimConfidence:
-    """Normalise a submitted claim confidence at the API boundary."""
-    text = str(value or "").strip().lower()
-    for candidate in CLAIM_CONFIDENCES:
-        if text == candidate:
-            return candidate
-    return "hypothetical"
+    """Normalise a supplied claim confidence without replacing invalid input."""
+    if isinstance(value, str):
+        text = value.strip().lower()
+        for candidate in CLAIM_CONFIDENCES:
+            if text == candidate:
+                return candidate
+    raise ResearchError("Claim confidence must be hypothetical, evidenced or disputed")
 
 
 def evidence_relation(value: object) -> EvidenceRelation:
-    """Normalise a submitted evidence relation at the API boundary."""
-    text = str(value or "").strip().lower()
-    for candidate in EVIDENCE_RELATIONS:
-        if text == candidate:
-            return candidate
-    return "supports"
+    """Normalise a supplied evidence relation without changing its meaning."""
+    if isinstance(value, str):
+        text = value.strip().lower()
+        for candidate in EVIDENCE_RELATIONS:
+            if text == candidate:
+                return candidate
+    raise ResearchError("Evidence relation must be supports, contradicts, qualifies or contextualizes")
 
 
 def supported_language(value: object) -> Language:

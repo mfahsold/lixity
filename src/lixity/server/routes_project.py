@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import contextlib
 import json
 import os
 import re
@@ -25,7 +24,7 @@ from ..config import (
     validate_project_title,
 )
 from ..research import api as research_api
-from ..research.repository import ResearchError
+from ..research.repository import Repository, ResearchError
 from ..workspace import resolve_project_target
 from ..workspace_labels import WORKSPACE_LABELS
 from ._base import ResponseMixin
@@ -293,18 +292,37 @@ class ProjectRoutesMixin(ResponseMixin):
                 self._json({"ok": False, "message": f"Failed to write manuscript: {exc}"}, 500)
                 return
 
-        config_file = target_path / "lixity.toml"
-        if not config_file.exists():
-            cfg_lines = [f'title = {json.dumps(title, ensure_ascii=False)}',
-                         f'language = {json.dumps(lang)}']
-            if author_value:
-                cfg_lines.append(f'author_name = {json.dumps(author_value, ensure_ascii=False)}')
-            with contextlib.suppress(OSError):
-                config_file.write_text("\n".join(cfg_lines) + "\n", encoding="utf-8")
+        try:
+            configuration = prepare_project_settings(target_path, {})
+            if configuration.original[0] is None:
+                cfg_lines = [f'title = {json.dumps(title, ensure_ascii=False)}',
+                             f'language = {json.dumps(lang)}']
+                if author_value:
+                    cfg_lines.append(f'author_name = {json.dumps(author_value, ensure_ascii=False)}')
+                # Keep creation's existing title encoding; metadata edits have
+                # stricter title validation. Reuse its guarded atomic commit.
+                replace(configuration, content=("\n".join(cfg_lines) + "\n").encode("utf-8")).commit()
+        except (OSError, ValueError) as exc:
+            self._json({"ok": False, "message": (
+                f"Project setup incomplete: could not read or save configuration: {exc}. "
+                f"Files in {target_path} were retained. Save lixity.toml there, "
+                "then use Open Project to continue."
+            )}, 500 if isinstance(exc, OSError) else 400)
+            return
 
         if init_research:
-            with contextlib.suppress(ResearchError, OSError, ValueError):
-                research_api.init(target_path, title=title, language=lang)
+            try:
+                if (target_path / "research").exists():
+                    Repository(target_path).snapshot()
+                else:
+                    research_api.init(target_path, title=title, language=lang)
+            except (ResearchError, OSError, ValueError) as exc:
+                self._json({"ok": False, "message": (
+                    f"Project setup incomplete: could not initialize or open Research: {exc}. "
+                    f"Files in {target_path} were retained. Correct the Research setup, "
+                    "then use Open Project and initialize Research if needed."
+                )}, 500 if isinstance(exc, OSError) else 400)
+                return
 
         self.__class__.workspace_root = str(target_path)
         self.__class__.source_input = str(manuscript_file)
