@@ -35,7 +35,7 @@ if (researchRevisionDialog) {
   var revisionBatch = {projectId: null, entries: [], preview: null, pending: false, request: 0};
   var revisionState = {kind: "", id: "", session: 0, request: 0, historyRequest: 0,
     current: null, initial: {}, dossierPins: {}, mode: "edit", historyLoaded: false, pending: false, loading: false, merge: null,
-    section: null, sectionBase: null, sectionContent: null, historyInitialRevision: null, context: null};
+    section: null, sectionBase: null, sectionContent: null, historyInitialRevision: null, historyView: null, context: null};
 
   function revisionContextMatches(data) {
     var context = revisionState.context;
@@ -53,6 +53,13 @@ if (researchRevisionDialog) {
       "&section=" + encodeURIComponent(revisionState.section);
   }
 
+  function revisionViewedRecord(envelope, historical) {
+    var record = envelope && envelope.record;
+    return record ? {kind: revisionState.kind, title: record.title || record.id, revision: record.revision,
+      pinned: historical && revisionState.historyInitialRevision === record.revision,
+      current: record.revision === envelope.latest_revision} : null;
+  }
+
   function revisionShowMeta(envelope) {
     var record = envelope && envelope.record;
     revisionMeta.textContent = uiLabel("research_revision_kind_" + revisionState.kind) +
@@ -60,6 +67,9 @@ if (researchRevisionDialog) {
       (revisionState.section ? " · " + uiFormat("research_section_editing", {section: revisionState.section}) : "");
     revisionIdentifier.textContent = revisionState.id;
     revisionSnapshot.textContent = envelope ? envelope.snapshot || "" : "";
+    // Only envelopes accepted by the viewer's context/session guards reach here.
+    document.dispatchEvent(new CustomEvent("lixity:research-record-view", {
+      detail: revisionViewedRecord(envelope, revisionState.mode === "history")}));
   }
 
   var revisionSpecs = {
@@ -343,6 +353,8 @@ if (researchRevisionDialog) {
     }
     revisionPending(revisionState.pending);
     if (!editing && revisionState.current && !revisionState.historyLoaded) revisionLoadHistory();
+    else if (!editing && revisionState.historyLoaded)
+      document.dispatchEvent(new CustomEvent("lixity:research-record-view", {detail: revisionState.historyView}));
   }
 
   async function revisionLoadHistory() {
@@ -386,7 +398,9 @@ if (researchRevisionDialog) {
   async function revisionLoadHistorical(number) {
     var request = ++revisionState.historyRequest;
     var session = revisionState.session;
+    revisionState.historyView = null;
     revisionHistoryDetail.textContent = uiLabel("research_revision_loading");
+    revisionShowMeta(null);
     revisionHistoryList.querySelectorAll("button[data-research-revision]").forEach(function(button) {
       button.setAttribute("aria-current", String(Number(button.dataset.researchRevision) === Number(number)));
     });
@@ -398,6 +412,7 @@ if (researchRevisionDialog) {
       return;
     }
     revisionHistoryDetail.innerHTML = revisionReadOnly(data);
+    revisionState.historyView = revisionViewedRecord(data, true);
     if (revisionState.mode === "history") {
       revisionShowMeta(data);
       revisionNotices(data);
@@ -409,6 +424,7 @@ if (researchRevisionDialog) {
     var request = ++revisionState.request;
     var session = revisionState.session;
     revisionState.loading = true;
+    document.dispatchEvent(new CustomEvent("lixity:research-record-view", {detail: null}));
     revisionPending(revisionState.pending);
     revisionStatus(uiLabel("research_revision_loading"), false);
     try {
@@ -434,7 +450,7 @@ if (researchRevisionDialog) {
         revisionState.sectionContent = sectionData.content;
       }
       revisionState.current = data;
-      revisionShowMeta(data);
+      if (revisionState.mode !== "history") revisionShowMeta(data);
       if (replaceDraft) {
         revisionBuildFields(data.record);
         revisionState.historyRequest++;
@@ -906,6 +922,7 @@ if (researchRevisionDialog) {
     revisionState.context = researchReadContext();
     var pin = Number(historyRevision);
     revisionState.historyInitialRevision = mode === "history" && Number.isInteger(pin) && pin > 0 ? pin : null;
+    revisionState.historyView = null;
     revisionState.section = kind === "dossier" && mode === "edit" ? section || null : null;
     revisionState.sectionBase = revisionState.section ? Number(baseRevision) || null : null;
     revisionState.sectionContent = null;

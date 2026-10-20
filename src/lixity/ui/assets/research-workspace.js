@@ -286,6 +286,15 @@ document.addEventListener("click", async function (event) {
     refreshResearchEditorialReview();
     return;
   }
+  var globalRecords = event.target.closest("[data-research-global]");
+  if (globalRecords) {
+    var globalTab = document.querySelector('.research-tabs [data-rtab="' + globalRecords.dataset.researchGlobal + '"]');
+    if (globalTab) {
+      switchActiveView("research");
+      globalTab.click(); globalTab.focus();
+    }
+    return;
+  }
   var contextualClaim = event.target.closest("[data-dossier-claim]");
   var contextualDecision = event.target.closest("[data-dossier-decision]");
   if (contextualClaim || contextualDecision) {

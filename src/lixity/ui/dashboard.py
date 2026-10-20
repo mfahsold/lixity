@@ -758,7 +758,7 @@ def render_dashboard(
             '<div class="workspace-reader-layout" id="workspace-reader-layout">'
             '<div id="workspace-context-panel" class="workspace-context-panel" hidden>'
             '<div class="context-tool-tabs" role="group">'
-            f'<button type="button" class="ctl" data-context-tool="analysis" aria-pressed="false">{L("reading_analysis")}</button>'
+            f'<button type="button" class="ctl" data-context-tool="analysis" aria-pressed="false">{L("reading_passage_values")}</button>'
             f'<button type="button" class="ctl" data-context-tool="dossier" aria-pressed="false" {"" if reader_enabled else "hidden"}>{L("reader_title")}</button></div>'
             '<aside class="panel workspace-reader-panel" id="workspace-reader-panel" '
             'aria-labelledby="workspace-reader-title" hidden>'

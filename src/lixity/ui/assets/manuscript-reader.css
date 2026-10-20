@@ -175,6 +175,12 @@ button.analysis-toggle { font-weight: var(--weight-strong); }
 .manuscript-reading .ptext.analysis-jump { outline: 2px solid var(--accent); }
 .workspace-shell > #workbench-return { white-space: normal; }
 .workspace-shell > #workbench-return[hidden] { display: none; }
+.workbench-thread { display: grid; gap: var(--space-2); min-width: 0; padding-block: var(--space-3); border-top: 1px solid var(--line); }
+.workbench-thread[hidden], .workbench-thread p:empty { display: none; }
+.workbench-thread p { margin: 0; overflow-wrap: anywhere; }
+.workbench-thread .ctl { white-space: normal; }
+.reader-passage-context { display: grid; gap: var(--space-2); padding-block-end: var(--space-3); border-bottom: 1px solid var(--line); }
+.reader-passage-context p { margin: 0; }
 
 #chapters .reader-structural.text-miss, .text-search-active #chapters .reader-coverage { display: none; }
 

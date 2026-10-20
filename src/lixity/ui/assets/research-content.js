@@ -349,17 +349,24 @@ function researchDossierDetailHtml(detail, readOnly) {
     bodyHtml = (readOnly ? "" : (detail.editable_sections || []).map(function(section) { return researchDossierSectionAction(detail, section); }).join("")) +
       researchDossierBodyHtml(detail.body, detail);
   }
-  return reviewAlert + sectionsHtml +
+  return '<div class="research-dossier-folder">' + reviewAlert + sectionsHtml +
+    '<nav class="row" aria-label="' + escapeHtml(uiLabel("research_folder_global")) + '">' +
+    '<span class="ctl-note">' + escapeHtml(uiLabel("research_folder_global")) + '</span>' +
+    '<button type="button" class="ctl" data-research-global="claims">' + escapeHtml(uiLabel("research_tab_claims")) + '</button>' +
+    '<button type="button" class="ctl" data-research-global="decisions">' + escapeHtml(uiLabel("research_tab_decisions")) + '</button></nav>' +
     (readOnly ? "" : '<div class="row"><button type="button" class="ctl" data-dossier-claim="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_claim_heading")) + '</button>' +
     '<button type="button" class="ctl" data-dossier-decision="' + escapeHtml(detail.id) + '">' + escapeHtml(uiLabel("research_decision_heading")) + '</button></div>') +
+    '<section class="research-folder-notes"><h4>' + escapeHtml(uiLabel("research_folder_notes")) + '</h4>' +
     (!readOnly && window.LixityDossierImages ? window.LixityDossierImages.actionsHtml(detail) : "") + bodyHtml +
-    (window.LixityDossierGeography ? window.LixityDossierGeography.html(detail.geography, detail.geography_summary) : "") +
+    (window.LixityDossierGeography ? window.LixityDossierGeography.html(detail.geography, detail.geography_summary) : "") + '</section>' +
     (researchContextToken() ? '<section class="research-dossier-claims"><h4>' +
       escapeHtml(uiLabel("research_dossier_claims")) + '</h4><p class="ctl-note">' +
       escapeHtml(uiLabel("research_loading")) + '</p></section>' : '') +
-    '<h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' + (detail.citations || []).map(function(citation) {
+    '<section class="research-folder-citations"><h4>' + escapeHtml(uiLabel("research_citations")) + '</h4>' +
+    ((detail.citations || []).length ? detail.citations.map(function(citation) {
       return researchCitationHtml(citation, !readOnly);
-    }).join("");
+    }).join("") : '<p class="ctl-note">' + escapeHtml(uiLabel("research_revision_no_citations")) + '</p>') +
+    '</section></div>';
 }
 
 // This reverse list projects current Claim.dossier_ref associations and

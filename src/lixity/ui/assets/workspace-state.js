@@ -18,10 +18,9 @@
     } else if (command.type === "analysis") {
       value.analysisVisible = Boolean(command.value);
       if (!value.analysisVisible) {
-        if (value.contextTool === "analysis") value.contextTool = "none";
         if (value.surface === "overview") {
           value.surface = "document";
-          value.contextTool = suspendedTool === "dossier" ? "dossier" : "none";
+          value.contextTool = suspendedTool;
         }
       }
     } else if (command.type === "surface") {
@@ -38,7 +37,6 @@
       if (!["none", "analysis", "dossier"].includes(command.value)) return;
       if (value.surface === "overview") value.analysisVisible = suspendedAnalysis;
       value.surface = "document"; value.contextTool = command.value;
-      if (command.value === "analysis") value.analysisVisible = true;
       value.transient = null;
     } else if (command.type === "focus") {
       if (command.value && !value.focus) {

@@ -100,6 +100,10 @@ server.serve_forever()
       await summary.click();
       const detail = page.locator('.research-details-body').filter({has: page.locator(`[data-dossier-claim="${fixture.dossier}"]`)});
       const linked = detail.locator('.research-dossier-claims');
+      await expect(detail.locator('.research-folder-notes')).toContainText('Revised synthetic dossier notes.');
+      await expect(detail.locator('.research-folder-citations')).toBeVisible();
+      await expect(detail.locator('[data-research-global=claims]')).toBeVisible();
+      await expect(detail.locator('[data-research-global=decisions]')).toBeVisible();
       await expect(linked).toContainText('Current linked <img src=x onerror=window.claimInjected=true> title');
       await expect(linked.locator('li')).toHaveCount(1);
       await expect(linked).not.toContainText('Original linked title');
@@ -128,6 +132,13 @@ server.serve_forever()
       await detail.scrollIntoViewIfNeeded();
       assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth + 1), 'Dossier list fits the viewport');
       if (locale === 'de') await detail.screenshot({path: path.join(artifacts, `dossier-${width}.png`)});
+      if (locale === 'en') {
+        await page.locator('#r-claim-title').evaluate(input => { input.value = 'Retained unsubmitted draft'; });
+        await detail.locator('[data-research-global=claims]').click();
+        await expect(page.locator('#rtab-claims')).toBeVisible();
+        await expect(page.locator('#research-claims-list')).toContainText('Unlinked claim');
+        await expect(page.locator('#r-claim-title')).toHaveValue('Retained unsubmitted draft');
+      }
       await page.locator('#tab-view-analysis').click();
       await page.locator('#workspace-reader-toggle').click();
       await page.waitForFunction(() => !document.querySelector('#workspace-reader-dossier').disabled);

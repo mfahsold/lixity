@@ -38,7 +38,7 @@ const dossier = {id: 'synthetic-dossier', project_id: 'synthetic-project', title
   editable_sections: ['Context'], citations: [], sections: ['Context'], tags: [], evidence_count: 0};
 
 async function createPage(browser, fixture, width) {
-  const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce'});
+  const page = await browser.newPage({viewport: {width, height: 900}, reducedMotion: 'reduce', hasTouch: width <= 390});
   const errors = [], writes = [];
   page.on('pageerror', error => errors.push(error.message));
   await page.route('http://lixity.test/**', route => {
@@ -97,7 +97,7 @@ async function settleGeometry(page) {
 (async () => {
   const browser = await launchChromium();
   try {
-    for (const [locale, fixture] of Object.entries(fixtures)) for (const width of [1440, 320]) {
+    for (const [locale, fixture] of Object.entries(fixtures)) for (const width of locale === 'en' ? [1440, 390, 320] : [1440, 320]) {
       const {page, errors, writes} = await createPage(browser, fixture, width);
       const analysis = page.locator('#manuscript-analysis-toggle');
       assert.equal(await analysis.isVisible(), true, 'Analysis has one explicit visible display control');
@@ -147,6 +147,30 @@ async function settleGeometry(page) {
       const inspector = page.locator('#reader-inspector');
       assert.equal(await inspector.isVisible(), true, 'Values open on request in the paragraph inspector');
       assert.ok((await page.locator('#reader-inspector-body').textContent()).trim());
+      assert.equal(await inspector.locator('.reader-passage-context [data-manuscript-links-paragraph]').getAttribute('data-manuscript-links-paragraph'), id,
+        'The passage lens routes research to the inspected paragraph, independently of scroll position');
+      assert.ok((await inspector.locator('.reader-passage-context p').textContent()).includes(await first.getAttribute('data-start')),
+        'The passage lens names its manuscript line context');
+      assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'Local values do not enable global Analysis');
+      await analysis.click(); await analysis.click();
+      assert.equal(await inspector.isVisible(), true, 'Changing global Analysis does not dismiss local values');
+      if (locale === 'en') for (const colorScheme of ['light', 'dark']) {
+        await page.emulateMedia({colorScheme});
+        await inspector.screenshot({path: path.join(artifacts, `passage-values-${colorScheme}-${width}.png`)});
+        await page.screenshot({path: path.join(artifacts, `passage-values-context-${colorScheme}-${width}.png`)});
+      }
+      await page.emulateMedia({colorScheme: 'light'});
+      if (locale === 'en' && width === 390) {
+        await inspector.locator('[data-manuscript-links-paragraph]').tap();
+        assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true');
+        await page.locator('#workbench-return').tap();
+        assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true');
+        assert.equal(await inspector.isVisible(), true, 'Touch research return preserves the local passage tool');
+      }
+      await page.locator('#workbench-overview-open').click();
+      await page.locator('#workbench-overview-back').click();
+      assert.equal(await inspector.isVisible(), true, 'Returning from overview restores the explicit local tool');
+      assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'Overview return restores global Analysis independently');
       if (width === 1440) {
         const insetWidth = await page.locator('#workspace-analysis-body').evaluate(node => node.getBoundingClientRect().width);
         await page.locator('#reader-focus').click(); await settleGeometry(page);
@@ -173,7 +197,8 @@ async function settleGeometry(page) {
         'Closing the first passage inspector returns to its own trigger after a later menu');
       assert.deepEqual(await sourceState(page), anchors, 'Context tools preserve exact manuscript text and anchors');
 
-      assert.equal(await analysis.getAttribute('aria-pressed'), 'true', 'Opening values enables analysis');
+      assert.equal(await analysis.getAttribute('aria-pressed'), 'false', 'Closing local values preserves global Analysis Off');
+      await analysis.click();
       assert.equal(await analysis.getAttribute('aria-label'), analysisName, 'Analysis keeps its accessible name when active');
       assert.equal(await page.locator('#chapters .strip').first().isVisible(), true,
         'Analysis exposes restrained paragraph diagnostics alongside the same prose');

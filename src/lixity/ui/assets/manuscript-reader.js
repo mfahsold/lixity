@@ -113,6 +113,11 @@
       workbench.dispatch({type: "surface", value: "overview"});
     } else workbench.dispatch({type: "surface", value: "document"});
   }
+  function passageContext(panel) {
+    var chapter = panel.closest(".chapter"), heading = chapter && chapter.querySelector("h2, h3");
+    return (heading ? heading.textContent.trim() + " · " : "") +
+      uiFormat("reading_passage_lines", {start: panel.dataset.start, end: panel.dataset.end});
+  }
   function showValues(panel) {
     if (!panel) return;
     renderParagraph(panel);
@@ -120,7 +125,15 @@
     if (!values) return;
     var copy = values.cloneNode(true); copy.open = true;
     if (inspectorTarget) inspectorTarget.classList.remove("reader-inspector-target");
-    inspectorBody.replaceChildren(copy); inspectorTarget = panel;
+    var context = document.createElement("div"); context.className = "reader-passage-context";
+    var location = document.createElement("p"); location.className = "ctl-note";
+    location.textContent = passageContext(panel); context.appendChild(location);
+    if (window.LixityManuscriptLinks && typeof window.LixityManuscriptLinks.review === "function") {
+      var related = document.createElement("button"); related.type = "button"; related.className = "ctl";
+      related.dataset.manuscriptLinksParagraph = panel.id;
+      related.textContent = uiLabel("manuscript_link_review"); context.appendChild(related);
+    }
+    inspectorBody.replaceChildren(context, copy); inspectorTarget = panel;
     panel.classList.add("reader-inspector-target");
   }
   if (dock) dock.appendChild(inspector);
@@ -386,16 +399,34 @@
   }, {passive: true, capture: true});
   var returnButton = document.getElementById("workbench-return");
   var shell = document.querySelector(".workspace-shell");
-  if (shell) shell.appendChild(returnButton);
+  var thread = document.createElement("aside"); thread.id = "workbench-thread";
+  thread.className = "workbench-thread"; thread.hidden = true;
+  thread.setAttribute("aria-label", uiLabel("reading_thread"));
+  var threadOrigin = document.createElement("p"), threadRecord = document.createElement("p");
+  threadOrigin.className = threadRecord.className = "ctl-note";
+  threadRecord.setAttribute("aria-live", "polite");
+  thread.append(threadOrigin, threadRecord, returnButton);
+  if (shell) shell.appendChild(thread);
+  function clearOrigin() {
+    origin = null; returnButton.hidden = true; thread.hidden = true;
+    threadOrigin.textContent = threadRecord.textContent = "";
+  }
+  function validOrigin() {
+    return origin && origin.context === sourceContext() && origin.anchor.panel.isConnected &&
+      origin.hash === origin.anchor.panel.dataset.paragraphSha256;
+  }
   function sourceContext() {
     var workspace = document.getElementById("manuscript-pdf-form") || document.getElementById("workspace-reader");
     return [workspace ? workspace.dataset.projectToken : document.body.dataset.manuscriptProjectToken,
-      document.body.dataset.manuscriptSourceSha256, window.LixityWorkspaceReader && window.LixityWorkspaceReader.contextToken()].join(":");
+      document.body.dataset.manuscriptSourceSha256, window.LixityWorkspaceReader && window.LixityWorkspaceReader.contextToken(),
+      typeof researchContextToken === "function" ? researchContextToken() : ""].join(":");
   }
   document.addEventListener("click", function(event) {
     var relation = event.target.closest("[data-research-history], [data-workspace-dossier], [data-manuscript-link-jump], [data-manuscript-links-claim], [data-manuscript-links-dossier], [data-manuscript-links-paragraph], .manuscript-claim-hit");
     if (!relation || workbench.state().view !== "analysis" || workbench.state().surface !== "document") return;
-    var panel = event.target.closest(".ptext");
+    var panel = event.target.closest(".ptext") || document.getElementById(relation.dataset.manuscriptLinksParagraph || "");
+    // Following records in a dialog or companion belongs to the same passage journey.
+    if (!panel && validOrigin()) return;
     var anchor = panel ? {panel: panel, top: panel.getBoundingClientRect().top} : capture();
     if (!anchor) return;
     var range = rangeFor(anchor.panel), offsets = null;
@@ -407,11 +438,25 @@
       offsets = {anchor: from, focus: prefix.toString().length};
     }
     origin = {anchor: anchor, offsets: offsets, hash: anchor.panel.dataset.paragraphSha256, context: sourceContext()};
-    returnButton.hidden = false;
+    threadOrigin.textContent = passageContext(anchor.panel); threadRecord.textContent = "";
+    thread.hidden = false; returnButton.hidden = false;
   }, true);
+  document.addEventListener("lixity:research-record-view", function(event) {
+    if (!validOrigin()) { clearOrigin(); return; }
+    var record = event.detail;
+    threadRecord.textContent = record ? uiLabel("reading_reviewed") + ": " + uiLabel("research_revision_kind_" + record.kind) + " · " +
+      record.title + " · " + uiFormat("research_revision_number", {revision: record.revision}) +
+      (record.pinned || record.current ? " · " + uiLabel(record.pinned ? "reading_pinned" : "research_revision_current") : "") : "";
+  });
+  var originObserver = new MutationObserver(function() { if (origin && !validOrigin()) clearOrigin(); });
+  [document.body, document.getElementById("manuscript-pdf-form"), document.getElementById("workspace-reader"),
+    document.getElementById("research-manager")].forEach(function(host) {
+    if (host) originObserver.observe(host, {attributes: true, attributeFilter: ["data-project-token",
+      "data-manuscript-project-token", "data-manuscript-source-sha256", "data-research-token"]});
+  });
   returnButton.addEventListener("click", function() {
-    if (!origin || origin.context !== sourceContext() || !origin.anchor.panel.isConnected || origin.hash !== origin.anchor.panel.dataset.paragraphSha256) {
-      origin = null; returnButton.hidden = true; return;
+    if (!validOrigin()) {
+      clearOrigin(); return;
     }
     switchActiveView("analysis"); workbench.dispatch({type: "surface", value: "document"});
     rememberPassageLocation(origin.anchor.panel);
@@ -437,7 +482,7 @@
         }
       }
     }
-    origin = null; returnButton.hidden = true;
+    clearOrigin();
   });
   window.LixityReader = {capture: capture, restore: restore, retain: retain,
     inspect: function() { setMode("inspect", true); }};

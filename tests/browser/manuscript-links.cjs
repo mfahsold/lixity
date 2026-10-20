@@ -55,7 +55,7 @@ async function selectText(page, text) {
 (async () => {
   const browser = await launchChromium();
   try {
-    for (const width of [1440, 320]) {
+    for (const width of [1440, 390, 320]) {
       const page = await browser.newPage({viewport: {width, height: 900}});
       page.setDefaultTimeout(10000);
       const errors = [], writes = [], recordReads = []; let anchorState = 'moved', holdHistorical = false, historicalHeld, releaseHistorical;
@@ -209,18 +209,50 @@ async function selectText(page, text) {
       await page.locator('#research-manuscript-review [data-manuscript-link-jump]').waitFor();
       const originReturn = page.locator('#workbench-return');
       assert.equal(await originReturn.isVisible(), true, 'Research keeps a visible return to the originating passage');
+      const thread = page.locator('#workbench-thread');
+      assert.match(await thread.textContent(), /Manuscript · lines/);
       releaseEditorial();
       await page.locator('#research-editorial-review .research-card').nth(3).waitFor();
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       const destination = await page.locator('#research-manuscript-review blockquote').boundingBox();
       assert.ok(destination.y >= 0 && destination.y + destination.height <= 900,
         'The scoped quote destination remains visible after preceding editorial decisions finish rendering');
+      await page.locator('#research-manuscript-review [data-research-history=claim]').click();
+      await claimHistory.getByText('Pinned original claim', {exact: true}).waitFor();
+      assert.match(await thread.textContent(), /Pinned original claim.*Version 1.*Pinned version/i,
+        'The work thread reports the accepted pin rather than the newer current claim');
+      await page.locator('#research-revision-edit-tab').click();
+      await page.waitForFunction(() => document.querySelector('#research-revision-field-title').value === 'Latest changed claim'
+        && !document.querySelector('#research-revision-field-title').disabled);
+      assert.match(await thread.textContent(), /Latest changed claim.*Version 2.*current/i);
+      await page.locator('#research-revision-history-tab').click();
+      await claimHistory.getByText('Pinned original claim', {exact: true}).waitFor();
+      assert.match(await thread.textContent(), /Pinned original claim.*Version 1.*Pinned version/i,
+        'Returning from Edit to an already loaded historical view restores its viewed identity');
+      await page.locator('#research-revision-history-list [data-research-revision="2"]').click();
+      await claimHistory.getByText('Latest changed claim', {exact: true}).waitFor();
+      assert.match(await thread.textContent(), /Latest changed claim.*Version 2.*current/i);
+      await page.keyboard.press('Escape');
+      for (const colorScheme of ['light', 'dark']) {
+        await page.emulateMedia({colorScheme});
+        await thread.screenshot({path: `/tmp/lixity-work-thread-${colorScheme}-${width}.png`});
+        await page.screenshot({path: `/tmp/lixity-work-thread-context-${colorScheme}-${width}.png`});
+      }
+      await page.emulateMedia({colorScheme: 'light'});
+      if (width === 1440) {
+        await page.locator('#workspace-navigation-toggle').click();
+        await thread.screenshot({path: '/tmp/lixity-work-thread-collapsed-1440.png'});
+        assert.ok(await thread.evaluate(node => node.scrollWidth <= node.clientWidth + 1),
+          'The work thread remains usable when navigation is collapsed');
+        await page.locator('#workspace-navigation-toggle').click();
+      }
       await page.locator('#chapters .ptext-inner > p').first().evaluate(paragraph => {
         const oldText = paragraph.textContent, oldNode = paragraph.firstChild;
         renderParagraphText(paragraph, 'safe');
         if (paragraph.textContent !== oldText || paragraph.firstChild === oldNode) throw new Error('Expected a text-preserving mark repaint');
       });
       await originReturn.click();
+      assert.equal(await thread.isVisible(), false, 'Returning clears the contextual thread');
       assert.equal(await page.locator('#tab-view-analysis').getAttribute('aria-selected'), 'true');
       assert.equal(await page.evaluate(() => document.activeElement.id), 'p-0');
       assert.deepEqual(await nativeSelection(), {quote: originQuote, backward: true},
@@ -246,7 +278,8 @@ async function selectText(page, text) {
       await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
       assert.equal(await page.evaluate(() => scrollY), 0,
         'A source-context change cancels destination alignment before a held preceding read renders');
-      await originReturn.click();
+      assert.equal(await thread.isVisible(), false, 'A source change removes the stale thread and return control immediately');
+      await originReturn.evaluate(button => button.click());
       assert.equal(await page.locator('#tab-view-research').getAttribute('aria-selected'), 'true',
         'A changed displayed source invalidates the saved origin instead of restoring an obsolete passage');
       await page.locator('body').evaluate(body => { body.dataset.manuscriptSourceSha256 = 'a'.repeat(64); });
