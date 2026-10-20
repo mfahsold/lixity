@@ -11,7 +11,6 @@ These tests guard the specific invariants fixed or identified during the
    commit time (ValidationError → ResearchError) and read time.
 """
 
-import contextlib
 import tempfile
 import unittest
 from pathlib import Path
@@ -22,7 +21,7 @@ from pydantic import ValidationError
 
 from lixity.research import api
 from lixity.research.models import Entry, Manifest, Reference
-from lixity.research.repository import Repository
+from lixity.research.repository import Repository, ResearchCleanupError
 
 
 class TestPurgeAtomicity(unittest.TestCase):
@@ -82,12 +81,14 @@ class TestPurgeAtomicity(unittest.TestCase):
                 raise OSError("Simulated power loss during orphan deletion")
 
         with patch.object(Path, "unlink", unlink_after_head_then_fail), \
-                contextlib.suppress(OSError):
+                self.assertRaises(ResearchCleanupError) as failure:
             api.purge(self.project, source_id, reason="Atomicity test")
 
         # The archive must still be openable and self-consistent.
         snapshot_after = repo.snapshot()
         self.assertNotEqual(snapshot_after.digest, snapshot_before.digest)
+        self.assertEqual(failure.exception.accepted_snapshot, snapshot_after.digest)
+        self.assertTrue(failure.exception.pending_paths)
         self.assertTrue(api.audit(self.project)["ok"])
 
     def test_old_files_remain_intact_when_head_rotation_fails(self) -> None:

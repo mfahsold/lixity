@@ -130,11 +130,14 @@ class _Store:
     def clear_objects(self, index: int | None = None) -> None:
         path = self.objects if index is None else self.objects / str(index)
         path = self.repository.safe(path)
-        if path.exists():
-            # Reject links throughout private staging before removing its own payloads.
-            for child in path.rglob("*"):
-                self.repository.safe(child)
-            shutil.rmtree(path)
+        try:
+            path.lstat()
+        except FileNotFoundError:
+            return
+        # Reject links throughout private staging before removing its own payloads.
+        for child in path.rglob("*"):
+            self.repository.safe(child)
+        shutil.rmtree(path)
 
     def discard(self) -> None:
         self.clear_objects()
@@ -474,7 +477,7 @@ def discard(project: str | Path, checkpoint: str | Path) -> dict[str, Any]:
 
 
 @contextmanager
-def purge_guard(repository: Repository, source_id: str) -> Iterator[Callable[[], None]]:
+def purge_guard(repository: Repository, source_id: str) -> Iterator[Callable[[], list[Path]]]:
     """Hold affected checkpoints while purge removes their private retained preparation."""
     directory = repository.safe(repository.cache / "imports")
     stores = []
@@ -489,8 +492,18 @@ def purge_guard(repository: Repository, source_id: str) -> Iterator[Callable[[],
                         store.load()
                         stores.append(store)
 
-        def clear() -> None:
+        def clear() -> list[Path]:
+            pending: list[Path] = []
             for store in stores:
-                store.discard()
+                try:
+                    store.clear_objects()
+                except (OSError, ResearchError):
+                    pending.extend((store.objects, store.path))
+                    continue
+                try:
+                    repository.safe(store.path).unlink(missing_ok=True)
+                except (OSError, ResearchError):
+                    pending.append(store.path)
+            return pending
 
         yield clear

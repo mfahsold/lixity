@@ -18,7 +18,13 @@ from lixity.research.models import (
     Source,
     reference,
 )
-from lixity.research.repository import Repository, ResearchConflictError, ResearchError, encode
+from lixity.research.repository import (
+    Repository,
+    ResearchConflictError,
+    ResearchError,
+    ResearchPublicationError,
+    encode,
+)
 
 
 class TestResearchRevisionStorage(unittest.TestCase):
@@ -212,9 +218,11 @@ class TestResearchRevisionStorage(unittest.TestCase):
             raise OSError("Directory sync failed after replacement")
 
         second = self.revision(self.original, title="Accepted despite response failure")
-        with patch("lixity.research.repository.replace_head", side_effect=published_then_failed), self.assertRaises(OSError):
+        with patch("lixity.research.repository.replace_head", side_effect=published_then_failed), self.assertRaises(ResearchPublicationError) as failure:
             self.repository.commit([second], {}, self.repository.snapshot())
         self.assertEqual(self.repository.snapshot().latest(self.original.id, Dossier), second)
+        self.assertEqual(failure.exception.published_snapshot, self.repository.snapshot().digest)
+        self.assertEqual(failure.exception.outcome, "published")
         self.assertTrue(api.audit(self.project)["ok"])
 
     def test_revision_cleanup_does_not_remove_failed_purge_recovery_artifacts(self):

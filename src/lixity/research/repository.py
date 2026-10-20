@@ -6,7 +6,7 @@ import json
 import os
 import sys
 import tempfile
-from collections.abc import Iterator
+from collections.abc import Iterable, Iterator
 from contextlib import contextmanager, suppress
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -55,6 +55,37 @@ class ResearchConflictError(ResearchError):
 
 class ResearchStorageError(ResearchError):
     """The archive cannot be safely read or written; an item cannot be skipped."""
+
+
+class ResearchCleanupError(ResearchStorageError):
+    """A snapshot was committed, but listed local artifacts still need cleanup."""
+
+    def __init__(self, accepted_snapshot: str, pending_paths: Iterable[Path], *, project_root: Path):
+        self.accepted_snapshot = accepted_snapshot
+        self.pending_paths = tuple(sorted(set(pending_paths)))
+        paths = ", ".join(path.relative_to(project_root).as_posix() for path in self.pending_paths[:5])
+        if len(self.pending_paths) > 5:
+            paths += f"; {len(self.pending_paths) - 5} more pending paths"
+        super().__init__(
+            f"Research snapshot {accepted_snapshot} was committed, but cleanup is incomplete "
+            f"({len(self.pending_paths)} pending artifacts): {paths}. "
+            "Check storage and permissions before cleaning these retained artifacts. Do not repeat the write."
+        )
+
+
+class ResearchPublicationError(ResearchStorageError):
+    """Publication failed with a visible candidate or an unknown HEAD outcome."""
+
+    def __init__(self, candidate_snapshot: str, *, published: bool):
+        self.candidate_snapshot = candidate_snapshot
+        self.published_snapshot = candidate_snapshot if published else None
+        self.outcome: Literal["published", "unknown"] = "published" if published else "unknown"
+        message = (
+            f"Research snapshot {candidate_snapshot} was published, but durability could not be confirmed."
+            if published else
+            f"Research publication outcome is unknown for candidate snapshot {candidate_snapshot}; HEAD could not be confirmed."
+        )
+        super().__init__(message + " Recovery artifacts were retained. Reload and review current state before retrying.")
 
 
 def _lock_failure(path: Path, error: OSError, *, acquiring: bool = False) -> ResearchStorageError:
@@ -405,6 +436,9 @@ class Repository:
             elif isinstance(record, Decision):
                 if record.claim_ref and loaded("claim"):
                     snapshot.get(record.claim_ref, Claim)
+                if loaded("dossier"):
+                    for ref in record.dossier_refs:
+                        snapshot.get(ref, Dossier)
             elif isinstance(record, DecisionAcknowledgement):
                 if loaded("decision") and loaded("dossier"):
                     snapshot.get(record.decision_ref, Decision)
@@ -587,6 +621,14 @@ class Repository:
             candidate, manifest_bytes = self.prepare_commit(additions, current, removals)
             entries = candidate.manifest.entries
             project = candidate.project
+            cleanup_paths: list[Path] = []
+            if removals and current:
+                cleanup_paths.extend(self.record_path(entry) for entry in current.manifest.entries
+                                     if entry.ref.id in removals)
+            if delete_blobs:
+                cleanup_paths.extend(self.safe(self.data / "blobs" / sha) for sha in sorted(delete_blobs))
+            if removals:
+                cleanup_paths.append(self.safe(self.cache / "catalogue.sqlite3"))
             for checksum, content in blobs.items():
                 if digest(content) != checksum:
                     raise ResearchError("Blob digest does not match bytes")
@@ -614,42 +656,41 @@ class Repository:
                 publish(self.safe(self.data / "project.json"), encode(project))
                 publish(self.safe(self.data / "manifests" / f"{candidate.digest}.json"), manifest_bytes)
                 replace_head(self.safe(self.data / "HEAD.json"), encode(Head(sha256=candidate.digest)))
-            except (OSError, ResearchError):
+            except (OSError, ResearchError) as error:
                 # Only clean this attempt's authored revision files when HEAD
-                # never accepted them. Other operations, notably purge, retain
-                # their existing recovery artifacts. Preserved unpublished
-                # bytes are never removed by this cleanup.
-                with suppress(OSError, ResearchError, ValidationError):
-                    head_path = self.safe(self.data / "HEAD.json")
-                    head = Head.model_validate_json(self.read(head_path)) if head_path.exists() else None
-                    if (head.sha256 if head else None) == (current.digest if current else None):
-                        for path in created_paths:
-                            with suppress(OSError):
-                                path.unlink(missing_ok=True)
+                # is known to be unchanged. Visible or uninspectable publication
+                # retains every recovery file and never claims durable success.
+                try:
+                    head = Head.model_validate_json(self.read(self.data / "HEAD.json"))
+                except FileNotFoundError:
+                    head = None
+                except (OSError, ResearchError, ValidationError):
+                    raise ResearchPublicationError(candidate.digest, published=False) from error
+                observed = head.sha256 if head else None
+                if observed == candidate.digest:
+                    raise ResearchPublicationError(candidate.digest, published=True) from error
+                if observed != (current.digest if current else None):
+                    raise ResearchPublicationError(candidate.digest, published=False) from error
+                for path in created_paths:
+                    with suppress(OSError):
+                        path.unlink(missing_ok=True)
                 raise
 
             # Orphan deletion and cache invalidation happen only after HEAD has been
             # atomically rotated. A crash here leaves unreferenced but harmless files;
             # a crash before replace_head leaves the old, fully consistent archive intact.
-            if removals and current:
-                for entry in current.manifest.entries:
-                    if entry.ref.id in removals:
-                        rec_path = self.record_path(entry)
-                        with suppress(OSError):
-                            rec_path.unlink(missing_ok=True)
-
-            if delete_blobs:
-                for blob_sha in delete_blobs:
-                    blob_path = self.safe(self.data / "blobs" / blob_sha)
-                    with suppress(OSError):
-                        blob_path.unlink(missing_ok=True)
-
-            if removals:
-                cache_db = self.safe(self.cache / "catalogue.sqlite3")
-                if cache_db.exists():
-                    cache_db.unlink()
-
             self._snapshot = candidate
+            pending_paths = []
+            cleanup_cause: OSError | ResearchError | None = None
+            for path in cleanup_paths:
+                try:
+                    self.safe(path).unlink(missing_ok=True)
+                except (OSError, ResearchError) as error:  # noqa: PERF203 - Attempt every independent filesystem cleanup.
+                    pending_paths.append(path)
+                    if cleanup_cause is None:
+                        cleanup_cause = error
+            if pending_paths:
+                raise ResearchCleanupError(candidate.digest, pending_paths, project_root=self.root) from cleanup_cause
             return candidate
 
     def citation(self, snapshot: Snapshot, passage: Passage) -> dict[str, Any]:

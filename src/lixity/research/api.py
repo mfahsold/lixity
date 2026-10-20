@@ -103,7 +103,14 @@ from .ocr import (
     extract_pdf_document,
     get_ocr_diagnostics,
 )
-from .repository import Repository, ResearchConflictError, ResearchError, Snapshot, digest
+from .repository import (
+    Repository,
+    ResearchCleanupError,
+    ResearchConflictError,
+    ResearchError,
+    Snapshot,
+    digest,
+)
 from .revisions import (
     apply_record_revisions as apply_record_revisions,
 )
@@ -840,21 +847,19 @@ def purge(
     if purge_source_record:
         records_to_remove.add(source.id)
 
-    purged_blob_shas = {v.blob.sha256 for v in versions_to_purge}
-    retained_shared_blobs: set[str] = set()
-    deleted_blobs: set[str] = set()
-
-    remaining_version_blobs = {
-        rec.blob.sha256
-        for rec in snapshot.records.values()
-        if isinstance(rec, SourceVersion) and rec.id not in version_ids
-    }
-
-    for sha in purged_blob_shas:
-        if sha in remaining_version_blobs:
-            retained_shared_blobs.add(sha)
+    purged_blob_shas: set[str] = set()
+    remaining_blob_shas: set[str] = set()
+    for record in snapshot.records.values():
+        if isinstance(record, SourceVersion):
+            descriptor = record.blob
+        elif isinstance(record, Extraction):
+            descriptor = record.text_blob
         else:
-            deleted_blobs.add(sha)
+            continue
+        owners = purged_blob_shas if record.id in records_to_remove else remaining_blob_shas
+        owners.add(descriptor.sha256)
+    retained_shared_blobs = purged_blob_shas & remaining_blob_shas
+    deleted_blobs = purged_blob_shas - remaining_blob_shas
 
     tombstone = Tombstone(
         **envelope(snapshot.project.id, actor),
@@ -888,15 +893,24 @@ def purge(
         from .checkpoints import purge_guard
 
         with purge_guard(repository, source.id) as discard_preparation:
-            new_snapshot = repository.commit(
-                [tombstone, *passage_tombstones, *version_tombstones],
-                {},
-                snapshot,
-                removals=records_to_remove,
-                delete_blobs=deleted_blobs,
-            )
-            discard_preparation()
-        new_digest = new_snapshot.digest
+            cleanup_error = None
+            try:
+                new_snapshot = repository.commit(
+                    [tombstone, *passage_tombstones, *version_tombstones],
+                    {},
+                    snapshot,
+                    removals=records_to_remove,
+                    delete_blobs=deleted_blobs,
+                )
+                new_digest = new_snapshot.digest
+            except ResearchCleanupError as error:
+                cleanup_error = error
+                new_digest = error.accepted_snapshot
+            pending_paths = discard_preparation()
+            if cleanup_error is not None:
+                pending_paths.extend(cleanup_error.pending_paths)
+            if pending_paths:
+                raise ResearchCleanupError(new_digest, pending_paths, project_root=repository.root) from cleanup_error
 
     return {
         "schema_version": "research-purge-local/1",
